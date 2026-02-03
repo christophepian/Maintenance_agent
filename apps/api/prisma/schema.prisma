@@ -1,0 +1,52 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  TENANT
+  CONTRACTOR
+  MANAGER
+}
+
+enum RequestStatus {
+  PENDING_REVIEW
+  AUTO_APPROVED
+  APPROVED
+}
+
+model Org {
+  id     String    @id @default(uuid())
+  name   String
+  users  User[]
+  config OrgConfig?
+}
+
+model OrgConfig {
+  id               String @id @default(uuid())
+  orgId            String @unique
+  autoApproveLimit Int    @default(200) // CHF
+
+  org Org @relation(fields: [orgId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id    String @id @default(uuid())
+  orgId String
+  org   Org    @relation(fields: [orgId], references: [id])
+  role  Role
+  name  String
+}
+
+model Request {
+  id            String        @id @default(uuid())
+  description   String
+  category      String?
+  estimatedCost Int?          // CHF (nullable = truly optional)
+  status        RequestStatus @default(PENDING_REVIEW)
+  createdAt     DateTime      @default(now())
+}

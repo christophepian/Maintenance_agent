@@ -1,0 +1,34 @@
+**/node_modules
+
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+.DS_Store
+.idea
+.vscode
+
+.env
+.env.*
+!.env.example
+
+# TypeScript build artifacts (dist per-package)
+apps/api/dist/
+apps/web/.next/
+**/*.js.map
+**/*.d.ts
+**/*.d.ts.map
+
+# Build output
+apps/web/.next
+apps/**/dist
+apps/**/.turbo
+
+# Local archives / scratch
+_archive
+
+# Environment files
+.env
+.env.local
+.env.*.local

@@ -1,0 +1,8 @@
+{
+  "name": "maintenance-agent",
+  "private": true,
+  "workspaces": ["apps/*", "packages/*"],
+  "scripts": {
+    "dev": "echo \"Run 'npm --workspace @apps/api run start:dev' and 'npm --workspace apps/web run dev' in separate terminals\""
+  }
+}

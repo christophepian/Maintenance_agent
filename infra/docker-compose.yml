@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: maint_agent_pg
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_DB: maint_agent
+    ports:
+      - "5432:5432"
+    volumes:
+      - maint_agent_pgdata:/var/lib/postgresql/data
+
+volumes:
+  maint_agent_pgdata:
