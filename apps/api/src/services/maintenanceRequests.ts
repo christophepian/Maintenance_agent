@@ -5,6 +5,9 @@ export type CreateMaintenanceRequestInput = {
   category: string | null; // already normalized by caller
   estimatedCost: number | null; // CHF (nullable)
   status: RequestStatus;
+  tenantId?: string | null; // optional tenant reference
+  unitId?: string | null; // optional unit reference
+  applianceId?: string | null; // optional appliance reference
 };
 
 export type MaintenanceRequestDTO = {
@@ -13,12 +16,25 @@ export type MaintenanceRequestDTO = {
   category?: string;
   estimatedCost?: number; // omit if null
   status: RequestStatus;
+  tenantId?: string;
+  unitId?: string;
+  applianceId?: string;
   assignedContractor?: {
     id: string;
     name: string;
     phone: string;
     email: string;
     hourlyRate: number;
+  };
+  appliance?: {
+    id: string;
+    name: string;
+    serial?: string;
+    assetModel?: {
+      manufacturer: string;
+      model: string;
+      category: string;
+    };
   };
   createdAt: string; // ISO
 };
@@ -29,28 +45,31 @@ export type ListRequestsOptions = {
   order: "asc" | "desc";
 };
 
-function toDTO(r: {
-  id: string;
-  description: string;
-  category: string | null;
-  estimatedCost: number | null;
-  status: RequestStatus;
-  createdAt: Date;
-  assignedContractor?: {
-    id: string;
-    name: string;
-    phone: string;
-    email: string;
-    hourlyRate: number;
-  } | null;
-}) {
+function toDTO(r: any) {
   return {
     id: r.id,
     description: r.description,
     category: r.category ?? undefined,
     estimatedCost: r.estimatedCost ?? undefined,
     status: r.status,
+    tenantId: r.tenantId ?? undefined,
+    unitId: r.unitId ?? undefined,
+    applianceId: r.applianceId ?? undefined,
     assignedContractor: r.assignedContractor ?? undefined,
+    appliance: r.appliance
+      ? {
+          id: r.appliance.id,
+          name: r.appliance.name,
+          serial: r.appliance.serial ?? undefined,
+          assetModel: r.appliance.assetModel
+            ? {
+                manufacturer: r.appliance.assetModel.manufacturer,
+                model: r.appliance.assetModel.model,
+                category: r.appliance.assetModel.category,
+              }
+            : undefined,
+        }
+      : undefined,
     createdAt: r.createdAt.toISOString(),
   } satisfies MaintenanceRequestDTO;
 }
@@ -81,6 +100,11 @@ export async function listMaintenanceRequests(
           hourlyRate: true,
         },
       },
+      appliance: {
+        include: {
+          assetModel: true,
+        },
+      },
     },
   });
 
@@ -106,6 +130,11 @@ export async function getMaintenanceRequestById(
           hourlyRate: true,
         },
       },
+      appliance: {
+        include: {
+          assetModel: true,
+        },
+      },
     },
   });
   return row ? toDTO(row) : null;
@@ -124,6 +153,9 @@ export async function createMaintenanceRequest(
       category: input.category,
       estimatedCost: input.estimatedCost, // can be null
       status: input.status,
+      tenantId: input.tenantId || null,
+      unitId: input.unitId || null,
+      applianceId: input.applianceId || null,
     },
     include: {
       assignedContractor: {
@@ -133,6 +165,11 @@ export async function createMaintenanceRequest(
           phone: true,
           email: true,
           hourlyRate: true,
+        },
+      },
+      appliance: {
+        include: {
+          assetModel: true,
         },
       },
     },
@@ -161,6 +198,11 @@ export async function updateMaintenanceRequestStatus(
             phone: true,
             email: true,
             hourlyRate: true,
+          },
+        },
+        appliance: {
+          include: {
+            assetModel: true,
           },
         },
       },

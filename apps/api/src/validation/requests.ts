@@ -31,6 +31,11 @@ export const CreateRequestSchema = z.object({
     .max(100000, { message: "estimatedCost must be <= 100000" })
     .optional(),
 
+  // Tenant asset context
+  tenantId: z.string().uuid().optional(),
+  unitId: z.string().uuid().optional(),
+  applianceId: z.string().uuid().optional(),
+
   // legacy support
   text: z.string().optional(),
 });
