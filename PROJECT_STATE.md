@@ -1,6 +1,6 @@
 # Maintenance Agent — Project State
 
-**Last updated:** 2026-02-03 (Slice 1 complete)
+**Last updated:** 2026-02-03 (Slice 2 complete)
 
 ---
 
@@ -226,6 +226,12 @@ model Contractor {
 * `PATCH /contractors/{id}` — update contractor details
 * `DELETE /contractors/{id}` — deactivate contractor (soft delete)
 
+#### Request Assignment (NEW — Slice 2)
+
+* `POST /requests/{id}/assign` — assign contractor to request
+* `DELETE /requests/{id}/assign` — unassign contractor from request
+* Auto-assignment on request creation based on category match
+
 #### Org Config
 
 * `GET /org-config`
@@ -417,12 +423,21 @@ The project had legacy NestJS scaffolding that was never used at runtime, making
   * Frontend proxy routes: /api/contractors and /api/contractors/[id]
   * Testing completed: all endpoints verified working, validation errors properly handled, database persistence confirmed
 
+* **Slice 2 (Feb 3):** Request assignment & routing
+  * Auto-assignment service: matches requests to contractors by category
+  * Manual assignment endpoints: POST /requests/{id}/assign, DELETE /requests/{id}/assign
+  * Assignment validation: contractor must exist and be active
+  * Request DTO enhanced: includes assignedContractor with name, phone, email, hourlyRate
+  * Backend queries updated: all request operations include contractor relation
+  * Manager dashboard updated: displays assigned contractor details (name, phone, hourly rate)
+  * Auto-assignment on request creation: if category matches contractor, auto-assign immediately
+  * Testing completed: auto-assignment works, manual assignment/unassignment works, validation errors handled, dashboard displays contractors
+
 ### Not Implemented Yet
 
 * Authentication / authorization
 * Role enforcement
-* **Slice 2:** Request assignment & routing to contractors
-* **Slice 3:** Contractor portal
+* **Slice 3:** Contractor portal & notifications
 * Scheduling
 * Invoicing
 * Media uploads
@@ -431,13 +446,13 @@ The project had legacy NestJS scaffolding that was never used at runtime, making
 
 ## 12. Backlog
 
-### Slice 2 (Next)
+### Slice 2 (Completed)
 
-* Assignment logic: match requests to contractors by category
-* Display assigned contractor on manager UI
-* Update request status workflow to include contractor assignment
+* Assignment logic: match requests to contractors by category ✅
+* Display assigned contractor on manager UI ✅
+* Update request status workflow to include contractor assignment ✅
 
-### Slice 3
+### Slice 3 (Next)
 
 * Contractor portal: view assigned requests, update status, upload documents
 * Notification system (contractor assigned, work completed)

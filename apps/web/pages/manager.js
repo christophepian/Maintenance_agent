@@ -353,7 +353,15 @@ export default function Manager() {
                         )}
                       </td>
                       <td style={{ padding: 10, borderBottom: "1px solid #eee", color: "#666" }}>
-                        (not implemented)
+                        {r.assignedContractor ? (
+                          <div style={{ fontSize: 13 }}>
+                            <div style={{ fontWeight: 600 }}>{r.assignedContractor.name}</div>
+                            <div style={{ fontSize: 12, color: "#888" }}>{r.assignedContractor.phone}</div>
+                            <div style={{ fontSize: 12, color: "#888" }}>{r.assignedContractor.hourlyRate} CHF/h</div>
+                          </div>
+                        ) : (
+                          <span style={{ color: "#ccc" }}>(none)</span>
+                        )}
                       </td>
                     </tr>
                   );
@@ -364,7 +372,7 @@ export default function Manager() {
         </div>
 
         <div style={{ color: "#666", fontSize: 12 }}>
-          Note: contractor assignment will appear here once we implement routing/assignment (Option C).
+          Note: contractors are auto-assigned based on service categories. Managers can manually reassign via API if needed.
         </div>
       </div>
     </div>

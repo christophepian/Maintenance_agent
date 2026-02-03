@@ -15,6 +15,11 @@ import {
   type ContractorDTO,
 } from "./services/contractors";
 import { decideRequestStatus } from "./services/autoApproval";
+import {
+  findMatchingContractor,
+  assignContractor,
+  unassignContractor,
+} from "./services/requestAssignment";
 import { getOrgConfig, updateOrgConfig } from "./services/orgConfig";
 import { readJson } from "./http/body";
 import { sendError, sendJson } from "./http/json";
@@ -22,6 +27,7 @@ import { CreateRequestSchema, CreateRequestInput } from "./validation/requests";
 import { UpdateOrgConfigSchema, UpdateOrgConfigInput } from "./validation/orgConfig";
 import { UpdateRequestStatusSchema, UpdateRequestStatusInput } from "./validation/requestStatus";
 import { CreateContractorSchema, UpdateContractorSchema } from "./validation/contractors";
+import { AssignContractorSchema } from "./validation/requestAssignment";
 
 const prisma = new PrismaClient();
 const port = process.env.PORT ? Number(process.env.PORT) : 3001;
@@ -238,6 +244,60 @@ if (current.status !== RequestStatus.PENDING_REVIEW) {
     }
   }
 
+  // =========================
+  // POST /requests/:id/assign
+  // Body: { contractorId: "uuid" }
+  // =========================
+  const assignMatch = path.match(/^\/requests\/([a-f0-9\-]{36})\/assign$/);
+  if (req.method === "POST" && assignMatch) {
+    const requestId = assignMatch[1];
+    try {
+      const raw = await readJson(req);
+      const parsed = AssignContractorSchema.safeParse(raw);
+
+      if (!parsed.success) {
+        return sendError(
+          res,
+          400,
+          "VALIDATION_ERROR",
+          "Invalid assignment data",
+          parsed.error.flatten()
+        );
+      }
+
+      const result = await assignContractor(prisma, requestId, parsed.data.contractorId);
+      if (!result.success) {
+        return sendError(res, 400, "ASSIGNMENT_FAILED", result.message);
+      }
+
+      const updated = await getMaintenanceRequestById(prisma, requestId);
+      if (!updated) return sendError(res, 404, "NOT_FOUND", "Request not found");
+      return sendJson(res, 200, { data: updated, message: result.message });
+    } catch (e: any) {
+      const msg = String(e?.message || e);
+      if (msg === "Invalid JSON") return sendError(res, 400, "INVALID_JSON", "Invalid JSON");
+      if (msg === "Body too large")
+        return sendError(res, 413, "BODY_TOO_LARGE", "Request body too large");
+      return sendError(res, 500, "DB_ERROR", "Database error", String(e));
+    }
+  }
+
+  // =========================
+  // DELETE /requests/:id/assign
+  // Unassign contractor from request
+  // =========================
+  if (req.method === "DELETE" && assignMatch) {
+    const requestId = assignMatch[1];
+    try {
+      const result = await unassignContractor(prisma, requestId);
+      const updated = await getMaintenanceRequestById(prisma, requestId);
+      if (!updated) return sendError(res, 404, "NOT_FOUND", "Request not found");
+      return sendJson(res, 200, { data: updated, message: result.message });
+    } catch (e) {
+      return sendError(res, 500, "DB_ERROR", "Database error", String(e));
+    }
+  }
+
   // GET /requests/:id
   if (req.method === "GET") {
     const id = matchRequestById(path);
@@ -306,6 +366,21 @@ if (current.status !== RequestStatus.PENDING_REVIEW) {
         estimatedCost,
         status,
       });
+
+      // Auto-assign contractor if category matches
+      if (category) {
+        const matchingContractor = await findMatchingContractor(
+          prisma,
+          DEFAULT_ORG_ID,
+          category
+        );
+        if (matchingContractor) {
+          await assignContractor(prisma, created.id, matchingContractor.id);
+          // Update response to include assigned contractor
+          const updated = await getMaintenanceRequestById(prisma, created.id);
+          return sendJson(res, 201, { data: updated });
+        }
+      }
 
       return sendJson(res, 201, { data: created });
     } catch (e: any) {

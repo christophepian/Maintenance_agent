@@ -13,6 +13,13 @@ export type MaintenanceRequestDTO = {
   category?: string;
   estimatedCost?: number; // omit if null
   status: RequestStatus;
+  assignedContractor?: {
+    id: string;
+    name: string;
+    phone: string;
+    email: string;
+    hourlyRate: number;
+  };
   createdAt: string; // ISO
 };
 
@@ -29,6 +36,13 @@ function toDTO(r: {
   estimatedCost: number | null;
   status: RequestStatus;
   createdAt: Date;
+  assignedContractor?: {
+    id: string;
+    name: string;
+    phone: string;
+    email: string;
+    hourlyRate: number;
+  } | null;
 }) {
   return {
     id: r.id,
@@ -36,6 +50,7 @@ function toDTO(r: {
     category: r.category ?? undefined,
     estimatedCost: r.estimatedCost ?? undefined,
     status: r.status,
+    assignedContractor: r.assignedContractor ?? undefined,
     createdAt: r.createdAt.toISOString(),
   } satisfies MaintenanceRequestDTO;
 }
@@ -56,6 +71,17 @@ export async function listMaintenanceRequests(
     orderBy: { createdAt: order },
     take: limit,
     skip: offset,
+    include: {
+      assignedContractor: {
+        select: {
+          id: true,
+          name: true,
+          phone: true,
+          email: true,
+          hourlyRate: true,
+        },
+      },
+    },
   });
 
   return rows.map(toDTO);
@@ -68,7 +94,20 @@ export async function getMaintenanceRequestById(
   prisma: PrismaClient,
   id: string
 ): Promise<MaintenanceRequestDTO | null> {
-  const row = await prisma.request.findUnique({ where: { id } });
+  const row = await prisma.request.findUnique({
+    where: { id },
+    include: {
+      assignedContractor: {
+        select: {
+          id: true,
+          name: true,
+          phone: true,
+          email: true,
+          hourlyRate: true,
+        },
+      },
+    },
+  });
   return row ? toDTO(row) : null;
 }
 
@@ -85,6 +124,17 @@ export async function createMaintenanceRequest(
       category: input.category,
       estimatedCost: input.estimatedCost, // can be null
       status: input.status,
+    },
+    include: {
+      assignedContractor: {
+        select: {
+          id: true,
+          name: true,
+          phone: true,
+          email: true,
+          hourlyRate: true,
+        },
+      },
     },
   });
 
@@ -103,6 +153,17 @@ export async function updateMaintenanceRequestStatus(
     const updated = await prisma.request.update({
       where: { id },
       data: { status },
+      include: {
+        assignedContractor: {
+          select: {
+            id: true,
+            name: true,
+            phone: true,
+            email: true,
+            hourlyRate: true,
+          },
+        },
+      },
     });
     return toDTO(updated);
   } catch (e: any) {
