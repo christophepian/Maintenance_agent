@@ -22,11 +22,13 @@ enum RequestStatus {
 }
 
 model Org {
-  id         String        @id @default(uuid())
-  name       String
-  users      User[]
-  contractors Contractor[]
-  config     OrgConfig?
+  id           String        @id @default(uuid())
+  name         String
+  users        User[]
+  contractors  Contractor[]
+  config       OrgConfig?
+  tenants      Tenant[]
+  buildings    Building[]
 }
 
 model OrgConfig {
@@ -68,5 +70,89 @@ model Request {
   status            RequestStatus  @default(PENDING_REVIEW)
   assignedContractorId String?
   assignedContractor Contractor?   @relation(fields: [assignedContractorId], references: [id])
+  tenantId          String?
+  tenant            Tenant?        @relation(fields: [tenantId], references: [id])
+  unitId            String?
+  unit              Unit?          @relation(fields: [unitId], references: [id])
+  applianceId       String?
+  appliance         Appliance?     @relation(fields: [applianceId], references: [id])
   createdAt         DateTime       @default(now())
+}
+
+model Tenant {
+  id        String    @id @default(uuid())
+  orgId     String
+  org       Org       @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  name      String?
+  phone     String    // E.164 format
+  email     String?
+  unitId    String?
+  unit      Unit?     @relation(fields: [unitId], references: [id])
+  requests  Request[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@unique([orgId, phone])
+  @@index([orgId, phone])
+}
+
+model Building {
+  id        String    @id @default(uuid())
+  orgId     String
+  org       Org       @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  name      String
+  address   String
+  units     Unit[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([orgId])
+}
+
+model Unit {
+  id         String      @id @default(uuid())
+  buildingId String
+  building   Building    @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+  unitNumber String
+  floor      String?
+  tenants    Tenant[]
+  appliances Appliance[]
+  requests   Request[]
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  @@unique([buildingId, unitNumber])
+  @@index([buildingId])
+}
+
+model Appliance {
+  id          String      @id @default(uuid())
+  unitId      String
+  unit        Unit        @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  assetModelId String?
+  assetModel  AssetModel? @relation(fields: [assetModelId], references: [id])
+  name        String
+  serial      String?
+  installDate DateTime?
+  notes       String?
+  requests    Request[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@index([unitId])
+}
+
+model AssetModel {
+  id            String      @id @default(uuid())
+  orgId         String
+  manufacturer  String
+  model         String
+  category      String
+  specs         String?     // JSON specs
+  appliances    Appliance[]
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@unique([orgId, manufacturer, model])
+  @@index([orgId, category])
 }

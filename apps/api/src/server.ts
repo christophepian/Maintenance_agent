@@ -24,6 +24,12 @@ import {
   getContractorAssignedRequests,
   updateContractorRequestStatus,
 } from "./services/contractorRequests";
+import {
+  createOrGetTenant,
+  getTenantByPhone,
+  getTenantById,
+  updateTenant,
+} from "./services/tenants";
 import { getOrgConfig, updateOrgConfig } from "./services/orgConfig";
 import { readJson } from "./http/body";
 import { sendError, sendJson } from "./http/json";
@@ -32,6 +38,7 @@ import { UpdateOrgConfigSchema, UpdateOrgConfigInput } from "./validation/orgCon
 import { UpdateRequestStatusSchema, UpdateRequestStatusInput } from "./validation/requestStatus";
 import { CreateContractorSchema, UpdateContractorSchema } from "./validation/contractors";
 import { AssignContractorSchema } from "./validation/requestAssignment";
+import { normalizePhoneToE164 } from "./utils/phoneNormalization";
 
 const prisma = new PrismaClient();
 const port = process.env.PORT ? Number(process.env.PORT) : 3001;
@@ -438,6 +445,106 @@ if (current.status !== RequestStatus.PENDING_REVIEW) {
       if (msg === "Body too large")
         return sendError(res, 413, "BODY_TOO_LARGE", "Request body too large");
       return sendError(res, 500, "UNKNOWN_ERROR", "Unexpected error", String(e));
+    }
+  }
+
+  // =========================
+  // GET /tenants (lookup by phone)
+  // =========================
+  if (req.method === "GET" && path === "/tenants") {
+    try {
+      const phone = first(query, "phone");
+      if (!phone) {
+        return sendError(res, 400, "VALIDATION_ERROR", "Phone number required");
+      }
+
+      const tenant = await getTenantByPhone({
+        phone,
+        orgId: DEFAULT_ORG_ID,
+      });
+
+      return sendJson(res, 200, { data: tenant });
+    } catch (e) {
+      return sendError(res, 500, "DB_ERROR", "Failed to fetch tenant", String(e));
+    }
+  }
+
+  // =========================
+  // POST /tenants (create or get)
+  // =========================
+  if (req.method === "POST" && path === "/tenants") {
+    try {
+      const raw = await readJson(req);
+      const tenant = await createOrGetTenant({
+        ...raw,
+        orgId: DEFAULT_ORG_ID,
+      });
+      return sendJson(res, 201, { data: tenant });
+    } catch (e: any) {
+      const msg = String(e?.message || e);
+      if (msg.includes("Invalid phone")) {
+        return sendError(res, 400, "VALIDATION_ERROR", msg);
+      }
+      return sendError(res, 500, "DB_ERROR", "Failed to create tenant", String(e));
+    }
+  }
+
+  // =========================
+
+  // GET /tenants (lookup by phone)
+  // =========================
+  if (req.method === "GET" && path === "/tenants") {
+    try {
+      const phone = first(query, "phone");
+      if (!phone) {
+        return sendError(res, 400, "VALIDATION_ERROR", "Phone parameter required");
+      }
+
+      const tenant = await getTenantByPhone({
+        phone,
+        orgId: DEFAULT_ORG_ID,
+      });
+
+      if (!tenant) {
+        // Phone not found, still return 200 with null for frontend to trigger create flow
+        return sendJson(res, 200, { data: null });
+      }
+
+      return sendJson(res, 200, { data: tenant });
+    } catch (e: any) {
+      const msg = String(e?.message || e);
+      if (msg.includes("Invalid phone")) {
+        return sendError(res, 400, "VALIDATION_ERROR", "Invalid phone format");
+      }
+      return sendError(res, 500, "DB_ERROR", "Failed to lookup tenant", String(e));
+    }
+  }
+
+  // =========================
+  // POST /tenants (create or get)
+  // =========================
+  if (req.method === "POST" && path === "/tenants") {
+    try {
+      const raw = await readJson(req);
+      const normalizedPhone = normalizePhoneToE164(raw.phone);
+      if (!normalizedPhone) {
+        return sendError(res, 400, "VALIDATION_ERROR", "Invalid phone format");
+      }
+
+      const tenant = await createOrGetTenant({
+        ...raw,
+        phone: normalizedPhone,
+        orgId: DEFAULT_ORG_ID,
+      });
+
+      return sendJson(res, 200, { data: tenant });
+    } catch (e: any) {
+      const msg = String(e?.message || e);
+      if (msg.includes("Invalid phone")) {
+        return sendError(res, 400, "VALIDATION_ERROR", "Invalid phone format");
+      }
+      if (msg === "Invalid JSON") return sendError(res, 400, "INVALID_JSON", "Invalid JSON");
+      return sendError(res, 500, "DB_ERROR", "Failed to create tenant", String(e));
     }
   }
 
