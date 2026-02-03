@@ -20,6 +20,10 @@ import {
   assignContractor,
   unassignContractor,
 } from "./services/requestAssignment";
+import {
+  getContractorAssignedRequests,
+  updateContractorRequestStatus,
+} from "./services/contractorRequests";
 import { getOrgConfig, updateOrgConfig } from "./services/orgConfig";
 import { readJson } from "./http/body";
 import { sendError, sendJson } from "./http/json";
@@ -178,8 +182,10 @@ const server = http.createServer(async (req, res) => {
 
   // =========================
   // PATCH /requests/:id/status
-  // Body: { status: "APPROVED" }
-  // Only allows: PENDING_REVIEW -> APPROVED
+    // Body: { status: "APPROVED" | "IN_PROGRESS" | "COMPLETED" }
+    // ?contractorId=<uuid> query param for contractor updates
+    // Manager: PENDING_REVIEW -> APPROVED
+    // Contractor: any approved status -> IN_PROGRESS -> COMPLETED
   // =========================
   if (req.method === "PATCH") {
     const id = matchRequestStatus(path);
@@ -199,7 +205,23 @@ const server = http.createServer(async (req, res) => {
         }
 
         const input: UpdateRequestStatusInput = parsed.data;
+          const contractorId = query.contractorId ? String(query.contractorId) : null;
 
+          // Contractor status update path
+          if (contractorId) {
+            const result = await updateContractorRequestStatus(
+              prisma,
+              id,
+              contractorId,
+              RequestStatus[input.status as keyof typeof RequestStatus]
+            );
+            if (!result.success) {
+              return sendError(res, 400, "UPDATE_FAILED", result.message);
+            }
+            return sendJson(res, 200, { data: result.data, message: result.message });
+          }
+
+          // Manager approval update path (original logic)
         const current = await prisma.request.findUnique({ where: { id } });
         if (!current) return sendError(res, 404, "NOT_FOUND", "Request not found");
 
@@ -311,6 +333,33 @@ if (current.status !== RequestStatus.PENDING_REVIEW) {
       }
     }
   }
+
+    // =========================
+    // GET /requests/contractor/:contractorId
+    // List all requests assigned to a contractor
+    // =========================
+    const contractorRequestMatch = path.match(/^\/requests\/contractor\/([a-f0-9\-]{36})$/i);
+    if (req.method === "GET" && contractorRequestMatch) {
+      const contractorId = contractorRequestMatch[1];
+      try {
+        const requests = await getContractorAssignedRequests(prisma, contractorId);
+        return sendJson(res, 200, { data: requests });
+      } catch (e) {
+        return sendError(res, 500, "DB_ERROR", "Failed to fetch requests", String(e));
+      }
+    }
+
+    // Fallback: GET /requests/contractor?contractorId=<uuid>
+    if (req.method === "GET" && path === "/requests/contractor") {
+      const cid = first(query, "contractorId");
+      if (!cid) return sendError(res, 400, "VALIDATION_ERROR", "Missing contractorId");
+      try {
+        const requests = await getContractorAssignedRequests(prisma, cid);
+        return sendJson(res, 200, { data: requests });
+      } catch (e) {
+        return sendError(res, 500, "DB_ERROR", "Failed to fetch requests", String(e));
+      }
+    }
 
   // GET /requests?limit=&offset=&order=
   if (req.method === "GET" && path === "/requests") {

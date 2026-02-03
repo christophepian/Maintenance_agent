@@ -17,6 +17,8 @@ enum RequestStatus {
   PENDING_REVIEW
   AUTO_APPROVED
   APPROVED
+  IN_PROGRESS
+  COMPLETED
 }
 
 model Org {
