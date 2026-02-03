@@ -30,6 +30,28 @@ import {
   getTenantById,
   updateTenant,
 } from "./services/tenants";
+import {
+  createBuilding,
+  getBuilding,
+  listBuildings,
+  updateBuilding,
+  deleteBuilding,
+  createUnit,
+  getUnit,
+  listUnits,
+  updateUnit,
+  deleteUnit,
+  createAppliance,
+  getAppliance,
+  listAppliances,
+  updateAppliance,
+  deleteAppliance,
+  createAssetModel,
+  getAssetModel,
+  listAssetModels,
+  updateAssetModel,
+  deleteAssetModel,
+} from "./services/inventory";
 import { getOrgConfig, updateOrgConfig } from "./services/orgConfig";
 import { readJson } from "./http/body";
 import { sendError, sendJson } from "./http/json";
@@ -38,6 +60,7 @@ import { UpdateOrgConfigSchema, UpdateOrgConfigInput } from "./validation/orgCon
 import { UpdateRequestStatusSchema, UpdateRequestStatusInput } from "./validation/requestStatus";
 import { CreateContractorSchema, UpdateContractorSchema } from "./validation/contractors";
 import { AssignContractorSchema } from "./validation/requestAssignment";
+
 import { normalizePhoneToE164 } from "./utils/phoneNormalization";
 
 const prisma = new PrismaClient();
@@ -635,6 +658,132 @@ if (current.status !== RequestStatus.PENDING_REVIEW) {
       return sendJson(res, 200, { message: "Contractor deactivated" });
     } catch (e) {
       return sendError(res, 500, "DB_ERROR", "Failed to deactivate contractor", String(e));
+    }
+  }
+
+  // =========================
+  // BUILDINGS ENDPOINTS
+  // =========================
+
+  // GET /buildings
+  if (req.method === "GET" && path === "/buildings") {
+    try {
+      const buildingsList = await listBuildings(DEFAULT_ORG_ID);
+      return sendJson(res, 200, { data: buildingsList });
+    } catch (e) {
+      return sendError(res, 500, "DB_ERROR", "Failed to fetch buildings", String(e));
+    }
+  }
+
+  // POST /buildings
+  if (req.method === "POST" && path === "/buildings") {
+    try {
+      const raw = await readJson(req);
+      if (!raw.name || !raw.address) {
+        return sendError(res, 400, "VALIDATION_ERROR", "Name and address required");
+      }
+      const building = await createBuilding(DEFAULT_ORG_ID, raw);
+      return sendJson(res, 201, { data: building });
+    } catch (e) {
+      return sendError(res, 500, "DB_ERROR", "Failed to create building", String(e));
+    }
+  }
+
+  // GET /buildings/:id/units
+  const buildingId = path.match(/^\/buildings\/([a-f0-9-]+)$/)?.[1];
+  if (req.method === "GET" && buildingId && query["units"]) {
+    try {
+      const unitsList = await listUnits(buildingId);
+      return sendJson(res, 200, { data: unitsList });
+    } catch (e) {
+      return sendError(res, 500, "DB_ERROR", "Failed to fetch units", String(e));
+    }
+  }
+
+  const buildingUnitsPath = path.match(/^\/buildings\/([a-f0-9-]+)\/units$/);
+  if (req.method === "GET" && buildingUnitsPath) {
+    try {
+      const bId = buildingUnitsPath[1];
+      const unitsList = await listUnits(bId);
+      return sendJson(res, 200, { data: unitsList });
+    } catch (e) {
+      return sendError(res, 500, "DB_ERROR", "Failed to fetch units", String(e));
+    }
+  }
+
+  // POST /buildings/:id/units
+  if (req.method === "POST" && buildingUnitsPath) {
+    try {
+      const bId = buildingUnitsPath[1];
+      const raw = await readJson(req);
+      if (!raw.unitNumber) {
+        return sendError(res, 400, "VALIDATION_ERROR", "Unit number required");
+      }
+      const unit = await createUnit(bId, raw);
+      return sendJson(res, 201, { data: unit });
+    } catch (e) {
+      return sendError(res, 500, "DB_ERROR", "Failed to create unit", String(e));
+    }
+  }
+
+  // =========================
+  // UNITS ENDPOINTS
+  // =========================
+
+  const unitAppliancesPath = path.match(/^\/units\/([a-f0-9-]+)\/appliances$/);
+
+  // GET /units/:id/appliances
+  if (req.method === "GET" && unitAppliancesPath) {
+    try {
+      const uId = unitAppliancesPath[1];
+      const appList = await listAppliances(uId);
+      return sendJson(res, 200, { data: appList });
+    } catch (e) {
+      return sendError(res, 500, "DB_ERROR", "Failed to fetch appliances", String(e));
+    }
+  }
+
+  // POST /units/:id/appliances
+  if (req.method === "POST" && unitAppliancesPath) {
+    try {
+      const uId = unitAppliancesPath[1];
+      const raw = await readJson(req);
+      if (!raw.name) {
+        return sendError(res, 400, "VALIDATION_ERROR", "Appliance name required");
+      }
+      const appliance = await createAppliance(uId, raw);
+      return sendJson(res, 201, { data: appliance });
+    } catch (e) {
+      return sendError(res, 500, "DB_ERROR", "Failed to create appliance", String(e));
+    }
+  }
+
+  // =========================
+  // ASSET MODELS ENDPOINTS
+  // =========================
+
+  // GET /asset-models
+  if (req.method === "GET" && path === "/asset-models") {
+    try {
+      const category = first(query, "category");
+      const models = await listAssetModels(DEFAULT_ORG_ID, category);
+      return sendJson(res, 200, { data: models });
+    } catch (e) {
+      return sendError(res, 500, "DB_ERROR", "Failed to fetch asset models", String(e));
+    }
+  }
+
+  // POST /asset-models
+  if (req.method === "POST" && path === "/asset-models") {
+    try {
+      const raw = await readJson(req);
+      if (!raw.manufacturer || !raw.model || !raw.category) {
+        return sendError(res, 400, "VALIDATION_ERROR", "Manufacturer, model, and category required");
+      }
+      const model = await createAssetModel(DEFAULT_ORG_ID, raw);
+      return sendJson(res, 201, { data: model });
+    } catch (e) {
+      return sendError(res, 500, "DB_ERROR", "Failed to create asset model", String(e));
     }
   }
 
