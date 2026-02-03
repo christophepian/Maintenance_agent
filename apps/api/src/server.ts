@@ -6,6 +6,14 @@ import {
   listMaintenanceRequests,
   updateMaintenanceRequestStatus,
 } from "./services/maintenanceRequests";
+import {
+  createContractor,
+  getContractorById,
+  listContractors,
+  updateContractor,
+  deactivateContractor,
+  type ContractorDTO,
+} from "./services/contractors";
 import { decideRequestStatus } from "./services/autoApproval";
 import { getOrgConfig, updateOrgConfig } from "./services/orgConfig";
 import { readJson } from "./http/body";
@@ -13,6 +21,7 @@ import { sendError, sendJson } from "./http/json";
 import { CreateRequestSchema, CreateRequestInput } from "./validation/requests";
 import { UpdateOrgConfigSchema, UpdateOrgConfigInput } from "./validation/orgConfig";
 import { UpdateRequestStatusSchema, UpdateRequestStatusInput } from "./validation/requestStatus";
+import { CreateContractorSchema, UpdateContractorSchema } from "./validation/contractors";
 
 const prisma = new PrismaClient();
 const port = process.env.PORT ? Number(process.env.PORT) : 3001;
@@ -101,6 +110,11 @@ function matchRequestById(path: string) {
 
 function matchRequestStatus(path: string) {
   const m = path.match(/^\/requests\/([a-f0-9-]{36})\/status$/i);
+  return m ? m[1] : null;
+}
+
+function matchContractorById(path: string) {
+  const m = path.match(/^\/contractors\/([a-f0-9-]{36})$/i);
   return m ? m[1] : null;
 }
 
@@ -300,6 +314,96 @@ if (current.status !== RequestStatus.PENDING_REVIEW) {
       if (msg === "Body too large")
         return sendError(res, 413, "BODY_TOO_LARGE", "Request body too large");
       return sendError(res, 500, "UNKNOWN_ERROR", "Unexpected error", String(e));
+    }
+  }
+
+  // =========================
+  // GET /contractors
+  // =========================
+  if (req.method === "GET" && path === "/contractors") {
+    try {
+      const contractors = await listContractors(prisma, DEFAULT_ORG_ID);
+      return sendJson(res, 200, { data: contractors });
+    } catch (e) {
+      return sendError(res, 500, "DB_ERROR", "Failed to fetch contractors", String(e));
+    }
+  }
+
+  // =========================
+  // POST /contractors
+  // =========================
+  if (req.method === "POST" && path === "/contractors") {
+    try {
+      const raw = await readJson(req);
+      const parsed = CreateContractorSchema.safeParse(raw);
+
+      if (!parsed.success) {
+        return sendError(
+          res,
+          400,
+          "VALIDATION_ERROR",
+          "Invalid contractor data",
+          parsed.error.flatten()
+        );
+      }
+
+      const contractor = await createContractor(prisma, DEFAULT_ORG_ID, parsed.data);
+      return sendJson(res, 201, { data: contractor });
+    } catch (e) {
+      return sendError(res, 500, "DB_ERROR", "Failed to create contractor", String(e));
+    }
+  }
+
+  // =========================
+  // GET /contractors/:id
+  // =========================
+  const contractorId = matchContractorById(path);
+  if (req.method === "GET" && contractorId) {
+    try {
+      const contractor = await getContractorById(prisma, contractorId);
+      if (!contractor) return sendError(res, 404, "NOT_FOUND", "Contractor not found");
+      return sendJson(res, 200, { data: contractor });
+    } catch (e) {
+      return sendError(res, 500, "DB_ERROR", "Failed to fetch contractor", String(e));
+    }
+  }
+
+  // =========================
+  // PATCH /contractors/:id
+  // =========================
+  if (req.method === "PATCH" && contractorId) {
+    try {
+      const raw = await readJson(req);
+      const parsed = UpdateContractorSchema.safeParse(raw);
+
+      if (!parsed.success) {
+        return sendError(
+          res,
+          400,
+          "VALIDATION_ERROR",
+          "Invalid contractor data",
+          parsed.error.flatten()
+        );
+      }
+
+      const contractor = await updateContractor(prisma, contractorId, parsed.data);
+      if (!contractor) return sendError(res, 404, "NOT_FOUND", "Contractor not found");
+      return sendJson(res, 200, { data: contractor });
+    } catch (e) {
+      return sendError(res, 500, "DB_ERROR", "Failed to update contractor", String(e));
+    }
+  }
+
+  // =========================
+  // DELETE /contractors/:id
+  // =========================
+  if (req.method === "DELETE" && contractorId) {
+    try {
+      const success = await deactivateContractor(prisma, contractorId);
+      if (!success) return sendError(res, 404, "NOT_FOUND", "Contractor not found");
+      return sendJson(res, 200, { message: "Contractor deactivated" });
+    } catch (e) {
+      return sendError(res, 500, "DB_ERROR", "Failed to deactivate contractor", String(e));
     }
   }
 

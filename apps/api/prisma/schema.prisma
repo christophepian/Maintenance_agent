@@ -20,10 +20,11 @@ enum RequestStatus {
 }
 
 model Org {
-  id     String    @id @default(uuid())
-  name   String
-  users  User[]
-  config OrgConfig?
+  id         String        @id @default(uuid())
+  name       String
+  users      User[]
+  contractors Contractor[]
+  config     OrgConfig?
 }
 
 model OrgConfig {
@@ -42,11 +43,28 @@ model User {
   name  String
 }
 
+model Contractor {
+  id               String    @id @default(uuid())
+  orgId            String
+  org              Org       @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  name             String
+  phone            String
+  email            String
+  hourlyRate       Int       @default(50) // CHF
+  serviceCategories String  // JSON array of categories: ["stove", "oven", "dishwasher"]
+  isActive         Boolean   @default(true)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  requests         Request[]
+}
+
 model Request {
-  id            String        @id @default(uuid())
-  description   String
-  category      String?
-  estimatedCost Int?          // CHF (nullable = truly optional)
-  status        RequestStatus @default(PENDING_REVIEW)
-  createdAt     DateTime      @default(now())
+  id                String         @id @default(uuid())
+  description       String
+  category          String?
+  estimatedCost     Int?           // CHF (nullable = truly optional)
+  status            RequestStatus  @default(PENDING_REVIEW)
+  assignedContractorId String?
+  assignedContractor Contractor?   @relation(fields: [assignedContractorId], references: [id])
+  createdAt         DateTime       @default(now())
 }

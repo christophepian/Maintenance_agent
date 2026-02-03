@@ -1,6 +1,6 @@
 # Maintenance Agent — Project State
 
-**Last updated:** 2026-02-03
+**Last updated:** 2026-02-03 (Slice 1 complete)
 
 ---
 
@@ -165,6 +165,24 @@ model Request {
   estimatedCost Int?
   status        RequestStatus
   createdAt     DateTime       @default(now())
+  assignedContractorId String?
+  assignedContractor Contractor? @relation(fields: [assignedContractorId], references: [id])
+}
+
+model Contractor {
+  id               String    @id @default(uuid())
+  orgId            String
+  org              Org       @relation(fields: [orgId], references: [id])
+  name             String
+  phone            String
+  email            String
+  hourlyRate       Int
+  serviceCategories String  @default("[]")
+  isActive         Boolean   @default(true)
+  requests         Request[]
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  @@index([orgId, isActive])
 }
 ```
 
@@ -200,6 +218,14 @@ model Request {
 * `POST /requests/approve?id={uuid}` *(manager override)*
 * `DELETE /__dev/requests` *(dev only)*
 
+#### Contractors (NEW — Slice 1)
+
+* `GET /contractors` — list active contractors
+* `POST /contractors` — create contractor with validation
+* `GET /contractors/{id}` — get single contractor
+* `PATCH /contractors/{id}` — update contractor details
+* `DELETE /contractors/{id}` — deactivate contractor (soft delete)
+
 #### Org Config
 
 * `GET /org-config`
@@ -229,18 +255,19 @@ model Request {
 * Live validation
 * Debug payload display
 
-### Manager Dashboard (`/manager`)
+### Contractor Management UI (`/contractors`) — Slice 1
 
-* View all requests
-* Filter:
-
-  * All
-  * Needs approval
-  * Auto-approved
-* Approve pending requests
-* Configure auto-approval threshold
-* Status badges
-* UI styling **frozen** via `styles/managerStyles.js`
+* Add contractor form:
+  * Name (required)
+  * Phone (required, validated)
+  * Email (required, validated)
+  * Hourly rate (CHF 10–500)
+  * Service categories (checkboxes: stove, oven, dishwasher, bathroom, lighting)
+* Contractor list with:
+  * Name, phone, email, hourly rate
+  * Service categories display
+  * Deactivate button
+* Real-time form validation feedback
 
 ### API Proxy Routes (`/api`)
 
@@ -248,6 +275,11 @@ model Request {
 * `POST /api/requests` → backend `POST /requests`
 * `GET /api/requests/[id]` → backend `GET /requests/{id}` *(added Feb 3)*
 * `POST /api/requests/approve` → backend approve endpoint
+* `GET /api/contractors` → backend `GET /contractors` *(Slice 1)*
+* `POST /api/contractors` → backend `POST /contractors` *(Slice 1)*
+* `GET /api/contractors/[id]` → backend `GET /contractors/:id` *(Slice 1)*
+* `PATCH /api/contractors/[id]` → backend `PATCH /contractors/:id` *(Slice 1)*
+* `DELETE /api/contractors/[id]` → backend `DELETE /contractors/:id` *(Slice 1)*
 * `GET /api/org-config` → backend `GET /org-config`
 * `PUT /api/org-config` → backend `PUT /org-config`
 
@@ -376,13 +408,21 @@ The project had legacy NestJS scaffolding that was never used at runtime, making
   ```
 * **Project cleanup (Feb 3):** Removed dead NestJS code, added root configs, established CI/CD
 * **Frontend [id] route:** Implemented proxy for `GET /api/requests/:id` → backend
+* **Slice 1 (Feb 3):** Contractor model, backend CRUD services, validation, frontend management UI
+  * Prisma migration: added Contractor table with orgId, name, phone, email, hourlyRate, serviceCategories, isActive
+  * Backend services: listContractors, getContractorById, createContractor, updateContractor, deactivateContractor
+  * Zod validation: phone format, email format, hourlyRate 10–500, categories required array
+  * API endpoints: GET /contractors, POST /contractors, GET /contractors/:id, PATCH /contractors/:id, DELETE /contractors/:id
+  * Frontend page: /contractors with form and list
+  * Frontend proxy routes: /api/contractors and /api/contractors/[id]
+  * Testing completed: all endpoints verified working, validation errors properly handled, database persistence confirmed
 
 ### Not Implemented Yet
 
 * Authentication / authorization
 * Role enforcement
-* Contractor model
-* Assignment & routing
+* **Slice 2:** Request assignment & routing to contractors
+* **Slice 3:** Contractor portal
 * Scheduling
 * Invoicing
 * Media uploads
@@ -391,11 +431,16 @@ The project had legacy NestJS scaffolding that was never used at runtime, making
 
 ## 12. Backlog
 
-### Option C (Next Major Increment)
+### Slice 2 (Next)
 
-* Contractor model
-* Assignment logic
-* Display contractor on manager UI
+* Assignment logic: match requests to contractors by category
+* Display assigned contractor on manager UI
+* Update request status workflow to include contractor assignment
+
+### Slice 3
+
+* Contractor portal: view assigned requests, update status, upload documents
+* Notification system (contractor assigned, work completed)
 
 ### Future: Tenant Identification, Asset Context & Automated Scheduling
 
