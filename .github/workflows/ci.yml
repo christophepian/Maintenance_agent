@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies (backend)
+        run: npm --prefix apps/api install --no-audit --no-fund
+
+      - name: Install dependencies (frontend)
+        run: npm --prefix apps/web install --no-audit --no-fund
+
+      - name: Type-check backend
+        run: npm --prefix apps/api run build || npx tsc --noEmit
+
+      - name: Type-check frontend
+        run: npm --prefix apps/web run build || npx tsc --noEmit
+
+      - name: Lint (optional: add real linters later)
+        run: echo "Linting placeholder - add eslint/prettier when ready"
