@@ -1,6 +1,6 @@
 # Maintenance Agent — Project State
 
-**Last updated:** 2026-02-02
+**Last updated:** 2026-02-03
 
 ---
 
@@ -32,8 +32,7 @@ Single repository containing:
 * `apps/` — runtime applications
 * `infra/` — infrastructure (Docker)
 * `packages/` — shared packages / metadata
-* `_archive/` — legacy backups (not used)
-* `_archive/` — archive for reports and removed legacy backups (created during cleanup)
+* `_archive/` — archived audit reports and removed legacy backups
 
 ---
 
@@ -41,8 +40,7 @@ Single repository containing:
 
 * Node.js + TypeScript
 * Raw HTTP server using `http.createServer`
-* **No Express**
-* **NestJS files exist but are NOT used at runtime**
+* **No Express or NestJS** (removed during cleanup Feb 3)
 * Entry point: `apps/api/src/server.ts`
 * Prisma ORM
 * PostgreSQL persistence
@@ -86,10 +84,10 @@ Maintenance_Agent/
 │   │   │   └── migrations/
 │   │   └── src/
 │   │       ├── server.ts          # ACTIVE runtime entry
-│   │       ├── (legacy NestJS files removed during cleanup)
 │   │       ├── services/
 │   │       │   ├── maintenanceRequests.ts
-│   │       │   └── autoApproval.ts
+│   │       │   ├── autoApproval.ts
+│   │       │   └── orgConfig.ts
 │   │       ├── validation/
 │   │       │   └── requests.ts
 │   │       └── http/
@@ -104,13 +102,16 @@ Maintenance_Agent/
 │       │       ├── requests.js
 │       │       ├── org-config.js
 │       │       └── requests/
+│       │           ├── [id].js       # GET /api/requests/[id] proxy (added Feb 3)
 │       │           └── approve.js
 │       └── styles/
 │           └── managerStyles.js   # UI style lock
-  
-* Root-level helpers added during cleanup:
-  - `package.json` (monorepo workspace stub)
-  - `tsconfig.json` (root TypeScript config)
+├── .github/
+│   ├── copilot-instructions.md  # AI agent guidance
+│   └── workflows/
+│       └── ci.yml               # GitHub Actions CI (added Feb 3)
+├── tsconfig.json                # Root TypeScript config with project references
+├── package.json                 # Root monorepo workspace stub
 ├── infra/
 │   └── docker-compose.yml         # PostgreSQL
 └── packages/
@@ -241,6 +242,15 @@ model Request {
 * Status badges
 * UI styling **frozen** via `styles/managerStyles.js`
 
+### API Proxy Routes (`/api`)
+
+* `GET /api/requests` → backend `GET /requests`
+* `POST /api/requests` → backend `POST /requests`
+* `GET /api/requests/[id]` → backend `GET /requests/{id}` *(added Feb 3)*
+* `POST /api/requests/approve` → backend approve endpoint
+* `GET /api/org-config` → backend `GET /org-config`
+* `PUT /api/org-config` → backend `PUT /org-config`
+
 ---
 
 ## 7. Styling Policy (IMPORTANT)
@@ -256,7 +266,7 @@ model Request {
 
 ---
 
-## 8. Infrastructure
+## 8. Infrastructure & DevOps
 
 ### PostgreSQL (Docker)
 
@@ -264,6 +274,16 @@ model Request {
 * Port: `5432`
 * Volume: persistent
 * File: `infra/docker-compose.yml`
+
+### Git & CI/CD
+
+* **Repository:** https://github.com/christophepian/Maintenance_agent.git
+* **Main branch:** all production-ready commits
+* **GitHub Actions CI:**
+  - Runs on push to `main` and PRs
+  - Installs dependencies for both apps
+  - Type-checks both backend and frontend
+  - Workflow file: `.github/workflows/ci.yml` (added Feb 3)
 
 ---
 
@@ -307,7 +327,38 @@ lsof -nP -iTCP:3000,3001 -sTCP:LISTEN
 
 ---
 
-## 11. Current Status Summary
+## 11. Cleanup & Refactoring (Feb 3, 2026)
+
+### Changes Made
+
+**Removed:**
+- Legacy NestJS scaffolding (`main.ts`, `app.module.ts`, `requests.controller.ts`, `requests.module.ts`)
+- Disabled files (`prisma.service.ts.disabled`, `.gitignore.save`)
+- Legacy server backup (`_archive/apps_api_src_apps_backup/`)
+- Package lockfiles (`apps/api/package-lock.json`, `apps/web/package-lock.json`)
+- Unused NestJS dependencies (`@nestjs/*`) from `apps/api/package.json`
+
+**Added:**
+- Root `tsconfig.json` with project references for monorepo support
+- Root `package.json` with workspace configuration
+- Frontend API proxy route `apps/web/pages/api/requests/[id].js` for `GET /api/requests/:id`
+- `.github/copilot-instructions.md` for AI agent guidance
+- `.github/workflows/ci.yml` for GitHub Actions CI/CD pipeline
+- Git repository with initial commit pushed to GitHub
+
+**Updated:**
+- `apps/api/package.json` scripts: use `ts-node src/server.ts` for dev, `tsc` for build
+- `.gitignore`: constrained aggressive patterns, added `.env.local`
+- `PROJECT_STATE.md`: documented all changes
+
+### Rationale
+
+The project had legacy NestJS scaffolding that was never used at runtime, making the codebase confusing for new developers. The cleanup focused on:
+- Removing dead code and backups
+- Clarifying that the backend is a raw HTTP server (not Express/NestJS)
+- Establishing monorepo structure with root configs
+- Adding CI/CD for early error detection
+- Documenting architectural decisions for future maintainers
 
 ### Completed
 
@@ -323,6 +374,8 @@ lsof -nP -iTCP:3000,3001 -sTCP:LISTEN
   ```
   Web → Next proxy → API → DB
   ```
+* **Project cleanup (Feb 3):** Removed dead NestJS code, added root configs, established CI/CD
+* **Frontend [id] route:** Implemented proxy for `GET /api/requests/:id` → backend
 
 ### Not Implemented Yet
 
