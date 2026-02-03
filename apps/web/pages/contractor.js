@@ -151,6 +151,9 @@ export default function ContractorPortal() {
                   Category
                 </th>
                 <th style={{ padding: "12px", textAlign: "left", fontWeight: 600, borderBottom: "2px solid #ddd" }}>
+                  Appliance / Model
+                </th>
+                <th style={{ padding: "12px", textAlign: "left", fontWeight: 600, borderBottom: "2px solid #ddd" }}>
                   Description
                 </th>
                 <th style={{ padding: "12px", textAlign: "left", fontWeight: 600, borderBottom: "2px solid #ddd" }}>
@@ -179,6 +182,25 @@ export default function ContractorPortal() {
                     </td>
                     <td style={{ padding: "10px", borderBottom: "1px solid #eee" }}>
                       {r.category || "(none)"}
+                    </td>
+                    <td style={{ padding: "10px", borderBottom: "1px solid #eee" }}>
+                      {r.appliance ? (
+                        <div>
+                          <div style={{ fontWeight: 500 }}>{r.appliance.name}</div>
+                          {r.appliance.assetModel ? (
+                            <div style={{ fontSize: 12, color: "#666" }}>
+                              {r.appliance.assetModel.manufacturer} {r.appliance.assetModel.model}
+                            </div>
+                          ) : (
+                            <div style={{ fontSize: 12, color: "#999" }}>(No model info)</div>
+                          )}
+                          {r.appliance.serial && (
+                            <div style={{ fontSize: 11, color: "#999" }}>SN: {r.appliance.serial}</div>
+                          )}
+                        </div>
+                      ) : (
+                        <div style={{ color: "#999" }}>(No appliance)</div>
+                      )}
                     </td>
                     <td style={{ padding: "10px", borderBottom: "1px solid #eee" }}>
                       <div style={{ fontWeight: 500 }}>{r.description}</div>

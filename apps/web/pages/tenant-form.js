@@ -8,6 +8,15 @@ export default function TenantForm() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [selectedAppliance, setSelectedAppliance] = useState("");
+  
+  // Request form states
+  const [showRequestForm, setShowRequestForm] = useState(false);
+  const [requestForm, setRequestForm] = useState({
+    description: "",
+    category: "",
+    estimatedCost: "",
+  });
+  const [submittingRequest, setSubmittingRequest] = useState(false);
 
   // Normalize phone input to E.164 format
   const normalizePhone = (input) => {
@@ -60,11 +69,71 @@ export default function TenantForm() {
       setTenant(data.data);
       setSelectedAppliance("");
       setSuccess(`Tenant found: ${data.data.name || "No name"}`);
+      setShowRequestForm(false);
     } catch (e) {
       setError(`Error: ${e.message}`);
       setTenant(null);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCreateRequest = async (e) => {
+    e.preventDefault();
+    
+    if (!requestForm.description || requestForm.description.length < 10) {
+      setError("Please describe the issue (at least 10 characters)");
+      return;
+    }
+
+    if (!requestForm.category) {
+      setError("Please select a category");
+      return;
+    }
+
+    setSubmittingRequest(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      const payload = {
+        description: requestForm.description,
+        category: requestForm.category,
+        estimatedCost: requestForm.estimatedCost ? parseInt(requestForm.estimatedCost) : null,
+        tenantId: tenant.id,
+        applianceId: selectedAppliance || null,
+      };
+
+      const response = await fetch("/api/requests", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.error?.message || "Failed to create request");
+        return;
+      }
+
+      setSuccess(
+        `✓ Request created successfully! Request ID: ${data.data.id.substring(0, 8)}...`
+      );
+      setRequestForm({ description: "", category: "", estimatedCost: "" });
+      setSelectedAppliance("");
+      setShowRequestForm(false);
+      
+      // Reset after 3 seconds
+      setTimeout(() => {
+        setPhone("");
+        setTenant(null);
+        setSuccess("");
+      }, 3000);
+    } catch (e) {
+      setError(`Error: ${e.message}`);
+    } finally {
+      setSubmittingRequest(false);
     }
   };
 
@@ -174,11 +243,93 @@ export default function TenantForm() {
           )}
 
           {/* Next Step Button */}
-          <button className={styles.button + " " + styles.primary}>
-            Create Maintenance Request →
+          <button
+            onClick={() => setShowRequestForm(!showRequestForm)}
+            className={styles.button}
+          >
+            {showRequestForm ? "Cancel" : "Create Maintenance Request →"}
           </button>
         </div>
       )}
+
+      {/* Request Form Section */}
+      {tenant && showRequestForm && (
+        <div className={styles.section}>
+          <h2>Describe the Issue</h2>
+
+          <form onSubmit={handleCreateRequest} className={styles.form}>
+            <div className={styles.formGroup}>
+              <label htmlFor="category">Category *</label>
+              <select
+                id="category"
+                value={requestForm.category}
+                onChange={(e) => setRequestForm({ ...requestForm, category: e.target.value })}
+                className={styles.input}
+                required
+              >
+                <option value="">-- Select a category --</option>
+                <option value="stove">Stove</option>
+                <option value="oven">Oven</option>
+                <option value="dishwasher">Dishwasher</option>
+                <option value="bathroom">Bathroom</option>
+                <option value="lighting">Lighting</option>
+              </select>
+            </div>
+
+            <div className={styles.formGroup}>
+              <label htmlFor="description">Description *</label>
+              <p className={styles.hint}>Describe what's wrong (at least 10 characters)</p>
+              <textarea
+                id="description"
+                value={requestForm.description}
+                onChange={(e) => setRequestForm({ ...requestForm, description: e.target.value })}
+                placeholder="e.g., The dishwasher won't drain and there's standing water at the bottom..."
+                className={styles.input}
+                rows={5}
+                required
+              />
+              <small>{requestForm.description.length} / 2000 characters</small>
+            </div>
+
+            <div className={styles.formGroup}>
+              <label htmlFor="estimatedCost">Estimated Cost (CHF, optional)</label>
+              <input
+                id="estimatedCost"
+                type="number"
+                value={requestForm.estimatedCost}
+                onChange={(e) => setRequestForm({ ...requestForm, estimatedCost: e.target.value })}
+                placeholder="e.g., 500"
+                min="0"
+                max="100000"
+                className={styles.input}
+              />
+            </div>
+
+            {selectedAppliance && tenant.appliances?.find((a) => a.id === selectedAppliance) && (
+              <div className={styles.infoBox}>
+                <strong>Selected Appliance:</strong>
+                <div>
+                  {tenant.appliances.find((a) => a.id === selectedAppliance)?.name}
+                  {tenant.appliances.find((a) => a.id === selectedAppliance)?.assetModel && (
+                    <>
+                      {" "}
+                      ({tenant.appliances.find((a) => a.id === selectedAppliance).assetModel.manufacturer}{" "}
+                      {tenant.appliances.find((a) => a.id === selectedAppliance).assetModel.model})
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+
+            <button type="submit" disabled={submittingRequest || !requestForm.description} className={styles.button}>
+              {submittingRequest ? "Submitting..." : "Submit Request"}
+            </button>
+          </form>
+        </div>
+      )}
+
+      {error && <div className={styles.error}>{error}</div>}
+      {success && <div className={styles.success}>{success}</div>}
 
       {/* Instructions */}
       {!tenant && (
