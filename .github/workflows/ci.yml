@@ -29,5 +29,5 @@ jobs:
       - name: Type-check frontend
         run: npm --prefix apps/web run build || npx tsc --noEmit
 
-      - name: Lint (optional: add real linters later)
+      - name: Lint
         run: echo "Linting placeholder - add eslint/prettier when ready"

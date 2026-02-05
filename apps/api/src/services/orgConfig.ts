@@ -4,7 +4,7 @@ export type OrgConfigDTO = {
   autoApproveLimit: number;
 };
 
-const DEFAULT_ORG_ID = "default-org";
+export const DEFAULT_ORG_ID = "default-org";
 
 export async function getOrgConfig(prisma: PrismaClient): Promise<OrgConfigDTO> {
   const config = await prisma.orgConfig.findUnique({

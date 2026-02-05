@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
 
+// Add global.css classes for layout and styling
+// Global CSS is imported in _app.js
+
 function badgeForStatus(status) {
   if (status === "PENDING_REVIEW")
     return { label: "Pending Manager", bg: "#fff5e6", border: "#ffd08a", color: "#7a4a00" };
@@ -23,12 +26,35 @@ function fmtDate(iso) {
 }
 
 export default function ContractorPortal() {
+    const [openTimeline, setOpenTimeline] = useState(null);
+    const [eventLoading, setEventLoading] = useState(false);
+    const [eventError, setEventError] = useState("");
+    const [eventData, setEventData] = useState({}); // { [requestId]: [events] }
+
+    async function loadTimeline(requestId) {
+      setEventLoading(true);
+      setEventError("");
+      try {
+        const r = await fetch(`/api/requests/${requestId}/events`);
+        const j = await r.json();
+        if (!r.ok) throw new Error(j?.error?.message || j?.error || "Failed to load events");
+        setEventData((prev) => ({ ...prev, [requestId]: j.data || [] }));
+      } catch (e) {
+        setEventError(String(e?.message || e));
+      } finally {
+        setEventLoading(false);
+      }
+    }
   const [contractorId, setContractorId] = useState(null);
+  const [contractor, setContractor] = useState(null);
   const [loading, setLoading] = useState(true);
   const [requests, setRequests] = useState([]);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [updating, setUpdating] = useState(null);
+  // Fallback input state hooks (must be top-level)
+  const [inputId, setInputId] = useState("");
+  const [inputError, setInputError] = useState("");
 
   // Load contractor ID from localStorage or query param
   useEffect(() => {
@@ -40,7 +66,7 @@ export default function ContractorPortal() {
       setContractorId(id);
       localStorage.setItem("contractorId", id);
     } else {
-      setError("No contractor ID provided. Use ?contractorId=<uuid>");
+      setError("");
       setLoading(false);
     }
   }, []);
@@ -55,7 +81,7 @@ export default function ContractorPortal() {
       setLoading(true);
 
       try {
-        const r = await fetch(`/api/requests/contractor/${contractorId}`);
+        const r = await fetch(`/api/requests/contractor?contractorId=${contractorId}`);
         const j = await r.json();
         if (!r.ok) throw new Error(j?.error?.message || j?.error || "Failed to load requests");
         setRequests(j?.data || []);
@@ -92,6 +118,15 @@ export default function ContractorPortal() {
     }
   }
 
+  // Fetch contractor info
+  useEffect(() => {
+    fetch(`/api/contractors?id=${contractorId}`)
+      .then(res => res.json())
+      .then(data => setContractor(data.data));
+  }, []);
+
+  // contractorId is already declared above or managed by state
+
   if (loading) {
     return (
       <div style={{ maxWidth: "900px", margin: "40px auto", padding: "16px", fontFamily: "system-ui" }}>
@@ -102,12 +137,37 @@ export default function ContractorPortal() {
   }
 
   if (!contractorId) {
+    function handleSubmit(e) {
+      e.preventDefault();
+      if (!inputId.trim()) {
+        setInputError("Please enter a contractor ID.");
+        return;
+      }
+      setContractorId(inputId.trim());
+      localStorage.setItem("contractorId", inputId.trim());
+      setInputError("");
+    }
     return (
       <div style={{ maxWidth: "900px", margin: "40px auto", padding: "16px", fontFamily: "system-ui" }}>
         <h1>Contractor Portal</h1>
-        <div style={{ padding: "12px", background: "#ffecec", border: "1px solid #ffb3b3" }}>
-          {error}
+        <div style={{ padding: "12px", background: "#ffecec", border: "1px solid #ffb3b3", marginBottom: "16px" }}>
+          No contractor ID provided. Enter your contractor ID below or use ?contractorId=&lt;uuid&gt; in the URL.
         </div>
+        <form onSubmit={handleSubmit} style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+          <input
+            type="text"
+            value={inputId}
+            onChange={e => setInputId(e.target.value)}
+            placeholder="Contractor ID (UUID)"
+            style={{ padding: "10px", borderRadius: "8px", border: "1px solid #ddd", width: "320px" }}
+          />
+          <button type="submit" style={{ padding: "10px 18px", borderRadius: "8px", border: "1px solid #111", background: "#111", color: "#fff", cursor: "pointer" }}>
+            Enter
+          </button>
+        </form>
+        {inputError && (
+          <div style={{ color: "crimson", marginTop: "10px" }}>{inputError}</div>
+        )}
       </div>
     );
   }
@@ -176,6 +236,7 @@ export default function ContractorPortal() {
                   const canComplete = r.status === "IN_PROGRESS";
 
                 return (
+                  <>
                   <tr key={r.id}>
                     <td style={{ padding: "10px", borderBottom: "1px solid #eee", whiteSpace: "nowrap" }}>
                       {fmtDate(r.createdAt)}
@@ -264,9 +325,53 @@ export default function ContractorPortal() {
                         {!canStartWork && !canComplete ? (
                           <span style={{ color: "#ccc", fontSize: 12 }}>(no actions)</span>
                         ) : null}
+                        <button
+                          style={{ padding: "6px 12px", background: "#2196f3", color: "white", border: "none", borderRadius: 4, cursor: "pointer" }}
+                          onClick={() => {
+                            if (openTimeline === r.id) {
+                              setOpenTimeline(null);
+                            } else {
+                              setOpenTimeline(r.id);
+                              loadTimeline(r.id);
+                            }
+                          }}
+                        >
+                          {openTimeline === r.id ? "Hide Timeline" : "Show Timeline"}
+                        </button>
                       </div>
                     </td>
                   </tr>
+                  {openTimeline === r.id && (
+                    <tr>
+                      <td colSpan={7} style={{ background: "#f9f9f9", padding: "18px 24px" }}>
+                        <div style={{ fontWeight: 600, marginBottom: 8 }}>Event Timeline</div>
+                        {eventLoading ? (
+                          <div style={{ color: "#888" }}>Loading...</div>
+                        ) : eventError ? (
+                          <div style={{ color: "crimson" }}>
+                            {eventError === "Not found" || eventError?.toLowerCase().includes("not found")
+                              ? "No timeline events found for this request."
+                              : eventError}
+                          </div>
+                        ) : (
+                          <ul style={{ margin: 0, padding: 0, listStyle: "none" }}>
+                            {(eventData[r.id] || []).length === 0 ? (
+                              <li style={{ color: "#aaa" }}>(No events logged yet)</li>
+                            ) : (
+                              eventData[r.id].map(ev => (
+                                <li key={ev.id} style={{ marginBottom: 10 }}>
+                                  <span style={{ fontWeight: 500 }}>{ev.type}</span>
+                                  {ev.message ? <>: <span>{ev.message}</span></> : null}
+                                  <span style={{ color: "#888", marginLeft: 12, fontSize: 12 }}>{fmtDate(ev.timestamp)}</span>
+                                </li>
+                              ))
+                            )}
+                          </ul>
+                        )}
+                      </td>
+                    </tr>
+                  )}
+                  </>
                 );
               })}
             </tbody>

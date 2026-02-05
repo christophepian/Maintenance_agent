@@ -1,3 +1,6 @@
+
+import React from "react";
+
 export default function ContractorsPage() {
   const [contractors, setContractors] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
@@ -10,13 +13,10 @@ export default function ContractorsPage() {
     serviceCategories: [],
   });
   const [message, setMessage] = React.useState("");
-
   const categories = ["stove", "oven", "dishwasher", "bathroom", "lighting"];
-
   React.useEffect(() => {
     fetchContractors();
   }, []);
-
   async function fetchContractors() {
     setLoading(true);
     try {
@@ -28,7 +28,6 @@ export default function ContractorsPage() {
     }
     setLoading(false);
   }
-
   async function handleSubmit(e) {
     e.preventDefault();
     try {
@@ -56,7 +55,6 @@ export default function ContractorsPage() {
       setMessage(`Error: ${String(e)}`);
     }
   }
-
   async function handleDelete(id) {
     if (!confirm("Deactivate this contractor?")) return;
     try {
@@ -71,7 +69,6 @@ export default function ContractorsPage() {
       setMessage(`Error: ${String(e)}`);
     }
   }
-
   function toggleCategory(cat) {
     setFormData((prev) => ({
       ...prev,
@@ -80,48 +77,26 @@ export default function ContractorsPage() {
         : [...prev.serviceCategories, cat],
     }));
   }
-
   return (
-    <div style={{ maxWidth: 800, margin: "40px auto", padding: "16px", fontFamily: "system-ui" }}>
-      <h1 style={{ marginBottom: 8 }}>Contractors</h1>
-      <p style={{ marginTop: 0, color: "#555" }}>Manage contractors and their service areas.</p>
-
+    <div className="main-container">
+      <h1>Contractors</h1>
+      <p className="subtle">Manage contractors and their service areas.</p>
       {message && (
-        <div style={{ padding: 12, marginBottom: 16, backgroundColor: "#f0f0f0", borderRadius: 4 }}>
-          {message}
-        </div>
+        <div className="notice" style={{ marginBottom: 16 }}>{message}</div>
       )}
-
       <button
         onClick={() => setFormVisible(!formVisible)}
-        style={{
-          padding: "8px 16px",
-          marginBottom: 16,
-          backgroundColor: "#007bff",
-          color: "white",
-          border: "none",
-          borderRadius: 4,
-          cursor: "pointer",
-        }}
+        className="button-primary"
+        style={{ marginBottom: 16 }}
       >
         {formVisible ? "Cancel" : "Add Contractor"}
       </button>
-
       {formVisible && (
-        <form
-          onSubmit={handleSubmit}
-          style={{
-            display: "grid",
-            gap: 12,
-            marginBottom: 24,
-            padding: 16,
-            backgroundColor: "#f9f9f9",
-            borderRadius: 4,
-          }}
-        >
-          <label style={{ display: "grid", gap: 6 }}>
-            <div style={{ fontWeight: 600 }}>Name</div>
+        <form onSubmit={handleSubmit} className="card" style={{ display: 'grid', gap: 12, marginBottom: 24 }}>
+          <label className="label">
+            Name
             <input
+              className="input"
               type="text"
               value={formData.name}
               onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
@@ -129,10 +104,10 @@ export default function ContractorsPage() {
               required
             />
           </label>
-
-          <label style={{ display: "grid", gap: 6 }}>
-            <div style={{ fontWeight: 600 }}>Phone</div>
+          <label className="label">
+            Phone
             <input
+              className="input"
               type="tel"
               value={formData.phone}
               onChange={(e) => setFormData((prev) => ({ ...prev, phone: e.target.value }))}
@@ -140,10 +115,10 @@ export default function ContractorsPage() {
               required
             />
           </label>
-
-          <label style={{ display: "grid", gap: 6 }}>
-            <div style={{ fontWeight: 600 }}>Email</div>
+          <label className="label">
+            Email
             <input
+              className="input"
               type="email"
               value={formData.email}
               onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
@@ -151,10 +126,10 @@ export default function ContractorsPage() {
               required
             />
           </label>
-
-          <label style={{ display: "grid", gap: 6 }}>
-            <div style={{ fontWeight: 600 }}>Hourly Rate (CHF)</div>
+          <label className="label">
+            Hourly Rate (CHF)
             <input
+              className="input"
               type="number"
               value={formData.hourlyRate}
               onChange={(e) => setFormData((prev) => ({ ...prev, hourlyRate: parseInt(e.target.value) }))}
@@ -162,9 +137,8 @@ export default function ContractorsPage() {
               max="500"
             />
           </label>
-
-          <div style={{ display: "grid", gap: 6 }}>
-            <div style={{ fontWeight: 600 }}>Service Categories</div>
+          <div>
+            <div className="label" style={{ marginBottom: 6 }}>Service Categories</div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 8 }}>
               {categories.map((cat) => (
                 <label key={cat} style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -178,24 +152,11 @@ export default function ContractorsPage() {
               ))}
             </div>
           </div>
-
-          <button
-            type="submit"
-            style={{
-              padding: "8px 16px",
-              backgroundColor: "#28a745",
-              color: "white",
-              border: "none",
-              borderRadius: 4,
-              cursor: "pointer",
-              fontWeight: 600,
-            }}
-          >
+          <button type="submit" className="button-primary">
             Save Contractor
           </button>
         </form>
       )}
-
       {loading ? (
         <p>Loading contractors...</p>
       ) : contractors.length === 0 ? (
@@ -205,12 +166,8 @@ export default function ContractorsPage() {
           {contractors.map((c) => (
             <div
               key={c.id}
-              style={{
-                padding: 12,
-                border: "1px solid #ddd",
-                borderRadius: 4,
-                backgroundColor: c.isActive ? "#fff" : "#f5f5f5",
-              }}
+              className="card"
+              style={{ background: c.isActive ? undefined : "#f5f5f5" }}
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start" }}>
                 <div>
@@ -226,21 +183,14 @@ export default function ContractorsPage() {
                   </p>
                   {!c.isActive && (
                     <p style={{ margin: "4px 0 0 0", fontSize: "12px", color: "#c00" }}>
-                      ⚠️ Deactivated
+                      \u26a0\ufe0f Deactivated
                     </p>
                   )}
                 </div>
                 <button
                   onClick={() => handleDelete(c.id)}
-                  style={{
-                    padding: "4px 12px",
-                    backgroundColor: "#dc3545",
-                    color: "white",
-                    border: "none",
-                    borderRadius: 4,
-                    cursor: "pointer",
-                    fontSize: "12px",
-                  }}
+                  className="button-secondary"
+                  style={{ background: "#dc3545", color: "white", fontSize: 12, padding: "4px 12px" }}
                 >
                   Deactivate
                 </button>
@@ -252,5 +202,3 @@ export default function ContractorsPage() {
     </div>
   );
 }
-
-import React from "react";

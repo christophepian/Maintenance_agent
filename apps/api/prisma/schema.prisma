@@ -1,3 +1,25 @@
+enum RequestEventType {
+  ARRIVED
+  PARTS_ORDERED
+  COMPLETED
+  NOTE
+  OTHER
+}
+
+model RequestEvent {
+  id           String           @id @default(uuid())
+  requestId    String
+  contractorId String
+  type         RequestEventType
+  message      String
+  timestamp    DateTime        @default(now())
+
+  request      Request         @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  contractor   Contractor      @relation(fields: [contractorId], references: [id], onDelete: Cascade)
+
+  @@index([requestId])
+  @@index([contractorId])
+}
 generator client {
   provider = "prisma-client-js"
 }
@@ -17,12 +39,13 @@ enum RequestStatus {
   PENDING_REVIEW
   AUTO_APPROVED
   APPROVED
+  ASSIGNED
   IN_PROGRESS
   COMPLETED
 }
 
 model Org {
-  id           String        @id @default(uuid())
+  id           String       @id @default(uuid())
   name         String
   users        User[]
   contractors  Contractor[]
@@ -45,38 +68,74 @@ model User {
   org   Org    @relation(fields: [orgId], references: [id])
   role  Role
   name  String
+  email String?
+  passwordHash String? // bcrypt hash; null = legacy/dev user
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([orgId, email], name: "user_org_email_unique")
 }
 
 model Contractor {
-  id               String    @id @default(uuid())
-  orgId            String
-  org              Org       @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  name             String
-  phone            String
-  email            String
-  hourlyRate       Int       @default(50) // CHF
-  serviceCategories String  // JSON array of categories: ["stove", "oven", "dishwasher"]
-  isActive         Boolean   @default(true)
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
-  requests         Request[]
+  id                String    @id @default(uuid())
+  orgId             String
+  org               Org       @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  name              String
+  phone             String
+  email             String
+  hourlyRate        Int       @default(50) // CHF
+  serviceCategories String    // JSON array of categories: ["stove", "oven", "dishwasher"]
+  isActive          Boolean   @default(true)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  requests          Request[]
+  events            RequestEvent[]
 }
 
 model Request {
-  id                String         @id @default(uuid())
-  description       String
-  category          String?
-  estimatedCost     Int?           // CHF (nullable = truly optional)
-  status            RequestStatus  @default(PENDING_REVIEW)
+  id                   String        @id @default(uuid())
+  description          String
+  category             String?
+  estimatedCost        Int?          // CHF (nullable = truly optional)
+  status               RequestStatus @default(PENDING_REVIEW)
+
+  // NEW: store tenant-entered phone even when tenantId is null
+  contactPhone         String?
+
   assignedContractorId String?
-  assignedContractor Contractor?   @relation(fields: [assignedContractorId], references: [id])
-  tenantId          String?
-  tenant            Tenant?        @relation(fields: [tenantId], references: [id])
-  unitId            String?
-  unit              Unit?          @relation(fields: [unitId], references: [id])
-  applianceId       String?
-  appliance         Appliance?     @relation(fields: [applianceId], references: [id])
-  createdAt         DateTime       @default(now())
+  assignedContractor   Contractor?   @relation(fields: [assignedContractorId], references: [id])
+
+  tenantId             String?
+  tenant               Tenant?       @relation(fields: [tenantId], references: [id])
+
+  unitId               String?
+  unit                 Unit?         @relation(fields: [unitId], references: [id])
+
+  applianceId          String?
+  appliance            Appliance?    @relation(fields: [applianceId], references: [id])
+
+  contractorNotes      String?
+  startedAt            DateTime?
+  completedAt          DateTime?
+  updatedAt            DateTime      @updatedAt @default(now())
+
+
+  createdAt            DateTime      @default(now())
+  events                RequestEvent[]
+}
+
+
+model Event {
+  id           String   @id @default(uuid())
+  orgId        String
+  type         String
+  actorUserId  String?
+  requestId    String?
+  payload      String   @default("{}") // JSON string for MVP
+  createdAt    DateTime @default(now())
+
+  @@index([orgId, createdAt])
+  @@index([requestId])
 }
 
 model Tenant {
@@ -126,32 +185,32 @@ model Unit {
 }
 
 model Appliance {
-  id          String      @id @default(uuid())
-  unitId      String
-  unit        Unit        @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  id           String      @id @default(uuid())
+  unitId       String
+  unit         Unit        @relation(fields: [unitId], references: [id], onDelete: Cascade)
   assetModelId String?
-  assetModel  AssetModel? @relation(fields: [assetModelId], references: [id])
-  name        String
-  serial      String?
-  installDate DateTime?
-  notes       String?
-  requests    Request[]
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  assetModel   AssetModel? @relation(fields: [assetModelId], references: [id])
+  name         String
+  serial       String?
+  installDate  DateTime?
+  notes        String?
+  requests     Request[]
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
 
   @@index([unitId])
 }
 
 model AssetModel {
-  id            String      @id @default(uuid())
-  orgId         String
-  manufacturer  String
-  model         String
-  category      String
-  specs         String?     // JSON specs
-  appliances    Appliance[]
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  id           String      @id @default(uuid())
+  orgId        String
+  manufacturer String
+  model        String
+  category     String
+  specs        String?     // JSON specs
+  appliances   Appliance[]
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
 
   @@unique([orgId, manufacturer, model])
   @@index([orgId, category])

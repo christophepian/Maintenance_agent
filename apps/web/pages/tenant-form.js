@@ -1,349 +1,285 @@
-import { useState, useEffect } from "react";
-import styles from "../styles/Form.module.css";
+import { useEffect, useState } from "react";
+
+/**
+ * Tenant Form (Slice 4)
+ * - Phone-based tenant identity
+ * - Unit + appliance context
+ * - Plain JS (NO TypeScript generics)
+ */
+
+
 
 export default function TenantForm() {
+  const API_BASE =
+    process.env.NEXT_PUBLIC_API_BASE_URL ||
+    process.env.API_BASE_URL ||
+    "http://127.0.0.1:3001";
+
   const [phone, setPhone] = useState("");
   const [tenant, setTenant] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
-  const [selectedAppliance, setSelectedAppliance] = useState("");
-  
-  // Request form states
-  const [showRequestForm, setShowRequestForm] = useState(false);
-  const [requestForm, setRequestForm] = useState({
-    description: "",
-    category: "",
-    estimatedCost: "",
-  });
-  const [submittingRequest, setSubmittingRequest] = useState(false);
+  const [buildings, setBuildings] = useState([]);
+  const [units, setUnits] = useState([]);
+  const [appliances, setAppliances] = useState([]);
+  const [buildingId, setBuildingId] = useState("");
+  const [unitId, setUnitId] = useState("");
+  const [applianceId, setApplianceId] = useState("");
+  const [category, setCategory] = useState("oven");
+  const [description, setDescription] = useState("");
+  const [estimatedCost, setEstimatedCost] = useState("");
+  const [notice, setNotice] = useState(null); // { type: "ok" | "err", msg: string }
+  const [loadingTenant, setLoadingTenant] = useState(false);
 
-  // Normalize phone input to E.164 format
-  const normalizePhone = (input) => {
-    // Remove all non-numeric characters except +
-    let cleaned = input.replace(/[^\d+]/g, "");
-
-    // If starts with +, keep it; otherwise add it
-    if (!cleaned.startsWith("+")) {
-      cleaned = "+" + cleaned;
-    }
-
-    // Swiss default: if +41 not present and input starts with 0, replace with +41
-    if (!cleaned.includes("41") && cleaned.startsWith("+0")) {
-      cleaned = "+41" + cleaned.substring(2);
-    } else if (!cleaned.includes("41") && cleaned.startsWith("+")) {
-      // For other countries, keep as-is
-    }
-
-    return cleaned;
-  };
-
-  const handlePhoneChange = (e) => {
-    const normalized = normalizePhone(e.target.value);
-    setPhone(normalized);
-    setError("");
-    setTenant(null);
-  };
-
-  const handleLookupTenant = async () => {
-    if (!phone || phone.length < 5) {
-      setError("Please enter a valid phone number");
-      return;
-    }
-
-    setLoading(true);
-    setError("");
-    setSuccess("");
-
+  function ok(msg) {
+    setNotice({ type: "ok", msg });
+    setTimeout(() => setNotice(null), 4000);
+  }
+  function err(msg) {
+    setNotice({ type: "err", msg });
+  }
+  async function api(path, options = {}) {
+    const res = await fetch(`${API_BASE}${path}`, {
+      ...options,
+      headers: {
+        "Content-Type": "application/json",
+        ...(options.headers || {}),
+      },
+    });
+    const text = await res.text();
+    let parsed = null;
     try {
-      const response = await fetch(`/api/tenants?phone=${encodeURIComponent(phone)}`);
-      const data = await response.json();
-
-      if (!response.ok) {
-        setError(data.error?.message || "Failed to lookup tenant");
+      parsed = text ? JSON.parse(text) : null;
+    } catch {
+      parsed = null;
+    }
+    if (!res.ok) {
+      const msg =
+        parsed?.error?.message ||
+        parsed?.message ||
+        `Request failed (${res.status})`;
+      throw new Error(msg);
+    }
+    return parsed?.data;
+  }
+  async function lookupTenant() {
+    const p = phone.trim();
+    if (!p) return;
+    setLoadingTenant(true);
+    try {
+      const found = await api(`/tenants?phone=${encodeURIComponent(p)}`);
+      if (found) {
+        setTenant(found);
+        ok("Tenant identified by phone.");
+      } else {
         setTenant(null);
-        setLoading(false);
-        return;
+        err("No tenant found for this phone.");
       }
-
-      setTenant(data.data);
-      setSelectedAppliance("");
-      setSuccess(`Tenant found: ${data.data.name || "No name"}`);
-      setShowRequestForm(false);
     } catch (e) {
-      setError(`Error: ${e.message}`);
       setTenant(null);
+      err(`Lookup failed: ${e.message}`);
     } finally {
-      setLoading(false);
+      setLoadingTenant(false);
     }
-  };
-
-  const handleCreateRequest = async (e) => {
+  }
+  async function createTenant() {
+    const p = phone.trim();
+    if (!p) return err("Phone is required.");
+    setLoadingTenant(true);
+    try {
+      const created = await api(`/tenants`, {
+        method: "POST",
+        body: JSON.stringify({ phone: p }),
+      });
+      setTenant(created);
+      ok("Tenant created (or found).");
+    } catch (e) {
+      err(`Create tenant failed: ${e.message}`);
+    } finally {
+      setLoadingTenant(false);
+    }
+  }
+  useEffect(() => {
+    api(`/buildings`)
+      .then((rows) => setBuildings(Array.isArray(rows) ? rows : []))
+      .catch(() => {});
+  }, []);
+  useEffect(() => {
+    if (!buildingId) {
+      setUnits([]);
+      setUnitId("");
+      setAppliances([]);
+      setApplianceId("");
+      return;
+    }
+    api(`/buildings/${buildingId}/units`)
+      .then((rows) => setUnits(Array.isArray(rows) ? rows : []))
+      .catch(() => {});
+  }, [buildingId]);
+  useEffect(() => {
+    if (!unitId) {
+      setAppliances([]);
+      setApplianceId("");
+      return;
+    }
+    api(`/units/${unitId}/appliances`)
+      .then((rows) => setAppliances(Array.isArray(rows) ? rows : []))
+      .catch(() => {});
+  }, [unitId]);
+  async function submitRequest(e) {
     e.preventDefault();
-    
-    if (!requestForm.description || requestForm.description.length < 10) {
-      setError("Please describe the issue (at least 10 characters)");
-      return;
-    }
-
-    if (!requestForm.category) {
-      setError("Please select a category");
-      return;
-    }
-
-    setSubmittingRequest(true);
-    setError("");
-    setSuccess("");
-
+    if (!description.trim()) return err("Description is required.");
+    const cost = String(estimatedCost).trim();
+    const costNum = cost ? Number(cost) : null;
     try {
       const payload = {
-        description: requestForm.description,
-        category: requestForm.category,
-        estimatedCost: requestForm.estimatedCost ? parseInt(requestForm.estimatedCost) : null,
-        tenantId: tenant.id,
-        applianceId: selectedAppliance || null,
+        description,
+        category,
+        contactPhone: phone.trim() || undefined,
+        estimatedCost: Number.isFinite(costNum) ? costNum : undefined,
+        tenantId: tenant?.id || undefined,
+        unitId: unitId || tenant?.unitId || undefined,
+        applianceId: applianceId || undefined,
       };
-
-      const response = await fetch("/api/requests", {
+      const created = await api(`/requests`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        setError(data.error?.message || "Failed to create request");
-        return;
-      }
-
-      setSuccess(
-        `✓ Request created successfully! Request ID: ${data.data.id.substring(0, 8)}...`
-      );
-      setRequestForm({ description: "", category: "", estimatedCost: "" });
-      setSelectedAppliance("");
-      setShowRequestForm(false);
-      
-      // Reset after 3 seconds
-      setTimeout(() => {
-        setPhone("");
-        setTenant(null);
-        setSuccess("");
-      }, 3000);
-    } catch (e) {
-      setError(`Error: ${e.message}`);
-    } finally {
-      setSubmittingRequest(false);
+      ok(`Request created with status: ${created?.status || "OK"}`);
+      setDescription("");
+      setEstimatedCost("");
+    } catch (e2) {
+      err(`Create request failed: ${e2.message}`);
     }
-  };
-
-  const handleKeyPress = (e) => {
-    if (e.key === "Enter") {
-      handleLookupTenant();
-    }
-  };
-
+  }
+  const tenantUnitLabel = tenant?.unit?.unitNumber
+    ? tenant.unit.unitNumber
+    : tenant?.unitId
+    ? tenant.unitId
+    : "\u2014";
   return (
-    <div className={styles.container}>
-      <h1>Tenant Request Form</h1>
-
-      {/* Phone Lookup Section */}
-      <div className={styles.section}>
-        <h2>Who are you?</h2>
-        <p className={styles.hint}>Enter your phone number to get started</p>
-
-        <div className={styles.formGroup}>
-          <label htmlFor="phone">Phone Number (e.g., +41 79 312 3456)</label>
-          <input
-            id="phone"
-            type="tel"
-            placeholder="+41 79 312 3456"
-            value={phone}
-            onChange={handlePhoneChange}
-            onKeyPress={handleKeyPress}
-            disabled={loading}
-            className={styles.input}
-          />
-        </div>
-
-        <button
-          onClick={handleLookupTenant}
-          disabled={loading || !phone}
-          className={styles.button}
-        >
-          {loading ? "Looking up..." : "Find My Unit"}
-        </button>
-
-        {error && <div className={styles.error}>{error}</div>}
-        {success && <div className={styles.success}>{success}</div>}
+    <div className="main-container">
+      <h1>Tenant request (by phone)</h1>
+      <div className="subtle">
+        Backend: <code className="code">{API_BASE}</code>
       </div>
-
-      {/* Tenant & Unit Info Section */}
-      {tenant && (
-        <div className={styles.section}>
-          <h2>Your Information</h2>
-
-          <div className={styles.infoBox}>
-            <div className={styles.infoRow}>
-              <strong>Phone:</strong>
-              <span>{tenant.phone}</span>
-            </div>
-            {tenant.name && (
-              <div className={styles.infoRow}>
-                <strong>Name:</strong>
-                <span>{tenant.name}</span>
-              </div>
-            )}
-            {tenant.email && (
-              <div className={styles.infoRow}>
-                <strong>Email:</strong>
-                <span>{tenant.email}</span>
-              </div>
-            )}
-            {tenant.unit && (
-              <>
-                <div className={styles.infoRow}>
-                  <strong>Unit:</strong>
-                  <span>{tenant.unit.unitNumber}{tenant.unit.floor ? ` (Floor ${tenant.unit.floor})` : ""}</span>
-                </div>
-              </>
-            )}
-          </div>
-
-          {/* Appliances Section */}
-          {tenant.appliances && tenant.appliances.length > 0 && (
-            <div className={styles.formGroup}>
-              <label htmlFor="appliance">What needs repair? (optional)</label>
-              <select
-                id="appliance"
-                value={selectedAppliance}
-                onChange={(e) => setSelectedAppliance(e.target.value)}
-                className={styles.input}
-              >
-                <option value="">-- Select an appliance --</option>
-                {tenant.appliances.map((app) => (
-                  <option key={app.id} value={app.id}>
-                    {app.name}
-                    {app.assetModel
-                      ? ` (${app.assetModel.manufacturer} ${app.assetModel.model})`
-                      : ""}
-                  </option>
-                ))}
-              </select>
-              {selectedAppliance && tenant.appliances.find((a) => a.id === selectedAppliance)?.serial && (
-                <p className={styles.hint}>
-                  Serial: {tenant.appliances.find((a) => a.id === selectedAppliance).serial}
-                </p>
-              )}
-            </div>
-          )}
-
-          {tenant.appliances && tenant.appliances.length === 0 && (
-            <p className={styles.hint}>No appliances registered for your unit yet.</p>
-          )}
-
-          {/* Next Step Button */}
+      {notice ? (
+        <div className={`notice ${notice.type === "ok" ? "notice-ok" : "notice-err"}`}>
+          {notice.msg}
+        </div>
+      ) : null}
+      <div className="card">
+        <label className="label">Phone number</label>
+        <input
+          className="input"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          onBlur={lookupTenant}
+          placeholder="+41 79 123 45 67"
+        />
+        <div className="row">
           <button
-            onClick={() => setShowRequestForm(!showRequestForm)}
-            className={styles.button}
+            type="button"
+            className="button-secondary"
+            onClick={lookupTenant}
+            disabled={loadingTenant || !phone.trim()}
           >
-            {showRequestForm ? "Cancel" : "Create Maintenance Request →"}
+            {loadingTenant ? "Looking up\u2026" : "Lookup"}
+          </button>
+          <button
+            type="button"
+            className="button-primary"
+            onClick={createTenant}
+            disabled={loadingTenant || !phone.trim()}
+          >
+            {loadingTenant ? "Working\u2026" : tenant ? "Re-create / Find" : "Create tenant"}
           </button>
         </div>
-      )}
-
-      {/* Request Form Section */}
-      {tenant && showRequestForm && (
-        <div className={styles.section}>
-          <h2>Describe the Issue</h2>
-
-          <form onSubmit={handleCreateRequest} className={styles.form}>
-            <div className={styles.formGroup}>
-              <label htmlFor="category">Category *</label>
-              <select
-                id="category"
-                value={requestForm.category}
-                onChange={(e) => setRequestForm({ ...requestForm, category: e.target.value })}
-                className={styles.input}
-                required
-              >
-                <option value="">-- Select a category --</option>
-                <option value="stove">Stove</option>
-                <option value="oven">Oven</option>
-                <option value="dishwasher">Dishwasher</option>
-                <option value="bathroom">Bathroom</option>
-                <option value="lighting">Lighting</option>
-              </select>
-            </div>
-
-            <div className={styles.formGroup}>
-              <label htmlFor="description">Description *</label>
-              <p className={styles.hint}>Describe what's wrong (at least 10 characters)</p>
-              <textarea
-                id="description"
-                value={requestForm.description}
-                onChange={(e) => setRequestForm({ ...requestForm, description: e.target.value })}
-                placeholder="e.g., The dishwasher won't drain and there's standing water at the bottom..."
-                className={styles.input}
-                rows={5}
-                required
-              />
-              <small>{requestForm.description.length} / 2000 characters</small>
-            </div>
-
-            <div className={styles.formGroup}>
-              <label htmlFor="estimatedCost">Estimated Cost (CHF, optional)</label>
-              <input
-                id="estimatedCost"
-                type="number"
-                value={requestForm.estimatedCost}
-                onChange={(e) => setRequestForm({ ...requestForm, estimatedCost: e.target.value })}
-                placeholder="e.g., 500"
-                min="0"
-                max="100000"
-                className={styles.input}
-              />
-            </div>
-
-            {selectedAppliance && tenant.appliances?.find((a) => a.id === selectedAppliance) && (
-              <div className={styles.infoBox}>
-                <strong>Selected Appliance:</strong>
-                <div>
-                  {tenant.appliances.find((a) => a.id === selectedAppliance)?.name}
-                  {tenant.appliances.find((a) => a.id === selectedAppliance)?.assetModel && (
-                    <>
-                      {" "}
-                      ({tenant.appliances.find((a) => a.id === selectedAppliance).assetModel.manufacturer}{" "}
-                      {tenant.appliances.find((a) => a.id === selectedAppliance).assetModel.model})
-                    </>
-                  )}
-                </div>
-              </div>
-            )}
-
-            <button type="submit" disabled={submittingRequest || !requestForm.description} className={styles.button}>
-              {submittingRequest ? "Submitting..." : "Submit Request"}
-            </button>
-          </form>
+        <div className="help">
+          {tenant ? (
+            <>
+              Tenant ID: <code className="code-small">{tenant.id}</code> \u2022 Phone:{" "}
+              <strong>{tenant.phone || phone}</strong> \u2022 Unit:{" "}
+              <strong>{tenantUnitLabel}</strong>
+            </>
+          ) : (
+            <>No tenant loaded yet. Enter phone \u2192 Lookup, or Create.</>
+          )}
         </div>
-      )}
-
-      {error && <div className={styles.error}>{error}</div>}
-      {success && <div className={styles.success}>{success}</div>}
-
-      {/* Instructions */}
-      {!tenant && (
-        <div className={styles.section}>
-          <h3>How it works:</h3>
-          <ol>
-            <li>Enter your phone number</li>
-            <li>We'll find your unit and list your appliances</li>
-            <li>Select which appliance needs repair</li>
-            <li>Describe the issue and submit</li>
-            <li>A contractor will be assigned automatically</li>
-          </ol>
+      </div>
+      <form onSubmit={submitRequest} className="card">
+        <h2>Request context</h2>
+        <label className="label">Building</label>
+        <select
+          className="input"
+          value={buildingId}
+          onChange={(e) => setBuildingId(e.target.value)}
+        >
+          <option value="">Select\u2026</option>
+          {buildings.map((b) => (
+            <option key={b.id} value={b.id}>
+              {b.name}
+            </option>
+          ))}
+        </select>
+        <label className="label">Unit</label>
+        <select
+          className="input"
+          value={unitId}
+          onChange={(e) => setUnitId(e.target.value)}
+          disabled={!buildingId}
+        >
+          <option value="">{buildingId ? "Select\u2026" : "Select building first"}</option>
+          {units.map((u) => (
+            <option key={u.id} value={u.id}>
+              {u.unitNumber ? `Unit ${u.unitNumber}${u.floor ? ` (floor ${u.floor})` : ""}` : u.id}
+            </option>
+          ))}
+        </select>
+        <label className="label">Appliance</label>
+        <select
+          className="input"
+          value={applianceId}
+          onChange={(e) => setApplianceId(e.target.value)}
+          disabled={!unitId}
+        >
+          <option value="">{unitId ? "Select\u2026" : "Select unit first"}</option>
+          {appliances.map((a) => (
+            <option key={a.id} value={a.id}>
+              {a.name}
+              {a.serial ? ` (${a.serial})` : ""}
+            </option>
+          ))}
+        </select>
+        <label className="label">Category</label>
+        <select className="input" value={category} onChange={(e) => setCategory(e.target.value)}>
+          {["stove", "oven", "dishwasher", "bathroom", "lighting"].map((c) => (
+            <option key={c} value={c}>
+              {c}
+            </option>
+          ))}
+        </select>
+        <label className="label">Description</label>
+        <textarea
+          className="input textarea"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          placeholder="Describe the issue\u2026"
+        />
+        <label className="label">Estimated cost (CHF)</label>
+        <input
+          className="input"
+          type="number"
+          value={estimatedCost}
+          onChange={(e) => setEstimatedCost(e.target.value)}
+          placeholder="e.g. 150"
+        />
+        <button className="button-primary" type="submit">
+          Submit request
+        </button>
+        <div className="help">
+          This will include: tenantId ({tenant?.id ? "yes" : "no"}), unitId (
+          {unitId || tenant?.unitId ? "yes" : "no"}), applianceId ({applianceId ? "yes" : "no"}).
         </div>
-      )}
+      </form>
     </div>
   );
 }

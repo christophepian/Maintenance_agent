@@ -1,0 +1,141 @@
+/*
+  Global styles for Maintenance Agent web app
+  Extracted from manager.js as the reference style system
+*/
+
+:root {
+  --font-main: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  --color-bg: #fafafa;
+  --color-card: #fff;
+  --color-border: #ddd;
+  --color-border-strong: #111;
+  --color-primary: #111;
+  --color-primary-text: #fff;
+  --color-secondary: #fff;
+  --color-secondary-border: #ddd;
+  --color-error-bg: #ffecec;
+  --color-error-border: #ffb3b3;
+  --color-success-bg: #eefaf1;
+  --color-success-border: #7bd89a;
+  --radius: 10px;
+  --radius-card: 12px;
+  --radius-table: 10px;
+  --input-padding: 10px;
+  --card-padding: 16px;
+}
+
+body {
+  font-family: var(--font-main);
+  background: var(--color-bg);
+  margin: 0;
+  color: #222;
+}
+
+.main-container {
+  max-width: 980px;
+  margin: 40px auto;
+  padding: 16px;
+}
+
+h1, h2 {
+  margin-bottom: 6px;
+}
+
+.card {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  padding: var(--card-padding);
+  background: var(--color-card);
+  margin-bottom: 16px;
+}
+
+.label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.input, select, textarea {
+  width: 100%;
+  padding: var(--input-padding);
+  border-radius: var(--radius);
+  border: 1px solid var(--color-border);
+  margin-bottom: 12px;
+  font-family: inherit;
+  font-size: 1rem;
+  box-sizing: border-box;
+}
+
+.textarea {
+  min-height: 90px;
+}
+
+.button-primary {
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  border: 1px solid var(--color-primary);
+  background: var(--color-primary);
+  color: var(--color-primary-text);
+  cursor: pointer;
+}
+
+.button-secondary {
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  border: 1px solid var(--color-secondary-border);
+  background: var(--color-secondary);
+  cursor: pointer;
+}
+
+.notice {
+  padding: 12px;
+  border-radius: var(--radius);
+  margin-bottom: 12px;
+  border: 1px solid var(--color-border);
+}
+
+.notice-ok {
+  background: var(--color-success-bg);
+  border-color: var(--color-success-border);
+}
+
+.notice-err {
+  background: var(--color-error-bg);
+  border-color: var(--color-error-border);
+}
+
+.code {
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  font-family: monospace;
+}
+
+.code-small {
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  font-size: 12px;
+  font-family: monospace;
+}
+
+.row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-top: 4px;
+}
+
+.help {
+  font-size: 13px;
+  color: #555;
+  margin-top: 8px;
+}
+
+.subtle {
+  color: #555;
+  font-size: 13px;
+  margin-bottom: 16px;
+}

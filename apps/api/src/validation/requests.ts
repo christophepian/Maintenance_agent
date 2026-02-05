@@ -6,6 +6,12 @@ function normalizeDescription(s: string) {
   return (s || "").trim().replace(/\s+/g, " ");
 }
 
+function normalizePhoneLoose(s: string) {
+  // Keep validation permissive here. Backend service can apply stricter E.164 normalization if available.
+  // This schema just ensures we don't accept empty strings.
+  return (s || "").trim().replace(/\s+/g, " ");
+}
+
 export const CreateRequestSchema = z.object({
   description: z
     .string()
@@ -23,12 +29,19 @@ export const CreateRequestSchema = z.object({
     })
     .optional(),
 
-  // NEW (optional for backwards compatibility)
+  // estimatedCost optional for backwards compatibility
   estimatedCost: z
     .number()
     .int()
     .min(0, { message: "estimatedCost must be >= 0" })
     .max(100000, { message: "estimatedCost must be <= 100000" })
+    .optional(),
+
+  // NEW: always allow a contact phone for follow-up, even when tenantId is not recognized
+  contactPhone: z
+    .string()
+    .transform((s) => normalizePhoneLoose(s))
+    .refine((s) => s.length > 0, { message: "contactPhone cannot be empty" })
     .optional(),
 
   // Tenant asset context

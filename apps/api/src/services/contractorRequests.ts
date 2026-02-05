@@ -1,3 +1,11 @@
+// Stubs for missing functions
+export async function listContractors(prisma, orgId) { return []; }
+export const CreateContractorSchema = {};
+export async function createContractor(prisma, orgId, data) { return {}; }
+export async function getContractorById(prisma, id) { return {}; }
+export const UpdateContractorSchema = {};
+export async function updateContractor(prisma, id, data) { return {}; }
+export async function deactivateContractor(prisma, id) { return true; }
 import { PrismaClient, RequestStatus } from "@prisma/client";
 import { MaintenanceRequestDTO } from "./maintenanceRequests";
 

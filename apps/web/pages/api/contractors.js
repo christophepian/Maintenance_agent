@@ -39,7 +39,13 @@ export default async function handler(req, res) {
 
     if (req.method === "GET") {
       let url = `${baseUrl}/contractors`;
-      if (id) url = `${baseUrl}/contractors/${id}`;
+      // support GET /api/contractors/match?category=...
+      const category = req.query?.category;
+      if (category) {
+        url = `${baseUrl}/contractors/match?category=${encodeURIComponent(category)}`;
+      } else if (id) {
+        url = `${baseUrl}/contractors/${id}`;
+      }
 
       const r = await fetch(url);
       const j = await safeJson(r);

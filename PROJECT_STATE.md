@@ -1,6 +1,6 @@
 # Maintenance Agent — Project State
 
-**Last updated:** 2026-02-03 (Slice 2 complete)
+**Last updated:** 2026-02-05 (Auth & Testing scaffolded) — developer fixes applied
 
 ---
 
@@ -357,6 +357,21 @@ cd apps/web
 npm run dev
 ```
 
+Quick dev restart (pick when files changed):
+```bash
+# Backend: restart ts-node server and view logs
+pkill -f "ts-node src/server.ts" || true
+cd apps/api
+npm run start:dev > /tmp/api.log 2>&1 &
+tail -n 200 /tmp/api.log
+
+# Frontend: clear Next cache and restart
+cd apps/web
+rm -rf .next
+API_BASE_URL=http://127.0.0.1:3001 npm run dev > /tmp/web.log 2>&1 &
+tail -n 200 /tmp/web.log
+```
+
 Check ports:
 
 ```bash
@@ -397,6 +412,61 @@ The project had legacy NestJS scaffolding that was never used at runtime, making
 - Establishing monorepo structure with root configs
 - Adding CI/CD for early error detection
 - Documenting architectural decisions for future maintainers
+
+## 12. Slice 4 — Tenant → Unit → Appliance (Feb 3, 2026)
+
+**Overview:** Added tenant asset context so tenants and managers can associate maintenance requests with a unit and a specific appliance. This enables better routing and clearer repair context for contractors.
+
+What was added:
+- Prisma models: `Tenant`, `Building`, `Unit`, `Appliance`, `AssetModel` (migration `20260203112038_add_tenant_asset_context` applied)
+- Backend services: tenant lookup/creation, inventory services for buildings/units/appliances/asset models, phone normalization utility (E.164)
+- API endpoints (backend `apps/api/src/server.ts`):
+  - `GET /tenants?phone=...` — lookup tenant by phone
+  - `POST /tenants` — create or find tenant
+  - `GET /buildings`, `POST /buildings`
+  - `GET /buildings/:id/units`, `POST /buildings/:id/units`
+  - `GET /units/:id/appliances`, `POST /units/:id/appliances`
+  - `GET /asset-models`, `POST /asset-models`
+  - `GET /requests/:id/suggest-contractor` — suggest contractor by request category
+  - `GET /contractors/match?category=...` — find a matching contractor for an org/category
+
+- Request enhancements: `Request` now optionally stores `tenantId`, `unitId`, `applianceId` and frontend request creation includes these values when available
+
+Frontend changes (`apps/web`):
+- `pages/tenant-form.js` — tenant phone lookup, unit & appliance selection, request creation with `tenantId` and `applianceId`, shows suggested contractor when category selected
+- `pages/admin-inventory.js` — admin UI for buildings/units/appliances/asset models
+
+Operational notes:
+
+
+### Recent Changes & Troubleshooting (Feb 4–5, 2026)
+
+- **Navigation improvements:** The home page (`/`, `pages/index.js`) is now the single entry point for all flows. The old `flows.js` navigation page has been archived and removed from routing.
+- **404 and fetch errors:** Fixed 404 errors for `/admin-inventory` and `/manager` by clearing the Next.js cache, killing stale processes, and restarting both backend and frontend servers. Resolved "Failed to fetch" errors by ensuring the backend server was running on port 3001.
+- **Troubleshooting workflow:**
+  - If a page returns 404 or fails to fetch data, check that both servers are running (`lsof -nP -iTCP:3000,3001 -sTCP:LISTEN`).
+  - If UI changes are not reflected, clear the Next.js cache (`rm -rf .next` in `apps/web`), kill any stale `next` processes, and restart both servers.
+  - Use `tail -n 200 /tmp/web.log` and `/tmp/api.log` to inspect logs for errors.
+  - If you see stale UI after pulling changes, restart both dev servers and hard-refresh the browser (Cmd+Shift+R) or open an incognito window.
+  - If problems persist, paste the last 200 lines of `/tmp/web.log` and `/tmp/api.log` and I will diagnose further.
+- **flows.js index (archived):** The previous navigation page (`flows.js`) has been archived as `flows.js.archived` and is no longer routable. All navigation is now handled by the home page (`index.js`).
+
+Status:
+- Code changes committed and pushed. Prisma migration applied locally and Prisma Client regenerated.
+- Integration test executed: creating a request with category auto-assigned a matching contractor.
+
+### Developer Actions (runtime & debugging)
+
+- Added lightweight contractor suggestion endpoints:
+  - `GET /requests/:id/suggest-contractor` — suggests a contractor by request category
+  - `GET /contractors/match?category=...` — returns a matching contractor for the org
+- Wired frontend proxy (`apps/web/pages/api/contractors.js`) to forward `?category=` to `/contractors/match` and show suggestions in `tenant-form.js`.
+- Added console logging in suggestion handlers for easier debugging.
+- Observed intermittent Next dev binding issues (EADDRINUSE). Recommended restart steps added under "Running the Project" and quick dev restart snippet; Next may need `.next` cleared and stale `next` processes killed before restart.
+- Logs written during local runs: `/tmp/api.log` (backend) and `/tmp/web.log` (frontend). Use `tail -n 200` to inspect.
+
+If you still see stale UI after pulling changes, restart both dev servers and hard-refresh the browser (Cmd+Shift+R) or open an incognito window. If problems persist, paste the last 200 lines of `/tmp/web.log` and `/tmp/api.log` and I will diagnose further.
+
 
 ### Completed
 
@@ -533,3 +603,51 @@ Safe to:
 🧊 **Project frozen in a stable state.**
 
 Work can resume cleanly from Option C or future backlog items without rework.
+
+---
+
+## 13. Authentication & Testing Frameworks (Feb 5, 2026)
+
+### Authentication
+
+**Status:** Scaffolded and integrated
+
+- Auth service (`src/services/auth.ts`):
+  - Token encoding/decoding (demo impl; use jsonwebtoken in production)
+  - Token payload structure with userId, orgId, email, role
+- Auth middleware (`src/auth.ts`):
+  - Optional `authMiddleware()` for request user extraction
+  - `requireAuth()` for protected routes
+  - `requireRole(role)` for role-based access (TENANT, CONTRACTOR, MANAGER)
+- Prisma schema updated:
+  - User model now has `email` (optional, unique per org), `passwordHash`, timestamps
+  - Migration applied: `20260205142350_add_auth_to_user`
+
+**Next steps:**
+- Replace demo token with `jsonwebtoken` library
+- Implement `/auth/login` and `/auth/register` endpoints
+- Wire middleware into protected routes in server.ts
+- Add bcrypt for password hashing
+
+### Automated Testing
+
+**Status:** Scaffolded and ready
+
+- Jest configuration (`jest.config.js`):
+  - TypeScript support via ts-jest
+  - Test discovery pattern: `src/__tests__/**/*.test.ts`
+- Test scripts in `package.json`:
+  - `npm test` — run all tests
+  - `npm run test:watch` — watch mode
+- Sample integration tests (`src/__tests__/requests.test.ts`):
+  - Tests for GET /requests, GET /org-config, GET /contractors
+  - Graceful handling of connection errors
+- Dependencies: jest@29.7.0, ts-jest@29.1.1, @types/jest@29.5.11
+
+**Next steps:**
+- Add unit tests for validation schemas and services
+- Set up test database for integration testing
+- Integrate tests into GitHub Actions CI/CD
+- Add test coverage thresholds
+
+**Reference:** [AUTH_AND_TESTING_IMPLEMENTATION.md](AUTH_AND_TESTING_IMPLEMENTATION.md) for detailed setup and deployment checklist

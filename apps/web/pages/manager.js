@@ -180,16 +180,15 @@ export default function Manager() {
   }
 
   return (
-    <div style={{ maxWidth: 980, margin: "40px auto", padding: 16, fontFamily: "system-ui" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 16 }}>
+    <div className="main-container">
+      <div className="row" style={{ justifyContent: "space-between", alignItems: "baseline" }}>
         <div>
-          <h1 style={{ marginBottom: 6 }}>Manager Dashboard</h1>
-          <div style={{ color: "#555" }}>
+          <h1>Manager Dashboard</h1>
+          <div className="subtle">
             Configure auto-approval and review requests that need attention.
           </div>
         </div>
-
-        <button onClick={refreshAll} disabled={loading}>
+        <button onClick={refreshAll} disabled={loading} className="button-secondary">
           {loading ? "Refreshing…" : "Refresh"}
         </button>
       </div>
@@ -197,27 +196,16 @@ export default function Manager() {
       <hr style={{ margin: "18px 0" }} />
 
       {/* Threshold */}
-      <div
-        style={{
-          border: "1px solid #ddd",
-          borderRadius: 10,
-          padding: 14,
-          background: "#fafafa",
-          display: "grid",
-          gap: 10,
-        }}
-      >
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+      <div className="card" style={{ display: "grid", gap: 10 }}>
+        <div className="row" style={{ justifyContent: "space-between", alignItems: "baseline" }}>
           <div style={{ fontWeight: 700 }}>Auto-approval threshold</div>
-          <div style={{ color: "#666", fontSize: 13 }}>
-            Current:{" "}
-            <strong>{autoApproveLimit == null ? "(unavailable)" : `${autoApproveLimit} CHF`}</strong>
+          <div className="subtle">
+            Current: <strong>{autoApproveLimit == null ? "(unavailable)" : `${autoApproveLimit} CHF`}</strong>
           </div>
         </div>
-
-        <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-          <label style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <span style={{ fontSize: 13, color: "#444" }}>Set to</span>
+        <div className="row" style={{ flexWrap: "wrap" }}>
+          <label className="row" style={{ gap: 8 }}>
+            <span className="subtle" style={{ color: "#444" }}>Set to</span>
             <input
               type="number"
               step="1"
@@ -225,21 +213,18 @@ export default function Manager() {
               max="100000"
               value={limitDraft}
               onChange={(e) => setLimitDraft(e.target.value)}
-              style={{ width: 140 }}
+              className="input"
+              style={{ width: 140, marginBottom: 0 }}
             />
-            <span style={{ fontSize: 13, color: "#444" }}>CHF</span>
+            <span className="subtle" style={{ color: "#444" }}>CHF</span>
           </label>
-
-          <button onClick={saveThreshold} disabled={savingLimit || !limitValidation.ok}>
+          <button onClick={saveThreshold} disabled={savingLimit || !limitValidation.ok} className="button-primary">
             {savingLimit ? "Saving…" : "Save"}
           </button>
-
           {!limitValidation.ok ? (
-            <span style={{ fontSize: 13, color: "crimson" }}>{limitValidation.error}</span>
+            <span className="notice notice-err" style={{ padding: 6, marginBottom: 0 }}>{limitValidation.error}</span>
           ) : (
-            <span style={{ fontSize: 13, color: "#666" }}>
-              Requests with estimated cost ≤ this value auto-approve.
-            </span>
+            <span className="help">Requests with estimated cost ≤ this value auto-approve.</span>
           )}
         </div>
       </div>
@@ -247,13 +232,12 @@ export default function Manager() {
       {/* Messages */}
       <div style={{ marginTop: 12 }}>
         {error ? (
-          <div style={{ padding: 12, background: "#ffecec", border: "1px solid #ffb3b3" }}>
+          <div className="notice notice-err">
             <strong style={{ color: "crimson" }}>Error:</strong> {error}
           </div>
         ) : null}
-
         {notice ? (
-          <div style={{ padding: 12, background: "#eefaf1", border: "1px solid #7bd89a", marginTop: 10 }}>
+          <div className="notice notice-ok" style={{ marginTop: 10 }}>
             <strong style={{ color: "#116b2b" }}>OK:</strong> {notice}
           </div>
         ) : null}
@@ -263,33 +247,30 @@ export default function Manager() {
 
       {/* Requests */}
       <div style={{ display: "grid", gap: 12 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12, flexWrap: "wrap" }}>
+        <div className="row" style={{ justifyContent: "space-between", alignItems: "baseline", gap: 12, flexWrap: "wrap" }}>
           <h2 style={{ margin: 0 }}>Requests</h2>
-
-          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+          <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search…"
-              style={{ minWidth: 220 }}
+              className="input"
+              style={{ minWidth: 220, marginBottom: 0 }}
             />
-
-            <div style={{ display: "flex", gap: 6 }}>
-              <button onClick={() => setFilter("ALL")} disabled={filter === "ALL"}>All</button>
-              <button onClick={() => setFilter("NEEDS_APPROVAL")} disabled={filter === "NEEDS_APPROVAL"}>
+            <div className="row" style={{ gap: 6, marginTop: 0 }}>
+              <button onClick={() => setFilter("ALL")} disabled={filter === "ALL"} className="button-secondary">All</button>
+              <button onClick={() => setFilter("NEEDS_APPROVAL")} disabled={filter === "NEEDS_APPROVAL"} className="button-secondary">
                 Needs approval
               </button>
-              <button onClick={() => setFilter("AUTO_APPROVED")} disabled={filter === "AUTO_APPROVED"}>
+              <button onClick={() => setFilter("AUTO_APPROVED")} disabled={filter === "AUTO_APPROVED"} className="button-secondary">
                 Auto-approved
               </button>
             </div>
           </div>
         </div>
-
-        <div style={{ color: "#666", fontSize: 13 }}>
+        <div className="subtle">
           Showing <strong>{filteredRequests.length}</strong> of <strong>{requests.length}</strong>
         </div>
-
         <div style={{ overflowX: "auto", border: "1px solid #ddd", borderRadius: 10 }}>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
@@ -313,7 +294,6 @@ export default function Manager() {
                   const b = badgeForStatus(r.status);
                   const canApprove = r.status === "PENDING_REVIEW";
                   const busy = approvingId === r.id;
-
                   return (
                     <tr key={r.id}>
                       <td style={{ padding: 10, borderBottom: "1px solid #eee", whiteSpace: "nowrap" }}>
@@ -322,7 +302,7 @@ export default function Manager() {
                       <td style={{ padding: 10, borderBottom: "1px solid #eee" }}>{r.category || "(none)"}</td>
                       <td style={{ padding: 10, borderBottom: "1px solid #eee" }}>
                         <div style={{ fontWeight: 600 }}>{r.description}</div>
-                        <div style={{ fontSize: 12, color: "#888" }}>{r.id}</div>
+                        <div className="subtle" style={{ fontSize: 12 }}>{r.id}</div>
                       </td>
                       <td style={{ padding: 10, borderBottom: "1px solid #eee", whiteSpace: "nowrap" }}>
                         {typeof r.estimatedCost === "number" ? `${r.estimatedCost} CHF` : "(none)"}
@@ -345,19 +325,19 @@ export default function Manager() {
                       </td>
                       <td style={{ padding: 10, borderBottom: "1px solid #eee" }}>
                         {canApprove ? (
-                          <button onClick={() => approveRequest(r.id)} disabled={busy}>
+                          <button onClick={() => approveRequest(r.id)} disabled={busy} className="button-primary">
                             {busy ? "Approving…" : "Approve"}
                           </button>
                         ) : (
-                          <span style={{ color: "#888", fontSize: 12 }}>(none)</span>
+                          <span className="subtle" style={{ fontSize: 12 }}>(none)</span>
                         )}
                       </td>
                       <td style={{ padding: 10, borderBottom: "1px solid #eee", color: "#666" }}>
                         {r.assignedContractor ? (
                           <div style={{ fontSize: 13 }}>
                             <div style={{ fontWeight: 600 }}>{r.assignedContractor.name}</div>
-                            <div style={{ fontSize: 12, color: "#888" }}>{r.assignedContractor.phone}</div>
-                            <div style={{ fontSize: 12, color: "#888" }}>{r.assignedContractor.hourlyRate} CHF/h</div>
+                            <div className="subtle" style={{ fontSize: 12 }}>{r.assignedContractor.phone}</div>
+                            <div className="subtle" style={{ fontSize: 12 }}>{r.assignedContractor.hourlyRate} CHF/h</div>
                           </div>
                         ) : (
                           <span style={{ color: "#ccc" }}>(none)</span>
@@ -370,8 +350,7 @@ export default function Manager() {
             </tbody>
           </table>
         </div>
-
-        <div style={{ color: "#666", fontSize: 12 }}>
+        <div className="subtle" style={{ fontSize: 12 }}>
           Note: contractors are auto-assigned based on service categories. Managers can manually reassign via API if needed.
         </div>
       </div>

@@ -25,7 +25,7 @@ export function parseQuery(url?: string): { path: string; query: QueryParams } {
   return { path, query };
 }
 
-function first(query: QueryParams, key: string): string | undefined {
+export function first(query: QueryParams, key: string): string | undefined {
   const v = query[key];
   if (!v || v.length === 0) return undefined;
   return v[0];
