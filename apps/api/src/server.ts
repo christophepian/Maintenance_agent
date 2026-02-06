@@ -3,7 +3,7 @@ const port = process.env.PORT ? Number(process.env.PORT) : 3001;
 
 import { PrismaClient } from "@prisma/client";
 import * as bcrypt from "bcryptjs";
-import { decodeToken, extractToken, TokenPayload } from "./services/auth";
+import { decodeToken, encodeToken, extractToken, TokenPayload } from "./services/auth";
 import { sendError, sendJson } from "./http/json";
 import { parseQuery, first, getIntParam, getEnumParam } from "./http/query";
 import { readJson } from "./http/body";
@@ -23,6 +23,7 @@ import { listContractors, CreateContractorSchema, createContractor, getContracto
 import { TenantSessionSchema } from "./validation/tenantSession";
 import { TriageSchema } from "./validation/triage";
 import { triageIssue } from "./services/triage";
+import { LoginSchema, RegisterSchema } from "./validation/auth";
 // Building/unit/appliance/asset model functions are not implemented; remove references below.
 // import { ensureDefaultOrgConfig } from "./services/orgConfig";
 import * as http from "http";
@@ -259,6 +260,119 @@ const server = http.createServer(async (req, res) => {
       const msg = String(e?.message || e);
       if (msg === "Invalid JSON") return sendError(res, 400, "INVALID_JSON", "Invalid JSON");
       return sendError(res, 500, "DB_ERROR", "Failed to triage request", String(e));
+    }
+  }
+
+  // =========================
+  // POST /auth/register
+  // Body: { email, password, name, role? }
+  // =========================
+  if (req.method === "POST" && path === "/auth/register") {
+    try {
+      const raw = await readJson(req);
+      const parsed = RegisterSchema.safeParse(raw);
+
+      if (!parsed.success) {
+        return sendError(res, 400, "VALIDATION_ERROR", "Invalid registration input", parsed.error.flatten());
+      }
+
+      const { email, password, name, role } = parsed.data;
+      const passwordHash = await bcrypt.hash(password, 10);
+
+      const user = await prisma.user.create({
+        data: {
+          orgId: DEFAULT_ORG_ID,
+          email,
+          name,
+          passwordHash,
+          role: role || "TENANT",
+        },
+      });
+
+      const token = encodeToken({
+        userId: user.id,
+        orgId: user.orgId,
+        email: user.email || email,
+        role: user.role,
+      });
+
+      return sendJson(res, 201, {
+        data: {
+          token,
+          user: {
+            id: user.id,
+            orgId: user.orgId,
+            email: user.email,
+            name: user.name,
+            role: user.role,
+          },
+        },
+      });
+    } catch (e: any) {
+      if (e?.code === "P2002") {
+        return sendError(res, 409, "CONFLICT", "Email already registered");
+      }
+      const msg = String(e?.message || e);
+      if (msg === "Invalid JSON") return sendError(res, 400, "INVALID_JSON", "Invalid JSON");
+      return sendError(res, 500, "DB_ERROR", "Failed to register", String(e));
+    }
+  }
+
+  // =========================
+  // POST /auth/login
+  // Body: { email, password }
+  // =========================
+  if (req.method === "POST" && path === "/auth/login") {
+    try {
+      const raw = await readJson(req);
+      const parsed = LoginSchema.safeParse(raw);
+
+      if (!parsed.success) {
+        return sendError(res, 400, "VALIDATION_ERROR", "Invalid login input", parsed.error.flatten());
+      }
+
+      const { email, password } = parsed.data;
+      const user = await prisma.user.findUnique({
+        where: {
+          user_org_email_unique: {
+            orgId: DEFAULT_ORG_ID,
+            email,
+          },
+        },
+      });
+
+      if (!user || !user.passwordHash) {
+        return sendError(res, 401, "UNAUTHORIZED", "Invalid credentials");
+      }
+
+      const ok = await bcrypt.compare(password, user.passwordHash);
+      if (!ok) {
+        return sendError(res, 401, "UNAUTHORIZED", "Invalid credentials");
+      }
+
+      const token = encodeToken({
+        userId: user.id,
+        orgId: user.orgId,
+        email: user.email || email,
+        role: user.role,
+      });
+
+      return sendJson(res, 200, {
+        data: {
+          token,
+          user: {
+            id: user.id,
+            orgId: user.orgId,
+            email: user.email,
+            name: user.name,
+            role: user.role,
+          },
+        },
+      });
+    } catch (e: any) {
+      const msg = String(e?.message || e);
+      if (msg === "Invalid JSON") return sendError(res, 400, "INVALID_JSON", "Invalid JSON");
+      return sendError(res, 500, "DB_ERROR", "Failed to login", String(e));
     }
   }
 

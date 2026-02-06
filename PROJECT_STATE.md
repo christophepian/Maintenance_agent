@@ -237,6 +237,11 @@ model Contractor {
 * `POST /tenant-session` — identify tenant by phone and return unit/building/appliances
 * `POST /triage` — deterministic troubleshooting suggestions based on unit context
 
+#### Authentication (NEW)
+
+* `POST /auth/register` — create a user and return a token
+* `POST /auth/login` — authenticate and return a token
+
 #### Org Config
 
 * `GET /org-config`
