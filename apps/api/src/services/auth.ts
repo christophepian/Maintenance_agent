@@ -1,6 +1,8 @@
 // Authentication and authorization service
 // Provides token generation, verification, and user lookup
 
+import jwt from "jsonwebtoken";
+
 export interface TokenPayload {
   userId: string;
   orgId: string;
@@ -8,25 +10,23 @@ export interface TokenPayload {
   role: string;
 }
 
-const DEV_TOKEN_SECRET = process.env.AUTH_SECRET || 'dev-secret-key-change-in-prod';
+const AUTH_SECRET = process.env.AUTH_SECRET || "dev-secret-key-change-in-prod";
+const TOKEN_TTL_SECONDS = 60 * 60 * 24; // 24h
 
 /**
- * Simple JWT-like token encoding (for demo; use jsonwebtoken in production)
+ * Encode token using JWT
  */
 export function encodeToken(payload: TokenPayload): string {
-  const encoded = Buffer.from(JSON.stringify(payload)).toString('base64');
-  return `dev.${encoded}`;
+  return jwt.sign(payload, AUTH_SECRET, { expiresIn: TOKEN_TTL_SECONDS });
 }
 
 /**
- * Decode and verify token (for demo; add real verification in production)
+ * Decode and verify token
  */
 export function decodeToken(token: string): TokenPayload | null {
   try {
-    if (!token.startsWith('dev.')) return null;
-    const encoded = token.substring(4);
-    const payload = JSON.parse(Buffer.from(encoded, 'base64').toString());
-    return payload;
+    const decoded = jwt.verify(token, AUTH_SECRET) as TokenPayload;
+    return decoded;
   } catch {
     return null;
   }
