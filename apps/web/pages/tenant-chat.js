@@ -12,6 +12,7 @@ export default function TenantChat() {
   const [currentIssue, setCurrentIssue] = useState("");
   const [detectedCategory, setDetectedCategory] = useState(null);
   const [candidateApplianceId, setCandidateApplianceId] = useState(null);
+  const [needsClarification, setNeedsClarification] = useState(false);
   const [notice, setNotice] = useState(null);
   const [loading, setLoading] = useState(false);
 
@@ -42,6 +43,7 @@ export default function TenantChat() {
     e.preventDefault();
     const trimmed = message.trim();
     if (!trimmed || !session?.unit?.id) return;
+    if (suggestions.length > 0 && !needsClarification) return;
 
     setLoading(true);
     setNotice(null);
@@ -64,6 +66,7 @@ export default function TenantChat() {
       setDetectedCategory(result.detectedCategory || null);
       setCandidateApplianceId(result.candidateApplianceIds?.[0] || null);
       setSuggestions(Array.isArray(result.suggestions) ? result.suggestions : []);
+      setNeedsClarification(Boolean(result.needsClarification));
 
       if (result.needsClarification && result.clarifyingQuestion) {
         setMessages((prev) => [...prev, { role: "system", text: result.clarifyingQuestion }]);
@@ -107,11 +110,23 @@ export default function TenantChat() {
         { role: "system", text: `Thanks! Your request is submitted. Reference: ${data?.data?.id || "N/A"}` },
       ]);
       setSuggestions([]);
+      setNeedsClarification(false);
+      setCurrentIssue("");
     } catch (e) {
       setNotice({ type: "err", msg: String(e) });
     } finally {
       setLoading(false);
     }
+  }
+
+  function resolveIssue() {
+    setMessages((prev) => [
+      ...prev,
+      { role: "system", text: "Glad it worked. If anything else comes up, just describe the issue." },
+    ]);
+    setSuggestions([]);
+    setNeedsClarification(false);
+    setCurrentIssue("");
   }
 
   if (!session) return null;
@@ -153,7 +168,7 @@ export default function TenantChat() {
             </div>
           ))}
           <div className="row">
-            <button className="button-secondary" type="button" onClick={() => setSuggestions([])}>
+            <button className="button-secondary" type="button" onClick={resolveIssue}>
               That fixed it
             </button>
             <button className="button-primary" type="button" onClick={createRequest} disabled={loading}>
@@ -170,10 +185,14 @@ export default function TenantChat() {
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           placeholder="e.g., The oven is overheating"
+          disabled={suggestions.length > 0 && !needsClarification}
         />
         <button className="button-primary" type="submit" disabled={loading}>
           {loading ? "Working…" : "Send"}
         </button>
+        {suggestions.length > 0 && !needsClarification ? (
+          <div className="help">Use the buttons above to continue.</div>
+        ) : null}
       </form>
     </div>
   );

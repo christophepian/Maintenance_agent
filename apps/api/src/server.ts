@@ -205,7 +205,11 @@ const server = http.createServer(async (req, res) => {
       return; // Prevent fallthrough to NOT_FOUND
     }
   // CORS
-  res.setHeader("Access-Control-Allow-Origin", "*");
+  const isProd = process.env.NODE_ENV === "production";
+  const corsOrigin = process.env.CORS_ORIGIN || (isProd ? "" : "*");
+  if (corsOrigin) {
+    res.setHeader("Access-Control-Allow-Origin", corsOrigin);
+  }
   res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "content-type");
 
@@ -480,6 +484,9 @@ const server = http.createServer(async (req, res) => {
   // DEV ONLY: DELETE /__dev/requests
   // =========================
   if (req.method === "DELETE" && path === "/__dev/requests") {
+    if (process.env.NODE_ENV === "production") {
+      return sendError(res, 403, "FORBIDDEN", "Not allowed in production");
+    }
     try {
       const result = await prisma.request.deleteMany({});
       return sendJson(res, 200, { data: { deleted: result.count } });

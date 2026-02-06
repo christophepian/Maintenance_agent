@@ -462,10 +462,11 @@ Frontend changes (`apps/web`):
 Operational notes:
 
 
-### Recent Changes & Troubleshooting (Feb 4–5, 2026)
+### Recent Changes & Troubleshooting (Feb 4–6, 2026)
 
 - **Navigation improvements:** The home page (`/`, `pages/index.js`) is now the single entry point for all flows. The old `flows.js` navigation page has been archived and removed from routing.
 - **404 and fetch errors:** Fixed 404 errors for `/admin-inventory` and `/manager` by clearing the Next.js cache, killing stale processes, and restarting both backend and frontend servers. Resolved "Failed to fetch" errors by ensuring the backend server was running on port 3001.
+- **Tenant chat UX:** Prevented the conversation from looping by pausing new input when suggestions are shown (unless clarification is needed) and adding a clear resolution message on “That fixed it.”
 - **Troubleshooting workflow:**
   - If a page returns 404 or fails to fetch data, check that both servers are running (`lsof -nP -iTCP:3000,3001 -sTCP:LISTEN`).
   - If UI changes are not reflected, clear the Next.js cache (`rm -rf .next` in `apps/web`), kill any stale `next` processes, and restart both servers.

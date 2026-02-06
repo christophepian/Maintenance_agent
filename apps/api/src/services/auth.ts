@@ -11,6 +11,9 @@ export interface TokenPayload {
 }
 
 const AUTH_SECRET = process.env.AUTH_SECRET || "dev-secret-key-change-in-prod";
+if (process.env.NODE_ENV === "production" && !process.env.AUTH_SECRET) {
+  throw new Error("AUTH_SECRET must be set in production");
+}
 const TOKEN_TTL_SECONDS = 60 * 60 * 24; // 24h
 
 /**
