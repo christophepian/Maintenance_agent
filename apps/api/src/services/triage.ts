@@ -36,7 +36,7 @@ const symptomKeywords: Record<string, string[]> = {
   tripping_breaker: ["tripping", "breaker", "fuse"],
   smell_burning: ["burning smell", "smoke", "sparks"],
   flooding: ["flood", "flooding", "water everywhere"],
-  gas_smell: ["gas smell", "gas leak"],
+  gas_smell: ["gas smell", "gas leak", "smell gas", "smell of gas"],
 };
 
 const suggestionCatalog: Record<string, Record<string, TriageSuggestion>> = {

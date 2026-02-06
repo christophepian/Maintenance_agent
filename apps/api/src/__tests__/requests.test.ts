@@ -1,4 +1,4 @@
-import http from 'http';
+import * as http from 'http';
 
 const BASE_URL = 'http://127.0.0.1:3001';
 
@@ -29,7 +29,8 @@ describe('Requests API Integration Tests', () => {
       res.on('end', () => {
         expect(() => JSON.parse(data)).not.toThrow();
         const parsed = JSON.parse(data);
-        expect(parsed).toHaveProperty('autoApproveLimit');
+        expect(parsed).toHaveProperty('data');
+        expect(parsed.data).toHaveProperty('autoApproveLimit');
         done();
       });
     }).on('error', err => {
