@@ -1,7 +1,7 @@
 // Authentication and authorization service
 // Provides token generation, verification, and user lookup
 
-import jwt from "jsonwebtoken";
+import * as jwt from "jsonwebtoken";
 
 export interface TokenPayload {
   userId: string;
