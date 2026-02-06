@@ -36,6 +36,7 @@ export default async function handler(req, res) {
   try {
     const baseUrl = process.env.API_BASE_URL || "http://127.0.0.1:3001";
     const { id } = req.query;
+    const authHeader = req.headers["authorization"];
 
     if (req.method === "GET") {
       let url = `${baseUrl}/contractors`;
@@ -47,7 +48,9 @@ export default async function handler(req, res) {
         url = `${baseUrl}/contractors/${id}`;
       }
 
-      const r = await fetch(url);
+      const r = await fetch(url, {
+        headers: authHeader ? { authorization: authHeader } : undefined,
+      });
       const j = await safeJson(r);
       return res.status(r.status).json(j);
     }
@@ -65,7 +68,10 @@ export default async function handler(req, res) {
 
       const r = await fetch(`${baseUrl}/contractors`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(authHeader ? { authorization: authHeader } : {}),
+        },
         body: JSON.stringify(payload),
       });
       const j = await safeJson(r);
@@ -87,7 +93,10 @@ export default async function handler(req, res) {
 
       const r = await fetch(`${baseUrl}/contractors/${id}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(authHeader ? { authorization: authHeader } : {}),
+        },
         body: JSON.stringify(payload),
       });
       const j = await safeJson(r);
@@ -97,7 +106,10 @@ export default async function handler(req, res) {
     if (req.method === "DELETE") {
       if (!id) return res.status(400).json({ error: "missing id" });
 
-      const r = await fetch(`${baseUrl}/contractors/${id}`, { method: "DELETE" });
+      const r = await fetch(`${baseUrl}/contractors/${id}`, {
+        method: "DELETE",
+        headers: authHeader ? { authorization: authHeader } : undefined,
+      });
       const j = await safeJson(r);
       return res.status(r.status).json(j);
     }

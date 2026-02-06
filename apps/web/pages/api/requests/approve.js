@@ -38,10 +38,14 @@ export default async function handler(req, res) {
     }
 
     const baseUrl = process.env.API_BASE_URL || "http://127.0.0.1:3001";
+    const authHeader = req.headers["authorization"];
 
     const r = await fetch(`${baseUrl}/requests/${id}/status`, {
       method: "PATCH",
-      headers: { "content-type": "application/json" },
+      headers: {
+        "content-type": "application/json",
+        ...(authHeader ? { authorization: authHeader } : {}),
+      },
       body: JSON.stringify({ status: "APPROVED" }),
     });
 

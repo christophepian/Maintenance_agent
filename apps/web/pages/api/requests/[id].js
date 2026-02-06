@@ -27,6 +27,7 @@ export default async function handler(req, res) {
   try {
     const baseUrl = process.env.API_BASE_URL || "http://127.0.0.1:3001";
     const { id } = req.query;
+    const authHeader = req.headers["authorization"];
 
     if (!id) return res.status(400).json({ error: "missing id" });
 
@@ -35,7 +36,9 @@ export default async function handler(req, res) {
       return res.status(405).end();
     }
 
-    const r = await fetch(`${baseUrl}/requests/${encodeURIComponent(id)}`);
+    const r = await fetch(`${baseUrl}/requests/${encodeURIComponent(id)}`, {
+      headers: authHeader ? { authorization: authHeader } : undefined,
+    });
     const j = await safeJson(r);
     return res.status(r.status).json(j);
   } catch (e) {

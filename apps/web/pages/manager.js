@@ -24,6 +24,12 @@ function badgeForStatus(status) {
 export default function Manager() {
   const [loading, setLoading] = useState(true);
 
+  function authHeaders() {
+    if (typeof window === "undefined") return {};
+    const token = localStorage.getItem("authToken");
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  }
+
   // Org config
   const [autoApproveLimit, setAutoApproveLimit] = useState(null);
   const [limitDraft, setLimitDraft] = useState("");
@@ -42,14 +48,14 @@ export default function Manager() {
   const [notice, setNotice] = useState("");
 
   async function loadOrgConfig() {
-    const r = await fetch("/api/org-config");
+    const r = await fetch("/api/org-config", { headers: authHeaders() });
     const j = await r.json();
     if (!r.ok) throw new Error(j?.error?.message || j?.error || "Failed to load org config");
     return j?.data;
   }
 
   async function loadRequests() {
-    const r = await fetch("/api/requests");
+    const r = await fetch("/api/requests", { headers: authHeaders() });
     const j = await r.json();
     if (!r.ok) throw new Error(j?.error?.message || j?.error || "Failed to load requests");
     return j?.data || [];
@@ -136,7 +142,10 @@ export default function Manager() {
     try {
       const r = await fetch("/api/org-config", {
         method: "PUT",
-        headers: { "content-type": "application/json" },
+        headers: {
+          "content-type": "application/json",
+          ...authHeaders(),
+        },
         body: JSON.stringify({ autoApproveLimit: v.value }),
       });
       const j = await r.json();
@@ -165,6 +174,7 @@ export default function Manager() {
     try {
       const r = await fetch(`/api/requests/approve?id=${encodeURIComponent(id)}`, {
         method: "POST",
+        headers: authHeaders(),
       });
       const j = await r.json();
 

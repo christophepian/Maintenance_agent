@@ -290,6 +290,10 @@ model Contractor {
 * `/tenant` — phone-based identification
 * `/tenant-chat` — conversational troubleshooting and request creation
 
+### Authentication UI (NEW)
+
+* `/login` — sign in or register (manager / contractor)
+
 ### API Proxy Routes (`/api`)
 
 * `GET /api/requests` → backend `GET /requests`
@@ -303,6 +307,8 @@ model Contractor {
 * `DELETE /api/contractors/[id]` → backend `DELETE /contractors/:id` *(Slice 1)*
 * `POST /api/tenant-session` → backend `POST /tenant-session`
 * `POST /api/triage` → backend `POST /triage`
+* `POST /api/auth/login` → backend `POST /auth/login`
+* `POST /api/auth/register` → backend `POST /auth/register`
 * `GET /api/org-config` → backend `GET /org-config`
 * `PUT /api/org-config` → backend `PUT /org-config`
 

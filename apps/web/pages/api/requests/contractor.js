@@ -6,11 +6,14 @@ export default async function handler(req, res) {
   }
 
   const backendUrl = process.env.API_BASE_URL || "http://127.0.0.1:3001";
+  const authHeader = req.headers["authorization"];
 
   try {
     if (req.method === "GET") {
       // GET /api/requests/contractor/:contractorId
-      const response = await fetch(`${backendUrl}/requests/contractor/${contractorId}`);
+      const response = await fetch(`${backendUrl}/requests/contractor/${contractorId}`, {
+        headers: authHeader ? { authorization: authHeader } : undefined,
+      });
       const data = await response.json();
 
       if (!response.ok) {

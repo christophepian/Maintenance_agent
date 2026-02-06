@@ -36,6 +36,7 @@ export default async function handler(req, res) {
   try {
     // Keep identical behavior to org-config route
     const baseUrl = process.env.API_BASE_URL || "http://127.0.0.1:3001";
+    const authHeader = req.headers["authorization"];
 
     // Build querystring explicitly (do NOT reuse req.url)
     const { limit, offset, order } = req.query;
@@ -46,7 +47,9 @@ export default async function handler(req, res) {
     const qs = params.toString() ? `?${params.toString()}` : "";
 
     if (req.method === "GET") {
-      const r = await fetch(`${baseUrl}/requests${qs}`);
+      const r = await fetch(`${baseUrl}/requests${qs}`, {
+        headers: authHeader ? { authorization: authHeader } : undefined,
+      });
       const j = await safeJson(r);
       return res.status(r.status).json(j);
     }
@@ -69,7 +72,10 @@ export default async function handler(req, res) {
 
       const r = await fetch(`${baseUrl}/requests`, {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: {
+          "content-type": "application/json",
+          ...(authHeader ? { authorization: authHeader } : {}),
+        },
         body: JSON.stringify(payload),
       });
 

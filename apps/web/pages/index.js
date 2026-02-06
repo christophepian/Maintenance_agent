@@ -36,6 +36,11 @@ export default function Home() {
         path: "/contractors",
         desc: "Add, edit, and manage contractors",
       },
+      {
+        title: "Login",
+        path: "/login",
+        desc: "Sign in or register (manager / contractor)",
+      },
       // Removed 'Home (tenant UI)' and 'Flows index (this page)' as this is now the home page
     ],
     []

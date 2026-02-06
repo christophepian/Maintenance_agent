@@ -36,9 +36,12 @@ export default async function handler(req, res) {
   try {
     const baseUrl = process.env.API_BASE_URL || "http://localhost:3001";
     const url = `${baseUrl}/org-config`;
+    const authHeader = req.headers["authorization"];
 
     if (req.method === "GET") {
-      const r = await fetch(url);
+      const r = await fetch(url, {
+        headers: authHeader ? { authorization: authHeader } : undefined,
+      });
       const parsed = await safeReadJsonResponse(r);
       return res.status(r.status).json(parsed.json);
     }
@@ -57,9 +60,14 @@ export default async function handler(req, res) {
         }
       }
 
+      const headers = {
+        "content-type": "application/json",
+        ...(authHeader ? { authorization: authHeader } : {}),
+      };
+
       const r = await fetch(url, {
         method: "PUT",
-        headers: { "content-type": "application/json" },
+        headers,
         body: JSON.stringify(payload),
       });
 

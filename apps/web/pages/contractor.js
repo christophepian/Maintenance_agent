@@ -26,6 +26,11 @@ function fmtDate(iso) {
 }
 
 export default function ContractorPortal() {
+    function authHeaders() {
+      if (typeof window === "undefined") return {};
+      const token = localStorage.getItem("authToken");
+      return token ? { Authorization: `Bearer ${token}` } : {};
+    }
     const [openTimeline, setOpenTimeline] = useState(null);
     const [eventLoading, setEventLoading] = useState(false);
     const [eventError, setEventError] = useState("");
@@ -35,7 +40,9 @@ export default function ContractorPortal() {
       setEventLoading(true);
       setEventError("");
       try {
-        const r = await fetch(`/api/requests/${requestId}/events`);
+        const r = await fetch(`/api/requests/${requestId}/events`, {
+          headers: authHeaders(),
+        });
         const j = await r.json();
         if (!r.ok) throw new Error(j?.error?.message || j?.error || "Failed to load events");
         setEventData((prev) => ({ ...prev, [requestId]: j.data || [] }));
@@ -81,7 +88,9 @@ export default function ContractorPortal() {
       setLoading(true);
 
       try {
-        const r = await fetch(`/api/requests/contractor?contractorId=${contractorId}`);
+        const r = await fetch(`/api/requests/contractor?contractorId=${contractorId}`, {
+          headers: authHeaders(),
+        });
         const j = await r.json();
         if (!r.ok) throw new Error(j?.error?.message || j?.error || "Failed to load requests");
         setRequests(j?.data || []);
@@ -100,7 +109,10 @@ export default function ContractorPortal() {
     try {
       const r = await fetch(`/api/requests/${requestId}/status?contractorId=${contractorId}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...authHeaders(),
+        },
         body: JSON.stringify({ status: newStatus }),
       });
       const j = await r.json();
@@ -120,7 +132,7 @@ export default function ContractorPortal() {
 
   // Fetch contractor info
   useEffect(() => {
-    fetch(`/api/contractors?id=${contractorId}`)
+    fetch(`/api/contractors?id=${contractorId}`, { headers: authHeaders() })
       .then(res => res.json())
       .then(data => setContractor(data.data));
   }, []);

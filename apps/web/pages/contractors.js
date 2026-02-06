@@ -14,13 +14,19 @@ export default function ContractorsPage() {
   });
   const [message, setMessage] = React.useState("");
   const categories = ["stove", "oven", "dishwasher", "bathroom", "lighting"];
+
+  function authHeaders() {
+    if (typeof window === "undefined") return {};
+    const token = localStorage.getItem("authToken");
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  }
   React.useEffect(() => {
     fetchContractors();
   }, []);
   async function fetchContractors() {
     setLoading(true);
     try {
-      const res = await fetch("/api/contractors");
+      const res = await fetch("/api/contractors", { headers: authHeaders() });
       const json = await res.json();
       if (json.data) setContractors(json.data);
     } catch (e) {
@@ -33,7 +39,10 @@ export default function ContractorsPage() {
     try {
       const res = await fetch("/api/contractors", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...authHeaders(),
+        },
         body: JSON.stringify(formData),
       });
       const json = await res.json();
@@ -58,7 +67,10 @@ export default function ContractorsPage() {
   async function handleDelete(id) {
     if (!confirm("Deactivate this contractor?")) return;
     try {
-      const res = await fetch(`/api/contractors/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/contractors/${id}`, {
+        method: "DELETE",
+        headers: authHeaders(),
+      });
       if (res.ok) {
         setMessage("Contractor deactivated");
         await fetchContractors();
