@@ -21,6 +21,8 @@ import { getTenantByPhone, createOrGetTenant, updateTenant } from "./services/te
 import { getTenantSession } from "./services/tenantSession";
 import { listContractors, CreateContractorSchema, createContractor, getContractorById, UpdateContractorSchema, updateContractor, deactivateContractor } from "./services/contractorRequests";
 import { TenantSessionSchema } from "./validation/tenantSession";
+import { TriageSchema } from "./validation/triage";
+import { triageIssue } from "./services/triage";
 // Building/unit/appliance/asset model functions are not implemented; remove references below.
 // import { ensureDefaultOrgConfig } from "./services/orgConfig";
 import * as http from "http";
@@ -201,6 +203,28 @@ const server = http.createServer(async (req, res) => {
       const msg = String(e?.message || e);
       if (msg === "Invalid JSON") return sendError(res, 400, "INVALID_JSON", "Invalid JSON");
       return sendError(res, 500, "DB_ERROR", "Failed to create tenant session", String(e));
+    }
+  }
+
+  // =========================
+  // POST /triage
+  // Body: { unitId: string, message: string }
+  // =========================
+  if (req.method === "POST" && path === "/triage") {
+    try {
+      const raw = await readJson(req);
+      const parsed = TriageSchema.safeParse(raw);
+
+      if (!parsed.success) {
+        return sendError(res, 400, "VALIDATION_ERROR", "Invalid triage input", parsed.error.flatten());
+      }
+
+      const result = await triageIssue(prisma, parsed.data);
+      return sendJson(res, 200, { data: result });
+    } catch (e: any) {
+      const msg = String(e?.message || e);
+      if (msg === "Invalid JSON") return sendError(res, 400, "INVALID_JSON", "Invalid JSON");
+      return sendError(res, 500, "DB_ERROR", "Failed to triage request", String(e));
     }
   }
 
