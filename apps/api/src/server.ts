@@ -18,7 +18,9 @@ import { CreateRequestSchema, CreateRequestInput } from "./validation/requests";
 import { decideRequestStatus } from "./services/autoApproval";
 import { normalizePhoneToE164 } from "./utils/phoneNormalization";
 import { getTenantByPhone, createOrGetTenant, updateTenant } from "./services/tenants";
+import { getTenantSession } from "./services/tenantSession";
 import { listContractors, CreateContractorSchema, createContractor, getContractorById, UpdateContractorSchema, updateContractor, deactivateContractor } from "./services/contractorRequests";
+import { TenantSessionSchema } from "./validation/tenantSession";
 // Building/unit/appliance/asset model functions are not implemented; remove references below.
 // import { ensureDefaultOrgConfig } from "./services/orgConfig";
 import * as http from "http";
@@ -174,6 +176,32 @@ const server = http.createServer(async (req, res) => {
     res.writeHead(204);
     res.end();
     return;
+  }
+
+  // =========================
+  // POST /tenant-session
+  // Body: { phone: string }
+  // =========================
+  if (req.method === "POST" && path === "/tenant-session") {
+    try {
+      const raw = await readJson(req);
+      const parsed = TenantSessionSchema.safeParse(raw);
+
+      if (!parsed.success) {
+        return sendError(res, 400, "VALIDATION_ERROR", "Invalid tenant session input", parsed.error.flatten());
+      }
+
+      const session = await getTenantSession(prisma, DEFAULT_ORG_ID, parsed.data.phone);
+      if (!session) {
+        return sendError(res, 404, "NOT_FOUND", "Tenant not found");
+      }
+
+      return sendJson(res, 200, { data: session });
+    } catch (e: any) {
+      const msg = String(e?.message || e);
+      if (msg === "Invalid JSON") return sendError(res, 400, "INVALID_JSON", "Invalid JSON");
+      return sendError(res, 500, "DB_ERROR", "Failed to create tenant session", String(e));
+    }
   }
 
 
