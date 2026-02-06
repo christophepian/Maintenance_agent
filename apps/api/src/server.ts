@@ -3,7 +3,7 @@ const port = process.env.PORT ? Number(process.env.PORT) : 3001;
 
 import { PrismaClient } from "@prisma/client";
 import * as bcrypt from "bcryptjs";
-import { encodeToken } from "./services/auth";
+import { decodeToken, extractToken, TokenPayload } from "./services/auth";
 import { sendError, sendJson } from "./http/json";
 import { parseQuery, first, getIntParam, getEnumParam } from "./http/query";
 import { readJson } from "./http/body";
@@ -29,6 +29,40 @@ import * as http from "http";
 // ...import other helpers as needed
 
 const prisma = new PrismaClient();
+
+function getAuthUser(req: http.IncomingMessage): TokenPayload | null {
+  const token = extractToken(req.headers["authorization"] as string | undefined);
+  if (token) {
+    return decodeToken(token);
+  }
+
+  if (process.env.DEV_IDENTITY_ENABLED === "true") {
+    const role = req.headers["x-dev-role"];
+    if (typeof role === "string" && role.trim()) {
+      return {
+        userId: (req.headers["x-dev-user-id"] as string) || "dev-user",
+        orgId: (req.headers["x-dev-org-id"] as string) || DEFAULT_ORG_ID,
+        email: (req.headers["x-dev-email"] as string) || "dev@local",
+        role: role.toUpperCase(),
+      };
+    }
+  }
+
+  return null;
+}
+
+function requireRole(req: http.IncomingMessage, res: http.ServerResponse, role: string) {
+  const user = getAuthUser(req);
+  if (!user) {
+    sendError(res, 401, "UNAUTHORIZED", "Unauthorized");
+    return null;
+  }
+  if (user.role !== role) {
+    sendError(res, 403, "FORBIDDEN", "Forbidden");
+    return null;
+  }
+  return user;
+}
 
 // Event log helper
 async function logEvent({ orgId, type, actorUserId, requestId, payload }: { orgId: string, type: string, actorUserId?: string, requestId?: string, payload?: any }) {
@@ -245,6 +279,7 @@ const server = http.createServer(async (req, res) => {
   // PUT /org-config
   // =========================
   if (req.method === "PUT" && path === "/org-config") {
+    if (!requireRole(req, res, "MANAGER")) return;
     try {
       const raw = await readJson(req);
       const parsed = UpdateOrgConfigSchema.safeParse(raw);
@@ -282,6 +317,7 @@ const server = http.createServer(async (req, res) => {
 
         // Contractor status update path
         if (contractorId) {
+          if (!requireRole(req, res, "CONTRACTOR")) return;
           const result = await updateContractorRequestStatus(
             prisma,
             id,
@@ -295,6 +331,7 @@ const server = http.createServer(async (req, res) => {
         }
 
         // Manager approval update path
+        if (!requireRole(req, res, "MANAGER")) return;
         const current = await prisma.request.findUnique({ where: { id } });
         if (!current) return sendError(res, 404, "NOT_FOUND", "Request not found");
 
@@ -343,6 +380,7 @@ const server = http.createServer(async (req, res) => {
   // =========================
   const assignMatch = path.match(/^\/requests\/([a-f0-9\-]{36})\/assign$/i);
   if (req.method === "POST" && assignMatch) {
+    if (!requireRole(req, res, "MANAGER")) return;
     const requestId = assignMatch[1];
     try {
       const raw = await readJson(req);
@@ -372,6 +410,7 @@ const server = http.createServer(async (req, res) => {
   // DELETE /requests/:id/assign
   // =========================
   if (req.method === "DELETE" && assignMatch) {
+    if (!requireRole(req, res, "MANAGER")) return;
     const requestId = assignMatch[1];
     try {
       const result = await unassignContractor(prisma, requestId);
@@ -655,6 +694,7 @@ const server = http.createServer(async (req, res) => {
   // POST /contractors
   // =========================
   if (req.method === "POST" && path === "/contractors") {
+    if (!requireRole(req, res, "MANAGER")) return;
     try {
       const raw = await readJson(req);
       // Directly create contractor (stub validation)
@@ -683,6 +723,7 @@ const server = http.createServer(async (req, res) => {
   // PATCH /contractors/:id
   // =========================
   if (req.method === "PATCH" && contractorId) {
+    if (!requireRole(req, res, "MANAGER")) return;
     try {
       const raw = await readJson(req);
       // Directly update contractor (stub validation)
@@ -698,6 +739,7 @@ const server = http.createServer(async (req, res) => {
   // DELETE /contractors/:id
   // =========================
   if (req.method === "DELETE" && contractorId) {
+    if (!requireRole(req, res, "MANAGER")) return;
     try {
       const success = await deactivateContractor(prisma, contractorId);
       if (!success) return sendError(res, 404, "NOT_FOUND", "Contractor not found");
