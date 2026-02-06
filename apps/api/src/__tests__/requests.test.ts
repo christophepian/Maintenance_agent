@@ -55,5 +55,38 @@ describe('Requests API Integration Tests', () => {
       done(err);
     });
   }, 10000);
+
+  it('should create request without estimatedCost (POST /requests)', done => {
+    const payload = JSON.stringify({
+      description: 'Oven is overheating and smells hot',
+      category: 'oven',
+    });
+
+    const req = http.request(
+      `${BASE_URL}/requests`,
+      { method: 'POST', headers: { 'Content-Type': 'application/json' } },
+      res => {
+        let data = '';
+        res.on('data', chunk => (data += chunk));
+        res.on('end', () => {
+          expect(res.statusCode).toBe(201);
+          expect(() => JSON.parse(data)).not.toThrow();
+          const parsed = JSON.parse(data);
+          expect(parsed).toHaveProperty('data');
+          expect(parsed.data).toHaveProperty('status');
+          expect(parsed.data.status).toBe('PENDING_REVIEW');
+          done();
+        });
+      }
+    );
+
+    req.on('error', err => {
+      console.error('Connection error (server may not be running):', err.message);
+      done(err);
+    });
+
+    req.write(payload);
+    req.end();
+  }, 10000);
 });
 

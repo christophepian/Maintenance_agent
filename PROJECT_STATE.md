@@ -232,6 +232,11 @@ model Contractor {
 * `DELETE /requests/{id}/assign` — unassign contractor from request
 * Auto-assignment on request creation based on category match
 
+#### Tenant Intake (NEW)
+
+* `POST /tenant-session` — identify tenant by phone and return unit/building/appliances
+* `POST /triage` — deterministic troubleshooting suggestions based on unit context
+
 #### Org Config
 
 * `GET /org-config`
@@ -275,6 +280,11 @@ model Contractor {
   * Deactivate button
 * Real-time form validation feedback
 
+### Tenant Conversational Intake (NEW)
+
+* `/tenant` — phone-based identification
+* `/tenant-chat` — conversational troubleshooting and request creation
+
 ### API Proxy Routes (`/api`)
 
 * `GET /api/requests` → backend `GET /requests`
@@ -286,6 +296,8 @@ model Contractor {
 * `GET /api/contractors/[id]` → backend `GET /contractors/:id` *(Slice 1)*
 * `PATCH /api/contractors/[id]` → backend `PATCH /contractors/:id` *(Slice 1)*
 * `DELETE /api/contractors/[id]` → backend `DELETE /contractors/:id` *(Slice 1)*
+* `POST /api/tenant-session` → backend `POST /tenant-session`
+* `POST /api/triage` → backend `POST /triage`
 * `GET /api/org-config` → backend `GET /org-config`
 * `PUT /api/org-config` → backend `PUT /org-config`
 
