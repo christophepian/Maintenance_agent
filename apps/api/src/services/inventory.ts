@@ -1,331 +1,318 @@
-import { PrismaClient } from "@prisma/client";
-import { z } from "zod";
+import { PrismaClient, UnitType } from "@prisma/client";
 
 const prisma = new PrismaClient();
+const activeFilter = (includeInactive?: boolean) =>
+  includeInactive ? {} : { isActive: true };
 
-/**
- * Building CRUD operations
- */
+const assetModelName = (model: { manufacturer: string; model: string }) => {
+  if (!model.manufacturer || model.manufacturer.toLowerCase() === "unknown") return model.model;
+  return `${model.manufacturer} ${model.model}`.trim();
+};
 
-export async function createBuilding(orgId: string, data: { name: string; address: string }) {
-  const building = await prisma.building.create({
-    data: {
-      orgId,
-      name: data.name,
-      address: data.address,
-    },
-    include: {
-      units: true,
-    },
-  });
-  return building;
-}
-
-export async function getBuilding(id: string) {
-  return await prisma.building.findUnique({
-    where: { id },
-    include: {
-      units: {
-        include: {
-          appliances: {
-            include: {
-              assetModel: true,
-            },
-          },
-          occupancies: {
-            include: {
-              tenant: true,
-            },
-          },
-        },
-      },
-    },
-  });
-}
-
-export async function listBuildings(orgId: string) {
-  return await prisma.building.findMany({
-    where: { orgId },
-    include: {
-      units: {
-        include: {
-          appliances: true,
-        },
-      },
-    },
+// =========================
+// Buildings
+// =========================
+export async function listBuildings(orgId: string, includeInactive?: boolean) {
+  return prisma.building.findMany({
+    where: { orgId, ...activeFilter(includeInactive) },
     orderBy: { createdAt: "desc" },
   });
 }
-
+export async function createBuilding(
+  orgId: string,
+  data: { name: string; address?: string }
+) {
+  const address = data.address?.trim() || data.name;
+  return prisma.building.create({
+    data: {
+  orgId,
+  name: data.name,
+  address,
+    },
+  });
+}
 export async function updateBuilding(
-  id: string,
+  orgId: string,
+  buildingId: string,
   data: { name?: string; address?: string }
 ) {
-  return await prisma.building.update({
-    where: { id },
-    data,
-    include: {
-      units: true,
-    },
-  });
-}
-
-export async function deleteBuilding(id: string) {
-  return await prisma.building.delete({
-    where: { id },
-  });
-}
-
-/**
- * Unit CRUD operations
- */
-
-export async function createUnit(
-  buildingId: string,
-  orgId: string,
-  data: { unitNumber: string; floor?: string; type?: string }
-) {
-  const unit = await prisma.unit.create({
+  const existing = await prisma.building.findFirst({ where: { id: buildingId, orgId } });
+  if (!existing) return null;
+  return prisma.building.update({
+    where: { id: buildingId },
     data: {
-      buildingId,
+      name: data.name ?? undefined,
+      address: data.address ?? undefined,
+    },
+  });
+}
+
+export async function deactivateBuilding(orgId: string, buildingId: string) {
+  const existing = await prisma.building.findFirst({ where: { id: buildingId, orgId } });
+  if (!existing) return { success: false, reason: "NOT_FOUND" };
+
+  const activeUnits = await prisma.unit.count({
+    where: { buildingId, ...activeFilter(false) },
+  });
+  if (activeUnits > 0) {
+    return { success: false, reason: "HAS_ACTIVE_UNITS" };
+  }
+
+  await prisma.building.update({
+    where: { id: buildingId },
+    data: { isActive: false },
+  });
+  return { success: true };
+}
+
+// =========================
+// Units
+// =========================
+
+export async function listUnits(
+  orgId: string,
+  buildingId: string,
+  includeInactive?: boolean,
+  type?: UnitType
+) {
+  return prisma.unit.findMany({
+    where: {
       orgId,
-      unitNumber: data.unitNumber,
-      floor: data.floor || null,
-      type: data.type as any,
-    },
-    include: {
-      appliances: {
-        include: {
-          assetModel: true,
-        },
-      },
-      occupancies: {
-        include: {
-          tenant: true,
-        },
-      },
-    },
-  });
-  return unit;
-}
-
-export async function getUnit(id: string) {
-  return await prisma.unit.findUnique({
-    where: { id },
-    include: {
-      building: true,
-      appliances: {
-        include: {
-          assetModel: true,
-        },
-      },
-      occupancies: {
-        include: {
-          tenant: true,
-        },
-      },
-    },
-  });
-}
-
-export async function listUnits(buildingId: string) {
-  return await prisma.unit.findMany({
-    where: { buildingId },
-    include: {
-      appliances: {
-        include: {
-          assetModel: true,
-        },
-      },
-      occupancies: {
-        include: {
-          tenant: true,
-        },
-      },
+  buildingId,
+  ...activeFilter(includeInactive),
+  ...(type ? { type } : {}),
     },
     orderBy: { unitNumber: "asc" },
   });
 }
 
-export async function updateUnit(
-  id: string,
-  data: { unitNumber?: string; floor?: string; type?: string }
-) {
-  return await prisma.unit.update({
-    where: { id },
-    data: {
-      unitNumber: data.unitNumber,
-      floor: data.floor,
-      type: data.type as any,
-    },
-    include: {
-      appliances: {
-        include: {
-          assetModel: true,
-        },
-      },
-      occupancies: {
-        include: {
-          tenant: true,
-        },
-      },
-    },
-  });
-}
-
-export async function deleteUnit(id: string) {
-  return await prisma.unit.delete({
-    where: { id },
-  });
-}
-
-/**
- * Appliance CRUD operations
- */
-
-export async function createAppliance(
-  unitId: string,
+export async function createUnit(
   orgId: string,
-  data: {
-    name: string;
-    assetModelId?: string;
-    serial?: string;
-    installDate?: string;
-    notes?: string;
-  }
+  buildingId: string,
+  data: { unitNumber: string; floor?: string; type?: UnitType }
 ) {
-  const appliance = await prisma.appliance.create({
+  const building = await prisma.building.findFirst({ where: { id: buildingId, orgId } });
+  if (!building) return null;
+
+  return prisma.unit.create({
     data: {
-      unitId,
+      buildingId,
       orgId,
-      name: data.name,
-      assetModelId: data.assetModelId || null,
-      serial: data.serial || null,
-      installDate: data.installDate ? new Date(data.installDate) : null,
-      notes: data.notes || null,
-    },
-    include: {
-      assetModel: true,
-    },
-  });
-  return appliance;
-}
-
-export async function getAppliance(id: string) {
-  return await prisma.appliance.findUnique({
-    where: { id },
-    include: {
-      unit: true,
-      assetModel: true,
+  unitNumber: data.unitNumber,
+  floor: data.floor ?? null,
+  type: data.type ?? UnitType.RESIDENTIAL,
     },
   });
 }
+export async function updateUnit(
+  orgId: string,
+  unitId: string,
+  data: { unitNumber?: string; floor?: string; type?: UnitType }
+) {
+  const existing = await prisma.unit.findFirst({ where: { id: unitId, orgId } });
+  if (!existing) return null;
 
-export async function listAppliances(unitId: string) {
-  return await prisma.appliance.findMany({
-    where: { unitId },
-    include: {
-      assetModel: true,
+  return prisma.unit.update({
+    where: { id: unitId },
+    data: {
+      unitNumber: data.unitNumber ?? undefined,
+      floor: data.floor ?? undefined,
+      type: data.type ?? undefined,
     },
+  });
+}
+
+export async function deactivateUnit(orgId: string, unitId: string) {
+  const existing = await prisma.unit.findFirst({ where: { id: unitId, orgId } });
+  if (!existing) return { success: false, reason: "NOT_FOUND" };
+
+  const activeAppliances = await prisma.appliance.count({
+    where: { unitId, ...activeFilter(false) },
+  });
+  if (activeAppliances > 0) {
+    return { success: false, reason: "HAS_ACTIVE_APPLIANCES" };
+  }
+
+  await prisma.unit.update({
+    where: { id: unitId },
+    data: { isActive: false },
+  });
+  return { success: true };
+}
+
+// =========================
+// Appliances
+// =========================
+
+export async function listAppliances(
+  orgId: string,
+  unitId: string,
+  includeInactive?: boolean
+) {
+  return prisma.appliance.findMany({
+    where: { orgId, unitId, ...activeFilter(includeInactive) },
+    include: { assetModel: true },
     orderBy: { createdAt: "desc" },
   });
 }
-
-export async function updateAppliance(
-  id: string,
+export async function createAppliance(
+  orgId: string,
+  unitId: string,
   data: {
-    name?: string;
-    assetModelId?: string;
-    serial?: string;
+  name: string;
+  assetModelId?: string;
+  serial?: string;
     installDate?: string;
     notes?: string;
   }
 ) {
-  return await prisma.appliance.update({
-    where: { id },
+  const unit = await prisma.unit.findFirst({ where: { id: unitId, orgId } });
+  if (!unit) return null;
+
+  return prisma.appliance.create({
     data: {
-      name: data.name,
-      assetModelId: data.assetModelId,
-      serial: data.serial,
-      installDate: data.installDate ? new Date(data.installDate) : undefined,
-      notes: data.notes,
+      unitId,
+      orgId,
+  name: data.name,
+  assetModelId: data.assetModelId ?? null,
+  serial: data.serial ?? null,
+      installDate: data.installDate ? new Date(data.installDate) : null,
+      notes: data.notes ?? null,
     },
-    include: {
-      assetModel: true,
-    },
+    include: { assetModel: true },
   });
 }
-
-export async function deleteAppliance(id: string) {
-  return await prisma.appliance.delete({
-    where: { id },
-  });
-}
-
-/**
- * AssetModel CRUD operations
- */
-
-export async function createAssetModel(
+export async function updateAppliance(
   orgId: string,
+  applianceId: string,
   data: {
-    manufacturer: string;
-    model: string;
-    category: string;
-    specs?: string;
+  name?: string;
+  assetModelId?: string;
+  serial?: string;
+    installDate?: string;
+    notes?: string;
   }
 ) {
-  const assetModel = await prisma.assetModel.create({
+  const existing = await prisma.appliance.findFirst({ where: { id: applianceId, orgId } });
+  if (!existing) return null;
+
+  return prisma.appliance.update({
+    where: { id: applianceId },
     data: {
-      orgId,
-      manufacturer: data.manufacturer,
-      model: data.model,
-      category: data.category,
-      specs: data.specs || null,
+      name: data.name ?? undefined,
+  assetModelId: data.assetModelId ?? undefined,
+  serial: data.serial ?? undefined,
+  installDate: data.installDate ? new Date(data.installDate) : undefined,
+      notes: data.notes ?? undefined,
     },
-  });
-  return assetModel;
-}
-
-export async function getAssetModel(id: string) {
-  return await prisma.assetModel.findUnique({
-    where: { id },
-    include: {
-      appliances: true,
-    },
+    include: { assetModel: true },
   });
 }
 
-export async function listAssetModels(orgId: string, category?: string) {
-  return await prisma.assetModel.findMany({
+export async function deactivateAppliance(orgId: string, applianceId: string) {
+  const existing = await prisma.appliance.findFirst({ where: { id: applianceId, orgId } });
+  if (!existing) return { success: false, reason: "NOT_FOUND" };
+
+  const requestCount = await prisma.request.count({ where: { applianceId } });
+  if (requestCount > 0) {
+    return { success: false, reason: "HAS_REQUESTS" };
+  }
+
+  await prisma.appliance.update({
+    where: { id: applianceId },
+    data: { isActive: false },
+  });
+  return { success: true };
+}
+
+// =========================
+// Asset Models
+// =========================
+
+export async function listAssetModels(orgId: string, includeInactive?: boolean) {
+  return prisma.assetModel.findMany({
     where: {
-      orgId,
-      ...(category && { category }),
-    },
-    include: {
-      appliances: true,
+      ...activeFilter(includeInactive),
+      OR: [{ orgId: null }, { orgId }],
     },
     orderBy: [{ category: "asc" }, { manufacturer: "asc" }, { model: "asc" }],
   });
 }
 
-export async function updateAssetModel(
-  id: string,
+export async function createAssetModel(
+  orgId: string,
   data: {
-    manufacturer?: string;
-    model?: string;
-    category?: string;
+    name: string;
+  category?: string;
+  manufacturer?: string;
+  model?: string;
     specs?: string;
   }
 ) {
-  return await prisma.assetModel.update({
-    where: { id },
-    data,
+  const manufacturer = data.manufacturer?.trim() || "Unknown";
+  const model = data.model?.trim() || data.name.trim();
+  const category = data.category?.trim() || "general";
+
+  const assetModel = await prisma.assetModel.create({
+    data: {
+      orgId,
+  manufacturer,
+  model,
+  category,
+      specs: data.specs ?? null,
+      isActive: true,
+    },
+  });
+
+  return { ...assetModel, name: assetModelName(assetModel) };
+}
+
+export async function updateAssetModel(
+  orgId: string,
+  modelId: string,
+  data: {
+  name?: string;
+  category?: string;
+  manufacturer?: string;
+    model?: string;
+    specs?: string;
+  }
+) {
+  const existing = await prisma.assetModel.findFirst({ where: { id: modelId } });
+  if (!existing) return null;
+  if (!existing.orgId || existing.orgId !== orgId) return null;
+
+  const manufacturer = data.manufacturer ?? (data.name ? "Unknown" : undefined);
+  const model = data.model ?? data.name;
+
+  return prisma.assetModel.update({
+    where: { id: modelId },
+    data: {
+      manufacturer: manufacturer ?? undefined,
+  model: model ?? undefined,
+  category: data.category ?? undefined,
+  specs: data.specs ?? undefined,
+    },
   });
 }
 
-export async function deleteAssetModel(id: string) {
-  return await prisma.assetModel.delete({
-    where: { id },
+export async function deactivateAssetModel(orgId: string, modelId: string) {
+  const existing = await prisma.assetModel.findFirst({ where: { id: modelId } });
+  if (!existing) return { success: false, reason: "NOT_FOUND" };
+  if (!existing.orgId || existing.orgId !== orgId) return { success: false, reason: "FORBIDDEN" };
+
+  const applianceCount = await prisma.appliance.count({ where: { assetModelId: modelId } });
+  if (applianceCount > 0) {
+    return { success: false, reason: "HAS_APPLIANCES" };
+  }
+
+  await prisma.assetModel.update({
+    where: { id: modelId },
+    data: { isActive: false },
   });
+  return { success: true };
+}
+
+export function addAssetModelName(model: { manufacturer: string; model: string }) {
+  return assetModelName(model);
 }

@@ -17,13 +17,38 @@ import { updateContractorRequestStatus, getContractorAssignedRequests } from "./
 import { CreateRequestSchema, CreateRequestInput } from "./validation/requests";
 import { decideRequestStatus } from "./services/autoApproval";
 import { normalizePhoneToE164 } from "./utils/phoneNormalization";
-import { getTenantByPhone, createOrGetTenant, updateTenant } from "./services/tenants";
+import { getTenantByPhone, createOrGetTenant, updateTenant, deactivateTenant } from "./services/tenants";
 import { getTenantSession } from "./services/tenantSession";
+import {
+  listBuildings,
+  createBuilding,
+  updateBuilding,
+  deactivateBuilding,
+  listUnits,
+  createUnit,
+  updateUnit,
+  deactivateUnit,
+  listAppliances,
+  createAppliance,
+  updateAppliance,
+  deactivateAppliance,
+  listAssetModels,
+  createAssetModel,
+  updateAssetModel,
+  deactivateAssetModel,
+  addAssetModelName,
+} from "./services/inventory";
+import { listUnitTenants, linkTenantToUnit, unlinkTenantFromUnit } from "./services/occupancies";
 import { listContractors, CreateContractorSchema, createContractor, getContractorById, UpdateContractorSchema, updateContractor, deactivateContractor } from "./services/contractorRequests";
 import { TenantSessionSchema } from "./validation/tenantSession";
 import { TriageSchema } from "./validation/triage";
 import { triageIssue } from "./services/triage";
 import { LoginSchema, RegisterSchema } from "./validation/auth";
+import { CreateBuildingSchema, UpdateBuildingSchema } from "./validation/buildings";
+import { CreateUnitSchema, UpdateUnitSchema } from "./validation/units";
+import { CreateApplianceSchema, UpdateApplianceSchema } from "./validation/appliances";
+import { CreateAssetModelSchema, UpdateAssetModelSchema } from "./validation/assetModels";
+import { LinkTenantSchema } from "./validation/occupancies";
 // Building/unit/appliance/asset model functions are not implemented; remove references below.
 // import { ensureDefaultOrgConfig } from "./services/orgConfig";
 import * as http from "http";
@@ -50,6 +75,12 @@ function getAuthUser(req: http.IncomingMessage): TokenPayload | null {
   }
 
   return null;
+}
+
+function getOrgIdForRequest(req: http.IncomingMessage): string {
+  const user = getAuthUser(req);
+  if (user?.orgId) return user.orgId;
+  return process.env.DEV_ORG_ID || DEFAULT_ORG_ID;
 }
 
 function requireRole(req: http.IncomingMessage, res: http.ServerResponse, role: string) {
@@ -141,6 +172,46 @@ function matchTenantById(path: string) {
   return m ? m[1] : null;
 }
 
+function matchBuildingById(path: string) {
+  const m = path.match(/^\/buildings\/([a-f0-9-]{36})$/i);
+  return m ? m[1] : null;
+}
+
+function matchBuildingUnits(path: string) {
+  const m = path.match(/^\/buildings\/([a-f0-9-]{36})\/units$/i);
+  return m ? m[1] : null;
+}
+
+function matchUnitById(path: string) {
+  const m = path.match(/^\/units\/([a-f0-9-]{36})$/i);
+  return m ? m[1] : null;
+}
+
+function matchUnitAppliances(path: string) {
+  const m = path.match(/^\/units\/([a-f0-9-]{36})\/appliances$/i);
+  return m ? m[1] : null;
+}
+
+function matchUnitTenants(path: string) {
+  const m = path.match(/^\/units\/([a-f0-9-]{36})\/tenants$/i);
+  return m ? m[1] : null;
+}
+
+function matchUnitTenant(path: string) {
+  const m = path.match(/^\/units\/([a-f0-9-]{36})\/tenants\/([a-f0-9-]{36})$/i);
+  return m ? { unitId: m[1], tenantId: m[2] } : null;
+}
+
+function matchApplianceById(path: string) {
+  const m = path.match(/^\/appliances\/([a-f0-9-]{36})$/i);
+  return m ? m[1] : null;
+}
+
+function matchAssetModelById(path: string) {
+  const m = path.match(/^\/asset-models\/([a-f0-9-]{36})$/i);
+  return m ? m[1] : null;
+}
+
 const server = http.createServer(async (req, res) => {
     const { path, query } = parseQuery(req.url);
 
@@ -217,6 +288,330 @@ const server = http.createServer(async (req, res) => {
     res.writeHead(204);
     res.end();
     return;
+  }
+
+  const orgId = getOrgIdForRequest(req);
+
+  // =========================
+  // Buildings
+  // =========================
+  if (req.method === "GET" && path === "/buildings") {
+    try {
+      const includeInactive = first(query, "includeInactive") === "true";
+      const buildings = await listBuildings(orgId, includeInactive);
+      return sendJson(res, 200, { data: buildings });
+    } catch (e) {
+      return sendError(res, 500, "DB_ERROR", "Failed to fetch buildings", String(e));
+    }
+  }
+
+  if (req.method === "POST" && path === "/buildings") {
+    try {
+      const raw = await readJson(req);
+      const parsed = CreateBuildingSchema.safeParse(raw);
+      if (!parsed.success) {
+        return sendError(res, 400, "VALIDATION_ERROR", "Invalid building data", parsed.error.flatten());
+      }
+      const created = await createBuilding(orgId, parsed.data);
+      return sendJson(res, 201, { data: created });
+    } catch (e: any) {
+      const msg = String(e?.message || e);
+      if (msg === "Invalid JSON") return sendError(res, 400, "INVALID_JSON", "Invalid JSON");
+      return sendError(res, 500, "DB_ERROR", "Failed to create building", String(e));
+    }
+  }
+
+  const buildingId = matchBuildingById(path);
+  if (req.method === "PATCH" && buildingId) {
+    try {
+      const raw = await readJson(req);
+      const parsed = UpdateBuildingSchema.safeParse(raw);
+      if (!parsed.success) {
+        return sendError(res, 400, "VALIDATION_ERROR", "Invalid building data", parsed.error.flatten());
+      }
+      const updated = await updateBuilding(orgId, buildingId, parsed.data);
+      if (!updated) return sendError(res, 404, "NOT_FOUND", "Building not found");
+      return sendJson(res, 200, { data: updated });
+    } catch (e: any) {
+      const msg = String(e?.message || e);
+      if (msg === "Invalid JSON") return sendError(res, 400, "INVALID_JSON", "Invalid JSON");
+      return sendError(res, 500, "DB_ERROR", "Failed to update building", String(e));
+    }
+  }
+
+  if (req.method === "DELETE" && buildingId) {
+    try {
+      const result = await deactivateBuilding(orgId, buildingId);
+      if (!result.success && result.reason === "NOT_FOUND") {
+        return sendError(res, 404, "NOT_FOUND", "Building not found");
+      }
+      if (!result.success && result.reason === "HAS_ACTIVE_UNITS") {
+        return sendError(res, 409, "CONFLICT", "Building has active units");
+      }
+      return sendJson(res, 200, { message: "Building deactivated" });
+    } catch (e) {
+      return sendError(res, 500, "DB_ERROR", "Failed to deactivate building", String(e));
+    }
+  }
+
+  // =========================
+  // Units
+  // =========================
+  const buildingUnitsId = matchBuildingUnits(path);
+  if (req.method === "GET" && buildingUnitsId) {
+    try {
+      const includeInactive = first(query, "includeInactive") === "true";
+      const typeParam = first(query, "type");
+      const type = typeParam === "COMMON_AREA" || typeParam === "RESIDENTIAL" ? typeParam : undefined;
+      const units = await listUnits(orgId, buildingUnitsId, includeInactive, type as any);
+      return sendJson(res, 200, { data: units });
+    } catch (e) {
+      return sendError(res, 500, "DB_ERROR", "Failed to fetch units", String(e));
+    }
+  }
+
+  if (req.method === "POST" && buildingUnitsId) {
+    try {
+      const raw = await readJson(req);
+      const parsed = CreateUnitSchema.safeParse(raw);
+      if (!parsed.success) {
+        return sendError(res, 400, "VALIDATION_ERROR", "Invalid unit data", parsed.error.flatten());
+      }
+      const created = await createUnit(orgId, buildingUnitsId, parsed.data);
+      if (!created) return sendError(res, 404, "NOT_FOUND", "Building not found");
+      return sendJson(res, 201, { data: created });
+    } catch (e: any) {
+      const msg = String(e?.message || e);
+      if (msg === "Invalid JSON") return sendError(res, 400, "INVALID_JSON", "Invalid JSON");
+      return sendError(res, 500, "DB_ERROR", "Failed to create unit", String(e));
+    }
+  }
+
+  const unitId = matchUnitById(path);
+  if (req.method === "PATCH" && unitId) {
+    try {
+      const raw = await readJson(req);
+      const parsed = UpdateUnitSchema.safeParse(raw);
+      if (!parsed.success) {
+        return sendError(res, 400, "VALIDATION_ERROR", "Invalid unit data", parsed.error.flatten());
+      }
+      const updated = await updateUnit(orgId, unitId, parsed.data);
+      if (!updated) return sendError(res, 404, "NOT_FOUND", "Unit not found");
+      return sendJson(res, 200, { data: updated });
+    } catch (e: any) {
+      const msg = String(e?.message || e);
+      if (msg === "Invalid JSON") return sendError(res, 400, "INVALID_JSON", "Invalid JSON");
+      return sendError(res, 500, "DB_ERROR", "Failed to update unit", String(e));
+    }
+  }
+
+  if (req.method === "DELETE" && unitId) {
+    try {
+      const result = await deactivateUnit(orgId, unitId);
+      if (!result.success && result.reason === "NOT_FOUND") {
+        return sendError(res, 404, "NOT_FOUND", "Unit not found");
+      }
+      if (!result.success && result.reason === "HAS_ACTIVE_APPLIANCES") {
+        return sendError(res, 409, "CONFLICT", "Unit has active appliances");
+      }
+      return sendJson(res, 200, { message: "Unit deactivated" });
+    } catch (e) {
+      return sendError(res, 500, "DB_ERROR", "Failed to deactivate unit", String(e));
+    }
+  }
+
+  // =========================
+  // Appliances
+  // =========================
+  const unitAppliancesId = matchUnitAppliances(path);
+  if (req.method === "GET" && unitAppliancesId) {
+    try {
+      const includeInactive = first(query, "includeInactive") === "true";
+      const appliances = await listAppliances(orgId, unitAppliancesId, includeInactive);
+      return sendJson(res, 200, { data: appliances });
+    } catch (e) {
+      return sendError(res, 500, "DB_ERROR", "Failed to fetch appliances", String(e));
+    }
+  }
+
+  if (req.method === "POST" && unitAppliancesId) {
+    try {
+      const raw = await readJson(req);
+      const parsed = CreateApplianceSchema.safeParse(raw);
+      if (!parsed.success) {
+        return sendError(res, 400, "VALIDATION_ERROR", "Invalid appliance data", parsed.error.flatten());
+      }
+      const created = await createAppliance(orgId, unitAppliancesId, parsed.data);
+      if (!created) return sendError(res, 404, "NOT_FOUND", "Unit not found");
+      return sendJson(res, 201, { data: created });
+    } catch (e: any) {
+      const msg = String(e?.message || e);
+      if (msg === "Invalid JSON") return sendError(res, 400, "INVALID_JSON", "Invalid JSON");
+      return sendError(res, 500, "DB_ERROR", "Failed to create appliance", String(e));
+    }
+  }
+
+  const applianceId = matchApplianceById(path);
+  if (req.method === "PATCH" && applianceId) {
+    try {
+      const raw = await readJson(req);
+      const parsed = UpdateApplianceSchema.safeParse(raw);
+      if (!parsed.success) {
+        return sendError(res, 400, "VALIDATION_ERROR", "Invalid appliance data", parsed.error.flatten());
+      }
+      const updated = await updateAppliance(orgId, applianceId, parsed.data);
+      if (!updated) return sendError(res, 404, "NOT_FOUND", "Appliance not found");
+      return sendJson(res, 200, { data: updated });
+    } catch (e: any) {
+      const msg = String(e?.message || e);
+      if (msg === "Invalid JSON") return sendError(res, 400, "INVALID_JSON", "Invalid JSON");
+      return sendError(res, 500, "DB_ERROR", "Failed to update appliance", String(e));
+    }
+  }
+
+  if (req.method === "DELETE" && applianceId) {
+    try {
+      const result = await deactivateAppliance(orgId, applianceId);
+      if (!result.success && result.reason === "NOT_FOUND") {
+        return sendError(res, 404, "NOT_FOUND", "Appliance not found");
+      }
+      if (!result.success && result.reason === "HAS_REQUESTS") {
+        return sendError(res, 409, "CONFLICT", "Appliance is referenced by requests");
+      }
+      return sendJson(res, 200, { message: "Appliance deactivated" });
+    } catch (e) {
+      return sendError(res, 500, "DB_ERROR", "Failed to deactivate appliance", String(e));
+    }
+  }
+
+  // =========================
+  // Asset Models
+  // =========================
+  if (req.method === "GET" && path === "/asset-models") {
+    try {
+      const includeInactive = first(query, "includeInactive") === "true";
+      const models = await listAssetModels(orgId, includeInactive);
+      const data = models.map((m) => ({ ...m, name: addAssetModelName(m) }));
+      return sendJson(res, 200, { data });
+    } catch (e) {
+      return sendError(res, 500, "DB_ERROR", "Failed to fetch asset models", String(e));
+    }
+  }
+
+  if (req.method === "POST" && path === "/asset-models") {
+    try {
+      const raw = await readJson(req);
+      const parsed = CreateAssetModelSchema.safeParse(raw);
+      if (!parsed.success) {
+        return sendError(res, 400, "VALIDATION_ERROR", "Invalid asset model data", parsed.error.flatten());
+      }
+      const created = await createAssetModel(orgId, parsed.data);
+      return sendJson(res, 201, { data: created });
+    } catch (e: any) {
+      const msg = String(e?.message || e);
+      if (msg === "Invalid JSON") return sendError(res, 400, "INVALID_JSON", "Invalid JSON");
+      return sendError(res, 500, "DB_ERROR", "Failed to create asset model", String(e));
+    }
+  }
+
+  const assetModelId = matchAssetModelById(path);
+  if (req.method === "PATCH" && assetModelId) {
+    try {
+      const raw = await readJson(req);
+      const parsed = UpdateAssetModelSchema.safeParse(raw);
+      if (!parsed.success) {
+        return sendError(res, 400, "VALIDATION_ERROR", "Invalid asset model data", parsed.error.flatten());
+      }
+      const updated = await updateAssetModel(orgId, assetModelId, parsed.data);
+      if (!updated) return sendError(res, 404, "NOT_FOUND", "Asset model not found");
+      return sendJson(res, 200, { data: updated });
+    } catch (e: any) {
+      const msg = String(e?.message || e);
+      if (msg === "Invalid JSON") return sendError(res, 400, "INVALID_JSON", "Invalid JSON");
+      return sendError(res, 500, "DB_ERROR", "Failed to update asset model", String(e));
+    }
+  }
+
+  if (req.method === "DELETE" && assetModelId) {
+    try {
+      const result = await deactivateAssetModel(orgId, assetModelId);
+      if (!result.success && result.reason === "NOT_FOUND") {
+        return sendError(res, 404, "NOT_FOUND", "Asset model not found");
+      }
+      if (!result.success && result.reason === "HAS_APPLIANCES") {
+        return sendError(res, 409, "CONFLICT", "Asset model is referenced by appliances");
+      }
+      if (!result.success && result.reason === "FORBIDDEN") {
+        return sendError(res, 403, "FORBIDDEN", "Asset model is not org-private");
+      }
+      return sendJson(res, 200, { message: "Asset model deactivated" });
+    } catch (e) {
+      return sendError(res, 500, "DB_ERROR", "Failed to deactivate asset model", String(e));
+    }
+  }
+
+  // =========================
+  // Occupancies
+  // =========================
+  const unitTenantsId = matchUnitTenants(path);
+  if (req.method === "GET" && unitTenantsId) {
+    try {
+      const tenants = await listUnitTenants(orgId, unitTenantsId);
+      if (!tenants) return sendError(res, 404, "NOT_FOUND", "Unit not found");
+      return sendJson(res, 200, { data: tenants });
+    } catch (e) {
+      return sendError(res, 500, "DB_ERROR", "Failed to fetch unit tenants", String(e));
+    }
+  }
+
+  if (req.method === "POST" && unitTenantsId) {
+    try {
+      const raw = await readJson(req);
+      const parsed = LinkTenantSchema.safeParse(raw);
+      if (!parsed.success) {
+        return sendError(res, 400, "VALIDATION_ERROR", "Invalid tenant link data", parsed.error.flatten());
+      }
+
+      let tenantId = parsed.data.tenantId;
+      if (!tenantId) {
+        const normalizedPhone = normalizePhoneToE164(parsed.data.phone);
+        if (!normalizedPhone) {
+          return sendError(res, 400, "VALIDATION_ERROR", "Invalid phone format");
+        }
+        const tenant = await createOrGetTenant({
+          orgId,
+          phone: normalizedPhone,
+          name: parsed.data.name,
+        });
+        tenantId = tenant.id;
+      }
+
+      const result = await linkTenantToUnit(orgId, tenantId, unitTenantsId);
+      if (!result.success && result.reason === "UNIT_NOT_FOUND") {
+        return sendError(res, 404, "NOT_FOUND", "Unit not found");
+      }
+      if (!result.success && result.reason === "TENANT_NOT_FOUND") {
+        return sendError(res, 404, "NOT_FOUND", "Tenant not found");
+      }
+      return sendJson(res, 200, { message: "Tenant linked" });
+    } catch (e: any) {
+      const msg = String(e?.message || e);
+      if (msg === "Invalid JSON") return sendError(res, 400, "INVALID_JSON", "Invalid JSON");
+      return sendError(res, 500, "DB_ERROR", "Failed to link tenant", String(e));
+    }
+  }
+
+  const unitTenantMatch = matchUnitTenant(path);
+  if (req.method === "DELETE" && unitTenantMatch) {
+    try {
+      const result = await unlinkTenantFromUnit(orgId, unitTenantMatch.tenantId, unitTenantMatch.unitId);
+      if (!result.success && result.reason === "UNIT_NOT_FOUND") {
+        return sendError(res, 404, "NOT_FOUND", "Unit not found");
+      }
+      return sendJson(res, 200, { message: "Tenant unlinked" });
+    } catch (e) {
+      return sendError(res, 500, "DB_ERROR", "Failed to unlink tenant", String(e));
+    }
   }
 
   // =========================
@@ -744,7 +1139,7 @@ const server = http.createServer(async (req, res) => {
 
       const tenant = await getTenantByPhone({
         phone: normalizedPhone,
-        orgId: DEFAULT_ORG_ID,
+        orgId,
       });
 
       return sendJson(res, 200, { data: tenant ?? null });
@@ -769,7 +1164,7 @@ const server = http.createServer(async (req, res) => {
       const tenant = await createOrGetTenant({
         ...raw,
         phone: normalizedPhone,
-        orgId: DEFAULT_ORG_ID,
+        orgId,
       });
 
       return sendJson(res, 200, { data: tenant });
@@ -788,13 +1183,34 @@ const server = http.createServer(async (req, res) => {
     if (tenantId) {
       try {
         const raw = await readJson(req);
-        const updated = await updateTenant(tenantId, raw);
+        const updated = await updateTenant(orgId, tenantId, raw);
         if (!updated) return sendError(res, 404, "NOT_FOUND", "Tenant not found");
         return sendJson(res, 200, { data: updated });
       } catch (e: any) {
         const msg = String(e?.message || e);
         if (msg === "Invalid JSON") return sendError(res, 400, "INVALID_JSON", "Invalid JSON");
         return sendError(res, 500, "DB_ERROR", "Failed to update tenant", String(e));
+      }
+    }
+  }
+
+  // =========================
+  // DELETE /tenants/:id (soft delete)
+  // =========================
+  if (req.method === "DELETE") {
+    const tenantId = matchTenantById(path);
+    if (tenantId) {
+      try {
+        const result = await deactivateTenant(orgId, tenantId);
+        if (!result.success && result.reason === "NOT_FOUND") {
+          return sendError(res, 404, "NOT_FOUND", "Tenant not found");
+        }
+        if (!result.success && result.reason === "HAS_OCCUPANCIES") {
+          return sendError(res, 409, "CONFLICT", "Tenant has active occupancies");
+        }
+        return sendJson(res, 200, { message: "Tenant deactivated" });
+      } catch (e) {
+        return sendError(res, 500, "DB_ERROR", "Failed to deactivate tenant", String(e));
       }
     }
   }

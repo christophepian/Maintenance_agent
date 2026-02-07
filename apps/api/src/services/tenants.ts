@@ -241,10 +241,16 @@ export async function getTenantById(id: string): Promise<TenantDTO | null> {
  * Update tenant information
  */
 export async function updateTenant(
+  orgId: string,
   id: string,
   input: UpdateTenantInput
 ): Promise<TenantDTO> {
   const validated = updateTenantSchema.parse(input);
+
+  const existing = await prisma.tenant.findFirst({ where: { id, orgId } });
+  if (!existing) {
+    throw new Error("Tenant not found");
+  }
 
   const tenant = await prisma.tenant.update({
     where: { id },
@@ -296,9 +302,9 @@ export async function updateTenant(
 /**
  * List tenants in org
  */
-export async function listTenants(orgId: string): Promise<TenantDTO[]> {
+export async function listTenants(orgId: string, includeInactive?: boolean): Promise<TenantDTO[]> {
   const tenants = await prisma.tenant.findMany({
-    where: { orgId },
+    where: { orgId, ...(includeInactive ? {} : { isActive: true }) },
     include: {
       occupancies: {
         include: {
@@ -318,4 +324,21 @@ export async function listTenants(orgId: string): Promise<TenantDTO[]> {
   });
 
   return tenants.map(tenantToDTO);
+}
+
+export async function deactivateTenant(orgId: string, tenantId: string) {
+  const existing = await prisma.tenant.findFirst({ where: { id: tenantId, orgId } });
+  if (!existing) return { success: false, reason: "NOT_FOUND" };
+
+  const occupancyCount = await prisma.occupancy.count({ where: { tenantId } });
+  if (occupancyCount > 0) {
+    return { success: false, reason: "HAS_OCCUPANCIES" };
+  }
+
+  await prisma.tenant.update({
+    where: { id: tenantId },
+    data: { isActive: false },
+  });
+
+  return { success: true };
 }
