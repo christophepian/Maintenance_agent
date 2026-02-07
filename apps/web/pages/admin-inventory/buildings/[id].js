@@ -166,8 +166,8 @@ export default function BuildingDetail() {
 
   return (
     <div style={ui.page}>
-      <Link href="/admin-inventory">
-        <a style={ui.backLink}>← Back to Inventory</a>
+      <Link href="/admin-inventory" style={ui.backLink}>
+        ← Back to Inventory
       </Link>
 
       <div style={ui.headerRow}>
@@ -271,8 +271,7 @@ export default function BuildingDetail() {
             </h3>
             <div style={ui.list}>
               {residentialUnits.map((u) => (
-                <Link key={u.id} href={`/admin-inventory/units/${u.id}`}>
-                  <a style={{ textDecoration: "none" }}>
+                <Link key={u.id} href={`/admin-inventory/units/${u.id}`} style={{ textDecoration: "none", display: "block" }}>
                     <div style={ui.listRow}>
                       <div>
                         <div style={ui.rowTitle}>{u.unitNumber || u.name || "Unit"}</div>
@@ -280,7 +279,6 @@ export default function BuildingDetail() {
                       </div>
                       <span style={{ color: "#0066cc" }}>→</span>
                     </div>
-                  </a>
                 </Link>
               ))}
             </div>
@@ -294,16 +292,14 @@ export default function BuildingDetail() {
             </h3>
             <div style={ui.list}>
               {commonUnits.map((u) => (
-                <Link key={u.id} href={`/admin-inventory/units/${u.id}`}>
-                  <a style={{ textDecoration: "none" }}>
-                    <div style={ui.listRow}>
-                      <div>
-                        <div style={ui.rowTitle}>{u.unitNumber || u.name || "Common Area"}</div>
-                        <div style={ui.help}><code style={ui.codeSmall}>{u.id}</code></div>
-                      </div>
-                      <span style={{ color: "#0066cc" }}>→</span>
+                <Link key={u.id} href={`/admin-inventory/units/${u.id}`} style={{ textDecoration: "none", display: "block" }}>
+                  <div style={ui.listRow}>
+                    <div>
+                      <div style={ui.rowTitle}>{u.unitNumber || u.name || "Common Area"}</div>
+                      <div style={ui.help}><code style={ui.codeSmall}>{u.id}</code></div>
                     </div>
-                  </a>
+                    <span style={{ color: "#0066cc" }}>→</span>
+                  </div>
                 </Link>
               ))}
             </div>

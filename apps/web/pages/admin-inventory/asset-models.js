@@ -131,8 +131,8 @@ export default function AssetModelsAdmin() {
 
   return (
     <div style={ui.page}>
-      <Link href="/admin-inventory">
-        <a style={ui.backLink}>← Back to Inventory</a>
+      <Link href="/admin-inventory" style={ui.backLink}>
+        ← Back to Inventory
       </Link>
 
       <div style={ui.headerRow}>
