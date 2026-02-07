@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 
 /**
  * Inventory Admin (Slice 4)
@@ -22,18 +23,34 @@ export default function InventoryAdmin() {
       page: { maxWidth: "1100px", margin: "40px auto", padding: "24px", fontFamily: "system-ui" },
       headerRow: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "24px" },
       h1: { fontSize: "2.2rem", fontWeight: 700, margin: 0 },
-      subtle: { color: "#888", fontSize: "1rem", marginTop: "4px" },
-      code: { background: "#f5f5f5", padding: "2px 6px", borderRadius: "4px", fontSize: "0.95em" },
-      tabRow: { display: "flex", gap: "16px", marginBottom: "24px" },
-      tab: { padding: "10px 18px", borderRadius: "8px", border: "1px solid #ddd", background: "#fafafa", cursor: "pointer", fontWeight: 500 },
-      tabActive: { background: "#111", color: "#fff", border: "1px solid #111" },
-      section: { marginBottom: "32px" },
-      card: { background: "#fff", border: "1px solid #eee", borderRadius: "8px", padding: "18px", marginBottom: "18px" },
-      label: { fontWeight: 600, marginRight: "8px" },
-      input: { padding: "10px", borderRadius: "8px", border: "1px solid #ddd", width: "320px", marginRight: "10px" },
-      btn: { padding: "10px 18px", borderRadius: "8px", border: "1px solid #111", background: "#111", color: "#fff", cursor: "pointer" },
-      error: { color: "crimson", marginTop: "10px" },
-      ok: { color: "green", marginTop: "10px" },
+      h2: { fontSize: "1.5rem", fontWeight: 600, margin: "0 0 16px 0" },
+      subtle: { color: "#888", fontSize: "0.95rem" },
+      code: { background: "#f5f5f5", padding: "2px 6px", borderRadius: "4px", fontSize: "0.95em", fontFamily: "monospace" },
+      codeSmall: { background: "#f5f5f5", padding: "2px 4px", borderRadius: "3px", fontSize: "0.85em", fontFamily: "monospace" },
+      tabsRow: { display: "flex", gap: "12px", marginBottom: "20px", borderBottom: "1px solid #eee", paddingBottom: "12px" },
+      tab: { padding: "10px 16px", borderRadius: "6px 6px 0 0", border: "1px solid #ddd", borderBottom: "none", background: "#fafafa", cursor: "pointer", fontWeight: 500, fontSize: "0.95rem" },
+      tabActive: { background: "#fff", border: "1px solid #ddd", borderBottom: "1px solid #fff", color: "#111" },
+      card: { background: "#fff", border: "1px solid #e5e5e5", borderRadius: "8px", padding: "20px", marginBottom: "20px" },
+      label: { display: "block", fontWeight: 600, marginBottom: "6px", fontSize: "0.95rem" },
+      input: { padding: "10px 12px", borderRadius: "6px", border: "1px solid #ddd", width: "100%", maxWidth: "380px", fontSize: "0.95rem", boxSizing: "border-box" },
+      primaryBtn: { padding: "10px 20px", borderRadius: "6px", border: "none", background: "#111", color: "#fff", cursor: "pointer", fontWeight: 600, fontSize: "0.95rem" },
+      secondaryBtn: { padding: "10px 20px", borderRadius: "6px", border: "1px solid #ddd", background: "#fafafa", color: "#111", cursor: "pointer", fontWeight: 500, fontSize: "0.95rem" },
+      formRow: { display: "flex", gap: "16px", alignItems: "flex-end", marginBottom: "20px" },
+      formCol: { display: "flex", flexDirection: "column", gap: "20px", marginBottom: "20px" },
+      grid2: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", marginBottom: "20px" },
+      grow: { flex: 1 },
+      list: { display: "flex", flexDirection: "column", gap: "12px" },
+      listRow: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px", border: "1px solid #e5e5e5", borderRadius: "6px", background: "#fafafa" },
+      rowTitle: { fontWeight: 600, fontSize: "1rem", marginBottom: "4px" },
+      help: { fontSize: "0.85rem", color: "#666", marginTop: "4px" },
+      empty: { padding: "20px", textAlign: "center", color: "#888", fontStyle: "italic" },
+      notice: { padding: "12px 16px", borderRadius: "6px", marginBottom: "16px", fontSize: "0.95rem" },
+      noticeOk: { background: "#e8f5e9", border: "1px solid #81c784", color: "#2e7d32" },
+      noticeErr: { background: "#ffebee", border: "1px solid #ef5350", color: "#c62828" },
+      pill: { display: "inline-block", background: "#e0e0e0", color: "#333", padding: "2px 8px", borderRadius: "12px", fontSize: "0.8rem", marginLeft: "6px" },
+      badgeRow: { display: "flex", gap: "12px" },
+      badge: { padding: "4px 8px", background: "#f0f0f0", borderRadius: "4px", fontSize: "0.85rem", color: "#666" },
+      footer: { marginTop: "40px", paddingTop: "20px", borderTop: "1px solid #e5e5e5" },
     };
   const API_BASE =
     process.env.NEXT_PUBLIC_API_BASE_URL ||
@@ -410,24 +427,20 @@ export default function InventoryAdmin() {
               <div style={ui.empty}>No buildings yet.</div>
             ) : (
               buildings.map((b) => (
-                <div key={b.id} style={ui.listRow}>
-                  <div>
-                    <div style={ui.rowTitle}>{b.name}</div>
-                    <div style={ui.subtle}>
-                      <code style={ui.codeSmall}>{b.id}</code>
+                <Link key={b.id} href={`/admin-inventory/buildings/${b.id}`}>
+                  <a style={{ textDecoration: "none" }}>
+                    <div style={ui.listRow}>
+                      <div>
+                        <div style={ui.rowTitle}>{b.name}</div>
+                        <div style={ui.help}>
+                          {b.address && <div>{b.address}</div>}
+                          <code style={ui.codeSmall}>{b.id}</code>
+                        </div>
+                      </div>
+                      <span style={{ color: "#0066cc" }}>→</span>
                     </div>
-                  </div>
-                  <button
-                    type="button"
-                    style={ui.secondaryBtn}
-                    onClick={() => {
-                      setSelectedBuildingId(b.id);
-                      setActiveTab("units");
-                    }}
-                  >
-                    Manage units →
-                  </button>
-                </div>
+                  </a>
+                </Link>
               ))
             )}
           </div>
@@ -497,7 +510,14 @@ export default function InventoryAdmin() {
 
       {activeTab === "asset-models" ? (
         <div style={ui.card}>
-          <h2 style={ui.h2}>Asset Models</h2>
+          <h2 style={ui.h2}>
+            Asset Models
+            <Link href="/admin-inventory/asset-models">
+              <a style={{ marginLeft: "16px", fontSize: "0.9rem", color: "#0066cc", textDecoration: "none" }}>
+                View all →
+              </a>
+            </Link>
+          </h2>
 
           <form onSubmit={onCreateAssetModel} style={ui.formRow}>
             <div style={ui.grow}>
