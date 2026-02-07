@@ -129,12 +129,12 @@ export default function InventoryAdmin() {
 
   async function loadBuildings() {
     const data = await fetchJSON(`/buildings`);
-    setBuildings(Array.isArray(data) ? data : data?.buildings || []);
+    setBuildings(Array.isArray(data) ? data : data?.data || []);
   }
 
   async function loadAssetModels() {
     const data = await fetchJSON(`/asset-models`);
-    setAssetModels(Array.isArray(data) ? data : data?.assetModels || []);
+    setAssetModels(Array.isArray(data) ? data : data?.data || []);
   }
 
   async function loadUnits(buildingId) {
@@ -143,7 +143,7 @@ export default function InventoryAdmin() {
       return;
     }
     const data = await fetchJSON(`/buildings/${buildingId}/units`);
-    setUnits(Array.isArray(data) ? data : data?.units || []);
+    setUnits(Array.isArray(data) ? data : data?.data || []);
   }
 
   async function loadAppliances(unitId) {
@@ -152,7 +152,7 @@ export default function InventoryAdmin() {
       return;
     }
     const data = await fetchJSON(`/units/${unitId}/appliances`);
-    setAppliances(Array.isArray(data) ? data : data?.appliances || []);
+    setAppliances(Array.isArray(data) ? data : data?.data || []);
   }
 
   // Initial load
