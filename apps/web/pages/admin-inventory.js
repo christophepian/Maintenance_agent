@@ -427,19 +427,17 @@ export default function InventoryAdmin() {
               <div style={ui.empty}>No buildings yet.</div>
             ) : (
               buildings.map((b) => (
-                <Link key={b.id} href={`/admin-inventory/buildings/${b.id}`}>
-                  <a style={{ textDecoration: "none" }}>
-                    <div style={ui.listRow}>
-                      <div>
-                        <div style={ui.rowTitle}>{b.name}</div>
-                        <div style={ui.help}>
-                          {b.address && <div>{b.address}</div>}
-                          <code style={ui.codeSmall}>{b.id}</code>
-                        </div>
+                <Link key={b.id} href={`/admin-inventory/buildings/${b.id}`} style={{ textDecoration: "none", display: "block" }}>
+                  <div style={ui.listRow}>
+                    <div>
+                      <div style={ui.rowTitle}>{b.name}</div>
+                      <div style={ui.help}>
+                        {b.address && <div>{b.address}</div>}
+                        <code style={ui.codeSmall}>{b.id}</code>
                       </div>
-                      <span style={{ color: "#0066cc" }}>→</span>
                     </div>
-                  </a>
+                    <span style={{ color: "#0066cc" }}>→</span>
+                  </div>
                 </Link>
               ))
             )}
@@ -512,10 +510,8 @@ export default function InventoryAdmin() {
         <div style={ui.card}>
           <h2 style={ui.h2}>
             Asset Models
-            <Link href="/admin-inventory/asset-models">
-              <a style={{ marginLeft: "16px", fontSize: "0.9rem", color: "#0066cc", textDecoration: "none" }}>
-                View all →
-              </a>
+            <Link href="/admin-inventory/asset-models" style={{ marginLeft: "16px", fontSize: "0.9rem", color: "#0066cc", textDecoration: "none" }}>
+              View all →
             </Link>
           </h2>
 
