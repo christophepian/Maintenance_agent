@@ -51,12 +51,16 @@ export async function getTenantSession(
       },
     },
     include: {
-      unit: {
+      occupancies: {
         include: {
-          building: true,
-          appliances: {
+          unit: {
             include: {
-              assetModel: true,
+              building: true,
+              appliances: {
+                include: {
+                  assetModel: true,
+                },
+              },
             },
           },
         },
@@ -66,30 +70,32 @@ export async function getTenantSession(
 
   if (!tenant) return null;
 
+  const primaryUnit = tenant.occupancies[0]?.unit || null;
+
   return {
     tenant: {
       id: tenant.id,
       name: tenant.name ?? null,
       phone: tenant.phone,
       email: tenant.email ?? null,
-      unitId: tenant.unitId ?? null,
+      unitId: primaryUnit?.id ?? null,
     },
-    unit: tenant.unit
+    unit: primaryUnit
       ? {
-          id: tenant.unit.id,
-          unitNumber: tenant.unit.unitNumber,
-          floor: tenant.unit.floor ?? null,
+          id: primaryUnit.id,
+          unitNumber: primaryUnit.unitNumber,
+          floor: primaryUnit.floor ?? null,
         }
       : null,
-    building: tenant.unit?.building
+    building: primaryUnit?.building
       ? {
-          id: tenant.unit.building.id,
-          name: tenant.unit.building.name,
-          address: tenant.unit.building.address,
+          id: primaryUnit.building.id,
+          name: primaryUnit.building.name,
+          address: primaryUnit.building.address,
         }
       : null,
-    appliances: tenant.unit?.appliances
-      ? tenant.unit.appliances.map((appliance) => ({
+    appliances: primaryUnit?.appliances
+      ? primaryUnit.appliances.map((appliance) => ({
           id: appliance.id,
           name: appliance.name,
           serial: appliance.serial ?? null,

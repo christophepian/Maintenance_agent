@@ -32,7 +32,11 @@ export async function getBuilding(id: string) {
               assetModel: true,
             },
           },
-          tenants: true,
+          occupancies: {
+            include: {
+              tenant: true,
+            },
+          },
         },
       },
     },
@@ -78,13 +82,16 @@ export async function deleteBuilding(id: string) {
 
 export async function createUnit(
   buildingId: string,
-  data: { unitNumber: string; floor?: string }
+  orgId: string,
+  data: { unitNumber: string; floor?: string; type?: string }
 ) {
   const unit = await prisma.unit.create({
     data: {
       buildingId,
+      orgId,
       unitNumber: data.unitNumber,
       floor: data.floor || null,
+      type: data.type as any,
     },
     include: {
       appliances: {
@@ -92,7 +99,11 @@ export async function createUnit(
           assetModel: true,
         },
       },
-      tenants: true,
+      occupancies: {
+        include: {
+          tenant: true,
+        },
+      },
     },
   });
   return unit;
@@ -108,7 +119,11 @@ export async function getUnit(id: string) {
           assetModel: true,
         },
       },
-      tenants: true,
+      occupancies: {
+        include: {
+          tenant: true,
+        },
+      },
     },
   });
 }
@@ -122,7 +137,11 @@ export async function listUnits(buildingId: string) {
           assetModel: true,
         },
       },
-      tenants: true,
+      occupancies: {
+        include: {
+          tenant: true,
+        },
+      },
     },
     orderBy: { unitNumber: "asc" },
   });
@@ -130,18 +149,26 @@ export async function listUnits(buildingId: string) {
 
 export async function updateUnit(
   id: string,
-  data: { unitNumber?: string; floor?: string }
+  data: { unitNumber?: string; floor?: string; type?: string }
 ) {
   return await prisma.unit.update({
     where: { id },
-    data,
+    data: {
+      unitNumber: data.unitNumber,
+      floor: data.floor,
+      type: data.type as any,
+    },
     include: {
       appliances: {
         include: {
           assetModel: true,
         },
       },
-      tenants: true,
+      occupancies: {
+        include: {
+          tenant: true,
+        },
+      },
     },
   });
 }
@@ -158,6 +185,7 @@ export async function deleteUnit(id: string) {
 
 export async function createAppliance(
   unitId: string,
+  orgId: string,
   data: {
     name: string;
     assetModelId?: string;
@@ -169,6 +197,7 @@ export async function createAppliance(
   const appliance = await prisma.appliance.create({
     data: {
       unitId,
+      orgId,
       name: data.name,
       assetModelId: data.assetModelId || null,
       serial: data.serial || null,

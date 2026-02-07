@@ -44,6 +44,11 @@ enum RequestStatus {
   COMPLETED
 }
 
+enum UnitType {
+  RESIDENTIAL
+  COMMON_AREA
+}
+
 model Org {
   id           String       @id @default(uuid())
   name         String
@@ -52,6 +57,9 @@ model Org {
   config       OrgConfig?
   tenants      Tenant[]
   buildings    Building[]
+  units        Unit[]
+  appliances   Appliance[]
+  assetModels  AssetModel[]
 }
 
 model OrgConfig {
@@ -145,9 +153,9 @@ model Tenant {
   name      String?
   phone     String    // E.164 format
   email     String?
-  unitId    String?
-  unit      Unit?     @relation(fields: [unitId], references: [id])
+  occupancies Occupancy[]
   requests  Request[]
+  isActive  Boolean   @default(true)
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
@@ -162,6 +170,7 @@ model Building {
   name      String
   address   String
   units     Unit[]
+  isActive  Boolean   @default(true)
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
@@ -172,22 +181,29 @@ model Unit {
   id         String      @id @default(uuid())
   buildingId String
   building   Building    @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+  orgId      String
+  org        Org         @relation(fields: [orgId], references: [id], onDelete: Cascade)
   unitNumber String
   floor      String?
-  tenants    Tenant[]
+  type       UnitType    @default(RESIDENTIAL)
+  occupancies Occupancy[]
   appliances Appliance[]
   requests   Request[]
+  isActive   Boolean     @default(true)
   createdAt  DateTime    @default(now())
   updatedAt  DateTime    @updatedAt
 
   @@unique([buildingId, unitNumber])
   @@index([buildingId])
+  @@index([orgId])
 }
 
 model Appliance {
   id           String      @id @default(uuid())
   unitId       String
   unit         Unit        @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  orgId        String
+  org          Org         @relation(fields: [orgId], references: [id], onDelete: Cascade)
   assetModelId String?
   assetModel   AssetModel? @relation(fields: [assetModelId], references: [id])
   name         String
@@ -195,23 +211,41 @@ model Appliance {
   installDate  DateTime?
   notes        String?
   requests     Request[]
+  isActive     Boolean     @default(true)
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
 
   @@index([unitId])
+  @@index([orgId])
 }
 
 model AssetModel {
   id           String      @id @default(uuid())
-  orgId        String
+  orgId        String?
+  org          Org?        @relation(fields: [orgId], references: [id], onDelete: Cascade)
   manufacturer String
   model        String
   category     String
   specs        String?     // JSON specs
   appliances   Appliance[]
+  isActive     Boolean     @default(true)
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
 
   @@unique([orgId, manufacturer, model])
   @@index([orgId, category])
+  @@index([orgId, isActive])
+}
+
+model Occupancy {
+  id       String  @id @default(uuid())
+  tenantId String
+  unitId   String
+
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  unit     Unit   @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, unitId])
+  @@index([tenantId])
+  @@index([unitId])
 }

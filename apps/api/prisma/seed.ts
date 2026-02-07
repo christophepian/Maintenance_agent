@@ -45,6 +45,7 @@ async function main() {
     unit = await prisma.unit.create({
       data: {
         buildingId: building.id,
+        orgId,
         unitNumber: "1A",
         floor: "1",
       },
@@ -58,6 +59,7 @@ async function main() {
     appliance = await prisma.appliance.create({
       data: {
         unitId: unit.id,
+        orgId,
         name: "Kitchen Oven",
       },
     });
@@ -68,7 +70,7 @@ async function main() {
     throw new Error("Failed to normalize demo phone");
   }
 
-  await prisma.tenant.upsert({
+  const tenant = await prisma.tenant.upsert({
     where: {
       orgId_phone: {
         orgId,
@@ -77,12 +79,24 @@ async function main() {
     },
     update: {
       name: "Test Tenant",
-      unitId: unit.id,
     },
     create: {
       orgId,
       phone: normalizedPhone,
       name: "Test Tenant",
+    },
+  });
+
+  await prisma.occupancy.upsert({
+    where: {
+      tenantId_unitId: {
+        tenantId: tenant.id,
+        unitId: unit.id,
+      },
+    },
+    update: {},
+    create: {
+      tenantId: tenant.id,
       unitId: unit.id,
     },
   });

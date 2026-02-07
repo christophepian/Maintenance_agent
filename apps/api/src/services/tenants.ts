@@ -47,23 +47,24 @@ export interface TenantDTO {
  * Transform database tenant record to DTO
  */
 function tenantToDTO(tenant: any): TenantDTO {
+  const primaryUnit = tenant.occupancies?.[0]?.unit;
   return {
     id: tenant.id,
     orgId: tenant.orgId,
     name: tenant.name || undefined,
     phone: tenant.phone,
     email: tenant.email || undefined,
-    unitId: tenant.unitId || undefined,
-    unit: tenant.unit
+    unitId: primaryUnit?.id || undefined,
+    unit: primaryUnit
       ? {
-          id: tenant.unit.id,
-          buildingId: tenant.unit.buildingId,
-          unitNumber: tenant.unit.unitNumber,
-          floor: tenant.unit.floor || undefined,
+          id: primaryUnit.id,
+          buildingId: primaryUnit.buildingId,
+          unitNumber: primaryUnit.unitNumber,
+          floor: primaryUnit.floor || undefined,
         }
       : undefined,
-    appliances: tenant.unit?.appliances
-      ? tenant.unit.appliances.map((appliance: any) => ({
+    appliances: primaryUnit?.appliances
+      ? primaryUnit.appliances.map((appliance: any) => ({
           id: appliance.id,
           name: appliance.name,
           serial: appliance.serial || undefined,
@@ -107,11 +108,15 @@ export async function createOrGetTenant(
       },
     },
     include: {
-      unit: {
+      occupancies: {
         include: {
-          appliances: {
+          unit: {
             include: {
-              assetModel: true,
+              appliances: {
+                include: {
+                  assetModel: true,
+                },
+              },
             },
           },
         },
@@ -130,14 +135,30 @@ export async function createOrGetTenant(
       phone: normalizedPhone,
       name: validated.name || null,
       email: validated.email || null,
-      unitId: validated.unitId || null,
     },
+  });
+
+  if (validated.unitId) {
+    await prisma.occupancy.create({
+      data: {
+        tenantId: newTenant.id,
+        unitId: validated.unitId,
+      },
+    });
+  }
+
+  const loadedTenant = await prisma.tenant.findUnique({
+    where: { id: newTenant.id },
     include: {
-      unit: {
+      occupancies: {
         include: {
-          appliances: {
+          unit: {
             include: {
-              assetModel: true,
+              appliances: {
+                include: {
+                  assetModel: true,
+                },
+              },
             },
           },
         },
@@ -145,7 +166,8 @@ export async function createOrGetTenant(
     },
   });
 
-  return tenantToDTO(newTenant);
+  if (!loadedTenant) throw new Error("Failed to load tenant");
+  return tenantToDTO(loadedTenant);
 }
 
 /**
@@ -170,11 +192,15 @@ export async function getTenantByPhone(
       },
     },
     include: {
-      unit: {
+      occupancies: {
         include: {
-          appliances: {
+          unit: {
             include: {
-              assetModel: true,
+              appliances: {
+                include: {
+                  assetModel: true,
+                },
+              },
             },
           },
         },
@@ -192,11 +218,15 @@ export async function getTenantById(id: string): Promise<TenantDTO | null> {
   const tenant = await prisma.tenant.findUnique({
     where: { id },
     include: {
-      unit: {
+      occupancies: {
         include: {
-          appliances: {
+          unit: {
             include: {
-              assetModel: true,
+              appliances: {
+                include: {
+                  assetModel: true,
+                },
+              },
             },
           },
         },
@@ -221,14 +251,37 @@ export async function updateTenant(
     data: {
       name: validated.name !== undefined ? validated.name : undefined,
       email: validated.email !== undefined ? validated.email : undefined,
-      unitId: validated.unitId !== undefined ? validated.unitId : undefined,
     },
+  });
+
+  if (validated.unitId) {
+    await prisma.occupancy.upsert({
+      where: {
+        tenantId_unitId: {
+          tenantId: tenant.id,
+          unitId: validated.unitId,
+        },
+      },
+      update: {},
+      create: {
+        tenantId: tenant.id,
+        unitId: validated.unitId,
+      },
+    });
+  }
+
+  const loadedTenant = await prisma.tenant.findUnique({
+    where: { id: tenant.id },
     include: {
-      unit: {
+      occupancies: {
         include: {
-          appliances: {
+          unit: {
             include: {
-              assetModel: true,
+              appliances: {
+                include: {
+                  assetModel: true,
+                },
+              },
             },
           },
         },
@@ -236,7 +289,8 @@ export async function updateTenant(
     },
   });
 
-  return tenantToDTO(tenant);
+  if (!loadedTenant) throw new Error("Failed to load tenant");
+  return tenantToDTO(loadedTenant);
 }
 
 /**
@@ -246,11 +300,15 @@ export async function listTenants(orgId: string): Promise<TenantDTO[]> {
   const tenants = await prisma.tenant.findMany({
     where: { orgId },
     include: {
-      unit: {
+      occupancies: {
         include: {
-          appliances: {
+          unit: {
             include: {
-              assetModel: true,
+              appliances: {
+                include: {
+                  assetModel: true,
+                },
+              },
             },
           },
         },
