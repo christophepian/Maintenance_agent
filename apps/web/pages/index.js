@@ -137,6 +137,10 @@ export default function Home() {
         </div>
       </header>
 
+      <div className="mb-6 rounded-lg border border-red-300 bg-red-100 px-4 py-3 text-red-800 shadow-sm">
+        Tailwind check: this box should be red, padded, and rounded.
+      </div>
+
       <div style={ui.grid}>
         {flows.map((f) => (
           <div key={f.path} style={ui.card}>

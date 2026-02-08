@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useRouter } from "next/router";
 
 // Add global.css classes for layout and styling
 // Global CSS is imported in _app.js
@@ -26,11 +27,17 @@ function fmtDate(iso) {
 }
 
 export default function ContractorPortal() {
+    const router = useRouter();
     function authHeaders() {
       if (typeof window === "undefined") return {};
       const token = localStorage.getItem("authToken");
       return token ? { Authorization: `Bearer ${token}` } : {};
     }
+    useEffect(() => {
+      if (router.pathname === "/contractor") {
+        router.replace("/contractor/jobs");
+      }
+    }, [router]);
     const [openTimeline, setOpenTimeline] = useState(null);
     const [eventLoading, setEventLoading] = useState(false);
     const [eventError, setEventError] = useState("");
@@ -206,35 +213,29 @@ export default function ContractorPortal() {
           No requests assigned to you yet.
         </div>
       ) : (
-        <div
-          style={{
-            overflowX: "auto",
-            border: "1px solid #ddd",
-            borderRadius: 8,
-          }}
-        >
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead>
-              <tr style={{ background: "#f5f5f5" }}>
-                <th style={{ padding: "12px", textAlign: "left", fontWeight: 600, borderBottom: "2px solid #ddd" }}>
+        <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+          <table className="w-full border-collapse text-sm">
+            <thead className="bg-slate-50/70">
+              <tr>
+                <th className="h-12 px-4 text-left align-middle text-xs font-semibold text-slate-600 border-b border-slate-200">
                   Created
                 </th>
-                <th style={{ padding: "12px", textAlign: "left", fontWeight: 600, borderBottom: "2px solid #ddd" }}>
+                <th className="h-12 px-4 text-left align-middle text-xs font-semibold text-slate-600 border-b border-slate-200">
                   Category
                 </th>
-                <th style={{ padding: "12px", textAlign: "left", fontWeight: 600, borderBottom: "2px solid #ddd" }}>
+                <th className="h-12 px-4 text-left align-middle text-xs font-semibold text-slate-600 border-b border-slate-200">
                   Appliance / Model
                 </th>
-                <th style={{ padding: "12px", textAlign: "left", fontWeight: 600, borderBottom: "2px solid #ddd" }}>
+                <th className="h-12 px-4 text-left align-middle text-xs font-semibold text-slate-600 border-b border-slate-200">
                   Description
                 </th>
-                <th style={{ padding: "12px", textAlign: "left", fontWeight: 600, borderBottom: "2px solid #ddd" }}>
+                <th className="h-12 px-4 text-left align-middle text-xs font-semibold text-slate-600 border-b border-slate-200">
                   Est. Cost
                 </th>
-                <th style={{ padding: "12px", textAlign: "left", fontWeight: 600, borderBottom: "2px solid #ddd" }}>
+                <th className="h-12 px-4 text-left align-middle text-xs font-semibold text-slate-600 border-b border-slate-200">
                   Status
                 </th>
-                <th style={{ padding: "12px", textAlign: "left", fontWeight: 600, borderBottom: "2px solid #ddd" }}>
+                <th className="h-12 px-4 text-left align-middle text-xs font-semibold text-slate-600 border-b border-slate-200">
                   Actions
                 </th>
               </tr>
@@ -249,40 +250,40 @@ export default function ContractorPortal() {
 
                 return (
                   <>
-                  <tr key={r.id}>
-                    <td style={{ padding: "10px", borderBottom: "1px solid #eee", whiteSpace: "nowrap" }}>
+                  <tr key={r.id} className="border-b border-slate-100 hover:bg-slate-50/70 transition-colors">
+                    <td className="px-4 py-3 align-middle text-sm text-slate-700 whitespace-nowrap">
                       {fmtDate(r.createdAt)}
                     </td>
-                    <td style={{ padding: "10px", borderBottom: "1px solid #eee" }}>
+                    <td className="px-4 py-3 align-middle text-sm text-slate-700">
                       {r.category || "(none)"}
                     </td>
-                    <td style={{ padding: "10px", borderBottom: "1px solid #eee" }}>
+                    <td className="px-4 py-3 align-middle text-sm text-slate-700">
                       {r.appliance ? (
                         <div>
-                          <div style={{ fontWeight: 500 }}>{r.appliance.name}</div>
+                          <div className="font-medium text-slate-900">{r.appliance.name}</div>
                           {r.appliance.assetModel ? (
-                            <div style={{ fontSize: 12, color: "#666" }}>
+                            <div className="text-xs text-slate-500">
                               {r.appliance.assetModel.manufacturer} {r.appliance.assetModel.model}
                             </div>
                           ) : (
-                            <div style={{ fontSize: 12, color: "#999" }}>(No model info)</div>
+                            <div className="text-xs text-slate-400">(No model info)</div>
                           )}
                           {r.appliance.serial && (
-                            <div style={{ fontSize: 11, color: "#999" }}>SN: {r.appliance.serial}</div>
+                            <div className="text-[11px] text-slate-400">SN: {r.appliance.serial}</div>
                           )}
                         </div>
                       ) : (
-                        <div style={{ color: "#999" }}>(No appliance)</div>
+                        <div className="text-sm text-slate-400">(No appliance)</div>
                       )}
                     </td>
-                    <td style={{ padding: "10px", borderBottom: "1px solid #eee" }}>
-                      <div style={{ fontWeight: 500 }}>{r.description}</div>
-                      <div style={{ fontSize: 12, color: "#888" }}>{r.id}</div>
+                    <td className="px-4 py-3 align-middle text-sm text-slate-700">
+                      <div className="font-medium text-slate-900">{r.description}</div>
+                      <div className="text-xs text-slate-500">{r.id}</div>
                     </td>
-                    <td style={{ padding: "10px", borderBottom: "1px solid #eee", whiteSpace: "nowrap" }}>
+                    <td className="px-4 py-3 align-middle text-sm text-slate-700 whitespace-nowrap">
                       {typeof r.estimatedCost === "number" ? `${r.estimatedCost} CHF` : "(none)"}
                     </td>
-                    <td style={{ padding: "10px", borderBottom: "1px solid #eee" }}>
+                    <td className="px-4 py-3 align-middle text-sm text-slate-700">
                       <span
                         style={{
                           padding: "4px 8px",
@@ -298,8 +299,8 @@ export default function ContractorPortal() {
                         {b.label}
                       </span>
                     </td>
-                    <td style={{ padding: "10px", borderBottom: "1px solid #eee" }}>
-                      <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                    <td className="px-4 py-3 align-middle text-sm text-slate-700">
+                      <div className="flex flex-wrap gap-2">
                         {canStartWork ? (
                           <button
                             onClick={() => updateStatus(r.id, "IN_PROGRESS")}
@@ -335,7 +336,7 @@ export default function ContractorPortal() {
                           </button>
                         ) : null}
                         {!canStartWork && !canComplete ? (
-                          <span style={{ color: "#ccc", fontSize: 12 }}>(no actions)</span>
+                          <span className="text-xs text-slate-400">(no actions)</span>
                         ) : null}
                         <button
                           style={{ padding: "6px 12px", background: "#2196f3", color: "white", border: "none", borderRadius: 4, cursor: "pointer" }}
@@ -355,26 +356,26 @@ export default function ContractorPortal() {
                   </tr>
                   {openTimeline === r.id && (
                     <tr>
-                      <td colSpan={7} style={{ background: "#f9f9f9", padding: "18px 24px" }}>
-                        <div style={{ fontWeight: 600, marginBottom: 8 }}>Event Timeline</div>
+                      <td colSpan={7} className="bg-slate-50/70 px-6 py-5">
+                        <div className="mb-2 text-sm font-semibold text-slate-900">Event Timeline</div>
                         {eventLoading ? (
-                          <div style={{ color: "#888" }}>Loading...</div>
+                          <div className="text-sm text-slate-500">Loading...</div>
                         ) : eventError ? (
-                          <div style={{ color: "crimson" }}>
+                          <div className="text-sm text-red-600">
                             {eventError === "Not found" || eventError?.toLowerCase().includes("not found")
                               ? "No timeline events found for this request."
                               : eventError}
                           </div>
                         ) : (
-                          <ul style={{ margin: 0, padding: 0, listStyle: "none" }}>
+                          <ul className="space-y-2 text-sm text-slate-700">
                             {(eventData[r.id] || []).length === 0 ? (
-                              <li style={{ color: "#aaa" }}>(No events logged yet)</li>
+                              <li className="text-slate-400">(No events logged yet)</li>
                             ) : (
                               eventData[r.id].map(ev => (
-                                <li key={ev.id} style={{ marginBottom: 10 }}>
-                                  <span style={{ fontWeight: 500 }}>{ev.type}</span>
+                                <li key={ev.id}>
+                                  <span className="font-medium text-slate-900">{ev.type}</span>
                                   {ev.message ? <>: <span>{ev.message}</span></> : null}
-                                  <span style={{ color: "#888", marginLeft: 12, fontSize: 12 }}>{fmtDate(ev.timestamp)}</span>
+                                  <span className="ml-3 text-xs text-slate-500">{fmtDate(ev.timestamp)}</span>
                                 </li>
                               ))
                             )}

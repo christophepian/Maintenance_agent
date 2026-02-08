@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useRouter } from "next/router";
+import AppShell from "../components/AppShell";
 
 export default function TenantPhone() {
   const router = useRouter();
@@ -48,7 +49,8 @@ export default function TenantPhone() {
   }
 
   return (
-    <div className="main-container">
+    <AppShell role="TENANT">
+      <div className="main-container">
       <h1>Tenant sign-in</h1>
       <div className="subtle">Enter your phone number to continue.</div>
 
@@ -70,6 +72,7 @@ export default function TenantPhone() {
           {loading ? "Checking…" : "Continue"}
         </button>
       </form>
-    </div>
+      </div>
+    </AppShell>
   );
 }

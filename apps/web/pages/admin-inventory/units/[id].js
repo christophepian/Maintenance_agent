@@ -1,6 +1,7 @@
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import AppShell from "../../../components/AppShell";
 
 export default function UnitDetail() {
   const router = useRouter();
@@ -39,6 +40,14 @@ export default function UnitDetail() {
   const [unit, setUnit] = useState(null);
   const [appliances, setAppliances] = useState([]);
   const [tenants, setTenants] = useState([]);
+  const [allTenants, setAllTenants] = useState([]);
+  const [selectedTenantId, setSelectedTenantId] = useState("");
+  const [assigningTenant, setAssigningTenant] = useState(false);
+  const [unassigningTenantId, setUnassigningTenantId] = useState(null);
+  const [createTenantName, setCreateTenantName] = useState("");
+  const [createTenantPhone, setCreateTenantPhone] = useState("");
+  const [createTenantEmail, setCreateTenantEmail] = useState("");
+  const [creatingTenant, setCreatingTenant] = useState(false);
   const [assetModels, setAssetModels] = useState([]);
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState(null);
@@ -91,6 +100,7 @@ export default function UnitDetail() {
     }
     await loadAppliances();
     await loadTenants();
+    await loadAllTenants();
     await loadAssetModels();
     setLoading(false);
   }
@@ -115,6 +125,15 @@ export default function UnitDetail() {
     }
   }
 
+  async function loadAllTenants() {
+    try {
+      const data = await fetchJSON(`/tenants`);
+      setAllTenants(Array.isArray(data) ? data : data?.data || []);
+    } catch (e) {
+      // Silently fail
+    }
+  }
+
   async function loadAssetModels() {
     try {
       const data = await fetchJSON(`/asset-models`);
@@ -132,7 +151,6 @@ export default function UnitDetail() {
   async function onCreateAppliance(e) {
     e.preventDefault();
     if (!createApplianceName.trim()) return setErr("Appliance name is required.");
-    if (!createApplianceCategory.trim()) return setErr("Category is required.");
 
     try {
       setLoading(true);
@@ -140,7 +158,7 @@ export default function UnitDetail() {
         method: "POST",
         body: JSON.stringify({
           name: createApplianceName,
-          category: createApplianceCategory,
+          ...(createApplianceCategory.trim() ? { category: createApplianceCategory } : {}),
           serial: createApplianceSerial || undefined,
           assetModelId: createApplianceModel || undefined,
         }),
@@ -182,12 +200,85 @@ export default function UnitDetail() {
     }
   }
 
+  async function onAssignTenant(e) {
+    e.preventDefault();
+    if (!selectedTenantId) return setErr("Select a tenant to assign.");
+    try {
+      setAssigningTenant(true);
+      await fetchJSON(`/units/${id}/tenants`, {
+        method: "POST",
+        body: JSON.stringify({ tenantId: selectedTenantId }),
+      });
+      setSelectedTenantId("");
+      await loadTenants();
+      await loadAllTenants();
+      setOk("Tenant assigned.");
+    } catch (e) {
+      setErr(`Assign failed: ${e.message}`);
+    } finally {
+      setAssigningTenant(false);
+    }
+  }
+
+  async function onUnassignTenant(tenantId) {
+    if (!confirm("Remove this tenant from the unit?")) return;
+    try {
+      setUnassigningTenantId(tenantId);
+      await fetchJSON(`/units/${id}/tenants/${tenantId}`, { method: "DELETE" });
+      await loadTenants();
+      await loadAllTenants();
+      setOk("Tenant unassigned.");
+    } catch (e) {
+      setErr(`Unassign failed: ${e.message}`);
+    } finally {
+      setUnassigningTenantId(null);
+    }
+  }
+
+  async function onCreateTenant(e) {
+    e.preventDefault();
+    if (!createTenantPhone.trim()) return setErr("Phone is required.");
+    try {
+      setCreatingTenant(true);
+      const payload = {
+        phone: createTenantPhone.trim(),
+        ...(createTenantName.trim() ? { name: createTenantName.trim() } : {}),
+        ...(createTenantEmail.trim() ? { email: createTenantEmail.trim() } : {}),
+      };
+      const created = await fetchJSON(`/tenants`, {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+      const createdTenantId = created?.data?.id || created?.id;
+      if (createdTenantId) {
+        await fetchJSON(`/units/${id}/tenants`, {
+          method: "POST",
+          body: JSON.stringify({ tenantId: createdTenantId }),
+        });
+      }
+      setCreateTenantName("");
+      setCreateTenantPhone("");
+      setCreateTenantEmail("");
+      await loadTenants();
+      await loadAllTenants();
+      setOk("Tenant created and assigned.");
+    } catch (e) {
+      setErr(`Create tenant failed: ${e.message}`);
+    } finally {
+      setCreatingTenant(false);
+    }
+  }
+
+  const assignedTenantIds = new Set(tenants.map((t) => t.id));
+  const availableTenants = allTenants.filter((t) => !assignedTenantIds.has(t.id));
+
   if (loading) {
     return <div style={ui.page}>Loading...</div>;
   }
 
   return (
-    <div style={ui.page}>
+    <AppShell role="MANAGER">
+      <div style={ui.page}>
       <Link href="/admin-inventory" style={ui.backLink}>
         ← Back to Inventory
       </Link>
@@ -307,21 +398,91 @@ export default function UnitDetail() {
       </div>
 
       {/* Tenants section */}
-      {tenants.length > 0 && (
-        <div style={ui.card}>
-          <h2 style={ui.h2}>Tenants</h2>
-          <div style={ui.list}>
-            {tenants.map((t) => (
+      <div style={ui.card}>
+        <h2 style={ui.h2}>Tenants</h2>
+
+        <form onSubmit={onCreateTenant} style={ui.formRow}>
+          <div style={{ minWidth: 240 }}>
+            <label style={ui.label}>Name (optional)</label>
+            <input
+              style={ui.input}
+              value={createTenantName}
+              onChange={(e) => setCreateTenantName(e.target.value)}
+              placeholder="e.g. Jane Doe"
+            />
+          </div>
+          <div style={{ minWidth: 240 }}>
+            <label style={ui.label}>Phone</label>
+            <input
+              style={ui.input}
+              value={createTenantPhone}
+              onChange={(e) => setCreateTenantPhone(e.target.value)}
+              placeholder="+41 79 123 45 67"
+            />
+          </div>
+          <div style={{ minWidth: 240 }}>
+            <label style={ui.label}>Email (optional)</label>
+            <input
+              style={ui.input}
+              value={createTenantEmail}
+              onChange={(e) => setCreateTenantEmail(e.target.value)}
+              placeholder="tenant@example.com"
+            />
+          </div>
+          <button type="submit" style={ui.primaryBtn} disabled={creatingTenant}>
+            {creatingTenant ? "Creating..." : "Create + assign"}
+          </button>
+        </form>
+
+        <form onSubmit={onAssignTenant} style={ui.formRow}>
+          <div style={{ minWidth: 280 }}>
+            <label style={ui.label}>Assign tenant</label>
+            <select
+              style={ui.input}
+              value={selectedTenantId}
+              onChange={(e) => setSelectedTenantId(e.target.value)}
+              disabled={assigningTenant}
+            >
+              <option value="">— Select tenant —</option>
+              {availableTenants.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name || "Tenant"} • {t.phone}
+                </option>
+              ))}
+            </select>
+            {availableTenants.length === 0 && (
+              <div style={ui.help}>No unassigned tenants available.</div>
+            )}
+          </div>
+          <button type="submit" style={ui.primaryBtn} disabled={assigningTenant || !selectedTenantId}>
+            Assign tenant
+          </button>
+        </form>
+
+        <div style={ui.list}>
+          {tenants.length === 0 ? (
+            <div style={ui.empty}>No tenants assigned to this unit.</div>
+          ) : (
+            tenants.map((t) => (
               <div key={t.id} style={ui.listRow}>
                 <div>
                   <div style={ui.rowTitle}>{t.name || "Tenant"}</div>
                   <div style={ui.help}>Phone: {t.phone || "—"}</div>
                 </div>
+                <button
+                  type="button"
+                  style={ui.secondaryBtn}
+                  onClick={() => onUnassignTenant(t.id)}
+                  disabled={unassigningTenantId === t.id}
+                >
+                  {unassigningTenantId === t.id ? "Removing..." : "Remove"}
+                </button>
               </div>
-            ))}
-          </div>
+            ))
+          )}
         </div>
-      )}
-    </div>
+      </div>
+      </div>
+    </AppShell>
   );
 }

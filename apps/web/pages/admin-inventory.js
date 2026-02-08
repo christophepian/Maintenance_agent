@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/router";
+import AppShell from "../components/AppShell";
 
 /**
  * Inventory Admin (Slice 4)
@@ -18,6 +20,7 @@ import Link from "next/link";
  */
 
 export default function InventoryAdmin() {
+  const router = useRouter();
     // Inline style object for UI
     const ui = {
       page: { maxWidth: "1100px", margin: "40px auto", padding: "24px", fontFamily: "system-ui" },
@@ -64,6 +67,8 @@ export default function InventoryAdmin() {
   const [units, setUnits] = useState([]);
   const [appliances, setAppliances] = useState([]);
   const [assetModels, setAssetModels] = useState([]);
+  const [unitTenants, setUnitTenants] = useState([]);
+  const [tenantsList, setTenantsList] = useState([]);
 
   // Selection
   const [selectedBuildingId, setSelectedBuildingId] = useState("");
@@ -78,6 +83,10 @@ export default function InventoryAdmin() {
   const [applianceCategory, setApplianceCategory] = useState("");
   const [applianceSerialNumber, setApplianceSerialNumber] = useState("");
   const [selectedAssetModelId, setSelectedAssetModelId] = useState("");
+  const [createTenantName, setCreateTenantName] = useState("");
+  const [createTenantPhone, setCreateTenantPhone] = useState("");
+  const [createTenantEmail, setCreateTenantEmail] = useState("");
+  const [creatingTenant, setCreatingTenant] = useState(false);
 
   // UX
   const [loading, setLoading] = useState(false);
@@ -89,6 +98,7 @@ export default function InventoryAdmin() {
       { key: "units", label: "Units" },
       { key: "asset-models", label: "Asset Models" },
       { key: "appliances", label: "Appliances" },
+      { key: "tenants", label: "Tenants" },
     ],
     []
   );
@@ -120,7 +130,9 @@ export default function InventoryAdmin() {
 
     if (!res.ok) {
       const msg =
-        (data && (data.error || data.message)) ||
+        data?.error?.message ||
+        (typeof data?.error === "string" ? data.error : null) ||
+        data?.message ||
         `Request failed (${res.status})`;
       throw new Error(msg);
     }
@@ -155,12 +167,26 @@ export default function InventoryAdmin() {
     setAppliances(Array.isArray(data) ? data : data?.data || []);
   }
 
+  async function loadTenantsList() {
+    const data = await fetchJSON(`/tenants`);
+    setTenantsList(Array.isArray(data) ? data : data?.data || []);
+  }
+
+  async function loadUnitTenants(unitId) {
+    if (!unitId) {
+      setUnitTenants([]);
+      return;
+    }
+    const data = await fetchJSON(`/units/${unitId}/tenants`);
+    setUnitTenants(Array.isArray(data) ? data : data?.data || []);
+  }
+
   // Initial load
   useEffect(() => {
     (async () => {
       try {
         setLoading(true);
-        await Promise.all([loadBuildings(), loadAssetModels()]);
+        await Promise.all([loadBuildings(), loadAssetModels(), loadTenantsList()]);
       } catch (e) {
         setErr(
           `Failed to load inventory. Check API is running on ${API_BASE}. Error: ${e.message}`
@@ -191,12 +217,26 @@ export default function InventoryAdmin() {
     (async () => {
       try {
         await loadAppliances(selectedUnitId);
+        await loadUnitTenants(selectedUnitId);
       } catch (e) {
         setErr(`Failed to load appliances: ${e.message}`);
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedUnitId]);
+
+  // When switching to tenants tab, refresh tenant list
+  useEffect(() => {
+    if (activeTab !== "tenants") return;
+    (async () => {
+      try {
+        await loadTenantsList();
+      } catch (e) {
+        setErr(`Failed to load tenants: ${e.message}`);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
 
   // Actions
   async function onCreateBuilding(e) {
@@ -231,7 +271,7 @@ export default function InventoryAdmin() {
       setLoading(true);
       await fetchJSON(`/buildings/${selectedBuildingId}/units`, {
         method: "POST",
-        body: JSON.stringify({ label }),
+        body: JSON.stringify({ unitNumber: label }),
       });
       setUnitLabel("");
       await loadUnits(selectedBuildingId);
@@ -241,6 +281,44 @@ export default function InventoryAdmin() {
       setErr(`Create unit failed: ${e.message}`);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function onCreateTenant(e) {
+    e.preventDefault();
+    const phone = createTenantPhone.trim();
+    if (!phone) return setErr("Tenant phone is required.");
+
+    try {
+      setCreatingTenant(true);
+      const payload = {
+        phone,
+        ...(createTenantName.trim() ? { name: createTenantName.trim() } : {}),
+        ...(createTenantEmail.trim() ? { email: createTenantEmail.trim() } : {}),
+      };
+      const created = await fetchJSON(`/tenants`, {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+      const createdTenantId = created?.data?.id || created?.id;
+      if (selectedUnitId && createdTenantId) {
+        await fetchJSON(`/units/${selectedUnitId}/tenants`, {
+          method: "POST",
+          body: JSON.stringify({ tenantId: createdTenantId }),
+        });
+      }
+      await loadTenantsList();
+      if (selectedUnitId) {
+        await loadUnitTenants(selectedUnitId);
+      }
+      setCreateTenantName("");
+      setCreateTenantPhone("");
+      setCreateTenantEmail("");
+      setOk(selectedUnitId ? "Tenant created and assigned." : "Tenant created.");
+    } catch (e) {
+      setErr(`Create tenant failed: ${e.message}`);
+    } finally {
+      setCreatingTenant(false);
     }
   }
 
@@ -277,11 +355,10 @@ export default function InventoryAdmin() {
     e.preventDefault();
     const name = applianceName.trim();
     const category = applianceCategory.trim();
-    const serialNumber = applianceSerialNumber.trim();
+    const serial = applianceSerialNumber.trim();
 
     if (!selectedUnitId) return setErr("Select a unit first.");
     if (!name) return setErr("Appliance name is required.");
-    if (!category) return setErr("Appliance category is required.");
 
     // assetModelId optional but recommended
     const assetModelId = selectedAssetModelId || null;
@@ -292,8 +369,8 @@ export default function InventoryAdmin() {
         method: "POST",
         body: JSON.stringify({
           name,
-          category,
-          ...(serialNumber ? { serialNumber } : {}),
+          ...(category ? { category } : {}),
+          ...(serial ? { serial } : {}),
           ...(assetModelId ? { assetModelId } : {}),
         }),
       });
@@ -313,8 +390,13 @@ export default function InventoryAdmin() {
 
   const selectedBuilding = buildings.find((b) => b.id === selectedBuildingId);
   const selectedUnit = units.find((u) => u.id === selectedUnitId);
+  const filteredTenants = tenantsList.filter((t) => {
+    if (selectedUnitId) return t.unitId === selectedUnitId || t.unit?.id === selectedUnitId;
+    if (selectedBuildingId) return t.unit?.buildingId === selectedBuildingId;
+    return true;
+  });
 
-  return (
+  const content = (
     <div style={ui.page}>
       <div style={ui.headerRow}>
         <div>
@@ -391,12 +473,12 @@ export default function InventoryAdmin() {
               </option>
               {units.map((u) => (
                 <option key={u.id} value={u.id}>
-                  {u.label || u.name || u.id}
+                  {u.unitNumber || u.label || u.name || u.id}
                 </option>
               ))}
             </select>
             <div style={ui.help}>
-              Selected: <strong>{selectedUnit ? selectedUnit.label : "—"}</strong>
+              Selected: <strong>{selectedUnit ? selectedUnit.unitNumber || selectedUnit.label : "—"}</strong>
             </div>
           </div>
         </div>
@@ -446,64 +528,66 @@ export default function InventoryAdmin() {
       ) : null}
 
       {activeTab === "units" ? (
-        <div style={ui.card}>
-          <h2 style={ui.h2}>Units</h2>
+        <>
+          <div style={ui.card}>
+            <h2 style={ui.h2}>Units</h2>
 
-          <form onSubmit={onCreateUnit} style={ui.formRow}>
-            <div style={ui.grow}>
-              <label style={ui.label}>
-                New unit label{" "}
-                <span style={ui.subtle}>
-                  (Building:{" "}
-                  {selectedBuilding ? selectedBuilding.name : "none selected"})
-                </span>
-              </label>
-              <input
-                style={ui.input}
-                value={unitLabel}
-                onChange={(e) => setUnitLabel(e.target.value)}
-                placeholder="e.g. Apt 3B"
-                disabled={!selectedBuildingId}
-              />
-            </div>
-            <button
-              style={ui.primaryBtn}
-              disabled={loading || !selectedBuildingId}
-              type="submit"
-            >
-              Create
-            </button>
-          </form>
+            <form onSubmit={onCreateUnit} style={ui.formRow}>
+              <div style={ui.grow}>
+                <label style={ui.label}>
+                  New unit label{" "}
+                  <span style={ui.subtle}>
+                    (Building:{" "}
+                    {selectedBuilding ? selectedBuilding.name : "none selected"})
+                  </span>
+                </label>
+                <input
+                  style={ui.input}
+                  value={unitLabel}
+                  onChange={(e) => setUnitLabel(e.target.value)}
+                  placeholder="e.g. Apt 3B"
+                  disabled={!selectedBuildingId}
+                />
+              </div>
+              <button
+                style={ui.primaryBtn}
+                disabled={loading || !selectedBuildingId}
+                type="submit"
+              >
+                Create
+              </button>
+            </form>
 
-          <div style={ui.list}>
-            {!selectedBuildingId ? (
-              <div style={ui.empty}>Select a building to view units.</div>
-            ) : units.length === 0 ? (
-              <div style={ui.empty}>No units in this building yet.</div>
-            ) : (
-              units.map((u) => (
-                <div key={u.id} style={ui.listRow}>
-                  <div>
-                    <div style={ui.rowTitle}>{u.label || u.name || "Unit"}</div>
-                    <div style={ui.subtle}>
-                      <code style={ui.codeSmall}>{u.id}</code>
+            <div style={ui.list}>
+              {!selectedBuildingId ? (
+                <div style={ui.empty}>Select a building to view units.</div>
+              ) : units.length === 0 ? (
+                <div style={ui.empty}>No units in this building yet.</div>
+              ) : (
+                units.map((u) => (
+                  <div key={u.id} style={ui.listRow}>
+                    <div>
+                      <div style={ui.rowTitle}>{u.unitNumber || u.label || u.name || "Unit"}</div>
+                      <div style={ui.subtle}>
+                        <code style={ui.codeSmall}>{u.id}</code>
+                      </div>
                     </div>
+                    <button
+                      type="button"
+                      style={ui.secondaryBtn}
+                      onClick={() => {
+                        setSelectedUnitId(u.id);
+                        setActiveTab("appliances");
+                      }}
+                    >
+                      Manage appliances →
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    style={ui.secondaryBtn}
-                    onClick={() => {
-                      setSelectedUnitId(u.id);
-                      setActiveTab("appliances");
-                    }}
-                  >
-                    Manage appliances →
-                  </button>
-                </div>
-              ))
-            )}
+                ))
+              )}
+            </div>
           </div>
-        </div>
+        </>
       ) : null}
 
       {activeTab === "asset-models" ? (
@@ -575,7 +659,7 @@ export default function InventoryAdmin() {
                 <label style={ui.label}>
                   Appliance name{" "}
                   <span style={ui.subtle}>
-                    (Unit: {selectedUnit ? selectedUnit.label : "none selected"})
+                    (Unit: {selectedUnit ? selectedUnit.unitNumber || selectedUnit.label : "none selected"})
                   </span>
                 </label>
                 <input
@@ -692,6 +776,78 @@ export default function InventoryAdmin() {
         </div>
       ) : null}
 
+      {activeTab === "tenants" ? (
+        <div style={ui.card}>
+          <h2 style={ui.h2}>Tenants</h2>
+
+          <form onSubmit={onCreateTenant} style={ui.formRow}>
+            <div style={ui.grow}>
+              <label style={ui.label}>Name (optional)</label>
+              <input
+                style={ui.input}
+                value={createTenantName}
+                onChange={(e) => setCreateTenantName(e.target.value)}
+                placeholder="e.g. Jane Doe"
+              />
+            </div>
+            <div style={ui.grow}>
+              <label style={ui.label}>Phone</label>
+              <input
+                style={ui.input}
+                value={createTenantPhone}
+                onChange={(e) => setCreateTenantPhone(e.target.value)}
+                placeholder="+41 79 123 45 67"
+              />
+            </div>
+            <div style={ui.grow}>
+              <label style={ui.label}>Email (optional)</label>
+              <input
+                style={ui.input}
+                value={createTenantEmail}
+                onChange={(e) => setCreateTenantEmail(e.target.value)}
+                placeholder="tenant@example.com"
+              />
+            </div>
+            <button style={ui.primaryBtn} disabled={creatingTenant} type="submit">
+              {creatingTenant ? "Creating..." : "Create"}
+            </button>
+          </form>
+
+          <div style={ui.help}>
+            {selectedUnitId
+              ? `Tenant will be assigned to unit ${selectedUnit?.unitNumber || selectedUnit?.label || selectedUnitId}.`
+              : "Select a unit above to auto-assign the new tenant."}
+          </div>
+
+          <div style={{ marginTop: "16px" }}>
+            <div style={ui.subtle}>
+              {selectedUnitId
+                ? `Tenants in unit ${selectedUnit?.unitNumber || selectedUnit?.label || selectedUnitId}`
+                : selectedBuildingId
+                ? `Tenants in building ${selectedBuilding?.name || selectedBuildingId}`
+                : "All tenants"}
+            </div>
+            <div style={ui.list}>
+              {filteredTenants.length === 0 ? (
+                <div style={ui.empty}>No tenants yet.</div>
+              ) : (
+                filteredTenants.map((t) => (
+                  <div key={t.id} style={ui.listRow}>
+                    <div>
+                      <div style={ui.rowTitle}>{t.name || "Tenant"}</div>
+                      <div style={ui.help}>Phone: {t.phone || "—"}</div>
+                      <div style={ui.help}>
+                        Unit: {t.unit?.unitNumber || t.unitId || "—"}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       <div style={ui.footer}>
         <div style={ui.subtle}>
           Tip: if this page can’t load data, verify the API is running on{" "}
@@ -700,5 +856,11 @@ export default function InventoryAdmin() {
       </div>
     </div>
   );
+
+  if (router.pathname === "/admin-inventory") {
+    return <AppShell role="MANAGER">{content}</AppShell>;
+  }
+
+  return content;
 }
 

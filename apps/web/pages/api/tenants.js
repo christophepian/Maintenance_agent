@@ -4,11 +4,14 @@ export default async function handler(req, res) {
 
   try {
     if (req.method === "GET") {
-      // GET /api/tenants?phone=...
-      const { phone } = req.query;
+      // GET /api/tenants?phone=... or list all tenants when phone is omitted
+      const { phone, includeInactive } = req.query;
       const apiUrl = new URL(`${API_BASE_URL}/tenants`);
       if (phone) {
         apiUrl.searchParams.set("phone", phone);
+      }
+      if (includeInactive) {
+        apiUrl.searchParams.set("includeInactive", includeInactive);
       }
 
       const response = await fetch(apiUrl.toString());

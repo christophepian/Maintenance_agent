@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
+import AppShell from "../components/AppShell";
 
 export default function TenantChat() {
   const router = useRouter();
@@ -132,7 +133,8 @@ export default function TenantChat() {
   if (!session) return null;
 
   return (
-    <div className="main-container">
+    <AppShell role="TENANT">
+      <div className="main-container">
       <h1>Maintenance help</h1>
       <div className="subtle">{contextLabel}</div>
 
@@ -194,6 +196,7 @@ export default function TenantChat() {
           <div className="help">Use the buttons above to continue.</div>
         ) : null}
       </form>
-    </div>
+      </div>
+    </AppShell>
   );
 }

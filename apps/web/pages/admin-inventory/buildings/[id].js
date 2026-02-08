@@ -1,6 +1,7 @@
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import AppShell from "../../../components/AppShell";
 
 export default function BuildingDetail() {
   const router = useRouter();
@@ -165,7 +166,8 @@ export default function BuildingDetail() {
   const commonUnits = units.filter((u) => u.type === "COMMON_AREA");
 
   return (
-    <div style={ui.page}>
+    <AppShell role="MANAGER">
+      <div style={ui.page}>
       <Link href="/admin-inventory" style={ui.backLink}>
         ← Back to Inventory
       </Link>
@@ -308,6 +310,7 @@ export default function BuildingDetail() {
 
         {units.length === 0 && <div style={ui.empty}>No units yet.</div>}
       </div>
-    </div>
+      </div>
+    </AppShell>
   );
 }

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import AppShell from "../../components/AppShell";
 
 export default function AssetModelsAdmin() {
   const ui = {
@@ -130,14 +131,15 @@ export default function AssetModelsAdmin() {
   }
 
   return (
-    <div style={ui.page}>
-      <Link href="/admin-inventory" style={ui.backLink}>
-        ← Back to Inventory
-      </Link>
+    <AppShell role="MANAGER">
+      <div style={ui.page}>
+        <Link href="/admin-inventory" style={ui.backLink}>
+          ← Back to Inventory
+        </Link>
 
-      <div style={ui.headerRow}>
-        <h1 style={ui.h1}>Asset Models Library</h1>
-      </div>
+        <div style={ui.headerRow}>
+          <h1 style={ui.h1}>Asset Models Library</h1>
+        </div>
 
       {notice && (
         <div style={{ ...ui.notice, ...(notice.type === "ok" ? ui.noticeOk : ui.noticeErr) }}>
@@ -255,6 +257,7 @@ export default function AssetModelsAdmin() {
           <div style={ui.empty}>No asset models yet.</div>
         </div>
       )}
-    </div>
+      </div>
+    </AppShell>
   );
 }

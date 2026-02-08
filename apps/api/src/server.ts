@@ -17,7 +17,7 @@ import { updateContractorRequestStatus, getContractorAssignedRequests } from "./
 import { CreateRequestSchema, CreateRequestInput } from "./validation/requests";
 import { decideRequestStatus } from "./services/autoApproval";
 import { normalizePhoneToE164 } from "./utils/phoneNormalization";
-import { getTenantByPhone, createOrGetTenant, updateTenant, deactivateTenant } from "./services/tenants";
+import { getTenantByPhone, createOrGetTenant, updateTenant, deactivateTenant, listTenants } from "./services/tenants";
 import { getTenantSession } from "./services/tenantSession";
 import {
   listBuildings,
@@ -49,6 +49,9 @@ import { CreateUnitSchema, UpdateUnitSchema } from "./validation/units";
 import { CreateApplianceSchema, UpdateApplianceSchema } from "./validation/appliances";
 import { CreateAssetModelSchema, UpdateAssetModelSchema } from "./validation/assetModels";
 import { LinkTenantSchema } from "./validation/occupancies";
+import { propertyFromBuilding } from "./services/adapters/propertyAdapter";
+import { contactFromTenant, contactFromContractor } from "./services/adapters/contactAdapter";
+import { workRequestFromRequest } from "./services/adapters/workRequestAdapter";
 // Building/unit/appliance/asset model functions are not implemented; remove references below.
 // import { ensureDefaultOrgConfig } from "./services/orgConfig";
 import * as http from "http";
@@ -157,6 +160,11 @@ function matchRequestById(path: string) {
   return m ? m[1] : null;
 }
 
+function matchWorkRequestById(path: string) {
+  const m = path.match(/^\/work-requests\/([a-f0-9-]{36})$/i);
+  return m ? m[1] : null;
+}
+
 function matchRequestStatus(path: string) {
   const m = path.match(/^\/requests\/([a-f0-9-]{36})\/status$/i);
   return m ? m[1] : null;
@@ -179,6 +187,11 @@ function matchBuildingById(path: string) {
 
 function matchBuildingUnits(path: string) {
   const m = path.match(/^\/buildings\/([a-f0-9-]{36})\/units$/i);
+  return m ? m[1] : null;
+}
+
+function matchPropertyUnits(path: string) {
+  const m = path.match(/^\/properties\/([a-f0-9-]{36})\/units$/i);
   return m ? m[1] : null;
 }
 
@@ -291,6 +304,59 @@ const server = http.createServer(async (req, res) => {
   }
 
   const orgId = getOrgIdForRequest(req);
+
+  // =========================
+  // Properties (alias over Buildings)
+  // =========================
+  if (req.method === "GET" && path === "/properties") {
+    try {
+      const includeInactive = first(query, "includeInactive") === "true";
+      const buildings = await listBuildings(orgId, includeInactive);
+      const properties = buildings.map(propertyFromBuilding);
+      return sendJson(res, 200, { data: properties });
+    } catch (e) {
+      return sendError(res, 500, "DB_ERROR", "Failed to fetch properties", String(e));
+    }
+  }
+
+  const propertyId = matchPropertyUnits(path);
+  if (req.method === "GET" && propertyId) {
+    try {
+      const includeInactive = first(query, "includeInactive") === "true";
+      const unitTypeRaw = first(query, "type");
+      const unitType = unitTypeRaw && ["RESIDENTIAL", "COMMON_AREA"].includes(unitTypeRaw)
+        ? (unitTypeRaw as any)
+        : undefined;
+      const units = await listUnits(orgId, propertyId, includeInactive, unitType);
+      return sendJson(res, 200, { data: units });
+    } catch (e) {
+      return sendError(res, 500, "DB_ERROR", "Failed to fetch property units", String(e));
+    }
+  }
+
+  // =========================
+  // People (alias over tenants/contractors)
+  // =========================
+  if (req.method === "GET" && path === "/people/tenants") {
+    try {
+      const includeInactive = first(query, "includeInactive") === "true";
+      const tenants = await listTenants(orgId, includeInactive);
+      const contacts = tenants.map(contactFromTenant);
+      return sendJson(res, 200, { data: contacts });
+    } catch (e) {
+      return sendError(res, 500, "DB_ERROR", "Failed to fetch tenant contacts", String(e));
+    }
+  }
+
+  if (req.method === "GET" && path === "/people/vendors") {
+    try {
+      const vendors = await listContractors(prisma, orgId);
+      const contacts = vendors.map(contactFromContractor);
+      return sendJson(res, 200, { data: contacts });
+    } catch (e) {
+      return sendError(res, 500, "DB_ERROR", "Failed to fetch vendor contacts", String(e));
+    }
+  }
 
   // =========================
   // Buildings
@@ -593,7 +659,10 @@ const server = http.createServer(async (req, res) => {
       if (!result.success && result.reason === "TENANT_NOT_FOUND") {
         return sendError(res, 404, "NOT_FOUND", "Tenant not found");
       }
-      return sendJson(res, 200, { message: "Tenant linked" });
+      return sendJson(res, 200, {
+        message: "Tenant linked",
+        data: { tenantId, unitId: unitTenantsId },
+      });
     } catch (e: any) {
       const msg = String(e?.message || e);
       if (msg === "Invalid JSON") return sendError(res, 400, "INVALID_JSON", "Invalid JSON");
@@ -1036,6 +1105,37 @@ const server = http.createServer(async (req, res) => {
   }
 
   // =========================
+  // GET /work-requests?limit=&offset=&order=
+  // =========================
+  if (req.method === "GET" && path === "/work-requests") {
+    try {
+      const limit = getIntParam(query, "limit", { defaultValue: 50, min: 1, max: 200 });
+      const offset = getIntParam(query, "offset", { defaultValue: 0, min: 0, max: 1_000_000 });
+      const order = getEnumParam(query, "order", ["asc", "desc"] as const, "asc");
+
+      const data = await listMaintenanceRequests(prisma, { limit, offset, order });
+      const workRequests = data.map(workRequestFromRequest);
+      return sendJson(res, 200, { data: workRequests });
+    } catch (e) {
+      return sendError(res, 500, "DB_ERROR", "Database error", String(e));
+    }
+  }
+
+  // =========================
+  // GET /work-requests/:id
+  // =========================
+  const workRequestId = matchWorkRequestById(path);
+  if (req.method === "GET" && workRequestId) {
+    try {
+      const request = await getMaintenanceRequestById(prisma, workRequestId);
+      if (!request) return sendError(res, 404, "NOT_FOUND", "Work request not found");
+      return sendJson(res, 200, { data: workRequestFromRequest(request) });
+    } catch (e) {
+      return sendError(res, 500, "DB_ERROR", "Failed to fetch work request", String(e));
+    }
+  }
+
+  // =========================
   // POST /requests
   // Enrichment: contactPhone -> tenantId/unitId (if tenant exists)
   // =========================
@@ -1126,23 +1226,120 @@ const server = http.createServer(async (req, res) => {
   }
 
   // =========================
+  // POST /work-requests
+  // Alias of /requests
+  // =========================
+  if (req.method === "POST" && path === "/work-requests") {
+    try {
+      const raw = await readJson(req);
+
+      if (raw?.text && !raw?.description) raw.description = raw.text;
+
+      const parsed = CreateRequestSchema.safeParse(raw);
+      if (!parsed.success) {
+        return sendError(res, 400, "VALIDATION_ERROR", "Invalid request body", parsed.error.flatten());
+      }
+
+      const input: CreateRequestInput = parsed.data;
+
+      const description = input.description;
+      const category = input.category ? input.category : null;
+
+      const hasEstimatedCost = typeof input.estimatedCost === "number";
+      const estimatedCost = hasEstimatedCost ? input.estimatedCost : null;
+
+      let contactPhone: string | null = null;
+      if ((input as any).contactPhone) {
+        const normalized = normalizePhoneToE164((input as any).contactPhone);
+        if (!normalized) {
+          return sendError(res, 400, "VALIDATION_ERROR", "Invalid contactPhone format");
+        }
+        contactPhone = normalized;
+      }
+
+      let tenantId = (input as any).tenantId ?? null;
+      let unitId = (input as any).unitId ?? null;
+      const applianceId = (input as any).applianceId ?? null;
+
+      if (contactPhone && !tenantId) {
+        const tenant = await getTenantByPhone({
+          phone: contactPhone,
+          orgId: DEFAULT_ORG_ID,
+        });
+
+        if (tenant) {
+          tenantId = tenant.id;
+          if (!unitId && tenant.unitId) unitId = tenant.unitId;
+        }
+      }
+
+      let status: RequestStatus = RequestStatus.PENDING_REVIEW;
+      if (hasEstimatedCost) {
+        const config = await getOrgConfig(prisma);
+        status = decideRequestStatus(estimatedCost!, config.autoApproveLimit);
+      }
+
+      const created = await prisma.request.create({
+        data: {
+          description,
+          category,
+          estimatedCost,
+          status,
+          contactPhone,
+          tenantId,
+          unitId,
+          applianceId,
+        },
+      });
+
+      if (category) {
+        const matchingContractor = await findMatchingContractor(prisma, DEFAULT_ORG_ID, category);
+        if (matchingContractor) {
+          await assignContractor(prisma, created.id, matchingContractor.id);
+        }
+      }
+
+      const updated = await getMaintenanceRequestById(prisma, created.id);
+      const response = updated ? workRequestFromRequest(updated) : workRequestFromRequest({
+        ...created,
+        assignedContractor: null,
+        tenant: null,
+        unit: null,
+        appliance: null,
+        createdAt: created.createdAt.toISOString(),
+      } as any);
+      return sendJson(res, 201, { data: response });
+    } catch (e: any) {
+      const msg = String(e?.message || e);
+      if (msg === "Invalid JSON") return sendError(res, 400, "INVALID_JSON", "Invalid JSON");
+      if (msg === "Body too large") return sendError(res, 413, "BODY_TOO_LARGE", "Request body too large");
+      return sendError(res, 500, "UNKNOWN_ERROR", "Unexpected error", String(e));
+    }
+  }
+
+  // =========================
   // GET /tenants?phone=...
-  // Returns { data: tenant | null }
+  // Returns { data: tenant | null } when phone is provided
+  // Returns { data: TenantDTO[] } when phone is omitted
   // =========================
   if (req.method === "GET" && path === "/tenants") {
     try {
       const phoneRaw = first(query, "phone");
-      if (!phoneRaw) return sendError(res, 400, "VALIDATION_ERROR", "Phone parameter required");
+      if (phoneRaw) {
+        const normalizedPhone = normalizePhoneToE164(phoneRaw);
+        if (!normalizedPhone) return sendError(res, 400, "VALIDATION_ERROR", "Invalid phone format");
 
-      const normalizedPhone = normalizePhoneToE164(phoneRaw);
-      if (!normalizedPhone) return sendError(res, 400, "VALIDATION_ERROR", "Invalid phone format");
+        const tenant = await getTenantByPhone({
+          phone: normalizedPhone,
+          orgId,
+        });
 
-      const tenant = await getTenantByPhone({
-        phone: normalizedPhone,
-        orgId,
-      });
+        return sendJson(res, 200, { data: tenant ?? null });
+      }
 
-      return sendJson(res, 200, { data: tenant ?? null });
+      const includeInactive = first(query, "includeInactive") === "true";
+      const tenants = await listTenants(orgId, includeInactive);
+      return sendJson(res, 200, { data: tenants });
     } catch (e: any) {
       return sendError(res, 500, "DB_ERROR", "Failed to lookup tenant", String(e));
     }

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import AppShell from "../components/AppShell";
 
 /**
  * Tenant Form (Slice 4)
@@ -156,7 +157,8 @@ export default function TenantForm() {
     ? tenant.unitId
     : "\u2014";
   return (
-    <div className="main-container">
+    <AppShell role="TENANT">
+      <div className="main-container">
       <h1>Tenant request (by phone)</h1>
       <div className="subtle">
         Backend: <code className="code">{API_BASE}</code>
@@ -280,6 +282,7 @@ export default function TenantForm() {
           {unitId || tenant?.unitId ? "yes" : "no"}), applianceId ({applianceId ? "yes" : "no"}).
         </div>
       </form>
-    </div>
+      </div>
+    </AppShell>
   );
 }

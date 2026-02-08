@@ -1,7 +1,14 @@
 
 import React from "react";
+import { useRouter } from "next/router";
+import AppShell from "../components/AppShell";
+import PageShell from "../components/layout/PageShell";
+import PageHeader from "../components/layout/PageHeader";
+import PageContent from "../components/layout/PageContent";
+import Panel from "../components/layout/Panel";
 
 export default function ContractorsPage() {
+  const router = useRouter();
   const [contractors, setContractors] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [formVisible, setFormVisible] = React.useState(false);
@@ -18,7 +25,14 @@ export default function ContractorsPage() {
   function authHeaders() {
     if (typeof window === "undefined") return {};
     const token = localStorage.getItem("authToken");
-    return token ? { Authorization: `Bearer ${token}` } : {};
+    if (token) return { Authorization: `Bearer ${token}` };
+    const role = localStorage.getItem("role") || "MANAGER";
+    return {
+      "x-dev-role": role,
+      "x-dev-org-id": "default-org",
+      "x-dev-user-id": "dev-user",
+      "x-dev-email": "dev@local",
+    };
   }
   React.useEffect(() => {
     fetchContractors();
@@ -89,128 +103,144 @@ export default function ContractorsPage() {
         : [...prev.serviceCategories, cat],
     }));
   }
-  return (
-    <div className="main-container">
-      <h1>Contractors</h1>
-      <p className="subtle">Manage contractors and their service areas.</p>
-      {message && (
-        <div className="notice" style={{ marginBottom: 16 }}>{message}</div>
-      )}
-      <button
-        onClick={() => setFormVisible(!formVisible)}
-        className="button-primary"
-        style={{ marginBottom: 16 }}
-      >
-        {formVisible ? "Cancel" : "Add Contractor"}
-      </button>
-      {formVisible && (
-        <form onSubmit={handleSubmit} className="card" style={{ display: 'grid', gap: 12, marginBottom: 24 }}>
-          <label className="label">
-            Name
-            <input
-              className="input"
-              type="text"
-              value={formData.name}
-              onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
-              placeholder="Contractor name"
-              required
-            />
-          </label>
-          <label className="label">
-            Phone
-            <input
-              className="input"
-              type="tel"
-              value={formData.phone}
-              onChange={(e) => setFormData((prev) => ({ ...prev, phone: e.target.value }))}
-              placeholder="+41 XX XXX XXXX"
-              required
-            />
-          </label>
-          <label className="label">
-            Email
-            <input
-              className="input"
-              type="email"
-              value={formData.email}
-              onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
-              placeholder="contractor@example.com"
-              required
-            />
-          </label>
-          <label className="label">
-            Hourly Rate (CHF)
-            <input
-              className="input"
-              type="number"
-              value={formData.hourlyRate}
-              onChange={(e) => setFormData((prev) => ({ ...prev, hourlyRate: parseInt(e.target.value) }))}
-              min="10"
-              max="500"
-            />
-          </label>
-          <div>
-            <div className="label" style={{ marginBottom: 6 }}>Service Categories</div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 8 }}>
-              {categories.map((cat) => (
-                <label key={cat} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <input
-                    type="checkbox"
-                    checked={formData.serviceCategories.includes(cat)}
-                    onChange={() => toggleCategory(cat)}
-                  />
-                  {cat}
-                </label>
-              ))}
-            </div>
-          </div>
-          <button type="submit" className="button-primary">
-            Save Contractor
+  const content = (
+    <PageShell variant="embedded">
+      <PageHeader
+        title="Contractors"
+        subtitle="Manage contractors and their service areas."
+        actions={(
+          <button
+            onClick={() => setFormVisible(!formVisible)}
+            className="button-primary"
+          >
+            {formVisible ? "Cancel" : "Add Contractor"}
           </button>
-        </form>
-      )}
-      {loading ? (
-        <p>Loading contractors...</p>
-      ) : contractors.length === 0 ? (
-        <p>No contractors yet. Add one to get started.</p>
-      ) : (
-        <div style={{ display: "grid", gap: 12 }}>
-          {contractors.map((c) => (
-            <div
-              key={c.id}
-              className="card"
-              style={{ background: c.isActive ? undefined : "#f5f5f5" }}
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start" }}>
-                <div>
-                  <h3 style={{ margin: "0 0 4px 0" }}>{c.name}</h3>
-                  <p style={{ margin: "0 0 2px 0", fontSize: "14px", color: "#666" }}>
-                    {c.phone} | {c.email}
-                  </p>
-                  <p style={{ margin: "0 0 2px 0", fontSize: "14px", color: "#666" }}>
-                    CHF {c.hourlyRate}/hr
-                  </p>
-                  <p style={{ margin: 0, fontSize: "12px", color: "#999" }}>
-                    Categories: {c.serviceCategories.join(", ")}
-                  </p>
-                  {!c.isActive && (
-                    <p style={{ margin: "4px 0 0 0", fontSize: "12px", color: "#c00" }}>
-                      \u26a0\ufe0f Deactivated
-                    </p>
-                  )}
+        )}
+      />
+      <PageContent>
+        {message && (
+          <Panel>
+            <div className="text-sm text-slate-700">{message}</div>
+          </Panel>
+        )}
+
+        {formVisible && (
+          <Panel title="Add contractor">
+            <form onSubmit={handleSubmit} className="grid gap-4">
+              <label className="label">
+                Name
+                <input
+                  className="input"
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
+                  placeholder="Contractor name"
+                  required
+                />
+              </label>
+              <label className="label">
+                Phone
+                <input
+                  className="input"
+                  type="tel"
+                  value={formData.phone}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, phone: e.target.value }))}
+                  placeholder="+41 XX XXX XXXX"
+                  required
+                />
+              </label>
+              <label className="label">
+                Email
+                <input
+                  className="input"
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
+                  placeholder="contractor@example.com"
+                  required
+                />
+              </label>
+              <label className="label">
+                Hourly Rate (CHF)
+                <input
+                  className="input"
+                  type="number"
+                  value={formData.hourlyRate}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, hourlyRate: parseInt(e.target.value) }))}
+                  min="10"
+                  max="500"
+                />
+              </label>
+              <div>
+                <div className="label mb-2">Service Categories</div>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  {categories.map((cat) => (
+                    <label key={cat} className="flex items-center gap-2 text-sm text-slate-700">
+                      <input
+                        type="checkbox"
+                        checked={formData.serviceCategories.includes(cat)}
+                        onChange={() => toggleCategory(cat)}
+                      />
+                      {cat}
+                    </label>
+                  ))}
                 </div>
-                <button
-                  onClick={() => handleDelete(c.id)}
-                  className="button-secondary"
-                  style={{ background: "#dc3545", color: "white", fontSize: 12, padding: "4px 12px" }}
-                >
-                  Deactivate
+              </div>
+              <div className="flex justify-end">
+                <button type="submit" className="button-primary">
+                  Save Contractor
                 </button>
               </div>
+            </form>
+          </Panel>
+        )}
+
+        <Panel title="All contractors">
+          {loading ? (
+            <p className="text-sm text-slate-600">Loading contractors...</p>
+          ) : contractors.length === 0 ? (
+            <p className="text-sm text-slate-600">No contractors yet. Add one to get started.</p>
+          ) : (
+            <div className="grid gap-4">
+              {contractors.map((c) => (
+                <div
+                  key={c.id}
+                  className={`rounded-lg border px-4 py-3 ${c.isActive ? "border-slate-200" : "border-slate-200 bg-slate-50"}`}
+                >
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <h3 className="text-base font-semibold text-slate-900">{c.name}</h3>
+                      <p className="mt-1 text-sm text-slate-600">
+                        {c.phone} | {c.email}
+                      </p>
+                      <p className="text-sm text-slate-600">CHF {c.hourlyRate}/hr</p>
+                      <p className="text-xs text-slate-500">
+                        Categories: {c.serviceCategories.join(", ")}
+                      </p>
+                      {!c.isActive && (
+                        <p className="mt-2 text-xs text-red-600">\u26a0\ufe0f Deactivated</p>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => handleDelete(c.id)}
+                      className="button-secondary"
+                      style={{ background: "#dc3545", color: "white", fontSize: 12, padding: "4px 12px" }}
+                    >
+                      Deactivate
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-      )}
-    </div>
+          )}
+        </Panel>
+      </PageContent>
+    </PageShell>
   );
+
+  if (router.pathname === "/contractors") {
+    return <AppShell role="MANAGER">{content}</AppShell>;
+  }
+
+  return content;
 }

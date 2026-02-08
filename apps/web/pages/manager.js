@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/router";
+import AppShell from "../components/AppShell";
 
 function fmtDate(iso) {
   try {
@@ -22,7 +24,14 @@ function badgeForStatus(status) {
 }
 
 export default function Manager() {
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (router.pathname === "/manager") {
+      router.replace("/manager/work-requests");
+    }
+  }, [router]);
 
   function authHeaders() {
     if (typeof window === "undefined") return {};
@@ -189,7 +198,7 @@ export default function Manager() {
     }
   }
 
-  return (
+  const content = (
     <div className="main-container">
       <div className="row" style={{ justifyContent: "space-between", alignItems: "baseline" }}>
         <div>
@@ -281,43 +290,47 @@ export default function Manager() {
         <div className="subtle">
           Showing <strong>{filteredRequests.length}</strong> of <strong>{requests.length}</strong>
         </div>
-        <div style={{ overflowX: "auto", border: "1px solid #ddd", borderRadius: 10 }}>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead>
-              <tr style={{ background: "#f6f6f6" }}>
-                <th style={{ textAlign: "left", padding: 10, borderBottom: "1px solid #ddd" }}>Created</th>
-                <th style={{ textAlign: "left", padding: 10, borderBottom: "1px solid #ddd" }}>Category</th>
-                <th style={{ textAlign: "left", padding: 10, borderBottom: "1px solid #ddd" }}>Description</th>
-                <th style={{ textAlign: "left", padding: 10, borderBottom: "1px solid #ddd" }}>Est. cost</th>
-                <th style={{ textAlign: "left", padding: 10, borderBottom: "1px solid #ddd" }}>Status</th>
-                <th style={{ textAlign: "left", padding: 10, borderBottom: "1px solid #ddd" }}>Actions</th>
-                <th style={{ textAlign: "left", padding: 10, borderBottom: "1px solid #ddd" }}>Contractor</th>
+        <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+          <table className="w-full border-collapse text-sm">
+            <thead className="bg-slate-50/70">
+              <tr>
+                <th className="h-12 px-4 text-left align-middle text-xs font-semibold text-slate-600 border-b border-slate-200">Created</th>
+                <th className="h-12 px-4 text-left align-middle text-xs font-semibold text-slate-600 border-b border-slate-200">Category</th>
+                <th className="h-12 px-4 text-left align-middle text-xs font-semibold text-slate-600 border-b border-slate-200">Description</th>
+                <th className="h-12 px-4 text-left align-middle text-xs font-semibold text-slate-600 border-b border-slate-200">Est. cost</th>
+                <th className="h-12 px-4 text-left align-middle text-xs font-semibold text-slate-600 border-b border-slate-200">Status</th>
+                <th className="h-12 px-4 text-left align-middle text-xs font-semibold text-slate-600 border-b border-slate-200">Actions</th>
+                <th className="h-12 px-4 text-left align-middle text-xs font-semibold text-slate-600 border-b border-slate-200">Contractor</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={7} style={{ padding: 12, color: "#666" }}>Loading…</td></tr>
+                <tr className="border-b border-slate-100">
+                  <td colSpan={7} className="px-4 py-3 text-sm text-slate-500">Loading…</td>
+                </tr>
               ) : filteredRequests.length === 0 ? (
-                <tr><td colSpan={7} style={{ padding: 12, color: "#666" }}>No requests match your filter/search.</td></tr>
+                <tr className="border-b border-slate-100">
+                  <td colSpan={7} className="px-4 py-3 text-sm text-slate-500">No requests match your filter/search.</td>
+                </tr>
               ) : (
                 filteredRequests.map((r) => {
                   const b = badgeForStatus(r.status);
                   const canApprove = r.status === "PENDING_REVIEW";
                   const busy = approvingId === r.id;
                   return (
-                    <tr key={r.id}>
-                      <td style={{ padding: 10, borderBottom: "1px solid #eee", whiteSpace: "nowrap" }}>
+                    <tr key={r.id} className="border-b border-slate-100 hover:bg-slate-50/70 transition-colors">
+                      <td className="px-4 py-3 align-middle text-sm text-slate-700 whitespace-nowrap">
                         {fmtDate(r.createdAt)}
                       </td>
-                      <td style={{ padding: 10, borderBottom: "1px solid #eee" }}>{r.category || "(none)"}</td>
-                      <td style={{ padding: 10, borderBottom: "1px solid #eee" }}>
-                        <div style={{ fontWeight: 600 }}>{r.description}</div>
-                        <div className="subtle" style={{ fontSize: 12 }}>{r.id}</div>
+                      <td className="px-4 py-3 align-middle text-sm text-slate-700">{r.category || "(none)"}</td>
+                      <td className="px-4 py-3 align-middle text-sm text-slate-700">
+                        <div className="font-semibold text-slate-900">{r.description}</div>
+                        <div className="text-xs text-slate-500">{r.id}</div>
                       </td>
-                      <td style={{ padding: 10, borderBottom: "1px solid #eee", whiteSpace: "nowrap" }}>
+                      <td className="px-4 py-3 align-middle text-sm text-slate-700 whitespace-nowrap">
                         {typeof r.estimatedCost === "number" ? `${r.estimatedCost} CHF` : "(none)"}
                       </td>
-                      <td style={{ padding: 10, borderBottom: "1px solid #eee" }}>
+                      <td className="px-4 py-3 align-middle text-sm text-slate-700">
                         <span
                           style={{
                             padding: "4px 8px",
@@ -333,24 +346,24 @@ export default function Manager() {
                           {b.label}
                         </span>
                       </td>
-                      <td style={{ padding: 10, borderBottom: "1px solid #eee" }}>
+                      <td className="px-4 py-3 align-middle text-sm text-slate-700">
                         {canApprove ? (
                           <button onClick={() => approveRequest(r.id)} disabled={busy} className="button-primary">
                             {busy ? "Approving…" : "Approve"}
                           </button>
                         ) : (
-                          <span className="subtle" style={{ fontSize: 12 }}>(none)</span>
+                          <span className="text-xs text-slate-500">(none)</span>
                         )}
                       </td>
-                      <td style={{ padding: 10, borderBottom: "1px solid #eee", color: "#666" }}>
+                      <td className="px-4 py-3 align-middle text-sm text-slate-600">
                         {r.assignedContractor ? (
-                          <div style={{ fontSize: 13 }}>
-                            <div style={{ fontWeight: 600 }}>{r.assignedContractor.name}</div>
-                            <div className="subtle" style={{ fontSize: 12 }}>{r.assignedContractor.phone}</div>
-                            <div className="subtle" style={{ fontSize: 12 }}>{r.assignedContractor.hourlyRate} CHF/h</div>
+                          <div className="text-sm">
+                            <div className="font-semibold text-slate-900">{r.assignedContractor.name}</div>
+                            <div className="text-xs text-slate-500">{r.assignedContractor.phone}</div>
+                            <div className="text-xs text-slate-500">{r.assignedContractor.hourlyRate} CHF/h</div>
                           </div>
                         ) : (
-                          <span style={{ color: "#ccc" }}>(none)</span>
+                          <span className="text-xs text-slate-400">(none)</span>
                         )}
                       </td>
                     </tr>
@@ -366,4 +379,10 @@ export default function Manager() {
       </div>
     </div>
   );
+
+  if (router.pathname === "/manager") {
+    return <AppShell role="MANAGER">{content}</AppShell>;
+  }
+
+  return content;
 }

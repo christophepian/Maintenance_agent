@@ -37,6 +37,12 @@ export default async function handler(req, res) {
     const baseUrl = process.env.API_BASE_URL || "http://127.0.0.1:3001";
     const { id } = req.query;
     const authHeader = req.headers["authorization"];
+    const devHeaders = {
+      "x-dev-role": req.headers["x-dev-role"],
+      "x-dev-org-id": req.headers["x-dev-org-id"],
+      "x-dev-user-id": req.headers["x-dev-user-id"],
+      "x-dev-email": req.headers["x-dev-email"],
+    };
 
     if (req.method === "GET") {
       let url = `${baseUrl}/contractors`;
@@ -49,7 +55,10 @@ export default async function handler(req, res) {
       }
 
       const r = await fetch(url, {
-        headers: authHeader ? { authorization: authHeader } : undefined,
+        headers: {
+          ...(authHeader ? { authorization: authHeader } : {}),
+          ...devHeaders,
+        },
       });
       const j = await safeJson(r);
       return res.status(r.status).json(j);
@@ -71,6 +80,7 @@ export default async function handler(req, res) {
         headers: {
           "Content-Type": "application/json",
           ...(authHeader ? { authorization: authHeader } : {}),
+          ...devHeaders,
         },
         body: JSON.stringify(payload),
       });
@@ -96,6 +106,7 @@ export default async function handler(req, res) {
         headers: {
           "Content-Type": "application/json",
           ...(authHeader ? { authorization: authHeader } : {}),
+          ...devHeaders,
         },
         body: JSON.stringify(payload),
       });
@@ -108,7 +119,10 @@ export default async function handler(req, res) {
 
       const r = await fetch(`${baseUrl}/contractors/${id}`, {
         method: "DELETE",
-        headers: authHeader ? { authorization: authHeader } : undefined,
+        headers: {
+          ...(authHeader ? { authorization: authHeader } : {}),
+          ...devHeaders,
+        },
       });
       const j = await safeJson(r);
       return res.status(r.status).json(j);

@@ -1,13 +1,54 @@
-// Stubs for missing functions
-export async function listContractors(prisma, orgId) { return []; }
-export const CreateContractorSchema = {};
-export async function createContractor(prisma, orgId, data) { return {}; }
-export async function getContractorById(prisma, id) { return {}; }
-export const UpdateContractorSchema = {};
-export async function updateContractor(prisma, id, data) { return {}; }
-export async function deactivateContractor(prisma, id) { return true; }
 import { PrismaClient, RequestStatus } from "@prisma/client";
 import { MaintenanceRequestDTO } from "./maintenanceRequests";
+import {
+  listContractors as listContractorsCore,
+  createContractor as createContractorCore,
+  getContractorById as getContractorByIdCore,
+  updateContractor as updateContractorCore,
+  deactivateContractor as deactivateContractorCore,
+} from "./contractors";
+import {
+  CreateContractorSchema,
+  UpdateContractorSchema,
+} from "../validation/contractors";
+
+export { CreateContractorSchema, UpdateContractorSchema };
+
+export async function listContractors(prisma: PrismaClient, orgId: string) {
+  return listContractorsCore(prisma, orgId);
+}
+
+export async function createContractor(
+  prisma: PrismaClient,
+  orgId: string,
+  data: unknown
+) {
+  const parsed = CreateContractorSchema.safeParse(data);
+  if (!parsed.success) {
+    throw new Error(parsed.error.message);
+  }
+  return createContractorCore(prisma, orgId, parsed.data);
+}
+
+export async function getContractorById(prisma: PrismaClient, id: string) {
+  return getContractorByIdCore(prisma, id);
+}
+
+export async function updateContractor(
+  prisma: PrismaClient,
+  id: string,
+  data: unknown
+) {
+  const parsed = UpdateContractorSchema.safeParse(data);
+  if (!parsed.success) {
+    throw new Error(parsed.error.message);
+  }
+  return updateContractorCore(prisma, id, parsed.data);
+}
+
+export async function deactivateContractor(prisma: PrismaClient, id: string) {
+  return deactivateContractorCore(prisma, id);
+}
 
 /**
  * Get all requests assigned to a specific contractor.

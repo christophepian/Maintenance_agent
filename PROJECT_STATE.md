@@ -1,6 +1,6 @@
 # Maintenance Agent — Project State
 
-**Last updated:** 2026-02-05 (Auth & Testing scaffolded) — developer fixes applied
+**Last updated:** 2026-02-08 (SaaS layout primitives + table styling + tests/build verified)
 
 ---
 
@@ -19,7 +19,7 @@ Build a web-first maintenance platform for Swiss property managers that:
 
 * **Tenant** — submits repair requests
 * **Property Manager** — configures rules, approves escalations
-* **Contractor** — executes work *(not implemented yet)*
+* **Contractor** — executes work *(portal + status updates implemented)*
 
 ---
 
@@ -74,46 +74,48 @@ Single repository containing:
 Maintenance_Agent/
 ├── PROJECT_STATE.md
 ├── .gitignore
-├── _archive/                      # legacy backups (NOT USED)
+├── _archive/
 ├── apps/
-│   ├── api/                       # Backend (ACTIVE)
+│   ├── api/
 │   │   ├── .env
 │   │   ├── package.json
 │   │   ├── prisma/
 │   │   │   ├── schema.prisma
 │   │   │   └── migrations/
 │   │   └── src/
-│   │       ├── server.ts          # ACTIVE runtime entry
-│   │       ├── services/
-│   │       │   ├── maintenanceRequests.ts
-│   │       │   ├── autoApproval.ts
-│   │       │   └── orgConfig.ts
-│   │       ├── validation/
-│   │       │   └── requests.ts
-│   │       └── http/
-│   │           ├── body.ts
-│   │           ├── json.ts
-│   │           └── query.ts
-│   └── web/                       # Frontend (ACTIVE)
+│   │       ├── server.ts
+│   │       ├── auth.ts
+│   │       ├── __tests__/
+│   │       ├── services/          # auth, contractors, inventory, tenants, requests, assignments
+│   │       ├── validation/        # requests, contractors, inventory, auth, triage
+│   │       ├── utils/             # phone normalization
+│   │       └── http/              # body/json/query helpers
+│   └── web/
 │       ├── pages/
-│       │   ├── index.js           # Tenant UI
-│       │   ├── manager.js         # Manager dashboard
-│       │   └── api/
-│       │       ├── requests.js
-│       │       ├── org-config.js
-│       │       └── requests/
-│       │           ├── [id].js       # GET /api/requests/[id] proxy (added Feb 3)
-│       │           └── approve.js
+│       │   ├── index.js
+│       │   ├── manager.js
+│       │   ├── contractor.js
+│       │   ├── contractor/        # contractor portal routes
+│       │   ├── admin-inventory.js
+│       │   ├── admin-inventory/   # buildings, units, asset-models
+│       │   ├── tenant.js
+│       │   ├── tenant-chat.js
+│       │   ├── tenant-form.js
+│       │   ├── manager/           # manager operations pages
+│       │   ├── contractors.js
+│       │   └── api/               # proxy routes to backend
+│       ├── components/            # AppShell, shared UI
+│       │   └── layout/            # PageShell, PageHeader, PageContent, Panel, Section, SidebarLayout
 │       └── styles/
-│           └── managerStyles.js   # UI style lock
+│           └── managerStyles.js
 ├── .github/
-│   ├── copilot-instructions.md  # AI agent guidance
+│   ├── copilot-instructions.md
 │   └── workflows/
-│       └── ci.yml               # GitHub Actions CI (added Feb 3)
-├── tsconfig.json                # Root TypeScript config with project references
-├── package.json                 # Root monorepo workspace stub
+│       └── ci.yml
+├── tsconfig.json
+├── package.json
 ├── infra/
-│   └── docker-compose.yml         # PostgreSQL
+│   └── docker-compose.yml
 └── packages/
 ```
 
@@ -134,6 +136,14 @@ enum RequestStatus {
   PENDING_REVIEW
   AUTO_APPROVED
   APPROVED
+  ASSIGNED
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum UnitType {
+  RESIDENTIAL
+  COMMON_AREA
 }
 
 model Org {
@@ -151,40 +161,60 @@ model OrgConfig {
 }
 
 model User {
-  id    String @id @default(uuid())
-  orgId String
-  role  Role
-  name  String
-  org   Org    @relation(fields: [orgId], references: [id])
+  id           String   @id @default(uuid())
+  orgId        String
+  role         Role
+  name         String
+  email        String?
+  passwordHash String?
+  org          Org      @relation(fields: [orgId], references: [id])
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
 
 model Request {
-  id            String         @id @default(uuid())
-  description   String
-  category      String?
-  estimatedCost Int?
-  status        RequestStatus
-  createdAt     DateTime       @default(now())
+  id                   String        @id @default(uuid())
+  description          String
+  category             String?
+  estimatedCost        Int?
+  status               RequestStatus @default(PENDING_REVIEW)
+  contactPhone         String?
   assignedContractorId String?
-  assignedContractor Contractor? @relation(fields: [assignedContractorId], references: [id])
+  assignedContractor   Contractor?   @relation(fields: [assignedContractorId], references: [id])
+  tenantId             String?
+  unitId               String?
+  applianceId          String?
+  contractorNotes      String?
+  startedAt            DateTime?
+  completedAt          DateTime?
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
 }
 
 model Contractor {
-  id               String    @id @default(uuid())
-  orgId            String
-  org              Org       @relation(fields: [orgId], references: [id])
-  name             String
-  phone            String
-  email            String
-  hourlyRate       Int
-  serviceCategories String  @default("[]")
-  isActive         Boolean   @default(true)
-  requests         Request[]
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
-  @@index([orgId, isActive])
+  id                String    @id @default(uuid())
+  orgId             String
+  org               Org       @relation(fields: [orgId], references: [id])
+  name              String
+  phone             String
+  email             String
+  hourlyRate        Int       @default(50)
+  serviceCategories String
+  isActive          Boolean   @default(true)
+  requests          Request[]
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 }
+
+Additional models include Building, Unit (with UnitType), Appliance, AssetModel (global + org-private), Tenant, Occupancy (tenant↔unit), RequestEvent, and Event, all org-scoped with soft delete where applicable.
 ```
+
+**IA adapters (non-breaking):**
+
+* Properties → Building (adapter DTO)
+* Assets → Appliance (+ AssetModel)
+* People → Tenant + Contractor union DTO
+* Work Requests → Request DTO wrapper
 
 ---
 
@@ -193,7 +223,7 @@ model Contractor {
 ### Entry Point
 
 * File: `apps/api/src/server.ts`
-* Run: `npm run dev`
+* Run: `npm run start:dev`
 * Port: **3001**
 
 ### Implementation Details
@@ -218,7 +248,13 @@ model Contractor {
 * `POST /requests/approve?id={uuid}` *(manager override)*
 * `DELETE /__dev/requests` *(dev only)*
 
-#### Contractors (NEW — Slice 1)
+#### Work Requests (alias)
+
+* `GET /work-requests`
+* `GET /work-requests/:id`
+* `POST /work-requests`
+
+#### Contractors
 
 * `GET /contractors` — list active contractors
 * `POST /contractors` — create contractor with validation
@@ -226,26 +262,62 @@ model Contractor {
 * `PATCH /contractors/{id}` — update contractor details
 * `DELETE /contractors/{id}` — deactivate contractor (soft delete)
 
-#### Request Assignment (NEW — Slice 2)
+#### Request Assignment
 
 * `POST /requests/{id}/assign` — assign contractor to request
 * `DELETE /requests/{id}/assign` — unassign contractor from request
 * Auto-assignment on request creation based on category match
 
-#### Tenant Intake (NEW)
+#### Tenant Intake
 
 * `POST /tenant-session` — identify tenant by phone and return unit/building/appliances
 * `POST /triage` — deterministic troubleshooting suggestions based on unit context
 
-#### Authentication (NEW)
+#### Authentication
 
 * `POST /auth/register` — create a user and return a token
 * `POST /auth/login` — authenticate and return a token
+
+#### Inventory (Buildings/Units/Appliances/Tenants/Asset Models/Occupancies)
+
+* `GET /buildings`
+* `POST /buildings`
+* `PATCH /buildings/:id`
+* `DELETE /buildings/:id`
+* `GET /buildings/:id/units`
+* `POST /buildings/:id/units`
+* `PATCH /units/:id`
+* `DELETE /units/:id`
+* `GET /units/:id/appliances`
+* `POST /units/:id/appliances`
+* `PATCH /appliances/:id`
+* `DELETE /appliances/:id`
+* `GET /tenants` (list or lookup by phone)
+* `POST /tenants`
+* `PATCH /tenants/:id`
+* `DELETE /tenants/:id`
+* `GET /units/:id/tenants`
+* `POST /units/:id/tenants`
+* `DELETE /units/:id/tenants/:tenantId`
+* `GET /asset-models`
+* `POST /asset-models`
+* `PATCH /asset-models/:id`
+* `DELETE /asset-models/:id`
 
 #### Org Config
 
 * `GET /org-config`
 * `PUT /org-config`
+
+#### Properties (alias)
+
+* `GET /properties` (wraps buildings)
+* `GET /properties/:id/units`
+
+#### People (alias)
+
+* `GET /people/tenants`
+* `GET /people/vendors`
 
 ---
 
@@ -271,7 +343,7 @@ model Contractor {
 * Live validation
 * Debug payload display
 
-### Contractor Management UI (`/contractors`) — Slice 1
+### Contractor Management UI (`/contractors`)
 
 * Add contractor form:
   * Name (required)
@@ -284,6 +356,19 @@ model Contractor {
   * Service categories display
   * Deactivate button
 * Real-time form validation feedback
+
+### Manager Back Office
+
+* `AppShell` sidebar + role switcher
+* Primary modules: Properties, Work Requests, People, Assets, Finance, Reports, Settings
+* Legacy operations pages remain under `/manager/operations/*`
+
+### Inventory Admin
+
+* `/admin-inventory` entry
+* `/admin-inventory/buildings/[id]`
+* `/admin-inventory/units/[id]`
+* `/admin-inventory/asset-models`
 
 ### Tenant Conversational Intake (NEW)
 
@@ -300,11 +385,19 @@ model Contractor {
 * `POST /api/requests` → backend `POST /requests`
 * `GET /api/requests/[id]` → backend `GET /requests/{id}` *(added Feb 3)*
 * `POST /api/requests/approve` → backend approve endpoint
-* `GET /api/contractors` → backend `GET /contractors` *(Slice 1)*
-* `POST /api/contractors` → backend `POST /contractors` *(Slice 1)*
-* `GET /api/contractors/[id]` → backend `GET /contractors/:id` *(Slice 1)*
-* `PATCH /api/contractors/[id]` → backend `PATCH /contractors/:id` *(Slice 1)*
-* `DELETE /api/contractors/[id]` → backend `DELETE /contractors/:id` *(Slice 1)*
+* `GET /api/work-requests` → backend `GET /work-requests`
+* `GET /api/work-requests/[id]` → backend `GET /work-requests/:id`
+* `POST /api/work-requests` → backend `POST /work-requests`
+* `GET /api/properties` → backend `GET /properties`
+* `GET /api/properties/[id]/units` → backend `GET /properties/:id/units`
+* `GET /api/people/tenants` → backend `GET /people/tenants`
+* `GET /api/people/vendors` → backend `GET /people/vendors`
+* `GET /api/contractors` → backend `GET /contractors`
+* `POST /api/contractors` → backend `POST /contractors`
+* `GET /api/contractors/[id]` → backend `GET /contractors/:id`
+* `PATCH /api/contractors/[id]` → backend `PATCH /contractors/:id`
+* `DELETE /api/contractors/[id]` → backend `DELETE /contractors/:id`
+* Inventory proxies under `/api/buildings`, `/api/units`, `/api/appliances`, `/api/tenants`, `/api/asset-models`
 * `POST /api/tenant-session` → backend `POST /tenant-session`
 * `POST /api/triage` → backend `POST /triage`
 * `POST /api/auth/login` → backend `POST /auth/login`
@@ -373,7 +466,7 @@ docker compose up -d
 
 # Backend
 cd apps/api
-npm run dev
+npm run start:dev
 
 # Frontend
 cd apps/web
@@ -461,6 +554,40 @@ Frontend changes (`apps/web`):
 
 Operational notes:
 
+## 13. Inventory Admin Expansion (Feb 7–8, 2026)
+
+**Overview:** Expanded inventory management with org-scoped CRUD, soft deletes, tenant occupancy, admin UI detail pages, and full integration tests.
+
+What was added:
+- Prisma schema: `Occupancy` join model (tenant ↔ unit), `UnitType` enum, `isActive` soft-delete flags on inventory entities.
+- Backend services: `services/inventory.ts` (org-scoped buildings/units/appliances/asset models), `services/occupancies.ts`, updated `services/tenants.ts` with deactivation guards.
+- Validation: Zod schemas for buildings, units, appliances, asset models, occupancies, and request assignment.
+- Raw HTTP routes: comprehensive CRUD for inventory and occupancy in `apps/api/src/server.ts` (including unit tenant links).
+- Frontend API proxies: 11 Next.js API routes under `apps/web/pages/api/` for inventory endpoints.
+- Admin UI pages:
+  - `pages/admin-inventory.js` (main hub)
+  - `pages/admin-inventory/buildings/[id].js`
+  - `pages/admin-inventory/units/[id].js`
+  - `pages/admin-inventory/asset-models.js`
+- Tests: 29 new integration tests in `apps/api/src/__tests__/inventory.test.ts` covering CRUD, soft deletes, org scoping, occupancy, and validation.
+
+Follow-up fixes:
+- Next.js `Link` syntax updated to remove nested `<a>` tags across inventory UI pages.
+- Admin inventory UI aligned with backend payloads (`unitNumber`, `serial`) and response envelopes (`{ data: ... }`).
+- Tenant management UI: assign/unassign tenants on unit detail, create tenant + auto-assign, and a Tenants tab with filtered list (by selected building/unit).
+- Backend: `GET /tenants` now supports listing when `phone` is omitted (proxy updated). Tenants tab refreshes on open.
+
+## 14. Back-Office Navigation Cohesion (Feb 8, 2026)
+
+**Overview:** Added a shared sidebar layout and persona-scoped routes for manager/contractor/tenant navigation without changing backend APIs.
+
+What was added:
+- Shared layout: `apps/web/components/AppShell.js` with role dropdown and sidebar navigation.
+- Manager workspace routes under `/manager/*` (requests, inventory, contractors, tenants placeholder, invoices placeholder) using AppShell.
+- Contractor workspace routes under `/contractor/*` (jobs, estimates, invoices placeholders) using AppShell.
+- Tenant pages now render within AppShell with tenant nav links.
+- Legacy routes remain accessible; `/manager` and `/contractor` now redirect client-side to their workspace entry pages.
+
 
 ### Recent Changes & Troubleshooting (Feb 4–6, 2026)
 
@@ -472,6 +599,10 @@ Operational notes:
   - Dev-only `DELETE /__dev/requests` is blocked in production.
   - `AUTH_SECRET` is required in production for JWT handling.
 - **Frontend dependencies:** Next.js upgraded to a patched version (now 16.x) to address audit findings.
+- **Tailwind v4 fix:** Updated PostCSS config to use `@tailwindcss/postcss` and switched global stylesheet to `@import "tailwindcss"` to restore utility classes.
+- **SaaS layout primitives:** Added reusable layout components (`PageShell`, `PageHeader`, `PageContent`, `Panel`, `Section`, `SidebarLayout`) and applied a reference implementation on `/contractors`.
+- **Table styling:** Modernized the manager and contractor tables with Tailwind SaaS-style classes (subtle header tint, light borders, refined hover).
+- **Web build script:** Added `npm run build` in `apps/web`.
 - **Maintenance:** Legacy audit reports archived under `_archive/audits/`.
 - **Troubleshooting workflow:**
   - If a page returns 404 or fails to fetch data, check that both servers are running (`lsof -nP -iTCP:3000,3001 -sTCP:LISTEN`).
@@ -484,6 +615,8 @@ Operational notes:
 Status:
 - Code changes committed and pushed. Prisma migration applied locally and Prisma Client regenerated.
 - Integration test executed: creating a request with category auto-assigned a matching contractor.
+- Test suite verified (Feb 8): 5 suites, 40 tests passed.
+- Web build verified (Feb 8): `next build` completed successfully.
 
 ### Developer Actions (runtime & debugging)
 
@@ -537,7 +670,7 @@ If you still see stale UI after pulling changes, restart both dev servers and ha
 
 * Authentication / authorization
 * Role enforcement
-* **Slice 3:** Contractor portal & notifications
+* Notifications
 * Scheduling
 * Invoicing
 * Media uploads
@@ -554,8 +687,8 @@ If you still see stale UI after pulling changes, restart both dev servers and ha
 
 ### Slice 3 (Next)
 
-* Contractor portal: view assigned requests, update status, upload documents
 * Notification system (contractor assigned, work completed)
+* Finance workflows (invoices, payments, ledger)
 
 ### Future: Tenant Identification, Asset Context & Automated Scheduling
 
@@ -643,7 +776,7 @@ Work can resume cleanly from Option C or future backlog items without rework.
 **Status:** Scaffolded and integrated
 
 - Auth service (`src/services/auth.ts`):
-  - Token encoding/decoding (demo impl; use jsonwebtoken in production)
+  - JWT token encoding/decoding
   - Token payload structure with userId, orgId, email, role
 - Auth middleware (`src/auth.ts`):
   - Optional `authMiddleware()` for request user extraction
@@ -654,10 +787,8 @@ Work can resume cleanly from Option C or future backlog items without rework.
   - Migration applied: `20260205142350_add_auth_to_user`
 
 **Next steps:**
-- Replace demo token with `jsonwebtoken` library
-- Implement `/auth/login` and `/auth/register` endpoints
 - Wire middleware into protected routes in server.ts
-- Add bcrypt for password hashing
+- Add auth guards to manager/contractor endpoints
 
 ### Automated Testing
 
