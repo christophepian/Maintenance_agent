@@ -879,14 +879,25 @@ If you still see stale UI after pulling changes, restart both dev servers and ha
   * Auto-assignment on request creation: if category matches contractor, auto-assign immediately
   * Testing completed: auto-assignment works, manual assignment/unassignment works, validation errors handled, dashboard displays contractors
 
-### Not Implemented Yet
+* **Slice 8, Phase 1 (Specification — Feb 23):** Digital Lease Generation + Signature-Ready Workflow
+  * See [SLICE_8_DIGITAL_LEASE_GENERATION.md](SLICE_8_DIGITAL_LEASE_GENERATION.md) for complete specification
+  * Data models defined: Lease (with 20+ fields), SignatureRequest (provider-agnostic)
+  * Auto-fill strategy: tenant from application, landlord from OrgConfig, unit/building from inventory
+  * Backend API scope: lease CRUD, PDF generation, ready-to-sign workflow, signature request management
+  * PDF generation: Option 1 (clean PDF from scratch) recommended over form overlay
+  * Frontend: lease list page, lease editor with accordion sections, integration from approved applications
+  * Tests: 2 suites (leases.test.ts, signatureRequests.test.ts) covering full lifecycle
+  * Status: **Specification complete, ready for implementation** (estimated 2–3 weeks)
 
-* Authentication / authorization
-* Role enforcement
-* Notifications
-* Scheduling
-* Invoicing
+### Not Implemented Yet (Active Backlog)
+
+* Slice 8 Phase 1 implementation (see clarifying questions below)
+* Slice 8 Phase 2–5 (tenant portal, DocuSign/Skribble integration, payment, archive)
+* Authentication enforcement (scaffolded, not wired)
+* Role enforcement on sensitive endpoints
+* Notifications (scaffolded, not wired)
 * Media uploads
+* Tenant portal redesign
 
 ---
 
