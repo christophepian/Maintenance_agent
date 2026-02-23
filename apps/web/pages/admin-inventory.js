@@ -1,7 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import AppShell from "../components/AppShell";
+import { ALLOWED_CATEGORIES } from "../lib/categories";
+import PageShell from "../components/layout/PageShell";
+import PageHeader from "../components/layout/PageHeader";
+import PageContent from "../components/layout/PageContent";
 
 /**
  * Inventory Admin (Slice 4)
@@ -21,46 +25,11 @@ import AppShell from "../components/AppShell";
 
 export default function InventoryAdmin() {
   const router = useRouter();
-    // Inline style object for UI
-    const ui = {
-      page: { maxWidth: "1100px", margin: "40px auto", padding: "24px", fontFamily: "system-ui" },
-      headerRow: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "24px" },
-      h1: { fontSize: "2.2rem", fontWeight: 700, margin: 0 },
-      h2: { fontSize: "1.5rem", fontWeight: 600, margin: "0 0 16px 0" },
-      subtle: { color: "#888", fontSize: "0.95rem" },
-      code: { background: "#f5f5f5", padding: "2px 6px", borderRadius: "4px", fontSize: "0.95em", fontFamily: "monospace" },
-      codeSmall: { background: "#f5f5f5", padding: "2px 4px", borderRadius: "3px", fontSize: "0.85em", fontFamily: "monospace" },
-      tabsRow: { display: "flex", gap: "12px", marginBottom: "20px", borderBottom: "1px solid #eee", paddingBottom: "12px" },
-      tab: { padding: "10px 16px", borderRadius: "6px 6px 0 0", border: "1px solid #ddd", borderBottom: "none", background: "#fafafa", cursor: "pointer", fontWeight: 500, fontSize: "0.95rem" },
-      tabActive: { background: "#fff", border: "1px solid #ddd", borderBottom: "1px solid #fff", color: "#111" },
-      card: { background: "#fff", border: "1px solid #e5e5e5", borderRadius: "8px", padding: "20px", marginBottom: "20px" },
-      label: { display: "block", fontWeight: 600, marginBottom: "6px", fontSize: "0.95rem" },
-      input: { padding: "10px 12px", borderRadius: "6px", border: "1px solid #ddd", width: "100%", maxWidth: "380px", fontSize: "0.95rem", boxSizing: "border-box" },
-      primaryBtn: { padding: "10px 20px", borderRadius: "6px", border: "none", background: "#111", color: "#fff", cursor: "pointer", fontWeight: 600, fontSize: "0.95rem" },
-      secondaryBtn: { padding: "10px 20px", borderRadius: "6px", border: "1px solid #ddd", background: "#fafafa", color: "#111", cursor: "pointer", fontWeight: 500, fontSize: "0.95rem" },
-      formRow: { display: "flex", gap: "16px", alignItems: "flex-end", marginBottom: "20px" },
-      formCol: { display: "flex", flexDirection: "column", gap: "20px", marginBottom: "20px" },
-      grid2: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", marginBottom: "20px" },
-      grow: { flex: 1 },
-      list: { display: "flex", flexDirection: "column", gap: "12px" },
-      listRow: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px", border: "1px solid #e5e5e5", borderRadius: "6px", background: "#fafafa" },
-      rowTitle: { fontWeight: 600, fontSize: "1rem", marginBottom: "4px" },
-      help: { fontSize: "0.85rem", color: "#666", marginTop: "4px" },
-      empty: { padding: "20px", textAlign: "center", color: "#888", fontStyle: "italic" },
-      notice: { padding: "12px 16px", borderRadius: "6px", marginBottom: "16px", fontSize: "0.95rem" },
-      noticeOk: { background: "#e8f5e9", border: "1px solid #81c784", color: "#2e7d32" },
-      noticeErr: { background: "#ffebee", border: "1px solid #ef5350", color: "#c62828" },
-      pill: { display: "inline-block", background: "#e0e0e0", color: "#333", padding: "2px 8px", borderRadius: "12px", fontSize: "0.8rem", marginLeft: "6px" },
-      badgeRow: { display: "flex", gap: "12px" },
-      badge: { padding: "4px 8px", background: "#f0f0f0", borderRadius: "4px", fontSize: "0.85rem", color: "#666" },
-      footer: { marginTop: "40px", paddingTop: "20px", borderTop: "1px solid #e5e5e5" },
-    };
   const API_BASE =
     process.env.NEXT_PUBLIC_API_BASE_URL ||
     process.env.API_BASE_URL ||
     "http://127.0.0.1:3001";
 
-  const [activeTab, setActiveTab] = useState("buildings");
 
   // Data
   const [buildings, setBuildings] = useState([]);
@@ -73,12 +42,21 @@ export default function InventoryAdmin() {
   // Selection
   const [selectedBuildingId, setSelectedBuildingId] = useState("");
   const [selectedUnitId, setSelectedUnitId] = useState("");
+  const [buildingSearch, setBuildingSearch] = useState("");
+  const [buildingMenuOpenId, setBuildingMenuOpenId] = useState(null);
 
   // Forms
-  const [buildingName, setBuildingName] = useState("");
+  const [buildingFormVisible, setBuildingFormVisible] = useState(false);
+  const [unitFormVisible, setUnitFormVisible] = useState(false);
+  const [buildingSortKey, setBuildingSortKey] = useState("name");
+  const [buildingSortDir, setBuildingSortDir] = useState("asc");
+  const [buildingAddress, setBuildingAddress] = useState("");
+  const [buildingCityCode, setBuildingCityCode] = useState("");
+  const [buildingCity, setBuildingCity] = useState("");
+  const [buildingCountry, setBuildingCountry] = useState("");
   const [unitLabel, setUnitLabel] = useState("");
   const [assetModelName, setAssetModelName] = useState("");
-  const [assetModelCategory, setAssetModelCategory] = useState("");
+  const [assetModelCategory, setAssetModelCategory] = useState(ALLOWED_CATEGORIES[0] || "");
   const [applianceName, setApplianceName] = useState("");
   const [applianceCategory, setApplianceCategory] = useState("");
   const [applianceSerialNumber, setApplianceSerialNumber] = useState("");
@@ -92,16 +70,6 @@ export default function InventoryAdmin() {
   const [loading, setLoading] = useState(false);
   const [notice, setNotice] = useState(null); // { type: "ok" | "err", message: string }
 
-  const tabs = useMemo(
-    () => [
-      { key: "buildings", label: "Buildings" },
-      { key: "units", label: "Units" },
-      { key: "asset-models", label: "Asset Models" },
-      { key: "appliances", label: "Appliances" },
-      { key: "tenants", label: "Tenants" },
-    ],
-    []
-  );
 
   function setOk(message) {
     setNotice({ type: "ok", message });
@@ -212,48 +180,60 @@ export default function InventoryAdmin() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedBuildingId]);
 
-  // When unit changes, refresh appliances
+  // When unit changes, refresh dependent data
   useEffect(() => {
+    if (!selectedUnitId) return;
     (async () => {
       try {
-        await loadAppliances(selectedUnitId);
         await loadUnitTenants(selectedUnitId);
       } catch (e) {
-        setErr(`Failed to load appliances: ${e.message}`);
+        setErr(`Failed to load unit data: ${e.message}`);
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedUnitId]);
 
-  // When switching to tenants tab, refresh tenant list
   useEffect(() => {
-    if (activeTab !== "tenants") return;
-    (async () => {
-      try {
-        await loadTenantsList();
-      } catch (e) {
-        setErr(`Failed to load tenants: ${e.message}`);
-      }
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab]);
+    if (!buildingMenuOpenId) return;
+
+    function handleClickOutside(event) {
+      if (event.target.closest("[data-building-menu]")) return;
+      setBuildingMenuOpenId(null);
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [buildingMenuOpenId]);
 
   // Actions
   async function onCreateBuilding(e) {
     e.preventDefault();
-    const name = buildingName.trim();
-    if (!name) return setErr("Building name is required.");
+    const addressLine = buildingAddress.trim();
+    const cityCode = buildingCityCode.trim();
+    const city = buildingCity.trim();
+    const country = buildingCountry.trim();
+
+    if (!addressLine) return setErr("Address is required.");
+    if (!cityCode) return setErr("City code is required.");
+    if (!city) return setErr("City is required.");
+    if (!country) return setErr("Country is required.");
+
+    const name = addressLine;
+    const address = `${addressLine}, ${cityCode} ${city}, ${country}`;
 
     try {
       setLoading(true);
       await fetchJSON(`/buildings`, {
         method: "POST",
-        body: JSON.stringify({ name }),
+        body: JSON.stringify({ name, address }),
       });
-      setBuildingName("");
+      setBuildingAddress("");
+      setBuildingCityCode("");
+      setBuildingCity("");
+      setBuildingCountry("");
+      setBuildingFormVisible(false);
       await loadBuildings();
       setOk("Building created.");
-      setActiveTab("buildings");
     } catch (e) {
       setErr(`Create building failed: ${e.message}`);
     } finally {
@@ -276,7 +256,7 @@ export default function InventoryAdmin() {
       setUnitLabel("");
       await loadUnits(selectedBuildingId);
       setOk("Unit created.");
-      setActiveTab("units");
+      setUnitFormVisible(false);
     } catch (e) {
       setErr(`Create unit failed: ${e.message}`);
     } finally {
@@ -328,7 +308,7 @@ export default function InventoryAdmin() {
     const category = assetModelCategory.trim();
 
     if (!name) return setErr("Asset model name is required.");
-    // category is optional in many designs; keep optional here, but include if provided.
+    if (!category) return setErr("Asset model category is required.");
 
     try {
       setLoading(true);
@@ -336,14 +316,13 @@ export default function InventoryAdmin() {
         method: "POST",
         body: JSON.stringify({
           name,
-          ...(category ? { category } : {}),
+          category,
         }),
       });
       setAssetModelName("");
-      setAssetModelCategory("");
+      setAssetModelCategory(ALLOWED_CATEGORIES[0] || "");
       await loadAssetModels();
       setOk("Asset model created.");
-      setActiveTab("asset-models");
     } catch (e) {
       setErr(`Create asset model failed: ${e.message}`);
     } finally {
@@ -380,7 +359,6 @@ export default function InventoryAdmin() {
       setSelectedAssetModelId("");
       await loadAppliances(selectedUnitId);
       setOk("Appliance created.");
-      setActiveTab("appliances");
     } catch (e) {
       setErr(`Create appliance failed: ${e.message}`);
     } finally {
@@ -390,471 +368,264 @@ export default function InventoryAdmin() {
 
   const selectedBuilding = buildings.find((b) => b.id === selectedBuildingId);
   const selectedUnit = units.find((u) => u.id === selectedUnitId);
+  const filteredBuildings = buildings.filter((b) => {
+    const query = buildingSearch.trim().toLowerCase();
+    if (!query) return true;
+    return (
+      (b.name || "").toLowerCase().includes(query) ||
+      (b.address || "").toLowerCase().includes(query) ||
+      (b.id || "").toLowerCase().includes(query)
+    );
+  });
+  const sortedBuildings = [...filteredBuildings].sort((a, b) => {
+    const getValue = (item) => {
+      switch (buildingSortKey) {
+        case "address":
+          return item.address || "";
+        case "id":
+          return item.id || "";
+        case "name":
+        default:
+          return item.name || "";
+      }
+    };
+
+    const aVal = getValue(a);
+    const bVal = getValue(b);
+
+    return buildingSortDir === "asc"
+      ? String(aVal).localeCompare(String(bVal))
+      : String(bVal).localeCompare(String(aVal));
+  });
   const filteredTenants = tenantsList.filter((t) => {
     if (selectedUnitId) return t.unitId === selectedUnitId || t.unit?.id === selectedUnitId;
     if (selectedBuildingId) return t.unit?.buildingId === selectedBuildingId;
     return true;
   });
 
+  function toggleBuildingSort(key) {
+    if (buildingSortKey === key) {
+      setBuildingSortDir((prev) => (prev === "asc" ? "desc" : "asc"));
+      return;
+    }
+    setBuildingSortKey(key);
+    setBuildingSortDir("asc");
+  }
+
   const content = (
-    <div style={ui.page}>
-      <div style={ui.headerRow}>
-        <div>
-          <h1 style={ui.h1}>Admin Inventory</h1>
-          <div style={ui.subtle}>
-            Backend: <code style={ui.code}>{API_BASE}</code>
-          </div>
-        </div>
-        <div style={ui.badgeRow}>
-          {loading ? <span style={ui.badge}>Loading…</span> : null}
-        </div>
-      </div>
-
-      {notice ? (
-        <div
-          style={{
-            ...ui.notice,
-            ...(notice.type === "ok" ? ui.noticeOk : ui.noticeErr),
-          }}
-        >
-          {notice.message}
-        </div>
-      ) : null}
-
-      <div style={ui.card}>
-        <div style={ui.tabsRow}>
-          {tabs.map((t) => (
-            <button
-              key={t.key}
-              type="button"
-              onClick={() => setActiveTab(t.key)}
-              style={{
-                ...ui.tab,
-                ...(activeTab === t.key ? ui.tabActive : null),
-              }}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Shared selectors */}
-        <div style={ui.grid2}>
-          <div>
-            <label style={ui.label}>Building</label>
-            <select
-              style={ui.input}
-              value={selectedBuildingId}
-              onChange={(e) => setSelectedBuildingId(e.target.value)}
-            >
-              <option value="">— Select building —</option>
-              {buildings.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.name}
-                </option>
-              ))}
-            </select>
-            <div style={ui.help}>
-              Selected:{" "}
-              <strong>{selectedBuilding ? selectedBuilding.name : "—"}</strong>
-            </div>
-          </div>
-
-          <div>
-            <label style={ui.label}>Unit</label>
-            <select
-              style={ui.input}
-              value={selectedUnitId}
-              onChange={(e) => setSelectedUnitId(e.target.value)}
-              disabled={!selectedBuildingId}
-            >
-              <option value="">
-                {selectedBuildingId ? "— Select unit —" : "Select building first"}
-              </option>
-              {units.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.unitNumber || u.label || u.name || u.id}
-                </option>
-              ))}
-            </select>
-            <div style={ui.help}>
-              Selected: <strong>{selectedUnit ? selectedUnit.unitNumber || selectedUnit.label : "—"}</strong>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* TAB CONTENT */}
-      {activeTab === "buildings" ? (
-        <div style={ui.card}>
-          <h2 style={ui.h2}>Buildings</h2>
-
-          <form onSubmit={onCreateBuilding} style={ui.formRow}>
-            <div style={ui.grow}>
-              <label style={ui.label}>New building name</label>
-              <input
-                style={ui.input}
-                value={buildingName}
-                onChange={(e) => setBuildingName(e.target.value)}
-                placeholder="e.g. Bahnhofstrasse 12"
-              />
-            </div>
-            <button style={ui.primaryBtn} disabled={loading} type="submit">
-              Create
-            </button>
-          </form>
-
-          <div style={ui.list}>
-            {buildings.length === 0 ? (
-              <div style={ui.empty}>No buildings yet.</div>
-            ) : (
-              buildings.map((b) => (
-                <Link key={b.id} href={`/admin-inventory/buildings/${b.id}`} style={{ textDecoration: "none", display: "block" }}>
-                  <div style={ui.listRow}>
-                    <div>
-                      <div style={ui.rowTitle}>{b.name}</div>
-                      <div style={ui.help}>
-                        {b.address && <div>{b.address}</div>}
-                        <code style={ui.codeSmall}>{b.id}</code>
-                      </div>
-                    </div>
-                    <span style={{ color: "#0066cc" }}>→</span>
-                  </div>
-                </Link>
-              ))
-            )}
-          </div>
-        </div>
-      ) : null}
-
-      {activeTab === "units" ? (
-        <>
-          <div style={ui.card}>
-            <h2 style={ui.h2}>Units</h2>
-
-            <form onSubmit={onCreateUnit} style={ui.formRow}>
-              <div style={ui.grow}>
-                <label style={ui.label}>
-                  New unit label{" "}
-                  <span style={ui.subtle}>
-                    (Building:{" "}
-                    {selectedBuilding ? selectedBuilding.name : "none selected"})
-                  </span>
-                </label>
-                <input
-                  style={ui.input}
-                  value={unitLabel}
-                  onChange={(e) => setUnitLabel(e.target.value)}
-                  placeholder="e.g. Apt 3B"
-                  disabled={!selectedBuildingId}
-                />
-              </div>
-              <button
-                style={ui.primaryBtn}
-                disabled={loading || !selectedBuildingId}
-                type="submit"
-              >
-                Create
-              </button>
-            </form>
-
-            <div style={ui.list}>
-              {!selectedBuildingId ? (
-                <div style={ui.empty}>Select a building to view units.</div>
-              ) : units.length === 0 ? (
-                <div style={ui.empty}>No units in this building yet.</div>
-              ) : (
-                units.map((u) => (
-                  <div key={u.id} style={ui.listRow}>
-                    <div>
-                      <div style={ui.rowTitle}>{u.unitNumber || u.label || u.name || "Unit"}</div>
-                      <div style={ui.subtle}>
-                        <code style={ui.codeSmall}>{u.id}</code>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      style={ui.secondaryBtn}
-                      onClick={() => {
-                        setSelectedUnitId(u.id);
-                        setActiveTab("appliances");
-                      }}
-                    >
-                      Manage appliances →
-                    </button>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        </>
-      ) : null}
-
-      {activeTab === "asset-models" ? (
-        <div style={ui.card}>
-          <h2 style={ui.h2}>
-            Asset Models
-            <Link href="/admin-inventory/asset-models" style={{ marginLeft: "16px", fontSize: "0.9rem", color: "#0066cc", textDecoration: "none" }}>
-              View all →
-            </Link>
-          </h2>
-
-          <form onSubmit={onCreateAssetModel} style={ui.formRow}>
-            <div style={ui.grow}>
-              <label style={ui.label}>Model name</label>
-              <input
-                style={ui.input}
-                value={assetModelName}
-                onChange={(e) => setAssetModelName(e.target.value)}
-                placeholder="e.g. Bosch Serie 6"
-              />
-            </div>
-
-            <div style={ui.grow}>
-              <label style={ui.label}>Category (optional)</label>
-              <input
-                style={ui.input}
-                value={assetModelCategory}
-                onChange={(e) => setAssetModelCategory(e.target.value)}
-                placeholder="e.g. dishwasher"
-              />
-            </div>
-
-            <button style={ui.primaryBtn} disabled={loading} type="submit">
-              Create
-            </button>
-          </form>
-
-          <div style={ui.list}>
-            {assetModels.length === 0 ? (
-              <div style={ui.empty}>No asset models yet.</div>
-            ) : (
-              assetModels.map((m) => (
-                <div key={m.id} style={ui.listRow}>
-                  <div>
-                    <div style={ui.rowTitle}>
-                      {m.name}{" "}
-                      {m.category ? (
-                        <span style={ui.pill}>{m.category}</span>
-                      ) : null}
-                    </div>
-                    <div style={ui.subtle}>
-                      <code style={ui.codeSmall}>{m.id}</code>
-                    </div>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-      ) : null}
-
-      {activeTab === "appliances" ? (
-        <div style={ui.card}>
-          <h2 style={ui.h2}>Appliances</h2>
-
-          <form onSubmit={onCreateAppliance} style={ui.formCol}>
-            <div style={ui.grid2}>
-              <div>
-                <label style={ui.label}>
-                  Appliance name{" "}
-                  <span style={ui.subtle}>
-                    (Unit: {selectedUnit ? selectedUnit.unitNumber || selectedUnit.label : "none selected"})
-                  </span>
-                </label>
-                <input
-                  style={ui.input}
-                  value={applianceName}
-                  onChange={(e) => setApplianceName(e.target.value)}
-                  placeholder="e.g. Kitchen Dishwasher"
-                  disabled={!selectedUnitId}
-                />
-              </div>
-
-              <div>
-                <label style={ui.label}>Category</label>
-                <input
-                  style={ui.input}
-                  value={applianceCategory}
-                  onChange={(e) => setApplianceCategory(e.target.value)}
-                  placeholder="e.g. dishwasher"
-                  disabled={!selectedUnitId}
-                />
-              </div>
-
-              <div>
-                <label style={ui.label}>Serial number (optional)</label>
-                <input
-                  style={ui.input}
-                  value={applianceSerialNumber}
-                  onChange={(e) => setApplianceSerialNumber(e.target.value)}
-                  placeholder="e.g. SN123456"
-                  disabled={!selectedUnitId}
-                />
-              </div>
-
-              <div>
-                <label style={ui.label}>Asset model (optional)</label>
-                <select
-                  style={ui.input}
-                  value={selectedAssetModelId}
-                  onChange={(e) => setSelectedAssetModelId(e.target.value)}
-                  disabled={!selectedUnitId}
-                >
-                  <option value="">— None —</option>
-                  {assetModels.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.name}
-                      {m.category ? ` (${m.category})` : ""}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div style={ui.formRow}>
-              <button
-                style={ui.primaryBtn}
-                disabled={loading || !selectedUnitId}
-                type="submit"
-              >
-                Create appliance
-              </button>
+    <PageShell variant="embedded">
+      <div className="mx-auto max-w-6xl px-6 py-8">
+        <PageHeader
+          title="Admin Inventory"
+          subtitle={
+            <span>
+              Backend: <code className="code">{API_BASE}</code>
+            </span>
+          }
+          actions={(
+            <div className="flex items-center gap-3">
+              {loading ? <span className="text-xs text-slate-500">Loading…</span> : null}
               <button
                 type="button"
-                style={ui.secondaryBtn}
-                disabled={loading}
-                onClick={async () => {
-                  try {
-                    setLoading(true);
-                    await loadAppliances(selectedUnitId);
-                    setOk("Appliances refreshed.");
-                  } catch (e) {
-                    setErr(`Refresh failed: ${e.message}`);
-                  } finally {
-                    setLoading(false);
-                  }
-                }}
+                className="button-primary"
+                onClick={() => setBuildingFormVisible((prev) => !prev)}
               >
-                Refresh
+                {buildingFormVisible ? "Cancel" : "Add"}
               </button>
             </div>
-          </form>
+          )}
+        />
+        <PageContent>
+          {notice ? (
+            <div className={`notice ${notice.type === "ok" ? "notice-ok" : "notice-err"}`}>
+              {notice.message}
+            </div>
+          ) : null}
 
-          <div style={ui.list}>
-            {!selectedUnitId ? (
-              <div style={ui.empty}>Select a unit to view appliances.</div>
-            ) : appliances.length === 0 ? (
-              <div style={ui.empty}>No appliances in this unit yet.</div>
-            ) : (
-              appliances.map((a) => (
-                <div key={a.id} style={ui.listRow}>
+          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <h2 className="text-lg font-semibold text-slate-900">Buildings</h2>
+
+          {buildingFormVisible ? (
+            <div
+              className="mb-5 rounded-xl border border-slate-200 bg-slate-50 p-4"
+            >
+              <form onSubmit={onCreateBuilding} className="grid gap-5">
+                <div>
+                  <label className="label">Address</label>
+                  <input
+                    className="input"
+                    value={buildingAddress}
+                    onChange={(e) => setBuildingAddress(e.target.value)}
+                    placeholder="e.g. Bahnhofstrasse 12"
+                  />
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
                   <div>
-                    <div style={ui.rowTitle}>
-                      {a.name} <span style={ui.pill}>{a.category}</span>
-                    </div>
-                    <div style={ui.subtle}>
-                      {a.serialNumber ? (
-                        <span>
-                          SN: <code style={ui.codeSmall}>{a.serialNumber}</code>{" "}
-                          •{" "}
-                        </span>
-                      ) : null}
-                      <code style={ui.codeSmall}>{a.id}</code>
-                    </div>
-                    {a.assetModel ? (
-                      <div style={ui.help}>
-                        Model: <strong>{a.assetModel.name}</strong>
-                        {a.assetModel.category ? ` (${a.assetModel.category})` : ""}
-                      </div>
-                    ) : null}
+                    <label className="label">City code</label>
+                    <input
+                      className="input"
+                      value={buildingCityCode}
+                      onChange={(e) => setBuildingCityCode(e.target.value)}
+                      placeholder="e.g. 8001"
+                    />
+                  </div>
+                  <div>
+                    <label className="label">City</label>
+                    <input
+                      className="input"
+                      value={buildingCity}
+                      onChange={(e) => setBuildingCity(e.target.value)}
+                      placeholder="e.g. Zürich"
+                    />
                   </div>
                 </div>
-              ))
-            )}
-          </div>
-        </div>
-      ) : null}
-
-      {activeTab === "tenants" ? (
-        <div style={ui.card}>
-          <h2 style={ui.h2}>Tenants</h2>
-
-          <form onSubmit={onCreateTenant} style={ui.formRow}>
-            <div style={ui.grow}>
-              <label style={ui.label}>Name (optional)</label>
-              <input
-                style={ui.input}
-                value={createTenantName}
-                onChange={(e) => setCreateTenantName(e.target.value)}
-                placeholder="e.g. Jane Doe"
-              />
+                <div>
+                  <label className="label">Country</label>
+                  <input
+                    className="input"
+                    value={buildingCountry}
+                    onChange={(e) => setBuildingCountry(e.target.value)}
+                    placeholder="e.g. Switzerland"
+                  />
+                </div>
+                <div className="flex justify-end gap-3">
+                  <button
+                    type="button"
+                    className="button-secondary"
+                    onClick={() => setBuildingFormVisible(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button className="button-primary" disabled={loading} type="submit">
+                    Save building
+                  </button>
+                </div>
+              </form>
             </div>
-            <div style={ui.grow}>
-              <label style={ui.label}>Phone</label>
-              <input
-                style={ui.input}
-                value={createTenantPhone}
-                onChange={(e) => setCreateTenantPhone(e.target.value)}
-                placeholder="+41 79 123 45 67"
-              />
-            </div>
-            <div style={ui.grow}>
-              <label style={ui.label}>Email (optional)</label>
-              <input
-                style={ui.input}
-                value={createTenantEmail}
-                onChange={(e) => setCreateTenantEmail(e.target.value)}
-                placeholder="tenant@example.com"
-              />
-            </div>
-            <button style={ui.primaryBtn} disabled={creatingTenant} type="submit">
-              {creatingTenant ? "Creating..." : "Create"}
-            </button>
-          </form>
+          ) : null}
 
-          <div style={ui.help}>
-            {selectedUnitId
-              ? `Tenant will be assigned to unit ${selectedUnit?.unitNumber || selectedUnit?.label || selectedUnitId}.`
-              : "Select a unit above to auto-assign the new tenant."}
+          <div className="flex justify-end">
+            <div className="max-w-sm w-full">
+              <input
+                className="input"
+                value={buildingSearch}
+                onChange={(e) => setBuildingSearch(e.target.value)}
+                placeholder="Search…"
+              />
+              <div className="text-sm text-slate-600">
+                Selected:{" "}
+                <strong>{selectedBuilding ? selectedBuilding.name : "—"}</strong>
+              </div>
+            </div>
           </div>
 
-          <div style={{ marginTop: "16px" }}>
-            <div style={ui.subtle}>
-              {selectedUnitId
-                ? `Tenants in unit ${selectedUnit?.unitNumber || selectedUnit?.label || selectedUnitId}`
-                : selectedBuildingId
-                ? `Tenants in building ${selectedBuilding?.name || selectedBuildingId}`
-                : "All tenants"}
+          {sortedBuildings.length === 0 ? (
+            <div className="text-sm text-slate-500 italic">No buildings yet.</div>
+          ) : (
+            <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+              <table className="w-full border-collapse text-sm">
+                <thead className="bg-slate-50/70">
+                  <tr>
+                    <th className="h-12 px-4 text-left align-middle text-xs font-semibold text-slate-600 border-b border-slate-200">
+                      <button
+                        type="button"
+                        className="flex items-center gap-2 text-xs font-semibold text-slate-600"
+                        onClick={() => toggleBuildingSort("name")}
+                      >
+                        Name
+                        <span className="text-slate-400">↕</span>
+                      </button>
+                    </th>
+                    <th className="h-12 px-4 text-left align-middle text-xs font-semibold text-slate-600 border-b border-slate-200">
+                      <button
+                        type="button"
+                        className="flex items-center gap-2 text-xs font-semibold text-slate-600"
+                        onClick={() => toggleBuildingSort("address")}
+                      >
+                        Address
+                        <span className="text-slate-400">↕</span>
+                      </button>
+                    </th>
+                    <th className="h-12 px-4 text-left align-middle text-xs font-semibold text-slate-600 border-b border-slate-200">
+                      <button
+                        type="button"
+                        className="flex items-center gap-2 text-xs font-semibold text-slate-600"
+                        onClick={() => toggleBuildingSort("id")}
+                      >
+                        Building ID
+                        <span className="text-slate-400">↕</span>
+                      </button>
+                    </th>
+                    <th className="h-12 px-4 text-right align-middle text-xs font-semibold text-slate-600 border-b border-slate-200">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sortedBuildings.map((b) => (
+                    <tr key={b.id} className="border-b border-slate-100 hover:bg-slate-50/70 transition-colors">
+                      <td className="px-4 py-3 align-middle text-sm text-slate-700">
+                        <Link href={`/admin-inventory/buildings/${b.id}`} className="font-semibold text-slate-900 hover:underline">
+                          {b.name}
+                        </Link>
+                      </td>
+                      <td className="px-4 py-3 align-middle text-sm text-slate-700">
+                        {b.address || "—"}
+                      </td>
+                      <td className="px-4 py-3 align-middle text-sm text-slate-700">
+                        <code className="code-small">{b.id}</code>
+                      </td>
+                      <td className="px-4 py-3 align-middle text-sm text-slate-700 text-right">
+                        <div className="relative inline-block text-left" data-building-menu>
+                          <button
+                            type="button"
+                            className="rounded-md border border-slate-200 px-2 py-1 text-slate-600 hover:bg-slate-50"
+                            onClick={() =>
+                              setBuildingMenuOpenId((prev) => (prev === b.id ? null : b.id))
+                            }
+                          >
+                            ⋮
+                          </button>
+                          {buildingMenuOpenId === b.id ? (
+                            <div className="absolute right-0 z-10 mt-2 w-36 origin-top-right rounded-md border border-slate-200 bg-white shadow-lg">
+                              <button
+                                type="button"
+                                className="block w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                                onClick={() => {
+                                  setSelectedBuildingId(b.id);
+                                  setBuildingMenuOpenId(null);
+                                }}
+                              >
+                                Set active
+                              </button>
+                              <Link
+                                href={`/admin-inventory/buildings/${b.id}`}
+                                className="block px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                                onClick={() => setBuildingMenuOpenId(null)}
+                              >
+                                View →
+                              </Link>
+                            </div>
+                          ) : null}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-            <div style={ui.list}>
-              {filteredTenants.length === 0 ? (
-                <div style={ui.empty}>No tenants yet.</div>
-              ) : (
-                filteredTenants.map((t) => (
-                  <div key={t.id} style={ui.listRow}>
-                    <div>
-                      <div style={ui.rowTitle}>{t.name || "Tenant"}</div>
-                      <div style={ui.help}>Phone: {t.phone || "—"}</div>
-                      <div style={ui.help}>
-                        Unit: {t.unit?.unitNumber || t.unitId || "—"}
-                      </div>
-                    </div>
-                  </div>
-                ))
-              )}
+          )}
+          </div>
+
+
+
+          <div className="mt-10 border-t border-slate-200 pt-5">
+            <div className="text-sm text-slate-500">
+              Tip: if this page can’t load data, verify the API is running on{" "}
+              <code className="code-small">{API_BASE}</code> and that CORS is enabled.
             </div>
           </div>
-        </div>
-      ) : null}
-
-      <div style={ui.footer}>
-        <div style={ui.subtle}>
-          Tip: if this page can’t load data, verify the API is running on{" "}
-          <code style={ui.codeSmall}>{API_BASE}</code> and that CORS is enabled.
-        </div>
+        </PageContent>
       </div>
-    </div>
+    </PageShell>
   );
 
   if (router.pathname === "/admin-inventory") {

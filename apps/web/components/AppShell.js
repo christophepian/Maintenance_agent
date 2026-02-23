@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
+import NotificationBell from "./NotificationBell";
 
 function decodeRoleFromToken(token) {
   if (!token) return null;
@@ -87,10 +88,6 @@ export default function AppShell({ role: roleProp, children }) {
         ],
       },
       {
-        section: "Work Requests",
-        items: [{ label: "Work Requests", href: "/manager/work-requests" }],
-      },
-      {
         section: "People",
         items: [
           { label: "People overview", href: "/manager/people" },
@@ -99,11 +96,14 @@ export default function AppShell({ role: roleProp, children }) {
         ],
       },
       {
-        section: "Assets",
+        section: "Appliances",
         items: [
-          { label: "Assets", href: "/manager/assets" },
-          { label: "Asset models", href: "/admin-inventory/asset-models" },
+          { label: "Applances models", href: "/admin-inventory/asset-models" },
         ],
+      },
+      {
+        section: "Work Requests",
+        items: [{ label: "Work Requests", href: "/manager/work-requests" }],
       },
       {
         section: "Finance",
@@ -112,6 +112,7 @@ export default function AppShell({ role: roleProp, children }) {
           { label: "Charges", href: "/manager/finance/charges" },
           { label: "Payments", href: "/manager/finance/payments" },
           { label: "Invoices & Bills", href: "/manager/finance/invoices" },
+          { label: "Billing Entities", href: "/manager/finance/billing-entities" },
           { label: "Expenses", href: "/manager/finance/expenses" },
           { label: "Ledger", href: "/manager/finance/ledger" },
         ],
@@ -123,6 +124,39 @@ export default function AppShell({ role: roleProp, children }) {
       {
         section: "Settings",
         items: [{ label: "Settings", href: "/manager/settings" }],
+      },
+      {
+        section: "Testing",
+        items: [{ label: "Job & Invoice Test", href: "/test-jobs" }],
+      },
+    ],
+    []
+  );
+
+  const ownerNav = useMemo(
+    () => [
+      {
+        section: "Approvals",
+        items: [{ label: "Pending Approvals", href: "/owner/approvals" }],
+      },
+      {
+        section: "Jobs & Invoices",
+        items: [
+          { label: "Jobs", href: "/owner/jobs" },
+          { label: "Invoices", href: "/owner/invoices" },
+          { label: "Billing Entities", href: "/owner/billing-entities" },
+        ],
+      },
+      {
+        section: "Properties",
+        items: [
+          { label: "Properties", href: "/manager/properties" },
+          { label: "Inventory admin", href: "/admin-inventory" },
+        ],
+      },
+      {
+        section: "Work Requests",
+        items: [{ label: "Work Requests", href: "/manager/work-requests" }],
       },
     ],
     []
@@ -159,7 +193,7 @@ export default function AppShell({ role: roleProp, children }) {
     []
   );
 
-  const nav = role === "CONTRACTOR" ? contractorNav : role === "TENANT" ? tenantNav : managerNav;
+  const nav = role === "CONTRACTOR" ? contractorNav : role === "TENANT" ? tenantNav : role === "OWNER" ? ownerNav : managerNav;
   const showSwitcher = true;
 
   function isActive(href) {
@@ -175,6 +209,8 @@ export default function AppShell({ role: roleProp, children }) {
       router.push("/contractor/jobs");
     } else if (nextRole === "TENANT") {
       router.push("/tenant-form");
+    } else if (nextRole === "OWNER") {
+      router.push("/owner/approvals");
     } else {
       router.push("/manager/work-requests");
     }
@@ -228,6 +264,7 @@ export default function AppShell({ role: roleProp, children }) {
               }}
             >
               <option value="MANAGER">Manager</option>
+              <option value="OWNER">Owner</option>
               <option value="CONTRACTOR">Contractor</option>
               <option value="TENANT">Tenant</option>
             </select>
@@ -250,7 +287,20 @@ export default function AppShell({ role: roleProp, children }) {
         ))}
       </aside>
 
-      <main style={{ padding: "24px" }}>{children}</main>
+      <main style={{ padding: "24px" }}>
+        {/* Header with notification bell */}
+        {(role === "MANAGER" || role === "OWNER" || role === "TENANT" || role === "CONTRACTOR") && (
+          <div style={{ 
+            display: "flex", 
+            justifyContent: "flex-end", 
+            marginBottom: "16px",
+            paddingRight: "8px"
+          }}>
+            <NotificationBell />
+          </div>
+        )}
+        {children}
+      </main>
     </div>
   );
 }

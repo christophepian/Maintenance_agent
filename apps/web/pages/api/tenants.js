@@ -1,6 +1,7 @@
 // Frontend proxy for /api/tenants endpoints
 export default async function handler(req, res) {
   const API_BASE_URL = process.env.API_BASE_URL || "http://127.0.0.1:3001";
+  const authHeader = req.headers["authorization"];
 
   try {
     if (req.method === "GET") {
@@ -14,7 +15,9 @@ export default async function handler(req, res) {
         apiUrl.searchParams.set("includeInactive", includeInactive);
       }
 
-      const response = await fetch(apiUrl.toString());
+      const response = await fetch(apiUrl.toString(), {
+        headers: authHeader ? { authorization: authHeader } : undefined,
+      });
       const data = await response.json();
 
       if (!response.ok) {
@@ -30,6 +33,7 @@ export default async function handler(req, res) {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          ...(authHeader ? { authorization: authHeader } : {}),
         },
         body: JSON.stringify(req.body),
       });

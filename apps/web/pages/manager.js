@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import AppShell from "../components/AppShell";
+import PageShell from "../components/layout/PageShell";
+import PageHeader from "../components/layout/PageHeader";
+import PageContent from "../components/layout/PageContent";
 
 function fmtDate(iso) {
   try {
@@ -16,6 +19,9 @@ function badgeForStatus(status) {
   }
   if (status === "PENDING_REVIEW") {
     return { label: "PENDING_REVIEW", bg: "#fff5e6", border: "#ffd08a", color: "#7a4a00" };
+  }
+  if (status === "PENDING_OWNER_APPROVAL") {
+    return { label: "PENDING_OWNER_APPROVAL", bg: "#fff0f0", border: "#ffb3b3", color: "#7a1f1f" };
   }
   if (status === "APPROVED") {
     return { label: "APPROVED", bg: "#e8f2ff", border: "#90c2ff", color: "#0b3a75" };
@@ -112,7 +118,7 @@ export default function Manager() {
 
     return (requests || [])
       .filter((r) => {
-        if (filter === "NEEDS_APPROVAL") return r.status === "PENDING_REVIEW";
+        if (filter === "NEEDS_APPROVAL") return r.status === "PENDING_REVIEW" || r.status === "PENDING_OWNER_APPROVAL";
         if (filter === "AUTO_APPROVED") return r.status === "AUTO_APPROVED";
         return true;
       })
@@ -199,54 +205,50 @@ export default function Manager() {
   }
 
   const content = (
-    <div className="main-container">
-      <div className="row" style={{ justifyContent: "space-between", alignItems: "baseline" }}>
-        <div>
-          <h1>Manager Dashboard</h1>
-          <div className="subtle">
-            Configure auto-approval and review requests that need attention.
-          </div>
-        </div>
-        <button onClick={refreshAll} disabled={loading} className="button-secondary">
-          {loading ? "Refreshing…" : "Refresh"}
-        </button>
-      </div>
-
-      <hr style={{ margin: "18px 0" }} />
-
-      {/* Threshold */}
-      <div className="card" style={{ display: "grid", gap: 10 }}>
-        <div className="row" style={{ justifyContent: "space-between", alignItems: "baseline" }}>
-          <div style={{ fontWeight: 700 }}>Auto-approval threshold</div>
-          <div className="subtle">
-            Current: <strong>{autoApproveLimit == null ? "(unavailable)" : `${autoApproveLimit} CHF`}</strong>
-          </div>
-        </div>
-        <div className="row" style={{ flexWrap: "wrap" }}>
-          <label className="row" style={{ gap: 8 }}>
-            <span className="subtle" style={{ color: "#444" }}>Set to</span>
-            <input
-              type="number"
-              step="1"
-              min="0"
-              max="100000"
-              value={limitDraft}
-              onChange={(e) => setLimitDraft(e.target.value)}
-              className="input"
-              style={{ width: 140, marginBottom: 0 }}
-            />
-            <span className="subtle" style={{ color: "#444" }}>CHF</span>
-          </label>
-          <button onClick={saveThreshold} disabled={savingLimit || !limitValidation.ok} className="button-primary">
-            {savingLimit ? "Saving…" : "Save"}
+    <PageShell variant="embedded">
+      <PageHeader
+        title="Manager Dashboard"
+        subtitle="Configure auto-approval and review requests that need attention."
+        actions={(
+          <button onClick={refreshAll} disabled={loading} className="button-secondary">
+            {loading ? "Refreshing…" : "Refresh"}
           </button>
-          {!limitValidation.ok ? (
-            <span className="notice notice-err" style={{ padding: 6, marginBottom: 0 }}>{limitValidation.error}</span>
-          ) : (
-            <span className="help">Requests with estimated cost ≤ this value auto-approve.</span>
-          )}
+        )}
+      />
+      <PageContent>
+        {/* Threshold */}
+        <div className="card" style={{ display: "grid", gap: 10 }}>
+          <div className="row" style={{ justifyContent: "space-between", alignItems: "baseline" }}>
+            <div style={{ fontWeight: 700 }}>Auto-approval threshold</div>
+            <div className="subtle">
+              Current: <strong>{autoApproveLimit == null ? "(unavailable)" : `${autoApproveLimit} CHF`}</strong>
+            </div>
+          </div>
+          <div className="row" style={{ flexWrap: "wrap" }}>
+            <label className="row" style={{ gap: 8 }}>
+              <span className="subtle" style={{ color: "#444" }}>Set to</span>
+              <input
+                type="number"
+                step="1"
+                min="0"
+                max="100000"
+                value={limitDraft}
+                onChange={(e) => setLimitDraft(e.target.value)}
+                className="input"
+                style={{ width: 140, marginBottom: 0 }}
+              />
+              <span className="subtle" style={{ color: "#444" }}>CHF</span>
+            </label>
+            <button onClick={saveThreshold} disabled={savingLimit || !limitValidation.ok} className="button-primary">
+              {savingLimit ? "Saving…" : "Save"}
+            </button>
+            {!limitValidation.ok ? (
+              <span className="notice notice-err" style={{ padding: 6, marginBottom: 0 }}>{limitValidation.error}</span>
+            ) : (
+              <span className="help">Requests with estimated cost ≤ this value auto-approve.</span>
+            )}
+          </div>
         </div>
-      </div>
 
       {/* Messages */}
       <div style={{ marginTop: 12 }}>
@@ -377,7 +379,8 @@ export default function Manager() {
           Note: contractors are auto-assigned based on service categories. Managers can manually reassign via API if needed.
         </div>
       </div>
-    </div>
+      </PageContent>
+    </PageShell>
   );
 
   if (router.pathname === "/manager") {

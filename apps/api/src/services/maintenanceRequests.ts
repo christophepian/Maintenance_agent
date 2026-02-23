@@ -1,4 +1,4 @@
-import type { PrismaClient, RequestStatus } from "@prisma/client";
+import { PrismaClient, RequestStatus } from "@prisma/client";
 
 export type MaintenanceRequestDTO = {
   id: string;
@@ -146,6 +146,23 @@ export async function listMaintenanceRequests(
   return rows.map(toDTO);
 }
 
+export async function listOwnerPendingApprovals(
+  prisma: PrismaClient,
+  opts: { buildingId?: string }
+): Promise<MaintenanceRequestDTO[]> {
+  const where = opts.buildingId
+    ? { status: RequestStatus.PENDING_OWNER_APPROVAL, unit: { buildingId: opts.buildingId } }
+    : { status: RequestStatus.PENDING_OWNER_APPROVAL };
+
+  const rows = await prisma.request.findMany({
+    where,
+    orderBy: { createdAt: "desc" },
+    include: requestInclude,
+  });
+
+  return rows.map(toDTO);
+}
+
 
 export async function assignContractor(prisma: PrismaClient, requestId: string, contractorId: string) {
   // Stub implementation
@@ -158,9 +175,25 @@ export async function unassignContractor(prisma: PrismaClient, requestId: string
 }
 
 export async function findMatchingContractor(prisma: PrismaClient, orgId: string, category: string) {
-  // Stub implementation
-  return { id: "stub-contractor-id", name: "Stub Contractor" };
+  // Find an active contractor in the org whose serviceCategories includes this category
+  const contractor = await prisma.contractor.findFirst({
+    where: {
+      orgId,
+      isActive: true,
+      serviceCategories: {
+        contains: category,
+      },
+    },
+  });
+  
+  if (!contractor) return null;
+  
+  return {
+    id: contractor.id,
+    name: contractor.name,
+  };
 }
+
 export async function getMaintenanceRequestById(
   prisma: PrismaClient,
   id: string

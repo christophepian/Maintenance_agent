@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
+import PageShell from "../components/layout/PageShell";
+import PageHeader from "../components/layout/PageHeader";
+import PageContent from "../components/layout/PageContent";
 
 // Add global.css classes for layout and styling
 // Global CSS is imported in _app.js
@@ -7,6 +10,8 @@ import { useRouter } from "next/router";
 function badgeForStatus(status) {
   if (status === "PENDING_REVIEW")
     return { label: "Pending Manager", bg: "#fff5e6", border: "#ffd08a", color: "#7a4a00" };
+  if (status === "PENDING_OWNER_APPROVAL")
+    return { label: "Pending Owner", bg: "#fff0f0", border: "#ffb3b3", color: "#7a1f1f" };
   if (status === "AUTO_APPROVED")
     return { label: "Ready to Start", bg: "#e9f8ee", border: "#7bd89a", color: "#116b2b" };
   if (status === "APPROVED")
@@ -148,10 +153,14 @@ export default function ContractorPortal() {
 
   if (loading) {
     return (
-      <div style={{ maxWidth: "900px", margin: "40px auto", padding: "16px", fontFamily: "system-ui" }}>
-        <h1>Contractor Portal</h1>
-        <p style={{ color: "#666" }}>Loading...</p>
-      </div>
+      <PageShell>
+        <div className="mx-auto w-full max-w-5xl">
+          <PageHeader title="Contractor Portal" subtitle="Loading assigned requests." />
+          <PageContent>
+            <p className="text-sm text-slate-600">Loading...</p>
+          </PageContent>
+        </div>
+      </PageShell>
     );
   }
 
@@ -167,46 +176,57 @@ export default function ContractorPortal() {
       setInputError("");
     }
     return (
-      <div style={{ maxWidth: "900px", margin: "40px auto", padding: "16px", fontFamily: "system-ui" }}>
-        <h1>Contractor Portal</h1>
-        <div style={{ padding: "12px", background: "#ffecec", border: "1px solid #ffb3b3", marginBottom: "16px" }}>
-          No contractor ID provided. Enter your contractor ID below or use ?contractorId=&lt;uuid&gt; in the URL.
-        </div>
-        <form onSubmit={handleSubmit} style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-          <input
-            type="text"
-            value={inputId}
-            onChange={e => setInputId(e.target.value)}
-            placeholder="Contractor ID (UUID)"
-            style={{ padding: "10px", borderRadius: "8px", border: "1px solid #ddd", width: "320px" }}
+      <PageShell>
+        <div className="mx-auto w-full max-w-5xl">
+          <PageHeader
+            title="Contractor Portal"
+            subtitle="Enter your contractor ID to view assigned work."
           />
-          <button type="submit" style={{ padding: "10px 18px", borderRadius: "8px", border: "1px solid #111", background: "#111", color: "#fff", cursor: "pointer" }}>
-            Enter
-          </button>
-        </form>
-        {inputError && (
-          <div style={{ color: "crimson", marginTop: "10px" }}>{inputError}</div>
-        )}
-      </div>
+          <PageContent>
+            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              No contractor ID provided. Enter your contractor ID below or use ?contractorId=&lt;uuid&gt; in the URL.
+            </div>
+            <form onSubmit={handleSubmit} className="flex flex-wrap gap-3 items-center">
+              <input
+                type="text"
+                value={inputId}
+                onChange={e => setInputId(e.target.value)}
+                placeholder="Contractor ID (UUID)"
+                className="input"
+                style={{ width: 320, marginBottom: 0 }}
+              />
+              <button type="submit" className="button-primary">
+                Enter
+              </button>
+            </form>
+            {inputError && (
+              <div className="text-sm text-red-600">{inputError}</div>
+            )}
+          </PageContent>
+        </div>
+      </PageShell>
     );
   }
 
   return (
-    <div style={{ maxWidth: "900px", margin: "40px auto", padding: "16px", fontFamily: "system-ui" }}>
-      <h1>My Assigned Work</h1>
-      <p style={{ color: "#666" }}>Contractor ID: {contractorId}</p>
+    <PageShell>
+      <div className="mx-auto w-full max-w-5xl">
+        <PageHeader
+          title="My Assigned Work"
+          subtitle={`Contractor ID: ${contractorId}`}
+        />
+        <PageContent>
+          {error && (
+            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {error}
+            </div>
+          )}
 
-      {error && (
-        <div style={{ padding: "12px", background: "#ffecec", border: "1px solid #ffb3b3", marginBottom: "16px" }}>
-          {error}
-        </div>
-      )}
-
-      {message && (
-        <div style={{ padding: "12px", background: "#e8f5e9", border: "1px solid #81c784", marginBottom: "16px" }}>
-          {message}
-        </div>
-      )}
+          {message && (
+            <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+              {message}
+            </div>
+          )}
 
       {requests.length === 0 ? (
         <div style={{ padding: "20px", textAlign: "center", color: "#888" }}>
@@ -392,16 +412,16 @@ export default function ContractorPortal() {
         </div>
       )}
 
-      <div style={{ marginTop: "20px", color: "#666", fontSize: 13 }}>
-        <p>
-          <strong>How it works:</strong>
-        </p>
-        <ul style={{ marginLeft: "20px" }}>
-          <li>Once a request is <strong>Approved</strong> by the manager, you can click <strong>Start</strong> to begin work.</li>
-          <li>While working, the status shows <strong>In Progress</strong>.</li>
-          <li>When done, click <strong>Complete</strong> to mark it finished.</li>
-        </ul>
+          <div className="text-sm text-slate-600">
+            <p className="font-semibold text-slate-800">How it works:</p>
+            <ul className="ml-5 list-disc space-y-1">
+              <li>Once a request is <strong>Approved</strong> by the manager, you can click <strong>Start</strong> to begin work.</li>
+              <li>While working, the status shows <strong>In Progress</strong>.</li>
+              <li>When done, click <strong>Complete</strong> to mark it finished.</li>
+            </ul>
+          </div>
+        </PageContent>
       </div>
-    </div>
+    </PageShell>
   );
 }

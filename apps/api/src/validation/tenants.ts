@@ -26,6 +26,11 @@ export const getTenantByPhoneSchema = z.object({
 
 export const updateTenantSchema = z.object({
   name: z.string().optional(),
+  phone: z
+    .string()
+    .min(1, "Phone is required")
+    .refine(isValidE164, "Invalid phone format. Must be E.164 format (+41...)")
+    .optional(),
   email: z.string().email().optional(),
   unitId: z.string().uuid().optional(),
 });

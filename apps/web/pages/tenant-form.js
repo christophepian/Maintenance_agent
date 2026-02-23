@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import AppShell from "../components/AppShell";
+import { ALLOWED_CATEGORIES } from "../lib/categories";
 
 /**
  * Tenant Form (Slice 4)
@@ -11,6 +12,7 @@ import AppShell from "../components/AppShell";
 
 
 export default function TenantForm() {
+  const API_PROXY = "/api";
   const API_BASE =
     process.env.NEXT_PUBLIC_API_BASE_URL ||
     process.env.API_BASE_URL ||
@@ -24,7 +26,7 @@ export default function TenantForm() {
   const [buildingId, setBuildingId] = useState("");
   const [unitId, setUnitId] = useState("");
   const [applianceId, setApplianceId] = useState("");
-  const [category, setCategory] = useState("oven");
+  const [category, setCategory] = useState(ALLOWED_CATEGORIES[0] || "oven");
   const [description, setDescription] = useState("");
   const [estimatedCost, setEstimatedCost] = useState("");
   const [notice, setNotice] = useState(null); // { type: "ok" | "err", msg: string }
@@ -37,8 +39,27 @@ export default function TenantForm() {
   function err(msg) {
     setNotice({ type: "err", msg });
   }
+  async function applyTenantContext(found) {
+    if (!found) return;
+    if (found.unit?.buildingId) {
+      setBuildingId(found.unit.buildingId);
+      setUnitId(found.unit.id);
+      return;
+    }
+    if (found.unitId) {
+      try {
+        const unit = await api(`/units/${found.unitId}`);
+        if (unit?.buildingId) {
+          setBuildingId(unit.buildingId);
+          setUnitId(found.unitId);
+        }
+      } catch {
+        // ignore lookup failure; user can still select manually
+      }
+    }
+  }
   async function api(path, options = {}) {
-    const res = await fetch(`${API_BASE}${path}`, {
+    const res = await fetch(`${API_PROXY}${path}`, {
       ...options,
       headers: {
         "Content-Type": "application/json",
@@ -69,6 +90,7 @@ export default function TenantForm() {
       const found = await api(`/tenants?phone=${encodeURIComponent(p)}`);
       if (found) {
         setTenant(found);
+        await applyTenantContext(found);
         ok("Tenant identified by phone.");
       } else {
         setTenant(null);
@@ -91,6 +113,7 @@ export default function TenantForm() {
         body: JSON.stringify({ phone: p }),
       });
       setTenant(created);
+      await applyTenantContext(created);
       ok("Tenant created (or found).");
     } catch (e) {
       err(`Create tenant failed: ${e.message}`);
@@ -214,6 +237,7 @@ export default function TenantForm() {
           className="input"
           value={buildingId}
           onChange={(e) => setBuildingId(e.target.value)}
+          disabled={!!tenant?.unitId}
         >
           <option value="">Select\u2026</option>
           {buildings.map((b) => (
@@ -227,7 +251,7 @@ export default function TenantForm() {
           className="input"
           value={unitId}
           onChange={(e) => setUnitId(e.target.value)}
-          disabled={!buildingId}
+          disabled={!!tenant?.unitId || !buildingId}
         >
           <option value="">{buildingId ? "Select\u2026" : "Select building first"}</option>
           {units.map((u) => (
@@ -253,7 +277,7 @@ export default function TenantForm() {
         </select>
         <label className="label">Category</label>
         <select className="input" value={category} onChange={(e) => setCategory(e.target.value)}>
-          {["stove", "oven", "dishwasher", "bathroom", "lighting"].map((c) => (
+          {ALLOWED_CATEGORIES.map((c) => (
             <option key={c} value={c}>
               {c}
             </option>

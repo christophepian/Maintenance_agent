@@ -122,6 +122,13 @@ export async function updateUnit(
   });
 }
 
+export async function getUnitById(orgId: string, unitId: string) {
+  return prisma.unit.findFirst({
+    where: { id: unitId, orgId },
+    include: { building: true },
+  });
+}
+
 export async function deactivateUnit(orgId: string, unitId: string) {
   const existing = await prisma.unit.findFirst({ where: { id: unitId, orgId } });
   if (!existing) return { success: false, reason: "NOT_FOUND" };
@@ -243,7 +250,7 @@ export async function createAssetModel(
   orgId: string,
   data: {
     name: string;
-  category?: string;
+  category: string;
   manufacturer?: string;
   model?: string;
     specs?: string;
@@ -251,7 +258,7 @@ export async function createAssetModel(
 ) {
   const manufacturer = data.manufacturer?.trim() || "Unknown";
   const model = data.model?.trim() || data.name.trim();
-  const category = data.category?.trim() || "general";
+  const category = data.category.trim();
 
   const assetModel = await prisma.assetModel.create({
     data: {
@@ -290,7 +297,7 @@ export async function updateAssetModel(
     data: {
       manufacturer: manufacturer ?? undefined,
   model: model ?? undefined,
-  category: data.category ?? undefined,
+  category: data.category ? data.category.trim() : undefined,
   specs: data.specs ?? undefined,
     },
   });

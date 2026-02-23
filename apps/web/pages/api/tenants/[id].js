@@ -38,6 +38,15 @@ export default async function handler(req, res) {
     const authHeader = req.headers["authorization"];
     const { id } = req.query;
 
+    if (req.method === "GET") {
+      const r = await fetch(`${baseUrl}/tenants/${id}`, {
+        headers: authHeader ? { authorization: authHeader } : undefined,
+      });
+
+      const j = await safeJson(r);
+      return res.status(r.status).json(j);
+    }
+
     if (req.method === "PATCH") {
       const raw = await readRawBody(req);
       let payload = {};
@@ -74,7 +83,7 @@ export default async function handler(req, res) {
       return res.status(r.status).json(j);
     }
 
-    res.setHeader("Allow", ["PATCH", "DELETE"]);
+    res.setHeader("Allow", ["GET", "PATCH", "DELETE"]);
     return res.status(405).json({ error: "Method Not Allowed" });
   } catch (e) {
     return res.status(500).json({

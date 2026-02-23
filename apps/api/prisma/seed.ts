@@ -101,12 +101,87 @@ async function main() {
     },
   });
 
+  // Create a test contractor
+  let contractor = await prisma.contractor.findFirst({
+    where: { orgId, name: "Test Contractor" },
+  });
+  if (!contractor) {
+    contractor = await prisma.contractor.create({
+      data: {
+        orgId,
+        name: "Test Contractor",
+        phone: normalizePhoneToE164("+41791234567") || "+41791234567",
+        email: "contractor@test.com",
+        hourlyRate: 100,
+        serviceCategories: JSON.stringify(["plumbing", "oven", "stove", "dishwasher", "bathroom", "lighting"]),
+      },
+    });
+  }
+
+  // Create a billing entity for the contractor
+  let billingEntity = await prisma.billingEntity.findFirst({
+    where: { orgId, contractorId: contractor.id },
+  });
+  if (!billingEntity) {
+    billingEntity = await prisma.billingEntity.create({
+      data: {
+        orgId,
+        type: "CONTRACTOR",
+        contractorId: contractor.id,
+        name: "Test Contractor",
+        addressLine1: "Main Street 1",
+        postalCode: "8000",
+        city: "Zurich",
+        country: "CH",
+        iban: "CH9300762011623852957",
+        vatNumber: "CHE-123.456.789",
+        defaultVatRate: 7.7,
+      },
+    });
+  }
+
+  // Create test requests
+  const requestDescriptions = [
+    { description: "Leaking pipe in kitchen", category: "plumbing", estimatedCost: 250 },
+    { description: "Oven not heating properly", category: "oven", estimatedCost: 180 },
+    { description: "Dishwasher making noise", category: "dishwasher", estimatedCost: 120 },
+    { description: "Bathroom tap dripping", category: "plumbing", estimatedCost: 80 },
+    { description: "Light fixtures broken", category: "lighting", estimatedCost: 150 },
+  ];
+
+  for (const req of requestDescriptions) {
+    const existing = await prisma.request.findFirst({
+      where: {
+        description: req.description,
+        tenantId: tenant.id,
+      },
+    });
+
+    if (!existing) {
+      await prisma.request.create({
+        data: {
+          description: req.description,
+          category: req.category,
+          estimatedCost: req.estimatedCost,
+          status: "APPROVED",
+          tenantId: tenant.id,
+          unitId: unit.id,
+          applianceId: appliance.id,
+          assignedContractorId: contractor.id,
+        },
+      });
+    }
+  }
+
   console.log("Seed complete:");
   console.log({
     orgId,
     buildingId: building.id,
     unitId: unit.id,
     applianceId: appliance.id,
+    tenantId: tenant.id,
+    contractorId: contractor.id,
+    billingEntityId: billingEntity.id,
     phone: normalizedPhone,
   });
 }

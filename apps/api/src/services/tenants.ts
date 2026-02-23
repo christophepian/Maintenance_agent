@@ -256,6 +256,7 @@ export async function updateTenant(
     where: { id },
     data: {
       name: validated.name !== undefined ? validated.name : undefined,
+      phone: validated.phone !== undefined ? validated.phone : undefined,
       email: validated.email !== undefined ? validated.email : undefined,
     },
   });

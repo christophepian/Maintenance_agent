@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import AppShell from "../../components/AppShell";
+import { ALLOWED_CATEGORIES } from "../../lib/categories";
 
 export default function AssetModelsAdmin() {
   const ui = {
@@ -39,7 +40,7 @@ export default function AssetModelsAdmin() {
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState(null);
   const [createName, setCreateName] = useState("");
-  const [createCategory, setCreateCategory] = useState("");
+  const [createCategory, setCreateCategory] = useState(ALLOWED_CATEGORIES[0] || "");
   const [createManufacturer, setCreateManufacturer] = useState("");
   const [createModel, setCreateModel] = useState("");
 
@@ -90,6 +91,7 @@ export default function AssetModelsAdmin() {
   async function onCreate(e) {
     e.preventDefault();
     if (!createName.trim()) return setErr("Name is required.");
+    if (!createCategory) return setErr("Category is required.");
 
     try {
       setLoading(true);
@@ -97,13 +99,13 @@ export default function AssetModelsAdmin() {
         method: "POST",
         body: JSON.stringify({
           name: createName,
-          category: createCategory || undefined,
+          category: createCategory,
           manufacturer: createManufacturer || undefined,
           model: createModel || undefined,
         }),
       });
       setCreateName("");
-      setCreateCategory("");
+      setCreateCategory(ALLOWED_CATEGORIES[0] || "");
       setCreateManufacturer("");
       setCreateModel("");
       await loadAssetModels();
@@ -163,13 +165,18 @@ export default function AssetModelsAdmin() {
               />
             </div>
             <div>
-              <label style={ui.label}>Category (optional)</label>
-              <input
+              <label style={ui.label}>Category</label>
+              <select
                 style={ui.input}
                 value={createCategory}
                 onChange={(e) => setCreateCategory(e.target.value)}
-                placeholder="e.g. dishwasher"
-              />
+              >
+                {ALLOWED_CATEGORIES.map((category) => (
+                  <option key={category} value={category}>
+                    {category}
+                  </option>
+                ))}
+              </select>
             </div>
             <div>
               <label style={ui.label}>Manufacturer (optional)</label>

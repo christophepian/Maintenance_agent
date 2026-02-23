@@ -1,6 +1,5 @@
 import { z } from "zod";
-
-export const ALLOWED_CATEGORIES = ["stove", "oven", "dishwasher", "bathroom", "lighting"] as const;
+import { ALLOWED_CATEGORIES } from "./categories";
 
 function normalizeDescription(s: string) {
   return (s || "").trim().replace(/\s+/g, " ");
