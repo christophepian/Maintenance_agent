@@ -1,6 +1,6 @@
 # Maintenance Agent — Project State
 
-**Last updated:** 2026-02-25 (Committed `3a477cc` — M2 Centralized Auth Enforcement, 148 tests green, zero uncommitted changes)
+**Last updated:** 2026-02-25 (Committed `ea193d8` — M3 Internal Middleware & Error Standardization, 161 tests green, zero uncommitted changes)
 
 ---
 
@@ -329,7 +329,7 @@ Maintenance_Agent/
 │   │       ├── services/          # jobs, invoices, contractors, inventory, tenants, requests, assignments
 │   │       ├── validation/        # invoices, requests, contractors, inventory, auth, triage
 │   │       ├── utils/             # phone normalization
-│   │       └── http/              # body/json/query helpers
+│   │       └── http/              # body/json/query/errors/router helpers
 │   └── web/
 │       ├── pages/
 │       │   ├── index.js
@@ -983,7 +983,7 @@ What was added:
 Status:
 
 - All critical code changes completed and tested
-- All 148 tests passing ✅ (16 unit test suites + 1 contract test suite: requests, auth, governance, inventory, jobs, invoices, leases, notifications, billing, PDFs, QR bills, tenant session, triage, unit config cascade, IA, orgIsolation, contracts)
+- All 161 tests passing ✅ (17 unit test suites + 1 contract test suite: requests, auth, governance, inventory, jobs, invoices, leases, notifications, billing, PDFs, QR bills, tenant session, triage, unit config cascade, IA, orgIsolation, httpErrors, contracts)
 - Prisma migrations all applied (23 total)
 - Full end-to-end owner-direct workflow functional:
   1. Tenant submits request → 2. Owner approves → 3. Job auto-created → 4. Contractor manages job → 5. Invoice auto-created → 6. Owner approves/pays
@@ -997,7 +997,7 @@ Status:
 Automated audit of the entire project verified:
 - **Backend Build:** TypeScript compilation clean (0 errors)
 - **Frontend Build:** Next.js build successful (49 pages generated)
-- **Tests:** All 148 tests passing (17 suites covering full feature set)
+- **Tests:** All 161 tests passing (18 suites covering full feature set)
 - **Database:** PostgreSQL running, 23 migrations applied, schema up-to-date
 - **Dependencies:** Minor updates available (non-blocking), no critical vulnerabilities
 - **Code Quality:** One deprecated component removed
@@ -1154,7 +1154,13 @@ If you still see stale UI after pulling changes, restart both dev servers and ha
 - No route file imports `getOrgIdForRequest` or `DEFAULT_ORG_ID` anymore
 - Net reduction: 56 lines of redundant code removed (4 files, 62 insertions / 118 deletions)
 - Verification: tsc 0 errors, 148 tests pass (16 suites), 0 schema drift, frontend build clean
-**M3: Internal Middleware & Error Standardization** — Not started
+**M3: Internal Middleware & Error Standardization** ✅ (Committed `ea193d8`)
+- New `http/errors.ts`: typed error hierarchy — `HttpError` base class with `ValidationError` (400), `InvalidJsonError` (400), `UnauthorizedError` (401), `ForbiddenError` (403), `NotFoundError` (404), `ConflictError` (409), `PayloadTooLargeError` (413)
+- `http/router.ts`: dispatch error handler auto-maps `HttpError` and `OrgScopeMismatchError` to correct HTTP responses — handlers can throw instead of manually calling `sendError()`
+- `http/body.ts`: `readJson()` now throws `InvalidJsonError`/`PayloadTooLargeError` (backward compat: message strings unchanged); new `parseBody(req, zodSchema)` combines read + validate in one call
+- New `__tests__/httpErrors.test.ts`: 13 unit tests covering hierarchy, instanceof discrimination, backward compat, OrgScopeMismatchError
+- Existing handlers unchanged — continue to work with their own try/catch; new/refactored handlers can use the throw-based pattern
+- Verification: tsc 0 errors, 161 tests pass (17 suites), 0 schema drift, frontend build clean
 **M4: Domain Events + Idempotent Workflow** — Not started
 **M5: OpenAPI + Typed Client** — Not started
 
