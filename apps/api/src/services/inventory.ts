@@ -1,6 +1,5 @@
-import { PrismaClient, UnitType } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { UnitType } from "@prisma/client";
+import prisma from './prismaClient';
 const activeFilter = (includeInactive?: boolean) =>
   includeInactive ? {} : { isActive: true };
 

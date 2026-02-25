@@ -1,6 +1,21 @@
-import { PrismaClient, JobStatus } from '@prisma/client';
+import { JobStatus } from '@prisma/client';
+import prisma from './prismaClient';
 
-const prisma = new PrismaClient();
+/**
+ * G9: Canonical include tree for Job queries.
+ * All Job queries that feed mapJobToDTO MUST use this constant.
+ * If JobDTO changes, update this include in the same PR.
+ */
+export const JOB_INCLUDE = {
+  request: {
+    include: {
+      tenant: true,
+      unit: { include: { building: true } },
+      appliance: { include: { assetModel: true } },
+    },
+  },
+  contractor: true,
+} as const;
 
 export interface CreateJobParams {
   orgId: string;
@@ -91,6 +106,7 @@ export async function createJob(params: CreateJobParams): Promise<JobDTO> {
       contractorId,
       status: JobStatus.PENDING,
     },
+    include: JOB_INCLUDE,
   });
 
   return mapJobToDTO(job);
@@ -102,20 +118,7 @@ export async function createJob(params: CreateJobParams): Promise<JobDTO> {
 export async function getJob(jobId: string): Promise<JobDTO | null> {
   const job = await prisma.job.findUnique({
     where: { id: jobId },
-    include: {
-      request: {
-        include: {
-          tenant: true,
-          unit: {
-            include: {
-              building: true,
-            },
-          },
-          appliance: true,
-        },
-      },
-      contractor: true,
-    },
+    include: JOB_INCLUDE,
   });
 
   return job ? mapJobToDTO(job) : null;
@@ -139,20 +142,7 @@ export async function listJobs(
       ...(filters?.status && { status: filters.status }),
       ...(filters?.requestId && { requestId: filters.requestId }),
     },
-    include: {
-      request: {
-        include: {
-          tenant: true,
-          unit: {
-            include: {
-              building: true,
-            },
-          },
-          appliance: true,
-        },
-      },
-      contractor: true,
-    },
+    include: JOB_INCLUDE,
     orderBy: { createdAt: 'desc' },
   });
 
@@ -171,6 +161,7 @@ export async function updateJob(jobId: string, params: UpdateJobParams): Promise
       ...(params.completedAt !== undefined && { completedAt: params.completedAt }),
       ...(params.actualCost !== undefined && { actualCost: params.actualCost }),
     },
+    include: JOB_INCLUDE,
   });
 
   return mapJobToDTO(job);
@@ -187,6 +178,7 @@ export async function getOrCreateJobForRequest(
 ): Promise<JobDTO> {
   const existing = await prisma.job.findUnique({
     where: { requestId },
+    include: JOB_INCLUDE,
   });
 
   if (existing) {
@@ -229,7 +221,7 @@ function mapJobToDTO(job: any): JobDTO {
       } : undefined,
       appliance: job.request.appliance ? {
         id: job.request.appliance.id,
-        category: job.request.appliance.category,
+        category: job.request.appliance.assetModel?.category ?? job.request.appliance.name,
         serial: job.request.appliance.serial ?? undefined,
       } : undefined,
     } : undefined,

@@ -22,31 +22,42 @@ model RequestEvent {
 }
 
 model Org {
-  id              String           @id @default(uuid())
-  name            String
-  mode            OrgMode          @default(MANAGED)
-  appliances      Appliance[]
-  approvalRules   ApprovalRule[]
-  assetModels     AssetModel[]
-  billingEntities BillingEntity[]
-  buildings       Building[]
-  buildingConfigs BuildingConfig[]
-  contractors     Contractor[]
-  invoices        Invoice[]
-  jobs            Job[]
-  notifications   Notification[]
-  config          OrgConfig?
-  tenants         Tenant[]
-  units           Unit[]
-  unitConfigs     UnitConfig[]
-  users           User[]
+  id                String             @id @default(uuid())
+  name              String
+  mode              OrgMode            @default(MANAGED)
+  appliances        Appliance[]
+  approvalRules     ApprovalRule[]
+  assetModels       AssetModel[]
+  billingEntities   BillingEntity[]
+  buildings         Building[]
+  buildingConfigs   BuildingConfig[]
+  contractors       Contractor[]
+  invoices          Invoice[]
+  jobs              Job[]
+  notifications     Notification[]
+  config            OrgConfig?
+  tenants           Tenant[]
+  units             Unit[]
+  unitConfigs       UnitConfig[]
+  users             User[]
+  leases            Lease[]
+  signatureRequests SignatureRequest[]
 }
 
 model OrgConfig {
   id               String @id @default(uuid())
   orgId            String @unique
   autoApproveLimit Int    @default(200)
-  org              Org    @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  // Landlord party info (for lease)
+  landlordName          String?
+  landlordAddress       String?
+  landlordZipCity       String?
+  landlordPhone         String?
+  landlordEmail         String?
+  landlordRepresentedBy String?
+
+  org Org @relation(fields: [orgId], references: [id], onDelete: Cascade)
 }
 
 model User {
@@ -206,6 +217,7 @@ model Unit {
   building    Building    @relation(fields: [buildingId], references: [id], onDelete: Cascade)
   org         Org         @relation(fields: [orgId], references: [id], onDelete: Cascade)
   config      UnitConfig?
+  leases      Lease[]
 
   @@unique([buildingId, unitNumber])
   @@index([buildingId])
@@ -313,6 +325,7 @@ model Invoice {
   id                    String            @id @default(uuid())
   orgId                 String
   jobId                 String
+  leaseId               String? // optional link to lease
   amount                Int
   description           String
   status                InvoiceStatus     @default(DRAFT)
@@ -343,11 +356,13 @@ model Invoice {
   issuer                BillingEntity?    @relation(fields: [issuerBillingEntityId], references: [id])
   job                   Job               @relation(fields: [jobId], references: [id], onDelete: Cascade)
   org                   Org               @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  lease                 Lease?            @relation(fields: [leaseId], references: [id], onDelete: SetNull)
   lineItems             InvoiceLineItem[]
 
   @@unique([orgId, invoiceNumber])
   @@index([orgId])
   @@index([jobId])
+  @@index([leaseId])
   @@index([status])
   @@index([issuerBillingEntityId])
 }
@@ -482,4 +497,180 @@ enum NotificationEventType {
   INVOICE_PAID
   INVOICE_DISPUTED
   OWNER_REJECTED
+}
+
+// ==========================================
+// Lease & Signature enums
+// ==========================================
+
+enum LeaseStatus {
+  DRAFT
+  READY_TO_SIGN
+  SIGNED
+  ACTIVE
+  TERMINATED
+  CANCELLED
+}
+
+enum SignatureProvider {
+  INTERNAL
+  DOCUSIGN
+  SKRIBBLE
+}
+
+enum SignatureLevel {
+  SES
+  AES
+  QES
+}
+
+enum SignatureRequestStatus {
+  DRAFT
+  SENT
+  SIGNED
+  DECLINED
+  EXPIRED
+  ERROR
+}
+
+// ==========================================
+// Lease (Swiss rental contract)
+// ==========================================
+model Lease {
+  id     String      @id @default(uuid())
+  orgId  String
+  status LeaseStatus @default(DRAFT)
+
+  applicationId String?
+  unitId        String
+
+  // Parties landlord
+  landlordName          String
+  landlordAddress       String
+  landlordZipCity       String
+  landlordPhone         String?
+  landlordEmail         String?
+  landlordRepresentedBy String?
+
+  // Parties tenant
+  tenantName    String
+  tenantAddress String?
+  tenantZipCity String?
+  tenantPhone   String?
+  tenantEmail   String?
+  coTenantName  String?
+
+  // Object
+  objectType           String  @default("APPARTEMENT")
+  roomsCount           String?
+  floor                String?
+  buildingAddressLines Json?
+  usageFlags           Json?
+  serviceSpaces        Json?
+  commonInstallations  Json?
+
+  // Dates / termination
+  startDate                  DateTime
+  isFixedTerm                Boolean   @default(false)
+  endDate                    DateTime?
+  firstTerminationDate       DateTime?
+  noticeRule                 String    @default("3_MONTHS")
+  extendedNoticeText         String?
+  terminationDatesRule       String    @default("END_OF_MONTH_EXCEPT_31_12")
+  terminationDatesCustomText String?
+
+  // Rent & charges
+  netRentChf          Int
+  garageRentChf       Int?
+  otherServiceRentChf Int?
+  chargesItems        Json?
+  chargesTotalChf     Int?
+  rentTotalChf        Int?
+
+  chargesSettlementDate String?
+
+  paymentDueDayOfMonth Int?
+  paymentRecipient     String?
+  paymentInstitution   String?
+  paymentAccountNumber String?
+  paymentIban          String?
+  referenceRatePercent String?
+  referenceRateDate    String?
+
+  // Deposit
+  depositChf     Int?
+  depositDueRule String    @default("AT_SIGNATURE")
+  depositDueDate DateTime?
+
+  // Stipulations
+  otherStipulations  String?
+  includesHouseRules Boolean @default(false)
+  otherAnnexesText   String?
+
+  // Artifacts
+  draftPdfStorageKey String?
+  draftPdfSha256     String?
+
+  // Artifacts — signed PDF (final executed copy)
+  signedPdfStorageKey String?
+  signedPdfSha256     String?
+
+  // Deposit payment tracking
+  depositPaidAt      DateTime?
+  depositConfirmedBy String?
+  depositBankRef     String?
+
+  // Activation & termination lifecycle
+  activatedAt       DateTime?
+  terminatedAt      DateTime?
+  terminationReason String?
+  terminationNotice String?
+  archivedAt        DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  org               Org                @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  unit              Unit               @relation(fields: [unitId], references: [id])
+  signatureRequests SignatureRequest[]
+  invoices          Invoice[]
+
+  @@index([orgId])
+  @@index([unitId])
+  @@index([applicationId])
+  @@index([status])
+}
+
+// ==========================================
+// SignatureRequest (provider-agnostic)
+// ==========================================
+model SignatureRequest {
+  id    String @id @default(uuid())
+  orgId String
+
+  entityType String @default("LEASE")
+  entityId   String
+
+  provider SignatureProvider      @default(INTERNAL)
+  level    SignatureLevel         @default(SES)
+  status   SignatureRequestStatus @default(DRAFT)
+
+  providerEnvelopeId String?
+  signersJson        Json
+
+  auditTrailStorageKey String?
+
+  sentAt    DateTime?
+  signedAt  DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  // Relations
+  org   Org    @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  lease Lease? @relation(fields: [entityId], references: [id])
+
+  @@index([orgId])
+  @@index([entityType, entityId])
+  @@index([status])
 }

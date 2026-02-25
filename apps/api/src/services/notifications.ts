@@ -1,12 +1,10 @@
-import { PrismaClient } from '@prisma/client';
+import prisma from './prismaClient';
 import {
   CreateNotificationInput,
   NotificationDTO,
   NotificationEventType,
   ListNotificationsInput,
 } from '../validation/notifications';
-
-const prisma = new PrismaClient();
 
 /**
  * Create or update a notification (idempotent via unique constraint)

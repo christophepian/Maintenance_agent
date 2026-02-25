@@ -8,6 +8,7 @@ pnpm-debug.log*
 .DS_Store
 .idea
 .vscode
+*.bak
 
 .env
 .env.*
@@ -25,10 +26,19 @@ apps/web/.next
 apps/**/dist
 apps/**/.turbo
 
-# Local archives / scratch (except archived docs)
+# Local archives / scratch (except archived content we want tracked)
 _archive
+!_archive/*.md
+!_archive/audits/
+!_archive/audits/**
 !_archive/docs/
 !_archive/docs/**
+!_archive/scripts/
+!_archive/scripts/**
+!_archive/test-pages/
+!_archive/test-pages/**
+!_archive/prompts/
+!_archive/prompts/**
 
 # Environment files
 .env

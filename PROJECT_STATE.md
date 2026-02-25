@@ -1,33 +1,224 @@
 # Maintenance Agent — Project State
 
-**Last updated:** 2026-02-23 (Project audit completed, repository cleaned — Slices 1-7 complete, 109 tests passing, all systems healthy ✅)
+**Last updated:** 2026-02-25 (File audit cleanup — .bak files removed, 7 dev test pages archived, one-off scripts archived, COPILOT_PROMPTS archived, Testing nav link removed from AppShell)
 
 ---
 
-## ⚠️ CRITICAL: Database Persistence & Destructive Commands
+## 🛡️ GUARDRAILS — Read Before Making ANY Change
 
+> **These rules exist because we lost a full day (Feb 24–25) fixing silent failures caused by
+> schema drift, stub services, and missing Prisma includes. Every rule below maps to a real
+> outage. Do NOT skip them.**
+
+### G1: Schema Changes — Always Migrate, Never `db push`
+- **NEVER** use `npx prisma db push` in dev or production. It creates drift between the
+  migration history and the database, which is invisible until queries crash.
+- **ALWAYS** use `npx prisma migrate dev --name <description>` for schema changes.
+- After ANY schema change, run the drift check:
+  ```bash
+  cd apps/api
+  npx prisma migrate diff \
+    --from-schema-datasource ./prisma/schema.prisma \
+    --to-schema-datamodel ./prisma/schema.prisma \
+    --script
+  ```
+  **Expected output:** `-- This is an empty migration.`
+  If it outputs SQL, you have drift. Fix it before committing.
+
+### G2: New Model Fields — Update All Consumers
+When adding a field to a Prisma model, you MUST update:
+1. The Prisma schema (`schema.prisma`)
+2. The service DTO interface (e.g., `LeaseDTO`, `JobDTO`)
+3. The mapper function (e.g., `mapLeaseToDTO`, `mapJobToDTO`)
+4. Every `include`/`select` clause that touches the model
+5. The validation schema if the field is user-facing
+6. Run `npx prisma generate` after changes
+
+### G3: Prisma `include` — Always Include What You Map
+If a DTO mapper accesses a relation (e.g., `job.request.tenant`), the query that feeds it
+**MUST** have a matching `include`. Prisma returns `undefined` for non-included relations,
+which silently drops data from API responses.
+
+**Bad:**
+```typescript
+const job = await prisma.job.create({ data: { ... } });
+return mapJobToDTO(job); // job.request is undefined → DTO has empty relations
+```
+**Good:**
+```typescript
+const job = await prisma.job.create({
+  data: { ... },
+  include: { request: { include: { tenant: true, unit: { include: { building: true } } } }, contractor: true },
+});
+return mapJobToDTO(job);
+```
+
+### G4: No Stub Services in Production Paths
+Never leave a stub function (returns fake data without writing to DB) in a file that
+production routes import from. If a real implementation exists elsewhere, **re-export it**:
+```typescript
+// ❌ BAD: stub in maintenanceRequests.ts alongside real functions
+export async function assignContractor() { return { success: true }; }
+
+// ✅ GOOD: re-export from the real implementation
+export { assignContractor } from './requestAssignment';
+```
+
+### G5: Pre-Commit Smoke Test
+Before committing backend changes, run this 30-second check:
+```bash
+cd apps/api
+
+# 1. Schema drift = zero
+npx prisma migrate diff --from-schema-datasource ./prisma/schema.prisma \
+  --to-schema-datamodel ./prisma/schema.prisma --script 2>&1 | grep -q "empty migration" \
+  && echo "✅ No drift" || echo "❌ DRIFT DETECTED"
+
+# 2. Prisma client generates cleanly
+npx prisma generate 2>&1 | tail -1
+
+# 3. Server starts without crash (5s timeout)
+timeout 8 npx ts-node --transpile-only src/server.ts &
+sleep 5
+curl -sf 'http://127.0.0.1:3001/requests?limit=1' > /dev/null \
+  && echo "✅ Server OK" || echo "❌ Server FAIL"
+curl -sf 'http://127.0.0.1:3001/leases?limit=1' > /dev/null \
+  && echo "✅ Leases OK" || echo "❌ Leases FAIL"
+curl -sf 'http://127.0.0.1:3001/jobs?limit=1' > /dev/null \
+  && echo "✅ Jobs OK" || echo "❌ Jobs FAIL"
+kill %1 2>/dev/null
+```
+
+### G6: Destructive Database Commands — Require Explicit Approval
 **The PostgreSQL database uses Docker volume `maint_agent_pgdata` for persistent storage.**
 
-### Safe Commands (Data Preserved)
-- `docker-compose up` — Start services (data persists)
-- `docker-compose stop` — Stop services (data persists)
-- `npm run start:dev` — Restart backend
-- `npx prisma migrate dev --name <description>` — Add new migrations (safe)
+Safe commands (data preserved):
+- `docker-compose up` / `stop` — start/stop services
+- `npm run start:dev` — restart backend
+- `npx prisma migrate dev --name <desc>` — add new migrations
 
-### ❌ DESTRUCTIVE Commands (Data Loss — DO NOT RUN WITHOUT EXPLICIT USER REQUEST)
-- `docker-compose down -v` — **Removes database volume and all data**
-- `npx prisma migrate reset` — **Drops all tables and reseeds**
-- `docker volume rm maint_agent_pgdata` — **Deletes persistent storage**
+❌ **DESTRUCTIVE — DO NOT RUN without explicit user approval:**
+- `docker-compose down -v` — removes database volume and all data
+- `npx prisma migrate reset` — drops all tables and reseeds
+- `npx prisma db push --force-reset` — drops and recreates schema
+- `docker volume rm maint_agent_pgdata` — deletes persistent storage
 
-**If any agent needs to run a destructive command, it MUST ask the user for explicit approval first.**
+### G7: CI Is a Hard Gate
+CI must run and pass **all** of the following before merge:
+1. Schema drift check = empty migration
+2. `npx prisma generate` succeeds
+3. `tsc --noEmit` (backend type check)
+4. `next build` (frontend build)
+5. All Jest tests pass
+6. Backend boots + smoke curls return 200
 
-Current database state (as of 2026-02-23):
-- 1 Building: Central Plaza
-- 3 Units: 1A, 2B, 3C
-- 3 Tenants: Test Tenant, Marco Rossi, Sophie Dubois
-- Multiple requests, jobs, and invoices in production test data
-- All 23 Prisma migrations applied and verified
-- Schema: up-to-date ✅
+**If CI is red: do not merge, do not defer fixes.**
+
+### G8: `prisma db push` Is Banned
+`db push` must never appear in any script, CI step, or developer workflow.
+CI should fail if `db push` is detected. Schema changes require migrations — no exceptions.
+This reinforces G1 with enforcement at the tooling level.
+
+### G9: Canonical Include Definitions (No Ad-Hoc Include Trees)
+For any service that returns a DTO, define a **centralized include constant** rather than
+scattering ad-hoc include trees across queries:
+```typescript
+// ✅ GOOD: single source of truth for Job relations
+export const JOB_INCLUDE = {
+  request: {
+    include: {
+      tenant: true,
+      unit: { include: { building: true } },
+      appliance: { include: { assetModel: true } },
+    },
+  },
+  contractor: true,
+  invoices: { include: { lineItems: true } },
+};
+```
+Rules:
+- All DTO mappers must use typed Prisma payloads fed by the canonical include.
+- If a DTO changes → update the include constant in the same PR.
+- No random one-off include trees in individual query calls.
+
+### G10: API Contract Tests (Prevent Silent DTO Drift)
+Maintain contract tests for key endpoints:
+- `GET /requests?limit=1`
+- `GET /jobs?limit=1`
+- `GET /invoices?limit=1`
+- `GET /leases/:id`
+
+Tests must assert:
+- Required top-level fields exist
+- Required nested relations exist (not `null` / `undefined` unexpectedly)
+- If a DTO changes → update the contract test in the same PR
+
+---
+
+### 🔮 FUTURE RISK GUARDRAILS (F1–F8)
+
+> These prevent long-term structural decay. They may not all be enforced today, but new code
+> **must** respect them to avoid accruing the same debt we just cleaned up.
+
+### F1: Production Cannot Start With Optional Auth
+When `NODE_ENV=production`:
+- `AUTH_OPTIONAL` must be `false`
+- `AUTH_SECRET` must exist
+- Server must **refuse to boot** if either condition is violated
+- Sensitive routes must use `requireAuth()` and `requireRole(...)` — no bypass in production paths
+
+### F2: Org Scoping Must Be Explicit
+Because `Request` has no `orgId` and multi-org is planned:
+- All read/write operations for Requests, Jobs, Invoices, Leases, and Inventory must
+  explicitly enforce org scope via join or helper function
+- Add cross-org isolation tests when multi-org lands
+- No implicit org assumptions in query logic
+
+### F3: Proxy Layer Must Be Transparent
+Next.js API proxy routes must:
+- Forward all headers (including `Authorization`)
+- Forward query params unchanged
+- Forward HTTP status codes as-is
+- Forward binary responses correctly (PDF, PNG)
+- **Never** re-parse URLs when `query` is already available in the handler context
+
+### F4: Emergency DB Fixes Must Be Codified
+If a manual `ALTER TABLE` is ever applied to fix a live issue:
+1. Create a proper Prisma migration immediately after
+2. Verify drift returns empty
+3. Add a note to the stabilization log in this document
+4. No permanent manual DB edits — every change must be in the migration history
+
+### F5: Financial & PDF Logic Requires Golden Tests
+For lease PDFs, invoice PDFs, QR bills, and line item totals:
+- Tests must verify SHA-256 is present in lease PDF footer
+- Invoice totals must equal sum of line items (cents-level precision)
+- QR endpoint must return valid PNG
+- `includeQRBill=false` must actually exclude the QR section
+- Financial correctness cannot rely on manual spot-checks
+
+### F6: Clean Dev Environment Scripts
+Formalize restart workflows as npm scripts instead of scattered shell commands:
+```bash
+npm run dev:clean:api   # kill stale ts-node, restart backend
+npm run dev:clean:web   # kill stale next, clear .next, restart frontend
+npm run dev:clean:all   # both of the above
+npm run dev:db          # start PostgreSQL via Docker
+```
+**Status: Implemented** — these scripts are defined in root `package.json`.
+
+### F7: No Single-Org Assumption in New Code
+Even while single-org (`DEFAULT_ORG_ID`) is active:
+- New models must include `orgId` unless architecturally justified
+- No hard-coded `DEFAULT_ORG_ID` outside the bootstrap/seed path
+- All queries must consider org scope
+- Multi-org should not require rewriting existing services
+
+### F8: Styling Lock Enforcement
+Manager UI styling lives **only** in `apps/web/styles/managerStyles.js` (see Section 7).
+- No inline style changes in manager workspace pages
+- Styling PRs must modify the lock file or justify a new shared style layer
+- This rule extends the existing policy in Section 7 with PR-level enforcement
 
 ---
 
@@ -102,20 +293,26 @@ Single repository containing:
 ```
 Maintenance_Agent/
 ├── PROJECT_STATE.md
-├── PROJECT_AUDIT_2026-02-23.md
 ├── .gitignore
 ├── _archive/
 │   ├── audits/
 │   ├── docs/                      # 18 legacy slice/feature docs (archived Feb 23)
-│   │   ├── BUILDING_PAGE_REDESIGN_DETAILS.md
-│   │   ├── FRONTEND_INVOICE_TESTING.md
-│   │   ├── MANUAL_INVOICE_TEST.md
-│   │   ├── SLICE_*.md (5 files)
-│   │   ├── TEST_DATA_READY.md
-│   │   ├── UI_REDESIGN_SUMMARY.md
-│   │   ├── UNIT_CONFIG_*.md (7 files)
-│   │   └── UNIT_NUMBER_*.md (2 files)
-│   └── ...
+│   ├── prompts/                   # Completed copilot prompts (archived Feb 25)
+│   │   └── INVENTORY_ADMIN_EXPANSION.md
+│   ├── scripts/                   # One-off scripts & manual test scripts (archived Feb 25)
+│   │   ├── write-server.py
+│   │   ├── seed-tenant-lease.py
+│   │   ├── test-lease-lifecycle.sh
+│   │   └── test-tenant-portal.sh
+│   ├── test-pages/                # Dev-only frontend test pages (archived Feb 25)
+│   │   ├── flows.js
+│   │   ├── test-jobs.js
+│   │   ├── test-leases.js
+│   │   ├── test-notifications.js
+│   │   ├── test-pdf.js
+│   │   ├── test-qrbill.js
+│   │   └── test-requests-simple.js
+│   └── *.md                       # Top-level archived docs
 ├── apps/
 │   ├── api/
 │   │   ├── .env
@@ -154,6 +351,7 @@ Maintenance_Agent/
 │   ├── copilot-instructions.md
 │   └── workflows/
 │       └── ci.yml
+├── .gitignore
 ├── tsconfig.json
 ├── package.json
 ├── infra/
@@ -165,99 +363,53 @@ Maintenance_Agent/
 
 ## 4. Database Schema (Prisma)
 
-**Status: ACTIVE AND IN USE**
+**Status: ACTIVE AND IN USE — 23 migrations applied, zero drift**
 
-```prisma
-enum Role {
-  TENANT
-  CONTRACTOR
-  MANAGER
-  OWNER
-}
+**Last verified:** 2026-02-25
 
-enum RequestStatus {
-  PENDING_REVIEW
-  AUTO_APPROVED
-  APPROVED
-  ASSIGNED
-  IN_PROGRESS
-  COMPLETED
-}
+### Models (20 total)
 
-enum UnitType {
-  RESIDENTIAL
-  COMMON_AREA
-}
+| Model | Key Fields | Relations |
+|-------|-----------|-----------|
+| **Org** | id, name, mode (MANAGED/OWNER_DIRECT) | → OrgConfig, Users, Buildings, Contractors, ... |
+| **OrgConfig** | orgId, autoApproveLimit, landlord fields | → Org |
+| **User** | orgId, role (TENANT/CONTRACTOR/MANAGER/OWNER), email, passwordHash | → Org |
+| **Building** | orgId, name, address, isActive | → Units, BuildingConfig, ApprovalRules, Notifications |
+| **BuildingConfig** | buildingId, autoApproveLimit, emergencyAutoDispatch | → Building, Org |
+| **Unit** | buildingId, orgId, unitNumber, floor, type (RESIDENTIAL/COMMON_AREA), isActive | → Building, Occupancies, Appliances, Requests, Leases, UnitConfig |
+| **UnitConfig** | unitId, autoApproveLimit, emergencyAutoDispatch | → Unit, Org |
+| **Tenant** | orgId, name, phone (E.164), email, isActive | → Occupancies, Requests |
+| **Occupancy** | tenantId, unitId (unique pair) | → Tenant, Unit |
+| **Appliance** | unitId, orgId, assetModelId?, name, serial, isActive | → Unit, AssetModel, Requests |
+| **AssetModel** | orgId?, manufacturer, model, **category**, specs, isActive | → Appliances |
+| **Contractor** | orgId, name, phone, email, hourlyRate, serviceCategories (JSON), isActive | → Requests, Jobs, BillingEntity |
+| **Request** | description, category?, estimatedCost?, status, contactPhone, assignedContractorId?, tenantId?, unitId?, applianceId?, contractorNotes | → Contractor, Tenant, Unit, Appliance, Job, RequestEvents |
+| **RequestEvent** | requestId, type (RequestEventType), contractorId?, note | → Request, Contractor |
+| **Event** | orgId, type, actorUserId?, requestId?, payload (JSON) | (standalone) |
+| **Job** | orgId, requestId (unique), **contractorId** (required), status, actualCost | → Request, Contractor, Invoices |
+| **Invoice** | orgId, **jobId** (required), leaseId?, issuer fields, recipient fields, amounts in cents, status, lineItems | → Job, Lease, BillingEntity, InvoiceLineItems |
+| **InvoiceLineItem** | invoiceId, description, quantity, unitPrice (cents), vatRate, lineTotal | → Invoice |
+| **BillingEntity** | orgId, type, contractorId?, name, address, iban, vatNumber | → Org, Contractor |
+| **ApprovalRule** | orgId, buildingId?, name, priority, conditions (JSON), action | → Org, Building |
+| **Notification** | orgId, userId, buildingId?, entityType, entityId, eventType, readAt | → Org, Building |
+| **Lease** | orgId, status, unitId, 40+ fields (parties, object, dates, rent, deposit, PDF refs, lifecycle timestamps) | → Org, Unit, SignatureRequests, Invoices |
+| **SignatureRequest** | orgId, entityType, entityId, provider, level, status, signersJson | → Org, Lease |
 
-model Org {
-  id     String     @id @default(uuid())
-  name   String
-  users  User[]
-  config OrgConfig?
-}
+### Key Enums
+- `RequestStatus`: PENDING_REVIEW, AUTO_APPROVED, APPROVED, ASSIGNED, IN_PROGRESS, COMPLETED, PENDING_OWNER_APPROVAL
+- `JobStatus`: PENDING, IN_PROGRESS, COMPLETED, INVOICED
+- `InvoiceStatus`: DRAFT, APPROVED, PAID, DISPUTED
+- `LeaseStatus`: DRAFT, READY_TO_SIGN, SIGNED, ACTIVE, TERMINATED, CANCELLED
+- `SignatureRequestStatus`: DRAFT, SENT, SIGNED, DECLINED, EXPIRED, ERROR
+- `Role`: TENANT, CONTRACTOR, MANAGER, OWNER
+- `OrgMode`: MANAGED, OWNER_DIRECT
+- `UnitType`: RESIDENTIAL, COMMON_AREA
 
-model OrgConfig {
-  id               String  @id @default(uuid())
-  orgId            String  @unique
-  autoApproveLimit Int     @default(200)
-  org              Org     @relation(fields: [orgId], references: [id])
-}
-
-model User {
-  id           String   @id @default(uuid())
-  orgId        String
-  role         Role
-  name         String
-  email        String?
-  passwordHash String?
-  org          Org      @relation(fields: [orgId], references: [id])
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-}
-
-model Request {
-  id                   String        @id @default(uuid())
-  description          String
-  category             String?
-  estimatedCost        Int?
-  status               RequestStatus @default(PENDING_REVIEW)
-  contactPhone         String?
-  assignedContractorId String?
-  assignedContractor   Contractor?   @relation(fields: [assignedContractorId], references: [id])
-  tenantId             String?
-  unitId               String?
-  applianceId          String?
-  contractorNotes      String?
-  startedAt            DateTime?
-  completedAt          DateTime?
-  createdAt            DateTime      @default(now())
-  updatedAt            DateTime      @updatedAt
-}
-
-model Contractor {
-  id                String    @id @default(uuid())
-  orgId             String
-  org               Org       @relation(fields: [orgId], references: [id])
-  name              String
-  phone             String
-  email             String
-  hourlyRate        Int       @default(50)
-  serviceCategories String
-  isActive          Boolean   @default(true)
-  requests          Request[]
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-}
-
-Additional models include Building, Unit (with UnitType), Appliance, AssetModel (global + org-private), Tenant, Occupancy (tenant↔unit), RequestEvent, and Event, all org-scoped with soft delete where applicable.
-```
-
-**IA adapters (non-breaking):**
-
-* Properties → Building (adapter DTO)
-* Assets → Appliance (+ AssetModel)
-* People → Tenant + Contractor union DTO
-* Work Requests → Request DTO wrapper
+### ⚠️ Schema Gotchas (fields that DON'T exist where you'd expect)
+- **`Request` has NO `orgId`** — requests are not directly org-scoped (they inherit scope through unit/building)
+- **`Job` has NO `description`** — use `Request.description` via the relation
+- **`Appliance` has NO `category`** — category lives on `AssetModel`, accessed via `appliance.assetModel.category`
+- **`Job.contractorId` is REQUIRED** — every Job must reference an active Contractor
 
 ---
 
@@ -281,86 +433,104 @@ Additional models include Building, Unit (with UnitType), Appliance, AssetModel 
 
 ---
 
-### Endpoints (Verified)
+### Endpoints (Verified 2026-02-25)
+
+#### Core Architecture
+Routes are split into modular files under `src/routes/`:
+- `routes/requests.ts` — request CRUD, assignment, owner approval, work-requests alias
+- `routes/leases.ts` — lease CRUD, PDF, ready-to-sign, lifecycle, signature requests, lease invoices
+- `routes/invoices.ts` — invoice CRUD, approve/pay/dispute, PDF generation, QR codes
+- `routes/inventory.ts` — buildings, units, appliances, asset models, occupancies
+- `routes/tenants.ts` — tenant CRUD, tenant portal (lease view + accept)
+- `routes/config.ts` — org config, building config, unit config
+- `routes/notifications.ts` — notification list, unread count, mark read
+- `routes/auth.ts` — register, login, tenant-session, triage
+- `routes/helpers.ts` — event logging, governance access helpers
+
+All registered in `src/server.ts` via `register*Routes(router)`.
 
 #### Requests
-
-* `GET /requests`
-* `GET /requests/:id`
-* `POST /requests`
-* `POST /requests/approve?id={uuid}` *(manager override)*
-* `DELETE /__dev/requests` *(dev only)*
+- `GET /requests` — list (with limit, offset, order)
+- `GET /requests/:id` — get by ID
+- `POST /requests` — create (validates via Zod, auto-approve logic, auto-assign contractor)
+- `POST /requests/approve?id={uuid}` — manager override
+- `POST /requests/:id/assign` — assign contractor
+- `DELETE /requests/:id/assign` — unassign contractor
+- `POST /requests/:id/owner-approve` — owner approval
+- `POST /requests/:id/owner-reject` — owner rejection
+- `GET /owner/pending-approvals` — owner dashboard
+- `DELETE /__dev/requests` — dev only
 
 #### Work Requests (alias)
+- `GET /work-requests`, `GET /work-requests/:id`, `POST /work-requests`
 
-* `GET /work-requests`
-* `GET /work-requests/:id`
-* `POST /work-requests`
+#### Leases
+- `GET /leases`, `POST /leases`, `GET /leases/:id`, `PATCH /leases/:id`
+- `POST /leases/:id/generate-pdf` — generate draft PDF
+- `POST /leases/:id/store-pdf` — store PDF reference
+- `POST /leases/:id/store-signed-pdf` — store signed PDF
+- `POST /leases/:id/ready-to-sign` — mark ready
+- `POST /leases/:id/cancel` — cancel lease
+- `POST /leases/:id/confirm-deposit` — confirm deposit payment
+- `POST /leases/:id/activate` — activate lease
+- `POST /leases/:id/terminate` — terminate lease
+- `POST /leases/:id/archive` — archive lease
+- `POST /leases/:id/invoices` — create lease invoice
+- `GET /leases/:id/invoices` — list lease invoices
+
+#### Signature Requests
+- `GET /signature-requests`, `GET /signature-requests/:id`
+- `POST /signature-requests/:id/send`, `POST /signature-requests/:id/mark-signed`
+
+#### Invoices
+- `GET /invoices`, `GET /invoices/:id`, `POST /invoices`
+- `PATCH /invoices/:id` — update
+- `POST /invoices/:id/approve`, `POST /invoices/:id/mark-paid`, `POST /invoices/:id/dispute`
+- `POST /invoices/:id/issue` — issue with invoice number
+- `GET /invoices/:id/pdf` — generate PDF (with `?includeQRBill=true|false`)
+- `GET /invoices/:id/qr-code.png` — QR bill image
+- `GET /owner/invoices` — owner invoice dashboard
+
+#### Jobs
+- `GET /jobs`, `GET /jobs/:id`, `PATCH /jobs/:id`
 
 #### Contractors
+- `GET /contractors`, `POST /contractors`, `GET /contractors/:id`
+- `PATCH /contractors/:id`, `DELETE /contractors/:id`
 
-* `GET /contractors` — list active contractors
-* `POST /contractors` — create contractor with validation
-* `GET /contractors/{id}` — get single contractor
-* `PATCH /contractors/{id}` — update contractor details
-* `DELETE /contractors/{id}` — deactivate contractor (soft delete)
+#### Tenants
+- `GET /tenants`, `POST /tenants`, `PATCH /tenants/:id`, `DELETE /tenants/:id`
 
-#### Request Assignment
+#### Tenant Portal
+- `GET /tenant-portal/leases` — tenant lease list (occupancy-verified)
+- `GET /tenant-portal/leases/:id` — tenant lease detail
+- `POST /tenant-portal/leases/:id/accept` — tenant sign/accept
 
-* `POST /requests/{id}/assign` — assign contractor to request
-* `DELETE /requests/{id}/assign` — unassign contractor from request
-* Auto-assignment on request creation based on category match
+#### Inventory
+- Buildings: `GET /buildings`, `POST /buildings`, `PATCH /buildings/:id`, `DELETE /buildings/:id`
+- Units: `GET /buildings/:id/units`, `POST /buildings/:id/units`, `PATCH /units/:id`, `DELETE /units/:id`
+- Appliances: `GET /units/:id/appliances`, `POST /units/:id/appliances`, `PATCH /appliances/:id`, `DELETE /appliances/:id`
+- Asset Models: `GET /asset-models`, `POST /asset-models`, `PATCH /asset-models/:id`, `DELETE /asset-models/:id`
+- Occupancies: `GET /units/:id/tenants`, `POST /units/:id/tenants`, `DELETE /units/:id/tenants/:tenantId`
 
-#### Tenant Intake
+#### Configuration
+- `GET /org-config`, `PUT /org-config`
+- `GET /buildings/:id/config`, `PUT /buildings/:id/config`
+- `GET /units/:id/config`, `PUT /units/:id/config`
 
-* `POST /tenant-session` — identify tenant by phone and return unit/building/appliances
-* `POST /triage` — deterministic troubleshooting suggestions based on unit context
+#### Notifications
+- `GET /notifications` — list (requires userId)
+- `GET /notifications/unread-count`
+- `POST /notifications/:id/read`
+- `POST /notifications/mark-all-read`
 
-#### Authentication
+#### Auth
+- `POST /auth/register`, `POST /auth/login`
+- `POST /tenant-session`, `POST /triage`
 
-* `POST /auth/register` — create a user and return a token
-* `POST /auth/login` — authenticate and return a token
-
-#### Inventory (Buildings/Units/Appliances/Tenants/Asset Models/Occupancies)
-
-* `GET /buildings`
-* `POST /buildings`
-* `PATCH /buildings/:id`
-* `DELETE /buildings/:id`
-* `GET /buildings/:id/units`
-* `POST /buildings/:id/units`
-* `PATCH /units/:id`
-* `DELETE /units/:id`
-* `GET /units/:id/appliances`
-* `POST /units/:id/appliances`
-* `PATCH /appliances/:id`
-* `DELETE /appliances/:id`
-* `GET /tenants` (list or lookup by phone)
-* `POST /tenants`
-* `PATCH /tenants/:id`
-* `DELETE /tenants/:id`
-* `GET /units/:id/tenants`
-* `POST /units/:id/tenants`
-* `DELETE /units/:id/tenants/:tenantId`
-* `GET /asset-models`
-* `POST /asset-models`
-* `PATCH /asset-models/:id`
-* `DELETE /asset-models/:id`
-
-#### Org Config
-
-* `GET /org-config`
-* `PUT /org-config`
-
-#### Properties (alias)
-
-* `GET /properties` (wraps buildings)
-* `GET /properties/:id/units`
-
-#### People (alias)
-
-* `GET /people/tenants`
-* `GET /people/vendors`
+#### Aliases
+- `GET /properties` (wraps buildings), `GET /properties/:id/units`
+- `GET /people/tenants`, `GET /people/vendors`
 
 ---
 
@@ -476,11 +646,17 @@ Additional models include Building, Unit (with UnitType), Appliance, AssetModel 
 
 * **Repository:** https://github.com/christophepian/Maintenance_agent.git
 * **Main branch:** all production-ready commits
-* **GitHub Actions CI:**
+* **GitHub Actions CI** (hardened Feb 25 per G7):
   - Runs on push to `main` and PRs
-  - Installs dependencies for both apps
-  - Type-checks both backend and frontend
-  - Workflow file: `.github/workflows/ci.yml` (added Feb 3)
+  - Uses PostgreSQL 16 service container for live tests
+  - **6 mandatory gates** (all must pass before merge):
+    1. G8 enforcement: scans for banned `db push` references
+    2. `prisma generate` + schema drift check = empty migration
+    3. `tsc --noEmit` (backend type check)
+    4. `next build` (frontend build)
+    5. Jest tests (`npm test -- --ci --forceExit`)
+    6. Backend boot + smoke curls (5 endpoints must return 200)
+  - Workflow file: `.github/workflows/ci.yml`
 
 ---
 
@@ -504,27 +680,32 @@ PORT=3001
 
 ```bash
 # Database
-cd infra
-docker compose up -d
+npm run dev:db          # or: cd infra && docker compose up -d
 
 # Backend
-cd apps/api
-npm run start:dev
+npm run dev:api         # or: cd apps/api && npm run start:dev
 
 # Frontend
-cd apps/web
-npm run dev
+npm run dev:web         # or: cd apps/web && npm run dev
 ```
 
-Quick dev restart (pick when files changed):
+Clean restart scripts (kill stale processes, clear caches):
+```bash
+npm run dev:clean:api   # kill stale ts-node, restart backend
+npm run dev:clean:web   # kill stale next, clear .next, restart frontend
+npm run dev:clean:all   # both of the above
+```
+
+Manual restart (if scripts don't work):
 ```bash
 # Backend: restart ts-node server and view logs
-pkill -f "ts-node src/server.ts" || true
+pkill -f "ts-node.*src/server" || true
 cd apps/api
 npm run start:dev > /tmp/api.log 2>&1 &
 tail -n 200 /tmp/api.log
 
 # Frontend: clear Next cache and restart
+pkill -f "next dev" || true
 cd apps/web
 rm -rf .next
 API_BASE_URL=http://127.0.0.1:3001 npm run dev > /tmp/web.log 2>&1 &
@@ -831,7 +1012,37 @@ Automated audit of the entire project verified:
 
 ---
 
-### Developer Actions (runtime & debugging)
+### Stabilization & Tech Debt Cleanup (Feb 24–25, 2026)
+
+**Context:** Server crashing on lease/signature/invoice endpoints due to accumulated schema drift
+and code-schema mismatches. Full day lost diagnosing and fixing.
+
+**Root Causes Identified:**
+
+| # | Issue | Severity | How It Hid |
+|---|-------|----------|------------|
+| 1 | **Database missing 10 columns + 2 enum values** (Lease lifecycle fields, Invoice.leaseId) — schema said they existed but DB didn't have them | 🔴 CRASH | Used `prisma db push` at some point instead of `migrate dev`; drift invisible until queries hit those columns |
+| 2 | **`createLeaseInvoice()` referenced `Job.description`** (doesn't exist), `Request.orgId` (doesn't exist), and created Job without required `contractorId` | 🔴 CRASH | Function was only called via lease invoice creation, which wasn't in the main test path |
+| 3 | **`assignContractor()` / `unassignContractor()` were stubs** in `maintenanceRequests.ts` that returned fake success without writing to DB | 🔴 CRASH (silent) | API returned `{ success: true }` — looked correct, but DB was never updated. Real implementations existed in `requestAssignment.ts` but weren't imported |
+| 4 | **Invoice PDF route re-parsed URL incorrectly** — `?includeQRBill=false` was silently ignored, QR bill always included | 🔴 CRASH (feature) | `parseQuery()` was called on already-stripped URL fragment; `query` from HandlerContext was available but not used |
+| 5 | **Job DTO mapper used `appliance.category`** but Appliance has no `category` field (it's on AssetModel) | 🟡 WARN | Returns `undefined` — doesn't crash but loses data |
+| 6 | **`createJob`, `updateJob`, `getOrCreateJobForRequest`** returned incomplete DTOs (no `include` clauses) | 🟡 WARN | Mapper has `?.` guards so no crash, but relations silently omitted from API response |
+| 7 | **`getOrCreateJobInvoice` missing `include: { lineItems: true }`** on findFirst | 🟡 WARN | Existing invoices returned without their line items |
+
+**Fixes Applied:**
+1. Applied safe ALTERs directly to DB (`ALTER TABLE ... ADD COLUMN IF NOT EXISTS`) — no `migrate reset` or data loss
+2. Rewrote `createLeaseInvoice()` to use `Request.contractorNotes` for tagging and find/create admin contractor
+3. Replaced stubs with `export { assignContractor, unassignContractor, findMatchingContractor } from './requestAssignment'`
+4. Changed PDF route to destructure `query` from HandlerContext
+5. Updated mapper to use `assetModel?.category ?? appliance.name`
+6. Added full `include` clauses to all Job CRUD operations
+7. Added `include: { lineItems: true }` to `getOrCreateJobInvoice`
+
+**Verification:** All endpoints tested live — zero crashes, zero drift, zero errors.
+
+**Guardrails added:** See Section "🛡️ GUARDRAILS" at top of this document (G1–G6).
+
+---
 
 - Added lightweight contractor suggestion endpoints:
   - `GET /requests/:id/suggest-contractor` — suggests a contractor by request category
@@ -847,18 +1058,32 @@ If you still see stale UI after pulling changes, restart both dev servers and ha
 ### Completed
 
 * Raw HTTP backend stabilized
-* Prisma + PostgreSQL integrated
-* Request lifecycle implemented
-* Auto-approval logic working
-* Org-level configuration
+* Prisma + PostgreSQL integrated (23 migrations, zero drift)
+* Request lifecycle implemented (full CRUD + auto-approve + owner approval)
+* Auto-approval logic working (org-level + building-level + unit-level + rules engine)
+* Org-level configuration with MANAGED/OWNER_DIRECT modes
 * Manager dashboard with approve action
+* Owner portal with approval workflow
+* Contractor portal with job management
+* Tenant portal with lease view + accept/sign
+* Job lifecycle (PENDING → IN_PROGRESS → COMPLETED → INVOICED)
+* Invoice lifecycle (DRAFT → APPROVED → PAID with PDF + QR bill generation)
+* Digital lease generation (Swiss ImmoScout24 template, 40+ fields)
+* Signature request workflow (create → send → sign, provider-agnostic)
+* Inventory admin (buildings, units, appliances, asset models, occupancies)
+* Billing entities with contractor linking
+* Notification system (scaffolded, route-registered)
+* Auth system (JWT scaffolded, optional enforcement)
 * UI styling frozen
-* End-to-end flow verified:
+* **Tech debt cleanup (Feb 24–25):** Schema drift fixed, stub services replaced, all code-schema mismatches resolved
+* **Guardrail audit fixes (Feb 25):** CI hardened to 6-gate pipeline (G7), production boot guard (F1), canonical includes extracted — `JOB_INCLUDE`, `LEASE_INCLUDE`, `INVOICE_INCLUDE` (G9), API contract tests created (G10), proxy auth forwarding fixed (F3), dev scripts formalized (F6), `managerStyles.js` created (F8)
+* End-to-end flows verified:
 
   ```
-  Web → Next proxy → API → DB
+  Tenant → Request → Auto-approve/Owner-approve → Job → Invoice → Payment
+  Tenant → Lease → Sign → Activate → Terminate → Archive
+  Web → Next proxy → API → DB (all endpoints live-tested)
   ```
-* **Project cleanup (Feb 3):** Removed dead NestJS code, added root configs, established CI/CD
 * **Frontend [id] route:** Implemented proxy for `GET /api/requests/:id` → backend
 * **Slice 1 (Feb 3):** Contractor model, backend CRUD services, validation, frontend management UI
   * Prisma migration: added Contractor table with orgId, name, phone, email, hourlyRate, serviceCategories, isActive
@@ -879,25 +1104,41 @@ If you still see stale UI after pulling changes, restart both dev servers and ha
   * Auto-assignment on request creation: if category matches contractor, auto-assign immediately
   * Testing completed: auto-assignment works, manual assignment/unassignment works, validation errors handled, dashboard displays contractors
 
-* **Slice 8, Phase 1 (Specification — Feb 23):** Digital Lease Generation + Signature-Ready Workflow
-  * See [SLICE_8_DIGITAL_LEASE_GENERATION.md](SLICE_8_DIGITAL_LEASE_GENERATION.md) for complete specification
-  * Data models defined: Lease (with 20+ fields), SignatureRequest (provider-agnostic)
-  * Auto-fill strategy: tenant from application, landlord from OrgConfig, unit/building from inventory
-  * Backend API scope: lease CRUD, PDF generation, ready-to-sign workflow, signature request management
-  * PDF generation: Option 1 (clean PDF from scratch) recommended over form overlay
-  * Frontend: lease list page, lease editor with accordion sections, integration from approved applications
-  * Tests: 2 suites (leases.test.ts, signatureRequests.test.ts) covering full lifecycle
-  * Status: **Specification complete, ready for implementation** (estimated 2–3 weeks)
+* **Slice 8, Phase 1 (Implementation — Feb 23):** Digital Lease Generation + Signature-Ready Workflow ✅
+  * See `_archive/SLICE_8_DIGITAL_LEASE_GENERATION.md` for specification
+  * **Database:** Lease model (40+ fields), SignatureRequest model, 4 new enums (LeaseStatus, SignatureProvider, SignatureLevel, SignatureRequestStatus), OrgConfig landlord fields
+  * **Backend services:** `apps/api/src/services/leases.ts` (CRUD + auto-fill from OrgConfig/Unit/Building, rent total recompute, PDF ref storage, ready-to-sign workflow, cancel), `signatureRequests.ts` (create/list/get/send/markSigned with auto-signer extraction from lease)
+  * **PDF generation:** `apps/api/src/services/leasePDFRenderer.ts` — Swiss ImmoScout24-style lease PDF via PDFKit (§1 Parties, §2 Object, §3 Duration, §4 Termination, §5 Rent/Charges, §6 Payment, §7 Deposit, §15 Stipulations, Signatures block, Footer with SHA-256)
+  * **Backend routes:** 10 new endpoints in server.ts (GET/POST /leases, GET/PATCH /leases/:id, POST /leases/:id/generate-pdf, POST /leases/:id/ready-to-sign, POST /leases/:id/cancel, GET /signature-requests, GET /signature-requests/:id, POST /signature-requests/:id/send, POST /signature-requests/:id/mark-signed)
+  * **Frontend proxy:** 4 proxy files (leases/index.js, leases/[...id].js with PDF streaming, signature-requests/index.js, signature-requests/[...id].js)
+  * **Frontend pages:** Lease list page (manager/leases/index.js — status filter, building/unit selectors, create form), Lease editor (manager/leases/[id].js — 8 accordion sections, Save/Generate PDF/Ready to Sign/Cancel actions, signature request table)
+  * **Navigation:** AppShell updated with "Leases" section in manager nav
+  * **Validation:** Zod schemas (CreateLeaseSchema, UpdateLeaseSchema, ReadyToSignSchema) in `apps/api/src/validation/leases.ts`
+  * **Tests:** 17 passing tests in `apps/api/src/__tests__/leases.test.ts` covering full lifecycle (create with auto-fill, list/get, org isolation, update, PDF generation + SHA-256, store PDF ref, ready-to-sign, reject non-DRAFT edit, signature requests CRUD, send, reject double-send, mark signed + lease status update, cancel constraints)
+  * Status: **Implementation complete, all tests passing, frontend builds clean** ✅
+
+* **Slice 8, Phase 2 (Implementation — Feb 23):** Tenant View Portal + Accept/Sign Stub ✅
+  * **Backend service:** `apps/api/src/services/tenantPortal.ts` — tenant-safe lease access (read-only, filtered to READY_TO_SIGN + SIGNED only), occupancy verification, tenant accept/sign flow
+  * **Backend routes:** 3 new endpoints in server.ts: `GET /tenant-portal/leases` (list by tenantId+unitId), `GET /tenant-portal/leases/:id` (detail), `POST /tenant-portal/leases/:id/accept` (tenant sign stub)
+  * **Security:** Occupancy-verified access — tenants can only see leases for units they occupy; wrong tenant gets 403; DRAFT leases hidden
+  * **Tenant DTO:** Subset of full LeaseDTO (no landlord email/address, no payment details) + signatureStatus + tenantAcceptedAt
+  * **Frontend proxy:** `pages/api/tenant-portal/leases/index.js` and `pages/api/tenant-portal/leases/[...id].js`
+  * **Frontend pages:** `pages/tenant/leases/index.js` (lease list with status badges, action-required banner for READY_TO_SIGN), `pages/tenant/leases/[id].js` (full detail view: §1 Parties, §2 Object, §3-4 Duration, §5-6 Rent, §7 Deposit, §15 Stipulations, signature status, 2-step accept confirmation)
+  * **Navigation:** "My Leases" added to tenantNav in AppShell
+  * **Accept flow:** 2-step confirmation → marks SignatureRequest as SIGNED + Lease as SIGNED; prevents re-accept (409)
+  * **Tests:** 22 passing integration tests in `test-tenant-portal.sh` (DRAFT hidden, param validation, READY_TO_SIGN visible, detail correctness, wrong-tenant 403, accept flow, SIGNED state, re-accept 409)
+  * Status: **Implementation complete, all tests passing, TS compiles, frontend builds clean** ✅
 
 ### Not Implemented Yet (Active Backlog)
 
-* Slice 8 Phase 1 implementation (see clarifying questions below)
-* Slice 8 Phase 2–5 (tenant portal, DocuSign/Skribble integration, payment, archive)
-* Authentication enforcement (scaffolded, not wired)
-* Role enforcement on sensitive endpoints
-* Notifications (scaffolded, not wired)
-* Media uploads
-* Tenant portal redesign
+* Lease Phase 3–5: DocuSign/Skribble integration, deposit payment tracking, archive workflow
+* Authentication enforcement (scaffolded, not wired to all routes)
+* Role enforcement on all sensitive endpoints (partially implemented)
+* Notifications delivery (routes exist, notifications created, but no push/email delivery)
+* Media uploads (photos of damage, documents)
+* Tenant portal redesign (conversational → structured)
+* Reporting & analytics dashboard
+* Multi-org support (currently single-org with DEFAULT_ORG_ID)
 
 ---
 
@@ -973,10 +1214,11 @@ Current tenant UI relies on manual category selection and free-text descriptions
 
 This document is the **single source of truth** and matches:
 
-* Filesystem
-* Database schema
-* Running system
+* Filesystem (verified 2026-02-25, post-guardrail-audit)
+* Database schema — zero drift (`prisma migrate diff` clean)
+* Running system — all endpoints return 200 (verified 2026-02-25)
 * Architectural intent
+* CI pipeline enforces G1–G10 guardrails
 
 Safe to:
 
@@ -985,11 +1227,13 @@ Safe to:
 * Onboard collaborators
 * Refactor deliberately
 
+⚠️ **Before any code change, re-read the 🛡️ GUARDRAILS section at the top of this file.**
+
 ---
 
-🧊 **Project frozen in a stable state.**
+✅ **Project stabilized and audit-hardened (2026-02-25).**
 
-Work can resume cleanly from Option C or future backlog items without rework.
+All crash-level and warning-level issues resolved. Guardrail enforcement in CI (G7), canonical includes (G9), contract tests (G10), production boot guard (F1), proxy auth forwarding (F3), dev scripts (F6), and styling lock file (F8) all implemented. Work can resume from the Active Backlog without rework.
 
 ---
 
@@ -1034,8 +1278,8 @@ Work can resume cleanly from Option C or future backlog items without rework.
 
 **Next steps:**
 - Add unit tests for validation schemas and services
-- Set up test database for integration testing
-- Integrate tests into GitHub Actions CI/CD
 - Add test coverage thresholds
 
-**Reference:** See `PROJECT_AUDIT_2026-02-23.md` for comprehensive audit report including dependency status, recommendations, and detailed system health analysis.
+**Reference:** See `_archive/PROJECT_AUDIT_2026-02-23.md` for comprehensive audit report including dependency status, recommendations, and detailed system health analysis.
+
+**Update (Feb 25):** CI now includes Jest tests and test database (PostgreSQL service container). API contract tests added in `src/__tests__/contracts.test.ts` (G10).

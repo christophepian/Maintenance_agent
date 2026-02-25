@@ -1,6 +1,4 @@
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import prisma from './prismaClient';
 
 export async function listUnitTenants(orgId: string, unitId: string) {
   const unit = await prisma.unit.findFirst({ where: { id: unitId, orgId } });

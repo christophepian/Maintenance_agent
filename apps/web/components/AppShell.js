@@ -118,16 +118,16 @@ export default function AppShell({ role: roleProp, children }) {
         ],
       },
       {
+        section: "Leases",
+        items: [{ label: "Leases", href: "/manager/leases" }],
+      },
+      {
         section: "Reports",
         items: [{ label: "Reports", href: "/manager/reports" }],
       },
       {
         section: "Settings",
         items: [{ label: "Settings", href: "/manager/settings" }],
-      },
-      {
-        section: "Testing",
-        items: [{ label: "Job & Invoice Test", href: "/test-jobs" }],
       },
     ],
     []
@@ -186,6 +186,7 @@ export default function AppShell({ role: roleProp, children }) {
         items: [
           { label: "Submit Work Request", href: "/tenant-form" },
           { label: "Chat intake", href: "/tenant-chat" },
+          { label: "My Leases", href: "/tenant/leases" },
           { label: "My unit & assets", href: "/tenant/assets" },
         ],
       },

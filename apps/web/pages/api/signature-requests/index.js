@@ -1,20 +1,14 @@
 export default async function handler(req, res) {
   const { API_BASE_URL = 'http://127.0.0.1:3001' } = process.env;
-  const { id } = req.query;
 
   try {
-    const url = id ? `${API_BASE_URL}/invoices/${id}` : `${API_BASE_URL}/invoices`;
-    
-    const headers = {
-      'Content-Type': 'application/json',
-    };
-    if (req.headers.authorization) {
-      headers['Authorization'] = req.headers.authorization;
-    }
-
-    const response = await fetch(url, {
+    const qs = req.url.includes('?') ? '?' + req.url.split('?')[1] : '';
+    const response = await fetch(`${API_BASE_URL}/signature-requests${qs}`, {
       method: req.method,
-      headers,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(req.headers.authorization ? { Authorization: req.headers.authorization } : {}),
+      },
       body: req.method !== 'GET' ? JSON.stringify(req.body) : undefined,
     });
 

@@ -1,6 +1,14 @@
-import { PrismaClient, InvoiceStatus, BillingEntityType } from '@prisma/client';
+import { InvoiceStatus, BillingEntityType } from '@prisma/client';
+import prisma from './prismaClient';
 
-const prisma = new PrismaClient();
+/**
+ * G9: Canonical include tree for Invoice queries.
+ * All Invoice queries that feed mapInvoiceToDTO MUST use this constant.
+ * If InvoiceDTO changes, update this include in the same PR.
+ */
+export const INVOICE_INCLUDE = {
+  lineItems: true,
+} as const;
 
 export interface CreateInvoiceParams {
   orgId: string;
@@ -225,7 +233,7 @@ export async function issueInvoice(
   return prisma.$transaction(async (tx) => {
     const invoice = await tx.invoice.findUnique({
       where: { id: invoiceId },
-      include: { lineItems: true },
+      include: INVOICE_INCLUDE,
     });
 
     if (!invoice) throw new Error('INVOICE_NOT_FOUND');
@@ -263,7 +271,7 @@ export async function issueInvoice(
         lockedAt: new Date(),
         iban: issuer.iban,
       },
-      include: { lineItems: true },
+      include: INVOICE_INCLUDE,
     });
 
     return mapInvoiceToDTO(updated);
@@ -342,7 +350,7 @@ export async function createInvoice(params: CreateInvoiceParams): Promise<Invoic
           }
         : undefined,
     },
-    include: { lineItems: true },
+    include: INVOICE_INCLUDE,
   });
 
   return mapInvoiceToDTO(invoice);
@@ -354,7 +362,7 @@ export async function createInvoice(params: CreateInvoiceParams): Promise<Invoic
 export async function getInvoice(invoiceId: string): Promise<InvoiceDTO | null> {
   const invoice = await prisma.invoice.findUnique({
     where: { id: invoiceId },
-    include: { lineItems: true },
+    include: INVOICE_INCLUDE,
   });
 
   return invoice ? mapInvoiceToDTO(invoice) : null;
@@ -377,7 +385,7 @@ export async function listInvoices(
       ...(filters?.status && { status: filters.status }),
     },
     orderBy: { createdAt: 'desc' },
-    include: { lineItems: true },
+    include: INVOICE_INCLUDE,
   });
 
   return invoices.map(mapInvoiceToDTO);
@@ -392,7 +400,7 @@ export async function updateInvoice(
 ): Promise<InvoiceDTO> {
   const existing = await prisma.invoice.findUnique({
     where: { id: invoiceId },
-    include: { lineItems: true },
+    include: INVOICE_INCLUDE,
   });
 
   if (!existing) {
@@ -462,7 +470,7 @@ export async function updateInvoice(
           totalAmount: nextTotals.totalAmount,
         }),
       },
-      include: { lineItems: true },
+      include: INVOICE_INCLUDE,
     });
 
     if (nextLineItems?.length) {
@@ -474,7 +482,7 @@ export async function updateInvoice(
       });
       const refreshed = await tx.invoice.findUnique({
         where: { id: invoiceId },
-        include: { lineItems: true },
+        include: INVOICE_INCLUDE,
       });
       return refreshed || invoice;
     }
@@ -491,7 +499,7 @@ export async function updateInvoice(
 export async function approveInvoice(invoiceId: string): Promise<InvoiceDTO> {
   const invoice = await prisma.invoice.findUnique({
     where: { id: invoiceId },
-    include: { lineItems: true, job: true },
+    include: { ...INVOICE_INCLUDE, job: true },
   });
 
   if (!invoice) throw new Error('INVOICE_NOT_FOUND');
@@ -540,6 +548,7 @@ export async function getOrCreateInvoiceForJob(
   // Check if invoice already exists
   const existing = await prisma.invoice.findFirst({
     where: { jobId },
+    include: INVOICE_INCLUDE,
   });
 
   if (existing) {

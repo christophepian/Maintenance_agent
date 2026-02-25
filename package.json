@@ -6,7 +6,13 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "echo \"Run 'npm --workspace @apps/api run start:dev' and 'npm --workspace apps/web run dev' in separate terminals\""
+    "dev": "echo \"Run 'npm run dev:api' and 'npm run dev:web' in separate terminals\"",
+    "dev:api": "cd apps/api && npm run start:dev",
+    "dev:web": "cd apps/web && npm run dev",
+    "dev:clean:api": "pkill -f 'ts-node.*src/server' || true; sleep 1; cd apps/api && npm run start:dev",
+    "dev:clean:web": "pkill -f 'next dev' || true; sleep 1; cd apps/web && rm -rf .next && npm run dev",
+    "dev:clean:all": "npm run dev:clean:api & npm run dev:clean:web",
+    "dev:db": "cd infra && docker compose up -d"
   },
   "dependencies": {
     "tailwindcss": "^4.1.18"

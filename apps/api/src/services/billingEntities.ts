@@ -1,6 +1,5 @@
-import { BillingEntityType, PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { BillingEntityType } from "@prisma/client";
+import prisma from './prismaClient';
 
 export type BillingEntityDTO = {
   id: string;

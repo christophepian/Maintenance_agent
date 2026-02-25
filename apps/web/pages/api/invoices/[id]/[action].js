@@ -7,11 +7,16 @@ export default async function handler(req, res) {
       ? `${API_BASE_URL}/invoices/${id}/${action}${req.url.includes('?') ? '?' + req.url.split('?')[1] : ''}`
       : `${API_BASE_URL}/invoices${id ? '/' + id : ''}`;
     
+    const headers = {
+      'Content-Type': 'application/json',
+    };
+    if (req.headers.authorization) {
+      headers['Authorization'] = req.headers.authorization;
+    }
+
     const response = await fetch(url, {
       method: req.method,
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
       body: req.method !== 'GET' ? JSON.stringify(req.body) : undefined,
     });
 

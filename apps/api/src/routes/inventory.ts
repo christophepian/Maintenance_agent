@@ -1,0 +1,404 @@
+import { Router } from "../http/router";
+import { sendError, sendJson } from "../http/json";
+import { readJson } from "../http/body";
+import { first } from "../http/query";
+import { maybeRequireManager } from "../authz";
+import {
+  listBuildings,
+  createBuilding,
+  updateBuilding,
+  deactivateBuilding,
+  listUnits,
+  createUnit,
+  updateUnit,
+  deactivateUnit,
+  getUnitById,
+  listAppliances,
+  createAppliance,
+  updateAppliance,
+  deactivateAppliance,
+  listAssetModels,
+  createAssetModel,
+  updateAssetModel,
+  deactivateAssetModel,
+  addAssetModelName,
+} from "../services/inventory";
+import { listUnitTenants, linkTenantToUnit, unlinkTenantFromUnit } from "../services/occupancies";
+import { listContractors } from "../services/contractorRequests";
+import { listTenants, createOrGetTenant } from "../services/tenants";
+import { propertyFromBuilding } from "../services/adapters/propertyAdapter";
+import { contactFromTenant, contactFromContractor } from "../services/adapters/contactAdapter";
+import { CreateBuildingSchema, UpdateBuildingSchema } from "../validation/buildings";
+import { CreateUnitSchema, UpdateUnitSchema } from "../validation/units";
+import { CreateApplianceSchema, UpdateApplianceSchema } from "../validation/appliances";
+import { CreateAssetModelSchema, UpdateAssetModelSchema } from "../validation/assetModels";
+import { LinkTenantSchema } from "../validation/occupancies";
+import { normalizePhoneToE164 } from "../utils/phoneNormalization";
+import { DEFAULT_ORG_ID } from "../services/orgConfig";
+
+export function registerInventoryRoutes(router: Router) {
+  /* ── Properties (alias over Buildings) ─────────────────────── */
+
+  router.get("/properties", async ({ res, orgId, query }) => {
+    try {
+      const includeInactive = first(query, "includeInactive") === "true";
+      const buildings = await listBuildings(orgId, includeInactive);
+      const properties = buildings.map(propertyFromBuilding);
+      sendJson(res, 200, { data: properties });
+    } catch (e) {
+      sendError(res, 500, "DB_ERROR", "Failed to fetch properties", String(e));
+    }
+  });
+
+  router.get("/properties/:id/units", async ({ res, orgId, query, params }) => {
+    try {
+      const includeInactive = first(query, "includeInactive") === "true";
+      const unitTypeRaw = first(query, "type");
+      const unitType = unitTypeRaw && ["RESIDENTIAL", "COMMON_AREA"].includes(unitTypeRaw)
+        ? (unitTypeRaw as any) : undefined;
+      const units = await listUnits(orgId, params.id, includeInactive, unitType);
+      sendJson(res, 200, { data: units });
+    } catch (e) {
+      sendError(res, 500, "DB_ERROR", "Failed to fetch property units", String(e));
+    }
+  });
+
+  /* ── People aliases ────────────────────────────────────────── */
+
+  router.get("/people/tenants", async ({ res, orgId, query }) => {
+    try {
+      const includeInactive = first(query, "includeInactive") === "true";
+      const tenants = await listTenants(orgId, includeInactive);
+      const contacts = tenants.map(contactFromTenant);
+      sendJson(res, 200, { data: contacts });
+    } catch (e) {
+      sendError(res, 500, "DB_ERROR", "Failed to fetch tenant contacts", String(e));
+    }
+  });
+
+  router.get("/people/vendors", async ({ res, orgId, prisma }) => {
+    try {
+      const vendors = await listContractors(prisma, orgId);
+      const contacts = vendors.map(contactFromContractor);
+      sendJson(res, 200, { data: contacts });
+    } catch (e) {
+      sendError(res, 500, "DB_ERROR", "Failed to fetch vendor contacts", String(e));
+    }
+  });
+
+  /* ── Buildings ─────────────────────────────────────────────── */
+
+  router.get("/buildings", async ({ res, orgId, query }) => {
+    try {
+      const includeInactive = first(query, "includeInactive") === "true";
+      const buildings = await listBuildings(orgId, includeInactive);
+      sendJson(res, 200, { data: buildings });
+    } catch (e) {
+      sendError(res, 500, "DB_ERROR", "Failed to fetch buildings", String(e));
+    }
+  });
+
+  router.post("/buildings", async ({ req, res, orgId }) => {
+    if (!maybeRequireManager(req, res)) return;
+    try {
+      const raw = await readJson(req);
+      const parsed = CreateBuildingSchema.safeParse(raw);
+      if (!parsed.success) return sendError(res, 400, "VALIDATION_ERROR", "Invalid building data", parsed.error.flatten());
+      const created = await createBuilding(orgId, parsed.data);
+      sendJson(res, 201, { data: created });
+    } catch (e: any) {
+      const msg = String(e?.message || e);
+      if (msg === "Invalid JSON") return sendError(res, 400, "INVALID_JSON", "Invalid JSON");
+      sendError(res, 500, "DB_ERROR", "Failed to create building", String(e));
+    }
+  });
+
+  router.get("/buildings/:id", async ({ res, orgId, params }) => {
+    // Note: matchBuildingById in old code was used for PATCH/DELETE only.
+    // GET /buildings/:id wasn't explicitly handled before; adding it for completeness.
+    // This will fall through to 405 if no GET was intended — but it's good practice.
+    try {
+      const buildings = await listBuildings(orgId, true);
+      const building = buildings.find((b: any) => b.id === params.id);
+      if (!building) return sendError(res, 404, "NOT_FOUND", "Building not found");
+      sendJson(res, 200, { data: building });
+    } catch (e) {
+      sendError(res, 500, "DB_ERROR", "Failed to fetch building", String(e));
+    }
+  });
+
+  router.patch("/buildings/:id", async ({ req, res, orgId, params }) => {
+    if (!maybeRequireManager(req, res)) return;
+    try {
+      const raw = await readJson(req);
+      const parsed = UpdateBuildingSchema.safeParse(raw);
+      if (!parsed.success) return sendError(res, 400, "VALIDATION_ERROR", "Invalid building data", parsed.error.flatten());
+      const updated = await updateBuilding(orgId, params.id, parsed.data);
+      if (!updated) return sendError(res, 404, "NOT_FOUND", "Building not found");
+      sendJson(res, 200, { data: updated });
+    } catch (e: any) {
+      const msg = String(e?.message || e);
+      if (msg === "Invalid JSON") return sendError(res, 400, "INVALID_JSON", "Invalid JSON");
+      sendError(res, 500, "DB_ERROR", "Failed to update building", String(e));
+    }
+  });
+
+  router.delete("/buildings/:id", async ({ req, res, orgId, params }) => {
+    if (!maybeRequireManager(req, res)) return;
+    try {
+      const result = await deactivateBuilding(orgId, params.id);
+      if (!result.success && result.reason === "NOT_FOUND") return sendError(res, 404, "NOT_FOUND", "Building not found");
+      if (!result.success && result.reason === "HAS_ACTIVE_UNITS") return sendError(res, 409, "CONFLICT", "Building has active units");
+      sendJson(res, 200, { message: "Building deactivated" });
+    } catch (e) {
+      sendError(res, 500, "DB_ERROR", "Failed to deactivate building", String(e));
+    }
+  });
+
+  /* ── Units ─────────────────────────────────────────────────── */
+
+  router.get("/buildings/:id/units", async ({ res, orgId, query, params }) => {
+    try {
+      const includeInactive = first(query, "includeInactive") === "true";
+      const typeParam = first(query, "type");
+      const type = typeParam === "COMMON_AREA" || typeParam === "RESIDENTIAL" ? typeParam : undefined;
+      const units = await listUnits(orgId, params.id, includeInactive, type as any);
+      sendJson(res, 200, { data: units });
+    } catch (e) {
+      sendError(res, 500, "DB_ERROR", "Failed to fetch units", String(e));
+    }
+  });
+
+  router.post("/buildings/:id/units", async ({ req, res, orgId, params }) => {
+    if (!maybeRequireManager(req, res)) return;
+    try {
+      const raw = await readJson(req);
+      const parsed = CreateUnitSchema.safeParse(raw);
+      if (!parsed.success) return sendError(res, 400, "VALIDATION_ERROR", "Invalid unit data", parsed.error.flatten());
+      const created = await createUnit(orgId, params.id, parsed.data);
+      if (!created) return sendError(res, 404, "NOT_FOUND", "Building not found");
+      sendJson(res, 201, { data: created });
+    } catch (e: any) {
+      const msg = String(e?.message || e);
+      if (msg === "Invalid JSON") return sendError(res, 400, "INVALID_JSON", "Invalid JSON");
+      sendError(res, 500, "DB_ERROR", "Failed to create unit", String(e));
+    }
+  });
+
+  router.get("/units", async ({ res, orgId, query, prisma }) => {
+    try {
+      const includeInactive = first(query, "includeInactive") === "true";
+      const units = await prisma.unit.findMany({
+        where: {
+          building: { orgId },
+          ...(includeInactive ? {} : { isActive: true }),
+        },
+        include: { building: true },
+        orderBy: { createdAt: "desc" },
+      });
+      sendJson(res, 200, { data: units });
+    } catch (e) {
+      sendError(res, 500, "DB_ERROR", "Failed to fetch units", String(e));
+    }
+  });
+
+  router.get("/units/:id", async ({ res, orgId, params }) => {
+    try {
+      const unit = await getUnitById(orgId, params.id);
+      if (!unit) return sendError(res, 404, "NOT_FOUND", "Unit not found");
+      sendJson(res, 200, { data: unit });
+    } catch (e) {
+      sendError(res, 500, "DB_ERROR", "Failed to fetch unit", String(e));
+    }
+  });
+
+  router.patch("/units/:id", async ({ req, res, orgId, params }) => {
+    if (!maybeRequireManager(req, res)) return;
+    try {
+      const raw = await readJson(req);
+      const parsed = UpdateUnitSchema.safeParse(raw);
+      if (!parsed.success) return sendError(res, 400, "VALIDATION_ERROR", "Invalid unit data", parsed.error.flatten());
+      const updated = await updateUnit(orgId, params.id, parsed.data);
+      if (!updated) return sendError(res, 404, "NOT_FOUND", "Unit not found");
+      sendJson(res, 200, { data: updated });
+    } catch (e: any) {
+      const msg = String(e?.message || e);
+      if (msg === "Invalid JSON") return sendError(res, 400, "INVALID_JSON", "Invalid JSON");
+      sendError(res, 500, "DB_ERROR", "Failed to update unit", String(e));
+    }
+  });
+
+  router.delete("/units/:id", async ({ req, res, orgId, params }) => {
+    if (!maybeRequireManager(req, res)) return;
+    try {
+      const result = await deactivateUnit(orgId, params.id);
+      if (!result.success && result.reason === "NOT_FOUND") return sendError(res, 404, "NOT_FOUND", "Unit not found");
+      if (!result.success && result.reason === "HAS_ACTIVE_APPLIANCES") return sendError(res, 409, "CONFLICT", "Unit has active appliances");
+      sendJson(res, 200, { message: "Unit deactivated" });
+    } catch (e) {
+      sendError(res, 500, "DB_ERROR", "Failed to deactivate unit", String(e));
+    }
+  });
+
+  /* ── Appliances ────────────────────────────────────────────── */
+
+  router.get("/units/:id/appliances", async ({ res, orgId, query, params }) => {
+    try {
+      const includeInactive = first(query, "includeInactive") === "true";
+      const appliances = await listAppliances(orgId, params.id, includeInactive);
+      sendJson(res, 200, { data: appliances });
+    } catch (e) {
+      sendError(res, 500, "DB_ERROR", "Failed to fetch appliances", String(e));
+    }
+  });
+
+  router.post("/units/:id/appliances", async ({ req, res, orgId, params }) => {
+    if (!maybeRequireManager(req, res)) return;
+    try {
+      const raw = await readJson(req);
+      const parsed = CreateApplianceSchema.safeParse(raw);
+      if (!parsed.success) return sendError(res, 400, "VALIDATION_ERROR", "Invalid appliance data", parsed.error.flatten());
+      const created = await createAppliance(orgId, params.id, parsed.data);
+      if (!created) return sendError(res, 404, "NOT_FOUND", "Unit not found");
+      sendJson(res, 201, { data: created });
+    } catch (e: any) {
+      const msg = String(e?.message || e);
+      if (msg === "Invalid JSON") return sendError(res, 400, "INVALID_JSON", "Invalid JSON");
+      sendError(res, 500, "DB_ERROR", "Failed to create appliance", String(e));
+    }
+  });
+
+  router.patch("/appliances/:id", async ({ req, res, orgId, params }) => {
+    if (!maybeRequireManager(req, res)) return;
+    try {
+      const raw = await readJson(req);
+      const parsed = UpdateApplianceSchema.safeParse(raw);
+      if (!parsed.success) return sendError(res, 400, "VALIDATION_ERROR", "Invalid appliance data", parsed.error.flatten());
+      const updated = await updateAppliance(orgId, params.id, parsed.data);
+      if (!updated) return sendError(res, 404, "NOT_FOUND", "Appliance not found");
+      sendJson(res, 200, { data: updated });
+    } catch (e: any) {
+      const msg = String(e?.message || e);
+      if (msg === "Invalid JSON") return sendError(res, 400, "INVALID_JSON", "Invalid JSON");
+      sendError(res, 500, "DB_ERROR", "Failed to update appliance", String(e));
+    }
+  });
+
+  router.delete("/appliances/:id", async ({ req, res, orgId, params }) => {
+    if (!maybeRequireManager(req, res)) return;
+    try {
+      const result = await deactivateAppliance(orgId, params.id);
+      if (!result.success && result.reason === "NOT_FOUND") return sendError(res, 404, "NOT_FOUND", "Appliance not found");
+      if (!result.success && result.reason === "HAS_REQUESTS") return sendError(res, 409, "CONFLICT", "Appliance is referenced by requests");
+      sendJson(res, 200, { message: "Appliance deactivated" });
+    } catch (e) {
+      sendError(res, 500, "DB_ERROR", "Failed to deactivate appliance", String(e));
+    }
+  });
+
+  /* ── Asset Models ──────────────────────────────────────────── */
+
+  router.get("/asset-models", async ({ res, orgId, query }) => {
+    try {
+      const includeInactive = first(query, "includeInactive") === "true";
+      const models = await listAssetModels(orgId, includeInactive);
+      const data = models.map((m) => ({ ...m, name: addAssetModelName(m) }));
+      sendJson(res, 200, { data });
+    } catch (e) {
+      sendError(res, 500, "DB_ERROR", "Failed to fetch asset models", String(e));
+    }
+  });
+
+  router.post("/asset-models", async ({ req, res, orgId }) => {
+    if (!maybeRequireManager(req, res)) return;
+    try {
+      const raw = await readJson(req);
+      const parsed = CreateAssetModelSchema.safeParse(raw);
+      if (!parsed.success) return sendError(res, 400, "VALIDATION_ERROR", "Invalid asset model data", parsed.error.flatten());
+      const created = await createAssetModel(orgId, parsed.data);
+      sendJson(res, 201, { data: created });
+    } catch (e: any) {
+      const msg = String(e?.message || e);
+      if (msg === "Invalid JSON") return sendError(res, 400, "INVALID_JSON", "Invalid JSON");
+      sendError(res, 500, "DB_ERROR", "Failed to create asset model", String(e));
+    }
+  });
+
+  router.patch("/asset-models/:id", async ({ req, res, orgId, params }) => {
+    if (!maybeRequireManager(req, res)) return;
+    try {
+      const raw = await readJson(req);
+      const parsed = UpdateAssetModelSchema.safeParse(raw);
+      if (!parsed.success) return sendError(res, 400, "VALIDATION_ERROR", "Invalid asset model data", parsed.error.flatten());
+      const updated = await updateAssetModel(orgId, params.id, parsed.data);
+      if (!updated) return sendError(res, 404, "NOT_FOUND", "Asset model not found");
+      sendJson(res, 200, { data: updated });
+    } catch (e: any) {
+      const msg = String(e?.message || e);
+      if (msg === "Invalid JSON") return sendError(res, 400, "INVALID_JSON", "Invalid JSON");
+      sendError(res, 500, "DB_ERROR", "Failed to update asset model", String(e));
+    }
+  });
+
+  router.delete("/asset-models/:id", async ({ req, res, orgId, params }) => {
+    if (!maybeRequireManager(req, res)) return;
+    try {
+      const result = await deactivateAssetModel(orgId, params.id);
+      if (!result.success && result.reason === "NOT_FOUND") return sendError(res, 404, "NOT_FOUND", "Asset model not found");
+      if (!result.success && result.reason === "HAS_APPLIANCES") return sendError(res, 409, "CONFLICT", "Asset model is referenced by appliances");
+      if (!result.success && result.reason === "FORBIDDEN") return sendError(res, 403, "FORBIDDEN", "Asset model is not org-private");
+      sendJson(res, 200, { message: "Asset model deactivated" });
+    } catch (e) {
+      sendError(res, 500, "DB_ERROR", "Failed to deactivate asset model", String(e));
+    }
+  });
+
+  /* ── Occupancies ───────────────────────────────────────────── */
+
+  router.get("/units/:unitId/tenants", async ({ res, orgId, params }) => {
+    try {
+      const tenants = await listUnitTenants(orgId, params.unitId);
+      if (!tenants) return sendError(res, 404, "NOT_FOUND", "Unit not found");
+      sendJson(res, 200, { data: tenants });
+    } catch (e) {
+      sendError(res, 500, "DB_ERROR", "Failed to fetch unit tenants", String(e));
+    }
+  });
+
+  router.post("/units/:unitId/tenants", async ({ req, res, orgId, params }) => {
+    if (!maybeRequireManager(req, res)) return;
+    try {
+      const raw = await readJson(req);
+      const parsed = LinkTenantSchema.safeParse(raw);
+      if (!parsed.success) return sendError(res, 400, "VALIDATION_ERROR", "Invalid tenant link data", parsed.error.flatten());
+
+      let tenantId = parsed.data.tenantId;
+      if (!tenantId) {
+        const normalizedPhone = normalizePhoneToE164(parsed.data.phone);
+        if (!normalizedPhone) return sendError(res, 400, "VALIDATION_ERROR", "Invalid phone format");
+        const tenant = await createOrGetTenant({ orgId, phone: normalizedPhone, name: parsed.data.name });
+        tenantId = tenant.id;
+      }
+
+      const result = await linkTenantToUnit(orgId, tenantId, params.unitId);
+      if (!result.success && result.reason === "UNIT_NOT_FOUND") return sendError(res, 404, "NOT_FOUND", "Unit not found");
+      if (!result.success && result.reason === "TENANT_NOT_FOUND") return sendError(res, 404, "NOT_FOUND", "Tenant not found");
+      sendJson(res, 200, { message: "Tenant linked", data: { tenantId, unitId: params.unitId } });
+    } catch (e: any) {
+      const msg = String(e?.message || e);
+      if (msg === "Invalid JSON") return sendError(res, 400, "INVALID_JSON", "Invalid JSON");
+      sendError(res, 500, "DB_ERROR", "Failed to link tenant", String(e));
+    }
+  });
+
+  router.delete("/units/:unitId/tenants/:tenantId", async ({ req, res, orgId, params }) => {
+    if (!maybeRequireManager(req, res)) return;
+    try {
+      const result = await unlinkTenantFromUnit(orgId, params.tenantId, params.unitId);
+      if (!result.success && result.reason === "UNIT_NOT_FOUND") return sendError(res, 404, "NOT_FOUND", "Unit not found");
+      sendJson(res, 200, { message: "Tenant unlinked" });
+    } catch (e) {
+      sendError(res, 500, "DB_ERROR", "Failed to unlink tenant", String(e));
+    }
+  });
+}

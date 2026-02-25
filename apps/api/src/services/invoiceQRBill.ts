@@ -1,12 +1,10 @@
-import { PrismaClient } from '@prisma/client';
+import prisma from './prismaClient';
 import {
   SwissQRBillPayload,
   formatAmountForQRBill,
   generateSwissReference,
   generateCompleteQRBill,
 } from './qrBill';
-
-const prisma = new PrismaClient();
 
 export interface InvoiceQRBillDTO {
   invoiceId: string;

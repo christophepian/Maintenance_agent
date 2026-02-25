@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import prisma from './prismaClient';
 import { normalizePhoneToE164 } from "../utils/phoneNormalization";
 import {
   CreateTenantInput,
@@ -8,8 +8,6 @@ import {
   getTenantByPhoneSchema,
   updateTenantSchema,
 } from "../validation/tenants";
-
-const prisma = new PrismaClient();
 
 /**
  * DTO for tenant response - excludes internal fields

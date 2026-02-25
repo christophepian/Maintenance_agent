@@ -164,35 +164,8 @@ export async function listOwnerPendingApprovals(
 }
 
 
-export async function assignContractor(prisma: PrismaClient, requestId: string, contractorId: string) {
-  // Stub implementation
-  return { success: true, message: "Stub: assigned contractor", data: { id: contractorId } };
-}
-
-export async function unassignContractor(prisma: PrismaClient, requestId: string) {
-  // Stub implementation
-  return { success: true, message: "Stub: unassigned contractor" };
-}
-
-export async function findMatchingContractor(prisma: PrismaClient, orgId: string, category: string) {
-  // Find an active contractor in the org whose serviceCategories includes this category
-  const contractor = await prisma.contractor.findFirst({
-    where: {
-      orgId,
-      isActive: true,
-      serviceCategories: {
-        contains: category,
-      },
-    },
-  });
-  
-  if (!contractor) return null;
-  
-  return {
-    id: contractor.id,
-    name: contractor.name,
-  };
-}
+// Re-export real implementations from requestAssignment
+export { assignContractor, unassignContractor, findMatchingContractor } from './requestAssignment';
 
 export async function getMaintenanceRequestById(
   prisma: PrismaClient,

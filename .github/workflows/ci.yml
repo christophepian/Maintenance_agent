@@ -10,6 +10,25 @@ jobs:
   build-and-test:
     runs-on: ubuntu-latest
 
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: maint_agent_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/maint_agent_test
+      NODE_ENV: test
+
     steps:
       - uses: actions/checkout@v4
 
@@ -17,17 +36,78 @@ jobs:
         with:
           node-version: '20'
 
+      # ── G8 enforcement: ban db push ──
+      - name: "G8: Reject prisma db push"
+        run: |
+          if grep -rn "db push" apps/api/package.json .github/ scripts/ 2>/dev/null; then
+            echo "❌ 'prisma db push' detected — banned by G8"
+            exit 1
+          fi
+          echo "✅ No db push references found"
+
       - name: Install dependencies (backend)
         run: npm --prefix apps/api install --no-audit --no-fund
 
       - name: Install dependencies (frontend)
         run: npm --prefix apps/web install --no-audit --no-fund
 
-      - name: Type-check backend
-        run: npm --prefix apps/api run build || npx tsc --noEmit
+      # ── G7-2: Prisma generate ──
+      - name: "G7: Prisma generate"
+        run: npx --prefix apps/api prisma generate
+        working-directory: apps/api
 
-      - name: Type-check frontend
-        run: npm --prefix apps/web run build || npx tsc --noEmit
+      # ── G7-1: Schema drift check ──
+      - name: "G7: Schema drift check"
+        run: |
+          npx prisma migrate deploy
+          DRIFT=$(npx prisma migrate diff \
+            --from-schema-datasource ./prisma/schema.prisma \
+            --to-schema-datamodel ./prisma/schema.prisma \
+            --script 2>&1)
+          if echo "$DRIFT" | grep -q "empty migration"; then
+            echo "✅ No schema drift"
+          else
+            echo "❌ Schema drift detected:"
+            echo "$DRIFT"
+            exit 1
+          fi
+        working-directory: apps/api
 
-      - name: Lint
-        run: echo "Linting placeholder - add eslint/prettier when ready"
+      # ── G7-3: Backend type check ──
+      - name: "G7: Type-check backend (tsc --noEmit)"
+        run: npx tsc --noEmit
+        working-directory: apps/api
+
+      # ── G7-4: Frontend build ──
+      - name: "G7: Build frontend (next build)"
+        run: npm run build
+        working-directory: apps/web
+        env:
+          API_BASE_URL: http://127.0.0.1:3001
+
+      # ── G7-5: Jest tests ──
+      - name: "G7: Run Jest tests"
+        run: npm test -- --ci --forceExit
+        working-directory: apps/api
+
+      # ── G7-6: Boot smoke test ──
+      - name: "G7: Backend boot + smoke curls"
+        run: |
+          npx ts-node --transpile-only src/server.ts &
+          SERVER_PID=$!
+          echo "Waiting for server to start..."
+          for i in $(seq 1 15); do
+            if curl -sf http://127.0.0.1:3001/requests?limit=1 > /dev/null 2>&1; then
+              break
+            fi
+            sleep 1
+          done
+          echo "Testing endpoints..."
+          curl -sf 'http://127.0.0.1:3001/requests?limit=1' > /dev/null && echo "✅ /requests" || exit 1
+          curl -sf 'http://127.0.0.1:3001/jobs?limit=1' > /dev/null && echo "✅ /jobs" || exit 1
+          curl -sf 'http://127.0.0.1:3001/leases?limit=1' > /dev/null && echo "✅ /leases" || exit 1
+          curl -sf 'http://127.0.0.1:3001/invoices?limit=1' > /dev/null && echo "✅ /invoices" || exit 1
+          curl -sf 'http://127.0.0.1:3001/contractors?limit=1' > /dev/null && echo "✅ /contractors" || exit 1
+          kill $SERVER_PID 2>/dev/null || true
+          echo "✅ All smoke tests passed"
+        working-directory: apps/api
