@@ -17,6 +17,7 @@ import { registerTenantRoutes } from "./routes/tenants";
 import { registerInvoiceRoutes } from "./routes/invoices";
 import { registerNotificationRoutes } from "./routes/notifications";
 import { registerLeaseRoutes } from "./routes/leases";
+import { registerEventHandlers } from "./events";
 
 /* ── F1: Production boot guard ─────────────────────────────── */
 const isProdEnv = process.env.NODE_ENV === "production";
@@ -112,6 +113,7 @@ let isShuttingDown = false;
 async function start() {
   try {
     await ensureDefaultOrgConfig(prisma);
+    registerEventHandlers(prisma);
     server.listen(port, () => {
       console.log(`API running on http://localhost:${port}`);
     });
