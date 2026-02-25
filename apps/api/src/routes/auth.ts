@@ -3,9 +3,7 @@ import { Router } from "../http/router";
 import { sendError, sendJson } from "../http/json";
 import { readJson } from "../http/body";
 import { first } from "../http/query";
-import { getOrgIdForRequest } from "../authz";
 import { encodeToken } from "../services/auth";
-import { DEFAULT_ORG_ID } from "../services/orgConfig";
 import { getTenantSession } from "../services/tenantSession";
 import { listTenantLeases, getTenantLease, tenantAcceptLease } from "../services/tenantPortal";
 import { triageIssue } from "../services/triage";
@@ -15,12 +13,12 @@ import { LoginSchema, RegisterSchema } from "../validation/auth";
 
 export function registerAuthRoutes(router: Router) {
   // POST /tenant-session
-  router.post("/tenant-session", async ({ req, res, prisma }) => {
+  router.post("/tenant-session", async ({ req, res, prisma, orgId }) => {
     try {
       const raw = await readJson(req);
       const parsed = TenantSessionSchema.safeParse(raw);
       if (!parsed.success) return sendError(res, 400, "VALIDATION_ERROR", "Invalid tenant session input", parsed.error.flatten());
-      const session = await getTenantSession(prisma, DEFAULT_ORG_ID, parsed.data.phone);
+      const session = await getTenantSession(prisma, orgId, parsed.data.phone);
       if (!session) return sendError(res, 404, "NOT_FOUND", "Tenant not found");
       sendJson(res, 200, { data: session });
     } catch (e: any) {
@@ -31,12 +29,11 @@ export function registerAuthRoutes(router: Router) {
   });
 
   // GET /tenant-portal/leases
-  router.get("/tenant-portal/leases", async ({ req, res, query }) => {
+  router.get("/tenant-portal/leases", async ({ res, query, orgId }) => {
     try {
       const tenantId = first(query, "tenantId");
       if (!tenantId) return sendError(res, 400, "VALIDATION_ERROR", "tenantId is required");
       const unitId = first(query, "unitId") || undefined;
-      const orgId = getOrgIdForRequest(req);
       const leases = await listTenantLeases(tenantId, orgId, unitId);
       sendJson(res, 200, { data: leases });
     } catch (e: any) {
@@ -46,11 +43,10 @@ export function registerAuthRoutes(router: Router) {
   });
 
   // GET /tenant-portal/leases/:id
-  router.get("/tenant-portal/leases/:id", async ({ req, res, query, params }) => {
+  router.get("/tenant-portal/leases/:id", async ({ res, query, params, orgId }) => {
     try {
       const tenantId = first(query, "tenantId");
       if (!tenantId) return sendError(res, 400, "VALIDATION_ERROR", "tenantId is required");
-      const orgId = getOrgIdForRequest(req);
       const lease = await getTenantLease(params.id, tenantId, orgId);
       if (!lease) return sendError(res, 404, "NOT_FOUND", "Lease not found");
       sendJson(res, 200, { data: lease });
@@ -60,12 +56,11 @@ export function registerAuthRoutes(router: Router) {
   });
 
   // POST /tenant-portal/leases/:id/accept
-  router.post("/tenant-portal/leases/:id/accept", async ({ req, res, params }) => {
+  router.post("/tenant-portal/leases/:id/accept", async ({ req, res, params, orgId }) => {
     try {
       const raw = await readJson(req);
       const tenantId = raw?.tenantId;
       if (!tenantId) return sendError(res, 400, "VALIDATION_ERROR", "tenantId is required in body");
-      const orgId = getOrgIdForRequest(req);
       const result = await tenantAcceptLease(params.id, tenantId, orgId);
       sendJson(res, 200, { data: result });
     } catch (e: any) {
@@ -93,7 +88,7 @@ export function registerAuthRoutes(router: Router) {
   });
 
   // POST /auth/register
-  router.post("/auth/register", async ({ req, res, prisma }) => {
+  router.post("/auth/register", async ({ req, res, prisma, orgId }) => {
     try {
       const raw = await readJson(req);
       const parsed = RegisterSchema.safeParse(raw);
@@ -107,7 +102,7 @@ export function registerAuthRoutes(router: Router) {
 
       const passwordHash = await bcrypt.hash(password, 10);
       const user = await prisma.user.create({
-        data: { orgId: DEFAULT_ORG_ID, email, name, passwordHash, role: role || "TENANT" },
+        data: { orgId, email, name, passwordHash, role: role || "TENANT" },
       });
 
       const token = encodeToken({
@@ -132,7 +127,7 @@ export function registerAuthRoutes(router: Router) {
   });
 
   // POST /auth/login
-  router.post("/auth/login", async ({ req, res, prisma }) => {
+  router.post("/auth/login", async ({ req, res, prisma, orgId }) => {
     try {
       const raw = await readJson(req);
       const parsed = LoginSchema.safeParse(raw);
@@ -140,7 +135,7 @@ export function registerAuthRoutes(router: Router) {
 
       const { email, password } = parsed.data;
       const user = await prisma.user.findUnique({
-        where: { user_org_email_unique: { orgId: DEFAULT_ORG_ID, email } },
+        where: { user_org_email_unique: { orgId, email } },
       });
 
       if (!user || !user.passwordHash) return sendError(res, 401, "UNAUTHORIZED", "Invalid credentials");
@@ -169,7 +164,7 @@ export function registerAuthRoutes(router: Router) {
   });
 
   // POST /__dev/create-contractor-user (dev only)
-  router.post("/__dev/create-contractor-user", async ({ res, req, prisma }) => {
+  router.post("/__dev/create-contractor-user", async ({ res, req, prisma, orgId }) => {
     if (process.env.NODE_ENV === "production") return sendError(res, 403, "FORBIDDEN", "Not allowed in production");
     try {
       const raw = await readJson(req);
@@ -177,11 +172,11 @@ export function registerAuthRoutes(router: Router) {
       if (!email || !password || !name || !phone) return sendError(res, 400, "VALIDATION_ERROR", "Missing fields");
       const passwordHash = await bcrypt.hash(password, 10);
       const user = await prisma.user.create({
-        data: { orgId: DEFAULT_ORG_ID, email, name, passwordHash, role: "CONTRACTOR" },
+        data: { orgId, email, name, passwordHash, role: "CONTRACTOR" },
       });
       const contractor = await prisma.contractor.create({
         data: {
-          orgId: String(DEFAULT_ORG_ID),
+          orgId: String(orgId),
           name: String(name),
           phone: String(phone),
           email: String(email),

@@ -2,7 +2,7 @@ import { Router } from "../http/router";
 import { sendError, sendJson } from "../http/json";
 import { readJson } from "../http/body";
 import { first } from "../http/query";
-import { getAuthUser, getOrgIdForRequest } from "../authz";
+import { getAuthUser } from "../authz";
 import { requireOrgViewer, requireOwnerAccess, logEvent } from "./helpers";
 import { createJob, getJob, listJobs, updateJob } from "../services/jobs";
 import { createInvoice, getInvoice, listInvoices, approveInvoice, markInvoicePaid, disputeInvoice, issueInvoice, getOrCreateInvoiceForJob } from "../services/invoices";
@@ -12,10 +12,9 @@ import { generateInvoicePDF } from "../services/invoicePDF";
 
 export function registerInvoiceRoutes(router: Router) {
   // GET /jobs
-  router.get("/jobs", async ({ req, res, query }) => {
+  router.get("/jobs", async ({ req, res, query, orgId }) => {
     if (!requireOrgViewer(req, res)) return;
     try {
-      const orgId = getOrgIdForRequest(req);
       const contractorId = first(query, "contractorId") || undefined;
       const status = first(query, "status") || undefined;
       const jobs = await listJobs(orgId, { contractorId, status: status as any });
@@ -26,10 +25,9 @@ export function registerInvoiceRoutes(router: Router) {
   });
 
   // GET /jobs/:id
-  router.get("/jobs/:id", async ({ req, res, params }) => {
+  router.get("/jobs/:id", async ({ req, res, params, orgId }) => {
     if (!requireOrgViewer(req, res)) return;
     try {
-      const orgId = getOrgIdForRequest(req);
       const job = await getJob(params.id);
       if (!job || job.orgId !== orgId) return sendError(res, 404, "NOT_FOUND", "Job not found");
       sendJson(res, 200, { data: job });
@@ -39,11 +37,10 @@ export function registerInvoiceRoutes(router: Router) {
   });
 
   // PATCH /jobs/:id
-  router.patch("/jobs/:id", async ({ req, res, params }) => {
+  router.patch("/jobs/:id", async ({ req, res, params, orgId }) => {
     if (!requireOrgViewer(req, res)) return;
     try {
       const raw = await readJson(req);
-      const orgId = getOrgIdForRequest(req);
       const job = await getJob(params.id);
       if (!job || job.orgId !== orgId) return sendError(res, 404, "NOT_FOUND", "Job not found");
 
@@ -73,10 +70,9 @@ export function registerInvoiceRoutes(router: Router) {
   });
 
   // GET /invoices
-  router.get("/invoices", async ({ req, res, query }) => {
+  router.get("/invoices", async ({ req, res, query, orgId }) => {
     if (!requireOrgViewer(req, res)) return;
     try {
-      const orgId = getOrgIdForRequest(req);
       const jobId = first(query, "jobId") || undefined;
       const status = first(query, "status") || undefined;
       const invoices = await listInvoices(orgId, { jobId, status: status as any });
@@ -87,10 +83,9 @@ export function registerInvoiceRoutes(router: Router) {
   });
 
   // POST /invoices
-  router.post("/invoices", async ({ req, res }) => {
+  router.post("/invoices", async ({ req, res, orgId }) => {
     if (!requireOrgViewer(req, res)) return;
     try {
-      const orgId = getOrgIdForRequest(req);
       const raw = await readJson(req);
       const parsed = CreateInvoiceSchema.safeParse(raw);
       if (!parsed.success) return sendError(res, 400, "VALIDATION_ERROR", "Invalid invoice", parsed.error.flatten());
@@ -123,10 +118,9 @@ export function registerInvoiceRoutes(router: Router) {
   });
 
   // GET /invoices/:id
-  router.get("/invoices/:id", async ({ req, res, params }) => {
+  router.get("/invoices/:id", async ({ req, res, params, orgId }) => {
     if (!requireOrgViewer(req, res)) return;
     try {
-      const orgId = getOrgIdForRequest(req);
       const invoice = await getInvoice(params.id);
       if (!invoice || invoice.orgId !== orgId) return sendError(res, 404, "NOT_FOUND", "Invoice not found");
       sendJson(res, 200, { data: invoice });
@@ -136,10 +130,9 @@ export function registerInvoiceRoutes(router: Router) {
   });
 
   // POST /invoices/:id/issue
-  router.post("/invoices/:id/issue", async ({ req, res, prisma, params }) => {
+  router.post("/invoices/:id/issue", async ({ req, res, prisma, params, orgId }) => {
     if (!requireOwnerAccess(req, res)) return;
     try {
-      const orgId = getOrgIdForRequest(req);
       const invoice = await getInvoice(params.id);
       if (!invoice || invoice.orgId !== orgId) return sendError(res, 404, "NOT_FOUND", "Invoice not found");
 
@@ -179,10 +172,9 @@ export function registerInvoiceRoutes(router: Router) {
   });
 
   // POST /invoices/:id/approve
-  router.post("/invoices/:id/approve", async ({ req, res, prisma, params }) => {
+  router.post("/invoices/:id/approve", async ({ req, res, prisma, params, orgId }) => {
     if (!requireOwnerAccess(req, res)) return;
     try {
-      const orgId = getOrgIdForRequest(req);
       const invoice = await getInvoice(params.id);
       if (!invoice || invoice.orgId !== orgId) return sendError(res, 404, "NOT_FOUND", "Invoice not found");
 
@@ -206,10 +198,9 @@ export function registerInvoiceRoutes(router: Router) {
   });
 
   // POST /invoices/:id/mark-paid
-  router.post("/invoices/:id/mark-paid", async ({ req, res, prisma, params }) => {
+  router.post("/invoices/:id/mark-paid", async ({ req, res, prisma, params, orgId }) => {
     if (!requireOwnerAccess(req, res)) return;
     try {
-      const orgId = getOrgIdForRequest(req);
       const invoice = await getInvoice(params.id);
       if (!invoice || invoice.orgId !== orgId) return sendError(res, 404, "NOT_FOUND", "Invoice not found");
 
@@ -229,10 +220,9 @@ export function registerInvoiceRoutes(router: Router) {
   });
 
   // POST /invoices/:id/dispute
-  router.post("/invoices/:id/dispute", async ({ req, res, prisma, params }) => {
+  router.post("/invoices/:id/dispute", async ({ req, res, prisma, params, orgId }) => {
     if (!requireOwnerAccess(req, res)) return;
     try {
-      const orgId = getOrgIdForRequest(req);
       const invoice = await getInvoice(params.id);
       if (!invoice || invoice.orgId !== orgId) return sendError(res, 404, "NOT_FOUND", "Invoice not found");
 
@@ -256,10 +246,9 @@ export function registerInvoiceRoutes(router: Router) {
   });
 
   // GET /owner/invoices
-  router.get("/owner/invoices", async ({ req, res, query }) => {
+  router.get("/owner/invoices", async ({ req, res, query, orgId }) => {
     if (!requireOwnerAccess(req, res)) return;
     try {
-      const orgId = getOrgIdForRequest(req);
       const status = first(query, "status") || undefined;
       const invoices = await listInvoices(orgId, { status: status as any });
       sendJson(res, 200, { data: invoices });
@@ -269,10 +258,9 @@ export function registerInvoiceRoutes(router: Router) {
   });
 
   // GET /invoices/:id/qr-bill
-  router.get("/invoices/:id/qr-bill", async ({ req, res, params }) => {
+  router.get("/invoices/:id/qr-bill", async ({ req, res, params, orgId }) => {
     if (!requireOrgViewer(req, res)) return;
     try {
-      const orgId = getOrgIdForRequest(req);
       const qrBill = await generateInvoiceQRBill(params.id, orgId);
       sendJson(res, 200, { data: qrBill });
     } catch (e: any) {
@@ -287,10 +275,9 @@ export function registerInvoiceRoutes(router: Router) {
     "GET",
     /^\/invoices\/([a-f0-9-]{36})\/qr-code\.png$/i,
     ["id"],
-    async ({ req, res, params }) => {
+    async ({ req, res, params, orgId }) => {
       if (!requireOrgViewer(req, res)) return;
       try {
-        const orgId = getOrgIdForRequest(req);
         const pngBuffer = await getInvoiceQRCodePNG(params.id, orgId);
         res.writeHead(200, {
           "Content-Type": "image/png",
@@ -308,10 +295,9 @@ export function registerInvoiceRoutes(router: Router) {
   );
 
   // GET /invoices/:id/pdf
-  router.get("/invoices/:id/pdf", async ({ req, res, params, query }) => {
+  router.get("/invoices/:id/pdf", async ({ req, res, params, query, orgId }) => {
     if (!requireOrgViewer(req, res)) return;
     try {
-      const orgId = getOrgIdForRequest(req);
       const includeQRBillParam = first(query, "includeQRBill") || "true";
       const includeQRBill = includeQRBillParam !== "false";
       console.log(`[PDF] Generating PDF for invoice ${params.id}, includeQRBill=${includeQRBill}`);

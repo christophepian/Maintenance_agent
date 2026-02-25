@@ -3,7 +3,6 @@ import { Router } from "../http/router";
 import { sendError, sendJson } from "../http/json";
 import { readJson } from "../http/body";
 import { first } from "../http/query";
-import { getOrgIdForRequest } from "../authz";
 import { requireOrgViewer, requireGovernanceAccess } from "./helpers";
 import { getOrgConfig, updateOrgConfig } from "../services/orgConfig";
 import { UpdateOrgConfigSchema } from "../validation/orgConfig";
@@ -18,10 +17,9 @@ import { CreateBillingEntitySchema, UpdateBillingEntitySchema } from "../validat
 
 export function registerConfigRoutes(router: Router) {
   // GET /org-config
-  router.get("/org-config", async ({ req, res, prisma }) => {
+  router.get("/org-config", async ({ req, res, prisma, orgId }) => {
     if (!requireOrgViewer(req, res)) return;
     try {
-      const orgId = getOrgIdForRequest(req);
       const config = await getOrgConfig(prisma, orgId);
       sendJson(res, 200, { data: config });
     } catch (e) {
@@ -30,9 +28,8 @@ export function registerConfigRoutes(router: Router) {
   });
 
   // PUT /org-config
-  router.put("/org-config", async ({ req, res, prisma }) => {
+  router.put("/org-config", async ({ req, res, prisma, orgId }) => {
     try {
-      const orgId = getOrgIdForRequest(req);
       const raw = await readJson(req);
       const parsed = UpdateOrgConfigSchema.safeParse(raw);
       if (!parsed.success) return sendError(res, 400, "VALIDATION_ERROR", "Invalid org config", parsed.error.flatten());
@@ -60,10 +57,9 @@ export function registerConfigRoutes(router: Router) {
   });
 
   // GET /buildings/:id/config
-  router.get("/buildings/:id/config", async ({ req, res, prisma, params }) => {
+  router.get("/buildings/:id/config", async ({ req, res, prisma, params, orgId }) => {
     if (!requireOrgViewer(req, res)) return;
     try {
-      const orgId = getOrgIdForRequest(req);
       const building = await prisma.building.findFirst({ where: { id: params.id, orgId } });
       if (!building) return sendError(res, 404, "NOT_FOUND", "Building not found");
       const config = await getBuildingConfig(prisma, orgId, params.id);
@@ -74,9 +70,8 @@ export function registerConfigRoutes(router: Router) {
   });
 
   // PUT /buildings/:id/config
-  router.put("/buildings/:id/config", async ({ req, res, prisma, params }) => {
+  router.put("/buildings/:id/config", async ({ req, res, prisma, params, orgId }) => {
     try {
-      const orgId = getOrgIdForRequest(req);
       const current = await getOrgConfig(prisma, orgId);
       if (!requireGovernanceAccess(req, res, current.mode)) return;
 
@@ -96,10 +91,9 @@ export function registerConfigRoutes(router: Router) {
   });
 
   // GET /units/:id/config
-  router.get("/units/:id/config", async ({ req, res, prisma, params }) => {
+  router.get("/units/:id/config", async ({ req, res, prisma, params, orgId }) => {
     if (!requireOrgViewer(req, res)) return;
     try {
-      const orgId = getOrgIdForRequest(req);
       const unit = await prisma.unit.findFirst({ where: { id: params.id, orgId } });
       if (!unit) return sendError(res, 404, "NOT_FOUND", "Unit not found");
       const effectiveConfig = await computeEffectiveUnitConfig(prisma, orgId, params.id);
@@ -110,9 +104,8 @@ export function registerConfigRoutes(router: Router) {
   });
 
   // PUT /units/:id/config
-  router.put("/units/:id/config", async ({ req, res, prisma, params }) => {
+  router.put("/units/:id/config", async ({ req, res, prisma, params, orgId }) => {
     try {
-      const orgId = getOrgIdForRequest(req);
       const current = await getOrgConfig(prisma, orgId);
       if (!requireGovernanceAccess(req, res, current.mode)) return;
 
@@ -133,9 +126,8 @@ export function registerConfigRoutes(router: Router) {
   });
 
   // DELETE /units/:id/config
-  router.delete("/units/:id/config", async ({ req, res, prisma, params }) => {
+  router.delete("/units/:id/config", async ({ req, res, prisma, params, orgId }) => {
     try {
-      const orgId = getOrgIdForRequest(req);
       const current = await getOrgConfig(prisma, orgId);
       if (!requireGovernanceAccess(req, res, current.mode)) return;
 
@@ -149,10 +141,9 @@ export function registerConfigRoutes(router: Router) {
   });
 
   // GET /approval-rules
-  router.get("/approval-rules", async ({ req, res, prisma, query }) => {
+  router.get("/approval-rules", async ({ req, res, prisma, query, orgId }) => {
     if (!requireOrgViewer(req, res)) return;
     try {
-      const orgId = getOrgIdForRequest(req);
       const buildingId = first(query, "buildingId") || undefined;
       const rules = await listApprovalRules(prisma, orgId, buildingId);
       sendJson(res, 200, { data: rules });
@@ -162,9 +153,8 @@ export function registerConfigRoutes(router: Router) {
   });
 
   // POST /approval-rules
-  router.post("/approval-rules", async ({ req, res, prisma }) => {
+  router.post("/approval-rules", async ({ req, res, prisma, orgId }) => {
     try {
-      const orgId = getOrgIdForRequest(req);
       const current = await getOrgConfig(prisma, orgId);
       if (!requireGovernanceAccess(req, res, current.mode)) return;
 
@@ -184,10 +174,9 @@ export function registerConfigRoutes(router: Router) {
   });
 
   // GET /approval-rules/:id
-  router.get("/approval-rules/:id", async ({ req, res, prisma, params }) => {
+  router.get("/approval-rules/:id", async ({ req, res, prisma, params, orgId }) => {
     if (!requireOrgViewer(req, res)) return;
     try {
-      const orgId = getOrgIdForRequest(req);
       const rule = await getApprovalRule(prisma, orgId, params.id);
       if (!rule) return sendError(res, 404, "NOT_FOUND", "Approval rule not found");
       sendJson(res, 200, { data: rule });
@@ -197,9 +186,8 @@ export function registerConfigRoutes(router: Router) {
   });
 
   // PATCH /approval-rules/:id
-  router.patch("/approval-rules/:id", async ({ req, res, prisma, params }) => {
+  router.patch("/approval-rules/:id", async ({ req, res, prisma, params, orgId }) => {
     try {
-      const orgId = getOrgIdForRequest(req);
       const current = await getOrgConfig(prisma, orgId);
       if (!requireGovernanceAccess(req, res, current.mode)) return;
 
@@ -219,9 +207,8 @@ export function registerConfigRoutes(router: Router) {
   });
 
   // DELETE /approval-rules/:id
-  router.delete("/approval-rules/:id", async ({ req, res, prisma, params }) => {
+  router.delete("/approval-rules/:id", async ({ req, res, prisma, params, orgId }) => {
     try {
-      const orgId = getOrgIdForRequest(req);
       const current = await getOrgConfig(prisma, orgId);
       if (!requireGovernanceAccess(req, res, current.mode)) return;
 
@@ -234,10 +221,9 @@ export function registerConfigRoutes(router: Router) {
   });
 
   // GET /billing-entities
-  router.get("/billing-entities", async ({ req, res, query }) => {
+  router.get("/billing-entities", async ({ req, res, query, orgId }) => {
     if (!requireOrgViewer(req, res)) return;
     try {
-      const orgId = getOrgIdForRequest(req);
       const type = first(query, "type") || undefined;
       const entities = await listBillingEntities(orgId, { type: type as any });
       sendJson(res, 200, { data: entities });
@@ -247,9 +233,8 @@ export function registerConfigRoutes(router: Router) {
   });
 
   // POST /billing-entities
-  router.post("/billing-entities", async ({ req, res, prisma }) => {
+  router.post("/billing-entities", async ({ req, res, prisma, orgId }) => {
     try {
-      const orgId = getOrgIdForRequest(req);
       const current = await getOrgConfig(prisma, orgId);
       if (!requireGovernanceAccess(req, res, current.mode)) return;
 
@@ -271,10 +256,9 @@ export function registerConfigRoutes(router: Router) {
   });
 
   // GET /billing-entities/:id
-  router.get("/billing-entities/:id", async ({ req, res, params }) => {
+  router.get("/billing-entities/:id", async ({ req, res, params, orgId }) => {
     if (!requireOrgViewer(req, res)) return;
     try {
-      const orgId = getOrgIdForRequest(req);
       const entity = await getBillingEntity(orgId, params.id);
       if (!entity) return sendError(res, 404, "NOT_FOUND", "Billing entity not found");
       sendJson(res, 200, { data: entity });
@@ -284,9 +268,8 @@ export function registerConfigRoutes(router: Router) {
   });
 
   // PATCH /billing-entities/:id
-  router.patch("/billing-entities/:id", async ({ req, res, prisma, params }) => {
+  router.patch("/billing-entities/:id", async ({ req, res, prisma, params, orgId }) => {
     try {
-      const orgId = getOrgIdForRequest(req);
       const current = await getOrgConfig(prisma, orgId);
       if (!requireGovernanceAccess(req, res, current.mode)) return;
 
@@ -310,9 +293,8 @@ export function registerConfigRoutes(router: Router) {
   });
 
   // DELETE /billing-entities/:id
-  router.delete("/billing-entities/:id", async ({ req, res, prisma, params }) => {
+  router.delete("/billing-entities/:id", async ({ req, res, prisma, params, orgId }) => {
     try {
-      const orgId = getOrgIdForRequest(req);
       const current = await getOrgConfig(prisma, orgId);
       if (!requireGovernanceAccess(req, res, current.mode)) return;
 

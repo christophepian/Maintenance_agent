@@ -2,7 +2,6 @@ import { Router } from "../http/router";
 import { sendError, sendJson } from "../http/json";
 import { readJson } from "../http/body";
 import { first, getIntParam } from "../http/query";
-import { getOrgIdForRequest } from "../authz";
 import { requireOrgViewer } from "./helpers";
 import { createLease, listLeases, getLease, updateLease, markLeaseReadyToSign, cancelLease, storeLeasePdfReference, storeSignedPdfReference, confirmDeposit, activateLease, terminateLease, archiveLease, createLeaseInvoice, listLeaseInvoices } from "../services/leases";
 import { createSignatureRequest, listSignatureRequests, getSignatureRequest, sendSignatureRequest, markSignatureRequestSigned } from "../services/signatureRequests";
@@ -11,10 +10,9 @@ import { CreateLeaseSchema, UpdateLeaseSchema, ReadyToSignSchema } from "../vali
 
 export function registerLeaseRoutes(router: Router) {
   // GET /leases
-  router.get("/leases", async ({ req, res, query }) => {
+  router.get("/leases", async ({ req, res, query, orgId }) => {
     if (!requireOrgViewer(req, res)) return;
     try {
-      const orgId = getOrgIdForRequest(req);
       const status = first(query, "status") || undefined;
       const unitId = first(query, "unitId") || undefined;
       const applicationId = first(query, "applicationId") || undefined;
@@ -28,10 +26,9 @@ export function registerLeaseRoutes(router: Router) {
   });
 
   // POST /leases
-  router.post("/leases", async ({ req, res }) => {
+  router.post("/leases", async ({ req, res, orgId }) => {
     if (!requireOrgViewer(req, res)) return;
     try {
-      const orgId = getOrgIdForRequest(req);
       const raw = await readJson(req);
       const parsed = CreateLeaseSchema.safeParse(raw);
       if (!parsed.success) return sendError(res, 400, "VALIDATION_ERROR", "Invalid lease data", parsed.error.flatten());
@@ -44,10 +41,9 @@ export function registerLeaseRoutes(router: Router) {
   });
 
   // GET /leases/:id
-  router.get("/leases/:id", async ({ req, res, params }) => {
+  router.get("/leases/:id", async ({ req, res, params, orgId }) => {
     if (!requireOrgViewer(req, res)) return;
     try {
-      const orgId = getOrgIdForRequest(req);
       const lease = await getLease(params.id, orgId);
       if (!lease) return sendError(res, 404, "NOT_FOUND", "Lease not found");
       sendJson(res, 200, { data: lease });
@@ -57,10 +53,9 @@ export function registerLeaseRoutes(router: Router) {
   });
 
   // PATCH /leases/:id
-  router.patch("/leases/:id", async ({ req, res, params }) => {
+  router.patch("/leases/:id", async ({ req, res, params, orgId }) => {
     if (!requireOrgViewer(req, res)) return;
     try {
-      const orgId = getOrgIdForRequest(req);
       const raw = await readJson(req);
       const parsed = UpdateLeaseSchema.safeParse(raw);
       if (!parsed.success) return sendError(res, 400, "VALIDATION_ERROR", "Invalid lease data", parsed.error.flatten());
@@ -74,10 +69,9 @@ export function registerLeaseRoutes(router: Router) {
   });
 
   // POST /leases/:id/generate-pdf
-  router.post("/leases/:id/generate-pdf", async ({ req, res, params }) => {
+  router.post("/leases/:id/generate-pdf", async ({ req, res, params, orgId }) => {
     if (!requireOrgViewer(req, res)) return;
     try {
-      const orgId = getOrgIdForRequest(req);
       const { buffer, sha256 } = await generateLeasePDF(params.id, orgId);
       const storageKey = `lease-pdf/${params.id}/${Date.now()}.pdf`;
       await storeLeasePdfReference(params.id, orgId, storageKey, sha256);
@@ -97,10 +91,9 @@ export function registerLeaseRoutes(router: Router) {
   });
 
   // POST /leases/:id/ready-to-sign
-  router.post("/leases/:id/ready-to-sign", async ({ req, res, params }) => {
+  router.post("/leases/:id/ready-to-sign", async ({ req, res, params, orgId }) => {
     if (!requireOrgViewer(req, res)) return;
     try {
-      const orgId = getOrgIdForRequest(req);
       const raw = await readJson(req);
       const parsed = ReadyToSignSchema.safeParse(raw);
       if (!parsed.success) return sendError(res, 400, "VALIDATION_ERROR", "Invalid data", parsed.error.flatten());
@@ -123,10 +116,9 @@ export function registerLeaseRoutes(router: Router) {
   });
 
   // POST /leases/:id/cancel
-  router.post("/leases/:id/cancel", async ({ req, res, params }) => {
+  router.post("/leases/:id/cancel", async ({ req, res, params, orgId }) => {
     if (!requireOrgViewer(req, res)) return;
     try {
-      const orgId = getOrgIdForRequest(req);
       const lease = await cancelLease(params.id, orgId);
       sendJson(res, 200, { data: lease });
     } catch (e: any) {
@@ -137,10 +129,9 @@ export function registerLeaseRoutes(router: Router) {
   });
 
   // POST /leases/:id/store-signed-pdf
-  router.post("/leases/:id/store-signed-pdf", async ({ req, res, params }) => {
+  router.post("/leases/:id/store-signed-pdf", async ({ req, res, params, orgId }) => {
     if (!requireOrgViewer(req, res)) return;
     try {
-      const orgId = getOrgIdForRequest(req);
       const raw = await readJson(req);
       if (!raw?.storageKey || !raw?.sha256) return sendError(res, 400, "VALIDATION_ERROR", "storageKey and sha256 are required");
       const lease = await storeSignedPdfReference(params.id, orgId, raw.storageKey, raw.sha256);
@@ -156,10 +147,9 @@ export function registerLeaseRoutes(router: Router) {
   });
 
   // POST /leases/:id/confirm-deposit
-  router.post("/leases/:id/confirm-deposit", async ({ req, res, params }) => {
+  router.post("/leases/:id/confirm-deposit", async ({ req, res, params, orgId }) => {
     if (!requireOrgViewer(req, res)) return;
     try {
-      const orgId = getOrgIdForRequest(req);
       const raw = await readJson(req);
       const lease = await confirmDeposit(params.id, orgId, raw || {});
       sendJson(res, 200, { data: lease });
@@ -174,10 +164,9 @@ export function registerLeaseRoutes(router: Router) {
   });
 
   // POST /leases/:id/activate
-  router.post("/leases/:id/activate", async ({ req, res, params }) => {
+  router.post("/leases/:id/activate", async ({ req, res, params, orgId }) => {
     if (!requireOrgViewer(req, res)) return;
     try {
-      const orgId = getOrgIdForRequest(req);
       const lease = await activateLease(params.id, orgId);
       sendJson(res, 200, { data: lease });
     } catch (e: any) {
@@ -188,10 +177,9 @@ export function registerLeaseRoutes(router: Router) {
   });
 
   // POST /leases/:id/terminate
-  router.post("/leases/:id/terminate", async ({ req, res, params }) => {
+  router.post("/leases/:id/terminate", async ({ req, res, params, orgId }) => {
     if (!requireOrgViewer(req, res)) return;
     try {
-      const orgId = getOrgIdForRequest(req);
       const raw = await readJson(req);
       if (!raw?.reason) return sendError(res, 400, "VALIDATION_ERROR", "reason is required");
       const lease = await terminateLease(params.id, orgId, raw);
@@ -207,10 +195,9 @@ export function registerLeaseRoutes(router: Router) {
   });
 
   // POST /leases/:id/archive
-  router.post("/leases/:id/archive", async ({ req, res, params }) => {
+  router.post("/leases/:id/archive", async ({ req, res, params, orgId }) => {
     if (!requireOrgViewer(req, res)) return;
     try {
-      const orgId = getOrgIdForRequest(req);
       const lease = await archiveLease(params.id, orgId);
       sendJson(res, 200, { data: lease });
     } catch (e: any) {
@@ -222,10 +209,9 @@ export function registerLeaseRoutes(router: Router) {
   });
 
   // GET /leases/:id/invoices
-  router.get("/leases/:id/invoices", async ({ req, res, params }) => {
+  router.get("/leases/:id/invoices", async ({ req, res, params, orgId }) => {
     if (!requireOrgViewer(req, res)) return;
     try {
-      const orgId = getOrgIdForRequest(req);
       const invoices = await listLeaseInvoices(params.id, orgId);
       sendJson(res, 200, { data: invoices });
     } catch (e: any) {
@@ -235,10 +221,9 @@ export function registerLeaseRoutes(router: Router) {
   });
 
   // POST /leases/:id/invoices
-  router.post("/leases/:id/invoices", async ({ req, res, params }) => {
+  router.post("/leases/:id/invoices", async ({ req, res, params, orgId }) => {
     if (!requireOrgViewer(req, res)) return;
     try {
-      const orgId = getOrgIdForRequest(req);
       const raw = await readJson(req);
       if (!raw?.type || !raw?.amountChf) return sendError(res, 400, "VALIDATION_ERROR", "type and amountChf are required");
       const invoice = await createLeaseInvoice(params.id, orgId, raw);
@@ -252,10 +237,9 @@ export function registerLeaseRoutes(router: Router) {
   /* ── Signature Requests ────────────────────────────────────── */
 
   // GET /signature-requests
-  router.get("/signature-requests", async ({ req, res, query }) => {
+  router.get("/signature-requests", async ({ req, res, query, orgId }) => {
     if (!requireOrgViewer(req, res)) return;
     try {
-      const orgId = getOrgIdForRequest(req);
       const entityType = first(query, "entityType") || undefined;
       const entityId = first(query, "entityId") || undefined;
       const status = first(query, "status") || undefined;
@@ -267,10 +251,9 @@ export function registerLeaseRoutes(router: Router) {
   });
 
   // GET /signature-requests/:id
-  router.get("/signature-requests/:id", async ({ req, res, params }) => {
+  router.get("/signature-requests/:id", async ({ req, res, params, orgId }) => {
     if (!requireOrgViewer(req, res)) return;
     try {
-      const orgId = getOrgIdForRequest(req);
       const sr = await getSignatureRequest(params.id, orgId);
       if (!sr) return sendError(res, 404, "NOT_FOUND", "Signature request not found");
       sendJson(res, 200, { data: sr });
@@ -280,10 +263,9 @@ export function registerLeaseRoutes(router: Router) {
   });
 
   // POST /signature-requests/:id/send
-  router.post("/signature-requests/:id/send", async ({ req, res, params }) => {
+  router.post("/signature-requests/:id/send", async ({ req, res, params, orgId }) => {
     if (!requireOrgViewer(req, res)) return;
     try {
-      const orgId = getOrgIdForRequest(req);
       const sr = await sendSignatureRequest(params.id, orgId);
       sendJson(res, 200, { data: sr });
     } catch (e: any) {
@@ -294,10 +276,9 @@ export function registerLeaseRoutes(router: Router) {
   });
 
   // POST /signature-requests/:id/mark-signed
-  router.post("/signature-requests/:id/mark-signed", async ({ req, res, params }) => {
+  router.post("/signature-requests/:id/mark-signed", async ({ req, res, params, orgId }) => {
     if (!requireOrgViewer(req, res)) return;
     try {
-      const orgId = getOrgIdForRequest(req);
       const sr = await markSignatureRequestSigned(params.id, orgId);
       sendJson(res, 200, { data: sr });
     } catch (e: any) {
