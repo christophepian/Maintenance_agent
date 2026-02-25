@@ -1,6 +1,6 @@
 # Maintenance Agent — Project State
 
-**Last updated:** 2026-02-25 (File audit cleanup — .bak files removed, 7 dev test pages archived, one-off scripts archived, COPILOT_PROMPTS archived, Testing nav link removed from AppShell)
+**Last updated:** 2026-02-25 (Committed `eac7db4` — guardrail audit fixes, file cleanup, 131 tests green, zero uncommitted changes)
 
 ---
 
@@ -981,7 +981,7 @@ What was added:
 Status:
 
 - All critical code changes completed and tested
-- All 109 unit tests passing ✅ (14 test suites: requests, auth, governance, inventory, jobs, invoices, notifications, billing, PDFs, QR bills, tenant session, triage, unit config cascade, IA)
+- All 131 tests passing ✅ (15 unit test suites + 1 contract test suite: requests, auth, governance, inventory, jobs, invoices, leases, notifications, billing, PDFs, QR bills, tenant session, triage, unit config cascade, IA, contracts)
 - Prisma migrations all applied (23 total)
 - Full end-to-end owner-direct workflow functional:
   1. Tenant submits request → 2. Owner approves → 3. Job auto-created → 4. Contractor manages job → 5. Invoice auto-created → 6. Owner approves/pays
@@ -994,8 +994,8 @@ Status:
 
 Automated audit of the entire project verified:
 - **Backend Build:** TypeScript compilation clean (0 errors)
-- **Frontend Build:** Next.js build successful (51 pages generated)
-- **Tests:** All 109 tests passing (14 suites covering full feature set)
+- **Frontend Build:** Next.js build successful (49 pages generated)
+- **Tests:** All 131 tests passing (16 suites covering full feature set)
 - **Database:** PostgreSQL running, 23 migrations applied, schema up-to-date
 - **Dependencies:** Minor updates available (non-blocking), no critical vulnerabilities
 - **Code Quality:** One deprecated component removed
@@ -1214,9 +1214,10 @@ Current tenant UI relies on manual category selection and free-text descriptions
 
 This document is the **single source of truth** and matches:
 
-* Filesystem (verified 2026-02-25, post-guardrail-audit)
+* Filesystem (verified 2026-02-25, post-file-audit — committed `eac7db4`)
 * Database schema — zero drift (`prisma migrate diff` clean)
 * Running system — all endpoints return 200 (verified 2026-02-25)
+* Git — clean working tree, all changes committed
 * Architectural intent
 * CI pipeline enforces G1–G10 guardrails
 
