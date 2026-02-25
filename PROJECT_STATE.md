@@ -1,6 +1,6 @@
 # Maintenance Agent — Project State
 
-**Last updated:** 2026-02-25 (Committed `0a459a2` — M4 Domain Events + Idempotent Workflow, 172 tests green, zero uncommitted changes)
+**Last updated:** 2026-02-25 (Committed `7661aec` — M5 OpenAPI + Typed Client, 178 tests green, zero uncommitted changes, Architecture Hardening epic COMPLETE)
 
 ---
 
@@ -360,6 +360,7 @@ Maintenance_Agent/
 ├── infra/
 │   └── docker-compose.yml
 └── packages/
+    └── api-client/        # typed API client (DTO types + fetch-based methods)
 ```
 
 ---
@@ -984,7 +985,7 @@ What was added:
 Status:
 
 - All critical code changes completed and tested
-- All 172 tests passing ✅ (18 unit test suites + 1 contract test suite: requests, auth, governance, inventory, jobs, invoices, leases, notifications, billing, PDFs, QR bills, tenant session, triage, unit config cascade, IA, orgIsolation, httpErrors, domainEvents, contracts)
+- All 178 tests passing ✅ (19 unit test suites + 1 contract test suite: requests, auth, governance, inventory, jobs, invoices, leases, notifications, billing, PDFs, QR bills, tenant session, triage, unit config cascade, IA, orgIsolation, httpErrors, domainEvents, openApiSync, contracts)
 - Prisma migrations all applied (23 total)
 - Full end-to-end owner-direct workflow functional:
   1. Tenant submits request → 2. Owner approves → 3. Job auto-created → 4. Contractor manages job → 5. Invoice auto-created → 6. Owner approves/pays
@@ -998,7 +999,7 @@ Status:
 Automated audit of the entire project verified:
 - **Backend Build:** TypeScript compilation clean (0 errors)
 - **Frontend Build:** Next.js build successful (49 pages generated)
-- **Tests:** All 172 tests passing (19 suites covering full feature set)
+- **Tests:** All 178 tests passing (20 suites covering full feature set)
 - **Database:** PostgreSQL running, 23 migrations applied, schema up-to-date
 - **Dependencies:** Minor updates available (non-blocking), no critical vulnerabilities
 - **Code Quality:** One deprecated component removed
@@ -1172,7 +1173,17 @@ If you still see stale UI after pulling changes, restart both dev servers and ha
 - New `__tests__/domainEvents.test.ts`: 11 unit tests covering bus mechanics
 - Existing `logEvent()` calls remain — new code can use typed `emit()` instead
 - Verification: tsc 0 errors, 172 tests pass (18 suites), 0 schema drift, frontend build clean
-**M5: OpenAPI + Typed Client** — Not started
+**M5: OpenAPI + Typed Client** ✅ (Committed `7661aec`)
+- `apps/api/openapi.yaml`: comprehensive OpenAPI 3.1 specification covering all 116+ registered routes across 14 tags (Auth, Requests, Jobs, Invoices, Leases, SignatureRequests, Config, ApprovalRules, BillingEntities, Inventory, Tenants, Notifications, Dev)
+- Full DTO schemas: MaintenanceRequestDTO, JobDTO, InvoiceDTO, LeaseDTO, ContractorDTO, TenantDTO, BuildingDTO, UnitDTO, ApplianceDTO, NotificationDTO, ApprovalRuleDTO, BillingEntityDTO, + all enums (RequestStatus, JobStatus, InvoiceStatus, LeaseStatus, etc.)
+- ErrorResponse envelope schema with reusable response references (NotFound, ValidationError, Forbidden)
+- `packages/api-client/`: zero-dependency fetch-based typed API client
+  - All DTO types exported as TypeScript interfaces
+  - Namespace-organized methods: `api.requests.*`, `api.jobs.*`, `api.invoices.*`, `api.leases.*`, etc.
+  - `ApiClientError` with status, code, message for structured error handling
+  - Supports pagination params, binary responses (PDF/PNG)
+- New `__tests__/openApiSync.test.ts`: 6 tests ensuring bidirectional sync between spec and router registrations (code→spec, spec→code, unique operationIds, required DTO schemas)
+- Verification: tsc 0 errors, 178 tests pass (19 suites), 0 schema drift, frontend build clean, api-client typecheck clean
 
 ### Not Implemented Yet (Active Backlog)
 
