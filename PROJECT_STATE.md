@@ -1,6 +1,6 @@
 # Maintenance Agent — Project State
 
-**Last updated:** 2026-02-25 (Committed `a3e3dab` — M1 Org Scoping Enforcement Framework, 148 tests green, zero uncommitted changes)
+**Last updated:** 2026-02-25 (Committed `3a477cc` — M2 Centralized Auth Enforcement, 148 tests green, zero uncommitted changes)
 
 ---
 
@@ -1144,7 +1144,16 @@ If you still see stale UI after pulling changes, restart both dev servers and ha
 - **Remaining DEFAULT_ORG_ID:** only in `routes/auth.ts` (6 occurrences) — deferred to M2
 - Verification: tsc 0 errors, 148 tests pass (17 suites), 0 schema drift, frontend build clean
 
-**M2: Centralized Auth Enforcement** — Not started
+**M2: Centralized Auth Enforcement** ✅ (Committed `3a477cc`)
+- Eliminated all redundant `getOrgIdForRequest(req)` calls from route files; orgId now sourced exclusively from `HandlerContext` (populated by `server.ts` at dispatch)
+- `routes/auth.ts`: removed `DEFAULT_ORG_ID` + `getOrgIdForRequest` imports; 9 handlers → ctx.orgId
+- `routes/invoices.ts`: removed `getOrgIdForRequest` import; 16 handlers → ctx.orgId
+- `routes/leases.ts`: removed `getOrgIdForRequest` import; 20 handlers → ctx.orgId
+- `routes/config.ts`: removed `getOrgIdForRequest` import; 16 handlers → ctx.orgId
+- `getOrgIdForRequest` now only called in `server.ts` (canonical) and defined in `authz.ts`
+- No route file imports `getOrgIdForRequest` or `DEFAULT_ORG_ID` anymore
+- Net reduction: 56 lines of redundant code removed (4 files, 62 insertions / 118 deletions)
+- Verification: tsc 0 errors, 148 tests pass (16 suites), 0 schema drift, frontend build clean
 **M3: Internal Middleware & Error Standardization** — Not started
 **M4: Domain Events + Idempotent Workflow** — Not started
 **M5: OpenAPI + Typed Client** — Not started
@@ -1158,7 +1167,7 @@ If you still see stale UI after pulling changes, restart both dev servers and ha
 * Media uploads (photos of damage, documents)
 * Tenant portal redesign (conversational → structured)
 * Reporting & analytics dashboard
-* Multi-org support (org scoping framework in place via M1; DEFAULT_ORG_ID remains in auth.ts)
+* Multi-org support (org scoping via M1; auth centralized via M2; DEFAULT_ORG_ID remains only in authz.ts fallback + orgConfig.ts bootstrap + tests)
 
 ---
 
