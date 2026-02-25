@@ -3,6 +3,8 @@ import { PrismaClient } from "@prisma/client";
 import { AuthedRequest } from "../authz";
 import { QueryParams } from "./query";
 import { sendError } from "./json";
+import { HttpError } from "./errors";
+import { OrgScopeMismatchError } from "../governance/orgScope";
 
 /* ─────────────────────────── Types ─────────────────────────── */
 
@@ -157,10 +159,14 @@ export class Router {
       try {
         await route.handler({ req, res, path, query, orgId, prisma, params });
       } catch (err: any) {
-        console.error(`[ROUTE ERROR] ${route.label}:`, err);
         if (res.headersSent) {
           res.end();
+        } else if (err instanceof HttpError) {
+          sendError(res, err.status, err.code, err.message, err.details);
+        } else if (err instanceof OrgScopeMismatchError) {
+          sendError(res, 403, "FORBIDDEN", "Access denied: org scope mismatch");
         } else {
+          console.error(`[ROUTE ERROR] ${route.label}:`, err);
           sendError(res, 500, "INTERNAL_ERROR", "Internal server error");
         }
       }
