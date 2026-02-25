@@ -5,7 +5,7 @@ import { first } from "../http/query";
 import { getAuthUser, getOrgIdForRequest } from "../authz";
 import { requireOrgViewer, requireOwnerAccess, logEvent } from "./helpers";
 import { createJob, getJob, listJobs, updateJob } from "../services/jobs";
-import { createInvoice, getInvoice, listInvoices, approveInvoice, markInvoicePaid, disputeInvoice, issueInvoice } from "../services/invoices";
+import { createInvoice, getInvoice, listInvoices, approveInvoice, markInvoicePaid, disputeInvoice, issueInvoice, getOrCreateInvoiceForJob } from "../services/invoices";
 import { CreateInvoiceSchema } from "../validation/invoices";
 import { generateInvoiceQRBill, getInvoiceQRCodePNG } from "../services/invoiceQRBill";
 import { generateInvoicePDF } from "../services/invoicePDF";
@@ -29,8 +29,9 @@ export function registerInvoiceRoutes(router: Router) {
   router.get("/jobs/:id", async ({ req, res, params }) => {
     if (!requireOrgViewer(req, res)) return;
     try {
+      const orgId = getOrgIdForRequest(req);
       const job = await getJob(params.id);
-      if (!job) return sendError(res, 404, "NOT_FOUND", "Job not found");
+      if (!job || job.orgId !== orgId) return sendError(res, 404, "NOT_FOUND", "Job not found");
       sendJson(res, 200, { data: job });
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to load job", String(e));
@@ -53,10 +54,10 @@ export function registerInvoiceRoutes(router: Router) {
         completedAt: raw.completedAt ? new Date(raw.completedAt) : undefined,
       });
 
-      // Auto-create invoice when job is marked COMPLETED
+      // Auto-create invoice when job is marked COMPLETED (idempotent)
       if (raw.status === "COMPLETED" && job.status !== "COMPLETED" && updated.actualCost) {
         try {
-          await createInvoice({ orgId, jobId: params.id, amount: updated.actualCost });
+          await getOrCreateInvoiceForJob(orgId, params.id, updated.actualCost);
         } catch (err) {
           console.warn("Failed to auto-create invoice for job", params.id, err);
         }

@@ -6,7 +6,6 @@ import { maybeRequireManager } from "../authz";
 import { normalizePhoneToE164 } from "../utils/phoneNormalization";
 import { getTenantByPhone, createOrGetTenant, updateTenant, deactivateTenant, listTenants, getTenantById } from "../services/tenants";
 import { listContractors, createContractor, getContractorById, updateContractor, deactivateContractor } from "../services/contractorRequests";
-import { DEFAULT_ORG_ID } from "../services/orgConfig";
 
 export function registerTenantRoutes(router: Router) {
   // GET /tenants
@@ -44,10 +43,10 @@ export function registerTenantRoutes(router: Router) {
   });
 
   // GET /tenants/:id
-  router.get("/tenants/:id", async ({ res, params }) => {
+  router.get("/tenants/:id", async ({ res, params, orgId }) => {
     try {
       const tenant = await getTenantById(params.id);
-      if (!tenant) return sendError(res, 404, "NOT_FOUND", "Tenant not found");
+      if (!tenant || tenant.orgId !== orgId) return sendError(res, 404, "NOT_FOUND", "Tenant not found");
       sendJson(res, 200, { data: tenant });
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to fetch tenant", String(e));
@@ -88,9 +87,9 @@ export function registerTenantRoutes(router: Router) {
   });
 
   // GET /contractors
-  router.get("/contractors", async ({ res, prisma }) => {
+  router.get("/contractors", async ({ res, prisma, orgId }) => {
     try {
-      const contractors = await listContractors(prisma, DEFAULT_ORG_ID);
+      const contractors = await listContractors(prisma, orgId);
       sendJson(res, 200, { data: contractors });
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to fetch contractors", String(e));
@@ -98,11 +97,11 @@ export function registerTenantRoutes(router: Router) {
   });
 
   // POST /contractors
-  router.post("/contractors", async ({ req, res, prisma }) => {
+  router.post("/contractors", async ({ req, res, prisma, orgId }) => {
     if (!maybeRequireManager(req, res)) return;
     try {
       const raw = await readJson(req);
-      const contractor = await createContractor(prisma, DEFAULT_ORG_ID, raw);
+      const contractor = await createContractor(prisma, orgId, raw);
       sendJson(res, 201, { data: contractor });
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to create contractor", String(e));
@@ -110,10 +109,13 @@ export function registerTenantRoutes(router: Router) {
   });
 
   // GET /contractors/:id
-  router.get("/contractors/:id", async ({ res, prisma, params }) => {
+  router.get("/contractors/:id", async ({ res, prisma, params, orgId }) => {
     try {
       const contractor = await getContractorById(prisma, params.id);
       if (!contractor) return sendError(res, 404, "NOT_FOUND", "Contractor not found");
+      // Verify org ownership via raw lookup (DTO omits orgId)
+      const raw = await prisma.contractor.findUnique({ where: { id: params.id }, select: { orgId: true } });
+      if (raw?.orgId !== orgId) return sendError(res, 404, "NOT_FOUND", "Contractor not found");
       sendJson(res, 200, { data: contractor });
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to fetch contractor", String(e));
@@ -121,11 +123,14 @@ export function registerTenantRoutes(router: Router) {
   });
 
   // PATCH /contractors/:id
-  router.patch("/contractors/:id", async ({ req, res, prisma, params }) => {
+  router.patch("/contractors/:id", async ({ req, res, prisma, params, orgId }) => {
     if (!maybeRequireManager(req, res)) return;
     try {
-      const raw = await readJson(req);
-      const contractor = await updateContractor(prisma, params.id, raw);
+      // Verify org ownership before updating
+      const raw = await prisma.contractor.findUnique({ where: { id: params.id }, select: { orgId: true } });
+      if (!raw || raw.orgId !== orgId) return sendError(res, 404, "NOT_FOUND", "Contractor not found");
+      const body = await readJson(req);
+      const contractor = await updateContractor(prisma, params.id, body);
       if (!contractor) return sendError(res, 404, "NOT_FOUND", "Contractor not found");
       sendJson(res, 200, { data: contractor });
     } catch (e) {
@@ -134,9 +139,12 @@ export function registerTenantRoutes(router: Router) {
   });
 
   // DELETE /contractors/:id
-  router.delete("/contractors/:id", async ({ req, res, prisma, params }) => {
+  router.delete("/contractors/:id", async ({ req, res, prisma, params, orgId }) => {
     if (!maybeRequireManager(req, res)) return;
     try {
+      // Verify org ownership before deactivating
+      const raw = await prisma.contractor.findUnique({ where: { id: params.id }, select: { orgId: true } });
+      if (!raw || raw.orgId !== orgId) return sendError(res, 404, "NOT_FOUND", "Contractor not found");
       const success = await deactivateContractor(prisma, params.id);
       if (!success) return sendError(res, 404, "NOT_FOUND", "Contractor not found");
       sendJson(res, 200, { message: "Contractor deactivated" });

@@ -1,4 +1,22 @@
-import { PrismaClient, RequestStatus } from "@prisma/client";
+import { PrismaClient, Prisma, RequestStatus } from "@prisma/client";
+
+/**
+ * Build a Prisma WHERE clause that scopes Requests to a given org.
+ *
+ * Since Request has no orgId column we filter through its nullable
+ * FK chains: unit.orgId OR tenant.orgId OR appliance.orgId OR
+ * assignedContractor.orgId.
+ */
+function orgScopeWhere(orgId: string): Prisma.RequestWhereInput {
+  return {
+    OR: [
+      { unit: { orgId } },
+      { tenant: { orgId } },
+      { appliance: { orgId } },
+      { assignedContractor: { orgId } },
+    ],
+  };
+}
 
 export type MaintenanceRequestDTO = {
   id: string;
@@ -134,9 +152,11 @@ function toDTO(r: any): MaintenanceRequestDTO {
 
 export async function listMaintenanceRequests(
   prisma: PrismaClient,
+  orgId: string,
   opts: ListOpts
 ): Promise<MaintenanceRequestDTO[]> {
   const rows = await prisma.request.findMany({
+    where: orgScopeWhere(orgId),
     orderBy: { createdAt: opts.order },
     take: opts.limit,
     skip: opts.offset,
@@ -148,11 +168,14 @@ export async function listMaintenanceRequests(
 
 export async function listOwnerPendingApprovals(
   prisma: PrismaClient,
+  orgId: string,
   opts: { buildingId?: string }
 ): Promise<MaintenanceRequestDTO[]> {
+  const baseWhere = orgScopeWhere(orgId);
+
   const where = opts.buildingId
-    ? { status: RequestStatus.PENDING_OWNER_APPROVAL, unit: { buildingId: opts.buildingId } }
-    : { status: RequestStatus.PENDING_OWNER_APPROVAL };
+    ? { ...baseWhere, status: RequestStatus.PENDING_OWNER_APPROVAL, unit: { buildingId: opts.buildingId, orgId } }
+    : { ...baseWhere, status: RequestStatus.PENDING_OWNER_APPROVAL };
 
   const rows = await prisma.request.findMany({
     where,

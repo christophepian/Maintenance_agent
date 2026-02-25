@@ -34,7 +34,6 @@ import { CreateApplianceSchema, UpdateApplianceSchema } from "../validation/appl
 import { CreateAssetModelSchema, UpdateAssetModelSchema } from "../validation/assetModels";
 import { LinkTenantSchema } from "../validation/occupancies";
 import { normalizePhoneToE164 } from "../utils/phoneNormalization";
-import { DEFAULT_ORG_ID } from "../services/orgConfig";
 
 export function registerInventoryRoutes(router: Router) {
   /* ── Properties (alias over Buildings) ─────────────────────── */

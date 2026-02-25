@@ -3,8 +3,9 @@ import { Router, HandlerContext } from "../http/router";
 import { sendError, sendJson } from "../http/json";
 import { readJson } from "../http/body";
 import { first, getIntParam, getEnumParam } from "../http/query";
-import { getAuthUser, getOrgIdForRequest, maybeRequireManager, requireRole } from "../authz";
+import { getAuthUser, maybeRequireManager, requireRole } from "../authz";
 import { requireOwnerAccess, logEvent } from "./helpers";
+import { resolveRequestOrg, assertOrgScope, OrgScopeMismatchError } from "../governance/orgScope";
 import { UpdateRequestStatusSchema } from "../validation/requestStatus";
 import { AssignContractorSchema } from "../validation/requestAssignment";
 import { CreateRequestSchema, CreateRequestInput } from "../validation/requests";
@@ -21,7 +22,7 @@ import { updateContractorRequestStatus, getContractorAssignedRequests } from "..
 import { decideRequestStatus, decideRequestStatusWithRules } from "../services/autoApproval";
 import { normalizePhoneToE164 } from "../utils/phoneNormalization";
 import { getTenantByPhone } from "../services/tenants";
-import { DEFAULT_ORG_ID, getOrgConfig } from "../services/orgConfig";
+import { getOrgConfig } from "../services/orgConfig";
 import { computeEffectiveConfig } from "../services/buildingConfig";
 import { workRequestFromRequest } from "../services/adapters/workRequestAdapter";
 import { createJob } from "../services/jobs";
@@ -152,7 +153,11 @@ export function registerRequestRoutes(router: Router) {
 
   /* ── Request events ────────────────────────────────────────── */
 
-  router.get("/requests/:id/events", async ({ res, prisma, params }) => {
+  router.get("/requests/:id/events", async ({ res, prisma, params, orgId }) => {
+    const resolution = await resolveRequestOrg(prisma, params.id);
+    try { assertOrgScope(orgId, resolution); } catch {
+      return sendError(res, 404, "NOT_FOUND", "Request not found");
+    }
     const events = await prisma.requestEvent.findMany({
       where: { requestId: params.id },
       orderBy: { timestamp: "asc" },
@@ -160,7 +165,11 @@ export function registerRequestRoutes(router: Router) {
     sendJson(res, 200, { data: events });
   });
 
-  router.post("/requests/:id/events", async ({ req, res, prisma, params }) => {
+  router.post("/requests/:id/events", async ({ req, res, prisma, params, orgId }) => {
+    const resolution = await resolveRequestOrg(prisma, params.id);
+    try { assertOrgScope(orgId, resolution); } catch {
+      return sendError(res, 404, "NOT_FOUND", "Request not found");
+    }
     const raw = await readJson(req);
     const { contractorId, type, message } = raw;
     if (!contractorId || !type || !message) {
@@ -179,20 +188,24 @@ export function registerRequestRoutes(router: Router) {
 
   /* ── Owner approvals ───────────────────────────────────────── */
 
-  router.get("/owner/pending-approvals", async ({ req, res, prisma, query }) => {
+  router.get("/owner/pending-approvals", async ({ req, res, prisma, query, orgId }) => {
     if (!requireOwnerAccess(req, res)) return;
     const buildingId = first(query, "buildingId") || undefined;
-    const data = await listOwnerPendingApprovals(prisma, { buildingId });
+    const data = await listOwnerPendingApprovals(prisma, orgId, { buildingId });
     sendJson(res, 200, { data });
   });
 
-  router.post("/requests/:id/owner-approve", async ({ req, res, prisma, params }) => {
+  router.post("/requests/:id/owner-approve", async ({ req, res, prisma, params, orgId }) => {
     if (!requireOwnerAccess(req, res)) return;
     const requestId = params.id;
+    // Verify org scope
+    const resolution = await resolveRequestOrg(prisma, requestId);
+    try { assertOrgScope(orgId, resolution); } catch {
+      return sendError(res, 404, "NOT_FOUND", "Request not found");
+    }
     const raw = await readJson(req);
     const current = await prisma.request.findUnique({ where: { id: requestId } });
     if (!current) return sendError(res, 404, "NOT_FOUND", "Request not found");
-    const orgId = getOrgIdForRequest(req);
 
     // If already approved, just ensure job exists
     if (current.status === RequestStatus.APPROVED) {
@@ -229,9 +242,14 @@ export function registerRequestRoutes(router: Router) {
     sendJson(res, 200, { data: updated });
   });
 
-  router.post("/requests/:id/owner-reject", async ({ req, res, prisma, params }) => {
+  router.post("/requests/:id/owner-reject", async ({ req, res, prisma, params, orgId }) => {
     if (!requireOwnerAccess(req, res)) return;
     const requestId = params.id;
+    // Verify org scope
+    const resolution = await resolveRequestOrg(prisma, requestId);
+    try { assertOrgScope(orgId, resolution); } catch {
+      return sendError(res, 404, "NOT_FOUND", "Request not found");
+    }
     const raw = await readJson(req);
     const current = await prisma.request.findUnique({ where: { id: requestId } });
     if (!current) return sendError(res, 404, "NOT_FOUND", "Request not found");
@@ -245,7 +263,7 @@ export function registerRequestRoutes(router: Router) {
 
     const actor = getAuthUser(req);
     await logEvent(prisma, {
-      orgId: getOrgIdForRequest(req), type: "OWNER_REJECTED",
+      orgId, type: "OWNER_REJECTED",
       actorUserId: actor?.userId, requestId,
       payload: { reason: raw?.reason || null },
     });
@@ -255,7 +273,13 @@ export function registerRequestRoutes(router: Router) {
 
   /* ── Status update ─────────────────────────────────────────── */
 
-  router.patch("/requests/:id/status", async ({ req, res, prisma, query, params }) => {
+  router.patch("/requests/:id/status", async ({ req, res, prisma, query, params, orgId }) => {
+    // Verify org scope
+    const resolution = await resolveRequestOrg(prisma, params.id);
+    try { assertOrgScope(orgId, resolution); } catch {
+      return sendError(res, 404, "NOT_FOUND", "Request not found");
+    }
+
     const raw = await readJson(req);
     const parsed = UpdateRequestStatusSchema.safeParse(raw);
     if (!parsed.success) return sendError(res, 400, "VALIDATION_ERROR", "Invalid status update", parsed.error.flatten());
@@ -301,8 +325,13 @@ export function registerRequestRoutes(router: Router) {
 
   /* ── Assignment ────────────────────────────────────────────── */
 
-  router.post("/requests/:id/assign", async ({ req, res, prisma, params }) => {
+  router.post("/requests/:id/assign", async ({ req, res, prisma, params, orgId }) => {
     if (!maybeRequireManager(req, res)) return;
+    // Verify org scope
+    const resolution = await resolveRequestOrg(prisma, params.id);
+    try { assertOrgScope(orgId, resolution); } catch {
+      return sendError(res, 404, "NOT_FOUND", "Request not found");
+    }
     const raw = await readJson(req);
     const parsed = AssignContractorSchema.safeParse(raw);
     if (!parsed.success) return sendError(res, 400, "VALIDATION_ERROR", "Invalid assignment data", parsed.error.flatten());
@@ -315,8 +344,13 @@ export function registerRequestRoutes(router: Router) {
     sendJson(res, 200, { data: updated, message: result.message });
   });
 
-  router.delete("/requests/:id/assign", async ({ req, res, prisma, params }) => {
+  router.delete("/requests/:id/assign", async ({ req, res, prisma, params, orgId }) => {
     if (!maybeRequireManager(req, res)) return;
+    // Verify org scope
+    const resolution = await resolveRequestOrg(prisma, params.id);
+    try { assertOrgScope(orgId, resolution); } catch {
+      return sendError(res, 404, "NOT_FOUND", "Request not found");
+    }
     const result = await unassignContractor(prisma, params.id);
     const updated = await getMaintenanceRequestById(prisma, params.id);
     if (!updated) return sendError(res, 404, "NOT_FOUND", "Request not found");
@@ -325,24 +359,33 @@ export function registerRequestRoutes(router: Router) {
 
   /* ── Suggest contractor ────────────────────────────────────── */
 
-  router.get("/requests/:id/suggest-contractor", async ({ res, prisma, params }) => {
+  router.get("/requests/:id/suggest-contractor", async ({ res, prisma, params, orgId }) => {
+    const resolution = await resolveRequestOrg(prisma, params.id);
+    try { assertOrgScope(orgId, resolution); } catch {
+      return sendError(res, 404, "NOT_FOUND", "Request not found");
+    }
     const reqRow = await prisma.request.findUnique({ where: { id: params.id } });
     if (!reqRow) return sendError(res, 404, "NOT_FOUND", "Request not found");
     if (!reqRow.category) return sendJson(res, 200, { data: null });
-    const contractor = await findMatchingContractor(prisma, DEFAULT_ORG_ID, reqRow.category);
+    const contractor = await findMatchingContractor(prisma, orgId, reqRow.category);
     sendJson(res, 200, { data: contractor });
   });
 
-  router.get("/contractors/match", async ({ res, prisma, query }) => {
+  router.get("/contractors/match", async ({ res, prisma, query, orgId }) => {
     const category = first(query, "category");
     if (!category) return sendError(res, 400, "VALIDATION_ERROR", "Category required");
-    const contractor = await findMatchingContractor(prisma, DEFAULT_ORG_ID, category);
+    const contractor = await findMatchingContractor(prisma, orgId, category);
     sendJson(res, 200, { data: contractor });
   });
 
   /* ── Single request ────────────────────────────────────────── */
 
-  router.get("/requests/:id", async ({ res, prisma, params }) => {
+  router.get("/requests/:id", async ({ res, prisma, params, orgId }) => {
+    // Verify org ownership
+    const resolution = await resolveRequestOrg(prisma, params.id);
+    try { assertOrgScope(orgId, resolution); } catch {
+      return sendError(res, 404, "NOT_FOUND", "Request not found");
+    }
     const found = await getMaintenanceRequestById(prisma, params.id);
     if (!found) return sendError(res, 404, "NOT_FOUND", "Request not found");
     sendJson(res, 200, { data: found });
@@ -350,40 +393,49 @@ export function registerRequestRoutes(router: Router) {
 
   /* ── Contractor requests ───────────────────────────────────── */
 
-  router.get("/requests/contractor/:contractorId", async ({ res, prisma, params }) => {
+  router.get("/requests/contractor/:contractorId", async ({ res, prisma, params, orgId }) => {
+    // Verify contractor belongs to caller's org
+    const c = await prisma.contractor.findUnique({ where: { id: params.contractorId }, select: { orgId: true } });
+    if (!c || c.orgId !== orgId) return sendError(res, 404, "NOT_FOUND", "Contractor not found");
     const requests = await getContractorAssignedRequests(prisma, params.contractorId);
     sendJson(res, 200, { data: requests });
   });
 
-  router.get("/requests/contractor", async ({ res, prisma, query }) => {
+  router.get("/requests/contractor", async ({ res, prisma, query, orgId }) => {
     const cid = first(query, "contractorId");
     if (!cid) return sendError(res, 400, "VALIDATION_ERROR", "Missing contractorId");
+    const c = await prisma.contractor.findUnique({ where: { id: cid }, select: { orgId: true } });
+    if (!c || c.orgId !== orgId) return sendError(res, 404, "NOT_FOUND", "Contractor not found");
     const requests = await getContractorAssignedRequests(prisma, cid);
     sendJson(res, 200, { data: requests });
   });
 
   /* ── List requests ─────────────────────────────────────────── */
 
-  router.get("/requests", async ({ res, prisma, query }) => {
+  router.get("/requests", async ({ res, prisma, query, orgId }) => {
     const limit = getIntParam(query, "limit", { defaultValue: 50, min: 1, max: 200 });
     const offset = getIntParam(query, "offset", { defaultValue: 0, min: 0, max: 1_000_000 });
     const order = getEnumParam(query, "order", ["asc", "desc"] as const, "asc");
-    const data = await listMaintenanceRequests(prisma, { limit, offset, order });
+    const data = await listMaintenanceRequests(prisma, orgId, { limit, offset, order });
     sendJson(res, 200, { data });
   });
 
   /* ── Work requests (aliases) ───────────────────────────────── */
 
-  router.get("/work-requests", async ({ res, prisma, query }) => {
+  router.get("/work-requests", async ({ res, prisma, query, orgId }) => {
     const limit = getIntParam(query, "limit", { defaultValue: 50, min: 1, max: 200 });
     const offset = getIntParam(query, "offset", { defaultValue: 0, min: 0, max: 1_000_000 });
     const order = getEnumParam(query, "order", ["asc", "desc"] as const, "asc");
-    const data = await listMaintenanceRequests(prisma, { limit, offset, order });
+    const data = await listMaintenanceRequests(prisma, orgId, { limit, offset, order });
     const workRequests = data.map(workRequestFromRequest);
     sendJson(res, 200, { data: workRequests });
   });
 
-  router.get("/work-requests/:id", async ({ res, prisma, params }) => {
+  router.get("/work-requests/:id", async ({ res, prisma, params, orgId }) => {
+    const resolution = await resolveRequestOrg(prisma, params.id);
+    try { assertOrgScope(orgId, resolution); } catch {
+      return sendError(res, 404, "NOT_FOUND", "Work request not found");
+    }
     const request = await getMaintenanceRequestById(prisma, params.id);
     if (!request) return sendError(res, 404, "NOT_FOUND", "Work request not found");
     sendJson(res, 200, { data: workRequestFromRequest(request) });
