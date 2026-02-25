@@ -1,6 +1,6 @@
 # Maintenance Agent — Project State
 
-**Last updated:** 2026-02-25 (Committed `eac7db4` — guardrail audit fixes, file cleanup, 131 tests green, zero uncommitted changes)
+**Last updated:** 2026-02-25 (Committed `a3e3dab` — M1 Org Scoping Enforcement Framework, 148 tests green, zero uncommitted changes)
 
 ---
 
@@ -167,12 +167,13 @@ When `NODE_ENV=production`:
 - Server must **refuse to boot** if either condition is violated
 - Sensitive routes must use `requireAuth()` and `requireRole(...)` — no bypass in production paths
 
-### F2: Org Scoping Must Be Explicit
+### F2: Org Scoping Must Be Explicit ✅ (M1 implemented)
 Because `Request` has no `orgId` and multi-org is planned:
 - All read/write operations for Requests, Jobs, Invoices, Leases, and Inventory must
   explicitly enforce org scope via join or helper function
-- Add cross-org isolation tests when multi-org lands
-- No implicit org assumptions in query logic
+- Add cross-org isolation tests when multi-org lands → **Done:** `orgIsolation.test.ts` (22 tests)
+- No implicit org assumptions in query logic → **Done:** `governance/orgScope.ts` resolvers + `assertOrgScope`
+- Remaining: `DEFAULT_ORG_ID` in `routes/auth.ts` (M2 scope)
 
 ### F3: Proxy Layer Must Be Transparent
 Next.js API proxy routes must:
@@ -324,6 +325,7 @@ Maintenance_Agent/
 │   │       ├── server.ts
 │   │       ├── auth.ts
 │   │       ├── __tests__/
+│   │       ├── governance/        # orgScope.ts — org isolation resolvers & assertion
 │   │       ├── services/          # jobs, invoices, contractors, inventory, tenants, requests, assignments
 │   │       ├── validation/        # invoices, requests, contractors, inventory, auth, triage
 │   │       ├── utils/             # phone normalization
@@ -981,7 +983,7 @@ What was added:
 Status:
 
 - All critical code changes completed and tested
-- All 131 tests passing ✅ (15 unit test suites + 1 contract test suite: requests, auth, governance, inventory, jobs, invoices, leases, notifications, billing, PDFs, QR bills, tenant session, triage, unit config cascade, IA, contracts)
+- All 148 tests passing ✅ (16 unit test suites + 1 contract test suite: requests, auth, governance, inventory, jobs, invoices, leases, notifications, billing, PDFs, QR bills, tenant session, triage, unit config cascade, IA, orgIsolation, contracts)
 - Prisma migrations all applied (23 total)
 - Full end-to-end owner-direct workflow functional:
   1. Tenant submits request → 2. Owner approves → 3. Job auto-created → 4. Contractor manages job → 5. Invoice auto-created → 6. Owner approves/pays
@@ -995,7 +997,7 @@ Status:
 Automated audit of the entire project verified:
 - **Backend Build:** TypeScript compilation clean (0 errors)
 - **Frontend Build:** Next.js build successful (49 pages generated)
-- **Tests:** All 131 tests passing (16 suites covering full feature set)
+- **Tests:** All 148 tests passing (17 suites covering full feature set)
 - **Database:** PostgreSQL running, 23 migrations applied, schema up-to-date
 - **Dependencies:** Minor updates available (non-blocking), no critical vulnerabilities
 - **Code Quality:** One deprecated component removed
@@ -1129,16 +1131,34 @@ If you still see stale UI after pulling changes, restart both dev servers and ha
   * **Tests:** 22 passing integration tests in `test-tenant-portal.sh` (DRAFT hidden, param validation, READY_TO_SIGN visible, detail correctness, wrong-tenant 403, accept flow, SIGNED state, re-accept 409)
   * Status: **Implementation complete, all tests passing, TS compiles, frontend builds clean** ✅
 
+### Architecture Hardening (Feb 25, 2026)
+
+**M1: Org Scoping Enforcement Framework** ✅ (Committed `a3e3dab`)
+- New `governance/orgScope.ts`: resolveRequestOrg (FK chain traversal: unit→tenant→appliance→contractor), resolveJobOrg, resolveInvoiceOrg, resolveLeaseOrg, assertOrgScope with OrgScopeMismatchError
+- `maintenanceRequests.ts`: orgScopeWhere filter for list queries; listMaintenanceRequests & listOwnerPendingApprovals now require orgId param
+- `routes/requests.ts`: all 15+ endpoints org-scoped via resolveRequestOrg + assertOrgScope; contractor routes verify contractor.orgId; removed DEFAULT_ORG_ID and getOrgIdForRequest imports
+- `routes/tenants.ts`: tenant/contractor reads verify orgId; contractor CRUD uses ctx.orgId; removed DEFAULT_ORG_ID
+- `routes/invoices.ts`: GET /jobs/:id checks job.orgId; idempotent getOrCreateInvoiceForJob (M1.5 fix)
+- `routes/inventory.ts`: removed unused DEFAULT_ORG_ID import
+- New `__tests__/orgIsolation.test.ts`: 22 unit tests covering all resolvers, assertOrgScope (match/mismatch/orphan/prod), cross-org matrix
+- **Remaining DEFAULT_ORG_ID:** only in `routes/auth.ts` (6 occurrences) — deferred to M2
+- Verification: tsc 0 errors, 148 tests pass (17 suites), 0 schema drift, frontend build clean
+
+**M2: Centralized Auth Enforcement** — Not started
+**M3: Internal Middleware & Error Standardization** — Not started
+**M4: Domain Events + Idempotent Workflow** — Not started
+**M5: OpenAPI + Typed Client** — Not started
+
 ### Not Implemented Yet (Active Backlog)
 
 * Lease Phase 3–5: DocuSign/Skribble integration, deposit payment tracking, archive workflow
-* Authentication enforcement (scaffolded, not wired to all routes)
+* Authentication enforcement (scaffolded, not wired to all routes) — see M2 above
 * Role enforcement on all sensitive endpoints (partially implemented)
 * Notifications delivery (routes exist, notifications created, but no push/email delivery)
 * Media uploads (photos of damage, documents)
 * Tenant portal redesign (conversational → structured)
 * Reporting & analytics dashboard
-* Multi-org support (currently single-org with DEFAULT_ORG_ID)
+* Multi-org support (org scoping framework in place via M1; DEFAULT_ORG_ID remains in auth.ts)
 
 ---
 
@@ -1214,7 +1234,7 @@ Current tenant UI relies on manual category selection and free-text descriptions
 
 This document is the **single source of truth** and matches:
 
-* Filesystem (verified 2026-02-25, post-file-audit — committed `eac7db4`)
+* Filesystem (verified 2026-02-25, post-M1 — committed `a3e3dab`)
 * Database schema — zero drift (`prisma migrate diff` clean)
 * Running system — all endpoints return 200 (verified 2026-02-25)
 * Git — clean working tree, all changes committed
@@ -1232,9 +1252,9 @@ Safe to:
 
 ---
 
-✅ **Project stabilized and audit-hardened (2026-02-25).**
+✅ **Project stabilized, audit-hardened, and org-scoped (2026-02-25).**
 
-All crash-level and warning-level issues resolved. Guardrail enforcement in CI (G7), canonical includes (G9), contract tests (G10), production boot guard (F1), proxy auth forwarding (F3), dev scripts (F6), and styling lock file (F8) all implemented. Work can resume from the Active Backlog without rework.
+All crash-level and warning-level issues resolved. Guardrail enforcement in CI (G7), canonical includes (G9), contract tests (G10), production boot guard (F1), proxy auth forwarding (F3), dev scripts (F6), and styling lock file (F8) all implemented. M1 Org Scoping Enforcement Framework complete — all routes enforce org isolation via governance/orgScope.ts. Work can resume from M2 (Centralized Auth) or the Active Backlog without rework.
 
 ---
 
