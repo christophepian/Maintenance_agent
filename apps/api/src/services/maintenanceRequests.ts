@@ -53,10 +53,27 @@ export type MaintenanceRequestDTO = {
   createdAt: string;
 };
 
+  /**
+   * H5: Summary DTO for list endpoints.
+   * Reduces overfetch by omitting deep nested relations for list views.
+   */
+  export interface MaintenanceRequestSummaryDTO {
+    id: string;
+    status: RequestStatus;
+    createdAt: string;
+    description: string;
+    estimatedCost: number | null;
+    category: string | null;
+    unitNumber: string | null;
+    buildingName: string | null;
+    assignedContractorName: string | null;
+  }
+
 type ListOpts = {
   limit: number;
   offset: number;
   order: "asc" | "desc";
+    view?: "summary" | "full";
 };
 
 const requestInclude = {
@@ -110,6 +127,24 @@ const requestInclude = {
   },
 } as const;
 
+  const requestSummaryInclude = {
+    assignedContractor: {
+      select: {
+        name: true,
+      },
+    },
+    unit: {
+      select: {
+        unitNumber: true,
+        building: {
+          select: {
+            name: true,
+          },
+        },
+      },
+    },
+  } as const;
+
 function toDTO(r: any): MaintenanceRequestDTO {
   return {
     id: r.id,
@@ -150,20 +185,36 @@ function toDTO(r: any): MaintenanceRequestDTO {
   };
 }
 
+  function toSummaryDTO(r: any): MaintenanceRequestSummaryDTO {
+    return {
+      id: r.id,
+      status: r.status,
+      description: r.description,
+      estimatedCost: r.estimatedCost ?? null,
+      category: r.category ?? null,
+      unitNumber: r.unit?.unitNumber ?? null,
+      buildingName: r.unit?.building?.name ?? null,
+      assignedContractorName: r.assignedContractor?.name ?? null,
+      createdAt: r.createdAt instanceof Date ? r.createdAt.toISOString() : String(r.createdAt),
+    };
+  }
+
 export async function listMaintenanceRequests(
   prisma: PrismaClient,
   orgId: string,
   opts: ListOpts
-): Promise<MaintenanceRequestDTO[]> {
+  ): Promise<MaintenanceRequestDTO[] | MaintenanceRequestSummaryDTO[]> {
+    const useSummary = opts.view === "summary";
+  
   const rows = await prisma.request.findMany({
     where: orgScopeWhere(orgId),
     orderBy: { createdAt: opts.order },
     take: opts.limit,
     skip: opts.offset,
-    include: requestInclude,
+      include: useSummary ? requestSummaryInclude : requestInclude,
   });
 
-  return rows.map(toDTO);
+    return useSummary ? rows.map(toSummaryDTO) : rows.map(toDTO);
 }
 
 export async function listOwnerPendingApprovals(

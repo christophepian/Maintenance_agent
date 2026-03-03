@@ -16,8 +16,11 @@ export function getAuthUser(req: AuthedRequest): TokenPayload | null {
   const token = extractToken(req.headers["authorization"] as string | undefined);
   if (token) {
     const decoded = decodeToken(token);
-    req.user = decoded;
-    return decoded;
+    if (decoded) {
+      req.user = decoded;
+      return decoded;
+    }
+    // Token was present but invalid — fall through to dev identity
   }
 
   if (process.env.DEV_IDENTITY_ENABLED === "true") {

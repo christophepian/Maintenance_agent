@@ -4,12 +4,12 @@ import * as path from "path";
 
 const API_ROOT = path.resolve(__dirname, "..", "..");
 const TS_NODE = path.resolve(API_ROOT, "node_modules", ".bin", "ts-node");
-const PORT = 3205;
+const PORT = 3206;
 const BASE_URL = `http://127.0.0.1:${PORT}`;
 
 function startServer(envOverrides: Record<string, string>, port: number) {
   return new Promise<ChildProcessWithoutNullStreams>((resolve, reject) => {
-    const child = spawn(TS_NODE, ["src/server.ts"], {
+    const child = spawn(TS_NODE, ["--transpile-only", "src/server.ts"], {
       cwd: API_ROOT,
       env: {
         ...process.env,
@@ -36,7 +36,7 @@ function startServer(envOverrides: Record<string, string>, port: number) {
     const timeout = setTimeout(() => {
       cleanup();
       reject(new Error("Server did not start in time"));
-    }, 8000);
+    }, 15000);
 
     function cleanup() {
       clearTimeout(timeout);

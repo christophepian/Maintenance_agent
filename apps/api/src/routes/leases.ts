@@ -3,9 +3,10 @@ import { sendError, sendJson } from "../http/json";
 import { readJson } from "../http/body";
 import { first, getIntParam } from "../http/query";
 import { requireOrgViewer } from "./helpers";
-import { createLease, listLeases, getLease, updateLease, markLeaseReadyToSign, cancelLease, storeLeasePdfReference, storeSignedPdfReference, confirmDeposit, activateLease, terminateLease, archiveLease, createLeaseInvoice, listLeaseInvoices } from "../services/leases";
+import { createLease, listLeases, getLease, updateLease, markLeaseReadyToSign, cancelLease, storeLeasePdfReference, storeSignedPdfReference, confirmDeposit, activateLease, terminateLease, archiveLease, createLeaseInvoice, listLeaseInvoices, listLeaseTemplates, createLeaseTemplateFromLease, createBlankLeaseTemplate, createLeaseFromTemplate } from "../services/leases";
 import { createSignatureRequest, listSignatureRequests, getSignatureRequest, sendSignatureRequest, markSignatureRequestSigned } from "../services/signatureRequests";
 import { generateLeasePDF } from "../services/leasePDFRenderer";
+import { notifyTenantLeaseReady } from "../services/notifications";
 import { CreateLeaseSchema, UpdateLeaseSchema, ReadyToSignSchema } from "../validation/leases";
 
 export function registerLeaseRoutes(router: Router) {
@@ -104,6 +105,37 @@ export function registerLeaseRoutes(router: Router) {
         level: parsed.data.level as any,
         signers: parsed.data.signers,
       });
+
+      // Notify the tenant occupying this unit that a lease is ready to sign
+      try {
+        const fullLease = await getLease(params.id, orgId);
+        if (fullLease?.unitId) {
+          const occupancy = await (await import("../services/prismaClient")).default.occupancy.findFirst({
+            where: { unitId: fullLease.unitId },
+            include: { tenant: true },
+          });
+          if (occupancy?.tenant) {
+            // Find or use the tenant's userId — tenants may have a User record
+            const tenantUser = await (await import("../services/prismaClient")).default.user.findFirst({
+              where: { orgId, role: 'TENANT', email: occupancy.tenant.email || undefined },
+            });
+            const userId = tenantUser?.id || occupancy.tenantId;
+            const unit = await (await import("../services/prismaClient")).default.unit.findUnique({
+              where: { id: fullLease.unitId },
+              include: { building: true },
+            });
+            await notifyTenantLeaseReady(
+              params.id, orgId, userId,
+              unit?.unitNumber || 'unknown',
+              unit?.building?.name || 'Property',
+              unit?.buildingId || undefined
+            );
+          }
+        }
+      } catch (notifErr) {
+        console.error('[LEASE] Failed to notify tenant of ready-to-sign:', notifErr);
+      }
+
       sendJson(res, 200, { data: { lease, signatureRequest: sigReq } });
     } catch (e: any) {
       const msg = String(e?.message || e);
@@ -111,6 +143,7 @@ export function registerLeaseRoutes(router: Router) {
       if (msg === "Body too large") return sendError(res, 413, "BODY_TOO_LARGE", "Request body too large");
       if (e.message?.includes("not found")) return sendError(res, 404, "NOT_FOUND", e.message);
       if (e.message?.includes("Only DRAFT")) return sendError(res, 409, "CONFLICT", e.message);
+      if (e.message?.includes("Tenant phone") || e.message?.includes("phone number format")) return sendError(res, 422, "VALIDATION_ERROR", e.message);
       sendError(res, 500, "DB_ERROR", "Failed to mark lease ready to sign", String(e));
     }
   });
@@ -285,6 +318,105 @@ export function registerLeaseRoutes(router: Router) {
       if (e.message?.includes("not found")) return sendError(res, 404, "NOT_FOUND", e.message);
       if (e.message?.includes("Only SENT")) return sendError(res, 409, "CONFLICT", e.message);
       sendError(res, 500, "DB_ERROR", "Failed to mark signature request as signed", String(e));
+    }
+  });
+
+  /* ── Lease Templates (Rental Pipeline) ────────────────────── */
+
+  // GET /lease-templates?buildingId=...
+  router.get("/lease-templates", async ({ req, res, query, orgId }) => {
+    if (!requireOrgViewer(req, res)) return;
+    try {
+      const buildingId = first(query, "buildingId") || undefined;
+      const templates = await listLeaseTemplates(orgId, buildingId);
+      sendJson(res, 200, { data: templates });
+    } catch (e) {
+      sendError(res, 500, "DB_ERROR", "Failed to list lease templates", String(e));
+    }
+  });
+
+  // POST /lease-templates (create blank template from scratch)
+  router.post("/lease-templates", async ({ req, res, orgId }) => {
+    if (!requireOrgViewer(req, res)) return;
+    try {
+      const body = await readJson(req);
+      if (!body.buildingId || !body.templateName || !body.landlordName || !body.landlordAddress || !body.landlordZipCity) {
+        return sendError(res, 400, "VALIDATION_ERROR", "buildingId, templateName, landlordName, landlordAddress, and landlordZipCity are required");
+      }
+      const template = await createBlankLeaseTemplate(orgId, body.buildingId, {
+        templateName: body.templateName,
+        landlordName: body.landlordName,
+        landlordAddress: body.landlordAddress,
+        landlordZipCity: body.landlordZipCity,
+        landlordPhone: body.landlordPhone,
+        landlordEmail: body.landlordEmail,
+        objectType: body.objectType,
+        roomsCount: body.roomsCount,
+        noticeRule: body.noticeRule,
+        paymentDueDayOfMonth: body.paymentDueDayOfMonth,
+        paymentIban: body.paymentIban,
+        referenceRatePercent: body.referenceRatePercent,
+        depositDueRule: body.depositDueRule,
+        netRentChf: body.netRentChf,
+        chargesTotalChf: body.chargesTotalChf,
+        includesHouseRules: body.includesHouseRules,
+      });
+      sendJson(res, 201, { data: template });
+    } catch (e: any) {
+      const msg = String(e?.message || e);
+      if (msg === "Invalid JSON") return sendError(res, 400, "INVALID_JSON", "Invalid JSON");
+      if (msg === "Body too large") return sendError(res, 413, "BODY_TOO_LARGE", "Request body too large");
+      if (e.message?.includes("not found")) return sendError(res, 404, "NOT_FOUND", e.message);
+      if (e.message?.includes("no units")) return sendError(res, 400, "BAD_REQUEST", e.message);
+      sendError(res, 500, "DB_ERROR", "Failed to create lease template", String(e));
+    }
+  });
+
+  // POST /lease-templates/from-lease
+  router.post("/lease-templates/from-lease", async ({ req, res, orgId }) => {
+    if (!requireOrgViewer(req, res)) return;
+    try {
+      const body = await readJson(req);
+      if (!body.leaseId || !body.templateName) {
+        return sendError(res, 400, "VALIDATION_ERROR", "leaseId and templateName are required");
+      }
+      const template = await createLeaseTemplateFromLease(
+        body.leaseId,
+        orgId,
+        body.templateName,
+        body.buildingId,
+      );
+      sendJson(res, 201, { data: template });
+    } catch (e: any) {
+      if (e.message?.includes("not found")) return sendError(res, 404, "NOT_FOUND", e.message);
+      sendError(res, 500, "DB_ERROR", "Failed to create lease template", String(e));
+    }
+  });
+
+  // POST /lease-templates/:id/create-lease
+  router.post("/lease-templates/:id/create-lease", async ({ req, res, params, orgId }) => {
+    if (!requireOrgViewer(req, res)) return;
+    try {
+      const body = await readJson(req);
+      if (!body.unitId || !body.tenantName) {
+        return sendError(res, 400, "VALIDATION_ERROR", "unitId and tenantName are required");
+      }
+      const lease = await createLeaseFromTemplate(params.id, orgId, body.unitId, {
+        tenantName: body.tenantName,
+        tenantAddress: body.tenantAddress,
+        tenantZipCity: body.tenantZipCity,
+        tenantPhone: body.tenantPhone,
+        tenantEmail: body.tenantEmail,
+        coTenantName: body.coTenantName,
+        applicationId: body.applicationId,
+        startDate: body.startDate,
+        netRentChf: body.netRentChf,
+      });
+      sendJson(res, 201, { data: lease });
+    } catch (e: any) {
+      if (e.message?.includes("not found")) return sendError(res, 404, "NOT_FOUND", e.message);
+      if (e.message?.includes("not a template")) return sendError(res, 400, "BAD_REQUEST", e.message);
+      sendError(res, 500, "DB_ERROR", "Failed to create lease from template", String(e));
     }
   });
 }

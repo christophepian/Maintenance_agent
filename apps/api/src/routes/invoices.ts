@@ -17,7 +17,8 @@ export function registerInvoiceRoutes(router: Router) {
     try {
       const contractorId = first(query, "contractorId") || undefined;
       const status = first(query, "status") || undefined;
-      const jobs = await listJobs(orgId, { contractorId, status: status as any });
+      const view = first(query, "view") as "summary" | "full" | undefined;
+      const jobs = await listJobs(orgId, { contractorId, status: status as any, view });
       sendJson(res, 200, { data: jobs });
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to load jobs", String(e));
@@ -75,7 +76,8 @@ export function registerInvoiceRoutes(router: Router) {
     try {
       const jobId = first(query, "jobId") || undefined;
       const status = first(query, "status") || undefined;
-      const invoices = await listInvoices(orgId, { jobId, status: status as any });
+        const view = first(query, "view") as "summary" | "full" | undefined;
+        const invoices = await listInvoices(orgId, { jobId, status: status as any, view });
       sendJson(res, 200, { data: invoices });
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to load invoices", String(e));
@@ -250,7 +252,8 @@ export function registerInvoiceRoutes(router: Router) {
     if (!requireOwnerAccess(req, res)) return;
     try {
       const status = first(query, "status") || undefined;
-      const invoices = await listInvoices(orgId, { status: status as any });
+        const view = first(query, "view") as "summary" | "full" | undefined;
+        const invoices = await listInvoices(orgId, { status: status as any, view });
       sendJson(res, 200, { data: invoices });
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to load invoices", String(e));

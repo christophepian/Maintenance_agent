@@ -6,6 +6,7 @@ import { first } from "../http/query";
 import { encodeToken } from "../services/auth";
 import { getTenantSession } from "../services/tenantSession";
 import { listTenantLeases, getTenantLease, tenantAcceptLease } from "../services/tenantPortal";
+import { getUserNotifications, markNotificationAsRead, markAllNotificationsAsRead, getUnreadNotificationCount, deleteNotification } from "../services/notifications";
 import { triageIssue } from "../services/triage";
 import { TenantSessionSchema } from "../validation/tenantSession";
 import { TriageSchema } from "../validation/triage";
@@ -69,6 +70,142 @@ export function registerAuthRoutes(router: Router) {
       if (e.message?.includes("Only READY_TO_SIGN")) return sendError(res, 409, "CONFLICT", e.message);
       if (e.message?.includes("No active signature")) return sendError(res, 409, "CONFLICT", e.message);
       sendError(res, 500, "DB_ERROR", "Failed to accept lease", String(e));
+    }
+  });
+
+  // ─── Tenant Notifications (uses tenantId → userId resolution) ───
+
+  // GET /tenant-portal/notifications
+  router.get("/tenant-portal/notifications", async ({ res, query, orgId, prisma }) => {
+    try {
+      const tenantId = first(query, "tenantId");
+      if (!tenantId) return sendError(res, 400, "VALIDATION_ERROR", "tenantId is required");
+      // Resolve tenant to userId: look up User with matching email or use tenantId directly
+      const userId = await resolveTenantUserId(prisma, orgId, tenantId);
+      const limit = query.limit ? parseInt(String(query.limit), 10) : 20;
+      const offset = query.offset ? parseInt(String(query.offset), 10) : 0;
+      const unreadOnly = String(query.unreadOnly) === "true";
+      const result = await getUserNotifications({ orgId, userId, limit, offset, unreadOnly });
+      sendJson(res, 200, { data: result });
+    } catch (e: any) {
+      sendError(res, 500, "DB_ERROR", "Failed to get tenant notifications", String(e));
+    }
+  });
+
+  // GET /tenant-portal/notifications/unread-count
+  router.get("/tenant-portal/notifications/unread-count", async ({ res, query, orgId, prisma }) => {
+    try {
+      const tenantId = first(query, "tenantId");
+      if (!tenantId) return sendError(res, 400, "VALIDATION_ERROR", "tenantId is required");
+      const userId = await resolveTenantUserId(prisma, orgId, tenantId);
+      const count = await getUnreadNotificationCount(orgId, userId);
+      sendJson(res, 200, { count });
+    } catch (e: any) {
+      sendError(res, 500, "DB_ERROR", "Failed to get unread count", String(e));
+    }
+  });
+
+  // POST /tenant-portal/notifications/:id/read
+  router.post("/tenant-portal/notifications/:id/read", async ({ res, params, orgId }) => {
+    try {
+      const result = await markNotificationAsRead(params.id, orgId);
+      sendJson(res, 200, { data: result });
+    } catch (e: any) {
+      sendError(res, 500, "DB_ERROR", "Failed to mark as read", String(e));
+    }
+  });
+
+  // POST /tenant-portal/notifications/mark-all-read
+  router.post("/tenant-portal/notifications/mark-all-read", async ({ req, res, query, orgId, prisma }) => {
+    try {
+      const raw = await readJson(req).catch(() => ({}));
+      const tenantId = (raw as any)?.tenantId || first(query, "tenantId");
+      if (!tenantId) return sendError(res, 400, "VALIDATION_ERROR", "tenantId is required");
+      const userId = await resolveTenantUserId(prisma, orgId, tenantId);
+      const count = await markAllNotificationsAsRead(orgId, userId);
+      sendJson(res, 200, { marked: count });
+    } catch (e: any) {
+      sendError(res, 500, "DB_ERROR", "Failed to mark all as read", String(e));
+    }
+  });
+
+  // DELETE /tenant-portal/notifications/:id
+  router.delete("/tenant-portal/notifications/:id", async ({ res, params, orgId }) => {
+    try {
+      await deleteNotification(params.id, orgId);
+      sendJson(res, 200, { ok: true });
+    } catch (e: any) {
+      sendError(res, 500, "DB_ERROR", "Failed to delete notification", String(e));
+    }
+  });
+
+  // ─── Tenant Invoices ────────────────────────────────────────
+
+  // GET /tenant-portal/invoices
+  router.get("/tenant-portal/invoices", async ({ res, query, orgId, prisma }) => {
+    try {
+      const tenantId = first(query, "tenantId");
+      if (!tenantId) return sendError(res, 400, "VALIDATION_ERROR", "tenantId is required");
+
+      // Get all units this tenant occupies
+      const occupancies = await prisma.occupancy.findMany({
+        where: { tenantId },
+        select: { unitId: true },
+      });
+      if (occupancies.length === 0) {
+        sendJson(res, 200, { data: [] });
+        return;
+      }
+      const unitIds = occupancies.map((o: any) => o.unitId);
+
+      // Get all leases for those units
+      const leases = await prisma.lease.findMany({
+        where: { orgId, unitId: { in: unitIds } },
+        include: { unit: { include: { building: true } } },
+      });
+      if (leases.length === 0) {
+        sendJson(res, 200, { data: [] });
+        return;
+      }
+      const leaseIds = leases.map((l: any) => l.id);
+
+      // Get all invoices linked to those leases
+      const invoices = await prisma.invoice.findMany({
+        where: { orgId, leaseId: { in: leaseIds } },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      // Build a lease lookup for enrichment
+      const leaseMap = new Map(leases.map((l: any) => [l.id, l]));
+
+      const data = invoices.map((inv: any) => {
+        const lease = leaseMap.get(inv.leaseId);
+        return {
+          id: inv.id,
+          leaseId: inv.leaseId,
+          description: inv.description,
+          totalAmount: inv.totalAmount,
+          totalAmountChf: inv.totalAmount / 100,
+          currency: inv.currency || 'CHF',
+          status: inv.status,
+          invoiceNumber: inv.invoiceNumber || null,
+          issueDate: inv.issueDate?.toISOString() || null,
+          dueDate: inv.dueDate?.toISOString() || null,
+          paidAt: inv.paidAt?.toISOString() || null,
+          createdAt: inv.createdAt.toISOString(),
+          unit: lease?.unit ? {
+            unitNumber: lease.unit.unitNumber,
+            building: lease.unit.building ? {
+              name: lease.unit.building.name,
+              address: lease.unit.building.address,
+            } : null,
+          } : null,
+        };
+      });
+
+      sendJson(res, 200, { data });
+    } catch (e: any) {
+      sendError(res, 500, "DB_ERROR", "Failed to get tenant invoices", String(e));
     }
   });
 
@@ -188,4 +325,33 @@ export function registerAuthRoutes(router: Router) {
       sendError(res, 500, "DB_ERROR", "Failed to create contractor user", String(e));
     }
   });
+}
+
+/**
+ * Resolve a tenantId to a userId for notification lookups.
+ * Tries: 1) direct User with id=tenantId, 2) User with matching tenant email, 3) falls back to tenantId.
+ */
+async function resolveTenantUserId(prisma: any, orgId: string, tenantId: string): Promise<string> {
+  // First check if tenantId is already a User id
+  const directUser = await prisma.user.findFirst({
+    where: { id: tenantId, orgId },
+    select: { id: true },
+  });
+  if (directUser) return directUser.id;
+
+  // Look up the tenant record to get their email
+  const tenant = await prisma.tenant.findUnique({
+    where: { id: tenantId },
+    select: { email: true },
+  });
+  if (tenant?.email) {
+    const userByEmail = await prisma.user.findFirst({
+      where: { orgId, email: tenant.email, role: 'TENANT' },
+      select: { id: true },
+    });
+    if (userByEmail) return userByEmail.id;
+  }
+
+  // Fallback: use tenantId as userId (notifications will still be created with this id)
+  return tenantId;
 }

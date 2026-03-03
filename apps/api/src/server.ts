@@ -1,7 +1,7 @@
 import "dotenv/config";
 
 import * as http from "http";
-import { sendError } from "./http/json";
+import { sendError, sendJson } from "./http/json";
 import { parseQuery } from "./http/query";
 import { getOrgIdForRequest, AuthedRequest } from "./authz";
 import { ensureDefaultOrgConfig } from "./services/orgConfig";
@@ -15,9 +15,15 @@ import { registerInventoryRoutes } from "./routes/inventory";
 import { registerRequestRoutes } from "./routes/requests";
 import { registerTenantRoutes } from "./routes/tenants";
 import { registerInvoiceRoutes } from "./routes/invoices";
+import { registerContractorRoutes } from "./routes/contractor";
 import { registerNotificationRoutes } from "./routes/notifications";
 import { registerLeaseRoutes } from "./routes/leases";
+import { registerRentalRoutes } from "./routes/rentalApplications";
 import { registerEventHandlers } from "./events";
+import {
+  processSelectionTimeouts,
+  processAttachmentRetention,
+} from "./services/ownerSelection";
 
 /* ── F1: Production boot guard ─────────────────────────────── */
 const isProdEnv = process.env.NODE_ENV === "production";
@@ -48,8 +54,26 @@ registerConfigRoutes(router);
 registerInventoryRoutes(router);
 registerTenantRoutes(router);
 registerInvoiceRoutes(router);
+registerContractorRoutes(router);
 registerNotificationRoutes(router);
 registerLeaseRoutes(router);
+registerRentalRoutes(router);
+
+/* ── Dev-only: background job trigger route ─────────────────── */
+router.post("/__dev/rental/run-jobs", async ({ res }) => {
+  if (isProdEnv) {
+    sendError(res, 403, "FORBIDDEN", "Dev route disabled in production");
+    return;
+  }
+  try {
+    const timeoutsProcessed = await processSelectionTimeouts();
+    const attachmentsDeleted = await processAttachmentRetention();
+    sendJson(res, 200, { timeoutsProcessed, attachmentsDeleted });
+  } catch (e: any) {
+    console.error("[DEV] run-jobs error:", e);
+    sendError(res, 500, "INTERNAL_ERROR", e.message);
+  }
+});
 
 /* ── Connection tracking for graceful shutdown ──────────────── */
 const activeResponses = new Set<http.ServerResponse>();
@@ -110,6 +134,25 @@ const server = http.createServer(async (req: AuthedRequest, res) => {
 
 let isShuttingDown = false;
 
+/* ── Background job interval ────────────────────────────────── */
+const BG_JOB_INTERVAL_MS = Number(process.env.BG_JOB_INTERVAL_MS) || 60 * 60 * 1000; // default: 1 hour
+const BG_JOBS_ENABLED = process.env.BG_JOBS_ENABLED !== "false"; // enabled by default
+let bgJobTimer: ReturnType<typeof setInterval> | null = null;
+
+async function runBackgroundJobs() {
+  try {
+    const timeouts = await processSelectionTimeouts();
+    const attachments = await processAttachmentRetention();
+    if (timeouts > 0 || attachments > 0) {
+      console.log(
+        `[BG-JOBS] Processed ${timeouts} selection timeout(s), ${attachments} attachment retention(s)`,
+      );
+    }
+  } catch (e) {
+    console.error("[BG-JOBS] Error:", e);
+  }
+}
+
 async function start() {
   try {
     await ensureDefaultOrgConfig(prisma);
@@ -117,6 +160,14 @@ async function start() {
     server.listen(port, () => {
       console.log(`API running on http://localhost:${port}`);
     });
+
+    /* Start background job scheduler */
+    if (BG_JOBS_ENABLED) {
+      bgJobTimer = setInterval(runBackgroundJobs, BG_JOB_INTERVAL_MS);
+      console.log(
+        `[BG-JOBS] Scheduler started (interval: ${BG_JOB_INTERVAL_MS / 1000}s)`,
+      );
+    }
   } catch (e) {
     console.error("Failed to start API:", e);
     process.exit(1);
@@ -128,6 +179,7 @@ async function shutdown() {
   isShuttingDown = true;
   console.log("[SHUTDOWN] Stopping new connections…");
 
+  if (bgJobTimer) clearInterval(bgJobTimer);
   server.close();
 
   /* Give in-flight requests time to finish */

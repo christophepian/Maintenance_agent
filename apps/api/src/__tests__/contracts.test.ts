@@ -6,12 +6,69 @@
  * Update contract expectations in the same PR as any DTO change.
  */
 
-const API_BASE = process.env.API_BASE_URL || 'http://127.0.0.1:3001';
+import { spawn, ChildProcessWithoutNullStreams } from 'child_process';
+import * as path from 'path';
+
+const API_ROOT = path.resolve(__dirname, '..', '..');
+const TS_NODE = path.resolve(API_ROOT, 'node_modules', '.bin', 'ts-node');
+const PORT = 3205;
+const API_BASE = `http://127.0.0.1:${PORT}`;
+
+function startServer(envOverrides: Record<string, string>, port: number) {
+  return new Promise<ChildProcessWithoutNullStreams>((resolve, reject) => {
+    const child = spawn(TS_NODE, ['--transpile-only', 'src/server.ts'], {
+      cwd: API_ROOT,
+      env: {
+        ...process.env,
+        PORT: String(port),
+        AUTH_SECRET: 'test-secret',
+        ...envOverrides,
+      },
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+
+    const onData = (data: Buffer) => {
+      const text = data.toString();
+      if (text.includes('API running on')) {
+        cleanup();
+        resolve(child);
+      }
+    };
+
+    const onError = (err: Error) => {
+      cleanup();
+      reject(err);
+    };
+
+    const cleanup = () => {
+      clearTimeout(timer);
+      child.stdout.off('data', onData);
+      child.stderr.off('data', onData);
+      child.off('error', onError);
+    };
+
+    child.stdout.on('data', onData);
+    child.stderr.on('data', onData);
+    child.on('error', onError);
+
+    const timer = setTimeout(() => {
+      cleanup();
+      reject(new Error('Server did not start within 15s'));
+    }, 15000);
+  });
+}
 
 async function fetchJson(path: string) {
   const res = await fetch(`${API_BASE}${path}`);
   if (!res.ok) throw new Error(`${res.status} ${res.statusText} for ${path}`);
   return res.json();
+}
+
+async function fetchWithRole(path: string, role: string) {
+  const res = await fetch(`${API_BASE}${path}`, {
+    headers: { 'x-dev-role': role },
+  });
+  return res;
 }
 
 // ── Helper: check that an object has all expected keys ──
@@ -22,6 +79,15 @@ function expectKeys(obj: Record<string, any>, keys: string[], label: string) {
 }
 
 describe('G10: API Contract Tests', () => {
+  let proc: ChildProcessWithoutNullStreams;
+
+  beforeAll(async () => {
+    proc = await startServer({ AUTH_OPTIONAL: "true", NODE_ENV: "test" }, PORT);
+  }, 20000);
+
+  afterAll(() => {
+    if (proc) proc.kill();
+  });
   // ── Requests ──
   describe('GET /requests?limit=1', () => {
     it('returns an array with expected request shape', async () => {
@@ -35,10 +101,10 @@ describe('G10: API Contract Tests', () => {
         ], 'Request');
 
         // category and estimatedCost are optional but should not be unexpected types
-        if (req.category !== undefined) {
+        if (req.category !== undefined && req.category !== null) {
           expect(typeof req.category).toBe('string');
         }
-        if (req.estimatedCost !== undefined) {
+        if (req.estimatedCost !== undefined && req.estimatedCost !== null) {
           expect(typeof req.estimatedCost).toBe('number');
         }
       }
@@ -99,6 +165,51 @@ describe('G10: API Contract Tests', () => {
     });
   });
 
+  // ── Owner Pending Approvals ──
+  describe('GET /owner/pending-approvals', () => {
+    it('returns an array with expected approval shape', async () => {
+      const body = await fetchJson('/owner/pending-approvals');
+      expect(Array.isArray(body.data)).toBe(true);
+
+      if (body.data.length > 0) {
+        const req = body.data[0];
+        expectKeys(req, [
+          'id', 'status', 'description', 'createdAt',
+        ], 'OwnerPendingApproval');
+
+        if (req.estimatedCost !== undefined && req.estimatedCost !== null) {
+          expect(typeof req.estimatedCost).toBe('number');
+        }
+
+        if (req.unit) {
+          expectKeys(req.unit, ['unitNumber'], 'OwnerPendingApproval.unit');
+          if (req.unit.building) {
+            expectKeys(req.unit.building, ['name'], 'OwnerPendingApproval.unit.building');
+          }
+        }
+
+        if (req.assignedContractor) {
+          expectKeys(req.assignedContractor, ['name'], 'OwnerPendingApproval.assignedContractor');
+        }
+      }
+    });
+  });
+
+  // ── Owner Invoices ──
+  describe('GET /owner/invoices?limit=1', () => {
+    it('returns an array with expected owner invoice shape', async () => {
+      const body = await fetchJson('/owner/invoices?limit=1');
+      expect(Array.isArray(body.data)).toBe(true);
+
+      if (body.data.length > 0) {
+        const inv = body.data[0];
+        expectKeys(inv, [
+          'id', 'status', 'jobId', 'totalAmount', 'createdAt',
+        ], 'OwnerInvoice');
+      }
+    });
+  });
+
   // ── Leases ──
   describe('GET /leases?limit=1', () => {
     it('returns an array with expected lease shape', async () => {
@@ -141,6 +252,114 @@ describe('G10: API Contract Tests', () => {
           'id', 'name', 'phone', 'email',
         ], 'Contractor');
       }
+    });
+  });
+
+  // ── Summary DTO Endpoints (H5 tier pattern) ──
+  describe('GET /requests?limit=1&view=summary', () => {
+    it('returns summary DTO with reduced fields (no nested relations)', async () => {
+      const body = await fetchJson('/requests?limit=1&view=summary');
+      expect(Array.isArray(body.data)).toBe(true);
+
+      if (body.data.length > 0) {
+        const req = body.data[0];
+        expectKeys(req, [
+          'id', 'status', 'createdAt', 'description', 'estimatedCost', 'category',
+          'unitNumber', 'buildingName', 'assignedContractorName',
+        ], 'RequestSummaryDTO');
+
+        // Should NOT have deep nested objects like assignedContractor, tenant, unit, appliance
+        expect(req.assignedContractor).toBeUndefined();
+        expect(req.tenant).toBeUndefined();
+        expect(req.unit).toBeUndefined();
+        expect(req.appliance).toBeUndefined();
+      }
+    });
+  });
+
+  describe('GET /invoices?limit=1&view=summary', () => {
+    it('returns summary DTO with reduced fields (no lineItems)', async () => {
+      const body = await fetchJson('/invoices?limit=1&view=summary');
+      expect(Array.isArray(body.data)).toBe(true);
+
+      if (body.data.length > 0) {
+        const inv = body.data[0];
+        expectKeys(inv, [
+          'id', 'orgId', 'jobId', 'status', 'totalAmount', 'dueDate', 'paidAt', 'createdAt',
+        ], 'InvoiceSummaryDTO');
+
+        // Should NOT have lineItems or detailed recipient info
+        expect(inv.lineItems).toBeUndefined();
+        expect(inv.recipientName).toBeUndefined();
+        expect(inv.recipientAddressLine1).toBeUndefined();
+      }
+    });
+  });
+
+  // ── Contractor-Scoped Endpoints (H1 isolation) ──
+  describe('GET /contractor/jobs?contractorId=<id>&limit=1&view=summary', () => {
+    it('requires CONTRACTOR role and returns contractor-filtered jobs', async () => {
+      // First get a contractor ID
+      const contractors = await fetchJson('/contractors?limit=1');
+      if (contractors.data.length === 0) {
+        console.log('⚠️  Skipping contractor jobs test: no contractors in database');
+        return;
+      }
+
+      const contractorId = contractors.data[0].id;
+
+      // Test with CONTRACTOR role
+      const response = await fetchWithRole(`/contractor/jobs?contractorId=${contractorId}&limit=1&view=summary`, 'CONTRACTOR');
+      expect(response.ok).toBe(true);
+      const data = await response.json();
+
+      expect(Array.isArray(data.data)).toBe(true);
+      // Results should only include jobs for this contractor (may be empty)
+      if (data.data.length > 0) {
+        const job = data.data[0];
+        expect(job.contractorId).toBe(contractorId);
+        expectKeys(job, [
+          'id', 'orgId', 'requestId', 'contractorId', 'status',
+          'createdAt', 'updatedAt',
+        ], 'JobSummaryDTO');
+      }
+    });
+
+    it('rejects non-CONTRACTOR requests', async () => {
+      const response = await fetchWithRole('/contractor/jobs?contractorId=any&limit=1', 'MANAGER');
+      expect(response.status).toBe(403);
+    });
+  });
+
+  describe('GET /contractor/invoices?contractorId=<id>&limit=1&view=summary', () => {
+    it('requires CONTRACTOR role and returns contractor-filtered invoices', async () => {
+      // First get a contractor ID
+      const contractors = await fetchJson('/contractors?limit=1');
+      if (contractors.data.length === 0) {
+        console.log('⚠️  Skipping contractor invoices test: no contractors in database');
+        return;
+      }
+
+      const contractorId = contractors.data[0].id;
+
+      // Test with CONTRACTOR role
+      const response = await fetchWithRole(`/contractor/invoices?contractorId=${contractorId}&limit=1&view=summary`, 'CONTRACTOR');
+      expect(response.ok).toBe(true);
+      const data = await response.json();
+
+      expect(Array.isArray(data.data)).toBe(true);
+      // Results should only include invoices for jobs of this contractor (may be empty)
+      if (data.data.length > 0) {
+        const inv = data.data[0];
+        expectKeys(inv, [
+          'id', 'orgId', 'jobId', 'status', 'totalAmount', 'dueDate', 'paidAt', 'createdAt',
+        ], 'InvoiceSummaryDTO');
+      }
+    });
+
+    it('rejects non-CONTRACTOR requests', async () => {
+      const response = await fetchWithRole('/contractor/invoices?contractorId=any&limit=1', 'OWNER');
+      expect(response.status).toBe(403);
     });
   });
 });

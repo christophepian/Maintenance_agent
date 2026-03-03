@@ -4,6 +4,7 @@ import * as path from "path";
 import { PrismaClient } from "@prisma/client";
 import { computeEffectiveConfig } from "../services/buildingConfig";
 import { DEFAULT_ORG_ID } from "../services/orgConfig";
+import { createManagerToken, getAuthHeaders } from "./testHelpers";
 
 const API_ROOT = path.resolve(__dirname, "..", "..");
 const TS_NODE = path.resolve(API_ROOT, "node_modules", ".bin", "ts-node");
@@ -58,12 +59,18 @@ function startServer(envOverrides: Record<string, string>, port: number) {
 function httpRequest(method: string, path: string, body?: object): Promise<{ status: number; data: any }> {
   return new Promise((resolve, reject) => {
     const url = new URL(path, BASE_URL);
+    const token = createManagerToken();
+    const authHeaders = getAuthHeaders(token);
+    
     const options: http.RequestOptions = {
       hostname: url.hostname,
       port: url.port,
       path: url.pathname + url.search,
       method,
-      headers: { "Content-Type": "application/json" },
+      headers: { 
+        "Content-Type": "application/json",
+        ...authHeaders,
+      },
     };
 
     const req = http.request(options, (res) => {

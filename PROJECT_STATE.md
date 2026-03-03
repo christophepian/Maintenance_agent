@@ -1,6 +1,6 @@
 # Maintenance Agent — Project State
 
-**Last updated:** 2026-02-25 (Committed `7661aec` — M5 OpenAPI + Typed Client, 178 tests green, zero uncommitted changes, Architecture Hardening epic COMPLETE)
+**Last updated:** 2026-03-03 (Project audit: 216/216 tests green, 23 suites; 24 migrations, zero drift; OpenAPI spec synced — 10 missing routes added; stale backup deleted; Rental Applications Epic fully implemented — scoring, owner selection with fallback cascade, lease-from-template, document OCR with multi-strategy image support, email outbox)
 
 ---
 
@@ -223,6 +223,204 @@ Manager UI styling lives **only** in `apps/web/styles/managerStyles.js` (see Sec
 
 ---
 
+## 🚀 HARDENING GUIDELINES — Prototype → Production Seed (H1–H6)
+
+> **Added 2026-02-26:** These guidelines strengthen the transition from internal prototype
+> to production seed without requiring framework rewrites or 180° architectural changes.
+> They build on the existing guardrails (G1–G10, F1–F8) with incremental hardening patterns.
+
+### H1: Route Protection Must Be Declared (No Ad-Hoc Auth Checks)
+
+All route handlers must declare protection level via wrapper functions:
+
+- `withAuthRequired(handler)` — requires valid authentication (any role)
+- `withRole(Role.MANAGER, handler)` — requires specific role (MANAGER, OWNER, CONTRACTOR, TENANT)
+- Public routes need no wrapper (implicitly PUBLIC)
+
+**Why:** Consistent enforcement, easier auditing, no scattered auth checks inside handler bodies.
+
+**Implementation:** Route protection wrappers in [apps/api/src/http/routeProtection.ts](apps/api/src/http/routeProtection.ts) respect `AUTH_OPTIONAL` environment flag for dev/test backward compatibility. In production (AUTH_OPTIONAL=false or unset), wrappers always enforce authentication.
+
+**Route Protection Policy:**
+
+| Route Pattern | Protection | Rationale |
+|--------------|------------|-----------|
+| `/org-config` | withAuthRequired | Organization settings require authentication |
+| `/buildings/:id/config` | withAuthRequired | Building configuration management |
+| `/units/:id/config` | withAuthRequired | Unit configuration management |
+| `/approval-rules` | withAuthRequired | Approval rules management |
+| `/tenant-session`, `/tenant-portal/*` | PUBLIC | Tenant portal access via URL magic links |
+| `/triage`, `/auth/*` | PUBLIC | Authentication and triage endpoints |
+| All other routes | PUBLIC (legacy) | Pending future H1 expansion for role-based access |
+
+**Example:**
+```typescript
+// ✅ GOOD: Protection declared at registration
+router.get("/org-config", withAuthRequired(async (ctx) => {
+  // Handler logic here, auth already verified
+}));
+
+router.put("/org-config", withRole(Role.MANAGER, async (ctx) => {
+  // Only MANAGER can execute this
+}));
+
+// ❌ BAD: Ad-hoc auth check inside handler
+router.get("/org-config", async (ctx) => {
+  const user = getAuthUser(ctx.req);
+  if (!user) return sendError(ctx.res, 401, "UNAUTHORIZED");
+  // ...
+});
+```
+
+**Files:**
+- Protection wrappers: `apps/api/src/http/routeProtection.ts`
+- Import in route files: `import { withAuthRequired, withRole } from "../http/routeProtection"`
+
+### H2: Production Boot Guard (AUTH_OPTIONAL Impossible in Production)
+
+**F1 enforcement extended:** Server **must refuse to boot** if `NODE_ENV=production` and either:
+- `AUTH_OPTIONAL=true` (or missing/unset, which defaults to true in dev)
+- `AUTH_SECRET` is not set
+
+**Implementation:** `enforceProductionAuthConfig()` called in `server.ts` startup (already implemented Feb 25).
+
+**Tests required:**
+- Boot fails with clear error message if misconfigured
+- Representative protected endpoints return 401/403 when auth missing in production mode
+
+### H3: Next.js Proxy Must Use Shared Helper (No Hand-Rolled Logic)
+
+All Next.js API proxy routes (`apps/web/pages/api/*`) must use the centralized `proxyToBackend()` helper.
+
+**Required forwarding behaviors:**
+- All headers (including `Authorization`)
+- Query params unchanged (no re-parsing when `req.query` exists)
+- HTTP status codes as-is
+- Binary passthrough (PDF, PNG) without corruption
+
+**File:** `apps/web/lib/proxy.js`
+
+**Example:**
+```javascript
+import { proxyToBackend } from "../../../lib/proxy";
+
+export default async function handler(req, res) {
+  const { id } = req.query;
+  await proxyToBackend(req, res, `/leases/${id}`, { binary: true });
+}
+```
+
+**Banned patterns:**
+- Manual `fetch()` with custom header logic
+- URL re-parsing when `req.query` already exists
+- Forgetting to forward `Authorization` header
+- Incorrect content-type handling for binary responses
+
+### H4: DTO Changes Require Multi-File Updates
+
+When adding/removing/changing any DTO field, you **must update all of these in the same PR:**
+
+1. **Prisma schema** (`apps/api/prisma/schema.prisma`) — if DB field changes
+2. **Service DTO interface** (e.g., `apps/api/src/services/jobs.ts` → `JobDTO`)
+3. **Mapper function** (e.g., `mapJobToDTO()`)
+4. **Canonical include constant** (e.g., `JOB_INCLUDE`) — see G9
+5. **OpenAPI spec** (`apps/api/openapi.yaml`)
+6. **Typed API client** (`packages/api-client/src/index.ts`)
+7. **Contract tests** (`apps/api/src/__tests__/contracts.test.ts`)
+8. **Drift check** (if schema changed) — see G1/G2
+
+**Why:** Prevents code-schema mismatches, silent DTO drift, and missing relations.
+
+### H5: Prefer DTO Tiers for New List Endpoints (Reduce Overfetch)
+
+For list endpoints returning many records, introduce **summary DTOs** instead of bloating includes:
+
+- Full DTO (`JobDTO`): For detail endpoints (GET `/jobs/:id`)
+- Summary DTO (`JobSummaryDTO`): For list endpoints (GET `/jobs?view=summary`)
+
+**Pattern:**
+```typescript
+export interface JobSummaryDTO {
+  id: string;
+  status: JobStatus;
+  contractorName?: string;
+  requestDescription?: string;
+  unitNumber?: string;
+  buildingName?: string;
+  // Omit deep nested relations
+}
+```
+
+**Route implementation:**
+```typescript
+const view = first(query, "view") as "summary" | "full" | undefined;
+const jobs = await listJobs(orgId, { view });
+```
+
+**Service implementation:**
+```typescript
+const useSummary = filters?.view === "summary";
+const jobs = await prisma.job.findMany({
+  include: useSummary ? lightInclude : JOB_INCLUDE,
+});
+return useSummary ? jobs.map(mapJobToSummaryDTO) : jobs.map(mapJobToDTO);
+```
+
+**OpenAPI spec:** Use conditional response schema based on `view` parameter:
+```yaml
+parameters:
+  - name: view
+    in: query
+    schema:
+      type: string
+      enum: [summary, full]
+      default: full
+responses:
+  '200':
+    description: Job list
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            data:
+              type: array
+              items:
+                # ✅ RECOMMENDED: Use allOf with conditional schemas
+                # OR provide separate examples for summary vs full
+                $ref: '#/components/schemas/JobDTO'
+            # For full transparency, provide both schemas as alternatives in docs
+    # Note: OpenAPI 3.0 cannot conditionally select schema based on query param
+    # Document both variations in separate examples or use 3.1 conditional schemas
+```
+
+**Implementation note:** `items.oneOf` with `JobDTO` | `JobSummaryDTO` is misleading because which variant is returned depends on the `view` parameter, not client choice. Either:
+- Keep simple `$ref: JobDTO` and document that `view=summary` returns subset of fields
+- Or generate separate endpoints `/jobs/summary` and `/jobs`
+
+**Backward compatibility:** Default to `full` view; existing clients unaffected.
+
+### H6: Org Scoping via Resolvers (Request.orgId Migration Deferred)
+
+**Current state:** `Request` model has **no `orgId` field**. Org scope is resolved via FK traversal:
+- `resolveRequestOrg()` in `governance/orgScope.ts` walks `unit → building → org` (or `tenant → org`, `contractor → org`)
+
+**Planned migration** (not implemented yet):
+1. Add `orgId` to `Request` schema (nullable initially)
+2. Backfill via migration: `UPDATE "Request" SET "orgId" = (SELECT "orgId" FROM "Unit" WHERE "Unit"."id" = "Request"."unitId")`
+3. Make `orgId` required (not null)
+4. Update all queries to filter by `orgId` directly
+5. Keep resolvers for validation/assertions
+
+**When to do it:**
+- When multi-org truly lands (multiple real orgs in production)
+- When performance profiling shows FK traversal is a bottleneck
+- **NOT before** — avoid premature optimization and large data migrations
+
+**Documentation:** See "Request.orgId Migration Path" section below.
+
+---
+
 ## 1. Project Goal (MVP)
 
 Build a web-first maintenance platform for Swiss property managers that:
@@ -330,7 +528,8 @@ Maintenance_Agent/
 │   │       ├── services/          # jobs, invoices, contractors, inventory, tenants, requests, assignments
 │   │       ├── validation/        # invoices, requests, contractors, inventory, auth, triage
 │   │       ├── utils/             # phone normalization
-│   │       └── http/              # body/json/query/errors/router helpers
+│   │       ├── routes/            # auth, config, inventory, requests, tenants, invoices, notifications, leases, rentalApplications, contractor
+│   │       └── http/              # body/json/query/errors/router/routeProtection helpers
 │   └── web/
 │       ├── pages/
 │       │   ├── index.js
@@ -344,10 +543,14 @@ Maintenance_Agent/
 │       │   ├── tenant-chat.js
 │       │   ├── tenant-form.js
 │       │   ├── manager/           # manager operations pages
+│       │   ├── apply.js            # tenant rental application wizard
+│       │   ├── listings.js        # public vacancy listings
+│       │   ├── login.js           # auth login/register
 │       │   ├── contractors.js
-│       │   └── api/               # proxy routes to backend
-│       ├── components/            # AppShell, shared UI
+│       │   └── api/               # proxy routes to backend (~40 proxy files)
+│       ├── components/            # AppShell, ContractorPicker, shared UI
 │       │   └── layout/            # PageShell, PageHeader, PageContent, Panel, Section, SidebarLayout
+│       ├── lib/                   # proxy.js (H3 shared proxy helper)
 │       └── styles/
 │           └── managerStyles.js
 ├── .github/
@@ -367,11 +570,11 @@ Maintenance_Agent/
 
 ## 4. Database Schema (Prisma)
 
-**Status: ACTIVE AND IN USE — 23 migrations applied, zero drift**
+**Status: ACTIVE AND IN USE — 24 migrations applied, zero drift**
 
-**Last verified:** 2026-02-25
+**Last verified:** 2026-03-03
 
-### Models (20 total)
+### Models (29 total)
 
 | Model | Key Fields | Relations |
 |-------|-----------|-----------|
@@ -398,6 +601,12 @@ Maintenance_Agent/
 | **Notification** | orgId, userId, buildingId?, entityType, entityId, eventType, readAt | → Org, Building |
 | **Lease** | orgId, status, unitId, 40+ fields (parties, object, dates, rent, deposit, PDF refs, lifecycle timestamps) | → Org, Unit, SignatureRequests, Invoices |
 | **SignatureRequest** | orgId, entityType, entityId, provider, level, status, signersJson | → Org, Lease |
+| **RentalApplication** | orgId, status (RentalApplicationStatus), contactEmail, contactPhone, householdSize, currentAddress, moveInDate, pets, remarks, scoring fields | → Org, Applicants, Attachments, ApplicationUnits |
+| **RentalApplicant** | applicationId, role (PRIMARY/CO_APPLICANT), firstName, lastName, dateOfBirth, nationality, permitType, employer, income | → RentalApplication |
+| **RentalAttachment** | applicationId, applicantId, docType (RentalDocType), filename, mimeType, sizeBytes, scanResult JSON, retainUntil | → RentalApplication, RentalApplicant |
+| **RentalApplicationUnit** | applicationId, unitId, status (RentalApplicationUnitStatus), scoreTotal, confidenceScore, disqualified, disqualifyReason, manualAdjustment, manualAdjustReason | → RentalApplication, Unit |
+| **RentalOwnerSelection** | orgId, unitId, status (RentalOwnerSelectionStatus), primaryId, fallback1Id, fallback2Id, deadlineAt, escalatedAt | → Unit, RentalApplicationUnits |
+| **EmailOutbox** | orgId, template (EmailTemplate), recipientEmail, recipientName, subject, bodyHtml, status (EmailOutboxStatus), sentAt, errorMessage | → Org |
 
 ### Key Enums
 - `RequestStatus`: PENDING_REVIEW, AUTO_APPROVED, APPROVED, ASSIGNED, IN_PROGRESS, COMPLETED, PENDING_OWNER_APPROVAL
@@ -408,6 +617,12 @@ Maintenance_Agent/
 - `Role`: TENANT, CONTRACTOR, MANAGER, OWNER
 - `OrgMode`: MANAGED, OWNER_DIRECT
 - `UnitType`: RESIDENTIAL, COMMON_AREA
+- `RentalApplicationStatus`: DRAFT, SUBMITTED, UNDER_REVIEW, CLOSED
+- `RentalApplicationUnitStatus`: APPLIED, SHORTLISTED, SELECTED, REJECTED, WITHDRAWN
+- `RentalOwnerSelectionStatus`: AWAITING_SIGNATURE, FALLBACK_1, FALLBACK_2, EXHAUSTED, SIGNED, EXPIRED
+- `RentalDocType`: IDENTITY, SALARY_PROOF, DEBT_ENFORCEMENT_EXTRACT, PERMIT, HOUSEHOLD_INSURANCE, OTHER
+- `EmailOutboxStatus`: QUEUED, SENT, FAILED
+- `EmailTemplate`: LEASE_READY_TO_SIGN, APPLICATION_RECEIVED, APPLICATION_REJECTED, SELECTION_TIMEOUT_WARNING, etc.
 
 ### ⚠️ Schema Gotchas (fields that DON'T exist where you'd expect)
 - **`Request` has NO `orgId`** — requests are not directly org-scoped (they inherit scope through unit/building)
@@ -448,7 +663,8 @@ Routes are split into modular files under `src/routes/`:
 - `routes/tenants.ts` — tenant CRUD, tenant portal (lease view + accept)
 - `routes/config.ts` — org config, building config, unit config
 - `routes/notifications.ts` — notification list, unread count, mark read
-- `routes/auth.ts` — register, login, tenant-session, triage
+- `routes/auth.ts` — register, login, tenant-session, triage, tenant-portal notifications/invoices
+- `routes/rentalApplications.ts` — rental applications CRUD, document scan, manager/owner views, selections
 - `routes/helpers.ts` — event logging, governance access helpers
 
 All registered in `src/server.ts` via `register*Routes(router)`.
@@ -502,6 +718,12 @@ All registered in `src/server.ts` via `register*Routes(router)`.
 - `GET /contractors`, `POST /contractors`, `GET /contractors/:id`
 - `PATCH /contractors/:id`, `DELETE /contractors/:id`
 
+#### Contractor Portal (NEW Feb 27)
+- `GET /contractor/jobs` — contractor-scoped job list (requires CONTRACTOR role + contractorId)
+- `GET /contractor/jobs/:id` — contractor job detail
+- `GET /contractor/invoices` — contractor-scoped invoice list
+- `GET /contractor/invoices/:id` — contractor invoice detail
+
 #### Tenants
 - `GET /tenants`, `POST /tenants`, `PATCH /tenants/:id`, `DELETE /tenants/:id`
 
@@ -509,6 +731,12 @@ All registered in `src/server.ts` via `register*Routes(router)`.
 - `GET /tenant-portal/leases` — tenant lease list (occupancy-verified)
 - `GET /tenant-portal/leases/:id` — tenant lease detail
 - `POST /tenant-portal/leases/:id/accept` — tenant sign/accept
+- `GET /tenant-portal/notifications` — tenant notifications (paginated, unread filter)
+- `GET /tenant-portal/notifications/unread-count` — unread count
+- `POST /tenant-portal/notifications/:id/read` — mark notification read
+- `POST /tenant-portal/notifications/mark-all-read` — mark all read
+- `DELETE /tenant-portal/notifications/:id` — delete notification
+- `GET /tenant-portal/invoices` — tenant invoices across all occupied units
 
 #### Inventory
 - Buildings: `GET /buildings`, `POST /buildings`, `PATCH /buildings/:id`, `DELETE /buildings/:id`
@@ -527,6 +755,25 @@ All registered in `src/server.ts` via `register*Routes(router)`.
 - `GET /notifications/unread-count`
 - `POST /notifications/:id/read`
 - `POST /notifications/mark-all-read`
+
+#### Rental Applications
+- `GET /vacant-units` — list units with vacant status
+- `POST /rental-applications` — create new application
+- `POST /rental-applications/:id/submit` — submit application
+- `POST /rental-applications/:id/attachments` — upload documents (multipart)
+- `GET /manager/rental-applications` — manager ranked view (with scoring)
+- `GET /manager/rental-applications/:id` — application detail
+- `POST /manager/rental-application-units/:id/adjust-score` — manual score adjustment
+- `GET /owner/rental-applications` — owner view of applications
+- `POST /owner/units/:unitId/select-tenants` — owner selects primary + fallbacks
+- `GET /manager/selections` — active tenant selections (manager)
+- `GET /owner/selections` — active tenant selections (owner)
+- `POST /document-scan` — OCR scan uploaded document (multipart)
+- `POST /lease-templates` — create blank lease template
+- `POST /lease-templates/from-lease` — create template from existing lease
+- `POST /lease-templates/:id/create-lease` — generate lease from template
+- `GET /dev/emails` — dev email outbox list
+- `GET /dev/emails/:id` — dev email detail
 
 #### Auth
 - `POST /auth/register`, `POST /auth/login`
@@ -614,6 +861,10 @@ All registered in `src/server.ts` via `register*Routes(router)`.
 * `GET /api/contractors/[id]` → backend `GET /contractors/:id`
 * `PATCH /api/contractors/[id]` → backend `PATCH /contractors/:id`
 * `DELETE /api/contractors/[id]` → backend `DELETE /contractors/:id`
+* `GET /api/contractor/jobs` → backend `GET /contractor/jobs` (injects X-Dev-Role: CONTRACTOR)
+* `GET /api/contractor/jobs/[id]` → backend `GET /contractor/jobs/:id` (injects X-Dev-Role: CONTRACTOR)
+* `GET /api/contractor/invoices` → backend `GET /contractor/invoices` (injects X-Dev-Role: CONTRACTOR)
+* `GET /api/contractor/invoices/[id]` → backend `GET /contractor/invoices/:id` (injects X-Dev-Role: CONTRACTOR)
 * Inventory proxies under `/api/buildings`, `/api/units`, `/api/appliances`, `/api/tenants`, `/api/asset-models`
 * `POST /api/tenant-session` → backend `POST /tenant-session`
 * `POST /api/triage` → backend `POST /triage`
@@ -985,8 +1236,8 @@ What was added:
 Status:
 
 - All critical code changes completed and tested
-- All 178 tests passing ✅ (19 unit test suites + 1 contract test suite: requests, auth, governance, inventory, jobs, invoices, leases, notifications, billing, PDFs, QR bills, tenant session, triage, unit config cascade, IA, orgIsolation, httpErrors, domainEvents, openApiSync, contracts)
-- Prisma migrations all applied (23 total)
+- All 216 tests passing ✅ (23 test suites: requests, auth, governance, inventory, jobs, invoices, leases, notifications, billing, PDFs, QR bills, tenant session, triage, unit config cascade, IA, orgIsolation, httpErrors, domainEvents, openApiSync, contracts, routeProtection, rentalContracts, rentalIntegration)
+- Prisma migrations all applied (24 total)
 - Full end-to-end owner-direct workflow functional:
   1. Tenant submits request → 2. Owner approves → 3. Job auto-created → 4. Contractor manages job → 5. Invoice auto-created → 6. Owner approves/pays
 
@@ -1062,7 +1313,7 @@ If you still see stale UI after pulling changes, restart both dev servers and ha
 ### Completed
 
 * Raw HTTP backend stabilized
-* Prisma + PostgreSQL integrated (23 migrations, zero drift)
+* Prisma + PostgreSQL integrated (24 migrations, zero drift)
 * Request lifecycle implemented (full CRUD + auto-approve + owner approval)
 * Auto-approval logic working (org-level + building-level + unit-level + rules engine)
 * Org-level configuration with MANAGED/OWNER_DIRECT modes
@@ -1081,6 +1332,12 @@ If you still see stale UI after pulling changes, restart both dev servers and ha
 * UI styling frozen
 * **Tech debt cleanup (Feb 24–25):** Schema drift fixed, stub services replaced, all code-schema mismatches resolved
 * **Guardrail audit fixes (Feb 25):** CI hardened to 6-gate pipeline (G7), production boot guard (F1), canonical includes extracted — `JOB_INCLUDE`, `LEASE_INCLUDE`, `INVOICE_INCLUDE` (G9), API contract tests created (G10), proxy auth forwarding fixed (F3), dev scripts formalized (F6), `managerStyles.js` created (F8)
+* **Manager & Contractor Dashboard Blueprint (Feb 27):** 61/61 items complete — API client gaps filled, ContractorPicker component, assign→job creation bug fixed, proxy auth bugs fixed (3), job card enriched with tenant/unit/building/invoice addressee, test suite hardened (194/194 green)
+* **Rental Applications Epic (Feb 27 – Mar 2):** Full pipeline — tenant apply wizard, document upload with OCR (multi-strategy image+PDF), scoring engine, manager ranked view with manual adjustment, owner selection with 7-day deadline + fallback cascade, lease-from-template generation, email outbox with dev sink, attachment retention rules, 24 migrations, 216/216 tests green
+* **Document Scan OCR (Mar 1–2):** Multi-strategy OCR with Tesseract.js v7 + sharp preprocessing (grayscale, high-contrast, threshold binarization), scanned PDF→image extraction via pdfjs-dist, OCR-tolerant MRZ parser with cleanMrzLine/cleanMrzName, fuzzy field extraction fallback — 5 document types: passport (JPEG/PNG/PDF), FR ID card, salary proof
+* **Lease Signing Feedback (Mar 2):** Manager and owner notifications when tenant signs lease via tenant portal
+* **Debt Enforcement Fix (Mar 2):** Fixed false positive where "Open Enforcement Cases: None" returned hasDebtEnforcement: true — added 30 clean patterns, concrete positive signals, safe default false
+* **Project Audit & Cleanup (Mar 3):** OpenAPI spec synced (10 missing routes added), stale documentScan.ts.bak deleted, 216/216 tests green (23 suites), 0 TypeScript errors
 * End-to-end flows verified:
 
   ```
@@ -1185,14 +1442,330 @@ If you still see stale UI after pulling changes, restart both dev servers and ha
 - New `__tests__/openApiSync.test.ts`: 6 tests ensuring bidirectional sync between spec and router registrations (code→spec, spec→code, unique operationIds, required DTO schemas)
 - Verification: tsc 0 errors, 178 tests pass (19 suites), 0 schema drift, frontend build clean, api-client typecheck clean
 
+---
+
+### Request.orgId Migration Path (H6 Reference)
+
+**Context:** The `Request` model currently has **no `orgId` field**. Org scope is resolved dynamically via FK traversal using `resolveRequestOrg()` in `governance/orgScope.ts`, which walks:
+- `unit → building → org` (if `unitId` present)
+- `tenant → org` (if `tenantId` present)
+- `appliance → org` (if `applianceId` present)
+- `contractor → org` (if `assignedContractorId` present)
+
+This works but adds query complexity and prevents direct org filtering on `Request` queries.
+
+**Migration Steps (when needed):**
+
+1. **Schema Change** — Add nullable `orgId` to Request:
+   ```prisma
+   model Request {
+     // ... existing fields
+     orgId     String?  // Nullable initially for backfill
+     org       Org?     @relation(fields: [orgId], references: [id])
+   }
+   ```
+   Run: `npx prisma migrate dev --name add_request_orgid`
+
+2. **Backfill Data** — Populate `orgId` from FK chain:
+   ```sql
+   -- Via unit
+   UPDATE "Request"
+   SET "orgId" = (
+     SELECT "Building"."orgId"
+     FROM "Unit"
+     JOIN "Building" ON "Unit"."buildingId" = "Building"."id"
+     WHERE "Unit"."id" = "Request"."unitId"
+   )
+   WHERE "unitId" IS NOT NULL AND "orgId" IS NULL;
+
+   -- Via tenant
+   UPDATE "Request"
+   SET "orgId" = (SELECT "orgId" FROM "Tenant" WHERE "id" = "Request"."tenantId")
+   WHERE "tenantId" IS NOT NULL AND "orgId" IS NULL;
+
+   -- Via contractor
+   UPDATE "Request"
+   SET "orgId" = (SELECT "orgId" FROM "Contractor" WHERE "id" = "Request"."assignedContractorId")
+   WHERE "assignedContractorId" IS NOT NULL AND "orgId" IS NULL;
+   ```
+   Test: `SELECT COUNT(*) FROM "Request" WHERE "orgId" IS NULL;` → should be 0
+
+3. **Make Required** — Change schema to non-nullable:
+   ```prisma
+   orgId     String   @default("default-org")  // or remove default after backfill
+   ```
+   Run: `npx prisma migrate dev --name require_request_orgid`
+
+4. **Update Queries** — Change all `listMaintenanceRequests()` / `listOwnerPendingApprovals()` to filter directly:
+   ```typescript
+   const requests = await prisma.request.findMany({
+     where: { orgId },  // Direct filter, no FK traversal
+     // ...
+   });
+   ```
+
+5. **Keep Resolvers for Validation** — `resolveRequestOrg()` remains useful for assertions:
+   ```typescript
+   const resolvedOrgId = await resolveRequestOrg(prisma, requestId);
+   assertOrgScope(orgId, resolvedOrgId, "Request");  // Cross-check
+   ```
+
+6. **Drift Check** — Verify zero drift after migration:
+   ```bash
+   npx prisma migrate diff \
+     --from-schema-datasource ./prisma/schema.prisma \
+     --to-schema-datamodel ./prisma/schema.prisma \
+     --script
+   ```
+   Expected: `-- This is an empty migration.`
+
+7. **Update DTOs & Tests** (per H4):
+   - Add `orgId` to `MaintenanceRequestDTO` interface
+   - Update `mapRequestToDTO()` mapper
+   - Update OpenAPI spec + typed client
+   - Update contract tests
+
+**When to execute:**
+- Multi-org feature lands (multiple real tenants in production)
+- Query performance becomes measurably slow (profile first)
+- **NOT before** — avoid premature schema churn
+
+**Estimated effort:** 2–3 hours (schema + backfill + query updates + tests)
+
+---
+
+### Hardening Infrastructure (H1–H6) — Feb 26, 2026
+
+**Status:** Infrastructure complete, incremental rollout in progress
+
+**Overview:** Implemented prototype → production seed hardening patterns without framework rewrites. Established reusable infrastructure for auth enforcement, proxy consolidation, and DTO optimization.
+
+**What was delivered:**
+- **Route Protection Wrappers (H1):** `withAuthRequired()`, `withRole()` in `apps/api/src/http/routeProtection.ts`
+  - Applied to 7 representative routes in `routes/config.ts`
+  - Pattern established for incremental rollout to remaining 100+ endpoints
+- **Production Boot Guard (H2):** `enforceProductionAuthConfig()` enforces AUTH_SECRET requirement in production
+  - 3 new tests in `__tests__/routeProtection.test.ts`
+- **Shared Proxy Helper (H3):** `proxyToBackend()` in `apps/web/lib/proxy.js`
+  - Consolidates header/query/status/binary forwarding logic
+  - Lease PDF route refactored (45 lines → 3 lines)
+- **DTO Tiers (H5):** `JobSummaryDTO` + `view=summary` parameter
+  - Reduces list endpoint overfetch without breaking existing clients
+  - OpenAPI spec + typed client updated
+- **orgId Migration Path (H6):** Documented 7-step migration plan (deferred until multi-org launch)
+
+**Files created:**
+- `apps/api/src/http/routeProtection.ts` (83 lines)
+- `apps/api/src/__tests__/routeProtection.test.ts` (51 lines)
+- `apps/web/lib/proxy.js` (95 lines)
+
+**Files modified:**
+- `apps/api/src/routes/config.ts` — 7 routes wrapped
+- `apps/api/src/routes/invoices.ts` — view param added
+- `apps/api/src/services/jobs.ts` — JobSummaryDTO + view logic
+- `apps/api/openapi.yaml` — JobSummaryDTO schema
+- `packages/api-client/src/index.ts` — JobSummaryDTO export
+- `apps/web/pages/api/leases/[...id].js` — proxy helper adoption
+
+**Test status:** ✅ 194 tests, 21 suites, **ALL PASSING** (100% green)
+- 5 new tests: contracts.test.ts (G10: API Contract Tests)
+- Route protection wrappers respect `AUTH_OPTIONAL` for dev/test backward compatibility
+- Auth token generation helpers in testHelpers.ts for integration testing
+
+**Next steps (incremental):**
+- Roll out H1 wrappers to remaining routes
+- Add H3 proxy integration tests
+- Implement summary DTOs for requests, invoices, leases
+
+---
+
+### Rental Applications Epic (Feb 27 – Mar 2, 2026)
+
+**Status:** ✅ **COMPLETE** — Full pipeline from tenant application through lease signing
+
+**Overview:** Implemented the complete Rental Applications pipeline: tenant apply wizard with document upload and OCR scanning, automated scoring engine, manager ranked view with manual adjustments, owner selection with 7-day deadline and fallback cascade, lease generation from building templates, email outbox with dev sink, and attachment retention rules.
+
+**Database Schema (6 new models, 8 new enums, 1 migration):**
+- `RentalApplication`: application dossier (contact info, household, current address, move-in date, pets, remarks)
+- `RentalApplicant`: primary + co-applicants (identity, employment, income, document links)
+- `RentalAttachment`: uploaded documents (OCR scan results stored as JSON, retention policy)
+- `RentalApplicationUnit`: per-unit scoring junction (scoreTotal, confidenceScore, disqualified flag, manual adjustment)
+- `RentalOwnerSelection`: owner decision tracking (primary + 2 fallbacks, deadline, escalation, auto-cascade)
+- `EmailOutbox`: email queue with template system (QUEUED → SENT/FAILED)
+- Enums: `RentalApplicationStatus`, `ApplicantRole`, `RentalDocType`, `RentalApplicationUnitStatus`, `RentalOwnerSelectionStatus`, `EmailOutboxStatus`, `EmailTemplate`
+
+**Backend Services:**
+- `services/rentalApplications.ts` (722 lines): Application CRUD, scoring engine (income ratio, doc completeness, employment stability, residence stability), submission with auto-scoring across all applied units
+- `services/ownerSelection.ts` (447 lines): Owner selection with deadline enforcement, fallback cascade (primary → fallback1 → fallback2 → exhausted), timeout processing, attachment retention cleanup
+- `services/documentScan.ts` (1,680 lines): Multi-strategy OCR pipeline — 3 preprocessing strategies via sharp (grayscale+normalize+sharpen, high-contrast, threshold binarization), scanned PDF→image extraction via pdfjs-dist, OCR-tolerant MRZ parser, fuzzy field extraction fallback, identity/salary/debt-enforcement/permit/insurance document parsers
+- `services/emailOutbox.ts` (129 lines): Email queue with template rendering, dev sink view
+- `services/leases.ts` (1,167 lines): Lease template system, create-from-template with tenant auto-fill
+
+**Backend Routes:**
+- `routes/rentalApplications.ts` (532 lines): 17 endpoints for application lifecycle, document scan, manager/owner views, selections, dev email outbox
+- `routes/leases.ts`: `POST /lease-templates`, `POST /lease-templates/from-lease`, `POST /lease-templates/:id/create-lease`
+- `routes/auth.ts`: Tenant portal notifications and invoices (6 endpoints)
+
+**Frontend:**
+- `pages/apply.js` (1,203 lines): Multi-step application wizard with document upload (drag & drop, auto-scan, PDF/JPEG/PNG), real-time validation
+- `pages/listings.js`: Public vacancy listings
+- `pages/manager/vacancies/`: Manager ranked applications view, score adjustment
+- `pages/owner/vacancies/`: Owner selection UI with primary + fallback picker
+- `pages/manager/leases/templates.js`: Lease template management
+- 20+ new API proxy routes under `pages/api/`
+
+**Background Jobs:**
+- `processSelectionTimeouts()`: Checks expired deadlines, cascades to fallback candidates
+- `processAttachmentRetention()`: Deletes attachments for rejected candidates after 30 days
+- Both run on hourly interval + available via `POST /__dev/rental/run-jobs` (dev only)
+
+**Testing:**
+- `rentalContracts.test.ts`: Application lifecycle contract tests
+- `rentalIntegration.test.ts`: Full integration tests (scoring, selection, fallback cascade)
+- All 216 tests passing across 23 suites
+
+---
+
+### Document Scan OCR Improvements (Mar 1–2, 2026)
+
+**Status:** ✅ **COMPLETE** — 5 document types reliably parsed
+
+**Improvements:**
+- Fixed Tesseract.js v7 import: `await import("tesseract.js")` puts `recognize` on `.default`, not top level
+- Added sharp preprocessing (grayscale, normalize, sharpen, upscale) for image inputs
+- Added scanned PDF→image extraction via pdfjs-dist canvas rendering
+- Multi-strategy OCR: 3 preprocessing pipelines run in parallel, best result selected by confidence
+- OCR-tolerant MRZ parser: `cleanMrzLine()` strips OCR noise, `cleanMrzName()` handles garbled `<<<` padding, requires `<` chars to prevent false positives
+- `extractFieldsFromOcrText()`: fuzzy field extraction as fallback when MRZ parsing fails
+- `cleanName()`: strips document numbers accidentally captured in name fields
+- Improved `parseDebtEnforcementExtract()`: 30 clean patterns + concrete positive signals + safe default false (fixed false positive on "Open Enforcement Cases: None")
+
+**Verified Documents:**
+1. Realistic passport JPEG → ✅ MRZ parsed correctly
+2. Simple passport PNG → ✅ OCR + field extraction
+3. MRZ passport PDF (scanned) → ✅ PDF→image→OCR→MRZ
+4. French ID card PDF (no MRZ) → ✅ Fuzzy field extraction
+5. Salary proof JPEG → ✅ Income fields extracted
+
+---
+
+### Lease Signing Feedback (Mar 2, 2026)
+
+**Status:** ✅ **COMPLETE**
+
+- `tenantAcceptLease()` in `services/tenantPortal.ts` now updates `RentalOwnerSelection` status to `SIGNED`
+- Notifications sent to manager and owner when tenant signs lease
+- `NotificationBell.js` updated with color-coded notification types (LEASE_SIGNED=emerald, LEASE_READY_TO_SIGN=sky, TENANT_SELECTED=indigo)
+- Clickable notification items with role-aware routing
+
+---
+
+### Project Audit & OpenAPI Sync (Mar 3, 2026)
+
+**Status:** ✅ **COMPLETE**
+
+**Audit Results:**
+- Services: PostgreSQL (5432) ✅, API (3001) ✅, Frontend (3000) ✅
+- TypeScript: 0 errors ✅
+- Database: 24 migrations, schema up to date ✅
+- Tests: 216/216 passing (23 suites) ✅
+- All API endpoints responding correctly ✅
+- All 8 major frontend pages return 200 ✅
+
+**Fixes Applied:**
+1. **OpenAPI spec synced** — Added 10 missing route definitions:
+   - 6 tenant-portal routes (notifications CRUD + invoices)
+   - `POST /lease-templates`
+   - `POST /document-scan`
+   - `GET /manager/selections`
+   - `GET /owner/selections`
+2. **Deleted `documentScan.ts.bak`** (18KB stale backup)
+3. `_archive/` already in `.gitignore` ✅
+
+**Codebase Metrics:**
+- Backend: 16,179 lines TypeScript
+- Frontend: 19,548 lines JavaScript
+- Total: 35,727 LOC
+- ~120 API routes across 10 route files
+- 29 Prisma models, 21 enums
+- 65 frontend pages (UI + API proxies)
+
+---
+
+### Manager & Contractor Dashboard Blueprint (Feb 27, 2026)
+
+**Status:** ✅ **COMPLETE** — 61/61 blueprint items delivered, 194/194 tests green
+
+**Overview:** Implemented the full Manager & Contractor Dashboard Blueprint including API client completeness, contractor portal UX, runtime bug fixes, job card enrichment, and comprehensive test suite hardening.
+
+**API Client Gaps Fixed (5 items):**
+- Added `MaintenanceRequestSummaryDTO`, `InvoiceSummaryDTO` interfaces to `packages/api-client/src/index.ts`
+- Added `view` parameter support to `requests.list()` and `invoices.list()`
+- Added `contractor` namespace with `jobs()`, `getJob()`, `invoices()`, `getInvoice()` methods
+
+**ContractorPicker Component:**
+- New `apps/web/components/ContractorPicker.js` — dev/test contractor selector dropdown
+- Wired into all 3 contractor pages: `contractor/index.js`, `contractor/jobs.js`, `contractor/invoices.js`
+- Fetches contractor list from `/api/contractors` with dev-role headers
+
+**Runtime Bug Fixes (4 critical):**
+
+| # | Bug | Root Cause | Fix |
+|---|-----|-----------|-----|
+| 1 | Assigning contractor didn't create Job | `assignContractor()` only set `assignedContractorId` on Request, never created a Job | Added `getOrCreateJobForRequest()` call after `assignContractor()` in `routes/requests.ts` |
+| 2 | Contractor proxy returned 403 | 4 contractor proxy routes missing `X-Dev-Role: CONTRACTOR` header | Added `headers: { "X-Dev-Role": "CONTRACTOR" }` to all 4 proxy calls |
+| 3 | Stale JWT blocked dev identity | `getAuthUser()` returned `null` on invalid token without falling through to dev identity | Changed to only return decoded if truthy, else fall through |
+| 4 | ContractorPicker showed empty list | `devHeaders` spread `undefined` values → Node fetch sent `"undefined"` string → wrong org lookup | Filtered out undefined values before passing headers |
+
+**Job Card Enrichment:**
+- Added `invoiceAddressedTo: "TENANT" | "PROPERTY_MANAGER"` field to `JobDTO` in `services/jobs.ts`
+- Frontend `contractor/jobs.js` now fetches with `view=full` and displays invoice addressee badge
+- Logic: if request has `tenantId` → invoice addressed to TENANT, otherwise PROPERTY_MANAGER
+
+**Test Suite Hardening (6 previously-failing suites fixed):**
+
+| Issue | Root Cause | Fix |
+|-------|-----------|-----|
+| 5 suites timing out | Orphaned node processes occupying test ports | Killed orphans; added `--transpile-only` flag for faster startup |
+| `auth.manager-gates.test.ts` slow | Used `spawn("npx", ["ts-node", ...])` | Switched to direct `TS_NODE` binary path |
+| Port collision | `ia.test.ts` and `contracts.test.ts` both used port 3205 | Changed `ia.test.ts` to port 3206 |
+| `contracts.test.ts` open handle | `cleanup()` never called `clearTimeout()` | Added `clearTimeout(timer)` + missing `beforeAll` timeout |
+| Invoice summary DTO contract failure | `dueDate`/`paidAt` mapped to `undefined` → stripped by JSON.stringify | Changed to `null` so keys always appear in response |
+| Short timeouts | `contracts.test.ts` had 5s, others 8s | Standardized all to 15s |
+
+**Files Created:**
+- `apps/web/components/ContractorPicker.js`
+
+**Files Modified:**
+- `packages/api-client/src/index.ts` — DTOs, view params, contractor namespace
+- `apps/api/src/routes/requests.ts` — getOrCreateJobForRequest after assignContractor
+- `apps/api/src/authz.ts` — stale token fallthrough fix
+- `apps/api/src/services/jobs.ts` — invoiceAddressedTo in JobDTO
+- `apps/api/src/services/invoices.ts` — mapInvoiceToSummaryDTO null vs undefined fix
+- `apps/web/pages/api/contractor/jobs.js` — X-Dev-Role header
+- `apps/web/pages/api/contractor/invoices.js` — X-Dev-Role header
+- `apps/web/pages/api/contractor/jobs/[id].js` — X-Dev-Role header
+- `apps/web/pages/api/contractor/invoices/[id].js` — X-Dev-Role header
+- `apps/web/pages/api/contractors.js` — undefined header filtering
+- `apps/web/pages/contractor/index.js` — ContractorPicker
+- `apps/web/pages/contractor/jobs.js` — ContractorPicker + view=full + invoice badge
+- `apps/web/pages/contractor/invoices.js` — ContractorPicker
+- `apps/api/src/__tests__/contracts.test.ts` — --transpile-only, timeout, cleanup fix
+- `apps/api/src/__tests__/requests.test.ts` — --transpile-only, timeout
+- `apps/api/src/__tests__/inventory.test.ts` — --transpile-only, timeout
+- `apps/api/src/__tests__/auth.manager-gates.test.ts` — npx→TS_NODE, --transpile-only, timeout
+- `apps/api/src/__tests__/tenantSession.test.ts` — --transpile-only, timeout
+- `apps/api/src/__tests__/ia.test.ts` — --transpile-only, port 3206, timeout
+
+---
+
 ### Not Implemented Yet (Active Backlog)
 
 * Lease Phase 3–5: DocuSign/Skribble integration, deposit payment tracking, archive workflow
 * Authentication enforcement (scaffolded, not wired to all routes) — see M2 above
 * Role enforcement on all sensitive endpoints (partially implemented)
-* Notifications delivery (routes exist, notifications created, but no push/email delivery)
-* Media uploads (photos of damage, documents)
-* Tenant portal redesign (conversational → structured)
+* Email delivery provider integration (EmailOutbox + dev sink implemented; no SMTP/SendGrid wired yet)
+* Notifications push delivery (in-app notifications work; no push/email delivery)
 * Reporting & analytics dashboard
 * Multi-org support (org scoping via M1; auth centralized via M2; DEFAULT_ORG_ID remains only in authz.ts fallback + orgConfig.ts bootstrap + tests)
 
@@ -1270,9 +1843,12 @@ Current tenant UI relies on manual category selection and free-text descriptions
 
 This document is the **single source of truth** and matches:
 
-* Filesystem (verified 2026-02-25, post-M1 — committed `a3e3dab`)
-* Database schema — zero drift (`prisma migrate diff` clean)
-* Running system — all endpoints return 200 (verified 2026-02-25)
+* Filesystem (verified 2026-03-03)
+* Database schema — 24 migrations, zero drift (`prisma migrate diff` clean)
+* Running system — all endpoints return 200 (verified 2026-03-03)
+* Test suite — 216/216 tests green, 23 suites (verified 2026-03-03)
+* TypeScript compilation — 0 errors (verified 2026-03-03)
+* OpenAPI spec — fully synced with router registrations (verified 2026-03-03)
 * Git — clean working tree, all changes committed
 * Architectural intent
 * CI pipeline enforces G1–G10 guardrails
@@ -1288,9 +1864,9 @@ Safe to:
 
 ---
 
-✅ **Project stabilized, audit-hardened, and org-scoped (2026-02-25).**
+✅ **Project stabilized, audit-hardened, and org-scoped (2026-03-03).**
 
-All crash-level and warning-level issues resolved. Guardrail enforcement in CI (G7), canonical includes (G9), contract tests (G10), production boot guard (F1), proxy auth forwarding (F3), dev scripts (F6), and styling lock file (F8) all implemented. M1 Org Scoping Enforcement Framework complete — all routes enforce org isolation via governance/orgScope.ts. Work can resume from M2 (Centralized Auth) or the Active Backlog without rework.
+All crash-level and warning-level issues resolved. Guardrail enforcement in CI (G7), canonical includes (G9), contract tests (G10), production boot guard (F1), proxy auth forwarding (F3), dev scripts (F6), and styling lock file (F8) all implemented. M1 Org Scoping Enforcement Framework complete — all routes enforce org isolation via governance/orgScope.ts. Manager & Contractor Dashboard Blueprint fully implemented (61/61). Rental Applications Epic fully implemented — scoring, owner selection with fallback cascade, lease-from-template, document OCR. OpenAPI spec fully synced. **Backend: 16,179 LOC | Frontend: 19,548 LOC | ~120 API routes | 29 Prisma models | 21 enums | 65 frontend pages.** Work can resume from the Active Backlog without rework.
 
 ---
 

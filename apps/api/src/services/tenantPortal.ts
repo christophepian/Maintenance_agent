@@ -2,7 +2,7 @@
  * Tenant Portal — read-only lease access & acceptance stub
  *
  * Tenants identify via phone → unitId; they can only see leases
- * that are READY_TO_SIGN or SIGNED on their unit.
+ * that are READY_TO_SIGN, SIGNED, or ACTIVE on their unit.
  */
 import { LeaseStatus, SignatureRequestStatus } from '@prisma/client';
 import prisma from './prismaClient';
@@ -58,6 +58,9 @@ export interface TenantLeaseDTO {
   // Signature info (if any active request exists)
   signatureStatus?: string;
   tenantAcceptedAt?: string;
+  activatedAt?: string;
+  depositPaidAt?: string;
+  depositDueDate?: string;
 }
 
 // ==========================================
@@ -110,13 +113,16 @@ function mapToTenantLeaseDTO(lease: any, signatureReq?: any): TenantLeaseDTO {
 
     signatureStatus: signatureReq?.status || undefined,
     tenantAcceptedAt: signatureReq?.signedAt ? signatureReq.signedAt.toISOString() : undefined,
+    activatedAt: lease.activatedAt ? lease.activatedAt.toISOString() : undefined,
+    depositPaidAt: lease.depositPaidAt ? lease.depositPaidAt.toISOString() : undefined,
+    depositDueDate: lease.depositDueDate ? lease.depositDueDate.toISOString() : undefined,
   };
 }
 
 // ==========================================
 // TENANT-VISIBLE STATUSES: only non-draft
 // ==========================================
-const TENANT_VISIBLE_STATUSES: LeaseStatus[] = [LeaseStatus.READY_TO_SIGN, LeaseStatus.SIGNED];
+const TENANT_VISIBLE_STATUSES: LeaseStatus[] = [LeaseStatus.READY_TO_SIGN, LeaseStatus.SIGNED, LeaseStatus.ACTIVE];
 
 // ==========================================
 // List leases for a tenant (across all occupied units)
@@ -262,10 +268,13 @@ export async function tenantAcceptLease(
     },
   });
 
-  // Mark lease as SIGNED
+  // Auto-activate: READY_TO_SIGN → SIGNED → ACTIVE in one step
   const updatedLease = await prisma.lease.update({
     where: { id: leaseId },
-    data: { status: LeaseStatus.SIGNED },
+    data: {
+      status: LeaseStatus.ACTIVE,
+      activatedAt: new Date(),
+    },
     include: {
       unit: { include: { building: true } },
       signatureRequests: {
@@ -275,6 +284,77 @@ export async function tenantAcceptLease(
       },
     },
   });
+
+  // Auto-generate first rent invoice
+  try {
+    const { createLeaseInvoice } = await import('./leases');
+    const rentTotal = updatedLease.rentTotalChf || updatedLease.netRentChf || 0;
+    if (rentTotal > 0) {
+      await createLeaseInvoice(leaseId, orgId, {
+        type: 'FIRST_RENT',
+        amountChf: rentTotal,
+      });
+      console.log(`[LEASE] Auto-created first rent invoice for lease ${leaseId} — CHF ${rentTotal}`);
+    }
+  } catch (invoiceErr) {
+    // Don't fail the signing if invoice creation has an issue
+    console.error(`[LEASE] Failed to auto-create first rent invoice for lease ${leaseId}:`, invoiceErr);
+  }
+
+  // Mark the RentalOwnerSelection as SIGNED (removes from "Awaiting Signature" pipeline)
+  try {
+    const unitId = updatedLease.unitId;
+    const sel = await prisma.rentalOwnerSelection.findFirst({
+      where: { unitId, status: 'AWAITING_SIGNATURE' },
+    });
+    if (sel) {
+      await prisma.rentalOwnerSelection.update({
+        where: { id: sel.id },
+        data: { status: 'SIGNED' },
+      });
+      console.log(`[LEASE] Updated selection ${sel.id} → SIGNED for unit ${unitId}`);
+    }
+  } catch (selErr) {
+    console.error(`[LEASE] Failed to update selection status:`, selErr);
+  }
+
+  // Notify managers that the tenant has signed
+  try {
+    const { notifyManagerLeaseSigned } = await import('./notifications');
+    const managers = await prisma.user.findMany({
+      where: { orgId, role: 'MANAGER' },
+      select: { id: true },
+    });
+    const unitNumber = updatedLease.unit?.unitNumber || 'unknown';
+    const buildingId = updatedLease.unit?.building?.id;
+    for (const mgr of managers) {
+      await notifyManagerLeaseSigned(
+        leaseId, orgId, mgr.id,
+        updatedLease.tenantName, unitNumber, buildingId
+      );
+    }
+  } catch (notifErr) {
+    console.error(`[LEASE] Failed to notify managers of lease signing:`, notifErr);
+  }
+
+  // Notify owners that the tenant has signed
+  try {
+    const { notifyOwnerLeaseSigned } = await import('./notifications');
+    const owners = await prisma.user.findMany({
+      where: { orgId, role: 'OWNER' },
+      select: { id: true },
+    });
+    const unitNumber = updatedLease.unit?.unitNumber || 'unknown';
+    const buildingId = updatedLease.unit?.building?.id;
+    for (const owner of owners) {
+      await notifyOwnerLeaseSigned(
+        leaseId, orgId, owner.id,
+        updatedLease.tenantName, unitNumber, buildingId
+      );
+    }
+  } catch (notifErr) {
+    console.error(`[LEASE] Failed to notify owners of lease signing:`, notifErr);
+  }
 
   return {
     lease: mapToTenantLeaseDTO(updatedLease, updatedLease.signatureRequests?.[0]),

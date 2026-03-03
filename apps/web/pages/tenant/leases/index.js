@@ -6,12 +6,16 @@ const STATUS_LABELS = {
   DRAFT: "Draft",
   READY_TO_SIGN: "Ready to Sign",
   SIGNED: "Signed",
+  ACTIVE: "Active",
+  TERMINATED: "Terminated",
   CANCELLED: "Cancelled",
 };
 
 const STATUS_COLORS = {
   READY_TO_SIGN: "bg-yellow-100 text-yellow-800",
   SIGNED: "bg-green-100 text-green-800",
+  ACTIVE: "bg-emerald-100 text-emerald-800",
+  TERMINATED: "bg-orange-100 text-orange-800",
 };
 
 export default function TenantLeasesPage() {
@@ -62,12 +66,18 @@ export default function TenantLeasesPage() {
 
   function formatDate(iso) {
     if (!iso) return "—";
-    return new Date(iso).toLocaleDateString("de-CH");
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return "—";
+    const dd = String(d.getDate()).padStart(2, "0");
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const yyyy = d.getFullYear();
+    return `${dd}.${mm}.${yyyy}`;
   }
 
   function formatChf(amount) {
     if (amount == null) return "—";
-    return `CHF ${amount.toLocaleString("de-CH")}`;
+    const str = Number(amount).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, "'");
+    return `CHF ${str}`;
   }
 
   if (!session) {

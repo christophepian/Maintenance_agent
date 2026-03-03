@@ -18,6 +18,7 @@ import {
   getMaintenanceRequestById,
   listOwnerPendingApprovals,
 } from "../services/maintenanceRequests";
+import type { MaintenanceRequestDTO } from "../services/maintenanceRequests";
 import { updateContractorRequestStatus, getContractorAssignedRequests } from "../services/contractorRequests";
 import { decideRequestStatus, decideRequestStatusWithRules } from "../services/autoApproval";
 import { normalizePhoneToE164 } from "../utils/phoneNormalization";
@@ -25,7 +26,7 @@ import { getTenantByPhone } from "../services/tenants";
 import { getOrgConfig } from "../services/orgConfig";
 import { computeEffectiveConfig } from "../services/buildingConfig";
 import { workRequestFromRequest } from "../services/adapters/workRequestAdapter";
-import { createJob } from "../services/jobs";
+import { createJob, getOrCreateJobForRequest } from "../services/jobs";
 
 /* ── Shared: create request (used by POST /requests & POST /work-requests) ── */
 
@@ -339,6 +340,14 @@ export function registerRequestRoutes(router: Router) {
     const result = await assignContractor(prisma, params.id, parsed.data.contractorId);
     if (!result.success) return sendError(res, 400, "ASSIGNMENT_FAILED", result.message);
 
+    // Auto-create a Job so the contractor sees it in their jobs list
+    try {
+      await getOrCreateJobForRequest(orgId, params.id, parsed.data.contractorId);
+    } catch (e: any) {
+      // Non-fatal: assignment succeeded, but job creation failed (log and continue)
+      console.warn(`[ASSIGN] Job auto-creation failed for request ${params.id}:`, e?.message);
+    }
+
     const updated = await getMaintenanceRequestById(prisma, params.id);
     if (!updated) return sendError(res, 404, "NOT_FOUND", "Request not found");
     sendJson(res, 200, { data: updated, message: result.message });
@@ -416,7 +425,8 @@ export function registerRequestRoutes(router: Router) {
     const limit = getIntParam(query, "limit", { defaultValue: 50, min: 1, max: 200 });
     const offset = getIntParam(query, "offset", { defaultValue: 0, min: 0, max: 1_000_000 });
     const order = getEnumParam(query, "order", ["asc", "desc"] as const, "asc");
-    const data = await listMaintenanceRequests(prisma, orgId, { limit, offset, order });
+    const view = first(query, "view") as "summary" | "full" | undefined;
+    const data = await listMaintenanceRequests(prisma, orgId, { limit, offset, order, view });
     sendJson(res, 200, { data });
   });
 
@@ -426,7 +436,7 @@ export function registerRequestRoutes(router: Router) {
     const limit = getIntParam(query, "limit", { defaultValue: 50, min: 1, max: 200 });
     const offset = getIntParam(query, "offset", { defaultValue: 0, min: 0, max: 1_000_000 });
     const order = getEnumParam(query, "order", ["asc", "desc"] as const, "asc");
-    const data = await listMaintenanceRequests(prisma, orgId, { limit, offset, order });
+    const data = (await listMaintenanceRequests(prisma, orgId, { limit, offset, order, view: "full" })) as MaintenanceRequestDTO[];
     const workRequests = data.map(workRequestFromRequest);
     sendJson(res, 200, { data: workRequests });
   });

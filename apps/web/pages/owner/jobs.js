@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import AppShell from "../../components/AppShell";
+import { formatDate } from "../../lib/format";
 
 export default function OwnerJobs() {
   const [jobs, setJobs] = useState([]);
@@ -142,18 +143,18 @@ export default function OwnerJobs() {
                 <div className="grid grid-cols-3 gap-4 pt-4 border-t border-gray-200 text-xs text-gray-500">
                   <div>
                     <p className="font-medium text-gray-700">Created</p>
-                    <p>{new Date(job.createdAt).toLocaleDateString()}</p>
+                    <p>{formatDate(job.createdAt)}</p>
                   </div>
                   {job.startedAt && (
                     <div>
                       <p className="font-medium text-gray-700">Started</p>
-                      <p>{new Date(job.startedAt).toLocaleDateString()}</p>
+                      <p>{formatDate(job.startedAt)}</p>
                     </div>
                   )}
                   {job.completedAt && (
                     <div>
                       <p className="font-medium text-gray-700">Completed</p>
-                      <p>{new Date(job.completedAt).toLocaleDateString()}</p>
+                      <p>{formatDate(job.completedAt)}</p>
                     </div>
                   )}
                 </div>

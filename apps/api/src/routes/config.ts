@@ -4,6 +4,7 @@ import { sendError, sendJson } from "../http/json";
 import { readJson } from "../http/body";
 import { first } from "../http/query";
 import { requireOrgViewer, requireGovernanceAccess } from "./helpers";
+import { withAuthRequired } from "../http/routeProtection";
 import { getOrgConfig, updateOrgConfig } from "../services/orgConfig";
 import { UpdateOrgConfigSchema } from "../validation/orgConfig";
 import { BuildingConfigSchema } from "../validation/buildingConfig";
@@ -17,7 +18,7 @@ import { CreateBillingEntitySchema, UpdateBillingEntitySchema } from "../validat
 
 export function registerConfigRoutes(router: Router) {
   // GET /org-config
-  router.get("/org-config", async ({ req, res, prisma, orgId }) => {
+  router.get("/org-config", withAuthRequired(async ({ req, res, prisma, orgId }) => {
     if (!requireOrgViewer(req, res)) return;
     try {
       const config = await getOrgConfig(prisma, orgId);
@@ -25,10 +26,10 @@ export function registerConfigRoutes(router: Router) {
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to load org config", String(e));
     }
-  });
+  }));
 
   // PUT /org-config
-  router.put("/org-config", async ({ req, res, prisma, orgId }) => {
+  router.put("/org-config", withAuthRequired(async ({ req, res, prisma, orgId }) => {
     try {
       const raw = await readJson(req);
       const parsed = UpdateOrgConfigSchema.safeParse(raw);
@@ -54,10 +55,10 @@ export function registerConfigRoutes(router: Router) {
       if (msg === "Body too large") return sendError(res, 413, "BODY_TOO_LARGE", "Request body too large");
       sendError(res, 500, "DB_ERROR", "Failed to update org config", String(e));
     }
-  });
+  }));
 
   // GET /buildings/:id/config
-  router.get("/buildings/:id/config", async ({ req, res, prisma, params, orgId }) => {
+  router.get("/buildings/:id/config", withAuthRequired(async ({ req, res, prisma, params, orgId }) => {
     if (!requireOrgViewer(req, res)) return;
     try {
       const building = await prisma.building.findFirst({ where: { id: params.id, orgId } });
@@ -67,10 +68,10 @@ export function registerConfigRoutes(router: Router) {
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to load building config", String(e));
     }
-  });
+  }));
 
   // PUT /buildings/:id/config
-  router.put("/buildings/:id/config", async ({ req, res, prisma, params, orgId }) => {
+  router.put("/buildings/:id/config", withAuthRequired(async ({ req, res, prisma, params, orgId }) => {
     try {
       const current = await getOrgConfig(prisma, orgId);
       if (!requireGovernanceAccess(req, res, current.mode)) return;
@@ -88,10 +89,10 @@ export function registerConfigRoutes(router: Router) {
       if (msg === "Body too large") return sendError(res, 413, "BODY_TOO_LARGE", "Request body too large");
       sendError(res, 500, "DB_ERROR", "Failed to update building config", String(e));
     }
-  });
+  }));
 
   // GET /units/:id/config
-  router.get("/units/:id/config", async ({ req, res, prisma, params, orgId }) => {
+  router.get("/units/:id/config", withAuthRequired(async ({ req, res, prisma, params, orgId }) => {
     if (!requireOrgViewer(req, res)) return;
     try {
       const unit = await prisma.unit.findFirst({ where: { id: params.id, orgId } });
@@ -101,10 +102,10 @@ export function registerConfigRoutes(router: Router) {
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to load unit config", String(e));
     }
-  });
+  }));
 
   // PUT /units/:id/config
-  router.put("/units/:id/config", async ({ req, res, prisma, params, orgId }) => {
+  router.put("/units/:id/config", withAuthRequired(async ({ req, res, prisma, params, orgId }) => {
     try {
       const current = await getOrgConfig(prisma, orgId);
       if (!requireGovernanceAccess(req, res, current.mode)) return;
@@ -123,10 +124,10 @@ export function registerConfigRoutes(router: Router) {
       if (msg === "Body too large") return sendError(res, 413, "BODY_TOO_LARGE", "Request body too large");
       sendError(res, 500, "DB_ERROR", "Failed to update unit config", String(e));
     }
-  });
+  }));
 
   // DELETE /units/:id/config
-  router.delete("/units/:id/config", async ({ req, res, prisma, params, orgId }) => {
+  router.delete("/units/:id/config", withAuthRequired(async ({ req, res, prisma, params, orgId }) => {
     try {
       const current = await getOrgConfig(prisma, orgId);
       if (!requireGovernanceAccess(req, res, current.mode)) return;
@@ -138,10 +139,10 @@ export function registerConfigRoutes(router: Router) {
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to delete unit config", String(e));
     }
-  });
+  }));
 
   // GET /approval-rules
-  router.get("/approval-rules", async ({ req, res, prisma, query, orgId }) => {
+  router.get("/approval-rules", withAuthRequired(async ({ req, res, prisma, query, orgId }) => {
     if (!requireOrgViewer(req, res)) return;
     try {
       const buildingId = first(query, "buildingId") || undefined;
@@ -150,7 +151,7 @@ export function registerConfigRoutes(router: Router) {
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to load approval rules", String(e));
     }
-  });
+  }));
 
   // POST /approval-rules
   router.post("/approval-rules", async ({ req, res, prisma, orgId }) => {

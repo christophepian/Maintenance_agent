@@ -3,6 +3,7 @@ import { useRouter } from "next/router";
 import PageShell from "../components/layout/PageShell";
 import PageHeader from "../components/layout/PageHeader";
 import PageContent from "../components/layout/PageContent";
+import { formatDateTime } from "../lib/format";
 
 // Add global.css classes for layout and styling
 // Global CSS is imported in _app.js
@@ -24,11 +25,7 @@ function badgeForStatus(status) {
 }
 
 function fmtDate(iso) {
-  try {
-    return new Date(iso).toLocaleString();
-  } catch {
-    return iso;
-  }
+  return formatDateTime(iso);
 }
 
 export default function ContractorPortal() {

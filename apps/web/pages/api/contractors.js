@@ -37,12 +37,10 @@ export default async function handler(req, res) {
     const baseUrl = process.env.API_BASE_URL || "http://127.0.0.1:3001";
     const { id } = req.query;
     const authHeader = req.headers["authorization"];
-    const devHeaders = {
-      "x-dev-role": req.headers["x-dev-role"],
-      "x-dev-org-id": req.headers["x-dev-org-id"],
-      "x-dev-user-id": req.headers["x-dev-user-id"],
-      "x-dev-email": req.headers["x-dev-email"],
-    };
+    const devHeaders = {};
+    for (const key of ["x-dev-role", "x-dev-org-id", "x-dev-user-id", "x-dev-email"]) {
+      if (req.headers[key]) devHeaders[key] = req.headers[key];
+    }
 
     if (req.method === "GET") {
       let url = `${baseUrl}/contractors`;

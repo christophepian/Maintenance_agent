@@ -3,10 +3,10 @@ import Link from "next/link";
 import { useMemo } from "react";
 
 export default function Home() {
+  // Only use NEXT_PUBLIC_ env vars here — non-prefixed vars exist server-side
+  // only, which causes a hydration mismatch.
   const API_BASE =
-    process.env.NEXT_PUBLIC_API_BASE_URL ||
-    process.env.API_BASE_URL ||
-    "http://127.0.0.1:3001";
+    process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:3001";
 
   // Index all main pages for navigation
   const flows = useMemo(

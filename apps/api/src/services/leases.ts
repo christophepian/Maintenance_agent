@@ -1,6 +1,7 @@
 import { LeaseStatus } from '@prisma/client';
 import prisma from './prismaClient';
 import { CreateLeasePayload, UpdateLeasePayload } from '../validation/leases';
+import { normalizePhoneToE164 } from '../utils/phoneNormalization';
 
 /**
  * G9: Canonical include tree for Lease queries.
@@ -20,6 +21,11 @@ export interface LeaseDTO {
   status: LeaseStatus;
   applicationId?: string;
   unitId: string;
+
+  // Template fields
+  isTemplate: boolean;
+  templateName?: string;
+  templateBuildingId?: string;
 
   // Parties
   landlordName: string;
@@ -130,6 +136,10 @@ function mapLeaseToDTO(lease: any): LeaseDTO {
     status: lease.status,
     applicationId: lease.applicationId || undefined,
     unitId: lease.unitId,
+
+    isTemplate: lease.isTemplate || false,
+    templateName: lease.templateName || undefined,
+    templateBuildingId: lease.templateBuildingId || undefined,
 
     landlordName: lease.landlordName,
     landlordAddress: lease.landlordAddress,
@@ -360,7 +370,7 @@ export interface ListLeasesFilter {
 }
 
 export async function listLeases(orgId: string, filter: ListLeasesFilter = {}): Promise<LeaseDTO[]> {
-  const where: any = { orgId };
+  const where: any = { orgId, isTemplate: false };
   if (filter.status) where.status = filter.status;
   if (filter.unitId) where.unitId = filter.unitId;
   if (filter.applicationId) where.applicationId = filter.applicationId;
@@ -395,7 +405,8 @@ export async function getLease(id: string, orgId: string): Promise<LeaseDTO | nu
 export async function updateLease(id: string, orgId: string, payload: UpdateLeasePayload): Promise<LeaseDTO> {
   const existing = await prisma.lease.findUnique({ where: { id } });
   if (!existing || existing.orgId !== orgId) throw new Error('Lease not found');
-  if (existing.status !== LeaseStatus.DRAFT) throw new Error('Only DRAFT leases can be edited');
+  // Templates are always editable; regular leases must be DRAFT
+  if (!existing.isTemplate && existing.status !== LeaseStatus.DRAFT) throw new Error('Only DRAFT leases can be edited');
 
   const data: any = {};
 
@@ -432,6 +443,11 @@ export async function updateLease(id: string, orgId: string, payload: UpdateLeas
   const charges = data.chargesTotalChf !== undefined ? data.chargesTotalChf : existing.chargesTotalChf;
   data.rentTotalChf = computeRentTotal(netRent, garage, other, charges);
 
+  // If this is a template, always ensure it stays DRAFT
+  if (existing.isTemplate && existing.status !== LeaseStatus.DRAFT) {
+    data.status = LeaseStatus.DRAFT;
+  }
+
   const updated = await prisma.lease.update({
     where: { id },
     data,
@@ -450,12 +466,17 @@ export async function markLeaseReadyToSign(
 ): Promise<LeaseDTO> {
   const existing = await prisma.lease.findUnique({ where: { id } });
   if (!existing || existing.orgId !== orgId) throw new Error('Lease not found');
+  if (existing.isTemplate) throw new Error('Cannot change status of a template');
   if (existing.status !== LeaseStatus.DRAFT) throw new Error('Only DRAFT leases can be marked ready to sign');
 
   // Validate required fields
   if (!existing.tenantName) throw new Error('Tenant name is required');
   if (!existing.netRentChf && existing.netRentChf !== 0) throw new Error('Net rent is required');
   if (!existing.startDate) throw new Error('Start date is required');
+  if (!existing.tenantPhone) throw new Error('Tenant phone is required before sending for signature (needed for tenant portal login)');
+
+  // Auto-provision Tenant record + Occupancy so the tenant can log in and see the lease
+  await ensureTenantAndOccupancy(existing);
 
   const updated = await prisma.lease.update({
     where: { id },
@@ -467,11 +488,65 @@ export async function markLeaseReadyToSign(
 }
 
 // ==========================================
+// Auto-provision Tenant + Occupancy from lease data
+// ==========================================
+async function ensureTenantAndOccupancy(lease: {
+  orgId: string;
+  unitId: string;
+  tenantName: string;
+  tenantPhone: string | null;
+  tenantEmail: string | null;
+}): Promise<string> {
+  const normalizedPhone = normalizePhoneToE164(lease.tenantPhone || '');
+  if (!normalizedPhone) throw new Error('Invalid tenant phone number format');
+
+  // Find or create Tenant by (orgId, phone)
+  let tenant = await prisma.tenant.findUnique({
+    where: { orgId_phone: { orgId: lease.orgId, phone: normalizedPhone } },
+  });
+
+  if (!tenant) {
+    tenant = await prisma.tenant.create({
+      data: {
+        orgId: lease.orgId,
+        phone: normalizedPhone,
+        name: lease.tenantName,
+        email: lease.tenantEmail || null,
+      },
+    });
+    console.log(`[LEASE] Auto-created Tenant ${tenant.id} (${lease.tenantName}, ${normalizedPhone})`);
+  } else {
+    // Update name/email if they changed on the lease
+    const updates: any = {};
+    if (lease.tenantName && lease.tenantName !== tenant.name) updates.name = lease.tenantName;
+    if (lease.tenantEmail && lease.tenantEmail !== tenant.email) updates.email = lease.tenantEmail;
+    if (Object.keys(updates).length > 0) {
+      await prisma.tenant.update({ where: { id: tenant.id }, data: updates });
+    }
+  }
+
+  // Find or create Occupancy linking tenant → unit
+  const existingOccupancy = await prisma.occupancy.findFirst({
+    where: { tenantId: tenant.id, unitId: lease.unitId },
+  });
+
+  if (!existingOccupancy) {
+    await prisma.occupancy.create({
+      data: { tenantId: tenant.id, unitId: lease.unitId },
+    });
+    console.log(`[LEASE] Auto-created Occupancy for Tenant ${tenant.id} → Unit ${lease.unitId}`);
+  }
+
+  return tenant.id;
+}
+
+// ==========================================
 // Cancel lease
 // ==========================================
 export async function cancelLease(id: string, orgId: string): Promise<LeaseDTO> {
   const existing = await prisma.lease.findUnique({ where: { id } });
   if (!existing || existing.orgId !== orgId) throw new Error('Lease not found');
+  if (existing.isTemplate) throw new Error('Cannot change status of a template');
   if (existing.status === LeaseStatus.SIGNED || existing.status === LeaseStatus.ACTIVE) {
     throw new Error('Cannot cancel a signed or active lease');
   }
@@ -781,4 +856,313 @@ export async function listLeaseInvoices(leaseId: string, orgId: string): Promise
     paidAt: inv.paidAt?.toISOString() || undefined,
     createdAt: inv.createdAt.toISOString(),
   }));
+}
+
+// ==========================================
+// Lease Templates (Rental Application Pipeline)
+// ==========================================
+
+/**
+ * List lease templates for a building.
+ * Templates are leases with isTemplate=true that can be cloned
+ * when creating a new lease from a rental application.
+ */
+export async function listLeaseTemplates(
+  orgId: string,
+  buildingId?: string,
+): Promise<LeaseDTO[]> {
+  const where: any = { orgId, isTemplate: true };
+  if (buildingId) where.templateBuildingId = buildingId;
+
+  const templates = await prisma.lease.findMany({
+    where,
+    include: LEASE_INCLUDE,
+    orderBy: { createdAt: 'desc' },
+  });
+
+  return templates.map(mapLeaseToDTO);
+}
+
+/**
+ * Create a lease template from an existing lease.
+ * Copies all contract terms but marks it as a reusable template.
+ */
+export async function createLeaseTemplateFromLease(
+  leaseId: string,
+  orgId: string,
+  templateName: string,
+  buildingId?: string,
+): Promise<LeaseDTO> {
+  const source = await prisma.lease.findUnique({
+    where: { id: leaseId },
+    include: LEASE_INCLUDE,
+  });
+  if (!source || source.orgId !== orgId) throw new Error('Source lease not found');
+
+  const template = await prisma.lease.create({
+    data: {
+      orgId,
+      unitId: source.unitId,
+      isTemplate: true,
+      templateBuildingId: buildingId || source.unit?.buildingId || null,
+      templateName,
+      status: 'DRAFT' as LeaseStatus,
+
+      // Copy all contract terms from source
+      landlordName: source.landlordName,
+      landlordAddress: source.landlordAddress,
+      landlordZipCity: source.landlordZipCity,
+      landlordPhone: source.landlordPhone,
+      landlordEmail: source.landlordEmail,
+      landlordRepresentedBy: source.landlordRepresentedBy,
+
+      tenantName: 'TEMPLATE — will be replaced',
+      tenantAddress: null,
+      tenantZipCity: null,
+      tenantPhone: null,
+      tenantEmail: null,
+      coTenantName: null,
+
+      objectType: source.objectType,
+      roomsCount: source.roomsCount,
+      floor: source.floor,
+      buildingAddressLines: source.buildingAddressLines as any,
+      usageFlags: source.usageFlags as any,
+      serviceSpaces: source.serviceSpaces as any,
+      commonInstallations: source.commonInstallations as any,
+
+      startDate: source.startDate,
+      isFixedTerm: source.isFixedTerm,
+      endDate: source.endDate,
+      firstTerminationDate: source.firstTerminationDate,
+      noticeRule: source.noticeRule,
+      extendedNoticeText: source.extendedNoticeText,
+      terminationDatesRule: source.terminationDatesRule,
+      terminationDatesCustomText: source.terminationDatesCustomText,
+
+      netRentChf: source.netRentChf,
+      garageRentChf: source.garageRentChf,
+      otherServiceRentChf: source.otherServiceRentChf,
+      chargesItems: source.chargesItems as any,
+      chargesTotalChf: source.chargesTotalChf,
+      rentTotalChf: source.rentTotalChf,
+      chargesSettlementDate: source.chargesSettlementDate,
+
+      paymentDueDayOfMonth: source.paymentDueDayOfMonth,
+      paymentRecipient: source.paymentRecipient,
+      paymentInstitution: source.paymentInstitution,
+      paymentAccountNumber: source.paymentAccountNumber,
+      paymentIban: source.paymentIban,
+      referenceRatePercent: source.referenceRatePercent,
+      referenceRateDate: source.referenceRateDate,
+
+      depositChf: source.depositChf,
+      depositDueRule: source.depositDueRule,
+      depositDueDate: source.depositDueDate,
+
+      otherStipulations: source.otherStipulations,
+      includesHouseRules: source.includesHouseRules,
+      otherAnnexesText: source.otherAnnexesText,
+    },
+    include: LEASE_INCLUDE,
+  });
+
+  return mapLeaseToDTO(template);
+}
+
+/**
+ * Create a blank lease template from scratch (no source lease needed).
+ * Requires a buildingId so we can pick a placeholder unitId.
+ */
+export async function createBlankLeaseTemplate(
+  orgId: string,
+  buildingId: string,
+  data: {
+    templateName: string;
+    landlordName: string;
+    landlordAddress: string;
+    landlordZipCity: string;
+    landlordPhone?: string;
+    landlordEmail?: string;
+    objectType?: string;
+    roomsCount?: string;
+    noticeRule?: string;
+    paymentDueDayOfMonth?: number;
+    paymentIban?: string;
+    referenceRatePercent?: string;
+    depositDueRule?: string;
+    netRentChf?: number;
+    chargesTotalChf?: number;
+    includesHouseRules?: boolean;
+  },
+): Promise<LeaseDTO> {
+  // Verify building belongs to org
+  const building = await prisma.building.findUnique({ where: { id: buildingId } });
+  if (!building || building.orgId !== orgId) throw new Error('Building not found');
+
+  // Pick the first unit from the building as a placeholder for the template
+  const unit = await prisma.unit.findFirst({
+    where: { buildingId, orgId },
+    orderBy: { unitNumber: 'asc' },
+  });
+  if (!unit) throw new Error('Building has no units — create at least one unit first');
+
+  const template = await prisma.lease.create({
+    data: {
+      orgId,
+      unitId: unit.id,
+      isTemplate: true,
+      templateBuildingId: buildingId,
+      templateName: data.templateName,
+      status: 'DRAFT' as LeaseStatus,
+
+      landlordName: data.landlordName,
+      landlordAddress: data.landlordAddress,
+      landlordZipCity: data.landlordZipCity,
+      landlordPhone: data.landlordPhone || null,
+      landlordEmail: data.landlordEmail || null,
+
+      tenantName: 'TEMPLATE — will be replaced',
+
+      objectType: data.objectType || 'APPARTEMENT',
+      roomsCount: data.roomsCount || null,
+      buildingAddressLines: [building.address],
+
+      startDate: new Date('2026-05-01'),
+      isFixedTerm: false,
+      noticeRule: data.noticeRule || '3_MONTHS',
+      terminationDatesRule: 'END_OF_MONTH_EXCEPT_31_12',
+
+      netRentChf: data.netRentChf ?? 0,
+      chargesTotalChf: data.chargesTotalChf ?? null,
+      rentTotalChf: computeRentTotal(data.netRentChf ?? 0, null, null, data.chargesTotalChf ?? null),
+
+      paymentDueDayOfMonth: data.paymentDueDayOfMonth ?? 1,
+      paymentIban: data.paymentIban || null,
+      referenceRatePercent: data.referenceRatePercent || null,
+
+      depositDueRule: data.depositDueRule || 'AT_SIGNATURE',
+      includesHouseRules: data.includesHouseRules ?? true,
+    },
+    include: LEASE_INCLUDE,
+  });
+
+  return mapLeaseToDTO(template);
+}
+
+/**
+ * Create a new lease from a template, filling in tenant details
+ * from a rental application.
+ *
+ * Used when owner selects a tenant through the rental pipeline.
+ */
+export async function createLeaseFromTemplate(
+  templateId: string,
+  orgId: string,
+  unitId: string,
+  tenantInfo: {
+    tenantName: string;
+    tenantAddress?: string;
+    tenantZipCity?: string;
+    tenantPhone?: string;
+    tenantEmail?: string;
+    coTenantName?: string;
+    applicationId?: string;
+    startDate?: string;
+    netRentChf?: number;
+  },
+): Promise<LeaseDTO> {
+  const template = await prisma.lease.findUnique({
+    where: { id: templateId },
+    include: LEASE_INCLUDE,
+  });
+  if (!template || template.orgId !== orgId) throw new Error('Template not found');
+  if (!template.isTemplate) throw new Error('Lease is not a template');
+
+  // Look up unit + building for address auto-fill
+  const unit = await prisma.unit.findUnique({
+    where: { id: unitId },
+    include: { building: true },
+  });
+  if (!unit) throw new Error('Unit not found');
+
+  const lease = await prisma.lease.create({
+    data: {
+      orgId,
+      unitId,
+      applicationId: tenantInfo.applicationId || null,
+      isTemplate: false,
+      status: 'DRAFT' as LeaseStatus,
+
+      // Landlord from template
+      landlordName: template.landlordName,
+      landlordAddress: template.landlordAddress,
+      landlordZipCity: template.landlordZipCity,
+      landlordPhone: template.landlordPhone,
+      landlordEmail: template.landlordEmail,
+      landlordRepresentedBy: template.landlordRepresentedBy,
+
+      // Tenant from application
+      tenantName: tenantInfo.tenantName,
+      tenantAddress: tenantInfo.tenantAddress || null,
+      tenantZipCity: tenantInfo.tenantZipCity || null,
+      tenantPhone: tenantInfo.tenantPhone || null,
+      tenantEmail: tenantInfo.tenantEmail || null,
+      coTenantName: tenantInfo.coTenantName || null,
+
+      // Object from unit
+      objectType: template.objectType,
+      roomsCount: template.roomsCount,
+      floor: unit.floor || template.floor,
+      buildingAddressLines: [unit.building.address],
+      usageFlags: template.usageFlags as any,
+      serviceSpaces: template.serviceSpaces as any,
+      commonInstallations: template.commonInstallations as any,
+
+      // Dates — override start date if provided
+      startDate: tenantInfo.startDate ? new Date(tenantInfo.startDate) : template.startDate,
+      isFixedTerm: template.isFixedTerm,
+      endDate: template.endDate,
+      firstTerminationDate: template.firstTerminationDate,
+      noticeRule: template.noticeRule,
+      extendedNoticeText: template.extendedNoticeText,
+      terminationDatesRule: template.terminationDatesRule,
+      terminationDatesCustomText: template.terminationDatesCustomText,
+
+      // Rent — override if unit has specific rent, else use template
+      netRentChf: tenantInfo.netRentChf ?? unit.monthlyRentChf ?? template.netRentChf,
+      garageRentChf: template.garageRentChf,
+      otherServiceRentChf: template.otherServiceRentChf,
+      chargesItems: template.chargesItems as any,
+      chargesTotalChf: unit.monthlyChargesChf ?? template.chargesTotalChf,
+      rentTotalChf: computeRentTotal(
+        tenantInfo.netRentChf ?? unit.monthlyRentChf ?? template.netRentChf,
+        template.garageRentChf,
+        template.otherServiceRentChf,
+        unit.monthlyChargesChf ?? template.chargesTotalChf,
+      ),
+      chargesSettlementDate: template.chargesSettlementDate,
+
+      paymentDueDayOfMonth: template.paymentDueDayOfMonth,
+      paymentRecipient: template.paymentRecipient,
+      paymentInstitution: template.paymentInstitution,
+      paymentAccountNumber: template.paymentAccountNumber,
+      paymentIban: template.paymentIban,
+      referenceRatePercent: template.referenceRatePercent,
+      referenceRateDate: template.referenceRateDate,
+
+      // Deposit
+      depositChf: template.depositChf,
+      depositDueRule: template.depositDueRule,
+      depositDueDate: template.depositDueDate,
+
+      // Stipulations
+      otherStipulations: template.otherStipulations,
+      includesHouseRules: template.includesHouseRules,
+      otherAnnexesText: template.otherAnnexesText,
+    },
+    include: LEASE_INCLUDE,
+  });
+
+  return mapLeaseToDTO(lease);
 }

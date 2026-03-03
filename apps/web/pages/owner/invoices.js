@@ -1,11 +1,44 @@
-import { useState, useEffect } from 'react';
+import { useMemo, useState, useEffect } from "react";
 import AppShell from "../../components/AppShell";
+import PageShell from "../../components/layout/PageShell";
+import PageHeader from "../../components/layout/PageHeader";
+import PageContent from "../../components/layout/PageContent";
+import Panel from "../../components/layout/Panel";
+
+function authHeaders() {
+  if (typeof window === "undefined") return {};
+  const token = localStorage.getItem("authToken");
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+function formatCurrency(value) {
+  const safeValue = Number.isFinite(value) ? value : 0;
+  const formatted = safeValue.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, "'");
+  return `CHF ${formatted}`;
+}
+
+function formatDate(dateStr) {
+  if (!dateStr) return "—";
+  const d = new Date(dateStr);
+  if (Number.isNaN(d.getTime())) return "—";
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const yyyy = d.getFullYear();
+  return `${dd}.${mm}.${yyyy}`;
+}
+
+function getInvoiceTotal(invoice) {
+  if (typeof invoice.totalAmount === "number") return invoice.totalAmount;
+  if (typeof invoice.amount === "number") return invoice.amount;
+  return 0;
+}
 
 export default function OwnerInvoices() {
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [filter, setFilter] = useState('ALL');
+  const [error, setError] = useState("");
+  const [filter, setFilter] = useState("ALL");
+  const [includeQr, setIncludeQr] = useState(true);
 
   useEffect(() => {
     fetchInvoices();
@@ -13,10 +46,11 @@ export default function OwnerInvoices() {
 
   const fetchInvoices = async () => {
     setLoading(true);
-    setError('');
+    setError("");
     try {
-      const res = await fetch('/api/invoices');
+      const res = await fetch("/api/owner/invoices", { headers: authHeaders() });
       const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || "Failed to load invoices");
       setInvoices(data.data || []);
     } catch (err) {
       setError(err.message);
@@ -24,167 +58,142 @@ export default function OwnerInvoices() {
     setLoading(false);
   };
 
-  const approveInvoice = async (invoiceId) => {
+  const actionRequest = async (invoiceId, action) => {
     try {
-      const res = await fetch(`/api/invoices/${invoiceId}/approve`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch(`/api/invoices/${invoiceId}/${action}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
         body: JSON.stringify({}),
       });
-      if (!res.ok) throw new Error('Failed to approve invoice');
+      if (!res.ok) throw new Error(`Failed to ${action} invoice`);
       await fetchInvoices();
     } catch (err) {
       setError(err.message);
     }
   };
 
-  const markPaid = async (invoiceId) => {
-    try {
-      const res = await fetch(`/api/invoices/${invoiceId}/mark-paid`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
-      });
-      if (!res.ok) throw new Error('Failed to mark invoice as paid');
-      await fetchInvoices();
-    } catch (err) {
-      setError(err.message);
-    }
-  };
-
-  const disputeInvoice = async (invoiceId) => {
-    try {
-      const res = await fetch(`/api/invoices/${invoiceId}/dispute`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
-      });
-      if (!res.ok) throw new Error('Failed to dispute invoice');
-      await fetchInvoices();
-    } catch (err) {
-      setError(err.message);
-    }
-  };
-
-  const getStatusColor = (status) => {
-    const colors = {
-      DRAFT: 'bg-gray-100 text-gray-800',
-      APPROVED: 'bg-green-100 text-green-800',
-      PAID: 'bg-green-600 text-white',
-      DISPUTED: 'bg-red-100 text-red-800',
-    };
-    return colors[status] || 'bg-gray-100 text-gray-800';
-  };
-
-  const filteredInvoices = filter === 'ALL' 
-    ? invoices 
-    : invoices.filter(i => i.status === filter);
+  const filteredInvoices = useMemo(() => {
+    return filter === "ALL"
+      ? invoices
+      : invoices.filter((invoice) => invoice.status === filter);
+  }, [filter, invoices]);
 
   return (
     <AppShell role="OWNER">
-      <div style={{ maxWidth: "1200px" }}>
-        <div className="flex justify-between items-center mb-6">
-          <h1 style={{ marginTop: 0, marginBottom: 0 }}>Invoices</h1>
-          <select
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded bg-white"
-          >
-            <option value="ALL">All Invoices ({invoices.length})</option>
-            <option value="DRAFT">Draft ({invoices.filter(i => i.status === 'DRAFT').length})</option>
-            <option value="APPROVED">Approved ({invoices.filter(i => i.status === 'APPROVED').length})</option>
-            <option value="PAID">Paid ({invoices.filter(i => i.status === 'PAID').length})</option>
-            <option value="DISPUTED">Disputed ({invoices.filter(i => i.status === 'DISPUTED').length})</option>
-          </select>
-        </div>
+      <PageShell>
+        <PageHeader
+          title="Owner Invoices"
+          subtitle="Review, approve, and manage invoice payments"
+          actions={
+            <div className="flex items-center gap-3">
+              <label className="flex items-center gap-2 text-xs text-slate-600">
+                <input
+                  type="checkbox"
+                  checked={includeQr}
+                  onChange={(e) => setIncludeQr(e.target.checked)}
+                />
+                Include QR in PDF
+              </label>
+              <select
+                value={filter}
+                onChange={(e) => setFilter(e.target.value)}
+                className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+              >
+                <option value="ALL">All Invoices ({invoices.length})</option>
+                <option value="DRAFT">Draft ({invoices.filter((i) => i.status === "DRAFT").length})</option>
+                <option value="APPROVED">Approved ({invoices.filter((i) => i.status === "APPROVED").length})</option>
+                <option value="PAID">Paid ({invoices.filter((i) => i.status === "PAID").length})</option>
+                <option value="DISPUTED">Disputed ({invoices.filter((i) => i.status === "DISPUTED").length})</option>
+              </select>
+            </div>
+          }
+        />
 
-        {error && (
-          <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded text-red-800">
-            {error}
-          </div>
-        )}
+        <PageContent>
+          {error && (
+            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {error}
+            </div>
+          )}
 
-        {loading ? (
-          <p className="text-gray-600">Loading invoices...</p>
-        ) : filteredInvoices.length === 0 ? (
-          <div className="bg-gray-50 border border-gray-200 rounded p-8 text-center">
-            <p className="text-gray-600">
-              {filter === 'ALL' ? 'No invoices yet' : `No ${filter.toLowerCase()} invoices`}
-            </p>
-          </div>
-        ) : (
-          <div className="grid gap-4">
-            {filteredInvoices.map((invoice) => (
-              <div key={invoice.id} className="bg-white border border-gray-200 rounded-lg p-6">
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <h3 className="text-lg font-semibold mb-2">Invoice #{invoice.id.slice(0, 8)}</h3>
-                    <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(invoice.status)}`}>
-                      {invoice.status}
-                    </span>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-2xl font-bold text-gray-900">
-                      CHF {invoice.totalAmount ?? invoice.amount}
-                    </p>
-                    <p className="text-sm text-gray-600 mt-1">Job: {invoice.jobId.slice(0, 8)}</p>
-                  </div>
-                </div>
-
-                {invoice.description && (
-                  <p className="text-gray-700 mb-4">{invoice.description}</p>
-                )}
-
-                <div className="pt-4 border-t border-gray-200 text-xs text-gray-500 space-y-1 mb-4">
-                  <p>Submitted: {invoice.submittedAt ? new Date(invoice.submittedAt).toLocaleDateString() : 'Pending'}</p>
-                  {invoice.approvedAt && <p>Approved: {new Date(invoice.approvedAt).toLocaleDateString()}</p>}
-                  {invoice.paidAt && <p className="font-semibold text-green-700">Paid: {new Date(invoice.paidAt).toLocaleDateString()}</p>}
-                </div>
-
-                {invoice.status === 'DRAFT' && (
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => approveInvoice(invoice.id)}
-                      className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 text-sm"
-                    >
-                      Approve Invoice
-                    </button>
-                    <button
-                      onClick={() => disputeInvoice(invoice.id)}
-                      className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 text-sm"
-                    >
-                      Dispute
-                    </button>
-                  </div>
-                )}
-
-                {invoice.status === 'APPROVED' && (
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => markPaid(invoice.id)}
-                      className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 text-sm"
-                    >
-                      Mark as Paid
-                    </button>
-                    <button
-                      onClick={() => disputeInvoice(invoice.id)}
-                      className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 text-sm"
-                    >
-                      Dispute
-                    </button>
-                  </div>
-                )}
-
-                {invoice.status === 'DISPUTED' && (
-                  <div className="p-3 bg-red-50 border border-red-200 rounded">
-                    <p className="text-sm text-red-800 font-medium">⚠️ This invoice is under dispute</p>
-                  </div>
-                )}
+          <Panel>
+            {loading ? (
+              <p className="text-sm text-slate-600">Loading invoices...</p>
+            ) : filteredInvoices.length === 0 ? (
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-6 text-center text-slate-600">
+                {filter === "ALL" ? "No invoices yet" : `No ${filter.toLowerCase()} invoices`}
               </div>
-            ))}
-          </div>
-        )}
-      </div>
+            ) : (
+              <div className="space-y-4">
+                {filteredInvoices.map((invoice) => (
+                  <div key={invoice.id} className="rounded-lg border border-slate-200 bg-white p-5">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                      <div>
+                        <div className="text-sm text-slate-500">
+                          {invoice.invoiceNumber || "Draft"}
+                        </div>
+                        <div className="text-lg font-semibold text-slate-900">
+                          {formatCurrency(getInvoiceTotal(invoice))}
+                        </div>
+                        <div className="text-xs text-slate-500">
+                          Created {formatDate(invoice.createdAt)}
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-start gap-2 text-sm text-slate-700 sm:items-end">
+                        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold">
+                          {invoice.status}
+                        </span>
+                        <span className="text-xs text-slate-500">
+                          Job {invoice.jobId?.slice(0, 8)}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <button
+                        onClick={() => window.open(`/api/invoices/${invoice.id}/pdf?includeQRBill=${includeQr}`, "_blank")}
+                        className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                      >
+                        View PDF
+                      </button>
+                      <button
+                        onClick={() => window.open(`/api/invoices/${invoice.id}/qr-code.png`, "_blank")}
+                        className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                      >
+                        View QR
+                      </button>
+                      {invoice.status === "DRAFT" && (
+                        <button
+                          onClick={() => actionRequest(invoice.id, "approve")}
+                          className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-700"
+                        >
+                          Approve
+                        </button>
+                      )}
+                      {invoice.status === "APPROVED" && (
+                        <button
+                          onClick={() => actionRequest(invoice.id, "mark-paid")}
+                          className="rounded-lg bg-emerald-700 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-800"
+                        >
+                          Mark paid
+                        </button>
+                      )}
+                      {(invoice.status === "DRAFT" || invoice.status === "APPROVED") && (
+                        <button
+                          onClick={() => actionRequest(invoice.id, "dispute")}
+                          className="rounded-lg bg-rose-600 px-3 py-2 text-xs font-semibold text-white hover:bg-rose-700"
+                        >
+                          Dispute
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Panel>
+        </PageContent>
+      </PageShell>
     </AppShell>
   );
 }

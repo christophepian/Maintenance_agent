@@ -72,6 +72,34 @@ export interface JobDTO {
     phone: string;
     email: string;
   };
+  /**
+   * Provisional invoice addressee indicator.
+   * "TENANT" if the request is linked to a tenant, otherwise "PROPERTY_MANAGER".
+   * Actual billing rules TBD.
+   */
+  invoiceAddressedTo: "TENANT" | "PROPERTY_MANAGER";
+}
+
+/**
+ * H5: Summary DTO for list endpoints.
+ * Reduces overfetch by omitting nested relations for list views.
+ */
+export interface JobSummaryDTO {
+  id: string;
+  orgId: string;
+  requestId: string;
+  contractorId: string;
+  status: JobStatus;
+  actualCost?: number;
+  startedAt?: string;
+  completedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+  // Summary fields only (no deep nesting)
+  contractorName?: string;
+  requestDescription?: string;
+  unitNumber?: string;
+  buildingName?: string;
 }
 
 /**
@@ -126,6 +154,7 @@ export async function getJob(jobId: string): Promise<JobDTO | null> {
 
 /**
  * List jobs for org with optional filters.
+ * H5: Supports view=summary for lighter payloads.
  */
 export async function listJobs(
   orgId: string,
@@ -133,8 +162,11 @@ export async function listJobs(
     contractorId?: string;
     status?: JobStatus;
     requestId?: string;
+    view?: "summary" | "full";
   }
-): Promise<JobDTO[]> {
+): Promise<JobDTO[] | JobSummaryDTO[]> {
+  const useSummary = filters?.view === "summary";
+
   const jobs = await prisma.job.findMany({
     where: {
       orgId,
@@ -142,11 +174,26 @@ export async function listJobs(
       ...(filters?.status && { status: filters.status }),
       ...(filters?.requestId && { requestId: filters.requestId }),
     },
-    include: JOB_INCLUDE,
+    include: useSummary
+      ? {
+          contractor: { select: { name: true } },
+          request: {
+            select: {
+              description: true,
+              unit: {
+                select: {
+                  unitNumber: true,
+                  building: { select: { name: true } },
+                },
+              },
+            },
+          },
+        }
+      : JOB_INCLUDE,
     orderBy: { createdAt: 'desc' },
   });
 
-  return jobs.map(mapJobToDTO);
+  return useSummary ? jobs.map(mapJobToSummaryDTO) : jobs.map(mapJobToDTO);
 }
 
 /**
@@ -231,5 +278,31 @@ function mapJobToDTO(job: any): JobDTO {
       phone: job.contractor.phone,
       email: job.contractor.email,
     } : undefined,
+    // Provisional rule: if request has a tenant linked, invoice goes to tenant;
+    // otherwise it goes to the property manager. Actual rules TBD.
+    invoiceAddressedTo: job.request?.tenantId ? "TENANT" : "PROPERTY_MANAGER",
+  };
+}
+
+/**
+ * H5: Map Job to summary DTO for list endpoints.
+ * Uses lighter include to reduce overfetch.
+ */
+function mapJobToSummaryDTO(job: any): JobSummaryDTO {
+  return {
+    id: job.id,
+    orgId: job.orgId,
+    requestId: job.requestId,
+    contractorId: job.contractorId,
+    status: job.status,
+    actualCost: job.actualCost ?? undefined,
+    startedAt: job.startedAt ? job.startedAt.toISOString() : undefined,
+    completedAt: job.completedAt ? job.completedAt.toISOString() : undefined,
+    createdAt: job.createdAt.toISOString(),
+    updatedAt: job.updatedAt.toISOString(),
+    contractorName: job.contractor?.name,
+    requestDescription: job.request?.description,
+    unitNumber: job.request?.unit?.unitNumber,
+    buildingName: job.request?.unit?.building?.name,
   };
 }

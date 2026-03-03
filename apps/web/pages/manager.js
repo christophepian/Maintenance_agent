@@ -4,10 +4,11 @@ import AppShell from "../components/AppShell";
 import PageShell from "../components/layout/PageShell";
 import PageHeader from "../components/layout/PageHeader";
 import PageContent from "../components/layout/PageContent";
+import { formatDateTime } from "../lib/format";
 
 function fmtDate(iso) {
   try {
-    return new Date(iso).toLocaleString();
+    return formatDateTime(iso);
   } catch {
     return iso;
   }

@@ -40,6 +40,15 @@ _archive
 !_archive/prompts/
 !_archive/prompts/**
 
+# Tesseract OCR language data (downloaded at runtime)
+*.traineddata
+
+# Upload data (local test artifacts)
+apps/api/.data/
+
+# One-off test/seed scripts at root
+create-test-*.js
+
 # Environment files
 .env
 .env.local

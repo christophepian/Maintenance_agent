@@ -85,18 +85,19 @@ export default function OwnerApprovalsPage() {
 
   function formatCost(cost) {
     if (!cost) return "—";
-    return `CHF ${cost.toLocaleString()}`;
+    const str = Number(cost).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, "'");
+    return `CHF ${str}`;
   }
 
   function formatDate(dateStr) {
     const d = new Date(dateStr);
-    return d.toLocaleDateString("en-CH", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    if (isNaN(d.getTime())) return "—";
+    const dd = String(d.getDate()).padStart(2, "0");
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const yyyy = d.getFullYear();
+    const hh = String(d.getHours()).padStart(2, "0");
+    const min = String(d.getMinutes()).padStart(2, "0");
+    return `${dd}.${mm}.${yyyy} ${hh}:${min}`;
   }
 
   return (

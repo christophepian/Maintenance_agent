@@ -6,10 +6,11 @@ process.env.AUTH_SECRET = "test-secret";
 const { encodeToken } = require("../services/auth");
 
 const API_ROOT = path.resolve(__dirname, "..", "..");
+const TS_NODE = path.resolve(API_ROOT, "node_modules", ".bin", "ts-node");
 
 function startServer(envOverrides: Record<string, string>, port: number) {
   return new Promise<ChildProcessWithoutNullStreams>((resolve, reject) => {
-    const child = spawn("npx", ["ts-node", "src/server.ts"], {
+    const child = spawn(TS_NODE, ["--transpile-only", "src/server.ts"], {
       cwd: API_ROOT,
       env: {
         ...process.env,
@@ -36,7 +37,7 @@ function startServer(envOverrides: Record<string, string>, port: number) {
     const timeout = setTimeout(() => {
       cleanup();
       reject(new Error("Server did not start in time"));
-    }, 8000);
+    }, 15000);
 
     function cleanup() {
       clearTimeout(timeout);

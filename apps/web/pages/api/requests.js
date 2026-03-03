@@ -39,11 +39,12 @@ export default async function handler(req, res) {
     const authHeader = req.headers["authorization"];
 
     // Build querystring explicitly (do NOT reuse req.url)
-    const { limit, offset, order } = req.query;
+    const { limit, offset, order, view } = req.query;
     const params = new URLSearchParams();
     if (typeof limit === "string") params.set("limit", limit);
     if (typeof offset === "string") params.set("offset", offset);
     if (typeof order === "string") params.set("order", order);
+    if (typeof view === "string") params.set("view", view);
     const qs = params.toString() ? `?${params.toString()}` : "";
 
     if (req.method === "GET") {

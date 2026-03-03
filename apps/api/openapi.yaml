@@ -39,6 +39,12 @@ tags:
     description: In-app notification management
   - name: Dev
     description: Development-only endpoints (disabled in production)
+  - name: RentalApplications
+    description: Rental application intake, evaluation, and lifecycle
+  - name: OwnerSelection
+    description: Owner tenant selection for vacant units
+  - name: LeaseTemplates
+    description: Lease template management
 
 # ──────────────────────────────────────────────────────────────
 # Reusable components
@@ -213,6 +219,21 @@ components:
           $ref: '#/components/schemas/ApplianceSummary'
         createdAt: { type: string, format: date-time }
 
+    MaintenanceRequestSummaryDTO:
+      type: object
+      required: [id, status, createdAt, description]
+      description: "H5: Lightweight DTO for request list endpoints (reduces overfetch)"
+      properties:
+        id: { type: string, format: uuid }
+        status: { $ref: '#/components/schemas/RequestStatus' }
+        createdAt: { type: string, format: date-time }
+        description: { type: string }
+        estimatedCost: { type: number, nullable: true }
+        category: { type: string, nullable: true }
+        unitNumber: { type: string, nullable: true }
+        buildingName: { type: string, nullable: true }
+        assignedContractorName: { type: string, nullable: true }
+
     RequestEventDTO:
       type: object
       required: [id, requestId, contractorId, type, message, timestamp]
@@ -248,6 +269,26 @@ components:
             unit: { $ref: '#/components/schemas/UnitSummary' }
             appliance: { $ref: '#/components/schemas/ApplianceSummary' }
         contractor: { $ref: '#/components/schemas/ContractorSummary' }
+
+    JobSummaryDTO:
+      type: object
+      required: [id, orgId, requestId, contractorId, status, createdAt, updatedAt]
+      description: "H5: Lightweight DTO for list endpoints (reduces overfetch)"
+      properties:
+        id: { type: string, format: uuid }
+        orgId: { type: string, format: uuid }
+        requestId: { type: string, format: uuid }
+        contractorId: { type: string, format: uuid }
+        status: { $ref: '#/components/schemas/JobStatus' }
+        actualCost: { type: number }
+        startedAt: { type: string, format: date-time }
+        completedAt: { type: string, format: date-time }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        contractorName: { type: string }
+        requestDescription: { type: string }
+        unitNumber: { type: string }
+        buildingName: { type: string }
 
     InvoiceLineItemDTO:
       type: object
@@ -316,6 +357,22 @@ components:
         lineItems:
           type: array
           items: { $ref: '#/components/schemas/InvoiceLineItemDTO' }
+
+    InvoiceSummaryDTO:
+      type: object
+      required: [id, orgId, jobId, status, totalAmount, createdAt]
+      description: "H5: Lightweight DTO for invoice list endpoints (omits line items and address details)"
+      properties:
+        id: { type: string, format: uuid }
+        orgId: { type: string, format: uuid }
+        jobId: { type: string, format: uuid }
+        status: { $ref: '#/components/schemas/InvoiceStatus' }
+        invoiceNumber: { type: string }
+        totalAmount: { type: number }
+        dueDate: { type: string, format: date-time }
+        paidAt: { type: string, format: date-time }
+        createdAt: { type: string, format: date-time }
+        description: { type: string }
 
     LeaseDTO:
       type: object
@@ -645,6 +702,220 @@ components:
         application/json:
           schema: { $ref: '#/components/schemas/ErrorResponse' }
 
+    # ── Rental Application Enums ─────────────────────────────
+
+    RentalApplicationStatus:
+      type: string
+      enum: [DRAFT, SUBMITTED, UNDER_REVIEW, APPROVED, REJECTED, WITHDRAWN, EXPIRED]
+
+    ApplicantRole:
+      type: string
+      enum: [PRIMARY, CO_APPLICANT]
+
+    RentalDocType:
+      type: string
+      enum: [IDENTITY, SALARY_PROOF, PERMIT, DEBT_ENFORCEMENT_EXTRACT, HOUSEHOLD_INSURANCE, STUDENT_PROOF, PARKING_DOCS]
+
+    RentalApplicationUnitStatus:
+      type: string
+      enum: [PENDING_EVALUATION, EVALUATED, SELECTED_PRIMARY, SELECTED_BACKUP_1, SELECTED_BACKUP_2, REJECTED, LEASE_CREATED, EXPIRED]
+
+    RentalOwnerSelectionStatus:
+      type: string
+      enum: [AWAITING_SIGNATURE, SIGNED, VOIDED, FALLBACK_PROMOTED]
+
+    EmailOutboxStatus:
+      type: string
+      enum: [PENDING, SENT, FAILED]
+
+    # ── Rental Application Schemas ───────────────────────────
+
+    ApplicantInput:
+      type: object
+      required: [firstName, lastName]
+      properties:
+        role: { $ref: '#/components/schemas/ApplicantRole' }
+        firstName: { type: string, minLength: 1 }
+        lastName: { type: string, minLength: 1 }
+        birthdate: { type: string }
+        nationality: { type: string }
+        civilStatus: { type: string }
+        permitType: { type: string }
+        phone: { type: string }
+        email: { type: string, format: email }
+        currentAddress: { type: string }
+        currentZipCity: { type: string }
+        employer: { type: string }
+        jobTitle: { type: string }
+        workLocation: { type: string }
+        employedSince: { type: string }
+        netMonthlyIncome: { type: integer, minimum: 0, maximum: 1000000 }
+        hasDebtEnforcement: { type: boolean, default: false }
+
+    CreateRentalApplicationInput:
+      type: object
+      required: [applicants, unitIds]
+      properties:
+        applicants:
+          type: array
+          items: { $ref: '#/components/schemas/ApplicantInput' }
+          minItems: 1
+        unitIds:
+          type: array
+          items: { type: string, format: uuid }
+          minItems: 1
+        currentLandlordName: { type: string }
+        currentLandlordAddress: { type: string }
+        currentLandlordPhone: { type: string }
+        reasonForLeaving: { type: string }
+        desiredMoveInDate: { type: string }
+        householdSize: { type: integer, minimum: 1, maximum: 20 }
+        hasPets: { type: boolean }
+        petsDescription: { type: string }
+        hasRcInsurance: { type: boolean }
+        rcInsuranceCompany: { type: string }
+        hasVehicle: { type: boolean }
+        vehicleDescription: { type: string }
+        needsParking: { type: boolean }
+        remarks: { type: string }
+
+    SubmitRentalApplicationInput:
+      type: object
+      required: [signedName]
+      properties:
+        signedName: { type: string, minLength: 2 }
+
+    OwnerSelectionInput:
+      type: object
+      required: [primaryApplicationUnitId]
+      properties:
+        primaryApplicationUnitId: { type: string, format: uuid }
+        backup1ApplicationUnitId: { type: string, format: uuid }
+        backup2ApplicationUnitId: { type: string, format: uuid }
+
+    AdjustScoreInput:
+      type: object
+      required: [scoreDelta, reason]
+      properties:
+        scoreDelta: { type: integer, minimum: -100, maximum: 100 }
+        reason: { type: string, minLength: 3 }
+        overrideJson: { type: object }
+
+    RentalApplicantDTO:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        role: { $ref: '#/components/schemas/ApplicantRole' }
+        firstName: { type: string }
+        lastName: { type: string }
+        birthdate: { type: string }
+        nationality: { type: string }
+        civilStatus: { type: string }
+        permitType: { type: string }
+        phone: { type: string }
+        email: { type: string }
+        currentAddress: { type: string }
+        currentZipCity: { type: string }
+        employer: { type: string }
+        jobTitle: { type: string }
+        workLocation: { type: string }
+        employedSince: { type: string }
+        netMonthlyIncome: { type: integer }
+        hasDebtEnforcement: { type: boolean }
+
+    RentalAttachmentDTO:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        applicantId: { type: string, format: uuid }
+        docType: { $ref: '#/components/schemas/RentalDocType' }
+        fileName: { type: string }
+        sizeBytes: { type: integer }
+        createdAt: { type: string, format: date-time }
+
+    RentalApplicationUnitDTO:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        unitId: { type: string, format: uuid }
+        status: { $ref: '#/components/schemas/RentalApplicationUnitStatus' }
+        scoreTotal: { type: integer }
+        confidenceScore: { type: integer }
+        disqualified: { type: boolean }
+        disqualifiedReasons: { type: array, items: { type: string } }
+        managerOverrideJson: { type: object }
+
+    RentalApplicationDTO:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        status: { $ref: '#/components/schemas/RentalApplicationStatus' }
+        createdAt: { type: string, format: date-time }
+        submittedAt: { type: string, format: date-time }
+        signedName: { type: string }
+        householdSize: { type: integer }
+        hasPets: { type: boolean }
+        petsDescription: { type: string }
+        hasRcInsurance: { type: boolean }
+        hasVehicle: { type: boolean }
+        needsParking: { type: boolean }
+        remarks: { type: string }
+        currentLandlordName: { type: string }
+        reasonForLeaving: { type: string }
+        desiredMoveInDate: { type: string }
+        applicants:
+          type: array
+          items: { $ref: '#/components/schemas/RentalApplicantDTO' }
+        attachments:
+          type: array
+          items: { $ref: '#/components/schemas/RentalAttachmentDTO' }
+        applicationUnits:
+          type: array
+          items: { $ref: '#/components/schemas/RentalApplicationUnitDTO' }
+
+    RentalApplicationSummaryDTO:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        applicationUnitId: { type: string, format: uuid }
+        primaryApplicantName: { type: string }
+        householdIncome: { type: integer }
+        status: { $ref: '#/components/schemas/RentalApplicationStatus' }
+        unitStatus: { $ref: '#/components/schemas/RentalApplicationUnitStatus' }
+        scoreTotal: { type: integer }
+        confidenceScore: { type: integer }
+        disqualified: { type: boolean }
+        disqualifiedReasons: { type: array, items: { type: string } }
+        submittedAt: { type: string, format: date-time }
+
+    RentalOwnerSelectionDTO:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        unitId: { type: string, format: uuid }
+        status: { $ref: '#/components/schemas/RentalOwnerSelectionStatus' }
+        createdAt: { type: string, format: date-time }
+        decidedAt: { type: string, format: date-time }
+        deadlineAt: { type: string, format: date-time }
+        primaryApplicationUnitId: { type: string, format: uuid }
+        backup1ApplicationUnitId: { type: string, format: uuid }
+        backup2ApplicationUnitId: { type: string, format: uuid }
+
+    EmailOutboxDTO:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        template: { type: string }
+        toAddress: { type: string }
+        subject: { type: string }
+        bodyText: { type: string }
+        bodyHtml: { type: string }
+        status: { $ref: '#/components/schemas/EmailOutboxStatus' }
+        payloadJson: { type: object }
+        createdAt: { type: string, format: date-time }
+        sentAt: { type: string, format: date-time }
+        errorMessage: { type: string }
+
 # ──────────────────────────────────────────────────────────────
 # Paths
 # ──────────────────────────────────────────────────────────────
@@ -726,6 +997,133 @@ paths:
           content:
             application/json:
               schema: { type: object }
+
+  /tenant-portal/notifications:
+    get:
+      tags: [TenantPortal]
+      summary: List tenant notifications
+      operationId: listTenantPortalNotifications
+      parameters:
+        - name: tenantId
+          in: query
+          required: true
+          schema: { type: string }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 20 }
+        - name: offset
+          in: query
+          schema: { type: integer, default: 0 }
+        - name: unreadOnly
+          in: query
+          schema: { type: string, enum: ['true', 'false'] }
+      responses:
+        '200':
+          description: Paginated notifications
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/NotificationDTO' }
+                  total: { type: integer }
+
+  /tenant-portal/notifications/unread-count:
+    get:
+      tags: [TenantPortal]
+      summary: Get unread notification count for tenant
+      operationId: getTenantPortalUnreadCount
+      parameters:
+        - name: tenantId
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Unread count
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count: { type: integer }
+
+  /tenant-portal/notifications/{id}/read:
+    post:
+      tags: [TenantPortal]
+      summary: Mark a tenant notification as read
+      operationId: markTenantPortalNotificationRead
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Updated notification
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/NotificationDTO' }
+
+  /tenant-portal/notifications/mark-all-read:
+    post:
+      tags: [TenantPortal]
+      summary: Mark all tenant notifications as read
+      operationId: markAllTenantPortalNotificationsRead
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                tenantId: { type: string }
+      responses:
+        '200':
+          description: Count of notifications marked read
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  marked: { type: integer }
+
+  /tenant-portal/notifications/{id}:
+    delete:
+      tags: [TenantPortal]
+      summary: Delete a tenant notification
+      operationId: deleteTenantPortalNotification
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Deletion result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+
+  /tenant-portal/invoices:
+    get:
+      tags: [TenantPortal]
+      summary: List invoices for a tenant
+      operationId: listTenantPortalInvoices
+      parameters:
+        - name: tenantId
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Tenant invoices
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/InvoiceDTO' }
 
   /triage:
     post:
@@ -1150,6 +1548,13 @@ paths:
         - $ref: '#/components/parameters/OffsetParam'
         - $ref: '#/components/parameters/OrderParam'
         - $ref: '#/components/parameters/StatusFilter'
+        - name: view
+          in: query
+          description: "H5: Choose summary (lightweight) or full (default) DTO"
+          schema:
+            type: string
+            enum: [summary, full]
+            default: full
       responses:
         '200':
           description: Job list
@@ -1160,7 +1565,10 @@ paths:
                 properties:
                   data:
                     type: array
-                    items: { $ref: '#/components/schemas/JobDTO' }
+                    items:
+                      oneOf:
+                        - $ref: '#/components/schemas/JobDTO'
+                        - $ref: '#/components/schemas/JobSummaryDTO'
                   total: { type: integer }
                   limit: { type: integer }
                   offset: { type: integer }
@@ -2830,3 +3238,684 @@ paths:
           content:
             application/json:
               schema: { type: object }
+
+  # ═══════════════════════════════════════════════════════════
+  # Contractor-scoped endpoints (H1: role-protected)
+  # ═══════════════════════════════════════════════════════════
+
+  /contractor/jobs:
+    get:
+      tags: [Contractor]
+      summary: List jobs assigned to the authenticated contractor
+      operationId: listContractorJobs
+      parameters:
+        - name: contractorId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+        - name: status
+          in: query
+          schema: { $ref: '#/components/schemas/JobStatus' }
+        - name: view
+          in: query
+          schema: { type: string, enum: [summary, full], default: summary }
+      responses:
+        '200':
+          description: List of contractor jobs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/JobSummaryDTO' }
+        '403':
+          description: Forbidden – not a contractor
+
+  /contractor/jobs/{id}:
+    get:
+      tags: [Contractor]
+      summary: Get a specific job (contractor-scoped)
+      operationId: getContractorJob
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: contractorId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Job details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/JobDTO' }
+        '403':
+          description: Forbidden
+        '404':
+          description: Job not found
+
+  /contractor/invoices:
+    get:
+      tags: [Contractor]
+      summary: List invoices for the authenticated contractor
+      operationId: listContractorInvoices
+      parameters:
+        - name: contractorId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+        - name: status
+          in: query
+          schema: { $ref: '#/components/schemas/InvoiceStatus' }
+        - name: view
+          in: query
+          schema: { type: string, enum: [summary, full], default: summary }
+      responses:
+        '200':
+          description: List of contractor invoices
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/InvoiceSummaryDTO' }
+        '403':
+          description: Forbidden – not a contractor
+
+  /contractor/invoices/{id}:
+    get:
+      tags: [Contractor]
+      summary: Get a specific invoice (contractor-scoped)
+      operationId: getContractorInvoice
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: contractorId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Invoice details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/InvoiceDTO' }
+        '403':
+          description: Forbidden
+        '404':
+          description: Invoice not found
+
+  # ═══════════════════════════════════════════════════════════
+  # Rental Applications (Public)
+  # ═══════════════════════════════════════════════════════════
+
+  /vacant-units:
+    get:
+      tags: [RentalApplications]
+      summary: List vacant units (public)
+      operationId: listVacantUnits
+      responses:
+        '200':
+          description: List of vacant units grouped by building
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string, format: uuid }
+                        unitNumber: { type: string }
+                        floor: { type: string }
+                        monthlyRentChf: { type: integer }
+                        monthlyChargesChf: { type: integer }
+                        building:
+                          type: object
+                          properties:
+                            id: { type: string, format: uuid }
+                            name: { type: string }
+                            address: { type: string }
+
+  /rental-applications:
+    post:
+      tags: [RentalApplications]
+      summary: Create a draft rental application
+      operationId: createRentalApplication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateRentalApplicationInput' }
+      responses:
+        '201':
+          description: Draft application created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/RentalApplicationDTO' }
+        '400':
+          $ref: '#/components/responses/ValidationError'
+
+  /rental-applications/{id}/submit:
+    post:
+      tags: [RentalApplications]
+      summary: Submit a draft rental application
+      operationId: submitRentalApplication
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SubmitRentalApplicationInput' }
+      responses:
+        '200':
+          description: Application submitted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/RentalApplicationDTO' }
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /rental-applications/{id}/attachments:
+    post:
+      tags: [RentalApplications]
+      summary: Upload an attachment (multipart/form-data)
+      operationId: uploadRentalAttachment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [applicantId, docType, file]
+              properties:
+                applicantId: { type: string, format: uuid }
+                docType: { $ref: '#/components/schemas/RentalDocType' }
+                file: { type: string, format: binary }
+      responses:
+        '201':
+          description: Attachment uploaded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/RentalAttachmentDTO' }
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ═══════════════════════════════════════════════════════════
+  # Rental Applications (Manager)
+  # ═══════════════════════════════════════════════════════════
+
+  /manager/rental-applications:
+    get:
+      tags: [RentalApplications]
+      summary: List rental applications for a unit (manager-scoped)
+      operationId: listManagerRentalApplications
+      parameters:
+        - name: unitId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+        - name: view
+          in: query
+          schema: { type: string, enum: [summary, full], default: summary }
+      responses:
+        '200':
+          description: Ranked list of applications
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      oneOf:
+                        - { $ref: '#/components/schemas/RentalApplicationSummaryDTO' }
+                        - { $ref: '#/components/schemas/RentalApplicationDTO' }
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /manager/rental-applications/{id}:
+    get:
+      tags: [RentalApplications]
+      summary: Get a single rental application (manager-scoped)
+      operationId: getManagerRentalApplication
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Application details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/RentalApplicationDTO' }
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /manager/rental-application-units/{id}/adjust-score:
+    post:
+      tags: [RentalApplications]
+      summary: Adjust evaluation score for an application-unit
+      operationId: adjustApplicationScore
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AdjustScoreInput' }
+      responses:
+        '200':
+          description: Updated application-unit
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/RentalApplicationUnitDTO' }
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ═══════════════════════════════════════════════════════════
+  # Rental Applications (Owner)
+  # ═══════════════════════════════════════════════════════════
+
+  /owner/rental-applications:
+    get:
+      tags: [OwnerSelection]
+      summary: List rental applications for owner review
+      operationId: listOwnerRentalApplications
+      parameters:
+        - name: unitId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Ranked candidate list (summary view)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/RentalApplicationSummaryDTO' }
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /owner/units/{unitId}/select-tenants:
+    post:
+      tags: [OwnerSelection]
+      summary: Select primary + backup tenants for a vacant unit
+      operationId: ownerSelectTenants
+      parameters:
+        - name: unitId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/OwnerSelectionInput' }
+      responses:
+        '201':
+          description: Selection recorded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/RentalOwnerSelectionDTO' }
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /document-scan:
+    post:
+      tags: [RentalApplications]
+      summary: OCR scan an uploaded document
+      operationId: scanDocument
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                hintDocType:
+                  type: string
+                  enum: [IDENTITY, SALARY, DEBT_ENFORCEMENT, PERMIT, HOUSEHOLD_INSURANCE]
+      responses:
+        '200':
+          description: Scan result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      docType: { type: string }
+                      confidence: { type: number }
+                      fields: { type: object }
+                      summary: { type: string }
+        '400':
+          $ref: '#/components/responses/ValidationError'
+
+  /manager/selections:
+    get:
+      tags: [RentalApplications]
+      summary: List active tenant selections (manager view)
+      operationId: listManagerSelections
+      responses:
+        '200':
+          description: Active selections
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string, format: uuid }
+                        unitId: { type: string, format: uuid }
+                        unitNumber: { type: string }
+                        buildingId: { type: string, format: uuid }
+                        buildingName: { type: string }
+                        buildingAddress: { type: string }
+                        status: { type: string }
+                        deadlineAt: { type: string, format: date-time }
+                        createdAt: { type: string, format: date-time }
+                        primaryCandidate:
+                          type: object
+                          nullable: true
+                          properties:
+                            name: { type: string }
+                            email: { type: string }
+                        lease:
+                          type: object
+                          nullable: true
+                          properties:
+                            id: { type: string, format: uuid }
+                            status: { type: string }
+                            tenantName: { type: string }
+
+  /owner/selections:
+    get:
+      tags: [RentalApplications]
+      summary: List active tenant selections (owner view)
+      operationId: listOwnerSelections
+      responses:
+        '200':
+          description: Active selections
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string, format: uuid }
+                        unitId: { type: string, format: uuid }
+                        unitNumber: { type: string }
+                        buildingName: { type: string }
+                        buildingAddress: { type: string }
+                        status: { type: string }
+                        deadlineAt: { type: string, format: date-time }
+                        createdAt: { type: string, format: date-time }
+                        primaryCandidate:
+                          type: object
+                          nullable: true
+                          properties:
+                            name: { type: string }
+                            email: { type: string }
+                        lease:
+                          type: object
+                          nullable: true
+                          properties:
+                            id: { type: string, format: uuid }
+                            status: { type: string }
+                            tenantName: { type: string }
+
+  # ═══════════════════════════════════════════════════════════
+  # Dev Email Outbox
+  # ═══════════════════════════════════════════════════════════
+
+  /dev/emails:
+    get:
+      tags: [Dev]
+      summary: List queued emails (dev only)
+      operationId: listDevEmails
+      parameters:
+        - name: status
+          in: query
+          schema: { $ref: '#/components/schemas/EmailOutboxStatus' }
+      responses:
+        '200':
+          description: Email list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/EmailOutboxDTO' }
+
+  /dev/emails/{id}:
+    get:
+      tags: [Dev]
+      summary: Get email detail (dev only)
+      operationId: getDevEmail
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Email detail
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/EmailOutboxDTO' }
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ═══════════════════════════════════════════════════════════
+  # Lease Templates
+  # ═══════════════════════════════════════════════════════════
+
+  /lease-templates:
+    get:
+      tags: [LeaseTemplates]
+      summary: List lease templates
+      operationId: listLeaseTemplates
+      parameters:
+        - name: buildingId
+          in: query
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Template list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/LeaseDTO' }
+    post:
+      tags: [LeaseTemplates]
+      summary: Create a blank lease template
+      operationId: createLeaseTemplate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [buildingId, templateName, landlordName, landlordAddress, landlordZipCity]
+              properties:
+                buildingId: { type: string, format: uuid }
+                templateName: { type: string }
+                landlordName: { type: string }
+                landlordAddress: { type: string }
+                landlordZipCity: { type: string }
+                landlordPhone: { type: string }
+                landlordEmail: { type: string }
+                objectType: { type: string, default: APPARTEMENT }
+                roomsCount: { type: string }
+                noticeRule: { type: string, default: 3_MONTHS }
+                paymentDueDayOfMonth: { type: integer, default: 1 }
+                paymentIban: { type: string }
+                netRentChf: { type: number, default: 0 }
+                chargesTotalChf: { type: number }
+                includesHouseRules: { type: boolean, default: true }
+      responses:
+        '201':
+          description: Created lease template
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/LeaseDTO' }
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /lease-templates/from-lease:
+    post:
+      tags: [LeaseTemplates]
+      summary: Create a lease template from an existing lease
+      operationId: createLeaseTemplateFromLease
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [leaseId, templateName]
+              properties:
+                leaseId: { type: string, format: uuid }
+                templateName: { type: string }
+                buildingId: { type: string, format: uuid }
+      responses:
+        '201':
+          description: Template created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/LeaseDTO' }
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /lease-templates/{id}/create-lease:
+    post:
+      tags: [LeaseTemplates]
+      summary: Create a new lease from a template
+      operationId: createLeaseFromTemplate
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [unitId, tenantFirstName, tenantLastName, tenantPhone]
+              properties:
+                unitId: { type: string, format: uuid }
+                tenantFirstName: { type: string }
+                tenantLastName: { type: string }
+                tenantPhone: { type: string }
+                tenantEmail: { type: string, format: email }
+      responses:
+        '201':
+          description: Lease created from template
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/LeaseDTO' }
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '400':
+          $ref: '#/components/responses/ValidationError'

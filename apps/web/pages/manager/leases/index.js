@@ -3,6 +3,7 @@ import { useRouter } from "next/router";
 import AppShell from "../../../components/AppShell";
 import PageShell from "../../../components/layout/PageShell";
 import PageHeader from "../../../components/layout/PageHeader";
+import { formatDate } from "../../../lib/format";
 import PageContent from "../../../components/layout/PageContent";
 import Section from "../../../components/layout/Section";
 
@@ -263,7 +264,7 @@ export default function LeasesPage() {
                       <td className="px-4 py-3">{lease.unit?.unitNumber || "—"}</td>
                       <td className="px-4 py-3">{lease.unit?.building?.name || "—"}</td>
                       <td className="px-4 py-3">CHF {lease.rentTotalChf ?? lease.netRentChf}.-</td>
-                      <td className="px-4 py-3">{new Date(lease.startDate).toLocaleDateString("fr-CH")}</td>
+                      <td className="px-4 py-3">{formatDate(lease.startDate)}</td>
                       <td className="px-4 py-3">
                         <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${STATUS_COLORS[lease.status] || "bg-slate-100 text-slate-700"}`}>
                           {lease.status.replace(/_/g, " ")}

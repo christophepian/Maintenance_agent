@@ -63,6 +63,41 @@ export type UnitType = "RESIDENTIAL" | "COMMON_AREA";
 
 export type Role = "TENANT" | "CONTRACTOR" | "MANAGER" | "OWNER";
 
+export type RentalApplicationStatus = "DRAFT" | "SUBMITTED";
+
+export type ApplicantRole = "PRIMARY" | "CO_APPLICANT";
+
+export type RentalDocType =
+  | "IDENTITY"
+  | "SALARY_PROOF"
+  | "PERMIT"
+  | "DEBT_ENFORCEMENT_EXTRACT"
+  | "HOUSEHOLD_INSURANCE"
+  | "STUDENT_PROOF"
+  | "PARKING_DOCS";
+
+export type RentalApplicationUnitStatus =
+  | "SUBMITTED"
+  | "REJECTED"
+  | "SELECTED_PRIMARY"
+  | "SELECTED_BACKUP_1"
+  | "SELECTED_BACKUP_2"
+  | "AWAITING_SIGNATURE"
+  | "SIGNED"
+  | "VOIDED";
+
+export type RentalOwnerSelectionStatus =
+  | "AWAITING_SIGNATURE"
+  | "SIGNED"
+  | "VOIDED"
+  | "FALLBACK_1"
+  | "FALLBACK_2"
+  | "EXHAUSTED";
+
+export type EmailOutboxStatus = "PENDING" | "SENT" | "FAILED";
+
+export type EmailTemplate = "MISSING_DOCS" | "REJECTED" | "SELECTED_LEASE_LINK";
+
 /* ═══════════════════════════════════════════════════════════════
  * DTO Interfaces
  * ═══════════════════════════════════════════════════════════════ */
@@ -117,6 +152,22 @@ export interface MaintenanceRequestDTO {
   createdAt: string;
 }
 
+/**
+ * H5: Lightweight DTO for request list endpoints.
+ * Reduces payload size by flattening nested relations to scalar fields.
+ */
+export interface MaintenanceRequestSummaryDTO {
+  id: string;
+  status: RequestStatus;
+  createdAt: string;
+  description: string;
+  estimatedCost?: number | null;
+  category?: string | null;
+  unitNumber?: string | null;
+  buildingName?: string | null;
+  assignedContractorName?: string | null;
+}
+
 export interface RequestEventDTO {
   id: string;
   requestId: string;
@@ -146,6 +197,27 @@ export interface JobDTO {
     appliance?: ApplianceSummary;
   };
   contractor?: ContractorSummary;
+}
+
+/**
+ * H5: Lightweight DTO for job list endpoints.
+ * Reduces payload size by omitting nested relations.
+ */
+export interface JobSummaryDTO {
+  id: string;
+  orgId: string;
+  requestId: string;
+  contractorId: string;
+  status: JobStatus;
+  actualCost?: number;
+  startedAt?: string;
+  completedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+  contractorName?: string;
+  requestDescription?: string;
+  unitNumber?: string;
+  buildingName?: string;
 }
 
 export interface InvoiceLineItemDTO {
@@ -189,6 +261,23 @@ export interface InvoiceDTO {
   createdAt: string;
   updatedAt: string;
   lineItems: InvoiceLineItemDTO[];
+}
+
+/**
+ * H5: Lightweight DTO for invoice list endpoints.
+ * Reduces payload size by omitting line items and detailed billing fields.
+ */
+export interface InvoiceSummaryDTO {
+  id: string;
+  orgId: string;
+  jobId: string;
+  status: InvoiceStatus;
+  invoiceNumber?: string | null;
+  totalAmount: number;
+  dueDate?: string | null;
+  paidAt?: string | null;
+  createdAt: string;
+  description?: string;
 }
 
 export interface LeaseDTO {
@@ -407,6 +496,145 @@ export interface NotificationDTO {
 }
 
 /* ═══════════════════════════════════════════════════════════════
+ * Rental Application DTOs
+ * ═══════════════════════════════════════════════════════════════ */
+
+export interface RentalApplicantDTO {
+  id: string;
+  role: ApplicantRole;
+  firstName: string;
+  lastName: string;
+  birthdate?: string;
+  nationality?: string;
+  civilStatus?: string;
+  permitType?: string;
+  phone?: string;
+  email?: string;
+  currentAddress?: string;
+  currentZipCity?: string;
+  employer?: string;
+  jobTitle?: string;
+  workLocation?: string;
+  employedSince?: string;
+  netMonthlyIncome?: number;
+  hasDebtEnforcement?: boolean;
+  attachments?: RentalAttachmentDTO[];
+}
+
+export interface RentalAttachmentDTO {
+  id: string;
+  applicantId: string;
+  docType: RentalDocType;
+  fileName: string;
+  fileSizeBytes: number;
+  mimeType: string;
+  uploadedAt: string;
+}
+
+export interface RentalApplicationUnitDTO {
+  id: string;
+  applicationId: string;
+  unitId: string;
+  status: RentalApplicationUnitStatus;
+  scoreTotal?: number;
+  confidenceScore?: number;
+  disqualified: boolean;
+  disqualifiedReasons?: unknown;
+  rank?: number;
+  managerScoreDelta?: number;
+  managerOverrideReason?: string;
+  createdAt: string;
+  unit?: {
+    id: string;
+    unitNumber: string;
+    monthlyRentChf?: number;
+    monthlyChargesChf?: number;
+    building?: { id: string; name: string; address: string };
+  };
+}
+
+export interface RentalApplicationDTO {
+  id: string;
+  orgId: string;
+  status: RentalApplicationStatus;
+  createdAt: string;
+  updatedAt: string;
+  submittedAt?: string;
+  signedName?: string;
+  signedAt?: string;
+  currentLandlordName?: string;
+  currentLandlordAddress?: string;
+  currentLandlordPhone?: string;
+  reasonForLeaving?: string;
+  desiredMoveInDate?: string;
+  householdSize?: number;
+  hasPets?: boolean;
+  petsDescription?: string;
+  hasRcInsurance?: boolean;
+  rcInsuranceCompany?: string;
+  hasVehicle?: boolean;
+  vehicleDescription?: string;
+  needsParking?: boolean;
+  remarks?: string;
+  applicants?: RentalApplicantDTO[];
+  applicationUnits?: RentalApplicationUnitDTO[];
+}
+
+export interface RentalApplicationSummaryDTO {
+  id: string;
+  orgId: string;
+  status: RentalApplicationStatus;
+  createdAt: string;
+  submittedAt?: string;
+  householdSize?: number;
+  primaryApplicantName?: string;
+  totalMonthlyIncome?: number;
+  applicantCount: number;
+  unitApplications: {
+    id: string;
+    unitId: string;
+    status: RentalApplicationUnitStatus;
+    scoreTotal?: number;
+    confidenceScore?: number;
+    disqualified: boolean;
+    rank?: number;
+  }[];
+}
+
+export interface RentalOwnerSelectionDTO {
+  id: string;
+  unitId: string;
+  status: RentalOwnerSelectionStatus;
+  createdAt: string;
+  decidedAt?: string;
+  deadlineAt: string;
+  primaryApplicationUnitId: string;
+  backup1ApplicationUnitId?: string;
+  backup2ApplicationUnitId?: string;
+}
+
+export interface EmailOutboxDTO {
+  id: string;
+  orgId: string;
+  toEmail: string;
+  template: EmailTemplate;
+  subject: string;
+  bodyText: string;
+  status: EmailOutboxStatus;
+  metaJson?: unknown;
+  createdAt: string;
+}
+
+export interface VacantUnitDTO {
+  id: string;
+  unitNumber: string;
+  floor?: string;
+  monthlyRentChf?: number;
+  monthlyChargesChf?: number;
+  building?: { id: string; name: string; address: string };
+}
+
+/* ═══════════════════════════════════════════════════════════════
  * Common types
  * ═══════════════════════════════════════════════════════════════ */
 
@@ -512,8 +740,8 @@ async function request<T>(
 
 function buildRequestsApi(opts: ClientOptions) {
   return {
-    list: (params?: PaginationParams) =>
-      request<PaginatedList<MaintenanceRequestDTO>>(opts, "GET", "/requests", undefined, params as Record<string, string | number | boolean | undefined>),
+    list: (params?: PaginationParams & { view?: "summary" | "full" }) =>
+      request<PaginatedList<MaintenanceRequestDTO | MaintenanceRequestSummaryDTO>>(opts, "GET", "/requests", undefined, params as Record<string, string | number | boolean | undefined>),
 
     get: (id: string) =>
       request<MaintenanceRequestDTO>(opts, "GET", `/requests/${id}`),
@@ -588,8 +816,8 @@ function buildWorkRequestsApi(opts: ClientOptions) {
 
 function buildJobsApi(opts: ClientOptions) {
   return {
-    list: (params?: PaginationParams) =>
-      request<PaginatedList<JobDTO>>(opts, "GET", "/jobs", undefined, params as Record<string, string | number | boolean | undefined>),
+    list: (params?: PaginationParams & { view?: "summary" | "full" }) =>
+      request<PaginatedList<JobDTO | JobSummaryDTO>>(opts, "GET", "/jobs", undefined, params as Record<string, string | number | boolean | undefined>),
 
     get: (id: string) =>
       request<JobDTO>(opts, "GET", `/jobs/${id}`),
@@ -601,8 +829,8 @@ function buildJobsApi(opts: ClientOptions) {
 
 function buildInvoicesApi(opts: ClientOptions) {
   return {
-    list: (params?: PaginationParams) =>
-      request<PaginatedList<InvoiceDTO>>(opts, "GET", "/invoices", undefined, params as Record<string, string | number | boolean | undefined>),
+    list: (params?: PaginationParams & { view?: "summary" | "full" }) =>
+      request<PaginatedList<InvoiceDTO | InvoiceSummaryDTO>>(opts, "GET", "/invoices", undefined, params as Record<string, string | number | boolean | undefined>),
 
     get: (id: string) =>
       request<InvoiceDTO>(opts, "GET", `/invoices/${id}`),
@@ -638,6 +866,22 @@ function buildInvoicesApi(opts: ClientOptions) {
 
     getPdf: (id: string, includeQRBill?: boolean) =>
       request<Blob>(opts, "GET", `/invoices/${id}/pdf`, undefined, { includeQRBill }),
+  };
+}
+
+function buildContractorApi(opts: ClientOptions) {
+  return {
+    jobs: (params?: PaginationParams & { contractorId?: string; view?: "summary" | "full" }) =>
+      request<PaginatedList<JobDTO | JobSummaryDTO>>(opts, "GET", "/contractor/jobs", undefined, params as Record<string, string | number | boolean | undefined>),
+
+    getJob: (id: string) =>
+      request<JobDTO>(opts, "GET", `/contractor/jobs/${id}`),
+
+    invoices: (params?: PaginationParams & { contractorId?: string; view?: "summary" | "full" }) =>
+      request<PaginatedList<InvoiceDTO | InvoiceSummaryDTO>>(opts, "GET", "/contractor/invoices", undefined, params as Record<string, string | number | boolean | undefined>),
+
+    getInvoice: (id: string) =>
+      request<InvoiceDTO>(opts, "GET", `/contractor/invoices/${id}`),
   };
 }
 
@@ -958,6 +1202,120 @@ function buildAuthApi(opts: ClientOptions) {
   };
 }
 
+function buildRentalsApi(opts: ClientOptions) {
+  return {
+    /* ── Public (tenant-facing) ── */
+
+    /** List vacant units available for rental applications. */
+    listVacantUnits: () =>
+      request<{ data: VacantUnitDTO[] }>(opts, "GET", "/vacant-units"),
+
+    /** Create a new rental application draft. */
+    createApplication: (body: {
+      applicants: Array<{
+        role?: ApplicantRole;
+        firstName: string;
+        lastName: string;
+        birthdate?: string;
+        nationality?: string;
+        civilStatus?: string;
+        permitType?: string;
+        phone?: string;
+        email?: string;
+        currentAddress?: string;
+        currentZipCity?: string;
+        employer?: string;
+        jobTitle?: string;
+        workLocation?: string;
+        employedSince?: string;
+        netMonthlyIncome?: number;
+        hasDebtEnforcement?: boolean;
+      }>;
+      unitIds: string[];
+      currentLandlordName?: string;
+      currentLandlordAddress?: string;
+      currentLandlordPhone?: string;
+      reasonForLeaving?: string;
+      desiredMoveInDate?: string;
+      householdSize?: number;
+      hasPets?: boolean;
+      petsDescription?: string;
+      hasRcInsurance?: boolean;
+      rcInsuranceCompany?: string;
+      hasVehicle?: boolean;
+      vehicleDescription?: string;
+      needsParking?: boolean;
+      remarks?: string;
+    }) =>
+      request<{ data: RentalApplicationDTO }>(opts, "POST", "/rental-applications", body),
+
+    /** Submit (finalise) a rental application with signature. */
+    submitApplication: (id: string, body: { signedName: string }) =>
+      request<{ data: RentalApplicationDTO }>(opts, "POST", `/rental-applications/${id}/submit`, body),
+
+    /** Upload an attachment (for programmatic callers; multipart handled externally). */
+    // Note: real upload requires multipart; this is a typed hint.
+    // Use fetch directly with FormData for actual file uploads.
+
+    /* ── Manager ── */
+
+    /** List rental applications for a unit (manager dashboard). */
+    listApplicationsForUnit: (unitId: string, params?: { view?: "summary" | "full" }) =>
+      request<{ data: (RentalApplicationSummaryDTO | RentalApplicationDTO)[] }>(
+        opts, "GET", "/manager/rental-applications", undefined,
+        { unitId, ...params } as Record<string, string | number | boolean | undefined>,
+      ),
+
+    /** Get a single rental application by ID. */
+    getApplication: (id: string) =>
+      request<{ data: RentalApplicationDTO }>(opts, "GET", `/manager/rental-applications/${id}`),
+
+    /** Adjust evaluation score for an application-unit (manager override). */
+    adjustScore: (applicationUnitId: string, body: { scoreDelta: number; reason: string; overrideJson?: Record<string, unknown> }) =>
+      request<{ data: RentalApplicationUnitDTO }>(opts, "POST", `/manager/rental-application-units/${applicationUnitId}/adjust-score`, body),
+
+    /* ── Owner ── */
+
+    /** List rental applications for owner review. */
+    listOwnerApplications: (unitId: string) =>
+      request<{ data: RentalApplicationSummaryDTO[] }>(
+        opts, "GET", "/owner/rental-applications", undefined,
+        { unitId } as Record<string, string | number | boolean | undefined>,
+      ),
+
+    /** Owner selects primary + backup candidates for a unit. */
+    selectCandidates: (unitId: string, body: {
+      primaryApplicationUnitId: string;
+      backup1ApplicationUnitId?: string;
+      backup2ApplicationUnitId?: string;
+    }) =>
+      request<{ data: RentalOwnerSelectionDTO }>(opts, "POST", `/owner/units/${unitId}/select-tenants`, body),
+
+    /* ── Dev email sink ── */
+
+    /** List enqueued emails. */
+    listEmails: (params?: { status?: EmailOutboxStatus }) =>
+      request<{ data: EmailOutboxDTO[] }>(
+        opts, "GET", "/dev/emails", undefined,
+        params as Record<string, string | number | boolean | undefined>,
+      ),
+
+    /** Get a single email by ID. */
+    getEmail: (id: string) =>
+      request<{ data: EmailOutboxDTO }>(opts, "GET", `/dev/emails/${id}`),
+  };
+}
+
+function buildDevApi(opts: ClientOptions) {
+  return {
+    /** Trigger background job: process expired selection timeouts + attachment retention. */
+    runBackgroundJobs: () =>
+      request<{ timeoutsProcessed: number; attachmentsDeleted: number }>(
+        opts, "POST", "/__dev/rental/run-jobs", {},
+      ),
+  };
+}
+
 /* ═══════════════════════════════════════════════════════════════
  * Public factory
  * ═══════════════════════════════════════════════════════════════ */
@@ -967,6 +1325,7 @@ export interface ApiClient {
   workRequests: ReturnType<typeof buildWorkRequestsApi>;
   jobs: ReturnType<typeof buildJobsApi>;
   invoices: ReturnType<typeof buildInvoicesApi>;
+  contractor: ReturnType<typeof buildContractorApi>;
   leases: ReturnType<typeof buildLeasesApi>;
   signatureRequests: ReturnType<typeof buildSignatureRequestsApi>;
   config: ReturnType<typeof buildConfigApi>;
@@ -977,6 +1336,8 @@ export interface ApiClient {
   contractors: ReturnType<typeof buildContractorsApi>;
   notifications: ReturnType<typeof buildNotificationsApi>;
   auth: ReturnType<typeof buildAuthApi>;
+  rentals: ReturnType<typeof buildRentalsApi>;
+  dev: ReturnType<typeof buildDevApi>;
 }
 
 /**
@@ -995,6 +1356,7 @@ export function createApiClient(
     workRequests: buildWorkRequestsApi(opts),
     jobs: buildJobsApi(opts),
     invoices: buildInvoicesApi(opts),
+    contractor: buildContractorApi(opts),
     leases: buildLeasesApi(opts),
     signatureRequests: buildSignatureRequestsApi(opts),
     config: buildConfigApi(opts),
@@ -1005,5 +1367,7 @@ export function createApiClient(
     contractors: buildContractorsApi(opts),
     notifications: buildNotificationsApi(opts),
     auth: buildAuthApi(opts),
+    rentals: buildRentalsApi(opts),
+    dev: buildDevApi(opts),
   };
 }

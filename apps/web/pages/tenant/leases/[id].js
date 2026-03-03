@@ -99,12 +99,18 @@ export default function TenantLeaseDetailPage() {
 
   function formatDate(iso) {
     if (!iso) return "—";
-    return new Date(iso).toLocaleDateString("de-CH");
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return "—";
+    const dd = String(d.getDate()).padStart(2, "0");
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const yyyy = d.getFullYear();
+    return `${dd}.${mm}.${yyyy}`;
   }
 
   function formatChf(amount) {
     if (amount == null) return "—";
-    return `CHF ${amount.toLocaleString("de-CH")}`;
+    const str = Number(amount).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, "'");
+    return `CHF ${str}`;
   }
 
   if (!session) {
@@ -132,7 +138,21 @@ export default function TenantLeaseDetailPage() {
 
         {acceptResult && (
           <div className="notice notice-ok mb-4">
-            ✅ Lease accepted successfully! The lease is now signed.
+            ✅ Lease signed and activated! Your first rent invoice has been generated.
+            <div className="mt-2 flex gap-3">
+              <button
+                onClick={() => router.push("/tenant/leases")}
+                className="text-sm text-blue-600 hover:underline"
+              >
+                View My Leases →
+              </button>
+              <button
+                onClick={() => router.push("/tenant/invoices")}
+                className="text-sm text-blue-600 hover:underline"
+              >
+                View My Invoices →
+              </button>
+            </div>
           </div>
         )}
 

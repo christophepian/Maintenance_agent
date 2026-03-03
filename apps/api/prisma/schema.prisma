@@ -22,26 +22,28 @@ model RequestEvent {
 }
 
 model Org {
-  id                String             @id @default(uuid())
-  name              String
-  mode              OrgMode            @default(MANAGED)
-  appliances        Appliance[]
-  approvalRules     ApprovalRule[]
-  assetModels       AssetModel[]
-  billingEntities   BillingEntity[]
-  buildings         Building[]
-  buildingConfigs   BuildingConfig[]
-  contractors       Contractor[]
-  invoices          Invoice[]
-  jobs              Job[]
-  notifications     Notification[]
-  config            OrgConfig?
-  tenants           Tenant[]
-  units             Unit[]
-  unitConfigs       UnitConfig[]
-  users             User[]
-  leases            Lease[]
-  signatureRequests SignatureRequest[]
+  id                 String              @id @default(uuid())
+  name               String
+  mode               OrgMode             @default(MANAGED)
+  appliances         Appliance[]
+  approvalRules      ApprovalRule[]
+  assetModels        AssetModel[]
+  billingEntities    BillingEntity[]
+  buildings          Building[]
+  buildingConfigs    BuildingConfig[]
+  contractors        Contractor[]
+  invoices           Invoice[]
+  jobs               Job[]
+  notifications      Notification[]
+  config             OrgConfig?
+  tenants            Tenant[]
+  units              Unit[]
+  unitConfigs        UnitConfig[]
+  users              User[]
+  leases             Lease[]
+  signatureRequests  SignatureRequest[]
+  rentalApplications RentalApplication[]
+  emailOutbox        EmailOutbox[]
 }
 
 model OrgConfig {
@@ -178,10 +180,16 @@ model BuildingConfig {
   autoApproveLimit          Int?
   emergencyAutoDispatch     Boolean?
   requireOwnerApprovalAbove Int?
-  createdAt                 DateTime @default(now())
-  updatedAt                 DateTime @updatedAt
-  building                  Building @relation(fields: [buildingId], references: [id], onDelete: Cascade)
-  org                       Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  // Rental application policy
+  rentalIncomeMultiplier                Float? @default(3)
+  rentalSignatureDeadlineDays           Int?   @default(7)
+  rentalManualReviewConfidenceThreshold Int?   @default(60)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  building  Building @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+  org       Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
 
   @@index([orgId])
 }
@@ -202,26 +210,35 @@ model UnitConfig {
 }
 
 model Unit {
-  id          String      @id @default(uuid())
-  buildingId  String
-  unitNumber  String
-  floor       String?
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-  isActive    Boolean     @default(true)
-  orgId       String
-  type        UnitType    @default(RESIDENTIAL)
-  appliances  Appliance[]
-  occupancies Occupancy[]
-  requests    Request[]
-  building    Building    @relation(fields: [buildingId], references: [id], onDelete: Cascade)
-  org         Org         @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  config      UnitConfig?
-  leases      Lease[]
+  id         String   @id @default(uuid())
+  buildingId String
+  unitNumber String
+  floor      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  isActive   Boolean  @default(true)
+  orgId      String
+  type       UnitType @default(RESIDENTIAL)
+
+  // Vacancy fields (rental applications)
+  isVacant          Boolean @default(false)
+  monthlyRentChf    Int?
+  monthlyChargesChf Int?
+
+  appliances             Appliance[]
+  occupancies            Occupancy[]
+  requests               Request[]
+  building               Building                @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+  org                    Org                     @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  config                 UnitConfig?
+  leases                 Lease[]
+  rentalApplicationUnits RentalApplicationUnit[]
+  ownerSelections        RentalOwnerSelection[]
 
   @@unique([buildingId, unitNumber])
   @@index([buildingId])
   @@index([orgId])
+  @@index([isVacant])
 }
 
 model Appliance {
@@ -325,7 +342,7 @@ model Invoice {
   id                    String            @id @default(uuid())
   orgId                 String
   jobId                 String
-  leaseId               String? // optional link to lease
+  leaseId               String?
   amount                Int
   description           String
   status                InvoiceStatus     @default(DRAFT)
@@ -427,6 +444,7 @@ enum RequestEventType {
   OTHER
   OWNER_APPROVED
   OWNER_REJECTED
+  TENANT_SELECTED
 }
 
 enum JobStatus {
@@ -497,6 +515,9 @@ enum NotificationEventType {
   INVOICE_PAID
   INVOICE_DISPUTED
   OWNER_REJECTED
+  TENANT_SELECTED
+  LEASE_READY_TO_SIGN
+  LEASE_SIGNED
 }
 
 // ==========================================
@@ -534,6 +555,63 @@ enum SignatureRequestStatus {
 }
 
 // ==========================================
+// Rental Application enums
+// ==========================================
+
+enum RentalApplicationStatus {
+  DRAFT
+  SUBMITTED
+}
+
+enum ApplicantRole {
+  PRIMARY
+  CO_APPLICANT
+}
+
+enum RentalDocType {
+  IDENTITY
+  SALARY_PROOF
+  PERMIT
+  DEBT_ENFORCEMENT_EXTRACT
+  HOUSEHOLD_INSURANCE
+  STUDENT_PROOF
+  PARKING_DOCS
+}
+
+enum RentalApplicationUnitStatus {
+  SUBMITTED
+  REJECTED
+  SELECTED_PRIMARY
+  SELECTED_BACKUP_1
+  SELECTED_BACKUP_2
+  AWAITING_SIGNATURE
+  SIGNED
+  VOIDED
+}
+
+enum RentalOwnerSelectionStatus {
+  AWAITING_SIGNATURE
+  SIGNED
+  VOIDED
+  FALLBACK_1
+  FALLBACK_2
+  EXHAUSTED
+}
+
+enum EmailOutboxStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+enum EmailTemplate {
+  MISSING_DOCS
+  REJECTED
+  SELECTED_LEASE_LINK
+  MANAGER_TENANT_SELECTED
+}
+
+// ==========================================
 // Lease (Swiss rental contract)
 // ==========================================
 model Lease {
@@ -543,6 +621,11 @@ model Lease {
 
   applicationId String?
   unitId        String
+
+  // Template support (building-level lease templates)
+  isTemplate         Boolean @default(false)
+  templateBuildingId String?
+  templateName       String?
 
   // Parties landlord
   landlordName          String
@@ -611,7 +694,7 @@ model Lease {
   draftPdfStorageKey String?
   draftPdfSha256     String?
 
-  // Artifacts — signed PDF (final executed copy)
+  // Artifacts — signed PDF
   signedPdfStorageKey String?
   signedPdfSha256     String?
 
@@ -672,5 +755,194 @@ model SignatureRequest {
 
   @@index([orgId])
   @@index([entityType, entityId])
+  @@index([status])
+}
+
+// ==========================================
+// Rental Application models
+// ==========================================
+
+model RentalApplication {
+  id        String                  @id @default(uuid())
+  orgId     String
+  createdAt DateTime                @default(now())
+  updatedAt DateTime                @updatedAt
+  status    RentalApplicationStatus @default(DRAFT)
+
+  // Submission / signature
+  submittedAt        DateTime?
+  signedName         String?
+  signedAt           DateTime?
+  signatureIp        String?
+  signatureUserAgent String?
+
+  // Full normalized form payload snapshot (audit/export)
+  applicationDataJson Json?
+
+  // Current housing
+  currentLandlordName    String?
+  currentLandlordAddress String?
+  currentLandlordPhone   String?
+  reasonForLeaving       String?
+  desiredMoveInDate      DateTime?
+
+  // Household info
+  householdSize      Int?
+  hasPets            Boolean?
+  petsDescription    String?
+  hasRcInsurance     Boolean?
+  rcInsuranceCompany String?
+  hasVehicle         Boolean?
+  vehicleDescription String?
+  needsParking       Boolean?
+  remarks            String?
+
+  // Relations
+  org              Org                     @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  applicants       RentalApplicant[]
+  attachments      RentalAttachment[]
+  applicationUnits RentalApplicationUnit[]
+
+  @@index([orgId])
+  @@index([status])
+}
+
+model RentalApplicant {
+  id            String        @id @default(uuid())
+  applicationId String
+  role          ApplicantRole @default(PRIMARY)
+
+  // Identity
+  firstName   String
+  lastName    String
+  birthdate   DateTime?
+  nationality String?
+  civilStatus String?
+  permitType  String?
+
+  // Contact
+  phone String?
+  email String?
+
+  // Address
+  currentAddress String?
+  currentZipCity String?
+
+  // Employment
+  employer         String?
+  jobTitle         String?
+  workLocation     String?
+  employedSince    DateTime?
+  netMonthlyIncome Int?
+
+  // Debt enforcement
+  hasDebtEnforcement Boolean? @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  application RentalApplication  @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  attachments RentalAttachment[]
+
+  @@index([applicationId])
+}
+
+model RentalAttachment {
+  id            String        @id @default(uuid())
+  applicationId String
+  applicantId   String
+  docType       RentalDocType
+
+  fileName      String
+  fileSizeBytes Int
+  mimeType      String
+  storageKey    String
+  sha256        String
+
+  uploadedAt        DateTime  @default(now())
+  retentionDeleteAt DateTime?
+
+  // Relations
+  application RentalApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  applicant   RentalApplicant   @relation(fields: [applicantId], references: [id], onDelete: Cascade)
+
+  @@index([applicationId])
+  @@index([applicantId])
+  @@index([retentionDeleteAt])
+}
+
+model RentalApplicationUnit {
+  id            String                      @id @default(uuid())
+  applicationId String
+  unitId        String
+  createdAt     DateTime                    @default(now())
+  status        RentalApplicationUnitStatus @default(SUBMITTED)
+
+  // Evaluation results
+  evaluationJson      Json?
+  scoreTotal          Int?
+  confidenceScore     Int?
+  disqualified        Boolean @default(false)
+  disqualifiedReasons Json?
+  rank                Int?
+
+  // Manager override
+  managerScoreDelta     Int?
+  managerOverrideJson   Json?
+  managerOverrideReason String?
+
+  // Relations
+  application       RentalApplication      @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  unit              Unit                   @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  primarySelections RentalOwnerSelection[] @relation("PrimarySelection")
+  backup1Selections RentalOwnerSelection[] @relation("Backup1Selection")
+  backup2Selections RentalOwnerSelection[] @relation("Backup2Selection")
+
+  @@unique([applicationId, unitId])
+  @@index([applicationId])
+  @@index([unitId])
+  @@index([unitId, rank])
+}
+
+model RentalOwnerSelection {
+  id         String    @id @default(uuid())
+  unitId     String
+  createdAt  DateTime  @default(now())
+  decidedAt  DateTime?
+  deadlineAt DateTime
+
+  primaryApplicationUnitId String
+  backup1ApplicationUnitId String?
+  backup2ApplicationUnitId String?
+
+  status RentalOwnerSelectionStatus @default(AWAITING_SIGNATURE)
+
+  // Relations
+  unit             Unit                   @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  primarySelection RentalApplicationUnit  @relation("PrimarySelection", fields: [primaryApplicationUnitId], references: [id])
+  backup1Selection RentalApplicationUnit? @relation("Backup1Selection", fields: [backup1ApplicationUnitId], references: [id])
+  backup2Selection RentalApplicationUnit? @relation("Backup2Selection", fields: [backup2ApplicationUnitId], references: [id])
+
+  @@index([unitId])
+  @@index([status])
+  @@index([deadlineAt])
+}
+
+model EmailOutbox {
+  id        String            @id @default(uuid())
+  orgId     String
+  createdAt DateTime          @default(now())
+  toEmail   String
+  template  EmailTemplate
+  subject   String
+  bodyText  String
+  status    EmailOutboxStatus @default(PENDING)
+  metaJson  Json?
+
+  // Relations
+  org Org @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@index([orgId])
   @@index([status])
 }

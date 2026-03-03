@@ -1,6 +1,7 @@
 import * as http from "http";
 import { spawn, ChildProcessWithoutNullStreams } from "child_process";
 import * as path from "path";
+import { createManagerToken, getAuthHeaders } from "./testHelpers";
 
 const API_ROOT = path.resolve(__dirname, "..", "..");
 const TS_NODE = path.resolve(API_ROOT, "node_modules", ".bin", "ts-node");
@@ -9,7 +10,7 @@ const BASE_URL = `http://127.0.0.1:${PORT}`;
 
 function startServer(envOverrides: Record<string, string>, port: number) {
   return new Promise<ChildProcessWithoutNullStreams>((resolve, reject) => {
-    const child = spawn(TS_NODE, ["src/server.ts"], {
+    const child = spawn(TS_NODE, ["--transpile-only", "src/server.ts"], {
       cwd: API_ROOT,
       env: {
         ...process.env,
@@ -36,7 +37,7 @@ function startServer(envOverrides: Record<string, string>, port: number) {
     const timeout = setTimeout(() => {
       cleanup();
       reject(new Error("Server did not start in time"));
-    }, 8000);
+    }, 15000);
 
     function cleanup() {
       clearTimeout(timeout);
@@ -81,7 +82,10 @@ describe("Requests API Integration Tests", () => {
   }, 10000);
 
   it("should return org config (GET /org-config)", (done) => {
-    http.get(`${BASE_URL}/org-config`, (res) => {
+    const token = createManagerToken();
+    const headers = getAuthHeaders(token);
+    
+    const req = http.get(`${BASE_URL}/org-config`, { headers }, (res) => {
       expect(res.statusCode).toBe(200);
       let data = '';
       res.on('data', chunk => (data += chunk));
@@ -92,7 +96,8 @@ describe("Requests API Integration Tests", () => {
         expect(parsed.data).toHaveProperty('autoApproveLimit');
         done();
       });
-    }).on("error", (err) => {
+    });
+    req.on("error", (err) => {
       console.error("Connection error (server may not be running):", err.message);
       done(err);
     });

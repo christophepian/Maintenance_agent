@@ -309,6 +309,95 @@ export async function notifyJobStatusChanged(
 }
 
 /**
+ * Notify tenant that a lease is ready to sign
+ */
+export async function notifyTenantLeaseReady(
+  leaseId: string,
+  orgId: string,
+  tenantUserId: string,
+  unitNumber: string,
+  buildingName: string,
+  buildingId?: string
+): Promise<void> {
+  await createNotification({
+    orgId,
+    userId: tenantUserId,
+    buildingId,
+    entityType: 'LEASE',
+    entityId: leaseId,
+    eventType: 'LEASE_READY_TO_SIGN',
+    message: `Your lease for unit ${unitNumber} at ${buildingName} is ready for your signature.`,
+  });
+}
+
+/**
+ * Notify manager that tenant has signed a lease
+ */
+export async function notifyManagerLeaseSigned(
+  leaseId: string,
+  orgId: string,
+  managerId: string,
+  tenantName: string,
+  unitNumber: string,
+  buildingId?: string
+): Promise<void> {
+  await createNotification({
+    orgId,
+    userId: managerId,
+    buildingId,
+    entityType: 'LEASE',
+    entityId: leaseId,
+    eventType: 'LEASE_SIGNED',
+    message: `${tenantName} has signed the lease for unit ${unitNumber}. The lease is now active.`,
+  });
+}
+
+/**
+ * Notify owner that tenant has signed a lease
+ */
+export async function notifyOwnerLeaseSigned(
+  leaseId: string,
+  orgId: string,
+  ownerId: string,
+  tenantName: string,
+  unitNumber: string,
+  buildingId?: string
+): Promise<void> {
+  await createNotification({
+    orgId,
+    userId: ownerId,
+    buildingId,
+    entityType: 'LEASE',
+    entityId: leaseId,
+    eventType: 'LEASE_SIGNED',
+    message: `${tenantName} has signed the lease for unit ${unitNumber}. The unit is now occupied.`,
+  });
+}
+
+/**
+ * Create notification for manager when owner selects tenant candidates.
+ * Notifies the manager that a selection has been made and lease generation may be needed.
+ */
+export async function notifyManagerTenantSelected(
+  selectionId: string,
+  orgId: string,
+  managerId: string,
+  unitNumber: string,
+  candidateName: string,
+  buildingId?: string
+): Promise<void> {
+  await createNotification({
+    orgId,
+    userId: managerId,
+    buildingId,
+    entityType: 'SELECTION',
+    entityId: selectionId,
+    eventType: 'TENANT_SELECTED',
+    message: `Owner selected ${candidateName} for unit ${unitNumber}. Please ensure a lease is generated and sent.`,
+  });
+}
+
+/**
  * Helper: map Prisma notification to DTO
  */
 function mapNotificationToDTO(notification: any): NotificationDTO {

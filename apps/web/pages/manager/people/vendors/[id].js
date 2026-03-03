@@ -3,6 +3,7 @@ import { useRouter } from "next/router";
 import AppShell from "../../../../components/AppShell";
 import PageShell from "../../../../components/layout/PageShell";
 import PageHeader from "../../../../components/layout/PageHeader";
+import { formatDateTime } from "../../../../lib/format";
 import PageContent from "../../../../components/layout/PageContent";
 import Panel from "../../../../components/layout/Panel";
 import { ALLOWED_CATEGORIES } from "../../../../lib/categories";
@@ -420,13 +421,13 @@ export default function ContractorDetailPage() {
                     <div>
                       <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Created</div>
                       <div className="text-sm text-slate-700 mt-1">
-                        {contractor?.createdAt ? new Date(contractor.createdAt).toLocaleString() : "—"}
+                        {contractor?.createdAt ? formatDateTime(contractor.createdAt) : "—"}
                       </div>
                     </div>
                     <div>
                       <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Updated</div>
                       <div className="text-sm text-slate-700 mt-1">
-                        {contractor?.updatedAt ? new Date(contractor.updatedAt).toLocaleString() : "—"}
+                        {contractor?.updatedAt ? formatDateTime(contractor.updatedAt) : "—"}
                       </div>
                     </div>
                   </div>

@@ -101,6 +101,23 @@ export interface InvoiceDTO {
   lineItems: InvoiceLineItemDTO[];
 }
 
+  /**
+   * H5: Summary DTO for list endpoints.
+   * Reduces overfetch by omitting line items and address details.
+   */
+  export interface InvoiceSummaryDTO {
+    id: string;
+    orgId: string;
+    jobId: string;
+    status: InvoiceStatus;
+    invoiceNumber?: string;
+    totalAmount: number; // CHF
+    dueDate?: string;
+    paidAt?: string;
+    createdAt: string;
+    description?: string;
+  }
+
 function toCents(amount: number): number {
   return Math.round(amount * 100);
 }
@@ -370,25 +387,31 @@ export async function getInvoice(invoiceId: string): Promise<InvoiceDTO | null> 
 
 /**
  * List invoices for org with optional filters.
+ * H1: Supports contractorId filter for contractor-scoped access.
  */
 export async function listInvoices(
   orgId: string,
   filters?: {
     jobId?: string;
     status?: InvoiceStatus;
+    view?: "summary" | "full";
+    contractorId?: string;
   }
-): Promise<InvoiceDTO[]> {
+): Promise<InvoiceDTO[] | InvoiceSummaryDTO[]> {
+  const useSummary = filters?.view === "summary";
+
   const invoices = await prisma.invoice.findMany({
     where: {
       orgId,
       ...(filters?.jobId && { jobId: filters.jobId }),
       ...(filters?.status && { status: filters.status }),
+      ...(filters?.contractorId && { job: { contractorId: filters.contractorId } }),
     },
     orderBy: { createdAt: 'desc' },
-    include: INVOICE_INCLUDE,
+    include: useSummary ? undefined : INVOICE_INCLUDE,
   });
 
-  return invoices.map(mapInvoiceToDTO);
+  return useSummary ? invoices.map(mapInvoiceToSummaryDTO) : invoices.map(mapInvoiceToDTO);
 }
 
 /**
@@ -614,3 +637,19 @@ function mapInvoiceToDTO(invoice: any): InvoiceDTO {
     lineItems,
   };
 }
+
+  function mapInvoiceToSummaryDTO(invoice: any): InvoiceSummaryDTO {
+    const totalAmount = invoice.totalAmount ?? 0;
+    return {
+      id: invoice.id,
+      orgId: invoice.orgId,
+      jobId: invoice.jobId,
+      status: invoice.status,
+      invoiceNumber: invoice.invoiceNumber || undefined,
+      totalAmount: fromCents(totalAmount),
+      dueDate: invoice.dueDate ? invoice.dueDate.toISOString() : null as any,
+      paidAt: invoice.paidAt ? invoice.paidAt.toISOString() : null as any,
+      createdAt: invoice.createdAt.toISOString(),
+      description: invoice.description || undefined,
+    };
+  }

@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/router";
+import { formatDateTime } from "../lib/format";
 
-export default function NotificationBell() {
+export default function NotificationBell({ role }) {
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifications, setNotifications] = useState([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -118,7 +120,32 @@ export default function NotificationBell() {
       case "REQUEST_APPROVED": return "bg-green-100 text-green-800";
       case "INVOICE_PAID": return "bg-blue-100 text-blue-800";
       case "JOB_COMPLETED": return "bg-purple-100 text-purple-800";
+      case "LEASE_SIGNED": return "bg-emerald-100 text-emerald-800";
+      case "LEASE_READY_TO_SIGN": return "bg-sky-100 text-sky-800";
+      case "TENANT_SELECTED": return "bg-indigo-100 text-indigo-800";
       default: return "bg-gray-100 text-gray-800";
+    }
+  };
+
+  const router = useRouter();
+
+  const getNotificationLink = (notif) => {
+    const prefix = role === "OWNER" ? "/owner" : role === "MANAGER" ? "/manager" : null;
+    if (!prefix) return null;
+    if (notif.entityType === "LEASE" && notif.entityId) {
+      return `${prefix}/leases/${notif.entityId}`;
+    }
+    return null;
+  };
+
+  const handleNotificationClick = async (notif) => {
+    const link = getNotificationLink(notif);
+    if (link) {
+      if (!notif.isRead) {
+        await markAsRead(notif.id);
+      }
+      router.push(link);
+      setIsOpen(false);
     }
   };
 
@@ -183,28 +210,26 @@ export default function NotificationBell() {
               notifications.map((notif) => (
                 <div
                   key={notif.id}
+                  onClick={() => handleNotificationClick(notif)}
                   className={`px-4 py-3 border-b border-gray-100 hover:bg-gray-50 ${
                     !notif.isRead ? "bg-blue-50" : ""
-                  }`}
+                  } ${getNotificationLink(notif) ? "cursor-pointer" : ""}`}
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className={`text-xs px-2 py-0.5 rounded ${getTypeColor(notif.type)}`}>
-                          {notif.type.replace(/_/g, " ")}
+                        <span className={`text-xs px-2 py-0.5 rounded ${getTypeColor(notif.eventType)}`}>
+                          {(notif.eventType || notif.type || "").replace(/_/g, " ")}
                         </span>
                         {!notif.isRead && (
                           <span className="w-2 h-2 bg-blue-600 rounded-full"></span>
                         )}
                       </div>
-                      <h4 className="text-sm font-semibold text-gray-900 mb-1">
-                        {notif.title}
-                      </h4>
-                      <p className="text-sm text-gray-600 mb-1">
+                      <p className="text-sm text-gray-700 mb-1">
                         {notif.message}
                       </p>
                       <p className="text-xs text-gray-400">
-                        {new Date(notif.createdAt).toLocaleString()}
+                        {formatDateTime(notif.createdAt)}
                       </p>
                     </div>
                     <div className="flex flex-col gap-1 ml-2">

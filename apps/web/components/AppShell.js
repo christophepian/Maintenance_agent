@@ -81,6 +81,12 @@ export default function AppShell({ role: roleProp, children }) {
   const managerNav = useMemo(
     () => [
       {
+        section: "Overview",
+        items: [
+          { label: "Dashboard", href: "/manager" },
+        ],
+      },
+      {
         section: "Properties",
         items: [
           { label: "Properties", href: "/manager/properties" },
@@ -98,7 +104,13 @@ export default function AppShell({ role: roleProp, children }) {
       {
         section: "Appliances",
         items: [
-          { label: "Applances models", href: "/admin-inventory/asset-models" },
+          { label: "Appliance models", href: "/admin-inventory/asset-models" },
+        ],
+      },
+      {
+        section: "Rental Applications",
+        items: [
+          { label: "Vacancies", href: "/manager/vacancies" },
         ],
       },
       {
@@ -119,7 +131,10 @@ export default function AppShell({ role: roleProp, children }) {
       },
       {
         section: "Leases",
-        items: [{ label: "Leases", href: "/manager/leases" }],
+        items: [
+          { label: "Leases", href: "/manager/leases" },
+          { label: "Lease Templates", href: "/manager/leases/templates" },
+        ],
       },
       {
         section: "Reports",
@@ -129,12 +144,23 @@ export default function AppShell({ role: roleProp, children }) {
         section: "Settings",
         items: [{ label: "Settings", href: "/manager/settings" }],
       },
+      {
+        section: "Dev Tools",
+        items: [{ label: "Email Sink", href: "/manager/emails" }],
+      },
     ],
     []
   );
 
   const ownerNav = useMemo(
     () => [
+      {
+        section: "Overview",
+        items: [
+          { label: "Dashboard", href: "/owner" },
+          { label: "Vacancies", href: "/owner/vacancies" },
+        ],
+      },
       {
         section: "Approvals",
         items: [{ label: "Pending Approvals", href: "/owner/approvals" }],
@@ -165,6 +191,12 @@ export default function AppShell({ role: roleProp, children }) {
   const contractorNav = useMemo(
     () => [
       {
+        section: "Overview",
+        items: [
+          { label: "Dashboard", href: "/contractor" },
+        ],
+      },
+      {
         section: "Jobs",
         items: [
           { label: "Jobs", href: "/contractor/jobs" },
@@ -173,7 +205,10 @@ export default function AppShell({ role: roleProp, children }) {
       },
       {
         section: "Finance",
-        items: [{ label: "Invoices", href: "/contractor/invoices" }],
+        items: [
+          { label: "Invoices", href: "/contractor/invoices" },
+          { label: "Estimates", href: "/contractor/estimates" },
+        ],
       },
     ],
     []
@@ -182,12 +217,32 @@ export default function AppShell({ role: roleProp, children }) {
   const tenantNav = useMemo(
     () => [
       {
-        section: "Tenant",
+        section: "Overview",
+        items: [
+          { label: "Dashboard", href: "/tenant" },
+          { label: "Inbox", href: "/tenant/inbox" },
+        ],
+      },
+      {
+        section: "Work Requests",
         items: [
           { label: "Submit Work Request", href: "/tenant-form" },
           { label: "Chat intake", href: "/tenant-chat" },
+        ],
+      },
+      {
+        section: "My Tenancy",
+        items: [
           { label: "My Leases", href: "/tenant/leases" },
+          { label: "My Invoices", href: "/tenant/invoices" },
           { label: "My unit & assets", href: "/tenant/assets" },
+        ],
+      },
+      {
+        section: "Applications",
+        items: [
+          { label: "Browse Listings", href: "/listings" },
+          { label: "Apply for a unit", href: "/apply" },
         ],
       },
     ],
@@ -207,13 +262,13 @@ export default function AppShell({ role: roleProp, children }) {
     }
     setRole(nextRole);
     if (nextRole === "CONTRACTOR") {
-      router.push("/contractor/jobs");
+      router.push("/contractor");
     } else if (nextRole === "TENANT") {
       router.push("/tenant-form");
     } else if (nextRole === "OWNER") {
-      router.push("/owner/approvals");
+      router.push("/owner");
     } else {
-      router.push("/manager/work-requests");
+      router.push("/manager");
     }
   }
 
@@ -297,7 +352,7 @@ export default function AppShell({ role: roleProp, children }) {
             marginBottom: "16px",
             paddingRight: "8px"
           }}>
-            <NotificationBell />
+            <NotificationBell role={role} />
           </div>
         )}
         {children}

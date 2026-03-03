@@ -3,6 +3,7 @@ import { useRouter } from "next/router";
 import Link from "next/link";
 import AppShell from "../../../components/AppShell";
 import PageShell from "../../../components/layout/PageShell";
+import { formatDate as fmtD } from "../../../lib/format";
 import PageHeader from "../../../components/layout/PageHeader";
 import PageContent from "../../../components/layout/PageContent";
 import Section from "../../../components/layout/Section";
@@ -93,6 +94,7 @@ export default function LeaseEditorPage() {
   const isDraft = lease?.status === "DRAFT";
   const isSigned = lease?.status === "SIGNED";
   const isActive = lease?.status === "ACTIVE";
+  const isTemplate = lease?.isTemplate === true;
 
   const fetchLease = useCallback(async () => {
     if (!id) return;
@@ -148,6 +150,11 @@ export default function LeaseEditorPage() {
       delete body.createdAt; delete body.updatedAt;
       delete body.draftPdfStorageKey; delete body.draftPdfSha256;
       delete body.unit; delete body.applicationId; delete body.unitId;
+      delete body.isTemplate; delete body.templateName; delete body.templateBuildingId;
+      delete body.signedPdfStorageKey; delete body.signedPdfSha256;
+      delete body.depositPaidAt; delete body.depositConfirmedBy; delete body.depositBankRef;
+      delete body.activatedAt; delete body.terminatedAt; delete body.terminationReason;
+      delete body.terminationNotice; delete body.archivedAt;
 
       // Convert empty strings to null for optional numeric fields
       for (const f of ["garageRentChf", "otherServiceRentChf", "chargesTotalChf", "depositChf", "paymentDueDayOfMonth"]) {
@@ -325,14 +332,19 @@ export default function LeaseEditorPage() {
     <AppShell role="MANAGER">
       <PageShell>
         <PageHeader
-          title={`Lease — ${lease.tenantName}`}
+          title={isTemplate ? `Template — ${lease.templateName || lease.landlordName}` : `Lease — ${lease.tenantName}`}
           subtitle={
             <span className="flex items-center gap-2">
-              <Link href="/manager/leases" className="text-blue-600 hover:underline">← Leases</Link>
+              <Link href={isTemplate ? "/manager/leases/templates" : "/manager/leases"} className="text-blue-600 hover:underline">{isTemplate ? "← Templates" : "← Leases"}</Link>
               <span>·</span>
-              <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${STATUS_COLORS[lease.status] || "bg-slate-100"}`}>
-                {lease.status.replace(/_/g, " ")}
-              </span>
+              {isTemplate && (
+                <span className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-700">TEMPLATE</span>
+              )}
+              {!isTemplate && (
+                <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${STATUS_COLORS[lease.status] || "bg-slate-100"}`}>
+                  {lease.status.replace(/_/g, " ")}
+                </span>
+              )}
               {lease.unit && (
                 <>
                   <span>·</span>
@@ -343,7 +355,7 @@ export default function LeaseEditorPage() {
           }
           actions={
             <div className="flex items-center gap-2 flex-wrap">
-              {isDraft && (
+              {(isDraft || isTemplate) && (
                 <button onClick={handleSave} disabled={saving}
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50">
                   {saving ? "Saving..." : "Save"}
@@ -353,35 +365,37 @@ export default function LeaseEditorPage() {
                 className="px-4 py-2 bg-slate-600 text-white rounded-lg text-sm font-medium hover:bg-slate-700 disabled:opacity-50">
                 {pdfGenerating ? "Generating..." : "📄 Generate PDF"}
               </button>
-              {isDraft && (
+              {isDraft && !isTemplate && (
                 <button onClick={() => setShowSignModal(true)}
                   className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700">
                   ✍️ Ready to Sign
                 </button>
               )}
-              {isSigned && (
+              {isSigned && !isTemplate && (
                 <button onClick={handleActivate} disabled={!!actionLoading}
                   className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 disabled:opacity-50">
                   {actionLoading === "activate" ? "Activating..." : "⚡ Activate"}
                 </button>
               )}
-              {isActive && (
+              {isActive && !isTemplate && (
                 <button onClick={() => setShowTerminateModal(true)}
                   className="px-4 py-2 bg-orange-600 text-white rounded-lg text-sm font-medium hover:bg-orange-700">
                   📋 Terminate
                 </button>
               )}
-              {!lease.archivedAt && ["SIGNED", "ACTIVE", "TERMINATED", "CANCELLED"].includes(lease.status) && (
+              {!isTemplate && !lease.archivedAt && ["SIGNED", "ACTIVE", "TERMINATED", "CANCELLED"].includes(lease.status) && (
                 <button onClick={handleArchive} disabled={!!actionLoading}
                   className="px-3 py-2 bg-slate-100 text-slate-600 rounded-lg text-sm font-medium hover:bg-slate-200 disabled:opacity-50">
                   📦 Archive
                 </button>
               )}
-              <button onClick={() => setShowInvoiceModal(true)}
-                className="px-3 py-2 bg-indigo-50 text-indigo-600 rounded-lg text-sm font-medium hover:bg-indigo-100">
-                💰 Invoice
-              </button>
-              {lease.status !== "SIGNED" && lease.status !== "ACTIVE" && lease.status !== "TERMINATED" && lease.status !== "CANCELLED" && (
+              {!isTemplate && (
+                <button onClick={() => setShowInvoiceModal(true)}
+                  className="px-3 py-2 bg-indigo-50 text-indigo-600 rounded-lg text-sm font-medium hover:bg-indigo-100">
+                  💰 Invoice
+                </button>
+              )}
+              {!isTemplate && lease.status !== "SIGNED" && lease.status !== "ACTIVE" && lease.status !== "TERMINATED" && lease.status !== "CANCELLED" && (
                 <button onClick={handleCancel}
                   className="px-3 py-2 bg-red-50 text-red-600 rounded-lg text-sm font-medium hover:bg-red-100">
                   Cancel
@@ -566,7 +580,7 @@ export default function LeaseEditorPage() {
                           }`}>{sr.status}</span>
                         </td>
                         <td className="px-4 py-3">{sr.signers?.map(s => s.name).join(", ") || "—"}</td>
-                        <td className="px-4 py-3">{new Date(sr.createdAt).toLocaleDateString("fr-CH")}</td>
+                        <td className="px-4 py-3">{fmtD(sr.createdAt)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -609,7 +623,7 @@ export default function LeaseEditorPage() {
                   {lease.depositPaidAt ? (
                     <div className="text-right">
                       <span className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">✅ PAID</span>
-                      <p className="text-xs text-slate-400 mt-1">{new Date(lease.depositPaidAt).toLocaleDateString("fr-CH")}</p>
+                      <p className="text-xs text-slate-400 mt-1">{fmtD(lease.depositPaidAt)}</p>
                       {lease.depositConfirmedBy && <p className="text-xs text-slate-400">By: {lease.depositConfirmedBy}</p>}
                       {lease.depositBankRef && <p className="text-xs text-slate-400">Ref: {lease.depositBankRef}</p>}
                     </div>
@@ -629,17 +643,17 @@ export default function LeaseEditorPage() {
             <Section title="📋 Lifecycle">
               <div className="bg-white rounded-lg border p-4 space-y-2">
                 {lease.activatedAt && (
-                  <p className="text-sm"><span className="text-emerald-600 font-medium">⚡ Activated:</span> {new Date(lease.activatedAt).toLocaleDateString("fr-CH")}</p>
+                  <p className="text-sm"><span className="text-emerald-600 font-medium">⚡ Activated:</span> {fmtD(lease.activatedAt)}</p>
                 )}
                 {lease.terminatedAt && (
                   <div>
-                    <p className="text-sm"><span className="text-orange-600 font-medium">📋 Terminated:</span> {new Date(lease.terminatedAt).toLocaleDateString("fr-CH")}</p>
+                    <p className="text-sm"><span className="text-orange-600 font-medium">📋 Terminated:</span> {fmtD(lease.terminatedAt)}</p>
                     {lease.terminationReason && <p className="text-xs text-slate-500 ml-6">Reason: {lease.terminationReason}</p>}
                     {lease.terminationNotice && <p className="text-xs text-slate-500 ml-6">Notice: {lease.terminationNotice}</p>}
                   </div>
                 )}
                 {lease.archivedAt && (
-                  <p className="text-sm"><span className="text-slate-600 font-medium">📦 Archived:</span> {new Date(lease.archivedAt).toLocaleDateString("fr-CH")}</p>
+                  <p className="text-sm"><span className="text-slate-600 font-medium">📦 Archived:</span> {fmtD(lease.archivedAt)}</p>
                 )}
               </div>
             </Section>
@@ -673,7 +687,7 @@ export default function LeaseEditorPage() {
                               "bg-slate-100 text-slate-700"
                             }`}>{inv.status}</span>
                           </td>
-                          <td className="px-4 py-3 text-slate-500">{new Date(inv.createdAt).toLocaleDateString("fr-CH")}</td>
+                          <td className="px-4 py-3 text-slate-500">{fmtD(inv.createdAt)}</td>
                         </tr>
                       ))}
                     </tbody>
