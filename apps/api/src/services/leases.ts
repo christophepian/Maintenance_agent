@@ -129,7 +129,7 @@ export interface LeaseDTO {
 // ==========================================
 // Mapper
 // ==========================================
-function mapLeaseToDTO(lease: any): LeaseDTO {
+export function mapLeaseToDTO(lease: any): LeaseDTO {
   return {
     id: lease.id,
     orgId: lease.orgId,

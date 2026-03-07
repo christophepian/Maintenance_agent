@@ -14,10 +14,13 @@
 
 import { spawn, ChildProcessWithoutNullStreams } from "child_process";
 import * as path from "path";
+import { PrismaClient } from "@prisma/client";
 
 const API_ROOT = path.resolve(__dirname, "..", "..");
 const PORT = 3207;
 const API_BASE = `http://127.0.0.1:${PORT}`;
+const prisma = new PrismaClient();
+const DEFAULT_ORG_ID = "default-org";
 
 /* ── Helpers ──────────────────────────────────────────────── */
 
@@ -88,6 +91,7 @@ let vacantUnitId: string;
 let applicationId: string;
 let applicantId: string;
 let applicationUnitId: string;
+let seededBuildingId: string;
 
 /* ══════════════════════════════════════════════════════════════
    Lifecycle Tests
@@ -95,6 +99,30 @@ let applicationUnitId: string;
 
 describe("Rental Application Lifecycle (Integration)", () => {
   beforeAll(async () => {
+    // Seed a vacant unit for "default-org" (server creates the org on startup)
+    const building = await prisma.building.create({
+      data: {
+        orgId: DEFAULT_ORG_ID,
+        name: "Rental Test Building",
+        address: "Teststrasse 1, 8000 Zürich",
+      },
+    });
+    seededBuildingId = building.id;
+
+    const unit = await prisma.unit.create({
+      data: {
+        orgId: DEFAULT_ORG_ID,
+        buildingId: building.id,
+        unitNumber: "R1",
+        floor: "1",
+        type: "RESIDENTIAL",
+        isVacant: true,
+        isActive: true,
+        monthlyRentChf: 1500,
+        monthlyChargesChf: 200,
+      },
+    });
+
     proc = await startServer();
 
     // Get a vacant unit for the tests
@@ -103,8 +131,44 @@ describe("Rental Application Lifecycle (Integration)", () => {
     vacantUnitId = body.data[0].id;
   }, 25000);
 
-  afterAll(() => {
+  afterAll(async () => {
     if (proc) proc.kill();
+
+    // Cleanup seeded test data (cascade deletes units via building)
+    if (seededBuildingId) {
+      // Delete rental application data tied to units in this building
+      const unitIds = (
+        await prisma.unit.findMany({
+          where: { buildingId: seededBuildingId },
+          select: { id: true },
+        })
+      ).map((u) => u.id);
+
+      if (unitIds.length > 0) {
+        // Clean up rental application units → applications → applicants
+        const appUnits = await prisma.rentalApplicationUnit.findMany({
+          where: { unitId: { in: unitIds } },
+          select: { applicationId: true },
+        });
+        const appIds = [...new Set(appUnits.map((au) => au.applicationId))];
+
+        if (appIds.length > 0) {
+          await prisma.rentalOwnerSelection.deleteMany({ where: { unitId: { in: unitIds } } }).catch(() => {});
+          await prisma.rentalApplicationUnit.deleteMany({ where: { applicationId: { in: appIds } } }).catch(() => {});
+          await prisma.rentalAttachment.deleteMany({ where: { applicationId: { in: appIds } } }).catch(() => {});
+          await prisma.rentalApplicant.deleteMany({ where: { applicationId: { in: appIds } } }).catch(() => {});
+          await prisma.rentalApplication.deleteMany({ where: { id: { in: appIds } } }).catch(() => {});
+        }
+      }
+
+      await prisma.unit.deleteMany({ where: { buildingId: seededBuildingId } }).catch(() => {});
+      await prisma.building.delete({ where: { id: seededBuildingId } }).catch(() => {});
+    }
+
+    // Clean up dev emails created during test
+    await prisma.emailOutbox.deleteMany({ where: { orgId: DEFAULT_ORG_ID, toEmail: "integration-test@example.com" } }).catch(() => {});
+
+    await prisma.$disconnect();
   });
 
   /* ── 1. Create Draft ───────────────────────────────────── */

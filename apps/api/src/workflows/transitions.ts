@@ -6,7 +6,7 @@
  * invalid transitions are rejected in exactly one place.
  */
 
-import { RequestStatus, JobStatus, InvoiceStatus } from "@prisma/client";
+import { RequestStatus, JobStatus, InvoiceStatus, LeaseStatus } from "@prisma/client";
 
 // ─── Request Transitions ───────────────────────────────────────
 
@@ -117,5 +117,53 @@ export function assertInvoiceTransition(from: InvoiceStatus, to: InvoiceStatus):
 
 export function canTransitionInvoice(from: InvoiceStatus, to: InvoiceStatus): boolean {
   const allowed = VALID_INVOICE_TRANSITIONS[from];
+  return !!allowed && allowed.includes(to);
+}
+
+// ─── Lease Transitions ─────────────────────────────────────────
+
+const VALID_LEASE_TRANSITIONS: Record<string, LeaseStatus[]> = {
+  [LeaseStatus.DRAFT]: [LeaseStatus.READY_TO_SIGN, LeaseStatus.CANCELLED],
+  [LeaseStatus.READY_TO_SIGN]: [LeaseStatus.SIGNED, LeaseStatus.CANCELLED],
+  [LeaseStatus.SIGNED]: [LeaseStatus.ACTIVE],
+  [LeaseStatus.ACTIVE]: [LeaseStatus.TERMINATED],
+  [LeaseStatus.TERMINATED]: [],
+  [LeaseStatus.CANCELLED]: [],
+};
+
+export function assertLeaseTransition(from: LeaseStatus, to: LeaseStatus): void {
+  const allowed = VALID_LEASE_TRANSITIONS[from];
+  if (!allowed || !allowed.includes(to)) {
+    throw new InvalidTransitionError("Lease", from, to);
+  }
+}
+
+export function canTransitionLease(from: LeaseStatus, to: LeaseStatus): boolean {
+  const allowed = VALID_LEASE_TRANSITIONS[from];
+  return !!allowed && allowed.includes(to);
+}
+
+// ─── Rental Application Transitions ────────────────────────────
+
+/**
+ * Rental applications use string statuses (not Prisma enum for
+ * ApplicationUnitStatus).  The application-level lifecycle is:
+ *   DRAFT → SUBMITTED
+ * The per-unit lifecycle is managed separately by ownerSelection.
+ */
+const VALID_RENTAL_APPLICATION_TRANSITIONS: Record<string, string[]> = {
+  DRAFT: ["SUBMITTED"],
+  SUBMITTED: [], // terminal for the application itself
+};
+
+export function assertRentalApplicationTransition(from: string, to: string): void {
+  const allowed = VALID_RENTAL_APPLICATION_TRANSITIONS[from];
+  if (!allowed || !allowed.includes(to)) {
+    throw new InvalidTransitionError("RentalApplication", from, to);
+  }
+}
+
+export function canTransitionRentalApplication(from: string, to: string): boolean {
+  const allowed = VALID_RENTAL_APPLICATION_TRANSITIONS[from];
   return !!allowed && allowed.includes(to);
 }

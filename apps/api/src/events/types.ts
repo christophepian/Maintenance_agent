@@ -74,6 +74,21 @@ export interface LeaseStatusChangedPayload {
   toStatus: string;
 }
 
+export interface RentalApplicationSubmittedPayload {
+  applicationId: string;
+  unitIds: string[];
+  applicantName: string;
+}
+
+export interface RentalApplicationEvaluatedPayload {
+  applicationId: string;
+  unitEvaluations: Array<{
+    unitId: string;
+    scoreTotal: number;
+    disqualified: boolean;
+  }>;
+}
+
 export interface LegalAutoRoutedPayload {
   requestId: string;
   obligation: string;       // LegalObligation enum value
@@ -116,6 +131,8 @@ export interface DomainEventMap {
   INVOICE_PAID: InvoicePaidPayload;
   INVOICE_DISPUTED: InvoiceDisputedPayload;
   LEASE_STATUS_CHANGED: LeaseStatusChangedPayload;
+  RENTAL_APPLICATION_SUBMITTED: RentalApplicationSubmittedPayload;
+  RENTAL_APPLICATION_EVALUATED: RentalApplicationEvaluatedPayload;
 }
 
 export type DomainEventType = keyof DomainEventMap;

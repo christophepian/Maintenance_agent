@@ -1,6 +1,6 @@
 # Maintenance Agent — Project State
 
-**Last updated:** 2026-03-07 (Workflow Layer Structural Refactor — new `workflows/` layer (7 workflows), `repositories/` layer, `transitions` state machine; routes made thin wrappers delegating to workflows; zero behavior changes; 17 new workflow integration tests (all pass). Prior: Legal Auto-Routing, LKDE data quality + UX polish, comprehensive asset inventory, requests page redesign. Tests: 288 total, 27 suites; 43 Prisma models, 32 enums)
+**Last updated:** 2026-03-07 (Phase 3 Architecture Hardening — 4 new workflows (activateLease, terminateLease, markLeaseReady, submitRentalApplication), 2 new repositories (leaseRepository, rentalApplicationRepository), Lease + RentalApplication transition maps, 2 new domain events, routes wired to workflows, ARCHITECTURE_LOW_CONTEXT_GUIDE.md extended. Fixed 7 pre-existing test failures in rentalIntegration.test.ts (missing seed data). Tests: 288/288 pass, 27 suites; 43 Prisma models, 32 enums)
 
 ---
 
@@ -464,14 +464,14 @@ Single repository containing:
 * Raw HTTP server using `http.createServer`
 * **No Express or NestJS** (removed during cleanup Feb 3)
 * Entry point: `apps/api/src/server.ts`
-* **Layered architecture** (Mar 7 refactor):
+* **Layered architecture** (Mar 7 refactor, Phase 3 hardening):
   * `routes/` — thin HTTP handlers (parse, validate, delegate, respond)
-  * `workflows/` — orchestration layer (7 workflows: createRequest, approveRequest, assignContractor, unassignContractor, completeJob, issueInvoice, evaluateLegalRouting)
+  * `workflows/` — orchestration layer (14 workflows: createRequest, approveRequest, assignContractor, unassignContractor, completeJob, issueInvoice, evaluateLegalRouting, approveInvoice, disputeInvoice, payInvoice, activateLease, terminateLease, markLeaseReady, submitRentalApplication)
   * `services/` — domain logic (unchanged)
-  * `repositories/` — canonical Prisma access (centralized include constants)
-  * `events/` — domain event bus
+  * `repositories/` — canonical Prisma access (4 repositories: request, job, invoice, lease, rentalApplication)
+  * `events/` — domain event bus (15 event types)
   * `governance/` — org scoping resolvers
-  * `workflows/transitions.ts` — state machine guards for Request/Job/Invoice status transitions
+  * `workflows/transitions.ts` — state machine guards for Request/Job/Invoice/Lease/RentalApplication status transitions
 * Prisma ORM
 * PostgreSQL persistence
 * Zod for request validation
@@ -546,8 +546,8 @@ Maintenance_Agent/
 │   │       ├── __tests__/
 │   │       ├── governance/        # orgScope.ts — org isolation resolvers & assertion
 │   │       ├── events/            # domain event bus (types, bus, handlers, index)
-│   │       ├── workflows/         # orchestration layer (7 workflows + transitions + context)
-│   │       ├── repositories/      # canonical Prisma access (requestRepository + barrel)
+│   │       ├── workflows/         # orchestration layer (14 workflows + transitions + context)
+│   │       ├── repositories/      # canonical Prisma access (request, job, invoice, lease, rentalApplication + barrel)
 │   │       ├── services/          # domain logic: jobs, invoices, contractors, inventory, tenants, requests, assignments, financials, legalDecisionEngine, depreciation, cantonMapping, rfps, legalIngestion, legalIncludes
 │   │       ├── validation/        # invoices, requests, contractors, inventory, auth, triage, financials, legal
 │   │       ├── utils/             # phone normalization
@@ -691,10 +691,10 @@ Maintenance_Agent/
 * Manual CORS handling
 * Prisma Client instantiated directly
 * Zod validation in `src/validation`
-* **Workflow orchestration in `src/workflows`** — 7 canonical entry points for mutating operations
+* **Workflow orchestration in `src/workflows`** — 14 canonical entry points for mutating operations
 * Domain logic in `src/services`
-* **Repository layer in `src/repositories`** — centralized Prisma include constants + scoped queries
-* **State transition discipline in `workflows/transitions.ts`** — enforced valid status changes for Request, Job, Invoice
+* **Repository layer in `src/repositories`** — 5 repositories with centralized Prisma include constants + scoped queries
+* **State transition discipline in `workflows/transitions.ts`** — enforced valid status changes for Request, Job, Invoice, Lease, RentalApplication
 
 ---
 
@@ -703,14 +703,14 @@ Maintenance_Agent/
 #### Core Architecture
 Routes are split into modular files under `src/routes/` as **thin HTTP handlers** that delegate to workflows for mutating operations:
 - `routes/requests.ts` — request CRUD, assignment, owner approval, work-requests alias → delegates to `createRequestWorkflow`, `approveRequestWorkflow`, `assignContractorWorkflow`, `unassignContractorWorkflow`
-- `routes/leases.ts` — lease CRUD, PDF, ready-to-sign, lifecycle, signature requests, lease invoices
+- `routes/leases.ts` — lease CRUD, PDF, ready-to-sign, lifecycle, signature requests, lease invoices → delegates to `activateLeaseWorkflow`, `terminateLeaseWorkflow`, `markLeaseReadyWorkflow`
 - `routes/invoices.ts` — invoice CRUD, approve/pay/dispute, PDF generation, QR codes → delegates to `completeJobWorkflow`, `issueInvoiceWorkflow`
 - `routes/inventory.ts` — buildings, units, appliances, asset models, occupancies
 - `routes/tenants.ts` — tenant CRUD, tenant portal (lease view + accept)
 - `routes/config.ts` — org config, building config, unit config
 - `routes/notifications.ts` — notification list, unread count, mark read
 - `routes/auth.ts` — register, login, tenant-session, triage, tenant-portal notifications/invoices
-- `routes/rentalApplications.ts` — rental applications CRUD, document scan, manager/owner views, selections
+- `routes/rentalApplications.ts` — rental applications CRUD, document scan, manager/owner views, selections → delegates to `submitRentalApplicationWorkflow`
 - `routes/contractor.ts` — contractor portal (jobs, invoices)
 - `routes/financials.ts` — building financials, expense categorization
 - `routes/legal.ts` — legal decision, sources, variables, rules, category mappings, depreciation standards, evaluations, assets, RFPs, ingestion → delegates to `evaluateLegalRoutingWorkflow`
@@ -1436,6 +1436,7 @@ If you still see stale UI after pulling changes, restart both dev servers and ha
 * **Building Financial Performance (Mar 5):** Full financial dashboard — income/expense tracking, KPI computation with snapshot caching, expense categorization, contractor spend analysis, 3-layer progressive disclosure UI (health summary bullets, hero KPIs, collapsible details), embedded in building detail Financials tab, 583-line service, 11 integration tests
 * **Legal Knowledge & Decision Engine (Mar 6):** Swiss legal knowledge management — legal source ingestion, rule versioning with DSL evaluation, category-to-topic mappings, depreciation computation (cantonal/national standards), automated legal decision engine for maintenance requests, RFP lifecycle for contractor bidding. Sidecar pattern (evaluates but doesn't modify requests). 12 new Prisma models, 6 new enums, 7 services, 16 routes, 12 proxy routes, 6 manager pages, 26 integration tests
 * **Legal Auto-Routing (Mar 6–7):** Legal engine fires inline during request creation — `RFP_PENDING` status + `autoLegalRouting` org toggle; auto-creates RFP when obligation=OBLIGATED; 6 CO 259a statutory rules seeded; `LEGAL_AUTO_ROUTED` domain event; frontend: Auto-routed tab + indigo badges + dashboard count. E2E verified for oven, bathroom, lighting categories.
+* **Phase 3 Architecture Hardening (Mar 7):** 4 new workflows (activateLease, terminateLease, markLeaseReady, submitRentalApplication), 2 new repositories (lease, rentalApplication), Lease + RentalApplication transition maps, 2 domain events (RENTAL_APPLICATION_SUBMITTED, RENTAL_APPLICATION_EVALUATED), route wiring (leases + rentalApplications → workflows), architecture guide extended with lifecycle diagrams and W1–W8 conventions. Fixed 7 pre-existing test failures in rentalIntegration.test.ts (missing seed data). 288/288 tests, 27 suites, 0 TS errors.
 * End-to-end flows verified:
 
   ```
@@ -2390,6 +2391,96 @@ events/ (domain event bus: emission + handlers)
 
 ---
 
+### Phase 3: Architecture Hardening — Service Decomposition (Mar 7, 2026)
+
+**Status:** ✅ **COMPLETE** — 2 new repositories, 4 new workflows, Lease + RentalApplication transition maps, 2 new domain events, route wiring, architecture guide extended, 7 pre-existing test failures fixed. 288/288 tests pass, 27 suites, 0 TypeScript errors.
+
+**Overview:** Extended the low-context architecture to the Lease and RentalApplication domains — the last two major services with direct Prisma access in routes and no workflow orchestration. Introduced repositories for centralized data access, transition maps for state machine guards, workflows for orchestration, and domain events for audit. Also fixed 7 pre-existing test failures in `rentalIntegration.test.ts`.
+
+**Part 1 — Service Decomposition (2 new repositories):**
+
+| File | Purpose |
+|------|---------|
+| `src/repositories/leaseRepository.ts` | `LEASE_FULL_INCLUDE`, `findLeaseById()`, `updateLeaseStatus()`, `ensureTenantAndOccupancy()`, admin job/invoice helpers |
+| `src/repositories/rentalApplicationRepository.ts` | `RENTAL_APPLICATION_INCLUDE`, `findApplicationById()`, `updateApplicationUnits()`, `findVacantUnits()`, `createAttachment()` |
+
+**Part 2 — Workflow Expansion (4 new workflows):**
+
+| File | Transition | Events Emitted |
+|------|-----------|----------------|
+| `src/workflows/activateLeaseWorkflow.ts` | SIGNED → ACTIVE | `LEASE_STATUS_CHANGED` |
+| `src/workflows/terminateLeaseWorkflow.ts` | ACTIVE → TERMINATED (records reason/notice) | `LEASE_STATUS_CHANGED` |
+| `src/workflows/markLeaseReadyWorkflow.ts` | DRAFT → READY_TO_SIGN (validates fields, provisions Tenant+Occupancy) | `LEASE_STATUS_CHANGED` |
+| `src/workflows/submitRentalApplicationWorkflow.ts` | DRAFT → SUBMITTED (evaluates per unit, transaction, enqueue emails, notify) | `RENTAL_APPLICATION_SUBMITTED`, `RENTAL_APPLICATION_EVALUATED` |
+
+**Part 3 — Convention Normalization:**
+
+| Area | Change |
+|------|--------|
+| **Transition maps** | Added Lease map (DRAFT→READY_TO_SIGN→SIGNED→ACTIVE→TERMINATED, CANCELLED from DRAFT/READY_TO_SIGN) and RentalApplication map (DRAFT→SUBMITTED) to `transitions.ts` with `assertLeaseTransition()`, `canTransitionLease()`, `assertRentalApplicationTransition()`, `canTransitionRentalApplication()` |
+| **Domain events** | Added `RENTAL_APPLICATION_SUBMITTED` and `RENTAL_APPLICATION_EVALUATED` to `DomainEventMap` in `events/types.ts` |
+| **Barrel exports** | Updated `repositories/index.ts` and `workflows/index.ts` with new exports |
+| **Service exports** | Exported `mapLeaseToDTO` from `services/leases.ts` (was private, needed by workflows) |
+
+**Part 4 — Route Wiring:**
+
+| Route File | Endpoints Wired | Workflow Used |
+|------------|----------------|---------------|
+| `routes/leases.ts` | `POST /leases/:id/activate` | `activateLeaseWorkflow` |
+| `routes/leases.ts` | `POST /leases/:id/terminate` | `terminateLeaseWorkflow` |
+| `routes/leases.ts` | `POST /leases/:id/ready-to-sign` | `markLeaseReadyWorkflow` |
+| `routes/rentalApplications.ts` | `POST /rental-applications/:id/submit` | `submitRentalApplicationWorkflow` |
+
+**Part 5 — Architecture Guide Extended:**
+- Added Lease lifecycle diagram (6 states) to `ARCHITECTURE_LOW_CONTEXT_GUIDE.md`
+- Added RentalApplication lifecycle diagram (2 states)
+- Added full Workflow Conventions section with W1–W8 rules and inventory table of all 14 workflows
+
+**Part 6 — Test Fix (rentalIntegration.test.ts):**
+
+Root cause: All 7 integration tests cascade-failed because `beforeAll` called `GET /vacant-units` expecting data, but no building/unit with `isVacant: true` existed for the `"default-org"` that the spawned test server resolves to.
+
+Fix applied:
+- Added `PrismaClient` import and direct DB seeding in `beforeAll` — creates Building + Unit (`isVacant: true, isActive: true, monthlyRentChf: 1500, monthlyChargesChf: 200`) for `"default-org"` before server starts
+- Added comprehensive `afterAll` cleanup — tears down seeded building, unit, rental application records (owner selections, application units, attachments, applicants, applications), and dev emails
+- Pattern matches `leases.test.ts` which seeds its own org/building/unit via direct Prisma
+
+**Files Created:**
+
+| File | Lines |
+|------|-------|
+| `src/repositories/leaseRepository.ts` | ~120 |
+| `src/repositories/rentalApplicationRepository.ts` | ~80 |
+| `src/workflows/activateLeaseWorkflow.ts` | ~35 |
+| `src/workflows/terminateLeaseWorkflow.ts` | ~45 |
+| `src/workflows/markLeaseReadyWorkflow.ts` | ~40 |
+| `src/workflows/submitRentalApplicationWorkflow.ts` | ~70 |
+
+**Files Modified:**
+
+| File | Change |
+|------|--------|
+| `src/workflows/transitions.ts` | Added Lease + RentalApplication transition maps and assertion functions |
+| `src/events/types.ts` | Added `RENTAL_APPLICATION_SUBMITTED`, `RENTAL_APPLICATION_EVALUATED` events |
+| `src/repositories/index.ts` | Barrel exports for leaseRepo, rentalApplicationRepo |
+| `src/workflows/index.ts` | Barrel exports for 4 new workflows |
+| `src/services/leases.ts` | Exported `mapLeaseToDTO` |
+| `src/routes/leases.ts` | Wired activate, terminate, ready-to-sign to workflows |
+| `src/routes/rentalApplications.ts` | Wired submit to workflow |
+| `src/__tests__/rentalIntegration.test.ts` | Added PrismaClient seeding + cleanup (fixed 7 failures) |
+| `src/ARCHITECTURE_LOW_CONTEXT_GUIDE.md` | Lease/RentalApplication lifecycle diagrams + W1–W8 conventions |
+
+**Verification:**
+
+| Check | Result |
+|-------|--------|
+| `tsc --noEmit` (zero errors) | ✅ |
+| 288 tests, 27 suites (all pass) | ✅ |
+| rentalIntegration.test.ts: 13/13 (was 6/13) | ✅ |
+| Zero behavior changes (same HTTP contracts) | ✅ |
+
+---
+
 ### Not Implemented Yet (Active Backlog)
 
 * Lease Phase 3–5: DocuSign/Skribble integration, deposit payment tracking, archive workflow
@@ -2477,11 +2568,11 @@ This document is the **single source of truth** and matches:
 * Database schema — 27 migrations + `db push` for LKDE tables + `RFP_PENDING` enum value + `autoLegalRouting` column (shadow DB issue — see G8 exception in LKDE epic section); 43 models verified in live DB
 * Database data — 99 assets across 19 units, 274 depreciation standards (including 5 added for mapped topics), 16 category mappings, buildings with cantons set, 6 CO 259a statutory rules with proper DSL (verified 2026-03-07)
 * Running system — all endpoints return 200; legal auto-routing creates RFP and sets RFP_PENDING for requests with mapped categories when autoLegalRouting=true (verified 2026-03-07)
-* Test suite — 271 tests, 26 suites (265/271 green in parallel; all green individually — 1 pre-existing flaky: rentEstimation.test.ts port conflict in parallel execution) (verified 2026-03-06)
-* TypeScript compilation — 0 errors (verified 2026-03-06)
+* Test suite — **288 tests, 27 suites, ALL PASSING** (verified 2026-03-07). Previously 281/288 due to 7 pre-existing failures in rentalIntegration.test.ts (missing seed data) — now fixed.
+* TypeScript compilation — 0 errors (verified 2026-03-07)
 * OpenAPI spec — fully synced with router registrations (verified 2026-03-06)
-* Git — uncommitted changes: Legal Knowledge & Decision Engine epic (12 models, 7 services, routes, 6 frontend pages, 26 tests) + Legal Auto-Routing (RFP_PENDING, autoLegalRouting, inline engine wiring, 6 statutory rules, frontend tabs) + Building Financial Performance epic + rentEstimation test fix + auth hardening from Mar 4 + requests page accordion UI + comprehensive asset seed
-* Architectural intent
+* Git — uncommitted changes: Phase 3 Architecture Hardening (4 new workflows, 2 new repositories, Lease/RentalApplication transitions, 2 domain events, route wiring, architecture guide extended) + rentalIntegration test fix (seed data) + Legal Knowledge & Decision Engine epic + Legal Auto-Routing + Building Financial Performance epic + auth hardening + requests page accordion UI + comprehensive asset seed
+* Architectural intent — 14 workflows, 5 repositories, 5 transition maps (Request, Job, Invoice, Lease, RentalApplication)
 * CI pipeline enforces G1–G10 guardrails
 
 Safe to:
@@ -2497,7 +2588,7 @@ Safe to:
 
 ✅ **Project stabilized, audit-hardened, and org-scoped (2026-03-07).**
 
-All crash-level and warning-level issues resolved. Auth hardening complete — `isAuthOptional()` flipped to require-by-default, all unprotected GET routes wrapped with `withAuthRequired()`. Frontend consolidated — shared `lib/api.js` replaces 23 local `authHeaders()` definitions; 103/106 proxy routes use centralized `proxyToBackend()`. OpenAPI spec fully synced. Guardrail enforcement in CI (G7), canonical includes (G9), contract tests (G10), production boot guard (F1), proxy auth forwarding (F3/H3), dev scripts (F6), and styling lock file (F8) all implemented. M1 Org Scoping complete. Manager & Contractor Dashboard Blueprint (61/61). Rental Applications Epic complete — scoring, owner selection with fallback cascade, lease-from-template, document OCR. Building Financial Performance Epic complete — 3-layer progressive disclosure dashboard. Legal Knowledge & Decision Engine Epic complete — Swiss legal rule DSL evaluation, depreciation computation, canton mapping, RFP lifecycle, sidecar decision engine. **Legal Auto-Routing complete (Mar 7)** — legal engine fires inline during request creation; auto-creates RFP and sets `RFP_PENDING` when obligation=OBLIGATED; `autoLegalRouting` org toggle; 6 CO 259a statutory rules seeded; `LEGAL_AUTO_ROUTED` domain event; frontend Auto-routed tab + dashboard count. LKDE data quality + UX polish complete — requests page redesigned with Tailwind design tokens and legal recommendation accordion; comprehensive asset inventory seeded (99 assets, 19 units, proper depreciation chain coverage). **Workflow Layer Structural Refactor complete (Mar 7)** — backend refactored into explicit layered architecture: `routes/` (thin HTTP) → `workflows/` (7 orchestrators) → `services/` (domain logic) → `repositories/` (canonical Prisma access) → `events/` (domain bus); state transition discipline via `transitions.ts`; 17 new workflow integration tests; zero behavior changes. **Phase 2 Low-Context Refinement complete** — repositories expanded (job, invoice), transitions hardened (ASSIGNED), 3 new invoice workflows (approve, dispute, pay), all workflows normalized with event emission and repo-only Prisma access, include constants consolidated, `ARCHITECTURE_LOW_CONTEXT_GUIDE.md` created. **Backend: ~28,000 LOC | Frontend: ~21,100 LOC | ~148 API routes | 43 Prisma models | 32 enums | ~166 frontend pages.** Work can resume from the Active Backlog without rework.
+All crash-level and warning-level issues resolved. Auth hardening complete — `isAuthOptional()` flipped to require-by-default, all unprotected GET routes wrapped with `withAuthRequired()`. Frontend consolidated — shared `lib/api.js` replaces 23 local `authHeaders()` definitions; 103/106 proxy routes use centralized `proxyToBackend()`. OpenAPI spec fully synced. Guardrail enforcement in CI (G7), canonical includes (G9), contract tests (G10), production boot guard (F1), proxy auth forwarding (F3/H3), dev scripts (F6), and styling lock file (F8) all implemented. M1 Org Scoping complete. Manager & Contractor Dashboard Blueprint (61/61). Rental Applications Epic complete — scoring, owner selection with fallback cascade, lease-from-template, document OCR. Building Financial Performance Epic complete — 3-layer progressive disclosure dashboard. Legal Knowledge & Decision Engine Epic complete — Swiss legal rule DSL evaluation, depreciation computation, canton mapping, RFP lifecycle, sidecar decision engine. **Legal Auto-Routing complete (Mar 7)** — legal engine fires inline during request creation; auto-creates RFP and sets `RFP_PENDING` when obligation=OBLIGATED; `autoLegalRouting` org toggle; 6 CO 259a statutory rules seeded; `LEGAL_AUTO_ROUTED` domain event; frontend Auto-routed tab + dashboard count. LKDE data quality + UX polish complete — requests page redesigned with Tailwind design tokens and legal recommendation accordion; comprehensive asset inventory seeded (99 assets, 19 units, proper depreciation chain coverage). **Workflow Layer Structural Refactor complete (Mar 7)** — backend refactored into explicit layered architecture: `routes/` (thin HTTP) → `workflows/` (14 orchestrators) → `services/` (domain logic) → `repositories/` (5 canonical Prisma access) → `events/` (domain bus); state transition discipline via `transitions.ts` (5 entity types); 17 workflow integration tests; zero behavior changes. **Phase 2 Low-Context Refinement complete** — repositories expanded (job, invoice), transitions hardened (ASSIGNED), 3 new invoice workflows (approve, dispute, pay), all workflows normalized with event emission and repo-only Prisma access, include constants consolidated, `ARCHITECTURE_LOW_CONTEXT_GUIDE.md` created. **Phase 3 Architecture Hardening complete** — 4 new workflows (activateLease, terminateLease, markLeaseReady, submitRentalApplication), 2 new repositories (lease, rentalApplication), Lease + RentalApplication transition maps, 2 new domain events, lease/rental routes wired to workflows, architecture guide extended with lifecycle diagrams and W1–W8 conventions. **Test fix:** 7 pre-existing failures in rentalIntegration.test.ts resolved (missing seed data for `"default-org"` vacant units). **288/288 tests pass, 27 suites, 0 TypeScript errors.** **Backend: ~29,000 LOC | Frontend: ~21,100 LOC | ~148 API routes | 43 Prisma models | 32 enums | ~166 frontend pages | 14 workflows | 5 repositories.** Work can resume from the Active Backlog without rework.
 
 ---
 

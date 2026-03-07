@@ -209,3 +209,94 @@ APPROVED → PAID | DISPUTED
 DISPUTED → APPROVED | DRAFT
 PAID → (terminal)
 ```
+
+### Lease Lifecycle
+```
+DRAFT → READY_TO_SIGN | CANCELLED
+READY_TO_SIGN → SIGNED | CANCELLED
+SIGNED → ACTIVE
+ACTIVE → TERMINATED
+TERMINATED → (terminal)
+CANCELLED → (terminal)
+```
+
+### Rental Application Lifecycle
+```
+DRAFT → SUBMITTED
+SUBMITTED → (terminal; per-unit status managed by ownerSelection)
+```
+
+---
+
+## Workflow Conventions
+
+Every workflow is a single async function that orchestrates one business
+action.  It lives in `workflows/<name>Workflow.ts` and is the **only**
+entry point for that action from route handlers.
+
+### File Structure (canonical template)
+
+```typescript
+/**
+ * <name>Workflow
+ *
+ * Canonical entry point for <action description>.
+ * Orchestrates:
+ *   1. Fetch entity + org ownership check
+ *   2. Assert state transition is valid
+ *   3. Persist changes (via repository)
+ *   4. Emit domain event
+ *   5. Return typed result
+ */
+
+import { WorkflowContext } from "./context";
+import { assert<Entity>Transition } from "./transitions";
+import { emit } from "../events/bus";
+// ... repository + service imports
+
+// ─── Input / Output ────────────────────────────────────────────
+
+export interface <Name>Input { ... }
+export interface <Name>Result { dto: <EntityDTO>; }
+
+// ─── Workflow ──────────────────────────────────────────────────
+
+export async function <name>Workflow(
+  ctx: WorkflowContext,
+  input: <Name>Input,
+): Promise<<Name>Result> {
+  // Steps 1–5 ...
+}
+```
+
+### Rules
+
+| Rule | Description |
+|------|-------------|
+| **W1** | Every workflow has typed `Input` and `Result` interfaces. |
+| **W2** | First parameter is always `WorkflowContext { orgId, prisma, actorUserId? }`. |
+| **W3** | State transitions use `assert*Transition()` from `transitions.ts` — never inline status checks. |
+| **W4** | Persistence goes through repository functions, never direct `prisma.*` in the workflow (exception: transactions). |
+| **W5** | Every state change emits a domain event via `emit()` (fire-and-forget with `.catch()`). |
+| **W6** | Workflows never import the singleton `prismaClient` — they use `ctx.prisma`. |
+| **W7** | Route handlers call workflows; workflows call repositories + services. |
+| **W8** | JSDoc header lists orchestration steps as a numbered list. |
+
+### Inventory (16 workflows)
+
+| Workflow | Entity | Transition |
+|----------|--------|------------|
+| createRequestWorkflow | Request | → PENDING_REVIEW / AUTO_APPROVED |
+| approveRequestWorkflow | Request | PENDING → APPROVED |
+| assignContractorWorkflow | Request | → ASSIGNED |
+| unassignContractorWorkflow | Request | ASSIGNED → previous |
+| evaluateLegalRoutingWorkflow | Request | → RFP_PENDING |
+| completeJobWorkflow | Job | → COMPLETED |
+| issueInvoiceWorkflow | Invoice | → ISSUED |
+| approveInvoiceWorkflow | Invoice | → APPROVED |
+| disputeInvoiceWorkflow | Invoice | → DISPUTED |
+| payInvoiceWorkflow | Invoice | → PAID |
+| markLeaseReadyWorkflow | Lease | DRAFT → READY_TO_SIGN |
+| activateLeaseWorkflow | Lease | SIGNED → ACTIVE |
+| terminateLeaseWorkflow | Lease | ACTIVE → TERMINATED |
+| submitRentalApplicationWorkflow | RentalApplication | DRAFT → SUBMITTED |

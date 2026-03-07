@@ -26,6 +26,7 @@ import {
 } from "../services/rentalApplications";
 import { ownerSelectCandidates } from "../services/ownerSelection";
 import { listEmails, getEmail } from "../services/emailOutbox";
+import { submitRentalApplicationWorkflow } from "../workflows/submitRentalApplicationWorkflow";
 
 /* ══════════════════════════════════════════════════════════════
    Rental Application Routes
@@ -144,13 +145,20 @@ export function registerRentalRoutes(router: Router) {
    * Submit a rental application (trigger evaluation).
    * Public — tenant finalises their application.
    */
-  router.post("/rental-applications/:id/submit", async ({ req, res, orgId, params }) => {
+  router.post("/rental-applications/:id/submit", async ({ req, res, orgId, params, prisma }) => {
     try {
       const input = await parseBody(req, SubmitRentalApplicationSchema);
-      const dto = await submitRentalApplication(params.id, input, {
-        ip: req.socket.remoteAddress || "unknown",
-        userAgent: req.headers["user-agent"] || "unknown",
-      });
+      const { dto } = await submitRentalApplicationWorkflow(
+        { orgId, prisma },
+        {
+          applicationId: params.id,
+          signedName: input.signedName,
+          meta: {
+            ip: req.socket.remoteAddress || "unknown",
+            userAgent: req.headers["user-agent"] || "unknown",
+          },
+        },
+      );
       sendJson(res, 200, { data: dto });
     } catch (e: any) {
       if (e.name === "ValidationError" || e.code === "VALIDATION_ERROR") {

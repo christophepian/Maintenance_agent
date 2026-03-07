@@ -3,12 +3,15 @@ import { sendError, sendJson } from "../http/json";
 import { readJson } from "../http/body";
 import { first, getIntParam } from "../http/query";
 import { requireOrgViewer } from "./helpers";
-import { createLease, listLeases, getLease, updateLease, markLeaseReadyToSign, cancelLease, storeLeasePdfReference, storeSignedPdfReference, confirmDeposit, activateLease, terminateLease, archiveLease, createLeaseInvoice, listLeaseInvoices, listLeaseTemplates, deleteLeaseTemplate, restoreLeaseTemplate, createLeaseTemplateFromLease, createBlankLeaseTemplate, createLeaseFromTemplate } from "../services/leases";
+import { createLease, listLeases, getLease, updateLease, cancelLease, storeLeasePdfReference, storeSignedPdfReference, confirmDeposit, archiveLease, createLeaseInvoice, listLeaseInvoices, listLeaseTemplates, deleteLeaseTemplate, restoreLeaseTemplate, createLeaseTemplateFromLease, createBlankLeaseTemplate, createLeaseFromTemplate } from "../services/leases";
 import { createSignatureRequest, listSignatureRequests, getSignatureRequest, sendSignatureRequest, markSignatureRequestSigned } from "../services/signatureRequests";
 import { generateLeasePDF } from "../services/leasePDFRenderer";
 import { notifyTenantLeaseReady } from "../services/notifications";
 import { resolveTenantUserId } from "./auth";
 import { CreateLeaseSchema, UpdateLeaseSchema, ReadyToSignSchema } from "../validation/leases";
+import { activateLeaseWorkflow } from "../workflows/activateLeaseWorkflow";
+import { terminateLeaseWorkflow } from "../workflows/terminateLeaseWorkflow";
+import { markLeaseReadyWorkflow } from "../workflows/markLeaseReadyWorkflow";
 
 export function registerLeaseRoutes(router: Router) {
   // GET /leases
@@ -93,13 +96,19 @@ export function registerLeaseRoutes(router: Router) {
   });
 
   // POST /leases/:id/ready-to-sign
-  router.post("/leases/:id/ready-to-sign", async ({ req, res, params, orgId }) => {
+  router.post("/leases/:id/ready-to-sign", async ({ req, res, params, orgId, prisma }) => {
     if (!requireOrgViewer(req, res)) return;
     try {
       const raw = await readJson(req);
       const parsed = ReadyToSignSchema.safeParse(raw);
       if (!parsed.success) return sendError(res, 400, "VALIDATION_ERROR", "Invalid data", parsed.error.flatten());
-      const lease = await markLeaseReadyToSign(params.id, orgId);
+
+      // Workflow handles: validate, provision tenant, transition DRAFT → READY_TO_SIGN
+      const { dto: lease } = await markLeaseReadyWorkflow(
+        { orgId, prisma },
+        { leaseId: params.id },
+      );
+
       const sigReq = await createSignatureRequest({
         orgId,
         leaseId: params.id,
@@ -196,32 +205,38 @@ export function registerLeaseRoutes(router: Router) {
   });
 
   // POST /leases/:id/activate
-  router.post("/leases/:id/activate", async ({ req, res, params, orgId }) => {
+  router.post("/leases/:id/activate", async ({ req, res, params, orgId, prisma }) => {
     if (!requireOrgViewer(req, res)) return;
     try {
-      const lease = await activateLease(params.id, orgId);
-      sendJson(res, 200, { data: lease });
+      const { dto } = await activateLeaseWorkflow(
+        { orgId, prisma },
+        { leaseId: params.id },
+      );
+      sendJson(res, 200, { data: dto });
     } catch (e: any) {
       if (e.message?.includes("not found")) return sendError(res, 404, "NOT_FOUND", e.message);
-      if (e.message?.includes("Only SIGNED")) return sendError(res, 409, "CONFLICT", e.message);
+      if (e.code === "INVALID_TRANSITION" || e.message?.includes("Only SIGNED")) return sendError(res, 409, "CONFLICT", e.message);
       sendError(res, 500, "DB_ERROR", "Failed to activate lease", String(e));
     }
   });
 
   // POST /leases/:id/terminate
-  router.post("/leases/:id/terminate", async ({ req, res, params, orgId }) => {
+  router.post("/leases/:id/terminate", async ({ req, res, params, orgId, prisma }) => {
     if (!requireOrgViewer(req, res)) return;
     try {
       const raw = await readJson(req);
       if (!raw?.reason) return sendError(res, 400, "VALIDATION_ERROR", "reason is required");
-      const lease = await terminateLease(params.id, orgId, raw);
-      sendJson(res, 200, { data: lease });
+      const { dto } = await terminateLeaseWorkflow(
+        { orgId, prisma },
+        { leaseId: params.id, reason: raw.reason, notice: raw.notice },
+      );
+      sendJson(res, 200, { data: dto });
     } catch (e: any) {
       const msg = String(e?.message || e);
       if (msg === "Invalid JSON") return sendError(res, 400, "INVALID_JSON", "Invalid JSON");
       if (msg === "Body too large") return sendError(res, 413, "BODY_TOO_LARGE", "Request body too large");
       if (e.message?.includes("not found")) return sendError(res, 404, "NOT_FOUND", e.message);
-      if (e.message?.includes("Only ACTIVE")) return sendError(res, 409, "CONFLICT", e.message);
+      if (e.code === "INVALID_TRANSITION" || e.message?.includes("Only ACTIVE")) return sendError(res, 409, "CONFLICT", e.message);
       sendError(res, 500, "DB_ERROR", "Failed to terminate lease", String(e));
     }
   });

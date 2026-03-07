@@ -38,6 +38,18 @@ export type { DisputeInvoiceInput, DisputeInvoiceResult } from "./disputeInvoice
 export { payInvoiceWorkflow } from "./payInvoiceWorkflow";
 export type { PayInvoiceInput, PayInvoiceResult } from "./payInvoiceWorkflow";
 
+export { activateLeaseWorkflow } from "./activateLeaseWorkflow";
+export type { ActivateLeaseInput, ActivateLeaseResult } from "./activateLeaseWorkflow";
+
+export { terminateLeaseWorkflow } from "./terminateLeaseWorkflow";
+export type { TerminateLeaseInput, TerminateLeaseResult } from "./terminateLeaseWorkflow";
+
+export { markLeaseReadyWorkflow } from "./markLeaseReadyWorkflow";
+export type { MarkLeaseReadyInput, MarkLeaseReadyResult } from "./markLeaseReadyWorkflow";
+
+export { submitRentalApplicationWorkflow } from "./submitRentalApplicationWorkflow";
+export type { SubmitRentalApplicationInput, SubmitRentalApplicationResult } from "./submitRentalApplicationWorkflow";
+
 export type { WorkflowContext } from "./context";
 
 export {
@@ -45,7 +57,11 @@ export {
   assertRequestTransition,
   assertJobTransition,
   assertInvoiceTransition,
+  assertLeaseTransition,
+  assertRentalApplicationTransition,
   canTransitionRequest,
   canTransitionJob,
   canTransitionInvoice,
+  canTransitionLease,
+  canTransitionRentalApplication,
 } from "./transitions";
