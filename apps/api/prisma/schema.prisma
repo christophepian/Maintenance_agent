@@ -106,9 +106,9 @@ model Org {
 }
 
 model OrgConfig {
-  id               String @id @default(uuid())
-  orgId            String @unique
-  autoApproveLimit Int    @default(200)
+  id               String  @id @default(uuid())
+  orgId            String  @unique
+  autoApproveLimit Int     @default(200)
   autoLegalRouting Boolean @default(false)
 
   // Landlord party info (for lease)
@@ -435,6 +435,7 @@ model Job {
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
   invoices     Invoice[]
+  interventions AssetIntervention[]
   contractor   Contractor @relation(fields: [contractorId], references: [id], onDelete: Cascade)
   org          Org        @relation(fields: [orgId], references: [id], onDelete: Cascade)
   request      Request    @relation(fields: [requestId], references: [id], onDelete: Cascade)
@@ -1308,16 +1309,45 @@ model Asset {
   assetModelId    String?
   installedAt     DateTime?
   lastRenovatedAt DateTime?
+  replacedAt      DateTime?
+  brand           String?
+  modelNumber     String?
+  serialNumber    String?
+  notes           String?
+  isPresent       Boolean   @default(true)
   isActive        Boolean   @default(true)
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
-  org  Org  @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  unit Unit @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  org           Org                  @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  unit          Unit                 @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  interventions AssetIntervention[]
 
   @@index([orgId])
   @@index([unitId])
   @@index([type, topic])
+}
+
+enum AssetInterventionType {
+  REPAIR
+  REPLACEMENT
+}
+
+model AssetIntervention {
+  id               String                  @id @default(cuid())
+  assetId          String
+  type             AssetInterventionType
+  interventionDate DateTime
+  costChf          Float?
+  jobId            String?
+  notes            String?
+  createdAt        DateTime                @default(now())
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  job   Job?  @relation(fields: [jobId], references: [id], onDelete: SetNull)
+
+  @@index([assetId])
+  @@index([jobId])
 }
 
 model DepreciationStandard {

@@ -1,11 +1,13 @@
 import * as http from "http";
 import { spawn, ChildProcessWithoutNullStreams } from "child_process";
 import * as path from "path";
+import { PrismaClient } from "@prisma/client";
 
 const API_ROOT = path.resolve(__dirname, "..", "..");
 const TS_NODE = path.resolve(API_ROOT, "node_modules", ".bin", "ts-node");
 const PORT = 3208;
 const BASE_URL = `http://127.0.0.1:${PORT}`;
+const prisma = new PrismaClient();
 
 function startServer(envOverrides: Record<string, string>, port: number) {
   return new Promise<ChildProcessWithoutNullStreams>((resolve, reject) => {
@@ -105,8 +107,51 @@ describe("Legal Engine Integration Tests", () => {
     );
   }, 20000);
 
-  afterAll(() => {
+  afterAll(async () => {
     proc?.kill();
+
+    // Clean up test data created via HTTP API to prevent accumulation
+    // Delete in dependency order: evaluations → rules/versions → mappings → standards → sources
+    if (sourceId) {
+      await prisma.legalSource.delete({ where: { id: sourceId } }).catch(() => {});
+    }
+    if (ruleId) {
+      await prisma.legalRuleVersion.deleteMany({ where: { ruleId } }).catch(() => {});
+      await prisma.legalRule.delete({ where: { id: ruleId } }).catch(() => {});
+    }
+    if (mappingId) {
+      await prisma.legalCategoryMapping.delete({ where: { id: mappingId } }).catch(() => {});
+    }
+    if (standardId) {
+      await prisma.depreciationStandard.delete({ where: { id: standardId } }).catch(() => {});
+    }
+    if (requestId) {
+      await prisma.legalEvaluationLog.deleteMany({ where: { requestId } }).catch(() => {});
+      await prisma.rfp.deleteMany({ where: { requestId } }).catch(() => {});
+    }
+    // Clean up duplicate rules/standards/mappings created by uniqueness tests (Date.now() keyed)
+    // These have no stored IDs, but were created by the test server under "default-org"
+    await prisma.legalRuleVersion.deleteMany({
+      where: { rule: { key: { startsWith: "dup-rule-" } } },
+    }).catch(() => {});
+    await prisma.legalRule.deleteMany({
+      where: { key: { startsWith: "dup-rule-" } },
+    }).catch(() => {});
+    await prisma.depreciationStandard.deleteMany({
+      where: { topic: { startsWith: "dup_depr_" } },
+    }).catch(() => {});
+    await prisma.legalCategoryMapping.deleteMany({
+      where: { requestCategory: { startsWith: "dup_test_" } },
+    }).catch(() => {});
+    await prisma.legalCategoryMapping.deleteMany({
+      where: { requestCategory: { startsWith: "test_cat_" } },
+    }).catch(() => {});
+    // Clean up the source that has null fetcherType (test-created, not seeded)
+    await prisma.legalSource.deleteMany({
+      where: { name: "Swiss Code of Obligations", fetcherType: null },
+    }).catch(() => {});
+
+    await prisma.$disconnect();
   });
 
   // ════════════════════════════════════════════════════════════
@@ -368,7 +413,7 @@ describe("Legal Engine Integration Tests", () => {
       );
       expect(result.status).toBe(200);
 
-      const decision = result.data.data.decision;
+      const decision = result.data.data;
       expect(decision).toHaveProperty("requestId", requestId);
       expect(decision).toHaveProperty("legalObligation");
       expect(decision).toHaveProperty("confidence");

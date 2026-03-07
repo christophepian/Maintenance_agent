@@ -62,7 +62,7 @@ export function registerLegalRoutes(router: Router) {
           { requestId: params.id },
         );
 
-        sendJson(res, 200, { data: result });
+        sendJson(res, 200, { data: result.decision });
       } catch (e: any) {
         if (e instanceof RequestNotFoundError) {
           return sendError(res, 404, "NOT_FOUND", e.message);
@@ -577,18 +577,56 @@ export function registerLegalRoutes(router: Router) {
 
     const limit = Math.min(100, Math.max(1, parseInt(first(query, "limit") ?? "20", 10)));
     const offset = Math.max(0, parseInt(first(query, "offset") ?? "0", 10));
+    const obligationFilter = first(query, "obligation");
+    const categoryFilter = first(query, "category");
+    const requestIdFilter = first(query, "requestId");
 
     try {
+      const where: any = { orgId };
+      if (requestIdFilter) where.requestId = requestIdFilter;
+
       const [rows, total] = await Promise.all([
         prisma.legalEvaluationLog.findMany({
-          where: { orgId },
+          where,
           orderBy: { createdAt: "desc" },
           take: limit,
           skip: offset,
         }),
-        prisma.legalEvaluationLog.count({ where: { orgId } }),
+        prisma.legalEvaluationLog.count({ where }),
       ]);
-      sendJson(res, 200, { data: rows, total });
+
+      // Flatten contextJson + resultJson into top-level fields
+      const data = rows
+        .map((row: any) => {
+          const ctx = (row.contextJson ?? {}) as Record<string, any>;
+          const res = (row.resultJson ?? {}) as Record<string, any>;
+          return {
+            id: row.id,
+            requestId: row.requestId,
+            buildingId: row.buildingId,
+            unitId: row.unitId,
+            createdAt: row.createdAt,
+            // from contextJson
+            category: ctx.category ?? null,
+            canton: ctx.canton ?? null,
+            legalTopic: res.legalTopic ?? ctx.legalTopic ?? null,
+            // from resultJson
+            obligation: res.obligation ?? null,
+            confidence: typeof res.confidence === "number" ? res.confidence / 100 : 0,
+            reasons: Array.isArray(res.reasons) ? res.reasons : [],
+            citations: deduplicateCitations(Array.isArray(res.citations) ? res.citations : []),
+            recommendedActions: Array.isArray(res.recommendedActions) ? res.recommendedActions : [],
+            depreciationSignal: res.depreciationSignal ?? null,
+            matchedRuleCount: res.matchedRuleCount ?? 0,
+          };
+        })
+        .filter((ev: any) => {
+          if (obligationFilter && ev.obligation !== obligationFilter) return false;
+          if (categoryFilter && ev.category !== categoryFilter) return false;
+          return true;
+        });
+
+      sendJson(res, 200, { data, total });
     } catch (e: any) {
       console.error("[GET /legal/evaluations]", e);
       sendError(res, 500, "INTERNAL_ERROR", "Failed to list evaluations");
@@ -680,4 +718,27 @@ export function registerLegalRoutes(router: Router) {
       sendError(res, 500, "INTERNAL_ERROR", "Ingestion failed");
     }
   });
+}
+
+// ════════════════════════════════════════════════════════════
+// Helpers
+// ════════════════════════════════════════════════════════════
+
+function deduplicateCitations(
+  citations: Array<{ article?: string; text?: string; authority?: string }>,
+): Array<{ article: string; text: string; authority: string }> {
+  const seen = new Set<string>();
+  const result: Array<{ article: string; text: string; authority: string }> = [];
+  for (const c of citations) {
+    const key = `${c.article || ""}|${c.text || ""}|${c.authority || ""}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      result.push({
+        article: c.article || "",
+        text: c.text || "",
+        authority: c.authority || "",
+      });
+    }
+  }
+  return result;
 }

@@ -1,6 +1,6 @@
 # Maintenance Agent — Project State
 
-**Last updated:** 2026-03-07 (Phase 3 Architecture Hardening — 4 new workflows (activateLease, terminateLease, markLeaseReady, submitRentalApplication), 2 new repositories (leaseRepository, rentalApplicationRepository), Lease + RentalApplication transition maps, 2 new domain events, routes wired to workflows, ARCHITECTURE_LOW_CONTEXT_GUIDE.md extended. Fixed 7 pre-existing test failures in rentalIntegration.test.ts (missing seed data). Tests: 288/288 pass, 27 suites; 43 Prisma models, 32 enums)
+**Last updated:** 2026-03-07 (Asset Inventory & Depreciation Tracking — new AssetIntervention model + AssetInterventionType enum, extended Asset model (brand, modelNumber, serialNumber, notes, isPresent, replacedAt, interventions), assetRepository with upsert + deactivate + interventions, assetInventory service with depreciation computation, 5 new API endpoints, 5 frontend proxy routes, AssetInventoryPanel shared component, Assets tab on building + unit detail pages, 20 new integration tests. Tests: 308/308 pass, 28 suites; 44 Prisma models, 33 enums)
 
 ---
 
@@ -468,7 +468,7 @@ Single repository containing:
   * `routes/` — thin HTTP handlers (parse, validate, delegate, respond)
   * `workflows/` — orchestration layer (14 workflows: createRequest, approveRequest, assignContractor, unassignContractor, completeJob, issueInvoice, evaluateLegalRouting, approveInvoice, disputeInvoice, payInvoice, activateLease, terminateLease, markLeaseReady, submitRentalApplication)
   * `services/` — domain logic (unchanged)
-  * `repositories/` — canonical Prisma access (4 repositories: request, job, invoice, lease, rentalApplication)
+  * `repositories/` — canonical Prisma access (6 repositories: request, job, invoice, lease, rentalApplication, asset)
   * `events/` — domain event bus (15 event types)
   * `governance/` — org scoping resolvers
   * `workflows/transitions.ts` — state machine guards for Request/Job/Invoice/Lease/RentalApplication status transitions
@@ -547,9 +547,9 @@ Maintenance_Agent/
 │   │       ├── governance/        # orgScope.ts — org isolation resolvers & assertion
 │   │       ├── events/            # domain event bus (types, bus, handlers, index)
 │   │       ├── workflows/         # orchestration layer (14 workflows + transitions + context)
-│   │       ├── repositories/      # canonical Prisma access (request, job, invoice, lease, rentalApplication + barrel)
-│   │       ├── services/          # domain logic: jobs, invoices, contractors, inventory, tenants, requests, assignments, financials, legalDecisionEngine, depreciation, cantonMapping, rfps, legalIngestion, legalIncludes
-│   │       ├── validation/        # invoices, requests, contractors, inventory, auth, triage, financials, legal
+│   │       ├── repositories/      # canonical Prisma access (request, job, invoice, lease, rentalApplication, asset + barrel)
+│   │       ├── services/          # domain logic: jobs, invoices, contractors, inventory, tenants, requests, assignments, financials, legalDecisionEngine, depreciation, cantonMapping, rfps, legalIngestion, legalIncludes, assetInventory
+│   │       ├── validation/        # invoices, requests, contractors, inventory, auth, triage, financials, legal, assets
 │   │       ├── utils/             # phone normalization
 │   │       ├── routes/            # thin HTTP handlers: auth, config, inventory, requests, tenants, invoices, notifications, leases, rentalApplications, contractor, financials, legal
 │   │       └── http/              # body/json/query/errors/router/routeProtection helpers
@@ -593,11 +593,11 @@ Maintenance_Agent/
 
 ## 4. Database Schema (Prisma)
 
-**Status: ACTIVE AND IN USE — 27 migrations + `db push` for LKDE tables (shadow DB issue with legacy Lease migration prevents `migrate dev`)**
+**Status: ACTIVE AND IN USE — 28 migrations + `db push` for LKDE tables (shadow DB issue with legacy Lease migration prevents `migrate dev`)**
 
-**Last verified:** 2026-03-06
+**Last verified:** 2026-03-07
 
-### Models (43 total)
+### Models (44 total)
 
 | Model | Key Fields | Relations |
 |-------|-----------|-----------|
@@ -638,7 +638,8 @@ Maintenance_Agent/
 | **LegalRuleVersion** | ruleId, version (Int), dslJson (Json), obligation (LegalObligation), confidence (Float), citationsJson (Json?), effectiveFrom, effectiveTo? | → LegalRule |
 | **LegalEvaluationLog** | orgId, requestId, ruleVersionId?, obligation (LegalObligation), confidence (Float), reasons (Json), citations (Json?), recommendedActions (Json?), snapshotJson (Json) | → Org, Request, LegalRuleVersion |
 | **LegalCategoryMapping** | orgId, maintenanceCategory, legalTopic, ruleId? | → Org, LegalRule (unique on orgId+maintenanceCategory) |
-| **Asset** | orgId, unitId, name, assetType (AssetType), installedAt (DateTime), lifespanMonths (Int), manufacturer?, model?, serial? | → Org, Unit, Rfps |
+| **Asset** | orgId, unitId, type (AssetType), topic, name, installedAt?, lastRenovatedAt?, replacedAt?, brand?, modelNumber?, serialNumber?, notes?, isPresent (default true), isActive (default true) | → Org, Unit, Rfps, AssetInterventions |
+| **AssetIntervention** | assetId, type (AssetInterventionType: REPAIR/REPLACEMENT), interventionDate, costChf?, jobId?, notes? | → Asset, Job |
 | **DepreciationStandard** | jurisdiction, canton?, assetType (AssetType), topic, lifespanMonths (Int), authority (LegalAuthority), sourceLabel? | (standalone, unique on jurisdiction+canton+assetType+topic) |
 | **Rfp** | orgId, requestId, unitId?, status (RfpStatus), title, scope?, budgetCents?, deadlineAt?, awardedQuoteId? | → Org, Request, Unit, RfpInvites, RfpQuotes |
 | **RfpInvite** | rfpId, contractorId, status (RfpInviteStatus), respondedAt? | → Rfp, Contractor |
@@ -664,6 +665,7 @@ Maintenance_Agent/
 - `LegalRuleType`: MAINTENANCE_OBLIGATION, DEPRECIATION, RENT_INDEXATION, TERMINATION_DEADLINE
 - `LegalObligation`: OBLIGATED, DISCRETIONARY, TENANT_RESPONSIBLE, UNKNOWN
 - `AssetType`: APPLIANCE, FIXTURE, FINISH, STRUCTURAL, SYSTEM, OTHER
+- `AssetInterventionType`: REPAIR, REPLACEMENT
 - `RfpStatus`: DRAFT, OPEN, CLOSED, AWARDED, CANCELLED
 - `RfpInviteStatus`: INVITED, DECLINED, RESPONDED
 
@@ -705,7 +707,7 @@ Routes are split into modular files under `src/routes/` as **thin HTTP handlers*
 - `routes/requests.ts` — request CRUD, assignment, owner approval, work-requests alias → delegates to `createRequestWorkflow`, `approveRequestWorkflow`, `assignContractorWorkflow`, `unassignContractorWorkflow`
 - `routes/leases.ts` — lease CRUD, PDF, ready-to-sign, lifecycle, signature requests, lease invoices → delegates to `activateLeaseWorkflow`, `terminateLeaseWorkflow`, `markLeaseReadyWorkflow`
 - `routes/invoices.ts` — invoice CRUD, approve/pay/dispute, PDF generation, QR codes → delegates to `completeJobWorkflow`, `issueInvoiceWorkflow`
-- `routes/inventory.ts` — buildings, units, appliances, asset models, occupancies
+- `routes/inventory.ts` — buildings, units, appliances, asset models, occupancies, asset inventory (upsert, interventions, depreciation)
 - `routes/tenants.ts` — tenant CRUD, tenant portal (lease view + accept)
 - `routes/config.ts` — org config, building config, unit config
 - `routes/notifications.ts` — notification list, unread count, mark read
@@ -793,6 +795,13 @@ All registered in `src/server.ts` via `register*Routes(router)`.
 - Appliances: `GET /units/:id/appliances`, `POST /units/:id/appliances`, `PATCH /appliances/:id`, `DELETE /appliances/:id`
 - Asset Models: `GET /asset-models`, `POST /asset-models`, `PATCH /asset-models/:id`, `DELETE /asset-models/:id`
 - Occupancies: `GET /units/:id/tenants`, `POST /units/:id/tenants`, `DELETE /units/:id/tenants/:tenantId`
+
+#### Asset Inventory
+- `GET /units/:id/asset-inventory` — unit asset inventory with depreciation computation
+- `POST /units/:id/assets` — upsert asset for unit
+- `GET /buildings/:id/asset-inventory` — building asset inventory (all units + building-level)
+- `POST /buildings/:id/assets` — upsert asset for building
+- `POST /assets/:id/interventions` — add intervention (REPAIR/REPLACEMENT) to asset
 
 #### Configuration
 - `GET /org-config`, `PUT /org-config`
@@ -1437,6 +1446,7 @@ If you still see stale UI after pulling changes, restart both dev servers and ha
 * **Legal Knowledge & Decision Engine (Mar 6):** Swiss legal knowledge management — legal source ingestion, rule versioning with DSL evaluation, category-to-topic mappings, depreciation computation (cantonal/national standards), automated legal decision engine for maintenance requests, RFP lifecycle for contractor bidding. Sidecar pattern (evaluates but doesn't modify requests). 12 new Prisma models, 6 new enums, 7 services, 16 routes, 12 proxy routes, 6 manager pages, 26 integration tests
 * **Legal Auto-Routing (Mar 6–7):** Legal engine fires inline during request creation — `RFP_PENDING` status + `autoLegalRouting` org toggle; auto-creates RFP when obligation=OBLIGATED; 6 CO 259a statutory rules seeded; `LEGAL_AUTO_ROUTED` domain event; frontend: Auto-routed tab + indigo badges + dashboard count. E2E verified for oven, bathroom, lighting categories.
 * **Phase 3 Architecture Hardening (Mar 7):** 4 new workflows (activateLease, terminateLease, markLeaseReady, submitRentalApplication), 2 new repositories (lease, rentalApplication), Lease + RentalApplication transition maps, 2 domain events (RENTAL_APPLICATION_SUBMITTED, RENTAL_APPLICATION_EVALUATED), route wiring (leases + rentalApplications → workflows), architecture guide extended with lifecycle diagrams and W1–W8 conventions. Fixed 7 pre-existing test failures in rentalIntegration.test.ts (missing seed data). 288/288 tests, 27 suites, 0 TS errors.
+* **Asset Inventory & Depreciation Tracking (Mar 7):** New AssetIntervention model + AssetInterventionType enum, extended Asset model (brand, modelNumber, serialNumber, notes, isPresent, replacedAt, interventions relation), assetRepository (ASSET_FULL_INCLUDE, upsert matching on orgId+unitId+type+topic+name, REPLACEMENT auto-updates replacedAt), assetInventory service (depreciation computation with canton-specific + national fallback, DTO mapping), Zod validation (UpsertAssetSchema, AddInterventionSchema), 5 new routes (GET/POST unit + building asset-inventory + POST interventions), OpenAPI + api-client DTOs (AssetInventoryItemDTO, DepreciationInfoDTO, AssetInterventionDTO), 5 frontend proxy routes, AssetInventoryPanel shared component (depreciation bars, type grouping, intervention history, add forms), Assets tab on building + unit detail pages, 20 new integration tests (4 unit + 16 API). 308/308 tests, 28 suites, 0 TS errors.
 * End-to-end flows verified:
 
   ```
@@ -2481,6 +2491,137 @@ Fix applied:
 
 ---
 
+### Asset Inventory & Depreciation Tracking (Mar 7, 2026)
+
+**Status:** ✅ **COMPLETE** — New AssetIntervention model, extended Asset model, assetRepository, assetInventory service with depreciation computation, 5 API endpoints, 5 frontend proxy routes, shared AssetInventoryPanel component, Assets tabs on building + unit detail pages, 20 new tests. 308/308 tests pass, 28 suites, 0 TS errors.
+
+**Overview:** Adds asset inventory tabs to building and unit detail pages with full CRUD, depreciation computation (using cantonal/national DepreciationStandard lookup), intervention history (REPAIR/REPLACEMENT), and a shared React component with depreciation progress bars, type-grouped asset lists, and inline forms.
+
+**Database Schema (1 migration: `20260310100000_add_asset_intervention_and_extend_asset`):**
+- Extended `Asset` model: added `replacedAt DateTime?`, `brand String?`, `modelNumber String?`, `serialNumber String?`, `notes String?`, `isPresent Boolean @default(true)`, `interventions AssetIntervention[]` relation
+- New model: `AssetIntervention` — intervention history per asset (id cuid, assetId, type AssetInterventionType, interventionDate DateTime, costChf Float?, jobId String?, notes String?, createdAt DateTime)
+- New enum: `AssetInterventionType` (REPAIR, REPLACEMENT)
+- Relations: AssetIntervention → Asset (cascade delete), AssetIntervention → Job (optional)
+- Migration applied via Docker psql (shadow DB workaround), verified with drift check (empty migration)
+
+**Backend Repository (`apps/api/src/repositories/assetRepository.ts`):**
+- `ASSET_FULL_INCLUDE` — canonical include with interventions relation
+- `isBuildingLevelType(type)` — STRUCTURAL and SYSTEM types are building-level
+- `findAssetsByUnit(prisma, orgId, unitId)` — unit-scoped assets with interventions
+- `findAssetsByBuilding(prisma, orgId, buildingId, opts?)` — all assets across building's units; optional `buildingLevelOnly` filter for STRUCTURAL/SYSTEM types
+- `findAssetById(prisma, orgId, assetId)` — single asset with interventions
+- `upsertAsset(prisma, orgId, data)` — upsert matching on `orgId + unitId + type + topic + name`
+- `addIntervention(prisma, assetId, data)` — creates intervention; REPLACEMENT type auto-updates asset's `replacedAt` to intervention date
+- `deactivateAsset(prisma, orgId, assetId)` — soft delete (isActive → false)
+- Barrel exported from `repositories/index.ts` as `assetRepo`
+
+**Backend Service (`apps/api/src/services/assetInventory.ts`):**
+- `computeDepreciation(asset, standard, now?)` — depreciation formula:
+  - clockStart = `replacedAt ?? installedAt` (replacedAt takes priority)
+  - ageMonths = monthDiff(now, clockStart)
+  - depreciationPct = min(100, round(ageMonths / usefulLifeMonths × 100))
+  - residualPct = 100 − depreciationPct
+  - Returns null if clockStart or standard is null
+- `getAssetInventoryForUnit(prisma, orgId, unitId, canton?)` — fetches unit assets + joins DepreciationStandard (canton-specific first, national fallback) + computes depreciation for each
+- `getAssetInventoryForBuilding(prisma, orgId, buildingId, canton?)` — same for building scope, includes unit info in each item
+
+**Backend Validation (`apps/api/src/validation/assets.ts`):**
+- `UpsertAssetSchema` — unitId (UUID), type (ASSET_TYPES enum), topic (1–200 chars), name (1–200 chars), optional: assetModelId, installedAt, lastRenovatedAt, replacedAt, brand, modelNumber, serialNumber, notes, isPresent
+- `AddInterventionSchema` — type (INTERVENTION_TYPES enum), interventionDate (required), optional: costChf (≥0), jobId (UUID), notes
+
+**Backend Routes (5 new endpoints in `apps/api/src/routes/inventory.ts`):**
+- `GET /units/:id/asset-inventory` — withAuthRequired, accepts ?canton= query param
+- `POST /units/:id/assets` — manager-only, auto-sets unitId from URL
+- `GET /buildings/:id/asset-inventory` — withAuthRequired, accepts ?canton= and ?buildingLevelOnly= query params
+- `POST /buildings/:id/assets` — manager-only
+- `POST /assets/:id/interventions` — manager-only, verifies asset exists and belongs to org
+
+**OpenAPI + API Client:**
+- `apps/api/openapi.yaml` — 5 new path entries under Inventory tag, 5 new schemas (AssetInventoryItem, AssetInterventionItem, AssetInterventionType, UpsertAssetBody, AddInterventionBody)
+- `packages/api-client/src/index.ts` — new types: `AssetType`, `AssetInterventionType`, `AssetInterventionDTO`, `DepreciationInfoDTO`, `AssetInventoryItemDTO`, `UpsertAssetBody`, `AddInterventionBody`; 5 new methods in `buildInventoryApi`: `getUnitAssetInventory`, `createUnitAsset`, `getBuildingAssetInventory`, `createBuildingAsset`, `addAssetIntervention`
+
+**Frontend Proxy Routes (5 new files):**
+- `apps/web/pages/api/units/[id]/asset-inventory.js` → `/units/${id}/asset-inventory`
+- `apps/web/pages/api/units/[id]/assets.js` → `/units/${id}/assets`
+- `apps/web/pages/api/buildings/[id]/asset-inventory.js` → `/buildings/${id}/asset-inventory`
+- `apps/web/pages/api/buildings/[id]/assets.js` → `/buildings/${id}/assets`
+- `apps/web/pages/api/assets/[id]/interventions.js` → `/assets/${id}/interventions`
+
+**Frontend Component (`apps/web/components/AssetInventoryPanel.js`):**
+- Shared component for both building and unit detail pages
+- `DepreciationBar` — color-coded progress bar (green >60% residual, amber >30%, red ≤30%)
+- Type-grouped asset list with expand/collapse per group
+- Intervention history display per asset
+- `AddAssetForm` — type/topic/name/brand/model#/serial#/installed date/notes + unit picker for building scope
+- `AddInterventionForm` — type (REPAIR/REPLACEMENT)/date/cost/notes
+- Type filter dropdown + summary stats row (total assets, avg residual)
+- Props: `assets, onRefresh, scope ("unit"|"building"), parentId, unitId?, units?`
+
+**Frontend Pages Modified:**
+- `apps/web/pages/admin-inventory/units/[id].js` — added "Assets" tab (7th tab: Tenants, Appliances, Assets, Rent Estimate, Documents, Invoices, Contracts), lazy-loads asset inventory, renders AssetInventoryPanel
+- `apps/web/pages/admin-inventory/buildings/[id].js` — added "Assets" tab (6th tab: Building information, Units, Assets, Documents, Policies, Financials), lazy-loads on tab activation, renders AssetInventoryPanel with scope="building" and passes units list
+
+**Tests (`apps/api/src/__tests__/assetInventory.test.ts` — 20 tests, port 3209):**
+
+| Category | Test | Count |
+|----------|------|-------|
+| Unit | computeDepreciation: null standard → null | 1 |
+| Unit | computeDepreciation: null clockStart → null | 1 |
+| Unit | computeDepreciation: 5yr/10yr life correct calc | 1 |
+| Unit | computeDepreciation: replacedAt priority over installedAt, caps at 100% | 1 |
+| Integration | Empty inventory returns [] | 1 |
+| Integration | Create asset → 201 with correct fields | 1 |
+| Integration | Invalid type → 400 | 1 |
+| Integration | Missing fields → 400 | 1 |
+| Integration | Upsert existing asset (same org+unit+type+topic+name) | 1 |
+| Integration | Inventory with data + depreciation | 1 |
+| Integration | Repair intervention | 1 |
+| Integration | Replacement intervention (auto-updates replacedAt) | 1 |
+| Integration | Nonexistent asset → 404 | 1 |
+| Integration | Invalid intervention type → 400 | 1 |
+| Integration | Building inventory with unit info | 1 |
+| Integration | buildingLevelOnly filter | 1 |
+| Integration | Building-level asset creation | 1 |
+| Integration | Filtered vs unfiltered building queries | 1 |
+| Integration | Asset creation without optional fields | 1 |
+| Integration | Multiple interventions on same asset | 1 |
+
+**Files Created:**
+- `apps/api/src/repositories/assetRepository.ts`
+- `apps/api/src/services/assetInventory.ts`
+- `apps/api/src/validation/assets.ts`
+- `apps/api/src/__tests__/assetInventory.test.ts`
+- `apps/api/prisma/migrations/20260310100000_add_asset_intervention_and_extend_asset/migration.sql`
+- `apps/web/components/AssetInventoryPanel.js`
+- `apps/web/pages/api/units/[id]/asset-inventory.js`
+- `apps/web/pages/api/units/[id]/assets.js`
+- `apps/web/pages/api/buildings/[id]/asset-inventory.js`
+- `apps/web/pages/api/buildings/[id]/assets.js`
+- `apps/web/pages/api/assets/[id]/interventions.js`
+
+**Files Modified:**
+- `apps/api/prisma/schema.prisma` — extended Asset model, new AssetIntervention model, new AssetInterventionType enum, Job.interventions relation
+- `apps/api/src/repositories/index.ts` — added `assetRepo` barrel export
+- `apps/api/src/routes/inventory.ts` — 5 new route handlers (~100 lines added)
+- `apps/api/openapi.yaml` — 5 new paths, 5 new schemas
+- `packages/api-client/src/index.ts` — 7 new types, 5 new API methods
+- `apps/web/pages/admin-inventory/units/[id].js` — Assets tab + loadAssetInventory
+- `apps/web/pages/admin-inventory/buildings/[id].js` — Assets tab + loadAssetInventory + lazy-load
+
+**Verification:**
+
+| Check | Result |
+|-------|--------|
+| `tsc --noEmit` (zero errors) | ✅ |
+| 308 tests, 28 suites (all pass) | ✅ |
+| 20 new asset inventory tests (4 unit + 16 integration) | ✅ |
+| Schema drift check = empty migration | ✅ |
+| Unit detail page Assets tab loads correctly | ✅ |
+| Building detail page Assets tab loads correctly | ✅ |
+| Zero regressions (same HTTP contracts) | ✅ |
+
+---
+
 ### Not Implemented Yet (Active Backlog)
 
 * Lease Phase 3–5: DocuSign/Skribble integration, deposit payment tracking, archive workflow
@@ -2565,14 +2706,14 @@ Current tenant UI relies on manual category selection and free-text descriptions
 This document is the **single source of truth** and matches:
 
 * Filesystem (verified 2026-03-07)
-* Database schema — 27 migrations + `db push` for LKDE tables + `RFP_PENDING` enum value + `autoLegalRouting` column (shadow DB issue — see G8 exception in LKDE epic section); 43 models verified in live DB
-* Database data — 99 assets across 19 units, 274 depreciation standards (including 5 added for mapped topics), 16 category mappings, buildings with cantons set, 6 CO 259a statutory rules with proper DSL (verified 2026-03-07)
-* Running system — all endpoints return 200; legal auto-routing creates RFP and sets RFP_PENDING for requests with mapped categories when autoLegalRouting=true (verified 2026-03-07)
-* Test suite — **288 tests, 27 suites, ALL PASSING** (verified 2026-03-07). Previously 281/288 due to 7 pre-existing failures in rentalIntegration.test.ts (missing seed data) — now fixed.
+* Database schema — 28 migrations + `db push` for LKDE tables + `RFP_PENDING` enum value + `autoLegalRouting` column (shadow DB issue — see G8 exception in LKDE epic section); 44 models verified in live DB
+* Database data — 99+ assets across 19 units (with interventions tracking), 274 depreciation standards (including 5 added for mapped topics), 16 category mappings, buildings with cantons set, 6 CO 259a statutory rules with proper DSL (verified 2026-03-07)
+* Running system — all endpoints return 200; legal auto-routing creates RFP and sets RFP_PENDING for requests with mapped categories when autoLegalRouting=true; asset inventory endpoints serve depreciation data (verified 2026-03-07)
+* Test suite — **308 tests, 28 suites, ALL PASSING** (verified 2026-03-07). Includes 20 new asset inventory tests.
 * TypeScript compilation — 0 errors (verified 2026-03-07)
-* OpenAPI spec — fully synced with router registrations (verified 2026-03-06)
-* Git — uncommitted changes: Phase 3 Architecture Hardening (4 new workflows, 2 new repositories, Lease/RentalApplication transitions, 2 domain events, route wiring, architecture guide extended) + rentalIntegration test fix (seed data) + Legal Knowledge & Decision Engine epic + Legal Auto-Routing + Building Financial Performance epic + auth hardening + requests page accordion UI + comprehensive asset seed
-* Architectural intent — 14 workflows, 5 repositories, 5 transition maps (Request, Job, Invoice, Lease, RentalApplication)
+* OpenAPI spec — fully synced with router registrations (verified 2026-03-07)
+* Git — uncommitted changes: Asset Inventory & Depreciation Tracking slice + Phase 3 Architecture Hardening + rentalIntegration test fix (seed data) + Legal Knowledge & Decision Engine epic + Legal Auto-Routing + Building Financial Performance epic + auth hardening + requests page accordion UI + comprehensive asset seed
+* Architectural intent — 14 workflows, 6 repositories, 5 transition maps (Request, Job, Invoice, Lease, RentalApplication)
 * CI pipeline enforces G1–G10 guardrails
 
 Safe to:
@@ -2588,7 +2729,7 @@ Safe to:
 
 ✅ **Project stabilized, audit-hardened, and org-scoped (2026-03-07).**
 
-All crash-level and warning-level issues resolved. Auth hardening complete — `isAuthOptional()` flipped to require-by-default, all unprotected GET routes wrapped with `withAuthRequired()`. Frontend consolidated — shared `lib/api.js` replaces 23 local `authHeaders()` definitions; 103/106 proxy routes use centralized `proxyToBackend()`. OpenAPI spec fully synced. Guardrail enforcement in CI (G7), canonical includes (G9), contract tests (G10), production boot guard (F1), proxy auth forwarding (F3/H3), dev scripts (F6), and styling lock file (F8) all implemented. M1 Org Scoping complete. Manager & Contractor Dashboard Blueprint (61/61). Rental Applications Epic complete — scoring, owner selection with fallback cascade, lease-from-template, document OCR. Building Financial Performance Epic complete — 3-layer progressive disclosure dashboard. Legal Knowledge & Decision Engine Epic complete — Swiss legal rule DSL evaluation, depreciation computation, canton mapping, RFP lifecycle, sidecar decision engine. **Legal Auto-Routing complete (Mar 7)** — legal engine fires inline during request creation; auto-creates RFP and sets `RFP_PENDING` when obligation=OBLIGATED; `autoLegalRouting` org toggle; 6 CO 259a statutory rules seeded; `LEGAL_AUTO_ROUTED` domain event; frontend Auto-routed tab + dashboard count. LKDE data quality + UX polish complete — requests page redesigned with Tailwind design tokens and legal recommendation accordion; comprehensive asset inventory seeded (99 assets, 19 units, proper depreciation chain coverage). **Workflow Layer Structural Refactor complete (Mar 7)** — backend refactored into explicit layered architecture: `routes/` (thin HTTP) → `workflows/` (14 orchestrators) → `services/` (domain logic) → `repositories/` (5 canonical Prisma access) → `events/` (domain bus); state transition discipline via `transitions.ts` (5 entity types); 17 workflow integration tests; zero behavior changes. **Phase 2 Low-Context Refinement complete** — repositories expanded (job, invoice), transitions hardened (ASSIGNED), 3 new invoice workflows (approve, dispute, pay), all workflows normalized with event emission and repo-only Prisma access, include constants consolidated, `ARCHITECTURE_LOW_CONTEXT_GUIDE.md` created. **Phase 3 Architecture Hardening complete** — 4 new workflows (activateLease, terminateLease, markLeaseReady, submitRentalApplication), 2 new repositories (lease, rentalApplication), Lease + RentalApplication transition maps, 2 new domain events, lease/rental routes wired to workflows, architecture guide extended with lifecycle diagrams and W1–W8 conventions. **Test fix:** 7 pre-existing failures in rentalIntegration.test.ts resolved (missing seed data for `"default-org"` vacant units). **288/288 tests pass, 27 suites, 0 TypeScript errors.** **Backend: ~29,000 LOC | Frontend: ~21,100 LOC | ~148 API routes | 43 Prisma models | 32 enums | ~166 frontend pages | 14 workflows | 5 repositories.** Work can resume from the Active Backlog without rework.
+All crash-level and warning-level issues resolved. Auth hardening complete — `isAuthOptional()` flipped to require-by-default, all unprotected GET routes wrapped with `withAuthRequired()`. Frontend consolidated — shared `lib/api.js` replaces 23 local `authHeaders()` definitions; 103/106 proxy routes use centralized `proxyToBackend()`. OpenAPI spec fully synced. Guardrail enforcement in CI (G7), canonical includes (G9), contract tests (G10), production boot guard (F1), proxy auth forwarding (F3/H3), dev scripts (F6), and styling lock file (F8) all implemented. M1 Org Scoping complete. Manager & Contractor Dashboard Blueprint (61/61). Rental Applications Epic complete — scoring, owner selection with fallback cascade, lease-from-template, document OCR. Building Financial Performance Epic complete — 3-layer progressive disclosure dashboard. Legal Knowledge & Decision Engine Epic complete — Swiss legal rule DSL evaluation, depreciation computation, canton mapping, RFP lifecycle, sidecar decision engine. **Legal Auto-Routing complete (Mar 7)** — legal engine fires inline during request creation; auto-creates RFP and sets `RFP_PENDING` when obligation=OBLIGATED; `autoLegalRouting` org toggle; 6 CO 259a statutory rules seeded; `LEGAL_AUTO_ROUTED` domain event; frontend Auto-routed tab + dashboard count. LKDE data quality + UX polish complete — requests page redesigned with Tailwind design tokens and legal recommendation accordion; comprehensive asset inventory seeded (99 assets, 19 units, proper depreciation chain coverage). **Asset Inventory & Depreciation Tracking complete (Mar 7)** — new AssetIntervention model, extended Asset model (brand, modelNumber, serialNumber, notes, isPresent, replacedAt), assetRepository (upsert, deactivate, interventions), assetInventory service with depreciation computation (canton-specific + national fallback), 5 new API endpoints (unit/building asset-inventory + upsert + interventions), 5 frontend proxy routes, AssetInventoryPanel shared component with depreciation bars + type grouping + intervention history, Assets tab on building + unit detail pages, 20 new integration tests. **Workflow Layer Structural Refactor complete (Mar 7)** — backend refactored into explicit layered architecture: `routes/` (thin HTTP) → `workflows/` (14 orchestrators) → `services/` (domain logic) → `repositories/` (6 canonical Prisma access) → `events/` (domain bus); state transition discipline via `transitions.ts` (5 entity types); 17 workflow integration tests; zero behavior changes. **Phase 2 Low-Context Refinement complete** — repositories expanded (job, invoice), transitions hardened (ASSIGNED), 3 new invoice workflows (approve, dispute, pay), all workflows normalized with event emission and repo-only Prisma access, include constants consolidated, `ARCHITECTURE_LOW_CONTEXT_GUIDE.md` created. **Phase 3 Architecture Hardening complete** — 4 new workflows (activateLease, terminateLease, markLeaseReady, submitRentalApplication), 2 new repositories (lease, rentalApplication), Lease + RentalApplication transition maps, 2 new domain events, lease/rental routes wired to workflows, architecture guide extended with lifecycle diagrams and W1–W8 conventions. **Test fix:** 7 pre-existing failures in rentalIntegration.test.ts resolved (missing seed data for `"default-org"` vacant units). **308/308 tests pass, 28 suites, 0 TypeScript errors.** **Backend: ~30,000 LOC | Frontend: ~22,000 LOC | ~153 API routes | 44 Prisma models | 33 enums | ~171 frontend pages | 14 workflows | 6 repositories.** Work can resume from the Active Backlog without rework.
 
 ---
 

@@ -1066,6 +1066,95 @@ components:
           type: array
           items: { type: string }
 
+    # ── Asset Inventory Schemas ──────────────────────────────
+
+    AssetInterventionType:
+      type: string
+      enum: [REPAIR, REPLACEMENT]
+
+    AssetInventoryItem:
+      type: object
+      required: [id, orgId, unitId, type, topic, name, isPresent, isActive, createdAt, updatedAt, interventions]
+      properties:
+        id: { type: string, format: uuid }
+        orgId: { type: string }
+        unitId: { type: string, format: uuid }
+        type: { type: string, enum: [APPLIANCE, FIXTURE, FINISH, STRUCTURAL, SYSTEM, OTHER] }
+        topic: { type: string }
+        name: { type: string }
+        brand: { type: string, nullable: true }
+        modelNumber: { type: string, nullable: true }
+        serialNumber: { type: string, nullable: true }
+        notes: { type: string, nullable: true }
+        assetModelId: { type: string, format: uuid, nullable: true }
+        installedAt: { type: string, format: date-time, nullable: true }
+        lastRenovatedAt: { type: string, format: date-time, nullable: true }
+        replacedAt: { type: string, format: date-time, nullable: true }
+        isPresent: { type: boolean }
+        isActive: { type: boolean }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        depreciation:
+          nullable: true
+          type: object
+          properties:
+            usefulLifeMonths: { type: integer }
+            ageMonths: { type: integer }
+            depreciationPct: { type: integer }
+            residualPct: { type: integer }
+            clockStart: { type: string, format: date-time, nullable: true }
+            standardId: { type: string, format: uuid, nullable: true }
+        interventions:
+          type: array
+          items: { $ref: '#/components/schemas/AssetInterventionItem' }
+        unit:
+          nullable: true
+          type: object
+          properties:
+            id: { type: string, format: uuid }
+            unitNumber: { type: string }
+
+    AssetInterventionItem:
+      type: object
+      required: [id, type, interventionDate, createdAt]
+      properties:
+        id: { type: string }
+        type: { $ref: '#/components/schemas/AssetInterventionType' }
+        interventionDate: { type: string, format: date-time }
+        costChf: { type: number, nullable: true }
+        jobId: { type: string, format: uuid, nullable: true }
+        jobStatus: { type: string, nullable: true }
+        notes: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+
+    UpsertAssetBody:
+      type: object
+      required: [unitId, type, topic, name]
+      properties:
+        unitId: { type: string, format: uuid }
+        type: { type: string, enum: [APPLIANCE, FIXTURE, FINISH, STRUCTURAL, SYSTEM, OTHER] }
+        topic: { type: string, minLength: 1, maxLength: 200 }
+        name: { type: string, minLength: 1, maxLength: 200 }
+        assetModelId: { type: string, format: uuid, nullable: true }
+        installedAt: { type: string, format: date-time, nullable: true }
+        lastRenovatedAt: { type: string, format: date-time, nullable: true }
+        replacedAt: { type: string, format: date-time, nullable: true }
+        brand: { type: string, maxLength: 200, nullable: true }
+        modelNumber: { type: string, maxLength: 200, nullable: true }
+        serialNumber: { type: string, maxLength: 200, nullable: true }
+        notes: { type: string, maxLength: 2000, nullable: true }
+        isPresent: { type: boolean }
+
+    AddInterventionBody:
+      type: object
+      required: [type, interventionDate]
+      properties:
+        type: { $ref: '#/components/schemas/AssetInterventionType' }
+        interventionDate: { type: string, format: date-time }
+        costChf: { type: number, minimum: 0, nullable: true }
+        jobId: { type: string, format: uuid, nullable: true }
+        notes: { type: string, maxLength: 2000, nullable: true }
+
 # ──────────────────────────────────────────────────────────────
 # Paths
 # ──────────────────────────────────────────────────────────────
@@ -2851,6 +2940,104 @@ paths:
       responses:
         '204':
           description: Deleted
+
+  /units/{id}/asset-inventory:
+    get:
+      tags: [Inventory]
+      summary: Get asset inventory for a unit with depreciation info
+      operationId: getUnitAssetInventory
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+        - name: canton
+          in: query
+          schema: { type: string }
+          required: false
+      responses:
+        '200':
+          description: Asset inventory list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/AssetInventoryItem' }
+
+  /units/{id}/assets:
+    post:
+      tags: [Inventory]
+      summary: Create or update an asset in a unit
+      operationId: createUnitAsset
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpsertAssetBody' }
+      responses:
+        '201':
+          description: Created or updated asset
+
+  /buildings/{id}/asset-inventory:
+    get:
+      tags: [Inventory]
+      summary: Get asset inventory for a building with depreciation info
+      operationId: getBuildingAssetInventory
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+        - name: canton
+          in: query
+          schema: { type: string }
+          required: false
+        - name: buildingLevelOnly
+          in: query
+          schema: { type: boolean }
+          required: false
+      responses:
+        '200':
+          description: Asset inventory list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/AssetInventoryItem' }
+
+  /buildings/{id}/assets:
+    post:
+      tags: [Inventory]
+      summary: Create or update an asset for a building
+      operationId: createBuildingAsset
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpsertAssetBody' }
+      responses:
+        '201':
+          description: Created or updated asset
+
+  /assets/{id}/interventions:
+    post:
+      tags: [Inventory]
+      summary: Add an intervention to an asset
+      operationId: addAssetIntervention
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AddInterventionBody' }
+      responses:
+        '201':
+          description: Created intervention
 
   /units/{id}/appliances:
     get:

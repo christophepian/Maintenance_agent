@@ -7,6 +7,7 @@ import PageHeader from "../../../components/layout/PageHeader";
 import PageContent from "../../../components/layout/PageContent";
 import Panel from "../../../components/layout/Panel";
 import UndoToast, { useUndoToast } from "../../../components/ui/UndoToast";
+import AssetInventoryPanel from "../../../components/AssetInventoryPanel";
 import { authHeaders } from "../../../lib/api";
 import { formatChfCents, formatPercent } from "../../../lib/format";
 
@@ -151,6 +152,10 @@ export default function BuildingDetail() {
   const [finData, setFinData] = useState(null);
   const [finRange, setFinRange] = useState(defaultRange);
 
+  // ─── Asset inventory state ───
+  const [assetInventory, setAssetInventory] = useState([]);
+  const [assetInventoryLoading, setAssetInventoryLoading] = useState(false);
+
   const fetchFinancials = useCallback(
     async (forceRefresh = false) => {
       if (!id) return;
@@ -180,6 +185,12 @@ export default function BuildingDetail() {
       fetchFinancials();
     }
   }, [activeTab, finData, finLoading, fetchFinancials]);
+
+  useEffect(() => {
+    if (activeTab === "Assets" && assetInventory.length === 0 && !assetInventoryLoading) {
+      loadAssetInventory();
+    }
+  }, [activeTab]);
 
   const healthBullets = useMemo(() => {
     if (!finData) return [];
@@ -310,6 +321,19 @@ export default function BuildingDetail() {
       setUnits(Array.isArray(data) ? data : data?.data || []);
     } catch (e) {
       setErr(`Failed to load units: ${e.message}`);
+    }
+  }
+
+  async function loadAssetInventory() {
+    if (!id) return;
+    try {
+      setAssetInventoryLoading(true);
+      const data = await fetchJSON(`/buildings/${id}/asset-inventory`);
+      setAssetInventory(Array.isArray(data) ? data : data?.data || []);
+    } catch (e) {
+      // Silently fail
+    } finally {
+      setAssetInventoryLoading(false);
     }
   }
 
@@ -552,7 +576,7 @@ export default function BuildingDetail() {
 
           {/* Tabs Navigation */}
           <div className="flex flex-wrap gap-2 mb-4">
-            {["Building information", "Units", "Documents", "Policies", "Financials"].map((tab) => (
+            {["Building information", "Units", "Assets", "Documents", "Policies", "Financials"].map((tab) => (
               <button
                 key={tab}
                 type="button"
@@ -797,6 +821,23 @@ export default function BuildingDetail() {
               )}
 
               {units.length === 0 && <div className="text-center text-slate-500 italic text-sm py-6">No units yet.</div>}
+            </Panel>
+          )}
+
+          {/* Assets tab */}
+          {activeTab === "Assets" && (
+            <Panel title="Asset Inventory & Depreciation">
+              {assetInventoryLoading ? (
+                <p className="text-center text-slate-500 py-6">Loading assets…</p>
+              ) : (
+                <AssetInventoryPanel
+                  assets={assetInventory}
+                  onRefresh={loadAssetInventory}
+                  scope="building"
+                  parentId={id}
+                  units={units.map((u) => ({ id: u.id, unitNumber: u.unitNumber }))}
+                />
+              )}
             </Panel>
           )}
 

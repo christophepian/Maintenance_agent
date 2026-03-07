@@ -106,6 +106,10 @@ export type EmailOutboxStatus = "PENDING" | "SENT" | "FAILED";
 
 export type EmailTemplate = "MISSING_DOCS" | "REJECTED" | "SELECTED_LEASE_LINK";
 
+export type AssetType = "APPLIANCE" | "FIXTURE" | "FINISH" | "STRUCTURAL" | "SYSTEM" | "OTHER";
+
+export type AssetInterventionType = "REPAIR" | "REPLACEMENT";
+
 export type ExpenseCategory =
   | "MAINTENANCE"
   | "UTILITIES"
@@ -493,6 +497,74 @@ export interface AssetModelDTO {
   model: string;
   category: string;
   expectedLifespanYears?: number;
+}
+
+export interface AssetInterventionDTO {
+  id: string;
+  type: AssetInterventionType;
+  interventionDate: string;
+  costChf?: number;
+  jobId?: string;
+  jobStatus?: string;
+  notes?: string;
+  createdAt: string;
+}
+
+export interface DepreciationInfoDTO {
+  usefulLifeMonths: number;
+  ageMonths: number;
+  depreciationPct: number;
+  residualPct: number;
+  clockStart: string | null;
+  standardId: string | null;
+}
+
+export interface AssetInventoryItemDTO {
+  id: string;
+  orgId: string;
+  unitId: string;
+  type: AssetType;
+  topic: string;
+  name: string;
+  brand?: string;
+  modelNumber?: string;
+  serialNumber?: string;
+  notes?: string;
+  assetModelId?: string;
+  installedAt?: string;
+  lastRenovatedAt?: string;
+  replacedAt?: string;
+  isPresent: boolean;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  depreciation: DepreciationInfoDTO | null;
+  interventions: AssetInterventionDTO[];
+  unit?: { id: string; unitNumber: string };
+}
+
+export interface UpsertAssetBody {
+  unitId: string;
+  type: AssetType;
+  topic: string;
+  name: string;
+  assetModelId?: string;
+  installedAt?: string;
+  lastRenovatedAt?: string;
+  replacedAt?: string;
+  brand?: string;
+  modelNumber?: string;
+  serialNumber?: string;
+  notes?: string;
+  isPresent?: boolean;
+}
+
+export interface AddInterventionBody {
+  type: AssetInterventionType;
+  interventionDate: string;
+  costChf?: number;
+  jobId?: string;
+  notes?: string;
 }
 
 export interface TenantDTO {
@@ -1203,6 +1275,22 @@ function buildInventoryApi(opts: ClientOptions) {
 
     removeUnitTenant: (unitId: string, tenantId: string) =>
       request<void>(opts, "DELETE", `/units/${unitId}/tenants/${tenantId}`),
+
+    /* Asset Inventory */
+    getUnitAssetInventory: (unitId: string, params?: { canton?: string }) =>
+      request<AssetInventoryItemDTO[]>(opts, "GET", `/units/${unitId}/asset-inventory`, undefined, params as Record<string, string | number | boolean | undefined>),
+
+    createUnitAsset: (unitId: string, body: Omit<UpsertAssetBody, "unitId">) =>
+      request<unknown>(opts, "POST", `/units/${unitId}/assets`, body),
+
+    getBuildingAssetInventory: (buildingId: string, params?: { canton?: string; buildingLevelOnly?: boolean }) =>
+      request<AssetInventoryItemDTO[]>(opts, "GET", `/buildings/${buildingId}/asset-inventory`, undefined, params as Record<string, string | number | boolean | undefined>),
+
+    createBuildingAsset: (buildingId: string, body: UpsertAssetBody) =>
+      request<unknown>(opts, "POST", `/buildings/${buildingId}/assets`, body),
+
+    addAssetIntervention: (assetId: string, body: AddInterventionBody) =>
+      request<unknown>(opts, "POST", `/assets/${assetId}/interventions`, body),
   };
 }
 

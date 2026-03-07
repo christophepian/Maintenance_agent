@@ -24,6 +24,8 @@ import {
   deactivateAssetModel,
   addAssetModelName,
 } from "../services/inventory";
+import { getAssetInventoryForUnit, getAssetInventoryForBuilding } from "../services/assetInventory";
+import { assetRepo } from "../repositories";
 import { listUnitTenants, linkTenantToUnit, unlinkTenantFromUnit } from "../services/occupancies";
 import { listContractors } from "../services/contractorRequests";
 import { listTenants, createOrGetTenant } from "../services/tenants";
@@ -33,6 +35,7 @@ import { CreateBuildingSchema, UpdateBuildingSchema } from "../validation/buildi
 import { CreateUnitSchema, UpdateUnitSchema } from "../validation/units";
 import { CreateApplianceSchema, UpdateApplianceSchema } from "../validation/appliances";
 import { CreateAssetModelSchema, UpdateAssetModelSchema } from "../validation/assetModels";
+import { UpsertAssetSchema, AddInterventionSchema } from "../validation/assets";
 import { LinkTenantSchema } from "../validation/occupancies";
 import { normalizePhoneToE164 } from "../utils/phoneNormalization";
 
@@ -396,6 +399,115 @@ export function registerInventoryRoutes(router: Router) {
       sendJson(res, 200, { message: "Tenant unlinked" });
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to unlink tenant", String(e));
+    }
+  });
+
+  /* ── Asset Inventory ───────────────────────────────────────── */
+
+  router.get("/units/:id/asset-inventory", withAuthRequired(async ({ res, orgId, params, prisma, query }) => {
+    try {
+      const canton = first(query, "canton") || null;
+      const items = await getAssetInventoryForUnit(prisma, orgId, params.id, canton);
+      sendJson(res, 200, { data: items });
+    } catch (e) {
+      sendError(res, 500, "DB_ERROR", "Failed to fetch unit asset inventory", String(e));
+    }
+  }));
+
+  router.post("/units/:id/assets", async ({ req, res, orgId, params, prisma }) => {
+    if (!maybeRequireManager(req, res)) return;
+    try {
+      const raw = await readJson(req);
+      const body = { ...raw, unitId: params.id };
+      const parsed = UpsertAssetSchema.safeParse(body);
+      if (!parsed.success) return sendError(res, 400, "VALIDATION_ERROR", "Invalid asset data", parsed.error.flatten());
+      const data = parsed.data;
+      const asset = await assetRepo.upsertAsset(prisma, orgId, {
+        unitId: data.unitId,
+        type: data.type as any,
+        topic: data.topic,
+        name: data.name,
+        assetModelId: data.assetModelId,
+        installedAt: data.installedAt ? new Date(data.installedAt) : null,
+        lastRenovatedAt: data.lastRenovatedAt ? new Date(data.lastRenovatedAt) : null,
+        replacedAt: data.replacedAt ? new Date(data.replacedAt) : null,
+        brand: data.brand,
+        modelNumber: data.modelNumber,
+        serialNumber: data.serialNumber,
+        notes: data.notes,
+        isPresent: data.isPresent,
+      });
+      sendJson(res, 201, { data: asset });
+    } catch (e: any) {
+      const msg = String(e?.message || e);
+      if (msg === "Invalid JSON") return sendError(res, 400, "INVALID_JSON", "Invalid JSON");
+      sendError(res, 500, "DB_ERROR", "Failed to upsert asset", String(e));
+    }
+  });
+
+  router.get("/buildings/:id/asset-inventory", withAuthRequired(async ({ res, orgId, params, prisma, query }) => {
+    try {
+      const canton = first(query, "canton") || null;
+      const buildingLevelOnly = first(query, "buildingLevelOnly") === "true";
+      const items = await getAssetInventoryForBuilding(prisma, orgId, params.id, { buildingLevelOnly, canton });
+      sendJson(res, 200, { data: items });
+    } catch (e) {
+      sendError(res, 500, "DB_ERROR", "Failed to fetch building asset inventory", String(e));
+    }
+  }));
+
+  router.post("/buildings/:id/assets", async ({ req, res, orgId, params, prisma }) => {
+    if (!maybeRequireManager(req, res)) return;
+    try {
+      const raw = await readJson(req);
+      const parsed = UpsertAssetSchema.safeParse(raw);
+      if (!parsed.success) return sendError(res, 400, "VALIDATION_ERROR", "Invalid asset data", parsed.error.flatten());
+      const data = parsed.data;
+      const asset = await assetRepo.upsertAsset(prisma, orgId, {
+        unitId: data.unitId,
+        type: data.type as any,
+        topic: data.topic,
+        name: data.name,
+        assetModelId: data.assetModelId,
+        installedAt: data.installedAt ? new Date(data.installedAt) : null,
+        lastRenovatedAt: data.lastRenovatedAt ? new Date(data.lastRenovatedAt) : null,
+        replacedAt: data.replacedAt ? new Date(data.replacedAt) : null,
+        brand: data.brand,
+        modelNumber: data.modelNumber,
+        serialNumber: data.serialNumber,
+        notes: data.notes,
+        isPresent: data.isPresent,
+      });
+      sendJson(res, 201, { data: asset });
+    } catch (e: any) {
+      const msg = String(e?.message || e);
+      if (msg === "Invalid JSON") return sendError(res, 400, "INVALID_JSON", "Invalid JSON");
+      sendError(res, 500, "DB_ERROR", "Failed to upsert asset", String(e));
+    }
+  });
+
+  router.post("/assets/:id/interventions", async ({ req, res, orgId, params, prisma }) => {
+    if (!maybeRequireManager(req, res)) return;
+    try {
+      const raw = await readJson(req);
+      const parsed = AddInterventionSchema.safeParse(raw);
+      if (!parsed.success) return sendError(res, 400, "VALIDATION_ERROR", "Invalid intervention data", parsed.error.flatten());
+      // Verify asset exists and belongs to org
+      const asset = await assetRepo.findAssetById(prisma, orgId, params.id);
+      if (!asset) return sendError(res, 404, "NOT_FOUND", "Asset not found");
+      const data = parsed.data;
+      const intervention = await assetRepo.addIntervention(prisma, params.id, {
+        type: data.type as any,
+        interventionDate: new Date(data.interventionDate),
+        costChf: data.costChf,
+        jobId: data.jobId,
+        notes: data.notes,
+      });
+      sendJson(res, 201, { data: intervention });
+    } catch (e: any) {
+      const msg = String(e?.message || e);
+      if (msg === "Invalid JSON") return sendError(res, 400, "INVALID_JSON", "Invalid JSON");
+      sendError(res, 500, "DB_ERROR", "Failed to add intervention", String(e));
     }
   });
 }

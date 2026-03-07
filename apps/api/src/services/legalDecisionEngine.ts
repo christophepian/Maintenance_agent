@@ -157,6 +157,20 @@ export async function evaluateRequestLegalDecision(
         obligation,
         confidence,
         reasons,
+        citations: citations.map((c) => ({
+          article: c.article,
+          text: c.text,
+          authority: c.authority,
+        })),
+        recommendedActions,
+        depreciationSignal: depreciationSignal
+          ? {
+              remainingLifePct: depreciationSignal.remainingLifePct,
+              ageMonths: depreciationSignal.ageMonths,
+              usefulLifeMonths: depreciationSignal.usefulLifeMonths,
+              fullyDepreciated: depreciationSignal.fullyDepreciated,
+            }
+          : null,
         matchedRuleCount: ruleEvaluation.matchedVersionIds.length,
       },
       matchedRuleVersionIdsJson: ruleEvaluation.matchedVersionIds,
@@ -313,7 +327,7 @@ async function evaluateStatutoryRules(
   });
 
   const matchedVersionIds: string[] = [];
-  const citations: Citation[] = [];
+  const citationMap = new Map<string, Citation>();
   let obligation: LegalObligation | null = null;
   let highestPriority = 0;
 
@@ -342,18 +356,23 @@ async function evaluateStatutoryRules(
       highestPriority = rule.priority;
     }
 
-    // Extract citations
+    // Extract citations (deduplicate by article + text + authority)
     if (version.citationsJson) {
       const ruleCitations = version.citationsJson as any[];
       for (const c of ruleCitations) {
-        citations.push({
-          article: c.article || "",
-          text: c.text || "",
-          authority: rule.authority,
-        });
+        const key = `${c.article || ""}|${c.text || ""}|${rule.authority}`;
+        if (!citationMap.has(key)) {
+          citationMap.set(key, {
+            article: c.article || "",
+            text: c.text || "",
+            authority: rule.authority,
+          });
+        }
       }
     }
   }
+
+  const citations = Array.from(citationMap.values());
 
   return { obligation, matchedVersionIds, citations, highestPriority };
 }

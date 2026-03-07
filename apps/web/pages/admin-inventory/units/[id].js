@@ -4,6 +4,7 @@ import Link from "next/link";
 import AppShell from "../../../components/AppShell";
 import { ALLOWED_CATEGORIES } from "../../../lib/categories";
 import DocumentsPanel from "../../../components/DocumentsPanel";
+import AssetInventoryPanel from "../../../components/AssetInventoryPanel";
 
 export default function UnitDetail() {
   const router = useRouter();
@@ -93,6 +94,10 @@ export default function UnitDetail() {
   const [estimateLoading, setEstimateLoading] = useState(false);
   const [estimateError, setEstimateError] = useState(null);
 
+  // Asset inventory state
+  const [assetInventory, setAssetInventory] = useState([]);
+  const [assetInventoryLoading, setAssetInventoryLoading] = useState(false);
+
   function setOk(message) {
     setNotice({ type: "ok", message });
     setTimeout(() => setNotice(null), 4000);
@@ -154,6 +159,7 @@ export default function UnitDetail() {
       await loadTenants();
       await loadAllTenants();
       await loadAssetModels();
+      await loadAssetInventory();
       // Fetch leases for the unit to find linked rental application IDs
       try {
         const leasesData = await fetchJSON(`/leases?unitId=${id}`);
@@ -203,6 +209,19 @@ export default function UnitDetail() {
       setAssetModels(Array.isArray(data) ? data : data?.data || []);
     } catch (e) {
       // Silently fail
+    }
+  }
+
+  async function loadAssetInventory() {
+    if (!id) return;
+    try {
+      setAssetInventoryLoading(true);
+      const data = await fetchJSON(`/units/${id}/asset-inventory`);
+      setAssetInventory(Array.isArray(data) ? data : data?.data || []);
+    } catch (e) {
+      // Silently fail
+    } finally {
+      setAssetInventoryLoading(false);
     }
   }
 
@@ -622,7 +641,7 @@ export default function UnitDetail() {
       </div>
 
       <div style={ui.tabRow}>
-        {["Tenants", "Appliances", "Rent Estimate", "Documents", "Invoices", "Contracts"].map((tab) => (
+        {["Tenants", "Appliances", "Assets", "Rent Estimate", "Documents", "Invoices", "Contracts"].map((tab) => (
           <button
             key={tab}
             type="button"
@@ -803,6 +822,23 @@ export default function UnitDetail() {
               </>
             )}
           </div>
+        </div>
+      )}
+
+      {activeTab === "Assets" && (
+        <div style={ui.card}>
+          <h2 style={ui.h2}>Asset Inventory & Depreciation</h2>
+          {assetInventoryLoading ? (
+            <p style={{ textAlign: "center", color: "#888" }}>Loading assets…</p>
+          ) : (
+            <AssetInventoryPanel
+              assets={assetInventory}
+              onRefresh={loadAssetInventory}
+              scope="unit"
+              parentId={id}
+              unitId={id}
+            />
+          )}
         </div>
       )}
 
