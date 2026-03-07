@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { authHeaders as getAuthHeaders } from "../lib/api";
 
 const DEFAULT_FORM = {
   type: "ORG",
@@ -32,12 +33,6 @@ export default function BillingEntityManager({ title = "Billing Entities" }) {
     () => (editingId ? "Update billing entity" : "Create billing entity"),
     [editingId]
   );
-
-  function getAuthHeaders() {
-    if (typeof window === "undefined") return {};
-    const token = localStorage.getItem("authToken");
-    return token ? { authorization: `Bearer ${token}` } : {};
-  }
 
   async function fetchJSON(path, options = {}) {
     const res = await fetch(path, {

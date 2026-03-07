@@ -17,18 +17,19 @@ export const NotificationEventTypeSchema = z.enum([
   'TENANT_SELECTED',
   'LEASE_READY_TO_SIGN',
   'LEASE_SIGNED',
+  'APPLICATION_SUBMITTED',
 ]);
 
 export type NotificationEventType = z.infer<typeof NotificationEventTypeSchema>;
 
-export const NotificationEntityTypeSchema = z.enum(['REQUEST', 'JOB', 'INVOICE', 'SELECTION', 'LEASE']);
+export const NotificationEntityTypeSchema = z.enum(['REQUEST', 'JOB', 'INVOICE', 'SELECTION', 'LEASE', 'APPLICATION']);
 
 export type NotificationEntityType = z.infer<typeof NotificationEntityTypeSchema>;
 
 // Schema for creating a notification (internal use)
 export const CreateNotificationSchema = z.object({
-  orgId: z.string().uuid(),
-  userId: z.string().uuid(),
+  orgId: z.string().min(1),
+  userId: z.string().min(1),
   buildingId: z.string().uuid().optional().nullable(),
   entityType: NotificationEntityTypeSchema,
   entityId: z.string().uuid(),
@@ -41,7 +42,7 @@ export type CreateNotificationInput = z.infer<typeof CreateNotificationSchema>;
 // Schema for marking notification as read
 export const MarkNotificationReadSchema = z.object({
   id: z.string().uuid(),
-  orgId: z.string().uuid(),
+  orgId: z.string().min(1),
 });
 
 // Notification DTO (returned from API)
@@ -62,8 +63,8 @@ export type NotificationDTO = z.infer<typeof NotificationDTOSchema>;
 
 // Query schema for listing notifications
 export const ListNotificationsSchema = z.object({
-  orgId: z.string().uuid(),
-  userId: z.string().uuid(),
+  orgId: z.string().min(1),
+  userId: z.string().min(1),
   unreadOnly: z.boolean().optional(),
   limit: z.number().int().positive().optional().default(20),
   offset: z.number().int().nonnegative().optional().default(0),

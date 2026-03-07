@@ -65,6 +65,7 @@ export default function LeaseEditorPage() {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [pdfGenerating, setPdfGenerating] = useState(false);
+  const [editMode, setEditMode] = useState(false);
 
   // Accordion state
   const [openSections, setOpenSections] = useState({
@@ -355,11 +356,23 @@ export default function LeaseEditorPage() {
           }
           actions={
             <div className="flex items-center gap-2 flex-wrap">
-              {(isDraft || isTemplate) && (
-                <button onClick={handleSave} disabled={saving}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50">
-                  {saving ? "Saving..." : "Save"}
+              {(isDraft || isTemplate) && !editMode && (
+                <button onClick={() => setEditMode(true)}
+                  className="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50">
+                  ✏️ Edit
                 </button>
+              )}
+              {(isDraft || isTemplate) && editMode && (
+                <>
+                  <button onClick={() => { handleSave(); setEditMode(false); }} disabled={saving}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50">
+                    {saving ? "Saving..." : "Save"}
+                  </button>
+                  <button onClick={() => { setEditMode(false); fetchLease(); }}
+                    className="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50">
+                    Cancel
+                  </button>
+                </>
               )}
               <button onClick={handleGeneratePDF} disabled={pdfGenerating}
                 className="px-4 py-2 bg-slate-600 text-white rounded-lg text-sm font-medium hover:bg-slate-700 disabled:opacity-50">
@@ -368,7 +381,7 @@ export default function LeaseEditorPage() {
               {isDraft && !isTemplate && (
                 <button onClick={() => setShowSignModal(true)}
                   className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700">
-                  ✍️ Ready to Sign
+                  ✍️ Send for Signature
                 </button>
               )}
               {isSigned && !isTemplate && (
@@ -414,22 +427,22 @@ export default function LeaseEditorPage() {
             <div className="space-y-4">
               <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wide">§1.1 Bailleresse / Bailleur</h4>
               <div className="grid grid-cols-2 gap-3">
-                <Field label="Nom / Raison sociale"><Input value={lease.landlordName} onChange={v => updateField("landlordName", v)} disabled={!isDraft} /></Field>
-                <Field label="Adresse"><Input value={lease.landlordAddress} onChange={v => updateField("landlordAddress", v)} disabled={!isDraft} /></Field>
-                <Field label="NPA / Localité"><Input value={lease.landlordZipCity} onChange={v => updateField("landlordZipCity", v)} disabled={!isDraft} /></Field>
-                <Field label="Téléphone"><Input value={lease.landlordPhone} onChange={v => updateField("landlordPhone", v)} disabled={!isDraft} /></Field>
-                <Field label="E-mail"><Input value={lease.landlordEmail} onChange={v => updateField("landlordEmail", v)} disabled={!isDraft} /></Field>
-                <Field label="Représenté(e) par"><Input value={lease.landlordRepresentedBy} onChange={v => updateField("landlordRepresentedBy", v)} disabled={!isDraft} /></Field>
+                <Field label="Nom / Raison sociale"><Input value={lease.landlordName} onChange={v => updateField("landlordName", v)} disabled={!editMode} /></Field>
+                <Field label="Adresse"><Input value={lease.landlordAddress} onChange={v => updateField("landlordAddress", v)} disabled={!editMode} /></Field>
+                <Field label="NPA / Localité"><Input value={lease.landlordZipCity} onChange={v => updateField("landlordZipCity", v)} disabled={!editMode} /></Field>
+                <Field label="Téléphone"><Input value={lease.landlordPhone} onChange={v => updateField("landlordPhone", v)} disabled={!editMode} /></Field>
+                <Field label="E-mail"><Input value={lease.landlordEmail} onChange={v => updateField("landlordEmail", v)} disabled={!editMode} /></Field>
+                <Field label="Représenté(e) par"><Input value={lease.landlordRepresentedBy} onChange={v => updateField("landlordRepresentedBy", v)} disabled={!editMode} /></Field>
               </div>
 
               <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mt-6">§1.2 Locataire</h4>
               <div className="grid grid-cols-2 gap-3">
-                <Field label="Nom *"><Input value={lease.tenantName} onChange={v => updateField("tenantName", v)} disabled={!isDraft} /></Field>
-                <Field label="Adresse"><Input value={lease.tenantAddress} onChange={v => updateField("tenantAddress", v)} disabled={!isDraft} /></Field>
-                <Field label="NPA / Localité"><Input value={lease.tenantZipCity} onChange={v => updateField("tenantZipCity", v)} disabled={!isDraft} /></Field>
-                <Field label="Téléphone"><Input value={lease.tenantPhone} onChange={v => updateField("tenantPhone", v)} disabled={!isDraft} /></Field>
-                <Field label="E-mail"><Input value={lease.tenantEmail} onChange={v => updateField("tenantEmail", v)} disabled={!isDraft} /></Field>
-                <Field label="Co-locataire"><Input value={lease.coTenantName} onChange={v => updateField("coTenantName", v)} disabled={!isDraft} /></Field>
+                <Field label="Nom *"><Input value={lease.tenantName} onChange={v => updateField("tenantName", v)} disabled={!editMode} /></Field>
+                <Field label="Adresse"><Input value={lease.tenantAddress} onChange={v => updateField("tenantAddress", v)} disabled={!editMode} /></Field>
+                <Field label="NPA / Localité"><Input value={lease.tenantZipCity} onChange={v => updateField("tenantZipCity", v)} disabled={!editMode} /></Field>
+                <Field label="Téléphone"><Input value={lease.tenantPhone} onChange={v => updateField("tenantPhone", v)} disabled={!editMode} /></Field>
+                <Field label="E-mail"><Input value={lease.tenantEmail} onChange={v => updateField("tenantEmail", v)} disabled={!editMode} /></Field>
+                <Field label="Co-locataire"><Input value={lease.coTenantName} onChange={v => updateField("coTenantName", v)} disabled={!editMode} /></Field>
               </div>
             </div>
           </AccordionSection>
@@ -438,15 +451,15 @@ export default function LeaseEditorPage() {
           <AccordionSection title="§2 — Objet du bail" open={openSections.object} onToggle={() => toggle("object")}>
             <div className="grid grid-cols-2 gap-3">
               <Field label="Type d'objet">
-                <select value={lease.objectType || "APPARTEMENT"} onChange={e => updateField("objectType", e.target.value)} disabled={!isDraft}
+                <select value={lease.objectType || "APPARTEMENT"} onChange={e => updateField("objectType", e.target.value)} disabled={!editMode}
                   className="w-full border rounded-md px-3 py-1.5 text-sm disabled:bg-slate-100">
                   <option value="APPARTEMENT">Appartement</option>
                   <option value="MAISON">Maison</option>
                   <option value="CHAMBRE_MEUBLEE">Chambre meublée</option>
                 </select>
               </Field>
-              <Field label="Nombre de pièces"><Input value={lease.roomsCount} onChange={v => updateField("roomsCount", v)} placeholder="3.5" disabled={!isDraft} /></Field>
-              <Field label="Étage"><Input value={lease.floor} onChange={v => updateField("floor", v)} disabled={!isDraft} /></Field>
+              <Field label="Nombre de pièces"><Input value={lease.roomsCount} onChange={v => updateField("roomsCount", v)} placeholder="3.5" disabled={!editMode} /></Field>
+              <Field label="Étage"><Input value={lease.floor} onChange={v => updateField("floor", v)} disabled={!editMode} /></Field>
               <Field label="Adresse immeuble">
                 <Input value={lease.buildingAddressLines?.join(", ")} disabled={true} />
               </Field>
@@ -456,20 +469,20 @@ export default function LeaseEditorPage() {
           {/* §3–4 — Dates & Termination */}
           <AccordionSection title="§3–4 — Durée & Résiliation" open={openSections.dates} onToggle={() => toggle("dates")}>
             <div className="grid grid-cols-2 gap-3">
-              <Field label="Début du bail *"><Input type="date" value={lease.startDate?.split("T")[0]} onChange={v => updateField("startDate", v)} disabled={!isDraft} /></Field>
+              <Field label="Début du bail *"><Input type="date" value={lease.startDate?.split("T")[0]} onChange={v => updateField("startDate", v)} disabled={!editMode} /></Field>
               <Field label="Durée déterminée">
-                <select value={lease.isFixedTerm ? "true" : "false"} onChange={e => updateField("isFixedTerm", e.target.value === "true")} disabled={!isDraft}
+                <select value={lease.isFixedTerm ? "true" : "false"} onChange={e => updateField("isFixedTerm", e.target.value === "true")} disabled={!editMode}
                   className="w-full border rounded-md px-3 py-1.5 text-sm disabled:bg-slate-100">
                   <option value="false">Indéterminée</option>
                   <option value="true">Déterminée</option>
                 </select>
               </Field>
               {lease.isFixedTerm && (
-                <Field label="Fin du bail"><Input type="date" value={lease.endDate?.split("T")[0]} onChange={v => updateField("endDate", v)} disabled={!isDraft} /></Field>
+                <Field label="Fin du bail"><Input type="date" value={lease.endDate?.split("T")[0]} onChange={v => updateField("endDate", v)} disabled={!editMode} /></Field>
               )}
-              <Field label="Premier terme de résiliation"><Input type="date" value={lease.firstTerminationDate?.split("T")[0]} onChange={v => updateField("firstTerminationDate", v)} disabled={!isDraft} /></Field>
+              <Field label="Premier terme de résiliation"><Input type="date" value={lease.firstTerminationDate?.split("T")[0]} onChange={v => updateField("firstTerminationDate", v)} disabled={!editMode} /></Field>
               <Field label="Délai de résiliation">
-                <select value={lease.noticeRule || "3_MONTHS"} onChange={e => updateField("noticeRule", e.target.value)} disabled={!isDraft}
+                <select value={lease.noticeRule || "3_MONTHS"} onChange={e => updateField("noticeRule", e.target.value)} disabled={!editMode}
                   className="w-full border rounded-md px-3 py-1.5 text-sm disabled:bg-slate-100">
                   <option value="3_MONTHS">3 mois</option>
                   <option value="EXTENDED">Prolongé</option>
@@ -477,7 +490,7 @@ export default function LeaseEditorPage() {
                 </select>
               </Field>
               <Field label="Termes de résiliation">
-                <select value={lease.terminationDatesRule || "END_OF_MONTH_EXCEPT_31_12"} onChange={e => updateField("terminationDatesRule", e.target.value)} disabled={!isDraft}
+                <select value={lease.terminationDatesRule || "END_OF_MONTH_EXCEPT_31_12"} onChange={e => updateField("terminationDatesRule", e.target.value)} disabled={!editMode}
                   className="w-full border rounded-md px-3 py-1.5 text-sm disabled:bg-slate-100">
                   <option value="END_OF_MONTH_EXCEPT_31_12">Fin de mois, sauf 31.12</option>
                   <option value="CUSTOM">Dates locales</option>
@@ -489,10 +502,10 @@ export default function LeaseEditorPage() {
           {/* §5 — Rent & Charges */}
           <AccordionSection title="§5 — Loyer & Charges" open={openSections.rent} onToggle={() => toggle("rent")}>
             <div className="grid grid-cols-2 gap-3">
-              <Field label="Loyer net (CHF/mois) *"><Input type="number" value={lease.netRentChf} onChange={v => updateField("netRentChf", v)} disabled={!isDraft} /></Field>
-              <Field label="Loyer garage (CHF/mois)"><Input type="number" value={lease.garageRentChf} onChange={v => updateField("garageRentChf", v)} disabled={!isDraft} /></Field>
-              <Field label="Autres prestations (CHF/mois)"><Input type="number" value={lease.otherServiceRentChf} onChange={v => updateField("otherServiceRentChf", v)} disabled={!isDraft} /></Field>
-              <Field label="Total charges (CHF/mois)"><Input type="number" value={lease.chargesTotalChf} onChange={v => updateField("chargesTotalChf", v)} disabled={!isDraft} /></Field>
+              <Field label="Loyer net (CHF/mois) *"><Input type="number" value={lease.netRentChf} onChange={v => updateField("netRentChf", v)} disabled={!editMode} /></Field>
+              <Field label="Loyer garage (CHF/mois)"><Input type="number" value={lease.garageRentChf} onChange={v => updateField("garageRentChf", v)} disabled={!editMode} /></Field>
+              <Field label="Autres prestations (CHF/mois)"><Input type="number" value={lease.otherServiceRentChf} onChange={v => updateField("otherServiceRentChf", v)} disabled={!editMode} /></Field>
+              <Field label="Total charges (CHF/mois)"><Input type="number" value={lease.chargesTotalChf} onChange={v => updateField("chargesTotalChf", v)} disabled={!editMode} /></Field>
             </div>
             <div className="mt-3 p-3 bg-slate-50 rounded-md">
               <p className="text-sm font-medium text-slate-700">
@@ -504,21 +517,21 @@ export default function LeaseEditorPage() {
           {/* §6 — Payment */}
           <AccordionSection title="§6 — Paiement" open={openSections.payment} onToggle={() => toggle("payment")}>
             <div className="grid grid-cols-2 gap-3">
-              <Field label="Jour d'échéance"><Input type="number" value={lease.paymentDueDayOfMonth} onChange={v => updateField("paymentDueDayOfMonth", v)} placeholder="1" disabled={!isDraft} /></Field>
-              <Field label="Bénéficiaire"><Input value={lease.paymentRecipient} onChange={v => updateField("paymentRecipient", v)} disabled={!isDraft} /></Field>
-              <Field label="Institut financier"><Input value={lease.paymentInstitution} onChange={v => updateField("paymentInstitution", v)} disabled={!isDraft} /></Field>
-              <Field label="N° de compte"><Input value={lease.paymentAccountNumber} onChange={v => updateField("paymentAccountNumber", v)} disabled={!isDraft} /></Field>
-              <Field label="IBAN"><Input value={lease.paymentIban} onChange={v => updateField("paymentIban", v)} placeholder="CH..." disabled={!isDraft} /></Field>
-              <Field label="Taux de référence"><Input value={lease.referenceRatePercent} onChange={v => updateField("referenceRatePercent", v)} placeholder="1.75" disabled={!isDraft} /></Field>
+              <Field label="Jour d'échéance"><Input type="number" value={lease.paymentDueDayOfMonth} onChange={v => updateField("paymentDueDayOfMonth", v)} placeholder="1" disabled={!editMode} /></Field>
+              <Field label="Bénéficiaire"><Input value={lease.paymentRecipient} onChange={v => updateField("paymentRecipient", v)} disabled={!editMode} /></Field>
+              <Field label="Institut financier"><Input value={lease.paymentInstitution} onChange={v => updateField("paymentInstitution", v)} disabled={!editMode} /></Field>
+              <Field label="N° de compte"><Input value={lease.paymentAccountNumber} onChange={v => updateField("paymentAccountNumber", v)} disabled={!editMode} /></Field>
+              <Field label="IBAN"><Input value={lease.paymentIban} onChange={v => updateField("paymentIban", v)} placeholder="CH..." disabled={!editMode} /></Field>
+              <Field label="Taux de référence"><Input value={lease.referenceRatePercent} onChange={v => updateField("referenceRatePercent", v)} placeholder="1.75" disabled={!editMode} /></Field>
             </div>
           </AccordionSection>
 
           {/* §7 — Deposit */}
           <AccordionSection title="§7 — Garantie" open={openSections.deposit} onToggle={() => toggle("deposit")}>
             <div className="grid grid-cols-2 gap-3">
-              <Field label="Montant de la garantie (CHF)"><Input type="number" value={lease.depositChf} onChange={v => updateField("depositChf", v)} disabled={!isDraft} /></Field>
+              <Field label="Montant de la garantie (CHF)"><Input type="number" value={lease.depositChf} onChange={v => updateField("depositChf", v)} disabled={!editMode} /></Field>
               <Field label="Exigibilité">
-                <select value={lease.depositDueRule || "AT_SIGNATURE"} onChange={e => updateField("depositDueRule", e.target.value)} disabled={!isDraft}
+                <select value={lease.depositDueRule || "AT_SIGNATURE"} onChange={e => updateField("depositDueRule", e.target.value)} disabled={!editMode}
                   className="w-full border rounded-md px-3 py-1.5 text-sm disabled:bg-slate-100">
                   <option value="AT_SIGNATURE">À la signature</option>
                   <option value="BY_START">Au début du bail</option>
@@ -526,7 +539,7 @@ export default function LeaseEditorPage() {
                 </select>
               </Field>
               {lease.depositDueRule === "BY_DATE" && (
-                <Field label="Date d'échéance"><Input type="date" value={lease.depositDueDate?.split("T")[0]} onChange={v => updateField("depositDueDate", v)} disabled={!isDraft} /></Field>
+                <Field label="Date d'échéance"><Input type="date" value={lease.depositDueDate?.split("T")[0]} onChange={v => updateField("depositDueDate", v)} disabled={!editMode} /></Field>
               )}
             </div>
           </AccordionSection>
@@ -535,17 +548,17 @@ export default function LeaseEditorPage() {
           <AccordionSection title="§15 — Dispositions particulières & Annexes" open={openSections.stipulations} onToggle={() => toggle("stipulations")}>
             <div className="space-y-3">
               <label className="flex items-center gap-2 text-sm">
-                <input type="checkbox" checked={lease.includesHouseRules || false} onChange={e => updateField("includesHouseRules", e.target.checked)} disabled={!isDraft} />
+                <input type="checkbox" checked={lease.includesHouseRules || false} onChange={e => updateField("includesHouseRules", e.target.checked)} disabled={!editMode} />
                 Règlement de la maison joint en annexe
               </label>
               <Field label="Autres annexes" span={2}>
-                <Input value={lease.otherAnnexesText} onChange={v => updateField("otherAnnexesText", v)} disabled={!isDraft} />
+                <Input value={lease.otherAnnexesText} onChange={v => updateField("otherAnnexesText", v)} disabled={!editMode} />
               </Field>
               <Field label="Dispositions particulières" span={2}>
                 <textarea
                   value={lease.otherStipulations ?? ""}
                   onChange={e => updateField("otherStipulations", e.target.value)}
-                  disabled={!isDraft}
+                  disabled={!editMode}
                   rows={4}
                   className="w-full border rounded-md px-3 py-1.5 text-sm disabled:bg-slate-100"
                 />
@@ -702,9 +715,9 @@ export default function LeaseEditorPage() {
         {showSignModal && (
           <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
             <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md mx-4">
-              <h3 className="text-lg font-semibold mb-4">Mark Ready to Sign</h3>
+              <h3 className="text-lg font-semibold mb-4">Send for Signature</h3>
               <p className="text-sm text-slate-600 mb-4">
-                This will mark the lease as READY_TO_SIGN and create a signature request.
+                This will send the lease for signature and create a signature request.
                 The lease will no longer be editable.
               </p>
               <div className="mb-4">

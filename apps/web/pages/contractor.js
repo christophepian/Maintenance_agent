@@ -4,6 +4,7 @@ import PageShell from "../components/layout/PageShell";
 import PageHeader from "../components/layout/PageHeader";
 import PageContent from "../components/layout/PageContent";
 import { formatDateTime } from "../lib/format";
+import { authHeaders } from "../lib/api";
 
 // Add global.css classes for layout and styling
 // Global CSS is imported in _app.js
@@ -30,11 +31,6 @@ function fmtDate(iso) {
 
 export default function ContractorPortal() {
     const router = useRouter();
-    function authHeaders() {
-      if (typeof window === "undefined") return {};
-      const token = localStorage.getItem("authToken");
-      return token ? { Authorization: `Bearer ${token}` } : {};
-    }
     useEffect(() => {
       if (router.pathname === "/contractor") {
         router.replace("/contractor/jobs");

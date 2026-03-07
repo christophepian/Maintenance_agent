@@ -6,6 +6,8 @@ import PageHeader from "../../../../components/layout/PageHeader";
 import { formatDateTime } from "../../../../lib/format";
 import PageContent from "../../../../components/layout/PageContent";
 import Panel from "../../../../components/layout/Panel";
+import DocumentsPanel from "../../../../components/DocumentsPanel";
+import { authHeaders } from "../../../../lib/api";
 
 export default function TenantDetailPage() {
   const router = useRouter();
@@ -18,19 +20,7 @@ export default function TenantDetailPage() {
   const [message, setMessage] = useState("");
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState("Personal information");
-
-  function authHeaders() {
-    if (typeof window === "undefined") return {};
-    const token = localStorage.getItem("authToken");
-    if (token) return { Authorization: `Bearer ${token}` };
-    const role = localStorage.getItem("role") || "MANAGER";
-    return {
-      "x-dev-role": role,
-      "x-dev-org-id": "default-org",
-      "x-dev-user-id": "dev-user",
-      "x-dev-email": "dev@local",
-    };
-  }
+  const [applicationId, setApplicationId] = useState(null);
 
   useEffect(() => {
     if (!id) return;
@@ -54,6 +44,16 @@ export default function TenantDetailPage() {
         phone: tenantData?.phone || "",
         email: tenantData?.email || "",
       });
+      // Fetch leases for the tenant's unit to find applicationId
+      if (tenantData?.unitId) {
+        try {
+          const leasesRes = await fetch(`/api/leases?unitId=${tenantData.unitId}`, { headers: authHeaders() });
+          const leasesData = await leasesRes.json().catch(() => ({}));
+          const leases = leasesData?.data || [];
+          const leaseWithApp = leases.find((l) => l.applicationId);
+          if (leaseWithApp) setApplicationId(leaseWithApp.applicationId);
+        } catch {}
+      }
     } catch (e) {
       setError(String(e?.message || e));
     } finally {
@@ -176,7 +176,7 @@ export default function TenantDetailPage() {
           ) : tenant ? (
             <div className="grid gap-4">
               <div className="flex flex-wrap gap-2">
-                {["Personal information", "Unit", "Contracts", "Invoices"].map((tab) => (
+                {["Personal information", "Unit", "Documents", "Contracts", "Invoices"].map((tab) => (
                   <button
                     key={tab}
                     type="button"
@@ -286,6 +286,18 @@ export default function TenantDetailPage() {
                     </div>
                   </div>
                 </Panel>
+              )}
+
+              {activeTab === "Documents" && (
+                applicationId ? (
+                  <DocumentsPanel applicationId={applicationId} title="Corroborative Documents" />
+                ) : (
+                  <Panel title="Corroborative Documents">
+                    <p className="text-sm text-slate-500 py-2">
+                      No rental application linked to this tenant.
+                    </p>
+                  </Panel>
+                )
               )}
 
               {activeTab === "Contracts" && (

@@ -3,13 +3,14 @@ import { sendError, sendJson } from "../http/json";
 import { readJson } from "../http/body";
 import { first } from "../http/query";
 import { maybeRequireManager } from "../authz";
+import { withAuthRequired } from "../http/routeProtection";
 import { normalizePhoneToE164 } from "../utils/phoneNormalization";
 import { getTenantByPhone, createOrGetTenant, updateTenant, deactivateTenant, listTenants, getTenantById } from "../services/tenants";
 import { listContractors, createContractor, getContractorById, updateContractor, deactivateContractor } from "../services/contractorRequests";
 
 export function registerTenantRoutes(router: Router) {
   // GET /tenants
-  router.get("/tenants", async ({ res, query, orgId }) => {
+  router.get("/tenants", withAuthRequired(async ({ res, query, orgId }) => {
     try {
       const phoneRaw = first(query, "phone");
       if (phoneRaw) {
@@ -24,7 +25,7 @@ export function registerTenantRoutes(router: Router) {
     } catch (e: any) {
       sendError(res, 500, "DB_ERROR", "Failed to lookup tenant", String(e));
     }
-  });
+  }));
 
   // POST /tenants
   router.post("/tenants", async ({ req, res, orgId }) => {
@@ -43,7 +44,7 @@ export function registerTenantRoutes(router: Router) {
   });
 
   // GET /tenants/:id
-  router.get("/tenants/:id", async ({ res, params, orgId }) => {
+  router.get("/tenants/:id", withAuthRequired(async ({ res, params, orgId }) => {
     try {
       const tenant = await getTenantById(params.id);
       if (!tenant || tenant.orgId !== orgId) return sendError(res, 404, "NOT_FOUND", "Tenant not found");
@@ -51,7 +52,7 @@ export function registerTenantRoutes(router: Router) {
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to fetch tenant", String(e));
     }
-  });
+  }));
 
   // PATCH /tenants/:id
   router.patch("/tenants/:id", async ({ req, res, orgId, params }) => {
@@ -87,14 +88,14 @@ export function registerTenantRoutes(router: Router) {
   });
 
   // GET /contractors
-  router.get("/contractors", async ({ res, prisma, orgId }) => {
+  router.get("/contractors", withAuthRequired(async ({ res, prisma, orgId }) => {
     try {
       const contractors = await listContractors(prisma, orgId);
       sendJson(res, 200, { data: contractors });
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to fetch contractors", String(e));
     }
-  });
+  }));
 
   // POST /contractors
   router.post("/contractors", async ({ req, res, prisma, orgId }) => {
@@ -109,7 +110,7 @@ export function registerTenantRoutes(router: Router) {
   });
 
   // GET /contractors/:id
-  router.get("/contractors/:id", async ({ res, prisma, params, orgId }) => {
+  router.get("/contractors/:id", withAuthRequired(async ({ res, prisma, params, orgId }) => {
     try {
       const contractor = await getContractorById(prisma, params.id);
       if (!contractor) return sendError(res, 404, "NOT_FOUND", "Contractor not found");
@@ -120,7 +121,7 @@ export function registerTenantRoutes(router: Router) {
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to fetch contractor", String(e));
     }
-  });
+  }));
 
   // PATCH /contractors/:id
   router.patch("/contractors/:id", async ({ req, res, prisma, params, orgId }) => {

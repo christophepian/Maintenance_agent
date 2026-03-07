@@ -6,13 +6,7 @@ import PageHeader from "../../../../components/layout/PageHeader";
 import PageContent from "../../../../components/layout/PageContent";
 import Panel from "../../../../components/layout/Panel";
 import Section from "../../../../components/layout/Section";
-
-function authHeaders() {
-  if (typeof window === "undefined") return {};
-  const token = localStorage.getItem("authToken");
-  return token ? { Authorization: `Bearer ${token}` } : {};
-}
-
+import { authHeaders } from "../../../../lib/api";
 function todayIso() {
   return new Date().toISOString().slice(0, 10);
 }

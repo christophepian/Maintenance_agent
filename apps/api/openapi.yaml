@@ -45,6 +45,8 @@ tags:
     description: Owner tenant selection for vacant units
   - name: LeaseTemplates
     description: Lease template management
+  - name: LegalEngine
+    description: Swiss tenancy law decision engine, RFPs, depreciation, and legal rules
 
 # ──────────────────────────────────────────────────────────────
 # Reusable components
@@ -127,6 +129,72 @@ components:
     BillingEntityType:
       type: string
       enum: [CONTRACTOR, ORG, OWNER]
+
+    ExpenseCategory:
+      type: string
+      enum: [MAINTENANCE, UTILITIES, CLEANING, INSURANCE, TAX, ADMIN, CAPEX, OTHER]
+
+    # ── Financial DTOs ───────────────────────────────────────
+
+    ExpenseCategoryTotalDTO:
+      type: object
+      required: [category, totalCents]
+      properties:
+        category: { $ref: '#/components/schemas/ExpenseCategory' }
+        totalCents: { type: integer }
+
+    ContractorSpendDTO:
+      type: object
+      required: [contractorId, contractorName, totalCents]
+      properties:
+        contractorId: { type: string, format: uuid }
+        contractorName: { type: string }
+        totalCents: { type: integer }
+
+    BuildingFinancialsDTO:
+      type: object
+      required:
+        - buildingId
+        - buildingName
+        - from
+        - to
+        - earnedIncomeCents
+        - projectedIncomeCents
+        - expensesTotalCents
+        - maintenanceTotalCents
+        - capexTotalCents
+        - operatingTotalCents
+        - netIncomeCents
+        - netOperatingIncomeCents
+        - maintenanceRatio
+        - costPerUnitCents
+        - collectionRate
+        - activeUnitsCount
+        - expensesByCategory
+        - topContractorsBySpend
+      properties:
+        buildingId: { type: string, format: uuid }
+        buildingName: { type: string }
+        from: { type: string, format: date }
+        to: { type: string, format: date }
+        earnedIncomeCents: { type: integer }
+        projectedIncomeCents: { type: integer }
+        expensesTotalCents: { type: integer }
+        maintenanceTotalCents: { type: integer }
+        capexTotalCents: { type: integer }
+        operatingTotalCents: { type: integer }
+        netIncomeCents: { type: integer }
+        netOperatingIncomeCents: { type: integer }
+        maintenanceRatio: { type: number }
+        costPerUnitCents: { type: integer }
+        collectionRate: { type: number }
+        activeUnitsCount: { type: integer }
+        expensesByCategory:
+          type: array
+          items: { $ref: '#/components/schemas/ExpenseCategoryTotalDTO' }
+        topContractorsBySpend:
+          type: array
+          items: { $ref: '#/components/schemas/ContractorSpendDTO' }
 
     UnitType:
       type: string
@@ -915,6 +983,88 @@ components:
         createdAt: { type: string, format: date-time }
         sentAt: { type: string, format: date-time }
         errorMessage: { type: string }
+
+    # ── Rent Estimation ──────────────────────────────────────
+
+    LocationSegment:
+      type: string
+      enum: [PRIME, STANDARD, PERIPHERY]
+
+    InsulationQuality:
+      type: string
+      enum: [UNKNOWN, POOR, AVERAGE, GOOD, EXCELLENT]
+
+    EnergyLabel:
+      type: string
+      enum: [A, B, C, D, E, F, G]
+
+    HeatingType:
+      type: string
+      enum: [HEAT_PUMP, DISTRICT, GAS, OIL, ELECTRIC, UNKNOWN]
+
+    RentEstimationConfigDTO:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        orgId: { type: string }
+        canton: { type: string, nullable: true }
+        baseRentPerSqmChfMonthly: { type: number }
+        locationCoefPrime: { type: number }
+        locationCoefStandard: { type: number }
+        locationCoefPeriphery: { type: number }
+        ageCoefNew: { type: number }
+        ageCoefMid: { type: number }
+        ageCoefOld: { type: number }
+        ageCoefVeryOld: { type: number }
+        energyCoefJson: { type: object, additionalProperties: { type: number } }
+        chargesBaseOptimistic: { type: number }
+        chargesBasePessimistic: { type: number }
+        heatingChargeAdjJson: { type: object, additionalProperties: { type: number } }
+        serviceChargeAdjElevator: { type: number }
+        serviceChargeAdjConcierge: { type: number }
+        chargesMinClamp: { type: number }
+        chargesMaxClamp: { type: number }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    RentEstimateDTO:
+      type: object
+      properties:
+        unitId: { type: string, format: uuid }
+        netRentChfMonthly: { type: number }
+        chargesOptimisticChfMonthly: { type: number }
+        chargesPessimisticChfMonthly: { type: number }
+        totalOptimisticChfMonthly: { type: number }
+        totalPessimisticChfMonthly: { type: number }
+        appliedCoefficients:
+          type: object
+          properties:
+            baseRentPerSqm: { type: number }
+            locationCoef: { type: number }
+            ageCoef: { type: number }
+            energyCoef: { type: number }
+            chargesRateOptimistic: { type: number }
+            chargesRatePessimistic: { type: number }
+            heatingAdj: { type: number }
+            serviceAdj: { type: number }
+            clampsApplied:
+              type: object
+              properties:
+                optimistic: { type: boolean }
+                pessimistic: { type: boolean }
+        inputsUsed:
+          type: object
+          properties:
+            livingAreaSqm: { type: number }
+            segment: { type: string }
+            effectiveYear: { type: integer, nullable: true }
+            energyLabel: { type: string, nullable: true }
+            heatingType: { type: string, nullable: true }
+            hasElevator: { type: boolean }
+            hasConcierge: { type: boolean }
+        warnings:
+          type: array
+          items: { type: string }
 
 # ──────────────────────────────────────────────────────────────
 # Paths
@@ -3566,6 +3716,39 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /manager/rental-application-units/{id}/override-disqualification:
+    post:
+      tags: [RentalApplications]
+      summary: Manager overrides disqualification for a candidate
+      operationId: managerOverrideDisqualification
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string }
+      responses:
+        '200':
+          description: Disqualification overridden
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/RentalApplicationUnitDTO' }
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   # ═══════════════════════════════════════════════════════════
   # Rental Applications (Owner)
   # ═══════════════════════════════════════════════════════════
@@ -3595,6 +3778,39 @@ paths:
           $ref: '#/components/responses/ValidationError'
         '403':
           $ref: '#/components/responses/Forbidden'
+
+  /owner/rental-application-units/{id}/override-disqualification:
+    post:
+      tags: [OwnerSelection]
+      summary: Owner overrides disqualification for a candidate
+      operationId: ownerOverrideDisqualification
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string }
+      responses:
+        '200':
+          description: Disqualification overridden
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/RentalApplicationUnitDTO' }
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   /owner/units/{unitId}/select-tenants:
     post:
@@ -3661,6 +3877,68 @@ paths:
                       summary: { type: string }
         '400':
           $ref: '#/components/responses/ValidationError'
+
+  /rental-attachments/{attachmentId}/download:
+    get:
+      tags: [RentalApplications]
+      summary: Download a rental attachment file
+      operationId: downloadRentalAttachment
+      parameters:
+        - name: attachmentId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Attachment file binary
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /rental-applications/{id}/documents:
+    get:
+      tags: [RentalApplications]
+      summary: List applicant documents for a rental application
+      operationId: listRentalApplicationDocuments
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Applicant documents
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string, format: uuid }
+                        role: { type: string }
+                        firstName: { type: string }
+                        lastName: { type: string }
+                        attachments:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              id: { type: string, format: uuid }
+                              docType: { type: string }
+                              fileName: { type: string }
+                              fileSizeBytes: { type: integer }
+                              mimeType: { type: string }
+                              uploadedAt: { type: string, format: date-time }
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   /manager/selections:
     get:
@@ -3919,3 +4197,743 @@ paths:
           $ref: '#/components/responses/NotFound'
         '400':
           $ref: '#/components/responses/ValidationError'
+
+  /lease-templates/{id}:
+    delete:
+      tags: [LeaseTemplates]
+      summary: Soft-delete a lease template
+      operationId: deleteLeaseTemplate
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Template deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /lease-templates/{id}/restore:
+    post:
+      tags: [LeaseTemplates]
+      summary: Restore a soft-deleted lease template
+      operationId: restoreLeaseTemplate
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Template restored
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ═══════════════════════════════════════════════════════════
+  # Rent Estimation
+  # ═══════════════════════════════════════════════════════════
+
+  /rent-estimation/config:
+    get:
+      tags: [Rent Estimation]
+      summary: Get org-default rent estimation config
+      operationId: getRentEstimationConfig
+      responses:
+        '200':
+          description: Current config (auto-created with defaults if missing)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/RentEstimationConfigDTO' }
+    put:
+      tags: [Rent Estimation]
+      summary: Upsert org-default rent estimation config
+      operationId: upsertRentEstimationConfig
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                baseRentPerSqmChfMonthly: { type: number, minimum: 1, maximum: 200 }
+                locationCoefPrime: { type: number, minimum: 0.5, maximum: 2.5 }
+                locationCoefStandard: { type: number, minimum: 0.5, maximum: 2.5 }
+                locationCoefPeriphery: { type: number, minimum: 0.5, maximum: 2.5 }
+                ageCoefNew: { type: number, minimum: 0.5, maximum: 2.5 }
+                ageCoefMid: { type: number, minimum: 0.5, maximum: 2.5 }
+                ageCoefOld: { type: number, minimum: 0.5, maximum: 2.5 }
+                ageCoefVeryOld: { type: number, minimum: 0.5, maximum: 2.5 }
+                energyCoefJson: { type: object, additionalProperties: { type: number } }
+                chargesBaseOptimistic: { type: number, minimum: 0, maximum: 1 }
+                chargesBasePessimistic: { type: number, minimum: 0, maximum: 1 }
+                heatingChargeAdjJson: { type: object, additionalProperties: { type: number } }
+                serviceChargeAdjElevator: { type: number, minimum: 0, maximum: 1 }
+                serviceChargeAdjConcierge: { type: number, minimum: 0, maximum: 1 }
+                chargesMinClamp: { type: number, minimum: 0, maximum: 1 }
+                chargesMaxClamp: { type: number, minimum: 0, maximum: 1 }
+      responses:
+        '200':
+          description: Updated config
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/RentEstimationConfigDTO' }
+        '400':
+          $ref: '#/components/responses/ValidationError'
+
+  /rent-estimation/config/{canton}:
+    put:
+      tags: [Rent Estimation]
+      summary: Upsert canton-specific rent estimation config
+      operationId: upsertCantonRentEstimationConfig
+      parameters:
+        - name: canton
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 2
+            maxLength: 2
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                baseRentPerSqmChfMonthly: { type: number }
+                locationCoefPrime: { type: number }
+                locationCoefStandard: { type: number }
+                locationCoefPeriphery: { type: number }
+                ageCoefNew: { type: number }
+                ageCoefMid: { type: number }
+                ageCoefOld: { type: number }
+                ageCoefVeryOld: { type: number }
+                energyCoefJson: { type: object }
+                chargesBaseOptimistic: { type: number }
+                chargesBasePessimistic: { type: number }
+                heatingChargeAdjJson: { type: object }
+                serviceChargeAdjElevator: { type: number }
+                serviceChargeAdjConcierge: { type: number }
+                chargesMinClamp: { type: number }
+                chargesMaxClamp: { type: number }
+      responses:
+        '200':
+          description: Updated canton config
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/RentEstimationConfigDTO' }
+        '400':
+          $ref: '#/components/responses/ValidationError'
+
+  /units/{id}/rent-estimate:
+    get:
+      tags: [Rent Estimation]
+      summary: Estimate rent for a single unit
+      operationId: estimateRentForUnit
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Rent estimate with breakdown
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/RentEstimateDTO' }
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: Unit missing required data (livingAreaSqm)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code: { type: string, example: MISSING_DATA }
+                      message: { type: string }
+
+  /rent-estimation/bulk:
+    post:
+      tags: [Rent Estimation]
+      summary: Bulk estimate rent for multiple units
+      operationId: bulkEstimateRent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                unitIds:
+                  type: array
+                  items: { type: string, format: uuid }
+                  maxItems: 200
+                buildingId: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Array of rent estimates
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/RentEstimateDTO' }
+        '400':
+          $ref: '#/components/responses/ValidationError'
+
+  # ── Financial Performance ──────────────────────────────────
+
+  /financials/portfolio-summary:
+    get:
+      tags: [Financials]
+      summary: Get portfolio-level financial summary across all buildings
+      operationId: getPortfolioSummary
+      parameters:
+        - name: from
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+            example: '2026-01-01'
+          description: Period start (inclusive), YYYY-MM-DD
+        - name: to
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+            example: '2026-07-01'
+          description: Period end (exclusive), YYYY-MM-DD
+      responses:
+        '200':
+          description: Portfolio-level financial KPIs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    description: Portfolio summary DTO
+        '400':
+          $ref: '#/components/responses/ValidationError'
+
+  /buildings/{id}/financials:
+    get:
+      tags: [Financials]
+      summary: Get building financial performance for a period
+      operationId: getBuildingFinancials
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+        - name: from
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+            example: '2026-01-01'
+          description: Period start (inclusive), YYYY-MM-DD
+        - name: to
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+            example: '2026-07-01'
+          description: Period end (exclusive), YYYY-MM-DD
+        - name: forceRefresh
+          in: query
+          schema:
+            type: string
+            enum: ['true', 'false']
+            default: 'false'
+          description: If true, recompute all snapshots for the range
+      responses:
+        '200':
+          description: Building financial KPIs and breakdowns
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/BuildingFinancialsDTO' }
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /invoices/{id}/set-expense-category:
+    post:
+      tags: [Financials]
+      summary: Set expense category on an invoice
+      operationId: setInvoiceExpenseCategory
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expenseCategory]
+              properties:
+                expenseCategory: { $ref: '#/components/schemas/ExpenseCategory' }
+      responses:
+        '200':
+          description: Updated invoice with new category
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id: { type: string, format: uuid }
+                      expenseCategory: { $ref: '#/components/schemas/ExpenseCategory' }
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Job-linked invoices cannot be re-categorized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code: { type: string, example: CONFLICT }
+                      message: { type: string }
+
+  # ═══════════════════════════════════════════════════════════
+  # Legal Engine
+  # ═══════════════════════════════════════════════════════════
+
+  /requests/{id}/legal-decision:
+    get:
+      tags: [LegalEngine]
+      summary: Evaluate legal obligations for a maintenance request
+      operationId: evaluateRequestLegalDecision
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Legal decision result
+          content:
+            application/json:
+              schema:
+                type: object
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /rfps:
+    get:
+      tags: [LegalEngine]
+      summary: List RFPs
+      operationId: listRfps
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: integer, default: 20 }
+        - name: offset
+          in: query
+          schema: { type: integer, default: 0 }
+        - name: status
+          in: query
+          schema: { type: string, enum: [DRAFT, OPEN, CLOSED, AWARDED, CANCELLED] }
+      responses:
+        '200':
+          description: Paginated list of RFPs
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /rfps/{id}:
+    get:
+      tags: [LegalEngine]
+      summary: Get RFP by ID
+      operationId: getRfpById
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: RFP details
+          content:
+            application/json:
+              schema:
+                type: object
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /legal/sources:
+    get:
+      tags: [LegalEngine]
+      summary: List legal sources
+      operationId: listLegalSources
+      responses:
+        '200':
+          description: List of legal sources
+          content:
+            application/json:
+              schema:
+                type: object
+    post:
+      tags: [LegalEngine]
+      summary: Create a legal source
+      operationId: createLegalSource
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string }
+                jurisdiction: { type: string, default: CH }
+                url: { type: string, format: uri, nullable: true }
+                updateFrequency: { type: string, nullable: true }
+                fetcherType: { type: string, nullable: true }
+                parserType: { type: string, nullable: true }
+      responses:
+        '201':
+          description: Created legal source
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /legal/variables:
+    get:
+      tags: [LegalEngine]
+      summary: List legal variables with recent versions
+      operationId: listLegalVariables
+      responses:
+        '200':
+          description: List of legal variables
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /legal/rules:
+    get:
+      tags: [LegalEngine]
+      summary: List legal rules with active version
+      operationId: listLegalRules
+      responses:
+        '200':
+          description: List of legal rules
+          content:
+            application/json:
+              schema:
+                type: object
+    post:
+      tags: [LegalEngine]
+      summary: Create a legal rule with initial version
+      operationId: createLegalRule
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [key, ruleType, authority, dslJson, effectiveFrom]
+              properties:
+                key: { type: string }
+                ruleType: { type: string, enum: [MAINTENANCE_OBLIGATION, DEPRECIATION, RENT_INDEXATION, TERMINATION_DEADLINE] }
+                authority: { type: string, enum: [STATUTE, INDUSTRY_STANDARD] }
+                jurisdiction: { type: string, default: CH }
+                canton: { type: string, nullable: true }
+                priority: { type: integer, default: 0 }
+                isActive: { type: boolean, default: true }
+                dslJson: { type: object }
+                citationsJson:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      article: { type: string }
+                      text: { type: string }
+                summary: { type: string }
+                effectiveFrom: { type: string, format: date-time }
+      responses:
+        '201':
+          description: Created legal rule with initial version
+          content:
+            application/json:
+              schema:
+                type: object
+        '409':
+          description: Rule key already exists
+
+  /legal/category-mappings:
+    get:
+      tags: [LegalEngine]
+      summary: List category-to-legal-topic mappings
+      operationId: listCategoryMappings
+      responses:
+        '200':
+          description: List of category mappings
+          content:
+            application/json:
+              schema:
+                type: object
+    post:
+      tags: [LegalEngine]
+      summary: Create a category mapping
+      operationId: createCategoryMapping
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [requestCategory, legalTopic]
+              properties:
+                requestCategory: { type: string }
+                legalTopic: { type: string }
+                isActive: { type: boolean, default: true }
+      responses:
+        '201':
+          description: Created category mapping
+          content:
+            application/json:
+              schema:
+                type: object
+        '409':
+          description: Mapping for this category already exists
+
+  /legal/category-mappings/{id}:
+    put:
+      tags: [LegalEngine]
+      summary: Update a category mapping
+      operationId: updateCategoryMapping
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                legalTopic: { type: string }
+                isActive: { type: boolean }
+      responses:
+        '200':
+          description: Updated category mapping
+          content:
+            application/json:
+              schema:
+                type: object
+        '404':
+          description: Mapping not found
+    delete:
+      tags: [LegalEngine]
+      summary: Delete a category mapping
+      operationId: deleteCategoryMapping
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Mapping deleted
+          content:
+            application/json:
+              schema:
+                type: object
+        '404':
+          description: Mapping not found
+
+  /legal/category-mappings/coverage:
+    get:
+      tags: [LegalEngine]
+      summary: Category mapping coverage analysis
+      operationId: getCategoryMappingCoverage
+      responses:
+        '200':
+          description: Coverage analysis with matched depreciation standards and rules per category
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /legal/depreciation-standards:
+    get:
+      tags: [LegalEngine]
+      summary: List depreciation standards
+      operationId: listDepreciationStandards
+      responses:
+        '200':
+          description: List of depreciation standards
+          content:
+            application/json:
+              schema:
+                type: object
+    post:
+      tags: [LegalEngine]
+      summary: Create a depreciation standard
+      operationId: createDepreciationStandard
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [assetType, topic, usefulLifeMonths]
+              properties:
+                jurisdiction: { type: string, default: CH }
+                canton: { type: string, nullable: true }
+                authority: { type: string, enum: [STATUTE, INDUSTRY_STANDARD], default: INDUSTRY_STANDARD }
+                assetType: { type: string, enum: [APPLIANCE, FIXTURE, FINISH, STRUCTURAL, SYSTEM, OTHER] }
+                topic: { type: string }
+                usefulLifeMonths: { type: integer, minimum: 1 }
+                notes: { type: string, nullable: true }
+                sourceId: { type: string, format: uuid, nullable: true }
+      responses:
+        '201':
+          description: Created depreciation standard
+          content:
+            application/json:
+              schema:
+                type: object
+        '409':
+          description: Standard for this asset/topic/jurisdiction already exists
+
+  /legal/evaluations:
+    get:
+      tags: [LegalEngine]
+      summary: List legal evaluation logs
+      operationId: listLegalEvaluations
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: integer, default: 20 }
+        - name: offset
+          in: query
+          schema: { type: integer, default: 0 }
+      responses:
+        '200':
+          description: Paginated list of evaluation logs
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /assets:
+    get:
+      tags: [LegalEngine]
+      summary: List assets
+      operationId: listAssets
+      parameters:
+        - name: unitId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 50 }
+        - name: offset
+          in: query
+          schema: { type: integer, default: 0 }
+      responses:
+        '200':
+          description: Paginated list of assets
+          content:
+            application/json:
+              schema:
+                type: object
+    post:
+      tags: [LegalEngine]
+      summary: Create an asset
+      operationId: createAsset
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [unitId, type, topic, name]
+              properties:
+                unitId: { type: string, format: uuid }
+                type: { type: string, enum: [APPLIANCE, FIXTURE, FINISH, STRUCTURAL, SYSTEM, OTHER] }
+                topic: { type: string }
+                name: { type: string }
+                assetModelId: { type: string, format: uuid, nullable: true }
+                installedAt: { type: string, format: date-time, nullable: true }
+                lastRenovatedAt: { type: string, format: date-time, nullable: true }
+      responses:
+        '201':
+          description: Created asset
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /legal/ingest:
+    post:
+      tags: [LegalEngine]
+      summary: Trigger manual data ingestion
+      operationId: triggerIngestion
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sourceId: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Ingestion results
+          content:
+            application/json:
+              schema:
+                type: object

@@ -7,6 +7,58 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ==========================================
+// Legal Engine Enums
+// ==========================================
+
+enum LegalAuthority {
+  STATUTE
+  INDUSTRY_STANDARD
+}
+
+enum LegalRuleType {
+  MAINTENANCE_OBLIGATION
+  DEPRECIATION
+  RENT_INDEXATION
+  TERMINATION_DEADLINE
+}
+
+enum LegalObligation {
+  OBLIGATED
+  DISCRETIONARY
+  TENANT_RESPONSIBLE
+  UNKNOWN
+}
+
+enum AssetType {
+  APPLIANCE
+  FIXTURE
+  FINISH
+  STRUCTURAL
+  SYSTEM
+  OTHER
+}
+
+enum RfpStatus {
+  DRAFT
+  OPEN
+  CLOSED
+  AWARDED
+  CANCELLED
+}
+
+enum RfpInviteStatus {
+  INVITED
+  DECLINED
+  RESPONDED
+}
+
+enum LegalSourceStatus {
+  ACTIVE
+  INACTIVE
+  ERROR
+}
+
 model RequestEvent {
   id           String           @id @default(uuid())
   requestId    String
@@ -22,34 +74,42 @@ model RequestEvent {
 }
 
 model Org {
-  id                 String              @id @default(uuid())
-  name               String
-  mode               OrgMode             @default(MANAGED)
-  appliances         Appliance[]
-  approvalRules      ApprovalRule[]
-  assetModels        AssetModel[]
-  billingEntities    BillingEntity[]
-  buildings          Building[]
-  buildingConfigs    BuildingConfig[]
-  contractors        Contractor[]
-  invoices           Invoice[]
-  jobs               Job[]
-  notifications      Notification[]
-  config             OrgConfig?
-  tenants            Tenant[]
-  units              Unit[]
-  unitConfigs        UnitConfig[]
-  users              User[]
-  leases             Lease[]
-  signatureRequests  SignatureRequest[]
-  rentalApplications RentalApplication[]
-  emailOutbox        EmailOutbox[]
+  id                    String                      @id @default(uuid())
+  name                  String
+  mode                  OrgMode                     @default(MANAGED)
+  appliances            Appliance[]
+  approvalRules         ApprovalRule[]
+  assetModels           AssetModel[]
+  billingEntities       BillingEntity[]
+  buildings             Building[]
+  buildingConfigs       BuildingConfig[]
+  contractors           Contractor[]
+  invoices              Invoice[]
+  jobs                  Job[]
+  notifications         Notification[]
+  config                OrgConfig?
+  tenants               Tenant[]
+  units                 Unit[]
+  unitConfigs           UnitConfig[]
+  users                 User[]
+  leases                Lease[]
+  signatureRequests     SignatureRequest[]
+  rentalApplications    RentalApplication[]
+  emailOutbox           EmailOutbox[]
+  rentEstimationConfigs RentEstimationConfig[]
+  financialSnapshots    BuildingFinancialSnapshot[]
+  // Legal engine relations
+  legalEvaluationLogs   LegalEvaluationLog[]
+  legalCategoryMappings LegalCategoryMapping[]
+  assets                Asset[]
+  rfps                  Rfp[]
 }
 
 model OrgConfig {
   id               String @id @default(uuid())
   orgId            String @unique
   autoApproveLimit Int    @default(200)
+  autoLegalRouting Boolean @default(false)
 
   // Landlord party info (for lease)
   landlordName          String?
@@ -100,6 +160,9 @@ model Contractor {
   jobs              Job[]
   requests          Request[]
   events            RequestEvent[]
+  rfpInvites        RfpInvite[]
+  rfpQuotes         RfpQuote[]
+  awardedRfps       Rfp[]          @relation("AwardedContractor")
 }
 
 model Request {
@@ -157,18 +220,30 @@ model Tenant {
 }
 
 model Building {
-  id            String          @id @default(uuid())
-  orgId         String
-  name          String
-  address       String
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
-  isActive      Boolean         @default(true)
-  approvalRules ApprovalRule[]
-  org           Org             @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  config        BuildingConfig?
-  notifications Notification[]
-  units         Unit[]
+  id      String @id @default(uuid())
+  orgId   String
+  name    String
+  address String
+
+  // Rent estimation fields
+  yearBuilt    Int?
+  hasElevator  Boolean @default(false)
+  hasConcierge Boolean @default(false)
+
+  // Legal engine: canton derivation
+  canton          String?
+  cantonDerivedAt DateTime?
+
+  createdAt          DateTime                    @default(now())
+  updatedAt          DateTime                    @updatedAt
+  isActive           Boolean                     @default(true)
+  approvalRules      ApprovalRule[]
+  org                Org                         @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  config             BuildingConfig?
+  notifications      Notification[]
+  units              Unit[]
+  financialSnapshots BuildingFinancialSnapshot[]
+  rfps               Rfp[]
 
   @@index([orgId])
 }
@@ -180,6 +255,8 @@ model BuildingConfig {
   autoApproveLimit          Int?
   emergencyAutoDispatch     Boolean?
   requireOwnerApprovalAbove Int?
+  // RFP policy
+  rfpDefaultInviteCount     Int?     @default(3)
 
   // Rental application policy
   rentalIncomeMultiplier                Float? @default(3)
@@ -225,6 +302,18 @@ model Unit {
   monthlyRentChf    Int?
   monthlyChargesChf Int?
 
+  // Rent estimation fields
+  livingAreaSqm      Float?
+  rooms              Float? // allow 3.5 etc
+  hasBalcony         Boolean            @default(false)
+  hasTerrace         Boolean            @default(false)
+  hasParking         Boolean            @default(false)
+  locationSegment    LocationSegment?
+  lastRenovationYear Int?
+  insulationQuality  InsulationQuality?
+  energyLabel        EnergyLabel?
+  heatingType        HeatingType?
+
   appliances             Appliance[]
   occupancies            Occupancy[]
   requests               Request[]
@@ -234,11 +323,53 @@ model Unit {
   leases                 Lease[]
   rentalApplicationUnits RentalApplicationUnit[]
   ownerSelections        RentalOwnerSelection[]
+  assets                 Asset[]
+  rfps                   Rfp[]
 
   @@unique([buildingId, unitNumber])
   @@index([buildingId])
   @@index([orgId])
   @@index([isVacant])
+}
+
+model RentEstimationConfig {
+  id     String  @id @default(uuid())
+  orgId  String
+  canton String? // e.g. "ZH", "GE"; null = org default
+
+  // Base rent
+  baseRentPerSqmChfMonthly Float @default(20)
+
+  // Location coefficients
+  locationCoefPrime     Float @default(1.30)
+  locationCoefStandard  Float @default(1.00)
+  locationCoefPeriphery Float @default(0.85)
+
+  // Age coefficients
+  ageCoefNew     Float @default(1.10)
+  ageCoefMid     Float @default(1.00)
+  ageCoefOld     Float @default(0.95)
+  ageCoefVeryOld Float @default(0.90)
+
+  // Energy coefficient map (JSON)
+  energyCoefJson Json @default("{\"A\":1.05,\"B\":1.03,\"C\":1.01,\"D\":1.00,\"E\":0.98,\"F\":0.95,\"G\":0.90}")
+
+  // Charges
+  chargesBaseOptimistic     Float @default(0.10)
+  chargesBasePessimistic    Float @default(0.20)
+  heatingChargeAdjJson      Json  @default("{\"HEAT_PUMP\":-0.02,\"DISTRICT\":-0.01,\"GAS\":0,\"OIL\":0.02,\"ELECTRIC\":0.03,\"UNKNOWN\":0}")
+  serviceChargeAdjElevator  Float @default(0.01)
+  serviceChargeAdjConcierge Float @default(0.02)
+  chargesMinClamp           Float @default(0.08)
+  chargesMaxClamp           Float @default(0.25)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  org Org @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([orgId, canton])
+  @@index([orgId])
 }
 
 model Appliance {
@@ -374,6 +505,7 @@ model Invoice {
   job                   Job               @relation(fields: [jobId], references: [id], onDelete: Cascade)
   org                   Org               @relation(fields: [orgId], references: [id], onDelete: Cascade)
   lease                 Lease?            @relation(fields: [leaseId], references: [id], onDelete: SetNull)
+  expenseCategory       ExpenseCategory?
   lineItems             InvoiceLineItem[]
 
   @@unique([orgId, invoiceNumber])
@@ -462,6 +594,17 @@ enum InvoiceStatus {
   ISSUED
 }
 
+enum ExpenseCategory {
+  MAINTENANCE
+  UTILITIES
+  CLEANING
+  INSURANCE
+  TAX
+  ADMIN
+  CAPEX
+  OTHER
+}
+
 enum Role {
   TENANT
   CONTRACTOR
@@ -473,6 +616,7 @@ enum RequestStatus {
   PENDING_REVIEW
   AUTO_APPROVED
   APPROVED
+  RFP_PENDING
   IN_PROGRESS
   COMPLETED
   ASSIGNED
@@ -518,6 +662,7 @@ enum NotificationEventType {
   TENANT_SELECTED
   LEASE_READY_TO_SIGN
   LEASE_SIGNED
+  APPLICATION_SUBMITTED
 }
 
 // ==========================================
@@ -709,6 +854,9 @@ model Lease {
   terminationReason String?
   terminationNotice String?
   archivedAt        DateTime?
+
+  // Soft delete
+  deletedAt DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -945,4 +1093,312 @@ model EmailOutbox {
 
   @@index([orgId])
   @@index([status])
+}
+
+// ==========================================
+// Rent Estimation Enums
+// ==========================================
+
+enum LocationSegment {
+  PRIME
+  STANDARD
+  PERIPHERY
+}
+
+enum InsulationQuality {
+  UNKNOWN
+  POOR
+  AVERAGE
+  GOOD
+  EXCELLENT
+}
+
+enum EnergyLabel {
+  A
+  B
+  C
+  D
+  E
+  F
+  G
+}
+
+enum HeatingType {
+  HEAT_PUMP
+  DISTRICT
+  GAS
+  OIL
+  ELECTRIC
+  UNKNOWN
+}
+
+// ==========================================
+// BuildingFinancialSnapshot (monthly cache)
+// ==========================================
+model BuildingFinancialSnapshot {
+  id         String @id @default(uuid())
+  orgId      String
+  buildingId String
+
+  periodStart DateTime
+  periodEnd   DateTime
+
+  earnedIncomeCents    Int
+  projectedIncomeCents Int
+
+  expensesTotalCents    Int
+  maintenanceTotalCents Int
+  capexTotalCents       Int
+  operatingTotalCents   Int
+
+  netIncomeCents          Int
+  netOperatingIncomeCents Int
+
+  activeUnitsCount Int
+
+  computedAt DateTime
+  createdAt  DateTime @default(now())
+
+  org      Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  building Building @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+
+  @@unique([orgId, buildingId, periodStart, periodEnd])
+  @@index([orgId])
+  @@index([buildingId])
+  @@index([periodStart, periodEnd])
+}
+
+// ==========================================
+// Legal Engine Models
+// ==========================================
+
+model LegalSource {
+  id              String            @id @default(uuid())
+  name            String
+  jurisdiction    String            @default("CH")
+  url             String?
+  updateFrequency String?
+  fetcherType     String?
+  parserType      String?
+  status          LegalSourceStatus @default(ACTIVE)
+  lastCheckedAt   DateTime?
+  lastSuccessAt   DateTime?
+  lastError       String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  variableVersions      LegalVariableVersion[]
+  depreciationStandards DepreciationStandard[]
+
+  @@index([jurisdiction])
+  @@index([status])
+}
+
+model LegalVariable {
+  id           String   @id @default(uuid())
+  key          String
+  jurisdiction String   @default("CH")
+  canton       String?
+  unit         String?
+  description  String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  versions LegalVariableVersion[]
+
+  @@unique([key, jurisdiction, canton])
+  @@index([jurisdiction])
+}
+
+model LegalVariableVersion {
+  id            String    @id @default(uuid())
+  variableId    String
+  effectiveFrom DateTime
+  effectiveTo   DateTime?
+  valueJson     Json
+  sourceId      String?
+  fetchedAt     DateTime?
+  createdAt     DateTime  @default(now())
+
+  variable LegalVariable @relation(fields: [variableId], references: [id], onDelete: Cascade)
+  source   LegalSource?  @relation(fields: [sourceId], references: [id], onDelete: SetNull)
+
+  @@index([variableId, effectiveFrom])
+  @@index([sourceId])
+}
+
+model LegalRule {
+  id           String         @id @default(uuid())
+  key          String
+  ruleType     LegalRuleType
+  authority    LegalAuthority
+  jurisdiction String         @default("CH")
+  canton       String?
+  priority     Int            @default(0)
+  isActive     Boolean        @default(true)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  versions LegalRuleVersion[]
+
+  @@unique([key])
+  @@index([ruleType, jurisdiction])
+  @@index([isActive])
+}
+
+model LegalRuleVersion {
+  id            String    @id @default(uuid())
+  ruleId        String
+  effectiveFrom DateTime
+  effectiveTo   DateTime?
+  dslJson       Json
+  citationsJson Json?
+  summary       String?
+  createdAt     DateTime  @default(now())
+
+  rule LegalRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+
+  @@index([ruleId, effectiveFrom])
+}
+
+model LegalEvaluationLog {
+  id                        String   @id @default(uuid())
+  orgId                     String
+  buildingId                String?
+  unitId                    String?
+  requestId                 String?
+  contextJson               Json
+  contextHash               String
+  resultJson                Json
+  matchedRuleVersionIdsJson Json?
+  createdAt                 DateTime @default(now())
+
+  org Org @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@index([orgId])
+  @@index([requestId])
+  @@index([contextHash])
+}
+
+model LegalCategoryMapping {
+  id              String  @id @default(uuid())
+  orgId           String?
+  requestCategory String
+  legalTopic      String
+  isActive        Boolean @default(true)
+
+  org Org? @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([orgId, requestCategory])
+  @@index([requestCategory])
+  @@index([isActive])
+}
+
+// ==========================================
+// Asset & Depreciation Models
+// ==========================================
+
+model Asset {
+  id              String    @id @default(uuid())
+  orgId           String
+  unitId          String
+  type            AssetType
+  topic           String
+  name            String
+  assetModelId    String?
+  installedAt     DateTime?
+  lastRenovatedAt DateTime?
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  org  Org  @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  unit Unit @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  @@index([orgId])
+  @@index([unitId])
+  @@index([type, topic])
+}
+
+model DepreciationStandard {
+  id               String         @id @default(uuid())
+  jurisdiction     String         @default("CH")
+  canton           String?
+  authority        LegalAuthority @default(INDUSTRY_STANDARD)
+  assetType        AssetType
+  topic            String
+  usefulLifeMonths Int
+  notes            String?
+  sourceId         String?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  source LegalSource? @relation(fields: [sourceId], references: [id], onDelete: SetNull)
+
+  @@unique([jurisdiction, canton, assetType, topic])
+  @@index([assetType, topic])
+}
+
+// ==========================================
+// RFP (Request for Proposal) Models
+// ==========================================
+
+model Rfp {
+  id                  String          @id @default(uuid())
+  orgId               String
+  buildingId          String
+  unitId              String?
+  requestId           String?
+  category            String
+  legalObligation     LegalObligation @default(UNKNOWN)
+  status              RfpStatus       @default(DRAFT)
+  inviteCount         Int             @default(3)
+  deadlineAt          DateTime?
+  awardedContractorId String?
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+
+  org               Org         @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  building          Building    @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+  unit              Unit?       @relation(fields: [unitId], references: [id], onDelete: SetNull)
+  awardedContractor Contractor? @relation("AwardedContractor", fields: [awardedContractorId], references: [id], onDelete: SetNull)
+  invites           RfpInvite[]
+  quotes            RfpQuote[]
+
+  @@index([orgId])
+  @@index([buildingId])
+  @@index([requestId])
+  @@index([status])
+}
+
+model RfpInvite {
+  id           String          @id @default(uuid())
+  rfpId        String
+  contractorId String
+  status       RfpInviteStatus @default(INVITED)
+  createdAt    DateTime        @default(now())
+
+  rfp        Rfp        @relation(fields: [rfpId], references: [id], onDelete: Cascade)
+  contractor Contractor @relation(fields: [contractorId], references: [id], onDelete: Cascade)
+
+  @@unique([rfpId, contractorId])
+  @@index([rfpId])
+  @@index([contractorId])
+}
+
+model RfpQuote {
+  id           String   @id @default(uuid())
+  rfpId        String
+  contractorId String
+  amountCents  Int
+  notes        String?
+  submittedAt  DateTime @default(now())
+  createdAt    DateTime @default(now())
+
+  rfp        Rfp        @relation(fields: [rfpId], references: [id], onDelete: Cascade)
+  contractor Contractor @relation(fields: [contractorId], references: [id], onDelete: Cascade)
+
+  @@unique([rfpId, contractorId])
+  @@index([rfpId])
+  @@index([contractorId])
 }

@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import AppShell from "../../components/AppShell";
 import ContractorPicker from "../../components/ContractorPicker";
 import { formatDate } from "../../lib/format";
+import { authHeaders } from "../../lib/api";
 
 const STATUS_TABS = [
   { key: "ALL", label: "All" },
@@ -11,13 +12,6 @@ const STATUS_TABS = [
   { key: "COMPLETED", label: "Completed" },
   { key: "INVOICED", label: "Invoiced" },
 ];
-
-function authHeaders() {
-  if (typeof window === "undefined") return {};
-  const token = localStorage.getItem("authToken");
-  return token ? { Authorization: `Bearer ${token}` } : {};
-}
-
 export default function ContractorJobs() {
   const router = useRouter();
   const [jobs, setJobs] = useState([]);

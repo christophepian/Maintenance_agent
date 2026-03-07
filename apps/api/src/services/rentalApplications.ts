@@ -132,6 +132,8 @@ export interface RentalApplicationSummaryDTO {
     scoreTotal?: number;
     confidenceScore?: number;
     disqualified: boolean;
+    disqualifiedReasons?: any;
+    overrideReason?: string;
     rank?: number;
   }[];
 }
@@ -273,6 +275,8 @@ function mapApplicationToSummaryDTO(app: any): RentalApplicationSummaryDTO {
       scoreTotal: au.scoreTotal ?? undefined,
       confidenceScore: au.confidenceScore ?? undefined,
       disqualified: au.disqualified,
+      disqualifiedReasons: au.disqualifiedReasons ?? undefined,
+      overrideReason: au.managerOverrideReason ?? undefined,
       rank: au.rank ?? undefined,
     })),
   };
@@ -517,6 +521,30 @@ export async function submitRentalApplication(
     }
   }
 
+  // Notify managers and owners of the new application
+  try {
+    const primaryApplicant = app.applicants.find((a: any) => a.role === "PRIMARY") || app.applicants[0];
+    const applicantName = primaryApplicant
+      ? `${(primaryApplicant as any).firstName} ${(primaryApplicant as any).lastName}`
+      : "Unknown";
+    const unitNumbers = (app.applicationUnits as any[]).map(
+      (au: any) => au.unit?.unitNumber || au.unitId.slice(0, 8),
+    );
+    const firstUnit = (app.applicationUnits as any[])[0];
+    const buildingId = firstUnit?.unit?.buildingId || firstUnit?.unit?.building?.id;
+
+    const { notifyApplicationSubmitted } = await import("./notifications");
+    await notifyApplicationSubmitted(
+      applicationId,
+      app.orgId,
+      applicantName,
+      unitNumbers,
+      buildingId,
+    );
+  } catch (notifErr) {
+    console.error("[RENTAL] Application notification failed (non-critical):", notifErr);
+  }
+
   // Re-fetch with full includes for the response
   const result = await prisma.rentalApplication.findUnique({
     where: { id: applicationId },
@@ -599,11 +627,11 @@ export async function listApplicationsForUnit(
   unitId: string,
   view: "summary" | "full" = "summary",
 ): Promise<RentalApplicationSummaryDTO[] | RentalApplicationDTO[]> {
-  // Find all application-unit links for this unit
+  // Find all application-unit links for this unit (only submitted applications)
   const applicationUnits = await prisma.rentalApplicationUnit.findMany({
     where: {
       unitId,
-      application: { orgId },
+      application: { orgId, status: "SUBMITTED" },
     },
     include: {
       application: {
@@ -629,6 +657,8 @@ export async function listApplicationsForUnit(
                     scoreTotal: true,
                     confidenceScore: true,
                     disqualified: true,
+                    disqualifiedReasons: true,
+                    managerOverrideReason: true,
                     rank: true,
                   },
                 },
@@ -678,6 +708,40 @@ export async function adjustEvaluation(
     include: {
       unit: { include: { building: true } },
     },
+  });
+
+  return mapApplicationUnitToDTO(updated);
+}
+
+/**
+ * Owner/Manager overrides disqualification for an application-unit.
+ * Sets disqualified=false and records the override reason.
+ */
+export async function overrideDisqualification(
+  applicationUnitId: string,
+  reason: string,
+): Promise<RentalApplicationUnitDTO> {
+  const au = await prisma.rentalApplicationUnit.findUnique({
+    where: { id: applicationUnitId },
+    include: { unit: { include: { building: true } } },
+  });
+
+  if (!au) throw new Error("APPLICATION_UNIT_NOT_FOUND");
+  if (!au.disqualified) throw new Error("NOT_DISQUALIFIED");
+
+  const updated = await prisma.rentalApplicationUnit.update({
+    where: { id: applicationUnitId },
+    data: {
+      disqualified: false,
+      managerOverrideReason: reason,
+      managerOverrideJson: {
+        type: "disqualification_override",
+        previousReasons: au.disqualifiedReasons,
+        overriddenAt: new Date().toISOString(),
+        reason,
+      },
+    },
+    include: { unit: { include: { building: true } } },
   });
 
   return mapApplicationUnitToDTO(updated);

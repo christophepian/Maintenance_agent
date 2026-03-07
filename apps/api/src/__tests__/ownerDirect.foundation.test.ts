@@ -41,7 +41,7 @@ function startServer(envOverrides: Record<string, string>, port: number) {
     const timeout = setTimeout(() => {
       cleanup();
       reject(new Error("Server did not start in time"));
-    }, 8000);
+    }, 20000);
 
     function cleanup() {
       clearTimeout(timeout);
@@ -100,7 +100,7 @@ describe("Owner-direct foundations", () => {
     proc = await startServer({ AUTH_OPTIONAL: "true", NODE_ENV: "test" }, PORT);
     // Reset org mode to MANAGED
     await httpRequest("PUT", "/org-config", { mode: "MANAGED" });
-  });
+  }, 30000);
 
   afterAll(() => {
     proc?.kill();

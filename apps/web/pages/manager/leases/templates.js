@@ -1,11 +1,59 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/router";
 import AppShell from "../../../components/AppShell";
 import PageShell from "../../../components/layout/PageShell";
 import PageHeader from "../../../components/layout/PageHeader";
 import { formatDate } from "../../../lib/format";
 import PageContent from "../../../components/layout/PageContent";
+import Panel from "../../../components/layout/Panel";
 import Section from "../../../components/layout/Section";
+import UndoToast, { useUndoToast } from "../../../components/ui/UndoToast";
+
+/**
+ * Reusable action dropdown button — renders an "Actions ▾" pill that opens
+ * a positioned dropdown with a list of actions.
+ */
+function ActionDropdown({ actions }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function handleClick(e) {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [open]);
+
+  return (
+    <div ref={ref} className="relative inline-block text-left">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition"
+      >
+        Actions ▾
+      </button>
+      {open && (
+        <div className="absolute right-0 z-20 mt-1 w-48 origin-top-right rounded-lg border border-slate-200 bg-white shadow-lg ring-1 ring-black/5">
+          <div className="py-1">
+            {actions.map((a, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => { setOpen(false); a.onClick(); }}
+                className={"w-full text-left px-4 py-2 text-sm hover:bg-slate-50 transition " + (a.className || "text-slate-700")}
+              >
+                {a.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function LeaseTemplatesPage() {
   const router = useRouter();
@@ -14,6 +62,13 @@ export default function LeaseTemplatesPage() {
   const [selectedBuildingId, setSelectedBuildingId] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const toast = useUndoToast();
+
+  // Buildings that don't yet have a template (one template per building)
+  const availableBuildings = useMemo(() => {
+    const taken = new Set(templates.map((t) => t.templateBuildingId).filter(Boolean));
+    return buildings.filter((b) => !taken.has(b.id));
+  }, [buildings, templates]);
 
   // Create panel state
   const [showCreate, setShowCreate] = useState(false);
@@ -38,8 +93,6 @@ export default function LeaseTemplatesPage() {
     landlordZipCity: "",
     landlordPhone: "",
     landlordEmail: "",
-    objectType: "APPARTEMENT",
-    roomsCount: "",
     noticeRule: "3_MONTHS",
     paymentDueDayOfMonth: "1",
     paymentIban: "",
@@ -139,8 +192,6 @@ export default function LeaseTemplatesPage() {
           landlordZipCity: scratchForm.landlordZipCity.trim(),
           landlordPhone: scratchForm.landlordPhone.trim() || undefined,
           landlordEmail: scratchForm.landlordEmail.trim() || undefined,
-          objectType: scratchForm.objectType,
-          roomsCount: scratchForm.roomsCount || undefined,
           noticeRule: scratchForm.noticeRule,
           paymentDueDayOfMonth: parseInt(scratchForm.paymentDueDayOfMonth) || 1,
           paymentIban: scratchForm.paymentIban.trim() || undefined,
@@ -152,7 +203,7 @@ export default function LeaseTemplatesPage() {
       const json = await res.json();
       if (!res.ok) { setCreateError(json.error?.message || "Failed to create template"); return; }
       setShowCreate(false);
-      setScratchForm({ templateName: "", buildingId: "", landlordName: "", landlordAddress: "", landlordZipCity: "", landlordPhone: "", landlordEmail: "", objectType: "APPARTEMENT", roomsCount: "", noticeRule: "3_MONTHS", paymentDueDayOfMonth: "1", paymentIban: "", referenceRatePercent: "1.75", depositDueRule: "AT_SIGNATURE", includesHouseRules: true });
+      setScratchForm({ templateName: "", buildingId: "", landlordName: "", landlordAddress: "", landlordZipCity: "", landlordPhone: "", landlordEmail: "", noticeRule: "3_MONTHS", paymentDueDayOfMonth: "1", paymentIban: "", referenceRatePercent: "1.75", depositDueRule: "AT_SIGNATURE", includesHouseRules: true });
       fetchTemplates();
     } catch (err) {
       setCreateError(err.message);
@@ -172,6 +223,23 @@ export default function LeaseTemplatesPage() {
         landlordAddress: b.address?.split(",")[0]?.trim() || "",
         landlordZipCity: b.address?.split(",").slice(1).join(",").trim() || "",
       }));
+    }
+  }
+
+  async function handleDeleteTemplate(id, name) {
+    try {
+      const res = await fetch(`/api/lease-templates/${id}`, { method: "DELETE" });
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        throw new Error(json.error?.message || "Failed to delete");
+      }
+      fetchTemplates();
+      toast.show(`Template "${name || "Unnamed"}" deleted`, async () => {
+        await fetch(`/api/lease-templates/${id}/restore`, { method: "POST" });
+        fetchTemplates();
+      });
+    } catch (err) {
+      setError(err.message);
     }
   }
 
@@ -237,10 +305,13 @@ export default function LeaseTemplatesPage() {
                         onChange={(e) => onScratchBuildingChange(e.target.value)}
                         className="w-full border rounded-md px-3 py-2 text-sm">
                         <option value="">Select a building...</option>
-                        {buildings.map((b) => (
+                        {availableBuildings.map((b) => (
                           <option key={b.id} value={b.id}>{b.name} — {b.address}</option>
                         ))}
                       </select>
+                      {availableBuildings.length === 0 && buildings.length > 0 && (
+                        <p className="text-xs text-amber-600 mt-1">All buildings already have a template.</p>
+                      )}
                     </div>
                   </div>
 
@@ -286,25 +357,8 @@ export default function LeaseTemplatesPage() {
                   </div>
 
                   <div className="border-t pt-4">
-                    <h4 className="text-sm font-semibold text-slate-800 mb-3">§2 Object & Terms</h4>
+                    <h4 className="text-sm font-semibold text-slate-800 mb-3">§3–4 Termination & Deposit</h4>
                     <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Object Type</label>
-                        <select value={scratchForm.objectType}
-                          onChange={(e) => setScratchForm((f) => ({ ...f, objectType: e.target.value }))}
-                          className="w-full border rounded-md px-3 py-2 text-sm">
-                          <option value="APPARTEMENT">Apartment</option>
-                          <option value="MAISON">House</option>
-                          <option value="CHAMBRE_MEUBLEE">Furnished Room</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Rooms</label>
-                        <input type="text" value={scratchForm.roomsCount}
-                          onChange={(e) => setScratchForm((f) => ({ ...f, roomsCount: e.target.value }))}
-                          className="w-full border rounded-md px-3 py-2 text-sm"
-                          placeholder="e.g. 3.5" />
-                      </div>
                       <div>
                         <label className="block text-sm font-medium text-slate-700 mb-1">Notice Rule</label>
                         <select value={scratchForm.noticeRule}
@@ -398,10 +452,13 @@ export default function LeaseTemplatesPage() {
                       onChange={(e) => setLeaseForm((f) => ({ ...f, buildingId: e.target.value }))}
                       className="w-full border rounded-md px-3 py-2 text-sm">
                       <option value="">All buildings (global)</option>
-                      {buildings.map((b) => (
+                      {availableBuildings.map((b) => (
                         <option key={b.id} value={b.id}>{b.name} — {b.address}</option>
                       ))}
                     </select>
+                    {availableBuildings.length === 0 && buildings.length > 0 && (
+                      <p className="text-xs text-amber-600 mt-1">All buildings already have a template.</p>
+                    )}
                   </div>
                   <button type="submit" disabled={creating}
                     className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50">
@@ -412,100 +469,72 @@ export default function LeaseTemplatesPage() {
             </Section>
           )}
 
-          {/* Filter by building */}
-          <div className="flex items-center gap-3">
-            <label className="text-sm text-slate-600">Filter by building:</label>
-            <select
-              value={selectedBuildingId}
-              onChange={(e) => setSelectedBuildingId(e.target.value)}
-              className="border rounded-md px-3 py-1.5 text-sm"
-            >
-              <option value="">All buildings</option>
-              {buildings.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
           {/* Templates list */}
-          {loading ? (
-            <p className="text-sm text-slate-500">Loading templates...</p>
-          ) : error ? (
-            <p className="text-sm text-red-600">{error}</p>
-          ) : templates.length === 0 ? (
-            <div className="bg-white rounded-lg border p-8 text-center text-slate-500">
-              <p className="text-lg mb-2">No lease templates found</p>
-              <p className="text-sm">
-                Click &quot;+ Save Lease as Template&quot; to create a reusable
-                template from an existing lease. Templates are used
-                automatically when owners select tenants in the rental pipeline.
-              </p>
-            </div>
-          ) : (
-            <div className="bg-white rounded-lg border overflow-hidden">
-              <table className="w-full text-sm">
-                <thead className="bg-slate-50 border-b">
-                  <tr>
-                    <th className="text-left px-4 py-3 font-medium text-slate-600">
-                      Template Name
-                    </th>
-                    <th className="text-left px-4 py-3 font-medium text-slate-600">
-                      Building
-                    </th>
-                    <th className="text-left px-4 py-3 font-medium text-slate-600">
-                      Net Rent
-                    </th>
-                    <th className="text-left px-4 py-3 font-medium text-slate-600">
-                      Rooms
-                    </th>
-                    <th className="text-left px-4 py-3 font-medium text-slate-600">
-                      Created
-                    </th>
-                    <th className="text-left px-4 py-3 font-medium text-slate-600">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {templates.map((t) => (
-                    <tr
-                      key={t.id}
-                      className="hover:bg-slate-50 transition-colors"
-                    >
-                      <td className="px-4 py-3 font-medium">
-                        {t.templateName || "Unnamed template"}
-                      </td>
-                      <td className="px-4 py-3">
-                        {t.unit?.building?.name || "Global"}
-                      </td>
-                      <td className="px-4 py-3">
-                        {t.netRentChf != null
-                          ? `CHF ${t.netRentChf}.-`
-                          : "—"}
-                      </td>
-                      <td className="px-4 py-3">{t.roomsCount || "—"}</td>
-                      <td className="px-4 py-3">
-                        {formatDate(t.createdAt)}
-                      </td>
-                      <td className="px-4 py-3">
-                        <button
-                          onClick={() =>
-                            router.push(`/manager/leases/${t.id}`)
-                          }
-                          className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                        >
-                          View →
-                        </button>
-                      </td>
+          <Panel
+            title={"Templates" + (templates.length > 0 ? ` (${templates.length})` : "")}
+            actions={
+              <select
+                value={selectedBuildingId}
+                onChange={(e) => setSelectedBuildingId(e.target.value)}
+                className="border border-slate-200 rounded-md px-3 py-1.5 text-sm text-slate-700"
+              >
+                <option value="">All buildings</option>
+                {buildings.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name}
+                  </option>
+                ))}
+              </select>
+            }
+          >
+            {loading ? (
+              <p className="text-sm text-slate-500">Loading templates…</p>
+            ) : error ? (
+              <p className="text-sm text-red-600">{error}</p>
+            ) : templates.length === 0 ? (
+              <p className="text-sm text-slate-500 text-center py-4">No lease templates found. Click &quot;+ New Template&quot; to create one.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-slate-200 text-sm">
+                  <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    <tr>
+                      <th className="px-4 py-3">Template Name</th>
+                      <th className="px-4 py-3">Building</th>
+                      <th className="px-4 py-3">Landlord</th>
+                      <th className="px-4 py-3">Created</th>
+                      <th className="px-4 py-3 text-right">Action</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 bg-white">
+                    {templates.map((t) => (
+                      <tr key={t.id}>
+                        <td className="px-4 py-3 font-medium text-slate-900">
+                          {t.templateName || "Unnamed template"}
+                        </td>
+                        <td className="px-4 py-3 text-slate-700">
+                          {t.unit?.building?.name || "Global"}
+                        </td>
+                        <td className="px-4 py-3 text-slate-700">
+                          {t.landlordName || "—"}
+                        </td>
+                        <td className="px-4 py-3 text-xs text-slate-500">
+                          {formatDate(t.createdAt)}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <ActionDropdown actions={[
+                            { label: "📄 View Template", onClick: () => router.push(`/manager/leases/${t.id}`) },
+                            { label: "🗑️ Delete", onClick: () => handleDeleteTemplate(t.id, t.templateName), className: "text-red-600" },
+                          ]} />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Panel>
         </PageContent>
+        <UndoToast {...toast} />
       </PageShell>
     </AppShell>
   );

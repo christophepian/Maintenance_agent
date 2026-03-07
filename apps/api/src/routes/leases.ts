@@ -3,10 +3,11 @@ import { sendError, sendJson } from "../http/json";
 import { readJson } from "../http/body";
 import { first, getIntParam } from "../http/query";
 import { requireOrgViewer } from "./helpers";
-import { createLease, listLeases, getLease, updateLease, markLeaseReadyToSign, cancelLease, storeLeasePdfReference, storeSignedPdfReference, confirmDeposit, activateLease, terminateLease, archiveLease, createLeaseInvoice, listLeaseInvoices, listLeaseTemplates, createLeaseTemplateFromLease, createBlankLeaseTemplate, createLeaseFromTemplate } from "../services/leases";
+import { createLease, listLeases, getLease, updateLease, markLeaseReadyToSign, cancelLease, storeLeasePdfReference, storeSignedPdfReference, confirmDeposit, activateLease, terminateLease, archiveLease, createLeaseInvoice, listLeaseInvoices, listLeaseTemplates, deleteLeaseTemplate, restoreLeaseTemplate, createLeaseTemplateFromLease, createBlankLeaseTemplate, createLeaseFromTemplate } from "../services/leases";
 import { createSignatureRequest, listSignatureRequests, getSignatureRequest, sendSignatureRequest, markSignatureRequestSigned } from "../services/signatureRequests";
 import { generateLeasePDF } from "../services/leasePDFRenderer";
 import { notifyTenantLeaseReady } from "../services/notifications";
+import { resolveTenantUserId } from "./auth";
 import { CreateLeaseSchema, UpdateLeaseSchema, ReadyToSignSchema } from "../validation/leases";
 
 export function registerLeaseRoutes(router: Router) {
@@ -110,17 +111,15 @@ export function registerLeaseRoutes(router: Router) {
       try {
         const fullLease = await getLease(params.id, orgId);
         if (fullLease?.unitId) {
-          const occupancy = await (await import("../services/prismaClient")).default.occupancy.findFirst({
+          const prismaClient = (await import("../services/prismaClient")).default;
+          const occupancy = await prismaClient.occupancy.findFirst({
             where: { unitId: fullLease.unitId },
             include: { tenant: true },
           });
           if (occupancy?.tenant) {
-            // Find or use the tenant's userId — tenants may have a User record
-            const tenantUser = await (await import("../services/prismaClient")).default.user.findFirst({
-              where: { orgId, role: 'TENANT', email: occupancy.tenant.email || undefined },
-            });
-            const userId = tenantUser?.id || occupancy.tenantId;
-            const unit = await (await import("../services/prismaClient")).default.unit.findUnique({
+            // Use the same resolveTenantUserId that the inbox uses — keeps ids consistent
+            const userId = await resolveTenantUserId(prismaClient, orgId, occupancy.tenantId);
+            const unit = await prismaClient.unit.findUnique({
               where: { id: fullLease.unitId },
               include: { building: true },
             });
@@ -390,6 +389,32 @@ export function registerLeaseRoutes(router: Router) {
     } catch (e: any) {
       if (e.message?.includes("not found")) return sendError(res, 404, "NOT_FOUND", e.message);
       sendError(res, 500, "DB_ERROR", "Failed to create lease template", String(e));
+    }
+  });
+
+  // DELETE /lease-templates/:id
+  router.delete("/lease-templates/:id", async ({ req, res, params, orgId }) => {
+    if (!requireOrgViewer(req, res)) return;
+    try {
+      await deleteLeaseTemplate(params.id, orgId);
+      sendJson(res, 200, { ok: true });
+    } catch (e: any) {
+      if (e.message?.includes("not found")) return sendError(res, 404, "NOT_FOUND", e.message);
+      if (e.message?.includes("not a template")) return sendError(res, 400, "BAD_REQUEST", e.message);
+      sendError(res, 500, "DB_ERROR", "Failed to delete lease template", String(e));
+    }
+  });
+
+  // POST /lease-templates/:id/restore
+  router.post("/lease-templates/:id/restore", async ({ req, res, params, orgId }) => {
+    if (!requireOrgViewer(req, res)) return;
+    try {
+      await restoreLeaseTemplate(params.id, orgId);
+      sendJson(res, 200, { ok: true });
+    } catch (e: any) {
+      if (e.message?.includes("not found")) return sendError(res, 404, "NOT_FOUND", e.message);
+      if (e.message?.includes("not deleted")) return sendError(res, 400, "BAD_REQUEST", e.message);
+      sendError(res, 500, "DB_ERROR", "Failed to restore lease template", String(e));
     }
   });
 

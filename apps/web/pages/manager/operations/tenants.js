@@ -6,6 +6,7 @@ import PageShell from "../../../components/layout/PageShell";
 import PageHeader from "../../../components/layout/PageHeader";
 import PageContent from "../../../components/layout/PageContent";
 import Panel from "../../../components/layout/Panel";
+import { authHeaders } from "../../../lib/api";
 
 export default function ManagerTenantsPage() {
   const router = useRouter();
@@ -23,19 +24,6 @@ export default function ManagerTenantsPage() {
   const [sortKey, setSortKey] = useState("name");
   const [sortDir, setSortDir] = useState("asc");
   const [menuOpenId, setMenuOpenId] = useState(null);
-
-  function authHeaders() {
-    if (typeof window === "undefined") return {};
-    const token = localStorage.getItem("authToken");
-    if (token) return { Authorization: `Bearer ${token}` };
-    const role = localStorage.getItem("role") || "MANAGER";
-    return {
-      "x-dev-role": role,
-      "x-dev-org-id": "default-org",
-      "x-dev-user-id": "dev-user",
-      "x-dev-email": "dev@local",
-    };
-  }
 
   async function loadTenants() {
     setLoading(true);

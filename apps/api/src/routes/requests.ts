@@ -1,160 +1,58 @@
-import { RequestStatus, OrgMode } from "@prisma/client";
+/**
+ * Request Routes (Refactored)
+ *
+ * Routes are thin wrappers: parse → auth → validate → workflow → response.
+ * All orchestration logic lives in workflows/.
+ */
+
+import { RequestStatus } from "@prisma/client";
 import { Router, HandlerContext } from "../http/router";
 import { sendError, sendJson } from "../http/json";
 import { readJson } from "../http/body";
 import { first, getIntParam, getEnumParam } from "../http/query";
 import { getAuthUser, maybeRequireManager, requireRole } from "../authz";
+import { withAuthRequired } from "../http/routeProtection";
 import { requireOwnerAccess, logEvent } from "./helpers";
-import { resolveRequestOrg, assertOrgScope, OrgScopeMismatchError } from "../governance/orgScope";
+import { resolveRequestOrg, assertOrgScope } from "../governance/orgScope";
 import { UpdateRequestStatusSchema } from "../validation/requestStatus";
 import { AssignContractorSchema } from "../validation/requestAssignment";
-import { CreateRequestSchema, CreateRequestInput } from "../validation/requests";
+import { CreateRequestSchema } from "../validation/requests";
 import {
-  updateMaintenanceRequestStatus,
-  assignContractor,
-  unassignContractor,
-  findMatchingContractor,
   listMaintenanceRequests,
   getMaintenanceRequestById,
   listOwnerPendingApprovals,
+  updateMaintenanceRequestStatus,
 } from "../services/maintenanceRequests";
 import type { MaintenanceRequestDTO } from "../services/maintenanceRequests";
 import { updateContractorRequestStatus, getContractorAssignedRequests } from "../services/contractorRequests";
-import { decideRequestStatus, decideRequestStatusWithRules } from "../services/autoApproval";
-import { normalizePhoneToE164 } from "../utils/phoneNormalization";
-import { getTenantByPhone } from "../services/tenants";
-import { getOrgConfig } from "../services/orgConfig";
-import { computeEffectiveConfig } from "../services/buildingConfig";
+import { findMatchingContractor } from "../services/requestAssignment";
 import { workRequestFromRequest } from "../services/adapters/workRequestAdapter";
-import { createJob, getOrCreateJobForRequest } from "../services/jobs";
 
-/* ── Shared: create request (used by POST /requests & POST /work-requests) ── */
+// Workflows
+import { createRequestWorkflow } from "../workflows/createRequestWorkflow";
+import { approveRequestWorkflow } from "../workflows/approveRequestWorkflow";
+import { assignContractorWorkflow } from "../workflows/assignContractorWorkflow";
+import { unassignContractorWorkflow } from "../workflows/unassignContractorWorkflow";
+import { InvalidTransitionError } from "../workflows/transitions";
 
-async function handleCreateRequest(
-  ctx: HandlerContext,
-  asWorkRequest: boolean,
-) {
-  const { req, res, prisma, orgId } = ctx;
-  const raw = await readJson(req);
-  if (raw?.text && !raw?.description) raw.description = raw.text;
+/* ── Helper: build WorkflowContext from HandlerContext ────────── */
 
-  const parsed = CreateRequestSchema.safeParse(raw);
-  if (!parsed.success) return sendError(res, 400, "VALIDATION_ERROR", "Invalid request body", parsed.error.flatten());
-
-  const input: CreateRequestInput = parsed.data;
-  const description = input.description;
-  const category = input.category ? input.category : null;
-  const hasEstimatedCost = typeof input.estimatedCost === "number";
-  const estimatedCost = hasEstimatedCost ? input.estimatedCost : null;
-
-  let contactPhone: string | null = null;
-  if ((input as any).contactPhone) {
-    const normalized = normalizePhoneToE164((input as any).contactPhone);
-    if (!normalized) return sendError(res, 400, "VALIDATION_ERROR", "Invalid contactPhone format");
-    contactPhone = normalized;
-  }
-
-  let tenantId = (input as any).tenantId ?? null;
-  let unitId = (input as any).unitId ?? null;
-  const applianceId = (input as any).applianceId ?? null;
-
-  if (contactPhone && !tenantId) {
-    const tenant = await getTenantByPhone({ phone: contactPhone, orgId });
-    if (tenant) {
-      tenantId = tenant.id;
-      if (!unitId && tenant.unitId) unitId = tenant.unitId;
-    }
-  }
-
-  let status: RequestStatus = RequestStatus.PENDING_REVIEW;
-
-  if (hasEstimatedCost || category) {
-    let unitType: string | null = null;
-    let unitNumber: string | null = null;
-    let buildingId: string | null = null;
-    if (unitId) {
-      const unit = await prisma.unit.findUnique({
-        where: { id: unitId },
-        select: { type: true, unitNumber: true, buildingId: true },
-      });
-      unitType = unit?.type ?? null;
-      unitNumber = unit?.unitNumber ?? null;
-      buildingId = unit?.buildingId ?? null;
-    }
-
-    const effective = await computeEffectiveConfig(prisma, orgId, buildingId ?? undefined);
-    const approvalResult = await decideRequestStatusWithRules(
-      prisma, orgId,
-      { category, estimatedCost, unitType, unitNumber, buildingId, unitId },
-      effective.effectiveAutoApproveLimit,
-      unitId,
-    );
-    status = approvalResult.status;
-
-    if (
-      effective.org.mode === "OWNER_DIRECT" &&
-      estimatedCost !== null && estimatedCost !== undefined &&
-      estimatedCost > effective.effectiveRequireOwnerApprovalAbove
-    ) {
-      status = RequestStatus.PENDING_OWNER_APPROVAL;
-    }
-  }
-
-  const created = await prisma.request.create({
-    data: { description, category, estimatedCost, status, contactPhone, tenantId, unitId, applianceId },
-  });
-
-  if (category) {
-    const matchingContractor = await findMatchingContractor(prisma, orgId, category);
-    if (matchingContractor) await assignContractor(prisma, created.id, matchingContractor.id);
-  }
-
-  const updated = await getMaintenanceRequestById(prisma, created.id);
-
-  if (asWorkRequest) {
-    const response = updated
-      ? workRequestFromRequest(updated)
-      : workRequestFromRequest({
-          ...created, assignedContractor: null, tenant: null, unit: null, appliance: null,
-          createdAt: created.createdAt.toISOString(),
-        } as any);
-    sendJson(res, 201, { data: response });
-  } else {
-    sendJson(res, 201, { data: updated ?? created });
-  }
-}
-
-/* ── Shared: auto-create job after owner approval ────────────── */
-
-async function autoCreateJobIfNeeded(
-  prisma: any, orgId: string, requestId: string, current: any,
-) {
-  const orgConfig = await getOrgConfig(prisma, orgId);
-  if (orgConfig.mode !== OrgMode.OWNER_DIRECT) return;
-
-  const existingJob = await prisma.job.findUnique({ where: { requestId } });
-  if (existingJob) return;
-
-  let contractorId = current.assignedContractorId;
-  if (!contractorId && current.category) {
-    const matching = await findMatchingContractor(prisma, orgId, current.category);
-    if (matching) {
-      contractorId = matching.id;
-      await assignContractor(prisma, requestId, contractorId);
-    }
-  }
-  if (contractorId) {
-    await createJob({ orgId, requestId, contractorId });
-  }
+function wfCtx(ctx: HandlerContext) {
+  const actor = getAuthUser(ctx.req);
+  return {
+    orgId: ctx.orgId,
+    prisma: ctx.prisma,
+    actorUserId: actor?.userId ?? null,
+  };
 }
 
 /* ── Route registration ──────────────────────────────────────── */
 
 export function registerRequestRoutes(router: Router) {
 
-  /* ── Request events ────────────────────────────────────────── */
+  /* ── Request events (unchanged — thin already) ─────────────── */
 
-  router.get("/requests/:id/events", async ({ res, prisma, params, orgId }) => {
+  router.get("/requests/:id/events", withAuthRequired(async ({ res, prisma, params, orgId }) => {
     const resolution = await resolveRequestOrg(prisma, params.id);
     try { assertOrgScope(orgId, resolution); } catch {
       return sendError(res, 404, "NOT_FOUND", "Request not found");
@@ -164,7 +62,7 @@ export function registerRequestRoutes(router: Router) {
       orderBy: { timestamp: "asc" },
     });
     sendJson(res, 200, { data: events });
-  });
+  }));
 
   router.post("/requests/:id/events", async ({ req, res, prisma, params, orgId }) => {
     const resolution = await resolveRequestOrg(prisma, params.id);
@@ -187,7 +85,7 @@ export function registerRequestRoutes(router: Router) {
     sendJson(res, 201, { data: event });
   });
 
-  /* ── Owner approvals ───────────────────────────────────────── */
+  /* ── Owner pending approvals (thin — just query + respond) ── */
 
   router.get("/owner/pending-approvals", async ({ req, res, prisma, query, orgId }) => {
     if (!requireOwnerAccess(req, res)) return;
@@ -196,57 +94,41 @@ export function registerRequestRoutes(router: Router) {
     sendJson(res, 200, { data });
   });
 
-  router.post("/requests/:id/owner-approve", async ({ req, res, prisma, params, orgId }) => {
+  /* ── Owner approve → delegates to approveRequestWorkflow ──── */
+
+  router.post("/requests/:id/owner-approve", async (ctx) => {
+    const { req, res, prisma, params, orgId } = ctx;
     if (!requireOwnerAccess(req, res)) return;
-    const requestId = params.id;
-    // Verify org scope
-    const resolution = await resolveRequestOrg(prisma, requestId);
+
+    // Org scope check
+    const resolution = await resolveRequestOrg(prisma, params.id);
     try { assertOrgScope(orgId, resolution); } catch {
       return sendError(res, 404, "NOT_FOUND", "Request not found");
     }
+
     const raw = await readJson(req);
-    const current = await prisma.request.findUnique({ where: { id: requestId } });
-    if (!current) return sendError(res, 404, "NOT_FOUND", "Request not found");
 
-    // If already approved, just ensure job exists
-    if (current.status === RequestStatus.APPROVED) {
-      try { await autoCreateJobIfNeeded(prisma, orgId, requestId, current); } catch (e) {
-        console.warn("Failed to auto-create job for already-approved request", requestId, e);
+    try {
+      const result = await approveRequestWorkflow(wfCtx(ctx), {
+        requestId: params.id,
+        comment: raw?.comment || null,
+        approvalType: "owner",
+      });
+      sendJson(res, 200, { data: result.dto });
+    } catch (e: any) {
+      if (e instanceof InvalidTransitionError) {
+        return sendError(res, 409, "INVALID_TRANSITION", e.message);
       }
-      const found = await getMaintenanceRequestById(prisma, requestId);
-      return sendJson(res, 200, { data: found });
+      if (e.code === "NOT_FOUND") return sendError(res, 404, "NOT_FOUND", e.message);
+      throw e;
     }
-
-    if (
-      current.status !== RequestStatus.PENDING_OWNER_APPROVAL &&
-      current.status !== RequestStatus.AUTO_APPROVED &&
-      current.status !== RequestStatus.PENDING_REVIEW
-    ) {
-      return sendError(res, 409, "INVALID_TRANSITION", `Cannot owner-approve request from ${current.status}`);
-    }
-
-    const updated = await updateMaintenanceRequestStatus(prisma, requestId, RequestStatus.APPROVED);
-    if (!updated) return sendError(res, 404, "NOT_FOUND", "Request not found");
-
-    try { await autoCreateJobIfNeeded(prisma, orgId, requestId, current); } catch (err: any) {
-      if (!String(err?.message || err).includes("already exists")) {
-        console.warn("Failed to auto-create job for request", requestId, err);
-      }
-    }
-
-    const actor = getAuthUser(req);
-    await logEvent(prisma, {
-      orgId, type: "OWNER_APPROVED", actorUserId: actor?.userId,
-      requestId, payload: { comment: raw?.comment || null },
-    });
-
-    sendJson(res, 200, { data: updated });
   });
+
+  /* ── Owner reject (thin — simple status update) ─────────────── */
 
   router.post("/requests/:id/owner-reject", async ({ req, res, prisma, params, orgId }) => {
     if (!requireOwnerAccess(req, res)) return;
     const requestId = params.id;
-    // Verify org scope
     const resolution = await resolveRequestOrg(prisma, requestId);
     try { assertOrgScope(orgId, resolution); } catch {
       return sendError(res, 404, "NOT_FOUND", "Request not found");
@@ -274,8 +156,9 @@ export function registerRequestRoutes(router: Router) {
 
   /* ── Status update ─────────────────────────────────────────── */
 
-  router.patch("/requests/:id/status", async ({ req, res, prisma, query, params, orgId }) => {
-    // Verify org scope
+  router.patch("/requests/:id/status", async (ctx) => {
+    const { req, res, prisma, query, params, orgId } = ctx;
+
     const resolution = await resolveRequestOrg(prisma, params.id);
     try { assertOrgScope(orgId, resolution); } catch {
       return sendError(res, 404, "NOT_FOUND", "Request not found");
@@ -288,6 +171,7 @@ export function registerRequestRoutes(router: Router) {
     const input = parsed.data;
     const contractorId = first(query, "contractorId") || null;
 
+    // Contractor-scoped status update (unchanged — different flow)
     if (contractorId) {
       if (!requireRole(req, res, "CONTRACTOR")) return;
       const result = await updateContractorRequestStatus(
@@ -298,22 +182,22 @@ export function registerRequestRoutes(router: Router) {
       return sendJson(res, 200, { data: result.data, message: result.message });
     }
 
+    // Manager approval → delegate to workflow
     if (!maybeRequireManager(req, res)) return;
-    const current = await prisma.request.findUnique({ where: { id: params.id } });
-    if (!current) return sendError(res, 404, "NOT_FOUND", "Request not found");
 
-    if (current.status === RequestStatus.APPROVED) {
-      const found = await getMaintenanceRequestById(prisma, params.id);
-      return sendJson(res, 200, { data: found });
+    try {
+      const result = await approveRequestWorkflow(wfCtx(ctx), {
+        requestId: params.id,
+        approvalType: "manager",
+      });
+      sendJson(res, 200, { data: result.dto });
+    } catch (e: any) {
+      if (e instanceof InvalidTransitionError) {
+        return sendError(res, 409, "INVALID_TRANSITION", e.message);
+      }
+      if (e.code === "NOT_FOUND") return sendError(res, 404, "NOT_FOUND", e.message);
+      throw e;
     }
-
-    if (current.status !== RequestStatus.PENDING_REVIEW) {
-      return sendError(res, 409, "INVALID_TRANSITION", `Cannot change status from ${current.status} to ${input.status}`);
-    }
-
-    const updated = await updateMaintenanceRequestStatus(prisma, params.id, RequestStatus.APPROVED);
-    if (!updated) return sendError(res, 404, "NOT_FOUND", "Request not found");
-    sendJson(res, 200, { data: updated });
   });
 
   /* ── DEV: delete all requests ──────────────────────────────── */
@@ -324,49 +208,57 @@ export function registerRequestRoutes(router: Router) {
     sendJson(res, 200, { data: { deleted: result.count } });
   });
 
-  /* ── Assignment ────────────────────────────────────────────── */
+  /* ── Assignment → delegates to assignContractorWorkflow ────── */
 
-  router.post("/requests/:id/assign", async ({ req, res, prisma, params, orgId }) => {
+  router.post("/requests/:id/assign", async (ctx) => {
+    const { req, res, prisma, params, orgId } = ctx;
     if (!maybeRequireManager(req, res)) return;
-    // Verify org scope
+
     const resolution = await resolveRequestOrg(prisma, params.id);
     try { assertOrgScope(orgId, resolution); } catch {
       return sendError(res, 404, "NOT_FOUND", "Request not found");
     }
+
     const raw = await readJson(req);
     const parsed = AssignContractorSchema.safeParse(raw);
     if (!parsed.success) return sendError(res, 400, "VALIDATION_ERROR", "Invalid assignment data", parsed.error.flatten());
 
-    const result = await assignContractor(prisma, params.id, parsed.data.contractorId);
-    if (!result.success) return sendError(res, 400, "ASSIGNMENT_FAILED", result.message);
-
-    // Auto-create a Job so the contractor sees it in their jobs list
     try {
-      await getOrCreateJobForRequest(orgId, params.id, parsed.data.contractorId);
+      const result = await assignContractorWorkflow(wfCtx(ctx), {
+        requestId: params.id,
+        contractorId: parsed.data.contractorId,
+      });
+      sendJson(res, 200, { data: result.dto, message: result.message });
     } catch (e: any) {
-      // Non-fatal: assignment succeeded, but job creation failed (log and continue)
-      console.warn(`[ASSIGN] Job auto-creation failed for request ${params.id}:`, e?.message);
+      if (e.code === "ASSIGNMENT_FAILED") return sendError(res, 400, "ASSIGNMENT_FAILED", e.message);
+      if (e.code === "NOT_FOUND") return sendError(res, 404, "NOT_FOUND", e.message);
+      throw e;
     }
-
-    const updated = await getMaintenanceRequestById(prisma, params.id);
-    if (!updated) return sendError(res, 404, "NOT_FOUND", "Request not found");
-    sendJson(res, 200, { data: updated, message: result.message });
   });
 
-  router.delete("/requests/:id/assign", async ({ req, res, prisma, params, orgId }) => {
+  /* ── Unassign → delegates to unassignContractorWorkflow ────── */
+
+  router.delete("/requests/:id/assign", async (ctx) => {
+    const { req, res, prisma, params, orgId } = ctx;
     if (!maybeRequireManager(req, res)) return;
-    // Verify org scope
+
     const resolution = await resolveRequestOrg(prisma, params.id);
     try { assertOrgScope(orgId, resolution); } catch {
       return sendError(res, 404, "NOT_FOUND", "Request not found");
     }
-    const result = await unassignContractor(prisma, params.id);
-    const updated = await getMaintenanceRequestById(prisma, params.id);
-    if (!updated) return sendError(res, 404, "NOT_FOUND", "Request not found");
-    sendJson(res, 200, { data: updated, message: result.message });
+
+    try {
+      const result = await unassignContractorWorkflow(wfCtx(ctx), {
+        requestId: params.id,
+      });
+      sendJson(res, 200, { data: result.dto, message: result.message });
+    } catch (e: any) {
+      if (e.code === "NOT_FOUND") return sendError(res, 404, "NOT_FOUND", e.message);
+      throw e;
+    }
   });
 
-  /* ── Suggest contractor ────────────────────────────────────── */
+  /* ── Suggest contractor (thin — pure query) ────────────────── */
 
   router.get("/requests/:id/suggest-contractor", async ({ res, prisma, params, orgId }) => {
     const resolution = await resolveRequestOrg(prisma, params.id);
@@ -387,10 +279,9 @@ export function registerRequestRoutes(router: Router) {
     sendJson(res, 200, { data: contractor });
   });
 
-  /* ── Single request ────────────────────────────────────────── */
+  /* ── Single request (thin — pure query) ────────────────────── */
 
-  router.get("/requests/:id", async ({ res, prisma, params, orgId }) => {
-    // Verify org ownership
+  router.get("/requests/:id", withAuthRequired(async ({ res, prisma, params, orgId }) => {
     const resolution = await resolveRequestOrg(prisma, params.id);
     try { assertOrgScope(orgId, resolution); } catch {
       return sendError(res, 404, "NOT_FOUND", "Request not found");
@@ -398,12 +289,11 @@ export function registerRequestRoutes(router: Router) {
     const found = await getMaintenanceRequestById(prisma, params.id);
     if (!found) return sendError(res, 404, "NOT_FOUND", "Request not found");
     sendJson(res, 200, { data: found });
-  });
+  }));
 
-  /* ── Contractor requests ───────────────────────────────────── */
+  /* ── Contractor requests (thin — pure query) ───────────────── */
 
   router.get("/requests/contractor/:contractorId", async ({ res, prisma, params, orgId }) => {
-    // Verify contractor belongs to caller's org
     const c = await prisma.contractor.findUnique({ where: { id: params.contractorId }, select: { orgId: true } });
     if (!c || c.orgId !== orgId) return sendError(res, 404, "NOT_FOUND", "Contractor not found");
     const requests = await getContractorAssignedRequests(prisma, params.contractorId);
@@ -419,29 +309,29 @@ export function registerRequestRoutes(router: Router) {
     sendJson(res, 200, { data: requests });
   });
 
-  /* ── List requests ─────────────────────────────────────────── */
+  /* ── List requests (thin — pure query) ─────────────────────── */
 
-  router.get("/requests", async ({ res, prisma, query, orgId }) => {
+  router.get("/requests", withAuthRequired(async ({ res, prisma, query, orgId }) => {
     const limit = getIntParam(query, "limit", { defaultValue: 50, min: 1, max: 200 });
     const offset = getIntParam(query, "offset", { defaultValue: 0, min: 0, max: 1_000_000 });
     const order = getEnumParam(query, "order", ["asc", "desc"] as const, "asc");
     const view = first(query, "view") as "summary" | "full" | undefined;
     const data = await listMaintenanceRequests(prisma, orgId, { limit, offset, order, view });
     sendJson(res, 200, { data });
-  });
+  }));
 
-  /* ── Work requests (aliases) ───────────────────────────────── */
+  /* ── Work requests (aliases — thin) ────────────────────────── */
 
-  router.get("/work-requests", async ({ res, prisma, query, orgId }) => {
+  router.get("/work-requests", withAuthRequired(async ({ res, prisma, query, orgId }) => {
     const limit = getIntParam(query, "limit", { defaultValue: 50, min: 1, max: 200 });
     const offset = getIntParam(query, "offset", { defaultValue: 0, min: 0, max: 1_000_000 });
     const order = getEnumParam(query, "order", ["asc", "desc"] as const, "asc");
     const data = (await listMaintenanceRequests(prisma, orgId, { limit, offset, order, view: "full" })) as MaintenanceRequestDTO[];
     const workRequests = data.map(workRequestFromRequest);
     sendJson(res, 200, { data: workRequests });
-  });
+  }));
 
-  router.get("/work-requests/:id", async ({ res, prisma, params, orgId }) => {
+  router.get("/work-requests/:id", withAuthRequired(async ({ res, prisma, params, orgId }) => {
     const resolution = await resolveRequestOrg(prisma, params.id);
     try { assertOrgScope(orgId, resolution); } catch {
       return sendError(res, 404, "NOT_FOUND", "Work request not found");
@@ -449,9 +339,9 @@ export function registerRequestRoutes(router: Router) {
     const request = await getMaintenanceRequestById(prisma, params.id);
     if (!request) return sendError(res, 404, "NOT_FOUND", "Work request not found");
     sendJson(res, 200, { data: workRequestFromRequest(request) });
-  });
+  }));
 
-  /* ── Create request / work-request ─────────────────────────── */
+  /* ── Create request → delegates to createRequestWorkflow ──── */
 
   router.post("/requests", async (ctx) => {
     try {
@@ -460,6 +350,7 @@ export function registerRequestRoutes(router: Router) {
       const msg = String(e?.message || e);
       if (msg === "Invalid JSON") return sendError(ctx.res, 400, "INVALID_JSON", "Invalid JSON");
       if (msg === "Body too large") return sendError(ctx.res, 413, "BODY_TOO_LARGE", "Request body too large");
+      if (e.code === "VALIDATION_ERROR") return sendError(ctx.res, 400, "VALIDATION_ERROR", e.message);
       sendError(ctx.res, 500, "UNKNOWN_ERROR", "Unexpected error", String(e));
     }
   });
@@ -471,7 +362,38 @@ export function registerRequestRoutes(router: Router) {
       const msg = String(e?.message || e);
       if (msg === "Invalid JSON") return sendError(ctx.res, 400, "INVALID_JSON", "Invalid JSON");
       if (msg === "Body too large") return sendError(ctx.res, 413, "BODY_TOO_LARGE", "Request body too large");
+      if (e.code === "VALIDATION_ERROR") return sendError(ctx.res, 400, "VALIDATION_ERROR", e.message);
       sendError(ctx.res, 500, "UNKNOWN_ERROR", "Unexpected error", String(e));
     }
   });
+}
+
+/* ── Thin create handler: parse → validate → workflow → respond ── */
+
+async function handleCreateRequest(ctx: HandlerContext, asWorkRequest: boolean) {
+  const { req, res, prisma, orgId } = ctx;
+
+  // Parse body
+  const raw = await readJson(req);
+  if (raw?.text && !raw?.description) raw.description = raw.text;
+
+  // Validate
+  const parsed = CreateRequestSchema.safeParse(raw);
+  if (!parsed.success) return sendError(res, 400, "VALIDATION_ERROR", "Invalid request body", parsed.error.flatten());
+
+  // Delegate to workflow
+  const result = await createRequestWorkflow(wfCtx(ctx), {
+    input: parsed.data,
+    contactPhone: (raw as any).contactPhone ?? null,
+    tenantId: (raw as any).tenantId ?? null,
+    unitId: (raw as any).unitId ?? null,
+    applianceId: (raw as any).applianceId ?? null,
+  });
+
+  // Map response format
+  if (asWorkRequest) {
+    sendJson(res, 201, { data: workRequestFromRequest(result.dto) });
+  } else {
+    sendJson(res, 201, { data: result.dto });
+  }
 }

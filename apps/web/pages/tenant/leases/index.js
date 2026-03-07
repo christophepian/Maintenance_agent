@@ -29,18 +29,20 @@ export default function TenantLeasesPage() {
     if (typeof window === "undefined") return;
     const raw = localStorage.getItem("tenantSession");
     if (!raw) {
+      setLoading(false);
       router.push("/tenant");
       return;
     }
     try {
       setSession(JSON.parse(raw));
     } catch {
+      setLoading(false);
       router.push("/tenant");
     }
   }, [router]);
 
   const fetchLeases = useCallback(async () => {
-    if (!session?.tenant?.id) return;
+    if (!session?.tenant?.id) { setLoading(false); return; }
     setLoading(true);
     setError(null);
     try {
@@ -62,6 +64,17 @@ export default function TenantLeasesPage() {
 
   useEffect(() => {
     fetchLeases();
+    // Poll every 15 seconds for new leases
+    const interval = setInterval(fetchLeases, 15_000);
+    // Also refresh when tab becomes visible again
+    function handleVisibility() {
+      if (document.visibilityState === "visible") fetchLeases();
+    }
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
   }, [fetchLeases]);
 
   function formatDate(iso) {

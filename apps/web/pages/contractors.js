@@ -7,6 +7,7 @@ import PageShell from "../components/layout/PageShell";
 import PageHeader from "../components/layout/PageHeader";
 import PageContent from "../components/layout/PageContent";
 import Panel from "../components/layout/Panel";
+import { authHeaders } from "../lib/api";
 
 export default function ContractorsPage() {
   const router = useRouter();
@@ -34,19 +35,6 @@ export default function ContractorsPage() {
   const [sortKey, setSortKey] = React.useState("name");
   const [sortDir, setSortDir] = React.useState("asc");
   const categories = ALLOWED_CATEGORIES;
-
-  function authHeaders() {
-    if (typeof window === "undefined") return {};
-    const token = localStorage.getItem("authToken");
-    if (token) return { Authorization: `Bearer ${token}` };
-    const role = localStorage.getItem("role") || "MANAGER";
-    return {
-      "x-dev-role": role,
-      "x-dev-org-id": "default-org",
-      "x-dev-user-id": "dev-user",
-      "x-dev-email": "dev@local",
-    };
-  }
 
   React.useEffect(() => {
     fetchContractors();

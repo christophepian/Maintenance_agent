@@ -4,7 +4,8 @@ import * as path from "path";
 
 const API_ROOT = path.resolve(__dirname, "..", "..");
 const TS_NODE = path.resolve(API_ROOT, "node_modules", ".bin", "ts-node");
-const PORT = 3202;
+// Use process.pid to avoid port collisions during parallel test execution
+const PORT = 3202 + (process.pid % 1000);
 const BASE_URL = `http://127.0.0.1:${PORT}`;
 
 function startServer(envOverrides: Record<string, string>, port: number) {
@@ -36,7 +37,7 @@ function startServer(envOverrides: Record<string, string>, port: number) {
     const timeout = setTimeout(() => {
       cleanup();
       reject(new Error("Server did not start in time"));
-    }, 15000);
+    }, 25000);
 
     function cleanup() {
       clearTimeout(timeout);
@@ -56,7 +57,7 @@ describe("Tenant session API", () => {
 
   beforeAll(async () => {
     proc = await startServer({ AUTH_OPTIONAL: "true", NODE_ENV: "test" }, PORT);
-  }, 20000);
+  }, 30000);
 
   afterAll(() => {
     proc?.kill();

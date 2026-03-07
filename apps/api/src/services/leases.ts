@@ -866,12 +866,13 @@ export async function listLeaseInvoices(leaseId: string, orgId: string): Promise
  * List lease templates for a building.
  * Templates are leases with isTemplate=true that can be cloned
  * when creating a new lease from a rental application.
+ * Soft-deleted templates (deletedAt != null) are excluded.
  */
 export async function listLeaseTemplates(
   orgId: string,
   buildingId?: string,
 ): Promise<LeaseDTO[]> {
-  const where: any = { orgId, isTemplate: true };
+  const where: any = { orgId, isTemplate: true, deletedAt: null };
   if (buildingId) where.templateBuildingId = buildingId;
 
   const templates = await prisma.lease.findMany({
@@ -881,6 +882,45 @@ export async function listLeaseTemplates(
   });
 
   return templates.map(mapLeaseToDTO);
+}
+
+/**
+ * Soft-delete a lease template.
+ * Only templates (isTemplate=true) can be deleted.
+ * Sets deletedAt timestamp instead of removing the record,
+ * allowing undo within a grace period.
+ */
+export async function deleteLeaseTemplate(
+  templateId: string,
+  orgId: string,
+): Promise<void> {
+  const template = await prisma.lease.findUnique({ where: { id: templateId } });
+  if (!template || template.orgId !== orgId) throw new Error('Template not found');
+  if (!template.isTemplate) throw new Error('Lease is not a template — cannot delete');
+
+  await prisma.lease.update({
+    where: { id: templateId },
+    data: { deletedAt: new Date() },
+  });
+}
+
+/**
+ * Restore a soft-deleted lease template (undo delete).
+ * Clears the deletedAt timestamp.
+ */
+export async function restoreLeaseTemplate(
+  templateId: string,
+  orgId: string,
+): Promise<void> {
+  const template = await prisma.lease.findUnique({ where: { id: templateId } });
+  if (!template || template.orgId !== orgId) throw new Error('Template not found');
+  if (!template.isTemplate) throw new Error('Lease is not a template');
+  if (!template.deletedAt) throw new Error('Template is not deleted');
+
+  await prisma.lease.update({
+    where: { id: templateId },
+    data: { deletedAt: null },
+  });
 }
 
 /**
@@ -1163,6 +1203,16 @@ export async function createLeaseFromTemplate(
     },
     include: LEASE_INCLUDE,
   });
+
+  // Auto-provision Tenant + Occupancy so the tenant can log in immediately
+  if (lease.tenantPhone) {
+    try {
+      await ensureTenantAndOccupancy(lease);
+      console.log(`[LEASE] Auto-provisioned tenant from template lease ${lease.id}`);
+    } catch (e) {
+      console.error(`[LEASE] Auto-provision tenant failed (non-critical):`, e);
+    }
+  }
 
   return mapLeaseToDTO(lease);
 }

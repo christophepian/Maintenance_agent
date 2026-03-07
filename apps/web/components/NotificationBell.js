@@ -1,6 +1,7 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/router";
 import { formatDateTime } from "../lib/format";
+import { authHeaders as getAuthHeaders } from "../lib/api";
 
 export default function NotificationBell({ role }) {
   const [unreadCount, setUnreadCount] = useState(0);
@@ -9,33 +10,51 @@ export default function NotificationBell({ role }) {
   const [loading, setLoading] = useState(false);
   const panelRef = useRef(null);
 
-  // Get auth headers
-  const getAuthHeaders = () => {
-    if (typeof window === "undefined") return {};
-    const token = localStorage.getItem("authToken");
-    return token ? { authorization: `Bearer ${token}` } : {};
+  const isTenant = role === "TENANT";
+
+  // Get tenant session from localStorage
+  const getTenantId = () => {
+    if (typeof window === "undefined") return null;
+    try {
+      const raw = localStorage.getItem("tenantSession");
+      if (!raw) return null;
+      return JSON.parse(raw)?.tenant?.id || null;
+    } catch { return null; }
   };
 
   // Fetch unread count
-  const fetchUnreadCount = async () => {
+  const fetchUnreadCount = useCallback(async () => {
     try {
-      const res = await fetch("/api/notifications/unread-count", {
-        headers: getAuthHeaders(),
-      });
+      let res;
+      if (isTenant) {
+        const tenantId = getTenantId();
+        if (!tenantId) return;
+        res = await fetch(`/api/tenant-portal/notifications/unread-count?tenantId=${tenantId}`);
+      } else {
+        res = await fetch("/api/notifications/unread-count", { headers: getAuthHeaders() });
+      }
+      if (!res.ok) return;
       const data = await res.json();
-      setUnreadCount(data.count || 0);
+      // Tenant API returns { count }, manager API returns { data: { count } }
+      setUnreadCount(data.count ?? data.data?.count ?? 0);
     } catch (err) {
       console.error("Failed to fetch unread count:", err);
     }
-  };
+  }, [isTenant]);
 
   // Fetch all notifications
-  const fetchNotifications = async () => {
+  const fetchNotifications = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/notifications", {
-        headers: getAuthHeaders(),
-      });
+      let res;
+      if (isTenant) {
+        const tenantId = getTenantId();
+        if (!tenantId) { setLoading(false); return; }
+        res = await fetch(`/api/tenant-portal/notifications?tenantId=${tenantId}`);
+      } else {
+        res = await fetch("/api/notifications", { headers: getAuthHeaders() });
+      }
+      if (!res.ok) { setLoading(false); return; }
       const data = await res.json();
       setNotifications(data.data?.notifications || []);
     } catch (err) {
@@ -43,15 +62,16 @@ export default function NotificationBell({ role }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [isTenant]);
 
   // Mark notification as read
   const markAsRead = async (id) => {
     try {
-      await fetch(`/api/notifications/${id}/read`, {
-        method: "POST",
-        headers: getAuthHeaders(),
-      });
+      if (isTenant) {
+        await fetch(`/api/tenant-portal/notifications/${id}/read`, { method: "POST" });
+      } else {
+        await fetch(`/api/notifications/${id}/read`, { method: "POST", headers: getAuthHeaders() });
+      }
       await fetchUnreadCount();
       await fetchNotifications();
     } catch (err) {
@@ -62,10 +82,17 @@ export default function NotificationBell({ role }) {
   // Mark all as read
   const markAllAsRead = async () => {
     try {
-      await fetch("/api/notifications/mark-all-read", {
-        method: "POST",
-        headers: getAuthHeaders(),
-      });
+      if (isTenant) {
+        const tenantId = getTenantId();
+        if (!tenantId) return;
+        await fetch(`/api/tenant-portal/notifications/mark-all-read?tenantId=${tenantId}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ tenantId }),
+        });
+      } else {
+        await fetch("/api/notifications/mark-all-read", { method: "POST", headers: getAuthHeaders() });
+      }
       await fetchUnreadCount();
       await fetchNotifications();
     } catch (err) {
@@ -76,10 +103,11 @@ export default function NotificationBell({ role }) {
   // Delete notification
   const deleteNotification = async (id) => {
     try {
-      await fetch(`/api/notifications/${id}`, {
-        method: "DELETE",
-        headers: getAuthHeaders(),
-      });
+      if (isTenant) {
+        await fetch(`/api/tenant-portal/notifications/${id}`, { method: "DELETE" });
+      } else {
+        await fetch(`/api/notifications/${id}`, { method: "DELETE", headers: getAuthHeaders() });
+      }
       await fetchUnreadCount();
       await fetchNotifications();
     } catch (err) {
@@ -91,13 +119,19 @@ export default function NotificationBell({ role }) {
     fetchUnreadCount();
     const interval = setInterval(fetchUnreadCount, 10000); // Poll every 10s
     return () => clearInterval(interval);
-  }, []);
+  }, [fetchUnreadCount]);
 
   useEffect(() => {
     if (isOpen) {
       fetchNotifications();
+      // Also poll the list while the dropdown is open
+      const interval = setInterval(() => {
+        fetchNotifications();
+        fetchUnreadCount();
+      }, 10000);
+      return () => clearInterval(interval);
     }
-  }, [isOpen]);
+  }, [isOpen, fetchNotifications, fetchUnreadCount]);
 
   // Close panel when clicking outside
   useEffect(() => {
@@ -123,6 +157,7 @@ export default function NotificationBell({ role }) {
       case "LEASE_SIGNED": return "bg-emerald-100 text-emerald-800";
       case "LEASE_READY_TO_SIGN": return "bg-sky-100 text-sky-800";
       case "TENANT_SELECTED": return "bg-indigo-100 text-indigo-800";
+      case "APPLICATION_SUBMITTED": return "bg-amber-100 text-amber-800";
       default: return "bg-gray-100 text-gray-800";
     }
   };
@@ -130,18 +165,51 @@ export default function NotificationBell({ role }) {
   const router = useRouter();
 
   const getNotificationLink = (notif) => {
-    const prefix = role === "OWNER" ? "/owner" : role === "MANAGER" ? "/manager" : null;
-    if (!prefix) return null;
-    if (notif.entityType === "LEASE" && notif.entityId) {
-      return `${prefix}/leases/${notif.entityId}`;
+    const { entityType, entityId, eventType } = notif;
+
+    // ── Tenant ──────────────────────────────────────────────
+    if (isTenant) {
+      if (entityType === "LEASE" && entityId) return `/tenant/leases/${entityId}`;
+      if (entityType === "INVOICE" || eventType === "INVOICE_CREATED" || eventType === "INVOICE_PAID") return `/tenant/invoices`;
+      return null;
     }
+
+    // ── Contractor ──────────────────────────────────────────
+    if (role === "CONTRACTOR") {
+      if (entityType === "JOB" && entityId) return `/contractor/jobs/${entityId}`;
+      if (entityType === "JOB") return `/contractor/jobs`;
+      if (entityType === "INVOICE") return `/contractor/invoices`;
+      return null;
+    }
+
+    // ── Owner ───────────────────────────────────────────────
+    if (role === "OWNER") {
+      if (entityType === "LEASE" && entityId) return `/manager/leases/${entityId}`;
+      if (entityType === "REQUEST" || eventType === "REQUEST_PENDING_OWNER_APPROVAL" || eventType === "OWNER_REJECTED") return `/owner/approvals`;
+      if (entityType === "JOB") return `/owner/jobs`;
+      if (entityType === "INVOICE") return `/owner/invoices`;
+      if (entityType === "SELECTION" || eventType === "TENANT_SELECTED") return `/owner/vacancies`;
+      if (entityType === "APPLICATION" || eventType === "APPLICATION_SUBMITTED") return `/owner/vacancies`;
+      return null;
+    }
+
+    // ── Manager (default) ───────────────────────────────────
+    if (entityType === "LEASE" && entityId) return `/manager/leases/${entityId}`;
+    if (entityType === "REQUEST" || eventType?.startsWith("REQUEST_") || eventType === "CONTRACTOR_ASSIGNED" || eventType === "CONTRACTOR_REJECTED" || eventType === "OWNER_REJECTED") return `/manager/work-requests`;
+    if (entityType === "JOB") return `/manager/work-requests`;
+    if (entityType === "INVOICE") return `/manager/finance/invoices`;
+    if (entityType === "SELECTION" || eventType === "TENANT_SELECTED") return `/manager/vacancies`;
+    if (entityType === "APPLICATION" || eventType === "APPLICATION_SUBMITTED") return `/manager/vacancies`;
     return null;
   };
+
+  // Tenant API returns readAt, manager API returns isRead — normalize
+  const isNotifRead = (notif) => notif.isRead || !!notif.readAt;
 
   const handleNotificationClick = async (notif) => {
     const link = getNotificationLink(notif);
     if (link) {
-      if (!notif.isRead) {
+      if (!isNotifRead(notif)) {
         await markAsRead(notif.id);
       }
       router.push(link);
@@ -154,8 +222,9 @@ export default function NotificationBell({ role }) {
       {/* Bell Icon Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-full"
+        className="relative p-2 text-gray-600 hover:text-gray-900 focus:outline-none rounded-full"
         aria-label="Notifications"
+        style={{ position: "relative" }}
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -174,7 +243,23 @@ export default function NotificationBell({ role }) {
         
         {/* Unread Badge */}
         {unreadCount > 0 && (
-          <span className="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white transform translate-x-1/2 -translate-y-1/2 bg-red-600 rounded-full">
+          <span style={{
+            position: "absolute",
+            top: 2,
+            right: 2,
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            minWidth: 18,
+            height: 18,
+            padding: "0 5px",
+            fontSize: 11,
+            fontWeight: 700,
+            lineHeight: 1,
+            color: "#fff",
+            backgroundColor: "#dc2626",
+            borderRadius: 9999,
+          }}>
             {unreadCount}
           </span>
         )}
@@ -212,7 +297,7 @@ export default function NotificationBell({ role }) {
                   key={notif.id}
                   onClick={() => handleNotificationClick(notif)}
                   className={`px-4 py-3 border-b border-gray-100 hover:bg-gray-50 ${
-                    !notif.isRead ? "bg-blue-50" : ""
+                    !isNotifRead(notif) ? "bg-blue-50" : ""
                   } ${getNotificationLink(notif) ? "cursor-pointer" : ""}`}
                 >
                   <div className="flex items-start justify-between">
@@ -221,7 +306,7 @@ export default function NotificationBell({ role }) {
                         <span className={`text-xs px-2 py-0.5 rounded ${getTypeColor(notif.eventType)}`}>
                           {(notif.eventType || notif.type || "").replace(/_/g, " ")}
                         </span>
-                        {!notif.isRead && (
+                        {!isNotifRead(notif) && (
                           <span className="w-2 h-2 bg-blue-600 rounded-full"></span>
                         )}
                       </div>
@@ -233,9 +318,9 @@ export default function NotificationBell({ role }) {
                       </p>
                     </div>
                     <div className="flex flex-col gap-1 ml-2">
-                      {!notif.isRead && (
+                      {!isNotifRead(notif) && (
                         <button
-                          onClick={() => markAsRead(notif.id)}
+                          onClick={(e) => { e.stopPropagation(); markAsRead(notif.id); }}
                           className="text-xs text-blue-600 hover:text-blue-800"
                           title="Mark as read"
                         >
@@ -243,7 +328,7 @@ export default function NotificationBell({ role }) {
                         </button>
                       )}
                       <button
-                        onClick={() => deleteNotification(notif.id)}
+                        onClick={(e) => { e.stopPropagation(); deleteNotification(notif.id); }}
                         className="text-xs text-red-600 hover:text-red-800"
                         title="Delete"
                       >

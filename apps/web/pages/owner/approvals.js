@@ -3,18 +3,12 @@ import AppShell from "../../components/AppShell";
 import PageShell from "../../components/layout/PageShell";
 import PageHeader from "../../components/layout/PageHeader";
 import PageContent from "../../components/layout/PageContent";
+import { authHeaders } from "../../lib/api";
 
 export default function OwnerApprovalsPage() {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [actionInProgress, setActionInProgress] = useState(null);
-
-  function authHeaders() {
-    if (typeof window === "undefined") return {};
-    const token = localStorage.getItem("authToken");
-    return token ? { Authorization: `Bearer ${token}` } : {};
-  }
-
   useEffect(() => {
     loadPendingApprovals();
   }, []);

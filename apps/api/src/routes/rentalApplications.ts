@@ -4,7 +4,7 @@ import { readJson } from "../http/body";
 import { parseBody } from "../http/body";
 import { first, getIntParam, getEnumParam } from "../http/query";
 import { withRole } from "../http/routeProtection";
-import { readRawBody, parseMultipart, MAX_FILE_SIZE } from "../storage/attachments";
+import { readRawBody, parseMultipart, MAX_FILE_SIZE, storage } from "../storage/attachments";
 import { scanDocument } from "../services/documentScan";
 import prisma from "../services/prismaClient";
 import {
@@ -12,6 +12,7 @@ import {
   SubmitRentalApplicationSchema,
   OwnerSelectionSchema,
   AdjustScoreSchema,
+  OverrideDisqualificationSchema,
 } from "../validation/rentalApplications";
 import {
   createRentalApplicationDraft,
@@ -20,6 +21,7 @@ import {
   getApplication,
   listApplicationsForUnit,
   adjustEvaluation,
+  overrideDisqualification,
   listVacantUnits,
 } from "../services/rentalApplications";
 import { ownerSelectCandidates } from "../services/ownerSelection";
@@ -314,6 +316,36 @@ export function registerRentalRoutes(router: Router) {
   );
 
   /**
+   * Manager overrides disqualification for a candidate.
+   * Body: { reason: string }
+   */
+  router.post(
+    "/manager/rental-application-units/:id/override-disqualification",
+    withRole("MANAGER", async ({ req, res, params }) => {
+      try {
+        const input = await parseBody(req, OverrideDisqualificationSchema);
+        const dto = await overrideDisqualification(params.id, input.reason);
+        sendJson(res, 200, { data: dto });
+      } catch (e: any) {
+        if (e.name === "ValidationError" || e.code === "VALIDATION_ERROR") {
+          sendError(res, 400, "VALIDATION_ERROR", e.message, e.details);
+          return;
+        }
+        if (e.message?.includes("NOT_FOUND")) {
+          sendError(res, 404, "NOT_FOUND", e.message);
+          return;
+        }
+        if (e.message?.includes("NOT_DISQUALIFIED")) {
+          sendError(res, 400, "BAD_REQUEST", "This candidate is not disqualified");
+          return;
+        }
+        console.error("[RENTAL] manager overrideDisqualification error:", e);
+        sendError(res, 500, "INTERNAL_ERROR", "Failed to override disqualification", e.message);
+      }
+    }),
+  );
+
+  /**
    * List active tenant selections for manager review.
    * Shows the pipeline of units where the owner has selected candidates,
    * enriched with unit, candidate, lease, and selection status info.
@@ -332,7 +364,7 @@ export function registerRentalRoutes(router: Router) {
               include: {
                 building: { select: { id: true, name: true, address: true } },
                 leases: {
-                  where: { status: { in: ["DRAFT", "READY_TO_SIGN"] } },
+                  where: { status: { in: ["DRAFT", "READY_TO_SIGN"] }, isTemplate: false },
                   orderBy: { createdAt: "desc" },
                   take: 1,
                   select: { id: true, status: true, tenantName: true },
@@ -350,23 +382,39 @@ export function registerRentalRoutes(router: Router) {
           orderBy: { createdAt: "desc" },
         });
 
+        // Check which buildings have at least one lease template
+        const buildingIds = [...new Set(selections.map((s: any) => s.unit?.building?.id).filter(Boolean))];
+        const templatesPerBuilding = await prisma.lease.groupBy({
+          by: ["templateBuildingId"],
+          where: { isTemplate: true, deletedAt: null, templateBuildingId: { in: buildingIds } },
+          _count: { id: true },
+        });
+        const buildingsWithTemplate = new Set(templatesPerBuilding.map((t: any) => t.templateBuildingId));
+
         const data = selections.map((s: any) => {
           const primaryApplicant = s.primarySelection?.application?.applicants?.[0];
           const lease = s.unit?.leases?.[0] || null;
+          const bid = s.unit?.building?.id;
           return {
             id: s.id,
             unitId: s.unitId,
             unitNumber: s.unit?.unitNumber,
-            buildingId: s.unit?.building?.id,
+            buildingId: bid,
             buildingName: s.unit?.building?.name,
             buildingAddress: s.unit?.building?.address,
             status: s.status,
             deadlineAt: s.deadlineAt.toISOString(),
             createdAt: s.createdAt.toISOString(),
             primaryCandidate: primaryApplicant
-              ? { name: `${primaryApplicant.firstName} ${primaryApplicant.lastName}`, email: primaryApplicant.email }
+              ? {
+                  name: `${primaryApplicant.firstName} ${primaryApplicant.lastName}`,
+                  email: primaryApplicant.email,
+                  phone: primaryApplicant.phone || null,
+                  applicationId: s.primarySelection?.applicationId || null,
+                }
               : null,
             lease: lease ? { id: lease.id, status: lease.status, tenantName: lease.tenantName } : null,
+            hasLeaseTemplate: bid ? buildingsWithTemplate.has(bid) : false,
           };
         });
 
@@ -432,6 +480,36 @@ export function registerRentalRoutes(router: Router) {
   );
 
   /**
+   * Owner overrides disqualification for a candidate.
+   * Body: { reason: string }
+   */
+  router.post(
+    "/owner/rental-application-units/:id/override-disqualification",
+    withRole("OWNER", async ({ req, res, params }) => {
+      try {
+        const input = await parseBody(req, OverrideDisqualificationSchema);
+        const dto = await overrideDisqualification(params.id, input.reason);
+        sendJson(res, 200, { data: dto });
+      } catch (e: any) {
+        if (e.name === "ValidationError" || e.code === "VALIDATION_ERROR") {
+          sendError(res, 400, "VALIDATION_ERROR", e.message, e.details);
+          return;
+        }
+        if (e.message?.includes("NOT_FOUND")) {
+          sendError(res, 404, "NOT_FOUND", e.message);
+          return;
+        }
+        if (e.message?.includes("NOT_DISQUALIFIED")) {
+          sendError(res, 400, "BAD_REQUEST", "This candidate is not disqualified");
+          return;
+        }
+        console.error("[RENTAL] overrideDisqualification error:", e);
+        sendError(res, 500, "INTERNAL_ERROR", "Failed to override disqualification", e.message);
+      }
+    }),
+  );
+
+  /**
    * List active owner selections (awaiting signature pipeline).
    * Returns selection records enriched with unit, candidate, and lease info.
    */
@@ -449,7 +527,7 @@ export function registerRentalRoutes(router: Router) {
               include: {
                 building: { select: { id: true, name: true, address: true } },
                 leases: {
-                  where: { status: { in: ["DRAFT", "READY_TO_SIGN"] } },
+                  where: { status: { in: ["DRAFT", "READY_TO_SIGN"] }, isTemplate: false },
                   orderBy: { createdAt: "desc" },
                   take: 1,
                   select: { id: true, status: true, tenantName: true },
@@ -493,6 +571,86 @@ export function registerRentalRoutes(router: Router) {
       }
     }),
   );
+
+  /* ────────────────────────────────────────────────────────────
+     ATTACHMENT DOWNLOAD (manager / owner)
+     ──────────────────────────────────────────────────────────── */
+
+  /**
+   * Download a rental attachment file by its ID.
+   * Accessible to MANAGER and OWNER roles.
+   */
+  router.get("/rental-attachments/:attachmentId/download", async ({ req, res, params }) => {
+    try {
+      const attachment = await prisma.rentalAttachment.findUnique({
+        where: { id: params.attachmentId },
+      });
+      if (!attachment) {
+        sendError(res, 404, "NOT_FOUND", "Attachment not found");
+        return;
+      }
+
+      const fileExists = await storage.exists(attachment.storageKey);
+      if (!fileExists) {
+        sendError(res, 404, "NOT_FOUND", "Attachment file not found on disk");
+        return;
+      }
+
+      const buffer = await storage.get(attachment.storageKey);
+      res.writeHead(200, {
+        "Content-Type": attachment.mimeType || "application/octet-stream",
+        "Content-Length": buffer.length.toString(),
+        "Content-Disposition": `inline; filename="${encodeURIComponent(attachment.fileName)}"`,
+        "Cache-Control": "private, max-age=3600",
+      });
+      res.end(buffer);
+    } catch (e: any) {
+      console.error("[RENTAL] attachment download error:", e);
+      sendError(res, 500, "INTERNAL_ERROR", "Failed to download attachment", e.message);
+    }
+  });
+
+  /**
+   * List documents (applicants + their attachments) for a rental application.
+   * Returns applicant names, doc types, and attachment metadata.
+   */
+  router.get("/rental-applications/:id/documents", async ({ res, params }) => {
+    try {
+      const application = await prisma.rentalApplication.findUnique({
+        where: { id: params.id },
+        include: {
+          applicants: {
+            include: { attachments: true },
+            orderBy: { createdAt: "asc" as const },
+          },
+        },
+      });
+      if (!application) {
+        sendError(res, 404, "NOT_FOUND", "Application not found");
+        return;
+      }
+
+      const data = application.applicants.map((a: any) => ({
+        id: a.id,
+        role: a.role,
+        firstName: a.firstName,
+        lastName: a.lastName,
+        attachments: (a.attachments || []).map((att: any) => ({
+          id: att.id,
+          docType: att.docType,
+          fileName: att.fileName,
+          fileSizeBytes: att.fileSizeBytes,
+          mimeType: att.mimeType,
+          uploadedAt: att.uploadedAt.toISOString(),
+        })),
+      }));
+
+      sendJson(res, 200, { data });
+    } catch (e: any) {
+      console.error("[RENTAL] list documents error:", e);
+      sendError(res, 500, "DB_ERROR", "Failed to list documents", e.message);
+    }
+  });
 
   /* ────────────────────────────────────────────────────────────
      DEV: Email outbox sink

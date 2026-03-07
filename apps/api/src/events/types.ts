@@ -45,22 +45,27 @@ export interface JobCreatedPayload {
 
 export interface InvoiceIssuedPayload {
   invoiceId: string;
-  amount: number;
+  amount?: number;
+  jobId?: string;
 }
 
 export interface InvoiceApprovedPayload {
   invoiceId: string;
-  amount: number;
+  amount?: number;
+  jobId?: string;
 }
 
 export interface InvoicePaidPayload {
   invoiceId: string;
-  amount: number;
+  amount?: number;
+  jobId?: string;
+  jobTransitioned?: boolean;
 }
 
 export interface InvoiceDisputedPayload {
   invoiceId: string;
   reason?: string | null;
+  jobId?: string;
 }
 
 export interface LeaseStatusChangedPayload {
@@ -69,14 +74,43 @@ export interface LeaseStatusChangedPayload {
   toStatus: string;
 }
 
+export interface LegalAutoRoutedPayload {
+  requestId: string;
+  obligation: string;       // LegalObligation enum value
+  rfpId: string | null;     // non-null when OBLIGATED → RFP created
+  previousStatus: string;
+  newStatus: string;
+}
+
+export interface ContractorAssignedPayload {
+  requestId: string;
+  contractorId: string;
+  jobCreated: boolean;
+}
+
+export interface ContractorUnassignedPayload {
+  requestId: string;
+}
+
+export interface JobCompletedPayload {
+  jobId: string;
+  requestId: string;
+  invoiceAutoCreated: boolean;
+}
+
 /* ── Event map: type → payload ──────────────────────────────── */
 
 export interface DomainEventMap {
   REQUEST_CREATED: RequestCreatedPayload;
+  REQUEST_APPROVED: RequestApprovedPayload;
   REQUEST_STATUS_CHANGED: RequestStatusChangedPayload;
+  LEGAL_AUTO_ROUTED: LegalAutoRoutedPayload;
   OWNER_APPROVED: RequestApprovedPayload;
   OWNER_REJECTED: RequestRejectedPayload;
+  CONTRACTOR_ASSIGNED: ContractorAssignedPayload;
+  CONTRACTOR_UNASSIGNED: ContractorUnassignedPayload;
   JOB_CREATED: JobCreatedPayload;
+  JOB_COMPLETED: JobCompletedPayload;
   INVOICE_ISSUED: InvoiceIssuedPayload;
   INVOICE_APPROVED: InvoiceApprovedPayload;
   INVOICE_PAID: InvoicePaidPayload;

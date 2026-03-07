@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import AppShell from "../../../components/AppShell";
 import { ALLOWED_CATEGORIES } from "../../../lib/categories";
+import DocumentsPanel from "../../../components/DocumentsPanel";
 
 export default function UnitDetail() {
   const router = useRouter();
@@ -18,7 +19,7 @@ export default function UnitDetail() {
     codeSmall: { background: "#f5f5f5", padding: "2px 4px", borderRadius: "3px", fontSize: "0.85em", fontFamily: "monospace" },
     card: { background: "#fff", border: "1px solid #e5e5e5", borderRadius: "8px", padding: "20px", marginBottom: "20px" },
     label: { display: "block", fontWeight: 600, marginBottom: "6px", fontSize: "0.95rem" },
-    input: { padding: "10px 12px", borderRadius: "6px", border: "1px solid #ddd", width: "100%", maxWidth: "380px", fontSize: "0.95rem", boxSizing: "border-box" },
+    input: { padding: "10px 12px", borderRadius: "6px", border: "1px solid #ddd", width: "100%", fontSize: "0.95rem", boxSizing: "border-box" },
     primaryBtn: { padding: "10px 20px", borderRadius: "6px", border: "none", background: "#111", color: "#fff", cursor: "pointer", fontWeight: 600, fontSize: "0.95rem" },
     secondaryBtn: { padding: "10px 20px", borderRadius: "6px", border: "1px solid #ddd", background: "#fafafa", color: "#111", cursor: "pointer", fontWeight: 500, fontSize: "0.95rem" },
     dangerBtn: { padding: "10px 20px", borderRadius: "6px", border: "none", background: "#dc3545", color: "#fff", cursor: "pointer", fontWeight: 600, fontSize: "0.95rem" },
@@ -73,6 +74,24 @@ export default function UnitDetail() {
   const [activeTab, setActiveTab] = useState("Tenants");
   const [tenantAction, setTenantAction] = useState(null);
   const [applianceAction, setApplianceAction] = useState(null);
+  const [applicationIds, setApplicationIds] = useState([]);
+
+  // Rent estimation fields
+  const [editLivingArea, setEditLivingArea] = useState("");
+  const [editRooms, setEditRooms] = useState("");
+  const [editBalcony, setEditBalcony] = useState(false);
+  const [editTerrace, setEditTerrace] = useState(false);
+  const [editParking, setEditParking] = useState(false);
+  const [editLocationSegment, setEditLocationSegment] = useState("");
+  const [editLastRenovation, setEditLastRenovation] = useState("");
+  const [editInsulation, setEditInsulation] = useState("");
+  const [editEnergyLabel, setEditEnergyLabel] = useState("");
+  const [editHeatingType, setEditHeatingType] = useState("");
+  const [editMonthlyRent, setEditMonthlyRent] = useState("");
+  const [editMonthlyCharges, setEditMonthlyCharges] = useState("");
+  const [rentEstimate, setRentEstimate] = useState(null);
+  const [estimateLoading, setEstimateLoading] = useState(false);
+  const [estimateError, setEstimateError] = useState(null);
 
   function setOk(message) {
     setNotice({ type: "ok", message });
@@ -119,10 +138,29 @@ export default function UnitDetail() {
       setEditNumber(u.unitNumber || u.name || "");
       setEditFloor(u.floor || "");
       setEditType(u.type || "");
+      setEditLivingArea(u.livingAreaSqm ?? "");
+      setEditRooms(u.rooms ?? "");
+      setEditBalcony(!!u.hasBalcony);
+      setEditTerrace(!!u.hasTerrace);
+      setEditParking(!!u.hasParking);
+      setEditLocationSegment(u.locationSegment || "");
+      setEditLastRenovation(u.lastRenovationYear ?? "");
+      setEditInsulation(u.insulationQuality || "");
+      setEditEnergyLabel(u.energyLabel || "");
+      setEditHeatingType(u.heatingType || "");
+      setEditMonthlyRent(u.monthlyRentChf ?? "");
+      setEditMonthlyCharges(u.monthlyChargesChf ?? "");
       await loadAppliances();
       await loadTenants();
       await loadAllTenants();
       await loadAssetModels();
+      // Fetch leases for the unit to find linked rental application IDs
+      try {
+        const leasesData = await fetchJSON(`/leases?unitId=${id}`);
+        const leases = Array.isArray(leasesData) ? leasesData : leasesData?.data || [];
+        const appIds = leases.map((l) => l.applicationId).filter(Boolean);
+        setApplicationIds([...new Set(appIds)]);
+      } catch {}
     } catch (e) {
       setErr(`Failed to load unit: ${e.message}`);
     } finally {
@@ -242,6 +280,18 @@ export default function UnitDetail() {
         unitNumber: editNumber.trim() || undefined,
         floor: editFloor.trim() || undefined,
         type: editType || undefined,
+        livingAreaSqm: editLivingArea !== "" ? Number(editLivingArea) : undefined,
+        rooms: editRooms !== "" ? Number(editRooms) : undefined,
+        hasBalcony: editBalcony,
+        hasTerrace: editTerrace,
+        hasParking: editParking,
+        locationSegment: editLocationSegment || undefined,
+        lastRenovationYear: editLastRenovation !== "" ? Number(editLastRenovation) : undefined,
+        insulationQuality: editInsulation || undefined,
+        energyLabel: editEnergyLabel || undefined,
+        heatingType: editHeatingType || undefined,
+        monthlyRentChf: editMonthlyRent !== "" ? Number(editMonthlyRent) : null,
+        monthlyChargesChf: editMonthlyCharges !== "" ? Number(editMonthlyCharges) : null,
       };
       const data = await fetchJSON(`/units/${id}`, {
         method: "PATCH",
@@ -373,6 +423,18 @@ export default function UnitDetail() {
                 setEditNumber(unit?.unitNumber || "");
                 setEditFloor(unit?.floor || "");
                 setEditType(unit?.type || "");
+                setEditLivingArea(unit?.livingAreaSqm ?? "");
+                setEditRooms(unit?.rooms ?? "");
+                setEditBalcony(!!unit?.hasBalcony);
+                setEditTerrace(!!unit?.hasTerrace);
+                setEditParking(!!unit?.hasParking);
+                setEditLocationSegment(unit?.locationSegment || "");
+                setEditLastRenovation(unit?.lastRenovationYear ?? "");
+                setEditInsulation(unit?.insulationQuality || "");
+                setEditEnergyLabel(unit?.energyLabel || "");
+                setEditHeatingType(unit?.heatingType || "");
+                setEditMonthlyRent(unit?.monthlyRentChf ?? "");
+                setEditMonthlyCharges(unit?.monthlyChargesChf ?? "");
               }}>
                 Cancel
               </button>
@@ -401,43 +463,157 @@ export default function UnitDetail() {
           <span style={{ ...ui.tag, ...(isBusy ? ui.tagBusy : ui.tagEmpty) }}>{occupancyLabel}</span>
         </h2>
         {editMode ? (
-          <div style={{ marginBottom: "16px", display: "grid", gap: "12px", maxWidth: 420 }}>
-            <div>
-              <label style={ui.label}>Unit number</label>
-              <input
-                style={ui.input}
-                value={editNumber}
-                onChange={(e) => setEditNumber(e.target.value)}
-                placeholder="e.g. Apt 3B"
-              />
-            </div>
-            <div>
-              <label style={ui.label}>Floor</label>
-              <input
-                style={ui.input}
-                value={editFloor}
-                onChange={(e) => setEditFloor(e.target.value)}
-                placeholder="e.g. 3"
-              />
-            </div>
-            <div>
-              <label style={ui.label}>Type</label>
-              <select
-                style={ui.input}
-                value={editType}
-                onChange={(e) => setEditType(e.target.value)}
-              >
-                <option value="">— Select type —</option>
-                <option value="RESIDENTIAL">Residential</option>
-                <option value="COMMON_AREA">Common area</option>
-              </select>
+          <div style={{ marginBottom: "16px" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+              <div style={{ display: "grid", gap: "6px" }}>
+                <span style={{ fontSize: "0.7rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", color: "#64748b" }}>Unit number</span>
+                <input style={ui.input} value={editNumber} onChange={(e) => setEditNumber(e.target.value)} placeholder="e.g. Apt 3B" />
+              </div>
+              <div style={{ display: "grid", gap: "6px" }}>
+                <span style={{ fontSize: "0.7rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", color: "#64748b" }}>Floor</span>
+                <input style={ui.input} value={editFloor} onChange={(e) => setEditFloor(e.target.value)} placeholder="e.g. 3" />
+              </div>
+              <div style={{ display: "grid", gap: "6px" }}>
+                <span style={{ fontSize: "0.7rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", color: "#64748b" }}>Type</span>
+                <select style={ui.input} value={editType} onChange={(e) => setEditType(e.target.value)}>
+                  <option value="">— Select type —</option>
+                  <option value="RESIDENTIAL">Residential</option>
+                  <option value="COMMON_AREA">Common area</option>
+                </select>
+              </div>
+              <div style={{ display: "grid", gap: "6px" }}>
+                <span style={{ fontSize: "0.7rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", color: "#64748b" }}>Living area (m²)</span>
+                <input style={ui.input} type="number" step="0.1" min="0" value={editLivingArea} onChange={(e) => setEditLivingArea(e.target.value)} placeholder="e.g. 75" />
+              </div>
+              <div style={{ display: "grid", gap: "6px" }}>
+                <span style={{ fontSize: "0.7rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", color: "#64748b" }}>Rooms</span>
+                <input style={ui.input} type="number" step="0.5" min="0" value={editRooms} onChange={(e) => setEditRooms(e.target.value)} placeholder="e.g. 3.5" />
+              </div>
+              <div style={{ display: "grid", gap: "6px" }}>
+                <span style={{ fontSize: "0.7rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", color: "#64748b" }}>Location segment</span>
+                <select style={ui.input} value={editLocationSegment} onChange={(e) => setEditLocationSegment(e.target.value)}>
+                  <option value="">— Select —</option>
+                  <option value="PRIME">Prime</option>
+                  <option value="STANDARD">Standard</option>
+                  <option value="PERIPHERY">Periphery</option>
+                </select>
+              </div>
+              <div style={{ display: "grid", gap: "6px" }}>
+                <span style={{ fontSize: "0.7rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", color: "#64748b" }}>Last renovation year</span>
+                <input style={ui.input} type="number" min="1900" max="2099" value={editLastRenovation} onChange={(e) => setEditLastRenovation(e.target.value)} placeholder="e.g. 2015" />
+              </div>
+              <div style={{ display: "grid", gap: "6px" }}>
+                <span style={{ fontSize: "0.7rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", color: "#64748b" }}>Energy label</span>
+                <select style={ui.input} value={editEnergyLabel} onChange={(e) => setEditEnergyLabel(e.target.value)}>
+                  <option value="">— Select —</option>
+                  {["A","B","C","D","E","F","G"].map(l => <option key={l} value={l}>{l}</option>)}
+                </select>
+              </div>
+              <div style={{ display: "grid", gap: "6px" }}>
+                <span style={{ fontSize: "0.7rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", color: "#64748b" }}>Heating type</span>
+                <select style={ui.input} value={editHeatingType} onChange={(e) => setEditHeatingType(e.target.value)}>
+                  <option value="">— Select —</option>
+                  <option value="HEAT_PUMP">Heat pump</option>
+                  <option value="DISTRICT">District</option>
+                  <option value="GAS">Gas</option>
+                  <option value="OIL">Oil</option>
+                  <option value="ELECTRIC">Electric</option>
+                  <option value="UNKNOWN">Unknown</option>
+                </select>
+              </div>
+              <div style={{ display: "grid", gap: "6px" }}>
+                <span style={{ fontSize: "0.7rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", color: "#64748b" }}>Insulation quality</span>
+                <select style={ui.input} value={editInsulation} onChange={(e) => setEditInsulation(e.target.value)}>
+                  <option value="">— Select —</option>
+                  <option value="EXCELLENT">Excellent</option>
+                  <option value="GOOD">Good</option>
+                  <option value="AVERAGE">Average</option>
+                  <option value="POOR">Poor</option>
+                  <option value="UNKNOWN">Unknown</option>
+                </select>
+              </div>
+              <div style={{ display: "flex", alignItems: "flex-end", gap: "20px", paddingBottom: "4px", gridColumn: "1 / -1" }}>
+                <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "0.9rem", cursor: "pointer" }}>
+                  <input type="checkbox" checked={editBalcony} onChange={(e) => setEditBalcony(e.target.checked)} /> Balcony
+                </label>
+                <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "0.9rem", cursor: "pointer" }}>
+                  <input type="checkbox" checked={editTerrace} onChange={(e) => setEditTerrace(e.target.checked)} /> Terrace
+                </label>
+                <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "0.9rem", cursor: "pointer" }}>
+                  <input type="checkbox" checked={editParking} onChange={(e) => setEditParking(e.target.checked)} /> Parking
+                </label>
+              </div>
             </div>
           </div>
         ) : (
           <div style={{ marginBottom: "16px" }}>
-            <div style={ui.help}><strong>Unit number:</strong> {unit?.unitNumber || unit?.name || "—"}</div>
-            {unit?.floor && <div style={ui.help}><strong>Floor:</strong> {unit.floor}</div>}
-            {unit?.type && <div style={ui.help}><strong>Type:</strong> {unit.type}</div>}
+            {/* ── Pricing ── */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "16px", marginBottom: "16px", padding: "16px", background: "#f8fafc", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
+              <div>
+                <div style={{ fontSize: "0.7rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", color: "#64748b" }}>Net rent</div>
+                <div style={{ fontSize: "1.1rem", fontWeight: 700, color: "#0f172a", marginTop: "4px" }}>{unit?.monthlyRentChf != null ? `CHF ${unit.monthlyRentChf}.-` : "—"}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: "0.7rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", color: "#64748b" }}>Charges</div>
+                <div style={{ fontSize: "1.1rem", fontWeight: 700, color: "#0f172a", marginTop: "4px" }}>{unit?.monthlyChargesChf != null ? `CHF ${unit.monthlyChargesChf}.-` : "—"}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: "0.7rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", color: "#64748b" }}>Total incl. charges</div>
+                <div style={{ fontSize: "1.1rem", fontWeight: 700, color: "#0f172a", marginTop: "4px" }}>{unit?.monthlyRentChf != null || unit?.monthlyChargesChf != null ? `CHF ${(unit?.monthlyRentChf || 0) + (unit?.monthlyChargesChf || 0)}.-` : "—"}</div>
+              </div>
+            </div>
+            {/* ── Unit details grid ── */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+              <div>
+                <div style={{ fontSize: "0.7rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", color: "#64748b" }}>Unit number</div>
+                <div style={{ fontSize: "0.875rem", color: "#334155", marginTop: "4px" }}>{unit?.unitNumber || unit?.name || "—"}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: "0.7rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", color: "#64748b" }}>Floor</div>
+                <div style={{ fontSize: "0.875rem", color: "#334155", marginTop: "4px" }}>{unit?.floor || "—"}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: "0.7rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", color: "#64748b" }}>Type</div>
+                <div style={{ fontSize: "0.875rem", color: "#334155", marginTop: "4px" }}>{unit?.type || "—"}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: "0.7rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", color: "#64748b" }}>Living area</div>
+                <div style={{ fontSize: "0.875rem", color: "#334155", marginTop: "4px" }}>{unit?.livingAreaSqm != null ? `${unit.livingAreaSqm} m²` : "—"}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: "0.7rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", color: "#64748b" }}>Rooms</div>
+                <div style={{ fontSize: "0.875rem", color: "#334155", marginTop: "4px" }}>{unit?.rooms ?? "—"}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: "0.7rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", color: "#64748b" }}>Location</div>
+                <div style={{ fontSize: "0.875rem", color: "#334155", marginTop: "4px" }}>{unit?.locationSegment || "—"}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: "0.7rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", color: "#64748b" }}>Last renovation</div>
+                <div style={{ fontSize: "0.875rem", color: "#334155", marginTop: "4px" }}>{unit?.lastRenovationYear || "—"}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: "0.7rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", color: "#64748b" }}>Energy label</div>
+                <div style={{ fontSize: "0.875rem", color: "#334155", marginTop: "4px" }}>{unit?.energyLabel || "—"}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: "0.7rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", color: "#64748b" }}>Heating</div>
+                <div style={{ fontSize: "0.875rem", color: "#334155", marginTop: "4px" }}>{unit?.heatingType ? unit.heatingType.replace(/_/g, " ").toLowerCase() : "—"}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: "0.7rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", color: "#64748b" }}>Insulation</div>
+                <div style={{ fontSize: "0.875rem", color: "#334155", marginTop: "4px" }}>{unit?.insulationQuality ? unit.insulationQuality.toLowerCase() : "—"}</div>
+              </div>
+              <div style={{ gridColumn: "1 / -1" }}>
+                <div style={{ fontSize: "0.7rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", color: "#64748b" }}>Features</div>
+                <div style={{ fontSize: "0.875rem", color: "#334155", marginTop: "4px", display: "flex", gap: "8px" }}>
+                  {unit?.hasBalcony && <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", borderRadius: "9999px", background: "#eff6ff", padding: "2px 10px", fontSize: "0.75rem", fontWeight: 500, color: "#1d4ed8" }}>Balcony</span>}
+                  {unit?.hasTerrace && <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", borderRadius: "9999px", background: "#eff6ff", padding: "2px 10px", fontSize: "0.75rem", fontWeight: 500, color: "#1d4ed8" }}>Terrace</span>}
+                  {unit?.hasParking && <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", borderRadius: "9999px", background: "#eff6ff", padding: "2px 10px", fontSize: "0.75rem", fontWeight: 500, color: "#1d4ed8" }}>Parking</span>}
+                  {!unit?.hasBalcony && !unit?.hasTerrace && !unit?.hasParking && "—"}
+                </div>
+              </div>
+            </div>
           </div>
         )}
         <button type="button" style={ui.dangerBtn} onClick={onDeactivateUnit} disabled={loading}>
@@ -446,7 +622,7 @@ export default function UnitDetail() {
       </div>
 
       <div style={ui.tabRow}>
-        {["Tenants", "Appliances", "Invoices", "Contracts"].map((tab) => (
+        {["Tenants", "Appliances", "Rent Estimate", "Documents", "Invoices", "Contracts"].map((tab) => (
           <button
             key={tab}
             type="button"
@@ -640,7 +816,11 @@ export default function UnitDetail() {
               tenants.map((t) => (
                 <div key={t.id} style={ui.listRow}>
                   <div>
-                    <div style={ui.rowTitle}>{t.name || "Tenant"}</div>
+                    <div style={ui.rowTitle}>
+                      <Link href={`/manager/people/tenants/${t.id}`} style={{ color: "#0066cc", textDecoration: "none" }}>
+                        {t.name || "Tenant"}
+                      </Link>
+                    </div>
                     <div style={ui.help}>Phone: {t.phone || "—"}</div>
                   </div>
                   <button
@@ -759,6 +939,121 @@ export default function UnitDetail() {
               </>
             )}
           </div>
+        </div>
+      )}
+
+      {activeTab === "Rent Estimate" && (
+        <div style={ui.card}>
+          <h2 style={ui.h2}>Rent Estimate</h2>
+          {!unit?.livingAreaSqm ? (
+            <div style={{ ...ui.notice, ...ui.noticeErr }}>
+              Living area (m²) is required to estimate rent. Click <strong>Edit</strong> above and fill in the estimation inputs.
+            </div>
+          ) : (
+            <>
+              <button
+                type="button"
+                style={ui.primaryBtn}
+                disabled={estimateLoading}
+                onClick={async () => {
+                  try {
+                    setEstimateLoading(true);
+                    setEstimateError(null);
+                    const data = await fetchJSON(`/units/${id}/rent-estimate`);
+                    setRentEstimate(data?.data || data);
+                  } catch (e) {
+                    setEstimateError(e.message);
+                    setRentEstimate(null);
+                  } finally {
+                    setEstimateLoading(false);
+                  }
+                }}
+              >
+                {estimateLoading ? "Calculating…" : rentEstimate ? "Recalculate" : "Calculate Estimate"}
+              </button>
+
+              {estimateError && (
+                <div style={{ ...ui.notice, ...ui.noticeErr, marginTop: "12px" }}>{estimateError}</div>
+              )}
+
+              {rentEstimate && (
+                <div style={{ marginTop: "20px" }}>
+                  {/* Main figures */}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "16px", marginBottom: "20px" }}>
+                    <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: "8px", padding: "16px", textAlign: "center" }}>
+                      <div style={{ fontSize: "0.75rem", fontWeight: 600, textTransform: "uppercase", color: "#15803d" }}>Net Rent</div>
+                      <div style={{ fontSize: "1.6rem", fontWeight: 700, color: "#166534" }}>CHF {rentEstimate.netRentChfMonthly}</div>
+                      <div style={{ fontSize: "0.8rem", color: "#666" }}>per month</div>
+                    </div>
+                    <div style={{ background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: "8px", padding: "16px", textAlign: "center" }}>
+                      <div style={{ fontSize: "0.75rem", fontWeight: 600, textTransform: "uppercase", color: "#1d4ed8" }}>Total (optimistic)</div>
+                      <div style={{ fontSize: "1.6rem", fontWeight: 700, color: "#1e40af" }}>CHF {rentEstimate.totalOptimisticChfMonthly}</div>
+                      <div style={{ fontSize: "0.8rem", color: "#666" }}>incl. charges CHF {rentEstimate.chargesOptimisticChfMonthly}</div>
+                    </div>
+                    <div style={{ background: "#fef3c7", border: "1px solid #fde68a", borderRadius: "8px", padding: "16px", textAlign: "center" }}>
+                      <div style={{ fontSize: "0.75rem", fontWeight: 600, textTransform: "uppercase", color: "#92400e" }}>Total (pessimistic)</div>
+                      <div style={{ fontSize: "1.6rem", fontWeight: 700, color: "#78350f" }}>CHF {rentEstimate.totalPessimisticChfMonthly}</div>
+                      <div style={{ fontSize: "0.8rem", color: "#666" }}>incl. charges CHF {rentEstimate.chargesPessimisticChfMonthly}</div>
+                    </div>
+                  </div>
+
+                  {/* Coefficients breakdown */}
+                  <details style={{ marginBottom: "12px" }}>
+                    <summary style={{ cursor: "pointer", fontWeight: 600, fontSize: "0.95rem", color: "#333" }}>Applied Coefficients</summary>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", marginTop: "10px", fontSize: "0.9rem" }}>
+                      <div>Base rent/m²: <strong>CHF {rentEstimate.appliedCoefficients.baseRentPerSqm}</strong></div>
+                      <div>Location: <strong>×{rentEstimate.appliedCoefficients.locationCoef}</strong></div>
+                      <div>Age: <strong>×{rentEstimate.appliedCoefficients.ageCoef}</strong></div>
+                      <div>Energy: <strong>×{rentEstimate.appliedCoefficients.energyCoef}</strong></div>
+                      <div>Charges rate (opt): <strong>{(rentEstimate.appliedCoefficients.chargesRateOptimistic * 100).toFixed(1)}%</strong></div>
+                      <div>Charges rate (pes): <strong>{(rentEstimate.appliedCoefficients.chargesRatePessimistic * 100).toFixed(1)}%</strong></div>
+                      <div>Heating adj: <strong>{rentEstimate.appliedCoefficients.heatingAdj >= 0 ? "+" : ""}{(rentEstimate.appliedCoefficients.heatingAdj * 100).toFixed(1)}%</strong></div>
+                      <div>Service adj: <strong>+{(rentEstimate.appliedCoefficients.serviceAdj * 100).toFixed(1)}%</strong></div>
+                    </div>
+                  </details>
+
+                  {/* Inputs used */}
+                  <details style={{ marginBottom: "12px" }}>
+                    <summary style={{ cursor: "pointer", fontWeight: 600, fontSize: "0.95rem", color: "#333" }}>Inputs Used</summary>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", marginTop: "10px", fontSize: "0.9rem" }}>
+                      <div>Living area: <strong>{rentEstimate.inputsUsed.livingAreaSqm} m²</strong></div>
+                      <div>Segment: <strong>{rentEstimate.inputsUsed.segment}</strong></div>
+                      <div>Effective year: <strong>{rentEstimate.inputsUsed.effectiveYear || "—"}</strong></div>
+                      <div>Energy: <strong>{rentEstimate.inputsUsed.energyLabel || "—"}</strong></div>
+                      <div>Heating: <strong>{rentEstimate.inputsUsed.heatingType || "—"}</strong></div>
+                      <div>Elevator: <strong>{rentEstimate.inputsUsed.hasElevator ? "Yes" : "No"}</strong></div>
+                      <div>Concierge: <strong>{rentEstimate.inputsUsed.hasConcierge ? "Yes" : "No"}</strong></div>
+                    </div>
+                  </details>
+
+                  {/* Warnings */}
+                  {rentEstimate.warnings?.length > 0 && (
+                    <div style={{ background: "#fffbeb", border: "1px solid #fde68a", borderRadius: "6px", padding: "12px", marginTop: "8px" }}>
+                      <div style={{ fontWeight: 600, fontSize: "0.85rem", color: "#92400e", marginBottom: "4px" }}>⚠ Warnings</div>
+                      <ul style={{ margin: 0, paddingLeft: "18px", fontSize: "0.85rem", color: "#78350f" }}>
+                        {rentEstimate.warnings.map((w, i) => <li key={i}>{w}</li>)}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
+      {activeTab === "Documents" && (
+        <div style={ui.card}>
+          <h2 style={ui.h2}>Corroborative Documents</h2>
+          {applicationIds.length === 0 ? (
+            <div style={ui.empty}>No rental application linked to this unit.</div>
+          ) : (
+            applicationIds.map((appId) => (
+              <div key={appId} style={{ marginBottom: "16px" }}>
+                <DocumentsPanel applicationId={appId} />
+              </div>
+            ))
+          )}
         </div>
       )}
 

@@ -1,18 +1,60 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import Link from "next/link";
+import { useRouter } from "next/router";
 import AppShell from "../../../components/AppShell";
 import PageShell from "../../../components/layout/PageShell";
 import PageHeader from "../../../components/layout/PageHeader";
 import PageContent from "../../../components/layout/PageContent";
 import Panel from "../../../components/layout/Panel";
 import { formatDate } from "../../../lib/format";
+import { authHeaders } from "../../../lib/api";
 
-function authHeaders() {
-  if (typeof window === "undefined") return {};
-  const token = localStorage.getItem("authToken");
-  return token ? { Authorization: `Bearer ${token}` } : {};
+/**
+ * Reusable action dropdown button — renders a "⋯" pill that opens
+ * a positioned dropdown with a list of actions.
+ */
+function ActionDropdown({ actions }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  // Close on outside click
+  useEffect(() => {
+    if (!open) return;
+    function handleClick(e) {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [open]);
+
+  return (
+    <div ref={ref} className="relative inline-block text-left">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition"
+      >
+        Actions ▾
+      </button>
+      {open && (
+        <div className="absolute right-0 z-20 mt-1 w-48 origin-top-right rounded-lg border border-slate-200 bg-white shadow-lg ring-1 ring-black/5">
+          <div className="py-1">
+            {actions.map((a, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => { setOpen(false); a.onClick(); }}
+                className={"w-full text-left px-4 py-2 text-sm hover:bg-slate-50 transition " + (a.className || "text-slate-700")}
+              >
+                {a.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
-
 function selectionStatusBadge(status) {
   const map = {
     AWAITING_SIGNATURE: { label: "Awaiting Signature", cls: "bg-amber-100 text-amber-700" },
@@ -28,8 +70,9 @@ function selectionStatusBadge(status) {
   );
 }
 
-function leaseBadge(lease) {
-  if (!lease) return <span className="text-xs text-red-500 font-medium">No lease — action needed</span>;
+function leaseBadge(lease, hasLeaseTemplate) {
+  if (!lease && hasLeaseTemplate) return <span className="text-xs text-amber-600 font-medium">No lease — template ready</span>;
+  if (!lease) return <span className="text-xs text-red-500 font-medium">No lease template — create one first</span>;
   const map = {
     DRAFT: { label: "Draft", cls: "bg-slate-100 text-slate-600" },
     READY_TO_SIGN: { label: "Ready to Sign", cls: "bg-blue-100 text-blue-700" },
@@ -44,6 +87,7 @@ function leaseBadge(lease) {
 }
 
 export default function ManagerVacanciesPage() {
+  const router = useRouter();
   const [units, setUnits] = useState([]);
   const [selections, setSelections] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -80,6 +124,46 @@ export default function ManagerVacanciesPage() {
       // Non-critical
     } finally {
       setSelectionsLoading(false);
+    }
+  }
+
+  async function generateLeaseFromTemplate(sel) {
+    setError("");
+    try {
+      // 1. Fetch templates for this building
+      const tplRes = await fetch("/api/lease-templates?buildingId=" + sel.buildingId, { headers: authHeaders() });
+      const tplJson = await tplRes.json().catch(() => ({}));
+      const templates = tplJson.data || [];
+      if (templates.length === 0) {
+        setError("No lease template found for this building. Please create one first.");
+        return;
+      }
+      const templateId = templates[0].id;
+
+      // 2. Create lease from template
+      const candidate = sel.primaryCandidate || {};
+      const body = {
+        unitId: sel.unitId,
+        tenantName: candidate.name || "Unknown",
+        tenantEmail: candidate.email || undefined,
+        tenantPhone: candidate.phone || undefined,
+        applicationId: candidate.applicationId || undefined,
+      };
+      const createRes = await fetch(`/api/lease-templates/${templateId}/create-lease`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify(body),
+      });
+      const createJson = await createRes.json().catch(() => ({}));
+      if (!createRes.ok) throw new Error(createJson?.error?.message || "Failed to create lease");
+
+      const newLeaseId = createJson.data?.id;
+      if (!newLeaseId) throw new Error("No lease ID returned");
+
+      // 3. Navigate to the new lease editor
+      router.push("/manager/leases/" + newLeaseId);
+    } catch (e) {
+      setError(e.message);
     }
   }
 
@@ -161,28 +245,26 @@ export default function ManagerVacanciesPage() {
                               {leaseBadge(sel.lease)}
                             </Link>
                           ) : (
-                            leaseBadge(null)
+                            leaseBadge(null, sel.hasLeaseTemplate)
                           )}
                         </td>
                         <td className="px-4 py-3 text-xs text-slate-500">
                           {formatDate(sel.deadlineAt)}
                         </td>
                         <td className="px-4 py-3 text-right">
-                          {sel.lease ? (
-                            <Link
-                              href={"/manager/leases/" + sel.lease.id}
-                              className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700"
-                            >
-                              View Lease
-                            </Link>
-                          ) : (
-                            <Link
-                              href={"/manager/leases/templates?buildingId=" + (sel.buildingId || "")}
-                              className="rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-700"
-                            >
-                              Create Lease
-                            </Link>
-                          )}
+                          <ActionDropdown actions={[
+                            ...(sel.lease ? [
+                              { label: "📄 View Lease Project", onClick: () => router.push("/manager/leases/" + sel.lease.id) },
+                            ] : sel.hasLeaseTemplate ? [
+                              { label: "📝 Generate Lease from Template", onClick: () => generateLeaseFromTemplate(sel) },
+                            ] : [
+                              { label: "📐 Create Lease Template", onClick: () => router.push("/manager/leases/templates?buildingId=" + (sel.buildingId || "")) },
+                            ]),
+                            { label: "👤 View Candidate", onClick: () => router.push("/manager/vacancies/" + sel.unitId + "/applications") },
+                            ...(sel.buildingId ? [
+                              { label: "🏢 View Building", onClick: () => router.push("/admin-inventory/buildings/" + sel.buildingId) },
+                            ] : []),
+                          ]} />
                         </td>
                       </tr>
                     ))}
@@ -224,12 +306,15 @@ export default function ManagerVacanciesPage() {
                           <td className="px-4 py-3 text-slate-700">{u.monthlyRentChf ?? "—"}</td>
                           <td className="px-4 py-3 text-slate-700">{u.monthlyChargesChf ?? "—"}</td>
                           <td className="px-4 py-3 text-right">
-                            <Link
-                              href={"/manager/vacancies/" + u.id + "/applications"}
-                              className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700"
-                            >
-                              View Applications
-                            </Link>
+                            <ActionDropdown actions={[
+                              { label: "📋 View Applications", onClick: () => router.push("/manager/vacancies/" + u.id + "/applications") },
+                              ...(u.building?.id ? [
+                                { label: "🏢 View Building", onClick: () => router.push("/admin-inventory/buildings/" + u.building.id) },
+                              ] : []),
+                              ...(u.id ? [
+                                { label: "🔧 View Unit", onClick: () => router.push("/admin-inventory/units/" + u.id) },
+                              ] : []),
+                            ]} />
                           </td>
                         </tr>
                       ))}

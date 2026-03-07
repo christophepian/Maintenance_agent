@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import Link from "next/link";
 import AppShell from "../../components/AppShell";
 import PageShell from "../../components/layout/PageShell";
@@ -6,11 +6,57 @@ import PageHeader from "../../components/layout/PageHeader";
 import PageContent from "../../components/layout/PageContent";
 import Panel from "../../components/layout/Panel";
 import Section from "../../components/layout/Section";
+import { authHeaders } from "../../lib/api";
 
-function authHeaders() {
-  if (typeof window === "undefined") return {};
-  const token = localStorage.getItem("authToken");
-  return token ? { Authorization: `Bearer ${token}` } : {};
+/* ─── YTD date range ─── */
+function ytdRange() {
+  const now = new Date();
+  return {
+    from: `${now.getFullYear()}-01-01`,
+    to: now.toISOString().slice(0, 10),
+  };
+}
+
+/* ─── Health traffic-light dot ─── */
+const HEALTH_DOT = {
+  green: { bg: "bg-emerald-500", ring: "ring-emerald-200" },
+  amber: { bg: "bg-amber-500", ring: "ring-amber-200" },
+  red:   { bg: "bg-red-500",   ring: "ring-red-200" },
+};
+function HealthDot({ health }) {
+  const c = HEALTH_DOT[health] || HEALTH_DOT.amber;
+  return <span className={`inline-block w-2.5 h-2.5 rounded-full ${c.bg} ring-2 ${c.ring}`} />;
+}
+
+/* ─── Collapsible section with chevron ─── */
+function CollapsibleSection({ title, badge, defaultOpen = false, children }) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="mb-5">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex items-center gap-2 w-full text-left group"
+      >
+        <svg
+          className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${open ? "rotate-90" : ""}`}
+          viewBox="0 0 20 20"
+          fill="currentColor"
+        >
+          <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
+        </svg>
+        <span className="text-sm font-semibold uppercase tracking-wide text-slate-600 group-hover:text-slate-900 transition-colors">
+          {title}
+        </span>
+        {badge != null && (
+          <span className="ml-1 inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
+            {badge}
+          </span>
+        )}
+      </button>
+      {open && <div className="mt-3">{children}</div>}
+    </div>
+  );
 }
 
 function formatCurrency(value) {
@@ -24,6 +70,13 @@ function formatCurrency(value) {
 function formatPercent(value) {
   if (!Number.isFinite(value)) return "0%";
   return `${(value * 100).toFixed(1)}%`;
+}
+
+function formatChfCents(cents) {
+  if (!Number.isFinite(cents)) return "CHF 0";
+  const chf = Math.round(cents / 100);
+  const formatted = Math.abs(chf).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, "'");
+  return cents < 0 ? `CHF -${formatted}` : `CHF ${formatted}`;
 }
 
 function getLeaseRentTotal(lease) {
@@ -56,6 +109,25 @@ export default function OwnerDashboard() {
   const [units, setUnits] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  // ─── Portfolio summary ───
+  const [portfolio, setPortfolio] = useState(null);
+  const [portfolioLoading, setPortfolioLoading] = useState(true);
+
+  const loadPortfolio = useCallback(async () => {
+    setPortfolioLoading(true);
+    try {
+      const { from, to } = ytdRange();
+      const res = await fetch(`/api/financials/portfolio-summary?from=${from}&to=${to}`, {
+        headers: authHeaders(),
+      });
+      const json = await res.json();
+      if (res.ok) setPortfolio(json.data);
+    } catch (_) { /* swallow — non-critical widget */ }
+    finally { setPortfolioLoading(false); }
+  }, []);
+
+  useEffect(() => { loadPortfolio(); }, [loadPortfolio]);
 
   useEffect(() => {
     loadDashboard();
@@ -229,6 +301,7 @@ export default function OwnerDashboard() {
           {loading && <div className="text-sm text-slate-600">Loading dashboard data...</div>}
 
           {!loading && (
+            <CollapsibleSection title="Action Items" badge={recentApprovals.length + draftInvoices.length + approvedInvoices.length + topVacancies.length || null}>
             <div className="grid gap-6 lg:grid-cols-3">
               <Panel
                 title="Pending approvals"
@@ -335,7 +408,97 @@ export default function OwnerDashboard() {
                 )}
               </Panel>
             </div>
+            </CollapsibleSection>
           )}
+
+          {/* ─── Portfolio Financial Performance (YTD) ─── */}
+          <CollapsibleSection title="Portfolio Performance (YTD)" badge={portfolio ? portfolio.buildingCount + " buildings" : null}>
+            {portfolioLoading && !portfolio && (
+              <p className="text-sm text-slate-500">Loading financial data…</p>
+            )}
+
+            {portfolio && (
+              <>
+                {/* Owner-focused aggregate KPIs */}
+                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4 mb-5">
+                  <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                    <div className="text-xs font-semibold uppercase text-slate-500">Total Income</div>
+                    <div className="mt-2 text-2xl font-semibold text-emerald-700">
+                      {formatChfCents(portfolio.totalEarnedIncomeCents)}
+                    </div>
+                    <div className="text-sm text-slate-600">Rent collected YTD</div>
+                  </div>
+                  <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                    <div className="text-xs font-semibold uppercase text-slate-500">Total Expenses</div>
+                    <div className="mt-2 text-2xl font-semibold text-red-700">
+                      {formatChfCents(portfolio.totalExpensesCents)}
+                    </div>
+                    <div className="text-sm text-slate-600">Maintenance + operating</div>
+                  </div>
+                  <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                    <div className="text-xs font-semibold uppercase text-slate-500">Net Result</div>
+                    <div className={`mt-2 text-2xl font-semibold ${portfolio.totalNetIncomeCents >= 0 ? "text-emerald-700" : "text-red-700"}`}>
+                      {formatChfCents(portfolio.totalNetIncomeCents)}
+                    </div>
+                    <div className="text-sm text-slate-600">Income − Expenses</div>
+                  </div>
+                  <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                    <div className="text-xs font-semibold uppercase text-slate-500">Avg Maintenance Ratio</div>
+                    <div className={`mt-2 text-2xl font-semibold ${portfolio.avgMaintenanceRatio > 0.3 ? "text-amber-700" : "text-slate-900"}`}>
+                      {formatPercent(portfolio.avgMaintenanceRatio)}
+                    </div>
+                    <div className="text-sm text-slate-600">Maintenance ÷ Income</div>
+                  </div>
+                </div>
+
+                {/* Per-building compact table — owner view emphasises yield */}
+                {portfolio.buildings.length > 0 && (
+                  <div className="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-slate-200 bg-slate-50 text-left">
+                          <th className="py-2.5 px-4 font-medium text-slate-600">Building</th>
+                          <th className="py-2.5 px-3 font-medium text-slate-600 text-center w-16">Health</th>
+                          <th className="py-2.5 px-3 font-medium text-slate-600 text-right">Income</th>
+                          <th className="py-2.5 px-3 font-medium text-slate-600 text-right">Expenses</th>
+                          <th className="py-2.5 px-3 font-medium text-slate-600 text-right">Net Result</th>
+                          <th className="py-2.5 px-3 font-medium text-slate-600 text-right hidden sm:table-cell">Units</th>
+                          <th className="py-2.5 px-3 w-16"></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {portfolio.buildings.map((b) => (
+                          <tr key={b.buildingId} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                            <td className="py-2.5 px-4 font-medium text-slate-900">{b.buildingName}</td>
+                            <td className="py-2.5 px-3 text-center"><HealthDot health={b.health} /></td>
+                            <td className="py-2.5 px-3 text-right font-mono text-emerald-700">{formatChfCents(b.earnedIncomeCents)}</td>
+                            <td className="py-2.5 px-3 text-right font-mono text-red-700">{formatChfCents(b.expensesTotalCents)}</td>
+                            <td className={`py-2.5 px-3 text-right font-mono font-semibold ${b.netIncomeCents >= 0 ? "text-emerald-700" : "text-red-700"}`}>
+                              {formatChfCents(b.netIncomeCents)}
+                            </td>
+                            <td className="py-2.5 px-3 text-right text-slate-700 hidden sm:table-cell">{b.activeUnitsCount}</td>
+                            <td className="py-2.5 px-3 text-right">
+                              <Link
+                                href={`/admin-inventory/buildings/${b.buildingId}`}
+                                className="text-xs font-medium text-indigo-600 hover:text-indigo-700"
+                              >
+                                Details
+                              </Link>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+
+                {portfolio.buildings.length === 0 && (
+                  <p className="text-sm text-slate-500">No buildings with financial data found.</p>
+                )}
+              </>
+            )}
+          </CollapsibleSection>
+
         </PageContent>
       </PageShell>
     </AppShell>

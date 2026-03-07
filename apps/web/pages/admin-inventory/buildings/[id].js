@@ -1,11 +1,81 @@
 import { useRouter } from "next/router";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
 import AppShell from "../../../components/AppShell";
 import PageShell from "../../../components/layout/PageShell";
 import PageHeader from "../../../components/layout/PageHeader";
 import PageContent from "../../../components/layout/PageContent";
 import Panel from "../../../components/layout/Panel";
+import UndoToast, { useUndoToast } from "../../../components/ui/UndoToast";
+import { authHeaders } from "../../../lib/api";
+import { formatChfCents, formatPercent } from "../../../lib/format";
+
+/* ─── Financials helpers ─── */
+function displayDate(iso) {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return iso;
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  return `${dd}.${mm}.${d.getFullYear()}`;
+}
+
+function defaultRange() {
+  const now = new Date();
+  const from = `${now.getFullYear()}-01-01`;
+  const to = now.toISOString().slice(0, 10);
+  return { from, to };
+}
+
+const CATEGORY_LABELS = {
+  MAINTENANCE: "Maintenance",
+  UTILITIES: "Utilities",
+  CLEANING: "Cleaning",
+  INSURANCE: "Insurance",
+  TAX: "Tax",
+  ADMIN: "Administration",
+  CAPEX: "Capital Expenditure",
+  OTHER: "Other",
+};
+
+/* ─── Financials UI components ─── */
+function HealthBullet({ icon, text, color }) {
+  const bg = { green: "bg-emerald-50", amber: "bg-amber-50", red: "bg-red-50" }[color] || "bg-gray-50";
+  const border = { green: "border-emerald-200", amber: "border-amber-200", red: "border-red-200" }[color] || "border-gray-200";
+  return (
+    <div className={`flex items-start gap-2.5 px-4 py-3 rounded-lg border ${bg} ${border}`}>
+      <span className="text-lg leading-none mt-0.5">{icon}</span>
+      <span className="text-sm text-gray-800">{text}</span>
+    </div>
+  );
+}
+
+function HeroKpi({ label, value, color }) {
+  const textColor = color === "green" ? "text-emerald-700" : color === "red" ? "text-red-700" : "text-gray-900";
+  return (
+    <div className="bg-white rounded-lg border border-gray-200 p-5 flex flex-col items-center gap-1 text-center">
+      <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">{label}</span>
+      <span className={`text-2xl font-bold ${textColor}`}>{value}</span>
+    </div>
+  );
+}
+
+function DetailSection({ title, children, defaultOpen = false }) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="border border-gray-200 rounded-lg overflow-hidden">
+      <button
+        type="button"
+        className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100 transition-colors text-left"
+        onClick={() => setOpen((v) => !v)}
+      >
+        <span className="text-sm font-semibold text-gray-700">{title}</span>
+        <span className="text-gray-400 text-xs">{open ? "▲ Hide" : "▼ Show"}</span>
+      </button>
+      {open && <div className="p-4 bg-white">{children}</div>}
+    </div>
+  );
+}
 
 export default function BuildingDetail() {
   const router = useRouter();
@@ -45,7 +115,7 @@ export default function BuildingDetail() {
     backLink: { color: "#0066cc", textDecoration: "none", fontWeight: 500, marginBottom: "20px", display: "inline-block" },
   };
 
-  const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.API_BASE_URL || "http://127.0.0.1:3001";
+  const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3001";
 
   const [building, setBuilding] = useState(null);
   const [units, setUnits] = useState([]);
@@ -54,6 +124,9 @@ export default function BuildingDetail() {
   const [editMode, setEditMode] = useState(false);
   const [editName, setEditName] = useState("");
   const [editAddress, setEditAddress] = useState("");
+  const [editYearBuilt, setEditYearBuilt] = useState("");
+  const [editElevator, setEditElevator] = useState(false);
+  const [editConcierge, setEditConcierge] = useState(false);
   const [createUnitName, setCreateUnitName] = useState("");
   const [createUnitType, setCreateUnitType] = useState("RESIDENTIAL");
   const [unitAction, setUnitAction] = useState(null);
@@ -69,6 +142,81 @@ export default function BuildingDetail() {
   const [newRuleConditions, setNewRuleConditions] = useState([{ field: "CATEGORY", operator: "EQUALS", value: "" }]);
   const [newRuleAction, setNewRuleAction] = useState("AUTO_APPROVE");
   const [message, setMessage] = useState("");
+  const [leaseTemplates, setLeaseTemplates] = useState([]);
+  const toast = useUndoToast();
+
+  // ─── Financials state ───
+  const [finLoading, setFinLoading] = useState(false);
+  const [finError, setFinError] = useState("");
+  const [finData, setFinData] = useState(null);
+  const [finRange, setFinRange] = useState(defaultRange);
+
+  const fetchFinancials = useCallback(
+    async (forceRefresh = false) => {
+      if (!id) return;
+      setFinLoading(true);
+      setFinError("");
+      try {
+        const params = new URLSearchParams({ from: finRange.from, to: finRange.to });
+        if (forceRefresh) params.set("forceRefresh", "true");
+        const res = await fetch(`/api/buildings/${id}/financials?${params}`, {
+          headers: authHeaders(),
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json?.error?.message || "Failed to load financials");
+        setFinData(json.data);
+      } catch (e) {
+        setFinError(String(e?.message || e));
+      } finally {
+        setFinLoading(false);
+      }
+    },
+    [id, finRange],
+  );
+
+  // Load financials when the tab is activated
+  useEffect(() => {
+    if (activeTab === "Financials" && !finData && !finLoading) {
+      fetchFinancials();
+    }
+  }, [activeTab, finData, finLoading, fetchFinancials]);
+
+  const healthBullets = useMemo(() => {
+    if (!finData) return [];
+    const bullets = [];
+    // 1. Profitability
+    const net = finData.netIncomeCents;
+    if (net > 0) {
+      bullets.push({ icon: "🟢", color: "green", text: `This building is profitable — net income of ${formatChfCents(net)} for the period.` });
+    } else if (net === 0) {
+      bullets.push({ icon: "🟡", color: "amber", text: "Income and expenses are exactly balanced — no profit or loss this period." });
+    } else {
+      bullets.push({ icon: "🔴", color: "red", text: `Expenses exceed income by ${formatChfCents(Math.abs(net))} — review the breakdown below.` });
+    }
+    // 2. Collection
+    const cr = finData.collectionRate;
+    if (cr >= 0.95) {
+      bullets.push({ icon: "🟢", color: "green", text: `Collection rate is ${formatPercent(cr)} — rent is being paid on time.` });
+    } else if (cr >= 0.80) {
+      bullets.push({ icon: "🟡", color: "amber", text: `Collection rate is ${formatPercent(cr)} — some rent payments are outstanding.` });
+    } else if (finData.projectedIncomeCents > 0) {
+      bullets.push({ icon: "🔴", color: "red", text: `Collection rate is only ${formatPercent(cr)} — significant rent is overdue.` });
+    } else {
+      bullets.push({ icon: "🟡", color: "amber", text: "No projected income — collection rate cannot be assessed." });
+    }
+    // 3. Maintenance burden
+    const mr = finData.maintenanceRatio;
+    if (finData.earnedIncomeCents === 0 && finData.maintenanceTotalCents === 0) {
+      bullets.push({ icon: "🟡", color: "amber", text: "No maintenance spend and no income recorded this period." });
+    } else if (mr <= 0.15) {
+      bullets.push({ icon: "🟢", color: "green", text: `Maintenance is ${formatPercent(mr)} of income — well within healthy range.` });
+    } else if (mr <= 0.30) {
+      bullets.push({ icon: "🟡", color: "amber", text: `Maintenance is ${formatPercent(mr)} of income — monitor for rising costs.` });
+    } else {
+      bullets.push({ icon: "🔴", color: "red", text: `Maintenance is ${formatPercent(mr)} of income — unusually high, investigate major repairs.` });
+    }
+    return bullets;
+  }, [finData]);
 
   function setOk(message) {
     setNotice({ type: "ok", message });
@@ -103,9 +251,13 @@ export default function BuildingDetail() {
       setBuilding(b);
       setEditName(b.name);
       setEditAddress(b.address || "");
+      setEditYearBuilt(b.yearBuilt != null ? String(b.yearBuilt) : "");
+      setEditElevator(!!b.hasElevator);
+      setEditConcierge(!!b.hasConcierge);
       await loadUnits();
       await loadBuildingConfig();
       await loadApprovalRules();
+      await loadLeaseTemplates();
     } catch (e) {
       setErr(`Failed to load building: ${e.message}`);
     } finally {
@@ -140,6 +292,17 @@ export default function BuildingDetail() {
     }
   }
 
+  async function loadLeaseTemplates() {
+    if (!id) return;
+    try {
+      const data = await fetchJSON(`/lease-templates?buildingId=${id}`);
+      setLeaseTemplates(Array.isArray(data) ? data : data?.data || []);
+    } catch (e) {
+      console.error("Failed to load lease templates:", e);
+      setLeaseTemplates([]);
+    }
+  }
+
   async function loadUnits() {
     if (!id) return;
     try {
@@ -162,7 +325,13 @@ export default function BuildingDetail() {
       setLoading(true);
       await fetchJSON(`/buildings/${id}`, {
         method: "PATCH",
-        body: JSON.stringify({ name: editName, address: editAddress }),
+        body: JSON.stringify({
+          name: editName,
+          address: editAddress,
+          yearBuilt: editYearBuilt ? Number(editYearBuilt) : null,
+          hasElevator: editElevator,
+          hasConcierge: editConcierge,
+        }),
       });
       await loadBuilding();
       setEditMode(false);
@@ -383,7 +552,7 @@ export default function BuildingDetail() {
 
           {/* Tabs Navigation */}
           <div className="flex flex-wrap gap-2 mb-4">
-            {["Building information", "Units", "Policies"].map((tab) => (
+            {["Building information", "Units", "Documents", "Policies", "Financials"].map((tab) => (
               <button
                 key={tab}
                 type="button"
@@ -426,6 +595,36 @@ export default function BuildingDetail() {
                         placeholder="Address"
                       />
                     </label>
+                    <label className="grid gap-2">
+                      <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Year Built</span>
+                      <input
+                        className="input text-sm text-slate-700"
+                        type="number"
+                        min="1800"
+                        max={new Date().getFullYear()}
+                        value={editYearBuilt}
+                        onChange={(e) => setEditYearBuilt(e.target.value)}
+                        placeholder="e.g. 1995"
+                      />
+                    </label>
+                    <div className="flex items-end gap-6 pb-1">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={editElevator}
+                          onChange={(e) => setEditElevator(e.target.checked)}
+                        />
+                        <span className="text-sm text-slate-700">Elevator</span>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={editConcierge}
+                          onChange={(e) => setEditConcierge(e.target.checked)}
+                        />
+                        <span className="text-sm text-slate-700">Concierge</span>
+                      </label>
+                    </div>
                   </div>
                   <div className="flex gap-2 mt-4">
                     <button
@@ -442,6 +641,9 @@ export default function BuildingDetail() {
                         setEditMode(false);
                         setEditName(building?.name || "");
                         setEditAddress(building?.address || "");
+                        setEditYearBuilt(building?.yearBuilt != null ? String(building.yearBuilt) : "");
+                        setEditElevator(!!building?.hasElevator);
+                        setEditConcierge(!!building?.hasConcierge);
                       }}
                     >
                       Cancel
@@ -466,6 +668,18 @@ export default function BuildingDetail() {
                     <div>
                       <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Address</div>
                       <div className="text-sm text-slate-700 mt-1">{building?.address || "—"}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Year Built</div>
+                      <div className="text-sm text-slate-700 mt-1">{building?.yearBuilt ?? "—"}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Amenities</div>
+                      <div className="text-sm text-slate-700 mt-1 flex gap-3">
+                        {building?.hasElevator && <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">Elevator</span>}
+                        {building?.hasConcierge && <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">Concierge</span>}
+                        {!building?.hasElevator && !building?.hasConcierge && "—"}
+                      </div>
                     </div>
                   </div>
                 </>
@@ -535,11 +749,24 @@ export default function BuildingDetail() {
                     {residentialUnits.map((u) => (
                       <Link key={u.id} href={`/admin-inventory/units/${u.id}`} className="block border border-slate-200 rounded-lg p-3 hover:bg-slate-50 transition">
                         <div className="flex justify-between items-center">
-                          <div>
-                            <div className="font-semibold text-slate-900">{u.unitNumber || u.name || "Unit"}</div>
-                            <div className="text-xs text-slate-500 mt-1"><code>{u.id}</code></div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-semibold text-slate-900">{u.unitNumber || u.name || "Unit"}</span>
+                              {u.floor && <span className="text-xs text-slate-400">Floor {u.floor}</span>}
+                              {u.rooms != null && <span className="text-xs text-slate-400">{u.rooms} rooms</span>}
+                              {u.livingAreaSqm != null && <span className="text-xs text-slate-400">{u.livingAreaSqm} m²</span>}
+                            </div>
+                            {(u.monthlyRentChf != null || u.monthlyChargesChf != null) && (
+                              <div className="text-xs text-slate-500 mt-1">
+                                {u.monthlyRentChf != null && <span className="font-medium text-slate-700">CHF {u.monthlyRentChf}.-</span>}
+                                {u.monthlyChargesChf != null && <span className="ml-1 text-slate-400">+ {u.monthlyChargesChf} charges</span>}
+                                {(u.monthlyRentChf != null || u.monthlyChargesChf != null) && (
+                                  <span className="ml-1 text-slate-600 font-medium">= CHF {(u.monthlyRentChf || 0) + (u.monthlyChargesChf || 0)}.- total</span>
+                                )}
+                              </div>
+                            )}
                           </div>
-                          <span className="text-blue-600">→</span>
+                          <span className="text-blue-600 ml-2 flex-shrink-0">→</span>
                         </div>
                       </Link>
                     ))}
@@ -554,11 +781,14 @@ export default function BuildingDetail() {
                     {commonUnits.map((u) => (
                       <Link key={u.id} href={`/admin-inventory/units/${u.id}`} className="block border border-slate-200 rounded-lg p-3 hover:bg-slate-50 transition">
                         <div className="flex justify-between items-center">
-                          <div>
-                            <div className="font-semibold text-slate-900">{u.unitNumber || u.name || "Common Area"}</div>
-                            <div className="text-xs text-slate-500 mt-1"><code>{u.id}</code></div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-semibold text-slate-900">{u.unitNumber || u.name || "Common Area"}</span>
+                              {u.floor && <span className="text-xs text-slate-400">Floor {u.floor}</span>}
+                              {u.livingAreaSqm != null && <span className="text-xs text-slate-400">{u.livingAreaSqm} m²</span>}
+                            </div>
                           </div>
-                          <span className="text-blue-600">→</span>
+                          <span className="text-blue-600 ml-2 flex-shrink-0">→</span>
                         </div>
                       </Link>
                     ))}
@@ -567,6 +797,72 @@ export default function BuildingDetail() {
               )}
 
               {units.length === 0 && <div className="text-center text-slate-500 italic text-sm py-6">No units yet.</div>}
+            </Panel>
+          )}
+
+          {/* Documents tab */}
+          {activeTab === "Documents" && (
+            <Panel title="Documents">
+              <h3 className="font-semibold text-slate-900 mb-3">Lease Template</h3>
+              {leaseTemplates.length > 0 ? (
+                <div className="space-y-2">
+                  {leaseTemplates.map((tpl) => (
+                    <div
+                      key={tpl.id}
+                      className="border border-slate-200 rounded-lg p-4 hover:bg-slate-50 transition"
+                    >
+                      <div className="flex justify-between items-center">
+                        <Link href={`/manager/leases/${tpl.id}`} className="flex-1 min-w-0">
+                          <span className="font-semibold text-slate-900">{tpl.templateName || "Lease Template"}</span>
+                          <span className="ml-2 inline-block px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-700">TEMPLATE</span>
+                          {tpl.landlordName && (
+                            <p className="text-xs text-slate-500 mt-1">Landlord: {tpl.landlordName}</p>
+                          )}
+                          {tpl.netRentChf != null && (
+                            <p className="text-xs text-slate-500">Default rent: CHF {tpl.netRentChf}.-/month</p>
+                          )}
+                        </Link>
+                        <div className="flex items-center gap-2 ml-4 flex-shrink-0">
+                          <Link href={`/manager/leases/${tpl.id}`} className="text-blue-600">→</Link>
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              try {
+                                const r = await fetch(`${API_BASE}/lease-templates/${tpl.id}`, { method: "DELETE" });
+                                if (!r.ok) throw new Error("Delete failed");
+                                await loadLeaseTemplates();
+                                toast.show(`Template "${tpl.templateName || "Unnamed"}" deleted`, async () => {
+                                  await fetch(`${API_BASE}/lease-templates/${tpl.id}/restore`, { method: "POST" });
+                                  await loadLeaseTemplates();
+                                });
+                              } catch (e) {
+                                setErr(`Failed to delete template: ${e.message}`);
+                              }
+                            }}
+                            className="text-red-500 hover:text-red-700 text-sm font-medium"
+                          >
+                            🗑️
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+                  <p className="text-sm text-amber-800 font-medium mb-1">No lease template found for this building</p>
+                  <p className="text-xs text-amber-600 mb-3">
+                    A lease template defines the default contract terms (landlord info, notice rules, payment details, deposit) 
+                    that are automatically applied when a new tenant is selected. Without a template, leases must be created manually.
+                  </p>
+                  <Link
+                    href="/manager/leases/templates"
+                    className="inline-flex items-center rounded-lg bg-amber-600 px-3 py-2 text-xs font-semibold text-white hover:bg-amber-700"
+                  >
+                    Go to Lease Templates →
+                  </Link>
+                </div>
+              )}
             </Panel>
           )}
 
@@ -835,7 +1131,197 @@ export default function BuildingDetail() {
               </Panel>
             </>
           )}
+
+          {/* Financials tab */}
+          {activeTab === "Financials" && (
+            <>
+              {/* Date range controls */}
+              <Panel>
+                <div className="flex flex-wrap items-end gap-4">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs font-medium text-gray-600">From</label>
+                    <input
+                      type="date"
+                      value={finRange.from}
+                      onChange={(e) => setFinRange((r) => ({ ...r, from: e.target.value }))}
+                      className="border border-gray-300 rounded px-2 py-1 text-sm"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs font-medium text-gray-600">To</label>
+                    <input
+                      type="date"
+                      value={finRange.to}
+                      onChange={(e) => setFinRange((r) => ({ ...r, to: e.target.value }))}
+                      className="border border-gray-300 rounded px-2 py-1 text-sm"
+                    />
+                  </div>
+                  <button
+                    onClick={() => fetchFinancials(false)}
+                    className="bg-blue-600 text-white text-sm font-medium px-4 py-1.5 rounded hover:bg-blue-700 transition-colors"
+                  >
+                    Apply
+                  </button>
+                  <button
+                    onClick={() => fetchFinancials(true)}
+                    className="bg-gray-100 text-gray-700 text-sm font-medium px-4 py-1.5 rounded border border-gray-300 hover:bg-gray-200 transition-colors"
+                    title="Re-compute snapshots from source data"
+                  >
+                    ↻ Refresh
+                  </button>
+                </div>
+                {finData && (
+                  <p className="text-xs text-gray-400 mt-2">
+                    Period: {displayDate(finData.from)} – {displayDate(finData.to)} · {finData.activeUnitsCount} active unit{finData.activeUnitsCount !== 1 ? "s" : ""}
+                  </p>
+                )}
+              </Panel>
+
+              {finError && (
+                <Panel><p className="text-red-600 font-medium">Error: {finError}</p></Panel>
+              )}
+
+              {finLoading && !finData && <p className="text-gray-500 mt-4">Loading financials…</p>}
+
+              {finData && (
+                <>
+                  {/* ── Layer 1: Health Summary ── */}
+                  <div className="mt-4 flex flex-col gap-2">
+                    {healthBullets.map((b, i) => (
+                      <HealthBullet key={i} icon={b.icon} text={b.text} color={b.color} />
+                    ))}
+                  </div>
+
+                  {/* ── Layer 2: Hero KPIs ── */}
+                  <div className="grid grid-cols-3 gap-4 mt-5">
+                    <HeroKpi label="Income" value={formatChfCents(finData.earnedIncomeCents)} color="green" />
+                    <HeroKpi label="Expenses" value={formatChfCents(finData.expensesTotalCents)} color="red" />
+                    <HeroKpi
+                      label="Net Result"
+                      value={formatChfCents(finData.netIncomeCents)}
+                      color={finData.netIncomeCents >= 0 ? "green" : "red"}
+                    />
+                  </div>
+
+                  {/* ── Layer 3: Detailed Breakdown (collapsed) ── */}
+                  <div className="mt-5 flex flex-col gap-3">
+                    <DetailSection title="Income Details">
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <span className="text-gray-500">Earned (paid)</span>
+                          <p className="font-semibold text-gray-900">{formatChfCents(finData.earnedIncomeCents)}</p>
+                        </div>
+                        <div>
+                          <span className="text-gray-500">Projected (full period)</span>
+                          <p className="font-semibold text-gray-900">{formatChfCents(finData.projectedIncomeCents)}</p>
+                        </div>
+                        <div>
+                          <span className="text-gray-500">Collection Rate</span>
+                          <p className="font-semibold text-gray-900">{formatPercent(finData.collectionRate)}</p>
+                        </div>
+                        <div>
+                          <span className="text-gray-500">Active Units</span>
+                          <p className="font-semibold text-gray-900">{finData.activeUnitsCount}</p>
+                        </div>
+                      </div>
+                    </DetailSection>
+
+                    <DetailSection title="Expense Breakdown">
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
+                        <div>
+                          <span className="text-gray-500">Maintenance</span>
+                          <p className="font-semibold text-gray-900">{formatChfCents(finData.maintenanceTotalCents)}</p>
+                        </div>
+                        <div>
+                          <span className="text-gray-500">Operating</span>
+                          <p className="font-semibold text-gray-900">{formatChfCents(finData.operatingTotalCents)}</p>
+                        </div>
+                        <div>
+                          <span className="text-gray-500">Capital Expenditure</span>
+                          <p className="font-semibold text-gray-900">{formatChfCents(finData.capexTotalCents)}</p>
+                        </div>
+                        <div>
+                          <span className="text-gray-500">Cost per Unit</span>
+                          <p className="font-semibold text-gray-900">{formatChfCents(finData.costPerUnitCents)}</p>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4 text-sm mt-4">
+                        <div>
+                          <span className="text-gray-500">Net Operating Income</span>
+                          <p className="font-semibold text-gray-900">{formatChfCents(finData.netOperatingIncomeCents)}</p>
+                        </div>
+                        <div>
+                          <span className="text-gray-500">Maintenance Ratio</span>
+                          <p className="font-semibold text-gray-900">{formatPercent(finData.maintenanceRatio)}</p>
+                        </div>
+                      </div>
+                    </DetailSection>
+                  </div>
+
+                  {/* ── Tables ── */}
+                  <div className="mt-6 mb-2">
+                    <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wide">Expenses by Category</h3>
+                  </div>
+                  <Panel>
+                    {finData.expensesByCategory.length === 0 ? (
+                      <p className="text-gray-400 text-sm">No categorised expenses in this period.</p>
+                    ) : (
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-gray-200 text-left">
+                            <th className="py-2 font-medium text-gray-600">Category</th>
+                            <th className="py-2 font-medium text-gray-600 text-right">Amount</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {finData.expensesByCategory.map((row) => (
+                            <tr key={row.category} className="border-b border-gray-100">
+                              <td className="py-2 text-gray-800">
+                                {CATEGORY_LABELS[row.category] || row.category}
+                              </td>
+                              <td className="py-2 text-gray-800 text-right font-mono">
+                                {formatChfCents(row.totalCents)}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+                  </Panel>
+
+                  <div className="mt-6 mb-2">
+                    <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wide">Top Contractors by Spend</h3>
+                  </div>
+                  <Panel>
+                    {finData.topContractorsBySpend.length === 0 ? (
+                      <p className="text-gray-400 text-sm">No contractor expenses in this period.</p>
+                    ) : (
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-gray-200 text-left">
+                            <th className="py-2 font-medium text-gray-600">Contractor</th>
+                            <th className="py-2 font-medium text-gray-600 text-right">Total Spend</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {finData.topContractorsBySpend.map((row) => (
+                            <tr key={row.contractorId} className="border-b border-gray-100">
+                              <td className="py-2 text-gray-800">{row.contractorName}</td>
+                              <td className="py-2 text-gray-800 text-right font-mono">
+                                {formatChfCents(row.totalCents)}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+                  </Panel>
+                </>
+              )}
+            </>
+          )}
         </PageContent>
+        <UndoToast {...toast} />
       </PageShell>
     </AppShell>
   );

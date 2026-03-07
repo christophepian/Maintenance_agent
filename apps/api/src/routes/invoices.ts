@@ -1,14 +1,17 @@
-import { Router } from "../http/router";
+import { Router, HandlerContext } from "../http/router";
 import { sendError, sendJson } from "../http/json";
 import { readJson } from "../http/body";
 import { first } from "../http/query";
 import { getAuthUser } from "../authz";
 import { requireOrgViewer, requireOwnerAccess, logEvent } from "./helpers";
-import { createJob, getJob, listJobs, updateJob } from "../services/jobs";
-import { createInvoice, getInvoice, listInvoices, approveInvoice, markInvoicePaid, disputeInvoice, issueInvoice, getOrCreateInvoiceForJob } from "../services/invoices";
+import { getJob, listJobs, updateJob } from "../services/jobs";
+import { createInvoice, getInvoice, listInvoices, approveInvoice, markInvoicePaid, disputeInvoice, getOrCreateInvoiceForJob } from "../services/invoices";
 import { CreateInvoiceSchema } from "../validation/invoices";
 import { generateInvoiceQRBill, getInvoiceQRCodePNG } from "../services/invoiceQRBill";
 import { generateInvoicePDF } from "../services/invoicePDF";
+import { completeJobWorkflow } from "../workflows/completeJobWorkflow";
+import { issueInvoiceWorkflow } from "../workflows/issueInvoiceWorkflow";
+import { InvalidTransitionError } from "../workflows/transitions";
 
 export function registerInvoiceRoutes(router: Router) {
   // GET /jobs
@@ -37,14 +40,25 @@ export function registerInvoiceRoutes(router: Router) {
     }
   });
 
-  // PATCH /jobs/:id
-  router.patch("/jobs/:id", async ({ req, res, params, orgId }) => {
+  // PATCH /jobs/:id — uses completeJobWorkflow when status=COMPLETED
+  router.patch("/jobs/:id", async ({ req, res, params, orgId, prisma }) => {
     if (!requireOrgViewer(req, res)) return;
     try {
       const raw = await readJson(req);
       const job = await getJob(params.id);
       if (!job || job.orgId !== orgId) return sendError(res, 404, "NOT_FOUND", "Job not found");
 
+      // Delegate to workflow when completing a job
+      if (raw.status === "COMPLETED" && job.status !== "COMPLETED") {
+        const actor = getAuthUser(req);
+        const result = await completeJobWorkflow(
+          { orgId, prisma, actorUserId: actor?.userId ?? null },
+          { jobId: params.id, actualCost: raw.actualCost, startedAt: raw.startedAt, completedAt: raw.completedAt },
+        );
+        return sendJson(res, 200, { data: result.dto });
+      }
+
+      // Non-completion updates: pass through directly
       const updated = await updateJob(params.id, {
         status: raw.status,
         actualCost: raw.actualCost,
@@ -52,17 +66,9 @@ export function registerInvoiceRoutes(router: Router) {
         completedAt: raw.completedAt ? new Date(raw.completedAt) : undefined,
       });
 
-      // Auto-create invoice when job is marked COMPLETED (idempotent)
-      if (raw.status === "COMPLETED" && job.status !== "COMPLETED" && updated.actualCost) {
-        try {
-          await getOrCreateInvoiceForJob(orgId, params.id, updated.actualCost);
-        } catch (err) {
-          console.warn("Failed to auto-create invoice for job", params.id, err);
-        }
-      }
-
       sendJson(res, 200, { data: updated });
     } catch (e: any) {
+      if (e instanceof InvalidTransitionError) return sendError(res, 409, "INVALID_TRANSITION", e.message);
       const msg = String(e?.message || e);
       if (msg === "Invalid JSON") return sendError(res, 400, "INVALID_JSON", "Invalid JSON");
       if (msg === "Body too large") return sendError(res, 413, "BODY_TOO_LARGE", "Request body too large");
@@ -131,40 +137,19 @@ export function registerInvoiceRoutes(router: Router) {
     }
   });
 
-  // POST /invoices/:id/issue
+  // POST /invoices/:id/issue → delegates to issueInvoiceWorkflow
   router.post("/invoices/:id/issue", async ({ req, res, prisma, params, orgId }) => {
     if (!requireOwnerAccess(req, res)) return;
     try {
-      const invoice = await getInvoice(params.id);
-      if (!invoice || invoice.orgId !== orgId) return sendError(res, 404, "NOT_FOUND", "Invoice not found");
-
-      const issued = await issueInvoice(params.id);
-
-      // Fetch job to get tenantId for notification
-      let tenantId: string | undefined = undefined;
-      try {
-        const job = await prisma.job.findUnique({
-          where: { id: issued.jobId },
-          include: { request: true },
-        });
-        tenantId = (job as any)?.request?.tenantId;
-      } catch (err) {
-        console.warn("Failed to fetch tenantId for invoice notification", err);
-      }
-
-      // Trigger notification to tenant (if found)
-      try {
-        if (tenantId) {
-          const { notifyInvoiceStatusChanged } = require("../services/notifications");
-          await notifyInvoiceStatusChanged(params.id, orgId, tenantId, "INVOICE_CREATED");
-        }
-      } catch (notifyErr) {
-        console.warn("Failed to send invoice issued notification", notifyErr);
-      }
-
-      sendJson(res, 200, { data: issued });
+      const actor = getAuthUser(req);
+      const result = await issueInvoiceWorkflow(
+        { orgId, prisma, actorUserId: actor?.userId ?? null },
+        { invoiceId: params.id },
+      );
+      sendJson(res, 200, { data: result.dto });
     } catch (e: any) {
       const msg = String(e?.message || e);
+      if (e.code === "NOT_FOUND" || msg === "INVOICE_NOT_FOUND") return sendError(res, 404, "NOT_FOUND", "Invoice not found");
       if (msg === "INVOICE_ALREADY_ISSUED") return sendError(res, 400, "ALREADY_ISSUED", "Invoice already issued");
       if (msg === "ISSUER_BILLING_ENTITY_REQUIRED") {
         return sendError(res, 400, "VALIDATION_ERROR", "Invoice issuer billing entity is required before issuing");

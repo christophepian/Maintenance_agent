@@ -19,6 +19,9 @@ import { registerContractorRoutes } from "./routes/contractor";
 import { registerNotificationRoutes } from "./routes/notifications";
 import { registerLeaseRoutes } from "./routes/leases";
 import { registerRentalRoutes } from "./routes/rentalApplications";
+import { registerRentEstimationRoutes } from "./routes/rentEstimation";
+import { registerFinancialRoutes } from "./routes/financials";
+import { registerLegalRoutes } from "./routes/legal";
 import { registerEventHandlers } from "./events";
 import {
   processSelectionTimeouts,
@@ -58,6 +61,9 @@ registerContractorRoutes(router);
 registerNotificationRoutes(router);
 registerLeaseRoutes(router);
 registerRentalRoutes(router);
+registerRentEstimationRoutes(router);
+registerFinancialRoutes(router);
+registerLegalRoutes(router);
 
 /* ── Dev-only: background job trigger route ─────────────────── */
 router.post("/__dev/rental/run-jobs", async ({ res }) => {

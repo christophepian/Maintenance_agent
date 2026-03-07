@@ -36,7 +36,7 @@ export function registerConfigRoutes(router: Router) {
       if (!parsed.success) return sendError(res, 400, "VALIDATION_ERROR", "Invalid org config", parsed.error.flatten());
 
       const input = parsed.data;
-      if (input.autoApproveLimit === undefined && input.mode === undefined) {
+      if (input.autoApproveLimit === undefined && input.autoLegalRouting === undefined && input.mode === undefined) {
         return sendError(res, 400, "VALIDATION_ERROR", "No org config fields provided");
       }
 
@@ -46,6 +46,7 @@ export function registerConfigRoutes(router: Router) {
 
       const updated = await updateOrgConfig(prisma, orgId, {
         autoApproveLimit: input.autoApproveLimit,
+        autoLegalRouting: input.autoLegalRouting,
         mode: input.mode as OrgMode | undefined,
       });
       sendJson(res, 200, { data: updated });

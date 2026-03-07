@@ -9,6 +9,7 @@ export const UpdateOrgConfigSchema = z.object({
     .min(0, { message: "autoApproveLimit must be >= 0" })
     .max(100000, { message: "autoApproveLimit must be <= 100000" })
     .optional(),
+  autoLegalRouting: z.boolean().optional(),
   mode: OrgModeSchema.optional(),
 });
 

@@ -130,7 +130,13 @@ export default function TenantChat() {
     setCurrentIssue("");
   }
 
-  if (!session) return null;
+  if (!session) return (
+    <AppShell role="TENANT">
+      <div className="main-container">
+        <p className="subtle">Loading…</p>
+      </div>
+    </AppShell>
+  );
 
   return (
     <AppShell role="TENANT">

@@ -1,21 +1,12 @@
 import { JobStatus } from '@prisma/client';
 import prisma from './prismaClient';
+import { JOB_FULL_INCLUDE, JOB_SUMMARY_INCLUDE } from '../repositories/jobRepository';
 
 /**
  * G9: Canonical include tree for Job queries.
- * All Job queries that feed mapJobToDTO MUST use this constant.
- * If JobDTO changes, update this include in the same PR.
+ * Single source of truth lives in jobRepository; re-exported here for backward compat.
  */
-export const JOB_INCLUDE = {
-  request: {
-    include: {
-      tenant: true,
-      unit: { include: { building: true } },
-      appliance: { include: { assetModel: true } },
-    },
-  },
-  contractor: true,
-} as const;
+export const JOB_INCLUDE = JOB_FULL_INCLUDE;
 
 export interface CreateJobParams {
   orgId: string;

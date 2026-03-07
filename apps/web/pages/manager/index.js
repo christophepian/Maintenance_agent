@@ -1,5 +1,6 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/router";
+import Link from "next/link";
 import AppShell from "../../components/AppShell";
 import PageShell from "../../components/layout/PageShell";
 import PageHeader from "../../components/layout/PageHeader";
@@ -7,12 +8,58 @@ import PageContent from "../../components/layout/PageContent";
 import Panel from "../../components/layout/Panel";
 import Section from "../../components/layout/Section";
 import { styles } from "../../styles/managerStyles";
-import { formatChf as formatCurrency, formatDate } from "../../lib/format";
+import { formatChf as formatCurrency, formatChfCents, formatPercent, formatDate } from "../../lib/format";
+import { authHeaders } from "../../lib/api";
 
-function authHeaders() {
-  if (typeof window === "undefined") return {};
-  const token = localStorage.getItem("authToken");
-  return token ? { Authorization: `Bearer ${token}` } : {};
+/* ─── YTD date range ─── */
+function ytdRange() {
+  const now = new Date();
+  return {
+    from: `${now.getFullYear()}-01-01`,
+    to: now.toISOString().slice(0, 10),
+  };
+}
+
+/* ─── Health traffic-light dot ─── */
+const HEALTH_DOT = {
+  green: { bg: "bg-emerald-500", ring: "ring-emerald-200" },
+  amber: { bg: "bg-amber-500", ring: "ring-amber-200" },
+  red:   { bg: "bg-red-500",   ring: "ring-red-200" },
+};
+function HealthDot({ health }) {
+  const c = HEALTH_DOT[health] || HEALTH_DOT.amber;
+  return <span className={`inline-block w-2.5 h-2.5 rounded-full ${c.bg} ring-2 ${c.ring}`} />;
+}
+
+/* ─── Collapsible section with chevron ─── */
+function CollapsibleSection({ title, badge, defaultOpen = false, children }) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="mb-5">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex items-center gap-2 w-full text-left group"
+      >
+        <svg
+          className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${open ? "rotate-90" : ""}`}
+          viewBox="0 0 20 20"
+          fill="currentColor"
+        >
+          <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
+        </svg>
+        <span className="text-sm font-semibold uppercase tracking-wide text-slate-600 group-hover:text-slate-900 transition-colors">
+          {title}
+        </span>
+        {badge != null && (
+          <span className="ml-1 inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
+            {badge}
+          </span>
+        )}
+      </button>
+      {open && <div className="mt-3">{children}</div>}
+    </div>
+  );
 }
 
 export default function ManagerDashboard() {
@@ -24,6 +71,31 @@ export default function ManagerDashboard() {
   const [requests, setRequests] = useState([]);
   const [jobs, setJobs] = useState([]);
   const [invoices, setInvoices] = useState([]);
+
+  // ─── Portfolio summary ───
+  const [portfolio, setPortfolio] = useState(null);
+  const [portfolioLoading, setPortfolioLoading] = useState(true);
+  const [portfolioError, setPortfolioError] = useState("");
+
+  const loadPortfolio = useCallback(async () => {
+    setPortfolioLoading(true);
+    setPortfolioError("");
+    try {
+      const { from, to } = ytdRange();
+      const res = await fetch(`/api/financials/portfolio-summary?from=${from}&to=${to}`, {
+        headers: authHeaders(),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error?.message || "Failed to load portfolio");
+      setPortfolio(json.data);
+    } catch (e) {
+      setPortfolioError(String(e?.message || e));
+    } finally {
+      setPortfolioLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadPortfolio(); }, [loadPortfolio]);
 
   useEffect(() => {
     loadDashboardData();
@@ -69,6 +141,11 @@ export default function ManagerDashboard() {
     [requests]
   );
 
+  const rfpPendingRequests = useMemo(
+    () => requests.filter((r) => r.status === "RFP_PENDING"),
+    [requests]
+  );
+
   const disputedInvoices = useMemo(
     () => invoices.filter((inv) => inv.status === "DISPUTED"),
     [invoices]
@@ -85,7 +162,7 @@ export default function ManagerDashboard() {
   }, [jobs]);
 
   const openRequestsCount = useMemo(
-    () => requests.filter((r) => ["PENDING_REVIEW", "PENDING_OWNER_APPROVAL", "APPROVED", "ASSIGNED"].includes(r.status)).length,
+    () => requests.filter((r) => ["PENDING_REVIEW", "PENDING_OWNER_APPROVAL", "RFP_PENDING", "APPROVED", "ASSIGNED"].includes(r.status)).length,
     [requests]
   );
 
@@ -151,7 +228,7 @@ export default function ManagerDashboard() {
           )}
 
           {/* Action Required Section */}
-          <Section title="Action Required">
+          <CollapsibleSection title="Action Required" badge={pendingReviewRequests.length + pendingOwnerApprovalRequests.length + disputedInvoices.length + staleJobs.length + rfpPendingRequests.length || null}>
             <div style={styles.gridGap12}>
               <Panel>
                 <div style={styles.rowSpaceBetween}>
@@ -219,19 +296,39 @@ export default function ManagerDashboard() {
                 </Panel>
               )}
 
+              {rfpPendingRequests.length > 0 && (
+                <Panel>
+                  <div style={styles.rowSpaceBetween}>
+                    <div>
+                      <strong style={styles.headingFlush}>Auto-routed to RFP</strong>
+                      <div style={styles.subtleText}>Legal engine created RFPs</div>
+                    </div>
+                    <div style={{ fontSize: "2em", fontWeight: 700, color: "#4338ca" }}>
+                      {rfpPendingRequests.length}
+                    </div>
+                  </div>
+                  <div style={styles.marginTop12}>
+                    <button onClick={() => router.push("/manager/requests?filter=RFP_PENDING")}>
+                      View Auto-routed →
+                    </button>
+                  </div>
+                </Panel>
+              )}
+
               {pendingReviewRequests.length === 0 && 
                pendingOwnerApprovalRequests.length === 0 && 
                disputedInvoices.length === 0 && 
-               staleJobs.length === 0 && (
+               staleJobs.length === 0 &&
+               rfpPendingRequests.length === 0 && (
                 <Panel>
                   <p style={{ ...styles.okText, ...styles.headingFlush }}>✓ No items require immediate action</p>
                 </Panel>
               )}
             </div>
-          </Section>
+          </CollapsibleSection>
 
           {/* Operational KPIs Section */}
-          <Section title="Operational Health">
+          <CollapsibleSection title="Operational Health">
             <div style={styles.gridGap12}>
               <Panel>
                 <div style={styles.rowSpaceBetween}>
@@ -269,7 +366,95 @@ export default function ManagerDashboard() {
                 </div>
               </Panel>
             </div>
-          </Section>
+          </CollapsibleSection>
+
+          {/* ─── Building Financial Performance ─── */}
+          <CollapsibleSection title="Building Performance (YTD)" badge={portfolio ? portfolio.buildingCount : null}>
+            {portfolioError && (
+              <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {portfolioError}
+              </div>
+            )}
+
+            {portfolioLoading && !portfolio && (
+              <p className="text-sm text-slate-500">Loading portfolio data…</p>
+            )}
+
+            {portfolio && (
+              <>
+                {/* Aggregate KPIs */}
+                <div className="grid gap-3 grid-cols-2 md:grid-cols-4 mb-4">
+                  <div className="rounded-lg border border-slate-200 bg-white p-4">
+                    <div className="text-xs font-semibold uppercase text-slate-500">Portfolio NOI</div>
+                    <div className={`mt-1 text-xl font-bold ${portfolio.totalNetIncomeCents >= 0 ? "text-emerald-700" : "text-red-700"}`}>
+                      {formatChfCents(portfolio.totalNetIncomeCents)}
+                    </div>
+                  </div>
+                  <div className="rounded-lg border border-slate-200 bg-white p-4">
+                    <div className="text-xs font-semibold uppercase text-slate-500">Avg Collection</div>
+                    <div className="mt-1 text-xl font-bold text-slate-900">
+                      {formatPercent(portfolio.avgCollectionRate)}
+                    </div>
+                  </div>
+                  <div className="rounded-lg border border-slate-200 bg-white p-4">
+                    <div className="text-xs font-semibold uppercase text-slate-500">Active Units</div>
+                    <div className="mt-1 text-xl font-bold text-slate-900">
+                      {portfolio.totalActiveUnits}
+                    </div>
+                  </div>
+                  <div className="rounded-lg border border-slate-200 bg-white p-4">
+                    <div className="text-xs font-semibold uppercase text-slate-500">Buildings in Red</div>
+                    <div className={`mt-1 text-xl font-bold ${portfolio.buildingsInRed > 0 ? "text-red-700" : "text-emerald-700"}`}>
+                      {portfolio.buildingsInRed} / {portfolio.buildingCount}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Per-building compact table */}
+                {portfolio.buildings.length > 0 && (
+                  <div className="rounded-lg border border-slate-200 bg-white overflow-hidden">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-slate-200 bg-slate-50 text-left">
+                          <th className="py-2.5 px-4 font-medium text-slate-600">Building</th>
+                          <th className="py-2.5 px-3 font-medium text-slate-600 text-center w-16">Health</th>
+                          <th className="py-2.5 px-3 font-medium text-slate-600 text-right">Net Income</th>
+                          <th className="py-2.5 px-3 font-medium text-slate-600 text-right">Collection</th>
+                          <th className="py-2.5 px-3 font-medium text-slate-600 text-right hidden sm:table-cell">Units</th>
+                          <th className="py-2.5 px-3 w-16"></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {portfolio.buildings.map((b) => (
+                          <tr key={b.buildingId} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                            <td className="py-2.5 px-4 font-medium text-slate-900">{b.buildingName}</td>
+                            <td className="py-2.5 px-3 text-center"><HealthDot health={b.health} /></td>
+                            <td className={`py-2.5 px-3 text-right font-mono text-sm ${b.netIncomeCents >= 0 ? "text-emerald-700" : "text-red-700"}`}>
+                              {formatChfCents(b.netIncomeCents)}
+                            </td>
+                            <td className="py-2.5 px-3 text-right text-slate-700">{formatPercent(b.collectionRate)}</td>
+                            <td className="py-2.5 px-3 text-right text-slate-700 hidden sm:table-cell">{b.activeUnitsCount}</td>
+                            <td className="py-2.5 px-3 text-right">
+                              <Link
+                                href={`/admin-inventory/buildings/${b.buildingId}`}
+                                className="text-xs font-medium text-indigo-600 hover:text-indigo-700"
+                              >
+                                Details
+                              </Link>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+
+                {portfolio.buildings.length === 0 && (
+                  <p className="text-sm text-slate-500">No buildings with financial data found.</p>
+                )}
+              </>
+            )}
+          </CollapsibleSection>
 
         </PageContent>
       </PageShell>

@@ -6,13 +6,7 @@ import PageHeader from "../../components/layout/PageHeader";
 import PageContent from "../../components/layout/PageContent";
 import Panel from "../../components/layout/Panel";
 import { formatDate } from "../../lib/format";
-
-function authHeaders() {
-  if (typeof window === "undefined") return {};
-  const token = localStorage.getItem("authToken");
-  return token ? { Authorization: `Bearer ${token}` } : {};
-}
-
+import { authHeaders } from "../../lib/api";
 function statusBadge(status) {
   const map = {
     AWAITING_SIGNATURE: { label: "Awaiting Signature", cls: "bg-amber-100 text-amber-700" },
@@ -152,6 +146,8 @@ export default function OwnerVacanciesPage() {
                       <th className="px-4 py-3">Building</th>
                       <th className="px-4 py-3">Unit</th>
                       <th className="px-4 py-3">Rent</th>
+                      <th className="px-4 py-3">Charges</th>
+                      <th className="px-4 py-3">Total</th>
                       <th className="px-4 py-3">Candidates</th>
                       <th className="px-4 py-3 text-right">Action</th>
                     </tr>
@@ -166,6 +162,16 @@ export default function OwnerVacanciesPage() {
                             ? `CHF ${unit.monthlyRentChf}.-`
                             : "—"}
                         </td>
+                        <td className="px-4 py-3 text-slate-700">
+                          {unit.monthlyChargesChf != null
+                            ? `CHF ${unit.monthlyChargesChf}.-`
+                            : "—"}
+                        </td>
+                        <td className="px-4 py-3 font-semibold text-slate-900">
+                          {unit.monthlyRentChf != null || unit.monthlyChargesChf != null
+                            ? `CHF ${(unit.monthlyRentChf || 0) + (unit.monthlyChargesChf || 0)}.-`
+                            : "—"}
+                        </td>
                         <td className="px-4 py-3">
                           {unit.candidateCount > 0 ? (
                             <span className="inline-flex items-center rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-semibold text-indigo-700">
@@ -175,18 +181,12 @@ export default function OwnerVacanciesPage() {
                             <span className="text-slate-400 text-xs">None yet</span>
                           )}
                         </td>
-                        <td className="px-4 py-3 text-right space-x-2">
+                        <td className="px-4 py-3 text-right">
                           <Link
                             href={`/owner/vacancies/${unit.id}/candidates`}
                             className="rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-700 hover:bg-indigo-100"
                           >
-                            Candidates
-                          </Link>
-                          <Link
-                            href={`/owner/vacancies/${unit.id}/fill`}
-                            className="rounded-lg bg-indigo-600 px-3 py-2 text-xs font-semibold text-white hover:bg-indigo-700"
-                          >
-                            Create lease
+                            Review candidates
                           </Link>
                         </td>
                       </tr>

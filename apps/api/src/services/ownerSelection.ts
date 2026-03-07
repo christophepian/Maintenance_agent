@@ -6,7 +6,7 @@ import prisma from "./prismaClient";
 import { RENTAL_OWNER_SELECTION_INCLUDE } from "./rentalIncludes";
 import { OwnerSelectionInput } from "../validation/rentalApplications";
 import { enqueueEmail } from "./emailOutbox";
-import { listLeaseTemplates, createLeaseFromTemplate } from "./leases";
+import { listLeaseTemplates, createLeaseFromTemplate, createLeaseInvoice } from "./leases";
 
 /* ══════════════════════════════════════════════════════════════
    Owner Selection Service
@@ -251,6 +251,35 @@ export async function ownerSelectCandidates(
         console.log(
           `[RENTAL] Auto-generated lease ${leaseId} from template ${template.id} for unit ${unitId}`,
         );
+
+        // Auto-generate deposit invoice if deposit is defined
+        try {
+          if (lease.depositChf && lease.depositChf > 0) {
+            await createLeaseInvoice(leaseId, orgId, {
+              type: 'DEPOSIT',
+              amountChf: lease.depositChf,
+              description: `Dépôt de garantie — ${lease.tenantName}`,
+            });
+            console.log(`[RENTAL] Auto-generated deposit invoice for lease ${leaseId}`);
+          }
+        } catch (invoiceErr) {
+          console.error("[RENTAL] Auto deposit invoice failed (non-critical):", invoiceErr);
+        }
+
+        // Auto-generate first rent invoice if rent total is defined
+        try {
+          const firstRentAmount = lease.rentTotalChf ?? lease.netRentChf;
+          if (firstRentAmount && firstRentAmount > 0) {
+            await createLeaseInvoice(leaseId, orgId, {
+              type: 'FIRST_RENT',
+              amountChf: firstRentAmount,
+              description: `Premier loyer — ${lease.tenantName}`,
+            });
+            console.log(`[RENTAL] Auto-generated first rent invoice for lease ${leaseId}`);
+          }
+        } catch (invoiceErr) {
+          console.error("[RENTAL] Auto first rent invoice failed (non-critical):", invoiceErr);
+        }
       }
     }
   } catch (e) {
@@ -272,7 +301,7 @@ export async function ownerSelectCandidates(
       select: { id: true, email: true },
     });
 
-    const { notifyManagerTenantSelected } = await import("./notifications");
+    const { notifyManagerTenantSelected, notifyOwnerTenantSelected } = await import("./notifications");
 
     for (const mgr of managers) {
       // Email notification
@@ -316,6 +345,22 @@ export async function ownerSelectCandidates(
         selection.id,
         orgId,
         "dev-user",
+        unitNumber,
+        candidateName,
+        buildingId,
+      );
+    }
+
+    // Also notify the owner(s) as a confirmation of their selection
+    const owners = await prisma.user.findMany({
+      where: { orgId, role: "OWNER" },
+      select: { id: true },
+    });
+    for (const owner of owners) {
+      await notifyOwnerTenantSelected(
+        selection.id,
+        orgId,
+        owner.id,
         unitNumber,
         candidateName,
         buildingId,

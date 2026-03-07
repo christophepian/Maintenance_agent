@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import AppShell from "../../components/AppShell";
 import ContractorPicker from "../../components/ContractorPicker";
 import { formatDate } from "../../lib/format";
+import { authHeaders } from "../../lib/api";
 
 const STATUS_TABS = [
   { key: "ALL", label: "All" },
@@ -12,13 +13,6 @@ const STATUS_TABS = [
   { key: "PAID", label: "Paid" },
   { key: "DISPUTED", label: "Disputed" },
 ];
-
-function authHeaders() {
-  if (typeof window === "undefined") return {};
-  const token = localStorage.getItem("authToken");
-  return token ? { Authorization: `Bearer ${token}` } : {};
-}
-
 export default function ContractorInvoices() {
   const router = useRouter();
   const [invoices, setInvoices] = useState([]);

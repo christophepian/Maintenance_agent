@@ -13,10 +13,6 @@ import { ALLOWED_CATEGORIES } from "../lib/categories";
 
 export default function TenantForm() {
   const API_PROXY = "/api";
-  const API_BASE =
-    process.env.NEXT_PUBLIC_API_BASE_URL ||
-    process.env.API_BASE_URL ||
-    "http://127.0.0.1:3001";
 
   const [phone, setPhone] = useState("");
   const [tenant, setTenant] = useState(null);
@@ -31,6 +27,14 @@ export default function TenantForm() {
   const [estimatedCost, setEstimatedCost] = useState("");
   const [notice, setNotice] = useState(null); // { type: "ok" | "err", msg: string }
   const [loadingTenant, setLoadingTenant] = useState(false);
+  const [apiBase, setApiBase] = useState("");
+
+  useEffect(() => {
+    setApiBase(
+      process.env.NEXT_PUBLIC_API_BASE_URL ||
+      "http://127.0.0.1:3001"
+    );
+  }, []);
 
   function ok(msg) {
     setNotice({ type: "ok", msg });
@@ -184,7 +188,7 @@ export default function TenantForm() {
       <div className="main-container">
       <h1>Tenant request (by phone)</h1>
       <div className="subtle">
-        Backend: <code className="code">{API_BASE}</code>
+        Backend: <code className="code">{apiBase || "\u2026"}</code>
       </div>
       {notice ? (
         <div className={`notice ${notice.type === "ok" ? "notice-ok" : "notice-err"}`}>

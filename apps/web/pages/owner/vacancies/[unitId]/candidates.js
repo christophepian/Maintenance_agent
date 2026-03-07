@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import AppShell from "../../../../components/AppShell";
@@ -7,13 +7,9 @@ import { formatNumber } from "../../../../lib/format";
 import PageHeader from "../../../../components/layout/PageHeader";
 import PageContent from "../../../../components/layout/PageContent";
 import Panel from "../../../../components/layout/Panel";
-
-function authHeaders() {
-  if (typeof window === "undefined") return {};
-  const token = localStorage.getItem("authToken");
-  return token ? { Authorization: `Bearer ${token}` } : {};
-}
-
+import DocumentsPanel from "../../../../components/DocumentsPanel";
+import { formatDisqualificationReasons } from "../../../../lib/formatDisqualificationReasons";
+import { authHeaders } from "../../../../lib/api";
 function scoreColor(score) {
   if (score >= 700) return "text-green-700 bg-green-50";
   if (score >= 400) return "text-amber-700 bg-amber-50";
@@ -56,6 +52,10 @@ export default function OwnerCandidatesPage() {
   });
   const [submitting, setSubmitting] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [expandedDocApp, setExpandedDocApp] = useState(null);
+  const [overrideTarget, setOverrideTarget] = useState(null); // { applicationUnitId, name }
+  const [overrideReason, setOverrideReason] = useState("");
+  const [overriding, setOverriding] = useState(false);
 
   useEffect(() => {
     if (!router.isReady || !unitId) return;
@@ -93,6 +93,7 @@ export default function OwnerCandidatesPage() {
           confidence: au?.confidenceScore,
           disqualified: !!au?.disqualified,
           disqualifiedReasons: au?.disqualifiedReasons || [],
+          overrideReason: au?.overrideReason || null,
           status: au?.status || app.status,
         };
       })
@@ -159,6 +160,33 @@ export default function OwnerCandidatesPage() {
       setError(e.message);
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function handleOverride() {
+    if (!overrideTarget || !overrideReason.trim()) return;
+    setOverriding(true);
+    setError("");
+    try {
+      const res = await fetch(
+        `/api/owner/rental-application-units/${overrideTarget.applicationUnitId}/override-disqualification`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...authHeaders() },
+          body: JSON.stringify({ reason: overrideReason.trim() }),
+        },
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error?.message || data?.message || "Override failed");
+
+      // Reload candidates to get fresh data
+      await loadCandidates();
+      setOverrideTarget(null);
+      setOverrideReason("");
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setOverriding(false);
     }
   }
 
@@ -331,29 +359,55 @@ export default function OwnerCandidatesPage() {
                         const conf = confidenceBadge(row.confidence || 0);
                         const currentRole = roleOf(row.applicationUnitId);
                         const roleInfo = currentRole ? ROLES.find((r) => r.key === currentRole) : null;
+                        const isDocExpanded = expandedDocApp === row.id;
+                        const reasons = Array.isArray(row.disqualifiedReasons)
+                          ? row.disqualifiedReasons
+                          : typeof row.disqualifiedReasons === "string"
+                            ? [row.disqualifiedReasons]
+                            : [];
 
                         return (
+                          <React.Fragment key={row.applicationUnitId || row.id}>
                           <tr
-                            key={row.applicationUnitId || row.id}
                             className={`${
-                              row.disqualified ? "bg-red-50/50 opacity-60" : ""
+                              row.disqualified ? "bg-red-50/40" : ""
                             } ${currentRole ? "ring-2 ring-indigo-200 ring-inset" : ""}`}
                           >
                             <td className="px-4 py-3 text-slate-600 font-mono">{idx + 1}</td>
                             <td className="px-4 py-3">
-                              <span className="font-medium text-slate-900">{row.name}</span>
-                              {row.disqualified && (
-                                <span className="ml-2 rounded bg-red-100 px-1.5 py-0.5 text-xs text-red-700">
-                                  Disqualified
-                                </span>
-                              )}
-                              {roleInfo && (
-                                <span
-                                  className={`ml-2 rounded px-1.5 py-0.5 text-xs font-bold text-white ${roleInfo.color}`}
+                              <div className="flex items-center flex-wrap gap-x-2">
+                                <button
+                                  onClick={() => setExpandedDocApp(isDocExpanded ? null : row.id)}
+                                  className={`font-medium underline decoration-dotted underline-offset-2 transition-colors ${
+                                    isDocExpanded
+                                      ? "text-indigo-700"
+                                      : "text-slate-900 hover:text-indigo-600"
+                                  }`}
+                                  title="Click to view corroborative documents"
                                 >
-                                  {roleInfo.label}
-                                </span>
-                              )}
+                                  {row.name}
+                                </button>
+                                {row.disqualified && (
+                                  <span className="rounded bg-red-100 px-1.5 py-0.5 text-xs text-red-700">
+                                    Disqualified
+                                  </span>
+                                )}
+                                {row.overrideReason && !row.disqualified && (
+                                  <span className="rounded bg-amber-100 px-1.5 py-0.5 text-xs text-amber-700" title={`Override: ${row.overrideReason}`}>
+                                    ✓ Override
+                                  </span>
+                                )}
+                                {roleInfo && (
+                                  <span
+                                    className={`rounded px-1.5 py-0.5 text-xs font-bold text-white ${roleInfo.color}`}
+                                  >
+                                    {roleInfo.label}
+                                  </span>
+                                )}
+                                {isDocExpanded && (
+                                  <span className="text-xs text-indigo-500">▼ docs</span>
+                                )}
+                              </div>
                             </td>
                             <td className="px-4 py-3 text-slate-700">
                               {row.income != null ? formatNumber(row.income) : "—"}
@@ -370,9 +424,19 @@ export default function OwnerCandidatesPage() {
                                 {row.confidence ?? 0}% {conf.label}
                               </span>
                             </td>
+
                             <td className="px-4 py-3 text-right">
                               {row.disqualified ? (
-                                <span className="text-xs text-slate-400">Not eligible</span>
+                                <button
+                                  onClick={() => {
+                                    setOverrideTarget({ applicationUnitId: row.applicationUnitId, name: row.name });
+                                    setOverrideReason("");
+                                  }}
+                                  className="rounded px-2.5 py-1 text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 hover:bg-amber-100 transition-colors"
+                                  title="Override disqualification and make this candidate eligible"
+                                >
+                                  ⚠ Override
+                                </button>
                               ) : (
                                 <div className="flex items-center justify-end gap-1">
                                   {ROLES.map((r) => {
@@ -397,6 +461,28 @@ export default function OwnerCandidatesPage() {
                               )}
                             </td>
                           </tr>
+                          {isDocExpanded && (
+                            <tr>
+                              <td colSpan={6} className="px-4 py-3 bg-slate-50/50">
+                                <div className="space-y-4">
+                                  {/* Disqualification reasons (human-friendly) */}
+                                  {row.disqualified && reasons.length > 0 && (
+                                    <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3">
+                                      <h4 className="text-sm font-semibold text-red-800 mb-2">Disqualification Reasons</h4>
+                                      <ul className="list-disc ml-5 space-y-1.5">
+                                        {formatDisqualificationReasons(reasons).map((text, i) => (
+                                          <li key={i} className="text-sm text-red-700 leading-relaxed">{text}</li>
+                                        ))}
+                                      </ul>
+                                    </div>
+                                  )}
+                                  {/* Corroborative documents */}
+                                  <DocumentsPanel applicationId={row.id} compact title={`Documents — ${row.name}`} />
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                          </React.Fragment>
                         );
                       })}
                     </tbody>
@@ -406,22 +492,45 @@ export default function OwnerCandidatesPage() {
             </Panel>
           )}
 
-          {/* Disqualified reasons */}
-          {rows.some((r) => r.disqualified && r.disqualifiedReasons.length > 0) && !success && (
-            <Panel title="Disqualification Details">
-              {rows
-                .filter((r) => r.disqualified)
-                .map((row) => (
-                  <div key={row.id} className="py-2">
-                    <span className="text-sm font-medium text-slate-900">{row.name}</span>
-                    <ul className="ml-4 mt-1 list-disc text-xs text-red-700">
-                      {row.disqualifiedReasons.map((reason, i) => (
-                        <li key={i}>{reason}</li>
-                      ))}
-                    </ul>
-                  </div>
-                ))}
-            </Panel>
+          {/* Override disqualification modal */}
+          {overrideTarget && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setOverrideTarget(null)}>
+              <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+                <h3 className="text-lg font-bold text-slate-900">Override Disqualification</h3>
+                <p className="mt-2 text-sm text-slate-600">
+                  You are about to override the automatic disqualification for <strong>{overrideTarget.name}</strong>.
+                  This candidate will become eligible for selection.
+                </p>
+                <div className="mt-4">
+                  <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1.5">
+                    Reason for override *
+                  </label>
+                  <textarea
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                    rows={3}
+                    placeholder="e.g. Verified income directly with employer; debt enforcement extract is clear…"
+                    value={overrideReason}
+                    onChange={(e) => setOverrideReason(e.target.value)}
+                  />
+                  <p className="mt-1 text-xs text-slate-400">Minimum 3 characters. This will be recorded for audit.</p>
+                </div>
+                <div className="mt-5 flex justify-end gap-3">
+                  <button
+                    onClick={() => setOverrideTarget(null)}
+                    className="rounded-lg border border-slate-200 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    disabled={overriding || overrideReason.trim().length < 3}
+                    onClick={handleOverride}
+                    className="rounded-lg bg-amber-600 px-5 py-2 text-sm font-semibold text-white hover:bg-amber-700 disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    {overriding ? "Overriding…" : "Confirm Override"}
+                  </button>
+                </div>
+              </div>
+            </div>
           )}
         </PageContent>
       </PageShell>

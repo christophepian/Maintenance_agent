@@ -7,6 +7,7 @@ import { formatDateTime } from "../../../../lib/format";
 import PageContent from "../../../../components/layout/PageContent";
 import Panel from "../../../../components/layout/Panel";
 import { ALLOWED_CATEGORIES } from "../../../../lib/categories";
+import { authHeaders } from "../../../../lib/api";
 
 export default function ContractorDetailPage() {
   const router = useRouter();
@@ -33,19 +34,6 @@ export default function ContractorDetailPage() {
   const [message, setMessage] = useState("");
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState("Personal information");
-
-  function authHeaders() {
-    if (typeof window === "undefined") return {};
-    const token = localStorage.getItem("authToken");
-    if (token) return { Authorization: `Bearer ${token}` };
-    const role = localStorage.getItem("role") || "MANAGER";
-    return {
-      "x-dev-role": role,
-      "x-dev-org-id": "default-org",
-      "x-dev-user-id": "dev-user",
-      "x-dev-email": "dev@local",
-    };
-  }
 
   useEffect(() => {
     if (!id) return;

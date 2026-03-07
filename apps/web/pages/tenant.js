@@ -40,7 +40,7 @@ export default function TenantPhone() {
       }
 
       localStorage.setItem("tenantSession", JSON.stringify(data.data));
-      router.push("/tenant-chat");
+      router.push("/tenant/inbox");
     } catch (e) {
       setNotice({ type: "err", msg: String(e) });
     } finally {

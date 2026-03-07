@@ -33,7 +33,7 @@ export default function AssetModelsAdmin() {
     backLink: { color: "#0066cc", textDecoration: "none", fontWeight: 500, marginBottom: "20px", display: "inline-block" },
   };
 
-  const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.API_BASE_URL || "http://127.0.0.1:3001";
+  const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3001";
 
   const [globalModels, setGlobalModels] = useState([]);
   const [orgModels, setOrgModels] = useState([]);

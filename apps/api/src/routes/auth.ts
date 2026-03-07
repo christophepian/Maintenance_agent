@@ -331,7 +331,7 @@ export function registerAuthRoutes(router: Router) {
  * Resolve a tenantId to a userId for notification lookups.
  * Tries: 1) direct User with id=tenantId, 2) User with matching tenant email, 3) falls back to tenantId.
  */
-async function resolveTenantUserId(prisma: any, orgId: string, tenantId: string): Promise<string> {
+export async function resolveTenantUserId(prisma: any, orgId: string, tenantId: string): Promise<string> {
   // First check if tenantId is already a User id
   const directUser = await prisma.user.findFirst({
     where: { id: tenantId, orgId },

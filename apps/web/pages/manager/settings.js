@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import AppShell from "../../components/AppShell";
 import Link from "next/link";
+import { authHeaders } from "../../lib/api";
 
 export default function ManagerSettingsPage() {
   const [loading, setLoading] = useState(true);
@@ -11,13 +12,6 @@ export default function ManagerSettingsPage() {
   const [orgMode, setOrgMode] = useState("MANAGED");
   const [autoApproveLimit, setAutoApproveLimit] = useState(null);
   const [limitDraft, setLimitDraft] = useState("");
-
-  function authHeaders() {
-    if (typeof window === "undefined") return {};
-    const token = localStorage.getItem("authToken");
-    return token ? { Authorization: `Bearer ${token}` } : {};
-  }
-
   async function loadOrgConfig() {
     const r = await fetch("/api/org-config", { headers: authHeaders() });
     const j = await r.json();

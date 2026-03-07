@@ -145,3 +145,14 @@ export const AdjustScoreSchema = z.object({
 });
 
 export type AdjustScoreInput = z.infer<typeof AdjustScoreSchema>;
+
+/* ── Disqualification Override ─────────────────────────────── */
+
+export const OverrideDisqualificationSchema = z.object({
+  reason: z
+    .string()
+    .transform(trimStr)
+    .refine((s) => s.length >= 3, { message: "Reason must be at least 3 characters" }),
+});
+
+export type OverrideDisqualificationInput = z.infer<typeof OverrideDisqualificationSchema>;

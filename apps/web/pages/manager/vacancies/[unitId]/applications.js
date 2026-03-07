@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import React from "react";
 import { useRouter } from "next/router";
 import AppShell from "../../../../components/AppShell";
 import PageShell from "../../../../components/layout/PageShell";
@@ -6,13 +7,9 @@ import PageHeader from "../../../../components/layout/PageHeader";
 import { formatNumber } from "../../../../lib/format";
 import PageContent from "../../../../components/layout/PageContent";
 import Panel from "../../../../components/layout/Panel";
-
-function authHeaders() {
-  if (typeof window === "undefined") return {};
-  const token = localStorage.getItem("authToken");
-  return token ? { Authorization: `Bearer ${token}` } : {};
-}
-
+import DocumentsPanel from "../../../../components/DocumentsPanel";
+import { formatDisqualificationReasons } from "../../../../lib/formatDisqualificationReasons";
+import { authHeaders } from "../../../../lib/api";
 function scoreColor(score) {
   if (score >= 700) return "text-green-700 bg-green-50";
   if (score >= 400) return "text-amber-700 bg-amber-50";
@@ -40,6 +37,14 @@ export default function UnitApplicationsPage() {
   const [scoreDelta, setScoreDelta] = useState(0);
   const [adjustReason, setAdjustReason] = useState("");
   const [adjustLoading, setAdjustLoading] = useState(false);
+
+  // Override disqualification
+  const [overrideTarget, setOverrideTarget] = useState(null);
+  const [overrideReason, setOverrideReason] = useState("");
+  const [overriding, setOverriding] = useState(false);
+
+  // Document viewer
+  const [expandedDocApp, setExpandedDocApp] = useState(null);
 
   useEffect(() => {
     if (!router.isReady || !unitId) return;
@@ -93,6 +98,28 @@ export default function UnitApplicationsPage() {
     }
   }
 
+  async function handleOverride() {
+    if (!overrideTarget) return;
+    setOverriding(true);
+    setError("");
+    try {
+      const res = await fetch(`/api/manager/rental-application-units/${overrideTarget.applicationUnitId}/override-disqualification`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({ reason: overrideReason.trim() }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error?.message || data?.message || "Override failed");
+      setOverrideTarget(null);
+      setOverrideReason("");
+      loadData();
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setOverriding(false);
+    }
+  }
+
   const unitLabel = unit ? `${unit.building?.name || "Building"} — Unit ${unit.unitNumber}` : "Loading…";
 
   // For summary view, applications are RentalApplicationSummaryDTO
@@ -111,6 +138,7 @@ export default function UnitApplicationsPage() {
           confidence: au?.confidenceScore,
           disqualified: au?.disqualified ?? false,
           disqualifiedReasons: au?.disqualifiedReasons,
+          overrideReason: au?.overrideReason || null,
           status: au?.status || app.status,
           submittedAt: app.submittedAt,
         };
@@ -128,6 +156,7 @@ export default function UnitApplicationsPage() {
         confidence: au?.confidenceScore,
         disqualified: au?.disqualified,
         disqualifiedReasons: au?.disqualifiedReasons,
+        overrideReason: au?.overrideReason || null,
         status: au?.status || app.status,
         submittedAt: app.submittedAt,
       };
@@ -198,16 +227,43 @@ export default function UnitApplicationsPage() {
                   <tbody className="divide-y divide-slate-100 bg-white">
                     {sorted.map((row, idx) => {
                       const conf = confidenceBadge(row.confidence || 0);
+                      const isDocExpanded = expandedDocApp === row.id;
+                      const reasons = Array.isArray(row.disqualifiedReasons)
+                        ? row.disqualifiedReasons
+                        : typeof row.disqualifiedReasons === "string"
+                          ? [row.disqualifiedReasons]
+                          : [];
                       return (
-                        <tr key={row.id} className={row.disqualified ? "bg-red-50/50" : ""}>
+                        <React.Fragment key={row.id}>
+                        <tr className={row.disqualified ? "bg-red-50/40" : ""}>
                           <td className="px-4 py-3 text-slate-600 font-mono">{idx + 1}</td>
                           <td className="px-4 py-3">
-                            <span className="font-medium text-slate-900">{row.name}</span>
-                            {row.disqualified && (
-                              <span className="ml-2 rounded bg-red-100 px-1.5 py-0.5 text-xs text-red-700">
-                                Disqualified
-                              </span>
-                            )}
+                            <div className="flex items-center flex-wrap gap-x-2">
+                              <button
+                                onClick={() => setExpandedDocApp(isDocExpanded ? null : row.id)}
+                                className={`font-medium underline decoration-dotted underline-offset-2 transition-colors ${
+                                  isDocExpanded
+                                    ? "text-indigo-700"
+                                    : "text-slate-900 hover:text-indigo-600"
+                                }`}
+                                title="Click to view corroborative documents"
+                              >
+                                {row.name}
+                              </button>
+                              {row.disqualified && (
+                                <span className="rounded bg-red-100 px-1.5 py-0.5 text-xs text-red-700">
+                                  Disqualified
+                                </span>
+                              )}
+                              {row.overrideReason && !row.disqualified && (
+                                <span className="rounded bg-amber-100 px-1.5 py-0.5 text-xs text-amber-700" title={`Override: ${row.overrideReason}`}>
+                                  ✓ Override
+                                </span>
+                              )}
+                              {isDocExpanded && (
+                                <span className="text-xs text-indigo-500">▼ docs</span>
+                              )}
+                            </div>
                           </td>
                           <td className="px-4 py-3 text-slate-700">
                             {row.income != null ? formatNumber(row.income) : "—"}
@@ -232,7 +288,7 @@ export default function UnitApplicationsPage() {
                             >
                               View
                             </button>
-                            {row.applicationUnitId && (
+                            {row.applicationUnitId && !row.disqualified && (
                               <button
                                 onClick={() => setAdjustTarget(row.applicationUnitId)}
                                 className="text-xs text-amber-600 hover:underline"
@@ -240,8 +296,41 @@ export default function UnitApplicationsPage() {
                                 Adjust
                               </button>
                             )}
+                            {row.disqualified && row.applicationUnitId && (
+                              <button
+                                onClick={() => {
+                                  setOverrideTarget({ applicationUnitId: row.applicationUnitId, name: row.name });
+                                  setOverrideReason("");
+                                }}
+                                className="rounded px-2 py-0.5 text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 hover:bg-amber-100 transition-colors"
+                              >
+                                ⚠ Override
+                              </button>
+                            )}
                           </td>
                         </tr>
+                        {isDocExpanded && (
+                          <tr>
+                            <td colSpan={7} className="px-4 py-3 bg-slate-50/50">
+                              <div className="space-y-4">
+                                {/* Disqualification reasons (human-friendly) */}
+                                {row.disqualified && reasons.length > 0 && (
+                                  <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3">
+                                    <h4 className="text-sm font-semibold text-red-800 mb-2">Disqualification Reasons</h4>
+                                    <ul className="list-disc ml-5 space-y-1.5">
+                                      {formatDisqualificationReasons(reasons).map((text, i) => (
+                                        <li key={i} className="text-sm text-red-700 leading-relaxed">{text}</li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                )}
+                                {/* Corroborative documents */}
+                                <DocumentsPanel applicationId={row.id} compact title={`Documents — ${row.name}`} />
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                        </React.Fragment>
                       );
                     })}
                   </tbody>
@@ -249,23 +338,48 @@ export default function UnitApplicationsPage() {
               </div>
             )}
           </Panel>
-
-          {/* Disqualification reasons panel */}
-          {sorted.some((r) => r.disqualified && r.disqualifiedReasons?.length) && (
-            <Panel title="Disqualification Details">
-              {sorted.filter((r) => r.disqualified).map((row) => (
-                <div key={row.id} className="py-2">
-                  <span className="text-sm font-medium text-slate-900">{row.name}:</span>
-                  <ul className="ml-4 mt-1 list-disc text-xs text-red-700">
-                    {(row.disqualifiedReasons || []).map((reason, i) => (
-                      <li key={i}>{reason}</li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
-            </Panel>
-          )}
         </PageContent>
+
+        {/* Override disqualification modal */}
+        {overrideTarget && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setOverrideTarget(null)}>
+            <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+              <h3 className="text-lg font-bold text-slate-900">Override Disqualification</h3>
+              <p className="mt-2 text-sm text-slate-600">
+                You are about to override the automatic disqualification for <strong>{overrideTarget.name}</strong>.
+                This candidate will become eligible for selection.
+              </p>
+              <div className="mt-4">
+                <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1.5">
+                  Reason for override *
+                </label>
+                <textarea
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                  rows={3}
+                  placeholder="e.g. Verified income directly with employer; debt enforcement extract is clear…"
+                  value={overrideReason}
+                  onChange={(e) => setOverrideReason(e.target.value)}
+                />
+                <p className="mt-1 text-xs text-slate-400">Minimum 3 characters. This will be recorded for audit.</p>
+              </div>
+              <div className="mt-5 flex justify-end gap-3">
+                <button
+                  onClick={() => setOverrideTarget(null)}
+                  className="rounded-lg border border-slate-200 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  disabled={overriding || overrideReason.trim().length < 3}
+                  onClick={handleOverride}
+                  className="rounded-lg bg-amber-600 px-5 py-2 text-sm font-semibold text-white hover:bg-amber-700 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  {overriding ? "Overriding…" : "Confirm Override"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Adjust Score Modal */}
         {adjustTarget && (

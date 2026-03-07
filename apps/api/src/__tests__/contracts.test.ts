@@ -362,4 +362,126 @@ describe('G10: API Contract Tests', () => {
       expect(response.status).toBe(403);
     });
   });
+
+  // ── Building Financials ──
+  describe('GET /buildings/:id/financials', () => {
+    it('returns BuildingFinancialsDTO with all required numeric fields and arrays', async () => {
+      // Get a building ID
+      const buildings = await fetchJson('/buildings?limit=1');
+      expect(Array.isArray(buildings.data)).toBe(true);
+
+      if (buildings.data.length === 0) {
+        console.log('⚠️  Skipping financials test: no buildings in database');
+        return;
+      }
+
+      const buildingId = buildings.data[0].id;
+      const body = await fetchJson(
+        `/buildings/${buildingId}/financials?from=2025-01-01&to=2026-01-01`,
+      );
+
+      expect(body).toHaveProperty('data');
+      const dto = body.data;
+
+      // All required scalar fields
+      expectKeys(dto, [
+        'buildingId',
+        'buildingName',
+        'from',
+        'to',
+        'earnedIncomeCents',
+        'projectedIncomeCents',
+        'expensesTotalCents',
+        'maintenanceTotalCents',
+        'capexTotalCents',
+        'operatingTotalCents',
+        'netIncomeCents',
+        'netOperatingIncomeCents',
+        'maintenanceRatio',
+        'costPerUnitCents',
+        'collectionRate',
+        'activeUnitsCount',
+        'expensesByCategory',
+        'topContractorsBySpend',
+      ], 'BuildingFinancialsDTO');
+
+      // All numeric totals must be numbers (never undefined/null)
+      for (const key of [
+        'earnedIncomeCents',
+        'projectedIncomeCents',
+        'expensesTotalCents',
+        'maintenanceTotalCents',
+        'capexTotalCents',
+        'operatingTotalCents',
+        'netIncomeCents',
+        'netOperatingIncomeCents',
+        'costPerUnitCents',
+        'activeUnitsCount',
+      ]) {
+        expect(typeof dto[key]).toBe('number');
+      }
+
+      // Ratios must be numbers (safe division returns 0, never NaN/Infinity)
+      for (const key of ['maintenanceRatio', 'collectionRate']) {
+        expect(typeof dto[key]).toBe('number');
+        expect(Number.isFinite(dto[key])).toBe(true);
+      }
+
+      // Arrays exist and are arrays (never undefined)
+      expect(Array.isArray(dto.expensesByCategory)).toBe(true);
+      expect(Array.isArray(dto.topContractorsBySpend)).toBe(true);
+
+      // If expensesByCategory has entries, verify shape
+      if (dto.expensesByCategory.length > 0) {
+        expectKeys(dto.expensesByCategory[0], ['category', 'totalCents'], 'ExpenseCategoryTotalDTO');
+        expect(typeof dto.expensesByCategory[0].totalCents).toBe('number');
+      }
+
+      // If topContractorsBySpend has entries, verify shape
+      if (dto.topContractorsBySpend.length > 0) {
+        expectKeys(dto.topContractorsBySpend[0], ['contractorId', 'contractorName', 'totalCents'], 'ContractorSpendDTO');
+        expect(typeof dto.topContractorsBySpend[0].totalCents).toBe('number');
+      }
+    });
+
+    it('returns 400 for missing query params', async () => {
+      const buildings = await fetchJson('/buildings?limit=1');
+      if (buildings.data.length === 0) return;
+
+      const buildingId = buildings.data[0].id;
+      const res = await fetch(`${API_BASE}/buildings/${buildingId}/financials`);
+      expect(res.status).toBe(400);
+    });
+
+    it('returns 404 for non-existent building', async () => {
+      const res = await fetch(
+        `${API_BASE}/buildings/00000000-0000-0000-0000-000000000000/financials?from=2025-01-01&to=2026-01-01`,
+      );
+      expect(res.status).toBe(404);
+    });
+  });
+
+  // ── Set Expense Category ──
+  describe('POST /invoices/:id/set-expense-category', () => {
+    it('returns 400 for invalid expense category', async () => {
+      const res = await fetch(`${API_BASE}/invoices/00000000-0000-0000-0000-000000000000/set-expense-category`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ expenseCategory: 'INVALID' }),
+      });
+      expect(res.status).toBe(400);
+
+      const body = await res.json();
+      expect(body.error).toHaveProperty('code', 'VALIDATION_ERROR');
+    });
+
+    it('returns 404 for non-existent invoice', async () => {
+      const res = await fetch(`${API_BASE}/invoices/00000000-0000-0000-0000-000000000000/set-expense-category`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ expenseCategory: 'MAINTENANCE' }),
+      });
+      expect(res.status).toBe(404);
+    });
+  });
 });

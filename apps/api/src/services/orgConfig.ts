@@ -2,6 +2,7 @@ import { OrgMode, PrismaClient } from "@prisma/client";
 
 export type OrgConfigDTO = {
   autoApproveLimit: number;
+  autoLegalRouting: boolean;
   mode: OrgMode;
 };
 
@@ -23,7 +24,7 @@ export async function ensureDefaultOrgConfig(prisma: PrismaClient): Promise<void
   const config = await prisma.orgConfig.findUnique({ where: { orgId } });
   if (!config) {
     await prisma.orgConfig.create({
-      data: { orgId, autoApproveLimit: 200 },
+      data: { orgId, autoApproveLimit: 200, autoLegalRouting: false },
     });
   }
 }
@@ -39,19 +40,20 @@ export async function getOrgConfig(
 
   if (!config || !org) throw new Error("ORG_CONFIG_NOT_FOUND");
 
-  return { autoApproveLimit: config.autoApproveLimit, mode: org.mode };
+  return { autoApproveLimit: config.autoApproveLimit, autoLegalRouting: config.autoLegalRouting, mode: org.mode };
 }
 
 export async function updateOrgConfig(
   prisma: PrismaClient,
   orgId: string,
-  input: { autoApproveLimit?: number; mode?: OrgMode }
+  input: { autoApproveLimit?: number; autoLegalRouting?: boolean; mode?: OrgMode }
 ): Promise<OrgConfigDTO> {
   const [config, org] = await Promise.all([
     prisma.orgConfig.update({
       where: { orgId },
       data: {
         autoApproveLimit: input.autoApproveLimit ?? undefined,
+        autoLegalRouting: input.autoLegalRouting ?? undefined,
       },
     }),
     input.mode
@@ -61,5 +63,5 @@ export async function updateOrgConfig(
 
   if (!org) throw new Error("ORG_NOT_FOUND");
 
-  return { autoApproveLimit: config.autoApproveLimit, mode: org.mode };
+  return { autoApproveLimit: config.autoApproveLimit, autoLegalRouting: config.autoLegalRouting, mode: org.mode };
 }

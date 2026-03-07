@@ -145,7 +145,7 @@ const requestInclude = {
     },
   } as const;
 
-function toDTO(r: any): MaintenanceRequestDTO {
+export function toDTO(r: any): MaintenanceRequestDTO {
   return {
     id: r.id,
     description: r.description,
@@ -185,7 +185,7 @@ function toDTO(r: any): MaintenanceRequestDTO {
   };
 }
 
-  function toSummaryDTO(r: any): MaintenanceRequestSummaryDTO {
+export function toSummaryDTO(r: any): MaintenanceRequestSummaryDTO {
     return {
       id: r.id,
       status: r.status,

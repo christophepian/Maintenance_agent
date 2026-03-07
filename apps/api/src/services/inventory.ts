@@ -1,4 +1,4 @@
-import { UnitType } from "@prisma/client";
+import { UnitType, LocationSegment, InsulationQuality, EnergyLabel, HeatingType } from "@prisma/client";
 import prisma from './prismaClient';
 const activeFilter = (includeInactive?: boolean) =>
   includeInactive ? {} : { isActive: true };
@@ -33,7 +33,13 @@ export async function createBuilding(
 export async function updateBuilding(
   orgId: string,
   buildingId: string,
-  data: { name?: string; address?: string }
+  data: {
+    name?: string;
+    address?: string;
+    yearBuilt?: number;
+    hasElevator?: boolean;
+    hasConcierge?: boolean;
+  }
 ) {
   const existing = await prisma.building.findFirst({ where: { id: buildingId, orgId } });
   if (!existing) return null;
@@ -42,6 +48,9 @@ export async function updateBuilding(
     data: {
       name: data.name ?? undefined,
       address: data.address ?? undefined,
+      yearBuilt: data.yearBuilt ?? undefined,
+      hasElevator: data.hasElevator ?? undefined,
+      hasConcierge: data.hasConcierge ?? undefined,
     },
   });
 }
@@ -106,7 +115,23 @@ export async function createUnit(
 export async function updateUnit(
   orgId: string,
   unitId: string,
-  data: { unitNumber?: string; floor?: string; type?: UnitType }
+  data: {
+    unitNumber?: string;
+    floor?: string;
+    type?: UnitType;
+    livingAreaSqm?: number;
+    rooms?: number;
+    hasBalcony?: boolean;
+    hasTerrace?: boolean;
+    hasParking?: boolean;
+    locationSegment?: LocationSegment;
+    lastRenovationYear?: number;
+    insulationQuality?: InsulationQuality;
+    energyLabel?: EnergyLabel;
+    heatingType?: HeatingType;
+    monthlyRentChf?: number | null;
+    monthlyChargesChf?: number | null;
+  }
 ) {
   const existing = await prisma.unit.findFirst({ where: { id: unitId, orgId } });
   if (!existing) return null;
@@ -117,6 +142,18 @@ export async function updateUnit(
       unitNumber: data.unitNumber ?? undefined,
       floor: data.floor ?? undefined,
       type: data.type ?? undefined,
+      livingAreaSqm: data.livingAreaSqm ?? undefined,
+      rooms: data.rooms ?? undefined,
+      hasBalcony: data.hasBalcony ?? undefined,
+      hasTerrace: data.hasTerrace ?? undefined,
+      hasParking: data.hasParking ?? undefined,
+      locationSegment: data.locationSegment ?? undefined,
+      lastRenovationYear: data.lastRenovationYear ?? undefined,
+      insulationQuality: data.insulationQuality ?? undefined,
+      energyLabel: data.energyLabel ?? undefined,
+      heatingType: data.heatingType ?? undefined,
+      ...(data.monthlyRentChf !== undefined ? { monthlyRentChf: data.monthlyRentChf } : {}),
+      ...(data.monthlyChargesChf !== undefined ? { monthlyChargesChf: data.monthlyChargesChf } : {}),
     },
   });
 }

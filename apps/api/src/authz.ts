@@ -7,7 +7,8 @@ export type AuthedRequest = http.IncomingMessage & { user?: TokenPayload | null 
 
 export function isAuthOptional(): boolean {
   if (process.env.NODE_ENV === "production") return false;
-  return process.env.AUTH_OPTIONAL !== "false";
+  // H4: Auth required by default; must explicitly opt out with AUTH_OPTIONAL=true
+  return process.env.AUTH_OPTIONAL === "true";
 }
 
 export function getAuthUser(req: AuthedRequest): TokenPayload | null {

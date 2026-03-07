@@ -8,13 +8,7 @@ import Panel from "../../components/layout/Panel";
 import Section from "../../components/layout/Section";
 import ContractorPicker from "../../components/ContractorPicker";
 import { formatChf as formatCurrency, formatDate } from "../../lib/format";
-
-function authHeaders() {
-  if (typeof window === "undefined") return {};
-  const token = localStorage.getItem("authToken");
-  return token ? { Authorization: `Bearer ${token}` } : {};
-}
-
+import { authHeaders } from "../../lib/api";
 export default function ContractorDashboard() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);

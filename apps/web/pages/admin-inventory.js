@@ -26,9 +26,7 @@ import PageContent from "../components/layout/PageContent";
 export default function InventoryAdmin() {
   const router = useRouter();
   const API_BASE =
-    process.env.NEXT_PUBLIC_API_BASE_URL ||
-    process.env.API_BASE_URL ||
-    "http://127.0.0.1:3001";
+    process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3001";
 
 
   // Data

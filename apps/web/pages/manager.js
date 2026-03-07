@@ -5,6 +5,7 @@ import PageShell from "../components/layout/PageShell";
 import PageHeader from "../components/layout/PageHeader";
 import PageContent from "../components/layout/PageContent";
 import { formatDateTime } from "../lib/format";
+import { authHeaders } from "../lib/api";
 
 function fmtDate(iso) {
   try {
@@ -39,13 +40,6 @@ export default function Manager() {
       router.replace("/manager/work-requests");
     }
   }, [router]);
-
-  function authHeaders() {
-    if (typeof window === "undefined") return {};
-    const token = localStorage.getItem("authToken");
-    return token ? { Authorization: `Bearer ${token}` } : {};
-  }
-
   // Org config
   const [autoApproveLimit, setAutoApproveLimit] = useState(null);
   const [limitDraft, setLimitDraft] = useState("");

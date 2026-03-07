@@ -3,6 +3,7 @@ import { sendError, sendJson } from "../http/json";
 import { readJson } from "../http/body";
 import { first } from "../http/query";
 import { maybeRequireManager } from "../authz";
+import { withAuthRequired } from "../http/routeProtection";
 import {
   listBuildings,
   createBuilding,
@@ -38,7 +39,7 @@ import { normalizePhoneToE164 } from "../utils/phoneNormalization";
 export function registerInventoryRoutes(router: Router) {
   /* ── Properties (alias over Buildings) ─────────────────────── */
 
-  router.get("/properties", async ({ res, orgId, query }) => {
+  router.get("/properties", withAuthRequired(async ({ res, orgId, query }) => {
     try {
       const includeInactive = first(query, "includeInactive") === "true";
       const buildings = await listBuildings(orgId, includeInactive);
@@ -47,9 +48,9 @@ export function registerInventoryRoutes(router: Router) {
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to fetch properties", String(e));
     }
-  });
+  }));
 
-  router.get("/properties/:id/units", async ({ res, orgId, query, params }) => {
+  router.get("/properties/:id/units", withAuthRequired(async ({ res, orgId, query, params }) => {
     try {
       const includeInactive = first(query, "includeInactive") === "true";
       const unitTypeRaw = first(query, "type");
@@ -60,11 +61,11 @@ export function registerInventoryRoutes(router: Router) {
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to fetch property units", String(e));
     }
-  });
+  }));
 
   /* ── People aliases ────────────────────────────────────────── */
 
-  router.get("/people/tenants", async ({ res, orgId, query }) => {
+  router.get("/people/tenants", withAuthRequired(async ({ res, orgId, query }) => {
     try {
       const includeInactive = first(query, "includeInactive") === "true";
       const tenants = await listTenants(orgId, includeInactive);
@@ -73,9 +74,9 @@ export function registerInventoryRoutes(router: Router) {
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to fetch tenant contacts", String(e));
     }
-  });
+  }));
 
-  router.get("/people/vendors", async ({ res, orgId, prisma }) => {
+  router.get("/people/vendors", withAuthRequired(async ({ res, orgId, prisma }) => {
     try {
       const vendors = await listContractors(prisma, orgId);
       const contacts = vendors.map(contactFromContractor);
@@ -83,11 +84,11 @@ export function registerInventoryRoutes(router: Router) {
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to fetch vendor contacts", String(e));
     }
-  });
+  }));
 
   /* ── Buildings ─────────────────────────────────────────────── */
 
-  router.get("/buildings", async ({ res, orgId, query }) => {
+  router.get("/buildings", withAuthRequired(async ({ res, orgId, query }) => {
     try {
       const includeInactive = first(query, "includeInactive") === "true";
       const buildings = await listBuildings(orgId, includeInactive);
@@ -95,7 +96,7 @@ export function registerInventoryRoutes(router: Router) {
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to fetch buildings", String(e));
     }
-  });
+  }));
 
   router.post("/buildings", async ({ req, res, orgId }) => {
     if (!maybeRequireManager(req, res)) return;
@@ -112,10 +113,7 @@ export function registerInventoryRoutes(router: Router) {
     }
   });
 
-  router.get("/buildings/:id", async ({ res, orgId, params }) => {
-    // Note: matchBuildingById in old code was used for PATCH/DELETE only.
-    // GET /buildings/:id wasn't explicitly handled before; adding it for completeness.
-    // This will fall through to 405 if no GET was intended — but it's good practice.
+  router.get("/buildings/:id", withAuthRequired(async ({ res, orgId, params }) => {
     try {
       const buildings = await listBuildings(orgId, true);
       const building = buildings.find((b: any) => b.id === params.id);
@@ -124,7 +122,7 @@ export function registerInventoryRoutes(router: Router) {
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to fetch building", String(e));
     }
-  });
+  }));
 
   router.patch("/buildings/:id", async ({ req, res, orgId, params }) => {
     if (!maybeRequireManager(req, res)) return;
@@ -156,7 +154,7 @@ export function registerInventoryRoutes(router: Router) {
 
   /* ── Units ─────────────────────────────────────────────────── */
 
-  router.get("/buildings/:id/units", async ({ res, orgId, query, params }) => {
+  router.get("/buildings/:id/units", withAuthRequired(async ({ res, orgId, query, params }) => {
     try {
       const includeInactive = first(query, "includeInactive") === "true";
       const typeParam = first(query, "type");
@@ -166,7 +164,7 @@ export function registerInventoryRoutes(router: Router) {
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to fetch units", String(e));
     }
-  });
+  }));
 
   router.post("/buildings/:id/units", async ({ req, res, orgId, params }) => {
     if (!maybeRequireManager(req, res)) return;
@@ -184,7 +182,7 @@ export function registerInventoryRoutes(router: Router) {
     }
   });
 
-  router.get("/units", async ({ res, orgId, query, prisma }) => {
+  router.get("/units", withAuthRequired(async ({ res, orgId, query, prisma }) => {
     try {
       const includeInactive = first(query, "includeInactive") === "true";
       const units = await prisma.unit.findMany({
@@ -199,9 +197,9 @@ export function registerInventoryRoutes(router: Router) {
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to fetch units", String(e));
     }
-  });
+  }));
 
-  router.get("/units/:id", async ({ res, orgId, params }) => {
+  router.get("/units/:id", withAuthRequired(async ({ res, orgId, params }) => {
     try {
       const unit = await getUnitById(orgId, params.id);
       if (!unit) return sendError(res, 404, "NOT_FOUND", "Unit not found");
@@ -209,7 +207,7 @@ export function registerInventoryRoutes(router: Router) {
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to fetch unit", String(e));
     }
-  });
+  }));
 
   router.patch("/units/:id", async ({ req, res, orgId, params }) => {
     if (!maybeRequireManager(req, res)) return;
@@ -241,7 +239,7 @@ export function registerInventoryRoutes(router: Router) {
 
   /* ── Appliances ────────────────────────────────────────────── */
 
-  router.get("/units/:id/appliances", async ({ res, orgId, query, params }) => {
+  router.get("/units/:id/appliances", withAuthRequired(async ({ res, orgId, query, params }) => {
     try {
       const includeInactive = first(query, "includeInactive") === "true";
       const appliances = await listAppliances(orgId, params.id, includeInactive);
@@ -249,7 +247,7 @@ export function registerInventoryRoutes(router: Router) {
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to fetch appliances", String(e));
     }
-  });
+  }));
 
   router.post("/units/:id/appliances", async ({ req, res, orgId, params }) => {
     if (!maybeRequireManager(req, res)) return;
@@ -297,7 +295,7 @@ export function registerInventoryRoutes(router: Router) {
 
   /* ── Asset Models ──────────────────────────────────────────── */
 
-  router.get("/asset-models", async ({ res, orgId, query }) => {
+  router.get("/asset-models", withAuthRequired(async ({ res, orgId, query }) => {
     try {
       const includeInactive = first(query, "includeInactive") === "true";
       const models = await listAssetModels(orgId, includeInactive);
@@ -306,7 +304,7 @@ export function registerInventoryRoutes(router: Router) {
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to fetch asset models", String(e));
     }
-  });
+  }));
 
   router.post("/asset-models", async ({ req, res, orgId }) => {
     if (!maybeRequireManager(req, res)) return;
@@ -354,7 +352,7 @@ export function registerInventoryRoutes(router: Router) {
 
   /* ── Occupancies ───────────────────────────────────────────── */
 
-  router.get("/units/:unitId/tenants", async ({ res, orgId, params }) => {
+  router.get("/units/:unitId/tenants", withAuthRequired(async ({ res, orgId, params }) => {
     try {
       const tenants = await listUnitTenants(orgId, params.unitId);
       if (!tenants) return sendError(res, 404, "NOT_FOUND", "Unit not found");
@@ -362,7 +360,7 @@ export function registerInventoryRoutes(router: Router) {
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to fetch unit tenants", String(e));
     }
-  });
+  }));
 
   router.post("/units/:unitId/tenants", async ({ req, res, orgId, params }) => {
     if (!maybeRequireManager(req, res)) return;

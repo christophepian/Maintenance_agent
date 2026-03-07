@@ -1,14 +1,12 @@
 import { InvoiceStatus, BillingEntityType } from '@prisma/client';
 import prisma from './prismaClient';
+import { INVOICE_FULL_INCLUDE } from '../repositories/invoiceRepository';
 
 /**
  * G9: Canonical include tree for Invoice queries.
- * All Invoice queries that feed mapInvoiceToDTO MUST use this constant.
- * If InvoiceDTO changes, update this include in the same PR.
+ * Single source of truth lives in invoiceRepository; re-exported here for backward compat.
  */
-export const INVOICE_INCLUDE = {
-  lineItems: true,
-} as const;
+export const INVOICE_INCLUDE = INVOICE_FULL_INCLUDE;
 
 export interface CreateInvoiceParams {
   orgId: string;

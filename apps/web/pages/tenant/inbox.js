@@ -33,12 +33,12 @@ export default function TenantInboxPage() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     const raw = localStorage.getItem("tenantSession");
-    if (!raw) { router.push("/tenant"); return; }
-    try { setSession(JSON.parse(raw)); } catch { router.push("/tenant"); }
+    if (!raw) { setLoading(false); router.push("/tenant"); return; }
+    try { setSession(JSON.parse(raw)); } catch { setLoading(false); router.push("/tenant"); }
   }, [router]);
 
   const fetchNotifications = useCallback(async () => {
-    if (!session?.tenant?.id) return;
+    if (!session?.tenant?.id) { setLoading(false); return; }
     setLoading(true);
     setError(null);
     try {
@@ -72,6 +72,23 @@ export default function TenantInboxPage() {
   useEffect(() => {
     fetchNotifications();
     fetchUnreadCount();
+    // Poll every 15 seconds for new notifications
+    const interval = setInterval(() => {
+      fetchNotifications();
+      fetchUnreadCount();
+    }, 15_000);
+    // Also refresh when the tab becomes visible again
+    function handleVisibility() {
+      if (document.visibilityState === "visible") {
+        fetchNotifications();
+        fetchUnreadCount();
+      }
+    }
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
   }, [fetchNotifications, fetchUnreadCount]);
 
   async function markAsRead(id) {
@@ -119,8 +136,17 @@ export default function TenantInboxPage() {
   if (!session) {
     return (
       <AppShell role="TENANT">
-        <div className="main-container">
-          <p className="subtle">Loading…</p>
+        <div className="main-container max-w-2xl">
+          <h1 className="text-2xl font-bold mb-6">Inbox</h1>
+          <div className="card p-8 text-center">
+            <p className="text-gray-500">Please sign in to view your notifications.</p>
+            <button
+              onClick={() => router.push("/tenant")}
+              className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700"
+            >
+              Sign in
+            </button>
+          </div>
         </div>
       </AppShell>
     );

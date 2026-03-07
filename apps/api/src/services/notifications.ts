@@ -398,6 +398,77 @@ export async function notifyManagerTenantSelected(
 }
 
 /**
+ * Notify owner that their tenant selection was confirmed (self-notification)
+ */
+export async function notifyOwnerTenantSelected(
+  selectionId: string,
+  orgId: string,
+  ownerId: string,
+  unitNumber: string,
+  candidateName: string,
+  buildingId?: string
+): Promise<void> {
+  await createNotification({
+    orgId,
+    userId: ownerId,
+    buildingId,
+    entityType: 'SELECTION',
+    entityId: selectionId,
+    eventType: 'TENANT_SELECTED',
+    message: `You selected ${candidateName} for unit ${unitNumber}. A lease will be generated and sent for signature.`,
+  });
+}
+
+/**
+ * Notify managers and owners that a new rental application was submitted.
+ */
+export async function notifyApplicationSubmitted(
+  applicationId: string,
+  orgId: string,
+  applicantName: string,
+  unitNumbers: string[],
+  buildingId?: string,
+): Promise<void> {
+  const unitsLabel = unitNumbers.length === 1
+    ? `unit ${unitNumbers[0]}`
+    : `units ${unitNumbers.join(', ')}`;
+
+  // Notify all managers
+  const managers = await prisma.user.findMany({
+    where: { orgId, role: 'MANAGER' },
+    select: { id: true },
+  });
+  for (const mgr of managers) {
+    await createNotification({
+      orgId,
+      userId: mgr.id,
+      buildingId,
+      entityType: 'APPLICATION',
+      entityId: applicationId,
+      eventType: 'APPLICATION_SUBMITTED',
+      message: `New application from ${applicantName} for ${unitsLabel}.`,
+    });
+  }
+
+  // Notify all owners
+  const owners = await prisma.user.findMany({
+    where: { orgId, role: 'OWNER' },
+    select: { id: true },
+  });
+  for (const owner of owners) {
+    await createNotification({
+      orgId,
+      userId: owner.id,
+      buildingId,
+      entityType: 'APPLICATION',
+      entityId: applicationId,
+      eventType: 'APPLICATION_SUBMITTED',
+      message: `New application from ${applicantName} for ${unitsLabel}. Review candidates in the vacancies page.`,
+    });
+  }
+}
+
+/**
  * Helper: map Prisma notification to DTO
  */
 function mapNotificationToDTO(notification: any): NotificationDTO {

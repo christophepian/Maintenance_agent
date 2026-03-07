@@ -46,7 +46,7 @@ export default function TenantLeaseDetailPage() {
 
   // Fetch lease detail
   const fetchLease = useCallback(async () => {
-    if (!session?.tenant?.id || !session?.tenant?.unitId || !leaseId) return;
+    if (!session?.tenant?.id || !leaseId) return;
     setLoading(true);
     setError(null);
     try {

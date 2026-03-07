@@ -26,7 +26,7 @@ function getCurrentRole() {
 export default function AppShell({ role: roleProp, children }) {
   const router = useRouter();
   const [role, setRole] = useState(roleProp || null);
-  const [authBootstrapped, setAuthBootstrapped] = useState(false);
+  const [authRole, setAuthRole] = useState(null); // tracks which role has been bootstrapped
 
   useEffect(() => {
     if (roleProp) {
@@ -38,29 +38,41 @@ export default function AppShell({ role: roleProp, children }) {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    if (role !== "MANAGER") return;
-    if (authBootstrapped) return;
-    if (localStorage.getItem("authToken")) {
-      setAuthBootstrapped(true);
-      return;
+    if (role !== "MANAGER" && role !== "OWNER") return;
+    if (authRole === role) return; // already bootstrapped for this role
+
+    // Check if existing token matches current role
+    const existingToken = localStorage.getItem("authToken");
+    if (existingToken) {
+      try {
+        const payload = JSON.parse(atob(existingToken.split(".")[1]));
+        if (payload?.role === role) {
+          setAuthRole(role);
+          return;
+        }
+        // Token is for a different role — re-login
+      } catch {
+        // Invalid token — re-login
+      }
     }
 
-    const email = "manager@local.dev";
-    const password = "devpassword";
+    const creds = role === "OWNER"
+      ? { email: "owner@local.dev", password: "devpassword", name: "Dev Owner", role: "OWNER" }
+      : { email: "manager@local.dev", password: "devpassword", name: "Dev Manager", role: "MANAGER" };
 
-    async function ensureManagerAuth() {
+    async function ensureAuth() {
       try {
         let res = await fetch("/api/auth/login", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password }),
+          body: JSON.stringify({ email: creds.email, password: creds.password }),
         });
         let data = await res.json();
         if (!res.ok) {
           res = await fetch("/api/auth/register", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email, password, name: "Dev Manager", role: "MANAGER" }),
+            body: JSON.stringify(creds),
           });
           data = await res.json();
         }
@@ -71,12 +83,12 @@ export default function AppShell({ role: roleProp, children }) {
       } catch {
         // ignore auth bootstrap errors
       } finally {
-        setAuthBootstrapped(true);
+        setAuthRole(role);
       }
     }
 
-    ensureManagerAuth();
-  }, [role, authBootstrapped]);
+    ensureAuth();
+  }, [role, authRole]);
 
   const managerNav = useMemo(
     () => [
@@ -137,6 +149,17 @@ export default function AppShell({ role: roleProp, children }) {
         ],
       },
       {
+        section: "Legal Engine",
+        items: [
+          { label: "Legal Overview", href: "/manager/legal" },
+          { label: "Rules", href: "/manager/legal/rules" },
+          { label: "Category Mappings", href: "/manager/legal/mappings" },
+          { label: "Depreciation", href: "/manager/legal/depreciation" },
+          { label: "Evaluations", href: "/manager/legal/evaluations" },
+          { label: "RFPs", href: "/manager/rfps" },
+        ],
+      },
+      {
         section: "Reports",
         items: [{ label: "Reports", href: "/manager/reports" }],
       },
@@ -146,7 +169,10 @@ export default function AppShell({ role: roleProp, children }) {
       },
       {
         section: "Dev Tools",
-        items: [{ label: "Email Sink", href: "/manager/emails" }],
+        items: [
+          { label: "Email Sink", href: "/manager/emails" },
+          { label: "Tenant Login", href: "/tenant" },
+        ],
       },
     ],
     []

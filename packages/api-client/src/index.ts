@@ -94,9 +94,27 @@ export type RentalOwnerSelectionStatus =
   | "FALLBACK_2"
   | "EXHAUSTED";
 
+export type LocationSegment = "PRIME" | "STANDARD" | "PERIPHERY";
+
+export type InsulationQuality = "UNKNOWN" | "POOR" | "AVERAGE" | "GOOD" | "EXCELLENT";
+
+export type EnergyLabel = "A" | "B" | "C" | "D" | "E" | "F" | "G";
+
+export type HeatingType = "HEAT_PUMP" | "DISTRICT" | "GAS" | "OIL" | "ELECTRIC" | "UNKNOWN";
+
 export type EmailOutboxStatus = "PENDING" | "SENT" | "FAILED";
 
 export type EmailTemplate = "MISSING_DOCS" | "REJECTED" | "SELECTED_LEASE_LINK";
+
+export type ExpenseCategory =
+  | "MAINTENANCE"
+  | "UTILITIES"
+  | "CLEANING"
+  | "INSURANCE"
+  | "TAX"
+  | "ADMIN"
+  | "CAPEX"
+  | "OTHER";
 
 /* ═══════════════════════════════════════════════════════════════
  * DTO Interfaces
@@ -261,6 +279,7 @@ export interface InvoiceDTO {
   createdAt: string;
   updatedAt: string;
   lineItems: InvoiceLineItemDTO[];
+  expenseCategory?: ExpenseCategory | null;
 }
 
 /**
@@ -278,6 +297,7 @@ export interface InvoiceSummaryDTO {
   paidAt?: string | null;
   createdAt: string;
   description?: string;
+  expenseCategory?: ExpenseCategory | null;
 }
 
 export interface LeaseDTO {
@@ -424,6 +444,9 @@ export interface BuildingDTO {
   address: string;
   city?: string;
   postalCode?: string;
+  yearBuilt?: number;
+  hasElevator?: boolean;
+  hasConcierge?: boolean;
   createdAt: string;
 }
 
@@ -434,6 +457,16 @@ export interface UnitDTO {
   unitNumber: string;
   floor?: string;
   type: UnitType;
+  livingAreaSqm?: number;
+  rooms?: number;
+  hasBalcony?: boolean;
+  hasTerrace?: boolean;
+  hasParking?: boolean;
+  locationSegment?: LocationSegment;
+  lastRenovationYear?: number;
+  insulationQuality?: InsulationQuality;
+  energyLabel?: EnergyLabel;
+  heatingType?: HeatingType;
   building?: {
     id: string;
     name: string;
@@ -469,6 +502,60 @@ export interface TenantDTO {
   phone: string;
   email?: string;
   unitId?: string;
+}
+
+export interface RentEstimationConfigDTO {
+  id: string;
+  orgId: string;
+  canton: string | null;
+  baseRentPerSqmChfMonthly: number;
+  locationCoefPrime: number;
+  locationCoefStandard: number;
+  locationCoefPeriphery: number;
+  ageCoefNew: number;
+  ageCoefMid: number;
+  ageCoefOld: number;
+  ageCoefVeryOld: number;
+  energyCoefJson: Record<string, number>;
+  chargesBaseOptimistic: number;
+  chargesBasePessimistic: number;
+  heatingChargeAdjJson: Record<string, number>;
+  serviceChargeAdjElevator: number;
+  serviceChargeAdjConcierge: number;
+  chargesMinClamp: number;
+  chargesMaxClamp: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface RentEstimateDTO {
+  unitId: string;
+  netRentChfMonthly: number;
+  chargesOptimisticChfMonthly: number;
+  chargesPessimisticChfMonthly: number;
+  totalOptimisticChfMonthly: number;
+  totalPessimisticChfMonthly: number;
+  appliedCoefficients: {
+    baseRentPerSqm: number;
+    locationCoef: number;
+    ageCoef: number;
+    energyCoef: number;
+    chargesRateOptimistic: number;
+    chargesRatePessimistic: number;
+    heatingAdj: number;
+    serviceAdj: number;
+    clampsApplied?: { optimistic?: boolean; pessimistic?: boolean };
+  };
+  inputsUsed: {
+    livingAreaSqm: number;
+    segment: string;
+    effectiveYear: number | null;
+    energyLabel: string | null;
+    heatingType: string | null;
+    hasElevator: boolean;
+    hasConcierge: boolean;
+  };
+  warnings: string[];
 }
 
 export interface ContractorDTO {
@@ -866,6 +953,11 @@ function buildInvoicesApi(opts: ClientOptions) {
 
     getPdf: (id: string, includeQRBill?: boolean) =>
       request<Blob>(opts, "GET", `/invoices/${id}/pdf`, undefined, { includeQRBill }),
+
+    setExpenseCategory: (id: string, body: { expenseCategory: ExpenseCategory }) =>
+      request<{ data: { id: string; expenseCategory: ExpenseCategory } }>(
+        opts, "POST", `/invoices/${id}/set-expense-category`, body,
+      ),
   };
 }
 
@@ -1051,7 +1143,7 @@ function buildInventoryApi(opts: ClientOptions) {
     createBuilding: (body: { name: string; address: string; city?: string; postalCode?: string }) =>
       request<BuildingDTO>(opts, "POST", "/buildings", body),
 
-    updateBuilding: (id: string, body: Partial<Pick<BuildingDTO, "name" | "address" | "city" | "postalCode">>) =>
+    updateBuilding: (id: string, body: Partial<Pick<BuildingDTO, "name" | "address" | "city" | "postalCode" | "yearBuilt" | "hasElevator" | "hasConcierge">>) =>
       request<BuildingDTO>(opts, "PATCH", `/buildings/${id}`, body),
 
     deleteBuilding: (id: string) =>
@@ -1070,7 +1162,7 @@ function buildInventoryApi(opts: ClientOptions) {
     getUnit: (id: string) =>
       request<UnitDTO>(opts, "GET", `/units/${id}`),
 
-    updateUnit: (id: string, body: Partial<Pick<UnitDTO, "unitNumber" | "floor" | "type">>) =>
+    updateUnit: (id: string, body: Partial<Pick<UnitDTO, "unitNumber" | "floor" | "type" | "livingAreaSqm" | "rooms" | "hasBalcony" | "hasTerrace" | "hasParking" | "locationSegment" | "lastRenovationYear" | "insulationQuality" | "energyLabel" | "heatingType">>) =>
       request<UnitDTO>(opts, "PATCH", `/units/${id}`, body),
 
     deleteUnit: (id: string) =>
@@ -1111,6 +1203,25 @@ function buildInventoryApi(opts: ClientOptions) {
 
     removeUnitTenant: (unitId: string, tenantId: string) =>
       request<void>(opts, "DELETE", `/units/${unitId}/tenants/${tenantId}`),
+  };
+}
+
+function buildRentEstimationApi(opts: ClientOptions) {
+  return {
+    getConfig: () =>
+      request<RentEstimationConfigDTO>(opts, "GET", "/rent-estimation/config"),
+
+    upsertConfig: (body: Partial<Omit<RentEstimationConfigDTO, "id" | "orgId" | "canton" | "createdAt" | "updatedAt">>) =>
+      request<RentEstimationConfigDTO>(opts, "PUT", "/rent-estimation/config", body),
+
+    upsertCantonConfig: (canton: string, body: Partial<Omit<RentEstimationConfigDTO, "id" | "orgId" | "canton" | "createdAt" | "updatedAt">>) =>
+      request<RentEstimationConfigDTO>(opts, "PUT", `/rent-estimation/config/${canton}`, body),
+
+    estimateUnit: (unitId: string) =>
+      request<RentEstimateDTO>(opts, "GET", `/units/${unitId}/rent-estimate`),
+
+    bulkEstimate: (body: { unitIds?: string[]; buildingId?: string }) =>
+      request<RentEstimateDTO[]>(opts, "POST", "/rent-estimation/bulk", body),
   };
 }
 
@@ -1306,6 +1417,63 @@ function buildRentalsApi(opts: ClientOptions) {
   };
 }
 
+/* ═══════════════════════════════════════════════════════════════
+ * Financial DTOs
+ * ═══════════════════════════════════════════════════════════════ */
+
+export interface ExpenseCategoryTotalDTO {
+  category: ExpenseCategory;
+  totalCents: number;
+}
+
+export interface ContractorSpendDTO {
+  contractorId: string;
+  contractorName: string;
+  totalCents: number;
+}
+
+export interface BuildingFinancialsDTO {
+  buildingId: string;
+  buildingName: string;
+  from: string;
+  to: string;
+  earnedIncomeCents: number;
+  projectedIncomeCents: number;
+  expensesTotalCents: number;
+  maintenanceTotalCents: number;
+  capexTotalCents: number;
+  operatingTotalCents: number;
+  netIncomeCents: number;
+  netOperatingIncomeCents: number;
+  maintenanceRatio: number;
+  costPerUnitCents: number;
+  collectionRate: number;
+  activeUnitsCount: number;
+  expensesByCategory: ExpenseCategoryTotalDTO[];
+  topContractorsBySpend: ContractorSpendDTO[];
+}
+
+function buildFinancialsApi(opts: ClientOptions) {
+  return {
+    /** Get building financial performance KPIs for a date range. */
+    getBuildingFinancials: (
+      buildingId: string,
+      params: { from: string; to: string; forceRefresh?: boolean },
+    ) =>
+      request<{ data: BuildingFinancialsDTO }>(
+        opts,
+        "GET",
+        `/buildings/${buildingId}/financials`,
+        undefined,
+        {
+          from: params.from,
+          to: params.to,
+          ...(params.forceRefresh ? { forceRefresh: "true" } : {}),
+        },
+      ),
+  };
+}
+
 function buildDevApi(opts: ClientOptions) {
   return {
     /** Trigger background job: process expired selection timeouts + attachment retention. */
@@ -1337,6 +1505,8 @@ export interface ApiClient {
   notifications: ReturnType<typeof buildNotificationsApi>;
   auth: ReturnType<typeof buildAuthApi>;
   rentals: ReturnType<typeof buildRentalsApi>;
+  rentEstimation: ReturnType<typeof buildRentEstimationApi>;
+  financials: ReturnType<typeof buildFinancialsApi>;
   dev: ReturnType<typeof buildDevApi>;
 }
 
@@ -1368,6 +1538,8 @@ export function createApiClient(
     notifications: buildNotificationsApi(opts),
     auth: buildAuthApi(opts),
     rentals: buildRentalsApi(opts),
+    rentEstimation: buildRentEstimationApi(opts),
+    financials: buildFinancialsApi(opts),
     dev: buildDevApi(opts),
   };
 }

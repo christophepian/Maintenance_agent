@@ -6,6 +6,7 @@ import PageHeader from "../../../components/layout/PageHeader";
 import PageContent from "../../../components/layout/PageContent";
 import Panel from "../../../components/layout/Panel";
 import { styles } from "../../../styles/managerStyles";
+import { authHeaders } from "../../../lib/api";
 
 const STATUS_TABS = [
   { key: "ALL", label: "All" },
@@ -15,13 +16,6 @@ const STATUS_TABS = [
   { key: "PAID", label: "Paid" },
   { key: "DISPUTED", label: "Disputed" },
 ];
-
-function authHeaders() {
-  if (typeof window === "undefined") return {};
-  const token = localStorage.getItem("authToken");
-  return token ? { Authorization: `Bearer ${token}` } : {};
-}
-
 function formatDate(iso) {
   if (!iso) return "—";
   const d = new Date(iso);
