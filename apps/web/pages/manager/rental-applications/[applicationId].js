@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
+import Link from "next/link";
 import AppShell from "../../../components/AppShell";
 import { formatDate } from "../../../lib/format";
 import PageShell from "../../../components/layout/PageShell";
@@ -138,7 +139,17 @@ export default function ApplicationDetailPage() {
                     <div className="flex items-center justify-between">
                       <div>
                         <span className="text-sm font-medium text-slate-900">
-                          {au.unit?.building?.name || "—"} — Unit {au.unit?.unitNumber || "—"}
+                          {au.unit?.building?.id ? (
+                            <Link href={`/manager/buildings/${au.unit.building.id}/financials`} className="text-indigo-600 hover:underline">
+                              {au.unit.building.name || "—"}
+                            </Link>
+                          ) : (au.unit?.building?.name || "—")}
+                          {" "}— Unit{" "}
+                          {au.unit?.id ? (
+                            <Link href={`/admin-inventory/units/${au.unit.id}`} className="text-indigo-600 hover:underline">
+                              {au.unit.unitNumber || "—"}
+                            </Link>
+                          ) : (au.unit?.unitNumber || "—")}
                         </span>
                         <span className={`ml-2 rounded-full px-2 py-0.5 text-xs font-medium ${au.disqualified ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"}`}>
                           {au.disqualified ? "Disqualified" : "Qualified"}

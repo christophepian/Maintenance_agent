@@ -102,6 +102,7 @@ export default function AppShell({ role: roleProp, children }) {
         section: "Properties",
         items: [
           { label: "Properties", href: "/manager/properties" },
+          { label: "Buildings", href: "/admin-inventory/buildings" },
           { label: "Inventory admin", href: "/admin-inventory" },
         ],
       },

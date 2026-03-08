@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import AppShell from "../components/AppShell";
 import { ALLOWED_CATEGORIES } from "../lib/categories";
 
@@ -171,7 +172,14 @@ export default function TenantForm() {
         method: "POST",
         body: JSON.stringify(payload),
       });
-      ok(`Request created with status: ${created?.status || "OK"}`);
+      const reqId = created?.id ? created.id.slice(0, 8) : null;
+      ok(
+        <>
+          Request {reqId ? <strong>#{reqId}</strong> : ""} created with status: <strong>{created?.status || "OK"}</strong>.
+          {" "}
+          <Link href="/tenant" style={{ color: "inherit", fontWeight: 600 }}>View your requests →</Link>
+        </>
+      );
       setDescription("");
       setEstimatedCost("");
     } catch (e2) {

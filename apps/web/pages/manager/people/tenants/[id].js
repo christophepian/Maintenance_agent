@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
+import Link from "next/link";
 import AppShell from "../../../../components/AppShell";
 import PageShell from "../../../../components/layout/PageShell";
 import PageHeader from "../../../../components/layout/PageHeader";
@@ -21,6 +22,10 @@ export default function TenantDetailPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState("Personal information");
   const [applicationId, setApplicationId] = useState(null);
+  const [leases, setLeases] = useState([]);
+  const [leasesLoading, setLeasesLoading] = useState(false);
+  const [leaseInvoices, setLeaseInvoices] = useState([]);
+  const [invoicesLoading, setInvoicesLoading] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -47,12 +52,30 @@ export default function TenantDetailPage() {
       // Fetch leases for the tenant's unit to find applicationId
       if (tenantData?.unitId) {
         try {
+          setLeasesLoading(true);
           const leasesRes = await fetch(`/api/leases?unitId=${tenantData.unitId}`, { headers: authHeaders() });
           const leasesData = await leasesRes.json().catch(() => ({}));
-          const leases = leasesData?.data || [];
-          const leaseWithApp = leases.find((l) => l.applicationId);
+          const fetchedLeases = (leasesData?.data || []).filter((l) => !l.isTemplate);
+          setLeases(fetchedLeases);
+          const leaseWithApp = fetchedLeases.find((l) => l.applicationId);
           if (leaseWithApp) setApplicationId(leaseWithApp.applicationId);
-        } catch {}
+          // Fetch invoices for each lease
+          setInvoicesLoading(true);
+          const allInvoices = [];
+          for (const lease of fetchedLeases) {
+            try {
+              const invRes = await fetch(`/api/leases/${lease.id}/invoices`, { headers: authHeaders() });
+              const invData = await invRes.json().catch(() => ({}));
+              if (invData?.data) allInvoices.push(...invData.data);
+            } catch {}
+          }
+          setLeaseInvoices(allInvoices);
+          setInvoicesLoading(false);
+          setLeasesLoading(false);
+        } catch {
+          setLeasesLoading(false);
+          setInvoicesLoading(false);
+        }
       }
     } catch (e) {
       setError(String(e?.message || e));
@@ -274,11 +297,23 @@ export default function TenantDetailPage() {
                     </div>
                     <div>
                       <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Building ID</div>
-                      <div className="text-sm text-slate-700 mt-1">{tenant?.unit?.buildingId || "—"}</div>
+                      <div className="text-sm text-slate-700 mt-1">
+                        {tenant?.unit?.buildingId ? (
+                          <Link href={`/manager/buildings/${tenant.unit.buildingId}/financials`} className="text-indigo-600 hover:underline">
+                            {tenant.unit.buildingId}
+                          </Link>
+                        ) : "—"}
+                      </div>
                     </div>
                     <div>
                       <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Unit ID</div>
-                      <div className="text-sm text-slate-700 mt-1">{tenant?.unit?.id || tenant?.unitId || "—"}</div>
+                      <div className="text-sm text-slate-700 mt-1">
+                        {(tenant?.unit?.id || tenant?.unitId) ? (
+                          <Link href={`/admin-inventory/units/${tenant?.unit?.id || tenant?.unitId}`} className="text-indigo-600 hover:underline">
+                            {tenant?.unit?.id || tenant?.unitId}
+                          </Link>
+                        ) : "—"}
+                      </div>
                     </div>
                     <div>
                       <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Floor</div>
@@ -302,13 +337,89 @@ export default function TenantDetailPage() {
 
               {activeTab === "Contracts" && (
                 <Panel title="Contracts">
-                  <div className="text-sm text-slate-600">Empty for now.</div>
+                  {leasesLoading ? (
+                    <p className="text-sm text-slate-600">Loading leases…</p>
+                  ) : leases.length === 0 ? (
+                    <p className="text-sm text-slate-500">No leases found for this tenant.</p>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-slate-200 text-sm">
+                        <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                          <tr>
+                            <th className="px-4 py-3">Unit</th>
+                            <th className="px-4 py-3">Building</th>
+                            <th className="px-4 py-3">Start date</th>
+                            <th className="px-4 py-3">End date</th>
+                            <th className="px-4 py-3">Status</th>
+                            <th className="px-4 py-3 text-right">Monthly rent</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 bg-white">
+                          {leases.map((l) => (
+                            <tr key={l.id}>
+                              <td className="px-4 py-3">
+                                <Link href={`/manager/leases/${l.id}`} className="text-indigo-600 hover:underline">
+                                  {l.unit?.unitNumber || l.unitId?.slice(0, 8) || "—"}
+                                </Link>
+                              </td>
+                              <td className="px-4 py-3 text-slate-700">{l.unit?.building?.name || "—"}</td>
+                              <td className="px-4 py-3 text-slate-700">{l.startDate ? new Date(l.startDate).toLocaleDateString("de-CH") : "—"}</td>
+                              <td className="px-4 py-3 text-slate-700">{l.endDate ? new Date(l.endDate).toLocaleDateString("de-CH") : "—"}</td>
+                              <td className="px-4 py-3">
+                                <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600">
+                                  {l.status}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 text-right text-slate-700">
+                                {l.netRentChf != null ? `CHF ${l.netRentChf}.-` : "—"}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
                 </Panel>
               )}
 
               {activeTab === "Invoices" && (
                 <Panel title="Invoices">
-                  <div className="text-sm text-slate-600">Empty for now.</div>
+                  {invoicesLoading ? (
+                    <p className="text-sm text-slate-600">Loading invoices…</p>
+                  ) : leaseInvoices.length === 0 ? (
+                    <p className="text-sm text-slate-500">No invoices found for this tenant.</p>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-slate-200 text-sm">
+                        <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                          <tr>
+                            <th className="px-4 py-3">Invoice #</th>
+                            <th className="px-4 py-3">Description</th>
+                            <th className="px-4 py-3 text-right">Amount</th>
+                            <th className="px-4 py-3">Due date</th>
+                            <th className="px-4 py-3">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 bg-white">
+                          {leaseInvoices.map((inv) => (
+                            <tr key={inv.id}>
+                              <td className="px-4 py-3 text-slate-700">{inv.invoiceNumber || inv.id?.slice(0, 8) || "—"}</td>
+                              <td className="px-4 py-3 text-slate-700">{inv.description || "—"}</td>
+                              <td className="px-4 py-3 text-right text-slate-700">
+                                {inv.totalAmount != null ? `CHF ${inv.totalAmount.toFixed(2)}` : "—"}
+                              </td>
+                              <td className="px-4 py-3 text-slate-700">{inv.dueDate ? new Date(inv.dueDate).toLocaleDateString("de-CH") : "—"}</td>
+                              <td className="px-4 py-3">
+                                <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600">
+                                  {inv.status}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
                 </Panel>
               )}
             </div>

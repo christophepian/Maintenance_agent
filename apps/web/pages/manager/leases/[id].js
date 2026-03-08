@@ -609,14 +609,28 @@ export default function LeaseEditorPage() {
                 {lease.draftPdfStorageKey && (
                   <div>
                     <p className="text-sm font-medium text-slate-700">📄 Draft PDF</p>
-                    <p className="text-xs text-slate-500 font-mono">{lease.draftPdfStorageKey}</p>
+                    <a
+                      href={`/api/leases/${id}/generate-pdf`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-indigo-600 hover:underline"
+                    >
+                      Download draft PDF
+                    </a>
                     <p className="text-xs text-slate-400">SHA-256: {lease.draftPdfSha256 || "—"}</p>
                   </div>
                 )}
                 {lease.signedPdfStorageKey && (
                   <div>
                     <p className="text-sm font-medium text-green-700">✅ Signed PDF</p>
-                    <p className="text-xs text-slate-500 font-mono">{lease.signedPdfStorageKey}</p>
+                    <a
+                      href={`/api/leases/${id}/generate-pdf`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-indigo-600 hover:underline"
+                    >
+                      Download signed PDF
+                    </a>
                     <p className="text-xs text-slate-400">SHA-256: {lease.signedPdfSha256 || "—"}</p>
                   </div>
                 )}
@@ -691,7 +705,11 @@ export default function LeaseEditorPage() {
                     <tbody className="divide-y">
                       {invoices.map(inv => (
                         <tr key={inv.id} className="hover:bg-slate-50">
-                          <td className="px-4 py-3">{inv.description || "—"}</td>
+                          <td className="px-4 py-3">
+                            <Link href="/manager/finance/invoices" className="text-indigo-600 hover:underline">
+                              {inv.description || "—"}
+                            </Link>
+                          </td>
                           <td className="px-4 py-3 font-medium">CHF {inv.totalAmountChf?.toFixed(2) || "—"}</td>
                           <td className="px-4 py-3">
                             <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${

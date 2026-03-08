@@ -251,15 +251,17 @@ export default function ManagerDashboard() {
 
               {pendingOwnerApprovalRequests.length > 0 && (
                 <Panel>
-                  <div style={styles.rowSpaceBetween}>
-                    <div>
-                      <strong style={styles.headingFlush}>Owner Approval Pending</strong>
-                      <div style={styles.subtleText}>High-value requests</div>
+                  <Link href="/manager/requests?filter=PENDING_OWNER_APPROVAL" style={{ textDecoration: "none", color: "inherit" }}>
+                    <div style={styles.rowSpaceBetween}>
+                      <div>
+                        <strong style={styles.headingFlush}>Owner Approval Pending</strong>
+                        <div style={styles.subtleText}>High-value requests</div>
+                      </div>
+                      <div style={{ fontSize: "2em", fontWeight: 700, color: "#7a1f1f" }}>
+                        {pendingOwnerApprovalRequests.length}
+                      </div>
                     </div>
-                    <div style={{ fontSize: "2em", fontWeight: 700, color: "#7a1f1f" }}>
-                      {pendingOwnerApprovalRequests.length}
-                    </div>
-                  </div>
+                  </Link>
                 </Panel>
               )}
 
@@ -284,15 +286,17 @@ export default function ManagerDashboard() {
 
               {staleJobs.length > 0 && (
                 <Panel>
-                  <div style={styles.rowSpaceBetween}>
-                    <div>
-                      <strong style={styles.headingFlush}>Stale Jobs</strong>
-                      <div style={styles.subtleText}>In progress &gt; 7 days</div>
+                  <Link href="/manager/requests?stale=true" style={{ textDecoration: "none", color: "inherit" }}>
+                    <div style={styles.rowSpaceBetween}>
+                      <div>
+                        <strong style={styles.headingFlush}>Stale Jobs</strong>
+                        <div style={styles.subtleText}>In progress &gt; 7 days</div>
+                      </div>
+                      <div style={{ fontSize: "2em", fontWeight: 700, color: "#7a4a00" }}>
+                        {staleJobs.length}
+                      </div>
                     </div>
-                    <div style={{ fontSize: "2em", fontWeight: 700, color: "#7a4a00" }}>
-                      {staleJobs.length}
-                    </div>
-                  </div>
+                  </Link>
                 </Panel>
               )}
 
@@ -331,15 +335,17 @@ export default function ManagerDashboard() {
           <CollapsibleSection title="Operational Health">
             <div style={styles.gridGap12}>
               <Panel>
-                <div style={styles.rowSpaceBetween}>
-                  <div>
-                    <strong style={styles.headingFlush}>Open Requests</strong>
-                    <div style={styles.subtleText}>Pending, approved, assigned</div>
+                <Link href="/manager/requests" style={{ textDecoration: "none", color: "inherit" }}>
+                  <div style={styles.rowSpaceBetween}>
+                    <div>
+                      <strong style={styles.headingFlush}>Open Requests</strong>
+                      <div style={styles.subtleText}>Pending, approved, assigned</div>
+                    </div>
+                    <div style={{ fontSize: "2em", fontWeight: 700, color: openRequestsCount > 20 ? "#7a4a00" : "#0b3a75" }}>
+                      {openRequestsCount}
+                    </div>
                   </div>
-                  <div style={{ fontSize: "2em", fontWeight: 700, color: openRequestsCount > 20 ? "#7a4a00" : "#0b3a75" }}>
-                    {openRequestsCount}
-                  </div>
-                </div>
+                </Link>
               </Panel>
 
               <Panel>
@@ -355,15 +361,17 @@ export default function ManagerDashboard() {
               </Panel>
 
               <Panel>
-                <div style={styles.rowSpaceBetween}>
-                  <div>
-                    <strong style={styles.headingFlush}>Spend This Month</strong>
-                    <div style={styles.subtleText}>Paid invoices</div>
+                <Link href="/manager/finance/invoices" style={{ textDecoration: "none", color: "inherit" }}>
+                  <div style={styles.rowSpaceBetween}>
+                    <div>
+                      <strong style={styles.headingFlush}>Spend This Month</strong>
+                      <div style={styles.subtleText}>Paid invoices</div>
+                    </div>
+                    <div style={{ fontSize: "1.6em", fontWeight: 700, color: "#116b2b" }}>
+                      {formatCurrency(spendThisMonth)}
+                    </div>
                   </div>
-                  <div style={{ fontSize: "1.6em", fontWeight: 700, color: "#116b2b" }}>
-                    {formatCurrency(spendThisMonth)}
-                  </div>
-                </div>
+                </Link>
               </Panel>
             </div>
           </CollapsibleSection>

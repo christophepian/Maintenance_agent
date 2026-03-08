@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import React from "react";
 import { useRouter } from "next/router";
+import Link from "next/link";
 import AppShell from "../../../../components/AppShell";
 import PageShell from "../../../../components/layout/PageShell";
 import PageHeader from "../../../../components/layout/PageHeader";
@@ -175,6 +176,9 @@ export default function UnitApplicationsPage() {
   return (
     <AppShell role="MANAGER">
       <PageShell>
+        <div className="px-4 pt-4">
+          <Link href="/manager/vacancies" className="text-sm text-blue-600 hover:text-blue-800">← Vacancies</Link>
+        </div>
         <PageHeader
           title="Rental Applications"
           subtitle={unitLabel}

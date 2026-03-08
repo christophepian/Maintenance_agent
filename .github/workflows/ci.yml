@@ -51,6 +51,11 @@ jobs:
       - name: Install dependencies (frontend)
         run: npm --prefix apps/web install --no-audit --no-fund
 
+      - name: Create test database
+        run: psql -h localhost -U postgres -c "CREATE DATABASE maint_agent_test;" || true
+        env:
+          PGPASSWORD: postgres
+
       # ── G7-2: Prisma generate ──
       - name: "G7: Prisma generate"
         run: npx --prefix apps/api prisma generate
@@ -89,6 +94,8 @@ jobs:
       - name: "G7: Run Jest tests"
         run: npm test -- --ci --forceExit
         working-directory: apps/api
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/maint_agent_test
 
       # ── G7-6: Boot smoke test ──
       - name: "G7: Backend boot + smoke curls"

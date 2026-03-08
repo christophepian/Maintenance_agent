@@ -13,6 +13,7 @@ pnpm-debug.log*
 .env
 .env.*
 !.env.example
+.env.test
 
 # TypeScript build artifacts (dist per-package)
 apps/api/dist/
@@ -48,6 +49,9 @@ apps/api/.data/
 
 # One-off test/seed scripts at root
 create-test-*.js
+
+# Local database backups
+backups/*.sql
 
 # Environment files
 .env

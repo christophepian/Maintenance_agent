@@ -320,17 +320,19 @@ export default function OwnerDashboard() {
                 {recentApprovals.length > 0 && (
                   <div className="space-y-3">
                     {recentApprovals.map((req) => (
-                      <div key={req.id} className="rounded-lg border border-slate-200 p-3">
-                        <div className="text-sm font-semibold text-slate-900">
-                          {req.description}
+                      <Link key={req.id} href="/owner/approvals" style={{ textDecoration: "none", color: "inherit" }}>
+                        <div className="rounded-lg border border-slate-200 p-3 hover:bg-slate-50 transition-colors">
+                          <div className="text-sm font-semibold text-slate-900">
+                            {req.description}
+                          </div>
+                          <div className="mt-1 text-xs text-slate-500">
+                            {req.unit?.building?.name || "—"} · Unit {req.unit?.unitNumber || "—"}
+                          </div>
+                          <div className="mt-1 text-sm text-slate-700">
+                            {formatCurrency(req.estimatedCost || 0)}
+                          </div>
                         </div>
-                        <div className="mt-1 text-xs text-slate-500">
-                          {req.unit?.building?.name || "—"} · Unit {req.unit?.unitNumber || "—"}
-                        </div>
-                        <div className="mt-1 text-sm text-slate-700">
-                          {formatCurrency(req.estimatedCost || 0)}
-                        </div>
-                      </div>
+                      </Link>
                     ))}
                   </div>
                 )}
@@ -395,14 +397,16 @@ export default function OwnerDashboard() {
                 {topVacancies.length > 0 && (
                   <div className="space-y-3">
                     {topVacancies.map((unit) => (
-                      <div key={unit.id} className="rounded-lg border border-slate-200 p-3">
-                        <div className="text-sm font-semibold text-slate-900">
-                          Unit {unit.unitNumber || "—"}
+                      <Link key={unit.id} href="/owner/vacancies" style={{ textDecoration: "none", color: "inherit" }}>
+                        <div className="rounded-lg border border-slate-200 p-3 hover:bg-slate-50 transition-colors">
+                          <div className="text-sm font-semibold text-slate-900">
+                            Unit {unit.unitNumber || "—"}
+                          </div>
+                          <div className="text-xs text-slate-500">
+                            {unit.building?.name || unit.buildingName || "Building"}
+                          </div>
                         </div>
-                        <div className="text-xs text-slate-500">
-                          {unit.building?.name || unit.buildingName || "Building"}
-                        </div>
-                      </div>
+                      </Link>
                     ))}
                   </div>
                 )}
@@ -478,12 +482,11 @@ export default function OwnerDashboard() {
                             </td>
                             <td className="py-2.5 px-3 text-right text-slate-700 hidden sm:table-cell">{b.activeUnitsCount}</td>
                             <td className="py-2.5 px-3 text-right">
-                              <Link
-                                href={`/admin-inventory/buildings/${b.buildingId}`}
-                                className="text-xs font-medium text-indigo-600 hover:text-indigo-700"
+                              <span
+                                className="text-xs font-medium text-slate-400"
                               >
-                                Details
-                              </Link>
+                                —
+                              </span>
                             </td>
                           </tr>
                         ))}

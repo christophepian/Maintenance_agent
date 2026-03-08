@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
+import Link from "next/link";
 import AppShell from "../../../../components/AppShell";
 import PageShell from "../../../../components/layout/PageShell";
 import PageHeader from "../../../../components/layout/PageHeader";
@@ -34,12 +35,40 @@ export default function ContractorDetailPage() {
   const [message, setMessage] = useState("");
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState("Personal information");
+  const [jobs, setJobs] = useState([]);
+  const [jobsLoading, setJobsLoading] = useState(false);
+  const [contractorInvoices, setContractorInvoices] = useState([]);
+  const [invoicesLoading, setInvoicesLoading] = useState(false);
 
   useEffect(() => {
     if (!id) return;
     loadContractor();
+    loadContractorJobs();
+    loadContractorInvoices();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  async function loadContractorJobs() {
+    setJobsLoading(true);
+    try {
+      const res = await fetch(`/api/jobs?contractorId=${id}`, { headers: authHeaders() });
+      const data = await res.json().catch(() => ({}));
+      setJobs(data?.data || []);
+    } catch {} finally {
+      setJobsLoading(false);
+    }
+  }
+
+  async function loadContractorInvoices() {
+    setInvoicesLoading(true);
+    try {
+      const res = await fetch(`/api/invoices?contractorId=${id}`, { headers: authHeaders() });
+      const data = await res.json().catch(() => ({}));
+      setContractorInvoices(data?.data || []);
+    } catch {} finally {
+      setInvoicesLoading(false);
+    }
+  }
 
   async function loadContractor() {
     setLoading(true);
@@ -478,13 +507,89 @@ export default function ContractorDetailPage() {
 
               {activeTab === "Contracts" && (
                 <Panel title="Contracts">
-                  <div className="text-sm text-slate-600">Empty for now.</div>
+                  {jobsLoading ? (
+                    <p className="text-sm text-slate-600">Loading jobs…</p>
+                  ) : jobs.length === 0 ? (
+                    <p className="text-sm text-slate-500">No jobs found for this contractor.</p>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-slate-200 text-sm">
+                        <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                          <tr>
+                            <th className="px-4 py-3">Job #</th>
+                            <th className="px-4 py-3">Request title</th>
+                            <th className="px-4 py-3">Building</th>
+                            <th className="px-4 py-3">Status</th>
+                            <th className="px-4 py-3">Created date</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 bg-white">
+                          {jobs.map((job) => (
+                            <tr key={job.id}>
+                              <td className="px-4 py-3">
+                                <Link href="/manager/requests" className="text-indigo-600 hover:underline">
+                                  {job.id?.slice(0, 8)}
+                                </Link>
+                              </td>
+                              <td className="px-4 py-3 text-slate-700">{job.request?.description?.slice(0, 60) || "—"}{job.request?.description?.length > 60 ? "…" : ""}</td>
+                              <td className="px-4 py-3 text-slate-700">{job.request?.unit?.building?.name || "—"}</td>
+                              <td className="px-4 py-3">
+                                <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600">
+                                  {job.status}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 text-slate-700">{job.createdAt ? new Date(job.createdAt).toLocaleDateString("de-CH") : "—"}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
                 </Panel>
               )}
 
               {activeTab === "Invoices" && (
                 <Panel title="Invoices">
-                  <div className="text-sm text-slate-600">Empty for now.</div>
+                  {invoicesLoading ? (
+                    <p className="text-sm text-slate-600">Loading invoices…</p>
+                  ) : contractorInvoices.length === 0 ? (
+                    <p className="text-sm text-slate-500">No invoices found for this contractor.</p>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-slate-200 text-sm">
+                        <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                          <tr>
+                            <th className="px-4 py-3">Invoice #</th>
+                            <th className="px-4 py-3">Job #</th>
+                            <th className="px-4 py-3 text-right">Amount</th>
+                            <th className="px-4 py-3">Status</th>
+                            <th className="px-4 py-3">Submitted date</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 bg-white">
+                          {contractorInvoices.map((inv) => (
+                            <tr key={inv.id}>
+                              <td className="px-4 py-3 text-slate-700">{inv.invoiceNumber || inv.id?.slice(0, 8) || "—"}</td>
+                              <td className="px-4 py-3">
+                                <Link href="/manager/requests" className="text-indigo-600 hover:underline">
+                                  {inv.jobId?.slice(0, 8) || "—"}
+                                </Link>
+                              </td>
+                              <td className="px-4 py-3 text-right text-slate-700">
+                                {inv.totalAmount != null ? `CHF ${inv.totalAmount.toFixed(2)}` : "—"}
+                              </td>
+                              <td className="px-4 py-3">
+                                <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600">
+                                  {inv.status}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 text-slate-700">{inv.submittedAt ? new Date(inv.submittedAt).toLocaleDateString("de-CH") : "—"}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
                 </Panel>
               )}
             </div>

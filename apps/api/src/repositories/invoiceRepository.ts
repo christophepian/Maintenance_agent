@@ -62,20 +62,46 @@ export interface ListInvoiceOpts {
   status?: InvoiceStatus;
   contractorId?: string;
   view?: "summary" | "full";
+  expenseCategory?: string;
+  buildingId?: string;
+  paidAfter?: string;   // ISO date string
+  paidBefore?: string;  // ISO date string
 }
 
 /**
  * List invoices scoped to an org, with optional filters.
+ * Supports filtering by expenseCategory, buildingId (via job→request→unit),
+ * and paidAfter/paidBefore date range.
  */
 export async function findInvoicesByOrg(prisma: PrismaClient, opts: ListInvoiceOpts) {
   const useSummary = opts.view === "summary";
+
+  const where: any = {
+    orgId: opts.orgId,
+    ...(opts.jobId && { jobId: opts.jobId }),
+    ...(opts.status && { status: opts.status }),
+    ...(opts.expenseCategory && { expenseCategory: opts.expenseCategory }),
+  };
+
+  // Contractor and building filters both traverse the job relation
+  const jobFilter: any = {};
+  if (opts.contractorId) jobFilter.contractorId = opts.contractorId;
+  if (opts.buildingId) {
+    jobFilter.request = { unit: { buildingId: opts.buildingId } };
+  }
+  if (Object.keys(jobFilter).length > 0) {
+    where.job = jobFilter;
+  }
+
+  // Date range filters on paidAt
+  if (opts.paidAfter || opts.paidBefore) {
+    where.paidAt = {};
+    if (opts.paidAfter) where.paidAt.gte = new Date(opts.paidAfter);
+    if (opts.paidBefore) where.paidAt.lte = new Date(opts.paidBefore);
+  }
+
   return prisma.invoice.findMany({
-    where: {
-      orgId: opts.orgId,
-      ...(opts.jobId && { jobId: opts.jobId }),
-      ...(opts.status && { status: opts.status }),
-      ...(opts.contractorId && { job: { contractorId: opts.contractorId } }),
-    },
+    where,
     orderBy: { createdAt: "desc" },
     include: useSummary ? INVOICE_SUMMARY_INCLUDE : INVOICE_FULL_INCLUDE,
   });

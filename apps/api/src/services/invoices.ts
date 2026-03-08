@@ -102,6 +102,7 @@ export interface InvoiceDTO {
   /**
    * H5: Summary DTO for list endpoints.
    * Reduces overfetch by omitting line items and address details.
+   * Includes expenseCategory and paymentReference for finance pages.
    */
   export interface InvoiceSummaryDTO {
     id: string;
@@ -114,6 +115,8 @@ export interface InvoiceDTO {
     paidAt?: string;
     createdAt: string;
     description?: string;
+    expenseCategory?: string;
+    paymentReference?: string;
   }
 
 function toCents(amount: number): number {
@@ -386,6 +389,8 @@ export async function getInvoice(invoiceId: string): Promise<InvoiceDTO | null> 
 /**
  * List invoices for org with optional filters.
  * H1: Supports contractorId filter for contractor-scoped access.
+ * Supports expenseCategory, buildingId, paidAfter, paidBefore filters
+ * for finance pages (payments, expenses).
  */
 export async function listInvoices(
   orgId: string,
@@ -394,17 +399,40 @@ export async function listInvoices(
     status?: InvoiceStatus;
     view?: "summary" | "full";
     contractorId?: string;
+    expenseCategory?: string;
+    buildingId?: string;
+    paidAfter?: string;
+    paidBefore?: string;
   }
 ): Promise<InvoiceDTO[] | InvoiceSummaryDTO[]> {
   const useSummary = filters?.view === "summary";
 
+  const where: any = {
+    orgId,
+    ...(filters?.jobId && { jobId: filters.jobId }),
+    ...(filters?.status && { status: filters.status }),
+    ...(filters?.expenseCategory && { expenseCategory: filters.expenseCategory }),
+  };
+
+  // Contractor and building filters both traverse the job relation
+  const jobFilter: any = {};
+  if (filters?.contractorId) jobFilter.contractorId = filters.contractorId;
+  if (filters?.buildingId) {
+    jobFilter.request = { unit: { buildingId: filters.buildingId } };
+  }
+  if (Object.keys(jobFilter).length > 0) {
+    where.job = jobFilter;
+  }
+
+  // Date range filters on paidAt
+  if (filters?.paidAfter || filters?.paidBefore) {
+    where.paidAt = {};
+    if (filters?.paidAfter) where.paidAt.gte = new Date(filters.paidAfter);
+    if (filters?.paidBefore) where.paidAt.lte = new Date(filters.paidBefore);
+  }
+
   const invoices = await prisma.invoice.findMany({
-    where: {
-      orgId,
-      ...(filters?.jobId && { jobId: filters.jobId }),
-      ...(filters?.status && { status: filters.status }),
-      ...(filters?.contractorId && { job: { contractorId: filters.contractorId } }),
-    },
+    where,
     orderBy: { createdAt: 'desc' },
     include: useSummary ? undefined : INVOICE_INCLUDE,
   });
@@ -649,5 +677,7 @@ function mapInvoiceToDTO(invoice: any): InvoiceDTO {
       paidAt: invoice.paidAt ? invoice.paidAt.toISOString() : null as any,
       createdAt: invoice.createdAt.toISOString(),
       description: invoice.description || undefined,
+      expenseCategory: invoice.expenseCategory || undefined,
+      paymentReference: invoice.paymentReference || undefined,
     };
   }

@@ -1,4 +1,9 @@
 services:
+  # Dev database:  maint_agent       (persistent dev data)
+  # Test database: maint_agent_test  (isolated test data)
+  # Create test DB once:
+  #   docker exec maint_agent_db psql -U postgres \
+  #     -c "CREATE DATABASE maint_agent_test;"
   postgres:
     image: postgres:16
     container_name: maint_agent_pg

@@ -82,8 +82,13 @@ export function registerInvoiceRoutes(router: Router) {
     try {
       const jobId = first(query, "jobId") || undefined;
       const status = first(query, "status") || undefined;
-        const view = first(query, "view") as "summary" | "full" | undefined;
-        const invoices = await listInvoices(orgId, { jobId, status: status as any, view });
+      const contractorId = first(query, "contractorId") || undefined;
+      const expenseCategory = first(query, "expenseCategory") || undefined;
+      const buildingId = first(query, "buildingId") || undefined;
+      const paidAfter = first(query, "paidAfter") || undefined;
+      const paidBefore = first(query, "paidBefore") || undefined;
+      const view = first(query, "view") as "summary" | "full" | undefined;
+      const invoices = await listInvoices(orgId, { jobId, status: status as any, view, contractorId, expenseCategory, buildingId, paidAfter, paidBefore });
       sendJson(res, 200, { data: invoices });
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to load invoices", String(e));

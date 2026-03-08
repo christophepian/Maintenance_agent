@@ -11,8 +11,9 @@
  *   - No external HTTP calls in CI
  */
 
-import { LegalSourceStatus } from "@prisma/client";
+import { LegalSourceStatus, LegalSourceScope } from "@prisma/client";
 import prisma from "./prismaClient";
+import * as legalSourceRepo from "../repositories/legalSourceRepository";
 
 // ==========================================
 // Fetcher Interface
@@ -1116,12 +1117,27 @@ export async function ingestSource(
 }
 
 /**
- * Run ingestion for all active sources.
+ * Run ingestion for all relevant sources.
+ *
+ * If canton is provided, only ingest FEDERAL + canton-scoped sources
+ * (always includes FEDERAL regardless of canton).
+ * If canton is omitted, ingest all non-INACTIVE sources (backwards-compatible).
  */
-export async function ingestAllSources(): Promise<IngestionResult[]> {
-  const sources = await prisma.legalSource.findMany({
-    where: { status: { not: "INACTIVE" } },
-  });
+export async function ingestAllSources(canton?: string): Promise<IngestionResult[]> {
+  let sources;
+
+  if (canton) {
+    // Scope to FEDERAL + the specific canton
+    const scopes: LegalSourceScope[] = [
+      LegalSourceScope.FEDERAL,
+      ...(canton in LegalSourceScope ? [canton as LegalSourceScope] : []),
+    ];
+    sources = await legalSourceRepo.findByScope(prisma, scopes);
+  } else {
+    // No canton filter — ingest all non-INACTIVE (existing behaviour)
+    sources = await legalSourceRepo.findAll(prisma);
+    sources = sources.filter((s: any) => s.status !== LegalSourceStatus.INACTIVE);
+  }
 
   const results: IngestionResult[] = [];
   for (const source of sources) {

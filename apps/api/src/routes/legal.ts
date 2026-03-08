@@ -35,9 +35,50 @@ import {
   CreateDepreciationStandardSchema,
   CreateLegalRuleSchema,
   CreateLegalSourceSchema,
+  UpdateLegalSourceSchema,
   CreateAssetSchema,
 } from "../validation/legal";
 import prisma from "../services/prismaClient";
+import * as legalSourceRepo from "../repositories/legalSourceRepository";
+import { LegalSourceStatus, LegalSourceScope } from "@prisma/client";
+
+// ─── LegalSource DTO + Mapper ──────────────────────────────────
+
+export interface LegalSourceDTO {
+  id: string;
+  name: string;
+  url: string | null;
+  jurisdiction: string;
+  scope: LegalSourceScope;
+  fetcherType: string | null;
+  parserType: string | null;
+  updateFrequency: string | null;
+  status: LegalSourceStatus;
+  lastCheckedAt: string | null;
+  lastSuccessAt: string | null;
+  lastError: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+function mapLegalSourceToDTO(source: any): LegalSourceDTO {
+  return {
+    id: source.id,
+    name: source.name,
+    url: source.url ?? null,
+    jurisdiction: source.jurisdiction,
+    scope: source.scope,
+    fetcherType: source.fetcherType ?? null,
+    parserType: source.parserType ?? null,
+    updateFrequency: source.updateFrequency ?? null,
+    status: source.status,
+    lastCheckedAt: source.lastCheckedAt?.toISOString() ?? null,
+    lastSuccessAt: source.lastSuccessAt?.toISOString() ?? null,
+    lastError: source.lastError ?? null,
+    createdAt: source.createdAt.toISOString(),
+    updatedAt: source.updatedAt.toISOString(),
+  };
+}
 
 
 export function registerLegalRoutes(router: Router) {
@@ -138,10 +179,8 @@ export function registerLegalRoutes(router: Router) {
     if (!requireOrgViewer(req, res)) return;
 
     try {
-      const sources = await prisma.legalSource.findMany({
-        orderBy: { name: "asc" },
-      });
-      sendJson(res, 200, { data: sources });
+      const sources = await legalSourceRepo.findAll(prisma, orgId);
+      sendJson(res, 200, { data: sources.map(mapLegalSourceToDTO) });
     } catch (e: any) {
       console.error("[GET /legal/sources]", e);
       sendError(res, 500, "INTERNAL_ERROR", "Failed to list sources");
@@ -161,15 +200,85 @@ export function registerLegalRoutes(router: Router) {
         return sendError(res, 400, "VALIDATION_ERROR", msg);
       }
 
-      const source = await prisma.legalSource.create({
-        data: parsed.data,
-      });
-      sendJson(res, 201, { data: source });
+      const source = await legalSourceRepo.create(prisma, parsed.data);
+      sendJson(res, 201, { data: mapLegalSourceToDTO(source) });
     } catch (e: any) {
       console.error("[POST /legal/sources]", e);
       sendError(res, 500, "INTERNAL_ERROR", "Failed to create source");
     }
   });
+
+  // LegalSource IDs may be UUIDs or slug-style strings (e.g. "asloca-depreciation"),
+  // so we use addCustom with a broader regex instead of the standard :id (UUID-only).
+  const LEGAL_SOURCE_ID_PATTERN = /^\/legal\/sources\/([a-zA-Z0-9_-]+)$/;
+
+  router.addCustom(
+    "PATCH",
+    LEGAL_SOURCE_ID_PATTERN,
+    ["id"],
+    async ({ req, res, params }) => {
+    if (!requireOrgViewer(req, res)) return;
+
+    try {
+      const id = params?.id;
+      if (!id) return sendError(res, 400, "MISSING_PARAM", "id is required");
+
+      const existing = await legalSourceRepo.findById(prisma, id);
+      if (!existing) return sendError(res, 404, "NOT_FOUND", "Legal source not found");
+
+      const body = await readJson(req);
+      const parsed = UpdateLegalSourceSchema.safeParse(body);
+      if (!parsed.success) {
+        const msg = parsed.error.issues
+          .map((i) => `${i.path.join(".")}: ${i.message}`)
+          .join("; ");
+        return sendError(res, 400, "VALIDATION_ERROR", msg);
+      }
+
+      const updated = await legalSourceRepo.update(prisma, id, parsed.data);
+      sendJson(res, 200, { data: mapLegalSourceToDTO(updated) });
+    } catch (e: any) {
+      console.error("[PATCH /legal/sources/:id]", e);
+      sendError(res, 500, "INTERNAL_ERROR", "Failed to update source");
+    }
+  },
+    "PATCH /legal/sources/:id",
+  );
+
+  router.addCustom(
+    "DELETE",
+    LEGAL_SOURCE_ID_PATTERN,
+    ["id"],
+    async ({ req, res, params }) => {
+    if (!requireOrgViewer(req, res)) return;
+
+    try {
+      const id = params?.id;
+      if (!id) return sendError(res, 400, "MISSING_PARAM", "id is required");
+
+      const existing = await legalSourceRepo.findById(prisma, id);
+      if (!existing) return sendError(res, 404, "NOT_FOUND", "Legal source not found");
+
+      const linked = await legalSourceRepo.hasLinkedData(prisma, id);
+      if (linked) {
+        return sendError(
+          res,
+          409,
+          "CONFLICT",
+          "Source has linked data and cannot be deleted. Deactivate it instead.",
+        );
+      }
+
+      await legalSourceRepo.remove(prisma, id);
+      res.writeHead(204);
+      res.end();
+    } catch (e: any) {
+      console.error("[DELETE /legal/sources/:id]", e);
+      sendError(res, 500, "INTERNAL_ERROR", "Failed to delete source");
+    }
+  },
+    "DELETE /legal/sources/:id",
+  );
 
   // ════════════════════════════════════════════════════════════
   // Admin: Legal Variables

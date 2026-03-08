@@ -19,7 +19,11 @@ const EVENT_LINKS = {
   LEASE_READY_TO_SIGN: (n) => `/tenant/leases/${n.entityId}`,
   LEASE_SIGNED: (n) => `/tenant/leases/${n.entityId}`,
   INVOICE_CREATED: () => `/tenant/invoices`,
+  INVOICE_APPROVED: () => `/tenant/invoices`,
   INVOICE_PAID: () => `/tenant/invoices`,
+  JOB_STARTED: () => `/tenant/inbox`,
+  JOB_COMPLETED: () => `/tenant/inbox`,
+  CONTRACTOR_REJECTED: () => `/tenant/inbox`,
 };
 
 export default function TenantInboxPage() {

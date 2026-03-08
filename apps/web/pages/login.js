@@ -1,6 +1,15 @@
 import { useState } from "react";
+import { useRouter } from "next/router";
+
+const ROLE_HOME = {
+  MANAGER: "/manager",
+  CONTRACTOR: "/contractor",
+  OWNER: "/owner",
+  TENANT: "/tenant/inbox",
+};
 
 export default function LoginPage() {
+  const router = useRouter();
   const [mode, setMode] = useState("login"); // login | register
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -38,10 +47,10 @@ export default function LoginPage() {
         localStorage.setItem("authUser", JSON.stringify(data.data.user));
       }
 
-      setNotice({
-        type: "ok",
-        msg: mode === "login" ? "Logged in." : "Registered and logged in.",
-      });
+      // Redirect to role-specific home page
+      const userRole = data?.data?.user?.role;
+      const target = ROLE_HOME[userRole] || "/manager";
+      router.push(target);
     } catch (e2) {
       setNotice({ type: "err", msg: String(e2) });
     } finally {

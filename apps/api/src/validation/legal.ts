@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { RfpStatus, LegalObligation, LegalAuthority, AssetType, LegalRuleType } from "@prisma/client";
+import { RfpStatus, LegalObligation, LegalAuthority, AssetType, LegalRuleType, LegalSourceStatus, LegalSourceScope } from "@prisma/client";
 
 // ── GET /rfps query params ──────────────────────────────────
 
@@ -78,6 +78,7 @@ export type CreateLegalRuleBody = z.infer<typeof CreateLegalRuleSchema>;
 export const CreateLegalSourceSchema = z.object({
   name: z.string().min(1).max(200),
   jurisdiction: z.string().max(10).optional().default("CH"),
+  scope: z.nativeEnum(LegalSourceScope).optional().default("FEDERAL"),
   url: z.string().url().nullable().optional(),
   updateFrequency: z.string().max(50).nullable().optional(),
   fetcherType: z.string().max(50).nullable().optional(),
@@ -85,6 +86,21 @@ export const CreateLegalSourceSchema = z.object({
 });
 
 export type CreateLegalSourceBody = z.infer<typeof CreateLegalSourceSchema>;
+
+// ── PATCH /legal/sources/:id body ───────────────────────────
+
+export const UpdateLegalSourceSchema = z.object({
+  name: z.string().min(1).max(200).optional(),
+  url: z.union([z.string().url(), z.literal("")]).nullable().optional(),
+  jurisdiction: z.string().max(10).optional(),
+  scope: z.nativeEnum(LegalSourceScope).optional(),
+  fetcherType: z.string().max(50).nullable().optional(),
+  parserType: z.string().max(50).nullable().optional(),
+  updateFrequency: z.string().max(50).nullable().optional(),
+  status: z.nativeEnum(LegalSourceStatus).optional(),
+});
+
+export type UpdateLegalSourceBody = z.infer<typeof UpdateLegalSourceSchema>;
 
 // ── POST /assets body ───────────────────────────────────────
 

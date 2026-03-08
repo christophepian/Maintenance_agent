@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
+import Link from "next/link";
 import AppShell from "../../../components/AppShell";
 import PageShell from "../../../components/layout/PageShell";
 import PageHeader from "../../../components/layout/PageHeader";
@@ -32,6 +33,9 @@ export default function LegalRulesPage() {
   return (
     <AppShell role="MANAGER">
       <PageShell>
+        <div className="px-4 pt-4">
+          <Link href="/manager/legal" className="text-sm text-blue-600 hover:text-blue-800">← Legal</Link>
+        </div>
         <PageHeader
           title="Legal Rules"
           subtitle="Statutory and custom rules evaluated by the legal decision engine"

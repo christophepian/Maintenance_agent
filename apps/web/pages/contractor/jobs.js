@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/router';
+import Link from 'next/link';
 import AppShell from "../../components/AppShell";
 import ContractorPicker from "../../components/ContractorPicker";
 import { formatDate } from "../../lib/format";
@@ -150,7 +151,11 @@ export default function ContractorJobs() {
               <div key={job.id} className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
                 <div className="flex justify-between items-start mb-4">
                   <div>
-                    <h3 className="text-lg font-semibold mb-2">Job #{job.id.slice(0, 8)}</h3>
+                    <h3 className="text-lg font-semibold mb-2">
+                      <Link href={`/contractor/jobs/${job.id}`} className="text-blue-700 hover:underline">
+                        Job #{job.id.slice(0, 8)}
+                      </Link>
+                    </h3>
                     <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(job.status)}`}>
                       {job.status}
                     </span>
@@ -311,7 +316,11 @@ export default function ContractorJobs() {
                     )}
                     {(job.status === 'COMPLETED' || job.status === 'INVOICED') && (
                       <p className="text-sm text-gray-600">
-                        {job.status === 'COMPLETED' ? 'Completed - Invoice pending' : 'Invoiced'}
+                        {job.status === 'COMPLETED' ? 'Completed - Invoice pending' : (
+                          <Link href="/contractor/invoices" className="text-indigo-600 hover:underline">
+                            View Invoice →
+                          </Link>
+                        )}
                       </p>
                     )}
                   </div>

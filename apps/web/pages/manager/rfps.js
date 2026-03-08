@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
+import Link from "next/link";
 import AppShell from "../../components/AppShell";
 import PageShell from "../../components/layout/PageShell";
 import PageHeader from "../../components/layout/PageHeader";
@@ -163,7 +164,13 @@ function RfpCard({ rfp }) {
                   <tbody>
                     {rfp.invites.map((inv) => (
                       <tr key={inv.id} className="border-b border-slate-50">
-                        <td className="py-1 pr-3">{inv.contractor?.businessName || inv.contractorId?.slice(0, 8)}</td>
+                        <td className="py-1 pr-3">
+                          {inv.contractorId ? (
+                            <Link href={`/manager/people/vendors/${inv.contractorId}`} className="text-indigo-600 hover:underline">
+                              {inv.contractor?.businessName || inv.contractorId?.slice(0, 8)}
+                            </Link>
+                          ) : (inv.contractor?.businessName || "—")}
+                        </td>
                         <td className="py-1 pr-3">
                           <InviteStatusPill status={inv.status} />
                         </td>
@@ -192,7 +199,13 @@ function RfpCard({ rfp }) {
                   <tbody>
                     {rfp.quotes.map((q) => (
                       <tr key={q.id} className="border-b border-slate-50">
-                        <td className="py-1 pr-3">{q.contractor?.businessName || q.contractorId?.slice(0, 8)}</td>
+                        <td className="py-1 pr-3">
+                          {q.contractorId ? (
+                            <Link href={`/manager/people/vendors/${q.contractorId}`} className="text-indigo-600 hover:underline">
+                              {q.contractor?.businessName || q.contractorId?.slice(0, 8)}
+                            </Link>
+                          ) : (q.contractor?.businessName || "—")}
+                        </td>
                         <td className="py-1 pr-3 font-mono">CHF {q.amountCents ? (q.amountCents / 100).toFixed(2) : "—"}</td>
                         <td className="py-1 pr-3">{formatDate(q.submittedAt)}</td>
                       </tr>

@@ -182,12 +182,20 @@ export default function OwnerVacanciesPage() {
                           )}
                         </td>
                         <td className="px-4 py-3 text-right">
-                          <Link
-                            href={`/owner/vacancies/${unit.id}/candidates`}
-                            className="rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-700 hover:bg-indigo-100"
-                          >
-                            Review candidates
-                          </Link>
+                          <div className="flex items-center justify-end gap-2">
+                            <Link
+                              href={`/owner/vacancies/${unit.id}/fill`}
+                              className="rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-xs font-semibold text-green-700 hover:bg-green-100"
+                            >
+                              Fill vacancy →
+                            </Link>
+                            <Link
+                              href={`/owner/vacancies/${unit.id}/candidates`}
+                              className="rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-700 hover:bg-indigo-100"
+                            >
+                              Review candidates
+                            </Link>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -238,12 +246,9 @@ export default function OwnerVacanciesPage() {
                         <td className="px-4 py-3">{statusBadge(sel.status)}</td>
                         <td className="px-4 py-3">
                           {sel.lease ? (
-                            <Link
-                              href={`/manager/leases/${sel.lease.id}`}
-                              className="inline-flex items-center gap-1.5 text-indigo-600 hover:underline"
-                            >
+                            <span className="inline-flex items-center gap-1.5">
                               {leaseBadge(sel.lease)}
-                            </Link>
+                            </span>
                           ) : (
                             leaseBadge(null)
                           )}

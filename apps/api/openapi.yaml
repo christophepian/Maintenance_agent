@@ -4833,6 +4833,56 @@ paths:
               schema:
                 type: object
 
+  /legal/sources/{id}:
+    patch:
+      tags: [LegalEngine]
+      summary: Update a legal source
+      operationId: updateLegalSource
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                jurisdiction: { type: string }
+                url: { type: string, format: uri, nullable: true }
+                updateFrequency: { type: string, nullable: true }
+                fetcherType: { type: string, nullable: true }
+                parserType: { type: string, nullable: true }
+                status: { type: string, enum: [ACTIVE, INACTIVE] }
+      responses:
+        '200':
+          description: Updated legal source
+          content:
+            application/json:
+              schema:
+                type: object
+        '404':
+          description: Legal source not found
+    delete:
+      tags: [LegalEngine]
+      summary: Delete a legal source
+      operationId: deleteLegalSource
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '204':
+          description: Source deleted
+        '404':
+          description: Legal source not found
+        '409':
+          description: Source has linked data and cannot be deleted
+
   /legal/variables:
     get:
       tags: [LegalEngine]

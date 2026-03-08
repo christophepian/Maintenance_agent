@@ -41,7 +41,26 @@ export default function Home() {
         path: "/login",
         desc: "Sign in or register (manager / contractor)",
       },
-      // Removed 'Home (tenant UI)' and 'Flows index (this page)' as this is now the home page
+      {
+        title: "Tenant dashboard",
+        path: "/tenant",
+        desc: "Tenant portal — inbox, invoices, and requests",
+      },
+      {
+        title: "Tenant chat",
+        path: "/tenant-chat",
+        desc: "AI-assisted chat to submit maintenance requests",
+      },
+      {
+        title: "Listings",
+        path: "/listings",
+        desc: "Public vacancy listings for prospective tenants",
+      },
+      {
+        title: "Apply",
+        path: "/apply",
+        desc: "Submit a rental application for a listed unit",
+      },
     ],
     []
   );

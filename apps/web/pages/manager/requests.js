@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo, useCallback, Fragment } from "react";
 import { useRouter } from "next/router";
+import Link from "next/link";
 import AppShell from "../../components/AppShell";
 import PageShell from "../../components/layout/PageShell";
 import PageHeader from "../../components/layout/PageHeader";
@@ -511,8 +512,18 @@ export default function ManagerRequestsPage() {
                             <td className="px-3 py-2.5"><StatusBadge status={r.status} /></td>
 
                             <td className="px-3 py-2.5 text-slate-700">
-                              {r.buildingName || "\u2014"}
-                              {r.unitNumber ? <span className="text-slate-400"> / {r.unitNumber}</span> : ""}
+                              {r.buildingId ? (
+                                <Link href={`/manager/buildings/${r.buildingId}/financials`} className="text-indigo-600 hover:underline" onClick={(e) => e.stopPropagation()}>
+                                  {r.buildingName || "\u2014"}
+                                </Link>
+                              ) : (r.buildingName || "\u2014")}
+                              {r.unitNumber ? (
+                                r.unitId ? (
+                                  <span className="text-slate-400"> / <Link href={`/admin-inventory/units/${r.unitId}`} className="text-indigo-600 hover:underline" onClick={(e) => e.stopPropagation()}>{r.unitNumber}</Link></span>
+                                ) : (
+                                  <span className="text-slate-400"> / {r.unitNumber}</span>
+                                )
+                              ) : ""}
                             </td>
 
                             <td className="px-3 py-2.5">

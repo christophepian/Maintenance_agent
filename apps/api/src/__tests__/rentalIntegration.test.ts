@@ -99,7 +99,8 @@ let seededBuildingId: string;
 
 describe("Rental Application Lifecycle (Integration)", () => {
   beforeAll(async () => {
-    // Seed a vacant unit for "default-org" (server creates the org on startup)
+    // Seed data under default-org — the server's active org.
+    // DB-level isolation (maint_agent_test) protects dev data.
     const building = await prisma.building.create({
       data: {
         orgId: DEFAULT_ORG_ID,
@@ -122,13 +123,9 @@ describe("Rental Application Lifecycle (Integration)", () => {
         monthlyChargesChf: 200,
       },
     });
+    vacantUnitId = unit.id;
 
     proc = await startServer();
-
-    // Get a vacant unit for the tests
-    const { body } = await api("/vacant-units");
-    expect(body.data.length).toBeGreaterThan(0);
-    vacantUnitId = body.data[0].id;
   }, 25000);
 
   afterAll(async () => {
@@ -165,7 +162,7 @@ describe("Rental Application Lifecycle (Integration)", () => {
       await prisma.building.delete({ where: { id: seededBuildingId } }).catch(() => {});
     }
 
-    // Clean up dev emails created during test
+    // Clean up emails created during test
     await prisma.emailOutbox.deleteMany({ where: { orgId: DEFAULT_ORG_ID, toEmail: "integration-test@example.com" } }).catch(() => {});
 
     await prisma.$disconnect();

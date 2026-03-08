@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/router";
+import Link from "next/link";
 import AppShell from "../../../../components/AppShell";
 import PageShell from "../../../../components/layout/PageShell";
 import PageHeader from "../../../../components/layout/PageHeader";
@@ -121,6 +122,9 @@ export default function BuildingFinancialsPage() {
       <PageShell>
         <PageHeader title={data ? `${data.buildingName} — Financials` : "Building Financials"} />
         <PageContent>
+          <Link href="/admin-inventory/buildings" className="text-sm text-blue-600 hover:text-blue-800 mb-4 inline-block">
+            ← Back to buildings
+          </Link>
           {/* ─── Controls ─── */}
           <Panel>
             <div className="flex flex-wrap items-end gap-4">

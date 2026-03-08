@@ -59,6 +59,37 @@ enum LegalSourceStatus {
   ERROR
 }
 
+enum LegalSourceScope {
+  FEDERAL
+  AG
+  AL
+  AR
+  AI
+  BE
+  BL
+  BS
+  FR
+  GE
+  GL
+  GR
+  JU
+  LU
+  NE
+  NW
+  OW
+  SG
+  SH
+  SO
+  SZ
+  TG
+  TI
+  UR
+  VD
+  VS
+  ZG
+  ZH
+}
+
 model RequestEvent {
   id           String           @id @default(uuid())
   requestId    String
@@ -1177,6 +1208,7 @@ model LegalSource {
   id              String            @id @default(uuid())
   name            String
   jurisdiction    String            @default("CH")
+  scope           LegalSourceScope  @default(FEDERAL)
   url             String?
   updateFrequency String?
   fetcherType     String?

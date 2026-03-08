@@ -1,10 +1,10 @@
-import AppShell from "../../../components/AppShell";
-import ContractorsPage from "../../contractors";
+import { useEffect } from "react";
+import { useRouter } from "next/router";
 
 export default function ManagerContractorsPage() {
-  return (
-    <AppShell role="MANAGER">
-      <ContractorsPage />
-    </AppShell>
-  );
+  const router = useRouter();
+  useEffect(() => {
+    router.replace("/manager/people/vendors");
+  }, [router]);
+  return null;
 }

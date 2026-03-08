@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect } from "react";
+import Link from "next/link";
 import AppShell from "../../components/AppShell";
 import PageShell from "../../components/layout/PageShell";
 import PageHeader from "../../components/layout/PageHeader";
@@ -138,7 +139,7 @@ export default function OwnerInvoices() {
                           {invoice.status}
                         </span>
                         <span className="text-xs text-slate-500">
-                          Job {invoice.jobId?.slice(0, 8)}
+                          Job <Link href="/owner/jobs" className="text-indigo-600 hover:underline">{invoice.jobId?.slice(0, 8)}</Link>
                         </span>
                       </div>
                     </div>

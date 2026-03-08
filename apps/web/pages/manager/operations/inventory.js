@@ -1,10 +1,10 @@
-import AppShell from "../../../components/AppShell";
-import InventoryAdmin from "../../admin-inventory";
+import { useEffect } from "react";
+import { useRouter } from "next/router";
 
 export default function ManagerInventoryPage() {
-  return (
-    <AppShell role="MANAGER">
-      <InventoryAdmin />
-    </AppShell>
-  );
+  const router = useRouter();
+  useEffect(() => {
+    router.replace("/admin-inventory");
+  }, [router]);
+  return null;
 }
