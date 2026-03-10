@@ -1,112 +1,168 @@
-# Copilot Instructions for Maintenance Agent
+# Copilot Instructions — Maintenance Agent
+
+## Before Every Session
+
+Read these files in full before writing any code:
+1. `PROJECT_STATE.md` — guardrails, architecture decisions, backlog, epic history
+2. `apps/api/src/ARCHITECTURE_LOW_CONTEXT_GUIDE.md` — compact auth helpers, layer rules, quick reference
+3. `docs/AUDIT.md` — open findings; check if any apply to files you are about to touch
+
+For schema work also read:
+- `SCHEMA_REFERENCE.md`
+- `apps/api/prisma/schema.prisma`
+
+---
 
 ## Project Overview
-Web-first MVP for routing tenant maintenance requests directly to contractors with minimal property manager involvement. Built with Node.js + TypeScript backend (raw HTTP, no Express/Nest in production) and Next.js frontend.
 
-## Architecture Patterns
+Full-stack Swiss property management platform. Monorepo with Node.js + TypeScript backend and Next.js frontend.
 
-### Backend: Raw HTTP Server (NOT NestJS at Runtime)
-- **File:** [apps/api/src/server.ts](apps/api/src/server.ts) — uses `http.createServer()` with custom routing
-- **Why:** Minimal dependencies; NestJS files exist but are disabled (see `requests.controller.ts` and `app.module.ts`)
-- **Port:** 3001
-- **Routing:** Manual URL parsing with regex matchers (e.g., `matchRequestById()` for `/requests/{id}`)
-- **Error handling:** Centralized via `sendError()` and `sendJson()` utilities in [apps/api/src/http/](apps/api/src/http/)
+| | |
+|-|-|
+| Backend | Raw `http.createServer()` — no Express/NestJS. Port 3001. |
+| Frontend | Next.js Pages Router. Port 3000. |
+| Database | PostgreSQL 16 via Docker. Prisma ORM. 45 models · 35 enums · 34 migrations. |
+| Auth | JWT-based. Role enum: MANAGER, CONTRACTOR, TENANT, OWNER. |
+| Personas | Manager · Contractor · Tenant · Owner |
 
-### Data Flow: Request Lifecycle
-1. Tenant submits request → Next.js frontend `POST /api/requests` → proxied to backend `POST /requests`
-2. Backend validates via Zod ([apps/api/src/validation/requests.ts](apps/api/src/validation/requests.ts))
-3. Auto-approval logic: `decideRequestStatus()` compares `estimatedCost` against org's `autoApproveLimit` (CHF)
-4. Creates record in Prisma → PostgreSQL; returns UUID and status
+---
 
-### Database: Prisma + PostgreSQL
-- **Schema:** [apps/api/prisma/schema.prisma](apps/api/prisma/schema.prisma)
-- **Key tables:** `Request`, `Org`, `OrgConfig` (stores `autoApproveLimit` per tenant)
-- **Migrations:** [apps/api/prisma/migrations/](apps/api/prisma/migrations/) — do NOT edit past migrations; use `prisma migrate dev --name <description>`
-- **Validation state:** `RequestStatus` enum: `PENDING_REVIEW`, `AUTO_APPROVED`, `APPROVED`
+## Architecture Rules (Non-negotiable)
 
-### Frontend: Next.js Pages Router
-- **Location:** [apps/web/](apps/web/)
-- **API routes as proxy:** [apps/web/pages/api/](apps/web/pages/api/) proxies requests to backend (sets `API_BASE_URL` env var, defaults to `http://127.0.0.1:3001`)
-- **Port:** 3000
-
-## Key Conventions
-
-### Validation: Zod + Manual Normalization
-- Category whitelist: `["stove", "oven", "dishwasher", "bathroom", "lighting"]`
-- Description: 10–2000 chars, auto-trimmed and collapse whitespace
-- `estimatedCost`: optional, CHF (integer), 0–100000
-- See [apps/api/src/validation/](apps/api/src/validation/) for schemas
-
-### DTOs: Nullable Fields Become Undefined
-- Services return `MaintenanceRequestDTO` with `category?` and `estimatedCost?` (omitted if null)
-- Example: [apps/api/src/services/maintenanceRequests.ts](apps/api/src/services/maintenanceRequests.ts#L34-L42)
-
-### Temporary Auth: Default Org
-- No auth implemented; hardcoded `DEFAULT_ORG_ID = "default-org"`
-- All requests use this org; org config auto-created on startup
-
-## Development Workflows
-
-### Start Services (Local)
-```bash
-# Backend
-cd apps/api && npm run start:dev  # Watch mode with ts-node
-
-# Frontend (separate terminal)
-cd apps/web && npm run dev
-
-# Database (Docker)
-docker-compose up  # Starts PostgreSQL on 5432
-
-# Quick check running services
-lsof -nP -iTCP:3000,3001 -sTCP:LISTEN
+**Layer order — always flow top to bottom, never skip:**
+```
+routes → workflows → services → repositories → Prisma → PostgreSQL
 ```
 
-### Database Migrations
-```bash
-cd apps/api
+- **Routes** — thin HTTP handlers only. Parse input, call workflow, return response. No business logic, no direct Prisma calls.
+- **Workflows** — orchestration only. Delegate to services. Emit domain events. Own status transitions.
+- **Services** — domain logic. No raw Prisma calls — use repositories.
+- **Repositories** — canonical Prisma access. Always use exported include constants (e.g. `JOB_INCLUDE`). Never define inline include trees.
+- **transitions.ts** — all status transition rules live here. Nowhere else.
 
-# Create new migration (generates SQL + auto-runs)
+---
+
+## Database Rules (G1, G8 — Hard Gates)
+```bash
+# ALWAYS use migrations
 npx prisma migrate dev --name <description>
+npx prisma generate
 
-# Reset (dangerous: drops all data)
-npx prisma migrate reset
-
-# Inspect schema
-npx prisma studio  # GUI at http://localhost:5555
+# NEVER use — banned
+prisma db push        # creates drift
+prisma migrate reset  # destroys data
+docker-compose down -v  # destroys volume
 ```
 
-### Build Backend
-```bash
-cd apps/api
-npm run build  # Outputs to dist/
-npm run start  # Runs dist/main.js (NestJS entry, NOT used in dev)
+One known exception: LKDE epic used `db push` for shadow DB replay issue — this is a documented one-time exception, not a precedent.
+
+---
+
+## Auth Helpers — `apps/api/src/authz.ts`
+
+| Helper | Use case |
+|--------|----------|
+| `requireAuth(req, res)` | Any authenticated route |
+| `maybeRequireManager(req, res)` | MANAGER or OWNER reads only |
+| `requireRole(req, res, role)` | Single role enforcement |
+| `requireAnyRole(req, res, roles[])` | Multi-role e.g. `['CONTRACTOR', 'MANAGER']` |
+| `requireTenantSession(req, res)` | Tenant-portal routes — returns `tenantId` or null |
+| `getOrgIdForRequest(req)` | Returns `string \| null` — null in production if unauthenticated |
+
+**Usage pattern — always check return value:**
+```typescript
+if (!maybeRequireManager(req, res)) return;
+const tenantId = requireTenantSession(req, res);
+if (!tenantId) return;
 ```
 
-## Integration Points
+**Production boot guards — server refuses to start if:**
+- `AUTH_OPTIONAL=true`
+- `DEV_IDENTITY_ENABLED=true`
+- `AUTH_SECRET` not set
 
-### Backend ↔ Frontend
-- Frontend proxies `GET /api/requests`, `POST /api/requests`, `POST /api/requests/approve` to backend
-- Raw body handling: frontend manually parses JSON (backend provides `readJson()` util)
-- Query params: passed through as-is (limit, offset, order)
+---
 
-### Approval Workflow
-- `POST /requests/approve?id={uuid}` updates status to `APPROVED` (overrides auto-approval)
-- Used by property manager to manually approve `PENDING_REVIEW` requests
+## Prisma / DTO Rules (G2, G3, G9)
 
-### Env Configuration
-- **Backend:** `API_BASE_URL` (for backend when proxy needs to call itself)
-- **Backend:** `DATABASE_URL` (Prisma; see `.env` / `.env.example`)
-- **Frontend:** `API_BASE_URL` (defaults to `http://127.0.0.1:3001`)
-- **Port:** `PORT` env var (defaults: 3001 for API, 3000 for web)
+- Every repository must export a canonical include constant
+- Every DTO mapper must use `Prisma.XGetPayload<{ include: typeof X_INCLUDE }>` — never `any`
+- Never define inline `include: { ... }` objects in routes or services
+- When adding a model field: update schema → migration → repository include → DTO mapper → OpenAPI → api-client → tests — all together
 
-## Testing Patterns
-- Manual testing via curl (see context for example commands)
-- No unit tests in repo yet; focus on integration testing against running services
-- Validate with Zod early; assume data shape is correct after schema parse
+---
 
-## Gotchas & Legacy Code
-- **NestJS files exist but are unused at runtime:** Controllers, modules disabled or ignored
-- **_archive/ folder:** Contains legacy server.ts backup; do NOT reference
-- **prisma.service.ts.disabled:** NestJS Prisma integration disabled; use direct `PrismaClient` instead
-- **Query parsing:** Custom implementation; no qs library; watch for edge cases in `parseUrl()` and parameter coercion
+## Testing Rules (G5, G7, G10)
+
+- CI is a hard gate — 6 checks must pass before merge
+- Jest runs with `maxWorkers: 1` — integration tests are serial
+- Contract tests required for: `GET /requests`, `GET /jobs`, `GET /invoices`, `GET /leases/:id`
+- After any backend change: `npx tsc --noEmit` → `npm test` → `npm run blueprint`
+
+---
+
+## Commit Checklist
+
+Before every commit:
+- [ ] `npx tsc --noEmit` — 0 errors
+- [ ] `npm test` — all tests pass
+- [ ] `npm run blueprint` — docs sync (runs automatically via pre-commit hook)
+
+---
+
+## Monorepo Structure
+```
+Maintenance_Agent/
+├── apps/api/src/
+│   ├── routes/          # Thin HTTP handlers
+│   ├── workflows/       # Orchestration + domain events
+│   ├── services/        # Domain logic
+│   ├── repositories/    # Prisma access + canonical includes (9 repos)
+│   ├── events/          # Domain event bus
+│   └── governance/      # Org scoping + authz
+├── apps/api/prisma/
+│   ├── schema.prisma    # 45 models · 35 enums
+│   └── migrations/      # 34 dirs — never edit past migrations
+├── apps/web/pages/      # 185 pages (UI + API proxies)
+├── apps/web/styles/
+│   └── managerStyles.js # Manager UI styles — locked (F8)
+├── packages/api-client/ # Typed DTOs + fetch methods
+├── infra/               # Docker — PostgreSQL 16
+├── docs/
+│   ├── blueprint.html   # Live architecture blueprint
+│   ├── AUDIT.md         # 82 findings · 20 resolved
+│   └── FRONTEND_INVENTORY.md
+└── .github/
+    └── copilot-instructions.md  # This file
+```
+
+---
+
+## Known Open Issues (check `docs/AUDIT.md` for full list)
+
+- **SA-10–SA-20** — security findings still open (role enforcement, org scoping, rate limiting)
+- **CQ-1–CQ-15** — layer violations in routes (legal.ts worst offender)
+- **TC-1–TC-3, TC-6–TC-15** — test coverage gaps
+- **Multi-org** — `Request` has no `orgId`; `DEFAULT_ORG_ID` still in `authz.ts` fallback (dev only)
+- **Legal DSL** — `LegalVariable` values not wired into DSL condition evaluation
+
+---
+
+## Key Schema Gotchas
+
+- `Request` — no `orgId` (scoped via unit→building FK chain)
+- `Job` — no `description` (use `Request.description`)
+- `Appliance` — no `category` (lives on `AssetModel`)
+- `Job.contractorId` — required, not optional
+
+---
+
+## What NOT To Do
+
+- Do not put business logic in routes
+- Do not call Prisma directly from routes or services — use repositories
+- Do not define inline include trees — use canonical constants
+- Do not use `prisma db push` under any circumstances
+- Do not add inline styles to manager pages — use `managerStyles.js`
+- Do not change `maybeRequireManager` to allow writes — use `requireRole('MANAGER')` for mutations
+- Do not accept `tenantId` as a query param on tenant-portal routes — use `requireTenantSession()`
