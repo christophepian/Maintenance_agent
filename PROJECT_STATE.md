@@ -1,6 +1,6 @@
 # Maintenance Agent — Project State
 
-**Last updated:** 2026-03-12 (Frontend Debt Cleanup Slice)
+**Last updated:** 2026-03-10 (Prisma DTO Hardening Final Slice)
 
 **Companion files (do not duplicate content here):**
 * [EPIC_HISTORY.md](EPIC_HISTORY.md) — all completed epic/slice narratives + hardening guidelines (H1–H6)
@@ -554,6 +554,26 @@ Bug-fix + debt-retirement slice. Fixes 2 live bugs (broken nav link, non-conform
 
 Next.js build: 0 errors. Blueprint synced.
 
+### Prisma DTO Hardening Final Slice — 2026-03-10
+**Status:** ✅ COMPLETE
+
+Closes remaining open items from the prisma-dto-hardening slice.
+
+**Deliverables:**
+- **Fix 1:** Added 4 canonical include constants to `inventoryRepository.ts` (`BUILDING_FULL_INCLUDE`, `BUILDING_LIST_INCLUDE`, `UNIT_FULL_INCLUDE`, `APPLIANCE_INCLUDE`) — resolves G9 violation
+- **Fix 2:** `legal.ts` — confirmed all 4 inline includes already replaced with canonical constants in prior slice (no change needed)
+- **Fix 3:** Replaced `unit?: any | null` and `appliance?: any | null` in `MaintenanceRequestDTO` with properly typed shapes matching `REQUEST_FULL_INCLUDE`
+- **Fix 4:** Added inventory includes to `includeIntegrity.test.ts` — 4 compile-time type assertions + 4 runtime entries (25 tests total, all passing)
+
+**Files modified:**
+- `apps/api/src/repositories/inventoryRepository.ts` — added 4 canonical include constants
+- `apps/api/src/services/maintenanceRequests.ts` — replaced 2 `any` types in `MaintenanceRequestDTO`
+- `apps/api/src/__tests__/includeIntegrity.test.ts` — added inventory import, type assertions, runtime entries
+
+**Audit:** CQ-7 already resolved in prior slice. No new audit items.
+
+tsc: 0 errors. Blueprint synced.
+
 ---
 
 ## 12. Backlog
@@ -570,6 +590,18 @@ Next.js build: 0 errors. Blueprint synced.
 * Consolidate DTO files — buildingDetail.ts was created as a standalone file; review whether it should be merged with other DTO definitions for consistency
 * G8 consistency — `migrate deploy` was used instead of `migrate dev` for the building owner migration. Confirm local dev workflow always uses `migrate dev` going forward. Consider resolving the shadow DB exception (G8) to unblock `migrate dev` reliably.
 * ~~Fix server-spawn test timeouts~~ — ✅ Resolved 2026-03-10 (TC-4/TC-5): `maxWorkers: 1` + port deconfliction
+
+### Multi-org Architecture Initiative
+**Priority:** High — every new feature built around current partial scoping increases future migration cost
+**Status:** Deferred — no timeline set
+**Context:** `Request` has no `orgId` (scoped via FK chain). `DEFAULT_ORG_ID` remains in `authz.ts` dev fallback. Production null guard is in place (SA-1). Full multi-org requires: adding `orgId` to `Request` (7-step migration documented in SCHEMA_REFERENCE.md), auditing all queries for cross-org leakage, removing `DEFAULT_ORG_ID` entirely.
+**Prerequisite:** Product decision on multi-org timeline before any code is written.
+
+### Custom HTTP Stack Evaluation
+**Priority:** Medium — evaluate before the team grows or route count exceeds ~200
+**Status:** Deferred — explicit re-evaluation recommended at next architecture review
+**Context:** Backend uses raw `http.createServer()` with custom routing (~140 routes, manual URL parsing, custom auth wrappers, binary forwarding). This was the right call early. At current scale the question is whether the maintenance burden of a bespoke stack outweighs the dependency cost of Express or Fastify. Decision should be made explicitly rather than by default.
+**Prerequisite:** Architecture review session — not a Copilot task.
 
 ### Future Vision (Deferred)
 

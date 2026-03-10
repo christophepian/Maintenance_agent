@@ -11,6 +11,45 @@
 
 import { PrismaClient, UnitType, LocationSegment, InsulationQuality, EnergyLabel, HeatingType } from "@prisma/client";
 
+// ─── Canonical Includes (G9) ───────────────────────────────────
+
+/** Full include for building detail views — units with appliances, owners, config. */
+export const BUILDING_FULL_INCLUDE = {
+  units: {
+    include: {
+      appliances: true,
+    },
+  },
+  owners: true,
+  config: true,
+} as const;
+
+/** Lighter include for building list views. */
+export const BUILDING_LIST_INCLUDE = {
+  units: true,
+  config: true,
+} as const;
+
+/** Full include for unit detail views — appliances + parent building with config. */
+export const UNIT_FULL_INCLUDE = {
+  appliances: true,
+  building: {
+    include: {
+      config: true,
+    },
+  },
+} as const;
+
+/** Include for appliance detail — asset model + parent unit/building chain. */
+export const APPLIANCE_INCLUDE = {
+  assetModel: true,
+  unit: {
+    include: {
+      building: true,
+    },
+  },
+} as const;
+
 // ─── Helpers ───────────────────────────────────────────────────
 
 const activeFilter = (includeInactive?: boolean) =>

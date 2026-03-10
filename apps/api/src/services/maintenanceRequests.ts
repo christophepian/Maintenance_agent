@@ -52,8 +52,29 @@ export type MaintenanceRequestDTO = {
     phone: string;
     email: string | null;
   };
-  unit?: any | null;
-  appliance?: any | null;
+  unit?: null | {
+    id: string;
+    unitNumber: string;
+    floor: string | null;
+    building: {
+      id: string;
+      name: string;
+      address: string;
+    };
+  };
+  appliance?: null | {
+    id: string;
+    name: string;
+    serial: string | null;
+    installDate: Date | null;
+    notes: string | null;
+    assetModel: {
+      id: string;
+      manufacturer: string;
+      model: string;
+      category: string;
+    } | null;
+  };
 
   // JSON-friendly
   createdAt: string;

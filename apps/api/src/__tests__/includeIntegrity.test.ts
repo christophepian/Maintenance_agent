@@ -51,6 +51,13 @@ import {
   SELECTION_PIPELINE_INCLUDE,
 } from "../repositories/rentalApplicationRepository";
 
+import {
+  BUILDING_FULL_INCLUDE,
+  BUILDING_LIST_INCLUDE,
+  UNIT_FULL_INCLUDE,
+  APPLIANCE_INCLUDE,
+} from "../repositories/inventoryRepository";
+
 // ─── Compile-time type assertions ──────────────────────────────
 // These lines exist purely for the TypeScript compiler. If any include
 // constant references a relation that doesn't exist on the model, the
@@ -73,6 +80,10 @@ type _DepreciationStd = Prisma.DepreciationStandardGetPayload<{ include: typeof 
 type _RentalApp = Prisma.RentalApplicationGetPayload<{ include: typeof RENTAL_APPLICATION_INCLUDE }>;
 type _RentalAppUnit = Prisma.RentalApplicationUnitGetPayload<{ include: typeof RENTAL_APPLICATION_UNIT_INCLUDE }>;
 type _RentalDocs = Prisma.RentalApplicationGetPayload<{ include: typeof RENTAL_DOCUMENTS_INCLUDE }>;
+type _BuildingFull = Prisma.BuildingGetPayload<{ include: typeof BUILDING_FULL_INCLUDE }>;
+type _BuildingList = Prisma.BuildingGetPayload<{ include: typeof BUILDING_LIST_INCLUDE }>;
+type _UnitFull = Prisma.UnitGetPayload<{ include: typeof UNIT_FULL_INCLUDE }>;
+type _Appliance = Prisma.ApplianceGetPayload<{ include: typeof APPLIANCE_INCLUDE }>;
 // SELECTION_PIPELINE_INCLUDE is validated at call sites (rentalApplications.ts)
 // via Prisma's findMany type checking rather than GetPayload, since the deep
 // nested where/select/take clauses lose literal types without `as const`.
@@ -83,7 +94,8 @@ const _typeCheck: [
   _InvoiceFull, _InvoiceSummary, _LeaseFull, _AssetFull,
   _AssetList, _Contractor, _LegalVariable, _LegalRule,
   _LegalRuleVersions, _DepreciationStd, _RentalApp,
-  _RentalAppUnit, _RentalDocs,
+  _RentalAppUnit, _RentalDocs, _BuildingFull, _BuildingList,
+  _UnitFull, _Appliance,
 ] = null as any;
 void _typeCheck;
 
@@ -109,6 +121,10 @@ describe("Canonical include constants integrity", () => {
     ["RENTAL_APPLICATION_UNIT_INCLUDE", RENTAL_APPLICATION_UNIT_INCLUDE],
     ["RENTAL_DOCUMENTS_INCLUDE", RENTAL_DOCUMENTS_INCLUDE],
     ["SELECTION_PIPELINE_INCLUDE", SELECTION_PIPELINE_INCLUDE],
+    ["BUILDING_FULL_INCLUDE", BUILDING_FULL_INCLUDE],
+    ["BUILDING_LIST_INCLUDE", BUILDING_LIST_INCLUDE],
+    ["UNIT_FULL_INCLUDE", UNIT_FULL_INCLUDE],
+    ["APPLIANCE_INCLUDE", APPLIANCE_INCLUDE],
   ];
 
   test.each(includes)("%s is a non-null object", (name, include) => {
@@ -134,6 +150,9 @@ describe("Canonical include constants integrity", () => {
       ["LEGAL_RULE_INCLUDE", LEGAL_RULE_INCLUDE as any],
       ["RENTAL_APPLICATION_INCLUDE", RENTAL_APPLICATION_INCLUDE as any],
       ["SELECTION_PIPELINE_INCLUDE", SELECTION_PIPELINE_INCLUDE as any],
+      ["BUILDING_FULL_INCLUDE", BUILDING_FULL_INCLUDE as any],
+      ["UNIT_FULL_INCLUDE", UNIT_FULL_INCLUDE as any],
+      ["APPLIANCE_INCLUDE", APPLIANCE_INCLUDE as any],
     ];
 
     for (const [name, include] of fullIncludes) {
