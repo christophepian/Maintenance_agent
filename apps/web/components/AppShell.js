@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import NotificationBell from "./NotificationBell";
+import ManagerSidebar from "./ManagerSidebar";
 
 function decodeRoleFromToken(token) {
   if (!token) return null;
@@ -354,20 +355,24 @@ export default function AppShell({ role: roleProp, children }) {
           </div>
         ) : null}
 
-        {nav.map((group) => (
-          <div key={group.section} style={{ marginBottom: "16px" }}>
-            <div style={{ fontSize: "0.8rem", textTransform: "uppercase", color: "#888", marginBottom: "6px" }}>
-              {group.section}
+        {role === "MANAGER" ? (
+          <ManagerSidebar />
+        ) : (
+          nav.map((group) => (
+            <div key={group.section} style={{ marginBottom: "16px" }}>
+              <div style={{ fontSize: "0.8rem", textTransform: "uppercase", color: "#888", marginBottom: "6px" }}>
+                {group.section}
+              </div>
+              <div style={{ display: "grid", gap: "6px" }}>
+                {group.items.map((item) => (
+                  <Link key={item.href} href={item.href} className={navLinkClass(isActive(item.href))}>
+                    {item.label}
+                  </Link>
+                ))}
+              </div>
             </div>
-            <div style={{ display: "grid", gap: "6px" }}>
-              {group.items.map((item) => (
-                <Link key={item.href} href={item.href} className={navLinkClass(isActive(item.href))}>
-                  {item.label}
-                </Link>
-              ))}
-            </div>
-          </div>
-        ))}
+          ))
+        )}
       </aside>
 
       <main style={{ padding: "24px" }}>

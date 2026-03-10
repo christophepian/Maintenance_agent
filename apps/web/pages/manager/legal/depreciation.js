@@ -6,6 +6,7 @@ import PageHeader from "../../../components/layout/PageHeader";
 import PageContent from "../../../components/layout/PageContent";
 import Panel from "../../../components/layout/Panel";
 import { authHeaders } from "../../../lib/api";
+import { styles } from "../../../styles/managerStyles";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -361,13 +362,13 @@ export default function DepreciationStandardsPage() {
             <Panel><p className="text-sm text-slate-500">Loading depreciation standards…</p></Panel>
           ) : standards.length === 0 ? (
             <Panel>
-              <p className="text-sm text-slate-500">
+              <p style={styles.emptyStateText}>
                 No depreciation standards yet. Click <strong>"Sync Sources"</strong> on the{" "}
                 <a href="/manager/legal" className="text-blue-600 underline">Legal Engine hub</a> to import the ASLOCA/FRI table.
               </p>
             </Panel>
           ) : filtered.length === 0 ? (
-            <Panel><p className="text-sm text-slate-500">No items match your search. Try adjusting filters.</p></Panel>
+            <Panel><p style={styles.emptyStateText}>No items match your search. Try adjusting filters.</p></Panel>
           ) : (
             <div className="flex flex-col gap-2">
               {grouped.map(({ category, items }) => (

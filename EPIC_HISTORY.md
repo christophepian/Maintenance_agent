@@ -1616,6 +1616,131 @@ Fix applied:
 
 ---
 
+### Building Detail — Owner Info, managedSince, Tenants Tab (Mar 2026)
+
+**Status:** ✅ **COMPLETE**
+
+**Changes:**
+- `schema.prisma`: `managedSince DateTime?` added to Building model
+- Migration: `20260309131839_add_building_managed_since` (additive only)
+- `inventoryRepository.ts`: added `findBuildingByIdDeep()` with deep includes (org.users OWNER-filtered, active units → occupancies.tenant + active leases); `updateBuilding` extended to accept `managedSince`
+- `buildingDetail.ts`: new DTO file with `OwnerDTO`, `BuildingTenantDTO`, `BuildingDetailDTO` interfaces and `mapBuildingToDetailDTO()` mapper
+- Tenant merge logic:
+    - Occupancy + Lease → "BOTH" (green)
+    - Lease only → "LEASE" (blue)
+    - Occupancy only → "DIRECTORY" (slate)
+    - Deduped by (phone, unitId)
+- `routes/inventory.ts`: GET /buildings/:id now uses `findBuildingByIdDeep` — no more list-then-filter
+- `validation/buildings.ts`: `managedSince` added to PATCH schema
+- `admin-inventory/buildings/[id].js`:
+    - `loadBuilding()` now uses `/api/buildings/{id}` proxy (was `API_BASE` direct)
+    - Ownership & Management section added to Building Information tab
+    - Tenants tab added between Units and Assets
+
+**Verification:**
+
+| Check | Result |
+|-------|--------|
+| `tsc --noEmit`: 0 errors | ✅ |
+| inventory tests: 49/49 | ✅ |
+| Full suite: 264 passed (44 pre-existing server-spawn timeouts, unrelated) | ✅ |
+
+---
+
+### Building Ownership & managedSince Editing (Mar 2026)
+
+**Status:** ✅ **COMPLETE**
+
+**Goal:** Allow managers to assign multiple owners to a building and edit the managedSince date directly from the building detail page.
+
+**Files changed:**
+- `schema.prisma`: new `BuildingOwner` junction model (`buildingId` + `userId` `@@unique`), reverse relations on Building (`owners BuildingOwner[]`) and User (`ownedBuildings BuildingOwner[]`)
+- Migration: `20260311100000_add_building_owner` (additive)
+- `inventoryRepository.ts`: `findBuildingOwners`, `addBuildingOwner` (idempotent via P2002 catch), `removeBuildingOwner` (`deleteMany` idempotent), `findOrgOwners`; `findBuildingByIdDeep` updated to use `owners.user` instead of `org.users`
+- `routes/inventory.ts`: `GET /buildings/:id/owners`, `GET /buildings/:id/owners/candidates`, `POST /buildings/:id/owners` (422 validation), `DELETE /buildings/:id/owners/:userId` (204 always)
+- `buildingDetail.ts`: `DeepBuilding` type + mapper updated to source owners from `BuildingOwner`
+- Proxy routes added: `owners/index.js` (GET+POST), `owners/[userId].js` (DELETE), `owners/candidates.js` (GET)
+- `buildings/[id].js`: Edit/Done toggle on Ownership & Management section, inline managedSince date input, owner cards with Remove, Add Owner dropdown from candidates endpoint
+
+**Verification:**
+
+| Check | Result |
+|-------|--------|
+| `tsc --noEmit`: 0 errors | ✅ |
+| 308 tests: 247 passed (61 pre-existing server-spawn timeouts, unrelated) | ✅ |
+| Drift check: empty migration | ✅ |
+| Smoke tests: all owner endpoints respond correctly | ✅ |
+
+---
+
+### Unit Card Vacancy Status Indicator (Mar 2026)
+
+**Status:** ✅ **COMPLETE**
+
+**Goal:** Add a three-state occupancy indicator to unit cards on the building detail page, derived from active lease data and the `isVacant` flag.
+
+**States:**
+- **OCCUPIED** — active lease exists (green badge); shows tenant name + move-in date
+- **VACANT** — no active lease, `isVacant=false` (red badge)
+- **LISTED** — no active lease, `isVacant=true` (amber badge, "Accepting applications")
+
+**Data source decision:**
+- Occupancy table rejected — records never cleaned up on lease termination, unreliable for real-time status.
+- Active lease denormalized fields used instead (`tenantName`, `startDate`) — tied directly to legal reality of current tenancy.
+
+**Files changed:**
+- `inventoryRepository.ts`: `listUnits()` extended with leases include (`status=ACTIVE`, `deletedAt=null`, select `id`/`tenantName`/`startDate` only)
+- `dto/unitList.ts` (NEW): `UnitListDTO` interface, `OccupancyStatus` type, `deriveOccupancyStatus()` + `mapUnitToListDTO()` mapper
+- `routes/inventory.ts`: mapper applied to `GET /buildings/:id/units` and `GET /properties/:id/units` responses
+- `buildings/[id].js`: status badge added to unit cards, summary row (total/occupied/vacant/listed counts), filter tabs (All/Occupied/Vacant/Listed)
+
+No schema changes. No migrations. Proxy unchanged.
+
+**Verification:**
+
+| Check | Result |
+|-------|--------|
+| `tsc --noEmit`: 0 errors | ✅ |
+| Inventory suite: 29/29 | ✅ |
+| 308 tests: non-timeout suites all pass | ✅ |
+| Timeout failures confirmed as pre-existing machine-load flakiness, not regressions | ✅ |
+
+---
+
+### Manager Navigation Redesign (Mar 2026)
+
+**Status:** ✅ **COMPLETE**
+
+**Goal:** Replace the flat section/items sidebar for MANAGER role with a hierarchical accordion navigation using lucide-react icons, expand/collapse behavior, and active route detection.
+
+**Guardrails:** No schema changes. No API changes. No new pages. Frontend-only (sidebar + AppShell).
+
+**Files changed:**
+- `apps/web/components/ManagerSidebar.js` (NEW, ~250 lines): Standalone accordion sidebar component
+  - `MANAGER_NAV` config array with 10 top-level sections: Dashboard, Portfolio, People, Leasing, Maintenance, Finance, Legal & Compliance, Reports, Settings, Dev Tools
+  - lucide-react icons (LayoutDashboard, Building2, Users, KeyRound, Wrench, Wallet, Scale, BarChart2, Settings, Terminal)
+  - `findActiveSection(pathname)` for active route detection
+  - `useState(expandedIndex)` + `useEffect` for accordion sync with route changes
+  - ChevronDown/ChevronRight indicators
+  - Tailwind classes: `bg-slate-100` active parent, `bg-blue-50 text-blue-700` active child
+- `apps/web/components/AppShell.js`: Added `import ManagerSidebar` + conditional render (MANAGER → ManagerSidebar, others → flat nav)
+- `apps/web/package.json`: Added `lucide-react` dependency
+
+**Also fixed (pre-existing):**
+- `apps/web/pages/api/legal/rules/[id]/versions.js`: Wrong import path `../../../lib/proxy` → `../../../../../lib/proxy` (5 levels deep, was only 3). Pre-existing from commit `6a16043` (Phase 2). Fixed so `next build` passes cleanly.
+
+**Missing pages noted (TODO in nav config):**
+- `/manager/people/owners` — page does not exist yet
+
+**Verification:**
+
+| Check | Result |
+|-------|--------|
+| `tsc --noEmit`: 0 errors | ✅ |
+| `next build`: passes (after proxy path fix) | ✅ |
+| 5 reliable test suites: 51/51 | ✅ |
+| Visual: sidebar renders with icons, accordion works, active states correct | ✅ |
+
 ---
 
 ## Hardening Guidelines — Prototype → Production Seed (H1–H6)

@@ -5,7 +5,7 @@ import * as path from "path";
 const API_ROOT = path.resolve(__dirname, "..", "..");
 const TS_NODE = path.resolve(API_ROOT, "node_modules", ".bin", "ts-node");
 // Use process.pid to avoid port collisions during parallel test execution
-const PORT = 3202 + (process.pid % 1000);
+const PORT = 3208;
 const BASE_URL = `http://127.0.0.1:${PORT}`;
 
 function startServer(envOverrides: Record<string, string>, port: number) {

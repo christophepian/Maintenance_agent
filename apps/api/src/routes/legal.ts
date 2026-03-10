@@ -40,7 +40,14 @@ import {
 } from "../validation/legal";
 import prisma from "../services/prismaClient";
 import * as legalSourceRepo from "../repositories/legalSourceRepository";
-import { LegalSourceStatus, LegalSourceScope } from "@prisma/client";
+import * as assetRepo from "../repositories/assetRepository";
+import {
+  LEGAL_VARIABLE_INCLUDE,
+  LEGAL_RULE_INCLUDE,
+  LEGAL_RULE_WITH_VERSIONS_INCLUDE,
+  DEPRECIATION_STANDARD_INCLUDE,
+} from "../repositories/legalSourceRepository";
+import { LegalSourceStatus, LegalSourceScope, LegalSource } from "@prisma/client";
 
 // ─── LegalSource DTO + Mapper ──────────────────────────────────
 
@@ -61,7 +68,7 @@ export interface LegalSourceDTO {
   updatedAt: string;
 }
 
-function mapLegalSourceToDTO(source: any): LegalSourceDTO {
+function mapLegalSourceToDTO(source: LegalSource): LegalSourceDTO {
   return {
     id: source.id,
     name: source.name,
@@ -178,6 +185,8 @@ export function registerLegalRoutes(router: Router) {
   router.get("/legal/sources", async ({ req, res, orgId }) => {
     if (!requireOrgViewer(req, res)) return;
 
+    // SA-11: LegalSource is intentionally global (jurisdiction-scoped, no orgId)
+    // — statutory sources like CO 259a are shared across all orgs.
     try {
       const sources = await legalSourceRepo.findAll(prisma, orgId);
       sendJson(res, 200, { data: sources.map(mapLegalSourceToDTO) });
@@ -190,6 +199,7 @@ export function registerLegalRoutes(router: Router) {
   router.post("/legal/sources", async ({ req, res, orgId }) => {
     if (!requireOrgViewer(req, res)) return;
 
+    // SA-11: LegalSource is intentionally global — see GET /legal/sources comment.
     try {
       const body = await readJson(req);
       const parsed = CreateLegalSourceSchema.safeParse(body);
@@ -287,14 +297,11 @@ export function registerLegalRoutes(router: Router) {
   router.get("/legal/variables", async ({ req, res }) => {
     if (!requireOrgViewer(req, res)) return;
 
+    // SA-11: LegalVariable is intentionally global (jurisdiction-scoped, no orgId)
+    // — variables like reference interest rates apply across all orgs.
     try {
       const variables = await prisma.legalVariable.findMany({
-        include: {
-          versions: {
-            orderBy: { effectiveFrom: "desc" },
-            take: 5,
-          },
-        },
+        include: LEGAL_VARIABLE_INCLUDE,
         orderBy: { key: "asc" },
       });
       sendJson(res, 200, { data: variables });
@@ -311,14 +318,11 @@ export function registerLegalRoutes(router: Router) {
   router.get("/legal/rules", async ({ req, res }) => {
     if (!requireOrgViewer(req, res)) return;
 
+    // SA-11: LegalRule is intentionally global (jurisdiction-scoped, no orgId)
+    // — statutory rules apply uniformly across orgs within a jurisdiction.
     try {
       const rules = await prisma.legalRule.findMany({
-        include: {
-          versions: {
-            orderBy: { effectiveFrom: "desc" },
-            take: 1,
-          },
-        },
+        include: LEGAL_RULE_INCLUDE,
         orderBy: [{ priority: "desc" }, { key: "asc" }],
       });
       sendJson(res, 200, { data: rules });
@@ -331,6 +335,7 @@ export function registerLegalRoutes(router: Router) {
   router.post("/legal/rules", async ({ req, res }) => {
     if (!requireOrgViewer(req, res)) return;
 
+    // SA-11: LegalRule is intentionally global — see GET /legal/rules comment.
     try {
       const body = await readJson(req);
       const parsed = CreateLegalRuleSchema.safeParse(body);
@@ -361,7 +366,7 @@ export function registerLegalRoutes(router: Router) {
             },
           },
         },
-        include: { versions: true },
+        include: LEGAL_RULE_WITH_VERSIONS_INCLUDE,
       });
 
       sendJson(res, 201, { data: rule });
@@ -429,7 +434,7 @@ export function registerLegalRoutes(router: Router) {
     }
   });
 
-  router.put("/legal/category-mappings/:id", async ({ req, res, params }) => {
+  router.put("/legal/category-mappings/:id", async ({ req, res, params, orgId }) => {
     if (!requireOrgViewer(req, res)) return;
 
     try {
@@ -449,6 +454,11 @@ export function registerLegalRoutes(router: Router) {
         return sendError(res, 404, "NOT_FOUND", "Mapping not found");
       }
 
+      // SA-11: Org-scope check — only allow editing org-owned or global mappings
+      if (existing.orgId && existing.orgId !== orgId) {
+        return sendError(res, 403, "FORBIDDEN", "Mapping belongs to another org");
+      }
+
       const mapping = await prisma.legalCategoryMapping.update({
         where: { id: params.id },
         data: parsed.data,
@@ -460,7 +470,7 @@ export function registerLegalRoutes(router: Router) {
     }
   });
 
-  router.delete("/legal/category-mappings/:id", async ({ req, res, params }) => {
+  router.delete("/legal/category-mappings/:id", async ({ req, res, params, orgId }) => {
     if (!requireOrgViewer(req, res)) return;
 
     try {
@@ -469,6 +479,11 @@ export function registerLegalRoutes(router: Router) {
       });
       if (!existing) {
         return sendError(res, 404, "NOT_FOUND", "Mapping not found");
+      }
+
+      // SA-11: Org-scope check — only allow deleting org-owned mappings
+      if (existing.orgId && existing.orgId !== orgId) {
+        return sendError(res, 403, "FORBIDDEN", "Mapping belongs to another org");
       }
 
       await prisma.legalCategoryMapping.delete({
@@ -620,9 +635,11 @@ export function registerLegalRoutes(router: Router) {
     async ({ req, res }) => {
       if (!requireOrgViewer(req, res)) return;
 
+      // SA-11: DepreciationStandard is intentionally global (jurisdiction-scoped, no orgId)
+      // — industry lifespan standards apply uniformly across orgs.
       try {
         const standards = await prisma.depreciationStandard.findMany({
-          include: { source: { select: { id: true, name: true } } },
+          include: DEPRECIATION_STANDARD_INCLUDE,
           orderBy: [{ assetType: "asc" }, { topic: "asc" }],
         });
         sendJson(res, 200, { data: standards });
@@ -754,21 +771,11 @@ export function registerLegalRoutes(router: Router) {
     const offset = Math.max(0, parseInt(first(query, "offset") ?? "0", 10));
 
     try {
-      const where: any = { orgId, isActive: true };
-      if (unitId) where.unitId = unitId;
-
-      const [rows, total] = await Promise.all([
-        prisma.asset.findMany({
-          where,
-          include: {
-            unit: { select: { id: true, unitNumber: true, buildingId: true } },
-          },
-          orderBy: { createdAt: "desc" },
-          take: limit,
-          skip: offset,
-        }),
-        prisma.asset.count({ where }),
-      ]);
+      const { rows, total } = await assetRepo.findAssetsForOrg(prisma, orgId, {
+        unitId: unitId ?? undefined,
+        limit,
+        offset,
+      });
       sendJson(res, 200, { data: rows, total });
     } catch (e: any) {
       console.error("[GET /assets]", e);
@@ -789,12 +796,7 @@ export function registerLegalRoutes(router: Router) {
         return sendError(res, 400, "VALIDATION_ERROR", msg);
       }
 
-      const asset = await prisma.asset.create({
-        data: {
-          orgId,
-          ...parsed.data,
-        },
-      });
+      const asset = await assetRepo.createAssetSimple(prisma, orgId, parsed.data);
       sendJson(res, 201, { data: asset });
     } catch (e: any) {
       console.error("[POST /assets]", e);

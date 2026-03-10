@@ -1,4 +1,4 @@
-import { proxyToBackend } from "../../../lib/proxy";
+import { proxyToBackend } from "../../../../../lib/proxy";
 
 export default async function handler(req, res) {
   await proxyToBackend(req, res, `/legal/rules/${req.query.id}/versions`);

@@ -4,6 +4,8 @@
 > be able to read this file and know *exactly which 1-3 files to touch*
 > for any given change.
 
+**Codebase:** 45 models · 35 enums · 32 migrations · 14 workflows · 9 repositories · ~34k backend LOC · ~24k frontend LOC
+
 ---
 
 ## Layer Diagram
@@ -300,3 +302,53 @@ export async function <name>Workflow(
 | activateLeaseWorkflow | Lease | SIGNED → ACTIVE |
 | terminateLeaseWorkflow | Lease | ACTIVE → TERMINATED |
 | submitRentalApplicationWorkflow | RentalApplication | DRAFT → SUBMITTED |
+
+---
+
+## Auth Helpers — `authz.ts`
+
+| Helper | Roles / Use case |
+|--------|------------------|
+| `requireAuth(req, res)` | Any authenticated route — returns user or 401 |
+| `maybeRequireManager(req, res)` | MANAGER or OWNER reads — returns false + 401/403 if fails |
+| `requireRole(req, res, role)` | Single role enforcement — returns false + 403 if fails |
+| `requireAnyRole(req, res, roles[])` | Multi-role — e.g. `['CONTRACTOR', 'MANAGER']` — returns false + 403 if fails |
+| `requireTenantSession(req, res)` | Tenant-portal routes only — validates tenant JWT, returns `tenantId` string or null |
+| `getOrgIdForRequest(req)` | Resolves orgId from auth context — returns `string \| null` — null in production when unauthenticated |
+
+### Usage pattern
+Every handler that calls an auth helper must check the return value and return early:
+```typescript
+if (!maybeRequireManager(req, res)) return;
+// or
+const tenantId = requireTenantSession(req, res);
+if (!tenantId) return;
+```
+
+### Production boot guards
+Server refuses to start (`process.exit(1)`) if any of the following are true in `NODE_ENV=production`:
+- `AUTH_OPTIONAL=true`
+- `DEV_IDENTITY_ENABLED=true`
+- `AUTH_SECRET` not set
+
+---
+
+## Tenant Portal Auth
+
+All `/tenant-portal/*` routes require a tenant JWT:
+- Header: `Authorization: Bearer <token>`
+- Token must have `role: TENANT` and `tenantId` claim
+- Use `requireTenantSession(req, res)` — returns `tenantId` or null
+- `POST /tenant-session` is the unauthenticated login entry point
+- Do NOT accept `tenantId` as a query parameter on tenant-portal routes
+
+---
+
+## Security Rules
+
+- Every route handler must have an explicit auth wrapper — no unauthenticated handlers except public entry points (`POST /tenant-session`, `GET /listings`, `POST /triage`)
+- `maybeRequireManager` is for reads only — use `requireRole('MANAGER')` for all mutation routes
+- `DEV_IDENTITY_ENABLED` headers (`x-dev-role`, `x-dev-org-id`, `x-dev-user-id`) are dev-only and blocked at boot in production
+- `getOrgIdForRequest()` returns null in production for unauthenticated requests — always null-check at the call site
+- Rental attachment downloads and document listings require manager auth — they contain PII
+- Dev-only routes (`/dev/emails`, `/dev/*`) must have a production guard returning 404 before any logic runs

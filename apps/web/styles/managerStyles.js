@@ -38,6 +38,55 @@ export const styles = {
   thresholdInput: { width: 140, marginBottom: 0 },
   searchInput: { minWidth: 220, marginBottom: 0 },
   noticePadding: { padding: 6, marginBottom: 0 },
+
+  /* ── Empty State ── */
+  emptyState: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '48px 24px',
+    color: '#6b7280',
+  },
+  emptyStateText: {
+    fontSize: '14px',
+    color: '#9ca3af',
+    margin: 0,
+  },
+
+  /* ── Coming Soon Stub ── */
+  comingSoonContainer: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '64px 24px',
+    textAlign: 'center',
+  },
+  comingSoonBadge: {
+    display: 'inline-block',
+    padding: '4px 12px',
+    borderRadius: '12px',
+    backgroundColor: '#f0f9ff',
+    color: '#0369a1',
+    fontSize: '12px',
+    fontWeight: 600,
+    letterSpacing: '0.05em',
+    textTransform: 'uppercase',
+    marginBottom: '12px',
+  },
+  comingSoonTitle: {
+    fontSize: '20px',
+    fontWeight: 600,
+    color: '#1e293b',
+    margin: '0 0 8px 0',
+  },
+  comingSoonText: {
+    fontSize: '14px',
+    color: '#64748b',
+    margin: 0,
+    maxWidth: '400px',
+  },
 };
 
 export default styles;

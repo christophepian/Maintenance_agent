@@ -10,7 +10,7 @@ import { Router, HandlerContext } from "../http/router";
 import { sendError, sendJson } from "../http/json";
 import { readJson } from "../http/body";
 import { first, getIntParam, getEnumParam } from "../http/query";
-import { getAuthUser, maybeRequireManager, requireRole } from "../authz";
+import { getAuthUser, maybeRequireManager, requireRole, requireAnyRole, requireAuth } from "../authz";
 import { withAuthRequired } from "../http/routeProtection";
 import { requireOwnerAccess, logEvent } from "./helpers";
 import { resolveRequestOrg, assertOrgScope } from "../governance/orgScope";
@@ -65,6 +65,7 @@ export function registerRequestRoutes(router: Router) {
   }));
 
   router.post("/requests/:id/events", async ({ req, res, prisma, params, orgId }) => {
+    if (!requireAnyRole(req, res, ["CONTRACTOR", "MANAGER"])) return;
     const resolution = await resolveRequestOrg(prisma, params.id);
     try { assertOrgScope(orgId, resolution); } catch {
       return sendError(res, 404, "NOT_FOUND", "Request not found");
@@ -183,7 +184,7 @@ export function registerRequestRoutes(router: Router) {
     }
 
     // Manager approval → delegate to workflow
-    if (!maybeRequireManager(req, res)) return;
+    if (!requireRole(req, res, "MANAGER")) return;
 
     try {
       const result = await approveRequestWorkflow(wfCtx(ctx), {
@@ -202,8 +203,10 @@ export function registerRequestRoutes(router: Router) {
 
   /* ── DEV: delete all requests ──────────────────────────────── */
 
-  router.delete("/__dev/requests", async ({ res, prisma }) => {
+  router.delete("/__dev/requests", async ({ req, res, prisma }) => {
     if (process.env.NODE_ENV === "production") return sendError(res, 403, "FORBIDDEN", "Not allowed in production");
+    // SA-14: Even in dev/staging, require MANAGER auth
+    if (!requireRole(req, res, "MANAGER")) return;
     const result = await prisma.request.deleteMany({});
     sendJson(res, 200, { data: { deleted: result.count } });
   });
@@ -212,7 +215,7 @@ export function registerRequestRoutes(router: Router) {
 
   router.post("/requests/:id/assign", async (ctx) => {
     const { req, res, prisma, params, orgId } = ctx;
-    if (!maybeRequireManager(req, res)) return;
+    if (!requireRole(req, res, "MANAGER")) return;
 
     const resolution = await resolveRequestOrg(prisma, params.id);
     try { assertOrgScope(orgId, resolution); } catch {
@@ -240,7 +243,7 @@ export function registerRequestRoutes(router: Router) {
 
   router.delete("/requests/:id/assign", async (ctx) => {
     const { req, res, prisma, params, orgId } = ctx;
-    if (!maybeRequireManager(req, res)) return;
+    if (!requireRole(req, res, "MANAGER")) return;
 
     const resolution = await resolveRequestOrg(prisma, params.id);
     try { assertOrgScope(orgId, resolution); } catch {
@@ -260,7 +263,9 @@ export function registerRequestRoutes(router: Router) {
 
   /* ── Suggest contractor (thin — pure query) ────────────────── */
 
-  router.get("/requests/:id/suggest-contractor", async ({ res, prisma, params, orgId }) => {
+  router.get("/requests/:id/suggest-contractor", async ({ req, res, prisma, params, orgId }) => {
+    // SA-13: Auth required for contractor suggestion
+    if (!maybeRequireManager(req, res)) return;
     const resolution = await resolveRequestOrg(prisma, params.id);
     try { assertOrgScope(orgId, resolution); } catch {
       return sendError(res, 404, "NOT_FOUND", "Request not found");
@@ -272,7 +277,9 @@ export function registerRequestRoutes(router: Router) {
     sendJson(res, 200, { data: contractor });
   });
 
-  router.get("/contractors/match", async ({ res, prisma, query, orgId }) => {
+  router.get("/contractors/match", async ({ req, res, prisma, query, orgId }) => {
+    // SA-13: Auth required for contractor matching
+    if (!maybeRequireManager(req, res)) return;
     const category = first(query, "category");
     if (!category) return sendError(res, 400, "VALIDATION_ERROR", "Category required");
     const contractor = await findMatchingContractor(prisma, orgId, category);
@@ -293,7 +300,8 @@ export function registerRequestRoutes(router: Router) {
 
   /* ── Contractor requests (thin — pure query) ───────────────── */
 
-  router.get("/requests/contractor/:contractorId", async ({ res, prisma, params, orgId }) => {
+  router.get("/requests/contractor/:contractorId", async ({ req, res, prisma, params, orgId }) => {
+    if (!requireRole(req, res, "CONTRACTOR")) return;
     const c = await prisma.contractor.findUnique({ where: { id: params.contractorId }, select: { orgId: true } });
     if (!c || c.orgId !== orgId) return sendError(res, 404, "NOT_FOUND", "Contractor not found");
     const requests = await getContractorAssignedRequests(prisma, params.contractorId);
@@ -344,6 +352,8 @@ export function registerRequestRoutes(router: Router) {
   /* ── Create request → delegates to createRequestWorkflow ──── */
 
   router.post("/requests", async (ctx) => {
+    // SA-12: Upfront auth check — reject unauthenticated requests when AUTH_OPTIONAL=false
+    if (!requireAuth(ctx.req, ctx.res)) return;
     try {
       await handleCreateRequest(ctx, false);
     } catch (e: any) {
@@ -356,6 +366,8 @@ export function registerRequestRoutes(router: Router) {
   });
 
   router.post("/work-requests", async (ctx) => {
+    // SA-12: Upfront auth check
+    if (!requireAuth(ctx.req, ctx.res)) return;
     try {
       await handleCreateRequest(ctx, true);
     } catch (e: any) {

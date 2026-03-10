@@ -13,6 +13,17 @@ import { PrismaClient } from "@prisma/client";
 import { onAll, on } from "./bus";
 import { DomainEvent } from "./types";
 
+// SA-20: Redact sensitive fields from event log output
+function redactPayload(payload: Record<string, unknown>): Record<string, unknown> {
+  const SENSITIVE = ['token', 'password', 'secret', 'email', 'tenantId', 'iban', 'accountNumber'];
+  return Object.fromEntries(
+    Object.entries(payload).map(([k, v]) => [
+      k,
+      SENSITIVE.some(s => k.toLowerCase().includes(s)) ? '[REDACTED]' : v
+    ])
+  );
+}
+
 /**
  * Register all event handlers.  Called once from `server.ts` at boot.
  */

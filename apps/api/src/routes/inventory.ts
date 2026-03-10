@@ -2,7 +2,7 @@ import { Router } from "../http/router";
 import { sendError, sendJson } from "../http/json";
 import { readJson } from "../http/body";
 import { first } from "../http/query";
-import { maybeRequireManager } from "../authz";
+import { maybeRequireManager, requireRole } from "../authz";
 import { withAuthRequired } from "../http/routeProtection";
 import {
   listBuildings,
@@ -38,6 +38,9 @@ import { CreateAssetModelSchema, UpdateAssetModelSchema } from "../validation/as
 import { UpsertAssetSchema, AddInterventionSchema } from "../validation/assets";
 import { LinkTenantSchema } from "../validation/occupancies";
 import { normalizePhoneToE164 } from "../utils/phoneNormalization";
+import * as inventoryRepo from "../repositories/inventoryRepository";
+import { mapBuildingToDetailDTO } from "../dto/buildingDetail";
+import { mapUnitToListDTO } from "../dto/unitList";
 
 export function registerInventoryRoutes(router: Router) {
   /* ── Properties (alias over Buildings) ─────────────────────── */
@@ -60,7 +63,7 @@ export function registerInventoryRoutes(router: Router) {
       const unitType = unitTypeRaw && ["RESIDENTIAL", "COMMON_AREA"].includes(unitTypeRaw)
         ? (unitTypeRaw as any) : undefined;
       const units = await listUnits(orgId, params.id, includeInactive, unitType);
-      sendJson(res, 200, { data: units });
+      sendJson(res, 200, { data: units.map(mapUnitToListDTO) });
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to fetch property units", String(e));
     }
@@ -102,7 +105,7 @@ export function registerInventoryRoutes(router: Router) {
   }));
 
   router.post("/buildings", async ({ req, res, orgId }) => {
-    if (!maybeRequireManager(req, res)) return;
+    if (!requireRole(req, res, "MANAGER")) return;
     try {
       const raw = await readJson(req);
       const parsed = CreateBuildingSchema.safeParse(raw);
@@ -116,24 +119,31 @@ export function registerInventoryRoutes(router: Router) {
     }
   });
 
-  router.get("/buildings/:id", withAuthRequired(async ({ res, orgId, params }) => {
+  router.get("/buildings/:id", withAuthRequired(async ({ res, orgId, params, prisma }) => {
     try {
-      const buildings = await listBuildings(orgId, true);
-      const building = buildings.find((b: any) => b.id === params.id);
+      const building = await inventoryRepo.findBuildingByIdDeep(prisma, params.id, orgId);
       if (!building) return sendError(res, 404, "NOT_FOUND", "Building not found");
-      sendJson(res, 200, { data: building });
+      sendJson(res, 200, { data: mapBuildingToDetailDTO(building as any) });
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to fetch building", String(e));
     }
   }));
 
   router.patch("/buildings/:id", async ({ req, res, orgId, params }) => {
-    if (!maybeRequireManager(req, res)) return;
+    if (!requireRole(req, res, "MANAGER")) return;
     try {
       const raw = await readJson(req);
       const parsed = UpdateBuildingSchema.safeParse(raw);
       if (!parsed.success) return sendError(res, 400, "VALIDATION_ERROR", "Invalid building data", parsed.error.flatten());
-      const updated = await updateBuilding(orgId, params.id, parsed.data);
+
+      // Convert managedSince ISO string → Date | null for Prisma
+      const { managedSince, ...rest } = parsed.data;
+      const updateData: Parameters<typeof updateBuilding>[2] = { ...rest };
+      if (managedSince !== undefined) {
+        updateData.managedSince = managedSince ? new Date(managedSince) : null;
+      }
+
+      const updated = await updateBuilding(orgId, params.id, updateData);
       if (!updated) return sendError(res, 404, "NOT_FOUND", "Building not found");
       sendJson(res, 200, { data: updated });
     } catch (e: any) {
@@ -144,7 +154,7 @@ export function registerInventoryRoutes(router: Router) {
   });
 
   router.delete("/buildings/:id", async ({ req, res, orgId, params }) => {
-    if (!maybeRequireManager(req, res)) return;
+    if (!requireRole(req, res, "MANAGER")) return;
     try {
       const result = await deactivateBuilding(orgId, params.id);
       if (!result.success && result.reason === "NOT_FOUND") return sendError(res, 404, "NOT_FOUND", "Building not found");
@@ -152,6 +162,66 @@ export function registerInventoryRoutes(router: Router) {
       sendJson(res, 200, { message: "Building deactivated" });
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to deactivate building", String(e));
+    }
+  });
+
+  /* ── Building Owners ───────────────────────────────────────── */
+
+  router.get("/buildings/:id/owners", withAuthRequired(async ({ res, params, prisma }) => {
+    try {
+      const rows = await inventoryRepo.findBuildingOwners(prisma, params.id);
+      const data = rows.map((r) => r.user);
+      sendJson(res, 200, { data });
+    } catch (e) {
+      sendError(res, 500, "DB_ERROR", "Failed to fetch building owners", String(e));
+    }
+  }));
+
+  router.get("/buildings/:id/owners/candidates", withAuthRequired(async ({ res, orgId, prisma }) => {
+    try {
+      const candidates = await inventoryRepo.findOrgOwners(prisma, orgId);
+      sendJson(res, 200, { data: candidates });
+    } catch (e) {
+      sendError(res, 500, "DB_ERROR", "Failed to fetch owner candidates", String(e));
+    }
+  }));
+
+  router.post("/buildings/:id/owners", async ({ req, res, orgId, params, prisma }) => {
+    if (!requireRole(req, res, "MANAGER")) return;
+    try {
+      const raw = await readJson(req);
+      const userId = raw?.userId;
+      if (!userId || typeof userId !== "string") {
+        return sendError(res, 400, "VALIDATION_ERROR", "userId is required");
+      }
+
+      // Validate user exists, same org, role=OWNER
+      const user = await prisma.user.findFirst({
+        where: { id: userId, orgId },
+      });
+      if (!user) {
+        return sendError(res, 422, "VALIDATION_ERROR", "User not found in this org");
+      }
+      if (user.role !== "OWNER") {
+        return sendError(res, 422, "VALIDATION_ERROR", "User must have OWNER role");
+      }
+
+      const row = await inventoryRepo.addBuildingOwner(prisma, params.id, userId);
+      sendJson(res, 201, { data: row?.user ?? { id: userId } });
+    } catch (e: any) {
+      const msg = String(e?.message || e);
+      if (msg === "Invalid JSON") return sendError(res, 400, "INVALID_JSON", "Invalid JSON");
+      sendError(res, 500, "DB_ERROR", "Failed to add building owner", String(e));
+    }
+  });
+
+  router.delete("/buildings/:id/owners/:userId", async ({ req, res, params, prisma }) => {
+    if (!requireRole(req, res, "MANAGER")) return;
+    try {
+      await inventoryRepo.removeBuildingOwner(prisma, params.id, params.userId);
+      sendJson(res, 204, null);
+    } catch (e) {
+      sendError(res, 500, "DB_ERROR", "Failed to remove building owner", String(e));
     }
   });
 
@@ -163,14 +233,14 @@ export function registerInventoryRoutes(router: Router) {
       const typeParam = first(query, "type");
       const type = typeParam === "COMMON_AREA" || typeParam === "RESIDENTIAL" ? typeParam : undefined;
       const units = await listUnits(orgId, params.id, includeInactive, type as any);
-      sendJson(res, 200, { data: units });
+      sendJson(res, 200, { data: units.map(mapUnitToListDTO) });
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to fetch units", String(e));
     }
   }));
 
   router.post("/buildings/:id/units", async ({ req, res, orgId, params }) => {
-    if (!maybeRequireManager(req, res)) return;
+    if (!requireRole(req, res, "MANAGER")) return;
     try {
       const raw = await readJson(req);
       const parsed = CreateUnitSchema.safeParse(raw);
@@ -188,14 +258,7 @@ export function registerInventoryRoutes(router: Router) {
   router.get("/units", withAuthRequired(async ({ res, orgId, query, prisma }) => {
     try {
       const includeInactive = first(query, "includeInactive") === "true";
-      const units = await prisma.unit.findMany({
-        where: {
-          building: { orgId },
-          ...(includeInactive ? {} : { isActive: true }),
-        },
-        include: { building: true },
-        orderBy: { createdAt: "desc" },
-      });
+      const units = await inventoryRepo.listAllUnitsForOrg(prisma, orgId, includeInactive);
       sendJson(res, 200, { data: units });
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to fetch units", String(e));
@@ -213,7 +276,7 @@ export function registerInventoryRoutes(router: Router) {
   }));
 
   router.patch("/units/:id", async ({ req, res, orgId, params }) => {
-    if (!maybeRequireManager(req, res)) return;
+    if (!requireRole(req, res, "MANAGER")) return;
     try {
       const raw = await readJson(req);
       const parsed = UpdateUnitSchema.safeParse(raw);
@@ -229,7 +292,7 @@ export function registerInventoryRoutes(router: Router) {
   });
 
   router.delete("/units/:id", async ({ req, res, orgId, params }) => {
-    if (!maybeRequireManager(req, res)) return;
+    if (!requireRole(req, res, "MANAGER")) return;
     try {
       const result = await deactivateUnit(orgId, params.id);
       if (!result.success && result.reason === "NOT_FOUND") return sendError(res, 404, "NOT_FOUND", "Unit not found");
@@ -253,7 +316,7 @@ export function registerInventoryRoutes(router: Router) {
   }));
 
   router.post("/units/:id/appliances", async ({ req, res, orgId, params }) => {
-    if (!maybeRequireManager(req, res)) return;
+    if (!requireRole(req, res, "MANAGER")) return;
     try {
       const raw = await readJson(req);
       const parsed = CreateApplianceSchema.safeParse(raw);
@@ -269,7 +332,7 @@ export function registerInventoryRoutes(router: Router) {
   });
 
   router.patch("/appliances/:id", async ({ req, res, orgId, params }) => {
-    if (!maybeRequireManager(req, res)) return;
+    if (!requireRole(req, res, "MANAGER")) return;
     try {
       const raw = await readJson(req);
       const parsed = UpdateApplianceSchema.safeParse(raw);
@@ -285,7 +348,7 @@ export function registerInventoryRoutes(router: Router) {
   });
 
   router.delete("/appliances/:id", async ({ req, res, orgId, params }) => {
-    if (!maybeRequireManager(req, res)) return;
+    if (!requireRole(req, res, "MANAGER")) return;
     try {
       const result = await deactivateAppliance(orgId, params.id);
       if (!result.success && result.reason === "NOT_FOUND") return sendError(res, 404, "NOT_FOUND", "Appliance not found");
@@ -310,7 +373,7 @@ export function registerInventoryRoutes(router: Router) {
   }));
 
   router.post("/asset-models", async ({ req, res, orgId }) => {
-    if (!maybeRequireManager(req, res)) return;
+    if (!requireRole(req, res, "MANAGER")) return;
     try {
       const raw = await readJson(req);
       const parsed = CreateAssetModelSchema.safeParse(raw);
@@ -325,7 +388,7 @@ export function registerInventoryRoutes(router: Router) {
   });
 
   router.patch("/asset-models/:id", async ({ req, res, orgId, params }) => {
-    if (!maybeRequireManager(req, res)) return;
+    if (!requireRole(req, res, "MANAGER")) return;
     try {
       const raw = await readJson(req);
       const parsed = UpdateAssetModelSchema.safeParse(raw);
@@ -341,7 +404,7 @@ export function registerInventoryRoutes(router: Router) {
   });
 
   router.delete("/asset-models/:id", async ({ req, res, orgId, params }) => {
-    if (!maybeRequireManager(req, res)) return;
+    if (!requireRole(req, res, "MANAGER")) return;
     try {
       const result = await deactivateAssetModel(orgId, params.id);
       if (!result.success && result.reason === "NOT_FOUND") return sendError(res, 404, "NOT_FOUND", "Asset model not found");
@@ -366,7 +429,7 @@ export function registerInventoryRoutes(router: Router) {
   }));
 
   router.post("/units/:unitId/tenants", async ({ req, res, orgId, params }) => {
-    if (!maybeRequireManager(req, res)) return;
+    if (!requireRole(req, res, "MANAGER")) return;
     try {
       const raw = await readJson(req);
       const parsed = LinkTenantSchema.safeParse(raw);
@@ -392,7 +455,7 @@ export function registerInventoryRoutes(router: Router) {
   });
 
   router.delete("/units/:unitId/tenants/:tenantId", async ({ req, res, orgId, params }) => {
-    if (!maybeRequireManager(req, res)) return;
+    if (!requireRole(req, res, "MANAGER")) return;
     try {
       const result = await unlinkTenantFromUnit(orgId, params.tenantId, params.unitId);
       if (!result.success && result.reason === "UNIT_NOT_FOUND") return sendError(res, 404, "NOT_FOUND", "Unit not found");
@@ -415,7 +478,7 @@ export function registerInventoryRoutes(router: Router) {
   }));
 
   router.post("/units/:id/assets", async ({ req, res, orgId, params, prisma }) => {
-    if (!maybeRequireManager(req, res)) return;
+    if (!requireRole(req, res, "MANAGER")) return;
     try {
       const raw = await readJson(req);
       const body = { ...raw, unitId: params.id };
@@ -457,7 +520,7 @@ export function registerInventoryRoutes(router: Router) {
   }));
 
   router.post("/buildings/:id/assets", async ({ req, res, orgId, params, prisma }) => {
-    if (!maybeRequireManager(req, res)) return;
+    if (!requireRole(req, res, "MANAGER")) return;
     try {
       const raw = await readJson(req);
       const parsed = UpsertAssetSchema.safeParse(raw);
@@ -487,7 +550,7 @@ export function registerInventoryRoutes(router: Router) {
   });
 
   router.post("/assets/:id/interventions", async ({ req, res, orgId, params, prisma }) => {
-    if (!maybeRequireManager(req, res)) return;
+    if (!requireRole(req, res, "MANAGER")) return;
     try {
       const raw = await readJson(req);
       const parsed = AddInterventionSchema.safeParse(raw);

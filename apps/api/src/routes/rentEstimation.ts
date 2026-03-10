@@ -11,7 +11,7 @@
 import { Router } from "../http/router";
 import { sendError, sendJson } from "../http/json";
 import { readJson } from "../http/body";
-import { maybeRequireManager } from "../authz";
+import { maybeRequireManager, requireRole } from "../authz";
 import {
   getEffectiveRentEstimationConfig,
   upsertRentEstimationConfig,
@@ -35,7 +35,7 @@ export function registerRentEstimationRoutes(router: Router) {
 
   /* ── PUT /rent-estimation/config  (org default, canton=null) ─ */
   router.put("/rent-estimation/config", async ({ req, res, orgId }) => {
-    if (!maybeRequireManager(req, res)) return;
+    if (!requireRole(req, res, "MANAGER")) return;
     try {
       const body = await readJson(req);
       const parsed = UpsertRentEstimationConfigSchema.safeParse(body);
@@ -57,7 +57,7 @@ export function registerRentEstimationRoutes(router: Router) {
     /^\/rent-estimation\/config\/([A-Za-z]{2})$/,
     ["canton"],
     async ({ req, res, orgId, params }) => {
-      if (!maybeRequireManager(req, res)) return;
+      if (!requireRole(req, res, "MANAGER")) return;
       try {
         const body = await readJson(req);
         const parsed = UpsertRentEstimationConfigSchema.safeParse(body);
@@ -96,7 +96,7 @@ export function registerRentEstimationRoutes(router: Router) {
 
   /* ── POST /rent-estimation/bulk ────────────────────────────── */
   router.post("/rent-estimation/bulk", async ({ req, res, orgId }) => {
-    if (!maybeRequireManager(req, res)) return;
+    if (!requireRole(req, res, "MANAGER")) return;
     try {
       const body = await readJson(req);
       const parsed = BulkEstimateSchema.safeParse(body);

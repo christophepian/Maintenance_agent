@@ -10,6 +10,34 @@
 
 import { PrismaClient, LegalSourceStatus, LegalSourceScope } from "@prisma/client";
 
+// ─── Canonical Includes (G9) ───────────────────────────────────
+
+/** Include for GET /legal/variables — last 5 versions, ordered desc. */
+export const LEGAL_VARIABLE_INCLUDE = {
+  versions: {
+    orderBy: { effectiveFrom: "desc" as const },
+    take: 5,
+  },
+};
+
+/** Include for GET /legal/rules — latest version only. */
+export const LEGAL_RULE_INCLUDE = {
+  versions: {
+    orderBy: { effectiveFrom: "desc" as const },
+    take: 1,
+  },
+};
+
+/** Include for POST /legal/rules — all versions after create. */
+export const LEGAL_RULE_WITH_VERSIONS_INCLUDE = {
+  versions: true,
+};
+
+/** Include for GET /legal/depreciation-standards. */
+export const DEPRECIATION_STANDARD_INCLUDE = {
+  source: { select: { id: true, name: true } },
+};
+
 // ─── Input Types ───────────────────────────────────────────────
 
 export interface CreateLegalSourceInput {

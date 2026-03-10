@@ -6,6 +6,7 @@ import PageHeader from "../../../components/layout/PageHeader";
 import PageContent from "../../../components/layout/PageContent";
 import Panel from "../../../components/layout/Panel";
 import { authHeaders } from "../../../lib/api";
+import { styles } from "../../../styles/managerStyles";
 
 const OBLIGATION_CONFIG = {
   OBLIGATED: { label: "Obligated", bg: "bg-red-50", text: "text-red-700", border: "border-red-200", dot: "bg-red-500" },
@@ -159,7 +160,7 @@ export default function LegalEvaluationsPage() {
             {loading ? (
               <p className="text-sm text-slate-500">Loading…</p>
             ) : evaluations.length === 0 ? (
-              <p className="text-sm text-slate-500">
+              <p style={styles.emptyStateText}>
                 {obligationFilter || categoryFilter
                   ? "No evaluations match the current filters."
                   : "No evaluations yet. Trigger a legal decision on a maintenance request to generate one."}

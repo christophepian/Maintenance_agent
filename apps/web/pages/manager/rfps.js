@@ -6,6 +6,7 @@ import PageHeader from "../../components/layout/PageHeader";
 import PageContent from "../../components/layout/PageContent";
 import Panel from "../../components/layout/Panel";
 import { authHeaders } from "../../lib/api";
+import { styles } from "../../styles/managerStyles";
 
 const STATUS_TABS = [
   { key: "ALL", label: "All" },
@@ -74,7 +75,7 @@ export default function ManagerRfpsPage() {
             {loading ? (
               <p className="text-sm text-slate-500">Loading…</p>
             ) : rfps.length === 0 ? (
-              <p className="text-sm text-slate-500">
+              <p style={styles.emptyStateText}>
                 No RFPs found{activeTab !== "ALL" ? ` with status ${activeTab}` : ""}. RFPs are created automatically when the legal engine determines an obligation.
               </p>
             ) : (

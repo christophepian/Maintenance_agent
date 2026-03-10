@@ -6,6 +6,7 @@ import PageContent from "../../../components/layout/PageContent";
 import Panel from "../../../components/layout/Panel";
 import Link from "next/link";
 import { authHeaders } from "../../../lib/api";
+import { styles } from "../../../styles/managerStyles";
 
 // ── Plain-language labels ─────────────────────────────────────
 
@@ -171,9 +172,11 @@ export default function LegalMappingsPage() {
             </div>
           ) : coverage.length === 0 ? (
             <Panel>
-              <p className="py-8 text-center text-sm text-slate-500">
-                No categories found yet. Once tenants start submitting maintenance requests, their categories will appear here.
-              </p>
+              <div style={styles.emptyState}>
+                <p style={styles.emptyStateText}>
+                  No categories found yet. Once tenants start submitting maintenance requests, their categories will appear here.
+                </p>
+              </div>
             </Panel>
           ) : (
             <div className="space-y-4">

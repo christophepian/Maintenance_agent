@@ -4,6 +4,7 @@ import { sendError, sendJson } from "../http/json";
 import { readJson } from "../http/body";
 import { first } from "../http/query";
 import { encodeToken } from "../services/auth";
+import { requireTenantSession } from "../authz";
 import { getTenantSession } from "../services/tenantSession";
 import { listTenantLeases, getTenantLease, tenantAcceptLease } from "../services/tenantPortal";
 import { getUserNotifications, markNotificationAsRead, markAllNotificationsAsRead, getUnreadNotificationCount, deleteNotification } from "../services/notifications";
@@ -11,6 +12,23 @@ import { triageIssue } from "../services/triage";
 import { TenantSessionSchema } from "../validation/tenantSession";
 import { TriageSchema } from "../validation/triage";
 import { LoginSchema, RegisterSchema } from "../validation/auth";
+import { LEASE_FULL_INCLUDE } from "../repositories/leaseRepository";
+
+// SA-18: In-memory rate limiter for POST /triage (10 calls/IP/minute)
+const triageRateMap = new Map<string, { count: number; resetAt: number }>();
+const TRIAGE_RATE_LIMIT = 10;
+const TRIAGE_RATE_WINDOW_MS = 60_000;
+
+function checkTriageRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const entry = triageRateMap.get(ip);
+  if (!entry || now >= entry.resetAt) {
+    triageRateMap.set(ip, { count: 1, resetAt: now + TRIAGE_RATE_WINDOW_MS });
+    return true;
+  }
+  entry.count++;
+  return entry.count <= TRIAGE_RATE_LIMIT;
+}
 
 export function registerAuthRoutes(router: Router) {
   // POST /tenant-session
@@ -30,10 +48,10 @@ export function registerAuthRoutes(router: Router) {
   });
 
   // GET /tenant-portal/leases
-  router.get("/tenant-portal/leases", async ({ res, query, orgId }) => {
+  router.get("/tenant-portal/leases", async ({ req, res, query, orgId }) => {
+    const tenantId = requireTenantSession(req, res);
+    if (!tenantId) return;
     try {
-      const tenantId = first(query, "tenantId");
-      if (!tenantId) return sendError(res, 400, "VALIDATION_ERROR", "tenantId is required");
       const unitId = first(query, "unitId") || undefined;
       const leases = await listTenantLeases(tenantId, orgId, unitId);
       sendJson(res, 200, { data: leases });
@@ -44,10 +62,10 @@ export function registerAuthRoutes(router: Router) {
   });
 
   // GET /tenant-portal/leases/:id
-  router.get("/tenant-portal/leases/:id", async ({ res, query, params, orgId }) => {
+  router.get("/tenant-portal/leases/:id", async ({ req, res, query, params, orgId }) => {
+    const tenantId = requireTenantSession(req, res);
+    if (!tenantId) return;
     try {
-      const tenantId = first(query, "tenantId");
-      if (!tenantId) return sendError(res, 400, "VALIDATION_ERROR", "tenantId is required");
       const lease = await getTenantLease(params.id, tenantId, orgId);
       if (!lease) return sendError(res, 404, "NOT_FOUND", "Lease not found");
       sendJson(res, 200, { data: lease });
@@ -58,10 +76,9 @@ export function registerAuthRoutes(router: Router) {
 
   // POST /tenant-portal/leases/:id/accept
   router.post("/tenant-portal/leases/:id/accept", async ({ req, res, params, orgId }) => {
+    const tenantId = requireTenantSession(req, res);
+    if (!tenantId) return;
     try {
-      const raw = await readJson(req);
-      const tenantId = raw?.tenantId;
-      if (!tenantId) return sendError(res, 400, "VALIDATION_ERROR", "tenantId is required in body");
       const result = await tenantAcceptLease(params.id, tenantId, orgId);
       sendJson(res, 200, { data: result });
     } catch (e: any) {
@@ -76,10 +93,10 @@ export function registerAuthRoutes(router: Router) {
   // ─── Tenant Notifications (uses tenantId → userId resolution) ───
 
   // GET /tenant-portal/notifications
-  router.get("/tenant-portal/notifications", async ({ res, query, orgId, prisma }) => {
+  router.get("/tenant-portal/notifications", async ({ req, res, query, orgId, prisma }) => {
+    const tenantId = requireTenantSession(req, res);
+    if (!tenantId) return;
     try {
-      const tenantId = first(query, "tenantId");
-      if (!tenantId) return sendError(res, 400, "VALIDATION_ERROR", "tenantId is required");
       // Resolve tenant to userId: look up User with matching email or use tenantId directly
       const userId = await resolveTenantUserId(prisma, orgId, tenantId);
       const limit = query.limit ? parseInt(String(query.limit), 10) : 20;
@@ -93,10 +110,10 @@ export function registerAuthRoutes(router: Router) {
   });
 
   // GET /tenant-portal/notifications/unread-count
-  router.get("/tenant-portal/notifications/unread-count", async ({ res, query, orgId, prisma }) => {
+  router.get("/tenant-portal/notifications/unread-count", async ({ req, res, query, orgId, prisma }) => {
+    const tenantId = requireTenantSession(req, res);
+    if (!tenantId) return;
     try {
-      const tenantId = first(query, "tenantId");
-      if (!tenantId) return sendError(res, 400, "VALIDATION_ERROR", "tenantId is required");
       const userId = await resolveTenantUserId(prisma, orgId, tenantId);
       const count = await getUnreadNotificationCount(orgId, userId);
       sendJson(res, 200, { count });
@@ -106,7 +123,9 @@ export function registerAuthRoutes(router: Router) {
   });
 
   // POST /tenant-portal/notifications/:id/read
-  router.post("/tenant-portal/notifications/:id/read", async ({ res, params, orgId }) => {
+  router.post("/tenant-portal/notifications/:id/read", async ({ req, res, params, orgId }) => {
+    const tenantId = requireTenantSession(req, res);
+    if (!tenantId) return;
     try {
       const result = await markNotificationAsRead(params.id, orgId);
       sendJson(res, 200, { data: result });
@@ -117,10 +136,9 @@ export function registerAuthRoutes(router: Router) {
 
   // POST /tenant-portal/notifications/mark-all-read
   router.post("/tenant-portal/notifications/mark-all-read", async ({ req, res, query, orgId, prisma }) => {
+    const tenantId = requireTenantSession(req, res);
+    if (!tenantId) return;
     try {
-      const raw = await readJson(req).catch(() => ({}));
-      const tenantId = (raw as any)?.tenantId || first(query, "tenantId");
-      if (!tenantId) return sendError(res, 400, "VALIDATION_ERROR", "tenantId is required");
       const userId = await resolveTenantUserId(prisma, orgId, tenantId);
       const count = await markAllNotificationsAsRead(orgId, userId);
       sendJson(res, 200, { marked: count });
@@ -130,7 +148,9 @@ export function registerAuthRoutes(router: Router) {
   });
 
   // DELETE /tenant-portal/notifications/:id
-  router.delete("/tenant-portal/notifications/:id", async ({ res, params, orgId }) => {
+  router.delete("/tenant-portal/notifications/:id", async ({ req, res, params, orgId }) => {
+    const tenantId = requireTenantSession(req, res);
+    if (!tenantId) return;
     try {
       await deleteNotification(params.id, orgId);
       sendJson(res, 200, { ok: true });
@@ -142,10 +162,10 @@ export function registerAuthRoutes(router: Router) {
   // ─── Tenant Invoices ────────────────────────────────────────
 
   // GET /tenant-portal/invoices
-  router.get("/tenant-portal/invoices", async ({ res, query, orgId, prisma }) => {
+  router.get("/tenant-portal/invoices", async ({ req, res, query, orgId, prisma }) => {
+    const tenantId = requireTenantSession(req, res);
+    if (!tenantId) return;
     try {
-      const tenantId = first(query, "tenantId");
-      if (!tenantId) return sendError(res, 400, "VALIDATION_ERROR", "tenantId is required");
 
       // Get all units this tenant occupies
       const occupancies = await prisma.occupancy.findMany({
@@ -161,7 +181,7 @@ export function registerAuthRoutes(router: Router) {
       // Get all leases for those units
       const leases = await prisma.lease.findMany({
         where: { orgId, unitId: { in: unitIds } },
-        include: { unit: { include: { building: true } } },
+        include: LEASE_FULL_INCLUDE,
       });
       if (leases.length === 0) {
         sendJson(res, 200, { data: [] });
@@ -209,8 +229,13 @@ export function registerAuthRoutes(router: Router) {
     }
   });
 
-  // POST /triage
+  // POST /triage — intentionally public (tenant-facing intake); rate-limited per SA-18
   router.post("/triage", async ({ req, res, prisma }) => {
+    // SA-18: Rate limit — 10 calls per IP per minute
+    const ip = req.socket.remoteAddress || "unknown";
+    if (!checkTriageRateLimit(ip)) {
+      return sendJson(res, 429, { error: "Too many requests" });
+    }
     try {
       const raw = await readJson(req);
       const parsed = TriageSchema.safeParse(raw);

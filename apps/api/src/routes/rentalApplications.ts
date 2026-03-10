@@ -4,6 +4,7 @@ import { readJson } from "../http/body";
 import { parseBody } from "../http/body";
 import { first, getIntParam, getEnumParam } from "../http/query";
 import { withRole } from "../http/routeProtection";
+import { maybeRequireManager } from "../authz";
 import { readRawBody, parseMultipart, MAX_FILE_SIZE, storage } from "../storage/attachments";
 import { scanDocument } from "../services/documentScan";
 import prisma from "../services/prismaClient";
@@ -27,6 +28,7 @@ import {
 import { ownerSelectCandidates } from "../services/ownerSelection";
 import { listEmails, getEmail } from "../services/emailOutbox";
 import { submitRentalApplicationWorkflow } from "../workflows/submitRentalApplicationWorkflow";
+import * as rentalApplicationRepo from "../repositories/rentalApplicationRepository";
 
 /* ══════════════════════════════════════════════════════════════
    Rental Application Routes
@@ -78,6 +80,8 @@ export function registerRentalRoutes(router: Router) {
    * Multipart: field "file" + optional field "hintDocType".
    */
   router.post("/document-scan", async ({ req, res }) => {
+    // SA-15: Require MANAGER or OWNER auth for document scanning
+    if (!maybeRequireManager(req, res)) return;
     try {
       const contentType = req.headers["content-type"] || "";
       const boundaryMatch = contentType.match(/boundary=(.+)/i);
@@ -367,26 +371,7 @@ export function registerRentalRoutes(router: Router) {
             unit: { building: { orgId } },
             status: { in: ["AWAITING_SIGNATURE", "FALLBACK_1", "FALLBACK_2", "EXHAUSTED"] },
           },
-          include: {
-            unit: {
-              include: {
-                building: { select: { id: true, name: true, address: true } },
-                leases: {
-                  where: { status: { in: ["DRAFT", "READY_TO_SIGN"] }, isTemplate: false },
-                  orderBy: { createdAt: "desc" },
-                  take: 1,
-                  select: { id: true, status: true, tenantName: true },
-                },
-              },
-            },
-            primarySelection: {
-              include: {
-                application: {
-                  include: { applicants: { where: { role: "PRIMARY" }, take: 1 } },
-                },
-              },
-            },
-          },
+          include: rentalApplicationRepo.SELECTION_PIPELINE_INCLUDE,
           orderBy: { createdAt: "desc" },
         });
 
@@ -530,26 +515,7 @@ export function registerRentalRoutes(router: Router) {
             unit: { building: { orgId } },
             status: { in: ["AWAITING_SIGNATURE", "FALLBACK_1", "FALLBACK_2"] },
           },
-          include: {
-            unit: {
-              include: {
-                building: { select: { id: true, name: true, address: true } },
-                leases: {
-                  where: { status: { in: ["DRAFT", "READY_TO_SIGN"] }, isTemplate: false },
-                  orderBy: { createdAt: "desc" },
-                  take: 1,
-                  select: { id: true, status: true, tenantName: true },
-                },
-              },
-            },
-            primarySelection: {
-              include: {
-                application: {
-                  include: { applicants: { where: { role: "PRIMARY" }, take: 1 } },
-                },
-              },
-            },
-          },
+          include: rentalApplicationRepo.SELECTION_PIPELINE_INCLUDE,
           orderBy: { createdAt: "desc" },
         });
 
@@ -589,10 +555,9 @@ export function registerRentalRoutes(router: Router) {
    * Accessible to MANAGER and OWNER roles.
    */
   router.get("/rental-attachments/:attachmentId/download", async ({ req, res, params }) => {
+    if (!maybeRequireManager(req, res)) return;
     try {
-      const attachment = await prisma.rentalAttachment.findUnique({
-        where: { id: params.attachmentId },
-      });
+      const attachment = await rentalApplicationRepo.findAttachmentById(prisma, params.attachmentId);
       if (!attachment) {
         sendError(res, 404, "NOT_FOUND", "Attachment not found");
         return;
@@ -622,17 +587,10 @@ export function registerRentalRoutes(router: Router) {
    * List documents (applicants + their attachments) for a rental application.
    * Returns applicant names, doc types, and attachment metadata.
    */
-  router.get("/rental-applications/:id/documents", async ({ res, params }) => {
+  router.get("/rental-applications/:id/documents", async ({ req, res, params }) => {
+    if (!maybeRequireManager(req, res)) return;
     try {
-      const application = await prisma.rentalApplication.findUnique({
-        where: { id: params.id },
-        include: {
-          applicants: {
-            include: { attachments: true },
-            orderBy: { createdAt: "asc" as const },
-          },
-        },
-      });
+      const application = await rentalApplicationRepo.findApplicationDocuments(prisma, params.id);
       if (!application) {
         sendError(res, 404, "NOT_FOUND", "Application not found");
         return;
@@ -668,7 +626,12 @@ export function registerRentalRoutes(router: Router) {
    * List enqueued emails (dev inspection endpoint).
    * Query: status (optional filter)
    */
-  router.get("/dev/emails", async ({ res, orgId, query }) => {
+  router.get("/dev/emails", async ({ req, res, orgId, query }) => {
+    if (process.env.NODE_ENV === "production") {
+      sendError(res, 404, "NOT_FOUND", "Not found");
+      return;
+    }
+    if (!maybeRequireManager(req, res)) return;
     try {
       const status = first(query, "status") as any;
       const emails = await listEmails(orgId, status ? { status } : {});
@@ -682,7 +645,12 @@ export function registerRentalRoutes(router: Router) {
   /**
    * Get a single email by ID (dev inspection).
    */
-  router.get("/dev/emails/:id", async ({ res, params }) => {
+  router.get("/dev/emails/:id", async ({ req, res, params }) => {
+    if (process.env.NODE_ENV === "production") {
+      sendError(res, 404, "NOT_FOUND", "Not found");
+      return;
+    }
+    if (!maybeRequireManager(req, res)) return;
     try {
       const dto = await getEmail(params.id);
       if (!dto) {

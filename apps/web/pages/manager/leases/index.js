@@ -6,6 +6,7 @@ import PageHeader from "../../../components/layout/PageHeader";
 import { formatDate } from "../../../lib/format";
 import PageContent from "../../../components/layout/PageContent";
 import Section from "../../../components/layout/Section";
+import { styles } from "../../../styles/managerStyles";
 
 const STATUS_COLORS = {
   DRAFT: "bg-yellow-100 text-yellow-800",
@@ -239,9 +240,9 @@ export default function LeasesPage() {
           ) : error ? (
             <p className="text-sm text-red-600">{error}</p>
           ) : leases.length === 0 ? (
-            <div className="bg-white rounded-lg border p-8 text-center text-slate-500">
-              <p className="text-lg mb-2">No leases found</p>
-              <p className="text-sm">Click "+ New Lease" to create your first rental contract.</p>
+            <div style={styles.emptyState}>
+              <p style={{ ...styles.emptyStateText, fontSize: '18px', marginBottom: 8 }}>No leases found</p>
+              <p style={styles.emptyStateText}>Click "+ New Lease" to create your first rental contract.</p>
             </div>
           ) : (
             <div className="bg-white rounded-lg border overflow-hidden">

@@ -87,5 +87,16 @@ export async function logEvent(
       payload: payload ? JSON.stringify(payload) : "{}",
     },
   });
-  console.log("[EVENT]", type, { orgId, actorUserId, requestId, payload });
+  console.log("[EVENT]", type, { orgId, actorUserId, requestId, payload: payload ? redactEventPayload(payload) : undefined });
+}
+
+// SA-20: Redact sensitive fields from event log output
+function redactEventPayload(payload: Record<string, unknown>): Record<string, unknown> {
+  const SENSITIVE = ['token', 'password', 'secret', 'email', 'tenantId', 'iban', 'accountNumber'];
+  return Object.fromEntries(
+    Object.entries(payload).map(([k, v]) => [
+      k,
+      SENSITIVE.some(s => k.toLowerCase().includes(s)) ? '[REDACTED]' : v
+    ])
+  );
 }

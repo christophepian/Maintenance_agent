@@ -128,6 +128,7 @@ export default function BuildingDetail() {
   const [editYearBuilt, setEditYearBuilt] = useState("");
   const [editElevator, setEditElevator] = useState(false);
   const [editConcierge, setEditConcierge] = useState(false);
+  const [editManagedSince, setEditManagedSince] = useState("");
   const [createUnitName, setCreateUnitName] = useState("");
   const [createUnitType, setCreateUnitType] = useState("RESIDENTIAL");
   const [unitAction, setUnitAction] = useState(null);
@@ -145,6 +146,15 @@ export default function BuildingDetail() {
   const [message, setMessage] = useState("");
   const [leaseTemplates, setLeaseTemplates] = useState([]);
   const toast = useUndoToast();
+
+  // ─── Unit filter state ───
+  const [unitFilter, setUnitFilter] = useState("ALL");
+
+  // ─── Ownership editing state ───
+  const [editingOwnership, setEditingOwnership] = useState(false);
+  const [ownerCandidates, setOwnerCandidates] = useState([]);
+  const [selectedCandidateId, setSelectedCandidateId] = useState("");
+  const [ownerLoading, setOwnerLoading] = useState(false);
 
   // ─── Financials state ───
   const [finLoading, setFinLoading] = useState(false);
@@ -256,8 +266,10 @@ export default function BuildingDetail() {
 
   async function loadBuilding() {
     try {
-      const data = await fetchJSON(`/buildings`);
-      const b = Array.isArray(data) ? data.find((x) => x.id === id) : data?.data?.find((x) => x.id === id);
+      const res = await fetch(`/api/buildings/${id}`, { headers: authHeaders() });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error?.message || "Failed to load building");
+      const b = json?.data || json;
       if (!b) throw new Error("Building not found");
       setBuilding(b);
       setEditName(b.name);
@@ -265,6 +277,7 @@ export default function BuildingDetail() {
       setEditYearBuilt(b.yearBuilt != null ? String(b.yearBuilt) : "");
       setEditElevator(!!b.hasElevator);
       setEditConcierge(!!b.hasConcierge);
+      setEditManagedSince(b.managedSince ? b.managedSince.slice(0, 10) : "");
       await loadUnits();
       await loadBuildingConfig();
       await loadApprovalRules();
@@ -337,6 +350,65 @@ export default function BuildingDetail() {
     }
   }
 
+  // ─── Owner management ───
+
+  async function loadOwnerCandidates() {
+    try {
+      const res = await fetch(`/api/buildings/${id}/owners/candidates`, { headers: authHeaders() });
+      const json = await res.json();
+      if (!res.ok) return;
+      setOwnerCandidates(json?.data || []);
+    } catch (e) {
+      console.error("Failed to load owner candidates:", e);
+    }
+  }
+
+  async function onAddOwner() {
+    if (!selectedCandidateId) return;
+    try {
+      setOwnerLoading(true);
+      const res = await fetch(`/api/buildings/${id}/owners`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({ userId: selectedCandidateId }),
+      });
+      if (!res.ok) {
+        const json = await res.json().catch(() => null);
+        throw new Error(json?.error?.message || json?.message || `Failed (${res.status})`);
+      }
+      setSelectedCandidateId("");
+      await loadBuilding();
+      await loadOwnerCandidates();
+      setOk("Owner added.");
+    } catch (e) {
+      setErr(`Failed to add owner: ${e.message}`);
+    } finally {
+      setOwnerLoading(false);
+    }
+  }
+
+  async function onRemoveOwner(userId) {
+    try {
+      setOwnerLoading(true);
+      await fetch(`/api/buildings/${id}/owners/${userId}`, {
+        method: "DELETE",
+        headers: authHeaders(),
+      });
+      await loadBuilding();
+      await loadOwnerCandidates();
+      setOk("Owner removed.");
+    } catch (e) {
+      setErr(`Failed to remove owner: ${e.message}`);
+    } finally {
+      setOwnerLoading(false);
+    }
+  }
+
+  function startEditingOwnership() {
+    setEditingOwnership(true);
+    loadOwnerCandidates();
+  }
+
   useEffect(() => {
     if (id) loadBuilding();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -355,6 +427,7 @@ export default function BuildingDetail() {
           yearBuilt: editYearBuilt ? Number(editYearBuilt) : null,
           hasElevator: editElevator,
           hasConcierge: editConcierge,
+          managedSince: editManagedSince ? new Date(editManagedSince).toISOString() : null,
         }),
       });
       await loadBuilding();
@@ -539,6 +612,19 @@ export default function BuildingDetail() {
   const residentialUnits = units.filter((u) => u.type === "RESIDENTIAL" || !u.type);
   const commonUnits = units.filter((u) => u.type === "COMMON_AREA");
 
+  // ─── Occupancy counts (always across ALL units) ───
+  const occupiedCount = units.filter((u) => u.occupancyStatus === "OCCUPIED").length;
+  const vacantCount = units.filter((u) => u.occupancyStatus === "VACANT").length;
+  const listedCount = units.filter((u) => u.occupancyStatus === "LISTED").length;
+
+  // ─── Filter units by occupancy status ───
+  const filteredResidential = unitFilter === "ALL"
+    ? residentialUnits
+    : residentialUnits.filter((u) => u.occupancyStatus === unitFilter);
+  const filteredCommon = unitFilter === "ALL"
+    ? commonUnits
+    : commonUnits.filter((u) => u.occupancyStatus === unitFilter);
+
   return (
     <AppShell role="MANAGER">
       <PageShell variant="embedded">
@@ -576,7 +662,7 @@ export default function BuildingDetail() {
 
           {/* Tabs Navigation */}
           <div className="flex flex-wrap gap-2 mb-4">
-            {["Building information", "Units", "Assets", "Documents", "Policies", "Financials"].map((tab) => (
+            {["Building information", "Units", "Tenants", "Assets", "Documents", "Policies", "Financials"].map((tab) => (
               <button
                 key={tab}
                 type="button"
@@ -631,6 +717,15 @@ export default function BuildingDetail() {
                         placeholder="e.g. 1995"
                       />
                     </label>
+                    <label className="grid gap-2">
+                      <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Managed Since</span>
+                      <input
+                        className="input text-sm text-slate-700"
+                        type="date"
+                        value={editManagedSince}
+                        onChange={(e) => setEditManagedSince(e.target.value)}
+                      />
+                    </label>
                     <div className="flex items-end gap-6 pb-1">
                       <label className="flex items-center gap-2 cursor-pointer">
                         <input
@@ -668,6 +763,7 @@ export default function BuildingDetail() {
                         setEditYearBuilt(building?.yearBuilt != null ? String(building.yearBuilt) : "");
                         setEditElevator(!!building?.hasElevator);
                         setEditConcierge(!!building?.hasConcierge);
+                        setEditManagedSince(building?.managedSince ? building.managedSince.slice(0, 10) : "");
                       }}
                     >
                       Cancel
@@ -705,6 +801,135 @@ export default function BuildingDetail() {
                         {!building?.hasElevator && !building?.hasConcierge && "—"}
                       </div>
                     </div>
+                  </div>
+
+                  {/* Ownership & Management */}
+                  <div className="mt-6 pt-4 border-t border-slate-200">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-sm font-semibold text-slate-900">Ownership & Management</h3>
+                      {!editingOwnership ? (
+                        <button
+                          type="button"
+                          className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                          onClick={startEditingOwnership}
+                        >
+                          Edit
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          className="text-xs text-slate-500 hover:text-slate-700 font-medium"
+                          onClick={() => setEditingOwnership(false)}
+                        >
+                          Done
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Managed Since — inline date input when editing */}
+                    <div className="grid gap-4 sm:grid-cols-2 mb-3">
+                      <div>
+                        <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Managed Since</div>
+                        {editingOwnership ? (
+                          <div className="flex items-center gap-2 mt-1">
+                            <input
+                              type="date"
+                              className="input text-sm text-slate-700"
+                              value={editManagedSince}
+                              onChange={(e) => setEditManagedSince(e.target.value)}
+                            />
+                            <button
+                              type="button"
+                              className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                              disabled={loading}
+                              onClick={async () => {
+                                try {
+                                  setLoading(true);
+                                  await fetchJSON(`/buildings/${id}`, {
+                                    method: "PATCH",
+                                    body: JSON.stringify({
+                                      managedSince: editManagedSince ? new Date(editManagedSince).toISOString() : null,
+                                    }),
+                                  });
+                                  await loadBuilding();
+                                  setOk("Managed since updated.");
+                                } catch (err) {
+                                  setErr(`Update failed: ${err.message}`);
+                                } finally {
+                                  setLoading(false);
+                                }
+                              }}
+                            >
+                              Save
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="text-sm text-slate-700 mt-1">
+                            {building?.managedSince ? displayDate(building.managedSince) : "—"}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Owners list */}
+                    {building?.owners && building.owners.length > 0 ? (
+                      <div>
+                        <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">Owners</div>
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          {building.owners.map((owner) => (
+                            <div key={owner.id} className="border border-slate-200 rounded-lg p-3 bg-slate-50 flex items-center justify-between">
+                              <div>
+                                <div className="font-semibold text-sm text-slate-900">{owner.name}</div>
+                                {owner.email && <div className="text-xs text-slate-500 mt-0.5">{owner.email}</div>}
+                              </div>
+                              {editingOwnership && (
+                                <button
+                                  type="button"
+                                  className="text-xs text-red-500 hover:text-red-700 font-medium ml-2"
+                                  disabled={ownerLoading}
+                                  onClick={() => onRemoveOwner(owner.id)}
+                                >
+                                  Remove
+                                </button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-sm text-slate-500 italic">No owners assigned to this building.</div>
+                    )}
+
+                    {/* Add owner picker (visible when editing) */}
+                    {editingOwnership && (
+                      <div className="mt-3 flex items-end gap-2">
+                        <div className="flex-1">
+                          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">Add Owner</div>
+                          <select
+                            className="input text-sm text-slate-700 w-full"
+                            value={selectedCandidateId}
+                            onChange={(e) => setSelectedCandidateId(e.target.value)}
+                          >
+                            <option value="">Select an owner…</option>
+                            {ownerCandidates
+                              .filter((c) => !(building?.owners || []).some((o) => o.id === c.id))
+                              .map((c) => (
+                                <option key={c.id} value={c.id}>
+                                  {c.name}{c.email ? ` (${c.email})` : ""}
+                                </option>
+                              ))}
+                          </select>
+                        </div>
+                        <button
+                          type="button"
+                          className="button-primary text-sm"
+                          disabled={!selectedCandidateId || ownerLoading}
+                          onClick={onAddOwner}
+                        >
+                          Add
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </>
               )}
@@ -768,9 +993,40 @@ export default function BuildingDetail() {
 
               {residentialUnits.length > 0 && (
                 <>
+                  {/* ─── Occupancy summary row ─── */}
+                  <div className="text-sm text-slate-600 mt-4 mb-2">
+                    {units.length} unit{units.length !== 1 ? "s" : ""} — {occupiedCount} occupied, {vacantCount} vacant, {listedCount} listed
+                  </div>
+
+                  {/* ─── Filter tabs ─── */}
+                  <div className="flex gap-1 mb-4">
+                    {[
+                      { key: "ALL", label: "All" },
+                      { key: "OCCUPIED", label: "Occupied" },
+                      { key: "VACANT", label: "Vacant" },
+                      { key: "LISTED", label: "Listed" },
+                    ].map((tab) => (
+                      <button
+                        key={tab.key}
+                        onClick={() => setUnitFilter(tab.key)}
+                        className={`px-3 py-1 text-xs font-medium rounded-full border transition ${
+                          unitFilter === tab.key
+                            ? "bg-slate-900 text-white border-slate-900"
+                            : "bg-white text-slate-600 border-slate-300 hover:bg-slate-50"
+                        }`}
+                      >
+                        {tab.label}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {filteredResidential.length > 0 && (
+                <>
                   <h3 className="font-semibold text-slate-900 mt-4 mb-3">Residential Units</h3>
                   <div className="space-y-2 mb-4">
-                    {residentialUnits.map((u) => (
+                    {filteredResidential.map((u) => (
                       <Link key={u.id} href={`/admin-inventory/units/${u.id}`} className="block border border-slate-200 rounded-lg p-3 hover:bg-slate-50 transition">
                         <div className="flex justify-between items-center">
                           <div className="min-w-0 flex-1">
@@ -779,7 +1035,32 @@ export default function BuildingDetail() {
                               {u.floor && <span className="text-xs text-slate-400">Floor {u.floor}</span>}
                               {u.rooms != null && <span className="text-xs text-slate-400">{u.rooms} rooms</span>}
                               {u.livingAreaSqm != null && <span className="text-xs text-slate-400">{u.livingAreaSqm} m²</span>}
+                              {/* ─── Occupancy badge ─── */}
+                              {u.occupancyStatus === "OCCUPIED" && (
+                                <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-green-50 text-green-700 border border-green-200">Occupied</span>
+                              )}
+                              {u.occupancyStatus === "VACANT" && (
+                                <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-red-50 text-red-700 border border-red-200">Vacant</span>
+                              )}
+                              {u.occupancyStatus === "LISTED" && (
+                                <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-yellow-50 text-yellow-700 border border-yellow-200">Listed</span>
+                              )}
                             </div>
+                            {/* ─── Tenant info for occupied units ─── */}
+                            {u.occupancyStatus === "OCCUPIED" && u.tenantName && (
+                              <div className="text-xs text-slate-500 mt-1">
+                                <span className="text-slate-700">{u.tenantName}</span>
+                                {u.moveInDate && (
+                                  <span className="ml-2 text-slate-400">
+                                    Since {new Date(u.moveInDate).toLocaleDateString("de-CH")}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                            {/* ─── Listed note ─── */}
+                            {u.occupancyStatus === "LISTED" && (
+                              <div className="text-xs text-yellow-600 mt-1">Accepting applications</div>
+                            )}
                             {(u.monthlyRentChf != null || u.monthlyChargesChf != null) && (
                               <div className="text-xs text-slate-500 mt-1">
                                 {u.monthlyRentChf != null && <span className="font-medium text-slate-700">CHF {u.monthlyRentChf}.-</span>}
@@ -798,11 +1079,11 @@ export default function BuildingDetail() {
                 </>
               )}
 
-              {commonUnits.length > 0 && (
+              {filteredCommon.length > 0 && (
                 <>
                   <h3 className="font-semibold text-slate-900 mt-4 mb-3">Common Areas</h3>
                   <div className="space-y-2 mb-4">
-                    {commonUnits.map((u) => (
+                    {filteredCommon.map((u) => (
                       <Link key={u.id} href={`/admin-inventory/units/${u.id}`} className="block border border-slate-200 rounded-lg p-3 hover:bg-slate-50 transition">
                         <div className="flex justify-between items-center">
                           <div className="min-w-0 flex-1">
@@ -810,6 +1091,16 @@ export default function BuildingDetail() {
                               <span className="font-semibold text-slate-900">{u.unitNumber || u.name || "Common Area"}</span>
                               {u.floor && <span className="text-xs text-slate-400">Floor {u.floor}</span>}
                               {u.livingAreaSqm != null && <span className="text-xs text-slate-400">{u.livingAreaSqm} m²</span>}
+                              {/* ─── Occupancy badge ─── */}
+                              {u.occupancyStatus === "OCCUPIED" && (
+                                <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-green-50 text-green-700 border border-green-200">Occupied</span>
+                              )}
+                              {u.occupancyStatus === "VACANT" && (
+                                <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-red-50 text-red-700 border border-red-200">Vacant</span>
+                              )}
+                              {u.occupancyStatus === "LISTED" && (
+                                <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-yellow-50 text-yellow-700 border border-yellow-200">Listed</span>
+                              )}
                             </div>
                           </div>
                           <span className="text-blue-600 ml-2 flex-shrink-0">→</span>
@@ -821,6 +1112,54 @@ export default function BuildingDetail() {
               )}
 
               {units.length === 0 && <div className="text-center text-slate-500 italic text-sm py-6">No units yet.</div>}
+            </Panel>
+          )}
+
+          {/* Tenants tab */}
+          {activeTab === "Tenants" && (
+            <Panel title="Tenants">
+              {building?.tenants && building.tenants.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-slate-200 text-left">
+                        <th className="py-2 font-medium text-slate-600">Name</th>
+                        <th className="py-2 font-medium text-slate-600">Unit</th>
+                        <th className="py-2 font-medium text-slate-600">Phone</th>
+                        <th className="py-2 font-medium text-slate-600">Email</th>
+                        <th className="py-2 font-medium text-slate-600">Move-in</th>
+                        <th className="py-2 font-medium text-slate-600">Source</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {building.tenants.map((t, idx) => {
+                        const badgeColor =
+                          t.source === "BOTH"
+                            ? "bg-emerald-50 text-emerald-700"
+                            : t.source === "LEASE"
+                            ? "bg-blue-50 text-blue-700"
+                            : "bg-slate-100 text-slate-600";
+                        return (
+                          <tr key={t.tenantId || idx} className="border-b border-slate-100">
+                            <td className="py-2 text-slate-900 font-medium">{t.name}</td>
+                            <td className="py-2 text-slate-700">{t.unitNumber}</td>
+                            <td className="py-2 text-slate-700">{t.phone || "—"}</td>
+                            <td className="py-2 text-slate-700">{t.email || "—"}</td>
+                            <td className="py-2 text-slate-700">{t.moveInDate ? displayDate(t.moveInDate) : "—"}</td>
+                            <td className="py-2">
+                              <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${badgeColor}`}>
+                                {t.source === "BOTH" ? "Both" : t.source === "LEASE" ? "Lease" : "Directory"}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="text-center text-slate-500 italic text-sm py-6">No tenants found for this building.</div>
+              )}
             </Panel>
           )}
 

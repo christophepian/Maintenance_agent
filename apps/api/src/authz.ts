@@ -42,14 +42,33 @@ export function getAuthUser(req: AuthedRequest): TokenPayload | null {
   return null;
 }
 
-export function getOrgIdForRequest(req: AuthedRequest): string {
+export function getOrgIdForRequest(req: AuthedRequest): string | null {
   const user = getAuthUser(req);
   if (user?.orgId) return user.orgId;
+
+  // Production: never fall back to DEFAULT_ORG_ID for unauthenticated requests.
+  // This prevents silent data leakage across orgs.
+  if (process.env.NODE_ENV === "production") return null;
+
+  // Dev/test only: fall back so AUTH_OPTIONAL workflows are not broken.
   return process.env.DEV_ORG_ID || DEFAULT_ORG_ID;
 }
 
 function sendAuthError(res: http.ServerResponse, status: 401 | 403, code: "UNAUTHORIZED" | "FORBIDDEN") {
   return sendJson(res, status, { error: code });
+}
+
+export function requireAuth(
+  req: AuthedRequest,
+  res: http.ServerResponse
+): TokenPayload | null {
+  const user = getAuthUser(req);
+  if (isAuthOptional()) return user || ({ userId: "dev-user", orgId: DEFAULT_ORG_ID, email: "dev@local", role: "MANAGER" } as TokenPayload);
+  if (!user) {
+    sendAuthError(res, 401, "UNAUTHORIZED");
+    return null;
+  }
+  return user;
 }
 
 export function requireRole(
@@ -59,10 +78,35 @@ export function requireRole(
 ): TokenPayload | null {
   const user = getAuthUser(req);
   if (!user) {
+    if (isAuthOptional()) {
+      console.warn(`[AUTH_OPTIONAL] requireRole(${role}): no auth — dev bypass`);
+      return { userId: "dev-user", orgId: DEFAULT_ORG_ID, email: "dev@local", role } as TokenPayload;
+    }
     sendAuthError(res, 401, "UNAUTHORIZED");
     return null;
   }
   if (user.role !== role) {
+    sendAuthError(res, 403, "FORBIDDEN");
+    return null;
+  }
+  return user;
+}
+
+export function requireAnyRole(
+  req: AuthedRequest,
+  res: http.ServerResponse,
+  roles: string[]
+): TokenPayload | null {
+  const user = getAuthUser(req);
+  if (!user) {
+    if (isAuthOptional()) {
+      console.warn(`[AUTH_OPTIONAL] requireAnyRole(${roles.join(",")}): no auth — dev bypass`);
+      return { userId: "dev-user", orgId: DEFAULT_ORG_ID, email: "dev@local", role: roles[0] } as TokenPayload;
+    }
+    sendAuthError(res, 401, "UNAUTHORIZED");
+    return null;
+  }
+  if (!roles.includes(user.role)) {
     sendAuthError(res, 403, "FORBIDDEN");
     return null;
   }
@@ -74,7 +118,16 @@ export function maybeRequireManager(
   res: http.ServerResponse
 ): boolean {
   const user = getAuthUser(req);
-  if (isAuthOptional()) return true;
+  if (isAuthOptional()) {
+    // SA-17: Warn when dev mode bypasses role check without a dev-role header
+    if (!user) {
+      const devRole = req.headers["x-dev-role"];
+      if (!devRole || (typeof devRole === "string" && devRole.toUpperCase() !== "MANAGER" && devRole.toUpperCase() !== "OWNER")) {
+        console.warn("[AUTH_OPTIONAL] maybeRequireManager: no role header present — request allowed in dev mode only");
+      }
+    }
+    return true;
+  }
   if (!user) {
     sendAuthError(res, 401, "UNAUTHORIZED");
     return false;
@@ -84,4 +137,27 @@ export function maybeRequireManager(
     return false;
   }
   return true;
+}
+
+export function requireTenantSession(req: http.IncomingMessage, res: http.ServerResponse): string | null {
+  const authHeader = req.headers["authorization"];
+  if (!authHeader?.startsWith("Bearer ")) {
+    res.writeHead(401, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ error: "Tenant authentication required" }));
+    return null;
+  }
+  try {
+    const token = authHeader.slice(7);
+    const decoded = decodeToken(token) as { tenantId?: string; role?: string; userId?: string } | null;
+    if (!decoded || decoded.role !== "TENANT") {
+      res.writeHead(403, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: "Tenant role required" }));
+      return null;
+    }
+    return decoded.tenantId || decoded.userId || null;
+  } catch {
+    res.writeHead(401, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ error: "Invalid or expired token" }));
+    return null;
+  }
 }

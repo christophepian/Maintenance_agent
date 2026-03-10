@@ -7,6 +7,7 @@ import PageHeader from "../../components/layout/PageHeader";
 import PageContent from "../../components/layout/PageContent";
 import Panel from "../../components/layout/Panel";
 import { authHeaders } from "../../lib/api";
+import { styles } from "../../styles/managerStyles";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -470,7 +471,7 @@ export default function ManagerRequestsPage() {
           {loading ? (
             <Panel><p className="text-sm text-slate-500">Loading requests&hellip;</p></Panel>
           ) : filteredRequests.length === 0 ? (
-            <Panel><p className="text-sm text-slate-500">No requests match this filter.</p></Panel>
+            <Panel><p style={styles.emptyStateText}>No requests match this filter.</p></Panel>
           ) : (
             <Panel bodyClassName="p-0">
               <div className="overflow-x-auto">

@@ -22,6 +22,11 @@ export const ASSET_FULL_INCLUDE = {
   },
 } as const;
 
+/** Lighter include for asset list views (no interventions). */
+export const ASSET_LIST_INCLUDE = {
+  unit: { select: { id: true, unitNumber: true, buildingId: true } },
+} as const;
+
 // ─── Type-level inference: building vs unit ────────────────────
 
 /** STRUCTURAL and SYSTEM assets are building-level; rest are unit-level */
@@ -225,5 +230,48 @@ export async function deactivateAsset(
     where: { id: assetId },
     data: { isActive: false },
     include: ASSET_FULL_INCLUDE,
+  });
+}
+
+/**
+ * List assets across all units for an org (with optional unit filter).
+ * Used by GET /assets route. CQ-12 fix.
+ */
+export async function findAssetsForOrg(
+  prisma: PrismaClient,
+  orgId: string,
+  opts: { unitId?: string; limit?: number; offset?: number },
+) {
+  const where: any = { orgId, isActive: true };
+  if (opts.unitId) where.unitId = opts.unitId;
+
+  const [rows, total] = await Promise.all([
+    prisma.asset.findMany({
+      where,
+      include: ASSET_LIST_INCLUDE,
+      orderBy: { createdAt: "desc" },
+      take: opts.limit ?? 50,
+      skip: opts.offset ?? 0,
+    }),
+    prisma.asset.count({ where }),
+  ]);
+
+  return { rows, total };
+}
+
+/**
+ * Create a new asset (simple creation without upsert logic).
+ * Used by POST /assets route. CQ-12 fix.
+ */
+export async function createAssetSimple(
+  prisma: PrismaClient,
+  orgId: string,
+  data: Record<string, unknown>,
+) {
+  return prisma.asset.create({
+    data: {
+      orgId,
+      ...data,
+    } as any,
   });
 }

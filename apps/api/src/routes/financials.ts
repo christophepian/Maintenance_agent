@@ -3,6 +3,7 @@ import { sendError, sendJson } from "../http/json";
 import { readJson } from "../http/body";
 import { first } from "../http/query";
 import { requireOrgViewer } from "./helpers";
+import { requireRole, requireAuth } from "../authz";
 import {
   getBuildingFinancials,
   getPortfolioSummary,
@@ -22,6 +23,8 @@ export function registerFinancialRoutes(router: Router) {
   router.get(
     "/buildings/:id/financials",
     async ({ req, res, params, query, orgId }) => {
+      // SA-16: Upfront auth check — prevents AUTH_OPTIONAL bypass
+      if (!requireAuth(req, res)) return;
       if (!requireOrgViewer(req, res)) return;
 
       // Validate query params
@@ -62,7 +65,10 @@ export function registerFinancialRoutes(router: Router) {
   router.post(
     "/invoices/:id/set-expense-category",
     async ({ req, res, params, orgId }) => {
-      if (!requireOrgViewer(req, res)) return;
+      // SA-16: Upfront auth check — prevents AUTH_OPTIONAL bypass
+      if (!requireAuth(req, res)) return;
+      // SA-10: Mutations require MANAGER role (not OWNER)
+      if (!requireRole(req, res, "MANAGER")) return;
 
       let body: any;
       try {
@@ -118,6 +124,8 @@ export function registerFinancialRoutes(router: Router) {
   router.get(
     "/financials/portfolio-summary",
     async ({ req, res, query, orgId }) => {
+      // SA-16: Upfront auth check — prevents AUTH_OPTIONAL bypass
+      if (!requireAuth(req, res)) return;
       if (!requireOrgViewer(req, res)) return;
 
       const parsed = PortfolioSummarySchema.safeParse({

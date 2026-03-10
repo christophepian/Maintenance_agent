@@ -10,3 +10,6 @@ export * as invoiceRepo from "./invoiceRepository";
 export * as leaseRepo from "./leaseRepository";
 export * as rentalApplicationRepo from "./rentalApplicationRepository";
 export * as assetRepo from "./assetRepository";
+export * as inventoryRepo from "./inventoryRepository";
+export * as contractorRepo from "./contractorRepository";
+export * as legalSourceRepo from "./legalSourceRepository";

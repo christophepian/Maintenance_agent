@@ -2,7 +2,7 @@ import { Router } from "../http/router";
 import { sendError, sendJson } from "../http/json";
 import { readJson } from "../http/body";
 import { first } from "../http/query";
-import { maybeRequireManager } from "../authz";
+import { maybeRequireManager, requireRole } from "../authz";
 import { withAuthRequired } from "../http/routeProtection";
 import { normalizePhoneToE164 } from "../utils/phoneNormalization";
 import { getTenantByPhone, createOrGetTenant, updateTenant, deactivateTenant, listTenants, getTenantById } from "../services/tenants";
@@ -29,7 +29,7 @@ export function registerTenantRoutes(router: Router) {
 
   // POST /tenants
   router.post("/tenants", async ({ req, res, orgId }) => {
-    if (!maybeRequireManager(req, res)) return;
+    if (!requireRole(req, res, "MANAGER")) return;
     try {
       const raw = await readJson(req);
       const normalizedPhone = normalizePhoneToE164(raw?.phone);
@@ -56,7 +56,7 @@ export function registerTenantRoutes(router: Router) {
 
   // PATCH /tenants/:id
   router.patch("/tenants/:id", async ({ req, res, orgId, params }) => {
-    if (!maybeRequireManager(req, res)) return;
+    if (!requireRole(req, res, "MANAGER")) return;
     try {
       const raw = await readJson(req);
       if (raw?.phone) {
@@ -76,7 +76,7 @@ export function registerTenantRoutes(router: Router) {
 
   // DELETE /tenants/:id
   router.delete("/tenants/:id", async ({ req, res, orgId, params }) => {
-    if (!maybeRequireManager(req, res)) return;
+    if (!requireRole(req, res, "MANAGER")) return;
     try {
       const result = await deactivateTenant(orgId, params.id);
       if (!result.success && result.reason === "NOT_FOUND") return sendError(res, 404, "NOT_FOUND", "Tenant not found");
@@ -99,7 +99,7 @@ export function registerTenantRoutes(router: Router) {
 
   // POST /contractors
   router.post("/contractors", async ({ req, res, prisma, orgId }) => {
-    if (!maybeRequireManager(req, res)) return;
+    if (!requireRole(req, res, "MANAGER")) return;
     try {
       const raw = await readJson(req);
       const contractor = await createContractor(prisma, orgId, raw);
@@ -125,7 +125,7 @@ export function registerTenantRoutes(router: Router) {
 
   // PATCH /contractors/:id
   router.patch("/contractors/:id", async ({ req, res, prisma, params, orgId }) => {
-    if (!maybeRequireManager(req, res)) return;
+    if (!requireRole(req, res, "MANAGER")) return;
     try {
       // Verify org ownership before updating
       const raw = await prisma.contractor.findUnique({ where: { id: params.id }, select: { orgId: true } });
@@ -141,7 +141,7 @@ export function registerTenantRoutes(router: Router) {
 
   // DELETE /contractors/:id
   router.delete("/contractors/:id", async ({ req, res, prisma, params, orgId }) => {
-    if (!maybeRequireManager(req, res)) return;
+    if (!requireRole(req, res, "MANAGER")) return;
     try {
       // Verify org ownership before deactivating
       const raw = await prisma.contractor.findUnique({ where: { id: params.id }, select: { orgId: true } });

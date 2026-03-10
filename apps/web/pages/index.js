@@ -33,7 +33,7 @@ export default function Home() {
       },
       {
         title: "Contractors admin",
-        path: "/contractors",
+        path: "/manager/people/vendors",
         desc: "Add, edit, and manage contractors",
       },
       {

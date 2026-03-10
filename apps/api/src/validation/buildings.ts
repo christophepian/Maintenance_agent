@@ -15,6 +15,9 @@ export const UpdateBuildingSchema = z.object({
   yearBuilt: z.number().int().min(1800).max(currentYear + 1).optional(),
   hasElevator: z.boolean().optional(),
   hasConcierge: z.boolean().optional(),
+
+  // Management
+  managedSince: z.string().datetime().optional().nullable(),
 });
 
 export type CreateBuildingInput = z.infer<typeof CreateBuildingSchema>;

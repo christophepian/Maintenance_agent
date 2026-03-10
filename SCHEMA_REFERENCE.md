@@ -5,64 +5,65 @@
 
 ## Database Schema (Prisma)
 
-**Status: ACTIVE AND IN USE — 29 migrations + `db push` for LKDE tables (shadow DB issue with legacy Lease migration prevents `migrate dev`)**
+**Status: ACTIVE AND IN USE — 32 migrations + `db push` for LKDE tables (shadow DB issue with legacy Lease migration prevents `migrate dev`)**
 
-**Last verified:** 2026-03-07
+**Last verified:** 2026-03-10
 
-### Models (44 total)
+### Models (45 total)
 
 | Model | Key Fields | Relations |
 |-------|-----------|-----------|
 | **Org** | id, name, mode (MANAGED/OWNER_DIRECT) | → OrgConfig, Users, Buildings, Contractors, ... |
 | **OrgConfig** | orgId, autoApproveLimit, **autoLegalRouting** (Boolean, default false), landlord fields | → Org |
-| **User** | orgId, role (TENANT/CONTRACTOR/MANAGER/OWNER), email, passwordHash | → Org |
-| **Building** | orgId, name, address, isActive, canton?, cantonDerivedAt? | → Units, BuildingConfig, ApprovalRules, Notifications |
-| **BuildingConfig** | buildingId, autoApproveLimit, emergencyAutoDispatch | → Building, Org |
-| **Unit** | buildingId, orgId, unitNumber, floor, type (RESIDENTIAL/COMMON_AREA), isActive | → Building, Occupancies, Appliances, Requests, Leases, UnitConfig, Assets, Rfps |
-| **UnitConfig** | unitId, autoApproveLimit, emergencyAutoDispatch | → Unit, Org |
+| **User** | orgId, role (TENANT/CONTRACTOR/MANAGER/OWNER), email, passwordHash | → Org, BuildingOwners |
+| **Building** | orgId, name, address, isActive, managedSince?, canton?, cantonDerivedAt?, yearBuilt?, hasElevator, hasConcierge | → Units, BuildingConfig, ApprovalRules, Notifications, BuildingOwners |
+| **BuildingOwner** | id, buildingId, userId, createdAt; @@unique([buildingId, userId]), @@index([buildingId]), @@index([userId]) | → Building, User |
+| **BuildingConfig** | buildingId, orgId, autoApproveLimit, emergencyAutoDispatch, requireOwnerApprovalAbove?, rfpDefaultInviteCount?, rentalIncomeMultiplier?, rentalSignatureDeadlineDays?, rentalManualReviewConfidenceThreshold? | → Building, Org |
+| **Unit** | buildingId, orgId, unitNumber, floor, type (RESIDENTIAL/COMMON_AREA), isActive, isVacant, monthlyRentChf?, monthlyChargesChf?, livingAreaSqm?, rooms?, hasBalcony, hasTerrace, hasParking, locationSegment?, lastRenovationYear?, insulationQuality?, energyLabel?, heatingType? | → Building, Occupancies, Appliances, Requests, Leases, UnitConfig, Assets, Rfps |
+| **UnitConfig** | unitId, orgId, autoApproveLimit, emergencyAutoDispatch, requireOwnerApprovalAbove? | → Unit, Org |
 | **Tenant** | orgId, name, phone (E.164), email, isActive | → Occupancies, Requests |
 | **Occupancy** | tenantId, unitId (unique pair) | → Tenant, Unit |
-| **Appliance** | unitId, orgId, assetModelId?, name, serial, isActive | → Unit, AssetModel, Requests |
+| **Appliance** | unitId, orgId, assetModelId?, name, serial, isActive, installDate?, notes? | → Unit, AssetModel, Requests |
 | **AssetModel** | orgId?, manufacturer, model, **category**, specs, isActive | → Appliances |
-| **Contractor** | orgId, name, phone, email, hourlyRate, serviceCategories (JSON), isActive | → Requests, Jobs, BillingEntity, RfpInvites, RfpQuotes |
-| **Request** | description, category?, estimatedCost?, status, contactPhone, assignedContractorId?, tenantId?, unitId?, applianceId?, contractorNotes | → Contractor, Tenant, Unit, Appliance, Job, RequestEvents |
-| **RequestEvent** | requestId, type (RequestEventType), contractorId?, note | → Request, Contractor |
+| **Contractor** | orgId, name, phone, email, hourlyRate, serviceCategories (JSON), isActive, addressLine1?, addressLine2?, postalCode?, city?, country?, iban?, vatNumber?, defaultVatRate? | → Requests, Jobs, BillingEntity, RfpInvites, RfpQuotes |
+| **Request** | description, category?, estimatedCost?, status, contactPhone, assignedContractorId?, tenantId?, unitId?, applianceId?, contractorNotes, startedAt?, completedAt? | → Contractor, Tenant, Unit, Appliance, Job, RequestEvents |
+| **RequestEvent** | requestId, type (RequestEventType), contractorId (required), message | → Request, Contractor |
 | **Event** | orgId, type, actorUserId?, requestId?, payload (JSON) | (standalone) |
-| **Job** | orgId, requestId (unique), **contractorId** (required), status, actualCost | → Request, Contractor, Invoices |
+| **Job** | orgId, requestId (unique), **contractorId** (required), status, actualCost, startedAt?, completedAt? | → Request, Contractor, Invoices |
 | **Invoice** | orgId, **jobId** (required), leaseId?, issuer fields, recipient fields, amounts in cents, status, lineItems | → Job, Lease, BillingEntity, InvoiceLineItems |
 | **InvoiceLineItem** | invoiceId, description, quantity, unitPrice (cents), vatRate, lineTotal | → Invoice |
 | **BillingEntity** | orgId, type, contractorId?, name, address, iban, vatNumber | → Org, Contractor |
-| **ApprovalRule** | orgId, buildingId?, name, priority, conditions (JSON), action | → Org, Building |
-| **Notification** | orgId, userId, buildingId?, entityType, entityId, eventType, readAt | → Org, Building |
+| **ApprovalRule** | orgId, buildingId?, name, priority, conditions (JSON), action, isActive | → Org, Building |
+| **Notification** | orgId, userId, buildingId?, entityType, entityId, eventType, message?, readAt | → Org, Building |
 | **Lease** | orgId, status, unitId, 40+ fields (parties, object, dates, rent, deposit, PDF refs, lifecycle timestamps) | → Org, Unit, SignatureRequests, Invoices |
-| **SignatureRequest** | orgId, entityType, entityId, provider, level, status, signersJson | → Org, Lease |
-| **RentalApplication** | orgId, status (RentalApplicationStatus), contactEmail, contactPhone, householdSize, currentAddress, moveInDate, pets, remarks, scoring fields | → Org, Applicants, Attachments, ApplicationUnits |
-| **RentalApplicant** | applicationId, role (PRIMARY/CO_APPLICANT), firstName, lastName, dateOfBirth, nationality, permitType, employer, income | → RentalApplication |
-| **RentalAttachment** | applicationId, applicantId, docType (RentalDocType), filename, mimeType, sizeBytes, scanResult JSON, retainUntil | → RentalApplication, RentalApplicant |
+| **SignatureRequest** | orgId, entityType, entityId, provider, level, status, signersJson, providerEnvelopeId?, auditTrailStorageKey?, sentAt?, signedAt? | → Org, Lease |
+| **RentalApplication** | orgId, status (RentalApplicationStatus), householdSize?, desiredMoveInDate?, hasPets?, petsDescription?, currentLandlordName?, currentLandlordAddress?, currentLandlordPhone?, reasonForLeaving?, remarks, hasRcInsurance?, rcInsuranceCompany?, hasVehicle?, vehicleDescription?, needsParking?, signedName?, signedAt?, signatureIp?, signatureUserAgent?, submittedAt?, applicationDataJson? | → Org, Applicants, Attachments, ApplicationUnits |
+| **RentalApplicant** | applicationId, role (PRIMARY/CO_APPLICANT), firstName, lastName, birthdate?, nationality, civilStatus?, permitType, phone?, email?, currentAddress?, currentZipCity?, employer, jobTitle?, workLocation?, employedSince?, netMonthlyIncome?, hasDebtEnforcement? | → RentalApplication |
+| **RentalAttachment** | applicationId, applicantId, docType (RentalDocType), fileName, fileSizeBytes, mimeType, storageKey, sha256, uploadedAt, retentionDeleteAt? | → RentalApplication, RentalApplicant |
 | **RentalApplicationUnit** | applicationId, unitId, status (RentalApplicationUnitStatus), evaluationJson, scoreTotal, confidenceScore, disqualified, disqualifiedReasons (Json?), rank, managerScoreDelta, managerOverrideJson, managerOverrideReason | → RentalApplication, Unit |
-| **RentalOwnerSelection** | orgId, unitId, status (RentalOwnerSelectionStatus), primaryId, fallback1Id, fallback2Id, deadlineAt, escalatedAt | → Unit, RentalApplicationUnits |
-| **EmailOutbox** | orgId, template (EmailTemplate), recipientEmail, recipientName, subject, bodyHtml, status (EmailOutboxStatus), sentAt, errorMessage | → Org |
-| **BuildingFinancialSnapshot** | orgId, buildingId, month (DateTime), earnedIncomeCents, projectedIncomeCents, expensesTotalCents, maintenanceTotalCents, capexTotalCents, operatingTotalCents, netIncomeCents, netOperatingIncomeCents, activeUnitsCount, collectionRate, maintenanceRatio, costPerUnitCents, expensesByCategory (Json), topContractorsBySpend (Json) | → Org, Building |
+| **RentalOwnerSelection** | unitId, status (RentalOwnerSelectionStatus), primaryApplicationUnitId, backup1ApplicationUnitId?, backup2ApplicationUnitId?, deadlineAt, decidedAt? | → Unit, RentalApplicationUnits |
+| **EmailOutbox** | orgId, template (EmailTemplate), toEmail, subject, bodyText, status (EmailOutboxStatus), metaJson? | → Org |
+| **BuildingFinancialSnapshot** | orgId, buildingId, periodStart, periodEnd, earnedIncomeCents, projectedIncomeCents, expensesTotalCents, maintenanceTotalCents, capexTotalCents, operatingTotalCents, netIncomeCents, netOperatingIncomeCents, activeUnitsCount, computedAt | → Org, Building |
 | **RentEstimationConfig** | orgId, canton?, baseRentPerSqmChfMonthly, locationCoefs (prime/standard/periphery), ageCoefs (new/mid/old/veryOld), energyCoefJson (Json), chargesBase (optimistic/pessimistic), heatingChargeAdjJson (Json), serviceChargeAdj (elevator/concierge), chargesMinClamp, chargesMaxClamp | → Org |
-| **LegalSource** | orgId, name, jurisdiction, **scope** (LegalSourceScope, default FEDERAL), canton?, url?, fetchedAt?, rawText? | → Org, LegalVariables |
-| **LegalVariable** | orgId, sourceId, key (unique per org), label, dataType | → Org, LegalSource, LegalVariableVersions |
-| **LegalVariableVersion** | variableId, value, effectiveFrom, effectiveTo?, note? | → LegalVariable |
-| **LegalRule** | orgId, key (unique per org), label, legalTopic, authority (LegalAuthority) | → Org, LegalRuleVersions, LegalCategoryMappings |
-| **LegalRuleVersion** | ruleId, version (Int), dslJson (Json), obligation (LegalObligation), confidence (Float), citationsJson (Json?), effectiveFrom, effectiveTo? | → LegalRule |
-| **LegalEvaluationLog** | orgId, requestId, ruleVersionId?, obligation (LegalObligation), confidence (Float), reasons (Json), citations (Json?), recommendedActions (Json?), snapshotJson (Json) | → Org, Request, LegalRuleVersion |
-| **LegalCategoryMapping** | orgId, maintenanceCategory, legalTopic, ruleId? | → Org, LegalRule (unique on orgId+maintenanceCategory) |
-| **Asset** | orgId, unitId, type (AssetType), topic, name, installedAt?, lastRenovatedAt?, replacedAt?, brand?, modelNumber?, serialNumber?, notes?, isPresent (default true), isActive (default true) | → Org, Unit, Rfps, AssetInterventions |
+| **LegalSource** | name, jurisdiction, **scope** (LegalSourceScope, default FEDERAL), url?, updateFrequency?, fetcherType?, parserType?, status (LegalSourceStatus), lastCheckedAt?, lastSuccessAt?, lastError? | → LegalVariableVersions, DepreciationStandards |
+| **LegalVariable** | key (unique per jurisdiction+canton), jurisdiction, canton?, unit?, description? | → LegalVariableVersions |
+| **LegalVariableVersion** | variableId, effectiveFrom, effectiveTo?, valueJson (Json), sourceId?, fetchedAt? | → LegalVariable, LegalSource |
+| **LegalRule** | key (@@unique global), ruleType (LegalRuleType), authority (LegalAuthority), jurisdiction, canton?, priority, isActive | → LegalRuleVersions |
+| **LegalRuleVersion** | ruleId, effectiveFrom, effectiveTo?, dslJson (Json), citationsJson (Json?), summary? | → LegalRule |
+| **LegalEvaluationLog** | orgId, buildingId?, unitId?, requestId?, contextJson, contextHash, resultJson, matchedRuleVersionIdsJson? | → Org |
+| **LegalCategoryMapping** | orgId?, requestCategory, legalTopic, isActive | → Org (unique on orgId+requestCategory) |
+| **Asset** | orgId, unitId, type (AssetType), topic, name, installedAt?, lastRenovatedAt?, replacedAt?, brand?, modelNumber?, serialNumber?, notes?, isPresent (default true), isActive (default true), assetModelId? | → Org, Unit, AssetInterventions |
 | **AssetIntervention** | assetId, type (AssetInterventionType: REPAIR/REPLACEMENT), interventionDate, costChf?, jobId?, notes? | → Asset, Job |
-| **DepreciationStandard** | jurisdiction, canton?, assetType (AssetType), topic, lifespanMonths (Int), authority (LegalAuthority), sourceLabel? | (standalone, unique on jurisdiction+canton+assetType+topic) |
-| **Rfp** | orgId, requestId, unitId?, status (RfpStatus), title, scope?, budgetCents?, deadlineAt?, awardedQuoteId? | → Org, Request, Unit, RfpInvites, RfpQuotes |
-| **RfpInvite** | rfpId, contractorId, status (RfpInviteStatus), respondedAt? | → Rfp, Contractor |
-| **RfpQuote** | rfpId, contractorId, amountCents (Int), proposalText?, submittedAt | → Rfp, Contractor |
+| **DepreciationStandard** | jurisdiction, canton?, assetType (AssetType), topic, usefulLifeMonths (Int), authority (LegalAuthority), sourceId?, notes? | (standalone, unique on jurisdiction+canton+assetType+topic) |
+| **Rfp** | orgId, buildingId (required), requestId?, unitId?, category, legalObligation (LegalObligation), status (RfpStatus), inviteCount (default 3), deadlineAt?, awardedContractorId? | → Org, Building, Request, Unit, RfpInvites, RfpQuotes |
+| **RfpInvite** | rfpId, contractorId, status (RfpInviteStatus) | → Rfp, Contractor |
+| **RfpQuote** | rfpId, contractorId, amountCents (Int), notes?, submittedAt | → Rfp, Contractor |
 
 ### Key Enums (35 total)
 - `RequestStatus`: PENDING_REVIEW, AUTO_APPROVED, APPROVED, **RFP_PENDING**, ASSIGNED, IN_PROGRESS, COMPLETED, PENDING_OWNER_APPROVAL
 - `RequestEventType`: ARRIVED, PARTS_ORDERED, COMPLETED, NOTE, OTHER, OWNER_APPROVED, OWNER_REJECTED, TENANT_SELECTED
 - `JobStatus`: PENDING, IN_PROGRESS, COMPLETED, INVOICED
-- `InvoiceStatus`: DRAFT, APPROVED, PAID, DISPUTED
+- `InvoiceStatus`: DRAFT, ISSUED, APPROVED, DISPUTED, PAID
 - `LeaseStatus`: DRAFT, READY_TO_SIGN, SIGNED, ACTIVE, TERMINATED, CANCELLED
 - `SignatureRequestStatus`: DRAFT, SENT, SIGNED, DECLINED, EXPIRED, ERROR
 - `SignatureProvider`: INTERNAL, DOCUSIGN, SKRIBBLE
@@ -73,13 +74,13 @@
 - `BillingEntityType`: CONTRACTOR, ORG, OWNER
 - `RuleAction`: AUTO_APPROVE, REQUIRE_MANAGER_REVIEW, REQUIRE_OWNER_APPROVAL
 - `NotificationEventType`: REQUEST_APPROVED, REQUEST_PENDING_REVIEW, REQUEST_PENDING_OWNER_APPROVAL, CONTRACTOR_ASSIGNED, CONTRACTOR_REJECTED, JOB_CREATED, JOB_STARTED, JOB_COMPLETED, INVOICE_CREATED, INVOICE_APPROVED, INVOICE_PAID, INVOICE_DISPUTED, OWNER_REJECTED, TENANT_SELECTED, LEASE_READY_TO_SIGN, LEASE_SIGNED, APPLICATION_SUBMITTED
-- `RentalApplicationStatus`: DRAFT, SUBMITTED, UNDER_REVIEW, CLOSED
-- `RentalApplicationUnitStatus`: SUBMITTED, REJECTED, SELECTED_PRIMARY, SELECTED_BACKUP_1, SELECTED_BACKUP_2, WITHDRAWN
-- `RentalOwnerSelectionStatus`: AWAITING_SIGNATURE, FALLBACK_1, FALLBACK_2, EXHAUSTED, SIGNED, EXPIRED
+- `RentalApplicationStatus`: DRAFT, SUBMITTED
+- `RentalApplicationUnitStatus`: SUBMITTED, REJECTED, SELECTED_PRIMARY, SELECTED_BACKUP_1, SELECTED_BACKUP_2, AWAITING_SIGNATURE, SIGNED, VOIDED
+- `RentalOwnerSelectionStatus`: AWAITING_SIGNATURE, FALLBACK_1, FALLBACK_2, EXHAUSTED, SIGNED, VOIDED
 - `RentalDocType`: IDENTITY, SALARY_PROOF, PERMIT, DEBT_ENFORCEMENT_EXTRACT, HOUSEHOLD_INSURANCE, STUDENT_PROOF, PARKING_DOCS
 - `ApplicantRole`: PRIMARY, CO_APPLICANT
-- `EmailOutboxStatus`: QUEUED, SENT, FAILED
-- `EmailTemplate`: LEASE_READY_TO_SIGN, APPLICATION_RECEIVED, APPLICATION_REJECTED, SELECTION_TIMEOUT_WARNING, etc.
+- `EmailOutboxStatus`: PENDING, SENT, FAILED
+- `EmailTemplate`: MISSING_DOCS, REJECTED, SELECTED_LEASE_LINK, MANAGER_TENANT_SELECTED
 - `ExpenseCategory`: MAINTENANCE, UTILITIES, CLEANING, INSURANCE, TAX, ADMIN, CAPEX, OTHER
 - `LegalAuthority`: STATUTE, INDUSTRY_STANDARD
 - `LegalRuleType`: MAINTENANCE_OBLIGATION, DEPRECIATION, RENT_INDEXATION, TERMINATION_DEADLINE
@@ -190,3 +191,5 @@ This works but adds query complexity and prevents direct org filtering on `Reque
 - **NOT before** — avoid premature schema churn
 
 **Estimated effort:** 2–3 hours (schema + backfill + query updates + tests)
+
+<!-- reviewed 2026-03-10 -->

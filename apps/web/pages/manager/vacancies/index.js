@@ -8,6 +8,7 @@ import PageContent from "../../../components/layout/PageContent";
 import Panel from "../../../components/layout/Panel";
 import { formatDate } from "../../../lib/format";
 import { authHeaders } from "../../../lib/api";
+import { styles } from "../../../styles/managerStyles";
 
 /**
  * Reusable action dropdown button — renders a "⋯" pill that opens
@@ -203,7 +204,7 @@ export default function ManagerVacanciesPage() {
             {selectionsLoading && <p className="text-sm text-slate-500">Loading selections…</p>}
 
             {!selectionsLoading && selections.length === 0 && (
-              <p className="text-sm text-slate-500 text-center py-4">No active tenant selections.</p>
+              <div style={styles.emptyState}><p style={styles.emptyStateText}>No active tenant selections.</p></div>
             )}
 
             {!selectionsLoading && selections.length > 0 && (
@@ -279,7 +280,7 @@ export default function ManagerVacanciesPage() {
             {loading && <p className="text-sm text-slate-500">Loading…</p>}
 
             {!loading && units.length === 0 && (
-              <p className="text-sm text-slate-500 text-center py-6">No vacant units at this time.</p>
+              <div style={styles.emptyState}><p style={styles.emptyStateText}>No vacant units at this time.</p></div>
             )}
 
             {unitsByBuilding.map((group) => (

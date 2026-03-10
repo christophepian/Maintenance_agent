@@ -1,6 +1,11 @@
-import { JobStatus } from '@prisma/client';
+import { JobStatus, Prisma } from '@prisma/client';
 import prisma from './prismaClient';
 import { JOB_FULL_INCLUDE, JOB_SUMMARY_INCLUDE } from '../repositories/jobRepository';
+
+/** Compile-time type for a Job row loaded with JOB_FULL_INCLUDE. */
+type JobWithFullInclude = Prisma.JobGetPayload<{ include: typeof JOB_FULL_INCLUDE }>;
+/** Compile-time type for a Job row loaded with JOB_SUMMARY_INCLUDE. */
+type JobWithSummaryInclude = Prisma.JobGetPayload<{ include: typeof JOB_SUMMARY_INCLUDE }>;
 
 /**
  * G9: Canonical include tree for Job queries.
@@ -226,7 +231,7 @@ export async function getOrCreateJobForRequest(
   return createJob({ orgId, requestId, contractorId });
 }
 
-function mapJobToDTO(job: any): JobDTO {
+function mapJobToDTO(job: JobWithFullInclude): JobDTO {
   return {
     id: job.id,
     orgId: job.orgId,
@@ -279,7 +284,7 @@ function mapJobToDTO(job: any): JobDTO {
  * H5: Map Job to summary DTO for list endpoints.
  * Uses lighter include to reduce overfetch.
  */
-function mapJobToSummaryDTO(job: any): JobSummaryDTO {
+function mapJobToSummaryDTO(job: JobWithSummaryInclude): JobSummaryDTO {
   return {
     id: job.id,
     orgId: job.orgId,

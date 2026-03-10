@@ -11,7 +11,8 @@
     "seed": "ts-node prisma/seed.ts",
     "test": "dotenv -e .env.test -- jest --ci --forceExit",
     "test:dev": "jest --ci --forceExit",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch",
+    "blueprint": "node blueprint.js"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",

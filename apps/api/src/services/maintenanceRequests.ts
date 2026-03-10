@@ -1,4 +1,10 @@
 import { PrismaClient, Prisma, RequestStatus } from "@prisma/client";
+import { REQUEST_FULL_INCLUDE, REQUEST_SUMMARY_INCLUDE } from "../repositories/requestRepository";
+
+/** Compile-time type for a Request row loaded with REQUEST_FULL_INCLUDE. */
+type RequestWithFullInclude = Prisma.RequestGetPayload<{ include: typeof REQUEST_FULL_INCLUDE }>;
+/** Compile-time type for a Request row loaded with REQUEST_SUMMARY_INCLUDE. */
+type RequestWithSummaryInclude = Prisma.RequestGetPayload<{ include: typeof REQUEST_SUMMARY_INCLUDE }>;
 
 /**
  * Build a Prisma WHERE clause that scopes Requests to a given org.
@@ -145,7 +151,7 @@ const requestInclude = {
     },
   } as const;
 
-export function toDTO(r: any): MaintenanceRequestDTO {
+export function toDTO(r: RequestWithFullInclude): MaintenanceRequestDTO {
   return {
     id: r.id,
     description: r.description,
@@ -185,7 +191,7 @@ export function toDTO(r: any): MaintenanceRequestDTO {
   };
 }
 
-export function toSummaryDTO(r: any): MaintenanceRequestSummaryDTO {
+export function toSummaryDTO(r: RequestWithSummaryInclude): MaintenanceRequestSummaryDTO {
     return {
       id: r.id,
       status: r.status,

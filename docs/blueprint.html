@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Maintenance Agent — Architecture Blueprint</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
+  :root {
+    --bg:#0a0c10; --surface:#111318; --surface2:#181c24;
+    --border:#1e2433; --border2:#2a3045;
+    --text:#c8d0e0; --text-dim:#5a6580; --text-bright:#eef0f5;
+    --accent-blue:#3d7eff; --accent-cyan:#00d4c8; --accent-amber:#f5a623;
+    --accent-green:#2ecc8a; --accent-purple:#9b6dff; --accent-red:#ff5a5a;
+    --line:rgba(255,255,255,0.06);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-serif;font-size:13px;line-height:1.5;min-height:100vh}
+  body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0}
+  .page{position:relative;z-index:1;max-width:1400px;margin:0 auto;padding:40px 32px 80px}
+  .header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:36px;padding-bottom:20px;border-bottom:1px solid var(--border2)}
+  .doc-label{font-family:'IBM Plex Mono',mono;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--accent-blue);margin-bottom:8px}
+  .doc-title{font-size:26px;font-weight:600;color:var(--text-bright);letter-spacing:-.02em}
+  .doc-subtitle{font-size:13px;color:var(--text-dim);margin-top:4px}
+  .header-meta{text-align:right;font-family:'IBM Plex Mono',mono;font-size:11px;color:var(--text-dim);line-height:1.8}
+  .meta-val{color:var(--text)}
+  .live-badge{display:inline-flex;align-items:center;gap:5px;background:rgba(46,204,138,.1);border:1px solid rgba(46,204,138,.3);border-radius:3px;padding:2px 8px;font-size:10px;color:#5ed9a0;font-family:'IBM Plex Mono',mono;margin-bottom:6px}
+  .live-dot{width:6px;height:6px;border-radius:50%;background:#2ecc8a;animation:pulse 2s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+  .section{margin-bottom:40px}
+  .section-header{display:flex;align-items:center;gap:10px;margin-bottom:18px}
+  .section-num{font-family:'IBM Plex Mono',mono;font-size:10px;color:var(--accent-blue);letter-spacing:.15em}
+  .section-title{font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--text-bright)}
+  .section-line{flex:1;height:1px;background:var(--border2)}
+  .stat-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:6px;overflow:hidden;margin-bottom:24px}
+  .stat-cell{background:var(--surface);padding:14px;text-align:center}
+  .stat-num{font-family:'IBM Plex Mono',mono;font-size:22px;font-weight:600;color:var(--text-bright);display:block;line-height:1;margin-bottom:4px}
+  .stat-num.blue{color:var(--accent-blue)}.stat-num.cyan{color:var(--accent-cyan)}.stat-num.green{color:var(--accent-green)}.stat-num.amber{color:var(--accent-amber)}.stat-num.purple{color:var(--accent-purple)}
+  .stat-label{font-size:10px;color:var(--text-dim);letter-spacing:.08em;text-transform:uppercase}
+  .tab-nav{display:flex;gap:2px;margin-bottom:20px;border-bottom:1px solid var(--border2)}
+  .tab-btn{padding:7px 14px;font-size:11px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--text-dim);cursor:pointer;border:none;background:none;border-bottom:2px solid transparent;margin-bottom:-1px;font-family:'IBM Plex Mono',mono;transition:all .1s}
+  .tab-btn:hover{color:var(--text)}.tab-btn.active{color:var(--accent-blue);border-bottom-color:var(--accent-blue)}
+  .tab-pane{display:none}.tab-pane.active{display:block}
+  .layer-diagram{display:flex;flex-direction:column;gap:2px}
+  .layer{display:flex;align-items:stretch;gap:2px}
+  .layer-label{width:130px;flex-shrink:0;display:flex;align-items:center;justify-content:flex-end;padding-right:14px;font-family:'IBM Plex Mono',mono;font-size:10px;letter-spacing:.1em;color:var(--text-dim);text-transform:uppercase;text-align:right}
+  .layer-content{flex:1;display:flex;gap:4px;flex-wrap:wrap}
+  .layer-connector{display:flex;margin-left:144px;color:var(--text-dim);font-size:12px;padding:2px 0;font-family:'IBM Plex Mono',mono}
+  .box{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:9px 13px;font-size:12px;font-weight:500;color:var(--text);cursor:default;transition:all .15s;white-space:nowrap}
+  .box:hover{border-color:var(--border2);color:var(--text-bright);background:var(--surface2);transform:translateY(-1px)}
+  .box.accent-blue{border-left:3px solid var(--accent-blue)}.box.accent-cyan{border-left:3px solid var(--accent-cyan)}.box.accent-green{border-left:3px solid var(--accent-green)}.box.accent-amber{border-left:3px solid var(--accent-amber)}.box.accent-purple{border-left:3px solid var(--accent-purple)}.box.accent-red{border-left:3px solid var(--accent-red)}
+  .box.flex-fill{flex:1}.box small{display:block;font-size:10px;color:var(--text-dim);font-family:'IBM Plex Mono',mono;font-weight:400;margin-top:2px}
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .three-col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+  .panel{background:var(--surface);border:1px solid var(--border);border-radius:6px;overflow:hidden}
+  .panel-head{padding:9px 13px;background:var(--surface2);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
+  .panel-head-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+  .panel-head-title{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text-bright)}
+  .panel-head-count{margin-left:auto;font-family:'IBM Plex Mono',mono;font-size:10px;color:var(--text-dim)}
+  .panel-body{padding:11px 13px}
+  .tag-list{display:flex;flex-wrap:wrap;gap:5px}
+  .tag{padding:3px 7px;border-radius:3px;font-family:'IBM Plex Mono',mono;font-size:10px;background:var(--surface2);border:1px solid var(--border2);color:var(--text)}
+  .tag.blue{border-color:rgba(61,126,255,.3);color:#7aaeff;background:rgba(61,126,255,.07)}
+  .tag.cyan{border-color:rgba(0,212,200,.3);color:#4de8e0;background:rgba(0,212,200,.07)}
+  .tag.green{border-color:rgba(46,204,138,.3);color:#5ed9a0;background:rgba(46,204,138,.07)}
+  .tag.amber{border-color:rgba(245,166,35,.3);color:#f5c060;background:rgba(245,166,35,.07)}
+  .tag.purple{border-color:rgba(155,109,255,.3);color:#b899ff;background:rgba(155,109,255,.07)}
+  .tag.red{border-color:rgba(255,90,90,.3);color:#ff8080;background:rgba(255,90,90,.07)}
+  .row-list{list-style:none}
+  .row-list li{display:flex;align-items:baseline;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px}
+  .row-list li:last-child{border-bottom:none}
+  .row-key{font-family:'IBM Plex Mono',mono;font-size:10px;color:var(--text-dim);flex-shrink:0;min-width:90px}
+  .row-val{color:var(--text)}
+  .flow{display:flex;align-items:center;flex-wrap:wrap;gap:0;row-gap:6px}
+  .flow-node{background:var(--surface2);border:1px solid var(--border2);border-radius:4px;padding:7px 11px;font-size:11px;font-weight:500;color:var(--text);white-space:nowrap}
+  .flow-node.active{border-color:var(--accent-blue);color:#7aaeff}
+  .flow-arrow{padding:0 5px;color:var(--text-dim);font-size:13px}
+  .sm-flow{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+  .sm-state{padding:4px 9px;border-radius:3px;font-family:'IBM Plex Mono',mono;font-size:10px;border:1px solid}
+  .sm-state.initial{border-color:rgba(61,126,255,.4);background:rgba(61,126,255,.08);color:#7aaeff}
+  .sm-state.mid{border-color:rgba(245,166,35,.4);background:rgba(245,166,35,.08);color:#f5c060}
+  .sm-state.terminal{border-color:rgba(46,204,138,.4);background:rgba(46,204,138,.08);color:#5ed9a0}
+  .sm-arrow{color:var(--text-dim);font-size:11px;padding:0 2px}
+  .guardrail-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
+  .guardrail{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:9px 11px}
+  .guardrail-id{font-family:'IBM Plex Mono',mono;font-size:10px;font-weight:600;margin-bottom:3px}
+  .guardrail-title{color:var(--text);font-size:11px;line-height:1.4}
+  .guardrail.ok .guardrail-id{color:var(--accent-green)}.guardrail.warn .guardrail-id{color:var(--accent-amber)}
+  .note{background:rgba(245,166,35,.06);border:1px solid rgba(245,166,35,.2);border-radius:4px;padding:7px 11px;font-size:11px;color:#c8a050;font-family:'IBM Plex Mono',mono;margin-top:8px}
+  .note::before{content:'⚠ '}
+  .success-note{background:rgba(46,204,138,.06);border:1px solid rgba(46,204,138,.2);border-radius:4px;padding:7px 11px;font-size:11px;color:#5ed9a0;font-family:'IBM Plex Mono',mono;margin-top:8px}
+  .success-note::before{content:'✓ '}
+  .infra-box{border:1px solid var(--border2);border-radius:6px;overflow:hidden}
+  .infra-box-head{padding:8px 12px;font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;display:flex;align-items:center;gap:6px}
+  .infra-box-body{background:var(--surface);padding:9px 12px}
+  .infra-kv{display:flex;justify-content:space-between;padding:3px 0;font-size:11px;border-bottom:1px solid var(--border)}
+  .infra-kv:last-child{border-bottom:none}
+  .infra-k{color:var(--text-dim);font-family:'IBM Plex Mono',mono;font-size:10px}
+  .infra-v{color:var(--text);font-family:'IBM Plex Mono',mono;font-size:10px}
+  .port{font-family:'IBM Plex Mono',mono;font-size:10px;background:rgba(61,126,255,.12);border:1px solid rgba(61,126,255,.25);color:#7aaeff;border-radius:3px;padding:1px 5px}
+  .backlog-item{display:flex;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px}
+  .backlog-item:last-child{border-bottom:none}
+  .backlog-dot{width:6px;height:6px;border-radius:50%;background:var(--accent-amber);margin-top:5px;flex-shrink:0}
+  .mono{font-family:'IBM Plex Mono',mono;font-size:11px;color:var(--text);line-height:1.9}
+  .mono .dim{color:var(--text-dim)}.mono .hi-blue{color:#7aaeff}.mono .hi-cyan{color:#4de8e0}
+  .mono .hi-green{color:#5ed9a0}.mono .hi-amber{color:#f5c060}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div>
+      <div class="live-badge"><span class="live-dot"></span> LIVE — generated 2026-03-10 16:49:58 UTC</div>
+      <div class="doc-label">Architecture Blueprint · Tech Lead Reference</div>
+      <div class="doc-title">Maintenance Agent</div>
+      <div class="doc-subtitle">Full-stack property maintenance platform — Swiss market</div>
+    </div>
+    <div class="header-meta">
+      <div>Branch <span class="meta-val">main</span></div>
+      <div>Commit <span class="meta-val">ed7c841</span></div>
+      <div>Last commit <span class="meta-val">2026-03-08</span></div>
+      <div>Doc verified <span class="meta-val">2026-03-12 (Frontend Debt Cleanup Slice)</span></div>
+      <div>Backend <span class="meta-val">34,376 LOC</span></div>
+      <div>Frontend <span class="meta-val">24,331 LOC</span></div>
+    </div>
+  </div>
+
+  <!-- STAT STRIP -->
+  <div class="stat-grid">
+    <div class="stat-cell"><span class="stat-num blue">45</span><span class="stat-label">Models</span></div>
+    <div class="stat-cell"><span class="stat-num cyan">35</span><span class="stat-label">Enums</span></div>
+    <div class="stat-cell"><span class="stat-num green">140</span><span class="stat-label">API Routes</span></div>
+    <div class="stat-cell"><span class="stat-num amber">185</span><span class="stat-label">FE Pages</span></div>
+    <div class="stat-cell"><span class="stat-num purple">14</span><span class="stat-label">Workflows</span></div>
+    <div class="stat-cell"><span class="stat-num ">9</span><span class="stat-label">Repositories</span></div>
+    <div class="stat-cell"><span class="stat-num ">334</span><span class="stat-label">Tests</span></div>
+    <div class="stat-cell"><span class="stat-num ">30</span><span class="stat-label">Suites</span></div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tab-nav">
+    <button class="tab-btn active" onclick="switchTab('backend',this)">Backend</button>
+    <button class="tab-btn" onclick="switchTab('frontend',this)">Frontend</button>
+    <button class="tab-btn" onclick="switchTab('database',this)">Database</button>
+    <button class="tab-btn" onclick="switchTab('infra',this)">Infrastructure</button>
+    <button class="tab-btn" onclick="switchTab('flows',this)">Data Flows</button>
+    <button class="tab-btn" onclick="switchTab('guardrails',this)">Guardrails</button>
+    <button class="tab-btn" onclick="switchTab('audit',this)">Audit</button>
+    <button class="tab-btn" onclick="switchTab('backlog',this)">Backlog</button>
+  </div>
+
+  <!-- ══ BACKEND ══ -->
+  <div class="tab-pane active" id="tab-backend">
+    <div class="section">
+      <div class="section-header"><span class="section-num">01</span><span class="section-title">Backend Layer Architecture</span><div class="section-line"></div><span class="port">:3001</span></div>
+      <div class="layer-diagram">
+        <div class="layer">
+          <div class="layer-label">entry</div>
+          <div class="layer-content"><div class="box accent-blue">server.ts<small>raw http.createServer — no Express/NestJS</small></div></div>
+        </div>
+        <div class="layer-connector">↓ registers all route modules</div>
+        <div class="layer">
+          <div class="layer-label">routes (13)</div>
+          <div class="layer-content"><div class="box accent-blue">auth</div><div class="box accent-blue">config</div><div class="box accent-blue">inventory</div><div class="box accent-blue">request</div><div class="box accent-blue">tenant</div><div class="box accent-blue">invoice</div><div class="box accent-blue">contractor</div><div class="box accent-blue">notification</div><div class="box accent-blue">lease</div><div class="box accent-blue">rental</div><div class="box accent-blue">rent estimation</div><div class="box accent-blue">financial</div><div class="box accent-blue">legal</div></div>
+        </div>
+        <div class="layer-connector">↓ thin HTTP handlers only</div>
+        <div class="layer">
+          <div class="layer-label">workflows (14)</div>
+          <div class="layer-content"><div class="box accent-cyan">activateLeaseWorkflow</div><div class="box accent-cyan">approveInvoiceWorkflow</div><div class="box accent-cyan">approveRequestWorkflow</div><div class="box accent-cyan">assignContractorWorkflow</div><div class="box accent-cyan">completeJobWorkflow</div><div class="box accent-cyan">createRequestWorkflow</div><div class="box accent-cyan">disputeInvoiceWorkflow</div><div class="box accent-cyan">evaluateLegalRoutingWorkflow</div><div class="box accent-cyan">issueInvoiceWorkflow</div><div class="box accent-cyan">markLeaseReadyWorkflow</div><div class="box accent-cyan">payInvoiceWorkflow</div><div class="box accent-cyan">submitRentalApplicationWorkflow</div><div class="box accent-cyan">terminateLeaseWorkflow</div><div class="box accent-cyan">unassignContractorWorkflow</div></div>
+        </div>
+        <div class="layer-connector">↓ orchestration — delegates to services</div>
+        <div class="layer">
+          <div class="layer-label">services</div>
+          <div class="layer-content"><div class="box accent-green">auth</div><div class="box accent-green">requestAssignment</div><div class="box accent-green">invoiceService</div><div class="box accent-green">leaseService</div><div class="box accent-green">legalEngine</div><div class="box accent-green">triage</div><div class="box accent-green">pdfGenerator</div><div class="box accent-green">emailOutbox</div><div class="box accent-green">notificationService</div><div class="box accent-green">depreciationService</div></div>
+        </div>
+        <div class="layer-connector">↓ domain logic — no raw Prisma calls</div>
+        <div class="layer">
+          <div class="layer-label">repositories (9)</div>
+          <div class="layer-content"><div class="box accent-amber">assetRepository</div><div class="box accent-amber">contractorRepository</div><div class="box accent-amber">inventoryRepository</div><div class="box accent-amber">invoiceRepository</div><div class="box accent-amber">jobRepository</div><div class="box accent-amber">leaseRepository</div><div class="box accent-amber">legalSourceRepository</div><div class="box accent-amber">rentalApplicationRepository</div><div class="box accent-amber">requestRepository</div></div>
+        </div>
+        <div class="layer-connector">↓ canonical Prisma access + include constants (G9)</div>
+        <div class="layer">
+          <div class="layer-label">data / events</div>
+          <div class="layer-content">
+            <div class="box accent-purple">Prisma ORM + PostgreSQL 16<small>45 models · 35 enums · 32 migrations</small></div>
+            <div class="box accent-purple">Domain Event Bus<small>15 event types</small></div>
+          </div>
+        </div>
+      </div>
+      <div class="success-note">0 TypeScript errors · 334 tests passing · openapi.yaml synced</div>
+    </div>
+
+    <div class="section">
+      <div class="section-header"><span class="section-num">02</span><span class="section-title">State Machines — workflows/transitions.ts</span><div class="section-line"></div></div>
+      <div class="three-col">
+        <div class="panel">
+          <div class="panel-head"><div class="panel-head-dot" style="background:var(--accent-blue)"></div><div class="panel-head-title">Request</div></div>
+          <div class="panel-body">
+            <div class="sm-flow">
+              <div class="sm-state initial">PENDING_REVIEW</div><div class="sm-arrow">→</div><div class="sm-state mid">APPROVED</div><div class="sm-arrow">→</div><div class="sm-state mid">AUTO_APPROVED</div><div class="sm-arrow">→</div><div class="sm-state mid">PENDING_OWNER_APPROVAL</div><div class="sm-arrow">→</div><div class="sm-state mid">RFP_PENDING</div><div class="sm-arrow">→</div><div class="sm-state mid">ASSIGNED</div><div class="sm-arrow">→</div><div class="sm-state mid">IN_PROGRESS</div><div class="sm-arrow">→</div><div class="sm-state terminal">COMPLETED</div>
+            </div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><div class="panel-head-dot" style="background:var(--accent-cyan)"></div><div class="panel-head-title">Job</div></div>
+          <div class="panel-body">
+            <div class="sm-flow">
+              <div class="sm-state initial">PENDING</div><div class="sm-arrow">→</div><div class="sm-state mid">IN_PROGRESS</div><div class="sm-arrow">→</div><div class="sm-state mid">COMPLETED</div><div class="sm-arrow">→</div><div class="sm-state terminal">INVOICED</div>
+            </div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><div class="panel-head-dot" style="background:var(--accent-green)"></div><div class="panel-head-title">Invoice</div></div>
+          <div class="panel-body">
+            <div class="sm-flow">
+              <div class="sm-state initial">DRAFT</div><div class="sm-arrow">→</div><div class="sm-state mid">ISSUED</div><div class="sm-arrow">→</div><div class="sm-state mid">APPROVED</div><div class="sm-arrow">→</div><div class="sm-state mid">DISPUTED</div><div class="sm-arrow">→</div><div class="sm-state terminal">PAID</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ FRONTEND ══ -->
+  <div class="tab-pane" id="tab-frontend">
+    <div class="section">
+      <div class="section-header"><span class="section-num">03</span><span class="section-title">Frontend Architecture</span><div class="section-line"></div><span class="port">:3000</span></div>
+      <div class="layer-diagram">
+        <div class="layer">
+          <div class="layer-label">browser</div>
+          <div class="layer-content"><div class="box accent-blue">Next.js Pages Router<small>~185 pages (UI + API proxies) · AppShell role-scoped sidebar</small></div></div>
+        </div>
+        <div class="layer-connector">↓ pages/api/* — 103/106 use proxyToBackend()</div>
+        <div class="layer">
+          <div class="layer-label">proxy</div>
+          <div class="layer-content"><div class="box accent-cyan">lib/proxy.js → proxyToBackend()<small>Forwards headers, query params, status codes, binary responses (F3)</small></div></div>
+        </div>
+        <div class="layer-connector">↓ HTTP → backend :3001</div>
+        <div class="layer">
+          <div class="layer-label">API client</div>
+          <div class="layer-content"><div class="box accent-green">packages/api-client · lib/api.js<small>authHeaders() · fetchWithAuth() · apiFetch() · typed DTOs</small></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-header"><span class="section-num">04</span><span class="section-title">Persona Portals</span><div class="section-line"></div></div>
+      <div class="two-col">
+        <div class="panel">
+          <div class="panel-head"><div class="panel-head-dot" style="background:var(--accent-blue)"></div><div class="panel-head-title">Manager</div><div class="panel-head-count">/manager/*</div></div>
+          <div class="panel-body"><div class="tag-list"><span class="tag blue">requests</span><span class="tag blue">inventory</span><span class="tag blue">legal</span><span class="tag blue">leases</span><span class="tag blue">settings</span><span class="tag blue">payments</span><span class="tag blue">expenses</span><span class="tag blue">charges</span><span class="tag blue">buildings</span><span class="tag blue">tenants</span><span class="tag blue">vendors</span><span class="tag blue">vacancies</span></div><div class="note" style="margin-top:8px">Styling locked: styles/managerStyles.js (F8). Accordion sidebar + lucide-react icons.</div></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><div class="panel-head-dot" style="background:var(--accent-cyan)"></div><div class="panel-head-title">Contractor</div><div class="panel-head-count">/contractor/*</div></div>
+          <div class="panel-body"><div class="tag-list"><span class="tag cyan">jobs list</span><span class="tag cyan">job detail</span><span class="tag cyan">status updates</span><span class="tag cyan">invoices</span><span class="tag cyan">invoice create</span></div></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><div class="panel-head-dot" style="background:var(--accent-green)"></div><div class="panel-head-title">Tenant</div><div class="panel-head-count">/tenant/* + /</div></div>
+          <div class="panel-body"><div class="tag-list"><span class="tag green">chat intake</span><span class="tag green">leases</span><span class="tag green">assets</span><span class="tag green">apply wizard</span><span class="tag green">listings</span></div></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><div class="panel-head-dot" style="background:var(--accent-amber)"></div><div class="panel-head-title">Owner</div><div class="panel-head-count">/owner/*</div></div>
+          <div class="panel-body"><div class="tag-list"><span class="tag amber">approvals</span><span class="tag amber">invoices</span><span class="tag amber">vacancies</span><span class="tag amber">buildings</span><span class="tag amber">financials</span></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ DATABASE ══ -->
+  <div class="tab-pane" id="tab-database">
+    <div class="section">
+      <div class="section-header"><span class="section-num">05</span><span class="section-title">Schema Overview — 45 models · 35 enums</span><div class="section-line"></div></div>
+      <div class="three-col">
+        
+    <div class="panel">
+      <div class="panel-head">
+        <div class="panel-head-dot" style="background:var(--accent-blue)"></div>
+        <div class="panel-head-title">Core Domain</div>
+        <div class="panel-head-count">12 models</div>
+      </div>
+      <div class="panel-body"><div class="tag-list"><span class="tag blue">RequestEvent</span><span class="tag blue">Request</span><span class="tag blue">Job</span><span class="tag blue">Invoice</span><span class="tag blue">InvoiceLineItem</span><span class="tag blue">Lease</span><span class="tag blue">SignatureRequest</span><span class="tag blue">RentalApplication</span><span class="tag blue">RentalApplicant</span><span class="tag blue">RentalAttachment</span><span class="tag blue">RentalApplicationUnit</span><span class="tag blue">RentalOwnerSelection</span></div></div>
+    </div>
+        
+    <div class="panel">
+      <div class="panel-head">
+        <div class="panel-head-dot" style="background:var(--accent-cyan)"></div>
+        <div class="panel-head-title">Property & Asset</div>
+        <div class="panel-head-count">12 models</div>
+      </div>
+      <div class="panel-body"><div class="tag-list"><span class="tag cyan">Building</span><span class="tag cyan">BuildingOwner</span><span class="tag cyan">BuildingConfig</span><span class="tag cyan">UnitConfig</span><span class="tag cyan">Unit</span><span class="tag cyan">Appliance</span><span class="tag cyan">AssetModel</span><span class="tag cyan">RentalApplicationUnit</span><span class="tag cyan">BuildingFinancialSnapshot</span><span class="tag cyan">Asset</span><span class="tag cyan">AssetIntervention</span><span class="tag cyan">DepreciationStandard</span></div></div>
+    </div>
+        
+    <div class="panel">
+      <div class="panel-head">
+        <div class="panel-head-dot" style="background:var(--accent-green)"></div>
+        <div class="panel-head-title">People & Org</div>
+        <div class="panel-head-count">7 models</div>
+      </div>
+      <div class="panel-body"><div class="tag-list"><span class="tag green">Org</span><span class="tag green">OrgConfig</span><span class="tag green">User</span><span class="tag green">Contractor</span><span class="tag green">Tenant</span><span class="tag green">BuildingOwner</span><span class="tag green">RentalOwnerSelection</span></div></div>
+    </div>
+        
+    <div class="panel">
+      <div class="panel-head">
+        <div class="panel-head-dot" style="background:var(--accent-amber)"></div>
+        <div class="panel-head-title">Legal & Compliance</div>
+        <div class="panel-head-count">7 models</div>
+      </div>
+      <div class="panel-body"><div class="tag-list"><span class="tag amber">LegalSource</span><span class="tag amber">LegalVariable</span><span class="tag amber">LegalVariableVersion</span><span class="tag amber">LegalRule</span><span class="tag amber">LegalRuleVersion</span><span class="tag amber">LegalEvaluationLog</span><span class="tag amber">LegalCategoryMapping</span></div></div>
+    </div>
+        
+    <div class="panel">
+      <div class="panel-head">
+        <div class="panel-head-dot" style="background:var(--accent-purple)"></div>
+        <div class="panel-head-title">Notifications & Docs</div>
+        <div class="panel-head-count">3 models</div>
+      </div>
+      <div class="panel-body"><div class="tag-list"><span class="tag purple">Notification</span><span class="tag purple">SignatureRequest</span><span class="tag purple">EmailOutbox</span></div></div>
+    </div>
+        <div class="panel">
+          <div class="panel-head"><div class="panel-head-dot" style="background:var(--accent-red)"></div><div class="panel-head-title">Schema Gotchas</div></div>
+          <div class="panel-body">
+            <ul class="row-list">
+              <li><span class="row-key" style="color:#ff8080">Request</span><span class="row-val">NO orgId — scope via unit→building FK</span></li>
+              <li><span class="row-key" style="color:#ff8080">Job</span><span class="row-val">NO description — use Request.description</span></li>
+              <li><span class="row-key" style="color:#ff8080">Appliance</span><span class="row-val">NO category — lives on AssetModel</span></li>
+              <li><span class="row-key" style="color:var(--accent-amber)">Job.contractorId</span><span class="row-val">REQUIRED — not optional</span></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-header"><span class="section-num">06</span><span class="section-title">Migration Rules</span><div class="section-line"></div></div>
+      <div class="two-col">
+        <div class="panel">
+          <div class="panel-head"><div class="panel-head-dot" style="background:var(--accent-green)"></div><div class="panel-head-title">Always Use</div></div>
+          <div class="panel-body">
+            <div class="flow" style="flex-direction:column;align-items:flex-start;gap:6px">
+              <div class="flow-node active">prisma migrate dev --name &lt;desc&gt;</div>
+              <div class="flow-arrow">↓</div>
+              <div class="flow-node active">Drift check → expected: empty migration</div>
+              <div class="flow-arrow">↓</div>
+              <div class="flow-node active">prisma generate</div>
+            </div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><div class="panel-head-dot" style="background:var(--accent-red)"></div><div class="panel-head-title">Banned (G1 / G8)</div></div>
+          <div class="panel-body">
+            <ul class="row-list">
+              <li><span class="row-key" style="color:#ff8080">BANNED</span><span class="row-val" style="font-family:'IBM Plex Mono',mono;font-size:11px">prisma db push</span></li>
+              <li><span class="row-key" style="color:#ff8080">BANNED</span><span class="row-val" style="font-family:'IBM Plex Mono',mono;font-size:11px">prisma migrate reset</span></li>
+              <li><span class="row-key" style="color:#ff8080">BANNED</span><span class="row-val" style="font-family:'IBM Plex Mono',mono;font-size:11px">docker-compose down -v</span></li>
+              <li><span class="row-key" style="color:var(--accent-amber)">EXCEPTION</span><span class="row-val">LKDE epic — shadow DB replay issue (one-time, additive)</span></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ INFRA ══ -->
+  <div class="tab-pane" id="tab-infra">
+    <div class="section">
+      <div class="section-header"><span class="section-num">07</span><span class="section-title">Topology</span><div class="section-line"></div></div>
+      <div class="three-col" style="margin-bottom:20px">
+        <div class="infra-box">
+          <div class="infra-box-head" style="background:rgba(61,126,255,.12);color:#7aaeff">🌐 Frontend</div>
+          <div class="infra-box-body">
+            <div class="infra-kv"><span class="infra-k">runtime</span><span class="infra-v">Next.js Pages Router</span></div>
+            <div class="infra-kv"><span class="infra-k">port</span><span class="infra-v">3000</span></div>
+            <div class="infra-kv"><span class="infra-k">start</span><span class="infra-v">npm run dev:web</span></div>
+            <div class="infra-kv"><span class="infra-k">proxy target</span><span class="infra-v">127.0.0.1:3001</span></div>
+          </div>
+        </div>
+        <div class="infra-box">
+          <div class="infra-box-head" style="background:rgba(0,212,200,.12);color:#4de8e0">⚙️ Backend API</div>
+          <div class="infra-box-body">
+            <div class="infra-kv"><span class="infra-k">runtime</span><span class="infra-v">Node.js + TypeScript</span></div>
+            <div class="infra-kv"><span class="infra-k">port</span><span class="infra-v">3001</span></div>
+            <div class="infra-kv"><span class="infra-k">start</span><span class="infra-v">npm run dev:api</span></div>
+            <div class="infra-kv"><span class="infra-k">auth guard</span><span class="infra-v">AUTH_OPTIONAL=false (prod)</span></div>
+          </div>
+        </div>
+        <div class="infra-box">
+          <div class="infra-box-head" style="background:rgba(46,204,138,.12);color:#5ed9a0">🐘 PostgreSQL 16</div>
+          <div class="infra-box-body">
+            <div class="infra-kv"><span class="infra-k">host</span><span class="infra-v">Docker (infra/)</span></div>
+            <div class="infra-kv"><span class="infra-k">port</span><span class="infra-v">5432</span></div>
+            <div class="infra-kv"><span class="infra-k">dev db</span><span class="infra-v">maint_agent</span></div>
+            <div class="infra-kv"><span class="infra-k">test db</span><span class="infra-v">maint_agent_test</span></div>
+            <div class="infra-kv"><span class="infra-k">volume</span><span class="infra-v">maint_agent_pgdata</span></div>
+          </div>
+        </div>
+      </div>
+      <svg width="100%" height="76" viewBox="0 0 900 76">
+        <defs>
+          <marker id="a" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="#3d7eff"/></marker>
+          <marker id="b" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="#00d4c8"/></marker>
+          <marker id="c" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="#2ecc8a"/></marker>
+        </defs>
+        <rect x="10" y="18" width="130" height="38" rx="4" fill="#111318" stroke="#2a3045"/>
+        <text x="75" y="34" text-anchor="middle" fill="#c8d0e0" font-family="IBM Plex Mono" font-size="11">Browser</text>
+        <text x="75" y="50" text-anchor="middle" fill="#5a6580" font-family="IBM Plex Mono" font-size="10">:3000</text>
+        <line x1="140" y1="37" x2="210" y2="37" stroke="#3d7eff" stroke-width="1.5" marker-end="url(#a)"/>
+        <text x="175" y="31" text-anchor="middle" fill="#3d7eff" font-family="IBM Plex Mono" font-size="9">pages/api</text>
+        <rect x="210" y="18" width="160" height="38" rx="4" fill="#111318" stroke="#2a3045"/>
+        <text x="290" y="34" text-anchor="middle" fill="#c8d0e0" font-family="IBM Plex Mono" font-size="11">Next.js Proxy</text>
+        <text x="290" y="50" text-anchor="middle" fill="#5a6580" font-family="IBM Plex Mono" font-size="10">proxyToBackend()</text>
+        <line x1="370" y1="37" x2="440" y2="37" stroke="#00d4c8" stroke-width="1.5" marker-end="url(#b)"/>
+        <text x="405" y="31" text-anchor="middle" fill="#00d4c8" font-family="IBM Plex Mono" font-size="9">HTTP :3001</text>
+        <rect x="440" y="18" width="160" height="38" rx="4" fill="#111318" stroke="#2a3045"/>
+        <text x="520" y="34" text-anchor="middle" fill="#c8d0e0" font-family="IBM Plex Mono" font-size="11">Backend API</text>
+        <text x="520" y="50" text-anchor="middle" fill="#5a6580" font-family="IBM Plex Mono" font-size="10">server.ts :3001</text>
+        <line x1="600" y1="37" x2="670" y2="37" stroke="#2ecc8a" stroke-width="1.5" marker-end="url(#c)"/>
+        <text x="635" y="31" text-anchor="middle" fill="#2ecc8a" font-family="IBM Plex Mono" font-size="9">Prisma ORM</text>
+        <rect x="670" y="18" width="220" height="38" rx="4" fill="#111318" stroke="#2a3045"/>
+        <text x="780" y="34" text-anchor="middle" fill="#c8d0e0" font-family="IBM Plex Mono" font-size="11">PostgreSQL 16</text>
+        <text x="780" y="50" text-anchor="middle" fill="#5a6580" font-family="IBM Plex Mono" font-size="10">Docker :5432 / maint_agent</text>
+      </svg>
+    </div>
+    <div class="section">
+      <div class="section-header"><span class="section-num">08</span><span class="section-title">CI Pipeline — 6 Hard Gates (G7)</span><div class="section-line"></div></div>
+      <div class="flow" style="flex-wrap:wrap;gap:4px 0">
+        <div class="flow-node active">1. Schema drift = empty</div><div class="flow-arrow">→</div><div class="flow-node active">2. prisma generate</div><div class="flow-arrow">→</div><div class="flow-node active">3. tsc --noEmit</div><div class="flow-arrow">→</div><div class="flow-node active">4. next build</div><div class="flow-arrow">→</div><div class="flow-node active">5. Jest tests</div><div class="flow-arrow">→</div><div class="flow-node active">6. Boot + smoke curls</div>
+      </div>
+      <div class="note">CI red = no merge, no defer. Runs against maint_agent_test via PostgreSQL service container.</div>
+    </div>
+    <div class="section">
+      <div class="section-header"><span class="section-num">09</span><span class="section-title">Monorepo Structure</span><div class="section-line"></div></div>
+      <div class="panel"><div class="panel-body mono">
+        <span class="dim">Maintenance_Agent/</span><br>
+        &nbsp;&nbsp;<span class="hi-blue">apps/api/src/</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="dim">routes/ · workflows/ · services/ · repositories/ · events/ · governance/</span><br>
+        &nbsp;&nbsp;<span class="hi-blue">apps/api/prisma/</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="dim">schema.prisma · migrations/ (32 dirs)</span><br>
+        &nbsp;&nbsp;<span class="hi-cyan">apps/web/pages/</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="dim">~185 pages (UI + API proxies)</span><br>
+        &nbsp;&nbsp;<span class="hi-cyan">apps/web/components/</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="dim">AppShell · layout primitives · shared UI</span><br>
+        &nbsp;&nbsp;<span class="hi-cyan">apps/web/styles/</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="dim">managerStyles.js (locked — F8)</span><br>
+        &nbsp;&nbsp;<span class="hi-green">packages/api-client/</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="dim">typed DTO types + fetch methods</span><br>
+        &nbsp;&nbsp;<span class="hi-amber">infra/docker-compose.yml</span>&nbsp;&nbsp;<span class="dim">PostgreSQL 16</span><br>
+        &nbsp;&nbsp;<span class="dim">.github/workflows/ci.yml&nbsp;&nbsp;&nbsp;6-gate pipeline (G1–G11)</span>
+      </div></div>
+    </div>
+  </div>
+
+  <!-- ══ DATA FLOWS ══ -->
+  <div class="tab-pane" id="tab-flows">
+    <div class="section">
+      <div class="section-header"><span class="section-num">10</span><span class="section-title">Request Lifecycle</span><div class="section-line"></div></div>
+      <div class="panel"><div class="panel-body">
+        <div class="flow" style="flex-wrap:wrap;gap:4px 0;margin-bottom:8px">
+          <div class="flow-node active">Tenant chat</div><div class="flow-arrow">→</div><div class="flow-node">POST /requests</div><div class="flow-arrow">→</div><div class="flow-node">triage service</div><div class="flow-arrow">→</div><div class="flow-node">TRIAGED</div><div class="flow-arrow">→</div><div class="flow-node">legalAutoRouting?</div><div class="flow-arrow">→</div><div class="flow-node">RFP created</div><div class="flow-arrow">→</div><div class="flow-node active">RFP_PENDING</div>
+        </div>
+        <div class="flow" style="flex-wrap:wrap;gap:4px 0">
+          <div class="flow-node">Assign contractor</div><div class="flow-arrow">→</div><div class="flow-node">Job CREATED</div><div class="flow-arrow">→</div><div class="flow-node">Contractor executes</div><div class="flow-arrow">→</div><div class="flow-node">IN_PROGRESS</div><div class="flow-arrow">→</div><div class="flow-node">COMPLETE</div><div class="flow-arrow">→</div><div class="flow-node">Invoice DRAFT → PAID</div><div class="flow-arrow">→</div><div class="flow-node active">Request CLOSED</div>
+        </div>
+      </div></div>
+    </div>
+    <div class="section">
+      <div class="section-header"><span class="section-num">11</span><span class="section-title">Legal Auto-Routing</span><div class="section-line"></div></div>
+      <div class="panel"><div class="panel-body">
+        <div class="flow" style="flex-wrap:wrap;gap:4px 0">
+          <div class="flow-node">Request triaged</div><div class="flow-arrow">→</div><div class="flow-node">Category → CategoryMapping</div><div class="flow-arrow">→</div><div class="flow-node">autoLegalRouting=true?</div><div class="flow-arrow">→</div><div class="flow-node">DSL rules evaluated</div><div class="flow-arrow">→</div><div class="flow-node">RFP created</div><div class="flow-arrow">→</div><div class="flow-node active">→ RFP_PENDING</div>
+        </div>
+        <div class="note">Legal DSL variable resolver not yet wired. LegalVariable values cannot condition rules on ingested data (e.g. reference interest rate). Full canton-scoped evaluation blocked.</div>
+      </div></div>
+    </div>
+    <div class="section">
+      <div class="section-header"><span class="section-num">12</span><span class="section-title">Rental Application Flow</span><div class="section-line"></div></div>
+      <div class="panel"><div class="panel-body">
+        <div class="flow" style="flex-wrap:wrap;gap:4px 0">
+          <div class="flow-node active">/listings (public)</div><div class="flow-arrow">→</div><div class="flow-node">/apply wizard</div><div class="flow-arrow">→</div><div class="flow-node">POST /rentalApplications</div><div class="flow-arrow">→</div><div class="flow-node">SUBMITTED → SCREENING</div><div class="flow-arrow">→</div><div class="flow-node">Manager review</div><div class="flow-arrow">→</div><div class="flow-node active">APPROVED → Lease created</div>
+        </div>
+      </div></div>
+    </div>
+  </div>
+
+  <!-- ══ GUARDRAILS ══ -->
+  <div class="tab-pane" id="tab-guardrails">
+    <div class="section">
+      <div class="section-header"><span class="section-num">13</span><span class="section-title">Architecture Guardrails (G1–G11)</span><div class="section-line"></div></div>
+      <div class="guardrail-grid">
+        <div class="guardrail ok"><div class="guardrail-id">G1 — Schema Changes — Always Migrate, Never `db push`</div><div class="guardrail-title">- NEVER use npx prisma db push in dev or production. It creates drift between the</div></div><div class="guardrail ok"><div class="guardrail-id">G2 — New Model Fields — Update All Consumers</div><div class="guardrail-title">When adding a field to a Prisma model, you MUST update:</div></div><div class="guardrail ok"><div class="guardrail-id">G3 — Prisma `include` — Always Include What You Map</div><div class="guardrail-title">If a DTO mapper accesses a relation (e.g., job.request.tenant), the query that feeds it</div></div><div class="guardrail ok"><div class="guardrail-id">G4 — No Stub Services in Production Paths</div><div class="guardrail-title">Never leave a stub function (returns fake data without writing to DB) in a file that</div></div><div class="guardrail ok"><div class="guardrail-id">G5 — Pre-Commit Smoke Test</div><div class="guardrail-title">Before committing backend changes, run this 30-second check:</div></div><div class="guardrail ok"><div class="guardrail-id">G6 — Destructive Database Commands — Require Explicit Approval</div><div class="guardrail-title">The PostgreSQL database uses Docker volume maintagentpgdata for persistent storage.</div></div><div class="guardrail ok"><div class="guardrail-id">G7 — CI Is a Hard Gate</div><div class="guardrail-title">CI must run and pass all of the following before merge:</div></div><div class="guardrail ok"><div class="guardrail-id">G8 — `prisma db push` Is Banned</div><div class="guardrail-title">db push must never appear in any script, CI step, or developer workflow.</div></div><div class="guardrail ok"><div class="guardrail-id">G9 — Canonical Include Definitions (No Ad-Hoc Include Trees)</div><div class="guardrail-title">For any service that returns a DTO, define a centralized include constant rather than</div></div><div class="guardrail ok"><div class="guardrail-id">G10 — API Contract Tests (Prevent Silent DTO Drift)</div><div class="guardrail-title">Maintain contract tests for key endpoints:</div></div><div class="guardrail ok"><div class="guardrail-id">G11 — Test Database Requires Seed After Fresh Creation</div><div class="guardrail-title">The test database (maintagenttest) requires seed data for some test suites. After creating a fresh maintagenttest, run i</div></div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-header"><span class="section-num">14</span><span class="section-title">Future Risk Guardrails (F1–F8)</span><div class="section-line"></div></div>
+      <div class="guardrail-grid">
+        <div class="guardrail ok"><div class="guardrail-id">F1 — Production Cannot Start With Optional Auth</div><div class="guardrail-title">When NODEENV=production:</div></div><div class="guardrail ok"><div class="guardrail-id">F2 — Org Scoping Must Be Explicit ✅ (M1 implemented)</div><div class="guardrail-title">Because Request has no orgId and multi-org is planned:</div></div><div class="guardrail ok"><div class="guardrail-id">F3 — Proxy Layer Must Be Transparent</div><div class="guardrail-title">Next.js API proxy routes must:</div></div><div class="guardrail ok"><div class="guardrail-id">F4 — Emergency DB Fixes Must Be Codified</div><div class="guardrail-title">If a manual ALTER TABLE is ever applied to fix a live issue:</div></div><div class="guardrail ok"><div class="guardrail-id">F5 — Financial & PDF Logic Requires Golden Tests</div><div class="guardrail-title">For lease PDFs, invoice PDFs, QR bills, and line item totals:</div></div><div class="guardrail ok"><div class="guardrail-id">F6 — Clean Dev Environment Scripts</div><div class="guardrail-title">Formalize restart workflows as npm scripts instead of scattered shell commands:</div></div><div class="guardrail ok"><div class="guardrail-id">F7 — No Single-Org Assumption in New Code</div><div class="guardrail-title">Even while single-org (DEFAULTORGID) is active:</div></div><div class="guardrail ok"><div class="guardrail-id">F8 — Styling Lock Enforcement</div><div class="guardrail-title">Manager UI styling lives only in apps/web/styles/managerStyles.js (see Section 7).</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ AUDIT ══ -->
+  <div class="tab-pane" id="tab-audit">
+    <div class="section">
+      <div class="section-header"><span class="section-num">15</span><span class="section-title">Audit Summary (2026-03-10)</span><div class="section-line"></div></div>
+      <div class="panel"><div class="panel-body">
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead><tr style="border-bottom:1px solid var(--border)">
+            <th style="text-align:left;padding:6px">Area</th><th>Findings</th><th>Critical</th><th>High</th><th>Medium</th><th>Low</th><th style="color:#5ed9a0">Resolved</th>
+          </tr></thead>
+          <tbody>
+            <tr style="border-bottom:1px solid var(--border-light,#2a2e38)"><td style="padding:6px">Code Quality & Architecture</td><td style="text-align:center">35</td><td style="text-align:center;color:inherit">0</td><td style="text-align:center;color:#f5c060">7</td><td style="text-align:center">12</td><td style="text-align:center">16</td><td style="text-align:center;color:#5ed9a0">0</td></tr><tr style="border-bottom:1px solid var(--border-light,#2a2e38)"><td style="padding:6px">Schema & Data Integrity</td><td style="text-align:center">12</td><td style="text-align:center;color:inherit">0</td><td style="text-align:center;color:#f5c060">1</td><td style="text-align:center">7</td><td style="text-align:center">4</td><td style="text-align:center;color:#5ed9a0">9</td></tr><tr style="border-bottom:1px solid var(--border-light,#2a2e38)"><td style="padding:6px">Test Coverage Gaps</td><td style="text-align:center">15</td><td style="text-align:center;color:inherit">0</td><td style="text-align:center;color:#f5c060">6</td><td style="text-align:center">8</td><td style="text-align:center">1</td><td style="text-align:center;color:#5ed9a0">2</td></tr><tr style="border-bottom:1px solid var(--border-light,#2a2e38)"><td style="padding:6px">Security & Auth</td><td style="text-align:center">20</td><td style="text-align:center;color:#ff8080">1</td><td style="text-align:center;color:#f5c060">8</td><td style="text-align:center">9</td><td style="text-align:center">2</td><td style="text-align:center;color:#5ed9a0">9</td></tr>
+            <tr style="border-top:2px solid var(--border);font-weight:bold"><td style="padding:6px">Total</td><td style="text-align:center">82</td><td style="text-align:center">1</td><td style="text-align:center">22</td><td style="text-align:center">36</td><td style="text-align:center">23</td><td style="text-align:center;color:#5ed9a0">20</td></tr>
+          </tbody>
+        </table>
+      </div></div>
+    </div>
+    <div class="section">
+      <div class="section-header"><span class="section-num">16</span><span class="section-title">Resolved Findings</span><div class="section-line"></div></div>
+      <div class="panel"><div class="panel-body">
+        <ul class="row-list">
+          <li><span class="row-key" style="color:#5ed9a0">SI-2</span><span class="row-val">SCHEMA_REFERENCE.md claims orgId on LegalSource (MEDIUM)</span></li><li><span class="row-key" style="color:#5ed9a0">SI-3</span><span class="row-val">SCHEMA_REFERENCE.md claims orgId on LegalVariable (MEDIUM)</span></li><li><span class="row-key" style="color:#5ed9a0">SI-4</span><span class="row-val">SCHEMA_REFERENCE.md claims orgId on LegalRule (MEDIUM)</span></li><li><span class="row-key" style="color:#5ed9a0">SI-5</span><span class="row-val">InvoiceStatus enum doc drift (MEDIUM)</span></li><li><span class="row-key" style="color:#5ed9a0">SI-6</span><span class="row-val">RentalApplicationStatus enum doc drift (MEDIUM)</span></li><li><span class="row-key" style="color:#5ed9a0">SI-7</span><span class="row-val">RentalApplicationUnitStatus enum doc drift (MEDIUM)</span></li><li><span class="row-key" style="color:#5ed9a0">SI-8</span><span class="row-val">EmailTemplate enum doc drift (MEDIUM)</span></li><li><span class="row-key" style="color:#5ed9a0">SI-10</span><span class="row-val">RentalOwnerSelectionStatus enum doc drift (LOW)</span></li><li><span class="row-key" style="color:#5ed9a0">SI-11</span><span class="row-val">EmailOutboxStatus enum doc drift (LOW)</span></li><li><span class="row-key" style="color:#5ed9a0">TC-4</span><span class="row-val">`--runInBand` not configured; 16+ servers in parallel (HIGH)</span></li><li><span class="row-key" style="color:#5ed9a0">TC-5</span><span class="row-val">Port 3206 used by 3 test files (HIGH)</span></li><li><span class="row-key" style="color:#5ed9a0">SA-1</span><span class="row-val">`getOrgIdForRequest()` falls back to DEFAULT_ORG_ID (CRITICAL)</span></li><li><span class="row-key" style="color:#5ed9a0">SA-2</span><span class="row-val">All tenant-portal routes are IDOR-vulnerable (HIGH)</span></li><li><span class="row-key" style="color:#5ed9a0">SA-3</span><span class="row-val">Rental attachment download unprotected — PII exposure (HIGH)</span></li><li><span class="row-key" style="color:#5ed9a0">SA-4</span><span class="row-val">Rental application documents listing unprotected (HIGH)</span></li><li><span class="row-key" style="color:#5ed9a0">SA-5</span><span class="row-val">Email outbox routes exposed without auth or prod guard (HIGH)</span></li><li><span class="row-key" style="color:#5ed9a0">SA-6</span><span class="row-val">`DEV_IDENTITY_ENABLED` has no production guard (HIGH)</span></li><li><span class="row-key" style="color:#5ed9a0">SA-7</span><span class="row-val">Contractor request events POST has no auth (HIGH)</span></li><li><span class="row-key" style="color:#5ed9a0">SA-8</span><span class="row-val">Contractor-assigned requests have no auth (HIGH)</span></li><li><span class="row-key" style="color:#5ed9a0">SA-9</span><span class="row-val">Dev identity header allows org spoofing (HIGH)</span></li><li><span class="row-key" style="color:#5ed9a0">SA-10</span><span class="row-val">`maybeRequireManager` allows MANAGER + OWNER on writes (MEDIUM)</span></li><li><span class="row-key" style="color:#5ed9a0">SA-11</span><span class="row-val">Legal routes lack org scoping (MEDIUM)</span></li><li><span class="row-key" style="color:#5ed9a0">SA-12</span><span class="row-val">`POST /requests` conditionally authed (MEDIUM)</span></li><li><span class="row-key" style="color:#5ed9a0">SA-13</span><span class="row-val">Contractor suggest and match endpoints no auth (MEDIUM)</span></li><li><span class="row-key" style="color:#5ed9a0">SA-14</span><span class="row-val">`DELETE /requests` no auth (MEDIUM)</span></li><li><span class="row-key" style="color:#5ed9a0">SA-15</span><span class="row-val">`POST /document-scan` no auth (MEDIUM)</span></li><li><span class="row-key" style="color:#5ed9a0">SA-16</span><span class="row-val">Governance routes missing wrapper (MEDIUM)</span></li><li><span class="row-key" style="color:#5ed9a0">SA-17</span><span class="row-val">`maybeRequireManager` bypasses role check on AUTH_OPTIONAL (MEDIUM)</span></li><li><span class="row-key" style="color:#5ed9a0">SA-18</span><span class="row-val">`POST /triage` no auth (MEDIUM)</span></li><li><span class="row-key" style="color:#5ed9a0">SA-19</span><span class="row-val">Weak default JWT secret (LOW)</span></li><li><span class="row-key" style="color:#5ed9a0">SA-20</span><span class="row-val">Event logger outputs payload (LOW)</span></li>
+        </ul>
+      </div></div>
+    </div>
+    <div class="section">
+      <div class="section-header"><span class="section-num">17</span><span class="section-title">Open Findings</span><div class="section-line"></div></div>
+      <div class="panel"><div class="panel-body">
+        <ul class="row-list">
+          <li><span class="row-key" style="color:#f5c060">CQ-1</span><span class="row-val">`routes/legal.ts` — massive layer violation (HIGH)</span></li><li><span class="row-key" style="color:#f5c060">CQ-2</span><span class="row-val">`routes/rentalApplications.ts` — selection pipeline duplicated (HIGH)</span></li><li><span class="row-key" style="color:#f5c060">CQ-3</span><span class="row-val">`routes/tenants.ts` — business logic in route (HIGH)</span></li><li><span class="row-key" style="color:#f5c060">CQ-4</span><span class="row-val">`routes/leases.ts` — notification logic in route (HIGH)</span></li><li><span class="row-key" style="color:#f5c060">CQ-5</span><span class="row-val">`routes/legal.ts` — coverage computation (HIGH)</span></li><li><span class="row-key" style="color:#f5c060">CQ-6</span><span class="row-val">`routes/legal.ts` — evaluation listing (HIGH)</span></li><li><span class="row-key" style="color:#f5c060">CQ-7</span><span class="row-val">`routes/legal.ts` — ad-hoc includes (HIGH) ✅ Resolved 2026-03-10</span></li><li><span class="row-key" style="color:#8898aa">CQ-8</span><span class="row-val">`routes/auth.ts` — direct Prisma (MEDIUM)</span></li><li><span class="row-key" style="color:#8898aa">CQ-9</span><span class="row-val">`routes/requests.ts` — direct Prisma for events (MEDIUM)</span></li><li><span class="row-key" style="color:#8898aa">CQ-10</span><span class="row-val">`routes/requests.ts` — owner-reject has no workflow (MEDIUM)</span></li><li><span class="row-key" style="color:#8898aa">CQ-11</span><span class="row-val">`routes/invoices.ts` — workflows exist but not wired (MEDIUM)</span></li><li><span class="row-key" style="color:#8898aa">CQ-12</span><span class="row-val">`routes/inventory.ts` — direct Prisma for assets (MEDIUM) ✅ Resolved 2026-03-10</span></li><li><span class="row-key" style="color:#8898aa">CQ-13</span><span class="row-val">`routes/contractor.ts` — direct Prisma for verification (MEDIUM) ✅ Resolved 2026-03-10</span></li><li><span class="row-key" style="color:#8898aa">CQ-14</span><span class="row-val">`routes/rentalApplications.ts` — attachment download direct Prisma (MEDIUM) ✅ Resolved 2026-03-10</span></li><li><span class="row-key" style="color:#8898aa">CQ-15</span><span class="row-val">`routes/invoices.ts` — job status branching in route (MEDIUM)</span></li><li><span class="row-key" style="color:#8898aa">CQ-16–35</span><span class="row-val">Additional low-severity findings</span></li><li><span class="row-key" style="color:#f5c060">SI-1</span><span class="row-val">Inventory missing org scope resolver (HIGH)</span></li><li><span class="row-key" style="color:#8898aa">SI-9</span><span class="row-val">Request.orgId migration still pending (LOW)</span></li><li><span class="row-key" style="color:#8898aa">SI-12</span><span class="row-val">Schema gotchas and enum integrity verified (INFO)</span></li><li><span class="row-key" style="color:#f5c060">TC-1</span><span class="row-val">9 of 14 workflows have zero test coverage (HIGH)</span></li><li><span class="row-key" style="color:#f5c060">TC-2</span><span class="row-val">`routes/config.ts` has zero test coverage (HIGH)</span></li><li><span class="row-key" style="color:#f5c060">TC-3</span><span class="row-val">`GET /leases/:id` contract test missing (HIGH)</span></li><li><span class="row-key" style="color:#f5c060">TC-6</span><span class="row-val">No cross-org access test at HTTP auth gate level (HIGH)</span></li><li><span class="row-key" style="color:#8898aa">TC-7</span><span class="row-val">`routes/helpers.ts` has zero test coverage (MEDIUM)</span></li><li><span class="row-key" style="color:#8898aa">TC-8</span><span class="row-val">`GET /requests` contract test missing nested assertions (MEDIUM)</span></li><li><span class="row-key" style="color:#8898aa">TC-9</span><span class="row-val">`completeJobWorkflow` test is shallow (MEDIUM)</span></li><li><span class="row-key" style="color:#8898aa">TC-10</span><span class="row-val">No unit test for auth token decode/verify (MEDIUM)</span></li><li><span class="row-key" style="color:#8898aa">TC-11</span><span class="row-val">`startServer` copy-pasted in 14 test files (MEDIUM)</span></li><li><span class="row-key" style="color:#8898aa">TC-12</span><span class="row-val">Only CONTRACTOR role tested as "wrong role" (MEDIUM)</span></li><li><span class="row-key" style="color:#8898aa">TC-13</span><span class="row-val">No malformed/expired token test (MEDIUM)</span></li><li><span class="row-key" style="color:#8898aa">TC-14</span><span class="row-val">`ownerDirect.foundation.test.ts` uses PID-based port (MEDIUM)</span></li><li><span class="row-key" style="color:#8898aa">TC-15</span><span class="row-val">Building config only indirectly tested (LOW)</span></li>
+        </ul>
+      </div></div>
+    </div>
+  </div>
+
+  <!-- ══ BACKLOG ══ -->
+  <div class="tab-pane" id="tab-backlog">
+    <div class="section">
+      <div class="section-header"><span class="section-num">18</span><span class="section-title">Active Backlog</span><div class="section-line"></div></div>
+      <div class="panel"><div class="panel-body">
+        <div class="backlog-item"><div class="backlog-dot"></div><div>Lease Phase 3–5: DocuSign/Skribble integration, deposit payment tracking, archive workflow</div></div><div class="backlog-item"><div class="backlog-dot"></div><div>Role enforcement refinement (all routes protected; role granularity can be tightened further)</div></div><div class="backlog-item"><div class="backlog-dot"></div><div>Email delivery provider integration (EmailOutbox + dev sink implemented; no SMTP/SendGrid wired yet)</div></div><div class="backlog-item"><div class="backlog-dot"></div><div>Notifications push delivery (in-app notifications work; no push/email delivery)</div></div><div class="backlog-item"><div class="backlog-dot"></div><div>`reports.js` — define reporting scope before building (product decision required)</div></div><div class="backlog-item"><div class="backlog-dot"></div><div>Multi-org support (org scoping via M1; auth centralized via M2; DEFAULT_ORG_ID remains only in authz.ts dev/test fallback + orgConfig.ts bootstrap + tests; production returns null via SA-1 fix)</div></div><div class="backlog-item"><div class="backlog-dot"></div><div>Legal DSL variable resolver — wire LegalVariable values into DSL condition evaluation so rules can condition on ingested data (e.g. reference interest rate > 1.5%). Prerequisite for full canton-scoped rule evaluation. Depends on: LegalSource Scope slice (done).</div></div><div class="backlog-item"><div class="backlog-dot"></div><div>Consolidate DTO files — buildingDetail.ts was created as a standalone file; review whether it should be merged with other DTO definitions for consistency</div></div>
+      </div></div>
+    </div>
+    <div class="section">
+      <div class="section-header"><span class="section-num">19</span><span class="section-title">Known Technical Debt</span><div class="section-line"></div></div>
+      <div class="panel"><div class="panel-body">
+        <ul class="row-list">
+          <li><span class="row-key" style="color:#5ed9a0">TEST FLAKE</span><span class="row-val">✅ Resolved (TC-4/TC-5): maxWorkers:1 + port deconfliction</span></li>
+          <li><span class="row-key" style="color:#f5c060">SHADOW DB</span><span class="row-val">G8 exception: LKDE tables via db push; shadow DB can’t replay migration 20260223_add_leases</span></li>
+          <li><span class="row-key" style="color:#f5c060">DSL VARS</span><span class="row-val">LegalVariable values not wired into DSL condition evaluation (blocks canton-scoped rules)</span></li>
+          <li><span class="row-key" style="color:#f5c060">MULTI-ORG</span><span class="row-val">DEFAULT_ORG_ID in authz.ts dev/test fallback — production returns null (SA-1 ✅)</span></li>
+          <li><span class="row-key" style="color:#5a6580">DEFERRED</span><span class="row-val">Email delivery, push notifications, DocuSign/Skribble, reports.js</span></li>
+        </ul>
+      </div></div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div style="margin-top:40px;padding-top:16px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;font-family:'IBM Plex Mono',mono;font-size:10px;color:var(--text-dim)">
+    <div>Maintenance Agent · Architecture Blueprint · 2026-03-10 16:49:58 UTC · branch: main @ ed7c841</div>
+    <div style="display:flex;gap:14px">
+      <span style="color:#5ed9a0">● Implemented</span>
+      <span style="color:#f5c060">● Partial / Exception</span>
+      <span style="color:#ff8080">● Risk / Banned</span>
+    </div>
+  </div>
+
+</div>
+<script>
+function switchTab(id, btn) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  btn.classList.add('active');
+}
+</script>
+</body>
+</html>

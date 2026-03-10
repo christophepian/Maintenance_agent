@@ -5,4 +5,5 @@ module.exports = {
   moduleFileExtensions: ['ts', 'js', 'json'],
   roots: ['<rootDir>/src'],
   testTimeout: 30000,
+  maxWorkers: 1,
 };

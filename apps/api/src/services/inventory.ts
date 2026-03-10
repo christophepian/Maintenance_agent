@@ -1,7 +1,6 @@
 import { UnitType, LocationSegment, InsulationQuality, EnergyLabel, HeatingType } from "@prisma/client";
 import prisma from './prismaClient';
-const activeFilter = (includeInactive?: boolean) =>
-  includeInactive ? {} : { isActive: true };
+import * as inventoryRepo from "../repositories/inventoryRepository";
 
 const assetModelName = (model: { manufacturer: string; model: string }) => {
   if (!model.manufacturer || model.manufacturer.toLowerCase() === "unknown") return model.model;
@@ -12,23 +11,14 @@ const assetModelName = (model: { manufacturer: string; model: string }) => {
 // Buildings
 // =========================
 export async function listBuildings(orgId: string, includeInactive?: boolean) {
-  return prisma.building.findMany({
-    where: { orgId, ...activeFilter(includeInactive) },
-    orderBy: { createdAt: "desc" },
-  });
+  return inventoryRepo.listBuildings(prisma, orgId, includeInactive);
 }
 export async function createBuilding(
   orgId: string,
   data: { name: string; address?: string }
 ) {
   const address = data.address?.trim() || data.name;
-  return prisma.building.create({
-    data: {
-  orgId,
-  name: data.name,
-  address,
-    },
-  });
+  return inventoryRepo.createBuilding(prisma, orgId, { name: data.name, address });
 }
 export async function updateBuilding(
   orgId: string,
@@ -39,37 +29,24 @@ export async function updateBuilding(
     yearBuilt?: number;
     hasElevator?: boolean;
     hasConcierge?: boolean;
+    managedSince?: Date | null;
   }
 ) {
-  const existing = await prisma.building.findFirst({ where: { id: buildingId, orgId } });
+  const existing = await inventoryRepo.findBuildingByIdAndOrg(prisma, buildingId, orgId);
   if (!existing) return null;
-  return prisma.building.update({
-    where: { id: buildingId },
-    data: {
-      name: data.name ?? undefined,
-      address: data.address ?? undefined,
-      yearBuilt: data.yearBuilt ?? undefined,
-      hasElevator: data.hasElevator ?? undefined,
-      hasConcierge: data.hasConcierge ?? undefined,
-    },
-  });
+  return inventoryRepo.updateBuilding(prisma, buildingId, data);
 }
 
 export async function deactivateBuilding(orgId: string, buildingId: string) {
-  const existing = await prisma.building.findFirst({ where: { id: buildingId, orgId } });
+  const existing = await inventoryRepo.findBuildingByIdAndOrg(prisma, buildingId, orgId);
   if (!existing) return { success: false, reason: "NOT_FOUND" };
 
-  const activeUnits = await prisma.unit.count({
-    where: { buildingId, ...activeFilter(false) },
-  });
+  const activeUnits = await inventoryRepo.countActiveUnits(prisma, buildingId);
   if (activeUnits > 0) {
     return { success: false, reason: "HAS_ACTIVE_UNITS" };
   }
 
-  await prisma.building.update({
-    where: { id: buildingId },
-    data: { isActive: false },
-  });
+  await inventoryRepo.deactivateBuilding(prisma, buildingId);
   return { success: true };
 }
 
@@ -83,15 +60,7 @@ export async function listUnits(
   includeInactive?: boolean,
   type?: UnitType
 ) {
-  return prisma.unit.findMany({
-    where: {
-      orgId,
-  buildingId,
-  ...activeFilter(includeInactive),
-  ...(type ? { type } : {}),
-    },
-    orderBy: { unitNumber: "asc" },
-  });
+  return inventoryRepo.listUnits(prisma, orgId, buildingId, includeInactive, type);
 }
 
 export async function createUnit(
@@ -99,18 +68,10 @@ export async function createUnit(
   buildingId: string,
   data: { unitNumber: string; floor?: string; type?: UnitType }
 ) {
-  const building = await prisma.building.findFirst({ where: { id: buildingId, orgId } });
+  const building = await inventoryRepo.findBuildingByIdAndOrg(prisma, buildingId, orgId);
   if (!building) return null;
 
-  return prisma.unit.create({
-    data: {
-      buildingId,
-      orgId,
-  unitNumber: data.unitNumber,
-  floor: data.floor ?? null,
-  type: data.type ?? UnitType.RESIDENTIAL,
-    },
-  });
+  return inventoryRepo.createUnit(prisma, orgId, buildingId, data);
 }
 export async function updateUnit(
   orgId: string,
@@ -133,53 +94,26 @@ export async function updateUnit(
     monthlyChargesChf?: number | null;
   }
 ) {
-  const existing = await prisma.unit.findFirst({ where: { id: unitId, orgId } });
+  const existing = await inventoryRepo.findUnitByIdAndOrg(prisma, unitId, orgId);
   if (!existing) return null;
 
-  return prisma.unit.update({
-    where: { id: unitId },
-    data: {
-      unitNumber: data.unitNumber ?? undefined,
-      floor: data.floor ?? undefined,
-      type: data.type ?? undefined,
-      livingAreaSqm: data.livingAreaSqm ?? undefined,
-      rooms: data.rooms ?? undefined,
-      hasBalcony: data.hasBalcony ?? undefined,
-      hasTerrace: data.hasTerrace ?? undefined,
-      hasParking: data.hasParking ?? undefined,
-      locationSegment: data.locationSegment ?? undefined,
-      lastRenovationYear: data.lastRenovationYear ?? undefined,
-      insulationQuality: data.insulationQuality ?? undefined,
-      energyLabel: data.energyLabel ?? undefined,
-      heatingType: data.heatingType ?? undefined,
-      ...(data.monthlyRentChf !== undefined ? { monthlyRentChf: data.monthlyRentChf } : {}),
-      ...(data.monthlyChargesChf !== undefined ? { monthlyChargesChf: data.monthlyChargesChf } : {}),
-    },
-  });
+  return inventoryRepo.updateUnit(prisma, unitId, data);
 }
 
 export async function getUnitById(orgId: string, unitId: string) {
-  return prisma.unit.findFirst({
-    where: { id: unitId, orgId },
-    include: { building: true },
-  });
+  return inventoryRepo.findUnitByIdAndOrg(prisma, unitId, orgId);
 }
 
 export async function deactivateUnit(orgId: string, unitId: string) {
-  const existing = await prisma.unit.findFirst({ where: { id: unitId, orgId } });
+  const existing = await inventoryRepo.findUnitByIdAndOrg(prisma, unitId, orgId);
   if (!existing) return { success: false, reason: "NOT_FOUND" };
 
-  const activeAppliances = await prisma.appliance.count({
-    where: { unitId, ...activeFilter(false) },
-  });
+  const activeAppliances = await inventoryRepo.countActiveAppliances(prisma, unitId);
   if (activeAppliances > 0) {
     return { success: false, reason: "HAS_ACTIVE_APPLIANCES" };
   }
 
-  await prisma.unit.update({
-    where: { id: unitId },
-    data: { isActive: false },
-  });
+  await inventoryRepo.deactivateUnit(prisma, unitId);
   return { success: true };
 }
 
@@ -192,11 +126,7 @@ export async function listAppliances(
   unitId: string,
   includeInactive?: boolean
 ) {
-  return prisma.appliance.findMany({
-    where: { orgId, unitId, ...activeFilter(includeInactive) },
-    include: { assetModel: true },
-    orderBy: { createdAt: "desc" },
-  });
+  return inventoryRepo.listAppliances(prisma, orgId, unitId, includeInactive);
 }
 export async function createAppliance(
   orgId: string,
@@ -209,20 +139,15 @@ export async function createAppliance(
     notes?: string;
   }
 ) {
-  const unit = await prisma.unit.findFirst({ where: { id: unitId, orgId } });
+  const unit = await inventoryRepo.findUnitByIdAndOrg(prisma, unitId, orgId);
   if (!unit) return null;
 
-  return prisma.appliance.create({
-    data: {
-      unitId,
-      orgId,
-  name: data.name,
-  assetModelId: data.assetModelId ?? null,
-  serial: data.serial ?? null,
-      installDate: data.installDate ? new Date(data.installDate) : null,
-      notes: data.notes ?? null,
-    },
-    include: { assetModel: true },
+  return inventoryRepo.createAppliance(prisma, orgId, unitId, {
+    name: data.name,
+    assetModelId: data.assetModelId ?? null,
+    serial: data.serial ?? null,
+    installDate: data.installDate ? new Date(data.installDate) : null,
+    notes: data.notes ?? null,
   });
 }
 export async function updateAppliance(
@@ -236,35 +161,28 @@ export async function updateAppliance(
     notes?: string;
   }
 ) {
-  const existing = await prisma.appliance.findFirst({ where: { id: applianceId, orgId } });
+  const existing = await inventoryRepo.findApplianceByIdAndOrg(prisma, applianceId, orgId);
   if (!existing) return null;
 
-  return prisma.appliance.update({
-    where: { id: applianceId },
-    data: {
-      name: data.name ?? undefined,
-  assetModelId: data.assetModelId ?? undefined,
-  serial: data.serial ?? undefined,
-  installDate: data.installDate ? new Date(data.installDate) : undefined,
-      notes: data.notes ?? undefined,
-    },
-    include: { assetModel: true },
+  return inventoryRepo.updateAppliance(prisma, applianceId, {
+    name: data.name ?? undefined,
+    assetModelId: data.assetModelId ?? undefined,
+    serial: data.serial ?? undefined,
+    installDate: data.installDate ? new Date(data.installDate) : undefined,
+    notes: data.notes ?? undefined,
   });
 }
 
 export async function deactivateAppliance(orgId: string, applianceId: string) {
-  const existing = await prisma.appliance.findFirst({ where: { id: applianceId, orgId } });
+  const existing = await inventoryRepo.findApplianceByIdAndOrg(prisma, applianceId, orgId);
   if (!existing) return { success: false, reason: "NOT_FOUND" };
 
-  const requestCount = await prisma.request.count({ where: { applianceId } });
+  const requestCount = await inventoryRepo.countRequestsForAppliance(prisma, applianceId);
   if (requestCount > 0) {
     return { success: false, reason: "HAS_REQUESTS" };
   }
 
-  await prisma.appliance.update({
-    where: { id: applianceId },
-    data: { isActive: false },
-  });
+  await inventoryRepo.deactivateAppliance(prisma, applianceId);
   return { success: true };
 }
 
@@ -273,13 +191,7 @@ export async function deactivateAppliance(orgId: string, applianceId: string) {
 // =========================
 
 export async function listAssetModels(orgId: string, includeInactive?: boolean) {
-  return prisma.assetModel.findMany({
-    where: {
-      ...activeFilter(includeInactive),
-      OR: [{ orgId: null }, { orgId }],
-    },
-    orderBy: [{ category: "asc" }, { manufacturer: "asc" }, { model: "asc" }],
-  });
+  return inventoryRepo.listAssetModels(prisma, orgId, includeInactive);
 }
 
 export async function createAssetModel(
@@ -296,15 +208,11 @@ export async function createAssetModel(
   const model = data.model?.trim() || data.name.trim();
   const category = data.category.trim();
 
-  const assetModel = await prisma.assetModel.create({
-    data: {
-      orgId,
-  manufacturer,
-  model,
-  category,
-      specs: data.specs ?? null,
-      isActive: true,
-    },
+  const assetModel = await inventoryRepo.createAssetModel(prisma, orgId, {
+    manufacturer,
+    model,
+    category,
+    specs: data.specs ?? null,
   });
 
   return { ...assetModel, name: assetModelName(assetModel) };
@@ -321,38 +229,32 @@ export async function updateAssetModel(
     specs?: string;
   }
 ) {
-  const existing = await prisma.assetModel.findFirst({ where: { id: modelId } });
+  const existing = await inventoryRepo.findAssetModelById(prisma, modelId);
   if (!existing) return null;
   if (!existing.orgId || existing.orgId !== orgId) return null;
 
   const manufacturer = data.manufacturer ?? (data.name ? "Unknown" : undefined);
   const model = data.model ?? data.name;
 
-  return prisma.assetModel.update({
-    where: { id: modelId },
-    data: {
-      manufacturer: manufacturer ?? undefined,
-  model: model ?? undefined,
-  category: data.category ? data.category.trim() : undefined,
-  specs: data.specs ?? undefined,
-    },
+  return inventoryRepo.updateAssetModel(prisma, modelId, {
+    manufacturer: manufacturer ?? undefined,
+    model: model ?? undefined,
+    category: data.category ? data.category.trim() : undefined,
+    specs: data.specs ?? undefined,
   });
 }
 
 export async function deactivateAssetModel(orgId: string, modelId: string) {
-  const existing = await prisma.assetModel.findFirst({ where: { id: modelId } });
+  const existing = await inventoryRepo.findAssetModelById(prisma, modelId);
   if (!existing) return { success: false, reason: "NOT_FOUND" };
   if (!existing.orgId || existing.orgId !== orgId) return { success: false, reason: "FORBIDDEN" };
 
-  const applianceCount = await prisma.appliance.count({ where: { assetModelId: modelId } });
+  const applianceCount = await inventoryRepo.countAppliancesForAssetModel(prisma, modelId);
   if (applianceCount > 0) {
     return { success: false, reason: "HAS_APPLIANCES" };
   }
 
-  await prisma.assetModel.update({
-    where: { id: modelId },
-    data: { isActive: false },
-  });
+  await inventoryRepo.deactivateAssetModel(prisma, modelId);
   return { success: true };
 }
 

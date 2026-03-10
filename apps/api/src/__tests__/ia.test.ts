@@ -4,7 +4,7 @@ import * as path from "path";
 
 const API_ROOT = path.resolve(__dirname, "..", "..");
 const TS_NODE = path.resolve(API_ROOT, "node_modules", ".bin", "ts-node");
-const PORT = 3206;
+const PORT = 3210;
 const BASE_URL = `http://127.0.0.1:${PORT}`;
 
 function startServer(envOverrides: Record<string, string>, port: number) {

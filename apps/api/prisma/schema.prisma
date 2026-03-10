@@ -159,10 +159,11 @@ model User {
   role         Role
   name         String
   createdAt    DateTime @default(now())
-  email        String?
-  passwordHash String?
-  updatedAt    DateTime @updatedAt
-  org          Org      @relation(fields: [orgId], references: [id])
+  email          String?
+  passwordHash   String?
+  updatedAt      DateTime        @updatedAt
+  org            Org             @relation(fields: [orgId], references: [id])
+  ownedBuildings BuildingOwner[]
 
   @@unique([orgId, email], name: "user_org_email_unique")
 }
@@ -261,6 +262,9 @@ model Building {
   hasElevator  Boolean @default(false)
   hasConcierge Boolean @default(false)
 
+  // Management
+  managedSince DateTime?
+
   // Legal engine: canton derivation
   canton          String?
   cantonDerivedAt DateTime?
@@ -275,8 +279,23 @@ model Building {
   units              Unit[]
   financialSnapshots BuildingFinancialSnapshot[]
   rfps               Rfp[]
+  owners             BuildingOwner[]
 
   @@index([orgId])
+}
+
+model BuildingOwner {
+  id         String   @id @default(uuid())
+  buildingId String
+  userId     String
+  createdAt  DateTime @default(now())
+
+  building Building @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([buildingId, userId])
+  @@index([buildingId])
+  @@index([userId])
 }
 
 model BuildingConfig {

@@ -43,6 +43,12 @@ if (isProdEnv) {
     );
     process.exit(1);
   }
+  if (process.env.DEV_IDENTITY_ENABLED === "true") {
+    console.error(
+      "[FATAL] DEV_IDENTITY_ENABLED=true is not permitted in production. Refusing to start.",
+    );
+    process.exit(1);
+  }
 }
 
 const port = process.env.PORT ? Number(process.env.PORT) : 3001;
@@ -122,6 +128,11 @@ const server = http.createServer(async (req: AuthedRequest, res) => {
     /* Parse URL + resolve org */
     const { path, query } = parseQuery(req.url);
     const orgId = getOrgIdForRequest(req);
+
+    if (orgId === null) {
+      sendError(res, 401, "UNAUTHORIZED", "Authentication required");
+      return;
+    }
 
     /* Dispatch through router */
     const handled = await router.dispatch(req, res, path, query, orgId, prisma);

@@ -6,6 +6,7 @@ import PageContent from "../../components/layout/PageContent";
 import { formatDateTime } from "../../lib/format";
 import Panel from "../../components/layout/Panel";
 import { authHeaders } from "../../lib/api";
+import { styles } from "../../styles/managerStyles";
 function statusBadge(status) {
   switch (status) {
     case "PENDING":
@@ -101,7 +102,7 @@ export default function DevEmailsPage() {
                 {loading && <p className="text-sm text-slate-500">Loading…</p>}
 
                 {!loading && emails.length === 0 && (
-                  <p className="py-4 text-center text-sm text-slate-500">No emails in outbox.</p>
+                  <div style={styles.emptyState}><p style={styles.emptyStateText}>No emails in outbox.</p></div>
                 )}
 
                 {!loading && emails.length > 0 && (

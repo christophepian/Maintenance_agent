@@ -1,6 +1,11 @@
-import { InvoiceStatus, BillingEntityType } from '@prisma/client';
+import { InvoiceStatus, BillingEntityType, Prisma } from '@prisma/client';
 import prisma from './prismaClient';
-import { INVOICE_FULL_INCLUDE } from '../repositories/invoiceRepository';
+import { INVOICE_FULL_INCLUDE, INVOICE_SUMMARY_INCLUDE } from '../repositories/invoiceRepository';
+
+/** Compile-time type for an Invoice row loaded with INVOICE_FULL_INCLUDE. */
+type InvoiceWithFullInclude = Prisma.InvoiceGetPayload<{ include: typeof INVOICE_FULL_INCLUDE }>;
+/** Compile-time type for an Invoice row loaded with INVOICE_SUMMARY_INCLUDE. */
+type InvoiceWithSummaryInclude = Prisma.InvoiceGetPayload<{ include: typeof INVOICE_SUMMARY_INCLUDE }>;
 
 /**
  * G9: Canonical include tree for Invoice queries.
@@ -611,7 +616,7 @@ export async function getOrCreateInvoiceForJob(
   });
 }
 
-function mapInvoiceToDTO(invoice: any): InvoiceDTO {
+function mapInvoiceToDTO(invoice: InvoiceWithFullInclude): InvoiceDTO {
   const subtotalAmount = invoice.subtotalAmount ?? 0;
   const vatAmount = invoice.vatAmount ?? 0;
   const totalAmount = invoice.totalAmount ?? 0;
@@ -664,7 +669,7 @@ function mapInvoiceToDTO(invoice: any): InvoiceDTO {
   };
 }
 
-  function mapInvoiceToSummaryDTO(invoice: any): InvoiceSummaryDTO {
+  function mapInvoiceToSummaryDTO(invoice: InvoiceWithSummaryInclude): InvoiceSummaryDTO {
     const totalAmount = invoice.totalAmount ?? 0;
     return {
       id: invoice.id,

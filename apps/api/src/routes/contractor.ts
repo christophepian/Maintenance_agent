@@ -4,6 +4,7 @@ import { first, getIntParam } from "../http/query";
 import { getAuthUser } from "../authz";
 import { listJobs, getJob } from "../services/jobs";
 import { listInvoices, getInvoice } from "../services/invoices";
+import * as contractorRepo from "../repositories/contractorRepository";
 
 /**
  * Contractor-scoped routes: /contractor/jobs, /contractor/invoices
@@ -35,12 +36,10 @@ export function registerContractorRoutes(router: Router) {
         return sendError(res, 400, "VALIDATION_ERROR", "contractorId parameter required");
       }
 
-      // Verify contractor exists in this org
-      const contractor = await prisma.contractor.findUnique({
-        where: { id: contractorId },
-      });
+      // Verify contractor exists in this org (CQ-13: via repository)
+      const contractor = await contractorRepo.verifyOrgOwnership(prisma, contractorId, orgId);
 
-      if (!contractor || contractor.orgId !== orgId) {
+      if (!contractor) {
         return sendError(res, 404, "NOT_FOUND", "Contractor not found");
       }
 
@@ -78,12 +77,10 @@ export function registerContractorRoutes(router: Router) {
         return sendError(res, 400, "VALIDATION_ERROR", "contractorId parameter required");
       }
 
-      // Verify contractor exists in this org
-      const contractor = await prisma.contractor.findUnique({
-        where: { id: contractorId },
-      });
+      // Verify contractor exists in this org (CQ-13: via repository)
+      const contractor = await contractorRepo.verifyOrgOwnership(prisma, contractorId, orgId);
 
-      if (!contractor || contractor.orgId !== orgId) {
+      if (!contractor) {
         return sendError(res, 404, "NOT_FOUND", "Contractor not found");
       }
 
@@ -121,12 +118,10 @@ export function registerContractorRoutes(router: Router) {
         return sendError(res, 400, "VALIDATION_ERROR", "contractorId parameter required");
       }
 
-      // Verify contractor exists in this org
-      const contractor = await prisma.contractor.findUnique({
-        where: { id: contractorId },
-      });
+      // Verify contractor exists in this org (CQ-13: via repository)
+      const contractor = await contractorRepo.verifyOrgOwnership(prisma, contractorId, orgId);
 
-      if (!contractor || contractor.orgId !== orgId) {
+      if (!contractor) {
         return sendError(res, 404, "NOT_FOUND", "Contractor not found");
       }
 
@@ -164,12 +159,10 @@ export function registerContractorRoutes(router: Router) {
         return sendError(res, 400, "VALIDATION_ERROR", "contractorId parameter required");
       }
 
-      // Verify contractor exists in this org
-      const contractor = await prisma.contractor.findUnique({
-        where: { id: contractorId },
-      });
+      // Verify contractor exists in this org (CQ-13: via repository)
+      const contractor = await contractorRepo.verifyOrgOwnership(prisma, contractorId, orgId);
 
-      if (!contractor || contractor.orgId !== orgId) {
+      if (!contractor) {
         return sendError(res, 404, "NOT_FOUND", "Contractor not found");
       }
 

@@ -8,6 +8,7 @@ import PageContent from "../../../components/layout/PageContent";
 import Panel from "../../../components/layout/Panel";
 import Section from "../../../components/layout/Section";
 import UndoToast, { useUndoToast } from "../../../components/ui/UndoToast";
+import { styles } from "../../../styles/managerStyles";
 
 /**
  * Reusable action dropdown button — renders an "Actions ▾" pill that opens
@@ -492,7 +493,7 @@ export default function LeaseTemplatesPage() {
             ) : error ? (
               <p className="text-sm text-red-600">{error}</p>
             ) : templates.length === 0 ? (
-              <p className="text-sm text-slate-500 text-center py-4">No lease templates found. Click &quot;+ New Template&quot; to create one.</p>
+              <div style={styles.emptyState}><p style={styles.emptyStateText}>No lease templates found. Click &quot;+ New Template&quot; to create one.</p></div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-slate-200 text-sm">

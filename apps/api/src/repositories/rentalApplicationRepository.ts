@@ -9,7 +9,7 @@
  * G9: canonical include constants live here (delegated to rentalIncludes).
  */
 
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, LeaseStatus, ApplicantRole } from "@prisma/client";
 import {
   RENTAL_APPLICATION_INCLUDE,
   RENTAL_APPLICATION_UNIT_INCLUDE,
@@ -206,3 +206,64 @@ export async function findApplicationWithApplicants(
     include: { applicants: { where: { id: applicantId } } },
   });
 }
+
+// ─── Canonical Includes for Attachments (CQ-14 fix) ───────────
+
+/** Include for listing application documents with applicant attachments. */
+export const RENTAL_DOCUMENTS_INCLUDE = {
+  applicants: {
+    include: { attachments: true },
+    orderBy: { createdAt: "asc" as const },
+  },
+} as const;
+
+/**
+ * Find a rental attachment by ID.
+ * CQ-14: Replaces ad-hoc prisma.rentalAttachment.findUnique() in routes.
+ */
+export async function findAttachmentById(
+  prisma: PrismaClient,
+  attachmentId: string,
+) {
+  return prisma.rentalAttachment.findUnique({
+    where: { id: attachmentId },
+  });
+}
+
+/**
+ * Find an application with applicant documents for the documents listing endpoint.
+ * CQ-14: Replaces ad-hoc prisma.rentalApplication.findUnique() with inline include.
+ */
+export async function findApplicationDocuments(
+  prisma: PrismaClient,
+  applicationId: string,
+) {
+  return prisma.rentalApplication.findUnique({
+    where: { id: applicationId },
+    include: RENTAL_DOCUMENTS_INCLUDE,
+  });
+}
+
+// ─── Canonical Include for Selection Pipeline ──────────────────
+
+/** Shared include for owner/manager selection pipeline queries. */
+export const SELECTION_PIPELINE_INCLUDE = {
+  unit: {
+    include: {
+      building: { select: { id: true, name: true, address: true } },
+      leases: {
+        where: { status: { in: [LeaseStatus.DRAFT, LeaseStatus.READY_TO_SIGN] }, isTemplate: false },
+        orderBy: { createdAt: "desc" as const },
+        take: 1,
+        select: { id: true, status: true, tenantName: true },
+      },
+    },
+  },
+  primarySelection: {
+    include: {
+      application: {
+        include: { applicants: { where: { role: ApplicantRole.PRIMARY }, take: 1 } },
+      },
+    },
+  },
+};
