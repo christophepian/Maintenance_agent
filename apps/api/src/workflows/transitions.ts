@@ -12,30 +12,23 @@ import { RequestStatus, JobStatus, InvoiceStatus, LeaseStatus } from "@prisma/cl
 
 const VALID_REQUEST_TRANSITIONS: Record<string, RequestStatus[]> = {
   [RequestStatus.PENDING_REVIEW]: [
-    RequestStatus.APPROVED,
-    RequestStatus.AUTO_APPROVED,
-    RequestStatus.PENDING_OWNER_APPROVAL,
-    RequestStatus.RFP_PENDING,
-  ],
-  [RequestStatus.AUTO_APPROVED]: [
-    RequestStatus.APPROVED,
-    RequestStatus.ASSIGNED,
-    RequestStatus.IN_PROGRESS,
-    RequestStatus.RFP_PENDING,
-    RequestStatus.PENDING_OWNER_APPROVAL,
-  ],
-  [RequestStatus.PENDING_OWNER_APPROVAL]: [
-    RequestStatus.APPROVED,
-    RequestStatus.PENDING_REVIEW, // owner rejection → back to review
+    RequestStatus.RFP_PENDING,               // legal obligation → RFP
+    RequestStatus.PENDING_OWNER_APPROVAL,    // no/unknown obligation → owner
   ],
   [RequestStatus.RFP_PENDING]: [
-    RequestStatus.APPROVED,
-    RequestStatus.IN_PROGRESS,
+    RequestStatus.AUTO_APPROVED,             // avg quotes ≤ threshold
+    RequestStatus.PENDING_OWNER_APPROVAL,    // avg quotes > threshold
+  ],
+  [RequestStatus.PENDING_OWNER_APPROVAL]: [
+    RequestStatus.APPROVED,                  // owner approves
+    RequestStatus.OWNER_REJECTED,            // owner rejects (terminal)
+  ],
+  [RequestStatus.AUTO_APPROVED]: [
+    RequestStatus.IN_PROGRESS,               // contractor books appointment
   ],
   [RequestStatus.APPROVED]: [
     RequestStatus.ASSIGNED,
     RequestStatus.IN_PROGRESS,
-    RequestStatus.COMPLETED,
   ],
   [RequestStatus.ASSIGNED]: [
     RequestStatus.IN_PROGRESS,
@@ -45,6 +38,7 @@ const VALID_REQUEST_TRANSITIONS: Record<string, RequestStatus[]> = {
     RequestStatus.COMPLETED,
   ],
   [RequestStatus.COMPLETED]: [],
+  [RequestStatus.OWNER_REJECTED]: [],        // terminal
 };
 
 export class InvalidTransitionError extends Error {

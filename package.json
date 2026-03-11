@@ -14,7 +14,9 @@
     "dev:clean:all": "npm run dev:clean:api & npm run dev:clean:web",
     "dev:db": "cd infra && docker compose up -d",
     "db:backup": "mkdir -p backups && docker exec maint_agent_db pg_dump -U postgres maint_agent > backups/dev_$(date +%Y%m%d_%H%M%S).sql && echo Backup saved to backups/",
-    "db:restore": "echo Usage: docker exec -i maint_agent_db psql -U postgres maint_agent < backups/FILENAME.sql"
+    "db:restore": "echo Usage: docker exec -i maint_agent_db psql -U postgres maint_agent < backups/FILENAME.sql",
+    "roadmap": "node scripts/generate-roadmap.js",
+    "roadmap:watch": "npx nodemon --watch ROADMAP.json --watch apps/api/prisma/schema.prisma --watch apps/api/src/workflows --ext ts,json,prisma --exec 'node scripts/generate-roadmap.js'"
   },
   "dependencies": {
     "tailwindcss": "^4.1.18"

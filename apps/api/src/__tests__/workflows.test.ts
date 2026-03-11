@@ -304,7 +304,7 @@ describe("Workflow Layer — Integration", () => {
       const decision = data.data.decision ?? data.data;
       expect(decision).toHaveProperty("legalObligation");
       expect(decision).toHaveProperty("confidence");
-      expect(["OBLIGATED", "NOT_OBLIGATED", "AMBIGUOUS"]).toContain(
+      expect(["OBLIGATED", "NOT_OBLIGATED", "DISCRETIONARY", "TENANT_RESPONSIBLE", "UNKNOWN"]).toContain(
         decision.legalObligation,
       );
     });

@@ -1,4 +1,4 @@
-import { PrismaClient, Prisma, RequestStatus } from "@prisma/client";
+import { PrismaClient, Prisma, RequestStatus, ApprovalSource } from "@prisma/client";
 import { REQUEST_FULL_INCLUDE, REQUEST_SUMMARY_INCLUDE } from "../repositories/requestRepository";
 
 /** Compile-time type for a Request row loaded with REQUEST_FULL_INCLUDE. */
@@ -36,6 +36,8 @@ export type MaintenanceRequestDTO = {
   tenantId?: string | null;
   unitId?: string | null;
   applianceId?: string | null;
+  approvalSource?: ApprovalSource | null;
+  rejectionReason?: string | null;
 
   assignedContractor: null | {
     id: string;
@@ -185,6 +187,8 @@ export function toDTO(r: RequestWithFullInclude): MaintenanceRequestDTO {
     tenantId: r.tenantId ?? null,
     unitId: r.unitId ?? null,
     applianceId: r.applianceId ?? null,
+    approvalSource: r.approvalSource ?? null,
+    rejectionReason: r.rejectionReason ?? null,
 
     assignedContractor: r.assignedContractor
       ? {

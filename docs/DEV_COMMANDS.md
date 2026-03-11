@@ -238,3 +238,6 @@ kill %1 2>/dev/null
 | DB connect | `docker exec -it maint_agent_pg psql -U postgres -d maint_agent` |
 | Type check | `cd apps/api && npx tsc --noEmit` |
 | Drift check | See G5 smoke test above |
+
+#run architecture blueprint
+from apps/api/package.json run: npm run blueprint

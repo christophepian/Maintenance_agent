@@ -15,6 +15,7 @@ import { LoginSchema, RegisterSchema } from "../validation/auth";
 import { LEASE_FULL_INCLUDE } from "../repositories/leaseRepository";
 
 // SA-18: In-memory rate limiter for POST /triage (10 calls/IP/minute)
+// NOTE: Resets on server restart — replace with Redis-backed limiter before multi-tenant production
 const triageRateMap = new Map<string, { count: number; resetAt: number }>();
 const TRIAGE_RATE_LIMIT = 10;
 const TRIAGE_RATE_WINDOW_MS = 60_000;

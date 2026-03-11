@@ -4,7 +4,7 @@
 > be able to read this file and know *exactly which 1-3 files to touch*
 > for any given change.
 
-**Codebase:** 45 models · 35 enums · 32 migrations · 14 workflows · 9 repositories · ~34k backend LOC · ~24k frontend LOC
+**Codebase:** 45 models · 37 enums · 32 migrations · 17 workflows · 9 repositories · ~34k backend LOC · ~24k frontend LOC
 
 ---
 
@@ -185,15 +185,19 @@ Routes build `WorkflowContext` from `HandlerContext` and pass it into workflows.
 
 ### Request Lifecycle
 ```
-PENDING_REVIEW → APPROVED | AUTO_APPROVED | PENDING_OWNER_APPROVAL | RFP_PENDING
-AUTO_APPROVED → APPROVED | ASSIGNED | IN_PROGRESS | RFP_PENDING | PENDING_OWNER_APPROVAL
-PENDING_OWNER_APPROVAL → APPROVED | PENDING_REVIEW
-RFP_PENDING → APPROVED | IN_PROGRESS
-APPROVED → ASSIGNED | IN_PROGRESS | COMPLETED
-ASSIGNED → IN_PROGRESS | COMPLETED
+PENDING_REVIEW → RFP_PENDING | PENDING_OWNER_APPROVAL
+RFP_PENDING → AUTO_APPROVED | PENDING_OWNER_APPROVAL
+PENDING_OWNER_APPROVAL → APPROVED | OWNER_REJECTED
+AUTO_APPROVED → IN_PROGRESS
+APPROVED → IN_PROGRESS
 IN_PROGRESS → COMPLETED
 COMPLETED → (terminal)
+OWNER_REJECTED → (terminal)
 ```
+
+**Key fields:**
+- `approvalSource` (ApprovalSource?) — SYSTEM_AUTO | OWNER_APPROVED | OWNER_REJECTED | LEGAL_OBLIGATION
+- `rejectionReason` (String?) — free-text reason when owner rejects
 
 ### Job Lifecycle
 ```

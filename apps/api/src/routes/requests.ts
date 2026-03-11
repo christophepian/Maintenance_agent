@@ -33,6 +33,7 @@ import { createRequestWorkflow } from "../workflows/createRequestWorkflow";
 import { approveRequestWorkflow } from "../workflows/approveRequestWorkflow";
 import { assignContractorWorkflow } from "../workflows/assignContractorWorkflow";
 import { unassignContractorWorkflow } from "../workflows/unassignContractorWorkflow";
+import { ownerRejectWorkflow } from "../workflows/ownerRejectWorkflow";
 import { InvalidTransitionError } from "../workflows/transitions";
 
 /* ── Helper: build WorkflowContext from HandlerContext ────────── */
@@ -125,9 +126,10 @@ export function registerRequestRoutes(router: Router) {
     }
   });
 
-  /* ── Owner reject (thin — simple status update) ─────────────── */
+  /* ── Owner reject → delegates to ownerRejectWorkflow ─────── */
 
-  router.post("/requests/:id/owner-reject", async ({ req, res, prisma, params, orgId }) => {
+  router.post("/requests/:id/owner-reject", async (ctx) => {
+    const { req, res, prisma, params, orgId } = ctx;
     if (!requireOwnerAccess(req, res)) return;
     const requestId = params.id;
     const resolution = await resolveRequestOrg(prisma, requestId);
@@ -135,24 +137,20 @@ export function registerRequestRoutes(router: Router) {
       return sendError(res, 404, "NOT_FOUND", "Request not found");
     }
     const raw = await readJson(req);
-    const current = await prisma.request.findUnique({ where: { id: requestId } });
-    if (!current) return sendError(res, 404, "NOT_FOUND", "Request not found");
 
-    if (current.status !== RequestStatus.PENDING_OWNER_APPROVAL) {
-      return sendError(res, 409, "INVALID_TRANSITION", `Cannot owner-reject request from ${current.status}`);
+    try {
+      const result = await ownerRejectWorkflow(wfCtx(ctx), {
+        requestId,
+        reason: raw?.reason || null,
+      });
+      sendJson(res, 200, { data: result.dto });
+    } catch (e: any) {
+      if (e instanceof InvalidTransitionError) {
+        return sendError(res, 409, "INVALID_TRANSITION", e.message);
+      }
+      if (e.code === "NOT_FOUND") return sendError(res, 404, "NOT_FOUND", e.message);
+      throw e;
     }
-
-    const updated = await updateMaintenanceRequestStatus(prisma, requestId, RequestStatus.PENDING_REVIEW);
-    if (!updated) return sendError(res, 404, "NOT_FOUND", "Request not found");
-
-    const actor = getAuthUser(req);
-    await logEvent(prisma, {
-      orgId, type: "OWNER_REJECTED",
-      actorUserId: actor?.userId, requestId,
-      payload: { reason: raw?.reason || null },
-    });
-
-    sendJson(res, 200, { data: updated });
   });
 
   /* ── Status update ─────────────────────────────────────────── */

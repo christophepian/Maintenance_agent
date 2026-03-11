@@ -10,7 +10,7 @@
  * Results are logged in LegalEvaluationLog for audit.
  */
 
-import { LegalObligation, LegalAuthority, AssetType } from "@prisma/client";
+import { LegalObligation, LegalAuthority, AssetType, LegalRuleScope } from "@prisma/client";
 import * as crypto from "crypto";
 import prisma from "./prismaClient";
 import { REQUEST_LEGAL_DECISION_INCLUDE } from "./legalIncludes";
@@ -229,9 +229,12 @@ async function deriveBuildingCanton(
  * Map Request.category → legalTopic using LegalCategoryMapping.
  *
  * Priority:
- *   1. Org-specific mapping
- *   2. Global default (orgId = null)
+ *   1. Org-specific mapping (confidence ≥ threshold)
+ *   2. Global default (orgId = null, confidence ≥ threshold)
+ *   3. null if below threshold — route to owner, not legal path
  */
+const CONFIDENCE_THRESHOLD = 0.7;
+
 async function mapCategoryToLegalTopic(
   category: string | null,
   orgId: string,
@@ -246,7 +249,9 @@ async function mapCategoryToLegalTopic(
       isActive: true,
     },
   });
-  if (orgMapping) return orgMapping.legalTopic;
+  if (orgMapping && orgMapping.confidence >= CONFIDENCE_THRESHOLD) {
+    return orgMapping.legalTopic;
+  }
 
   // Fall back to global
   const globalMapping = await prisma.legalCategoryMapping.findFirst({
@@ -257,7 +262,12 @@ async function mapCategoryToLegalTopic(
     },
   });
 
-  return globalMapping?.legalTopic ?? null;
+  if (globalMapping && globalMapping.confidence >= CONFIDENCE_THRESHOLD) {
+    return globalMapping.legalTopic;
+  }
+
+  // Below threshold → treat as unmapped, route to owner not legal path
+  return null;
 }
 
 // ==========================================
@@ -265,7 +275,8 @@ async function mapCategoryToLegalTopic(
 // ==========================================
 
 interface RuleEvaluationResult {
-  obligation: LegalObligation | null;
+  federalObligation: LegalObligation | null;
+  cantonalObligation: LegalObligation | null;
   matchedVersionIds: string[];
   citations: Citation[];
   highestPriority: number;
@@ -290,21 +301,22 @@ async function evaluateStatutoryRules(
 ): Promise<RuleEvaluationResult> {
   if (!legalTopic) {
     return {
-      obligation: null,
+      federalObligation: null,
+      cantonalObligation: null,
       matchedVersionIds: [],
       citations: [],
       highestPriority: 0,
     };
   }
 
-  // Find active rules that match the topic
-  // Rules use key patterns like "CH_CO_259_MAINTENANCE"
+  // Find active rules that match the topic — filter at query level
   const now = new Date();
   const rules = await prisma.legalRule.findMany({
     where: {
       isActive: true,
       ruleType: "MAINTENANCE_OBLIGATION",
       jurisdiction: "CH",
+      topic: legalTopic,
       OR: [
         { canton: null }, // national rules
         { canton: canton ?? undefined }, // canton-specific
@@ -323,12 +335,16 @@ async function evaluateStatutoryRules(
         take: 1, // latest version only
       },
     },
-    orderBy: { priority: "desc" },
+    orderBy: [
+      { scope: "asc" },     // FEDERAL first (enum order: FEDERAL < CANTONAL < MUNICIPAL)
+      { priority: "desc" },
+    ],
   });
 
   const matchedVersionIds: string[] = [];
   const citationMap = new Map<string, Citation>();
-  let obligation: LegalObligation | null = null;
+  let federalObligation: LegalObligation | null = null;
+  let cantonalObligation: LegalObligation | null = null;
   let highestPriority = 0;
 
   for (const rule of rules) {
@@ -339,8 +355,10 @@ async function evaluateStatutoryRules(
     const dsl = version.dslJson as any;
     if (!dsl) continue;
 
-    // Check if DSL topic matches
-    if (dsl.topic && dsl.topic !== legalTopic) continue;
+    // Topic already filtered at query level; skip legacy in-DSL topic check
+    // only if rule.topic is set (migrated rules). Unmigrated rules still
+    // carry topic in dslJson — honour that for backwards compat.
+    if (!rule.topic && dsl.topic && dsl.topic !== legalTopic) continue;
 
     // DSL condition evaluation (simple match for MVP)
     if (dsl.conditions) {
@@ -350,10 +368,22 @@ async function evaluateStatutoryRules(
 
     matchedVersionIds.push(version.id);
 
-    // Extract obligation from DSL
-    if (dsl.obligation && (!obligation || rule.priority > highestPriority)) {
-      obligation = dsl.obligation as LegalObligation;
-      highestPriority = rule.priority;
+    // Extract obligation, tracking scope separately
+    if (dsl.obligation) {
+      const ob = dsl.obligation as LegalObligation;
+      if (rule.scope === LegalRuleScope.FEDERAL || rule.scope === undefined) {
+        if (!federalObligation || rule.priority > highestPriority) {
+          federalObligation = ob;
+        }
+      } else if (rule.scope === LegalRuleScope.CANTONAL) {
+        if (!cantonalObligation || rule.priority > highestPriority) {
+          cantonalObligation = ob;
+        }
+      }
+      // MUNICIPAL can be added later
+      if (rule.priority > highestPriority) {
+        highestPriority = rule.priority;
+      }
     }
 
     // Extract citations (deduplicate by article + text + authority)
@@ -374,7 +404,7 @@ async function evaluateStatutoryRules(
 
   const citations = Array.from(citationMap.values());
 
-  return { obligation, matchedVersionIds, citations, highestPriority };
+  return { federalObligation, cantonalObligation, matchedVersionIds, citations, highestPriority };
 }
 
 /**
@@ -477,8 +507,9 @@ function determineObligation(
   ruleEval: RuleEvaluationResult,
   depreciation: DepreciationSignalDTO | null,
 ): LegalObligation {
-  // Statutory rules take precedence
-  if (ruleEval.obligation) return ruleEval.obligation;
+  // Federal obligation always wins over cantonal
+  if (ruleEval.federalObligation) return ruleEval.federalObligation;
+  if (ruleEval.cantonalObligation) return ruleEval.cantonalObligation;
 
   // If depreciation shows asset is fully depreciated → landlord obligation
   if (depreciation?.fullyDepreciated) return LegalObligation.OBLIGATED;
@@ -561,6 +592,7 @@ function buildRecommendedActions(
     actions.push("CREATE_RFP");
     actions.push("NOTIFY_MANAGER");
   } else if (obligation === LegalObligation.DISCRETIONARY) {
+    actions.push("ROUTE_TO_OWNER");
     actions.push("REVIEW_RECOMMENDED");
     if (depreciation && depreciation.remainingLifePct < 20) {
       actions.push("CONSIDER_REPLACEMENT");
@@ -568,6 +600,8 @@ function buildRecommendedActions(
   } else if (obligation === LegalObligation.TENANT_RESPONSIBLE) {
     actions.push("NOTIFY_TENANT");
   } else {
+    // UNKNOWN — route to owner for manual decision instead of stalling
+    actions.push("ROUTE_TO_OWNER");
     actions.push("MANUAL_REVIEW");
   }
 

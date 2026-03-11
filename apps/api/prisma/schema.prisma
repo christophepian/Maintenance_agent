@@ -23,6 +23,12 @@ enum LegalRuleType {
   TERMINATION_DEADLINE
 }
 
+enum LegalRuleScope {
+  FEDERAL
+  CANTONAL
+  MUNICIPAL
+}
+
 enum LegalObligation {
   OBLIGATED
   DISCRETIONARY
@@ -213,6 +219,8 @@ model Request {
   contractorNotes      String?
   startedAt            DateTime?
   updatedAt            DateTime       @default(now()) @updatedAt
+  approvalSource       ApprovalSource?
+  rejectionReason      String?
   job                  Job?
   appliance            Appliance?     @relation(fields: [applianceId], references: [id])
   assignedContractor   Contractor?    @relation(fields: [assignedContractorId], references: [id])
@@ -672,6 +680,14 @@ enum RequestStatus {
   COMPLETED
   ASSIGNED
   PENDING_OWNER_APPROVAL
+  OWNER_REJECTED
+}
+
+enum ApprovalSource {
+  SYSTEM_AUTO
+  OWNER_APPROVED
+  OWNER_REJECTED
+  LEGAL_OBLIGATION
 }
 
 enum UnitType {
@@ -1286,6 +1302,8 @@ model LegalRule {
   authority    LegalAuthority
   jurisdiction String         @default("CH")
   canton       String?
+  topic        String?
+  scope        LegalRuleScope @default(FEDERAL)
   priority     Int            @default(0)
   isActive     Boolean        @default(true)
   createdAt    DateTime       @default(now())
@@ -1337,6 +1355,7 @@ model LegalCategoryMapping {
   orgId           String?
   requestCategory String
   legalTopic      String
+  confidence      Float   @default(1.0)
   isActive        Boolean @default(true)
 
   org Org? @relation(fields: [orgId], references: [id], onDelete: Cascade)

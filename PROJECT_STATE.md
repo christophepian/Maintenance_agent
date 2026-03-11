@@ -1,6 +1,6 @@
 # Maintenance Agent — Project State
 
-**Last updated:** 2026-03-10 (Prisma DTO Hardening Final Slice)
+**Last updated:** 2026-03-11 (Triage Rework — Slices 1–3)
 
 **Companion files (do not duplicate content here):**
 * [EPIC_HISTORY.md](EPIC_HISTORY.md) — all completed epic/slice narratives + hardening guidelines (H1–H6)
@@ -327,8 +327,9 @@ Maintenance_Agent/
 │       ├── lib/              # proxy.js, api.js, formatDisqualificationReasons.js
 │       └── styles/           # managerStyles.js (locked)
 ├── packages/api-client/      # Typed API client (DTO types + fetch methods)
-├── infra/docker-compose.yml  # PostgreSQL
-└── .github/                  # CI + copilot-instructions.md
+├── infra/docker-compose.yml  # PostgreSQL├── scripts/                  # generate-roadmap.js, roadmap.schema.json
+├── ROADMAP.json              # Product roadmap source of truth (26 features, 6 phases)
+├── docs/roadmap.html         # Auto-generated roadmap (IBM Plex dark-grid design)└── .github/                  # CI + copilot-instructions.md
 ```
 
 <!-- reviewed 2026-03-10 -->
@@ -574,6 +575,89 @@ Closes remaining open items from the prisma-dto-hardening slice.
 
 tsc: 0 errors. Blueprint synced.
 
+### Roadmap Visual Redesign — 2026-03-10
+**Status:** ✅ COMPLETE
+
+Full rewrite of the product roadmap generator to match the original IBM Plex dark-grid visual design.
+
+**Deliverables:**
+- **ROADMAP.json** rewritten — 26 features across 6 phases (P0–P5), up from 16 features. New feature ID scheme `F-P0-001`…`F-P4-006`. New fields: `hooks_blocked`, `depends_on`. New detection types: `page_exists`, `model_field` (with `model` property), `audit_finding`.
+- **scripts/generate-roadmap.js** rewritten (~340 lines) — zero-dependency Node.js generator producing:
+  - IBM Plex Sans/Mono fonts, dark grid background, CSS variables
+  - Phase blocks with colored headers, progress bars, inline status
+  - Feature cards with status dots, type badges (WIRE/BUILD/EXTEND/PRODUCT/INFRA/REFACTOR), detection signals
+  - Hook badges: green (exists), yellow (new), red (blocked)
+  - Stat grid: Done / In Progress / Planned / Total / Custom Items / % Complete
+  - 4 tabs: Phases (with filter bar), Custom Items, Codebase Signals (detection table + 3-column panels), How to Use
+- **scripts/roadmap.schema.json** updated — new feature ID pattern, `hooks_blocked` array, `page_exists`/`audit_finding` detection types, `model` property on checks, `future` phase status
+- **Codebase signals verified:** 45 models, 35 enums, 31 migrations, 16 workflows, 14 routes — all detected correctly
+
+**Files created/rewritten:**
+- `ROADMAP.json` — 26 features, 6 phases, empty `custom_items[]`
+- `scripts/generate-roadmap.js` — full visual redesign
+
+**Files modified:**
+- `scripts/roadmap.schema.json` — updated for new fields
+
+**Usage:** `npm run roadmap` generates `docs/roadmap.html`. Serve with `python3 -m http.server 8080` from `docs/` or use VS Code Live Server.
+
+### Triage Rework (Slices 1–3) — 2026-03-11
+**Status:** ✅ COMPLETE (Slices 1–3 of 4; Slice 4 parked per scope doc)
+
+Full rework of the request triage pipeline: fixed wrong state machine transitions, status-blind CTAs, and legal engine structural gaps that caused 12 requests to stall in PENDING_REVIEW.
+
+**Scope doc:** `TRIAGE_REWORK_SCOPE.md` — 3 problems fixed, 4 slices defined, slices 1–3 shipped.
+
+**Slice 1 — Backend State Machine Rewrite:**
+- Added `OWNER_REJECTED` to `RequestStatus` enum (terminal status)
+- Added `ApprovalSource` enum: SYSTEM_AUTO, OWNER_APPROVED, OWNER_REJECTED, LEGAL_OBLIGATION
+- Added `approvalSource` (ApprovalSource?) and `rejectionReason` (String?) fields on `Request`
+- Rewrote `VALID_REQUEST_TRANSITIONS` — removed 8 invalid transitions, added OWNER_REJECTED terminal state
+- Created `ownerRejectWorkflow.ts` — canonical workflow: PENDING_OWNER_APPROVAL → OWNER_REJECTED
+- Wired `approvalSource` writes into `createRequestWorkflow`, `approveRequestWorkflow`, `ownerRejectWorkflow`
+- Extended `updateRequestStatus` in requestRepository with optional `extra` param for approvalSource/rejectionReason
+- Updated `MaintenanceRequestDTO` + `toDTO()` mapper with new fields
+
+**Slice 2 — Manager Requests Page CTA Fix:**
+- Added `getAvailableCTAs(r, assigningId)` — status-driven CTA map, single source of truth
+- Replaced entire inline CTA JSX block with `getAvailableCTAs().map(switch)` pattern
+- Added `rejectRequest()` handler (prompt for reason → PATCH status)
+- Added OWNER_REJECTED tab, status badge (red), and canExpand support
+
+**Slice 3 — Legal Engine Hardening:**
+- Fix 1: Added `LegalRuleScope` enum (FEDERAL, CANTONAL, MUNICIPAL), `topic`/`scope` on LegalRule, `confidence` on LegalCategoryMapping
+- Fix 2: Pushed topic filter into Prisma query (was in-loop); backwards-compat for unmigrated rules
+- Fix 3: Split `RuleEvaluationResult` into `federalObligation`/`cantonalObligation`; federal always wins
+- Fix 4: Confidence gate (0.7 threshold) on category mapping — below threshold routes to owner
+- Fix 5: UNKNOWN/DISCRETIONARY → `ROUTE_TO_OWNER` action + `PENDING_OWNER_APPROVAL` routing in createRequestWorkflow
+
+**Parked (per scope doc):**
+- Fix 6: LegalVariable resolver — "non-blocking, parked"
+- Slice 4: Owner rejection tenant notification — "Parked — implement after Slices 1–3 are stable"
+
+**Deviation:** Transition map keeps APPROVED → [ASSIGNED, IN_PROGRESS] (scope doc removes ASSIGNED). Kept for backwards compat with existing requests.
+
+**Schema changes applied via `db push`** (G8 shadow DB exception — additive only, no data loss).
+
+**Files created:**
+- `apps/api/src/workflows/ownerRejectWorkflow.ts`
+
+**Files modified:**
+- `apps/api/prisma/schema.prisma` — 3 enum additions, 4 new fields across 3 models
+- `apps/api/src/workflows/transitions.ts` — VALID_REQUEST_TRANSITIONS rewritten
+- `apps/api/src/workflows/index.ts` — ownerRejectWorkflow export (17 workflows total)
+- `apps/api/src/workflows/approveRequestWorkflow.ts` — approvalSource writes
+- `apps/api/src/workflows/createRequestWorkflow.ts` — approvalSource + UNKNOWN routing
+- `apps/api/src/routes/requests.ts` — owner-reject delegates to ownerRejectWorkflow
+- `apps/api/src/repositories/requestRepository.ts` — updateRequestStatus extra param
+- `apps/api/src/services/maintenanceRequests.ts` — DTO + mapper updated
+- `apps/api/src/services/legalDecisionEngine.ts` — 5 structural fixes
+- `apps/web/pages/manager/requests.js` — CTA rewrite + OWNER_REJECTED UI
+- `apps/api/src/__tests__/workflows.test.ts` — obligation assertion fixed
+- `apps/api/src/ARCHITECTURE_LOW_CONTEXT_GUIDE.md` — transition map + counts updated
+
+**Stats:** 45 models · 37 enums · 17 workflows. tsc: 0 errors. Tests: pass (3 pre-existing legal engine timeouts unchanged).
+
 ---
 
 ## 12. Backlog
@@ -607,6 +691,10 @@ tsc: 0 errors. Blueprint synced.
 
 Conversational tenant intake with phone-based identification, automatic asset inference from unit inventory, and contractor availability scheduling.
 
+### Known Technical Debt
+
+- **TEST INTERACTION** — 30 suites (openApiSync, financials, jobs.and.invoices, notifications) fail in full serial run but pass individually. Root cause: `startServer` copy-pasted across 14 test files with no shared teardown — orphaned handles corrupt subsequent suites. Fix: extract shared `startServer`/`stopServer` into `testHelpers.ts` with proper `afterAll` cleanup (TC-11). Workaround: run failing suites individually with `--testPathPattern`.
+
 <!-- reviewed 2026-03-10 -->
 
 ---
@@ -631,6 +719,9 @@ Conversational tenant intake with phone-based identification, automatic asset in
 
 
 <!-- auto-sync 2026-03-10: repositories 8→9, repositories 8→9 -->
+
+
+<!-- auto-sync 2026-03-10: suites 4→30 -->
 
 ### State Integrity
 

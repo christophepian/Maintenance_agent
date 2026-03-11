@@ -22,6 +22,7 @@ const STATUS_TABS = [
   { key: "ASSIGNED", label: "Assigned" },
   { key: "IN_PROGRESS", label: "In Progress" },
   { key: "COMPLETED", label: "Completed" },
+  { key: "OWNER_REJECTED", label: "Rejected" },
 ];
 
 // ---------------------------------------------------------------------------
@@ -58,6 +59,7 @@ const STATUS_CLASSES = {
   ASSIGNED:                "bg-blue-50 text-blue-700 border-blue-200",
   IN_PROGRESS:             "bg-blue-50 text-blue-700 border-blue-200",
   COMPLETED:               "bg-violet-50 text-violet-700 border-violet-200",
+  OWNER_REJECTED:           "bg-red-50 text-red-700 border-red-200",
 };
 
 function StatusBadge({ status }) {
@@ -99,6 +101,41 @@ const OBLIGATION_META = {
     actionHint: "Review details \u2192 Decide",
   },
 };
+
+// ---------------------------------------------------------------------------
+// Status-driven CTA helper — single source of truth for action buttons
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns the set of CTA keys available for a given request.
+ * Single source of truth — no inline status checks in JSX.
+ *
+ * @param {object} r - request object from API
+ * @param {string|null} assigningId - currently open assign modal id
+ * @returns {string[]} array of CTA keys
+ */
+function getAvailableCTAs(r, assigningId) {
+  const ctaMap = {
+    PENDING_REVIEW:           ['approve'],
+    RFP_PENDING:              ['view_rfp'],
+    AUTO_APPROVED:            ['view_rfp'],
+    PENDING_OWNER_APPROVAL:   ['approve', 'reject', 'view_rfp'],
+    APPROVED:                 ['assign'],
+    ASSIGNED:                 ['unassign'],
+    IN_PROGRESS:              [],
+    COMPLETED:                [],
+    OWNER_REJECTED:           [],
+  };
+
+  const base = ctaMap[r.status] || [];
+
+  // Replace assign with unassign if contractor already set
+  if (base.includes('assign') && r.assignedContractorName) {
+    return base.map(k => k === 'assign' ? 'unassign' : k);
+  }
+
+  return base;
+}
 
 // ---------------------------------------------------------------------------
 // SVG Chevron (matches depreciation page)
@@ -395,6 +432,22 @@ export default function ManagerRequestsPage() {
     finally { setActionLoading(null); }
   }
 
+  async function rejectRequest(id) {
+    const reason = prompt("Reason for rejection (optional):");
+    if (reason === null) return; // user cancelled
+    setActionLoading(id);
+    try {
+      const res = await fetch(`/api/requests/${id}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({ status: "OWNER_REJECTED", rejectionReason: reason }),
+      });
+      if (!res.ok) { const d = await res.json(); throw new Error(d?.error?.message || "Failed to reject"); }
+      await loadData();
+    } catch (e) { setError(String(e?.message || e)); }
+    finally { setActionLoading(null); }
+  }
+
   async function doAssignContractor(requestId) {
     if (!selectedContractorId) return;
     setActionLoading(requestId);
@@ -425,7 +478,11 @@ export default function ManagerRequestsPage() {
     finally { setActionLoading(null); }
   }
 
-  const canExpand = (r) => r.status === "PENDING_REVIEW" || r.status === "PENDING_OWNER_APPROVAL" || r.status === "RFP_PENDING";
+  const canExpand = (r) =>
+    r.status === "PENDING_REVIEW" ||
+    r.status === "PENDING_OWNER_APPROVAL" ||
+    r.status === "RFP_PENDING" ||
+    r.status === "OWNER_REJECTED";
 
   return (
     <AppShell role="MANAGER">
@@ -552,73 +609,75 @@ export default function ManagerRequestsPage() {
                             {/* Actions */}
                             <td className="px-3 py-2.5" onClick={(e) => e.stopPropagation()}>
                               <div className="flex items-center gap-1.5 flex-wrap">
-                                {r.status === "PENDING_REVIEW" && (
-                                  <button
-                                    onClick={() => approveRequest(r.id)}
-                                    disabled={actionLoading === r.id}
-                                    className="rounded-md bg-emerald-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
-                                  >
-                                    {actionLoading === r.id ? "\u2026" : "Approve"}
-                                  </button>
-                                )}
-
-                                {r.status === "RFP_PENDING" && (
-                                  <a
-                                    href="/manager/rfps"
-                                    className="rounded-md bg-indigo-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-indigo-700"
-                                  >
-                                    View RFP
-                                  </a>
-                                )}
-
-                                {!r.assignedContractorName && assigningId !== r.id && (
-                                  <button
-                                    onClick={() => setAssigningId(r.id)}
-                                    className="rounded-md bg-blue-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-blue-700"
-                                  >
-                                    Assign
-                                  </button>
-                                )}
-
-                                {r.assignedContractorName && (
-                                  <button
-                                    onClick={() => doUnassignContractor(r.id)}
-                                    disabled={actionLoading === r.id}
-                                    className="rounded-md bg-red-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-red-700 disabled:opacity-50"
-                                  >
-                                    {actionLoading === r.id ? "\u2026" : "Unassign"}
-                                  </button>
-                                )}
-
-                                {assigningId === r.id && (
-                                  <div className="flex items-center gap-1.5">
-                                    <select
-                                      value={selectedContractorId}
-                                      onChange={(e) => setSelectedContractorId(e.target.value)}
-                                      className="rounded border border-slate-300 px-2 py-1 text-xs"
-                                    >
-                                      <option value="">Select&hellip;</option>
-                                      {contractors.map((c) => (
-                                        <option key={c.id} value={c.id}>
-                                          {c.name || c.companyName || c.id.slice(0, 8)}
-                                        </option>
-                                      ))}
-                                    </select>
-                                    <button
-                                      onClick={() => doAssignContractor(r.id)}
-                                      disabled={!selectedContractorId || actionLoading === r.id}
-                                      className="rounded-md bg-blue-600 px-2 py-1 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-                                    >
-                                      {actionLoading === r.id ? "\u2026" : "OK"}
-                                    </button>
-                                    <button
-                                      onClick={() => { setAssigningId(null); setSelectedContractorId(""); }}
-                                      className="rounded-md border border-slate-200 bg-white px-2 py-1 text-xs text-slate-500 hover:bg-slate-50"
-                                    >
-                                      &times;
-                                    </button>
-                                  </div>
-                                )}
+                                {getAvailableCTAs(r, assigningId).map((cta) => {
+                                  switch (cta) {
+                                    case 'approve':
+                                      return (
+                                        <button key="approve"
+                                          onClick={() => approveRequest(r.id)}
+                                          disabled={actionLoading === r.id}
+                                          className="rounded-md bg-emerald-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+                                        >
+                                          {actionLoading === r.id ? "\u2026" : "Approve"}
+                                        </button>
+                                      );
+                                    case 'reject':
+                                      return (
+                                        <button key="reject"
+                                          onClick={() => rejectRequest(r.id)}
+                                          disabled={actionLoading === r.id}
+                                          className="rounded-md border border-slate-300 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                                        >
+                                          {actionLoading === r.id ? "\u2026" : "Reject"}
+                                        </button>
+                                      );
+                                    case 'view_rfp':
+                                      return (
+                                        <a key="view_rfp" href="/manager/rfps"
+                                          className="rounded-md bg-indigo-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-indigo-700"
+                                        >
+                                          View RFP
+                                        </a>
+                                      );
+                                    case 'assign':
+                                      return assigningId === r.id ? (
+                                        <div key="assign-modal" className="flex items-center gap-1.5">
+                                          <select value={selectedContractorId} onChange={(e) => setSelectedContractorId(e.target.value)}
+                                            className="rounded border border-slate-300 px-2 py-1 text-xs">
+                                            <option value="">Select&hellip;</option>
+                                            {contractors.map((c) => (
+                                              <option key={c.id} value={c.id}>{c.name || c.companyName || c.id.slice(0, 8)}</option>
+                                            ))}
+                                          </select>
+                                          <button onClick={() => doAssignContractor(r.id)} disabled={!selectedContractorId || actionLoading === r.id}
+                                            className="rounded-md bg-blue-600 px-2 py-1 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50">
+                                            {actionLoading === r.id ? "\u2026" : "OK"}
+                                          </button>
+                                          <button onClick={() => { setAssigningId(null); setSelectedContractorId(""); }}
+                                            className="rounded-md border border-slate-200 bg-white px-2 py-1 text-xs text-slate-500 hover:bg-slate-50">
+                                            &times;
+                                          </button>
+                                        </div>
+                                      ) : (
+                                        <button key="assign" onClick={() => setAssigningId(r.id)}
+                                          className="rounded-md bg-blue-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-blue-700">
+                                          Assign
+                                        </button>
+                                      );
+                                    case 'unassign':
+                                      return (
+                                        <button key="unassign"
+                                          onClick={() => doUnassignContractor(r.id)}
+                                          disabled={actionLoading === r.id}
+                                          className="rounded-md bg-red-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-red-700 disabled:opacity-50"
+                                        >
+                                          {actionLoading === r.id ? "\u2026" : "Unassign"}
+                                        </button>
+                                      );
+                                    default:
+                                      return null;
+                                  }
+                                })}
                               </div>
                             </td>
                           </tr>

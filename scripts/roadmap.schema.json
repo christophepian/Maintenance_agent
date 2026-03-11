@@ -1,0 +1,123 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Maintenance Agent Roadmap",
+  "description": "Schema for ROADMAP.json — product roadmap source of truth",
+  "type": "object",
+  "required": ["_meta", "project", "phases", "features", "custom_items", "financial_boundary"],
+  "additionalProperties": false,
+  "properties": {
+    "_meta": {
+      "type": "object",
+      "required": ["version", "description"],
+      "properties": {
+        "version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+        "description": { "type": "string" }
+      }
+    },
+    "project": {
+      "type": "object",
+      "required": ["name", "subtitle", "repo", "market"],
+      "properties": {
+        "name": { "type": "string" },
+        "subtitle": { "type": "string" },
+        "repo": { "type": "string" },
+        "market": { "type": "string" }
+      }
+    },
+    "phases": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "color", "window", "goal", "status"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^P\\d+$" },
+          "name": { "type": "string" },
+          "color": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" },
+          "window": { "type": "string" },
+          "goal": { "type": "string" },
+          "status": { "type": "string", "enum": ["done", "in_progress", "planned", "future"] }
+        }
+      }
+    },
+    "features": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "phase", "title", "type", "description", "detection", "hooks_existing", "hooks_new"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^F-P\\d+-\\d{3}$" },
+          "phase": { "type": "string", "pattern": "^P\\d+$" },
+          "title": { "type": "string" },
+          "type": {
+            "type": "string",
+            "enum": ["wire", "build", "extend", "product", "infra", "refactor"]
+          },
+          "description": { "type": "string" },
+          "detection": {
+            "type": "object",
+            "required": ["checks"],
+            "properties": {
+              "checks": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["type"],
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "enum": ["model_exists", "model_field", "enum_exists", "workflow_exists", "file_exists", "page_exists", "env_key", "audit_finding"]
+                    },
+                    "name": { "type": "string" },
+                    "model": { "type": "string" },
+                    "field": { "type": "string" },
+                    "path": { "type": "string" },
+                    "key": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "hooks_existing": { "type": "array", "items": { "type": "string" } },
+          "hooks_new": { "type": "array", "items": { "type": "string" } },
+          "hooks_blocked": { "type": "array", "items": { "type": "string" } },
+          "depends_on": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "custom_items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "phase", "type", "persona", "title", "status"],
+        "properties": {
+          "id": { "type": "string" },
+          "phase": { "type": "string", "pattern": "^P\\d+$" },
+          "type": {
+            "type": "string",
+            "enum": ["user_story", "task", "bug", "spike"]
+          },
+          "persona": {
+            "type": "string",
+            "enum": ["manager", "contractor", "tenant", "owner", "admin", "system"]
+          },
+          "title": { "type": "string" },
+          "status": {
+            "type": "string",
+            "enum": ["done", "in_progress", "planned", "blocked"]
+          },
+          "ticket": { "type": ["string", "null"] },
+          "notes": { "type": ["string", "null"] }
+        }
+      }
+    },
+    "financial_boundary": {
+      "type": "object",
+      "required": ["we_own", "grey_zone", "we_dont_own"],
+      "properties": {
+        "we_own": { "type": "array", "items": { "type": "string" } },
+        "grey_zone": { "type": "array", "items": { "type": "string" } },
+        "we_dont_own": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  }
+}

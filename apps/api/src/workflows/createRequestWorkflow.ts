@@ -14,7 +14,7 @@
  *   9. Canonical reload + DTO return
  */
 
-import { RequestStatus, OrgMode, PrismaClient } from "@prisma/client";
+import { RequestStatus, OrgMode, PrismaClient, ApprovalSource } from "@prisma/client";
 import { WorkflowContext } from "./context";
 import { emit } from "../events/bus";
 import { findRequestById, createRequest as repoCreateRequest, updateRequestStatus } from "../repositories/requestRepository";
@@ -163,7 +163,9 @@ export async function createRequestWorkflow(
             });
 
             const previousStatus = created.status;
-            await updateRequestStatus(prisma, created.id, RequestStatus.RFP_PENDING);
+            await updateRequestStatus(prisma, created.id, RequestStatus.RFP_PENDING, {
+              approvalSource: ApprovalSource.LEGAL_OBLIGATION,
+            });
 
             legalAutoRouted = true;
 
@@ -182,7 +184,14 @@ export async function createRequestWorkflow(
 
             console.log(`[LEGAL] Auto-routed request ${created.id} → RFP ${rfp.id} (OBLIGATED)`);
           } else {
-            console.log(`[LEGAL] Request ${created.id}: ${decision.legalObligation} — no auto-route`);
+            // Non-OBLIGATED result: route to owner approval if still in PENDING_REVIEW
+            // This prevents UNKNOWN/DISCRETIONARY from stalling the request
+            if (created.status === RequestStatus.PENDING_REVIEW) {
+              await updateRequestStatus(prisma, created.id, RequestStatus.PENDING_OWNER_APPROVAL);
+              console.log(`[LEGAL] Request ${created.id}: ${decision.legalObligation} → PENDING_OWNER_APPROVAL`);
+            } else {
+              console.log(`[LEGAL] Request ${created.id}: ${decision.legalObligation} — kept as ${created.status}`);
+            }
           }
         }
       }

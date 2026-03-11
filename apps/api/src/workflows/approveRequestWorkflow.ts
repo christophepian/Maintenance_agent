@@ -14,7 +14,7 @@
  *   6. Canonical reload + DTO return
  */
 
-import { RequestStatus, OrgMode, PrismaClient } from "@prisma/client";
+import { RequestStatus, OrgMode, PrismaClient, ApprovalSource } from "@prisma/client";
 import { WorkflowContext } from "./context";
 import { InvalidTransitionError } from "./transitions";
 import { emit } from "../events/bus";
@@ -88,7 +88,11 @@ export async function approveRequestWorkflow(
   }
 
   // ── 4. Update status ──────────────────────────────────────
-  await updateRequestStatus(prisma, requestId, RequestStatus.APPROVED);
+  await updateRequestStatus(prisma, requestId, RequestStatus.APPROVED, {
+    approvalSource: approvalType === "owner"
+      ? ApprovalSource.OWNER_APPROVED
+      : ApprovalSource.SYSTEM_AUTO,
+  });
 
   // ── 5. Auto-create job in owner-direct mode ────────────────
   let jobAutoCreated = false;

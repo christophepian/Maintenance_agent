@@ -1,0 +1,729 @@
+{
+  "_meta": {
+    "version": "2.0.0",
+    "description": "Product roadmap source of truth for Maintenance Agent. Edit custom_items[] to add user stories and tasks. Feature statuses are auto-detected from the codebase."
+  },
+  "project": {
+    "name": "Maintenance Agent",
+    "subtitle": "Full-stack property maintenance platform — Swiss market",
+    "repo": "Maintenance_Agent",
+    "market": "Switzerland"
+  },
+  "phases": [
+    {
+      "id": "P0",
+      "name": "Foundation Hardening",
+      "color": "#2ecc8a",
+      "window": "Now → Month 1",
+      "goal": "Clear the critical path blockers before adding any new features. Three items in your backlog directly block monetizable work.",
+      "status": "in_progress"
+    },
+    {
+      "id": "P1",
+      "name": "Cashflow Layer",
+      "color": "#3d7eff",
+      "window": "Month 1–3",
+      "goal": "Build the financial visibility layer for building owners — cash in, cash out, per-building balance — without crossing into accounting. Anchored on BuildingFinancialSnapshot.",
+      "status": "planned"
+    },
+    {
+      "id": "P2",
+      "name": "Private Landlord SaaS",
+      "color": "#9b6dff",
+      "window": "Month 3–6",
+      "goal": "The current product is built for professional managers. This phase creates a simplified entry point for private individuals owning 1–20 properties — same backend, different UX skin and onboarding.",
+      "status": "planned"
+    },
+    {
+      "id": "P3",
+      "name": "AI Triage Upgrade",
+      "color": "#f5a623",
+      "window": "Month 5–8",
+      "goal": "Extend the existing triage service from classify-and-route to resolve-before-dispatch. The infrastructure is there. The intelligence layer is not.",
+      "status": "planned"
+    },
+    {
+      "id": "P4",
+      "name": "NOI Intelligence",
+      "color": "#ff7c3a",
+      "window": "Month 8–14",
+      "goal": "Connect cashflow + maintenance analytics + vacancy data into a per-building P&L proxy. Explicitly not accounting. The output is decision intelligence, not a financial statement.",
+      "status": "planned"
+    },
+    {
+      "id": "P5",
+      "name": "ESG Layer",
+      "color": "#5a6580",
+      "window": "Month 14+",
+      "goal": "Energy tracking, cantonal compliance deadlines, retrofit ROI modeling. New vertical targeting institutional owners.",
+      "status": "planned"
+    }
+  ],
+  "features": [
+    {
+      "id": "F-P0-001",
+      "phase": "P0",
+      "title": "Email Delivery (SMTP / SendGrid)",
+      "type": "wire",
+      "description": "EmailOutbox model and dev sink are built. Wire a real transport. Without this, rent reminders, invoice delivery, and tenant notifications are silent.",
+      "detection": {
+        "checks": [
+          {
+            "type": "env_key",
+            "key": "SMTP_HOST"
+          }
+        ]
+      },
+      "hooks_existing": [
+        "emailOutbox model",
+        "notificationService"
+      ],
+      "hooks_new": [
+        "SMTP provider config"
+      ]
+    },
+    {
+      "id": "F-P0-002",
+      "phase": "P0",
+      "title": "Legal DSL Variable Resolver",
+      "type": "wire",
+      "description": "LegalVariable, LegalVariableVersion, LegalRule are all in schema. Wire the resolver to live data. Reference interest rate ingestion first as proof of concept.",
+      "detection": {
+        "checks": [
+          {
+            "type": "file_exists",
+            "path": "apps/api/src/services/legalVariableIngestion.ts"
+          }
+        ]
+      },
+      "hooks_existing": [
+        "LegalVariable model",
+        "LegalRule + DSL",
+        "evaluateLegalRoutingWorkflow"
+      ],
+      "hooks_new": [
+        "data ingestion service"
+      ]
+    },
+    {
+      "id": "F-P0-003",
+      "phase": "P0",
+      "title": "Skribble e-Sign Integration",
+      "type": "wire",
+      "description": "SignatureRequest model exists. Digital lease signing is table stakes for private landlord positioning. Skribble is the Swiss-native choice (QES compliant).",
+      "detection": {
+        "checks": [
+          {
+            "type": "file_exists",
+            "path": "apps/api/src/services/skribbleClient.ts"
+          }
+        ]
+      },
+      "hooks_existing": [
+        "SignatureRequest model",
+        "leaseService"
+      ],
+      "hooks_new": [
+        "Skribble API client"
+      ]
+    },
+    {
+      "id": "F-P0-004",
+      "phase": "P0",
+      "title": "Route Layer Refactor (CQ-1/3/4)",
+      "type": "refactor",
+      "description": "legal.ts, tenants.ts, leases.ts have business logic in route handlers. Extract to services before P1 financial work adds more surface area.",
+      "detection": {
+        "checks": [
+          {
+            "type": "file_exists",
+            "path": "apps/api/src/services/legalService.ts"
+          }
+        ]
+      },
+      "hooks_existing": [
+        "workflow pattern established"
+      ],
+      "hooks_new": [
+        "legalService extraction",
+        "tenantService extraction"
+      ]
+    },
+    {
+      "id": "F-P1-001",
+      "phase": "P1",
+      "title": "QR-Invoice Rent Demand Generation",
+      "type": "build",
+      "description": "Generate Swiss QR-invoices (ISO 20022 compliant) for monthly rent demands from lease data. Send via email. Track payment status automatically.",
+      "detection": {
+        "checks": [
+          {
+            "type": "model_exists",
+            "name": "RentDemand"
+          }
+        ]
+      },
+      "hooks_existing": [
+        "Lease model",
+        "invoiceService",
+        "pdfGenerator"
+      ],
+      "hooks_new": [
+        "QR-bill library (qrbill-js)",
+        "rentDemandWorkflow"
+      ]
+    },
+    {
+      "id": "F-P1-002",
+      "phase": "P1",
+      "title": "MT940 Bank Statement Import",
+      "type": "build",
+      "description": "Accept MT940/CSV bank exports from all major Swiss banks. Auto-match incoming payments to open rent demands by amount + reference. Flag unmatched.",
+      "detection": {
+        "checks": [
+          {
+            "type": "file_exists",
+            "path": "apps/api/src/services/mt940Parser.ts"
+          }
+        ]
+      },
+      "hooks_existing": [
+        "Invoice model",
+        "invoiceRepository"
+      ],
+      "hooks_new": [
+        "MT940 parser service",
+        "paymentMatchingWorkflow"
+      ]
+    },
+    {
+      "id": "F-P1-003",
+      "phase": "P1",
+      "title": "BuildingFinancialSnapshot Engine",
+      "type": "extend",
+      "description": "The model exists. Build the service that populates it: monthly snapshot of income, expenses, vacancy loss, net balance. Central data structure for P4.",
+      "detection": {
+        "checks": [
+          {
+            "type": "file_exists",
+            "path": "apps/api/src/services/snapshotService.ts"
+          }
+        ]
+      },
+      "hooks_existing": [
+        "BuildingFinancialSnapshot model",
+        "financial route"
+      ],
+      "hooks_new": [
+        "snapshotService (scheduled)",
+        "vacancyLossCalc"
+      ]
+    },
+    {
+      "id": "F-P1-004",
+      "phase": "P1",
+      "title": "Arrears Management + Automated Reminders",
+      "type": "build",
+      "description": "Escalating reminder workflow: friendly nudge (D+3) → formal notice (D+14) → Betreibungshinweis template (D+30). All emails sent via EmailOutbox.",
+      "detection": {
+        "checks": [
+          {
+            "type": "workflow_exists",
+            "name": "arrearsWorkflow"
+          }
+        ]
+      },
+      "hooks_existing": [
+        "Lease model",
+        "notificationService"
+      ],
+      "hooks_new": [
+        "arrearsWorkflow",
+        "BetreibungshinweisTemplate"
+      ],
+      "hooks_blocked": [
+        "needs: F-P0-001"
+      ],
+      "depends_on": [
+        "F-P0-001"
+      ]
+    },
+    {
+      "id": "F-P1-005",
+      "phase": "P1",
+      "title": "Nebenkostenabrechnung Generator",
+      "type": "build",
+      "description": "Annual utility charge statement generation. Input: expense invoices tagged as Nebenkosten over 12 months. Output: PDF per tenant showing their share. OR Art. 257a/b compliant.",
+      "detection": {
+        "checks": [
+          {
+            "type": "enum_exists",
+            "name": "NebenkostenCategory"
+          }
+        ]
+      },
+      "hooks_existing": [
+        "Invoice + InvoiceLineItem",
+        "pdfGenerator",
+        "Unit + BuildingOwner"
+      ],
+      "hooks_new": [
+        "NebenkostenCategory enum",
+        "chargeAllocationService"
+      ]
+    },
+    {
+      "id": "F-P1-006",
+      "phase": "P1",
+      "title": "Owner Cashflow Dashboard",
+      "type": "extend",
+      "description": "Extend /owner/financials into a real cashflow dashboard. Per-building monthly view: income bar, expense bar, net balance line. Maintenance events shown as expense spikes.",
+      "detection": {
+        "checks": [
+          {
+            "type": "page_exists",
+            "path": "apps/web/pages/owner/cashflow.js"
+          }
+        ]
+      },
+      "hooks_existing": [
+        "/owner/financials page",
+        "Owner portal"
+      ],
+      "hooks_blocked": [
+        "needs: F-P1-003"
+      ],
+      "depends_on": [
+        "F-P1-003"
+      ]
+    },
+    {
+      "id": "F-P2-001",
+      "phase": "P2",
+      "title": "Self-Service Onboarding Wizard",
+      "type": "product",
+      "description": "Private landlord operational in under 15 minutes: add building → add unit → upload/create lease → set rent → generate first QR-invoice. Multi-language from day one.",
+      "detection": {
+        "checks": [
+          {
+            "type": "page_exists",
+            "path": "apps/web/pages/onboarding/index.js"
+          }
+        ]
+      },
+      "hooks_existing": [
+        "Building + Unit models",
+        "Lease workflow",
+        "apply wizard pattern"
+      ],
+      "hooks_new": [
+        "onboarding flow pages",
+        "OrgConfig.landlord_mode flag"
+      ]
+    },
+    {
+      "id": "F-P2-002",
+      "phase": "P2",
+      "title": "Owner-as-Manager Unified Mode",
+      "type": "build",
+      "description": "OrgConfig flag that collapses Manager and Owner personas into a single simplified interface for private landlords who manage their own properties.",
+      "detection": {
+        "checks": [
+          {
+            "type": "model_field",
+            "model": "OrgConfig",
+            "field": "unified_owner_mode"
+          }
+        ]
+      },
+      "hooks_existing": [
+        "OrgConfig model",
+        "Manager + Owner portals"
+      ],
+      "hooks_new": [
+        "unified_owner_mode flag",
+        "simplified sidebar layout"
+      ]
+    },
+    {
+      "id": "F-P2-003",
+      "phase": "P2",
+      "title": "Multilingual Tenant Portal (FR/DE/IT)",
+      "type": "build",
+      "description": "All tenant-facing pages serve FR/DE/IT based on tenant language preference. Without this, the platform is only usable in monolingual cantons.",
+      "detection": {
+        "checks": [
+          {
+            "type": "file_exists",
+            "path": "apps/web/public/locales/fr/common.json"
+          }
+        ]
+      },
+      "hooks_existing": [
+        "Tenant model",
+        "/tenant/* pages"
+      ],
+      "hooks_new": [
+        "next-i18next",
+        "Tenant.preferredLanguage field"
+      ]
+    },
+    {
+      "id": "F-P2-004",
+      "phase": "P2",
+      "title": "Canton-Aware Initial Rent Notice (Formular B)",
+      "type": "extend",
+      "description": "Generate the correct canton-specific initial rent notification form from lease data, pre-filled, ready to sign. First tangible proof of legal layer value.",
+      "detection": {
+        "checks": [
+          {
+            "type": "file_exists",
+            "path": "apps/api/src/services/formularBGenerator.ts"
+          }
+        ]
+      },
+      "hooks_existing": [
+        "Lease model",
+        "LegalRule DSL"
+      ],
+      "hooks_new": [
+        "FormularBGenerator",
+        "canton legal rule set"
+      ],
+      "hooks_blocked": [
+        "needs: F-P0-002"
+      ],
+      "depends_on": [
+        "F-P0-002"
+      ]
+    },
+    {
+      "id": "F-P2-005",
+      "phase": "P2",
+      "title": "PWA / Mobile-Optimized Tenant Portal",
+      "type": "extend",
+      "description": "Wrap tenant portal as a PWA — installable on iOS/Android, push notifications, offline document access. Replaces phone calls for a private landlord’s tenant.",
+      "detection": {
+        "checks": [
+          {
+            "type": "file_exists",
+            "path": "apps/web/public/manifest.json"
+          }
+        ]
+      },
+      "hooks_existing": [
+        "/tenant/* pages"
+      ],
+      "hooks_new": [
+        "manifest.json + service worker",
+        "push notification provider"
+      ]
+    },
+    {
+      "id": "F-P2-006",
+      "phase": "P2",
+      "title": "Document Vault",
+      "type": "build",
+      "description": "Structured document storage — lease PDFs, signed addenda, Nebenkosten statements, correspondence — linked to tenant and property, searchable, exportable.",
+      "detection": {
+        "checks": [
+          {
+            "type": "model_exists",
+            "name": "DocumentVault"
+          }
+        ]
+      },
+      "hooks_existing": [
+        "RentalAttachment model",
+        "pdfGenerator"
+      ],
+      "hooks_new": [
+        "DocumentVault model",
+        "document categorization enum"
+      ]
+    },
+    {
+      "id": "F-P3-001",
+      "phase": "P3",
+      "title": "Photo + Video Evidence on Intake",
+      "type": "build",
+      "description": "Tenant attaches photos/video when submitting a request. Forwarded to contractor before dispatch — eliminates ‘I need to assess first’ callout.",
+      "detection": {
+        "checks": [
+          {
+            "type": "model_field",
+            "model": "Request",
+            "field": "attachments"
+          }
+        ]
+      },
+      "hooks_existing": [
+        "Request model",
+        "Job model"
+      ],
+      "hooks_new": [
+        "S3/R2 object storage",
+        "Request.attachments relation"
+      ]
+    },
+    {
+      "id": "F-P3-002",
+      "phase": "P3",
+      "title": "LLM Classification + Urgency Scoring",
+      "type": "build",
+      "description": "Replace/augment rule-based triage with LLM-based classification. Input: free-text + photos. Output: category, urgency score (1–5), suggested contractor type, legal obligation flag.",
+      "detection": {
+        "checks": [
+          {
+            "type": "file_exists",
+            "path": "apps/api/src/services/llmTriageService.ts"
+          }
+        ]
+      },
+      "hooks_existing": [
+        "triage service",
+        "Request.description",
+        "LegalCategoryMapping"
+      ],
+      "hooks_new": [
+        "LLMTriageService",
+        "urgencyScore on Request"
+      ]
+    },
+    {
+      "id": "F-P3-003",
+      "phase": "P3",
+      "title": "Guided Troubleshooting Flows",
+      "type": "extend",
+      "description": "When tenant submits a request, present structured Q&A flow to resolve at intake without dispatch. Target: resolve ~20% without sending a contractor.",
+      "detection": {
+        "checks": [
+          {
+            "type": "model_exists",
+            "name": "TroubleshootingTree"
+          }
+        ]
+      },
+      "hooks_existing": [
+        "triage service",
+        "chat intake",
+        "RequestEvent model"
+      ],
+      "hooks_new": [
+        "TroubleshootingTree model",
+        "resolutionOutcomeEnum"
+      ]
+    },
+    {
+      "id": "F-P3-004",
+      "phase": "P3",
+      "title": "Maintenance Analytics Dashboard",
+      "type": "build",
+      "description": "Requests by category/building, avg time-to-resolution, self-resolution rate, contractor performance, cost-per-category. Resolves the reports.js backlog item.",
+      "detection": {
+        "checks": [
+          {
+            "type": "file_exists",
+            "path": "apps/api/src/routes/reports.ts"
+          }
+        ]
+      },
+      "hooks_existing": [
+        "Request + Job + Invoice models",
+        "reports.js (deferred)"
+      ],
+      "hooks_new": [
+        "analyticsAggregationService",
+        "manager analytics pages"
+      ]
+    },
+    {
+      "id": "F-P4-001",
+      "phase": "P4",
+      "title": "Maintenance → Cost Attribution Engine",
+      "type": "build",
+      "description": "Link every closed maintenance request to its total cost. Tag as capex or opex. Maintenance events appear as tagged expense events on building cashflow timeline.",
+      "detection": {
+        "checks": [
+          {
+            "type": "file_exists",
+            "path": "apps/api/src/services/costAttributionService.ts"
+          }
+        ]
+      },
+      "hooks_existing": [
+        "Request → Job → Invoice chain",
+        "BuildingFinancialSnapshot"
+      ],
+      "hooks_new": [
+        "capexOpex flag on Invoice",
+        "costAttributionService"
+      ],
+      "hooks_blocked": [
+        "needs: F-P1-003"
+      ],
+      "depends_on": [
+        "F-P1-003"
+      ]
+    },
+    {
+      "id": "F-P4-002",
+      "phase": "P4",
+      "title": "Vacancy Impact Quantification",
+      "type": "extend",
+      "description": "Calculate and display vacancy cost as a negative cash event. Link to reason where known. Makes the cost of slow re-letting viscerally clear.",
+      "detection": {
+        "checks": [
+          {
+            "type": "file_exists",
+            "path": "apps/api/src/services/vacancyImpactService.ts"
+          }
+        ]
+      },
+      "hooks_existing": [
+        "Unit model",
+        "Lease + vacancy state",
+        "vacancyLossCalc (P1)"
+      ],
+      "hooks_new": [
+        "vacancy event timeline on snapshot"
+      ],
+      "hooks_blocked": [
+        "needs: F-P1-003"
+      ],
+      "depends_on": [
+        "F-P1-003"
+      ]
+    },
+    {
+      "id": "F-P4-003",
+      "phase": "P4",
+      "title": "NOI Proxy Dashboard",
+      "type": "product",
+      "description": "Per-building: gross income, total expenses (with maintenance breakdown), vacancy loss, net operating income proxy. Clearly labelled indicative. Year-on-year comparison.",
+      "detection": {
+        "checks": [
+          {
+            "type": "file_exists",
+            "path": "apps/api/src/services/noiCalculationService.ts"
+          }
+        ]
+      },
+      "hooks_existing": [
+        "/owner/financials"
+      ],
+      "hooks_new": [
+        "NOICalculationService",
+        "enhanced /owner/financials"
+      ],
+      "hooks_blocked": [
+        "needs: F-P4-001",
+        "needs: F-P1-003"
+      ],
+      "depends_on": [
+        "F-P4-001",
+        "F-P1-003"
+      ]
+    },
+    {
+      "id": "F-P4-004",
+      "phase": "P4",
+      "title": "Proactive Asset Health Signals",
+      "type": "build",
+      "description": "Use AssetIntervention + DepreciationStandard to surface forward-looking signals: aging assets, recommended replacement budget, projected future expense.",
+      "detection": {
+        "checks": [
+          {
+            "type": "file_exists",
+            "path": "apps/api/src/services/assetHealthService.ts"
+          }
+        ]
+      },
+      "hooks_existing": [
+        "AssetIntervention model",
+        "DepreciationStandard model",
+        "depreciationService"
+      ],
+      "hooks_new": [
+        "assetHealthService",
+        "maintenanceForecast model"
+      ]
+    },
+    {
+      "id": "F-P4-005",
+      "phase": "P4",
+      "title": "Treuhänder / Accountant Export Package",
+      "type": "build",
+      "description": "One-click annual summary export for accountant: all income, expense invoices, Nebenkosten statements, lease periods, vacancy periods. Abacus CSV format.",
+      "detection": {
+        "checks": [
+          {
+            "type": "file_exists",
+            "path": "apps/api/src/services/exportService.ts"
+          }
+        ]
+      },
+      "hooks_existing": [
+        "Invoice + Lease + Snapshot models",
+        "pdfGenerator"
+      ],
+      "hooks_new": [
+        "exportService",
+        "Abacus CSV mapping"
+      ]
+    },
+    {
+      "id": "F-P4-006",
+      "phase": "P4",
+      "title": "bLink Open Banking Feed",
+      "type": "infra",
+      "description": "Replace MT940 manual import with live bank feed via SIX bLink. Automatic daily reconciliation. Build only after MT940 is proven and trusted.",
+      "detection": {
+        "checks": [
+          {
+            "type": "file_exists",
+            "path": "apps/api/src/services/blinkApiClient.ts"
+          }
+        ]
+      },
+      "hooks_existing": [],
+      "hooks_new": [
+        "bLink API client",
+        "OAuth consent flow"
+      ],
+      "hooks_blocked": [
+        "needs: F-P1-002"
+      ],
+      "depends_on": [
+        "F-P1-002"
+      ]
+    }
+  ],
+  "custom_items": [],
+  "financial_boundary": {
+    "we_own": [
+      "Request lifecycle (triage → approval → job → invoice → payment)",
+      "Lease lifecycle (draft → sign → active → terminate)",
+      "Legal decision engine (DSL rules, canton scoping, category mapping)",
+      "Asset inventory & depreciation tracking",
+      "Rental application pipeline (apply → screen → approve → lease)",
+      "Multi-org governance (org scoping, role enforcement)"
+    ],
+    "grey_zone": [
+      "Email delivery (outbox exists, no SMTP provider wired)",
+      "E-signatures (model exists, no Skribble/DocuSign adapter)",
+      "Payment reconciliation (QR-bill generated, no eBill/bank feed)",
+      "Push notifications (in-app works, no mobile push)"
+    ],
+    "we_dont_own": [
+      "Formal accounting (VAT, balance sheet, P&L — belongs in Abacus/Sage)",
+      "Tax optimization or advice",
+      "Payroll for caretakers",
+      "Depreciation schedules and asset accounting",
+      "LLM triage (rule-based only, no OpenAI integration)",
+      "Photo/vision analysis (no image upload or damage classification)",
+      "GEAK energy ratings (no Swiss government API integration)",
+      "Carbon tracking (no emissions calculation)"
+    ]
+  }
+}

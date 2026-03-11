@@ -8,6 +8,9 @@ pnpm-debug.log*
 .DS_Store
 .idea
 .vscode
+
+# Generated roadmap HTML (rebuild with `npm run roadmap`)
+docs/roadmap.html
 *.bak
 
 .env
