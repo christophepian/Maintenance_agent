@@ -14,9 +14,9 @@
  *   6. Canonical reload + DTO return
  */
 
-import { RequestStatus, OrgMode, PrismaClient, ApprovalSource } from "@prisma/client";
+import { RequestStatus, OrgMode, PrismaClient, ApprovalSource, LegalObligation } from "@prisma/client";
 import { WorkflowContext } from "./context";
-import { InvalidTransitionError } from "./transitions";
+import { InvalidTransitionError, assertRequestTransition } from "./transitions";
 import { emit } from "../events/bus";
 import { findRequestById, findRequestRaw, updateRequestStatus } from "../repositories/requestRepository";
 import { findJobByRequestIdRaw } from "../repositories/jobRepository";
@@ -24,6 +24,7 @@ import { toDTO, type MaintenanceRequestDTO } from "../services/maintenanceReques
 import { findMatchingContractor, assignContractor } from "../services/requestAssignment";
 import { getOrgConfig } from "../services/orgConfig";
 import { createJob } from "../services/jobs";
+import { createRfpForRequest } from "../services/rfps";
 
 // ─── Input / Output ────────────────────────────────────────────
 
@@ -87,7 +88,45 @@ export async function approveRequestWorkflow(
     throw new InvalidTransitionError("Request", current.status, "APPROVED");
   }
 
-  // ── 4. Update status ──────────────────────────────────────
+  // ── 4. Owner approves from PENDING_OWNER_APPROVAL → create RFP + RFP_PENDING
+  if (
+    approvalType === "owner" &&
+    current.status === RequestStatus.PENDING_OWNER_APPROVAL
+  ) {
+    assertRequestTransition(current.status, RequestStatus.RFP_PENDING);
+
+    // Create the RFP now (owner just gave the green light)
+    let rfpId: string | null = null;
+    try {
+      const rfp = await createRfpForRequest(orgId, requestId, {
+        legalObligation: LegalObligation.UNKNOWN,
+        legalTopic: current.category,
+      });
+      rfpId = rfp.id;
+    } catch (rfpErr: any) {
+      console.warn(`[approve] RFP creation failed for ${requestId}:`, rfpErr.message);
+    }
+
+    await updateRequestStatus(prisma, requestId, RequestStatus.RFP_PENDING, {
+      approvalSource: ApprovalSource.OWNER_APPROVED,
+    });
+
+    emit({
+      type: "OWNER_APPROVED",
+      orgId,
+      actorUserId: ctx.actorUserId,
+      payload: { requestId, comment: comment || null, rfpId, newStatus: "RFP_PENDING" },
+    }).catch((err) => console.error("[EVENT] Failed to emit OWNER_APPROVED", err));
+
+    const reloaded = await findRequestById(prisma, requestId);
+    return {
+      dto: toDTO(reloaded!),
+      jobAutoCreated: false,
+      alreadyApproved: false,
+    };
+  }
+
+  // ── 4b. All other approval paths → APPROVED ───────────────
   await updateRequestStatus(prisma, requestId, RequestStatus.APPROVED, {
     approvalSource: approvalType === "owner"
       ? ApprovalSource.OWNER_APPROVED

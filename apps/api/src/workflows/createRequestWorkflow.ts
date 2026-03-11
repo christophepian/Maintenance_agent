@@ -14,17 +14,16 @@
  *   9. Canonical reload + DTO return
  */
 
-import { RequestStatus, OrgMode, PrismaClient, ApprovalSource } from "@prisma/client";
+import { RequestStatus, PrismaClient } from "@prisma/client";
 import { WorkflowContext } from "./context";
 import { emit } from "../events/bus";
-import { findRequestById, createRequest as repoCreateRequest, updateRequestStatus } from "../repositories/requestRepository";
+import { findRequestById, createRequest as repoCreateRequest } from "../repositories/requestRepository";
 import { getTenantByPhone } from "../services/tenants";
 import { getOrgConfig } from "../services/orgConfig";
 import { computeEffectiveConfig } from "../services/buildingConfig";
 import { decideRequestStatusWithRules } from "../services/autoApproval";
 import { findMatchingContractor, assignContractor } from "../services/requestAssignment";
-import { evaluateRequestLegalDecision } from "../services/legalDecisionEngine";
-import { createRfpForRequest } from "../services/rfps";
+import { evaluateLegalRoutingWorkflow } from "./evaluateLegalRoutingWorkflow";
 import { toDTO, type MaintenanceRequestDTO } from "../services/maintenanceRequests";
 import { normalizePhoneToE164 } from "../utils/phoneNormalization";
 import type { CreateRequestInput } from "../validation/requests";
@@ -118,6 +117,14 @@ export async function createRequestWorkflow(
     }
   }
 
+  // ── 3b. Validate: unitId is required ─────────────────────
+  if (!unitId) {
+    throw Object.assign(
+      new Error("unitId is required — requests cannot be created without a unit"),
+      { code: "VALIDATION_ERROR" },
+    );
+  }
+
   // ── 4. Persist the request ─────────────────────────────────
   const created = await repoCreateRequest(prisma, {
     description,
@@ -154,44 +161,13 @@ export async function createRequestWorkflow(
         });
 
         if (mapping) {
-          const decision = await evaluateRequestLegalDecision(orgId, created.id);
+          const { decision } = await evaluateLegalRoutingWorkflow(ctx, { requestId: created.id });
+          legalAutoRouted = decision.legalObligation === "OBLIGATED";
 
-          if (decision.legalObligation === "OBLIGATED") {
-            const rfp = await createRfpForRequest(orgId, created.id, {
-              legalObligation: decision.legalObligation as any,
-              legalTopic: decision.legalTopic,
-            });
-
-            const previousStatus = created.status;
-            await updateRequestStatus(prisma, created.id, RequestStatus.RFP_PENDING, {
-              approvalSource: ApprovalSource.LEGAL_OBLIGATION,
-            });
-
-            legalAutoRouted = true;
-
-            emit({
-              type: "LEGAL_AUTO_ROUTED",
-              orgId,
-              actorUserId: ctx.actorUserId,
-              payload: {
-                requestId: created.id,
-                obligation: decision.legalObligation,
-                rfpId: rfp.id,
-                previousStatus: String(previousStatus),
-                newStatus: "RFP_PENDING",
-              },
-            }).catch((err) => console.error("[EVENT] Failed to emit LEGAL_AUTO_ROUTED", err));
-
-            console.log(`[LEGAL] Auto-routed request ${created.id} → RFP ${rfp.id} (OBLIGATED)`);
+          if (legalAutoRouted) {
+            console.log(`[LEGAL] Auto-routed request ${created.id} → RFP (OBLIGATED)`);
           } else {
-            // Non-OBLIGATED result: route to owner approval if still in PENDING_REVIEW
-            // This prevents UNKNOWN/DISCRETIONARY from stalling the request
-            if (created.status === RequestStatus.PENDING_REVIEW) {
-              await updateRequestStatus(prisma, created.id, RequestStatus.PENDING_OWNER_APPROVAL);
-              console.log(`[LEGAL] Request ${created.id}: ${decision.legalObligation} → PENDING_OWNER_APPROVAL`);
-            } else {
-              console.log(`[LEGAL] Request ${created.id}: ${decision.legalObligation} — kept as ${created.status}`);
-            }
+            console.log(`[LEGAL] Request ${created.id}: ${decision.legalObligation} — routed via workflow`);
           }
         }
       }

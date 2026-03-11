@@ -116,13 +116,13 @@ const OBLIGATION_META = {
  */
 function getAvailableCTAs(r, assigningId) {
   const ctaMap = {
-    PENDING_REVIEW:           ['approve'],
+    PENDING_REVIEW:           [],                         // auto-routed by legal engine
     RFP_PENDING:              ['view_rfp'],
     AUTO_APPROVED:            ['view_rfp'],
-    PENDING_OWNER_APPROVAL:   ['approve', 'reject', 'view_rfp'],
+    PENDING_OWNER_APPROVAL:   ['approve', 'reject'],      // no RFP yet — owner decides first
     APPROVED:                 ['assign'],
     ASSIGNED:                 ['unassign'],
-    IN_PROGRESS:              [],
+    IN_PROGRESS:              ['view_rfp'],               // read-only link
     COMPLETED:                [],
     OWNER_REJECTED:           [],
   };
@@ -135,6 +135,97 @@ function getAvailableCTAs(r, assigningId) {
   }
 
   return base;
+}
+
+// ---------------------------------------------------------------------------
+// Next-step display — status-driven banner for accordion detail view
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns the next-step info for a request based on its current status
+ * and optional legal decision data.
+ *
+ * @param {object} r - request summary from API
+ * @param {object|null} legalDecision - lazy-fetched legal decision (may be null/undefined)
+ * @returns {{ label: string, description: string, variant: string, linkLabel?: string, linkHref?: string } | null}
+ */
+function getNextStep(r, legalDecision) {
+  switch (r.status) {
+    case 'PENDING_REVIEW':
+      if (!r.unitNumber) {
+        return {
+          label: 'Unit Required',
+          description: 'This request has no unit assigned. Assign a unit before legal evaluation can proceed.',
+          variant: 'warn',
+        };
+      }
+      return {
+        label: 'Auto-Routing',
+        description: 'The legal engine is evaluating this request. It will be routed automatically based on obligation rules.',
+        variant: 'info',
+      };
+
+    case 'RFP_PENDING':
+      return {
+        label: 'Awaiting Quotes',
+        description: 'An RFP has been created. Waiting for contractor quotes before the work can proceed.',
+        variant: 'info',
+        linkLabel: 'View RFP',
+        linkHref: '/manager/rfps',
+      };
+
+    case 'PENDING_OWNER_APPROVAL': {
+      const obl = legalDecision?.legalObligation;
+      const oblText = obl
+        ? `Legal verdict: ${obl.replace(/_/g, ' ').toLowerCase()}.`
+        : '';
+      return {
+        label: 'Awaiting Owner Decision',
+        description: `The owner must approve or reject this request before an RFP is created. ${oblText}`.trim(),
+        variant: 'warn',
+      };
+    }
+
+    case 'AUTO_APPROVED':
+      return {
+        label: 'Auto-Approved',
+        description: 'This request was auto-approved based on legal obligation rules. An RFP is in progress.',
+        variant: 'success',
+        linkLabel: 'View RFP',
+        linkHref: '/manager/rfps',
+      };
+
+    case 'APPROVED':
+      return {
+        label: 'Ready to Assign',
+        description: 'This request is approved. Assign a contractor to begin work.',
+        variant: 'success',
+      };
+
+    case 'IN_PROGRESS':
+      return {
+        label: 'Work in Progress',
+        description: 'A contractor has been assigned and work is underway.',
+        variant: 'info',
+      };
+
+    case 'OWNER_REJECTED':
+      return {
+        label: 'Owner Rejected',
+        description: 'The owner has rejected this request. No further action will be taken.',
+        variant: 'error',
+      };
+
+    case 'COMPLETED':
+      return {
+        label: 'Completed',
+        description: 'This maintenance request has been fulfilled.',
+        variant: 'success',
+      };
+
+    default:
+      return null;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -482,6 +573,11 @@ export default function ManagerRequestsPage() {
     r.status === "PENDING_REVIEW" ||
     r.status === "PENDING_OWNER_APPROVAL" ||
     r.status === "RFP_PENDING" ||
+    r.status === "AUTO_APPROVED" ||
+    r.status === "APPROVED" ||
+    r.status === "ASSIGNED" ||
+    r.status === "IN_PROGRESS" ||
+    r.status === "COMPLETED" ||
     r.status === "OWNER_REJECTED";
 
   return (
@@ -686,6 +782,29 @@ export default function ManagerRequestsPage() {
                           {isExpanded && (
                             <tr>
                               <td colSpan={9} className="p-0">
+                                {/* Next-step banner */}
+                                {(() => {
+                                  const step = getNextStep(r, legalState?.data);
+                                  if (!step) return null;
+                                  const variantStyles = {
+                                    info:    'border-blue-200 bg-blue-50 text-blue-800',
+                                    warn:    'border-amber-200 bg-amber-50 text-amber-800',
+                                    success: 'border-emerald-200 bg-emerald-50 text-emerald-800',
+                                    error:   'border-red-200 bg-red-50 text-red-800',
+                                  };
+                                  return (
+                                    <div className={`mx-4 mt-3 rounded-lg border px-4 py-3 text-sm ${variantStyles[step.variant] || variantStyles.info}`}>
+                                      <p className="font-semibold">{step.label}</p>
+                                      <p className="mt-0.5 text-xs opacity-80">
+                                        {step.description}
+                                        {step.linkLabel && step.linkHref && (
+                                          <> &middot; <a href={step.linkHref} className="underline font-medium">{step.linkLabel}</a></>
+                                        )}
+                                      </p>
+                                    </div>
+                                  );
+                                })()}
+
                                 <LegalRecommendationPanel
                                   decision={legalState?.data}
                                   loading={legalState?.loading}

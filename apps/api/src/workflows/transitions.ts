@@ -20,7 +20,8 @@ const VALID_REQUEST_TRANSITIONS: Record<string, RequestStatus[]> = {
     RequestStatus.PENDING_OWNER_APPROVAL,    // avg quotes > threshold
   ],
   [RequestStatus.PENDING_OWNER_APPROVAL]: [
-    RequestStatus.APPROVED,                  // owner approves
+    RequestStatus.APPROVED,                  // owner approves (post-RFP cost approval)
+    RequestStatus.RFP_PENDING,               // owner approves → RFP created
     RequestStatus.OWNER_REJECTED,            // owner rejects (terminal)
   ],
   [RequestStatus.AUTO_APPROVED]: [
