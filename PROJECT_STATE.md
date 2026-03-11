@@ -1,6 +1,6 @@
 # Maintenance Agent — Project State
 
-**Last updated:** 2026-03-11 (Triage Rework — Slices 1–3)
+**Last updated:** 2026-03-11 (Legal Engine Remediation + DSL Evaluator Update)
 
 **Companion files (do not duplicate content here):**
 * [EPIC_HISTORY.md](EPIC_HISTORY.md) — all completed epic/slice narratives + hardening guidelines (H1–H6)
@@ -590,7 +590,7 @@ Full rewrite of the product roadmap generator to match the original IBM Plex dar
   - Stat grid: Done / In Progress / Planned / Total / Custom Items / % Complete
   - 4 tabs: Phases (with filter bar), Custom Items, Codebase Signals (detection table + 3-column panels), How to Use
 - **scripts/roadmap.schema.json** updated — new feature ID pattern, `hooks_blocked` array, `page_exists`/`audit_finding` detection types, `model` property on checks, `future` phase status
-- **Codebase signals verified:** 45 models, 35 enums, 31 migrations, 16 workflows, 14 routes — all detected correctly
+- **Codebase signals verified:** 45 models, 37 enums, 32 migrations, 16 workflows, 14 routes — all detected correctly
 
 **Files created/rewritten:**
 - `ROADMAP.json` — 26 features, 6 phases, empty `custom_items[]`
@@ -643,7 +643,7 @@ Full rework of the request triage pipeline: fixed wrong state machine transition
 - `apps/api/src/workflows/ownerRejectWorkflow.ts`
 
 **Files modified:**
-- `apps/api/prisma/schema.prisma` — 3 enum additions, 4 new fields across 3 models
+- `apps/api/prisma/schema.prisma` — 3 enum additions, 4 new fields across 45 models
 - `apps/api/src/workflows/transitions.ts` — VALID_REQUEST_TRANSITIONS rewritten
 - `apps/api/src/workflows/index.ts` — ownerRejectWorkflow export (17 workflows total)
 - `apps/api/src/workflows/approveRequestWorkflow.ts` — approvalSource writes
@@ -656,7 +656,44 @@ Full rework of the request triage pipeline: fixed wrong state machine transition
 - `apps/api/src/__tests__/workflows.test.ts` — obligation assertion fixed
 - `apps/api/src/ARCHITECTURE_LOW_CONTEXT_GUIDE.md` — transition map + counts updated
 
-**Stats:** 45 models · 37 enums · 17 workflows. tsc: 0 errors. Tests: pass (3 pre-existing legal engine timeouts unchanged).
+**Stats:** 45 models · 38 enums · 17 workflows. tsc: 0 errors. Tests: pass (12 pre-existing integration test timeouts unchanged).
+
+### Legal Engine Remediation + DSL Evaluator Update — 2026-03-11
+**Status:** ✅ COMPLETE
+
+Cleaned up 93 corrupt legal rules (duplicates, missing topics, wrong ruleType) and fixed the DSL evaluator to handle `topic_match` conditions so the legal engine can reliably route requests.
+
+**Problem:** All 93 MAINTENANCE_OBLIGATION rules had `topic: null` and 53 had `authority: INDUSTRY_STANDARD`. The DSL evaluator only supported legacy `field/op/value` conditions, not the `topic_match` format used by canonical rules. Result: no rules ever matched → all requests got UNKNOWN → PENDING_OWNER_APPROVAL.
+
+**Schema change:**
+- Added `RENT_REDUCTION` to `LegalRuleType` enum (applied via `db push` — G8 additive exception)
+
+**Data remediation (one-time script):**
+1. Deactivated 34 duplicate/test rules (33 `co-259a-dishwasher-leak-*` + 1 `duplicate-test-key-for-conflict`)
+2. Deactivated 4 per-appliance rules (OVEN, DISHWASHER_V2, STOVE, BATHROOM)
+3. Updated CH_CO_259A_PLUMBING → topic: PLUMBING, canonical DSL
+4. Updated CH_CO_259A_LIGHTING → topic: ELECTRICAL, canonical DSL
+5. Reclassified 53 INDUSTRY_STANDARD rules → ruleType: RENT_REDUCTION
+6. Seeded 3 new canonical rules: CH_CO259A_HEATING, CH_CO259A_STRUCTURAL, CH_CO259A_SAFETY
+7. Upserted 34 global category mappings (HEATING: 6, PLUMBING: 8, ELECTRICAL: 7, STRUCTURAL: 8, SAFETY: 5)
+
+**Final state:** 5 active MAINTENANCE_OBLIGATION rules, all STATUTE, all FEDERAL scope, topics: ELECTRICAL, HEATING, PLUMBING, SAFETY, STRUCTURAL. 37 active category mappings.
+
+**DSL evaluator fixes (legalDecisionEngine.ts):**
+- Fix A: Rewrote `evaluateDslConditions()` → supports `topic_match`, `always_true`, `always_false`, `AND`, `OR` + legacy `field/op/value`
+- Fix B: Pass `legalTopic` as third arg to `evaluateDslConditions` in `evaluateStatutoryRules`
+- Fix D: Added `authority: 'STATUTE'` filter to Prisma query in `evaluateStatutoryRules`
+
+**Files created:**
+- `apps/api/scripts/remediate-legal-rules.ts` — idempotent one-time cleanup script
+- `apps/api/scripts/verify-legal-engine.ts` — 26-assertion verification script
+- `apps/api/scripts/inspect-legal-rules.ts` — DB inspection utility
+
+**Files modified:**
+- `apps/api/prisma/schema.prisma` — RENT_REDUCTION enum value
+- `apps/api/src/services/legalDecisionEngine.ts` — DSL evaluator rewrite + authority filter
+
+**Stats:** 45 models · 38 enums · 17 workflows. tsc: 0 errors. 26 verification assertions passed. 12 pre-existing integration test timeouts unchanged.
 
 ---
 
@@ -723,13 +760,16 @@ Conversational tenant intake with phone-based identification, automatic asset in
 
 <!-- auto-sync 2026-03-10: suites 4→30 -->
 
+
+<!-- auto-sync 2026-03-11: models 3→45, enums 35→37, enums 35→37, enums 35→37, migrations 31→32, backendLOC 34→35 -->
+
 ### State Integrity
 
 This document + companion files are the **single source of truth**:
 
 * **Doc structure:** PROJECT_STATE.md (~570 lines) + EPIC_HISTORY.md (epics) + SCHEMA_REFERENCE.md (schema) + ARCHITECTURE_LOW_CONTEXT_GUIDE.md (lookup)
 * Filesystem (verified 2026-03-10)
-* Database schema — 32 migrations + `db push` for LKDE tables + `RFP_PENDING` enum value + `autoLegalRouting` column (shadow DB issue — see G8 exception in LKDE epic section); 45 models, 35 enums verified in live DB
+* Database schema — 32 migrations + `db push` for LKDE tables + `RFP_PENDING` enum value + `autoLegalRouting` column (shadow DB issue — see G8 exception in LKDE epic section); 45 models, 37 enums verified in live DB
 * Database data — 99+ assets across 19 units (with interventions tracking), 274 depreciation standards (including 5 added for mapped topics), 16 category mappings, buildings with cantons set, 6 CO 259a statutory rules with proper DSL (verified 2026-03-07)
 * Running system — all endpoints return 200; legal auto-routing creates RFP and sets RFP_PENDING for requests with mapped categories when autoLegalRouting=true; asset inventory endpoints serve depreciation data (verified 2026-03-07)
 * Frontend navigation — ~52 of 67 audit findings resolved; all 4 portals (manager, contractor, owner, tenant) fully connected with working links, detail tabs, and finance pages; **manager sidebar redesigned** with accordion navigation, lucide-react icons, and active route detection (verified 2026-03-09)
@@ -757,7 +797,7 @@ Safe to:
 
 ---
 
-✅ **Project stabilized, security-hardened, org-scoped, and UI-connected (2026-03-12).** 334 tests, 30 suites, 0 TS errors. ~52/67 frontend audit findings resolved. 20/82 audit findings resolved (security hardening + schema doc fixes). Frontend rationalized: full page inventory, 12 empty states standardized, 119/119 proxies conforming. Backend: ~34,000 LOC | Frontend: ~24,000 LOC | ~140 API routes | 45 Prisma models | 35 enums | 185 frontend pages | 14 workflows | 9 repositories. See [EPIC_HISTORY.md](EPIC_HISTORY.md) for full completion details.
+✅ **Project stabilized, security-hardened, org-scoped, and UI-connected (2026-03-12).** 334 tests, 30 suites, 0 TS errors. ~52/67 frontend audit findings resolved. 20/82 audit findings resolved (security hardening + schema doc fixes). Frontend rationalized: full page inventory, 12 empty states standardized, 119/119 proxies conforming. Backend: ~35,000 LOC | Frontend: ~24,000 LOC | ~140 API routes | 45 Prisma models | 37 enums | 185 frontend pages | 14 workflows | 9 repositories. See [EPIC_HISTORY.md](EPIC_HISTORY.md) for full completion details.
 
 
 ## 13. Authentication & Testing

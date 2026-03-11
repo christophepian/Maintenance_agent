@@ -315,6 +315,7 @@ async function evaluateStatutoryRules(
     where: {
       isActive: true,
       ruleType: "MAINTENANCE_OBLIGATION",
+      authority: "STATUTE",
       jurisdiction: "CH",
       topic: legalTopic,
       OR: [
@@ -360,9 +361,9 @@ async function evaluateStatutoryRules(
     // carry topic in dslJson — honour that for backwards compat.
     if (!rule.topic && dsl.topic && dsl.topic !== legalTopic) continue;
 
-    // DSL condition evaluation (simple match for MVP)
+    // DSL condition evaluation
     if (dsl.conditions) {
-      const conditionsMet = evaluateDslConditions(dsl.conditions, request);
+      const conditionsMet = evaluateDslConditions(dsl.conditions, request, legalTopic);
       if (!conditionsMet) continue;
     }
 
@@ -408,49 +409,85 @@ async function evaluateStatutoryRules(
 }
 
 /**
- * Simple DSL condition evaluator.
+ * DSL condition evaluator.
  *
- * Conditions are objects like:
+ * Supported condition types:
+ *   { type: "topic_match", topic: "PLUMBING" }  — matches resolved legal topic
+ *   { type: "always_true" }                       — unconditional pass
+ *   { type: "always_false" }                      — unconditional fail
+ *   { type: "AND", conditions: [...] }             — all sub-conditions must pass
+ *   { type: "OR",  conditions: [...] }             — any sub-condition must pass
+ *
+ * Legacy format (backwards compat):
  *   { field: "category", op: "eq", value: "stove" }
  *   { field: "estimatedCost", op: "gt", value: 500 }
  */
 function evaluateDslConditions(
   conditions: any[],
   request: any,
+  resolvedTopic?: string | null,
 ): boolean {
   if (!Array.isArray(conditions)) return true;
 
   for (const cond of conditions) {
+    if (!evaluateSingleCondition(cond, request, resolvedTopic)) return false;
+  }
+
+  return true;
+}
+
+function evaluateSingleCondition(
+  cond: any,
+  request: any,
+  resolvedTopic?: string | null,
+): boolean {
+  if (!cond || typeof cond !== "object") return true;
+
+  // ── Typed condition nodes ──────────────────────────────────
+  if (cond.type === "topic_match") {
+    return resolvedTopic === cond.topic;
+  }
+  if (cond.type === "always_true") {
+    return true;
+  }
+  if (cond.type === "always_false") {
+    return false;
+  }
+  if (cond.type === "AND" && Array.isArray(cond.conditions)) {
+    return cond.conditions.every((sub: any) =>
+      evaluateSingleCondition(sub, request, resolvedTopic),
+    );
+  }
+  if (cond.type === "OR" && Array.isArray(cond.conditions)) {
+    return cond.conditions.some((sub: any) =>
+      evaluateSingleCondition(sub, request, resolvedTopic),
+    );
+  }
+
+  // ── Legacy field/op/value format ───────────────────────────
+  if (cond.field && cond.op) {
     const fieldValue = request[cond.field];
     switch (cond.op) {
       case "eq":
-        if (fieldValue !== cond.value) return false;
-        break;
+        return fieldValue === cond.value;
       case "neq":
-        if (fieldValue === cond.value) return false;
-        break;
+        return fieldValue !== cond.value;
       case "gt":
-        if (typeof fieldValue !== "number" || fieldValue <= cond.value) return false;
-        break;
+        return typeof fieldValue === "number" && fieldValue > cond.value;
       case "gte":
-        if (typeof fieldValue !== "number" || fieldValue < cond.value) return false;
-        break;
+        return typeof fieldValue === "number" && fieldValue >= cond.value;
       case "lt":
-        if (typeof fieldValue !== "number" || fieldValue >= cond.value) return false;
-        break;
+        return typeof fieldValue === "number" && fieldValue < cond.value;
       case "in":
-        if (!Array.isArray(cond.value) || !cond.value.includes(fieldValue)) return false;
-        break;
+        return Array.isArray(cond.value) && cond.value.includes(fieldValue);
       case "exists":
-        if (cond.value && !fieldValue) return false;
-        if (!cond.value && fieldValue) return false;
-        break;
+        return cond.value ? !!fieldValue : !fieldValue;
       default:
-        // Unknown operator — skip
-        break;
+        return true; // Unknown operator — skip
     }
   }
 
+  // Unknown condition shape — permissive (don't block evaluation)
   return true;
 }
 
