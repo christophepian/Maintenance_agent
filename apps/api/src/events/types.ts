@@ -19,6 +19,8 @@
 export interface RequestApprovedPayload {
   requestId: string;
   comment?: string | null;
+  rfpId?: string | null;
+  newStatus?: string;
 }
 
 export interface RequestRejectedPayload {
