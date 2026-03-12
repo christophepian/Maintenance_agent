@@ -206,6 +206,7 @@ model Contractor {
 
 model Request {
   id                   String         @id @default(uuid())
+  requestNumber        Int            @default(autoincrement()) @unique
   description          String
   category             String?
   createdAt            DateTime       @default(now())
@@ -222,12 +223,28 @@ model Request {
   updatedAt            DateTime       @default(now()) @updatedAt
   approvalSource       ApprovalSource?
   rejectionReason      String?
+  payingParty          PayingParty     @default(LANDLORD)
   job                  Job?
   appliance            Appliance?     @relation(fields: [applianceId], references: [id])
   assignedContractor   Contractor?    @relation(fields: [assignedContractorId], references: [id])
   tenant               Tenant?        @relation(fields: [tenantId], references: [id])
   unit                 Unit?          @relation(fields: [unitId], references: [id])
   events               RequestEvent[]
+  attachments          MaintenanceAttachment[]
+}
+
+model MaintenanceAttachment {
+  id          String   @id @default(uuid())
+  requestId   String
+  fileName    String
+  mimeType    String
+  storageKey  String
+  sizeBytes   Int
+  uploadedBy  String?
+  createdAt   DateTime @default(now())
+  request     Request  @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@index([requestId])
 }
 
 model Event {
@@ -691,6 +708,11 @@ enum ApprovalSource {
   LEGAL_OBLIGATION
 }
 
+enum PayingParty {
+  LANDLORD
+  TENANT
+}
+
 enum UnitType {
   RESIDENTIAL
   COMMON_AREA
@@ -727,6 +749,7 @@ enum NotificationEventType {
   INVOICE_PAID
   INVOICE_DISPUTED
   OWNER_REJECTED
+  TENANT_SELF_PAY_ACCEPTED
   TENANT_SELECTED
   LEASE_READY_TO_SIGN
   LEASE_SIGNED

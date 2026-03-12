@@ -13,3 +13,4 @@ export * as assetRepo from "./assetRepository";
 export * as inventoryRepo from "./inventoryRepository";
 export * as contractorRepo from "./contractorRepository";
 export * as legalSourceRepo from "./legalSourceRepository";
+export * as maintenanceAttachmentRepo from "./maintenanceAttachmentRepo";

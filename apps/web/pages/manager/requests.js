@@ -80,25 +80,21 @@ const OBLIGATION_META = {
     cls: "bg-emerald-50 text-emerald-800 border-emerald-200",
     heading: "Landlord is legally obligated to repair",
     description: "Swiss law requires the landlord to fix this. Approve the repair and assign a contractor.",
-    actionHint: "Approve \u2192 Assign contractor",
   },
   DISCRETIONARY: {
     cls: "bg-amber-50 text-amber-800 border-amber-200",
     heading: "Repair is at the landlord\u2019s discretion",
     description: "This isn\u2019t strictly required by law, but is common practice. Consider the tenant relationship and cost.",
-    actionHint: "Review cost estimate \u2192 Decide",
   },
   NOT_OBLIGATED: {
     cls: "bg-red-50 text-red-800 border-red-200",
     heading: "Landlord is not obligated",
     description: "Based on Swiss law and the asset\u2019s condition, this repair falls on the tenant. You may still choose to cover it.",
-    actionHint: "Decline or offer goodwill repair",
   },
   UNKNOWN: {
     cls: "bg-slate-100 text-slate-700 border-slate-200",
     heading: "Needs your judgement",
     description: "The legal engine couldn\u2019t determine obligation automatically. Review the details below and decide.",
-    actionHint: "Review details \u2192 Decide",
   },
 };
 
@@ -147,9 +143,11 @@ function getAvailableCTAs(r, assigningId) {
  *
  * @param {object} r - request summary from API
  * @param {object|null} legalDecision - lazy-fetched legal decision (may be null/undefined)
- * @returns {{ label: string, description: string, variant: string, linkLabel?: string, linkHref?: string } | null}
+ * @returns {{ label: string, description: string, variant: string } | null}
  */
 function getNextStep(r, legalDecision) {
+  const obl = legalDecision?.legalObligation;
+
   switch (r.status) {
     case 'PENDING_REVIEW':
       if (!r.unitNumber) {
@@ -166,60 +164,65 @@ function getNextStep(r, legalDecision) {
       };
 
     case 'RFP_PENDING':
+      if (obl === 'OBLIGATED') {
+        return {
+          label: 'Legally required \u2014 RFP open',
+          description: 'Swiss law requires this repair. An RFP has been created automatically.',
+          variant: 'info',
+        };
+      }
       return {
-        label: 'Awaiting Quotes',
-        description: 'An RFP has been created. Waiting for contractor quotes before the work can proceed.',
+        label: 'RFP open',
+        description: 'The owner approved this request. Contractors are being invited to quote.',
         variant: 'info',
-        linkLabel: 'View RFP',
-        linkHref: '/manager/rfps',
       };
-
-    case 'PENDING_OWNER_APPROVAL': {
-      const obl = legalDecision?.legalObligation;
-      const oblText = obl
-        ? `Legal verdict: ${obl.replace(/_/g, ' ').toLowerCase()}.`
-        : '';
-      return {
-        label: 'Awaiting Owner Decision',
-        description: `The owner must approve or reject this request before an RFP is created. ${oblText}`.trim(),
-        variant: 'warn',
-      };
-    }
 
     case 'AUTO_APPROVED':
       return {
-        label: 'Auto-Approved',
-        description: 'This request was auto-approved based on legal obligation rules. An RFP is in progress.',
+        label: 'Auto-approved \u2014 RFP open',
+        description: 'This repair was legally obligated and automatically approved.',
         variant: 'success',
-        linkLabel: 'View RFP',
-        linkHref: '/manager/rfps',
+      };
+
+    case 'PENDING_OWNER_APPROVAL':
+      if (obl === 'OBLIGATED') {
+        return {
+          label: 'Legal obligation \u2014 owner review',
+          description: 'Swiss law requires this repair. The owner should approve to proceed.',
+          variant: 'warn',
+        };
+      }
+      return {
+        label: 'Awaiting owner decision',
+        description: 'The owner must approve or reject before an RFP is created.',
+        variant: 'warn',
       };
 
     case 'APPROVED':
       return {
-        label: 'Ready to Assign',
-        description: 'This request is approved. Assign a contractor to begin work.',
+        label: 'Ready to assign',
+        description: 'Approved and ready. Assign a contractor to begin work.',
         variant: 'success',
       };
 
     case 'IN_PROGRESS':
       return {
-        label: 'Work in Progress',
-        description: 'A contractor has been assigned and work is underway.',
+        label: 'Work in progress',
+        description: 'A contractor is assigned and work is underway.',
         variant: 'info',
       };
 
     case 'OWNER_REJECTED':
       return {
-        label: 'Owner Rejected',
-        description: 'The owner has rejected this request. No further action will be taken.',
+        label: 'Rejected by owner',
+        description: 'The owner declined this request.',
         variant: 'error',
       };
 
     case 'COMPLETED':
       return {
         label: 'Completed',
-        description: 'This maintenance request has been fulfilled.',
+        description: 'This repair has been completed.',
         variant: 'success',
       };
 
@@ -299,9 +302,6 @@ function LegalRecommendationPanel({ decision, loading: isLoading, error: loadErr
 
   const ob = OBLIGATION_META[decision.legalObligation] || OBLIGATION_META.UNKNOWN;
 
-  const topic = (decision.legalTopic || "").replace(/_/g, " ").toLowerCase()
-    .replace(/\b\w/g, (ch) => ch.toUpperCase());
-
   const uniqueCitations = [];
   const seen = new Set();
   for (const c of decision.citations || []) {
@@ -310,10 +310,10 @@ function LegalRecommendationPanel({ decision, loading: isLoading, error: loadErr
   }
 
   return (
-    <div className="border-t-2 border-blue-500 bg-slate-50 px-6 py-5">
+    <div className="px-6 py-4">
 
       {/* Hero verdict card */}
-      <div className={`rounded-lg border p-4 mb-5 ${ob.cls}`}>
+      <div className={`rounded-lg border p-4 ${ob.cls}`}>
         <div className="flex items-start justify-between gap-4">
           <div>
             <h4 className="text-sm font-bold">{ob.heading}</h4>
@@ -323,44 +323,12 @@ function LegalRecommendationPanel({ decision, loading: isLoading, error: loadErr
             {decision.confidence}% confidence
           </span>
         </div>
-        <div className="mt-3 flex items-center gap-2 text-xs font-medium opacity-75">
-          <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-          </svg>
-          <span>Suggested next step: {ob.actionHint}</span>
-        </div>
       </div>
 
-      {/* Section 1: Recommended Actions */}
-      {decision.recommendedActions?.length > 0 && (
-        <div className="mb-4">
-          <SectionLabel>What to do</SectionLabel>
-          <div className="flex flex-wrap gap-2 mt-1.5">
-            {decision.recommendedActions
-              .filter((a) => a !== "MANUAL_REVIEW")
-              .map((a, i) => {
-                const actionMap = {
-                  CREATE_RFP:     { label: "Create request for proposal",   cls: "bg-blue-50 text-blue-700 border-blue-200" },
-                  APPROVE_REPAIR: { label: "Approve the repair",            cls: "bg-emerald-50 text-emerald-700 border-emerald-200" },
-                  DECLINE_REPAIR: { label: "Decline \u2014 tenant\u2019s responsibility", cls: "bg-red-50 text-red-700 border-red-200" },
-                  REQUEST_QUOTE:  { label: "Request a quote first",         cls: "bg-amber-50 text-amber-700 border-amber-200" },
-                };
-                const m = actionMap[a] || { label: a.replace(/_/g, " "), cls: "bg-slate-50 text-slate-600 border-slate-200" };
-                return (
-                  <span key={i} className={`inline-block rounded-lg border px-3 py-1.5 text-xs font-medium ${m.cls}`}>
-                    {m.label}
-                  </span>
-                );
-              })}
-          </div>
-        </div>
-      )}
-
-      {/* Section 2: Legal Basis */}
+      {/* Citations */}
       {uniqueCitations.length > 0 && (
-        <div className="mb-4">
-          <SectionLabel>Legal basis</SectionLabel>
-          <div className="mt-1.5 flex flex-col gap-1.5">
+        <div className="mt-3">
+          <div className="flex flex-col gap-1.5">
             {uniqueCitations.slice(0, 4).map((c, i) => (
               <div key={i} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs">
                 <span className="font-semibold text-blue-700">{c.article}</span>
@@ -376,49 +344,18 @@ function LegalRecommendationPanel({ decision, loading: isLoading, error: loadErr
         </div>
       )}
 
-      {/* Section 3: Analysis */}
-      <div className="mb-4">
-        <SectionLabel>Analysis &mdash; {topic}</SectionLabel>
-        <ul className="mt-1.5 space-y-1">
-          {(decision.reasons || []).map((r, i) => (
-            <li key={i} className="flex items-start gap-2 text-xs text-slate-600">
-              <span className="mt-0.5 text-slate-300">&bull;</span>
-              <span>{r}</span>
-            </li>
-          ))}
-        </ul>
-
-        {/* Depreciation sub-card */}
-        {decision.depreciationSignal && (
-          <div className="mt-3 rounded-lg border border-slate-200 bg-white p-3">
-            <p className="text-xs font-semibold text-slate-600 mb-1">Asset depreciation</p>
-            <DepreciationBar signal={decision.depreciationSignal} />
-            {decision.depreciationSignal.fullyDepreciated && (
-              <div className="mt-2 rounded-md bg-red-50 border border-red-200 px-3 py-1.5 text-xs text-red-700 font-medium">
-                Asset has exceeded its useful life &mdash; landlord typically bears full replacement cost.
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* No depreciation data tip */}
-        {!decision.depreciationSignal && (
-          <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-            <strong>Tip:</strong> No asset age data found. Add the appliance install date in unit management
-            to unlock depreciation analysis and more accurate recommendations.
-          </div>
-        )}
-      </div>
-
-      {/* Footer */}
-      <div className="flex items-center justify-between border-t border-slate-200 pt-3 text-[11px] text-slate-400">
-        <span>Evaluation {decision.evaluationLogId?.slice(0, 8)}&hellip;</span>
-        {decision.rfpId && (
-          <span className="rounded-full bg-blue-50 px-2.5 py-0.5 font-medium text-blue-600">
-            RFP auto-created
-          </span>
-        )}
-      </div>
+      {/* Depreciation sub-card */}
+      {decision.depreciationSignal && (
+        <div className="mt-3 rounded-lg border border-slate-200 bg-white p-3">
+          <p className="text-xs font-semibold text-slate-600 mb-1">Asset depreciation</p>
+          <DepreciationBar signal={decision.depreciationSignal} />
+          {decision.depreciationSignal.fullyDepreciated && (
+            <div className="mt-2 rounded-md bg-red-50 border border-red-200 px-3 py-1.5 text-xs text-red-700 font-medium">
+              Asset has exceeded its useful life &mdash; landlord typically bears full replacement cost.
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -429,6 +366,156 @@ function SectionLabel({ children }) {
     <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
       {children}
     </p>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Request Photos / Attachments Panel (inline component)
+// ---------------------------------------------------------------------------
+
+function RequestPhotosPanel({ requestId }) {
+  const [attachments, setAttachments] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    fetch(`/api/maintenance-attachments/${requestId}`, { headers: authHeaders() })
+      .then(async (res) => {
+        if (!res.ok) throw new Error("Not available");
+        const body = await res.json();
+        if (!cancelled) setAttachments(body?.data || []);
+      })
+      .catch(() => {
+        if (!cancelled) setAttachments([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [requestId]);
+
+  function handleUpload(e) {
+    const files = e.target.files;
+    if (!files?.length) return;
+    const uploads = Array.from(files).map(async (file) => {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch(`/api/maintenance-attachments/${requestId}`, {
+        method: "POST",
+        headers: authHeaders(),
+        body: fd,
+      });
+      if (!res.ok) throw new Error("Upload failed");
+      const body = await res.json();
+      return body?.data;
+    });
+    Promise.all(uploads)
+      .then((newItems) => {
+        setAttachments((prev) => [...prev, ...newItems.filter(Boolean)]);
+      })
+      .catch(() => alert("One or more uploads failed"))
+      .finally(() => { e.target.value = ""; });
+  }
+
+  function isImage(name) {
+    return /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(name || "");
+  }
+
+  function formatSize(bytes) {
+    if (!bytes) return "";
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / 1048576).toFixed(1)} MB`;
+  }
+
+  if (loading) {
+    return (
+      <div className="px-6 py-4">
+        <SectionLabel>Photos / Attachments</SectionLabel>
+        <p className="mt-2 text-xs text-slate-400">Loading&hellip;</p>
+      </div>
+    );
+  }
+
+  const images = attachments.filter((a) => isImage(a.filename));
+  const files = attachments.filter((a) => !isImage(a.filename));
+
+  /** Resolve download URL — DTO returns /maintenance-attachments/:id/download, proxy needs /api prefix */
+  function downloadUrl(a) {
+    return a.url?.startsWith("/") ? `/api${a.url}` : a.url;
+  }
+
+  return (
+    <div className="px-6 py-4">
+      <SectionLabel>Photos / Attachments</SectionLabel>
+
+      {attachments.length === 0 ? (
+        /* Empty state */
+        <div className="mt-2 flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-center">
+          <svg className="h-8 w-8 text-slate-300 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+          <p className="text-sm text-slate-500">No photos yet. Upload to document the issue.</p>
+          <label className="mt-3 cursor-pointer rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700">
+            Upload photo
+            <input type="file" multiple accept="image/*,.pdf" className="hidden" onChange={handleUpload} />
+          </label>
+        </div>
+      ) : (
+        <>
+          {/* Image thumbnails */}
+          {images.length > 0 && (
+            <div className="mt-2 grid grid-cols-4 gap-2">
+              {images.map((a, i) => (
+                <button key={i} onClick={() => setPreviewUrl(downloadUrl(a))} className="group relative aspect-square overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
+                  <img src={downloadUrl(a)} alt={a.filename} className="h-full w-full object-cover transition-transform group-hover:scale-105" />
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Non-image files */}
+          {files.length > 0 && (
+            <div className="mt-2 flex flex-col gap-1.5">
+              {files.map((a, i) => (
+                <a key={i} href={downloadUrl(a)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs hover:bg-slate-50">
+                  <svg className="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                  </svg>
+                  <span className="font-medium text-slate-700">{a.filename}</span>
+                  {a.size && <span className="text-slate-400">{formatSize(a.size)}</span>}
+                </a>
+              ))}
+            </div>
+          )}
+
+          {/* Upload more */}
+          <label className="mt-2 inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50">
+            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            Upload more
+            <input type="file" multiple accept="image/*,.pdf" className="hidden" onChange={handleUpload} />
+          </label>
+        </>
+      )}
+
+      {/* Lightbox modal */}
+      {previewUrl && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80" onClick={() => setPreviewUrl(null)}>
+          <div className="relative max-h-[90vh] max-w-[90vw]" onClick={(e) => e.stopPropagation()}>
+            <img src={previewUrl} alt="Preview" className="max-h-[85vh] max-w-[85vw] rounded-lg object-contain" />
+            <button onClick={() => setPreviewUrl(null)} className="absolute -top-3 -right-3 flex h-8 w-8 items-center justify-center rounded-full bg-white text-slate-700 shadow-lg hover:bg-slate-100">
+              &times;
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -452,6 +539,7 @@ export default function ManagerRequestsPage() {
   // Accordion state
   const [expandedId, setExpandedId] = useState(null);
   const [legalDecisions, setLegalDecisions] = useState({});
+  const [requestDetails, setRequestDetails] = useState({});
 
   useEffect(() => {
     if (router.query.filter) setActiveTab(router.query.filter);
@@ -488,6 +576,19 @@ export default function ManagerRequestsPage() {
   function toggleAccordion(requestId) {
     if (expandedId === requestId) { setExpandedId(null); return; }
     setExpandedId(requestId);
+    // Lazy-fetch full request detail (for tenant info, full description, etc.)
+    if (!requestDetails[requestId]) {
+      setRequestDetails((prev) => ({ ...prev, [requestId]: { loading: true, data: null } }));
+      fetch(`/api/requests/${requestId}`, { headers: authHeaders() })
+        .then(async (res) => {
+          const body = await res.json();
+          if (!res.ok) throw new Error("Failed to load detail");
+          setRequestDetails((prev) => ({ ...prev, [requestId]: { loading: false, data: body.data } }));
+        })
+        .catch(() => {
+          setRequestDetails((prev) => ({ ...prev, [requestId]: { loading: false, data: null } }));
+        });
+    }
     if (!legalDecisions[requestId]) {
       setLegalDecisions((prev) => ({ ...prev, [requestId]: { loading: true, error: null, data: null } }));
       fetch(`/api/requests/${requestId}/legal-decision`, { headers: authHeaders() })
@@ -528,10 +629,10 @@ export default function ManagerRequestsPage() {
     if (reason === null) return; // user cancelled
     setActionLoading(id);
     try {
-      const res = await fetch(`/api/requests/${id}/status`, {
-        method: "PATCH",
+      const res = await fetch(`/api/requests/${id}/owner-reject`, {
+        method: "POST",
         headers: { "Content-Type": "application/json", ...authHeaders() },
-        body: JSON.stringify({ status: "OWNER_REJECTED", rejectionReason: reason }),
+        body: JSON.stringify({ reason: reason || null }),
       });
       if (!res.ok) { const d = await res.json(); throw new Error(d?.error?.message || "Failed to reject"); }
       await loadData();
@@ -632,6 +733,7 @@ export default function ManagerRequestsPage() {
                   <thead>
                     <tr className="border-b border-slate-100 text-left text-[11px] font-medium uppercase tracking-wider text-slate-400">
                       <th className="py-2.5 pl-3 pr-1 w-8"></th>
+                      <th className="px-3 py-2.5 w-16">#</th>
                       <th className="px-3 py-2.5">Status</th>
                       <th className="px-3 py-2.5">Building / Unit</th>
                       <th className="px-3 py-2.5">Category</th>
@@ -663,7 +765,18 @@ export default function ManagerRequestsPage() {
                               {expandable && <Chevron expanded={isExpanded} />}
                             </td>
 
-                            <td className="px-3 py-2.5"><StatusBadge status={r.status} /></td>
+                            <td className="px-3 py-2.5 text-sm font-mono text-slate-500">
+                              {r.requestNumber ? `#${r.requestNumber}` : "\u2014"}
+                            </td>
+
+                            <td className="px-3 py-2.5">
+                              <StatusBadge status={r.status} />
+                              {r.payingParty === "TENANT" && (
+                                <span className="ml-1.5 inline-block rounded-full border border-orange-200 bg-orange-50 px-2 py-0.5 text-[10px] font-semibold text-orange-700">
+                                  Tenant-funded
+                                </span>
+                              )}
+                            </td>
 
                             <td className="px-3 py-2.5 text-slate-700">
                               {r.buildingId ? (
@@ -781,35 +894,116 @@ export default function ManagerRequestsPage() {
                           {/* Accordion row */}
                           {isExpanded && (
                             <tr>
-                              <td colSpan={9} className="p-0">
-                                {/* Next-step banner */}
+                              <td colSpan={10} className="p-0">
                                 {(() => {
-                                  const step = getNextStep(r, legalState?.data);
-                                  if (!step) return null;
-                                  const variantStyles = {
-                                    info:    'border-blue-200 bg-blue-50 text-blue-800',
-                                    warn:    'border-amber-200 bg-amber-50 text-amber-800',
-                                    success: 'border-emerald-200 bg-emerald-50 text-emerald-800',
-                                    error:   'border-red-200 bg-red-50 text-red-800',
-                                  };
+                                  const detail = requestDetails[r.id];
+                                  const d = detail?.data;
+                                  const tenant = d?.tenant;
+                                  const rfpId = legalState?.data?.rfpId || d?.rfpId || null;
+
                                   return (
-                                    <div className={`mx-4 mt-3 rounded-lg border px-4 py-3 text-sm ${variantStyles[step.variant] || variantStyles.info}`}>
-                                      <p className="font-semibold">{step.label}</p>
-                                      <p className="mt-0.5 text-xs opacity-80">
-                                        {step.description}
-                                        {step.linkLabel && step.linkHref && (
-                                          <> &middot; <a href={step.linkHref} className="underline font-medium">{step.linkLabel}</a></>
+                                    <div className="divide-y divide-slate-100">
+
+                                      {/* Section 1 — Tenant info */}
+                                      <div className="px-6 py-4">
+                                        <SectionLabel>Tenant</SectionLabel>
+                                        {detail?.loading ? (
+                                          <p className="mt-1 text-xs text-slate-400">Loading&hellip;</p>
+                                        ) : tenant ? (
+                                          <div className="mt-2 grid grid-cols-3 gap-4">
+                                            <div>
+                                              <p className="text-[11px] uppercase tracking-wider text-slate-400">Name</p>
+                                              {d?.tenantId ? (
+                                                <Link href={`/manager/people/tenants/${d.tenantId}`} className="text-sm text-blue-600 hover:underline" onClick={(e) => e.stopPropagation()}>
+                                                  {tenant.name || "\u2014"}
+                                                </Link>
+                                              ) : (
+                                                <p className="text-sm text-slate-700">{tenant.name || "\u2014"}</p>
+                                              )}
+                                            </div>
+                                            <div>
+                                              <p className="text-[11px] uppercase tracking-wider text-slate-400">Phone</p>
+                                              <p className="text-sm text-slate-700">{tenant.phone || "\u2014"}</p>
+                                            </div>
+                                            <div>
+                                              <p className="text-[11px] uppercase tracking-wider text-slate-400">Email</p>
+                                              <p className="text-sm text-slate-700">{tenant.email || "\u2014"}</p>
+                                            </div>
+                                          </div>
+                                        ) : (
+                                          <p className="mt-1 text-sm text-slate-400">\u2014</p>
                                         )}
-                                      </p>
+                                      </div>
+
+                                      {/* Section 2 — Tenant self-pay banner */}
+                                      {d?.payingParty === "TENANT" && (
+                                        <div className="px-6 py-3 bg-orange-50 border-b border-orange-100">
+                                          <div className="flex items-start gap-2">
+                                            <span className="text-orange-500 text-base leading-none mt-0.5">⚠</span>
+                                            <div>
+                                              <p className="text-sm font-semibold text-orange-800">Tenant-funded request</p>
+                                              <p className="text-xs text-orange-700 mt-0.5">
+                                                The owner rejected this request{d.rejectionReason ? ` ("${d.rejectionReason}")` : ""}. The tenant chose to proceed at their own expense.
+                                              </p>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      )}
+
+                                      {/* Section 3 — Full description */}
+                                      <div className="px-6 py-4">
+                                        <SectionLabel>Description</SectionLabel>
+                                        <p className="mt-1 text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">
+                                          {r.description || <span className="text-slate-400">\u2014</span>}
+                                        </p>
+                                      </div>
+
+                                      {/* Section 3 — Photos / attachments */}
+                                      <div className="border-t border-slate-100">
+                                        <RequestPhotosPanel requestId={r.id} />
+                                      </div>
+
+                                      {/* Section 4 — Legal basis (CO articles + depreciation) */}
+                                      <div className="border-t border-slate-100">
+                                        <LegalRecommendationPanel
+                                          decision={legalState?.data}
+                                          loading={legalState?.loading}
+                                          error={legalState?.error}
+                                        />
+                                      </div>
+
+                                      {/* Section 5 — Next-step banner */}
+                                      {(() => {
+                                        const step = getNextStep(r, legalState?.data);
+                                        if (!step) return null;
+                                        const variantStyles = {
+                                          info:    'border-blue-200 bg-blue-50 text-blue-800',
+                                          warn:    'border-amber-200 bg-amber-50 text-amber-800',
+                                          success: 'border-emerald-200 bg-emerald-50 text-emerald-800',
+                                          error:   'border-red-200 bg-red-50 text-red-800',
+                                        };
+                                        return (
+                                          <div className="px-6 py-4 border-t border-slate-100">
+                                            <div className={`rounded-lg border px-4 py-3 text-sm ${variantStyles[step.variant] || variantStyles.info}`}>
+                                              <p className="font-semibold">{step.label}</p>
+                                              <p className="mt-0.5 text-xs opacity-80">{step.description}</p>
+                                            </div>
+                                          </div>
+                                        );
+                                      })()}
+
+                                      {/* Section 6 — RFP link (conditional) */}
+                                      {rfpId && (
+                                        <div className="flex items-center justify-between px-6 py-3 border-t border-slate-100">
+                                          <span className="text-sm text-slate-500">Request for Proposal</span>
+                                          <a href={`/manager/rfps/${rfpId}`} className="text-sm font-medium text-blue-600 hover:underline">
+                                            View RFP &rarr;
+                                          </a>
+                                        </div>
+                                      )}
                                     </div>
                                   );
                                 })()}
-
-                                <LegalRecommendationPanel
-                                  decision={legalState?.data}
-                                  loading={legalState?.loading}
-                                  error={legalState?.error}
-                                />
                               </td>
                             </tr>
                           )}

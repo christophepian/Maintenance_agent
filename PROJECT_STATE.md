@@ -1,6 +1,6 @@
 # Maintenance Agent — Project State
 
-**Last updated:** 2026-03-11 (Legal Engine Remediation + DSL Evaluator Update)
+**Last updated:** 2026-03-12 (requestNumber, tenant-funded badge, maintenance attachments)
 
 **Companion files (do not duplicate content here):**
 * [EPIC_HISTORY.md](EPIC_HISTORY.md) — all completed epic/slice narratives + hardening guidelines (H1–H6)
@@ -282,7 +282,7 @@ Build a web-first maintenance platform for Swiss property managers that:
 ### Backend API — `apps/api/src/server.ts` (port 3001)
 
 * Node.js + TypeScript, raw `http.createServer` — **no Express/NestJS**
-* Layered: `routes/` → `workflows/` (14) → `services/` → `repositories/` (9) → `events/` (15 types)
+* Layered: `routes/` → `workflows/` (14) → `services/` → `repositories/` (10) → `events/` (15 types)
 * State machines: `workflows/transitions.ts` (Request, Job, Invoice, Lease, RentalApplication)
 * Org scoping: `governance/orgScope.ts`
 * Prisma ORM + PostgreSQL + Zod validation
@@ -314,7 +314,7 @@ Maintenance_Agent/
 │   │       ├── routes/       # Thin HTTP handlers (13 route modules)
 │   │       ├── workflows/    # Orchestration layer (14 workflows + transitions)
 │   │       ├── services/     # Domain logic
-│   │       ├── repositories/ # Canonical Prisma access (9 repos)
+│   │       ├── repositories/ # Canonical Prisma access (10 repos)
 │   │       ├── events/       # Domain event bus
 │   │       ├── governance/   # Org scope resolvers
 │   │       ├── validation/   # Zod schemas
@@ -336,9 +336,9 @@ Maintenance_Agent/
 
 ## 4. Database Schema (Prisma)
 
-> **Full schema reference:** See [SCHEMA_REFERENCE.md](SCHEMA_REFERENCE.md) for the complete models table (45 models), enums (35), schema gotchas, and Request.orgId migration path.
+> **Full schema reference:** See [SCHEMA_REFERENCE.md](SCHEMA_REFERENCE.md) for the complete models table (46 models), enums (38), schema gotchas, and Request.orgId migration path.
 >
-> **Status:** 32 migrations + `db push` for LKDE tables. Last verified: 2026-03-10.
+> **Status:** 35 migrations + `db push` for LKDE tables. Last verified: 2026-03-12.
 >
 > **Quick gotchas (always check SCHEMA_REFERENCE.md for full list):**
 > - `Request` has NO `orgId` — scope inherited via unit/building FK chain
@@ -352,9 +352,9 @@ Maintenance_Agent/
 ## 5. Backend API
 
 * **Entry:** `apps/api/src/server.ts` — raw `http.createServer`, port **3001**
-* **Architecture:** `routes/` (thin HTTP) → `workflows/` (14) → `services/` → `repositories/` (9) → `events/`
+* **Architecture:** `routes/` (thin HTTP) → `workflows/` (14) → `services/` → `repositories/` (10) → `events/`
 * **Route modules (13):** requests, leases, invoices, inventory, tenants, config, notifications, auth, rentalApplications, contractor, financials, legal, helpers — all registered via `register*Routes(router)` in server.ts
-* **Full endpoint list:** See `apps/api/openapi.yaml` (~140 API routes, 14 tags) or `ARCHITECTURE_LOW_CONTEXT_GUIDE.md`
+* **Full endpoint list:** See `apps/api/openapi.yaml` (~146 API routes, 14 tags) or `ARCHITECTURE_LOW_CONTEXT_GUIDE.md`
 
 <!-- reviewed 2026-03-10 -->
 
@@ -368,7 +368,7 @@ Maintenance_Agent/
 * **Layout:** `AppShell` component with role-scoped sidebar (MANAGER/CONTRACTOR/TENANT/OWNER)
 * **Reusable components:** `PageShell`, `PageHeader`, `PageContent`, `Panel`, `Section`, `ContractorPicker`, `NotificationBell`, `AssetInventoryPanel`
 * **Key page groups:** `/manager/*` (requests, inventory, legal, leases, settings), `/contractor/*` (jobs, invoices), `/tenant/*` (leases, chat), `/owner/*` (approvals, invoices, vacancies), `/admin-inventory/*`, `/apply` (rental wizard), `/listings`
-* **~185 frontend pages** (UI + API proxies)
+* **~193 frontend pages** (UI + API proxies)
 
 <!-- reviewed 2026-03-10 -->
 
@@ -385,7 +385,7 @@ Maintenance_Agent/
 * PostgreSQL via Docker: `infra/docker-compose.yml` (port 5432)
 * Dev DB: `maint_agent` | Test DB: `maint_agent_test` (isolated)
 * CI: `.github/workflows/ci.yml` — 6-gate pipeline enforcing G1–G11
-* Prisma migrations: `apps/api/prisma/migrations/` (32 migrations + db push for LKDE)
+* Prisma migrations: `apps/api/prisma/migrations/` (35 migrations + db push for LKDE)
 
 ---
 
@@ -468,7 +468,7 @@ Resolved remaining 11 audit findings (SA-10 through SA-20, all medium/low):
 
 `requireRole`/`requireAnyRole` now include AUTH_OPTIONAL dev bypass with warning log.
 New test suite: `security2.test.ts` (5 integration tests).
-312/313 tests pass, 30 suites, 0 TS errors. Only failure: pre-existing `openApiSync.test.ts` (missing owner routes in spec).
+312/313 tests pass, 33 suites, 0 TS errors. Only failure: pre-existing `openApiSync.test.ts` (missing owner routes in spec).
 
 ### UI Navigation & Finance Pages (Mar 2026)
 **Status:** ✅ COMPLETE
@@ -590,7 +590,7 @@ Full rewrite of the product roadmap generator to match the original IBM Plex dar
   - Stat grid: Done / In Progress / Planned / Total / Custom Items / % Complete
   - 4 tabs: Phases (with filter bar), Custom Items, Codebase Signals (detection table + 3-column panels), How to Use
 - **scripts/roadmap.schema.json** updated — new feature ID pattern, `hooks_blocked` array, `page_exists`/`audit_finding` detection types, `model` property on checks, `future` phase status
-- **Codebase signals verified:** 45 models, 37 enums, 32 migrations, 16 workflows, 14 routes — all detected correctly
+- **Codebase signals verified:** 46 models, 38 enums, 35 migrations, 16 workflows, 14 routes — all detected correctly
 
 **Files created/rewritten:**
 - `ROADMAP.json` — 26 features, 6 phases, empty `custom_items[]`
@@ -643,7 +643,7 @@ Full rework of the request triage pipeline: fixed wrong state machine transition
 - `apps/api/src/workflows/ownerRejectWorkflow.ts`
 
 **Files modified:**
-- `apps/api/prisma/schema.prisma` — 3 enum additions, 4 new fields across 45 models
+- `apps/api/prisma/schema.prisma` — 3 enum additions, 4 new fields across 46 models
 - `apps/api/src/workflows/transitions.ts` — VALID_REQUEST_TRANSITIONS rewritten
 - `apps/api/src/workflows/index.ts` — ownerRejectWorkflow export (17 workflows total)
 - `apps/api/src/workflows/approveRequestWorkflow.ts` — approvalSource writes
@@ -656,7 +656,7 @@ Full rework of the request triage pipeline: fixed wrong state machine transition
 - `apps/api/src/__tests__/workflows.test.ts` — obligation assertion fixed
 - `apps/api/src/ARCHITECTURE_LOW_CONTEXT_GUIDE.md` — transition map + counts updated
 
-**Stats:** 45 models · 38 enums · 17 workflows. tsc: 0 errors. Tests: pass (12 pre-existing integration test timeouts unchanged).
+**Stats:** 46 models · 38 enums · 17 workflows. tsc: 0 errors. Tests: pass (12 pre-existing integration test timeouts unchanged).
 
 ### Legal Engine Remediation + DSL Evaluator Update — 2026-03-11
 **Status:** ✅ COMPLETE
@@ -693,7 +693,7 @@ Cleaned up 93 corrupt legal rules (duplicates, missing topics, wrong ruleType) a
 - `apps/api/prisma/schema.prisma` — RENT_REDUCTION enum value
 - `apps/api/src/services/legalDecisionEngine.ts` — DSL evaluator rewrite + authority filter
 
-**Stats:** 45 models · 38 enums · 17 workflows. tsc: 0 errors. 26 verification assertions passed. 12 pre-existing integration test timeouts unchanged.
+**Stats:** 46 models · 38 enums · 17 workflows. tsc: 0 errors. 26 verification assertions passed. 12 pre-existing integration test timeouts unchanged.
 
 ---
 
@@ -721,7 +721,7 @@ Cleaned up 93 corrupt legal rules (duplicates, missing topics, wrong ruleType) a
 ### Custom HTTP Stack Evaluation
 **Priority:** Medium — evaluate before the team grows or route count exceeds ~200
 **Status:** Deferred — explicit re-evaluation recommended at next architecture review
-**Context:** Backend uses raw `http.createServer()` with custom routing (~140 routes, manual URL parsing, custom auth wrappers, binary forwarding). This was the right call early. At current scale the question is whether the maintenance burden of a bespoke stack outweighs the dependency cost of Express or Fastify. Decision should be made explicitly rather than by default.
+**Context:** Backend uses raw `http.createServer()` with custom routing (~146 API routes, manual URL parsing, custom auth wrappers, binary forwarding). This was the right call early. At current scale the question is whether the maintenance burden of a bespoke stack outweighs the dependency cost of Express or Fastify. Decision should be made explicitly rather than by default.
 **Prerequisite:** Architecture review session — not a Copilot task.
 
 ### Future Vision (Deferred)
@@ -730,7 +730,7 @@ Conversational tenant intake with phone-based identification, automatic asset in
 
 ### Known Technical Debt
 
-- **TEST INTERACTION** — 30 suites (openApiSync, financials, jobs.and.invoices, notifications) fail in full serial run but pass individually. Root cause: `startServer` copy-pasted across 14 test files with no shared teardown — orphaned handles corrupt subsequent suites. Fix: extract shared `startServer`/`stopServer` into `testHelpers.ts` with proper `afterAll` cleanup (TC-11). Workaround: run failing suites individually with `--testPathPattern`.
+- **TEST INTERACTION** — 33 suites (openApiSync, financials, jobs.and.invoices, notifications) fail in full serial run but pass individually. Root cause: `startServer` copy-pasted across 14 test files with no shared teardown — orphaned handles corrupt subsequent suites. Fix: extract shared `startServer`/`stopServer` into `testHelpers.ts` with proper `afterAll` cleanup (TC-11). Workaround: run failing suites individually with `--testPathPattern`.
 
 <!-- reviewed 2026-03-10 -->
 
@@ -763,25 +763,49 @@ Conversational tenant intake with phone-based identification, automatic asset in
 
 <!-- auto-sync 2026-03-11: models 3→45, enums 35→37, enums 35→37, enums 35→37, migrations 31→32, backendLOC 34→35 -->
 
+
+<!-- auto-sync 2026-03-11: enums 38→37, enums 38→37 -->
+
+
+<!-- auto-sync 2026-03-11: frontendLOC 24→25 -->
+
+
+<!-- auto-sync 2026-03-12: models 45→46, models 45→46, models 45→46, models 45→46, models 45→46, models 45→46, migrations 32→33, repositories 9→10, repositories 9→10, repositories 9→10, repositories 9→10, repositories 9→10, repositories 9→10, fePages 185→187, apiRoutes 140→142, apiRoutes 140→142, apiRoutes 140→142 -->
+
+
+<!-- auto-sync 2026-03-12: enums 37→38, enums 37→38, enums 37→38, enums 37→38, enums 37→38, migrations 33→34, backendLOC 35→36, fePages 187→190, apiRoutes 142→144, apiRoutes 142→144, apiRoutes 142→144 -->
+
+
+<!-- auto-sync 2026-03-12: fePages 190→192, apiRoutes 144→146, apiRoutes 144→146, apiRoutes 144→146 -->
+
+
+<!-- auto-sync 2026-03-12: migrations 34→35, fePages 192→193 -->
+
+
+<!-- auto-sync 2026-03-12: tests 359→334, suites 33→30 -->
+
+
+<!-- auto-sync 2026-03-12: tests 334→359, suites 30→33, suites 30→33, suites 30→33 -->
+
 ### State Integrity
 
 This document + companion files are the **single source of truth**:
 
 * **Doc structure:** PROJECT_STATE.md (~570 lines) + EPIC_HISTORY.md (epics) + SCHEMA_REFERENCE.md (schema) + ARCHITECTURE_LOW_CONTEXT_GUIDE.md (lookup)
 * Filesystem (verified 2026-03-10)
-* Database schema — 32 migrations + `db push` for LKDE tables + `RFP_PENDING` enum value + `autoLegalRouting` column (shadow DB issue — see G8 exception in LKDE epic section); 45 models, 37 enums verified in live DB
+* Database schema — 35 migrations + `db push` for LKDE tables + `RFP_PENDING` enum value + `autoLegalRouting` column (shadow DB issue — see G8 exception in LKDE epic section); 46 models, 38 enums verified in live DB
 * Database data — 99+ assets across 19 units (with interventions tracking), 274 depreciation standards (including 5 added for mapped topics), 16 category mappings, buildings with cantons set, 6 CO 259a statutory rules with proper DSL (verified 2026-03-07)
 * Running system — all endpoints return 200; legal auto-routing creates RFP and sets RFP_PENDING for requests with mapped categories when autoLegalRouting=true; asset inventory endpoints serve depreciation data (verified 2026-03-07)
 * Frontend navigation — ~52 of 67 audit findings resolved; all 4 portals (manager, contractor, owner, tenant) fully connected with working links, detail tabs, and finance pages; **manager sidebar redesigned** with accordion navigation, lucide-react icons, and active route detection (verified 2026-03-09)
-* Test suite — **334 tests, 30 suites against maint_agent_test** (isolated from dev DB `maint_agent`) (verified 2026-03-10). Includes 20 new asset inventory tests.
+* Test suite — **359 tests, 33 suites against maint_agent_test** (isolated from dev DB `maint_agent`) (verified 2026-03-12). Includes 20 new asset inventory tests.
   - ✅ **TC-4 resolved (2026-03-10):** `jest.config.js` now has `maxWorkers: 1` — integration tests run serially, eliminating parallel server spawning timeouts.
   - ✅ **TC-5 resolved (2026-03-10):** Port collision on 3206 fixed — ports reassigned: rentalContracts → 3206, rentEstimation → 3209, ia.test → 3210, tenantSession → 3208.
   - Pure-function suites (**domainEvents, httpErrors, orgIsolation, routeProtection, triage**) always pass — they do not spawn a server.
 * Test DB: `maint_agent_test` (isolated) — requires seed scripts after fresh creation (see G11)
-* TypeScript compilation — 0 errors (verified 2026-03-10)
+* TypeScript compilation — 0 errors (verified 2026-03-12)
 * OpenAPI spec — fully synced with router registrations (verified 2026-03-07)
 * Git — uncommitted changes: Asset Inventory & Depreciation Tracking slice + Phase 3 Architecture Hardening + rentalIntegration test fix (seed data) + Legal Knowledge & Decision Engine epic + Legal Auto-Routing + Building Financial Performance epic + auth hardening + requests page accordion UI + comprehensive asset seed + LegalSource Scope Field + Ingestion Filter slice
-* Architectural intent — 14 workflows, 9 repositories, 5 transition maps (Request, Job, Invoice, Lease, RentalApplication)
+* Architectural intent — 14 workflows, 10 repositories, 5 transition maps (Request, Job, Invoice, Lease, RentalApplication)
 * CI pipeline enforces G1–G11 guardrails
 
 Safe to:
@@ -797,7 +821,7 @@ Safe to:
 
 ---
 
-✅ **Project stabilized, security-hardened, org-scoped, and UI-connected (2026-03-12).** 334 tests, 30 suites, 0 TS errors. ~52/67 frontend audit findings resolved. 20/82 audit findings resolved (security hardening + schema doc fixes). Frontend rationalized: full page inventory, 12 empty states standardized, 119/119 proxies conforming. Backend: ~35,000 LOC | Frontend: ~24,000 LOC | ~140 API routes | 45 Prisma models | 37 enums | 185 frontend pages | 14 workflows | 9 repositories. See [EPIC_HISTORY.md](EPIC_HISTORY.md) for full completion details.
+✅ **Project stabilized, security-hardened, org-scoped, and UI-connected (2026-03-12).** 359 tests, 33 suites, 0 TS errors. ~52/67 frontend audit findings resolved. 20/82 audit findings resolved (security hardening + schema doc fixes). Frontend rationalized: full page inventory, 12 empty states standardized, 119/119 proxies conforming. Backend: ~36,000 LOC | Frontend: ~25,000 LOC | ~146 API routes | 46 Prisma models | 38 enums | 193 frontend pages | 17 workflows | 10 repositories. See [EPIC_HISTORY.md](EPIC_HISTORY.md) for full completion details.
 
 
 ## 13. Authentication & Testing
@@ -840,7 +864,7 @@ Safe to:
 - ✅ Compile-time mapper constraints: `toDTO()`, `toSummaryDTO()`, `mapJobToDTO()`, `mapInvoiceToDTO()` etc. typed with `Prisma.XxxGetPayload<>`
 - ✅ `includeIntegrity.test.ts` — compile-time + runtime drift detection for all 18 canonical include constants
 
-### Testing — 334 tests, 30 suites
+### Testing — 359 tests, 33 suites
 
 * Jest + ts-jest, pattern: `src/__tests__/**/*.test.ts`
 * `maxWorkers: 1` in `jest.config.js` — integration tests run serially ✅ (TC-4, 2026-03-10)
@@ -857,20 +881,20 @@ Safe to:
 
 | Field | Value | Source |
 |-------|-------|--------|
-| Models | 45 | prisma/schema.prisma — derived |
-| Enums | 35 | prisma/schema.prisma — derived |
-| Migrations | 32 | prisma/migrations/ — derived |
-| Workflows | 14 | src/workflows/ — derived |
-| Repositories | 9 | src/repositories/ — derived |
-| Backend LOC | ~34k | src/ — derived |
-| Frontend LOC | ~24k | apps/web/ — derived |
-| Frontend pages | 185 | apps/web/pages/ — derived |
-| API routes | 140 | src/server.ts — derived |
-| Tests | 334 / 30 suites | jest — derived |
+| Models | 46 | prisma/schema.prisma — derived |
+| Enums | 38 | prisma/schema.prisma — derived |
+| Migrations | 35 | prisma/migrations/ — derived |
+| Workflows | 17 | src/workflows/ — derived |
+| Repositories | 10 | src/repositories/ — derived |
+| Backend LOC | ~36k | src/ — derived |
+| Frontend LOC | ~25k | apps/web/ — derived |
+| Frontend pages | 193 | apps/web/pages/ — derived |
+| API routes | 146 | src/server.ts — derived |
+| Tests | 359 / 33 suites | jest — derived |
 | Proxy conformance | 119 / 119 | apps/web/pages/api/ — derived |
 | Audit findings open | 62 / 82 | docs/AUDIT.md — manual |
 | Audit findings resolved | 20 / 82 | docs/AUDIT.md — manual |
-| Last auto-sync | 2026-03-10 | blueprint.js |
-| Last manual review | 2026-03-10 | human |
+| Last auto-sync | 2026-03-12 | blueprint.js |
+| Last manual review | 2026-03-12 | human |
 
 > Derived fields are auto-updated by `npm run blueprint`. Manual fields must be updated at the end of each slice.

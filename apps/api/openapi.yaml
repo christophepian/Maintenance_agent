@@ -99,8 +99,14 @@ components:
         - AUTO_APPROVED
         - APPROVED
         - ASSIGNED
+        - RFP_PENDING
         - IN_PROGRESS
         - COMPLETED
+        - OWNER_REJECTED
+
+    PayingParty:
+      type: string
+      enum: [LANDLORD, TENANT]
 
     JobStatus:
       type: string
@@ -273,6 +279,9 @@ components:
         tenantId: { type: string, format: uuid, nullable: true }
         unitId: { type: string, format: uuid, nullable: true }
         applianceId: { type: string, format: uuid, nullable: true }
+        approvalSource: { type: string, nullable: true }
+        rejectionReason: { type: string, nullable: true }
+        payingParty: { $ref: '#/components/schemas/PayingParty' }
         assignedContractor:
           nullable: true
           $ref: '#/components/schemas/ContractorSummary'
@@ -1155,6 +1164,18 @@ components:
         jobId: { type: string, format: uuid, nullable: true }
         notes: { type: string, maxLength: 2000, nullable: true }
 
+    MaintenanceAttachment:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        requestId: { type: string, format: uuid }
+        filename: { type: string }
+        mimeType: { type: string }
+        size: { type: integer }
+        uploadedBy: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+        url: { type: string }
+
 # ──────────────────────────────────────────────────────────────
 # Paths
 # ──────────────────────────────────────────────────────────────
@@ -1363,6 +1384,135 @@ paths:
                   data:
                     type: array
                     items: { $ref: '#/components/schemas/InvoiceDTO' }
+
+  /tenant-portal/requests:
+    get:
+      tags: [TenantPortal]
+      summary: List maintenance requests for the authenticated tenant
+      operationId: listTenantPortalRequests
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Tenant maintenance requests
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string, format: uuid }
+                        description: { type: string }
+                        category: { type: string, nullable: true }
+                        status: { $ref: '#/components/schemas/RequestStatus' }
+                        payingParty: { $ref: '#/components/schemas/PayingParty' }
+                        rejectionReason: { type: string, nullable: true }
+                        unitNumber: { type: string, nullable: true }
+                        buildingName: { type: string, nullable: true }
+                        assignedContractorName: { type: string, nullable: true }
+                        createdAt: { type: string, format: date-time }
+
+  /tenant-portal/requests/{id}/self-pay:
+    post:
+      tags: [TenantPortal]
+      summary: Tenant accepts to proceed at own expense after owner rejection
+      operationId: tenantSelfPay
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Request transitioned to RFP_PENDING with payingParty TENANT
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/MaintenanceRequestDTO' }
+                  rfpId: { type: string, format: uuid }
+        '403': { description: Tenant does not own the request }
+        '409': { description: Request is not in OWNER_REJECTED status }
+
+  /tenant-portal/maintenance-attachments/{requestId}:
+    get:
+      tags: [TenantPortal]
+      summary: List attachments for a tenant's own maintenance request
+      operationId: tenantListMaintenanceAttachments
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Array of attachment DTOs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/MaintenanceAttachmentDTO' }
+        '403': { description: Tenant does not own the request }
+        '404': { description: Request not found }
+    post:
+      tags: [TenantPortal]
+      summary: Upload a file attachment from the tenant portal
+      operationId: tenantUploadMaintenanceAttachment
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+      responses:
+        '201':
+          description: Attachment created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/MaintenanceAttachmentDTO' }
+        '403': { description: Tenant does not own the request }
+        '404': { description: Request not found }
+        '413': { description: File exceeds size limit }
+
+  /tenant-portal/maintenance-attachments/{id}/download:
+    get:
+      tags: [TenantPortal]
+      summary: Download a maintenance attachment file (tenant portal)
+      operationId: tenantDownloadMaintenanceAttachment
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Raw file binary
+          content:
+            application/octet-stream:
+              schema: { type: string, format: binary }
+        '403': { description: Tenant does not own the parent request }
+        '404': { description: Attachment not found }
 
   /triage:
     post:
@@ -5174,3 +5324,85 @@ paths:
             application/json:
               schema:
                 type: object
+
+  # ── Maintenance Attachments ──────────────────────────────────
+
+  /maintenance-attachments/{requestId}:
+    get:
+      tags: [Requests]
+      summary: List attachments for a maintenance request
+      operationId: listMaintenanceAttachments
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Attachment list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/MaintenanceAttachment'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [Requests]
+      summary: Upload a file attachment to a maintenance request
+      operationId: uploadMaintenanceAttachment
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          description: Uploaded attachment
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/MaintenanceAttachment'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '413':
+          description: File too large
+
+  /maintenance-attachments/{id}/download:
+    get:
+      tags: [Requests]
+      summary: Download a maintenance attachment file
+      operationId: downloadMaintenanceAttachment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Attachment file binary
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '404':
+          $ref: '#/components/responses/NotFound'

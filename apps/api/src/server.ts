@@ -22,6 +22,7 @@ import { registerRentalRoutes } from "./routes/rentalApplications";
 import { registerRentEstimationRoutes } from "./routes/rentEstimation";
 import { registerFinancialRoutes } from "./routes/financials";
 import { registerLegalRoutes } from "./routes/legal";
+import { registerMaintenanceAttachmentRoutes } from "./routes/maintenanceAttachments";
 import { registerEventHandlers } from "./events";
 import {
   processSelectionTimeouts,
@@ -70,6 +71,7 @@ registerRentalRoutes(router);
 registerRentEstimationRoutes(router);
 registerFinancialRoutes(router);
 registerLegalRoutes(router);
+registerMaintenanceAttachmentRoutes(router);
 
 /* ── Dev-only: background job trigger route ─────────────────── */
 router.post("/__dev/rental/run-jobs", async ({ res }) => {

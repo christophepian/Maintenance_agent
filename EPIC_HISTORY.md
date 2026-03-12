@@ -1743,6 +1743,89 @@ No schema changes. No migrations. Proxy unchanged.
 
 ---
 
+### Request Detail View Rework (Mar 12, 2026)
+
+**Status:** ✅ **COMPLETE**
+
+**Goal:** Fix 3 live bugs discovered during end-to-end testing and add numeric request IDs.
+
+**Bug fixes:**
+1. **Homepage 500 (slug conflict):** `[requestId].js` alongside `[id]/download.js` in tenant-portal maintenance-attachments — Next.js rejects different dynamic param names at same directory level. Fixed by renaming to `[id].js`.
+2. **Tenant requests module not found:** Import path `../../../lib/proxy` was 1 level short for `pages/api/tenant-portal/requests/index.js` (4 levels deep). Fixed to `../../../../lib/proxy`.
+3. **Invalid status update on reject:** Frontend sent `OWNER_REJECTED` to `PATCH /requests/:id/status` but Zod schema only allows 3 values. Backend had dedicated `POST /requests/:id/owner-reject`. Fixed frontend + created missing proxy.
+
+**Files changed:** 3 Next.js proxy files, 1 frontend page (manager/requests.js)
+
+---
+
+### Maintenance Attachments (Mar 12, 2026)
+
+**Status:** ✅ **COMPLETE** (earlier session — 31/31 suites, 344/344 tests)
+
+**Goal:** File upload/download for maintenance request photos. Manager and tenant portal paths.
+
+**Schema:** Added `MaintenanceAttachment` model (requestId, fileName, mimeType, storageKey, sizeBytes, uploadedBy)
+
+**API routes (6):** 3 manager-auth (`GET/POST /maintenance-attachments/:requestId`, `GET /maintenance-attachments/:requestId/:attachmentId/download`) + 3 tenant-auth equivalents under `/tenant-portal/maintenance-attachments/`.
+
+---
+
+### Owner Rejection — Tenant Notification + Self-Pay Offer (Mar 12, 2026)
+
+**Status:** ✅ **COMPLETE** (earlier session — 32 suites, 351 tests)
+
+**Goal:** When owner rejects a request, notify the tenant and offer a "proceed at own expense" CTA.
+
+**Key fields:** `Request.approvalSource` (ApprovalSource enum), `Request.rejectionReason`, `Request.payingParty` (PayingParty enum, default LANDLORD). Self-pay transitions request to `RFP_PENDING` with `payingParty=TENANT`.
+
+---
+
+### Tenant Maintenance Attachment Upload (Mar 12, 2026)
+
+**Status:** ✅ **COMPLETE** (earlier session — 33 suites, 359 tests)
+
+**Goal:** Allow tenants to upload photos for their maintenance requests from the tenant portal.
+
+**Frontend:** `TenantPhotosPanel` component with drag-and-drop upload, inline preview, download.
+
+---
+
+### Numeric Request ID — `requestNumber` (Mar 12, 2026)
+
+**Status:** ✅ **COMPLETE**
+
+**Goal:** Add human-readable auto-incrementing request number visible to all roles.
+
+**Schema:** `Request.requestNumber Int @default(autoincrement()) @unique` — PostgreSQL sequence `Request_requestNumber_seq`. Manual migration (shadow DB workaround): create sequence → add column → backfill with `ROW_NUMBER() OVER (ORDER BY createdAt)` → set NOT NULL + default + UNIQUE.
+
+**DTO updates:** Added `requestNumber` to `MaintenanceRequestDTO`, `MaintenanceRequestSummaryDTO`, contractor DTO, tenant-portal inline mapper.
+
+**Frontend display:** Manager table (# column), owner approvals (#N — Category), tenant requests (#N description), contractor jobs (Request Details #N).
+
+**Migration:** `20260316120000_add_request_number` (35th migration). Backfilled 158 rows in dev, 115 in test.
+
+---
+
+### Tenant-Funded Badge in Manager View (Mar 12, 2026)
+
+**Status:** ✅ **COMPLETE**
+
+**Goal:** Show managers which requests are tenant-funded (self-pay after owner rejection).
+
+**Backend:** Added `payingParty` and `approvalSource` to `MaintenanceRequestSummaryDTO` type + `toSummaryDTO()` mapper + api-client interface.
+
+**Frontend:** Orange "Tenant-funded" pill badge next to status in table row. Orange banner in expanded accordion detail with rejection reason. Fixed colSpan 9→10 for # column.
+
+**Verification:**
+
+| Check | Result |
+|-------|--------|
+| `tsc --noEmit`: 0 errors | ✅ |
+| 33 suites, 359 tests: all pass | ✅ |
+| Blueprint synced: 46 models, 38 enums, 146 routes, 193 pages | ✅ |
+
+---
+
 ## Hardening Guidelines — Prototype → Production Seed (H1–H6)
 
 > Moved from PROJECT_STATE.md during doc split. These are the implementation patterns.

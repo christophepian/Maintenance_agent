@@ -20,8 +20,12 @@ export type RequestStatus =
   | "AUTO_APPROVED"
   | "APPROVED"
   | "ASSIGNED"
+  | "RFP_PENDING"
   | "IN_PROGRESS"
-  | "COMPLETED";
+  | "COMPLETED"
+  | "OWNER_REJECTED";
+
+export type PayingParty = "LANDLORD" | "TENANT";
 
 export type JobStatus = "PENDING" | "IN_PROGRESS" | "COMPLETED" | "INVOICED";
 
@@ -159,6 +163,7 @@ export interface ApplianceSummary {
 
 export interface MaintenanceRequestDTO {
   id: string;
+  requestNumber: number;
   description: string;
   category: string | null;
   estimatedCost: number | null;
@@ -167,6 +172,9 @@ export interface MaintenanceRequestDTO {
   tenantId?: string | null;
   unitId?: string | null;
   applianceId?: string | null;
+  approvalSource?: string | null;
+  rejectionReason?: string | null;
+  payingParty?: PayingParty;
   assignedContractor: ContractorSummary | null;
   tenant?: TenantSummary | null;
   unit?: UnitSummary | null;
@@ -180,6 +188,7 @@ export interface MaintenanceRequestDTO {
  */
 export interface MaintenanceRequestSummaryDTO {
   id: string;
+  requestNumber: number;
   status: RequestStatus;
   createdAt: string;
   description: string;
@@ -188,6 +197,8 @@ export interface MaintenanceRequestSummaryDTO {
   unitNumber?: string | null;
   buildingName?: string | null;
   assignedContractorName?: string | null;
+  payingParty?: PayingParty;
+  approvalSource?: string | null;
 }
 
 export interface RequestEventDTO {
@@ -1389,6 +1400,12 @@ function buildAuthApi(opts: ClientOptions) {
 
     acceptTenantPortalLease: (id: string, body?: Record<string, unknown>) =>
       request<unknown>(opts, "POST", `/tenant-portal/leases/${id}/accept`, body ?? {}),
+
+    listTenantPortalRequests: () =>
+      request<{ data: Array<{ id: string; description: string; category: string | null; status: RequestStatus; payingParty: PayingParty; rejectionReason: string | null; unitNumber: string | null; buildingName: string | null; assignedContractorName: string | null; createdAt: string }> }>(opts, "GET", "/tenant-portal/requests"),
+
+    tenantSelfPay: (requestId: string) =>
+      request<{ data: MaintenanceRequestDTO; rfpId: string }>(opts, "POST", `/tenant-portal/requests/${requestId}/self-pay`, {}),
 
     triage: (body: { text: string }) =>
       request<unknown>(opts, "POST", "/triage", body),

@@ -33,9 +33,10 @@ export async function proxyToBackend(req, res, path, options = {}) {
     ...additionalHeaders,
   };
   
-  // Remove host header to avoid conflicts
+  // Remove headers that conflict with the proxied request
   delete forwardHeaders.host;
   delete forwardHeaders.connection;
+  delete forwardHeaders['content-length'];  // Let fetch recalculate from actual body
 
   // H3: Preserve query params unchanged (no re-parsing)
   const queryString = req.url?.includes("?") ? req.url.split("?")[1] : "";

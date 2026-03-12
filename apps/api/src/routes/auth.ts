@@ -13,6 +13,9 @@ import { TenantSessionSchema } from "../validation/tenantSession";
 import { TriageSchema } from "../validation/triage";
 import { LoginSchema, RegisterSchema } from "../validation/auth";
 import { LEASE_FULL_INCLUDE } from "../repositories/leaseRepository";
+import { tenantSelfPayWorkflow } from "../workflows/tenantSelfPayWorkflow";
+import { InvalidTransitionError } from "../workflows/transitions";
+import { resolveTenantUserId } from "../services/tenantIdentity";
 
 // SA-18: In-memory rate limiter for POST /triage (10 calls/IP/minute)
 // NOTE: Resets on server restart — replace with Redis-backed limiter before multi-tenant production
@@ -40,7 +43,15 @@ export function registerAuthRoutes(router: Router) {
       if (!parsed.success) return sendError(res, 400, "VALIDATION_ERROR", "Invalid tenant session input", parsed.error.flatten());
       const session = await getTenantSession(prisma, orgId, parsed.data.phone);
       if (!session) return sendError(res, 404, "NOT_FOUND", "Tenant not found");
-      sendJson(res, 200, { data: session });
+      // Issue a JWT for subsequent tenant-portal requests
+      const token = encodeToken({
+        userId: session.tenant.id,
+        orgId,
+        email: session.tenant.email || "",
+        role: "TENANT",
+        tenantId: session.tenant.id,
+      } as any);
+      sendJson(res, 200, { data: { ...session, token } });
     } catch (e: any) {
       const msg = String(e?.message || e);
       if (msg === "Invalid JSON") return sendError(res, 400, "INVALID_JSON", "Invalid JSON");
@@ -157,6 +168,61 @@ export function registerAuthRoutes(router: Router) {
       sendJson(res, 200, { ok: true });
     } catch (e: any) {
       sendError(res, 500, "DB_ERROR", "Failed to delete notification", String(e));
+    }
+  });
+
+  // ─── Tenant Self-Pay ────────────────────────────────────────
+
+  // POST /tenant-portal/requests/:id/self-pay
+  router.post("/tenant-portal/requests/:id/self-pay", async (ctx) => {
+    const { req, res, prisma, params, orgId } = ctx;
+    const tenantId = requireTenantSession(req, res);
+    if (!tenantId) return;
+    try {
+      const result = await tenantSelfPayWorkflow(
+        { orgId, prisma, actorUserId: tenantId },
+        { requestId: params.id, tenantId },
+      );
+      sendJson(res, 200, { data: result.dto, rfpId: result.rfpId });
+    } catch (e: any) {
+      if (e instanceof InvalidTransitionError) {
+        return sendError(res, 409, "INVALID_TRANSITION", e.message);
+      }
+      if (e.code === "NOT_FOUND") return sendError(res, 404, "NOT_FOUND", e.message);
+      if (e.code === "FORBIDDEN") return sendError(res, 403, "FORBIDDEN", e.message);
+      sendError(res, 500, "DB_ERROR", "Failed to accept self-pay", String(e));
+    }
+  });
+
+  // GET /tenant-portal/requests
+  router.get("/tenant-portal/requests", async ({ req, res, query, orgId, prisma }) => {
+    const tenantId = requireTenantSession(req, res);
+    if (!tenantId) return;
+    try {
+      const rows = await prisma.request.findMany({
+        where: { tenantId },
+        orderBy: { createdAt: "desc" },
+        include: {
+          unit: { select: { unitNumber: true, building: { select: { name: true } } } },
+          assignedContractor: { select: { name: true } },
+        },
+      });
+      const data = rows.map((r: any) => ({
+        id: r.id,
+        requestNumber: r.requestNumber,
+        description: r.description,
+        category: r.category,
+        status: r.status,
+        payingParty: r.payingParty,
+        rejectionReason: r.rejectionReason,
+        unitNumber: r.unit?.unitNumber ?? null,
+        buildingName: r.unit?.building?.name ?? null,
+        assignedContractorName: r.assignedContractor?.name ?? null,
+        createdAt: r.createdAt instanceof Date ? r.createdAt.toISOString() : String(r.createdAt),
+      }));
+      sendJson(res, 200, { data });
+    } catch (e: any) {
+      sendError(res, 500, "DB_ERROR", "Failed to list tenant requests", String(e));
     }
   });
 
@@ -355,29 +421,6 @@ export function registerAuthRoutes(router: Router) {
 
 /**
  * Resolve a tenantId to a userId for notification lookups.
- * Tries: 1) direct User with id=tenantId, 2) User with matching tenant email, 3) falls back to tenantId.
+ * Re-exported from services/tenantIdentity for backward compatibility.
  */
-export async function resolveTenantUserId(prisma: any, orgId: string, tenantId: string): Promise<string> {
-  // First check if tenantId is already a User id
-  const directUser = await prisma.user.findFirst({
-    where: { id: tenantId, orgId },
-    select: { id: true },
-  });
-  if (directUser) return directUser.id;
-
-  // Look up the tenant record to get their email
-  const tenant = await prisma.tenant.findUnique({
-    where: { id: tenantId },
-    select: { email: true },
-  });
-  if (tenant?.email) {
-    const userByEmail = await prisma.user.findFirst({
-      where: { orgId, email: tenant.email, role: 'TENANT' },
-      select: { id: true },
-    });
-    if (userByEmail) return userByEmail.id;
-  }
-
-  // Fallback: use tenantId as userId (notifications will still be created with this id)
-  return tenantId;
-}
+export { resolveTenantUserId } from "../services/tenantIdentity";

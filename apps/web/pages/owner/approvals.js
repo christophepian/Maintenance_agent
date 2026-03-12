@@ -119,7 +119,7 @@ export default function OwnerApprovalsPage() {
                   <div className="mb-4 flex items-start justify-between">
                     <div>
                       <h3 className="text-lg font-semibold text-slate-900">
-                        {req.category || "General Maintenance"}
+                        {req.requestNumber ? `#${req.requestNumber} — ` : ""}{req.category || "General Maintenance"}
                       </h3>
                       <p className="text-sm text-slate-500">
                         Submitted {formatDate(req.createdAt)}

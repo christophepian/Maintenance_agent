@@ -5,11 +5,11 @@
 
 ## Database Schema (Prisma)
 
-**Status: ACTIVE AND IN USE — 32 migrations + `db push` for LKDE tables (shadow DB issue with legacy Lease migration prevents `migrate dev`)**
+**Status: ACTIVE AND IN USE — 35 migrations + `db push` for LKDE tables (shadow DB issue with legacy Lease migration prevents `migrate dev`)**
 
-**Last verified:** 2026-03-10
+**Last verified:** 2026-03-12
 
-### Models (45 total)
+### Models (46 total)
 
 | Model | Key Fields | Relations |
 |-------|-----------|-----------|
@@ -26,7 +26,8 @@
 | **Appliance** | unitId, orgId, assetModelId?, name, serial, isActive, installDate?, notes? | → Unit, AssetModel, Requests |
 | **AssetModel** | orgId?, manufacturer, model, **category**, specs, isActive | → Appliances |
 | **Contractor** | orgId, name, phone, email, hourlyRate, serviceCategories (JSON), isActive, addressLine1?, addressLine2?, postalCode?, city?, country?, iban?, vatNumber?, defaultVatRate? | → Requests, Jobs, BillingEntity, RfpInvites, RfpQuotes |
-| **Request** | description, category?, estimatedCost?, status, contactPhone, assignedContractorId?, tenantId?, unitId?, applianceId?, contractorNotes, startedAt?, completedAt? | → Contractor, Tenant, Unit, Appliance, Job, RequestEvents |
+| **Request** | **requestNumber** (@default(autoincrement()) @unique), description, category?, estimatedCost?, status, contactPhone, assignedContractorId?, tenantId?, unitId?, applianceId?, contractorNotes, startedAt?, completedAt?, updatedAt, approvalSource? (ApprovalSource), rejectionReason?, payingParty (PayingParty, default LANDLORD) | → Contractor, Tenant, Unit, Appliance, Job, RequestEvents, MaintenanceAttachments |
+| **MaintenanceAttachment** | requestId, fileName, mimeType, storageKey, sizeBytes, uploadedBy?, createdAt | → Request |
 | **RequestEvent** | requestId, type (RequestEventType), contractorId (required), message | → Request, Contractor |
 | **Event** | orgId, type, actorUserId?, requestId?, payload (JSON) | (standalone) |
 | **Job** | orgId, requestId (unique), **contractorId** (required), status, actualCost, startedAt?, completedAt? | → Request, Contractor, Invoices |
@@ -59,8 +60,10 @@
 | **RfpInvite** | rfpId, contractorId, status (RfpInviteStatus) | → Rfp, Contractor |
 | **RfpQuote** | rfpId, contractorId, amountCents (Int), notes?, submittedAt | → Rfp, Contractor |
 
-### Key Enums (35 total)
-- `RequestStatus`: PENDING_REVIEW, AUTO_APPROVED, APPROVED, **RFP_PENDING**, ASSIGNED, IN_PROGRESS, COMPLETED, PENDING_OWNER_APPROVAL
+### Key Enums (38 total)
+- `RequestStatus`: PENDING_REVIEW, AUTO_APPROVED, APPROVED, **RFP_PENDING**, ASSIGNED, IN_PROGRESS, COMPLETED, PENDING_OWNER_APPROVAL, **OWNER_REJECTED**
+- `ApprovalSource`: SYSTEM_AUTO, OWNER_APPROVED, OWNER_REJECTED, LEGAL_OBLIGATION
+- `PayingParty`: LANDLORD, TENANT
 - `RequestEventType`: ARRIVED, PARTS_ORDERED, COMPLETED, NOTE, OTHER, OWNER_APPROVED, OWNER_REJECTED, TENANT_SELECTED
 - `JobStatus`: PENDING, IN_PROGRESS, COMPLETED, INVOICED
 - `InvoiceStatus`: DRAFT, ISSUED, APPROVED, DISPUTED, PAID
@@ -95,6 +98,7 @@
 - `HeatingType`: HEAT_PUMP, DISTRICT, GAS, OIL, ELECTRIC, UNKNOWN
 - `RfpStatus`: DRAFT, OPEN, CLOSED, AWARDED, CANCELLED
 - `RfpInviteStatus`: INVITED, DECLINED, RESPONDED
+- `LegalRuleScope`: FEDERAL, CANTONAL
 
 ### ⚠️ Schema Gotchas (fields that DON'T exist where you'd expect)
 - **`Request` has NO `orgId`** — requests are not directly org-scoped (they inherit scope through unit/building)

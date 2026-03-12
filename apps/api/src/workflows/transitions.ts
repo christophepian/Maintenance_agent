@@ -39,7 +39,9 @@ const VALID_REQUEST_TRANSITIONS: Record<string, RequestStatus[]> = {
     RequestStatus.COMPLETED,
   ],
   [RequestStatus.COMPLETED]: [],
-  [RequestStatus.OWNER_REJECTED]: [],        // terminal
+  [RequestStatus.OWNER_REJECTED]: [
+    RequestStatus.RFP_PENDING,               // tenant self-pay → create RFP
+  ],
 };
 
 export class InvalidTransitionError extends Error {

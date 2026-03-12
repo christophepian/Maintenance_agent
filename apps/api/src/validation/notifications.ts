@@ -14,6 +14,7 @@ export const NotificationEventTypeSchema = z.enum([
   'INVOICE_PAID',
   'INVOICE_DISPUTED',
   'OWNER_REJECTED',
+  'TENANT_SELF_PAY_ACCEPTED',
   'TENANT_SELECTED',
   'LEASE_READY_TO_SIGN',
   'LEASE_SIGNED',

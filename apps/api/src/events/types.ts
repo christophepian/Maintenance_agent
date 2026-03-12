@@ -115,6 +115,18 @@ export interface JobCompletedPayload {
   invoiceAutoCreated: boolean;
 }
 
+export interface MaintenanceAttachmentUploadedPayload {
+  attachmentId: string;
+  requestId: string;
+  fileName: string;
+}
+
+export interface TenantSelfPayAcceptedPayload {
+  requestId: string;
+  tenantId: string;
+  rfpId: string;
+}
+
 /* ── Event map: type → payload ──────────────────────────────── */
 
 export interface DomainEventMap {
@@ -135,6 +147,8 @@ export interface DomainEventMap {
   LEASE_STATUS_CHANGED: LeaseStatusChangedPayload;
   RENTAL_APPLICATION_SUBMITTED: RentalApplicationSubmittedPayload;
   RENTAL_APPLICATION_EVALUATED: RentalApplicationEvaluatedPayload;
+  MAINTENANCE_ATTACHMENT_UPLOADED: MaintenanceAttachmentUploadedPayload;
+  TENANT_SELF_PAY_ACCEPTED: TenantSelfPayAcceptedPayload;
 }
 
 export type DomainEventType = keyof DomainEventMap;

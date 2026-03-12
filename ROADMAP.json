@@ -459,11 +459,13 @@
       },
       "hooks_existing": [
         "Request model",
-        "Job model"
+        "Job model",
+        "MaintenanceAttachment model",
+        "maintenanceAttachments route",
+        "tenant upload UI"
       ],
       "hooks_new": [
-        "S3/R2 object storage",
-        "Request.attachments relation"
+        "S3/R2 object storage (production)"
       ]
     },
     {
@@ -721,7 +723,7 @@
       "Payroll for caretakers",
       "Depreciation schedules and asset accounting",
       "LLM triage (rule-based only, no OpenAI integration)",
-      "Photo/vision analysis (no image upload or damage classification)",
+      "Vision-based damage classification (image upload exists via MaintenanceAttachment, no AI analysis)",
       "GEAK energy ratings (no Swiss government API integration)",
       "Carbon tracking (no emissions calculation)"
     ]

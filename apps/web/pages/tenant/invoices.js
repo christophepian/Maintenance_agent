@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 import AppShell from "../../components/AppShell";
 import { formatDate, formatChf } from "../../lib/format";
+import { tenantFetch } from "../../lib/api";
 
 const STATUS_LABELS = {
   DRAFT: "Draft",
@@ -38,7 +39,7 @@ export default function TenantInvoicesPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(
+      const res = await tenantFetch(
         `/api/tenant-portal/invoices?tenantId=${session.tenant.id}`
       );
       const data = await res.json();

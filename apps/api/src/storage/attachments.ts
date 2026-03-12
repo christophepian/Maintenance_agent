@@ -36,6 +36,12 @@ export interface AttachmentStorage {
     },
   ): Promise<SaveResult>;
 
+  /**
+   * Generic key-based write. Caller builds the key, storage just persists.
+   * Used by maintenance-attachments and any future non-rental uploads.
+   */
+  put(key: string, buffer: Buffer): Promise<void>;
+
   get(key: string): Promise<Buffer>;
 
   getStream(key: string): fs.ReadStream;
@@ -91,6 +97,16 @@ class LocalDiskStorage implements AttachmentStorage {
       sha256,
       mimeType: opts.mimeType,
     };
+  }
+
+  async put(key: string, buffer: Buffer): Promise<void> {
+    if (buffer.length > MAX_FILE_SIZE) {
+      throw new Error(`File exceeds maximum size of ${MAX_FILE_SIZE} bytes`);
+    }
+    const fullPath = path.join(this.root, key);
+    const dir = path.dirname(fullPath);
+    await fs.promises.mkdir(dir, { recursive: true });
+    await fs.promises.writeFile(fullPath, buffer);
   }
 
   async get(key: string): Promise<Buffer> {

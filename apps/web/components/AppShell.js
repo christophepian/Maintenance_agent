@@ -255,6 +255,7 @@ export default function AppShell({ role: roleProp, children }) {
         section: "Work Requests",
         items: [
           { label: "Submit Work Request", href: "/tenant-form" },
+          { label: "My Requests", href: "/tenant/requests" },
           { label: "Chat intake", href: "/tenant-chat" },
         ],
       },

@@ -168,7 +168,9 @@ export default function ContractorJobs() {
                 {/* Request Details */}
                 {job.request && (
                   <div className="mb-4 p-4 bg-gray-50 rounded border border-gray-200">
-                    <h4 className="font-semibold text-sm text-gray-700 mb-2">Request Details</h4>
+                    <h4 className="font-semibold text-sm text-gray-700 mb-2">
+                      Request Details{job.request.requestNumber ? ` #${job.request.requestNumber}` : ""}
+                    </h4>
                     <p className="text-gray-800 mb-2">{job.request.description}</p>
                     {job.request.category && (
                       <p className="text-sm text-gray-600">

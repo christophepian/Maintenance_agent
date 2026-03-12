@@ -22,20 +22,30 @@ export function authHeaders() {
 }
 
 /**
- * Build tenant session headers from localStorage.
+ * Build tenant auth headers from localStorage.
  * SSR-safe: returns empty object on server.
  */
 export function tenantHeaders() {
   if (typeof window === "undefined") return {};
-  try {
-    const raw = localStorage.getItem("tenantSession");
-    if (!raw) return {};
-    const session = JSON.parse(raw);
-    if (session?.tenantId) {
-      return { "x-tenant-id": session.tenantId };
-    }
-  } catch { /* ignore parse errors */ }
+  const token = localStorage.getItem("tenantToken");
+  if (token) return { Authorization: `Bearer ${token}` };
   return {};
+}
+
+/**
+ * Fetch with automatic tenant Bearer token.
+ * Use this in all tenant-portal pages.
+ *
+ * @param {string} url - Relative URL (e.g. "/api/tenant-portal/notifications")
+ * @param {RequestInit} [opts] - Standard fetch options
+ * @returns {Promise<Response>}
+ */
+export function tenantFetch(url, opts = {}) {
+  const headers = {
+    ...tenantHeaders(),
+    ...opts.headers,
+  };
+  return fetch(url, { ...opts, headers });
 }
 
 /**

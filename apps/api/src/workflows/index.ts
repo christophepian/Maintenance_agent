@@ -53,6 +53,12 @@ export type { MarkLeaseReadyInput, MarkLeaseReadyResult } from "./markLeaseReady
 export { submitRentalApplicationWorkflow } from "./submitRentalApplicationWorkflow";
 export type { SubmitRentalApplicationInput, SubmitRentalApplicationResult } from "./submitRentalApplicationWorkflow";
 
+export { uploadMaintenanceAttachmentWorkflow } from "./uploadMaintenanceAttachmentWorkflow";
+export type { UploadMaintenanceAttachmentInput } from "./uploadMaintenanceAttachmentWorkflow";
+
+export { tenantSelfPayWorkflow } from "./tenantSelfPayWorkflow";
+export type { TenantSelfPayInput, TenantSelfPayResult } from "./tenantSelfPayWorkflow";
+
 export type { WorkflowContext } from "./context";
 
 export {

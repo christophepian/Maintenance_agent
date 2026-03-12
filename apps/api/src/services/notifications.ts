@@ -234,7 +234,7 @@ export async function notifyRequestPendingReview(
 }
 
 /**
- * Create notification for owner rejection
+ * Create notification for owner rejection — notifies the MANAGER
  */
 export async function notifyOwnerRejected(
   requestId: string,
@@ -250,6 +250,51 @@ export async function notifyOwnerRejected(
     entityId: requestId,
     eventType: 'OWNER_REJECTED',
     message: 'A maintenance request has been rejected by the owner.',
+  });
+}
+
+/**
+ * Notify the TENANT that the owner rejected their maintenance request.
+ * Includes the rejection reason (if provided) and a hint about self-pay.
+ */
+export async function notifyTenantOwnerRejected(
+  requestId: string,
+  orgId: string,
+  tenantUserId: string,
+  reason?: string | null,
+  buildingId?: string,
+): Promise<void> {
+  const msg = reason
+    ? `Your maintenance request was rejected by the owner: "${reason}". You may proceed at your own expense.`
+    : 'Your maintenance request was rejected by the owner. You may proceed at your own expense.';
+  await createNotification({
+    orgId,
+    userId: tenantUserId,
+    buildingId,
+    entityType: 'REQUEST',
+    entityId: requestId,
+    eventType: 'OWNER_REJECTED',
+    message: msg,
+  });
+}
+
+/**
+ * Notify the tenant that their self-pay acceptance was confirmed.
+ */
+export async function notifyTenantSelfPayAccepted(
+  requestId: string,
+  orgId: string,
+  tenantUserId: string,
+  buildingId?: string,
+): Promise<void> {
+  await createNotification({
+    orgId,
+    userId: tenantUserId,
+    buildingId,
+    entityType: 'REQUEST',
+    entityId: requestId,
+    eventType: 'TENANT_SELF_PAY_ACCEPTED',
+    message: 'You chose to proceed at your own expense. Contractor quotes are being collected.',
   });
 }
 

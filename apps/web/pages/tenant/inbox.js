@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 import AppShell from "../../components/AppShell";
 import { formatDateTime } from "../../lib/format";
+import { tenantFetch } from "../../lib/api";
 
 const EVENT_ICONS = {
   LEASE_READY_TO_SIGN: "📝",
@@ -13,6 +14,8 @@ const EVENT_ICONS = {
   JOB_CREATED: "🛠️",
   JOB_COMPLETED: "✅",
   TENANT_SELECTED: "🏠",
+  OWNER_REJECTED: "❌",
+  TENANT_SELF_PAY_ACCEPTED: "💳",
 };
 
 const EVENT_LINKS = {
@@ -24,6 +27,8 @@ const EVENT_LINKS = {
   JOB_STARTED: () => `/tenant/inbox`,
   JOB_COMPLETED: () => `/tenant/inbox`,
   CONTRACTOR_REJECTED: () => `/tenant/inbox`,
+  OWNER_REJECTED: () => `/tenant/requests`,
+  TENANT_SELF_PAY_ACCEPTED: () => `/tenant/requests`,
 };
 
 export default function TenantInboxPage() {
@@ -33,6 +38,7 @@ export default function TenantInboxPage() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [selfPayLoading, setSelfPayLoading] = useState(null); // requestId being processed
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -46,7 +52,7 @@ export default function TenantInboxPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(
+      const res = await tenantFetch(
         `/api/tenant-portal/notifications?tenantId=${session.tenant.id}`
       );
       const data = await res.json();
@@ -65,7 +71,7 @@ export default function TenantInboxPage() {
   const fetchUnreadCount = useCallback(async () => {
     if (!session?.tenant?.id) return;
     try {
-      const res = await fetch(
+      const res = await tenantFetch(
         `/api/tenant-portal/notifications/unread-count?tenantId=${session.tenant.id}`
       );
       const data = await res.json();
@@ -97,7 +103,7 @@ export default function TenantInboxPage() {
 
   async function markAsRead(id) {
     try {
-      await fetch(`/api/tenant-portal/notifications/${id}/read`, {
+      await tenantFetch(`/api/tenant-portal/notifications/${id}/read`, {
         method: "POST",
       });
       fetchNotifications();
@@ -108,7 +114,7 @@ export default function TenantInboxPage() {
   async function markAllRead() {
     if (!session?.tenant?.id) return;
     try {
-      await fetch(
+      await tenantFetch(
         `/api/tenant-portal/notifications/mark-all-read?tenantId=${session.tenant.id}`,
         {
           method: "POST",
@@ -123,7 +129,7 @@ export default function TenantInboxPage() {
 
   async function dismissNotification(id) {
     try {
-      await fetch(`/api/tenant-portal/notifications/${id}`, {
+      await tenantFetch(`/api/tenant-portal/notifications/${id}`, {
         method: "DELETE",
       });
       fetchNotifications();
@@ -135,6 +141,30 @@ export default function TenantInboxPage() {
     if (!notif.readAt) markAsRead(notif.id);
     const linkFn = EVENT_LINKS[notif.eventType];
     if (linkFn) router.push(linkFn(notif));
+  }
+
+  async function handleSelfPay(e, requestId) {
+    e.stopPropagation();
+    setSelfPayLoading(requestId);
+    try {
+      const res = await tenantFetch(`/api/tenant-portal/requests/${requestId}/self-pay`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setError(data?.error?.message || "Failed to accept self-pay");
+        return;
+      }
+      // Refresh notifications — the OWNER_REJECTED notification is replaced by TENANT_SELF_PAY_ACCEPTED
+      fetchNotifications();
+      fetchUnreadCount();
+    } catch (err) {
+      setError(String(err));
+    } finally {
+      setSelfPayLoading(null);
+    }
   }
 
   if (!session) {
@@ -218,6 +248,15 @@ export default function TenantInboxPage() {
                   <p className="text-xs text-gray-400 mt-1">
                     {formatDateTime(n.createdAt)}
                   </p>
+                  {n.eventType === "OWNER_REJECTED" && (
+                    <button
+                      onClick={(e) => handleSelfPay(e, n.entityId)}
+                      disabled={selfPayLoading === n.entityId}
+                      className="mt-2 px-3 py-1 bg-orange-500 text-white text-xs font-medium rounded hover:bg-orange-600 disabled:opacity-50"
+                    >
+                      {selfPayLoading === n.entityId ? "Processing…" : "Proceed at my own expense"}
+                    </button>
+                  )}
                 </div>
                 <div className="flex items-center gap-1 flex-shrink-0">
                   {!n.readAt && (

@@ -39,6 +39,10 @@ export default function TenantPhone() {
         return;
       }
 
+      // Store token separately for auth headers, keep session for tenant data
+      if (data.data.token) {
+        localStorage.setItem("tenantToken", data.data.token);
+      }
       localStorage.setItem("tenantSession", JSON.stringify(data.data));
       router.push("/tenant/inbox");
     } catch (e) {

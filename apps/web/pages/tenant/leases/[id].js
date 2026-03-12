@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 import AppShell from "../../../components/AppShell";
+import { tenantFetch } from "../../../lib/api";
 
 const STATUS_LABELS = {
   DRAFT: "Draft",
@@ -51,7 +52,7 @@ export default function TenantLeaseDetailPage() {
     setError(null);
     try {
       const qs = `tenantId=${session.tenant.id}`;
-      const res = await fetch(`/api/tenant-portal/leases/${leaseId}?${qs}`);
+      const res = await tenantFetch(`/api/tenant-portal/leases/${leaseId}?${qs}`);
       const data = await res.json();
       if (!res.ok) {
         setError(data?.error?.message || data?.error || "Failed to load lease");
@@ -75,7 +76,7 @@ export default function TenantLeaseDetailPage() {
     setAccepting(true);
     setError(null);
     try {
-      const res = await fetch(`/api/tenant-portal/leases/${leaseId}/accept`, {
+      const res = await tenantFetch(`/api/tenant-portal/leases/${leaseId}/accept`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

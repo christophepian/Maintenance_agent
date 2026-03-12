@@ -10,7 +10,7 @@
  * G9: canonical include constants live here.
  */
 
-import { PrismaClient, Prisma, RequestStatus, ApprovalSource } from "@prisma/client";
+import { PrismaClient, Prisma, RequestStatus, ApprovalSource, PayingParty } from "@prisma/client";
 
 // ─── Canonical Includes ────────────────────────────────────────
 
@@ -196,7 +196,7 @@ export async function updateRequestStatus(
   prisma: PrismaClient,
   id: string,
   status: RequestStatus,
-  extra?: { approvalSource?: ApprovalSource; rejectionReason?: string | null },
+  extra?: { approvalSource?: ApprovalSource; rejectionReason?: string | null; payingParty?: PayingParty },
 ) {
   return prisma.request.update({
     where: { id },
@@ -204,6 +204,7 @@ export async function updateRequestStatus(
       status,
       ...(extra?.approvalSource !== undefined && { approvalSource: extra.approvalSource }),
       ...(extra?.rejectionReason !== undefined && { rejectionReason: extra.rejectionReason }),
+      ...(extra?.payingParty !== undefined && { payingParty: extra.payingParty }),
     },
     include: REQUEST_FULL_INCLUDE,
   });

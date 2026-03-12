@@ -1,4 +1,4 @@
-import { PrismaClient, Prisma, RequestStatus, ApprovalSource } from "@prisma/client";
+import { PrismaClient, Prisma, RequestStatus, ApprovalSource, PayingParty } from "@prisma/client";
 import { REQUEST_FULL_INCLUDE, REQUEST_SUMMARY_INCLUDE } from "../repositories/requestRepository";
 
 /** Compile-time type for a Request row loaded with REQUEST_FULL_INCLUDE. */
@@ -26,6 +26,7 @@ function orgScopeWhere(orgId: string): Prisma.RequestWhereInput {
 
 export type MaintenanceRequestDTO = {
   id: string;
+  requestNumber: number;
   description: string;
   category: string | null;
   estimatedCost: number | null;
@@ -38,6 +39,7 @@ export type MaintenanceRequestDTO = {
   applianceId?: string | null;
   approvalSource?: ApprovalSource | null;
   rejectionReason?: string | null;
+  payingParty?: PayingParty;
 
   assignedContractor: null | {
     id: string;
@@ -88,6 +90,7 @@ export type MaintenanceRequestDTO = {
    */
   export interface MaintenanceRequestSummaryDTO {
     id: string;
+    requestNumber: number;
     status: RequestStatus;
     createdAt: string;
     description: string;
@@ -96,6 +99,8 @@ export type MaintenanceRequestDTO = {
     unitNumber: string | null;
     buildingName: string | null;
     assignedContractorName: string | null;
+    payingParty?: PayingParty;
+    approvalSource?: ApprovalSource | null;
   }
 
 type ListOpts = {
@@ -177,6 +182,7 @@ const requestInclude = {
 export function toDTO(r: RequestWithFullInclude): MaintenanceRequestDTO {
   return {
     id: r.id,
+    requestNumber: r.requestNumber,
     description: r.description,
     category: r.category ?? null,
     estimatedCost: r.estimatedCost ?? null,
@@ -189,6 +195,7 @@ export function toDTO(r: RequestWithFullInclude): MaintenanceRequestDTO {
     applianceId: r.applianceId ?? null,
     approvalSource: r.approvalSource ?? null,
     rejectionReason: r.rejectionReason ?? null,
+    payingParty: r.payingParty,
 
     assignedContractor: r.assignedContractor
       ? {
@@ -219,6 +226,7 @@ export function toDTO(r: RequestWithFullInclude): MaintenanceRequestDTO {
 export function toSummaryDTO(r: RequestWithSummaryInclude): MaintenanceRequestSummaryDTO {
     return {
       id: r.id,
+      requestNumber: r.requestNumber,
       status: r.status,
       description: r.description,
       estimatedCost: r.estimatedCost ?? null,
@@ -226,6 +234,8 @@ export function toSummaryDTO(r: RequestWithSummaryInclude): MaintenanceRequestSu
       unitNumber: r.unit?.unitNumber ?? null,
       buildingName: r.unit?.building?.name ?? null,
       assignedContractorName: r.assignedContractor?.name ?? null,
+      payingParty: r.payingParty,
+      approvalSource: r.approvalSource ?? null,
       createdAt: r.createdAt instanceof Date ? r.createdAt.toISOString() : String(r.createdAt),
     };
   }

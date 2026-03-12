@@ -14,7 +14,7 @@ const prisma = new PrismaClient();
 
 function startServer(envOverrides: Record<string, string>, port: number) {
   return new Promise<ChildProcessWithoutNullStreams>((resolve, reject) => {
-    const child = spawn(TS_NODE, ["src/server.ts"], {
+    const child = spawn(TS_NODE, ["--transpile-only", "src/server.ts"], {
       cwd: API_ROOT,
       env: {
         ...process.env,
