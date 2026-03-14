@@ -449,7 +449,7 @@ Maintenance_Agent/
 * **Layout:** `AppShell` component with role-scoped sidebar (MANAGER/CONTRACTOR/TENANT/OWNER)
 * **Reusable components:** `PageShell`, `PageHeader`, `PageContent`, `Panel`, `Section`, `ContractorPicker`, `NotificationBell`, `AssetInventoryPanel`
 * **Key page groups:** `/manager/*` (requests, inventory, legal, leases, settings), `/contractor/*` (jobs, invoices), `/tenant/*` (leases, chat), `/owner/*` (approvals, invoices, vacancies), `/admin-inventory/*`, `/apply` (rental wizard), `/listings`
-* **~194 frontend pages** (UI + API proxies)
+* **~195 frontend pages** (UI + API proxies)
 
 <!-- reviewed 2026-03-10 -->
 
@@ -893,6 +893,9 @@ Conversational tenant intake with phone-based identification, automatic asset in
 
 
 <!-- auto-sync 2026-03-13: frontendLOC 25→26, fePages 193→194 -->
+
+
+<!-- auto-sync 2026-03-14: fePages 194→195 -->
 
 ### State Integrity
 
