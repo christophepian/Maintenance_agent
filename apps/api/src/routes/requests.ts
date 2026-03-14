@@ -322,8 +322,8 @@ export function registerRequestRoutes(router: Router) {
     const offset = getIntParam(query, "offset", { defaultValue: 0, min: 0, max: 1_000_000 });
     const order = getEnumParam(query, "order", ["asc", "desc"] as const, "asc");
     const view = first(query, "view") as "summary" | "full" | undefined;
-    const data = await listMaintenanceRequests(prisma, orgId, { limit, offset, order, view });
-    sendJson(res, 200, { data });
+    const result = await listMaintenanceRequests(prisma, orgId, { limit, offset, order, view });
+    sendJson(res, 200, { data: result.data, total: result.total });
   }));
 
   /* ── Work requests (aliases — thin) ────────────────────────── */
@@ -332,9 +332,9 @@ export function registerRequestRoutes(router: Router) {
     const limit = getIntParam(query, "limit", { defaultValue: 50, min: 1, max: 200 });
     const offset = getIntParam(query, "offset", { defaultValue: 0, min: 0, max: 1_000_000 });
     const order = getEnumParam(query, "order", ["asc", "desc"] as const, "asc");
-    const data = (await listMaintenanceRequests(prisma, orgId, { limit, offset, order, view: "full" })) as MaintenanceRequestDTO[];
-    const workRequests = data.map(workRequestFromRequest);
-    sendJson(res, 200, { data: workRequests });
+    const result = await listMaintenanceRequests(prisma, orgId, { limit, offset, order, view: "full" });
+    const workRequests = (result.data as MaintenanceRequestDTO[]).map(workRequestFromRequest);
+    sendJson(res, 200, { data: workRequests, total: result.total });
   }));
 
   router.get("/work-requests/:id", withAuthRequired(async ({ res, prisma, params, orgId }) => {

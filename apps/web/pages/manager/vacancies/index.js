@@ -8,8 +8,6 @@ import PageContent from "../../../components/layout/PageContent";
 import Panel from "../../../components/layout/Panel";
 import { formatDate } from "../../../lib/format";
 import { authHeaders } from "../../../lib/api";
-import { styles } from "../../../styles/managerStyles";
-
 /**
  * Reusable action dropdown button — renders a "⋯" pill that opens
  * a positioned dropdown with a list of actions.
@@ -204,40 +202,39 @@ export default function ManagerVacanciesPage() {
             {selectionsLoading && <p className="text-sm text-slate-500">Loading selections…</p>}
 
             {!selectionsLoading && selections.length === 0 && (
-              <div style={styles.emptyState}><p style={styles.emptyStateText}>No active tenant selections.</p></div>
+              <div className="empty-state"><p className="empty-state-text">No active tenant selections.</p></div>
             )}
 
             {!selectionsLoading && selections.length > 0 && (
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-slate-200 text-sm">
-                  <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                <table className="inline-table">
+                  <thead>
                     <tr>
-                      <th className="px-4 py-3">Building</th>
-                      <th className="px-4 py-3">Unit</th>
-                      <th className="px-4 py-3">Selected Tenant</th>
-                      <th className="px-4 py-3">Status</th>
-                      <th className="px-4 py-3">Lease</th>
-                      <th className="px-4 py-3">Deadline</th>
-                      <th className="px-4 py-3 text-right">Action</th>
+                      <th>Building</th>
+                      <th>Unit</th>
+                      <th>Selected Tenant</th>
+                      <th>Status</th>
+                      <th>Lease</th>
+                      <th>Deadline</th>
+                      <th className="text-right">Action</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100 bg-white">
+                  <tbody>
                     {selections.map((sel) => (
                       <tr key={sel.id} className={!sel.lease ? "bg-amber-50/50" : ""}>
-                        <td className="px-4 py-3 text-slate-700">{sel.buildingName || "—"}</td>
-                        <td className="px-4 py-3 text-slate-700">{sel.unitNumber || "—"}</td>
-                        <td className="px-4 py-3">
+                        <td>{sel.buildingName || "—"}</td>
+                        <td>{sel.unitNumber || "—"}</td>
+                        <td>
                           {sel.primaryCandidate ? (
                             <div>
-                              <span className="font-medium text-slate-900">{sel.primaryCandidate.name}</span>
+                              <span className="cell-bold">{sel.primaryCandidate.name}</span>
                               <span className="ml-2 text-xs text-slate-400">{sel.primaryCandidate.email}</span>
                             </div>
                           ) : (
                             <span className="text-slate-400">—</span>
                           )}
                         </td>
-                        <td className="px-4 py-3">{selectionStatusBadge(sel.status)}</td>
-                        <td className="px-4 py-3">
+                        <td>{selectionStatusBadge(sel.status)}</td>
+                        <td>
                           {sel.lease ? (
                             <Link
                               href={"/manager/leases/" + sel.lease.id}
@@ -249,10 +246,10 @@ export default function ManagerVacanciesPage() {
                             leaseBadge(null, sel.hasLeaseTemplate)
                           )}
                         </td>
-                        <td className="px-4 py-3 text-xs text-slate-500">
+                        <td>
                           {formatDate(sel.deadlineAt)}
                         </td>
-                        <td className="px-4 py-3 text-right">
+                        <td className="text-right">
                           <ActionDropdown actions={[
                             ...(sel.lease ? [
                               { label: "📄 View Lease Project", onClick: () => router.push("/manager/leases/" + sel.lease.id) },
@@ -271,7 +268,6 @@ export default function ManagerVacanciesPage() {
                     ))}
                   </tbody>
                 </table>
-              </div>
             )}
           </Panel>
 
@@ -280,7 +276,7 @@ export default function ManagerVacanciesPage() {
             {loading && <p className="text-sm text-slate-500">Loading…</p>}
 
             {!loading && units.length === 0 && (
-              <div style={styles.emptyState}><p style={styles.emptyStateText}>No vacant units at this time.</p></div>
+              <div className="empty-state"><p className="empty-state-text">No vacant units at this time.</p></div>
             )}
 
             {unitsByBuilding.map((group) => (
@@ -288,25 +284,24 @@ export default function ManagerVacanciesPage() {
                 <h3 className="text-sm font-semibold text-slate-700 mb-2">
                   {group.building?.name || "Unknown"} — {group.building?.address || ""}
                 </h3>
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-slate-200 text-sm">
-                    <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                <table className="inline-table">
+                    <thead>
                       <tr>
-                        <th className="px-4 py-3">Unit</th>
-                        <th className="px-4 py-3">Floor</th>
-                        <th className="px-4 py-3">Rent (CHF)</th>
-                        <th className="px-4 py-3">Charges (CHF)</th>
-                        <th className="px-4 py-3 text-right">Applications</th>
+                        <th>Unit</th>
+                        <th>Floor</th>
+                        <th>Rent (CHF)</th>
+                        <th>Charges (CHF)</th>
+                        <th className="text-right">Applications</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100 bg-white">
+                    <tbody>
                       {group.units.map((u) => (
                         <tr key={u.id}>
-                          <td className="px-4 py-3 font-medium text-slate-900">{u.unitNumber || "—"}</td>
-                          <td className="px-4 py-3 text-slate-600">{u.floor || "—"}</td>
-                          <td className="px-4 py-3 text-slate-700">{u.monthlyRentChf ?? "—"}</td>
-                          <td className="px-4 py-3 text-slate-700">{u.monthlyChargesChf ?? "—"}</td>
-                          <td className="px-4 py-3 text-right">
+                          <td className="cell-bold">{u.unitNumber || "—"}</td>
+                          <td>{u.floor || "—"}</td>
+                          <td>{u.monthlyRentChf ?? "—"}</td>
+                          <td>{u.monthlyChargesChf ?? "—"}</td>
+                          <td className="text-right">
                             <ActionDropdown actions={[
                               { label: "📋 View Applications", onClick: () => router.push("/manager/vacancies/" + u.id + "/applications") },
                               ...(u.building?.id ? [
@@ -321,7 +316,6 @@ export default function ManagerVacanciesPage() {
                       ))}
                     </tbody>
                   </table>
-                </div>
               </div>
             ))}
           </Panel>

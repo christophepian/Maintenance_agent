@@ -512,38 +512,36 @@ export default function ContractorDetailPage() {
                   ) : jobs.length === 0 ? (
                     <p className="text-sm text-slate-500">No jobs found for this contractor.</p>
                   ) : (
-                    <div className="overflow-x-auto">
-                      <table className="min-w-full divide-y divide-slate-200 text-sm">
-                        <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      <table className="inline-table">
+                        <thead>
                           <tr>
-                            <th className="px-4 py-3">Job #</th>
-                            <th className="px-4 py-3">Request title</th>
-                            <th className="px-4 py-3">Building</th>
-                            <th className="px-4 py-3">Status</th>
-                            <th className="px-4 py-3">Created date</th>
+                            <th>Job #</th>
+                            <th>Request title</th>
+                            <th>Building</th>
+                            <th>Status</th>
+                            <th>Created date</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100 bg-white">
+                        <tbody>
                           {jobs.map((job) => (
                             <tr key={job.id}>
-                              <td className="px-4 py-3">
+                              <td>
                                 <Link href="/manager/requests" className="text-indigo-600 hover:underline">
                                   {job.id?.slice(0, 8)}
                                 </Link>
                               </td>
-                              <td className="px-4 py-3 text-slate-700">{job.request?.description?.slice(0, 60) || "—"}{job.request?.description?.length > 60 ? "…" : ""}</td>
-                              <td className="px-4 py-3 text-slate-700">{job.request?.unit?.building?.name || "—"}</td>
-                              <td className="px-4 py-3">
+                              <td>{job.request?.description?.slice(0, 60) || "—"}{job.request?.description?.length > 60 ? "…" : ""}</td>
+                              <td>{job.request?.unit?.building?.name || "—"}</td>
+                              <td>
                                 <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600">
                                   {job.status}
                                 </span>
                               </td>
-                              <td className="px-4 py-3 text-slate-700">{job.createdAt ? new Date(job.createdAt).toLocaleDateString("de-CH") : "—"}</td>
+                              <td>{job.createdAt ? new Date(job.createdAt).toLocaleDateString("de-CH") : "—"}</td>
                             </tr>
                           ))}
                         </tbody>
                       </table>
-                    </div>
                   )}
                 </Panel>
               )}
@@ -555,40 +553,38 @@ export default function ContractorDetailPage() {
                   ) : contractorInvoices.length === 0 ? (
                     <p className="text-sm text-slate-500">No invoices found for this contractor.</p>
                   ) : (
-                    <div className="overflow-x-auto">
-                      <table className="min-w-full divide-y divide-slate-200 text-sm">
-                        <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      <table className="inline-table">
+                        <thead>
                           <tr>
-                            <th className="px-4 py-3">Invoice #</th>
-                            <th className="px-4 py-3">Job #</th>
-                            <th className="px-4 py-3 text-right">Amount</th>
-                            <th className="px-4 py-3">Status</th>
-                            <th className="px-4 py-3">Submitted date</th>
+                            <th>Invoice #</th>
+                            <th>Job #</th>
+                            <th className="text-right">Amount</th>
+                            <th>Status</th>
+                            <th>Submitted date</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100 bg-white">
+                        <tbody>
                           {contractorInvoices.map((inv) => (
                             <tr key={inv.id}>
-                              <td className="px-4 py-3 text-slate-700">{inv.invoiceNumber || inv.id?.slice(0, 8) || "—"}</td>
-                              <td className="px-4 py-3">
+                              <td>{inv.invoiceNumber || inv.id?.slice(0, 8) || "—"}</td>
+                              <td>
                                 <Link href="/manager/requests" className="text-indigo-600 hover:underline">
                                   {inv.jobId?.slice(0, 8) || "—"}
                                 </Link>
                               </td>
-                              <td className="px-4 py-3 text-right text-slate-700">
+                              <td className="text-right">
                                 {inv.totalAmount != null ? `CHF ${inv.totalAmount.toFixed(2)}` : "—"}
                               </td>
-                              <td className="px-4 py-3">
+                              <td>
                                 <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600">
                                   {inv.status}
                                 </span>
                               </td>
-                              <td className="px-4 py-3 text-slate-700">{inv.submittedAt ? new Date(inv.submittedAt).toLocaleDateString("de-CH") : "—"}</td>
+                              <td>{inv.submittedAt ? new Date(inv.submittedAt).toLocaleDateString("de-CH") : "—"}</td>
                             </tr>
                           ))}
                         </tbody>
                       </table>
-                    </div>
                   )}
                 </Panel>
               )}

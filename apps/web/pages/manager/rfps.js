@@ -6,8 +6,6 @@ import PageHeader from "../../components/layout/PageHeader";
 import PageContent from "../../components/layout/PageContent";
 import Panel from "../../components/layout/Panel";
 import { authHeaders } from "../../lib/api";
-import { styles } from "../../styles/managerStyles";
-
 const STATUS_TABS = [
   { key: "ALL", label: "All" },
   { key: "OPEN", label: "Open" },
@@ -75,7 +73,7 @@ export default function ManagerRfpsPage() {
             {loading ? (
               <p className="text-sm text-slate-500">Loading…</p>
             ) : rfps.length === 0 ? (
-              <p style={styles.emptyStateText}>
+              <p className="empty-state-text">
                 No RFPs found{activeTab !== "ALL" ? ` with status ${activeTab}` : ""}. RFPs are created automatically when the legal engine determines an obligation.
               </p>
             ) : (
@@ -153,34 +151,32 @@ function RfpCard({ rfp }) {
           {rfp.invites?.length > 0 && (
             <div>
               <p className="text-xs font-medium text-slate-600 mb-1">Invites ({rfp.invites.length}):</p>
-              <div className="overflow-x-auto">
-                <table className="w-full text-xs">
+                <table className="inline-table">
                   <thead>
-                    <tr className="border-b border-slate-100 text-left font-medium text-slate-500">
-                      <th className="py-1 pr-3">Contractor</th>
-                      <th className="py-1 pr-3">Status</th>
-                      <th className="py-1 pr-3">Sent At</th>
+                    <tr>
+                      <th>Contractor</th>
+                      <th>Status</th>
+                      <th>Sent At</th>
                     </tr>
                   </thead>
                   <tbody>
                     {rfp.invites.map((inv) => (
-                      <tr key={inv.id} className="border-b border-slate-50">
-                        <td className="py-1 pr-3">
+                      <tr key={inv.id}>
+                        <td>
                           {inv.contractorId ? (
                             <Link href={`/manager/people/vendors/${inv.contractorId}`} className="text-indigo-600 hover:underline">
                               {inv.contractor?.businessName || inv.contractorId?.slice(0, 8)}
                             </Link>
                           ) : (inv.contractor?.businessName || "—")}
                         </td>
-                        <td className="py-1 pr-3">
+                        <td>
                           <InviteStatusPill status={inv.status} />
                         </td>
-                        <td className="py-1 pr-3">{formatDate(inv.sentAt)}</td>
+                        <td>{formatDate(inv.sentAt)}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
-              </div>
             </div>
           )}
 
@@ -188,32 +184,30 @@ function RfpCard({ rfp }) {
           {rfp.quotes?.length > 0 && (
             <div>
               <p className="text-xs font-medium text-slate-600 mb-1">Quotes ({rfp.quotes.length}):</p>
-              <div className="overflow-x-auto">
-                <table className="w-full text-xs">
+                <table className="inline-table">
                   <thead>
-                    <tr className="border-b border-slate-100 text-left font-medium text-slate-500">
-                      <th className="py-1 pr-3">Contractor</th>
-                      <th className="py-1 pr-3">Amount</th>
-                      <th className="py-1 pr-3">Submitted</th>
+                    <tr>
+                      <th>Contractor</th>
+                      <th>Amount</th>
+                      <th>Submitted</th>
                     </tr>
                   </thead>
                   <tbody>
                     {rfp.quotes.map((q) => (
-                      <tr key={q.id} className="border-b border-slate-50">
-                        <td className="py-1 pr-3">
+                      <tr key={q.id}>
+                        <td>
                           {q.contractorId ? (
                             <Link href={`/manager/people/vendors/${q.contractorId}`} className="text-indigo-600 hover:underline">
                               {q.contractor?.businessName || q.contractorId?.slice(0, 8)}
                             </Link>
                           ) : (q.contractor?.businessName || "—")}
                         </td>
-                        <td className="py-1 pr-3 font-mono">CHF {q.amountCents ? (q.amountCents / 100).toFixed(2) : "—"}</td>
-                        <td className="py-1 pr-3">{formatDate(q.submittedAt)}</td>
+                        <td className="font-mono">CHF {q.amountCents ? (q.amountCents / 100).toFixed(2) : "—"}</td>
+                        <td>{formatDate(q.submittedAt)}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
-              </div>
             </div>
           )}
         </div>

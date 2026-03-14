@@ -301,28 +301,33 @@ export async function updateTenant(
 /**
  * List tenants in org
  */
-export async function listTenants(orgId: string, includeInactive?: boolean): Promise<TenantDTO[]> {
-  const tenants = await prisma.tenant.findMany({
-    where: { orgId, ...(includeInactive ? {} : { isActive: true }) },
-    include: {
-      occupancies: {
-        include: {
-          unit: {
-            include: {
-              appliances: {
-                include: {
-                  assetModel: true,
+export async function listTenants(orgId: string, includeInactive?: boolean): Promise<{ data: TenantDTO[]; total: number }> {
+  const where = { orgId, ...(includeInactive ? {} : { isActive: true }) };
+
+  const [tenants, total] = await Promise.all([
+    prisma.tenant.findMany({
+      where,
+      include: {
+        occupancies: {
+          include: {
+            unit: {
+              include: {
+                appliances: {
+                  include: {
+                    assetModel: true,
+                  },
                 },
               },
             },
           },
         },
       },
-    },
-    orderBy: { createdAt: "desc" },
-  });
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.tenant.count({ where }),
+  ]);
 
-  return tenants.map(tenantToDTO);
+  return { data: tenants.map(tenantToDTO), total };
 }
 
 export async function deactivateTenant(orgId: string, tenantId: string) {

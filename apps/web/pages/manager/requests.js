@@ -7,23 +7,18 @@ import PageHeader from "../../components/layout/PageHeader";
 import PageContent from "../../components/layout/PageContent";
 import Panel from "../../components/layout/Panel";
 import { authHeaders } from "../../lib/api";
-import { styles } from "../../styles/managerStyles";
-
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
 const STATUS_TABS = [
-  { key: "ALL", label: "All" },
-  { key: "PENDING_REVIEW", label: "Pending Review" },
-  { key: "PENDING_OWNER_APPROVAL", label: "Owner Approval" },
-  { key: "RFP_PENDING", label: "Auto-routed" },
-  { key: "APPROVED", label: "Approved" },
-  { key: "ASSIGNED", label: "Assigned" },
-  { key: "IN_PROGRESS", label: "In Progress" },
-  { key: "COMPLETED", label: "Completed" },
-  { key: "OWNER_REJECTED", label: "Rejected" },
+  { key: "ALL", label: "Overview", statuses: null },
+  { key: "ACTIVE", label: "Active", statuses: ["APPROVED", "ASSIGNED", "IN_PROGRESS"] },
+  { key: "PENDING", label: "Pending review", statuses: ["PENDING_REVIEW", "PENDING_OWNER_APPROVAL", "RFP_PENDING", "AUTO_APPROVED"] },
+  { key: "DONE", label: "Completed", statuses: ["COMPLETED", "OWNER_REJECTED"] },
 ];
+
+const TAB_KEYS = ['overview', 'active', 'pending_review', 'completed'];
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -529,7 +524,15 @@ export default function ManagerRequestsPage() {
   const [error, setError] = useState("");
   const [requests, setRequests] = useState([]);
   const [contractors, setContractors] = useState([]);
-  const [activeTab, setActiveTab] = useState("ALL");
+  const [requestsTotal, setRequestsTotal] = useState(0);
+  const activeTab = router.isReady ? (Math.max(0, TAB_KEYS.indexOf(router.query.tab)) || 0) : 0;
+  const setActiveTab = useCallback((index) => {
+    router.push(
+      { pathname: router.pathname, query: { ...router.query, tab: TAB_KEYS[index] } },
+      undefined,
+      { shallow: true }
+    );
+  }, [router]);
   const [actionLoading, setActionLoading] = useState(null);
 
   // Assign modal state
@@ -540,10 +543,6 @@ export default function ManagerRequestsPage() {
   const [expandedId, setExpandedId] = useState(null);
   const [legalDecisions, setLegalDecisions] = useState({});
   const [requestDetails, setRequestDetails] = useState({});
-
-  useEffect(() => {
-    if (router.query.filter) setActiveTab(router.query.filter);
-  }, [router.query.filter]);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -557,6 +556,7 @@ export default function ManagerRequestsPage() {
       const conData = await conRes.json();
       if (!reqRes.ok) throw new Error(reqData?.error?.message || "Failed to load requests");
       setRequests(reqData?.data || []);
+      setRequestsTotal(reqData?.total ?? reqData?.data?.length ?? 0);
       setContractors(conData?.data || []);
     } catch (e) {
       setError(String(e?.message || e));
@@ -568,8 +568,9 @@ export default function ManagerRequestsPage() {
   useEffect(() => { loadData(); }, [loadData]);
 
   const filteredRequests = useMemo(() => {
-    if (activeTab === "ALL") return requests;
-    return requests.filter((r) => r.status === activeTab);
+    const tab = STATUS_TABS[activeTab];
+    if (!tab || !tab.statuses) return requests;
+    return requests.filter((r) => tab.statuses.includes(r.status));
   }, [requests, activeTab]);
 
   // Toggle accordion + lazy-fetch
@@ -699,23 +700,19 @@ export default function ManagerRequestsPage() {
           )}
 
           {/* Status Tabs */}
-          <div className="flex flex-wrap gap-1.5">
-            {STATUS_TABS.map((tab) => {
-              const count = tab.key === "ALL"
-                ? requests.length
-                : requests.filter((r) => r.status === tab.key).length;
-              const active = activeTab === tab.key;
+          <div className="tab-strip">
+            {STATUS_TABS.map((tab, i) => {
+              const count = !tab.statuses
+                ? requestsTotal
+                : requests.filter((r) => tab.statuses.includes(r.status)).length;
+              const active = activeTab === i;
               return (
                 <button
                   key={tab.key}
-                  onClick={() => setActiveTab(tab.key)}
-                  className={`rounded-lg px-3.5 py-1.5 text-xs font-medium transition-colors ${
-                    active
-                      ? "bg-blue-600 text-white shadow-sm"
-                      : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
-                  }`}
+                  onClick={() => setActiveTab(i)}
+                  className={active ? "tab-btn-active" : "tab-btn"}
                 >
-                  {tab.label} <span className={active ? "text-blue-200" : "text-slate-400"}>({count})</span>
+                  {tab.label} ({count})
                 </button>
               );
             })}
@@ -725,7 +722,7 @@ export default function ManagerRequestsPage() {
           {loading ? (
             <Panel><p className="text-sm text-slate-500">Loading requests&hellip;</p></Panel>
           ) : filteredRequests.length === 0 ? (
-            <Panel><p style={styles.emptyStateText}>No requests match this filter.</p></Panel>
+            <Panel><p className="empty-state-text">No requests match this filter.</p></Panel>
           ) : (
             <Panel bodyClassName="p-0">
               <div className="overflow-x-auto">

@@ -49,13 +49,13 @@ export function registerContractorRoutes(router: Router) {
       const view = (first(query, "view") as "summary" | "full") || "summary";
 
       // H1: Strict contractor isolation - only jobs assigned to this contractor
-      const jobs = await listJobs(orgId, {
+      const result = await listJobs(orgId, {
         contractorId,
         status: status as any,
         view,
       });
 
-      sendJson(res, 200, { data: jobs });
+      sendJson(res, 200, { data: result.data, total: result.total });
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to load contractor jobs", String(e));
     }
@@ -131,13 +131,13 @@ export function registerContractorRoutes(router: Router) {
       const view = (first(query, "view") as "summary" | "full") || "summary";
 
       // H1: Contractor-scoped invoices - only invoices for jobs assigned to this contractor
-      const invoices = await listInvoices(orgId, {
+      const result = await listInvoices(orgId, {
         status: status as any,
         view,
         contractorId,
       });
 
-      sendJson(res, 200, { data: invoices });
+      sendJson(res, 200, { data: result.data, total: result.total });
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to load contractor invoices", String(e));
     }

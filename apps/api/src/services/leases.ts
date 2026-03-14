@@ -369,21 +369,24 @@ export interface ListLeasesFilter {
   offset?: number;
 }
 
-export async function listLeases(orgId: string, filter: ListLeasesFilter = {}): Promise<LeaseDTO[]> {
+export async function listLeases(orgId: string, filter: ListLeasesFilter = {}): Promise<{ data: LeaseDTO[]; total: number }> {
   const where: any = { orgId, isTemplate: false };
   if (filter.status) where.status = filter.status;
   if (filter.unitId) where.unitId = filter.unitId;
   if (filter.applicationId) where.applicationId = filter.applicationId;
 
-  const leases = await prisma.lease.findMany({
-    where,
-    include: LEASE_INCLUDE,
-    orderBy: { createdAt: 'desc' },
-    take: filter.limit || 50,
-    skip: filter.offset || 0,
-  });
+  const [leases, total] = await Promise.all([
+    prisma.lease.findMany({
+      where,
+      include: LEASE_INCLUDE,
+      orderBy: { createdAt: 'desc' },
+      take: filter.limit || 50,
+      skip: filter.offset || 0,
+    }),
+    prisma.lease.count({ where }),
+  ]);
 
-  return leases.map(mapLeaseToDTO);
+  return { data: leases.map(mapLeaseToDTO), total };
 }
 
 // ==========================================

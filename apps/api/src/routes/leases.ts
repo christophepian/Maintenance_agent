@@ -23,8 +23,8 @@ export function registerLeaseRoutes(router: Router) {
       const applicationId = first(query, "applicationId") || undefined;
       const limit = getIntParam(query, "limit", { defaultValue: 50, min: 1, max: 200 });
       const offset = getIntParam(query, "offset", { defaultValue: 0, min: 0 });
-      const leases = await listLeases(orgId, { status, unitId, applicationId, limit, offset });
-      sendJson(res, 200, { data: leases });
+      const result = await listLeases(orgId, { status, unitId, applicationId, limit, offset });
+      sendJson(res, 200, { data: result.data, total: result.total });
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to list leases", String(e));
     }
@@ -343,7 +343,7 @@ export function registerLeaseRoutes(router: Router) {
     try {
       const buildingId = first(query, "buildingId") || undefined;
       const templates = await listLeaseTemplates(orgId, buildingId);
-      sendJson(res, 200, { data: templates });
+      sendJson(res, 200, { data: templates, total: templates.length });
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to list lease templates", String(e));
     }

@@ -81,12 +81,16 @@ function toDTO(c: {
 export async function listContractors(
   prisma: PrismaClient,
   orgId: string
-): Promise<ContractorDTO[]> {
-  const rows = await prisma.contractor.findMany({
-    where: { orgId, isActive: true },
-    orderBy: { createdAt: "desc" },
-  });
-  return rows.map(toDTO);
+): Promise<{ data: ContractorDTO[]; total: number }> {
+  const where = { orgId, isActive: true };
+  const [rows, total] = await Promise.all([
+    prisma.contractor.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.contractor.count({ where }),
+  ]);
+  return { data: rows.map(toDTO), total };
 }
 
 /**

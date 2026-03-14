@@ -1,15 +1,28 @@
 import { useEffect, useState, useCallback } from "react";
+import { useRouter } from "next/router";
 import AppShell from "../../components/AppShell";
 import PageShell from "../../components/layout/PageShell";
 import PageHeader from "../../components/layout/PageHeader";
 import PageContent from "../../components/layout/PageContent";
 import Panel from "../../components/layout/Panel";
+import CategoryMappings from "../../components/CategoryMappings";
 import Link from "next/link";
 import { authHeaders } from "../../lib/api";
+const LEGAL_TABS = [
+  { key: "RULES", label: "Rules" },
+  { key: "EVALUATIONS", label: "Evaluations" },
+  { key: "MAPPINGS", label: "Category mappings" },
+  { key: "SOURCES", label: "Sources" },
+];
+
+const TAB_KEYS = ['rules', 'evaluations', 'category_mappings', 'sources'];
 
 export default function ManagerLegalPage() {
   const [sources, setSources] = useState([]);
   const [variables, setVariables] = useState([]);
+  const [rules, setRules] = useState([]);
+  const [evaluations, setEvaluations] = useState([]);
+  const [evalTotal, setEvalTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [ingesting, setIngesting] = useState(false);
@@ -21,20 +34,36 @@ export default function ManagerLegalPage() {
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState("");
   const [scopeFilter, setScopeFilter] = useState("ALL");
+  const router = useRouter();
+  const activeTab = router.isReady ? (Math.max(0, TAB_KEYS.indexOf(router.query.tab)) || 0) : 0;
+  const setActiveTab = useCallback((index) => {
+    router.push(
+      { pathname: router.pathname, query: { ...router.query, tab: TAB_KEYS[index] } },
+      undefined,
+      { shallow: true }
+    );
+  }, [router]);
 
   const loadData = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
-      const [srcRes, varRes] = await Promise.all([
+      const [srcRes, varRes, rulesRes, evalRes] = await Promise.all([
         fetch("/api/legal/sources", { headers: authHeaders() }),
         fetch("/api/legal/variables", { headers: authHeaders() }),
+        fetch("/api/legal/rules", { headers: authHeaders() }),
+        fetch("/api/legal/evaluations?limit=200", { headers: authHeaders() }),
       ]);
       const srcData = await srcRes.json();
       const varData = await varRes.json();
+      const rulesData = await rulesRes.json();
+      const evalData = await evalRes.json();
       if (!srcRes.ok) throw new Error(srcData?.error?.message || "Failed to load sources");
       setSources(srcData?.data || []);
       setVariables(varData?.data || []);
+      setRules(rulesData?.data || []);
+      setEvaluations(evalData?.data || []);
+      setEvalTotal(evalData?.total ?? 0);
     } catch (e) {
       setError(String(e?.message || e));
     } finally {
@@ -158,13 +187,23 @@ export default function ManagerLegalPage() {
           title="Legal Engine"
           subtitle="Swiss tenancy law decision engine — rules, variables, and evaluation logs"
           actions={
-            <button
-              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-              onClick={syncSources}
-              disabled={ingesting}
-            >
-              {ingesting ? "Syncing\u2026" : "Sync Sources"}
-            </button>
+            <div className="flex items-center gap-2">
+              {syncResult && !error && (
+                <span className="text-xs text-slate-500">
+                  ✓ {syncResult.filter((r) => r.status === "success").length} synced
+                  {syncResult.reduce((sum, r) => sum + r.variablesUpdated, 0) > 0 && (
+                    <> — {syncResult.reduce((sum, r) => sum + r.variablesUpdated, 0)} var(s) updated</>
+                  )}
+                </span>
+              )}
+              <button
+                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                onClick={syncSources}
+                disabled={ingesting}
+              >
+                {ingesting ? "Syncing\u2026" : "Sync Sources"}
+              </button>
+            </div>
           }
         />
         <PageContent>
@@ -174,55 +213,113 @@ export default function ManagerLegalPage() {
             </div>
           )}
 
-          {syncResult && !error && (
-            <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700">
-              <strong>Sync complete:</strong>{" "}
-              {syncResult.filter((r) => r.status === "success").length} source(s) synced
-              {syncResult.some((r) => r.status === "error") && (
-                <span className="text-red-600">
-                  , {syncResult.filter((r) => r.status === "error").length} failed
-                </span>
-              )}
-              {syncResult.reduce((sum, r) => sum + r.variablesUpdated, 0) > 0 && (
-                <span>
-                  {" \u2014 "}{syncResult.reduce((sum, r) => sum + r.variablesUpdated, 0)} variable(s) updated
-                </span>
-              )}
-            </div>
-          )}
-
-          {/* Quick links */}
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-            {[
-              { label: "Rules", href: "/manager/legal/rules", desc: "Statutory & custom rules" },
-              { label: "Category Mappings", href: "/manager/legal/mappings", desc: "Category → legal topic" },
-              { label: "Depreciation", href: "/manager/legal/depreciation", desc: "Swiss depreciation standards" },
-              { label: "Evaluations", href: "/manager/legal/evaluations", desc: "Decision audit log" },
-              { label: "RFPs", href: "/manager/rfps", desc: "Request for proposals" },
-            ].map((card) => (
-              <Link
-                key={card.href}
-                href={card.href}
-                className="flex flex-col rounded-xl border border-slate-200 bg-white p-4 shadow-sm hover:border-blue-300 hover:shadow-md transition-all"
+          {/* Tab strip */}
+          <div className="tab-strip">
+            {LEGAL_TABS.map((tab, i) => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(i)}
+                className={activeTab === i ? "tab-btn-active" : "tab-btn"}
               >
-                <span className="text-sm font-semibold text-slate-900">{card.label}</span>
-                <span className="mt-1 text-xs text-slate-500">{card.desc}</span>
-              </Link>
+                {tab.label}
+              </button>
             ))}
           </div>
 
-          {/* Sources */}
-          <Panel
-            title="Legal Sources"
-            actions={
+          {/* Count + full-view link — outside the Panel card */}
+          <span className="tab-panel-count">
+            {activeTab === 0 ? `${rules.length} rule${rules.length !== 1 ? "s" : ""}` : null}
+            {activeTab === 1 ? `${evalTotal} evaluation${evalTotal !== 1 ? "s" : ""}` : null}
+            {activeTab === 2 ? "Category mappings" : null}
+            {activeTab === 3 ? `${sources.length} source${sources.length !== 1 ? "s" : ""} · ${variables.length} variable${variables.length !== 1 ? "s" : ""}` : null}
+          </span>
+          {activeTab === 0 && <Link href="/manager/legal/rules" className="full-page-link">Full view →</Link>}
+          {activeTab === 1 && <Link href="/manager/legal/evaluations" className="full-page-link">Full view →</Link>}
+          {activeTab === 2 && <Link href="/manager/legal/mappings" className="full-page-link">Full view →</Link>}
+
+          {/* Rules tab */}
+          {activeTab !== 2 && (
+          <Panel bodyClassName="p-0">
+          <div className={activeTab === 0 ? "tab-panel-active" : "tab-panel"}>
+            {loading ? (
+              <p className="loading-text">Loading rules…</p>
+            ) : rules.length === 0 ? (
+              <div className="empty-state">
+                <p className="empty-state-text">No legal rules configured yet.</p>
+              </div>
+            ) : (
+              <div style={{ overflowX: "auto" }}>
+                <table className="inline-table">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Type</th>
+                      <th>Jurisdiction</th>
+                      <th>Versions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rules.map((rule) => (
+                      <tr key={rule.id}>
+                        <td className="cell-bold">{rule.name}</td>
+                        <td>{rule.ruleType}</td>
+                        <td>{rule.jurisdiction || "CH"}{rule.canton ? ` / ${rule.canton}` : ""}</td>
+                        <td>{rule.versions?.length || 0}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          {/* Evaluations tab */}
+          <div className={activeTab === 1 ? "tab-panel-active" : "tab-panel"}>
+            {loading ? (
+              <p className="loading-text">Loading evaluations…</p>
+            ) : evaluations.length === 0 ? (
+              <div className="empty-state">
+                <p className="empty-state-text">No evaluations yet. Trigger a legal decision on a maintenance request to generate one.</p>
+              </div>
+            ) : (
+              <div style={{ overflowX: "auto" }}>
+                <table className="inline-table">
+                  <thead>
+                    <tr>
+                      <th>Category</th>
+                      <th>Obligation</th>
+                      <th>Confidence</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {evaluations.map((ev) => (
+                      <tr key={ev.id}>
+                        <td className="cell-bold">{ev.category || "—"}</td>
+                        <td>{ev.obligation || "—"}</td>
+                        <td>{ev.confidence != null ? `${(ev.confidence * 100).toFixed(0)}%` : "—"}</td>
+                        <td>{ev.recommendedActions?.join(", ") || "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          {/* Sources tab — inline content */}
+          <div className={activeTab === 3 ? "tab-panel-active" : "tab-panel"}>
+          <div className="px-4 py-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-slate-800">Legal Sources</h3>
               <button
                 className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700"
                 onClick={openCreateForm}
               >
                 Add Source
               </button>
-            }
-          >
+            </div>
+
             {/* Inline create / edit form */}
             {formOpen && (
               <SourceForm
@@ -261,38 +358,39 @@ export default function ManagerLegalPage() {
                   </button>
                 )}
               </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+            ) : null}
+          </div>
+            {!loading && sources.length > 0 && (
+                <table className="inline-table">
                   <thead>
-                    <tr className="border-b border-slate-100 text-left text-xs font-medium text-slate-500">
-                      <th className="py-2 pr-4">Name</th>
-                      <th className="py-2 pr-4">Type</th>
-                      <th className="py-2 pr-4">Scope</th>
-                      <th className="py-2 pr-4">Frequency</th>
-                      <th className="py-2 pr-4">Status</th>
-                      <th className="py-2 pr-4">Last Synced</th>
-                      <th className="py-2 pr-4">Actions</th>
+                    <tr>
+                      <th>Name</th>
+                      <th>Type</th>
+                      <th>Scope</th>
+                      <th>Frequency</th>
+                      <th>Status</th>
+                      <th>Last Synced</th>
+                      <th>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {sources
                       .filter((s) => scopeFilter === "ALL" || s.scope === scopeFilter)
                       .map((s) => (
-                      <tr key={s.id} className="border-b border-slate-50">
-                        <td className="py-2 pr-4 font-medium">
+                      <tr key={s.id}>
+                        <td className="cell-bold">
                           {s.url ? (
                             <a href={s.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">{s.name}</a>
                           ) : s.name}
                         </td>
-                        <td className="py-2 pr-4 font-mono text-xs">{formatFetcherType(s.fetcherType)}</td>
-                        <td className="py-2 pr-4"><ScopeBadge scope={s.scope} /></td>
-                        <td className="py-2 pr-4 text-xs">{s.updateFrequency || "—"}</td>
-                        <td className="py-2 pr-4">
+                        <td className="font-mono text-xs">{formatFetcherType(s.fetcherType)}</td>
+                        <td><ScopeBadge scope={s.scope} /></td>
+                        <td>{s.updateFrequency || "—"}</td>
+                        <td>
                           <StatusPill status={s.status} />
                         </td>
-                        <td className="py-2 pr-4">{s.lastSuccessAt ? formatDate(s.lastSuccessAt) : "Never"}</td>
-                        <td className="py-2 pr-4">
+                        <td>{s.lastSuccessAt ? formatDate(s.lastSuccessAt) : "Never"}</td>
+                        <td>
                           <div className="flex gap-2">
                             <button
                               className="text-xs text-blue-600 hover:underline"
@@ -329,39 +427,42 @@ export default function ManagerLegalPage() {
                     ))}
                   </tbody>
                 </table>
-              </div>
             )}
-          </Panel>
 
-          {/* Variables */}
-          <Panel title="Legal Variables">
+          <div className="px-4 py-4 border-t border-slate-100">
+            <h3 className="text-sm font-semibold text-slate-800 mb-3">Legal Variables</h3>
             {loading ? (
               <p className="text-sm text-slate-500">Loading…</p>
             ) : variables.length === 0 ? (
               <p className="text-sm text-slate-500">No legal variables configured yet.</p>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+            ) : null}
+          </div>
+            {!loading && variables.length > 0 && (
+                <table className="inline-table">
                   <thead>
-                    <tr className="border-b border-slate-100 text-left text-xs font-medium text-slate-500">
-                      <th className="py-2 pr-4">Key</th>
-                      <th className="py-2 pr-4">Description</th>
-                      <th className="py-2 pr-4">Versions</th>
+                    <tr>
+                      <th>Key</th>
+                      <th>Description</th>
+                      <th>Versions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {variables.map((v) => (
-                      <tr key={v.id} className="border-b border-slate-50">
-                        <td className="py-2 pr-4 font-mono text-xs">{v.key}</td>
-                        <td className="py-2 pr-4">{v.description || "—"}</td>
-                        <td className="py-2 pr-4">{v.versions?.length || 0}</td>
+                      <tr key={v.id}>
+                        <td className="font-mono text-xs">{v.key}</td>
+                        <td>{v.description || "—"}</td>
+                        <td>{v.versions?.length || 0}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
-              </div>
             )}
+          </div>{/* end Sources tab panel */}
           </Panel>
+          )}
+
+          {/* Category mappings tab — rendered outside Panel, uses shared component */}
+          {activeTab === 2 && <CategoryMappings />}
         </PageContent>
       </PageShell>
     </AppShell>

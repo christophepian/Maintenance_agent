@@ -215,20 +215,19 @@ export default function UnitApplicationsPage() {
             )}
 
             {!loading && sorted.length > 0 && (
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-slate-200 text-sm">
-                  <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                <table className="inline-table">
+                  <thead>
                     <tr>
-                      <th className="px-4 py-3">Rank</th>
-                      <th className="px-4 py-3">Applicant</th>
-                      <th className="px-4 py-3">Income (CHF)</th>
-                      <th className="px-4 py-3">Score</th>
-                      <th className="px-4 py-3">Confidence</th>
-                      <th className="px-4 py-3">Status</th>
-                      <th className="px-4 py-3 text-right">Actions</th>
+                      <th>Rank</th>
+                      <th>Applicant</th>
+                      <th>Income (CHF)</th>
+                      <th>Score</th>
+                      <th>Confidence</th>
+                      <th>Status</th>
+                      <th className="text-right">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100 bg-white">
+                  <tbody>
                     {sorted.map((row, idx) => {
                       const conf = confidenceBadge(row.confidence || 0);
                       const isDocExpanded = expandedDocApp === row.id;
@@ -240,8 +239,8 @@ export default function UnitApplicationsPage() {
                       return (
                         <React.Fragment key={row.id}>
                         <tr className={row.disqualified ? "bg-red-50/40" : ""}>
-                          <td className="px-4 py-3 text-slate-600 font-mono">{idx + 1}</td>
-                          <td className="px-4 py-3">
+                          <td className="font-mono">{idx + 1}</td>
+                          <td>
                             <div className="flex items-center flex-wrap gap-x-2">
                               <button
                                 onClick={() => setExpandedDocApp(isDocExpanded ? null : row.id)}
@@ -269,23 +268,23 @@ export default function UnitApplicationsPage() {
                               )}
                             </div>
                           </td>
-                          <td className="px-4 py-3 text-slate-700">
+                          <td>
                             {row.income != null ? formatNumber(row.income) : "—"}
                           </td>
-                          <td className="px-4 py-3">
+                          <td>
                             <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${scoreColor(row.score || 0)}`}>
                               {row.score ?? "—"}
                             </span>
                           </td>
-                          <td className="px-4 py-3">
+                          <td>
                             <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${conf.cls}`}>
                               {row.confidence ?? 0}% {conf.label}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-xs text-slate-600">
+                          <td>
                             {(row.status || "").replace(/_/g, " ")}
                           </td>
-                          <td className="px-4 py-3 text-right space-x-2">
+                          <td className="text-right space-x-2">
                             <button
                               onClick={() => router.push(`/manager/rental-applications/${row.id}`)}
                               className="text-xs text-indigo-600 hover:underline"
@@ -315,7 +314,7 @@ export default function UnitApplicationsPage() {
                         </tr>
                         {isDocExpanded && (
                           <tr>
-                            <td colSpan={7} className="px-4 py-3 bg-slate-50/50">
+                            <td colSpan={7} className="bg-slate-50/50">
                               <div className="space-y-4">
                                 {/* Disqualification reasons (human-friendly) */}
                                 {row.disqualified && reasons.length > 0 && (
@@ -339,7 +338,6 @@ export default function UnitApplicationsPage() {
                     })}
                   </tbody>
                 </table>
-              </div>
             )}
           </Panel>
         </PageContent>

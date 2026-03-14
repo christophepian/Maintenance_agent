@@ -21,8 +21,8 @@ export function registerInvoiceRoutes(router: Router) {
       const contractorId = first(query, "contractorId") || undefined;
       const status = first(query, "status") || undefined;
       const view = first(query, "view") as "summary" | "full" | undefined;
-      const jobs = await listJobs(orgId, { contractorId, status: status as any, view });
-      sendJson(res, 200, { data: jobs });
+      const result = await listJobs(orgId, { contractorId, status: status as any, view });
+      sendJson(res, 200, { data: result.data, total: result.total });
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to load jobs", String(e));
     }
@@ -88,8 +88,8 @@ export function registerInvoiceRoutes(router: Router) {
       const paidAfter = first(query, "paidAfter") || undefined;
       const paidBefore = first(query, "paidBefore") || undefined;
       const view = first(query, "view") as "summary" | "full" | undefined;
-      const invoices = await listInvoices(orgId, { jobId, status: status as any, view, contractorId, expenseCategory, buildingId, paidAfter, paidBefore });
-      sendJson(res, 200, { data: invoices });
+      const result = await listInvoices(orgId, { jobId, status: status as any, view, contractorId, expenseCategory, buildingId, paidAfter, paidBefore });
+      sendJson(res, 200, { data: result.data, total: result.total });
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to load invoices", String(e));
     }
@@ -243,8 +243,8 @@ export function registerInvoiceRoutes(router: Router) {
     try {
       const status = first(query, "status") || undefined;
         const view = first(query, "view") as "summary" | "full" | undefined;
-        const invoices = await listInvoices(orgId, { status: status as any, view });
-      sendJson(res, 200, { data: invoices });
+        const result = await listInvoices(orgId, { status: status as any, view });
+      sendJson(res, 200, { data: result.data, total: result.total });
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to load invoices", String(e));
     }

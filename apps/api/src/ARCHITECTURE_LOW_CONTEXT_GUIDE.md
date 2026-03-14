@@ -4,7 +4,7 @@
 > be able to read this file and know *exactly which 1-3 files to touch*
 > for any given change.
 
-**Codebase:** 46 models · 38 enums · 35 migrations · 17 workflows · 10 repositories · ~36k backend LOC · ~25k frontend LOC
+**Codebase:** 46 models · 38 enums · 35 migrations · 17 workflows · 10 repositories · ~36k backend LOC · ~26k frontend LOC
 
 ---
 
@@ -356,3 +356,23 @@ All `/tenant-portal/*` routes require a tenant JWT:
 - `getOrgIdForRequest()` returns null in production for unauthenticated requests — always null-check at the call site
 - Rental attachment downloads and document listings require manager auth — they contain PII
 - Dev-only routes (`/dev/emails`, `/dev/*`) must have a production guard returning 404 before any logic runs
+
+---
+
+## Frontend Page Patterns
+
+### "I need to add a new manager hub page (with tabs)"
+→ Copy **`apps/web/pages/manager/_template_hub.js`** as your starting point
+→ Tab strip outside Panel, Panel wraps content only, CTAs in PageHeader, styles from `globals.css` only
+→ See **F-UI1** in `PROJECT_STATE.md` for the full rule set
+→ Visual reference: `requests.js`
+
+### "I need to add a new manager detail page (no tabs)"
+→ Copy **`apps/web/pages/manager/_template_detail.js`** as your starting point
+→ Each section in its own Panel, tables use `bodyClassName="p-0"`
+→ See **F-UI2** in `PROJECT_STATE.md` for the full rule set
+
+### "I need to add a new content-rich layout (not tabular)"
+→ Use grid, category sections, or stat cards as appropriate — see **F-UI3**
+→ If it has its own state and appears in multiple places → extract to `apps/web/components/`
+→ Visual reference: `legal/depreciation.js`, `DepreciationStandards.js`

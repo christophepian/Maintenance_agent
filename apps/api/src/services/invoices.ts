@@ -409,7 +409,7 @@ export async function listInvoices(
     paidAfter?: string;
     paidBefore?: string;
   }
-): Promise<InvoiceDTO[] | InvoiceSummaryDTO[]> {
+): Promise<{ data: InvoiceDTO[] | InvoiceSummaryDTO[]; total: number }> {
   const useSummary = filters?.view === "summary";
 
   const where: any = {
@@ -436,13 +436,17 @@ export async function listInvoices(
     if (filters?.paidBefore) where.paidAt.lte = new Date(filters.paidBefore);
   }
 
-  const invoices = await prisma.invoice.findMany({
-    where,
-    orderBy: { createdAt: 'desc' },
-    include: useSummary ? undefined : INVOICE_INCLUDE,
-  });
+  const [invoices, total] = await Promise.all([
+    prisma.invoice.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      include: useSummary ? undefined : INVOICE_INCLUDE,
+    }),
+    prisma.invoice.count({ where }),
+  ]);
 
-  return useSummary ? invoices.map(mapInvoiceToSummaryDTO) : invoices.map(mapInvoiceToDTO);
+  const data = useSummary ? invoices.map(mapInvoiceToSummaryDTO) : invoices.map(mapInvoiceToDTO);
+  return { data, total };
 }
 
 /**

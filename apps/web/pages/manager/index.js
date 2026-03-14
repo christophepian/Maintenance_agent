@@ -7,7 +7,6 @@ import PageHeader from "../../components/layout/PageHeader";
 import PageContent from "../../components/layout/PageContent";
 import Panel from "../../components/layout/Panel";
 import Section from "../../components/layout/Section";
-import { styles } from "../../styles/managerStyles";
 import { formatChf as formatCurrency, formatChfCents, formatPercent, formatDate } from "../../lib/format";
 import { authHeaders } from "../../lib/api";
 
@@ -223,25 +222,25 @@ export default function ManagerDashboard() {
 
           {error && (
             <Panel style={{ backgroundColor: "#fff0f0", borderColor: "#ffb3b3" }}>
-              <strong style={styles.errorText}>Error:</strong> {error}
+              <strong className="text-err-text">Error:</strong> {error}
             </Panel>
           )}
 
           {/* Action Required Section */}
           <CollapsibleSection title="Action Required" badge={pendingReviewRequests.length + pendingOwnerApprovalRequests.length + disputedInvoices.length + staleJobs.length + rfpPendingRequests.length || null}>
-            <div style={styles.gridGap12}>
+            <div className="grid gap-3">
               <Panel>
-                <div style={styles.rowSpaceBetween}>
+                <div className="flex justify-between items-baseline">
                   <div>
-                    <strong style={styles.headingFlush}>Requests Pending Review</strong>
-                    <div style={styles.subtleText}>Manager approval required</div>
+                    <strong className="m-0">Requests Pending Review</strong>
+                    <div className="text-subtle">Manager approval required</div>
                   </div>
                   <div style={{ fontSize: "2em", fontWeight: 700, color: pendingReviewRequests.length > 0 ? "#7a4a00" : "#999" }}>
                     {pendingReviewRequests.length}
                   </div>
                 </div>
                 {pendingReviewRequests.length > 0 && (
-                  <div style={styles.marginTop12}>
+                  <div className="mt-3">
                     <button onClick={() => router.push("/manager/requests?filter=PENDING_REVIEW")}>
                       Review Now →
                     </button>
@@ -252,10 +251,10 @@ export default function ManagerDashboard() {
               {pendingOwnerApprovalRequests.length > 0 && (
                 <Panel>
                   <Link href="/manager/requests?filter=PENDING_OWNER_APPROVAL" style={{ textDecoration: "none", color: "inherit" }}>
-                    <div style={styles.rowSpaceBetween}>
+                    <div className="flex justify-between items-baseline">
                       <div>
-                        <strong style={styles.headingFlush}>Owner Approval Pending</strong>
-                        <div style={styles.subtleText}>High-value requests</div>
+                        <strong className="m-0">Owner Approval Pending</strong>
+                        <div className="text-subtle">High-value requests</div>
                       </div>
                       <div style={{ fontSize: "2em", fontWeight: 700, color: "#7a1f1f" }}>
                         {pendingOwnerApprovalRequests.length}
@@ -267,16 +266,16 @@ export default function ManagerDashboard() {
 
               {disputedInvoices.length > 0 && (
                 <Panel>
-                  <div style={styles.rowSpaceBetween}>
+                  <div className="flex justify-between items-baseline">
                     <div>
-                      <strong style={styles.headingFlush}>Disputed Invoices</strong>
-                      <div style={styles.subtleText}>Require resolution</div>
+                      <strong className="m-0">Disputed Invoices</strong>
+                      <div className="text-subtle">Require resolution</div>
                     </div>
                     <div style={{ fontSize: "2em", fontWeight: 700, color: "#b30000" }}>
                       {disputedInvoices.length}
                     </div>
                   </div>
-                  <div style={styles.marginTop12}>
+                  <div className="mt-3">
                     <button onClick={() => router.push("/manager/finance/invoices?status=DISPUTED")}>
                       Resolve Disputes →
                     </button>
@@ -287,10 +286,10 @@ export default function ManagerDashboard() {
               {staleJobs.length > 0 && (
                 <Panel>
                   <Link href="/manager/requests?stale=true" style={{ textDecoration: "none", color: "inherit" }}>
-                    <div style={styles.rowSpaceBetween}>
+                    <div className="flex justify-between items-baseline">
                       <div>
-                        <strong style={styles.headingFlush}>Stale Jobs</strong>
-                        <div style={styles.subtleText}>In progress &gt; 7 days</div>
+                        <strong className="m-0">Stale Jobs</strong>
+                        <div className="text-subtle">In progress &gt; 7 days</div>
                       </div>
                       <div style={{ fontSize: "2em", fontWeight: 700, color: "#7a4a00" }}>
                         {staleJobs.length}
@@ -302,16 +301,16 @@ export default function ManagerDashboard() {
 
               {rfpPendingRequests.length > 0 && (
                 <Panel>
-                  <div style={styles.rowSpaceBetween}>
+                  <div className="flex justify-between items-baseline">
                     <div>
-                      <strong style={styles.headingFlush}>Auto-routed to RFP</strong>
-                      <div style={styles.subtleText}>Legal engine created RFPs</div>
+                      <strong className="m-0">Auto-routed to RFP</strong>
+                      <div className="text-subtle">Legal engine created RFPs</div>
                     </div>
                     <div style={{ fontSize: "2em", fontWeight: 700, color: "#4338ca" }}>
                       {rfpPendingRequests.length}
                     </div>
                   </div>
-                  <div style={styles.marginTop12}>
+                  <div className="mt-3">
                     <button onClick={() => router.push("/manager/requests?filter=RFP_PENDING")}>
                       View Auto-routed →
                     </button>
@@ -325,7 +324,7 @@ export default function ManagerDashboard() {
                staleJobs.length === 0 &&
                rfpPendingRequests.length === 0 && (
                 <Panel>
-                  <p style={{ ...styles.okText, ...styles.headingFlush }}>✓ No items require immediate action</p>
+                  <p className="text-ok-text m-0">✓ No items require immediate action</p>
                 </Panel>
               )}
             </div>
@@ -333,13 +332,13 @@ export default function ManagerDashboard() {
 
           {/* Operational KPIs Section */}
           <CollapsibleSection title="Operational Health">
-            <div style={styles.gridGap12}>
+            <div className="grid gap-3">
               <Panel>
                 <Link href="/manager/requests" style={{ textDecoration: "none", color: "inherit" }}>
-                  <div style={styles.rowSpaceBetween}>
+                  <div className="flex justify-between items-baseline">
                     <div>
-                      <strong style={styles.headingFlush}>Open Requests</strong>
-                      <div style={styles.subtleText}>Pending, approved, assigned</div>
+                      <strong className="m-0">Open Requests</strong>
+                      <div className="text-subtle">Pending, approved, assigned</div>
                     </div>
                     <div style={{ fontSize: "2em", fontWeight: 700, color: openRequestsCount > 20 ? "#7a4a00" : "#0b3a75" }}>
                       {openRequestsCount}
@@ -349,10 +348,10 @@ export default function ManagerDashboard() {
               </Panel>
 
               <Panel>
-                <div style={styles.rowSpaceBetween}>
+                <div className="flex justify-between items-baseline">
                   <div>
-                    <strong style={styles.headingFlush}>Open Jobs</strong>
-                    <div style={styles.subtleText}>Pending + in progress</div>
+                    <strong className="m-0">Open Jobs</strong>
+                    <div className="text-subtle">Pending + in progress</div>
                   </div>
                   <div style={{ fontSize: "2em", fontWeight: 700, color: openJobsCount > 15 ? "#7a4a00" : "#0b3a75" }}>
                     {openJobsCount}
@@ -362,10 +361,10 @@ export default function ManagerDashboard() {
 
               <Panel>
                 <Link href="/manager/finance/invoices" style={{ textDecoration: "none", color: "inherit" }}>
-                  <div style={styles.rowSpaceBetween}>
+                  <div className="flex justify-between items-baseline">
                     <div>
-                      <strong style={styles.headingFlush}>Spend This Month</strong>
-                      <div style={styles.subtleText}>Paid invoices</div>
+                      <strong className="m-0">Spend This Month</strong>
+                      <div className="text-subtle">Paid invoices</div>
                     </div>
                     <div style={{ fontSize: "1.6em", fontWeight: 700, color: "#116b2b" }}>
                       {formatCurrency(spendThisMonth)}
@@ -421,28 +420,28 @@ export default function ManagerDashboard() {
                 {/* Per-building compact table */}
                 {portfolio.buildings.length > 0 && (
                   <div className="rounded-lg border border-slate-200 bg-white overflow-hidden">
-                    <table className="w-full text-sm">
+                    <table className="inline-table">
                       <thead>
-                        <tr className="border-b border-slate-200 bg-slate-50 text-left">
-                          <th className="py-2.5 px-4 font-medium text-slate-600">Building</th>
-                          <th className="py-2.5 px-3 font-medium text-slate-600 text-center w-16">Health</th>
-                          <th className="py-2.5 px-3 font-medium text-slate-600 text-right">Net Income</th>
-                          <th className="py-2.5 px-3 font-medium text-slate-600 text-right">Collection</th>
-                          <th className="py-2.5 px-3 font-medium text-slate-600 text-right hidden sm:table-cell">Units</th>
-                          <th className="py-2.5 px-3 w-16"></th>
+                        <tr>
+                          <th>Building</th>
+                          <th className="text-center">Health</th>
+                          <th className="text-right">Net Income</th>
+                          <th className="text-right">Collection</th>
+                          <th className="text-right hidden sm:table-cell">Units</th>
+                          <th></th>
                         </tr>
                       </thead>
                       <tbody>
                         {portfolio.buildings.map((b) => (
-                          <tr key={b.buildingId} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-                            <td className="py-2.5 px-4 font-medium text-slate-900">{b.buildingName}</td>
-                            <td className="py-2.5 px-3 text-center"><HealthDot health={b.health} /></td>
-                            <td className={`py-2.5 px-3 text-right font-mono text-sm ${b.netIncomeCents >= 0 ? "text-emerald-700" : "text-red-700"}`}>
+                          <tr key={b.buildingId}>
+                            <td className="cell-bold">{b.buildingName}</td>
+                            <td className="text-center"><HealthDot health={b.health} /></td>
+                            <td className={`text-right font-mono text-sm ${b.netIncomeCents >= 0 ? "text-emerald-700" : "text-red-700"}`}>
                               {formatChfCents(b.netIncomeCents)}
                             </td>
-                            <td className="py-2.5 px-3 text-right text-slate-700">{formatPercent(b.collectionRate)}</td>
-                            <td className="py-2.5 px-3 text-right text-slate-700 hidden sm:table-cell">{b.activeUnitsCount}</td>
-                            <td className="py-2.5 px-3 text-right">
+                            <td className="text-right">{formatPercent(b.collectionRate)}</td>
+                            <td className="text-right hidden sm:table-cell">{b.activeUnitsCount}</td>
+                            <td className="text-right">
                               <Link
                                 href={`/admin-inventory/buildings/${b.buildingId}`}
                                 className="text-xs font-medium text-indigo-600 hover:text-indigo-700"

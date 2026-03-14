@@ -4,7 +4,6 @@ import PageShell from "../../../components/layout/PageShell";
 import PageHeader from "../../../components/layout/PageHeader";
 import PageContent from "../../../components/layout/PageContent";
 import Panel from "../../../components/layout/Panel";
-import { styles } from "../../../styles/managerStyles";
 import { authHeaders } from "../../../lib/api";
 
 const EXPENSE_CATEGORIES = [
@@ -130,7 +129,7 @@ export default function ManagerExpensesPage() {
         <PageContent>
           {error && (
             <Panel style={{ backgroundColor: "#fff0f0", borderColor: "#ffb3b3" }}>
-              <strong style={styles.errorText}>Error:</strong> {error}
+              <strong className="text-err-text">Error:</strong> {error}
               <button onClick={() => setError("")} style={{ marginLeft: 12, fontSize: "0.85em" }}>Dismiss</button>
             </Panel>
           )}
@@ -179,35 +178,35 @@ export default function ManagerExpensesPage() {
           </Panel>
 
           {loading ? (
-            <p>Loading expenses...</p>
+            <Panel><p className="m-0">Loading expenses...</p></Panel>
           ) : invoices.length === 0 ? (
             <Panel>
-              <p style={styles.headingFlush}>No expenses found. Tag invoices with an expense category to track them here.</p>
+              <p className="m-0">No expenses found. Tag invoices with an expense category to track them here.</p>
             </Panel>
           ) : (
-            <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.9em" }}>
+            <Panel bodyClassName="p-0">
+            <table className="inline-table">
                 <thead>
-                  <tr style={{ borderBottom: "2px solid #ddd", textAlign: "left" }}>
-                    <th style={{ padding: "8px 6px" }}>Invoice #</th>
-                    <th style={{ padding: "8px 6px" }}>Category</th>
-                    <th style={{ padding: "8px 6px" }}>Description</th>
-                    <th style={{ padding: "8px 6px" }}>Amount (CHF)</th>
-                    <th style={{ padding: "8px 6px" }}>Date</th>
-                    <th style={{ padding: "8px 6px" }}>Actions</th>
+                  <tr>
+                    <th>Invoice #</th>
+                    <th>Category</th>
+                    <th>Description</th>
+                    <th>Amount (CHF)</th>
+                    <th>Date</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {invoices.map((inv) => {
                     const isJobLinked = inv.jobId && inv.expenseCategory === "MAINTENANCE";
                     return (
-                      <tr key={inv.id} style={{ borderBottom: "1px solid #eee" }}>
-                        <td style={{ padding: "8px 6px" }}>{inv.invoiceNumber || inv.id.slice(0, 8)}</td>
-                        <td style={{ padding: "8px 6px" }}><CategoryBadge category={inv.expenseCategory} /></td>
-                        <td style={{ padding: "8px 6px" }}>{inv.description || "—"}</td>
-                        <td style={{ padding: "8px 6px", fontWeight: 600 }}>{formatCurrency(inv.totalAmount)}</td>
-                        <td style={{ padding: "8px 6px" }}>{formatDate(inv.createdAt)}</td>
-                        <td style={{ padding: "8px 6px" }}>
+                      <tr key={inv.id}>
+                        <td>{inv.invoiceNumber || inv.id.slice(0, 8)}</td>
+                        <td><CategoryBadge category={inv.expenseCategory} /></td>
+                        <td>{inv.description || "—"}</td>
+                        <td className="cell-bold">{formatCurrency(inv.totalAmount)}</td>
+                        <td>{formatDate(inv.createdAt)}</td>
+                        <td>
                           {isJobLinked ? (
                             <span style={{ fontSize: "0.8em", color: "#999" }}>Auto (job-linked)</span>
                           ) : (
@@ -232,7 +231,7 @@ export default function ManagerExpensesPage() {
                   })}
                 </tbody>
               </table>
-            </div>
+            </Panel>
           )}
         </PageContent>
       </PageShell>

@@ -6,8 +6,6 @@ import PageHeader from "../../../components/layout/PageHeader";
 import PageContent from "../../../components/layout/PageContent";
 import Panel from "../../../components/layout/Panel";
 import { authHeaders } from "../../../lib/api";
-import { styles } from "../../../styles/managerStyles";
-
 export default function LegalRulesPage() {
   const [rules, setRules] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -67,7 +65,7 @@ export default function LegalRulesPage() {
             {loading ? (
               <p className="text-sm text-slate-500">Loading…</p>
             ) : rules.length === 0 ? (
-              <p style={styles.emptyStateText}>No legal rules configured yet.</p>
+              <p className="empty-state-text">No legal rules configured yet.</p>
             ) : (
               <div className="space-y-4">
                 {rules.map((rule) => (

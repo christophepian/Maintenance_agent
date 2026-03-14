@@ -96,11 +96,12 @@ describe("Jobs and Invoices", () => {
   });
 
   it("should list jobs for org", async () => {
-    const jobs = await listJobs(orgId);
+    const result = await listJobs(orgId);
 
-    expect(Array.isArray(jobs)).toBe(true);
-    expect(jobs.length).toBeGreaterThan(0);
-    expect(jobs.find((j) => j.id === jobId)).toBeDefined();
+    expect(Array.isArray(result.data)).toBe(true);
+    expect(result.data.length).toBeGreaterThan(0);
+    expect(typeof result.total).toBe("number");
+    expect(result.data.find((j) => j.id === jobId)).toBeDefined();
   });
 
   it("should update job status", async () => {
@@ -162,11 +163,12 @@ describe("Jobs and Invoices", () => {
   });
 
   it("should list invoices for org", async () => {
-    const invoices = await listInvoices(orgId);
+    const result = await listInvoices(orgId);
 
-    expect(Array.isArray(invoices)).toBe(true);
-    expect(invoices.length).toBeGreaterThan(0);
-    expect(invoices.find((i) => i.id === invoiceId)).toBeDefined();
+    expect(Array.isArray(result.data)).toBe(true);
+    expect(result.data.length).toBeGreaterThan(0);
+    expect(typeof result.total).toBe("number");
+    expect(result.data.find((i) => i.id === invoiceId)).toBeDefined();
   });
 
   it("should approve an invoice", async () => {
@@ -186,10 +188,10 @@ describe("Jobs and Invoices", () => {
   });
 
   it("should list invoices filtered by status", async () => {
-    const paidInvoices = await listInvoices(orgId, { status: InvoiceStatus.PAID });
+    const result = await listInvoices(orgId, { status: InvoiceStatus.PAID });
 
-    expect(paidInvoices.length).toBeGreaterThan(0);
-    expect(paidInvoices.every((i) => i.status === InvoiceStatus.PAID)).toBe(true);
+    expect(result.data.length).toBeGreaterThan(0);
+    expect(result.data.every((i) => i.status === InvoiceStatus.PAID)).toBe(true);
   });
 });
 

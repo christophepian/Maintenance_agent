@@ -31,7 +31,9 @@ export default function NotificationBell({ role }) {
         if (!tenantId) return;
         res = await fetch(`/api/tenant-portal/notifications/unread-count?tenantId=${tenantId}`);
       } else {
-        res = await fetch("/api/notifications/unread-count", { headers: getAuthHeaders() });
+        const headers = getAuthHeaders();
+        if (!headers.Authorization) return; // no token yet — skip fetch
+        res = await fetch("/api/notifications/unread-count", { headers });
       }
       if (!res.ok) return;
       const data = await res.json();
@@ -52,7 +54,9 @@ export default function NotificationBell({ role }) {
         if (!tenantId) { setLoading(false); return; }
         res = await fetch(`/api/tenant-portal/notifications?tenantId=${tenantId}`);
       } else {
-        res = await fetch("/api/notifications", { headers: getAuthHeaders() });
+        const headers = getAuthHeaders();
+        if (!headers.Authorization) { setLoading(false); return; }
+        res = await fetch("/api/notifications", { headers });
       }
       if (!res.ok) { setLoading(false); return; }
       const data = await res.json();

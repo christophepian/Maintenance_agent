@@ -5,7 +5,6 @@ import PageShell from "../../../components/layout/PageShell";
 import PageHeader from "../../../components/layout/PageHeader";
 import PageContent from "../../../components/layout/PageContent";
 import Panel from "../../../components/layout/Panel";
-import { styles } from "../../../styles/managerStyles";
 import { authHeaders } from "../../../lib/api";
 
 const STATUS_TABS = [
@@ -132,7 +131,7 @@ export default function ManagerInvoicesPage() {
         <PageContent>
           {error && (
             <Panel style={{ backgroundColor: "#fff0f0", borderColor: "#ffb3b3" }}>
-              <strong style={styles.errorText}>Error:</strong> {error}
+              <strong className="text-err-text">Error:</strong> {error}
               <button onClick={() => setError("")} style={{ marginLeft: 12, fontSize: "0.85em" }}>Dismiss</button>
             </Panel>
           )}
@@ -162,33 +161,33 @@ export default function ManagerInvoicesPage() {
           </div>
 
           {loading ? (
-            <p>Loading invoices...</p>
+            <Panel><p className="m-0">Loading invoices...</p></Panel>
           ) : filteredInvoices.length === 0 ? (
             <Panel>
-              <p style={styles.headingFlush}>No invoices match this filter.</p>
+              <p className="m-0">No invoices match this filter.</p>
             </Panel>
           ) : (
-            <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.9em" }}>
+            <Panel bodyClassName="p-0">
+            <table className="inline-table">
                 <thead>
-                  <tr style={{ borderBottom: "2px solid #ddd", textAlign: "left" }}>
-                    <th style={{ padding: "8px 6px" }}>Status</th>
-                    <th style={{ padding: "8px 6px" }}>Invoice #</th>
-                    <th style={{ padding: "8px 6px" }}>Amount</th>
-                    <th style={{ padding: "8px 6px" }}>Issuer</th>
-                    <th style={{ padding: "8px 6px" }}>Created</th>
-                    <th style={{ padding: "8px 6px" }}>Actions</th>
+                  <tr>
+                    <th>Status</th>
+                    <th>Invoice #</th>
+                    <th>Amount</th>
+                    <th>Issuer</th>
+                    <th>Created</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredInvoices.map((inv) => (
-                    <tr key={inv.id} style={{ borderBottom: "1px solid #eee" }}>
-                      <td style={{ padding: "8px 6px" }}><StatusBadge status={inv.status} /></td>
-                      <td style={{ padding: "8px 6px" }}>{inv.invoiceNumber || inv.id.slice(0, 8)}</td>
-                      <td style={{ padding: "8px 6px", fontWeight: 600 }}>{getAmount(inv)}</td>
-                      <td style={{ padding: "8px 6px" }}>{inv.issuerName || "—"}</td>
-                      <td style={{ padding: "8px 6px" }}>{formatDate(inv.createdAt)}</td>
-                      <td style={{ padding: "8px 6px" }}>
+                    <tr key={inv.id}>
+                      <td><StatusBadge status={inv.status} /></td>
+                      <td>{inv.invoiceNumber || inv.id.slice(0, 8)}</td>
+                      <td className="cell-bold">{getAmount(inv)}</td>
+                      <td>{inv.issuerName || "—"}</td>
+                      <td>{formatDate(inv.createdAt)}</td>
+                      <td>
                         <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
                           {/* Approve — for ISSUED invoices */}
                           {inv.status === "ISSUED" && (
@@ -265,7 +264,7 @@ export default function ManagerInvoicesPage() {
                   ))}
                 </tbody>
               </table>
-            </div>
+            </Panel>
           )}
         </PageContent>
       </PageShell>

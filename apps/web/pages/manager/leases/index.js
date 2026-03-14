@@ -5,8 +5,10 @@ import PageShell from "../../../components/layout/PageShell";
 import PageHeader from "../../../components/layout/PageHeader";
 import { formatDate } from "../../../lib/format";
 import PageContent from "../../../components/layout/PageContent";
+import Panel from "../../../components/layout/Panel";
 import Section from "../../../components/layout/Section";
-import { styles } from "../../../styles/managerStyles";
+import Link from "next/link";
+import { authHeaders } from "../../../lib/api";
 
 const STATUS_COLORS = {
   DRAFT: "bg-yellow-100 text-yellow-800",
@@ -15,12 +17,30 @@ const STATUS_COLORS = {
   CANCELLED: "bg-red-100 text-red-800",
 };
 
+const LEASE_TABS = [
+  { key: "ACTIVE", label: "Active", statuses: ["SIGNED", "READY_TO_SIGN"] },
+  { key: "DRAFTS", label: "Drafts", statuses: ["DRAFT"] },
+  { key: "TEMPLATES", label: "Templates", statuses: null },
+  { key: "ARCHIVE", label: "Archive", statuses: ["CANCELLED"] },
+];
+
+const TAB_KEYS = ['active', 'drafts', 'templates', 'archive'];
+
 export default function LeasesPage() {
   const router = useRouter();
   const [leases, setLeases] = useState([]);
+  const [templates, setTemplates] = useState([]);
+  const [leasesTotal, setLeasesTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [statusFilter, setStatusFilter] = useState("");
+  const activeTab = router.isReady ? (Math.max(0, TAB_KEYS.indexOf(router.query.tab)) || 0) : 0;
+  const setActiveTab = useCallback((index) => {
+    router.push(
+      { pathname: router.pathname, query: { ...router.query, tab: TAB_KEYS[index] } },
+      undefined,
+      { shallow: true }
+    );
+  }, [router]);
 
   // Create form
   const [showCreate, setShowCreate] = useState(false);
@@ -43,17 +63,22 @@ export default function LeasesPage() {
   const fetchLeases = useCallback(async () => {
     setLoading(true);
     try {
-      const qs = statusFilter ? `?status=${statusFilter}` : "";
-      const res = await fetch(`/api/leases${qs}`);
-      const json = await res.json();
-      setLeases(json.data || []);
+      const [leaseRes, tmplRes] = await Promise.all([
+        fetch("/api/leases?limit=200", { headers: authHeaders() }),
+        fetch("/api/lease-templates", { headers: authHeaders() }),
+      ]);
+      const leaseJson = await leaseRes.json();
+      const tmplJson = await tmplRes.json();
+      setLeases(leaseJson.data || []);
+      setLeasesTotal(leaseJson.total ?? leaseJson.data?.length ?? 0);
+      setTemplates(tmplJson.data || []);
       setError(null);
     } catch (err) {
       setError("Failed to load leases");
     } finally {
       setLoading(false);
     }
-  }, [statusFilter]);
+  }, []);
 
   useEffect(() => { fetchLeases(); }, [fetchLeases]);
 
@@ -218,73 +243,129 @@ export default function LeasesPage() {
             </Section>
           )}
 
-          {/* Filter */}
-          <div className="flex items-center gap-3">
-            <label className="text-sm text-slate-600">Filter by status:</label>
-            <select
-              value={statusFilter}
-              onChange={e => setStatusFilter(e.target.value)}
-              className="border rounded-md px-3 py-1.5 text-sm"
-            >
-              <option value="">All</option>
-              <option value="DRAFT">Draft</option>
-              <option value="READY_TO_SIGN">Ready to Sign</option>
-              <option value="SIGNED">Signed</option>
-              <option value="CANCELLED">Cancelled</option>
-            </select>
+          {/* Tab strip */}
+          <div className="tab-strip">
+            {LEASE_TABS.map((tab, i) => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(i)}
+                className={activeTab === i ? "tab-btn-active" : "tab-btn"}
+              >
+                {tab.label}
+              </button>
+            ))}
           </div>
 
-          {/* Table */}
-          {loading ? (
-            <p className="text-sm text-slate-500">Loading leases...</p>
-          ) : error ? (
-            <p className="text-sm text-red-600">{error}</p>
-          ) : leases.length === 0 ? (
-            <div style={styles.emptyState}>
-              <p style={{ ...styles.emptyStateText, fontSize: '18px', marginBottom: 8 }}>No leases found</p>
-              <p style={styles.emptyStateText}>Click "+ New Lease" to create your first rental contract.</p>
-            </div>
-          ) : (
-            <div className="bg-white rounded-lg border overflow-hidden">
-              <table className="w-full text-sm">
-                <thead className="bg-slate-50 border-b">
-                  <tr>
-                    <th className="text-left px-4 py-3 font-medium text-slate-600">Tenant</th>
-                    <th className="text-left px-4 py-3 font-medium text-slate-600">Unit</th>
-                    <th className="text-left px-4 py-3 font-medium text-slate-600">Building</th>
-                    <th className="text-left px-4 py-3 font-medium text-slate-600">Rent</th>
-                    <th className="text-left px-4 py-3 font-medium text-slate-600">Start</th>
-                    <th className="text-left px-4 py-3 font-medium text-slate-600">Status</th>
-                    <th className="text-left px-4 py-3 font-medium text-slate-600">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {leases.map(lease => (
-                    <tr key={lease.id} className="hover:bg-slate-50 transition-colors">
-                      <td className="px-4 py-3 font-medium">{lease.tenantName}</td>
-                      <td className="px-4 py-3">{lease.unit?.unitNumber || "—"}</td>
-                      <td className="px-4 py-3">{lease.unit?.building?.name || "—"}</td>
-                      <td className="px-4 py-3">CHF {lease.rentTotalChf ?? lease.netRentChf}.-</td>
-                      <td className="px-4 py-3">{formatDate(lease.startDate)}</td>
-                      <td className="px-4 py-3">
-                        <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${STATUS_COLORS[lease.status] || "bg-slate-100 text-slate-700"}`}>
-                          {lease.status.replace(/_/g, " ")}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <button
-                          onClick={() => router.push(`/manager/leases/${lease.id}`)}
-                          className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                        >
-                          Edit →
-                        </button>
-                      </td>
+          {/* Count + full-view link — outside the Panel card */}
+          <span className="tab-panel-count">
+            {activeTab === 0 ? `${leases.filter(l => ["SIGNED","READY_TO_SIGN"].includes(l.status)).length} active lease${leases.filter(l => ["SIGNED","READY_TO_SIGN"].includes(l.status)).length !== 1 ? "s" : ""}` : null}
+            {activeTab === 1 ? `${leases.filter(l => l.status === "DRAFT").length} draft${leases.filter(l => l.status === "DRAFT").length !== 1 ? "s" : ""}` : null}
+            {activeTab === 2 ? `${templates.length} template${templates.length !== 1 ? "s" : ""}` : null}
+            {activeTab === 3 ? `${leases.filter(l => l.status === "CANCELLED").length} archived` : null}
+          </span>
+          {activeTab === 2 && <Link href="/manager/leases/templates" className="full-page-link">Full view →</Link>}
+
+          <Panel bodyClassName="p-0">
+          {/* Templates tab */}
+          <div className={activeTab === 2 ? "tab-panel-active" : "tab-panel"}>
+            {loading ? (
+              <p className="loading-text">Loading templates…</p>
+            ) : templates.length === 0 ? (
+              <div className="empty-state">
+                <p className="empty-state-text text-lg mb-2">No templates yet</p>
+                <p className="empty-state-text">
+                  Create one on the{" "}
+                  <Link href="/manager/leases/templates" className="text-blue-600 hover:underline">
+                    templates page
+                  </Link>.
+                </p>
+              </div>
+            ) : (
+              <div style={{ overflowX: "auto" }}>
+                <table className="inline-table">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Building</th>
+                      <th>Created</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+                  </thead>
+                  <tbody>
+                    {templates.map((t) => (
+                      <tr key={t.id}>
+                        <td className="cell-bold">{t.templateName || "Unnamed"}</td>
+                        <td>{t.building?.name || t.building?.address || "—"}</td>
+                        <td>{formatDate(t.createdAt)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          {/* List tabs (Active / Drafts / Archive) */}
+          {[0, 1, 3].map((tabIndex) => {
+            const tab = LEASE_TABS[tabIndex];
+            const filtered = tab.statuses
+              ? leases.filter((l) => tab.statuses.includes(l.status))
+              : leases;
+            return (
+              <div key={tabIndex} className={activeTab === tabIndex ? "tab-panel-active" : "tab-panel"}>
+                {loading ? (
+                  <p className="text-sm text-slate-500">Loading leases...</p>
+                ) : error ? (
+                  <p className="text-sm text-red-600">{error}</p>
+                ) : filtered.length === 0 ? (
+                  <div className="empty-state">
+                    <p className="empty-state-text text-lg mb-2">No leases found</p>
+                    <p className="empty-state-text">Click "+ New Lease" to create your first rental contract.</p>
+                  </div>
+                ) : (
+                  <div>
+                    <table className="inline-table">
+                      <thead>
+                        <tr>
+                          <th>Tenant</th>
+                          <th>Unit</th>
+                          <th>Building</th>
+                          <th>Rent</th>
+                          <th>Start</th>
+                          <th>Status</th>
+                          <th>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filtered.slice(0, 200).map(lease => (
+                          <tr key={lease.id}>
+                            <td className="cell-bold">{lease.tenantName}</td>
+                            <td>{lease.unit?.unitNumber || "—"}</td>
+                            <td>{lease.unit?.building?.name || "—"}</td>
+                            <td>CHF {lease.rentTotalChf ?? lease.netRentChf}.-</td>
+                            <td>{formatDate(lease.startDate)}</td>
+                            <td>
+                              <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${STATUS_COLORS[lease.status] || "bg-slate-100 text-slate-700"}`}>
+                                {lease.status.replace(/_/g, " ")}
+                              </span>
+                            </td>
+                            <td>
+                              <button
+                                onClick={() => router.push(`/manager/leases/${lease.id}`)}
+                                className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                              >
+                                Edit →
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+          </Panel>
         </PageContent>
       </PageShell>
     </AppShell>

@@ -24,6 +24,28 @@
   --radius-table: 10px;
   --input-padding: 10px;
   --card-padding: 16px;
+
+  /* ── Manager token colours ── */
+  --color-text-subtle: #444;
+  --color-text-muted: #6b7280;
+  --color-text-muted-light: #9ca3af;
+  --color-text-heading: #1e293b;
+  --color-text-error: crimson;
+  --color-text-ok: #116b2b;
+  --color-text-error-banner: #b91c1c;
+  --color-tab-active: #111827;
+  --color-tab-inactive: #64748b;
+  --color-table-head: #94a3b8;
+  --color-table-border: #e5e7eb;
+  --color-table-row-border: #f8fafc;
+  --color-row-text-primary: #374151;
+  --color-loading: #94a3b8;
+  --color-coming-soon-bg: #f0f9ff;
+  --color-coming-soon: #0369a1;
+
+  /* ── Manager token spacing ── */
+  --radius-pill: 12px;
+  --radius-banner: 8px;
 }
 
 body {
@@ -140,4 +162,176 @@ h1, h2 {
   color: #555;
   font-size: 13px;
   margin-bottom: 16px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Manager component classes — migrated from managerStyles.js
+   Backed by CSS custom properties defined in :root above.
+   ═══════════════════════════════════════════════════════════════════ */
+
+@layer components {
+  /* ── Tab strip ── */
+  .tab-strip {
+    display: flex;
+    gap: 0;
+    border-bottom: 2px solid var(--color-table-border);
+    margin-bottom: 20px;
+  }
+
+  .tab-btn {
+    padding: 8px 16px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--color-tab-inactive);
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
+  }
+
+  .tab-btn-active {
+    padding: 8px 16px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-tab-active);
+    background: none;
+    border: none;
+    border-bottom: 2px solid var(--color-tab-active);
+    margin-bottom: -2px;
+    cursor: pointer;
+  }
+
+  /* ── Tab panels ── */
+  .tab-panel        { display: none; }
+  .tab-panel-active { display: block; }
+
+  .tab-panel-count {
+    display: block;
+    font-size: 12px;
+    color: var(--color-text-muted);
+    margin-bottom: 8px;
+  }
+
+  .full-page-link {
+    font-size: 13px;
+    color: var(--color-tab-active);
+    font-weight: 500;
+    text-decoration: none;
+  }
+
+  /* ── Inline data table ── */
+  .inline-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9em;
+  }
+
+  .inline-table th {
+    padding: 6px 12px;
+    text-align: left;
+    font-weight: 500;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-table-head);
+    background: transparent;
+    border-bottom: 2px solid var(--color-table-border);
+  }
+
+  .inline-table td {
+    padding: 10px 12px;
+    font-size: 14px;
+    color: var(--color-text-muted);
+    border-bottom: 1px solid var(--color-table-row-border);
+  }
+
+  .inline-table td.cell-bold {
+    font-weight: 500;
+    color: var(--color-row-text-primary);
+  }
+
+  .inline-table tbody tr:hover {
+    background-color: #f8fafc;
+  }
+
+  /* ── Status pill ── */
+  .status-pill {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: var(--radius-pill);
+    font-size: 0.8em;
+    font-weight: 600;
+  }
+
+  /* ── Empty state ── */
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 48px 24px;
+    color: var(--color-text-muted);
+  }
+
+  .empty-state-text {
+    font-size: 14px;
+    color: #6b7280;
+    margin: 0;
+  }
+
+  /* ── Loading / error ── */
+  .loading-text {
+    font-size: 12px;
+    color: #94a3b8;
+    padding: 24px 0;
+  }
+
+  .error-banner {
+    background-color: #fff0f0;
+    border: 1px solid #ffb3b3;
+    border-radius: var(--radius-banner);
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    font-size: 14px;
+    color: var(--color-text-error-banner);
+  }
+
+  /* ── Coming soon stub ── */
+  .coming-soon {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 64px 24px;
+    text-align: center;
+  }
+
+  .coming-soon-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: var(--radius-pill);
+    background-color: var(--color-coming-soon-bg);
+    color: var(--color-coming-soon);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  .coming-soon-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--color-text-heading);
+    margin: 0 0 8px 0;
+  }
+
+  .coming-soon-text {
+    font-size: 14px;
+    color: var(--color-tab-inactive);
+    margin: 0;
+    max-width: 400px;
+  }
 }

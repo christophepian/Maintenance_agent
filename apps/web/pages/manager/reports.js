@@ -3,8 +3,6 @@ import PageShell from "../../components/layout/PageShell";
 import PageHeader from "../../components/layout/PageHeader";
 import PageContent from "../../components/layout/PageContent";
 import Panel from "../../components/layout/Panel";
-import { styles } from "../../styles/managerStyles";
-
 export default function ReportsPage() {
   return (
     <AppShell role="MANAGER">
@@ -12,10 +10,10 @@ export default function ReportsPage() {
         <PageHeader title="Reports" subtitle="Analytics and reporting dashboards" />
         <PageContent>
           <Panel>
-            <div style={styles.comingSoonContainer}>
-              <span style={styles.comingSoonBadge}>Coming Soon</span>
-              <h2 style={styles.comingSoonTitle}>Reporting Dashboards</h2>
-              <p style={styles.comingSoonText}>
+            <div className="coming-soon">
+              <span className="coming-soon-badge">Coming Soon</span>
+              <h2 className="coming-soon-title">Reporting Dashboards</h2>
+              <p className="coming-soon-text">
                 Financial summaries, maintenance trends, and portfolio analytics
                 will appear here.
               </p>

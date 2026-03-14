@@ -106,14 +106,15 @@ describe("Leases and Signature Requests", () => {
 
   it("should list leases filtered by status", async () => {
     const all = await listLeases(orgId);
-    expect(all.length).toBeGreaterThanOrEqual(1);
+    expect(all.data.length).toBeGreaterThanOrEqual(1);
+    expect(typeof all.total).toBe("number");
 
     const drafts = await listLeases(orgId, { status: "DRAFT" });
-    expect(drafts.every(l => l.status === "DRAFT")).toBe(true);
+    expect(drafts.data.every(l => l.status === "DRAFT")).toBe(true);
 
     const signed = await listLeases(orgId, { status: "SIGNED" });
     // We haven't signed any yet
-    expect(signed.length).toBe(0);
+    expect(signed.data.length).toBe(0);
   });
 
   it("should get a single lease by id", async () => {

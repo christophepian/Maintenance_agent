@@ -244,18 +244,23 @@ export async function listMaintenanceRequests(
   prisma: PrismaClient,
   orgId: string,
   opts: ListOpts
-  ): Promise<MaintenanceRequestDTO[] | MaintenanceRequestSummaryDTO[]> {
+  ): Promise<{ data: MaintenanceRequestDTO[] | MaintenanceRequestSummaryDTO[]; total: number }> {
     const useSummary = opts.view === "summary";
-  
-  const rows = await prisma.request.findMany({
-    where: orgScopeWhere(orgId),
-    orderBy: { createdAt: opts.order },
-    take: opts.limit,
-    skip: opts.offset,
-      include: useSummary ? requestSummaryInclude : requestInclude,
-  });
+    const where = orgScopeWhere(orgId);
 
-    return useSummary ? rows.map(toSummaryDTO) : rows.map(toDTO);
+  const [rows, total] = await Promise.all([
+    prisma.request.findMany({
+      where,
+      orderBy: { createdAt: opts.order },
+      take: opts.limit,
+      skip: opts.offset,
+      include: useSummary ? requestSummaryInclude : requestInclude,
+    }),
+    prisma.request.count({ where }),
+  ]);
+
+    const data = useSummary ? rows.map(toSummaryDTO) : rows.map(toDTO);
+    return { data, total };
 }
 
 export async function listOwnerPendingApprovals(

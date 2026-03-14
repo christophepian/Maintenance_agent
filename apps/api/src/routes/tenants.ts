@@ -20,8 +20,8 @@ export function registerTenantRoutes(router: Router) {
         return sendJson(res, 200, { data: tenant ?? null });
       }
       const includeInactive = first(query, "includeInactive") === "true";
-      const tenants = await listTenants(orgId, includeInactive);
-      sendJson(res, 200, { data: tenants });
+      const result = await listTenants(orgId, includeInactive);
+      sendJson(res, 200, { data: result.data, total: result.total });
     } catch (e: any) {
       sendError(res, 500, "DB_ERROR", "Failed to lookup tenant", String(e));
     }
@@ -90,8 +90,8 @@ export function registerTenantRoutes(router: Router) {
   // GET /contractors
   router.get("/contractors", withAuthRequired(async ({ res, prisma, orgId }) => {
     try {
-      const contractors = await listContractors(prisma, orgId);
-      sendJson(res, 200, { data: contractors });
+      const result = await listContractors(prisma, orgId);
+      sendJson(res, 200, { data: result.data, total: result.total });
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to fetch contractors", String(e));
     }

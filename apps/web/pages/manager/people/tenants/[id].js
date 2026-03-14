@@ -342,42 +342,40 @@ export default function TenantDetailPage() {
                   ) : leases.length === 0 ? (
                     <p className="text-sm text-slate-500">No leases found for this tenant.</p>
                   ) : (
-                    <div className="overflow-x-auto">
-                      <table className="min-w-full divide-y divide-slate-200 text-sm">
-                        <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      <table className="inline-table">
+                        <thead>
                           <tr>
-                            <th className="px-4 py-3">Unit</th>
-                            <th className="px-4 py-3">Building</th>
-                            <th className="px-4 py-3">Start date</th>
-                            <th className="px-4 py-3">End date</th>
-                            <th className="px-4 py-3">Status</th>
-                            <th className="px-4 py-3 text-right">Monthly rent</th>
+                            <th>Unit</th>
+                            <th>Building</th>
+                            <th>Start date</th>
+                            <th>End date</th>
+                            <th>Status</th>
+                            <th className="text-right">Monthly rent</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100 bg-white">
+                        <tbody>
                           {leases.map((l) => (
                             <tr key={l.id}>
-                              <td className="px-4 py-3">
+                              <td>
                                 <Link href={`/manager/leases/${l.id}`} className="text-indigo-600 hover:underline">
                                   {l.unit?.unitNumber || l.unitId?.slice(0, 8) || "—"}
                                 </Link>
                               </td>
-                              <td className="px-4 py-3 text-slate-700">{l.unit?.building?.name || "—"}</td>
-                              <td className="px-4 py-3 text-slate-700">{l.startDate ? new Date(l.startDate).toLocaleDateString("de-CH") : "—"}</td>
-                              <td className="px-4 py-3 text-slate-700">{l.endDate ? new Date(l.endDate).toLocaleDateString("de-CH") : "—"}</td>
-                              <td className="px-4 py-3">
+                              <td>{l.unit?.building?.name || "—"}</td>
+                              <td>{l.startDate ? new Date(l.startDate).toLocaleDateString("de-CH") : "—"}</td>
+                              <td>{l.endDate ? new Date(l.endDate).toLocaleDateString("de-CH") : "—"}</td>
+                              <td>
                                 <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600">
                                   {l.status}
                                 </span>
                               </td>
-                              <td className="px-4 py-3 text-right text-slate-700">
+                              <td className="text-right">
                                 {l.netRentChf != null ? `CHF ${l.netRentChf}.-` : "—"}
                               </td>
                             </tr>
                           ))}
                         </tbody>
                       </table>
-                    </div>
                   )}
                 </Panel>
               )}
@@ -389,27 +387,26 @@ export default function TenantDetailPage() {
                   ) : leaseInvoices.length === 0 ? (
                     <p className="text-sm text-slate-500">No invoices found for this tenant.</p>
                   ) : (
-                    <div className="overflow-x-auto">
-                      <table className="min-w-full divide-y divide-slate-200 text-sm">
-                        <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      <table className="inline-table">
+                        <thead>
                           <tr>
-                            <th className="px-4 py-3">Invoice #</th>
-                            <th className="px-4 py-3">Description</th>
-                            <th className="px-4 py-3 text-right">Amount</th>
-                            <th className="px-4 py-3">Due date</th>
-                            <th className="px-4 py-3">Status</th>
+                            <th>Invoice #</th>
+                            <th>Description</th>
+                            <th className="text-right">Amount</th>
+                            <th>Due date</th>
+                            <th>Status</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100 bg-white">
+                        <tbody>
                           {leaseInvoices.map((inv) => (
                             <tr key={inv.id}>
-                              <td className="px-4 py-3 text-slate-700">{inv.invoiceNumber || inv.id?.slice(0, 8) || "—"}</td>
-                              <td className="px-4 py-3 text-slate-700">{inv.description || "—"}</td>
-                              <td className="px-4 py-3 text-right text-slate-700">
+                              <td>{inv.invoiceNumber || inv.id?.slice(0, 8) || "—"}</td>
+                              <td>{inv.description || "—"}</td>
+                              <td className="text-right">
                                 {inv.totalAmount != null ? `CHF ${inv.totalAmount.toFixed(2)}` : "—"}
                               </td>
-                              <td className="px-4 py-3 text-slate-700">{inv.dueDate ? new Date(inv.dueDate).toLocaleDateString("de-CH") : "—"}</td>
-                              <td className="px-4 py-3">
+                              <td>{inv.dueDate ? new Date(inv.dueDate).toLocaleDateString("de-CH") : "—"}</td>
+                              <td>
                                 <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600">
                                   {inv.status}
                                 </span>
@@ -418,7 +415,6 @@ export default function TenantDetailPage() {
                           ))}
                         </tbody>
                       </table>
-                    </div>
                   )}
                 </Panel>
               )}

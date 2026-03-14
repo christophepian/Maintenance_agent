@@ -211,20 +211,20 @@ export default function BuildingFinancialsPage() {
                   {data.expensesByCategory.length === 0 ? (
                     <p className="text-gray-400 text-sm">No categorised expenses in this period.</p>
                   ) : (
-                    <table className="w-full text-sm">
+                    <table className="inline-table">
                       <thead>
-                        <tr className="border-b border-gray-200 text-left">
-                          <th className="py-2 font-medium text-gray-600">Category</th>
-                          <th className="py-2 font-medium text-gray-600 text-right">Amount</th>
+                        <tr>
+                          <th>Category</th>
+                          <th className="text-right">Amount</th>
                         </tr>
                       </thead>
                       <tbody>
                         {data.expensesByCategory.map((row) => (
-                          <tr key={row.category} className="border-b border-gray-100">
-                            <td className="py-2 text-gray-800">
+                          <tr key={row.category}>
+                            <td className="cell-bold">
                               {CATEGORY_LABELS[row.category] || row.category}
                             </td>
-                            <td className="py-2 text-gray-800 text-right font-mono">
+                            <td className="text-right font-mono">
                               {formatChfCents(row.totalCents)}
                             </td>
                           </tr>
@@ -241,18 +241,18 @@ export default function BuildingFinancialsPage() {
                   {data.topContractorsBySpend.length === 0 ? (
                     <p className="text-gray-400 text-sm">No contractor expenses in this period.</p>
                   ) : (
-                    <table className="w-full text-sm">
+                    <table className="inline-table">
                       <thead>
-                        <tr className="border-b border-gray-200 text-left">
-                          <th className="py-2 font-medium text-gray-600">Contractor</th>
-                          <th className="py-2 font-medium text-gray-600 text-right">Total Spend</th>
+                        <tr>
+                          <th>Contractor</th>
+                          <th className="text-right">Total Spend</th>
                         </tr>
                       </thead>
                       <tbody>
                         {data.topContractorsBySpend.map((row) => (
-                          <tr key={row.contractorId} className="border-b border-gray-100">
-                            <td className="py-2 text-gray-800">{row.contractorName}</td>
-                            <td className="py-2 text-gray-800 text-right font-mono">
+                          <tr key={row.contractorId}>
+                            <td className="cell-bold">{row.contractorName}</td>
+                            <td className="text-right font-mono">
                               {formatChfCents(row.totalCents)}
                             </td>
                           </tr>

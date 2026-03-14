@@ -160,36 +160,42 @@ export async function listJobs(
     requestId?: string;
     view?: "summary" | "full";
   }
-): Promise<JobDTO[] | JobSummaryDTO[]> {
+): Promise<{ data: JobDTO[] | JobSummaryDTO[]; total: number }> {
   const useSummary = filters?.view === "summary";
 
-  const jobs = await prisma.job.findMany({
-    where: {
-      orgId,
-      ...(filters?.contractorId && { contractorId: filters.contractorId }),
-      ...(filters?.status && { status: filters.status }),
-      ...(filters?.requestId && { requestId: filters.requestId }),
-    },
-    include: useSummary
-      ? {
-          contractor: { select: { name: true } },
-          request: {
-            select: {
-              description: true,
-              unit: {
-                select: {
-                  unitNumber: true,
-                  building: { select: { name: true } },
+  const where = {
+    orgId,
+    ...(filters?.contractorId && { contractorId: filters.contractorId }),
+    ...(filters?.status && { status: filters.status }),
+    ...(filters?.requestId && { requestId: filters.requestId }),
+  };
+
+  const [jobs, total] = await Promise.all([
+    prisma.job.findMany({
+      where,
+      include: useSummary
+        ? {
+            contractor: { select: { name: true } },
+            request: {
+              select: {
+                description: true,
+                unit: {
+                  select: {
+                    unitNumber: true,
+                    building: { select: { name: true } },
+                  },
                 },
               },
             },
-          },
-        }
-      : JOB_INCLUDE,
-    orderBy: { createdAt: 'desc' },
-  });
+          }
+        : JOB_INCLUDE,
+      orderBy: { createdAt: 'desc' },
+    }),
+    prisma.job.count({ where }),
+  ]);
 
-  return useSummary ? jobs.map(mapJobToSummaryDTO) : jobs.map(mapJobToDTO);
+  const data = useSummary ? jobs.map(mapJobToSummaryDTO) : jobs.map(mapJobToDTO);
+  return { data, total };
 }
 
 /**

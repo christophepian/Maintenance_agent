@@ -6,7 +6,7 @@ import PageShell from "../../../components/layout/PageShell";
 import { formatDate as fmtD } from "../../../lib/format";
 import PageHeader from "../../../components/layout/PageHeader";
 import PageContent from "../../../components/layout/PageContent";
-import Section from "../../../components/layout/Section";
+import Panel from "../../../components/layout/Panel";
 
 const STATUS_COLORS = {
   DRAFT: "bg-yellow-100 text-yellow-800",
@@ -422,6 +422,7 @@ export default function LeaseEditorPage() {
         {success && <p className="mt-4 text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-4 py-2">{success}</p>}
 
         <PageContent>
+          <Panel title="Lease Contract" bodyClassName="space-y-3">
           {/* §1 — Parties */}
           <AccordionSection title="§1 — Parties (Bailleur & Locataire)" open={openSections.parties} onToggle={() => toggle("parties")}>
             <div className="space-y-4">
@@ -565,47 +566,46 @@ export default function LeaseEditorPage() {
               </Field>
             </div>
           </AccordionSection>
+          </Panel>
 
           {/* Signature Requests */}
           {sigRequests.length > 0 && (
-            <Section title="Signature Requests">
-              <div className="bg-white rounded-lg border overflow-hidden">
-                <table className="w-full text-sm">
-                  <thead className="bg-slate-50 border-b">
+            <Panel title="Signature Requests" bodyClassName="p-0">
+                <table className="inline-table">
+                  <thead>
                     <tr>
-                      <th className="text-left px-4 py-3 font-medium text-slate-600">Provider</th>
-                      <th className="text-left px-4 py-3 font-medium text-slate-600">Level</th>
-                      <th className="text-left px-4 py-3 font-medium text-slate-600">Status</th>
-                      <th className="text-left px-4 py-3 font-medium text-slate-600">Signers</th>
-                      <th className="text-left px-4 py-3 font-medium text-slate-600">Created</th>
+                      <th>Provider</th>
+                      <th>Level</th>
+                      <th>Status</th>
+                      <th>Signers</th>
+                      <th>Created</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y">
+                  <tbody>
                     {sigRequests.map(sr => (
-                      <tr key={sr.id} className="hover:bg-slate-50">
-                        <td className="px-4 py-3">{sr.provider}</td>
-                        <td className="px-4 py-3">{sr.level}</td>
-                        <td className="px-4 py-3">
+                      <tr key={sr.id}>
+                        <td>{sr.provider}</td>
+                        <td>{sr.level}</td>
+                        <td>
                           <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
                             sr.status === "SIGNED" ? "bg-green-100 text-green-800" :
                             sr.status === "SENT" ? "bg-blue-100 text-blue-800" :
                             "bg-slate-100 text-slate-700"
                           }`}>{sr.status}</span>
                         </td>
-                        <td className="px-4 py-3">{sr.signers?.map(s => s.name).join(", ") || "—"}</td>
-                        <td className="px-4 py-3">{fmtD(sr.createdAt)}</td>
+                        <td>{sr.signers?.map(s => s.name).join(", ") || "—"}</td>
+                        <td>{fmtD(sr.createdAt)}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
-              </div>
-            </Section>
+            </Panel>
           )}
 
           {/* PDF Artifact */}
           {(lease.draftPdfStorageKey || lease.signedPdfStorageKey) && (
-            <Section title="PDF Artifacts">
-              <div className="bg-white rounded-lg border p-4 space-y-3">
+            <Panel title="PDF Artifacts">
+              <div className="space-y-3">
                 {lease.draftPdfStorageKey && (
                   <div>
                     <p className="text-sm font-medium text-slate-700">📄 Draft PDF</p>
@@ -635,13 +635,12 @@ export default function LeaseEditorPage() {
                   </div>
                 )}
               </div>
-            </Section>
+            </Panel>
           )}
 
           {/* Deposit Tracking */}
           {lease.depositChf > 0 && (
-            <Section title="💰 Deposit Tracking">
-              <div className="bg-white rounded-lg border p-4">
+            <Panel title="💰 Deposit Tracking">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-slate-600">Deposit: <span className="font-semibold">CHF {lease.depositChf}.-</span></p>
@@ -661,14 +660,13 @@ export default function LeaseEditorPage() {
                     </button>
                   )}
                 </div>
-              </div>
-            </Section>
+            </Panel>
           )}
 
           {/* Lifecycle Info */}
           {(lease.activatedAt || lease.terminatedAt || lease.archivedAt) && (
-            <Section title="📋 Lifecycle">
-              <div className="bg-white rounded-lg border p-4 space-y-2">
+            <Panel title="📋 Lifecycle">
+              <div className="space-y-2">
                 {lease.activatedAt && (
                   <p className="text-sm"><span className="text-emerald-600 font-medium">⚡ Activated:</span> {fmtD(lease.activatedAt)}</p>
                 )}
@@ -683,49 +681,47 @@ export default function LeaseEditorPage() {
                   <p className="text-sm"><span className="text-slate-600 font-medium">📦 Archived:</span> {fmtD(lease.archivedAt)}</p>
                 )}
               </div>
-            </Section>
+            </Panel>
           )}
 
           {/* Invoices */}
           {(invoices.length > 0 || lease.status !== "DRAFT") && (
-            <Section title={`💰 Invoices (${invoices.length})`}>
+            <Panel title={`💰 Invoices (${invoices.length})`} bodyClassName={invoices.length > 0 ? "p-0" : undefined}>
               {invoices.length === 0 ? (
-                <p className="text-sm text-slate-500 bg-white rounded-lg border p-4">No invoices linked to this lease yet.</p>
+                <p className="text-sm text-slate-500">No invoices linked to this lease yet.</p>
               ) : (
-                <div className="bg-white rounded-lg border overflow-hidden">
-                  <table className="w-full text-sm">
-                    <thead className="bg-slate-50 border-b">
+                  <table className="inline-table">
+                    <thead>
                       <tr>
-                        <th className="text-left px-4 py-3 font-medium text-slate-600">Description</th>
-                        <th className="text-left px-4 py-3 font-medium text-slate-600">Amount</th>
-                        <th className="text-left px-4 py-3 font-medium text-slate-600">Status</th>
-                        <th className="text-left px-4 py-3 font-medium text-slate-600">Created</th>
+                        <th>Description</th>
+                        <th>Amount</th>
+                        <th>Status</th>
+                        <th>Created</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y">
+                    <tbody>
                       {invoices.map(inv => (
-                        <tr key={inv.id} className="hover:bg-slate-50">
-                          <td className="px-4 py-3">
+                        <tr key={inv.id}>
+                          <td>
                             <Link href="/manager/finance/invoices" className="text-indigo-600 hover:underline">
                               {inv.description || "—"}
                             </Link>
                           </td>
-                          <td className="px-4 py-3 font-medium">CHF {inv.totalAmountChf?.toFixed(2) || "—"}</td>
-                          <td className="px-4 py-3">
+                          <td className="cell-bold">CHF {inv.totalAmountChf?.toFixed(2) || "—"}</td>
+                          <td>
                             <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
                               inv.status === "PAID" ? "bg-green-100 text-green-800" :
                               inv.status === "APPROVED" ? "bg-blue-100 text-blue-800" :
                               "bg-slate-100 text-slate-700"
                             }`}>{inv.status}</span>
                           </td>
-                          <td className="px-4 py-3 text-slate-500">{fmtD(inv.createdAt)}</td>
+                          <td>{fmtD(inv.createdAt)}</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
-                </div>
               )}
-            </Section>
+            </Panel>
           )}
         </PageContent>
 

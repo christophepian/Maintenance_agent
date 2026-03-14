@@ -65,7 +65,6 @@ export default function Home() {
     []
   );
 
-  // Inline styles from flows.js (to be refactored to global.css in next step)
   const ui = {
     page: {
       maxWidth: 900,

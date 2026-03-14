@@ -172,6 +172,87 @@ The test database (`maint_agent_test`) requires seed data for some test suites. 
 
 ---
 
+### 🎨 FRONTEND UI GUARDRAILS (F-UI1–F-UI6)
+
+> These rules prevent the layout drift that required a full session to fix in March 2026.
+> Every new manager page must follow them exactly.
+
+#### F-UI1: Hub Pages (with tabs) — Canonical Structure
+
+Tab strip is a direct child of `PageContent`, **before** the `Panel`. `Panel` wraps only the tab panel `div`s. One `<div className="px-4 py-4">` wrapper per tab panel — no more, no less. Page-level CTAs go in `PageHeader` `actions` prop — **never** between the header and the tab strip. Error banner sits outside both strip and Panel at the top of `PageContent`.
+
+```
+AppShell > PageShell > PageHeader (actions prop for CTAs)
+  PageContent
+    error-banner (if any)
+    div.tab-strip
+    Panel bodyClassName="p-0"
+      div.tab-panel / div.tab-panel-active
+        div.px-4.py-4
+          content
+```
+
+- **Reference implementation:** `apps/web/pages/manager/requests.js`
+- **Starter template:** `apps/web/pages/manager/_template_hub.js`
+
+#### F-UI2: Detail/Sub-pages (no tabs) — Canonical Structure
+
+Each logical section in its own `<Panel>`. Sections with tables use `bodyClassName="p-0"`. Sections with forms or mixed content use default Panel padding.
+
+```
+AppShell > PageShell > PageHeader
+  PageContent
+    Panel title="Section name"
+      content
+    Panel title="Table section" bodyClassName="p-0"
+      table.inline-table
+```
+
+- **Starter template:** `apps/web/pages/manager/_template_detail.js`
+
+#### F-UI3: Content Layout — Not Everything Is a Table
+
+Use the layout that fits the content type:
+
+| Content type | Layout |
+|---|---|
+| Tabular records | `<table className="inline-table">` |
+| Summary stats | `grid grid-cols-2 sm:grid-cols-4` with stat cards |
+| Grouped/categorized items | Category sections with headers and pills (see `DepreciationStandards.js`) |
+| Single record detail | Key-value rows with `space-y-2` |
+| Empty state | `<div className="empty-state"><p className="empty-state-text">` |
+| Loading | `<p className="loading-text">` |
+
+`inline-table` is for tabular data only. Never use it for categorized content, stat dashboards, or grouped layouts.
+
+#### F-UI4: Styling — Single Source of Truth
+
+All styles from: Tailwind utility classes, component classes in `globals.css` `@layer components`, or CSS variables in `globals.css` `:root`.
+
+**Never:**
+- `style={}` with raw values
+- Hardcoded hex in JSX
+- New `.css` files
+- JS style objects
+
+New repeated patterns → add a component class to `globals.css`.
+
+#### F-UI5: Shared Components for Stateful Repeated UI
+
+If a UI block with its own state and data fetching appears in more than one page, extract it to `apps/web/components/`. Never copy-paste stateful UI.
+
+**Reference:** `DepreciationStandards.js`, `AssetInventoryPanel.js`.
+
+#### F-UI6: Reference Implementations
+
+| Purpose | File |
+|---|---|
+| Hub page layout + table style | `apps/web/pages/manager/requests.js` |
+| Rich non-tabular content layout | `apps/web/pages/manager/legal/depreciation.js` |
+| Shared stateful component | `apps/web/components/DepreciationStandards.js` |
+
+---
+
 ### 🔮 FUTURE RISK GUARDRAILS (F1–F8)
 
 > These prevent long-term structural decay. They may not all be enforced today, but new code
@@ -234,13 +315,13 @@ Even while single-org (`DEFAULT_ORG_ID`) is active:
 - All queries must consider org scope
 - Multi-org should not require rewriting existing services
 
-### F8: Styling Lock Enforcement
-Manager UI styling lives **only** in `apps/web/styles/managerStyles.js` (see Section 7).
-- No inline style changes in manager workspace pages
-- Styling PRs must modify the lock file or justify a new shared style layer
-- This rule extends the existing policy in Section 7 with PR-level enforcement
+### F8: Styling System (Tailwind + CSS Variables)
+Manager UI styling uses **Tailwind utility classes** backed by CSS custom properties in `apps/web/styles/globals.css`.
+- `managerStyles.js` has been **deleted** — all tokens migrated to Tailwind classes and `@layer components` in globals.css
+- No JS inline style objects for shared tokens — use Tailwind classes or component classes (`.tab-strip`, `.inline-table`, `.empty-state`, etc.)
+- New shared styles must be added to globals.css `@layer components` or via `tailwind.config.js` theme extensions
 
-<!-- reviewed 2026-03-10 -->
+<!-- reviewed 2026-03-14 -->
 
 ---
 
@@ -368,7 +449,7 @@ Maintenance_Agent/
 * **Layout:** `AppShell` component with role-scoped sidebar (MANAGER/CONTRACTOR/TENANT/OWNER)
 * **Reusable components:** `PageShell`, `PageHeader`, `PageContent`, `Panel`, `Section`, `ContractorPicker`, `NotificationBell`, `AssetInventoryPanel`
 * **Key page groups:** `/manager/*` (requests, inventory, legal, leases, settings), `/contractor/*` (jobs, invoices), `/tenant/*` (leases, chat), `/owner/*` (approvals, invoices, vacancies), `/admin-inventory/*`, `/apply` (rental wizard), `/listings`
-* **~193 frontend pages** (UI + API proxies)
+* **~194 frontend pages** (UI + API proxies)
 
 <!-- reviewed 2026-03-10 -->
 
@@ -695,6 +776,24 @@ Cleaned up 93 corrupt legal rules (duplicates, missing topics, wrong ruleType) a
 
 **Stats:** 46 models · 38 enums · 17 workflows. tsc: 0 errors. 26 verification assertions passed. 12 pre-existing integration test timeouts unchanged.
 
+### Navigation & UI Consistency — 2026-03-14
+**Status:** ✅ COMPLETE
+
+Full redesign of manager workspace navigation and visual consistency across 14 slices:
+- Sidebar flattened — accordion removed, 7 flat primary nav items
+- All 7 hub pages: inline tab content, URL tab persistence (?tab=key)
+- Tailwind unified — managerStyles.js deleted, single globals.css source of truth with CSS variables + @layer components
+- All list endpoints return { data, total } — accurate count badges
+- 26 tables migrated to inline-table component class
+- CSS tokens aligned to requests.js visual standard
+- Panel wrapper applied to all manager pages — white card layout
+- Tab header links: always-visible for richer standalone pages, absent otherwise
+- leases/[id].js Panel wrapper, duplicate invoice proxy removed, notification auth guard
+- Shared VacanciesPanel component — inventory vacancies tab and owner vacancies page unified
+- Shared CategoryMappings component — legal hub tab and standalone page unified
+- Count labels moved outside card on all 7 hub pages
+- router.isReady guard added to all 7 hub pages — fixes cold-load with ?tab= query param
+
 ---
 
 ## 12. Backlog
@@ -710,6 +809,11 @@ Cleaned up 93 corrupt legal rules (duplicates, missing topics, wrong ruleType) a
 * Legal DSL variable resolver — wire LegalVariable values into DSL condition evaluation so rules can condition on ingested data (e.g. reference interest rate > 1.5%). Prerequisite for full canton-scoped rule evaluation. Depends on: LegalSource Scope slice (done).
 * Consolidate DTO files — buildingDetail.ts was created as a standalone file; review whether it should be merged with other DTO definitions for consistency
 * G8 consistency — `migrate deploy` was used instead of `migrate dev` for the building owner migration. Confirm local dev workflow always uses `migrate dev` going forward. Consider resolving the shadow DB exception (G8) to unblock `migrate dev` reliably.
+* Finance sub-pages (Payments, Expenses, Charges) — inline tab content shows plain text overflow with no link; implement full sub-pages when finance reporting scope is defined
+* Sources tab in legal.js — confirm inline or stub, close the finding in AUDIT.md
+* ~~router.isReady guard~~ — ✅ Resolved 2026-03-14: added `router.isReady` ternary to activeTab derivation in all 7 hub pages + template
+* Hub tab content polish (low priority, on-demand): legal/rules, legal/evaluations, people/tenants, people/vendors, rfps tabs still use flat inline-table. Enrich when pages become high-traffic or users report friction
+* ASSET_TYPE_COLORS in legal/depreciation.js uses hardcoded Tailwind color strings (bg-violet-100 text-violet-700 etc.) — these bypass the token system; migrate to CSS variables when depreciation page is next touched
 * ~~Fix server-spawn test timeouts~~ — ✅ Resolved 2026-03-10 (TC-4/TC-5): `maxWorkers: 1` + port deconfliction
 
 ### Multi-org Architecture Initiative
@@ -787,6 +891,9 @@ Conversational tenant intake with phone-based identification, automatic asset in
 
 <!-- auto-sync 2026-03-12: tests 334→359, suites 30→33, suites 30→33, suites 30→33 -->
 
+
+<!-- auto-sync 2026-03-13: frontendLOC 25→26, fePages 193→194 -->
+
 ### State Integrity
 
 This document + companion files are the **single source of truth**:
@@ -796,7 +903,7 @@ This document + companion files are the **single source of truth**:
 * Database schema — 35 migrations + `db push` for LKDE tables + `RFP_PENDING` enum value + `autoLegalRouting` column (shadow DB issue — see G8 exception in LKDE epic section); 46 models, 38 enums verified in live DB
 * Database data — 99+ assets across 19 units (with interventions tracking), 274 depreciation standards (including 5 added for mapped topics), 16 category mappings, buildings with cantons set, 6 CO 259a statutory rules with proper DSL (verified 2026-03-07)
 * Running system — all endpoints return 200; legal auto-routing creates RFP and sets RFP_PENDING for requests with mapped categories when autoLegalRouting=true; asset inventory endpoints serve depreciation data (verified 2026-03-07)
-* Frontend navigation — ~52 of 67 audit findings resolved; all 4 portals (manager, contractor, owner, tenant) fully connected with working links, detail tabs, and finance pages; **manager sidebar redesigned** with accordion navigation, lucide-react icons, and active route detection (verified 2026-03-09)
+* Frontend navigation — sidebar: 7 flat primary nav items, no accordion. All 7 manager hub pages use inline tab content with URL-based tab persistence (?tab=key). Tab header links: always-visible "Full view →" for tabs with richer standalone pages; absent for equivalent pages. All manager pages wrapped in Panel component for consistent white card layout. Verified 2026-03-14.
 * Test suite — **359 tests, 33 suites against maint_agent_test** (isolated from dev DB `maint_agent`) (verified 2026-03-12). Includes 20 new asset inventory tests.
   - ✅ **TC-4 resolved (2026-03-10):** `jest.config.js` now has `maxWorkers: 1` — integration tests run serially, eliminating parallel server spawning timeouts.
   - ✅ **TC-5 resolved (2026-03-10):** Port collision on 3206 fixed — ports reassigned: rentalContracts → 3206, rentEstimation → 3209, ia.test → 3210, tenantSession → 3208.
@@ -821,7 +928,7 @@ Safe to:
 
 ---
 
-✅ **Project stabilized, security-hardened, org-scoped, and UI-connected (2026-03-12).** 359 tests, 33 suites, 0 TS errors. ~52/67 frontend audit findings resolved. 20/82 audit findings resolved (security hardening + schema doc fixes). Frontend rationalized: full page inventory, 12 empty states standardized, 119/119 proxies conforming. Backend: ~36,000 LOC | Frontend: ~25,000 LOC | ~146 API routes | 46 Prisma models | 38 enums | 193 frontend pages | 17 workflows | 10 repositories. See [EPIC_HISTORY.md](EPIC_HISTORY.md) for full completion details.
+✅ **Project stabilized, security-hardened, org-scoped, and UI-connected (2026-03-12).** 359 tests, 33 suites, 0 TS errors. ~52/67 frontend audit findings resolved. 20/82 audit findings resolved (security hardening + schema doc fixes). Frontend rationalized: full page inventory, 12 empty states standardized, 119/119 proxies conforming. Backend: ~36,000 LOC | Frontend: ~26,000 LOC | ~146 API routes | 46 Prisma models | 38 enums | 193 frontend pages | 17 workflows | 10 repositories. See [EPIC_HISTORY.md](EPIC_HISTORY.md) for full completion details.
 
 
 ## 13. Authentication & Testing
@@ -895,6 +1002,6 @@ Safe to:
 | Audit findings open | 62 / 82 | docs/AUDIT.md — manual |
 | Audit findings resolved | 20 / 82 | docs/AUDIT.md — manual |
 | Last auto-sync | 2026-03-12 | blueprint.js |
-| Last manual review | 2026-03-12 | human |
+| Last manual review | 2026-03-14 | human |
 
 > Derived fields are auto-updated by `npm run blueprint`. Manual fields must be updated at the end of each slice.

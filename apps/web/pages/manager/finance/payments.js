@@ -4,7 +4,6 @@ import PageShell from "../../../components/layout/PageShell";
 import PageHeader from "../../../components/layout/PageHeader";
 import PageContent from "../../../components/layout/PageContent";
 import Panel from "../../../components/layout/Panel";
-import { styles } from "../../../styles/managerStyles";
 import { authHeaders } from "../../../lib/api";
 
 function formatDate(iso) {
@@ -81,7 +80,7 @@ export default function ManagerPaymentsPage() {
         <PageContent>
           {error && (
             <Panel style={{ backgroundColor: "#fff0f0", borderColor: "#ffb3b3" }}>
-              <strong style={styles.errorText}>Error:</strong> {error}
+              <strong className="text-err-text">Error:</strong> {error}
               <button onClick={() => setError("")} style={{ marginLeft: 12, fontSize: "0.85em" }}>Dismiss</button>
             </Panel>
           )}
@@ -135,33 +134,33 @@ export default function ManagerPaymentsPage() {
           </Panel>
 
           {loading ? (
-            <p>Loading payments...</p>
+            <Panel><p className="m-0">Loading payments...</p></Panel>
           ) : payments.length === 0 ? (
             <Panel>
-              <p style={styles.headingFlush}>No payments found for the selected filters.</p>
+              <p className="m-0">No payments found for the selected filters.</p>
             </Panel>
           ) : (
-            <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.9em" }}>
+            <Panel bodyClassName="p-0">
+            <table className="inline-table">
                 <thead>
-                  <tr style={{ borderBottom: "2px solid #ddd", textAlign: "left" }}>
-                    <th style={{ padding: "8px 6px" }}>Invoice #</th>
-                    <th style={{ padding: "8px 6px" }}>Description</th>
-                    <th style={{ padding: "8px 6px" }}>Amount (CHF)</th>
-                    <th style={{ padding: "8px 6px" }}>Paid on</th>
-                    <th style={{ padding: "8px 6px" }}>Payment reference</th>
-                    <th style={{ padding: "8px 6px" }}>Actions</th>
+                  <tr>
+                    <th>Invoice #</th>
+                    <th>Description</th>
+                    <th>Amount (CHF)</th>
+                    <th>Paid on</th>
+                    <th>Payment reference</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {payments.map((p) => (
-                    <tr key={p.id} style={{ borderBottom: "1px solid #eee" }}>
-                      <td style={{ padding: "8px 6px" }}>{p.invoiceNumber || p.id.slice(0, 8)}</td>
-                      <td style={{ padding: "8px 6px" }}>{p.description || "—"}</td>
-                      <td style={{ padding: "8px 6px", fontWeight: 600 }}>{formatCurrency(p.totalAmount)}</td>
-                      <td style={{ padding: "8px 6px" }}>{formatDate(p.paidAt)}</td>
-                      <td style={{ padding: "8px 6px" }}>{p.paymentReference || "—"}</td>
-                      <td style={{ padding: "8px 6px" }}>
+                    <tr key={p.id}>
+                      <td>{p.invoiceNumber || p.id.slice(0, 8)}</td>
+                      <td>{p.description || "—"}</td>
+                      <td className="cell-bold">{formatCurrency(p.totalAmount)}</td>
+                      <td>{formatDate(p.paidAt)}</td>
+                      <td>{p.paymentReference || "—"}</td>
+                      <td>
                         <a
                           href="/manager/finance/invoices"
                           style={{
@@ -177,7 +176,7 @@ export default function ManagerPaymentsPage() {
                   ))}
                 </tbody>
               </table>
-            </div>
+            </Panel>
           )}
         </PageContent>
       </PageShell>

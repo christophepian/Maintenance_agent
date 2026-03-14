@@ -6,8 +6,6 @@ import PageHeader from "../../../components/layout/PageHeader";
 import PageContent from "../../../components/layout/PageContent";
 import Panel from "../../../components/layout/Panel";
 import { authHeaders } from "../../../lib/api";
-import { styles } from "../../../styles/managerStyles";
-
 export default function PeopleVendorsPage() {
   const [contractors, setContractors] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -66,33 +64,32 @@ export default function PeopleVendorsPage() {
             {error && <p className="text-sm text-red-600">{error}</p>}
 
             {!loading && !error && filtered.length === 0 && (
-              <div style={styles.emptyState}>
-                <p style={styles.emptyStateText}>{search ? "No contractors match your search." : "No contractors found."}</p>
+              <div className="empty-state">
+                <p className="empty-state-text">{search ? "No contractors match your search." : "No contractors found."}</p>
               </div>
             )}
 
             {!loading && filtered.length > 0 && (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+              <table className="inline-table">
                   <thead>
-                    <tr className="border-b border-slate-200 text-left">
-                      <th className="py-2 font-medium text-slate-600">Name</th>
-                      <th className="py-2 font-medium text-slate-600">Phone</th>
-                      <th className="py-2 font-medium text-slate-600">Email</th>
-                      <th className="py-2 font-medium text-slate-600">Rate</th>
-                      <th className="py-2 font-medium text-slate-600"></th>
+                    <tr>
+                      <th>Name</th>
+                      <th>Phone</th>
+                      <th>Email</th>
+                      <th>Rate</th>
+                      <th></th>
                     </tr>
                   </thead>
                   <tbody>
                     {filtered.map((c) => (
-                      <tr key={c.id} className="border-b border-slate-100 hover:bg-slate-50">
-                        <td className="py-2 font-medium text-slate-900">{c.name || "—"}</td>
-                        <td className="py-2 text-slate-700">{c.phone || "—"}</td>
-                        <td className="py-2 text-slate-700">{c.email || "—"}</td>
-                        <td className="py-2 text-slate-700">
+                      <tr key={c.id}>
+                        <td className="cell-bold">{c.name || "—"}</td>
+                        <td>{c.phone || "—"}</td>
+                        <td>{c.email || "—"}</td>
+                        <td>
                           {c.hourlyRate != null ? `CHF ${c.hourlyRate}/h` : "—"}
                         </td>
-                        <td className="py-2 text-right">
+                        <td className="text-right">
                           <Link
                             href={`/manager/people/vendors/${c.id}`}
                             className="text-blue-600 hover:text-blue-800 text-xs font-medium"
@@ -104,7 +101,6 @@ export default function PeopleVendorsPage() {
                     ))}
                   </tbody>
                 </table>
-              </div>
             )}
           </Panel>
         </PageContent>

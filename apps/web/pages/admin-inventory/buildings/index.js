@@ -5,7 +5,6 @@ import PageShell from "../../../components/layout/PageShell";
 import PageHeader from "../../../components/layout/PageHeader";
 import PageContent from "../../../components/layout/PageContent";
 import Panel from "../../../components/layout/Panel";
-import { styles } from "../../../styles/managerStyles";
 import { authHeaders } from "../../../lib/api";
 
 export default function BuildingsListPage() {
@@ -49,7 +48,7 @@ export default function BuildingsListPage() {
         <PageContent>
           {error && (
             <Panel style={{ backgroundColor: "#fff0f0", borderColor: "#ffb3b3" }}>
-              <strong style={styles.errorText}>Error:</strong> {error}
+              <strong className="text-err-text">Error:</strong> {error}
               <button onClick={() => setError("")} style={{ marginLeft: 12, fontSize: "0.85em" }}>Dismiss</button>
             </Panel>
           )}
@@ -69,7 +68,7 @@ export default function BuildingsListPage() {
             <p>Loading buildings...</p>
           ) : filtered.length === 0 ? (
             <Panel>
-              <p style={styles.headingFlush}>No buildings found.</p>
+              <p className="m-0">No buildings found.</p>
             </Panel>
           ) : (
             <div style={{ overflowX: "auto" }}>

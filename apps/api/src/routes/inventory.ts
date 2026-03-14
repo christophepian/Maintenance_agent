@@ -50,7 +50,7 @@ export function registerInventoryRoutes(router: Router) {
       const includeInactive = first(query, "includeInactive") === "true";
       const buildings = await listBuildings(orgId, includeInactive);
       const properties = buildings.map(propertyFromBuilding);
-      sendJson(res, 200, { data: properties });
+      sendJson(res, 200, { data: properties, total: properties.length });
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to fetch properties", String(e));
     }
@@ -74,9 +74,9 @@ export function registerInventoryRoutes(router: Router) {
   router.get("/people/tenants", withAuthRequired(async ({ res, orgId, query }) => {
     try {
       const includeInactive = first(query, "includeInactive") === "true";
-      const tenants = await listTenants(orgId, includeInactive);
-      const contacts = tenants.map(contactFromTenant);
-      sendJson(res, 200, { data: contacts });
+      const result = await listTenants(orgId, includeInactive);
+      const contacts = result.data.map(contactFromTenant);
+      sendJson(res, 200, { data: contacts, total: result.total });
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to fetch tenant contacts", String(e));
     }
@@ -84,9 +84,9 @@ export function registerInventoryRoutes(router: Router) {
 
   router.get("/people/vendors", withAuthRequired(async ({ res, orgId, prisma }) => {
     try {
-      const vendors = await listContractors(prisma, orgId);
-      const contacts = vendors.map(contactFromContractor);
-      sendJson(res, 200, { data: contacts });
+      const result = await listContractors(prisma, orgId);
+      const contacts = result.data.map(contactFromContractor);
+      sendJson(res, 200, { data: contacts, total: result.total });
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to fetch vendor contacts", String(e));
     }
@@ -94,11 +94,11 @@ export function registerInventoryRoutes(router: Router) {
 
   /* ── Buildings ─────────────────────────────────────────────── */
 
-  router.get("/buildings", withAuthRequired(async ({ res, orgId, query }) => {
+  router.get("/buildings", withAuthRequired(async ({ res, orgId, query, prisma }) => {
     try {
       const includeInactive = first(query, "includeInactive") === "true";
       const buildings = await listBuildings(orgId, includeInactive);
-      sendJson(res, 200, { data: buildings });
+      sendJson(res, 200, { data: buildings, total: buildings.length });
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to fetch buildings", String(e));
     }
@@ -366,7 +366,7 @@ export function registerInventoryRoutes(router: Router) {
       const includeInactive = first(query, "includeInactive") === "true";
       const models = await listAssetModels(orgId, includeInactive);
       const data = models.map((m) => ({ ...m, name: addAssetModelName(m) }));
-      sendJson(res, 200, { data });
+      sendJson(res, 200, { data, total: data.length });
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to fetch asset models", String(e));
     }

@@ -4,7 +4,6 @@ import PageShell from "../../../components/layout/PageShell";
 import PageHeader from "../../../components/layout/PageHeader";
 import PageContent from "../../../components/layout/PageContent";
 import Panel from "../../../components/layout/Panel";
-import { styles } from "../../../styles/managerStyles";
 import { authHeaders } from "../../../lib/api";
 
 function formatCurrency(chf) {
@@ -140,7 +139,7 @@ export default function ManagerChargesPage() {
         <PageContent>
           {error && (
             <Panel style={{ backgroundColor: "#fff0f0", borderColor: "#ffb3b3" }}>
-              <strong style={styles.errorText}>Error:</strong> {error}
+              <strong className="text-err-text">Error:</strong> {error}
               <button onClick={() => setError("")} style={{ marginLeft: 12, fontSize: "0.85em" }}>Dismiss</button>
             </Panel>
           )}
@@ -263,34 +262,34 @@ export default function ManagerChargesPage() {
           )}
 
           {loading ? (
-            <p>Loading charges...</p>
+            <Panel><p className="m-0">Loading charges...</p></Panel>
           ) : leasesWithCharges.length === 0 ? (
             <Panel>
-              <p style={styles.headingFlush}>No active leases with charge data found.</p>
+              <p className="m-0">No active leases with charge data found.</p>
             </Panel>
           ) : activeTab === "SUMMARY" ? (
             /* Summary view */
-            <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.9em" }}>
+            <Panel bodyClassName="p-0">
+            <table className="inline-table">
                 <thead>
-                  <tr style={{ borderBottom: "2px solid #ddd", textAlign: "left" }}>
-                    <th style={{ padding: "8px 6px" }}>Tenant</th>
-                    <th style={{ padding: "8px 6px" }}>Unit</th>
-                    <th style={{ padding: "8px 6px" }}>Building</th>
-                    <th style={{ padding: "8px 6px" }}>Monthly charges (CHF)</th>
-                    <th style={{ padding: "8px 6px" }}>Settlement date</th>
-                    <th style={{ padding: "8px 6px" }}>Actions</th>
+                  <tr>
+                    <th>Tenant</th>
+                    <th>Unit</th>
+                    <th>Building</th>
+                    <th>Monthly charges (CHF)</th>
+                    <th>Settlement date</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {leasesWithCharges.map((l) => (
-                    <tr key={l.id} style={{ borderBottom: "1px solid #eee" }}>
-                      <td style={{ padding: "8px 6px" }}>{l.tenantName}</td>
-                      <td style={{ padding: "8px 6px" }}>{l.unit?.unitNumber || "—"}</td>
-                      <td style={{ padding: "8px 6px" }}>{l.unit?.building?.name || l.unit?.building?.address || "—"}</td>
-                      <td style={{ padding: "8px 6px", fontWeight: 600 }}>{formatCurrency(l.chargesTotalChf)}</td>
-                      <td style={{ padding: "8px 6px" }}>{l.chargesSettlementDate || "—"}</td>
-                      <td style={{ padding: "8px 6px" }}>
+                    <tr key={l.id}>
+                      <td className="cell-bold">{l.tenantName}</td>
+                      <td>{l.unit?.unitNumber || "—"}</td>
+                      <td>{l.unit?.building?.name || l.unit?.building?.address || "—"}</td>
+                      <td className="cell-bold">{formatCurrency(l.chargesTotalChf)}</td>
+                      <td>{l.chargesSettlementDate || "—"}</td>
+                      <td>
                         <button
                           onClick={() => startEdit(l)}
                           style={{
@@ -306,33 +305,33 @@ export default function ManagerChargesPage() {
                   ))}
                 </tbody>
               </table>
-            </div>
+            </Panel>
           ) : (
             /* Itemized view */
             itemizedRows.length === 0 ? (
               <Panel>
-                <p style={styles.headingFlush}>No itemized charge data found.</p>
+                <p className="m-0">No itemized charge data found.</p>
               </Panel>
             ) : (
-              <div style={{ overflowX: "auto" }}>
-                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.9em" }}>
+              <Panel bodyClassName="p-0">
+              <table className="inline-table">
                   <thead>
-                    <tr style={{ borderBottom: "2px solid #ddd", textAlign: "left" }}>
-                      <th style={{ padding: "8px 6px" }}>Tenant</th>
-                      <th style={{ padding: "8px 6px" }}>Unit</th>
-                      <th style={{ padding: "8px 6px" }}>Item name</th>
-                      <th style={{ padding: "8px 6px" }}>Mode</th>
-                      <th style={{ padding: "8px 6px" }}>Amount (CHF)</th>
-                      <th style={{ padding: "8px 6px" }}>Actions</th>
+                    <tr>
+                      <th>Tenant</th>
+                      <th>Unit</th>
+                      <th>Item name</th>
+                      <th>Mode</th>
+                      <th>Amount (CHF)</th>
+                      <th>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {itemizedRows.map((row, idx) => (
-                      <tr key={`${row.leaseId}-${idx}`} style={{ borderBottom: "1px solid #eee" }}>
-                        <td style={{ padding: "8px 6px" }}>{row.tenantName}</td>
-                        <td style={{ padding: "8px 6px" }}>{row.unitNumber}</td>
-                        <td style={{ padding: "8px 6px" }}>{row.label}</td>
-                        <td style={{ padding: "8px 6px" }}>
+                      <tr key={`${row.leaseId}-${idx}`}>
+                        <td className="cell-bold">{row.tenantName}</td>
+                        <td>{row.unitNumber}</td>
+                        <td>{row.label}</td>
+                        <td>
                           <span style={{
                             display: "inline-block", padding: "2px 8px", borderRadius: 10,
                             fontSize: "0.8em", fontWeight: 600,
@@ -343,8 +342,8 @@ export default function ManagerChargesPage() {
                             {row.mode}
                           </span>
                         </td>
-                        <td style={{ padding: "8px 6px", fontWeight: 600 }}>{formatCurrency(row.amountChf)}</td>
-                        <td style={{ padding: "8px 6px" }}>
+                        <td className="cell-bold">{formatCurrency(row.amountChf)}</td>
+                        <td>
                           <button
                             onClick={() => {
                               const lease = leases.find((l) => l.id === row.leaseId);
@@ -363,7 +362,7 @@ export default function ManagerChargesPage() {
                     ))}
                   </tbody>
                 </table>
-              </div>
+              </Panel>
             )
           )}
         </PageContent>

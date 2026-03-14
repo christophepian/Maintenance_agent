@@ -125,7 +125,7 @@ Maintenance_Agent/
 │   └── migrations/      # 34 dirs — never edit past migrations
 ├── apps/web/pages/      # 185 pages (UI + API proxies)
 ├── apps/web/styles/
-│   └── managerStyles.js # Manager UI styles — locked (F8)
+│   └── globals.css       # Tailwind + CSS variables + @layer components (F8)
 ├── packages/api-client/ # Typed DTOs + fetch methods
 ├── infra/               # Docker — PostgreSQL 16
 ├── docs/
@@ -163,6 +163,6 @@ Maintenance_Agent/
 - Do not call Prisma directly from routes or services — use repositories
 - Do not define inline include trees — use canonical constants
 - Do not use `prisma db push` under any circumstances
-- Do not add inline styles to manager pages — use `managerStyles.js`
+- Do not add inline styles to manager pages — use Tailwind classes or `@layer components` in globals.css
 - Do not change `maybeRequireManager` to allow writes — use `requireRole('MANAGER')` for mutations
 - Do not accept `tenantId` as a query param on tenant-portal routes — use `requireTenantSession()`

@@ -8,8 +8,6 @@ import PageContent from "../../../components/layout/PageContent";
 import Panel from "../../../components/layout/Panel";
 import Section from "../../../components/layout/Section";
 import UndoToast, { useUndoToast } from "../../../components/ui/UndoToast";
-import { styles } from "../../../styles/managerStyles";
-
 /**
  * Reusable action dropdown button — renders an "Actions ▾" pill that opens
  * a positioned dropdown with a list of actions.
@@ -493,35 +491,34 @@ export default function LeaseTemplatesPage() {
             ) : error ? (
               <p className="text-sm text-red-600">{error}</p>
             ) : templates.length === 0 ? (
-              <div style={styles.emptyState}><p style={styles.emptyStateText}>No lease templates found. Click &quot;+ New Template&quot; to create one.</p></div>
+              <div className="empty-state"><p className="empty-state-text">No lease templates found. Click &quot;+ New Template&quot; to create one.</p></div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-slate-200 text-sm">
-                  <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+              <table className="inline-table">
+                  <thead>
                     <tr>
-                      <th className="px-4 py-3">Template Name</th>
-                      <th className="px-4 py-3">Building</th>
-                      <th className="px-4 py-3">Landlord</th>
-                      <th className="px-4 py-3">Created</th>
-                      <th className="px-4 py-3 text-right">Action</th>
+                      <th>Template Name</th>
+                      <th>Building</th>
+                      <th>Landlord</th>
+                      <th>Created</th>
+                      <th className="text-right">Action</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100 bg-white">
+                  <tbody>
                     {templates.map((t) => (
                       <tr key={t.id}>
-                        <td className="px-4 py-3 font-medium text-slate-900">
+                        <td className="cell-bold">
                           {t.templateName || "Unnamed template"}
                         </td>
-                        <td className="px-4 py-3 text-slate-700">
+                        <td>
                           {t.unit?.building?.name || "Global"}
                         </td>
-                        <td className="px-4 py-3 text-slate-700">
+                        <td>
                           {t.landlordName || "—"}
                         </td>
-                        <td className="px-4 py-3 text-xs text-slate-500">
+                        <td>
                           {formatDate(t.createdAt)}
                         </td>
-                        <td className="px-4 py-3 text-right">
+                        <td className="text-right">
                           <ActionDropdown actions={[
                             { label: "📄 View Template", onClick: () => router.push(`/manager/leases/${t.id}`) },
                             { label: "🗑️ Delete", onClick: () => handleDeleteTemplate(t.id, t.templateName), className: "text-red-600" },
@@ -531,7 +528,6 @@ export default function LeaseTemplatesPage() {
                     ))}
                   </tbody>
                 </table>
-              </div>
             )}
           </Panel>
         </PageContent>

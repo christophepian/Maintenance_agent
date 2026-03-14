@@ -32,14 +32,15 @@ Updated: 2026-03-12 (frontend-debt-cleanup slice)
 | /manager/properties | UI — redirect | N/A | — | 2026-03-08 | active (→ /admin-inventory) |
 | /manager/emails | UI — list | N/A | yes | 2026-03-04 | suspect (dev-only, not in prod nav) |
 | /manager/reports | UI — coming-soon | N/A | — | 2026-03-12 | active (coming-soon stub) |
+| /manager/inventory | UI — tabbed hub | N/A | yes | 2026-03-12 | active |
 | /manager/rfps | UI — list | N/A | yes | 2026-03-08 | active |
 | /manager/settings | UI — form | N/A | — | 2026-03-04 | active |
-| /manager/legal | UI — hub | N/A | — | 2026-03-08 | active |
+| /manager/legal | UI — tabbed hub | N/A | yes | 2026-03-12 | active |
 | /manager/legal/depreciation | UI — list | N/A | yes | 2026-03-08 | active |
 | /manager/legal/evaluations | UI — list | N/A | yes | 2026-03-08 | active |
 | /manager/legal/mappings | UI — list | N/A | yes | 2026-03-06 | active |
 | /manager/legal/rules | UI — list | N/A | yes | 2026-03-08 | active |
-| /manager/finance/index | UI — hub | N/A | — | 2026-03-08 | active |
+| /manager/finance/index | UI — tabbed hub | N/A | yes | 2026-03-12 | active |
 | /manager/finance/billing-entities | UI — list | N/A | yes (via component) | 2026-02-12 | active |
 | /manager/finance/charges | UI — list | N/A | yes | 2026-03-08 | active |
 | /manager/finance/expenses | UI — list | N/A | yes | 2026-03-08 | active |
@@ -49,7 +50,7 @@ Updated: 2026-03-12 (frontend-debt-cleanup slice)
 | /manager/leases/index | UI — list | N/A | yes | 2026-03-02 | active |
 | /manager/leases/[id] | UI — detail | N/A | yes | 2026-03-08 | active |
 | /manager/leases/templates | UI — list | N/A | yes | 2026-03-04 | active |
-| /manager/people/index | UI — hub | N/A | — | 2026-02-08 | active |
+| /manager/people/index | UI — tabbed hub | N/A | yes | 2026-03-12 | active |
 | /manager/people/tenants | UI — list | N/A | yes | 2026-03-09 | active |
 | /manager/people/tenants/[id] | UI — detail | N/A | yes | 2026-03-08 | active |
 | /manager/people/vendors | UI — list | N/A | yes | 2026-03-09 | active |
@@ -249,6 +250,21 @@ Migrated in frontend-debt-cleanup slice (2026-03-12):
 | /contractor/index | ✅ | ✅ | ✅ | ✅ |
 | /owner/index | ✅ | ✅ | ✅ | ✅ |
 
+#### Tabbed Hubs (expected: tab strip + inline data per tab + "Open full page →" link)
+
+Hub pages that render summary tables inline per tab instead of linking out to sub-pages.
+Pattern: `useState` for active tab, `useEffect` + `fetch` on mount, CSS component classes (`.tab-strip`, `.tab-btn`, `.tab-panel`, `.inline-table`, etc.) defined in `globals.css` `@layer components`, capped at ~20 rows with "View all →" overflow link.
+
+| Page | Tabs | All inline | Loading | Empty | Conforms |
+|------|------|-----------|---------|-------|----------|
+| /manager/requests | 4 (Overview, Active, Pending review, Completed) | ✅ | ✅ | ✅ | ✅ |
+| /manager/finance/index | 4 (Payments, Expenses, Charges, Invoices) | ✅ | ✅ | ✅ | ✅ |
+| /manager/leases/index | 4 (Active, Drafts, Templates, Archive) | ✅ | ✅ | ✅ | ✅ |
+| /manager/people/index | 3 (Tenants, Vendors, Owners) | ✅ (Owners = stub) | ✅ | ✅ | ✅ |
+| /manager/inventory | 4 (Buildings, Units, Assets, Depreciation) | ✅ | ✅ | ✅ | ✅ |
+| /manager/legal | 4 (Rules, Evaluations, Category mappings, Sources) | ✅ | ✅ | ✅ | ✅ |
+| /manager/settings | 4 (Organisation, Buildings, Notifications, Integrations) | ✅ (Notif/Integ = stubs) | ✅ | ✅ | ✅ |
+
 ---
 
 ## Empty State Style Audit (Manager Pages)
@@ -257,13 +273,12 @@ All manager list pages already implement empty states. Current styling approache
 
 | Pattern | Pages using it | Notes |
 |---------|---------------|-------|
-| Tailwind `className="text-sm text-slate-500"` | requests, leases, templates, legal/*, rfps, emails, people/*, vacancies | Most common — lightweight inline text |
-| `managerStyles` via `style={styles.headingFlush}` | finance/charges, finance/expenses | Uses shared style object |
+| CSS class `.empty-state` + `.empty-state-text` | All manager hub pages | Standard component class in globals.css |
+| Tailwind `className="text-sm text-slate-500"` | requests, rfps, emails | Lightweight inline text |
 | `Panel` wrapper + Tailwind text | depreciation, mappings | Wraps empty text in a Panel card |
-| `className="bg-white rounded-lg border p-8 text-center"` | leases/index | Full card empty state with CTA |
 
-**Recommendation:** Standardize all manager list page empty states to use `styles.emptyState` + `styles.emptyStateText` from managerStyles.js for consistency. This requires adding those two style definitions to managerStyles.js and updating pages that use ad-hoc patterns.
+**Status:** All manager empty states standardized via `.empty-state` + `.empty-state-text` component classes (migrated from managerStyles.js, 2026-03-14).
 
 ---
 
-<!-- reviewed 2026-03-12 -->
+<!-- reviewed 2026-03-14 -->
