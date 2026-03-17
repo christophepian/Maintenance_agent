@@ -22,6 +22,17 @@ export function authHeaders() {
 }
 
 /**
+ * Build owner auth headers from localStorage.
+ * SSR-safe: returns empty object on server.
+ */
+export function ownerAuthHeaders() {
+  if (typeof window === "undefined") return {};
+  const token = localStorage.getItem("ownerToken");
+  if (token) return { Authorization: `Bearer ${token}` };
+  return {};
+}
+
+/**
  * Build tenant auth headers from localStorage.
  * SSR-safe: returns empty object on server.
  */

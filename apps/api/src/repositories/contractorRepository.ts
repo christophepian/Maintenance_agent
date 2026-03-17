@@ -36,3 +36,52 @@ export async function verifyOrgOwnership(
   if (!contractor || contractor.orgId !== orgId) return null;
   return contractor;
 }
+
+/**
+ * Find a contractor by ID, scoped to org.
+ * Returns the full record (including serviceCategories for category matching).
+ */
+export async function findContractorById(
+  prisma: PrismaClient,
+  contractorId: string,
+  orgId: string,
+) {
+  const contractor = await prisma.contractor.findUnique({
+    where: { id: contractorId },
+  });
+  if (!contractor || contractor.orgId !== orgId) return null;
+  return contractor;
+}
+
+/**
+ * Parse the JSON serviceCategories string into an array.
+ * Returns empty array on parse failure or missing data.
+ */
+export function parseServiceCategories(contractor: { serviceCategories: string }): string[] {
+  try {
+    const cats = JSON.parse(contractor.serviceCategories);
+    return Array.isArray(cats) ? cats : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Find multiple contractors by IDs, scoped to org.
+ * Returns only active contractors that belong to the org.
+ * Used for bulk validation in re-invite flows.
+ */
+export async function findContractorsByIds(
+  prisma: PrismaClient,
+  contractorIds: string[],
+  orgId: string,
+) {
+  return prisma.contractor.findMany({
+    where: {
+      id: { in: contractorIds },
+      orgId,
+      isActive: true,
+    },
+    select: { id: true, name: true },
+  });
+}

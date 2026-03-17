@@ -8,6 +8,20 @@ import PageContent from "../../../components/layout/PageContent";
 import Panel from "../../../components/layout/Panel";
 import Section from "../../../components/layout/Section";
 import UndoToast, { useUndoToast } from "../../../components/ui/UndoToast";
+import SortableHeader from "../../../components/SortableHeader";
+import { useTableSort, clientSort } from "../../../lib/tableUtils";
+
+const TEMPLATE_SORT_FIELDS = ["templateName", "building", "landlord", "createdAt"];
+
+function templateFieldExtractor(t, field) {
+  switch (field) {
+    case "templateName": return (t.templateName || "").toLowerCase();
+    case "building": return (t.unit?.building?.name || "Global").toLowerCase();
+    case "landlord": return (t.landlordName || "").toLowerCase();
+    case "createdAt": return t.createdAt || "";
+    default: return "";
+  }
+}
 /**
  * Reusable action dropdown button — renders an "Actions ▾" pill that opens
  * a positioned dropdown with a list of actions.
@@ -62,6 +76,8 @@ export default function LeaseTemplatesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const toast = useUndoToast();
+  const { sortField, sortDir, handleSort } = useTableSort(router, TEMPLATE_SORT_FIELDS, { defaultField: "templateName", defaultDir: "asc" });
+  const sortedTemplates = useMemo(() => clientSort(templates, sortField, sortDir, templateFieldExtractor), [templates, sortField, sortDir]);
 
   // Buildings that don't yet have a template (one template per building)
   const availableBuildings = useMemo(() => {
@@ -107,6 +123,19 @@ export default function LeaseTemplatesPage() {
       .then((json) => setBuildings(json.data || []))
       .catch(() => {});
   }, []);
+
+  // Deep-link: auto-open create panel when navigated from vacancies with ?buildingId=X&autoCreate=true
+  const autoCreateFiredRef = useRef(false);
+  useEffect(() => {
+    if (!router.isReady || buildings.length === 0 || autoCreateFiredRef.current) return;
+    const { buildingId, autoCreate } = router.query;
+    if (buildingId && autoCreate === 'true') {
+      autoCreateFiredRef.current = true;
+      onScratchBuildingChange(buildingId);
+      setShowCreate(true);
+      setCreateMode('scratch');
+    }
+  }, [router.isReady, router.query, buildings]);
 
   // Load templates (optionally filtered by building)
   const fetchTemplates = useCallback(async () => {
@@ -496,15 +525,15 @@ export default function LeaseTemplatesPage() {
               <table className="inline-table">
                   <thead>
                     <tr>
-                      <th>Template Name</th>
-                      <th>Building</th>
-                      <th>Landlord</th>
-                      <th>Created</th>
+                      <SortableHeader label="Template Name" field="templateName" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
+                      <SortableHeader label="Building" field="building" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
+                      <SortableHeader label="Landlord" field="landlord" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
+                      <SortableHeader label="Created" field="createdAt" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
                       <th className="text-right">Action</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {templates.map((t) => (
+                    {sortedTemplates.map((t) => (
                       <tr key={t.id}>
                         <td className="cell-bold">
                           {t.templateName || "Unnamed template"}

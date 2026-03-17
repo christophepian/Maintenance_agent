@@ -114,6 +114,20 @@ export type AssetType = "APPLIANCE" | "FIXTURE" | "FINISH" | "STRUCTURAL" | "SYS
 
 export type AssetInterventionType = "REPAIR" | "REPLACEMENT";
 
+export type RfpStatus = "DRAFT" | "OPEN" | "CLOSED" | "AWARDED" | "CANCELLED" | "PENDING_OWNER_APPROVAL";
+
+export type RfpQuoteStatus = "SUBMITTED" | "AWARDED" | "REJECTED";
+
+export type RfpInviteStatus = "INVITED" | "DECLINED" | "RESPONDED";
+
+export type LegalObligation =
+  | "NONE"
+  | "UNKNOWN"
+  | "MAINTENANCE_OBLIGATION"
+  | "OWNER_OBLIGATION"
+  | "TENANT_OBLIGATION"
+  | "SHARED";
+
 export type ExpenseCategory =
   | "MAINTENANCE"
   | "UTILITIES"
@@ -1044,6 +1058,67 @@ function buildInvoicesApi(opts: ClientOptions) {
   };
 }
 
+/* ─── Contractor RFP DTOs ───────────────────────────────────── */
+
+export interface ContractorRfpRequestSummaryDTO {
+  id: string;
+  requestNumber: number;
+  description: string;
+  category: string | null;
+  createdAt: string;
+  attachmentCount: number;
+}
+
+export interface ContractorRfpDTO {
+  id: string;
+  category: string;
+  legalObligation: LegalObligation;
+  status: RfpStatus;
+  inviteCount: number;
+  deadlineAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  postalCode: string | null;
+  buildingName: string | null;
+  unitNumber: string | null;
+  request: ContractorRfpRequestSummaryDTO | null;
+  isInvited: boolean;
+  quoteCount: number;
+  myQuote: RfpQuoteDTO | null;
+}
+
+export interface RfpQuoteDTO {
+  id: string;
+  rfpId: string;
+  contractorId: string;
+  amountCents: number;
+  currency: string;
+  vatIncluded: boolean;
+  estimatedDurationDays: number | null;
+  earliestAvailability: string | null;
+  lineItems: any;
+  workPlan: string | null;
+  assumptions: string | null;
+  validUntil: string | null;
+  notes: string | null;
+  status: RfpQuoteStatus;
+  submittedAt: string;
+  contractor?: { id: string; name: string };
+}
+
+export interface SubmitQuoteInput {
+  amountCents: number;
+  currency?: string;
+  vatIncluded?: boolean;
+  estimatedDurationDays?: number;
+  earliestAvailability?: string;
+  lineItems?: Array<{ description: string; amountCents: number }>;
+  workPlan: string;
+  assumptions?: string;
+  validUntil?: string;
+  notes?: string;
+}
+
 function buildContractorApi(opts: ClientOptions) {
   return {
     jobs: (params?: PaginationParams & { contractorId?: string; view?: "summary" | "full" }) =>
@@ -1057,6 +1132,94 @@ function buildContractorApi(opts: ClientOptions) {
 
     getInvoice: (id: string) =>
       request<InvoiceDTO>(opts, "GET", `/contractor/invoices/${id}`),
+
+    rfps: (params?: PaginationParams & { contractorId?: string; status?: RfpStatus }) =>
+      request<PaginatedList<ContractorRfpDTO>>(opts, "GET", "/contractor/rfps", undefined, params as Record<string, string | number | boolean | undefined>),
+
+    getRfp: (id: string, params?: { contractorId?: string }) =>
+      request<{ data: ContractorRfpDTO }>(opts, "GET", `/contractor/rfps/${id}`, undefined, params as Record<string, string | number | boolean | undefined>),
+
+    submitQuote: (rfpId: string, body: SubmitQuoteInput, params?: { contractorId?: string }) =>
+      request<{ data: RfpQuoteDTO }>(opts, "POST", `/contractor/rfps/${rfpId}/quotes`, body, params as Record<string, string | number | boolean | undefined>),
+  };
+}
+
+/* ─── Manager / Owner RFP DTOs ──────────────────────────────── */
+
+export interface ManagerRfpInviteDTO {
+  id: string;
+  rfpId: string;
+  contractorId: string;
+  status: string;
+  createdAt: string;
+  contractor?: { id: string; name: string; phone: string; email: string };
+}
+
+export interface ManagerRfpQuoteDTO {
+  id: string;
+  rfpId: string;
+  contractorId: string;
+  amountCents: number;
+  currency: string;
+  vatIncluded: boolean;
+  estimatedDurationDays: number | null;
+  earliestAvailability: string | null;
+  lineItems: any;
+  workPlan: string | null;
+  assumptions: string | null;
+  validUntil: string | null;
+  notes: string | null;
+  status: RfpQuoteStatus;
+  submittedAt: string;
+  contractor?: { id: string; name: string };
+}
+
+export interface ManagerRfpDTO {
+  id: string;
+  orgId: string;
+  buildingId: string;
+  unitId: string | null;
+  requestId: string | null;
+  category: string;
+  legalObligation: LegalObligation;
+  status: RfpStatus;
+  inviteCount: number;
+  deadlineAt: string | null;
+  awardedContractorId: string | null;
+  awardedQuoteId: string | null;
+  createdAt: string;
+  updatedAt: string;
+  building?: { id: string; name: string; address: string };
+  unit?: { id: string; unitNumber: string } | null;
+  awardedContractor?: { id: string; name: string } | null;
+  request?: { id: string; requestNumber: number; description: string; category: string | null; createdAt: string; attachmentCount: number } | null;
+  invites: ManagerRfpInviteDTO[];
+  quotes: ManagerRfpQuoteDTO[];
+  quoteCount: number;
+}
+
+export interface AwardQuoteInput {
+  quoteId: string;
+}
+
+export interface AwardQuoteResult {
+  rfpId: string;
+  quoteId: string;
+  status: "AWARDED" | "PENDING_OWNER_APPROVAL";
+  awardedContractorId: string | null;
+  ownerApprovalRequired: boolean;
+}
+
+function buildRfpsApi(opts: ClientOptions) {
+  return {
+    list: (params?: PaginationParams & { status?: RfpStatus }) =>
+      request<PaginatedList<ManagerRfpDTO>>(opts, "GET", "/rfps", undefined, params as Record<string, string | number | boolean | undefined>),
+
+    get: (id: string) =>
+      request<{ data: ManagerRfpDTO }>(opts, "GET", `/rfps/${id}`),
+
+    awardQuote: (rfpId: string, body: AwardQuoteInput) =>
+      request<{ data: AwardQuoteResult }>(opts, "POST", `/rfps/${rfpId}/award`, body),
   };
 }
 
@@ -1579,12 +1742,130 @@ function buildFinancialsApi(opts: ClientOptions) {
   };
 }
 
+/* ═══════════════════════════════════════════════════════════════
+ * Scheduling (Slice 6: appointment handshake)
+ * ═══════════════════════════════════════════════════════════════ */
+
+export interface AppointmentSlotDTO {
+  id: string;
+  jobId: string;
+  startTime: string;
+  endTime: string;
+  status: "PROPOSED" | "ACCEPTED" | "DECLINED";
+  respondedAt: string | null;
+  createdAt: string;
+}
+
+export interface ProposeSlotsResult {
+  slots: AppointmentSlotDTO[];
+  schedulingExpiresAt: string;
+}
+
+function buildSchedulingApi(opts: ClientOptions) {
+  return {
+    /** Contractor proposes appointment slots for a job. */
+    proposeSlots: (jobId: string, contractorId: string, slots: { startTime: string; endTime: string }[]) =>
+      request<{ data: ProposeSlotsResult }>(
+        opts, "POST", `/contractor/jobs/${jobId}/slots`, { slots },
+        { contractorId },
+      ),
+
+    /** Contractor lists slots for a job. */
+    listContractorSlots: (jobId: string, contractorId: string) =>
+      request<{ data: AppointmentSlotDTO[] }>(
+        opts, "GET", `/contractor/jobs/${jobId}/slots`,
+        undefined, { contractorId },
+      ),
+
+    /** Tenant views proposed slots for a request. */
+    listTenantSlots: (requestId: string) =>
+      request<{ data: AppointmentSlotDTO[] }>(
+        opts, "GET", `/tenant-portal/requests/${requestId}/slots`,
+      ),
+
+    /** Tenant accepts a proposed slot. */
+    acceptSlot: (slotId: string) =>
+      request<{ data: AppointmentSlotDTO }>(
+        opts, "POST", `/tenant-portal/slots/${slotId}/accept`, {},
+      ),
+
+    /** Tenant declines a proposed slot. */
+    declineSlot: (slotId: string) =>
+      request<{ data: AppointmentSlotDTO }>(
+        opts, "POST", `/tenant-portal/slots/${slotId}/decline`, {},
+      ),
+  };
+}
+
 function buildDevApi(opts: ClientOptions) {
   return {
     /** Trigger background job: process expired selection timeouts + attachment retention. */
     runBackgroundJobs: () =>
       request<{ timeoutsProcessed: number; attachmentsDeleted: number }>(
         opts, "POST", "/__dev/rental/run-jobs", {},
+      ),
+  };
+}
+
+/* ═══════════════════════════════════════════════════════════════
+ * Completion & Ratings (Slice 7: job-completion-ratings)
+ * ═══════════════════════════════════════════════════════════════ */
+
+export interface JobRatingDTO {
+  id: string;
+  jobId: string;
+  raterRole: "CONTRACTOR" | "TENANT";
+  score: number;
+  comment: string | null;
+  createdAt: string;
+  job?: {
+    id: string;
+    requestId: string;
+    contractorId: string;
+    description: string | null;
+    building: string | null;
+    unit: string | null;
+  } | null;
+}
+
+export interface ContractorRatingsResult {
+  data: JobRatingDTO[];
+  pagination: { total: number; limit: number; offset: number };
+}
+
+function buildCompletionApi(opts: ClientOptions) {
+  return {
+    /** Contractor marks a job as completed. */
+    contractorComplete: (jobId: string, contractorId: string, body?: { actualCost?: number; completedAt?: string; notes?: string }) =>
+      request<{ data: any }>(
+        opts, "POST", `/contractor/jobs/${jobId}/complete`, body ?? {},
+        { contractorId },
+      ),
+
+    /** Contractor submits a rating for a completed job. */
+    contractorRate: (jobId: string, contractorId: string, body: { score: number; comment?: string }) =>
+      request<{ data: JobRatingDTO }>(
+        opts, "POST", `/contractor/jobs/${jobId}/rate`, body,
+        { contractorId },
+      ),
+
+    /** Tenant confirms job completion. */
+    tenantConfirm: (jobId: string) =>
+      request<{ data: any }>(
+        opts, "POST", `/tenant-portal/jobs/${jobId}/confirm`, {},
+      ),
+
+    /** Tenant submits a rating for a completed job. */
+    tenantRate: (jobId: string, body: { score: number; comment?: string }) =>
+      request<{ data: JobRatingDTO }>(
+        opts, "POST", `/tenant-portal/jobs/${jobId}/rate`, body,
+      ),
+
+    /** Get contractor rating history (manager/owner read). */
+    getContractorRatings: (contractorId: string, opts2?: { limit?: number; offset?: number }) =>
+      request<ContractorRatingsResult>(
+        opts, "GET", `/contractors/${contractorId}/ratings`,
+        undefined, opts2 as Record<string, any>,
       ),
   };
 }
@@ -1599,6 +1880,7 @@ export interface ApiClient {
   jobs: ReturnType<typeof buildJobsApi>;
   invoices: ReturnType<typeof buildInvoicesApi>;
   contractor: ReturnType<typeof buildContractorApi>;
+  rfps: ReturnType<typeof buildRfpsApi>;
   leases: ReturnType<typeof buildLeasesApi>;
   signatureRequests: ReturnType<typeof buildSignatureRequestsApi>;
   config: ReturnType<typeof buildConfigApi>;
@@ -1612,6 +1894,8 @@ export interface ApiClient {
   rentals: ReturnType<typeof buildRentalsApi>;
   rentEstimation: ReturnType<typeof buildRentEstimationApi>;
   financials: ReturnType<typeof buildFinancialsApi>;
+  scheduling: ReturnType<typeof buildSchedulingApi>;
+  completion: ReturnType<typeof buildCompletionApi>;
   dev: ReturnType<typeof buildDevApi>;
 }
 
@@ -1632,6 +1916,7 @@ export function createApiClient(
     jobs: buildJobsApi(opts),
     invoices: buildInvoicesApi(opts),
     contractor: buildContractorApi(opts),
+    rfps: buildRfpsApi(opts),
     leases: buildLeasesApi(opts),
     signatureRequests: buildSignatureRequestsApi(opts),
     config: buildConfigApi(opts),
@@ -1645,6 +1930,8 @@ export function createApiClient(
     rentals: buildRentalsApi(opts),
     rentEstimation: buildRentEstimationApi(opts),
     financials: buildFinancialsApi(opts),
+    scheduling: buildSchedulingApi(opts),
+    completion: buildCompletionApi(opts),
     dev: buildDevApi(opts),
   };
 }

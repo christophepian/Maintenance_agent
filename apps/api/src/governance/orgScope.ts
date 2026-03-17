@@ -108,6 +108,40 @@ export async function resolveLeaseOrg(
   return { resolved: true, orgId: row.orgId, via: "lease" };
 }
 
+// ────────────── Resolve Appliance → orgId ────────────────────
+
+/**
+ * Appliance has a direct orgId column.
+ */
+export async function resolveApplianceOrg(
+  prisma: PrismaClient,
+  applianceId: string,
+): Promise<OrgResolution> {
+  const row = await prisma.appliance.findUnique({
+    where: { id: applianceId },
+    select: { orgId: true },
+  });
+  if (!row) return { resolved: false, orgId: null, via: "none" };
+  return { resolved: true, orgId: row.orgId, via: "appliance" };
+}
+
+// ────────────── Resolve Asset → orgId ────────────────────────
+
+/**
+ * Asset has a direct orgId column.
+ */
+export async function resolveAssetOrg(
+  prisma: PrismaClient,
+  assetId: string,
+): Promise<OrgResolution> {
+  const row = await prisma.asset.findUnique({
+    where: { id: assetId },
+    select: { orgId: true },
+  });
+  if (!row) return { resolved: false, orgId: null, via: "none" };
+  return { resolved: true, orgId: row.orgId, via: "asset" };
+}
+
 // ────────────── Assertion helper ─────────────────────────────
 
 /**

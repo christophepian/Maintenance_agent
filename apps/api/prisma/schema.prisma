@@ -46,12 +46,25 @@ enum AssetType {
   OTHER
 }
 
+enum SlotStatus {
+  PROPOSED
+  ACCEPTED
+  DECLINED
+}
+
 enum RfpStatus {
   DRAFT
   OPEN
   CLOSED
   AWARDED
   CANCELLED
+  PENDING_OWNER_APPROVAL
+}
+
+enum RfpQuoteStatus {
+  SUBMITTED
+  AWARDED
+  REJECTED
 }
 
 enum RfpInviteStatus {
@@ -141,6 +154,8 @@ model Org {
   legalCategoryMappings LegalCategoryMapping[]
   assets                Asset[]
   rfps                  Rfp[]
+  appointmentSlots      AppointmentSlot[]
+  jobRatings             JobRating[]
 }
 
 model OrgConfig {
@@ -231,6 +246,7 @@ model Request {
   unit                 Unit?          @relation(fields: [unitId], references: [id])
   events               RequestEvent[]
   attachments          MaintenanceAttachment[]
+  rfps                 Rfp[]
 }
 
 model MaintenanceAttachment {
@@ -500,21 +516,25 @@ model Occupancy {
 }
 
 model Job {
-  id           String     @id @default(uuid())
-  orgId        String
-  requestId    String     @unique
-  contractorId String
-  status       JobStatus  @default(PENDING)
-  actualCost   Int?
-  startedAt    DateTime?
-  completedAt  DateTime?
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-  invoices     Invoice[]
-  interventions AssetIntervention[]
-  contractor   Contractor @relation(fields: [contractorId], references: [id], onDelete: Cascade)
-  org          Org        @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  request      Request    @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  id                  String     @id @default(uuid())
+  orgId               String
+  requestId           String     @unique
+  contractorId        String
+  status              JobStatus  @default(PENDING)
+  actualCost          Int?
+  startedAt           DateTime?
+  completedAt         DateTime?
+  schedulingExpiresAt DateTime?
+  confirmedAt         DateTime?
+  createdAt           DateTime   @default(now())
+  updatedAt           DateTime   @updatedAt
+  invoices            Invoice[]
+  interventions       AssetIntervention[]
+  appointmentSlots    AppointmentSlot[]
+  ratings             JobRating[]
+  contractor          Contractor @relation(fields: [contractorId], references: [id], onDelete: Cascade)
+  org                 Org        @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  request             Request    @relation(fields: [requestId], references: [id], onDelete: Cascade)
 
   @@index([orgId])
   @@index([contractorId])
@@ -656,6 +676,11 @@ enum RequestEventType {
   TENANT_SELECTED
 }
 
+enum RaterRole {
+  CONTRACTOR
+  TENANT
+}
+
 enum JobStatus {
   PENDING
   IN_PROGRESS
@@ -687,6 +712,8 @@ enum Role {
   CONTRACTOR
   MANAGER
   OWNER
+  VENDOR
+  INSURANCE
 }
 
 enum RequestStatus {
@@ -754,6 +781,15 @@ enum NotificationEventType {
   LEASE_READY_TO_SIGN
   LEASE_SIGNED
   APPLICATION_SUBMITTED
+  QUOTE_SUBMITTED
+  QUOTE_AWARDED
+  QUOTE_REJECTED
+  SLOT_PROPOSED
+  SLOT_ACCEPTED
+  SLOT_DECLINED
+  SCHEDULING_ESCALATED
+  JOB_CONFIRMED
+  RATING_SUBMITTED
 }
 
 // ==========================================
@@ -1479,6 +1515,7 @@ model Rfp {
   inviteCount         Int             @default(3)
   deadlineAt          DateTime?
   awardedContractorId String?
+  awardedQuoteId      String?
   createdAt           DateTime        @default(now())
   updatedAt           DateTime        @updatedAt
 
@@ -1486,6 +1523,7 @@ model Rfp {
   building          Building    @relation(fields: [buildingId], references: [id], onDelete: Cascade)
   unit              Unit?       @relation(fields: [unitId], references: [id], onDelete: SetNull)
   awardedContractor Contractor? @relation("AwardedContractor", fields: [awardedContractorId], references: [id], onDelete: SetNull)
+  request           Request?    @relation(fields: [requestId], references: [id], onDelete: SetNull)
   invites           RfpInvite[]
   quotes            RfpQuote[]
 
@@ -1511,13 +1549,22 @@ model RfpInvite {
 }
 
 model RfpQuote {
-  id           String   @id @default(uuid())
-  rfpId        String
-  contractorId String
-  amountCents  Int
-  notes        String?
-  submittedAt  DateTime @default(now())
-  createdAt    DateTime @default(now())
+  id                    String    @id @default(uuid())
+  rfpId                 String
+  contractorId          String
+  amountCents           Int
+  currency              String    @default("CHF")
+  vatIncluded           Boolean   @default(true)
+  estimatedDurationDays Int?
+  earliestAvailability  DateTime?
+  lineItems             Json?     // Array of { description, amountCents }
+  workPlan              String?   // Narrative work plan
+  assumptions           String?   // Assumptions / exclusions
+  validUntil            DateTime?
+  notes                 String?
+  status                RfpQuoteStatus @default(SUBMITTED)
+  submittedAt           DateTime  @default(now())
+  createdAt             DateTime  @default(now())
 
   rfp        Rfp        @relation(fields: [rfpId], references: [id], onDelete: Cascade)
   contractor Contractor @relation(fields: [contractorId], references: [id], onDelete: Cascade)
@@ -1525,4 +1572,38 @@ model RfpQuote {
   @@unique([rfpId, contractorId])
   @@index([rfpId])
   @@index([contractorId])
+}
+
+model AppointmentSlot {
+  id          String     @id @default(uuid())
+  orgId       String
+  jobId       String
+  startTime   DateTime
+  endTime     DateTime
+  status      SlotStatus @default(PROPOSED)
+  respondedAt DateTime?
+  createdAt   DateTime   @default(now())
+
+  job Job @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  org Org @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@index([jobId])
+  @@index([orgId])
+}
+
+model JobRating {
+  id        String    @id @default(uuid())
+  orgId     String
+  jobId     String
+  raterRole RaterRole
+  score     Int
+  comment   String?
+  createdAt DateTime  @default(now())
+
+  job Job @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  org Org @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([jobId, raterRole])
+  @@index([jobId])
+  @@index([orgId])
 }

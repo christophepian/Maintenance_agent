@@ -6,7 +6,7 @@ import PageHeader from "../../../../components/layout/PageHeader";
 import PageContent from "../../../../components/layout/PageContent";
 import Panel from "../../../../components/layout/Panel";
 import Section from "../../../../components/layout/Section";
-import { authHeaders } from "../../../../lib/api";
+import { ownerAuthHeaders } from "../../../../lib/api";
 function todayIso() {
   return new Date().toISOString().slice(0, 10);
 }
@@ -40,7 +40,7 @@ export default function FillVacancyWizard() {
 
   async function fetchJson(path, options) {
     const res = await fetch(path, {
-      headers: { "Content-Type": "application/json", ...authHeaders() },
+      headers: { "Content-Type": "application/json", ...ownerAuthHeaders() },
       ...options,
     });
     const data = await res.json().catch(() => ({}));

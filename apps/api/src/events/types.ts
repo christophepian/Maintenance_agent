@@ -127,6 +127,82 @@ export interface TenantSelfPayAcceptedPayload {
   rfpId: string;
 }
 
+export interface QuoteSubmittedPayload {
+  rfpId: string;
+  quoteId: string;
+  contractorId: string;
+  amountCents: number;
+}
+
+export interface QuoteAwardedPayload {
+  rfpId: string;
+  quoteId: string;
+  contractorId: string;
+  amountCents: number;
+  awardedByRole: string;
+  ownerApprovalRequired: boolean;
+}
+
+export interface QuoteRejectedPayload {
+  rfpId: string;
+  quoteId: string;
+  contractorId: string;
+}
+
+export interface RfpReinvitedPayload {
+  rfpId: string;
+  contractorIds: string[];
+  totalInvites: number;
+}
+
+export interface RfpDirectAssignedPayload {
+  rfpId: string;
+  requestId: string;
+  contractorId: string;
+  jobCreated: boolean;
+}
+
+export interface SlotProposedPayload {
+  jobId: string;
+  requestId: string;
+  contractorId: string;
+  slotIds: string[];
+  schedulingExpiresAt: string; // ISO 8601
+}
+
+export interface SlotAcceptedPayload {
+  jobId: string;
+  requestId: string;
+  slotId: string;
+  startTime: string; // ISO 8601
+  endTime: string;   // ISO 8601
+}
+
+export interface SlotDeclinedPayload {
+  jobId: string;
+  requestId: string;
+  slotId: string;
+}
+
+export interface SchedulingEscalatedPayload {
+  jobId: string;
+  requestId: string;
+  contractorId: string;
+}
+
+export interface JobConfirmedPayload {
+  jobId: string;
+  requestId: string;
+  tenantId: string;
+}
+
+export interface RatingSubmittedPayload {
+  jobId: string;
+  ratingId: string;
+  raterRole: string;  // CONTRACTOR | TENANT
+  score: number;
+}
+
 /* ── Event map: type → payload ──────────────────────────────── */
 
 export interface DomainEventMap {
@@ -149,6 +225,17 @@ export interface DomainEventMap {
   RENTAL_APPLICATION_EVALUATED: RentalApplicationEvaluatedPayload;
   MAINTENANCE_ATTACHMENT_UPLOADED: MaintenanceAttachmentUploadedPayload;
   TENANT_SELF_PAY_ACCEPTED: TenantSelfPayAcceptedPayload;
+  QUOTE_SUBMITTED: QuoteSubmittedPayload;
+  QUOTE_AWARDED: QuoteAwardedPayload;
+  QUOTE_REJECTED: QuoteRejectedPayload;
+  RFP_REINVITED: RfpReinvitedPayload;
+  RFP_DIRECT_ASSIGNED: RfpDirectAssignedPayload;
+  SLOT_PROPOSED: SlotProposedPayload;
+  SLOT_ACCEPTED: SlotAcceptedPayload;
+  SLOT_DECLINED: SlotDeclinedPayload;
+  SCHEDULING_ESCALATED: SchedulingEscalatedPayload;
+  JOB_CONFIRMED: JobConfirmedPayload;
+  RATING_SUBMITTED: RatingSubmittedPayload;
 }
 
 export type DomainEventType = keyof DomainEventMap;

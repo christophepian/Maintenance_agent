@@ -35,6 +35,7 @@ export interface JobDTO {
   actualCost?: number;
   startedAt?: string; // ISO
   completedAt?: string; // ISO
+  confirmedAt?: string; // ISO — when tenant confirmed completion
   createdAt: string; // ISO
   updatedAt: string; // ISO
   request?: {
@@ -74,6 +75,13 @@ export interface JobDTO {
    * Actual billing rules TBD.
    */
   invoiceAddressedTo: "TENANT" | "PROPERTY_MANAGER";
+  ratings?: Array<{
+    id: string;
+    raterRole: string;
+    score: number;
+    comment?: string | null;
+    createdAt: string;
+  }>;
 }
 
 /**
@@ -247,6 +255,7 @@ function mapJobToDTO(job: JobWithFullInclude): JobDTO {
     actualCost: job.actualCost ?? undefined,
     startedAt: job.startedAt ? job.startedAt.toISOString() : undefined,
     completedAt: job.completedAt ? job.completedAt.toISOString() : undefined,
+    confirmedAt: job.confirmedAt ? job.confirmedAt.toISOString() : undefined,
     createdAt: job.createdAt.toISOString(),
     updatedAt: job.updatedAt.toISOString(),
     request: job.request ? {
@@ -283,6 +292,13 @@ function mapJobToDTO(job: JobWithFullInclude): JobDTO {
     // Provisional rule: if request has a tenant linked, invoice goes to tenant;
     // otherwise it goes to the property manager. Actual rules TBD.
     invoiceAddressedTo: job.request?.tenantId ? "TENANT" : "PROPERTY_MANAGER",
+    ratings: job.ratings?.map((r) => ({
+      id: r.id,
+      raterRole: r.raterRole,
+      score: r.score,
+      comment: r.comment,
+      createdAt: r.createdAt.toISOString(),
+    })),
   };
 }
 

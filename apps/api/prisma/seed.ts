@@ -25,6 +25,47 @@ async function main() {
     },
   });
 
+  // DEV: Seed the dev-user that matches the AUTH_OPTIONAL identity.
+  // Required for notifications and auth-gated API calls to work without a login flow.
+  await prisma.user.upsert({
+    where: { id: 'dev-user' },
+    update: {},
+    create: {
+      id: 'dev-user',
+      orgId,
+      name: 'Dev Manager',
+      email: 'dev@local',
+      role: 'MANAGER',
+      passwordHash: 'not-used-in-dev',
+    },
+  });
+
+  await prisma.user.upsert({
+    where: { id: 'dev-owner' },
+    update: {},
+    create: {
+      id: 'dev-owner',
+      orgId,
+      name: 'Dev Owner',
+      email: 'dev-owner@local',
+      role: 'OWNER',
+      passwordHash: 'not-used-in-dev',
+    },
+  });
+
+  await prisma.user.upsert({
+    where: { id: 'dev-vendor' },
+    update: {},
+    create: {
+      id: 'dev-vendor',
+      orgId,
+      name: 'Dev Vendor',
+      email: 'dev-vendor@local',
+      role: 'VENDOR',
+      passwordHash: 'not-used-in-dev',
+    },
+  });
+
   let building = await prisma.building.findFirst({
     where: { orgId, name: "Demo Building" },
   });

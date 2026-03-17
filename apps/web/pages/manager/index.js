@@ -310,9 +310,12 @@ export default function ManagerDashboard() {
                       {rfpPendingRequests.length}
                     </div>
                   </div>
-                  <div className="mt-3">
+                  <div className="mt-3 flex gap-2">
                     <button onClick={() => router.push("/manager/requests?filter=RFP_PENDING")}>
-                      View Auto-routed →
+                      View Requests →
+                    </button>
+                    <button onClick={() => router.push("/manager/rfps")}>
+                      Open RFPs →
                     </button>
                   </div>
                 </Panel>

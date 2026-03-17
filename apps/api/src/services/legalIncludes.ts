@@ -3,6 +3,8 @@
  *
  * All queries that feed legal/RFP DTO mappers MUST use these constants.
  * If a DTO changes, update the matching include in the same PR.
+ *
+ * NOTE: RFP_INCLUDE moved to repositories/rfpRepository.ts (rfp-manager-view slice).
  */
 
 /* ── Request context for legal decision evaluation ─────────── */
@@ -56,49 +58,5 @@ export const REQUEST_LEGAL_DECISION_INCLUDE = {
   },
 } as const;
 
-/* ── RFP with invites and quotes ───────────────────────────── */
-
-export const RFP_INCLUDE = {
-  invites: {
-    include: {
-      contractor: {
-        select: {
-          id: true,
-          name: true,
-          phone: true,
-          email: true,
-        },
-      },
-    },
-  },
-  quotes: {
-    include: {
-      contractor: {
-        select: {
-          id: true,
-          name: true,
-        },
-      },
-    },
-    orderBy: { amountCents: "asc" as const },
-  },
-  building: {
-    select: {
-      id: true,
-      name: true,
-      address: true,
-    },
-  },
-  unit: {
-    select: {
-      id: true,
-      unitNumber: true,
-    },
-  },
-  awardedContractor: {
-    select: {
-      id: true,
-      name: true,
-    },
-  },
-} as const;
+// NOTE: RFP_INCLUDE has moved to repositories/rfpRepository.ts as RFP_FULL_INCLUDE.
+// Re-exported from services/rfps.ts for backward compatibility.

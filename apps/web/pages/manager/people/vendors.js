@@ -1,12 +1,28 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
+import { useRouter } from "next/router";
 import Link from "next/link";
 import AppShell from "../../../components/AppShell";
 import PageShell from "../../../components/layout/PageShell";
 import PageHeader from "../../../components/layout/PageHeader";
 import PageContent from "../../../components/layout/PageContent";
 import Panel from "../../../components/layout/Panel";
+import SortableHeader from "../../../components/SortableHeader";
+import { useTableSort, clientSort } from "../../../lib/tableUtils";
 import { authHeaders } from "../../../lib/api";
+
+const VENDOR_SORT_FIELDS = ["name", "phone", "email", "hourlyRate"];
+
+function vendorFieldExtractor(c, field) {
+  switch (field) {
+    case "name": return (c.name || "").toLowerCase();
+    case "phone": return c.phone || "";
+    case "email": return (c.email || "").toLowerCase();
+    case "hourlyRate": return c.hourlyRate ?? -1;
+    default: return "";
+  }
+}
 export default function PeopleVendorsPage() {
+  const router = useRouter();
   const [contractors, setContractors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -41,6 +57,9 @@ export default function PeopleVendorsPage() {
     );
   });
 
+  const { sortField, sortDir, handleSort } = useTableSort(router, VENDOR_SORT_FIELDS, { defaultField: "name", defaultDir: "asc" });
+  const sortedVendors = useMemo(() => clientSort(filtered, sortField, sortDir, vendorFieldExtractor), [filtered, sortField, sortDir]);
+
   return (
     <AppShell role="MANAGER">
       <PageShell variant="embedded">
@@ -73,15 +92,15 @@ export default function PeopleVendorsPage() {
               <table className="inline-table">
                   <thead>
                     <tr>
-                      <th>Name</th>
-                      <th>Phone</th>
-                      <th>Email</th>
-                      <th>Rate</th>
+                      <SortableHeader label="Name" field="name" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
+                      <SortableHeader label="Phone" field="phone" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
+                      <SortableHeader label="Email" field="email" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
+                      <SortableHeader label="Rate" field="hourlyRate" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
                       <th></th>
                     </tr>
                   </thead>
                   <tbody>
-                    {filtered.map((c) => (
+                    {sortedVendors.map((c) => (
                       <tr key={c.id}>
                         <td className="cell-bold">{c.name || "—"}</td>
                         <td>{c.phone || "—"}</td>

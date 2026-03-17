@@ -3,8 +3,8 @@ import { sendError, sendJson } from "../http/json";
 import { readJson } from "../http/body";
 import { parseBody } from "../http/body";
 import { first, getIntParam, getEnumParam } from "../http/query";
-import { withRole } from "../http/routeProtection";
-import { maybeRequireManager } from "../authz";
+import { withRole, withAuthRequired } from "../http/routeProtection";
+import { maybeRequireManager, requireAnyRole } from "../authz";
 import { readRawBody, parseMultipart, MAX_FILE_SIZE, storage } from "../storage/attachments";
 import { scanDocument } from "../services/documentScan";
 import prisma from "../services/prismaClient";
@@ -429,7 +429,8 @@ export function registerRentalRoutes(router: Router) {
    */
   router.get(
     "/owner/rental-applications",
-    withRole("OWNER", async ({ res, orgId, query }) => {
+    withAuthRequired(async ({ req, res, orgId, query }) => {
+      if (!requireAnyRole(req, res, ["OWNER", "MANAGER"])) return;
       try {
         const unitId = first(query, "unitId");
         if (!unitId) {
@@ -508,7 +509,8 @@ export function registerRentalRoutes(router: Router) {
    */
   router.get(
     "/owner/selections",
-    withRole("OWNER", async ({ res, orgId }) => {
+    withAuthRequired(async ({ req, res, orgId }) => {
+      if (!requireAnyRole(req, res, ["OWNER", "MANAGER"])) return;
       try {
         const selections = await prisma.rentalOwnerSelection.findMany({
           where: {

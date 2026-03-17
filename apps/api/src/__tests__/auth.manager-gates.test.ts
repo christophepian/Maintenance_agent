@@ -167,4 +167,105 @@ describe("Manager auth gates", () => {
     expect(result.status).toBe(201);
     expect(result.data).toHaveProperty("data");
   }, 10000);
+
+  // ────────────── TC-6: Cross-org HTTP auth tests ──────────────
+
+  describe("cross-org isolation at HTTP level", () => {
+    const orgBManagerToken = encodeToken({
+      userId: "manager-org-b",
+      orgId: "org-b-isolation-test",
+      email: "manager-b@example.com",
+      role: "MANAGER",
+    });
+
+    it("org-B manager token gets empty contractors list (no org-B data exists)", async () => {
+      const result = await httpRequest(
+        requiredPort,
+        "GET",
+        "/contractors",
+        undefined,
+        orgBManagerToken
+      );
+      expect(result.status).toBe(200);
+      // org-B has no seeded data — response must be empty array or { data: [] }
+      const list = Array.isArray(result.data) ? result.data : result.data.data;
+      expect(list).toBeDefined();
+      expect(list.length).toBe(0);
+    }, 10000);
+
+    it("org-B manager token gets empty requests list (no org-B data exists)", async () => {
+      const result = await httpRequest(
+        requiredPort,
+        "GET",
+        "/requests",
+        undefined,
+        orgBManagerToken
+      );
+      expect(result.status).toBe(200);
+      const list = Array.isArray(result.data) ? result.data : result.data.data;
+      expect(list).toBeDefined();
+      expect(list.length).toBe(0);
+    }, 10000);
+
+    it("org-B manager token gets empty buildings list (no org-B data exists)", async () => {
+      const result = await httpRequest(
+        requiredPort,
+        "GET",
+        "/buildings",
+        undefined,
+        orgBManagerToken
+      );
+      expect(result.status).toBe(200);
+      const list = Array.isArray(result.data) ? result.data : result.data.data;
+      expect(list).toBeDefined();
+      expect(list.length).toBe(0);
+    }, 10000);
+
+    it("org-A manager token can see default-org data", async () => {
+      // First create a contractor with the default-org manager
+      const createResult = await httpRequest(
+        requiredPort,
+        "POST",
+        "/contractors",
+        sampleContractorPayload(),
+        managerToken
+      );
+      expect(createResult.status).toBe(201);
+
+      // default-org manager should see it
+      const listResult = await httpRequest(
+        requiredPort,
+        "GET",
+        "/contractors",
+        undefined,
+        managerToken
+      );
+      expect(listResult.status).toBe(200);
+      const list = Array.isArray(listResult.data) ? listResult.data : listResult.data.data;
+      expect(list.length).toBeGreaterThan(0);
+    }, 10000);
+
+    it("org-B manager cannot see contractor created by org-A", async () => {
+      // Create a contractor under default-org
+      await httpRequest(
+        requiredPort,
+        "POST",
+        "/contractors",
+        sampleContractorPayload(),
+        managerToken
+      );
+
+      // org-B manager should see none of default-org's contractors
+      const result = await httpRequest(
+        requiredPort,
+        "GET",
+        "/contractors",
+        undefined,
+        orgBManagerToken
+      );
+      expect(result.status).toBe(200);
+      const list = Array.isArray(result.data) ? result.data : result.data.data;
+      expect(list.length).toBe(0);
+    }, 10000);
+  });
 });

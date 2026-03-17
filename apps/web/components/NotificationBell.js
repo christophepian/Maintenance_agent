@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/router";
 import { formatDateTime } from "../lib/format";
-import { authHeaders as getAuthHeaders } from "../lib/api";
+import { getNotificationLink as resolveLink } from "../lib/notificationLinks";
 
 export default function NotificationBell({ role }) {
   const [unreadCount, setUnreadCount] = useState(0);
@@ -11,6 +11,16 @@ export default function NotificationBell({ role }) {
   const panelRef = useRef(null);
 
   const isTenant = role === "TENANT";
+
+  // Build auth headers from the role-specific localStorage key.
+  // Manager pages use "authToken", owner pages use "ownerToken", etc.
+  function getHeaders() {
+    if (typeof window === "undefined") return {};
+    const roleKey = role?.toLowerCase() || "manager";
+    const key = roleKey === "manager" ? "authToken" : `${roleKey}Token`;
+    const token = localStorage.getItem(key);
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  }
 
   // Get tenant session from localStorage
   const getTenantId = () => {
@@ -31,7 +41,7 @@ export default function NotificationBell({ role }) {
         if (!tenantId) return;
         res = await fetch(`/api/tenant-portal/notifications/unread-count?tenantId=${tenantId}`);
       } else {
-        const headers = getAuthHeaders();
+        const headers = getHeaders();
         if (!headers.Authorization) return; // no token yet — skip fetch
         res = await fetch("/api/notifications/unread-count", { headers });
       }
@@ -54,7 +64,7 @@ export default function NotificationBell({ role }) {
         if (!tenantId) { setLoading(false); return; }
         res = await fetch(`/api/tenant-portal/notifications?tenantId=${tenantId}`);
       } else {
-        const headers = getAuthHeaders();
+        const headers = getHeaders();
         if (!headers.Authorization) { setLoading(false); return; }
         res = await fetch("/api/notifications", { headers });
       }
@@ -74,7 +84,7 @@ export default function NotificationBell({ role }) {
       if (isTenant) {
         await fetch(`/api/tenant-portal/notifications/${id}/read`, { method: "POST" });
       } else {
-        await fetch(`/api/notifications/${id}/read`, { method: "POST", headers: getAuthHeaders() });
+        await fetch(`/api/notifications/${id}/read`, { method: "POST", headers: getHeaders() });
       }
       await fetchUnreadCount();
       await fetchNotifications();
@@ -95,7 +105,7 @@ export default function NotificationBell({ role }) {
           body: JSON.stringify({ tenantId }),
         });
       } else {
-        await fetch("/api/notifications/mark-all-read", { method: "POST", headers: getAuthHeaders() });
+        await fetch("/api/notifications/mark-all-read", { method: "POST", headers: getHeaders() });
       }
       await fetchUnreadCount();
       await fetchNotifications();
@@ -110,7 +120,7 @@ export default function NotificationBell({ role }) {
       if (isTenant) {
         await fetch(`/api/tenant-portal/notifications/${id}`, { method: "DELETE" });
       } else {
-        await fetch(`/api/notifications/${id}`, { method: "DELETE", headers: getAuthHeaders() });
+        await fetch(`/api/notifications/${id}`, { method: "DELETE", headers: getHeaders() });
       }
       await fetchUnreadCount();
       await fetchNotifications();
@@ -162,50 +172,22 @@ export default function NotificationBell({ role }) {
       case "LEASE_READY_TO_SIGN": return "bg-sky-100 text-sky-800";
       case "TENANT_SELECTED": return "bg-indigo-100 text-indigo-800";
       case "APPLICATION_SUBMITTED": return "bg-amber-100 text-amber-800";
+      case "QUOTE_SUBMITTED": return "bg-orange-100 text-orange-800";
+      case "QUOTE_AWARDED": return "bg-green-100 text-green-800";
+      case "QUOTE_REJECTED": return "bg-red-100 text-red-800";
+      case "SLOT_PROPOSED": return "bg-cyan-100 text-cyan-800";
+      case "SLOT_ACCEPTED": return "bg-green-100 text-green-800";
+      case "SLOT_DECLINED": return "bg-red-100 text-red-800";
+      case "SCHEDULING_ESCALATED": return "bg-yellow-100 text-yellow-800";
+      case "RATING_SUBMITTED": return "bg-violet-100 text-violet-800";
+      case "JOB_CONFIRMED": return "bg-teal-100 text-teal-800";
       default: return "bg-gray-100 text-gray-800";
     }
   };
 
   const router = useRouter();
 
-  const getNotificationLink = (notif) => {
-    const { entityType, entityId, eventType } = notif;
-
-    // ── Tenant ──────────────────────────────────────────────
-    if (isTenant) {
-      if (entityType === "LEASE" && entityId) return `/tenant/leases/${entityId}`;
-      if (entityType === "INVOICE" || eventType === "INVOICE_CREATED" || eventType === "INVOICE_PAID") return `/tenant/invoices`;
-      return null;
-    }
-
-    // ── Contractor ──────────────────────────────────────────
-    if (role === "CONTRACTOR") {
-      if (entityType === "JOB" && entityId) return `/contractor/jobs/${entityId}`;
-      if (entityType === "JOB") return `/contractor/jobs`;
-      if (entityType === "INVOICE") return `/contractor/invoices`;
-      return null;
-    }
-
-    // ── Owner ───────────────────────────────────────────────
-    if (role === "OWNER") {
-      if (entityType === "LEASE" && entityId) return `/manager/leases/${entityId}`;
-      if (entityType === "REQUEST" || eventType === "REQUEST_PENDING_OWNER_APPROVAL" || eventType === "OWNER_REJECTED") return `/owner/approvals`;
-      if (entityType === "JOB") return `/owner/jobs`;
-      if (entityType === "INVOICE") return `/owner/invoices`;
-      if (entityType === "SELECTION" || eventType === "TENANT_SELECTED") return `/owner/vacancies`;
-      if (entityType === "APPLICATION" || eventType === "APPLICATION_SUBMITTED") return `/owner/vacancies`;
-      return null;
-    }
-
-    // ── Manager (default) ───────────────────────────────────
-    if (entityType === "LEASE" && entityId) return `/manager/leases/${entityId}`;
-    if (entityType === "REQUEST" || eventType?.startsWith("REQUEST_") || eventType === "CONTRACTOR_ASSIGNED" || eventType === "CONTRACTOR_REJECTED" || eventType === "OWNER_REJECTED") return `/manager/work-requests`;
-    if (entityType === "JOB") return `/manager/work-requests`;
-    if (entityType === "INVOICE") return `/manager/finance/invoices`;
-    if (entityType === "SELECTION" || eventType === "TENANT_SELECTED") return `/manager/vacancies`;
-    if (entityType === "APPLICATION" || eventType === "APPLICATION_SUBMITTED") return `/manager/vacancies`;
-    return null;
-  };
+  const getNotificationLink = (notif) => resolveLink(notif, role);
 
   // Tenant API returns readAt, manager API returns isRead — normalize
   const isNotifRead = (notif) => notif.isRead || !!notif.readAt;

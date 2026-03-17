@@ -5,7 +5,7 @@ import PageShell from "../../components/layout/PageShell";
 import PageHeader from "../../components/layout/PageHeader";
 import PageContent from "../../components/layout/PageContent";
 import Panel from "../../components/layout/Panel";
-import { authHeaders } from "../../lib/api";
+import { ownerAuthHeaders } from "../../lib/api";
 function formatCurrency(value) {
   const safeValue = Number.isFinite(value) ? value : 0;
   const formatted = safeValue.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, "'");
@@ -43,7 +43,7 @@ export default function OwnerInvoices() {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch("/api/owner/invoices", { headers: authHeaders() });
+      const res = await fetch("/api/owner/invoices", { headers: ownerAuthHeaders() });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || "Failed to load invoices");
       setInvoices(data.data || []);
@@ -57,7 +57,7 @@ export default function OwnerInvoices() {
     try {
       const res = await fetch(`/api/invoices/${invoiceId}/${action}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...authHeaders() },
+        headers: { "Content-Type": "application/json", ...ownerAuthHeaders() },
         body: JSON.stringify({}),
       });
       if (!res.ok) throw new Error(`Failed to ${action} invoice`);

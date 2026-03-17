@@ -6,16 +6,35 @@ import PageHeader from "../../components/layout/PageHeader";
 import PageContent from "../../components/layout/PageContent";
 import Panel from "../../components/layout/Panel";
 import { authHeaders } from "../../lib/api";
+
 const STATUS_TABS = [
   { key: "ALL", label: "All" },
+  { key: "DRAFT", label: "Draft" },
   { key: "OPEN", label: "Open" },
   { key: "EVALUATING", label: "Evaluating" },
   { key: "AWARDED", label: "Awarded" },
   { key: "CANCELLED", label: "Cancelled" },
 ];
 
+const STATUS_COLORS = {
+  DRAFT: "bg-slate-50 text-slate-600 border-slate-200",
+  OPEN: "bg-blue-50 text-blue-700 border-blue-200",
+  EVALUATING: "bg-yellow-50 text-yellow-700 border-yellow-200",
+  AWARDED: "bg-green-50 text-green-700 border-green-200",
+  CLOSED: "bg-slate-50 text-slate-500 border-slate-200",
+  CANCELLED: "bg-red-50 text-red-600 border-red-200",
+};
+
+function formatDate(iso) {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString("de-CH");
+}
+
 export default function ManagerRfpsPage() {
   const [rfps, setRfps] = useState([]);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [activeTab, setActiveTab] = useState("ALL");
@@ -29,6 +48,7 @@ export default function ManagerRfpsPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error?.message || "Failed to load RFPs");
       setRfps(data?.data || []);
+      setTotal(data?.total ?? data?.data?.length ?? 0);
     } catch (e) {
       setError(String(e?.message || e));
     } finally {
@@ -69,170 +89,85 @@ export default function ManagerRfpsPage() {
             ))}
           </div>
 
-          <Panel title={`RFPs (${rfps.length})`}>
+          <Panel title={`RFPs (${total})`} bodyClassName="p-0">
             {loading ? (
-              <p className="text-sm text-slate-500">Loading…</p>
+              <p className="px-4 py-8 text-center text-sm text-slate-500">Loading…</p>
             ) : rfps.length === 0 ? (
-              <p className="empty-state-text">
+              <p className="px-4 py-8 text-center text-sm text-slate-400">
                 No RFPs found{activeTab !== "ALL" ? ` with status ${activeTab}` : ""}. RFPs are created automatically when the legal engine determines an obligation.
               </p>
             ) : (
-              <div className="space-y-3">
-                {rfps.map((rfp) => (
-                  <RfpCard key={rfp.id} rfp={rfp} />
-                ))}
-              </div>
+              <table className="inline-table">
+                <thead>
+                  <tr>
+                    <th>Request</th>
+                    <th>Category</th>
+                    <th>Building / Unit</th>
+                    <th>Status</th>
+                    <th>Invites</th>
+                    <th>Quotes</th>
+                    <th>Created</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rfps.map((rfp) => (
+                    <tr key={rfp.id}>
+                      <td>
+                        {rfp.request ? (
+                          <span className="text-sm">
+                            <span className="font-medium text-slate-900">
+                              #{rfp.request.requestNumber}
+                            </span>
+                            <span className="block text-xs text-slate-500 max-w-[200px] truncate">
+                              {rfp.request.description}
+                            </span>
+                          </span>
+                        ) : (
+                          <span className="text-xs text-slate-400">No request linked</span>
+                        )}
+                      </td>
+                      <td className="text-sm text-slate-700">{rfp.category || "—"}</td>
+                      <td className="text-sm text-slate-700">
+                        {rfp.building?.name || "—"}
+                        {rfp.unit && (
+                          <span className="text-slate-400"> / {rfp.unit.unitNumber}</span>
+                        )}
+                      </td>
+                      <td>
+                        <span
+                          className={`inline-block rounded-full border px-2 py-0.5 text-xs font-medium ${
+                            STATUS_COLORS[rfp.status] || STATUS_COLORS.OPEN
+                          }`}
+                        >
+                          {rfp.status}
+                        </span>
+                      </td>
+                      <td className="text-center text-sm text-slate-700">
+                        {rfp.invites?.length ?? 0}
+                      </td>
+                      <td className="text-center text-sm text-slate-700">
+                        <span className={rfp.quoteCount > 0 ? "font-medium text-green-700" : ""}>
+                          {rfp.quoteCount ?? 0}
+                        </span>
+                      </td>
+                      <td className="text-sm text-slate-500">{formatDate(rfp.createdAt)}</td>
+                      <td>
+                        <Link
+                          href={`/manager/rfps/${rfp.id}`}
+                          className="text-xs text-indigo-600 hover:underline font-medium"
+                        >
+                          View
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             )}
           </Panel>
         </PageContent>
       </PageShell>
     </AppShell>
   );
-}
-
-function RfpCard({ rfp }) {
-  const [expanded, setExpanded] = useState(false);
-
-  const statusColors = {
-    OPEN: "bg-blue-50 text-blue-700 border-blue-200",
-    EVALUATING: "bg-yellow-50 text-yellow-700 border-yellow-200",
-    AWARDED: "bg-green-50 text-green-700 border-green-200",
-    CANCELLED: "bg-slate-50 text-slate-500 border-slate-200",
-  };
-
-  return (
-    <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-      <div className="flex items-start justify-between gap-4">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold text-slate-900">
-              RFP {rfp.id?.slice(0, 8)}…
-            </span>
-            <span className={`inline-block rounded-full border px-2 py-0.5 text-xs font-medium ${statusColors[rfp.status] || statusColors.OPEN}`}>
-              {rfp.status}
-            </span>
-          </div>
-          <div className="flex flex-wrap gap-2 text-xs text-slate-500">
-            {rfp.building && (
-              <span>Building: <strong>{rfp.building.name || rfp.buildingId?.slice(0, 8)}</strong></span>
-            )}
-            {rfp.unit && (
-              <><span>•</span><span>Unit: <strong>{rfp.unit.unitNumber || rfp.unitId?.slice(0, 8)}</strong></span></>
-            )}
-            <span>•</span>
-            <span>Scope: <strong>{rfp.scope || "—"}</strong></span>
-            <span>•</span>
-            <span>Created: {formatDate(rfp.createdAt)}</span>
-          </div>
-          {rfp.awardedContractor && (
-            <p className="text-xs text-green-700">
-              Awarded to: <strong>{rfp.awardedContractor.businessName || rfp.awardedContractor.contactName}</strong>
-            </p>
-          )}
-        </div>
-        <button
-          className="text-xs text-blue-600 hover:underline whitespace-nowrap"
-          onClick={() => setExpanded(!expanded)}
-        >
-          {expanded ? "Collapse" : "Details"}
-        </button>
-      </div>
-
-      {expanded && (
-        <div className="mt-3 space-y-3">
-          {/* Deadline */}
-          {rfp.deadline && (
-            <p className="text-xs text-slate-600">
-              Deadline: <strong>{formatDate(rfp.deadline)}</strong>
-            </p>
-          )}
-
-          {/* Invites */}
-          {rfp.invites?.length > 0 && (
-            <div>
-              <p className="text-xs font-medium text-slate-600 mb-1">Invites ({rfp.invites.length}):</p>
-                <table className="inline-table">
-                  <thead>
-                    <tr>
-                      <th>Contractor</th>
-                      <th>Status</th>
-                      <th>Sent At</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {rfp.invites.map((inv) => (
-                      <tr key={inv.id}>
-                        <td>
-                          {inv.contractorId ? (
-                            <Link href={`/manager/people/vendors/${inv.contractorId}`} className="text-indigo-600 hover:underline">
-                              {inv.contractor?.businessName || inv.contractorId?.slice(0, 8)}
-                            </Link>
-                          ) : (inv.contractor?.businessName || "—")}
-                        </td>
-                        <td>
-                          <InviteStatusPill status={inv.status} />
-                        </td>
-                        <td>{formatDate(inv.sentAt)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-            </div>
-          )}
-
-          {/* Quotes */}
-          {rfp.quotes?.length > 0 && (
-            <div>
-              <p className="text-xs font-medium text-slate-600 mb-1">Quotes ({rfp.quotes.length}):</p>
-                <table className="inline-table">
-                  <thead>
-                    <tr>
-                      <th>Contractor</th>
-                      <th>Amount</th>
-                      <th>Submitted</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {rfp.quotes.map((q) => (
-                      <tr key={q.id}>
-                        <td>
-                          {q.contractorId ? (
-                            <Link href={`/manager/people/vendors/${q.contractorId}`} className="text-indigo-600 hover:underline">
-                              {q.contractor?.businessName || q.contractorId?.slice(0, 8)}
-                            </Link>
-                          ) : (q.contractor?.businessName || "—")}
-                        </td>
-                        <td className="font-mono">CHF {q.amountCents ? (q.amountCents / 100).toFixed(2) : "—"}</td>
-                        <td>{formatDate(q.submittedAt)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function InviteStatusPill({ status }) {
-  const colors = {
-    PENDING: "bg-yellow-50 text-yellow-700 border-yellow-200",
-    SENT: "bg-blue-50 text-blue-700 border-blue-200",
-    ACCEPTED: "bg-green-50 text-green-700 border-green-200",
-    DECLINED: "bg-red-50 text-red-700 border-red-200",
-  };
-  return (
-    <span className={`inline-block rounded-full border px-2 py-0.5 text-xs font-medium ${colors[status] || colors.PENDING}`}>
-      {status}
-    </span>
-  );
-}
-
-function formatDate(iso) {
-  if (!iso) return "—";
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString("de-CH");
 }

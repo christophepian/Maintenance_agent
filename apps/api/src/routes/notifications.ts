@@ -1,7 +1,7 @@
 import { Router } from "../http/router";
 import { sendError, sendJson } from "../http/json";
 import { first, getIntParam } from "../http/query";
-import { getAuthUser, maybeRequireManager, requireRole } from "../authz";
+import { getAuthUser, requireStaffAuth } from "../authz";
 import { safeSendError } from "./helpers";
 import {
   getUserNotifications,
@@ -15,7 +15,7 @@ import { ListNotificationsSchema } from "../validation/notifications";
 export function registerNotificationRoutes(router: Router) {
   // GET /notifications
   router.get("/notifications", async ({ req, res, query, orgId }) => {
-    if (!maybeRequireManager(req, res)) return;
+    if (!requireStaffAuth(req, res)) return;
     try {
       const user = getAuthUser(req);
       if (!user || !user.userId) {
@@ -44,7 +44,7 @@ export function registerNotificationRoutes(router: Router) {
 
   // GET /notifications/unread-count
   router.get("/notifications/unread-count", async ({ req, res, orgId }) => {
-    if (!maybeRequireManager(req, res)) return;
+    if (!requireStaffAuth(req, res)) return;
     try {
       const user = getAuthUser(req);
       if (!user || !user.userId) {
@@ -60,7 +60,7 @@ export function registerNotificationRoutes(router: Router) {
 
   // POST /notifications/:id/read
   router.post("/notifications/:id/read", async ({ req, res, orgId, params }) => {
-    if (!requireRole(req, res, "MANAGER")) return;
+    if (!requireStaffAuth(req, res)) return;
     try {
       const user = getAuthUser(req);
       if (!user || !user.userId) {
@@ -76,7 +76,7 @@ export function registerNotificationRoutes(router: Router) {
 
   // POST /notifications/mark-all-read
   router.post("/notifications/mark-all-read", async ({ req, res, orgId }) => {
-    if (!requireRole(req, res, "MANAGER")) return;
+    if (!requireStaffAuth(req, res)) return;
     try {
       const user = getAuthUser(req);
       if (!user || !user.userId) {
@@ -92,7 +92,7 @@ export function registerNotificationRoutes(router: Router) {
 
   // DELETE /notifications/:id
   router.delete("/notifications/:id", async ({ req, res, orgId, params }) => {
-    if (!requireRole(req, res, "MANAGER")) return;
+    if (!requireStaffAuth(req, res)) return;
     try {
       const user = getAuthUser(req);
       if (!user || !user.userId) {

@@ -1,19 +1,21 @@
 # Maintenance Agent — Project Audit
 
 **Generated:** 2026-03-10  
+**Last updated:** 2026-03-15 — reconciled with PROJECT_STATE.md, blueprint.js, ARCHITECTURE_LOW_CONTEXT_GUIDE.md  
 **Scope:** Code Quality, Schema Integrity, Test Coverage, Security & Auth  
 **Source commit:** ed7c841 (branch: main)  
-**Frontend rationalization audit:** Completed 2026-03-10 — results in [docs/FRONTEND_INVENTORY.md](FRONTEND_INVENTORY.md) (185 pages, 119/119 proxies conforming, 4 coming-soon stubs)
+**Codebase:** 46 models · 38 enums · 36 migrations · 17 workflows · 10 repositories · 372 tests / 33 suites · ~36k backend LOC · ~27k frontend LOC · 195 pages · ~146 API routes  
+**Frontend rationalization audit:** Completed 2026-03-10 — results in [docs/FRONTEND_INVENTORY.md](FRONTEND_INVENTORY.md) (195 pages, 119/119 proxies conforming, 4 coming-soon stubs)
 
 ## Summary
 
-| Area | Findings | Critical | High | Medium | Low | Resolved |
-|------|----------|----------|------|--------|-----|----------|
-| Code Quality & Architecture | 35 | 0 | 7 | 12 | 16 | 0 |
-| Schema & Data Integrity | 12 | 0 | 1 | 7 | 4 | 9 |
-| Test Coverage Gaps | 15 | 0 | 6 | 8 | 1 | 2 |
-| Security & Auth | 20 | 1 | 8 | 9 | 2 | 9 |
-| **Total** | **82** | **1** | **22** | **36** | **23** | **20** |
+| Area | Findings | Critical | High | Medium | Low | Resolved | Open |
+|------|----------|----------|------|--------|-----|----------|------|
+| Code Quality & Architecture | 35 | 0 | 7 | 12 | 16 | 5 | 30 |
+| Schema & Data Integrity | 12 | 0 | 1 | 7 | 4 | 10 | 2 |
+| Test Coverage Gaps | 15 | 0 | 6 | 8 | 1 | 3 | 12 |
+| Security & Auth | 20 | 1 | 8 | 9 | 2 | 20 | 0 |
+| **Total** | **82** | **1** | **22** | **36** | **23** | **38** | **44** |
 
 ---
 
@@ -25,6 +27,7 @@
 - **Lines:** L285–775 (multiple handlers)
 - **Description:** ~300 lines of direct Prisma queries and business logic in route handlers. Legal rules CRUD (L285–370), category mappings CRUD (L380–480), coverage computation (L490–610), depreciation standards (L620–670), and evaluation listing (L688–775) all contain direct `prisma.*` calls, inline include trees, and DTO mapping.
 - **Fix:** Extract to `legalAdminService` and `legalCategoryMappingRepository` with canonical includes.
+- **Partial progress (2026-03-17):** RFP data access extracted from `services/rfps.ts` to `repositories/rfpRepository.ts`. RFP include constant (`RFP_FULL_INCLUDE`) moved from `legalIncludes.ts` to repository with typed `RfpWithRelations` Prisma payload. RFP service now uses repository for all queries. `Rfp→Request` Prisma relation added (migration 37). Legal admin CRUD in `legal.ts` still has direct Prisma calls. (`rfp-manager-view` slice)
 
 ### CQ-2 · `routes/rentalApplications.ts` — selection pipeline duplicated (HIGH)
 
@@ -32,6 +35,7 @@
 - **Lines:** L362–575
 - **Description:** `GET /manager/rental-application-units` and `GET /owner/rental-selections` contain near-duplicate ~80-line handlers with deep 4-level ad-hoc include trees and inline DTO mapping. Both define the same `applicants → attachments → unit → building` tree inline.
 - **Fix:** Define `SELECTION_PIPELINE_INCLUDE` constant; extract to shared `rentalSelectionService.listPipeline()`.
+- **Partial progress (2026-03-10):** `SELECTION_PIPELINE_INCLUDE` constant extracted and shared by both handlers (CQ-14 resolution). Service extraction to `rentalSelectionService.listPipeline()` still pending.
 
 ### CQ-3 · `routes/tenants.ts` — business logic in route (HIGH)
 
@@ -83,12 +87,13 @@
 - **Description:** `GET /requests/:id/events` and `POST /requests/:id/events` call `prisma.requestEvent.*` directly.
 - **Fix:** Extract to `requestEventService.listEvents()` and `createEvent()`.
 
-### CQ-10 · `routes/requests.ts` — owner-reject has no workflow (MEDIUM)
+### CQ-10 · `routes/requests.ts` — owner-reject has no workflow (MEDIUM) ✅ Resolved 2026-03-11
 
 - **File:** `apps/api/src/routes/requests.ts`
 - **Lines:** L125–155
 - **Description:** `POST /requests/:id/owner-reject` contains inline business logic: status check, status transition, and event logging — no workflow exists for owner rejection.
 - **Fix:** Create `ownerRejectWorkflow` similar to `approveRequestWorkflow`.
+- **Resolution:** Created `ownerRejectWorkflow.ts` during Triage Rework epic. Route now delegates to workflow. Added OWNER_REJECTED status, PENDING_OWNER_APPROVAL → OWNER_REJECTED transition in `transitions.ts`, and `ApprovalSource` tracking.
 
 ### CQ-11 · `routes/invoices.ts` — workflows exist but not wired (MEDIUM)
 
@@ -138,12 +143,13 @@
 
 ## Area 2 — Schema & Data Integrity
 
-### SI-1 · Inventory missing org scope resolver (HIGH)
+### SI-1 · Inventory missing org scope resolver (HIGH) ✅ Resolved 2026-03-16
 
 - **File:** `apps/api/src/governance/orgScope.ts`
 - **Model:** `Appliance` / `Asset`
 - **Description:** F2 explicitly requires org scope resolvers for Request, Job, Invoice, Lease, and Inventory. Resolvers exist for the first four but not for Appliance or Asset. Both models have direct `orgId` columns, so a resolver would be trivial.
 - **Fix:** Add `resolveApplianceOrg()` / `resolveAssetOrg()` to `orgScope.ts`.
+- **Resolution:** Added `resolveApplianceOrg()` and `resolveAssetOrg()` following the existing direct-orgId pattern (identical to `resolveJobOrg`). 8 new unit tests in `orgIsolation.test.ts` (resolver happy/not-found + 4 cross-org matrix scenarios). (`pre-rfp-scope-and-auth-hardening` slice)
 
 ### SI-2 · SCHEMA_REFERENCE.md claims orgId on LegalSource (MEDIUM)
 
@@ -231,11 +237,12 @@
 
 ## Area 3 — Test Coverage Gaps
 
-### TC-1 · 9 of 14 workflows have zero test coverage (HIGH)
+### TC-1 · 12 of 17 workflows have zero test coverage (HIGH)
 
-- **Workflows:** `activateLeaseWorkflow`, `markLeaseReadyWorkflow`, `terminateLeaseWorkflow`, `submitRentalApplicationWorkflow`, `approveInvoiceWorkflow`, `issueInvoiceWorkflow`, `disputeInvoiceWorkflow`, `payInvoiceWorkflow`, `unassignContractorWorkflow`
+- **Workflows (untested):** `activateLeaseWorkflow`, `markLeaseReadyWorkflow`, `terminateLeaseWorkflow`, `submitRentalApplicationWorkflow`, `approveInvoiceWorkflow`, `issueInvoiceWorkflow`, `disputeInvoiceWorkflow`, `payInvoiceWorkflow`, `unassignContractorWorkflow`, `ownerRejectWorkflow`, `createNotificationWorkflow`, `markNotificationReadWorkflow`
 - **Description:** None are imported or referenced by any test file. Only 5 workflows have coverage: `createRequestWorkflow`, `approveRequestWorkflow`, `assignContractorWorkflow`, `completeJobWorkflow` (shallow), `evaluateLegalRoutingWorkflow`.
 - **Fix:** Add workflow test cases exercising the HTTP endpoints that delegate to them.
+- **Updated 2026-03-15:** Workflow count increased from 14→17 (triage rework + notification workflows). Untested count increased to 12.
 
 ### TC-2 · `routes/config.ts` has zero test coverage (HIGH)
 
@@ -261,11 +268,12 @@
 - **Fix:** Assign unique ports or use dynamic port allocation (`:0`).
 - **Status: ✅ Resolved 2026-03-10**
 
-### TC-6 · No cross-org access test at HTTP auth gate level (HIGH)
+### TC-6 · No cross-org access test at HTTP auth gate level (HIGH) ✅ Resolved 2026-03-16
 
 - **File:** `apps/api/src/__tests__/auth.manager-gates.test.ts`
 - **Description:** Both manager and contractor tokens use `default-org`. No test verifies that a token with `org-B` cannot read `org-A` data at the HTTP level. Cross-org isolation is tested at the service layer in `ownerDirect.governance.test.ts`, but not at the route/auth level.
 - **Fix:** Add test: create MANAGER token with `org-B`, attempt to read `org-A` data, expect 403 or empty results.
+- **Resolution:** Added 5 HTTP-level cross-org tests in `auth.manager-gates.test.ts`: org-B token gets empty lists for `/contractors`, `/requests`, `/buildings`; org-A token sees its own data; org-B token cannot see contractor created by org-A. All tests use a real server with `AUTH_OPTIONAL=false`. (`pre-rfp-scope-and-auth-hardening` slice)
 
 ### TC-7 · `routes/helpers.ts` has zero test coverage (MEDIUM)
 
@@ -478,22 +486,71 @@
 
 ## Recommended Priority Order
 
-### 1. SA-1 · `getOrgIdForRequest()` DEFAULT_ORG_ID fallback (CRITICAL)
+> **Previous top 5 all resolved (2026-03-10):** SA-1 (DEFAULT_ORG_ID fallback), SA-6+SA-9 (DEV_IDENTITY_ENABLED guard), SA-2 (tenant-portal IDOR), SA-3+SA-4 (PII exposure), TC-4+TC-5 (test infrastructure). All 20 security findings now closed.
 
-Every unauthenticated request silently inherits the default org. This is the single biggest multi-org blast radius risk. **Fix:** Return 401 for non-public routes when no auth is present and org cannot be resolved.
+### 1. CQ-1 + CQ-5 + CQ-6 · `routes/legal.ts` layer violation (HIGH)
 
-### 2. SA-6 + SA-9 · `DEV_IDENTITY_ENABLED` missing production guard (HIGH)
+~300 lines of direct Prisma queries and business logic across legal rules CRUD, coverage computation, and evaluation listing. Largest remaining layer violation. **Fix:** Extract to `legalAdminService` + `legalCategoryMappingRepository` with canonical includes.
 
-If this env var leaks into production, any request can impersonate any user/role/org via headers. **Fix:** Add one line to the production boot guard in `server.ts`: refuse to start if `DEV_IDENTITY_ENABLED=true` in production.
+### 2. TC-1 · 12 of 17 workflows untested (HIGH)
 
-### 3. SA-2 · Tenant-portal IDOR vulnerability (HIGH)
+Workflow count grew from 14→17 but tested count remains at 5. Critical orchestration logic (invoice lifecycle, lease lifecycle, owner rejection, notifications) has zero test coverage. **Fix:** Add HTTP-level workflow tests exercising status transitions.
 
-All tenant-portal endpoints are accessible with just a `tenantId` query parameter — no auth. An attacker can enumerate tenant IDs and read leases, invoices, and notifications. **Fix:** Require tenant JWT or session token validation.
+### 3. CQ-3 + CQ-4 · Business logic in routes/tenants.ts and routes/leases.ts (HIGH)
 
-### 4. SA-3 + SA-4 · Rental attachment/document PII exposure (HIGH)
+Payment history 3-query chain in tenants.ts, notification orchestration in leases.ts — both belong in services/workflows. **Fix:** Extract to `tenantService.getPaymentHistory()` and move notification into `markLeaseReadyWorkflow`.
 
-Identity documents and personal data downloadable without auth by anyone who knows a UUID. **Fix:** Add `maybeRequireManager()` to both endpoints.
+### 4. ~~TC-6 · No cross-org HTTP auth test~~ ✅ Resolved 2026-03-16
 
-### 5. TC-4 + TC-5 · Test infrastructure — `--runInBand` and port collisions (HIGH)
+5 HTTP-level cross-org tests added in `auth.manager-gates.test.ts` proving org-B tokens get empty results on org-A endpoints.
 
-The test suite is unreliable: 16+ servers spawn in parallel with 3 port collisions. This blocks CI reliability (G7). **Fix:** Add `--runInBand` to Jest config and deduplicate ports. Estimated effort: 30 minutes.
+### 5. ~~SI-1 · Inventory missing org scope resolver~~ ✅ Resolved 2026-03-16
+
+`resolveApplianceOrg()` and `resolveAssetOrg()` added to `orgScope.ts` with 8 unit tests.
+
+---
+
+## Post-Audit Developments (2026-03-10 → 2026-03-15)
+
+Significant work completed since the original audit was generated. This section documents changes that affect audit scope or introduce new architectural context.
+
+### Completed Epics
+
+| Epic | Date | Impact on Audit |
+|------|------|-----------------|
+| Security Hardening Slices 1 & 2 | 2026-03-10 | All 20 SA findings resolved. Production boot guards, role enforcement on mutations, org scoping, rate limiting, JWT hardening, event log redaction. |
+| Prisma DTO Hardening Final | 2026-03-10 | CQ-7, CQ-12, CQ-13, CQ-14 resolved. 18 canonical include constants, compile-time DTO constraints, `includeIntegrity.test.ts` drift detection. |
+| Triage Rework (Slices 1–3) | 2026-03-11 | CQ-10 resolved. `ownerRejectWorkflow` created, OWNER_REJECTED status + PENDING_OWNER_APPROVAL transitions, `ApprovalSource` tracking. Legal engine hardened: LegalRuleScope enum, confidence gating, UNKNOWN/DISCRETIONARY → ROUTE_TO_OWNER. |
+| Legal Engine Remediation | 2026-03-11 | 93 corrupt rules cleaned, DSL evaluator rewritten (`topic_match`, `always_true`, `AND`/`OR`), `RENT_REDUCTION` rule type added. 5 active MAINTENANCE_OBLIGATION rules, 37 active category mappings. |
+| Navigation & UI Consistency | 2026-03-14 | 14 slices: sidebar flattened, 7 hub pages with URL tab persistence, Tailwind unified (managerStyles.js deleted), all list endpoints return `{ data, total }`, 26 tables migrated to inline-table class, Panel wrapper on all manager pages. |
+| Frontend Canonical Tables | 2026-03-14 | Shared `SortableHeader`, `PaginationControls`, `tableUtils` components (F-UI5 guardrail). 7 pages migrated to shared table infrastructure. |
+| Frontend Rationalization | 2026-03-10 | Full page inventory (195 pages), 12 empty states standardized, 119/119 proxy conformance. |
+| Frontend Debt Cleanup | 2026-03-10 | 52/67 frontend findings resolved. |
+
+### New Guardrails Established
+
+- **F-UI1–F-UI6:** Frontend UI guardrails codified in PROJECT_STATE.md — CSS variable tokens, `@layer components`, Tailwind-only styling, shared table components, panel wrapper pattern, URL tab persistence.
+- **H1–H6:** Hardening guidelines for route protection, query scoping, error responses, input validation, sensitive data, transition enforcement.
+
+### Stats Delta
+
+| Metric | At Audit (2026-03-10) | Current (2026-03-17) |
+|--------|----------------------|---------------------|
+| Models | 45 | 46 |
+| Enums | 35 | 38 |
+| Migrations | 32 | 37 |
+| Workflows | 14 | 17 |
+| Repositories | 8 | 11 |
+| Tests | ~312 | 384 |
+| Suites | ~28 | 34 |
+| Frontend pages | 185 | 200 |
+| Backend LOC | ~34k | ~38k |
+| Frontend LOC | ~25k | ~27k |
+| Audit resolved | 20 | 38 |
+| Audit open | 62 | 44 |
+
+### In Progress: RFP Epic
+
+`docs/rfp-epic.md` defines 7 slices for the maintenance-request-to-RFP flow. **Slice 1 (`rfp-manager-view`) completed 2026-03-17**: `rfpRepository.ts` created (11th repository), Rfp→Request Prisma relation added, RFP DTOs enriched with request summary (number, description, category, attachment count), manager RFP list page upgraded from cards to table with real data, detail page created at `/manager/rfps/[id]`.
+
+**Slice 2 (`contractor-rfp-marketplace`) completed 2026-03-17**: Contractor-facing RFP endpoints (`GET /contractor/rfps`, `GET /contractor/rfps/:id`), visibility rules (OPEN + category match OR invited), contractor-safe DTO (postal code only, no full address/tenant identity), list + detail pages, 12 integration tests covering auth gates, visibility logic, response stripping, and cross-org isolation.

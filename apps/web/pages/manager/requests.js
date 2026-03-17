@@ -6,19 +6,29 @@ import PageShell from "../../components/layout/PageShell";
 import PageHeader from "../../components/layout/PageHeader";
 import PageContent from "../../components/layout/PageContent";
 import Panel from "../../components/layout/Panel";
+import SortableHeader from "../../components/SortableHeader";
+import PaginationControls from "../../components/PaginationControls";
+import { useTableSort, useTablePagination, clientSort } from "../../lib/tableUtils";
 import { authHeaders } from "../../lib/api";
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
 const STATUS_TABS = [
-  { key: "ALL", label: "Overview", statuses: null },
-  { key: "ACTIVE", label: "Active", statuses: ["APPROVED", "ASSIGNED", "IN_PROGRESS"] },
-  { key: "PENDING", label: "Pending review", statuses: ["PENDING_REVIEW", "PENDING_OWNER_APPROVAL", "RFP_PENDING", "AUTO_APPROVED"] },
-  { key: "DONE", label: "Completed", statuses: ["COMPLETED", "OWNER_REJECTED"] },
+  { key: "ALL",              label: "Overview",         statuses: null },
+  { key: "PENDING",          label: "Pending Review",   statuses: ["PENDING_REVIEW"] },
+  { key: "OWNER_APPROVAL",   label: "Owner Approval",   statuses: ["PENDING_OWNER_APPROVAL"] },
+  { key: "RFP_OPEN",         label: "RFP Open",         statuses: ["RFP_PENDING"] },
+  { key: "AUTO_APPROVED",    label: "Auto-Approved",    statuses: ["AUTO_APPROVED"] },
+  { key: "ACTIVE",           label: "Active",           statuses: ["APPROVED", "ASSIGNED", "IN_PROGRESS"] },
+  { key: "DONE",             label: "Completed",        statuses: ["COMPLETED", "OWNER_REJECTED"] },
+  { key: "RFPS",             label: "RFPs",             statuses: null, href: "/manager/rfps" },
 ];
 
-const TAB_KEYS = ['overview', 'active', 'pending_review', 'completed'];
+// Derive TAB_KEYS from STATUS_TABS to prevent drift; preserve backward-compat aliases
+const TAB_KEYS = STATUS_TABS.map((t) => t.key.toLowerCase());
+// Old deep-link aliases → map to new index
+const TAB_ALIASES = { overview: "all", pending_review: "pending", completed: "done" };
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -39,6 +49,21 @@ function formatCurrency(chf) {
   const str = chf.toFixed(0);
   const formatted = str.replace(/\B(?=(\d{3})+(?!\d))/g, "\u2019");
   return `CHF\u00A0${formatted}`;
+}
+
+const REQUEST_SORT_FIELDS = ["requestNumber", "status", "building", "category", "estimatedCost", "contractor", "createdAt"];
+
+function requestFieldExtractor(r, field) {
+  switch (field) {
+    case "requestNumber": return r.requestNumber ?? 0;
+    case "status": return r.status ?? "";
+    case "building": return (r.buildingName || "").toLowerCase();
+    case "category": return (r.category || "").toLowerCase();
+    case "estimatedCost": return r.estimatedCost ?? -1;
+    case "contractor": return (r.assignedContractorName || "").toLowerCase();
+    case "createdAt": return r.createdAt || "";
+    default: return "";
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -525,14 +550,23 @@ export default function ManagerRequestsPage() {
   const [requests, setRequests] = useState([]);
   const [contractors, setContractors] = useState([]);
   const [requestsTotal, setRequestsTotal] = useState(0);
-  const activeTab = router.isReady ? (Math.max(0, TAB_KEYS.indexOf(router.query.tab)) || 0) : 0;
+  const activeTab = useMemo(() => {
+    if (!router.isReady) return 0;
+    const raw = (router.query.tab || "").toLowerCase();
+    const resolved = TAB_ALIASES[raw] || raw;
+    const idx = TAB_KEYS.indexOf(resolved);
+    return idx >= 0 ? idx : 0;
+  }, [router.isReady, router.query.tab]);
   const setActiveTab = useCallback((index) => {
     router.push(
-      { pathname: router.pathname, query: { ...router.query, tab: TAB_KEYS[index] } },
+      { pathname: router.pathname, query: { ...router.query, tab: TAB_KEYS[index], page: "0" } },
       undefined,
       { shallow: true }
     );
   }, [router]);
+
+  const { sortField, sortDir, handleSort } = useTableSort(router, REQUEST_SORT_FIELDS);
+
   const [actionLoading, setActionLoading] = useState(null);
 
   // Assign modal state
@@ -549,7 +583,7 @@ export default function ManagerRequestsPage() {
     setError("");
     try {
       const [reqRes, conRes] = await Promise.all([
-        fetch("/api/requests?view=summary", { headers: authHeaders() }),
+        fetch("/api/requests?view=summary&order=desc&limit=200", { headers: authHeaders() }),
         fetch("/api/contractors", { headers: authHeaders() }),
       ]);
       const reqData = await reqRes.json();
@@ -572,6 +606,16 @@ export default function ManagerRequestsPage() {
     if (!tab || !tab.statuses) return requests;
     return requests.filter((r) => tab.statuses.includes(r.status));
   }, [requests, activeTab]);
+
+  const sortedRequests = useMemo(
+    () => clientSort(filteredRequests, sortField, sortDir, requestFieldExtractor),
+    [filteredRequests, sortField, sortDir]
+  );
+  const pager = useTablePagination(router, sortedRequests.length, 25);
+  const paginatedRequests = useMemo(
+    () => pager.pageSlice(sortedRequests),
+    [sortedRequests, pager.pageSlice]
+  );
 
   // Toggle accordion + lazy-fetch
   function toggleAccordion(requestId) {
@@ -702,6 +746,13 @@ export default function ManagerRequestsPage() {
           {/* Status Tabs */}
           <div className="tab-strip">
             {STATUS_TABS.map((tab, i) => {
+              if (tab.href) {
+                return (
+                  <Link key={tab.key} href={tab.href} className="tab-btn">
+                    {tab.label}
+                  </Link>
+                );
+              }
               const count = !tab.statuses
                 ? requestsTotal
                 : requests.filter((r) => tab.statuses.includes(r.status)).length;
@@ -730,19 +781,19 @@ export default function ManagerRequestsPage() {
                   <thead>
                     <tr className="border-b border-slate-100 text-left text-[11px] font-medium uppercase tracking-wider text-slate-400">
                       <th className="py-2.5 pl-3 pr-1 w-8"></th>
-                      <th className="px-3 py-2.5 w-16">#</th>
-                      <th className="px-3 py-2.5">Status</th>
-                      <th className="px-3 py-2.5">Building / Unit</th>
-                      <th className="px-3 py-2.5">Category</th>
+                      <SortableHeader label="#" field="requestNumber" sortField={sortField} sortDir={sortDir} onSort={handleSort} className="w-16" />
+                      <SortableHeader label="Status" field="status" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
+                      <SortableHeader label="Building / Unit" field="building" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
+                      <SortableHeader label="Category" field="category" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
                       <th className="px-3 py-2.5">Description</th>
-                      <th className="px-3 py-2.5">Est. Cost</th>
-                      <th className="px-3 py-2.5 hidden lg:table-cell">Contractor</th>
-                      <th className="px-3 py-2.5 hidden sm:table-cell">Created</th>
+                      <SortableHeader label="Est. Cost" field="estimatedCost" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
+                      <SortableHeader label="Contractor" field="contractor" sortField={sortField} sortDir={sortDir} onSort={handleSort} className="hidden lg:table-cell" />
+                      <SortableHeader label="Created" field="createdAt" sortField={sortField} sortDir={sortDir} onSort={handleSort} className="hidden sm:table-cell" />
                       <th className="px-3 py-2.5">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredRequests.map((r) => {
+                    {paginatedRequests.map((r) => {
                       const expandable = canExpand(r);
                       const isExpanded = expandedId === r.id;
                       const legalState = legalDecisions[r.id];
@@ -1010,6 +1061,14 @@ export default function ManagerRequestsPage() {
                   </tbody>
                 </table>
               </div>
+
+              <PaginationControls
+                currentPage={pager.currentPage}
+                totalPages={pager.totalPages}
+                totalItems={sortedRequests.length}
+                pageSize={pager.pageSize}
+                onPageChange={pager.setPage}
+              />
             </Panel>
           )}
         </PageContent>

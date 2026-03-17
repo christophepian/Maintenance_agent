@@ -12,9 +12,10 @@
 
 import { Router, HandlerContext } from "../http/router";
 import { sendError, sendJson } from "../http/json";
-import { readJson } from "../http/body";
+import { readJson, parseBody } from "../http/body";
 import { first } from "../http/query";
 import { requireOrgViewer } from "./helpers";
+import { requireAnyRole, requireRole, getAuthUser } from "../authz";
 import {
   RequestNotFoundError,
 } from "../services/legalDecisionEngine";
@@ -24,6 +25,11 @@ import {
   RfpNotFoundError,
 } from "../services/rfps";
 import { evaluateLegalRoutingWorkflow } from "../workflows/evaluateLegalRoutingWorkflow";
+import { awardQuoteWorkflow, AwardQuoteError } from "../workflows";
+import { rfpReinviteWorkflow, RfpReinviteError } from "../workflows";
+import { rfpDirectAssignWorkflow, RfpDirectAssignError } from "../workflows";
+import { AwardQuoteSchema } from "../validation/awardQuoteSchema";
+import { ReinviteContractorsSchema, DirectAssignContractorSchema } from "../validation/rfpFallbackSchemas";
 import {
   ingestSource,
   ingestAllSources,
@@ -175,6 +181,128 @@ export function registerLegalRoutes(router: Router) {
       }
       console.error("[GET /rfps/:id]", e);
       sendError(res, 500, "INTERNAL_ERROR", "Failed to load RFP");
+    }
+  });
+
+  /**
+   * POST /rfps/:id/award
+   *
+   * Award a quote on an RFP. MANAGER or OWNER only.
+   * If building threshold requires owner approval and actor is MANAGER,
+   * routes to PENDING_OWNER_APPROVAL instead of direct award.
+   */
+  router.post("/rfps/:id/award", async ({ req, res, params, orgId }) => {
+    if (!requireAnyRole(req, res, ["MANAGER", "OWNER"])) return;
+
+    const body = await parseBody(req, AwardQuoteSchema);
+
+    const user = getAuthUser(req);
+    const actorRole = user?.role as "MANAGER" | "OWNER";
+
+    try {
+      const result = await awardQuoteWorkflow(
+        { orgId, prisma, actorUserId: user?.userId ?? null },
+        {
+          rfpId: params.id,
+          quoteId: body.quoteId,
+          actorRole,
+        },
+      );
+
+      sendJson(res, 200, { data: result });
+    } catch (e: any) {
+      if (e instanceof AwardQuoteError) {
+        switch (e.code) {
+          case "NOT_FOUND":
+          case "QUOTE_NOT_FOUND":
+            return sendError(res, 404, e.code, e.message);
+          case "RFP_NOT_AWARDABLE":
+          case "QUOTE_NOT_SUBMITTABLE":
+            return sendError(res, 409, e.code, e.message);
+          case "OWNER_APPROVAL_REQUIRED":
+            return sendError(res, 403, e.code, e.message);
+          default:
+            return sendError(res, 400, e.code, e.message);
+        }
+      }
+      console.error("[POST /rfps/:id/award]", e);
+      sendError(res, 500, "INTERNAL_ERROR", "Failed to award quote");
+    }
+  });
+
+  /**
+   * POST /rfps/:id/reinvite
+   *
+   * Re-invite additional contractors to an open RFP.
+   * MANAGER only.
+   */
+  router.post("/rfps/:id/reinvite", async ({ req, res, params, orgId }) => {
+    if (!requireRole(req, res, "MANAGER")) return;
+
+    const body = await parseBody(req, ReinviteContractorsSchema);
+    const user = getAuthUser(req);
+
+    try {
+      const result = await rfpReinviteWorkflow(
+        { orgId, prisma, actorUserId: user?.userId ?? null },
+        { rfpId: params.id, contractorIds: body.contractorIds },
+      );
+      sendJson(res, 200, { data: result });
+    } catch (e: any) {
+      if (e instanceof RfpReinviteError) {
+        switch (e.code) {
+          case "NOT_FOUND":
+            return sendError(res, 404, e.code, e.message);
+          case "RFP_NOT_OPEN":
+            return sendError(res, 409, e.code, e.message);
+          case "NO_VALID_CONTRACTORS":
+            return sendError(res, 400, e.code, e.message);
+          default:
+            return sendError(res, 400, e.code, e.message);
+        }
+      }
+      console.error("[POST /rfps/:id/reinvite]", e);
+      sendError(res, 500, "INTERNAL_ERROR", "Failed to reinvite contractors");
+    }
+  });
+
+  /**
+   * POST /rfps/:id/direct-assign
+   *
+   * Bypass quote collection and directly assign a contractor.
+   * Closes the RFP and assigns the contractor to the linked request.
+   * MANAGER only.
+   */
+  router.post("/rfps/:id/direct-assign", async ({ req, res, params, orgId }) => {
+    if (!requireRole(req, res, "MANAGER")) return;
+
+    const body = await parseBody(req, DirectAssignContractorSchema);
+    const user = getAuthUser(req);
+
+    try {
+      const result = await rfpDirectAssignWorkflow(
+        { orgId, prisma, actorUserId: user?.userId ?? null },
+        { rfpId: params.id, contractorId: body.contractorId },
+      );
+      sendJson(res, 200, { data: result });
+    } catch (e: any) {
+      if (e instanceof RfpDirectAssignError) {
+        switch (e.code) {
+          case "NOT_FOUND":
+            return sendError(res, 404, e.code, e.message);
+          case "RFP_NOT_OPEN":
+            return sendError(res, 409, e.code, e.message);
+          case "NO_LINKED_REQUEST":
+          case "CONTRACTOR_NOT_FOUND":
+            return sendError(res, 400, e.code, e.message);
+          case "ASSIGNMENT_FAILED":
+            return sendError(res, 500, e.code, e.message);
+          default:
+            return sendError(res, 400, e.code, e.message);
+        }
+      }
+      console.error("[POST /rfps/:id/direct-assign]", e);
+      sendError(res, 500, "INTERNAL_ERROR", "Failed to directly assign contractor");
     }
   });
 

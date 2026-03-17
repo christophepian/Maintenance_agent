@@ -139,6 +139,30 @@ export function maybeRequireManager(
   return true;
 }
 
+// ── Staff auth ─────────────────────────────────────────────────────
+// Staff roles that can access shared endpoints (notifications, etc.)
+// Add new roles here only — no other files need to change.
+const STAFF_ROLES = ['MANAGER', 'OWNER', 'CONTRACTOR', 'VENDOR', 'INSURANCE'] as const;
+
+export function requireStaffAuth(
+  req: AuthedRequest,
+  res: http.ServerResponse
+): TokenPayload | null {
+  const user = getAuthUser(req);
+  if (!user) {
+    if (isAuthOptional()) {
+      return { userId: 'dev-user', orgId: DEFAULT_ORG_ID, email: 'dev@local', role: 'MANAGER' } as TokenPayload;
+    }
+    sendAuthError(res, 401, 'UNAUTHORIZED');
+    return null;
+  }
+  if (!(STAFF_ROLES as readonly string[]).includes(user.role)) {
+    sendAuthError(res, 403, 'FORBIDDEN');
+    return null;
+  }
+  return user;
+}
+
 export function requireTenantSession(req: http.IncomingMessage, res: http.ServerResponse): string | null {
   const authHeader = req.headers["authorization"];
   if (!authHeader?.startsWith("Bearer ")) {

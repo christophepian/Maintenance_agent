@@ -180,8 +180,8 @@ export default function ManagerVacanciesPage() {
     <AppShell role="MANAGER">
       <PageShell>
         <PageHeader
-          title="Vacancies & Lease Pipeline"
-          subtitle="Vacant units, applications, and tenant selection status"
+          title="Inventory"
+          subtitle="Buildings, units, assets and depreciation schedules."
           actions={
             <button
               onClick={() => { loadVacantUnits(); loadSelections(); }}
@@ -196,6 +196,15 @@ export default function ManagerVacanciesPage() {
           {error && (
             <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
           )}
+
+          {/* Inventory tab strip — mirrors /manager/inventory */}
+          <div className="tab-strip">
+            <Link href="/manager/inventory?tab=buildings" className="tab-btn">Buildings</Link>
+            <Link href="/manager/inventory?tab=units" className="tab-btn">Units</Link>
+            <button className="tab-btn-active">Vacancies</button>
+            <Link href="/manager/inventory?tab=assets" className="tab-btn">Assets</Link>
+            <Link href="/manager/inventory?tab=depreciation" className="tab-btn">Depreciation</Link>
+          </div>
 
           {/* ── Tenant Selections Pipeline ─────────────────── */}
           <Panel title={"Tenant Selections" + (selections.length > 0 ? ` (${selections.length})` : "")}>
@@ -256,7 +265,7 @@ export default function ManagerVacanciesPage() {
                             ] : sel.hasLeaseTemplate ? [
                               { label: "📝 Generate Lease from Template", onClick: () => generateLeaseFromTemplate(sel) },
                             ] : [
-                              { label: "📐 Create Lease Template", onClick: () => router.push("/manager/leases/templates?buildingId=" + (sel.buildingId || "")) },
+                              { label: "📐 Create Lease Template", onClick: () => router.push("/manager/leases/templates?buildingId=" + (sel.buildingId || "") + "&autoCreate=true") },
                             ]),
                             { label: "👤 View Candidate", onClick: () => router.push("/manager/vacancies/" + sel.unitId + "/applications") },
                             ...(sel.buildingId ? [

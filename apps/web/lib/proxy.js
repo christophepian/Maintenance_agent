@@ -38,6 +38,15 @@ export async function proxyToBackend(req, res, path, options = {}) {
   delete forwardHeaders.connection;
   delete forwardHeaders['content-length'];  // Let fetch recalculate from actual body
 
+  // When X-Dev-Role is set (dev impersonation), strip any browser-side
+  // Authorization token so the backend's dev-identity path is used instead
+  // of a potentially mismatched JWT (e.g. manager token on contractor route).
+  // In production X-Dev-Role is never set, so real JWTs flow through normally.
+  if (additionalHeaders["X-Dev-Role"]) {
+    delete forwardHeaders.authorization;
+    delete forwardHeaders.Authorization;
+  }
+
   // H3: Preserve query params unchanged (no re-parsing)
   const queryString = req.url?.includes("?") ? req.url.split("?")[1] : "";
   const url = `${API_BASE_URL}${path}${queryString ? `?${queryString}` : ""}`;

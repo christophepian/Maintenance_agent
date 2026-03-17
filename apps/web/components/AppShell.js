@@ -39,11 +39,15 @@ export default function AppShell({ role: roleProp, children }) {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    if (role !== "MANAGER" && role !== "OWNER") return;
+    if (role !== "MANAGER" && role !== "OWNER" && role !== "CONTRACTOR") return;
     if (authRole === role) return; // already bootstrapped for this role
 
+    // Each role stores its token under a role-specific localStorage key.
+    // Manager uses "authToken" (legacy), others use "<role>Token".
+    const tokenKey = role === "CONTRACTOR" ? "contractorToken" : "authToken";
+
     // Check if existing token matches current role
-    const existingToken = localStorage.getItem("authToken");
+    const existingToken = localStorage.getItem(tokenKey);
     if (existingToken) {
       try {
         const payload = JSON.parse(atob(existingToken.split(".")[1]));
@@ -57,9 +61,12 @@ export default function AppShell({ role: roleProp, children }) {
       }
     }
 
-    const creds = role === "OWNER"
-      ? { email: "owner@local.dev", password: "devpassword", name: "Dev Owner", role: "OWNER" }
-      : { email: "manager@local.dev", password: "devpassword", name: "Dev Manager", role: "MANAGER" };
+    const credsByRole = {
+      CONTRACTOR: { email: "contractor@local.dev", password: "devpassword", name: "Dev Contractor", role: "CONTRACTOR" },
+      OWNER: { email: "owner@local.dev", password: "devpassword", name: "Dev Owner", role: "OWNER" },
+      MANAGER: { email: "manager@local.dev", password: "devpassword", name: "Dev Manager", role: "MANAGER" },
+    };
+    const creds = credsByRole[role];
 
     async function ensureAuth() {
       try {
@@ -79,7 +86,7 @@ export default function AppShell({ role: roleProp, children }) {
         }
         const token = data?.data?.token;
         if (token) {
-          localStorage.setItem("authToken", token);
+          localStorage.setItem(tokenKey, token);
         }
       } catch {
         // ignore auth bootstrap errors
@@ -210,7 +217,11 @@ export default function AppShell({ role: roleProp, children }) {
       },
       {
         section: "Work Requests",
-        items: [{ label: "Work Requests", href: "/manager/work-requests" }],
+        items: [{ label: "Work Requests", href: "/owner/work-requests" }],
+      },
+      {
+        section: "RFPs",
+        items: [{ label: "RFPs", href: "/owner/rfps" }],
       },
     ],
     []
@@ -229,6 +240,12 @@ export default function AppShell({ role: roleProp, children }) {
         items: [
           { label: "Jobs", href: "/contractor/jobs" },
           { label: "Status updates", href: "/contractor/status-updates" },
+        ],
+      },
+      {
+        section: "Bidding",
+        items: [
+          { label: "RFPs", href: "/contractor/rfps" },
         ],
       },
       {

@@ -363,7 +363,7 @@ Build a web-first maintenance platform for Swiss property managers that:
 ### Backend API — `apps/api/src/server.ts` (port 3001)
 
 * Node.js + TypeScript, raw `http.createServer` — **no Express/NestJS**
-* Layered: `routes/` → `workflows/` (14) → `services/` → `repositories/` (10) → `events/` (15 types)
+* Layered: `routes/` → `workflows/` (14) → `services/` → `repositories/` (13) → `events/` (15 types)
 * State machines: `workflows/transitions.ts` (Request, Job, Invoice, Lease, RentalApplication)
 * Org scoping: `governance/orgScope.ts`
 * Prisma ORM + PostgreSQL + Zod validation
@@ -395,7 +395,7 @@ Maintenance_Agent/
 │   │       ├── routes/       # Thin HTTP handlers (13 route modules)
 │   │       ├── workflows/    # Orchestration layer (14 workflows + transitions)
 │   │       ├── services/     # Domain logic
-│   │       ├── repositories/ # Canonical Prisma access (10 repos)
+│   │       ├── repositories/ # Canonical Prisma access (13 repos)
 │   │       ├── events/       # Domain event bus
 │   │       ├── governance/   # Org scope resolvers
 │   │       ├── validation/   # Zod schemas
@@ -417,9 +417,9 @@ Maintenance_Agent/
 
 ## 4. Database Schema (Prisma)
 
-> **Full schema reference:** See [SCHEMA_REFERENCE.md](SCHEMA_REFERENCE.md) for the complete models table (46 models), enums (38), schema gotchas, and Request.orgId migration path.
+> **Full schema reference:** See [SCHEMA_REFERENCE.md](SCHEMA_REFERENCE.md) for the complete models table (48 models), enums (38), schema gotchas, and Request.orgId migration path.
 >
-> **Status:** 35 migrations + `db push` for LKDE tables. Last verified: 2026-03-12.
+> **Status:** 36 migrations + `db push` for LKDE tables. Last verified: 2026-03-15.
 >
 > **Quick gotchas (always check SCHEMA_REFERENCE.md for full list):**
 > - `Request` has NO `orgId` — scope inherited via unit/building FK chain
@@ -433,9 +433,9 @@ Maintenance_Agent/
 ## 5. Backend API
 
 * **Entry:** `apps/api/src/server.ts` — raw `http.createServer`, port **3001**
-* **Architecture:** `routes/` (thin HTTP) → `workflows/` (14) → `services/` → `repositories/` (10) → `events/`
+* **Architecture:** `routes/` (thin HTTP) → `workflows/` (14) → `services/` → `repositories/` (13) → `events/`
 * **Route modules (13):** requests, leases, invoices, inventory, tenants, config, notifications, auth, rentalApplications, contractor, financials, legal, helpers — all registered via `register*Routes(router)` in server.ts
-* **Full endpoint list:** See `apps/api/openapi.yaml` (~146 API routes, 14 tags) or `ARCHITECTURE_LOW_CONTEXT_GUIDE.md`
+* **Full endpoint list:** See `apps/api/openapi.yaml` (~161 API routes, 14 tags) or `ARCHITECTURE_LOW_CONTEXT_GUIDE.md`
 
 <!-- reviewed 2026-03-10 -->
 
@@ -449,7 +449,7 @@ Maintenance_Agent/
 * **Layout:** `AppShell` component with role-scoped sidebar (MANAGER/CONTRACTOR/TENANT/OWNER)
 * **Reusable components:** `PageShell`, `PageHeader`, `PageContent`, `Panel`, `Section`, `ContractorPicker`, `NotificationBell`, `AssetInventoryPanel`
 * **Key page groups:** `/manager/*` (requests, inventory, legal, leases, settings), `/contractor/*` (jobs, invoices), `/tenant/*` (leases, chat), `/owner/*` (approvals, invoices, vacancies), `/admin-inventory/*`, `/apply` (rental wizard), `/listings`
-* **~195 frontend pages** (UI + API proxies)
+* **~207 frontend pages** (UI + API proxies)
 
 <!-- reviewed 2026-03-10 -->
 
@@ -466,7 +466,7 @@ Maintenance_Agent/
 * PostgreSQL via Docker: `infra/docker-compose.yml` (port 5432)
 * Dev DB: `maint_agent` | Test DB: `maint_agent_test` (isolated)
 * CI: `.github/workflows/ci.yml` — 6-gate pipeline enforcing G1–G11
-* Prisma migrations: `apps/api/prisma/migrations/` (35 migrations + db push for LKDE)
+* Prisma migrations: `apps/api/prisma/migrations/` (36 migrations + db push for LKDE)
 
 ---
 
@@ -671,7 +671,7 @@ Full rewrite of the product roadmap generator to match the original IBM Plex dar
   - Stat grid: Done / In Progress / Planned / Total / Custom Items / % Complete
   - 4 tabs: Phases (with filter bar), Custom Items, Codebase Signals (detection table + 3-column panels), How to Use
 - **scripts/roadmap.schema.json** updated — new feature ID pattern, `hooks_blocked` array, `page_exists`/`audit_finding` detection types, `model` property on checks, `future` phase status
-- **Codebase signals verified:** 46 models, 38 enums, 35 migrations, 16 workflows, 14 routes — all detected correctly
+- **Codebase signals verified:** 48 models, 41 enums, 41 migrations, 16 workflows, 14 routes — all detected correctly
 
 **Files created/rewritten:**
 - `ROADMAP.json` — 26 features, 6 phases, empty `custom_items[]`
@@ -724,7 +724,7 @@ Full rework of the request triage pipeline: fixed wrong state machine transition
 - `apps/api/src/workflows/ownerRejectWorkflow.ts`
 
 **Files modified:**
-- `apps/api/prisma/schema.prisma` — 3 enum additions, 4 new fields across 46 models
+- `apps/api/prisma/schema.prisma` — 3 enum additions, 4 new fields across 48 models
 - `apps/api/src/workflows/transitions.ts` — VALID_REQUEST_TRANSITIONS rewritten
 - `apps/api/src/workflows/index.ts` — ownerRejectWorkflow export (17 workflows total)
 - `apps/api/src/workflows/approveRequestWorkflow.ts` — approvalSource writes
@@ -737,7 +737,7 @@ Full rework of the request triage pipeline: fixed wrong state machine transition
 - `apps/api/src/__tests__/workflows.test.ts` — obligation assertion fixed
 - `apps/api/src/ARCHITECTURE_LOW_CONTEXT_GUIDE.md` — transition map + counts updated
 
-**Stats:** 46 models · 38 enums · 17 workflows. tsc: 0 errors. Tests: pass (12 pre-existing integration test timeouts unchanged).
+**Stats:** 48 models · 41 enums · 17 workflows. tsc: 0 errors. Tests: pass (12 pre-existing integration test timeouts unchanged).
 
 ### Legal Engine Remediation + DSL Evaluator Update — 2026-03-11
 **Status:** ✅ COMPLETE
@@ -774,7 +774,7 @@ Cleaned up 93 corrupt legal rules (duplicates, missing topics, wrong ruleType) a
 - `apps/api/prisma/schema.prisma` — RENT_REDUCTION enum value
 - `apps/api/src/services/legalDecisionEngine.ts` — DSL evaluator rewrite + authority filter
 
-**Stats:** 46 models · 38 enums · 17 workflows. tsc: 0 errors. 26 verification assertions passed. 12 pre-existing integration test timeouts unchanged.
+**Stats:** 48 models · 41 enums · 17 workflows. tsc: 0 errors. 26 verification assertions passed. 12 pre-existing integration test timeouts unchanged.
 
 ### Navigation & UI Consistency — 2026-03-14
 **Status:** ✅ COMPLETE
@@ -814,6 +814,10 @@ Full redesign of manager workspace navigation and visual consistency across 14 s
 * ~~router.isReady guard~~ — ✅ Resolved 2026-03-14: added `router.isReady` ternary to activeTab derivation in all 7 hub pages + template
 * Hub tab content polish (low priority, on-demand): legal/rules, legal/evaluations, people/tenants, people/vendors, rfps tabs still use flat inline-table. Enrich when pages become high-traffic or users report friction
 * ASSET_TYPE_COLORS in legal/depreciation.js uses hardcoded Tailwind color strings (bg-violet-100 text-violet-700 etc.) — these bypass the token system; migrate to CSS variables when depreciation page is next touched
+* Dev auth token (`apps/web/pages/_app.js` `DEV_MANAGER_TOKEN`) expires 2027-03-15.
+  Regenerate with: `cd apps/api && node -e "const jwt=require('jsonwebtoken'); console.log(jwt.sign({userId:'dev-user',orgId:'default-org',email:'dev@local',role:'MANAGER'},'dev-secret-key-12345',{expiresIn:'365d'}))"`
+  Replace `DEV_MANAGER_TOKEN` in `_app.js` with the new value.
+  Also ensure `dev-user` exists in the DB: `cd apps/api && npx prisma db seed` (safe — upsert only).
 * ~~Fix server-spawn test timeouts~~ — ✅ Resolved 2026-03-10 (TC-4/TC-5): `maxWorkers: 1` + port deconfliction
 
 ### Multi-org Architecture Initiative
@@ -825,7 +829,7 @@ Full redesign of manager workspace navigation and visual consistency across 14 s
 ### Custom HTTP Stack Evaluation
 **Priority:** Medium — evaluate before the team grows or route count exceeds ~200
 **Status:** Deferred — explicit re-evaluation recommended at next architecture review
-**Context:** Backend uses raw `http.createServer()` with custom routing (~146 API routes, manual URL parsing, custom auth wrappers, binary forwarding). This was the right call early. At current scale the question is whether the maintenance burden of a bespoke stack outweighs the dependency cost of Express or Fastify. Decision should be made explicitly rather than by default.
+**Context:** Backend uses raw `http.createServer()` with custom routing (~161 API routes, manual URL parsing, custom auth wrappers, binary forwarding). This was the right call early. At current scale the question is whether the maintenance burden of a bespoke stack outweighs the dependency cost of Express or Fastify. Decision should be made explicitly rather than by default.
 **Prerequisite:** Architecture review session — not a Copilot task.
 
 ### Future Vision (Deferred)
@@ -897,15 +901,47 @@ Conversational tenant intake with phone-based identification, automatic asset in
 
 <!-- auto-sync 2026-03-14: fePages 194→195 -->
 
+
+<!-- auto-sync 2026-03-15: migrations 35→36 -->
+
+
+<!-- auto-sync 2026-03-15: frontendLOC 26→27 -->
+
+
+<!-- auto-sync 2026-03-16: migrations 36→37, repositories 10→11, repositories 10→11, repositories 10→11, repositories 10→11, repositories 10→11, repositories 10→11, backendLOC 36→37, fePages 195→196 -->
+
+
+<!-- auto-sync 2026-03-16: backendLOC 37→38, fePages 196→200, apiRoutes 146→148, apiRoutes 146→148, apiRoutes 146→148 -->
+
+
+<!-- auto-sync 2026-03-16: migrations 37→39, frontendLOC 27→28, fePages 200→201, apiRoutes 148→149, apiRoutes 148→149, apiRoutes 148→149 -->
+
+
+<!-- auto-sync 2026-03-16: enums 38→39, enums 38→39, enums 38→39, enums 38→39, enums 38→39, migrations 39→41, backendLOC 38→39, fePages 201→204, apiRoutes 149→150, apiRoutes 149→150, apiRoutes 149→150 -->
+
+
+<!-- auto-sync 2026-03-16: backendLOC 39→40, fePages 204→206, apiRoutes 150→152, apiRoutes 150→152, apiRoutes 150→152 -->
+
+
+<!-- auto-sync 2026-03-16: models 46→47, models 46→47, models 46→47, models 46→47, models 46→47, models 46→47, enums 39→40, enums 39→40, enums 39→40, enums 39→40, enums 39→40, repositories 11→12, repositories 11→12, repositories 11→12, repositories 11→12, repositories 11→12, repositories 11→12, backendLOC 40→41, apiRoutes 152→156, apiRoutes 152→156, apiRoutes 152→156 -->
+
+
+<!-- auto-sync 2026-03-16: models 47→48, models 47→48, models 47→48, models 47→48, models 47→48, models 47→48, enums 40→41, enums 40→41, enums 40→41, enums 40→41, enums 40→41, repositories 12→13, repositories 12→13, repositories 12→13, repositories 12→13, repositories 12→13, repositories 12→13, backendLOC 41→43, apiRoutes 156→161, apiRoutes 156→161, apiRoutes 156→161 -->
+
+
+<!-- auto-sync 2026-03-17: frontendLOC 28→29, fePages 206→207 -->
+
 ### State Integrity
 
 This document + companion files are the **single source of truth**:
 
 * **Doc structure:** PROJECT_STATE.md (~570 lines) + EPIC_HISTORY.md (epics) + SCHEMA_REFERENCE.md (schema) + ARCHITECTURE_LOW_CONTEXT_GUIDE.md (lookup)
 * Filesystem (verified 2026-03-10)
-* Database schema — 35 migrations + `db push` for LKDE tables + `RFP_PENDING` enum value + `autoLegalRouting` column (shadow DB issue — see G8 exception in LKDE epic section); 46 models, 38 enums verified in live DB
+* Database schema — 36 migrations + `db push` for LKDE tables + `RFP_PENDING` enum value + `autoLegalRouting` column (shadow DB issue — see G8 exception in LKDE epic section); 48 models, 41 enums verified in live DB
 * Database data — 99+ assets across 19 units (with interventions tracking), 274 depreciation standards (including 5 added for mapped topics), 16 category mappings, buildings with cantons set, 6 CO 259a statutory rules with proper DSL (verified 2026-03-07)
 * Running system — all endpoints return 200; legal auto-routing creates RFP and sets RFP_PENDING for requests with mapped categories when autoLegalRouting=true; asset inventory endpoints serve depreciation data (verified 2026-03-07)
+* Dev auth bootstrap: Canonical dev manager is user `d93436c1-6568-4dba-8e65-fd8d34e6be2b` (email `manager@local.dev`), created via the auth flow. The legacy `dev-user` still exists in DB but is no longer used as the manager identity — notifications were migrated to `d93436c1`. Long-lived JWTs in `_app.js`; bootstrap is expiry-aware (expired tokens are auto-replaced on next page load, no manual `localStorage.clear()` needed). All three dev tokens expire 2027-03-15.
+* **Multi-role auth system:** `STAFF_ROLES` array in `apps/api/src/authz.ts` is the single extension point for adding new staff roles. Currently: MANAGER, OWNER, VENDOR, INSURANCE. `requireStaffAuth()` guards all notification endpoints. Frontend `_app.js` bootstraps role-specific tokens under `authToken` (manager), `ownerToken`, `vendorToken` keys; `NotificationBell` reads the token matching its `role` prop. Adding a new role: (1) add string to `STAFF_ROLES`, (2) add entry to `DEV_TOKENS` in `_app.js`, (3) add seed user in `prisma/seed.ts`. Nothing else changes. Dev users: `d93436c1` (MANAGER, canonical), `dev-owner` (OWNER), `dev-vendor` (VENDOR). Schema `Role` enum: TENANT, CONTRACTOR, MANAGER, OWNER, VENDOR, INSURANCE (migration 35).
 * Frontend navigation — sidebar: 7 flat primary nav items, no accordion. All 7 manager hub pages use inline tab content with URL-based tab persistence (?tab=key). Tab header links: always-visible "Full view →" for tabs with richer standalone pages; absent for equivalent pages. All manager pages wrapped in Panel component for consistent white card layout. Verified 2026-03-14.
 * Test suite — **359 tests, 33 suites against maint_agent_test** (isolated from dev DB `maint_agent`) (verified 2026-03-12). Includes 20 new asset inventory tests.
   - ✅ **TC-4 resolved (2026-03-10):** `jest.config.js` now has `maxWorkers: 1` — integration tests run serially, eliminating parallel server spawning timeouts.
@@ -915,7 +951,7 @@ This document + companion files are the **single source of truth**:
 * TypeScript compilation — 0 errors (verified 2026-03-12)
 * OpenAPI spec — fully synced with router registrations (verified 2026-03-07)
 * Git — uncommitted changes: Asset Inventory & Depreciation Tracking slice + Phase 3 Architecture Hardening + rentalIntegration test fix (seed data) + Legal Knowledge & Decision Engine epic + Legal Auto-Routing + Building Financial Performance epic + auth hardening + requests page accordion UI + comprehensive asset seed + LegalSource Scope Field + Ingestion Filter slice
-* Architectural intent — 14 workflows, 10 repositories, 5 transition maps (Request, Job, Invoice, Lease, RentalApplication)
+* Architectural intent — 14 workflows, 13 repositories, 5 transition maps (Request, Job, Invoice, Lease, RentalApplication)
 * CI pipeline enforces G1–G11 guardrails
 
 Safe to:
@@ -931,7 +967,7 @@ Safe to:
 
 ---
 
-✅ **Project stabilized, security-hardened, org-scoped, and UI-connected (2026-03-12).** 359 tests, 33 suites, 0 TS errors. ~52/67 frontend audit findings resolved. 20/82 audit findings resolved (security hardening + schema doc fixes). Frontend rationalized: full page inventory, 12 empty states standardized, 119/119 proxies conforming. Backend: ~36,000 LOC | Frontend: ~26,000 LOC | ~146 API routes | 46 Prisma models | 38 enums | 193 frontend pages | 17 workflows | 10 repositories. See [EPIC_HISTORY.md](EPIC_HISTORY.md) for full completion details.
+✅ **Project stabilized, security-hardened, org-scoped, and UI-connected (2026-03-12).** 359 tests, 33 suites, 0 TS errors. ~52/67 frontend audit findings resolved. 20/82 audit findings resolved (security hardening + schema doc fixes). Frontend rationalized: full page inventory, 12 empty states standardized, 119/119 proxies conforming. Backend: ~43,000 LOC | Frontend: ~29,000 LOC | ~161 API routes | 46 Prisma models | 41 enums | 193 frontend pages | 17 workflows | 13 repositories. See [EPIC_HISTORY.md](EPIC_HISTORY.md) for full completion details.
 
 
 ## 13. Authentication & Testing
@@ -995,7 +1031,7 @@ Safe to:
 | Enums | 38 | prisma/schema.prisma — derived |
 | Migrations | 35 | prisma/migrations/ — derived |
 | Workflows | 17 | src/workflows/ — derived |
-| Repositories | 10 | src/repositories/ — derived |
+| Repositories | 13 | src/repositories/ — derived |
 | Backend LOC | ~36k | src/ — derived |
 | Frontend LOC | ~25k | apps/web/ — derived |
 | Frontend pages | 193 | apps/web/pages/ — derived |

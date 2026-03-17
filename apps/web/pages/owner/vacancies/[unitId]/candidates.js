@@ -9,7 +9,7 @@ import PageContent from "../../../../components/layout/PageContent";
 import Panel from "../../../../components/layout/Panel";
 import DocumentsPanel from "../../../../components/DocumentsPanel";
 import { formatDisqualificationReasons } from "../../../../lib/formatDisqualificationReasons";
-import { authHeaders } from "../../../../lib/api";
+import { ownerAuthHeaders } from "../../../../lib/api";
 function scoreColor(score) {
   if (score >= 700) return "text-green-700 bg-green-50";
   if (score >= 400) return "text-amber-700 bg-amber-50";
@@ -67,7 +67,7 @@ export default function OwnerCandidatesPage() {
     setError("");
     try {
       const res = await fetch(`/api/owner/rental-applications?unitId=${unitId}`, {
-        headers: authHeaders(),
+        headers: ownerAuthHeaders(),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.message || "Failed to load candidates");
@@ -148,7 +148,7 @@ export default function OwnerCandidatesPage() {
 
       const res = await fetch(`/api/owner/units/${unitId}/select-tenants`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...authHeaders() },
+        headers: { "Content-Type": "application/json", ...ownerAuthHeaders() },
         body: JSON.stringify(body),
       });
       const data = await res.json().catch(() => ({}));
@@ -172,7 +172,7 @@ export default function OwnerCandidatesPage() {
         `/api/owner/rental-application-units/${overrideTarget.applicationUnitId}/override-disqualification`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json", ...authHeaders() },
+          headers: { "Content-Type": "application/json", ...ownerAuthHeaders() },
           body: JSON.stringify({ reason: overrideReason.trim() }),
         },
       );

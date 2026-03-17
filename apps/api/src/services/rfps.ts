@@ -8,15 +8,42 @@
  *   - Does NOT break the Request → Job lifecycle
  *
  * RFPs represent a procurement step only.
+ *
+ * Data access: via rfpRepository (G9).
  */
 
-import { RfpStatus, LegalObligation, Prisma } from "@prisma/client";
+import { LegalObligation } from "@prisma/client";
 import prisma from "./prismaClient";
-import { RFP_INCLUDE } from "./legalIncludes";
+import {
+  RfpWithRelations,
+  findRfpsByOrg,
+  findRfpById,
+  findRfpByRequestId,
+  findRfpsForContractor,
+  createRfpWithInvites,
+} from "../repositories/rfpRepository";
+import type { ListRfpOpts } from "../repositories/rfpRepository";
+import {
+  findContractorById,
+  parseServiceCategories,
+} from "../repositories/contractorRepository";
+
+// Re-export for backward compatibility with legalIncludes consumers
+export { RFP_FULL_INCLUDE } from "../repositories/rfpRepository";
 
 // ==========================================
 // DTOs
 // ==========================================
+
+export interface RfpRequestSummaryDTO {
+  id: string;
+  requestNumber: number;
+  description: string;
+  category: string | null;
+  status: string;
+  createdAt: string;
+  attachmentCount: number;
+}
 
 export interface RfpDTO {
   id: string;
@@ -26,17 +53,20 @@ export interface RfpDTO {
   requestId: string | null;
   category: string;
   legalObligation: LegalObligation;
-  status: RfpStatus;
+  status: string;
   inviteCount: number;
   deadlineAt: string | null;
   awardedContractorId: string | null;
+  awardedQuoteId: string | null;
   createdAt: string;
   updatedAt: string;
   building?: { id: string; name: string; address: string };
   unit?: { id: string; unitNumber: string } | null;
   awardedContractor?: { id: string; name: string } | null;
+  request?: RfpRequestSummaryDTO | null;
   invites: RfpInviteDTO[];
   quotes: RfpQuoteDTO[];
+  quoteCount: number;
 }
 
 export interface RfpInviteDTO {
@@ -53,7 +83,16 @@ export interface RfpQuoteDTO {
   rfpId: string;
   contractorId: string;
   amountCents: number;
+  currency: string;
+  vatIncluded: boolean;
+  estimatedDurationDays: number | null;
+  earliestAvailability: string | null;
+  lineItems: any;
+  workPlan: string | null;
+  assumptions: string | null;
+  validUntil: string | null;
   notes: string | null;
+  status: string;
   submittedAt: string;
   contractor?: { id: string; name: string };
 }
@@ -70,10 +109,46 @@ export class RfpNotFoundError extends Error {
 }
 
 // ==========================================
+// Contractor-safe DTOs (pre-award view)
+// ==========================================
+
+/** Request summary visible to contractors — no tenant identity, no full address */
+export interface ContractorRfpRequestSummaryDTO {
+  id: string;
+  requestNumber: number;
+  description: string;
+  category: string | null;
+  createdAt: string;
+  attachmentCount: number;
+}
+
+/** RFP as seen by a contractor — strips address to postal code, hides tenant info */
+export interface ContractorRfpDTO {
+  id: string;
+  category: string;
+  legalObligation: LegalObligation;
+  status: string;
+  inviteCount: number;
+  deadlineAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  /** Postal code only — full address stripped for pre-award safety */
+  postalCode: string | null;
+  buildingName: string | null;
+  unitNumber: string | null;
+  request: ContractorRfpRequestSummaryDTO | null;
+  /** Whether this contractor was explicitly invited */
+  isInvited: boolean;
+  quoteCount: number;
+  /** The contractor's own submitted quote (null if not yet submitted) */
+  myQuote: RfpQuoteDTO | null;
+}
+
+// ==========================================
 // Mappers
 // ==========================================
 
-function mapRfpToDTO(rfp: any): RfpDTO {
+function mapRfpToDTO(rfp: RfpWithRelations): RfpDTO {
   return {
     id: rfp.id,
     orgId: rfp.orgId,
@@ -86,12 +161,24 @@ function mapRfpToDTO(rfp: any): RfpDTO {
     inviteCount: rfp.inviteCount,
     deadlineAt: rfp.deadlineAt?.toISOString() ?? null,
     awardedContractorId: rfp.awardedContractorId ?? null,
+    awardedQuoteId: (rfp as any).awardedQuoteId ?? null,
     createdAt: rfp.createdAt.toISOString(),
     updatedAt: rfp.updatedAt.toISOString(),
     building: rfp.building ?? undefined,
     unit: rfp.unit ?? null,
     awardedContractor: rfp.awardedContractor ?? null,
-    invites: (rfp.invites ?? []).map((i: any) => ({
+    request: rfp.request
+      ? {
+          id: rfp.request.id,
+          requestNumber: rfp.request.requestNumber,
+          description: rfp.request.description,
+          category: rfp.request.category ?? null,
+          status: rfp.request.status,
+          createdAt: rfp.request.createdAt.toISOString(),
+          attachmentCount: rfp.request._count.attachments,
+        }
+      : null,
+    invites: (rfp.invites ?? []).map((i) => ({
       id: i.id,
       rfpId: i.rfpId,
       contractorId: i.contractorId,
@@ -99,15 +186,25 @@ function mapRfpToDTO(rfp: any): RfpDTO {
       createdAt: i.createdAt.toISOString(),
       contractor: i.contractor ?? undefined,
     })),
-    quotes: (rfp.quotes ?? []).map((q: any) => ({
+    quotes: (rfp.quotes ?? []).map((q) => ({
       id: q.id,
       rfpId: q.rfpId,
       contractorId: q.contractorId,
       amountCents: q.amountCents,
+      currency: q.currency,
+      vatIncluded: q.vatIncluded,
+      estimatedDurationDays: q.estimatedDurationDays ?? null,
+      earliestAvailability: q.earliestAvailability?.toISOString() ?? null,
+      lineItems: q.lineItems ?? null,
+      workPlan: q.workPlan ?? null,
+      assumptions: q.assumptions ?? null,
+      validUntil: q.validUntil?.toISOString() ?? null,
       notes: q.notes ?? null,
+      status: (q as any).status ?? "SUBMITTED",
       submittedAt: q.submittedAt.toISOString(),
       contractor: q.contractor ?? undefined,
     })),
+    quoteCount: rfp.quotes?.length ?? 0,
   };
 }
 
@@ -132,13 +229,10 @@ export async function createRfpForRequest(
   },
 ): Promise<RfpDTO> {
   // Idempotency: check for existing RFP
-  const existing = await prisma.rfp.findFirst({
-    where: { requestId, orgId },
-    include: RFP_INCLUDE,
-  });
+  const existing = await findRfpByRequestId(prisma, orgId, requestId);
   if (existing) return mapRfpToDTO(existing);
 
-  // Load request context
+  // Load request context (creation-specific logic, not a generic query)
   const request = await prisma.request.findUnique({
     where: { id: requestId },
     include: {
@@ -186,72 +280,33 @@ export async function createRfpForRequest(
   // Take up to inviteCount contractors
   const selectedContractors = matchingContractors.slice(0, inviteCount);
 
-  // Create RFP with invites in a transaction
-  const rfp = await prisma.$transaction(async (tx) => {
-    const created = await tx.rfp.create({
-      data: {
-        orgId,
-        buildingId: building.id,
-        unitId: request.unit!.id,
-        requestId,
-        category,
-        legalObligation: decision.legalObligation,
-        status: selectedContractors.length > 0 ? "OPEN" : "DRAFT",
-        inviteCount,
-      },
-    });
-
-    // Create invites
-    if (selectedContractors.length > 0) {
-      await tx.rfpInvite.createMany({
-        data: selectedContractors.map((c) => ({
-          rfpId: created.id,
-          contractorId: c.id,
-          status: "INVITED",
-        })),
-      });
-    }
-
-    return created;
+  // Auto-routed RFPs are always OPEN so contractors can discover them
+  // by category browsing. Invites are an additional direct-notification
+  // channel, not a prerequisite for visibility.
+  const rfp = await createRfpWithInvites(prisma, {
+    orgId,
+    buildingId: building.id,
+    unitId: request.unit.id,
+    requestId,
+    category,
+    legalObligation: decision.legalObligation,
+    status: "OPEN",
+    inviteCount,
+    contractorIds: selectedContractors.map((c) => c.id),
   });
 
-  // Reload with includes
-  const loaded = await prisma.rfp.findUnique({
-    where: { id: rfp.id },
-    include: RFP_INCLUDE,
-  });
-
-  return mapRfpToDTO(loaded!);
+  return mapRfpToDTO(rfp);
 }
 
 // ==========================================
 // CRUD
 // ==========================================
 
-export interface ListRfpOpts {
-  limit: number;
-  offset: number;
-  status?: RfpStatus;
-}
-
 export async function listRfps(
   orgId: string,
   opts: ListRfpOpts,
 ): Promise<{ data: RfpDTO[]; total: number }> {
-  const where: Prisma.RfpWhereInput = { orgId };
-  if (opts.status) where.status = opts.status;
-
-  const [rows, total] = await Promise.all([
-    prisma.rfp.findMany({
-      where,
-      include: RFP_INCLUDE,
-      orderBy: { createdAt: "desc" },
-      take: opts.limit,
-      skip: opts.offset,
-    }),
-    prisma.rfp.count({ where }),
-  ]);
-
+  const { rows, total } = await findRfpsByOrg(prisma, orgId, opts);
   return { data: rows.map(mapRfpToDTO), total };
 }
 
@@ -259,10 +314,160 @@ export async function getRfpById(
   orgId: string,
   rfpId: string,
 ): Promise<RfpDTO> {
-  const rfp = await prisma.rfp.findFirst({
-    where: { id: rfpId, orgId },
-    include: RFP_INCLUDE,
-  });
+  const rfp = await findRfpById(prisma, orgId, rfpId);
   if (!rfp) throw new RfpNotFoundError(rfpId);
   return mapRfpToDTO(rfp);
+}
+
+// ==========================================
+// Contractor-safe mapper
+// ==========================================
+
+/**
+ * Map an RFP to a contractor-safe DTO.
+ * Strips: full address (keeps postal code only from building.address),
+ *         tenant identity, internal manager/owner fields,
+ *         invited contractor details (phone/email of others).
+ */
+function mapRfpToContractorDTO(
+  rfp: RfpWithRelations,
+  contractorId: string,
+): ContractorRfpDTO {
+  // Extract postal code from building address (Swiss format: "Street, 1234 City" or "1234 City")
+  let postalCode: string | null = null;
+  if (rfp.building?.address) {
+    const match = rfp.building.address.match(/\b(\d{4})\b/);
+    postalCode = match ? match[1] : null;
+  }
+
+  const isInvited = (rfp.invites ?? []).some(
+    (i) => i.contractorId === contractorId,
+  );
+
+  // Find this contractor's own submitted quote (if any)
+  const ownQuote = (rfp.quotes ?? []).find(
+    (q) => q.contractorId === contractorId,
+  );
+  const myQuote: RfpQuoteDTO | null = ownQuote
+    ? {
+        id: ownQuote.id,
+        rfpId: ownQuote.rfpId,
+        contractorId: ownQuote.contractorId,
+        amountCents: ownQuote.amountCents,
+        currency: ownQuote.currency,
+        vatIncluded: ownQuote.vatIncluded,
+        estimatedDurationDays: ownQuote.estimatedDurationDays ?? null,
+        earliestAvailability: ownQuote.earliestAvailability?.toISOString() ?? null,
+        lineItems: ownQuote.lineItems ?? null,
+        workPlan: ownQuote.workPlan ?? null,
+        assumptions: ownQuote.assumptions ?? null,
+        validUntil: ownQuote.validUntil?.toISOString() ?? null,
+        notes: ownQuote.notes ?? null,
+        status: (ownQuote as any).status ?? "SUBMITTED",
+        submittedAt: ownQuote.submittedAt.toISOString(),
+        contractor: ownQuote.contractor ?? undefined,
+      }
+    : null;
+
+  return {
+    id: rfp.id,
+    category: rfp.category,
+    legalObligation: rfp.legalObligation,
+    status: rfp.status,
+    inviteCount: rfp.inviteCount,
+    deadlineAt: rfp.deadlineAt?.toISOString() ?? null,
+    createdAt: rfp.createdAt.toISOString(),
+    updatedAt: rfp.updatedAt.toISOString(),
+    postalCode,
+    buildingName: rfp.building?.name ?? null,
+    unitNumber: rfp.unit?.unitNumber ?? null,
+    request: rfp.request
+      ? {
+          id: rfp.request.id,
+          requestNumber: rfp.request.requestNumber,
+          description: rfp.request.description,
+          category: rfp.request.category ?? null,
+          createdAt: rfp.request.createdAt.toISOString(),
+          attachmentCount: rfp.request._count.attachments,
+        }
+      : null,
+    isInvited,
+    quoteCount: rfp.quotes?.length ?? 0,
+    myQuote,
+  };
+}
+
+// ==========================================
+// Contractor-facing CRUD
+// ==========================================
+
+/**
+ * List RFPs visible to a contractor (category-matched open + invited).
+ * Contractor must exist and belong to org.
+ */
+export async function listRfpsForContractor(
+  orgId: string,
+  contractorId: string,
+  opts: ListRfpOpts,
+): Promise<{ data: ContractorRfpDTO[]; total: number }> {
+  const contractor = await findContractorById(prisma, contractorId, orgId);
+  if (!contractor) throw new RfpNotFoundError(contractorId);
+
+  const categories = parseServiceCategories(contractor);
+  const { rows, total } = await findRfpsForContractor(
+    prisma,
+    orgId,
+    contractorId,
+    categories,
+    opts,
+  );
+
+  return {
+    data: rows.map((r) => mapRfpToContractorDTO(r, contractorId)),
+    total,
+  };
+}
+
+/**
+ * Get a single RFP for a contractor.
+ * Contractor must have visibility (category match or invite).
+ */
+export async function getContractorRfpById(
+  orgId: string,
+  contractorId: string,
+  rfpId: string,
+): Promise<ContractorRfpDTO> {
+  const contractor = await findContractorById(prisma, contractorId, orgId);
+  if (!contractor) throw new RfpNotFoundError(rfpId);
+
+  const categories = parseServiceCategories(contractor);
+
+  // Use the same visibility query as list (single result)
+  const { rows } = await findRfpsForContractor(
+    prisma,
+    orgId,
+    contractorId,
+    categories,
+    { limit: 1, offset: 0 },
+  );
+
+  // findRfpsForContractor returns all matching, but we need a specific ID.
+  // Fetch it directly and verify visibility.
+  const rfp = await findRfpById(prisma, orgId, rfpId);
+  if (!rfp) throw new RfpNotFoundError(rfpId);
+
+  // Verify contractor can see this RFP
+  const isInvited = (rfp.invites ?? []).some(
+    (i) => i.contractorId === contractorId,
+  );
+  const hasQuote = (rfp.quotes ?? []).some(
+    (q) => q.contractorId === contractorId,
+  );
+  const categoryMatch =
+    rfp.status === "OPEN" && categories.includes(rfp.category);
+  if (!isInvited && !categoryMatch && !hasQuote) {
+    throw new RfpNotFoundError(rfpId);
+  }
+
+  return mapRfpToContractorDTO(rfp, contractorId);
 }

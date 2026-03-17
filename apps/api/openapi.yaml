@@ -719,6 +719,108 @@ components:
           items: { type: string }
         hourlyRate: { type: number }
 
+    ContractorRfpRequestSummaryDTO:
+      type: object
+      description: Contractor-safe request summary (no tenant identity)
+      properties:
+        id: { type: string, format: uuid }
+        requestNumber: { type: integer }
+        description: { type: string }
+        category: { type: string }
+        createdAt: { type: string, format: date-time }
+        attachmentCount: { type: integer }
+
+    ContractorRfpDTO:
+      type: object
+      description: Contractor-safe RFP detail (no full address, no tenant identity)
+      required: [id, category, status, isInvited]
+      properties:
+        id: { type: string, format: uuid }
+        category: { type: string }
+        legalObligation: { type: string, enum: [OBLIGATED, DISCRETIONARY, TENANT_RESPONSIBLE, UNKNOWN] }
+        status: { type: string, enum: [DRAFT, OPEN, CLOSED, AWARDED, CANCELLED] }
+        inviteCount: { type: integer }
+        deadlineAt: { type: string, format: date-time, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        postalCode: { type: string, nullable: true }
+        buildingName: { type: string }
+        unitNumber: { type: string, nullable: true }
+        isInvited: { type: boolean }
+        quoteCount: { type: integer }
+        request:
+          oneOf:
+            - $ref: '#/components/schemas/ContractorRfpRequestSummaryDTO'
+            - type: 'null'
+        myQuote:
+          oneOf:
+            - $ref: '#/components/schemas/RfpQuoteDTO'
+            - type: 'null'
+
+    RfpQuoteDTO:
+      type: object
+      required: [id, rfpId, contractorId, amountCents, currency, vatIncluded, submittedAt]
+      properties:
+        id: { type: string, format: uuid }
+        rfpId: { type: string, format: uuid }
+        contractorId: { type: string, format: uuid }
+        amountCents: { type: integer }
+        currency: { type: string }
+        vatIncluded: { type: boolean }
+        estimatedDurationDays: { type: integer, nullable: true }
+        earliestAvailability: { type: string, format: date-time, nullable: true }
+        lineItems:
+          type: array
+          nullable: true
+          items:
+            type: object
+            properties:
+              description: { type: string }
+              amountCents: { type: integer }
+        workPlan: { type: string, nullable: true }
+        assumptions: { type: string, nullable: true }
+        validUntil: { type: string, format: date-time, nullable: true }
+        notes: { type: string, nullable: true }
+        submittedAt: { type: string, format: date-time }
+        contractor:
+          type: object
+          properties:
+            id: { type: string, format: uuid }
+            name: { type: string }
+
+    AppointmentSlotDTO:
+      type: object
+      required: [id, jobId, startTime, endTime, status, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        jobId: { type: string, format: uuid }
+        startTime: { type: string, format: date-time }
+        endTime: { type: string, format: date-time }
+        status: { type: string, enum: [PROPOSED, ACCEPTED, DECLINED] }
+        respondedAt: { type: string, format: date-time, nullable: true }
+        createdAt: { type: string, format: date-time }
+
+    JobRatingDTO:
+      type: object
+      required: [id, jobId, raterRole, score, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        jobId: { type: string, format: uuid }
+        raterRole: { type: string, enum: [CONTRACTOR, TENANT] }
+        score: { type: integer, minimum: 1, maximum: 5 }
+        comment: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+        job:
+          type: object
+          nullable: true
+          properties:
+            id: { type: string, format: uuid }
+            requestId: { type: string, format: uuid }
+            contractorId: { type: string, format: uuid }
+            description: { type: string, nullable: true }
+            building: { type: string, nullable: true }
+            unit: { type: string, nullable: true }
+
     NotificationDTO:
       type: object
       required: [id, orgId, eventType, message, isRead, createdAt]
@@ -1513,6 +1615,259 @@ paths:
               schema: { type: string, format: binary }
         '403': { description: Tenant does not own the parent request }
         '404': { description: Attachment not found }
+
+  /tenant-portal/requests/{requestId}/slots:
+    get:
+      tags: [TenantPortal]
+      summary: View proposed appointment slots for a maintenance request
+      operationId: listTenantRequestSlots
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: List of appointment slots
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/AppointmentSlotDTO' }
+        '403': { description: Not your request }
+        '404': { description: No job found for this request }
+
+  /tenant-portal/slots/{slotId}/accept:
+    post:
+      tags: [TenantPortal]
+      summary: Accept a proposed appointment slot
+      operationId: acceptTenantSlot
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: slotId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Slot accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/AppointmentSlotDTO' }
+        '403': { description: Not your request }
+        '404': { description: Slot not found }
+        '409': { description: Slot not in PROPOSED status }
+
+  /tenant-portal/slots/{slotId}/decline:
+    post:
+      tags: [TenantPortal]
+      summary: Decline a proposed appointment slot
+      operationId: declineTenantSlot
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: slotId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Slot declined
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/AppointmentSlotDTO' }
+        '403': { description: Not your request }
+        '404': { description: Slot not found }
+        '409': { description: Slot not in PROPOSED status }
+
+  # ── Completion & Ratings (Slice 7) ─────────────────────────────
+
+  /contractor/jobs/{id}/complete:
+    post:
+      tags: [Contractor]
+      summary: Contractor marks a job as completed
+      operationId: contractorCompleteJob
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: contractorId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                actualCost: { type: integer, minimum: 0 }
+                completedAt: { type: string, format: date-time }
+                notes: { type: string }
+      responses:
+        '200':
+          description: Job completed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/JobDTO' }
+        '403': { description: Forbidden — not your job }
+        '404': { description: Job not found }
+        '409': { description: Job already completed }
+
+  /contractor/jobs/{id}/rate:
+    post:
+      tags: [Contractor]
+      summary: Contractor submits a rating after job completion
+      operationId: contractorRateJob
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: contractorId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [score]
+              properties:
+                score: { type: integer, minimum: 1, maximum: 5 }
+                comment: { type: string, maxLength: 1000 }
+      responses:
+        '201':
+          description: Rating submitted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/JobRatingDTO' }
+        '403': { description: Forbidden — not your job }
+        '404': { description: Job not found }
+        '409': { description: Job not completed or duplicate rating }
+
+  /tenant-portal/jobs/{jobId}/confirm:
+    post:
+      tags: [TenantPortal]
+      summary: Tenant confirms job completion
+      operationId: tenantConfirmCompletion
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Completion confirmed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/JobDTO' }
+        '403': { description: Forbidden — not your request }
+        '404': { description: Job not found }
+        '409': { description: Job not completed or already confirmed }
+
+  /tenant-portal/jobs/{jobId}/rate:
+    post:
+      tags: [TenantPortal]
+      summary: Tenant submits a rating after job completion
+      operationId: tenantRateJob
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [score]
+              properties:
+                score: { type: integer, minimum: 1, maximum: 5 }
+                comment: { type: string, maxLength: 1000 }
+      responses:
+        '201':
+          description: Rating submitted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/JobRatingDTO' }
+        '403': { description: Forbidden — not your request }
+        '404': { description: Job not found }
+        '409': { description: Job not completed or duplicate rating }
+
+  /contractors/{id}/ratings:
+    get:
+      tags: [Contractor]
+      summary: Get contractor rating history
+      operationId: getContractorRatings
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 50 }
+        - name: offset
+          in: query
+          schema: { type: integer, default: 0 }
+      responses:
+        '200':
+          description: Contractor ratings
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/JobRatingDTO' }
+                  pagination:
+                    type: object
+                    properties:
+                      total: { type: integer }
+                      limit: { type: integer }
+                      offset: { type: integer }
+        '401': { description: Unauthorized }
+        '403': { description: Forbidden — manager or owner only }
 
   /triage:
     post:
@@ -3846,6 +4201,205 @@ paths:
         '404':
           description: Invoice not found
 
+  /contractor/rfps:
+    get:
+      tags: [Contractor]
+      summary: List RFPs visible to contractor (category match or invited)
+      operationId: listContractorRfps
+      parameters:
+        - name: contractorId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+        - name: offset
+          in: query
+          schema: { type: integer, minimum: 0, default: 0 }
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [DRAFT, OPEN, CLOSED, AWARDED, CANCELLED]
+      responses:
+        '200':
+          description: Paginated list of contractor-safe RFP summaries
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/ContractorRfpDTO' }
+                  total: { type: integer }
+        '403':
+          description: Forbidden — only CONTRACTOR role
+        '404':
+          description: Contractor not found in org
+
+  /contractor/rfps/{id}:
+    get:
+      tags: [Contractor]
+      summary: Get contractor-safe RFP detail
+      operationId: getContractorRfp
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: contractorId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Contractor-safe RFP detail (no full address, no tenant identity)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/ContractorRfpDTO' }
+        '403':
+          description: Forbidden — only CONTRACTOR role
+        '404':
+          description: RFP not found or not visible to contractor
+
+  /contractor/rfps/{id}/quotes:
+    post:
+      tags: [Contractor]
+      summary: Submit a quote for an RFP
+      operationId: submitContractorQuote
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: contractorId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amountCents, workPlan]
+              properties:
+                amountCents: { type: integer, minimum: 1, description: Total amount in centimes }
+                currency: { type: string, default: CHF }
+                vatIncluded: { type: boolean, default: true }
+                estimatedDurationDays: { type: integer, minimum: 1 }
+                earliestAvailability: { type: string, format: date-time }
+                lineItems:
+                  type: array
+                  items:
+                    type: object
+                    required: [description, amountCents]
+                    properties:
+                      description: { type: string }
+                      amountCents: { type: integer }
+                workPlan: { type: string, minLength: 1, description: Narrative work plan }
+                assumptions: { type: string }
+                validUntil: { type: string, format: date-time }
+                notes: { type: string }
+      responses:
+        '201':
+          description: Quote submitted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/RfpQuoteDTO' }
+        '400':
+          description: Validation error (missing required fields)
+        '403':
+          description: Forbidden — only CONTRACTOR role, or RFP not visible
+        '409':
+          description: Conflict — RFP not open, or duplicate quote
+
+  /contractor/jobs/{id}/slots:
+    post:
+      tags: [Contractor]
+      summary: Propose appointment slots for a job
+      operationId: proposeContractorSlots
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: contractorId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [slots]
+              properties:
+                slots:
+                  type: array
+                  minItems: 1
+                  maxItems: 5
+                  items:
+                    type: object
+                    required: [startTime, endTime]
+                    properties:
+                      startTime: { type: string, format: date-time }
+                      endTime: { type: string, format: date-time }
+      responses:
+        '201':
+          description: Slots proposed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      slots:
+                        type: array
+                        items: { $ref: '#/components/schemas/AppointmentSlotDTO' }
+                      schedulingExpiresAt: { type: string, format: date-time }
+        '400': { description: Validation error }
+        '403': { description: Forbidden — not a contractor or wrong contractor }
+        '404': { description: Job not found }
+        '409': { description: Job not in PENDING status }
+    get:
+      tags: [Contractor]
+      summary: List appointment slots for a job (contractor view)
+      operationId: listContractorJobSlots
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: contractorId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: List of appointment slots
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/AppointmentSlotDTO' }
+        '403': { description: Forbidden — not a contractor }
+        '404': { description: Contractor not found in org }
+
   # ═══════════════════════════════════════════════════════════
   # Rental Applications (Public)
   # ═══════════════════════════════════════════════════════════
@@ -4916,7 +5470,7 @@ paths:
           schema: { type: integer, default: 0 }
         - name: status
           in: query
-          schema: { type: string, enum: [DRAFT, OPEN, CLOSED, AWARDED, CANCELLED] }
+          schema: { type: string, enum: [DRAFT, OPEN, CLOSED, AWARDED, CANCELLED, PENDING_OWNER_APPROVAL] }
       responses:
         '200':
           description: Paginated list of RFPs
@@ -4944,6 +5498,155 @@ paths:
                 type: object
         '404':
           $ref: '#/components/responses/NotFound'
+
+  /rfps/{id}/award:
+    post:
+      tags: [LegalEngine]
+      summary: Award a quote on an RFP
+      operationId: awardRfpQuote
+      description: >
+        Award a quote on an RFP. MANAGER or OWNER role required.
+        If the quote amount exceeds the building's owner-approval threshold
+        and the actor is a MANAGER, the RFP is routed to PENDING_OWNER_APPROVAL
+        instead of being awarded directly.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [quoteId]
+              properties:
+                quoteId:
+                  type: string
+                  format: uuid
+                  description: The ID of the quote to award
+      responses:
+        '200':
+          description: Award result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      rfpId: { type: string, format: uuid }
+                      quoteId: { type: string, format: uuid }
+                      status: { type: string, enum: [AWARDED, PENDING_OWNER_APPROVAL] }
+                      awardedContractorId: { type: string, format: uuid, nullable: true }
+                      ownerApprovalRequired: { type: boolean }
+        '403':
+          description: Owner approval required
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: RFP not in awardable state or quote not submittable
+
+  /rfps/{id}/reinvite:
+    post:
+      tags: [LegalEngine]
+      summary: Re-invite additional contractors to an open RFP
+      operationId: reinviteRfpContractors
+      description: >
+        Re-invite additional contractors to an RFP that is still OPEN.
+        Already-invited contractors are silently skipped (idempotent).
+        MANAGER role required.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [contractorIds]
+              properties:
+                contractorIds:
+                  type: array
+                  items: { type: string, format: uuid }
+                  minItems: 1
+                  maxItems: 20
+                  description: IDs of contractors to invite
+      responses:
+        '200':
+          description: Re-invite result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      rfpId: { type: string, format: uuid }
+                      addedCount: { type: integer }
+                      skippedCount: { type: integer }
+                      totalInvites: { type: integer }
+        '400':
+          description: No valid contractors or validation error
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: RFP is not OPEN
+
+  /rfps/{id}/direct-assign:
+    post:
+      tags: [LegalEngine]
+      summary: Bypass quotes and directly assign a contractor to an RFP
+      operationId: directAssignRfpContractor
+      description: >
+        Close the RFP, reject all submitted quotes, and directly assign
+        the specified contractor to the linked maintenance request.
+        A Job is auto-created. MANAGER role required.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [contractorId]
+              properties:
+                contractorId:
+                  type: string
+                  format: uuid
+                  description: ID of the contractor to assign
+      responses:
+        '200':
+          description: Direct-assign result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      rfpId: { type: string, format: uuid }
+                      requestId: { type: string, format: uuid }
+                      contractorId: { type: string, format: uuid }
+                      jobCreated: { type: boolean }
+                      rfpStatus: { type: string, enum: [CLOSED] }
+        '400':
+          description: No linked request or contractor not found
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: RFP is not OPEN
 
   /legal/sources:
     get:

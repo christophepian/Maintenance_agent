@@ -7,14 +7,7 @@
 ## Start Everything
 
 ```bash
-# 1. Database (Docker)
-cd infra && docker compose up -d
-
-# 2. Backend API (port 3001)
-cd apps/api && npm run start:dev > /tmp/api.log 2>&1 &
-
-# 3. Frontend (port 3000)
-cd apps/web && npm run dev > /tmp/web.log 2>&1 &
+cd /Users/christophepian/Documents/Maintenance_Agent/apps/web && npx next dev -p 3000
 ```
 
 Or from root using the npm scripts:

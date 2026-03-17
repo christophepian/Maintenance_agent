@@ -3,7 +3,7 @@ import AppShell from "../../components/AppShell";
 import PageShell from "../../components/layout/PageShell";
 import PageHeader from "../../components/layout/PageHeader";
 import PageContent from "../../components/layout/PageContent";
-import { authHeaders } from "../../lib/api";
+import { ownerAuthHeaders } from "../../lib/api";
 
 export default function OwnerApprovalsPage() {
   const [requests, setRequests] = useState([]);
@@ -16,7 +16,7 @@ export default function OwnerApprovalsPage() {
   async function loadPendingApprovals() {
     setLoading(true);
     try {
-      const res = await fetch("/api/owner/approvals", { headers: authHeaders() });
+      const res = await fetch("/api/owner/approvals", { headers: ownerAuthHeaders() });
       const json = await res.json();
       setRequests(json.data || []);
     } catch (err) {
@@ -33,7 +33,7 @@ export default function OwnerApprovalsPage() {
     try {
       const res = await fetch(`/api/owner/approvals?id=${requestId}&action=approve`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...authHeaders() },
+        headers: { "Content-Type": "application/json", ...ownerAuthHeaders() },
         body: JSON.stringify({ comment: "Approved by owner" }),
       });
 
@@ -59,7 +59,7 @@ export default function OwnerApprovalsPage() {
     try {
       const res = await fetch(`/api/owner/approvals?id=${requestId}&action=reject`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...authHeaders() },
+        headers: { "Content-Type": "application/json", ...ownerAuthHeaders() },
         body: JSON.stringify({ reason }),
       });
 

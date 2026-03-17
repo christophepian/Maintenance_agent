@@ -6,7 +6,7 @@ import PageHeader from "../../components/layout/PageHeader";
 import PageContent from "../../components/layout/PageContent";
 import Panel from "../../components/layout/Panel";
 import Section from "../../components/layout/Section";
-import { authHeaders } from "../../lib/api";
+import { ownerAuthHeaders } from "../../lib/api";
 
 /* ─── YTD date range ─── */
 function ytdRange() {
@@ -107,6 +107,7 @@ export default function OwnerDashboard() {
   const [invoices, setInvoices] = useState([]);
   const [leases, setLeases] = useState([]);
   const [units, setUnits] = useState([]);
+  const [rfps, setRfps] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -119,7 +120,7 @@ export default function OwnerDashboard() {
     try {
       const { from, to } = ytdRange();
       const res = await fetch(`/api/financials/portfolio-summary?from=${from}&to=${to}`, {
-        headers: authHeaders(),
+        headers: ownerAuthHeaders(),
       });
       const json = await res.json();
       if (res.ok) setPortfolio(json.data);
@@ -134,7 +135,7 @@ export default function OwnerDashboard() {
   }, []);
 
   async function fetchJson(path) {
-    const res = await fetch(path, { headers: authHeaders() });
+    const res = await fetch(path, { headers: ownerAuthHeaders() });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
       throw new Error(data?.error || data?.message || "Request failed");
@@ -146,16 +147,18 @@ export default function OwnerDashboard() {
     setLoading(true);
     setError("");
     try {
-      const [approvalsRes, invoicesRes, leasesRes, unitsRes] = await Promise.all([
+      const [approvalsRes, invoicesRes, leasesRes, unitsRes, rfpsRes] = await Promise.all([
         fetchJson("/api/owner/approvals"),
         fetchJson("/api/owner/invoices"),
         fetchJson("/api/leases?limit=200"),
         fetchJson("/api/units?limit=500"),
+        fetchJson("/api/rfps"),
       ]);
       setApprovals(approvalsRes.data || []);
       setInvoices(invoicesRes.data || []);
       setLeases(leasesRes.data || []);
       setUnits(unitsRes.data || []);
+      setRfps(rfpsRes.data || []);
     } catch (err) {
       setError(err?.message || "Failed to load owner dashboard");
     } finally {
@@ -230,6 +233,16 @@ export default function OwnerDashboard() {
 
   const topVacancies = useMemo(() => vacantUnits.slice(0, 5), [vacantUnits]);
 
+  const rfpsPendingApproval = useMemo(
+    () => rfps.filter((r) => r.status === "PENDING_OWNER_APPROVAL"),
+    [rfps]
+  );
+
+  const rfpsOpen = useMemo(
+    () => rfps.filter((r) => r.status === "OPEN" || r.status === "EVALUATING"),
+    [rfps]
+  );
+
   return (
     <AppShell role="OWNER">
       <PageShell>
@@ -301,8 +314,8 @@ export default function OwnerDashboard() {
           {loading && <div className="text-sm text-slate-600">Loading dashboard data...</div>}
 
           {!loading && (
-            <CollapsibleSection title="Action Items" badge={recentApprovals.length + draftInvoices.length + approvedInvoices.length + topVacancies.length || null}>
-            <div className="grid gap-6 lg:grid-cols-3">
+            <CollapsibleSection title="Action Items" badge={recentApprovals.length + draftInvoices.length + approvedInvoices.length + topVacancies.length + rfpsPendingApproval.length || null}>
+            <div className="grid gap-6 lg:grid-cols-2 xl:grid-cols-4">
               <Panel
                 title="Pending approvals"
                 actions={
@@ -404,6 +417,60 @@ export default function OwnerDashboard() {
                           </div>
                           <div className="text-xs text-slate-500">
                             {unit.building?.name || unit.buildingName || "Building"}
+                          </div>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </Panel>
+
+              <Panel
+                title="RFPs"
+                actions={
+                  <Link
+                    className="text-sm font-medium text-indigo-600 hover:text-indigo-700"
+                    href="/owner/rfps"
+                  >
+                    View all
+                  </Link>
+                }
+              >
+                {rfpsPendingApproval.length === 0 && rfpsOpen.length === 0 && (
+                  <div className="text-sm text-slate-600">No RFPs require attention.</div>
+                )}
+                {rfpsPendingApproval.length > 0 && (
+                  <div className="space-y-3">
+                    <div className="text-xs font-semibold uppercase text-amber-700">
+                      Awaiting your approval ({rfpsPendingApproval.length})
+                    </div>
+                    {rfpsPendingApproval.slice(0, 5).map((rfp) => (
+                      <Link key={rfp.id} href={`/owner/rfps/${rfp.id}`} style={{ textDecoration: "none", color: "inherit" }}>
+                        <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 hover:bg-amber-100 transition-colors">
+                          <div className="text-sm font-semibold text-slate-900">
+                            {rfp.category || "RFP"}
+                          </div>
+                          <div className="mt-1 text-xs text-slate-500">
+                            {rfp.building?.name || "—"} · {rfp.quoteCount ?? 0} quotes
+                          </div>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                )}
+                {rfpsOpen.length > 0 && (
+                  <div className={`space-y-3 ${rfpsPendingApproval.length > 0 ? "mt-3" : ""}`}>
+                    <div className="text-xs font-semibold uppercase text-blue-700">
+                      Open ({rfpsOpen.length})
+                    </div>
+                    {rfpsOpen.slice(0, 3).map((rfp) => (
+                      <Link key={rfp.id} href={`/owner/rfps/${rfp.id}`} style={{ textDecoration: "none", color: "inherit" }}>
+                        <div className="rounded-lg border border-slate-200 p-3 hover:bg-slate-50 transition-colors">
+                          <div className="text-sm font-semibold text-slate-900">
+                            {rfp.category || "RFP"}
+                          </div>
+                          <div className="mt-1 text-xs text-slate-500">
+                            {rfp.building?.name || "—"} · {rfp.quoteCount ?? 0} quotes
                           </div>
                         </div>
                       </Link>

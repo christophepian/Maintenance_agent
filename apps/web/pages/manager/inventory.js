@@ -1,24 +1,40 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/router";
 import AppShell from "../../components/AppShell";
 import PageShell from "../../components/layout/PageShell";
 import PageHeader from "../../components/layout/PageHeader";
 import PageContent from "../../components/layout/PageContent";
 import Panel from "../../components/layout/Panel";
+import SortableHeader from "../../components/SortableHeader";
+import { useTableSort, clientSort } from "../../lib/tableUtils";
 import DepreciationStandards from "../../components/DepreciationStandards";
-import VacanciesPanel from "../../components/VacanciesPanel";
 import Link from "next/link";
 import { authHeaders } from "../../lib/api";
+
+const INVENTORY_SORT_FIELDS = ["name", "address", "canton", "unitCount", "category", "manufacturer", "scope"];
+
+function inventoryFieldExtractor(row, field) {
+  switch (field) {
+    case "name": return (row.name || "").toLowerCase();
+    case "address": return (row.address || "").toLowerCase();
+    case "canton": return (row.canton || "").toLowerCase();
+    case "unitCount": return row._count?.units ?? row.unitCount ?? 0;
+    case "category": return (row.category || "").toLowerCase();
+    case "manufacturer": return (row.manufacturer || "").toLowerCase();
+    case "scope": return row.orgId ? "org" : "global";
+    default: return "";
+  }
+}
 
 const INVENTORY_TABS = [
   { key: "BUILDINGS", label: "Buildings" },
   { key: "UNITS", label: "Units" },
-  { key: "VACANCIES", label: "Vacancies" },
+  { key: "VACANCIES", label: "Vacancies", href: "/manager/vacancies" },
   { key: "ASSETS", label: "Assets" },
   { key: "DEPRECIATION", label: "Depreciation" },
 ];
 
-const TAB_KEYS = ['buildings', 'units', 'vacancies', 'assets', 'depreciation'];
+const TAB_KEYS = ['buildings', 'units', 'assets', 'depreciation'];
 
 export default function ManagerInventoryPage() {
   const router = useRouter();
@@ -58,6 +74,10 @@ export default function ManagerInventoryPage() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
+  const { sortField, sortDir, handleSort } = useTableSort(router, INVENTORY_SORT_FIELDS, { defaultField: "name", defaultDir: "asc" });
+  const sortedBuildings = useMemo(() => clientSort(buildings, sortField, sortDir, inventoryFieldExtractor), [buildings, sortField, sortDir]);
+  const sortedAssets = useMemo(() => clientSort(assetModels, sortField, sortDir, inventoryFieldExtractor), [assetModels, sortField, sortDir]);
+
   return (
     <AppShell role="MANAGER">
       <PageShell>
@@ -68,13 +88,19 @@ export default function ManagerInventoryPage() {
           {/* Tab strip */}
           <div className="tab-strip">
             {INVENTORY_TABS.map((tab, i) => (
-              <button
-                key={tab.key}
-                onClick={() => setActiveTab(i)}
-                className={activeTab === i ? "tab-btn-active" : "tab-btn"}
-              >
-                {tab.label}
-              </button>
+              tab.href ? (
+                <Link key={tab.key} href={tab.href} className="tab-btn">
+                  {tab.label}
+                </Link>
+              ) : (
+                <button
+                  key={tab.key}
+                  onClick={() => setActiveTab(i > 2 ? i - 1 : i)}
+                  className={activeTab === (i > 2 ? i - 1 : i) ? "tab-btn-active" : "tab-btn"}
+                >
+                  {tab.label}
+                </button>
+              )
             ))}
           </div>
 
@@ -82,15 +108,14 @@ export default function ManagerInventoryPage() {
           <span className="tab-panel-count">
             {activeTab === 0 ? `${buildings.length} building${buildings.length !== 1 ? "s" : ""}` : null}
             {activeTab === 1 ? `Units across ${buildings.length} building${buildings.length !== 1 ? "s" : ""}` : null}
-            {activeTab === 2 ? "Vacancies" : null}
-            {activeTab === 3 ? `${assetModels.length} asset model${assetModels.length !== 1 ? "s" : ""}` : null}
-            {activeTab === 4 ? "Depreciation standards" : null}
+            {activeTab === 2 ? `${assetModels.length} asset model${assetModels.length !== 1 ? "s" : ""}` : null}
+            {activeTab === 3 ? "Depreciation standards" : null}
           </span>
           {activeTab === 0 && <Link href="/admin-inventory/buildings" className="full-page-link">Full view →</Link>}
-          {activeTab === 3 && <Link href="/admin-inventory/asset-models" className="full-page-link">Full view →</Link>}
+          {activeTab === 2 && <Link href="/admin-inventory/asset-models" className="full-page-link">Full view →</Link>}
 
-          {/* Tabs 0,1,3 in Panel; tabs 2 (Vacancies) and 4 (Depreciation) render their own Panels */}
-          {activeTab !== 2 && activeTab !== 4 && (
+          {/* Tabs 0,1,2 in Panel; tab 3 (Depreciation) renders its own Panels */}
+          {activeTab !== 3 && (
           <Panel bodyClassName="p-0">
           {/* Buildings tab */}
           <div className={activeTab === 0 ? "tab-panel-active" : "tab-panel"}>
@@ -105,14 +130,14 @@ export default function ManagerInventoryPage() {
                 <table className="inline-table">
                   <thead>
                     <tr>
-                      <th>Name</th>
-                      <th>Address</th>
-                      <th>Canton</th>
+                      <SortableHeader label="Name" field="name" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
+                      <SortableHeader label="Address" field="address" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
+                      <SortableHeader label="Canton" field="canton" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
                       <th></th>
                     </tr>
                   </thead>
                   <tbody>
-                    {buildings.map((b) => (
+                    {sortedBuildings.map((b) => (
                       <tr key={b.id}>
                         <td className="cell-bold">{b.name || "Unnamed"}</td>
                         <td>{b.address || "—"}</td>
@@ -141,14 +166,14 @@ export default function ManagerInventoryPage() {
                 <table className="inline-table">
                   <thead>
                     <tr>
-                      <th>Building</th>
-                      <th>Address</th>
-                      <th>Units</th>
+                      <SortableHeader label="Building" field="name" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
+                      <SortableHeader label="Address" field="address" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
+                      <SortableHeader label="Units" field="unitCount" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
                       <th></th>
                     </tr>
                   </thead>
                   <tbody>
-                    {buildings.map((b) => (
+                    {sortedBuildings.map((b) => (
                       <tr key={b.id}>
                         <td className="cell-bold">{b.name || "Unnamed"}</td>
                         <td>{b.address || "—"}</td>
@@ -165,7 +190,7 @@ export default function ManagerInventoryPage() {
           </div>
 
           {/* Assets tab */}
-          <div className={activeTab === 3 ? "tab-panel-active" : "tab-panel"}>
+          <div className={activeTab === 2 ? "tab-panel-active" : "tab-panel"}>
             {loading ? (
               <p className="loading-text">Loading asset models…</p>
             ) : assetModels.length === 0 ? (
@@ -177,14 +202,14 @@ export default function ManagerInventoryPage() {
                 <table className="inline-table">
                   <thead>
                     <tr>
-                      <th>Name</th>
-                      <th>Category</th>
-                      <th>Manufacturer</th>
-                      <th>Scope</th>
+                      <SortableHeader label="Name" field="name" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
+                      <SortableHeader label="Category" field="category" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
+                      <SortableHeader label="Manufacturer" field="manufacturer" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
+                      <SortableHeader label="Scope" field="scope" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
                     </tr>
                   </thead>
                   <tbody>
-                    {assetModels.map((m) => (
+                    {sortedAssets.map((m) => (
                       <tr key={m.id}>
                         <td className="cell-bold">{m.name}</td>
                         <td>{m.category || "—"}</td>
@@ -200,11 +225,8 @@ export default function ManagerInventoryPage() {
           </Panel>
           )}
 
-          {/* Vacancies tab — rendered outside Panel, uses shared component */}
-          {activeTab === 2 && <VacanciesPanel role="MANAGER" />}
-
           {/* Depreciation tab — rendered outside Panel, uses shared component */}
-          {activeTab === 4 && <DepreciationStandards />}
+          {activeTab === 3 && <DepreciationStandards />}
         </PageContent>
       </PageShell>
     </AppShell>

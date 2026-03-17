@@ -3,6 +3,7 @@ import { useRouter } from "next/router";
 import AppShell from "../../components/AppShell";
 import { formatDateTime } from "../../lib/format";
 import { tenantFetch } from "../../lib/api";
+import { getNotificationLink } from "../../lib/notificationLinks";
 
 const EVENT_ICONS = {
   LEASE_READY_TO_SIGN: "📝",
@@ -16,19 +17,14 @@ const EVENT_ICONS = {
   TENANT_SELECTED: "🏠",
   OWNER_REJECTED: "❌",
   TENANT_SELF_PAY_ACCEPTED: "💳",
-};
-
-const EVENT_LINKS = {
-  LEASE_READY_TO_SIGN: (n) => `/tenant/leases/${n.entityId}`,
-  LEASE_SIGNED: (n) => `/tenant/leases/${n.entityId}`,
-  INVOICE_CREATED: () => `/tenant/invoices`,
-  INVOICE_APPROVED: () => `/tenant/invoices`,
-  INVOICE_PAID: () => `/tenant/invoices`,
-  JOB_STARTED: () => `/tenant/inbox`,
-  JOB_COMPLETED: () => `/tenant/inbox`,
-  CONTRACTOR_REJECTED: () => `/tenant/inbox`,
-  OWNER_REJECTED: () => `/tenant/requests`,
-  TENANT_SELF_PAY_ACCEPTED: () => `/tenant/requests`,
+  SLOT_PROPOSED: "📅",
+  SLOT_ACCEPTED: "✅",
+  SLOT_DECLINED: "❌",
+  SCHEDULING_ESCALATED: "⚠️",
+  QUOTE_SUBMITTED: "📋",
+  QUOTE_AWARDED: "🏆",
+  QUOTE_REJECTED: "❌",
+  RATING_SUBMITTED: "⭐",
 };
 
 export default function TenantInboxPage() {
@@ -139,8 +135,8 @@ export default function TenantInboxPage() {
 
   function handleClick(notif) {
     if (!notif.readAt) markAsRead(notif.id);
-    const linkFn = EVENT_LINKS[notif.eventType];
-    if (linkFn) router.push(linkFn(notif));
+    const link = getNotificationLink(notif, "TENANT");
+    if (link) router.push(link);
   }
 
   async function handleSelfPay(e, requestId) {

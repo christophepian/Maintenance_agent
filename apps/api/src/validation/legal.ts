@@ -17,6 +17,23 @@ export const ListRfpsSchema = z.object({
 
 export type ListRfpsQuery = z.infer<typeof ListRfpsSchema>;
 
+// ── GET /contractor/rfps query params ───────────────────────
+
+export const ListContractorRfpsSchema = z.object({
+  limit: z
+    .string()
+    .optional()
+    .transform((v) => Math.min(100, Math.max(1, parseInt(v ?? "20", 10)))),
+  offset: z
+    .string()
+    .optional()
+    .transform((v) => Math.max(0, parseInt(v ?? "0", 10))),
+  status: z.nativeEnum(RfpStatus).optional(),
+  contractorId: z.string().uuid("contractorId must be a valid UUID"),
+});
+
+export type ListContractorRfpsQuery = z.infer<typeof ListContractorRfpsSchema>;
+
 // ── POST /legal/category-mappings body ──────────────────────
 
 export const CreateCategoryMappingSchema = z.object({

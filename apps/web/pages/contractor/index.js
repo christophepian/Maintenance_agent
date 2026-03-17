@@ -133,6 +133,9 @@ export default function ContractorDashboard() {
                 <button className="button-primary" onClick={() => router.push("/contractor/jobs")}>
                 🔧 All Jobs
               </button>
+                <button className="button-primary" onClick={() => router.push("/contractor/rfps")}>
+                📋 RFPs
+              </button>
                 <button className="button-primary" onClick={() => router.push("/contractor/invoices")}>
                 💰 Invoices
               </button>

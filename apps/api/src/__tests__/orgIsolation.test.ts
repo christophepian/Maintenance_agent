@@ -13,6 +13,8 @@ import {
   resolveJobOrg,
   resolveInvoiceOrg,
   resolveLeaseOrg,
+  resolveApplianceOrg,
+  resolveAssetOrg,
   assertOrgScope,
   OrgScopeMismatchError,
   OrgResolution,
@@ -36,6 +38,12 @@ function mockPrisma(overrides: Record<string, any> = {}): any {
     },
     lease: {
       findUnique: overrides.leaseFindUnique ?? jest.fn().mockResolvedValue(null),
+    },
+    appliance: {
+      findUnique: overrides.applianceFindUnique ?? jest.fn().mockResolvedValue(null),
+    },
+    asset: {
+      findUnique: overrides.assetFindUnique ?? jest.fn().mockResolvedValue(null),
     },
   };
 }
@@ -194,6 +202,42 @@ describe("resolveLeaseOrg", () => {
   });
 });
 
+// ────────────── resolveApplianceOrg ──────────────────────────
+
+describe("resolveApplianceOrg", () => {
+  it("resolves directly from appliance.orgId", async () => {
+    const prisma = mockPrisma({
+      applianceFindUnique: jest.fn().mockResolvedValue({ orgId: ORG_A }),
+    });
+    const result = await resolveApplianceOrg(prisma, "appl-1");
+    expect(result).toEqual({ resolved: true, orgId: ORG_A, via: "appliance" });
+  });
+
+  it("returns unresolved when appliance not found", async () => {
+    const prisma = mockPrisma();
+    const result = await resolveApplianceOrg(prisma, "nonexistent");
+    expect(result).toEqual({ resolved: false, orgId: null, via: "none" });
+  });
+});
+
+// ────────────── resolveAssetOrg ──────────────────────────────
+
+describe("resolveAssetOrg", () => {
+  it("resolves directly from asset.orgId", async () => {
+    const prisma = mockPrisma({
+      assetFindUnique: jest.fn().mockResolvedValue({ orgId: ORG_B }),
+    });
+    const result = await resolveAssetOrg(prisma, "asset-1");
+    expect(result).toEqual({ resolved: true, orgId: ORG_B, via: "asset" });
+  });
+
+  it("returns unresolved when asset not found", async () => {
+    const prisma = mockPrisma();
+    const result = await resolveAssetOrg(prisma, "nonexistent");
+    expect(result).toEqual({ resolved: false, orgId: null, via: "none" });
+  });
+});
+
 // ────────────── assertOrgScope ───────────────────────────────
 
 describe("assertOrgScope", () => {
@@ -293,6 +337,38 @@ describe("cross-org isolation matrix", () => {
       callerOrg: ORG_A,
       shouldBlock: true,
     },
+    {
+      name: "Appliance in Org A accessed by Org B → blocked",
+      setup: { applianceFindUnique: jest.fn().mockResolvedValue({ orgId: ORG_A }) },
+      entity: "appliance" as const,
+      entityId: "appl-cross-1",
+      callerOrg: ORG_B,
+      shouldBlock: true,
+    },
+    {
+      name: "Appliance in Org A accessed by Org A → allowed",
+      setup: { applianceFindUnique: jest.fn().mockResolvedValue({ orgId: ORG_A }) },
+      entity: "appliance" as const,
+      entityId: "appl-cross-2",
+      callerOrg: ORG_A,
+      shouldBlock: false,
+    },
+    {
+      name: "Asset in Org B accessed by Org A → blocked",
+      setup: { assetFindUnique: jest.fn().mockResolvedValue({ orgId: ORG_B }) },
+      entity: "asset" as const,
+      entityId: "asset-cross-1",
+      callerOrg: ORG_A,
+      shouldBlock: true,
+    },
+    {
+      name: "Asset in Org B accessed by Org B → allowed",
+      setup: { assetFindUnique: jest.fn().mockResolvedValue({ orgId: ORG_B }) },
+      entity: "asset" as const,
+      entityId: "asset-cross-2",
+      callerOrg: ORG_B,
+      shouldBlock: false,
+    },
   ];
 
   const resolverMap = {
@@ -300,6 +376,8 @@ describe("cross-org isolation matrix", () => {
     job: resolveJobOrg,
     invoice: resolveInvoiceOrg,
     lease: resolveLeaseOrg,
+    appliance: resolveApplianceOrg,
+    asset: resolveAssetOrg,
   } as const;
 
   for (const scenario of scenarios) {

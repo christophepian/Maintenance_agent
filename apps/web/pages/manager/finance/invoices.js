@@ -5,7 +5,27 @@ import PageShell from "../../../components/layout/PageShell";
 import PageHeader from "../../../components/layout/PageHeader";
 import PageContent from "../../../components/layout/PageContent";
 import Panel from "../../../components/layout/Panel";
+import SortableHeader from "../../../components/SortableHeader";
+import PaginationControls from "../../../components/PaginationControls";
+import { useTableSort, useTablePagination, clientSort } from "../../../lib/tableUtils";
 import { authHeaders } from "../../../lib/api";
+
+const INVOICE_SORT_FIELDS = ["status", "invoiceNumber", "amount", "issuerName", "createdAt"];
+
+function invoiceFieldExtractor(inv, field) {
+  switch (field) {
+    case "status": return inv.status ?? "";
+    case "invoiceNumber": return inv.invoiceNumber ?? "";
+    case "amount":
+      if (typeof inv.totalAmountCents === "number") return inv.totalAmountCents;
+      if (typeof inv.totalAmount === "number") return inv.totalAmount;
+      if (typeof inv.amount === "number") return inv.amount;
+      return -1;
+    case "issuerName": return (inv.issuerName || "").toLowerCase();
+    case "createdAt": return inv.createdAt || "";
+    default: return "";
+  }
+}
 
 const STATUS_TABS = [
   { key: "ALL", label: "All" },
@@ -78,7 +98,7 @@ export default function ManagerInvoicesPage() {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch("/api/invoices?view=summary", { headers: authHeaders() });
+      const res = await fetch("/api/invoices?view=summary&limit=200", { headers: authHeaders() });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error?.message || "Failed to load invoices");
       setInvoices(data?.data || []);
@@ -95,6 +115,17 @@ export default function ManagerInvoicesPage() {
     if (activeTab === "ALL") return invoices;
     return invoices.filter((inv) => inv.status === activeTab);
   }, [invoices, activeTab]);
+
+  const { sortField, sortDir, handleSort } = useTableSort(router, INVOICE_SORT_FIELDS);
+  const sortedInvoices = useMemo(
+    () => clientSort(filteredInvoices, sortField, sortDir, invoiceFieldExtractor),
+    [filteredInvoices, sortField, sortDir]
+  );
+  const pager = useTablePagination(router, sortedInvoices.length, 25);
+  const pageInvoices = useMemo(
+    () => pager.pageSlice(sortedInvoices),
+    [sortedInvoices, pager.pageSlice]
+  );
 
   // ─── Actions ───
   async function invoiceAction(id, action) {
@@ -171,16 +202,16 @@ export default function ManagerInvoicesPage() {
             <table className="inline-table">
                 <thead>
                   <tr>
-                    <th>Status</th>
-                    <th>Invoice #</th>
-                    <th>Amount</th>
-                    <th>Issuer</th>
-                    <th>Created</th>
+                    <SortableHeader label="Status" field="status" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
+                    <SortableHeader label="Invoice #" field="invoiceNumber" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
+                    <SortableHeader label="Amount" field="amount" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
+                    <SortableHeader label="Issuer" field="issuerName" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
+                    <SortableHeader label="Created" field="createdAt" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
                     <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredInvoices.map((inv) => (
+                  {pageInvoices.map((inv) => (
                     <tr key={inv.id}>
                       <td><StatusBadge status={inv.status} /></td>
                       <td>{inv.invoiceNumber || inv.id.slice(0, 8)}</td>
@@ -264,6 +295,13 @@ export default function ManagerInvoicesPage() {
                   ))}
                 </tbody>
               </table>
+              <PaginationControls
+                currentPage={pager.currentPage}
+                totalPages={pager.totalPages}
+                totalItems={sortedInvoices.length}
+                pageSize={pager.pageSize}
+                onPageChange={pager.setPage}
+              />
             </Panel>
           )}
         </PageContent>

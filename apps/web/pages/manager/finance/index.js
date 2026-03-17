@@ -5,8 +5,31 @@ import PageShell from "../../../components/layout/PageShell";
 import PageHeader from "../../../components/layout/PageHeader";
 import PageContent from "../../../components/layout/PageContent";
 import Panel from "../../../components/layout/Panel";
+import SortableHeader from "../../../components/SortableHeader";
+import { useTableSort, clientSort } from "../../../lib/tableUtils";
 import Link from "next/link";
 import { authHeaders } from "../../../lib/api";
+
+const FINANCE_SORT_FIELDS = ["invoiceNumber", "description", "amount", "status", "createdAt", "expenseCategory", "tenantName", "unitNumber", "chargesTotalChf"];
+
+function financeFieldExtractor(row, field) {
+  switch (field) {
+    case "invoiceNumber": return row.invoiceNumber ?? "";
+    case "description": return (row.description || "").toLowerCase();
+    case "amount":
+      if (typeof row.totalAmountCents === "number") return row.totalAmountCents;
+      if (typeof row.totalAmount === "number") return row.totalAmount;
+      if (typeof row.amount === "number") return row.amount;
+      return -1;
+    case "status": return row.status ?? "";
+    case "createdAt": return row.createdAt || row.paidAt || row.updatedAt || "";
+    case "expenseCategory": return (row.expenseCategory || "").toLowerCase();
+    case "tenantName": return (row.tenantName || "").toLowerCase();
+    case "unitNumber": return (row.unit?.unitNumber || "").toLowerCase();
+    case "chargesTotalChf": return row.chargesTotalChf ?? -1;
+    default: return "";
+  }
+}
 const FINANCE_TABS = [
   { key: "PAYMENTS", label: "Payments" },
   { key: "EXPENSES", label: "Expenses" },
@@ -120,6 +143,13 @@ export default function ManagerFinanceHome() {
     return leases.filter((l) => l.chargesTotalChf || (l.chargesItems && l.chargesItems.length > 0));
   }, [leases]);
 
+  // Shared sort hook (applies to whichever tab is active)
+  const { sortField, sortDir, handleSort } = useTableSort(router, FINANCE_SORT_FIELDS, { defaultField: "createdAt", defaultDir: "desc" });
+  const sortedPayments = useMemo(() => clientSort(payments, sortField, sortDir, financeFieldExtractor), [payments, sortField, sortDir]);
+  const sortedExpenses = useMemo(() => clientSort(expenses, sortField, sortDir, financeFieldExtractor), [expenses, sortField, sortDir]);
+  const sortedCharges = useMemo(() => clientSort(leasesWithCharges, sortField, sortDir, financeFieldExtractor), [leasesWithCharges, sortField, sortDir]);
+  const sortedInvoices = useMemo(() => clientSort(invoices, sortField, sortDir, financeFieldExtractor), [invoices, sortField, sortDir]);
+
   return (
     <AppShell role="MANAGER">
       <PageShell>
@@ -163,14 +193,14 @@ export default function ManagerFinanceHome() {
                 <table className="inline-table">
                   <thead>
                     <tr>
-                      <th>Invoice #</th>
-                      <th>Description</th>
-                      <th>Amount</th>
-                      <th>Paid</th>
+                      <SortableHeader label="Invoice #" field="invoiceNumber" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
+                      <SortableHeader label="Description" field="description" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
+                      <SortableHeader label="Amount" field="amount" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
+                      <SortableHeader label="Paid" field="createdAt" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
                     </tr>
                   </thead>
                   <tbody>
-                    {payments.slice(0, 200).map((inv) => (
+                    {sortedPayments.map((inv) => (
                       <tr key={inv.id}>
                         <td className="cell-bold">{inv.invoiceNumber || inv.id?.slice(0, 8)}</td>
                         <td>{inv.description || "—"}</td>
@@ -197,14 +227,14 @@ export default function ManagerFinanceHome() {
                 <table className="inline-table">
                   <thead>
                     <tr>
-                      <th>Invoice #</th>
-                      <th>Category</th>
-                      <th>Amount</th>
-                      <th>Status</th>
+                      <SortableHeader label="Invoice #" field="invoiceNumber" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
+                      <SortableHeader label="Category" field="expenseCategory" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
+                      <SortableHeader label="Amount" field="amount" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
+                      <SortableHeader label="Status" field="status" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
                     </tr>
                   </thead>
                   <tbody>
-                    {expenses.slice(0, 200).map((inv) => (
+                    {sortedExpenses.map((inv) => (
                       <tr key={inv.id}>
                         <td className="cell-bold">{inv.invoiceNumber || inv.id?.slice(0, 8)}</td>
                         <td>{inv.expenseCategory || "—"}</td>
@@ -231,14 +261,14 @@ export default function ManagerFinanceHome() {
                 <table className="inline-table">
                   <thead>
                     <tr>
-                      <th>Tenant</th>
-                      <th>Unit</th>
-                      <th>Total (CHF)</th>
+                      <SortableHeader label="Tenant" field="tenantName" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
+                      <SortableHeader label="Unit" field="unitNumber" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
+                      <SortableHeader label="Total (CHF)" field="chargesTotalChf" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
                       <th>Items</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {leasesWithCharges.slice(0, 200).map((l) => (
+                    {sortedCharges.map((l) => (
                       <tr key={l.id}>
                         <td className="cell-bold">{l.tenantName || "—"}</td>
                         <td>{l.unit?.unitNumber || "—"}</td>
@@ -265,15 +295,15 @@ export default function ManagerFinanceHome() {
                 <table className="inline-table">
                   <thead>
                     <tr>
-                      <th>Invoice #</th>
-                      <th>Description</th>
-                      <th>Amount</th>
-                      <th>Status</th>
-                      <th>Date</th>
+                      <SortableHeader label="Invoice #" field="invoiceNumber" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
+                      <SortableHeader label="Description" field="description" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
+                      <SortableHeader label="Amount" field="amount" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
+                      <SortableHeader label="Status" field="status" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
+                      <SortableHeader label="Date" field="createdAt" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
                     </tr>
                   </thead>
                   <tbody>
-                    {invoices.map((inv) => (
+                    {sortedInvoices.map((inv) => (
                       <tr key={inv.id}>
                         <td className="cell-bold">{inv.invoiceNumber || inv.id?.slice(0, 8)}</td>
                         <td>{inv.description || "—"}</td>

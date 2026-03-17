@@ -6,7 +6,7 @@
  * invalid transitions are rejected in exactly one place.
  */
 
-import { RequestStatus, JobStatus, InvoiceStatus, LeaseStatus } from "@prisma/client";
+import { RequestStatus, JobStatus, InvoiceStatus, LeaseStatus, RfpStatus, RfpQuoteStatus } from "@prisma/client";
 
 // ─── Request Transitions ───────────────────────────────────────
 
@@ -162,5 +162,48 @@ export function assertRentalApplicationTransition(from: string, to: string): voi
 
 export function canTransitionRentalApplication(from: string, to: string): boolean {
   const allowed = VALID_RENTAL_APPLICATION_TRANSITIONS[from];
+  return !!allowed && allowed.includes(to);
+}
+
+// ─── RFP Transitions ───────────────────────────────────────────
+
+const VALID_RFP_TRANSITIONS: Record<string, RfpStatus[]> = {
+  [RfpStatus.DRAFT]: [RfpStatus.OPEN, RfpStatus.CANCELLED],
+  [RfpStatus.OPEN]: [RfpStatus.AWARDED, RfpStatus.PENDING_OWNER_APPROVAL, RfpStatus.CLOSED, RfpStatus.CANCELLED],
+  [RfpStatus.PENDING_OWNER_APPROVAL]: [RfpStatus.AWARDED, RfpStatus.OPEN, RfpStatus.CANCELLED],
+  [RfpStatus.AWARDED]: [],     // terminal
+  [RfpStatus.CLOSED]: [],      // terminal
+  [RfpStatus.CANCELLED]: [],   // terminal
+};
+
+export function assertRfpTransition(from: RfpStatus, to: RfpStatus): void {
+  const allowed = VALID_RFP_TRANSITIONS[from];
+  if (!allowed || !allowed.includes(to)) {
+    throw new InvalidTransitionError("Rfp", from, to);
+  }
+}
+
+export function canTransitionRfp(from: RfpStatus, to: RfpStatus): boolean {
+  const allowed = VALID_RFP_TRANSITIONS[from];
+  return !!allowed && allowed.includes(to);
+}
+
+// ─── RFP Quote Transitions ─────────────────────────────────────
+
+const VALID_RFP_QUOTE_TRANSITIONS: Record<string, RfpQuoteStatus[]> = {
+  [RfpQuoteStatus.SUBMITTED]: [RfpQuoteStatus.AWARDED, RfpQuoteStatus.REJECTED],
+  [RfpQuoteStatus.AWARDED]: [],    // terminal
+  [RfpQuoteStatus.REJECTED]: [],   // terminal
+};
+
+export function assertRfpQuoteTransition(from: RfpQuoteStatus, to: RfpQuoteStatus): void {
+  const allowed = VALID_RFP_QUOTE_TRANSITIONS[from];
+  if (!allowed || !allowed.includes(to)) {
+    throw new InvalidTransitionError("RfpQuote", from, to);
+  }
+}
+
+export function canTransitionRfpQuote(from: RfpQuoteStatus, to: RfpQuoteStatus): boolean {
+  const allowed = VALID_RFP_QUOTE_TRANSITIONS[from];
   return !!allowed && allowed.includes(to);
 }

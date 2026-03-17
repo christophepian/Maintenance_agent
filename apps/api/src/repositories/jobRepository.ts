@@ -26,6 +26,7 @@ export const JOB_FULL_INCLUDE = {
     },
   },
   contractor: true,
+  ratings: true,
 } as const;
 
 /**
@@ -135,6 +136,7 @@ export interface UpdateJobData {
   actualCost?: number;
   startedAt?: Date;
   completedAt?: Date;
+  confirmedAt?: Date;
 }
 
 /**
@@ -152,6 +154,7 @@ export async function updateJobRecord(
       ...(data.actualCost !== undefined && { actualCost: data.actualCost }),
       ...(data.startedAt !== undefined && { startedAt: data.startedAt }),
       ...(data.completedAt !== undefined && { completedAt: data.completedAt }),
+      ...(data.confirmedAt !== undefined && { confirmedAt: data.confirmedAt }),
     },
     include: JOB_FULL_INCLUDE,
   });

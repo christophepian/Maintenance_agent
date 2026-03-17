@@ -4,7 +4,7 @@
 > be able to read this file and know *exactly which 1-3 files to touch*
 > for any given change.
 
-**Codebase:** 46 models · 38 enums · 35 migrations · 17 workflows · 10 repositories · ~36k backend LOC · ~26k frontend LOC
+**Codebase:** 48 models · 41 enums · 41 migrations · 23 workflows · 13 repositories · ~43k backend LOC · ~29k frontend LOC
 
 ---
 

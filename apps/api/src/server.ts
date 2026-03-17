@@ -23,11 +23,14 @@ import { registerRentEstimationRoutes } from "./routes/rentEstimation";
 import { registerFinancialRoutes } from "./routes/financials";
 import { registerLegalRoutes } from "./routes/legal";
 import { registerMaintenanceAttachmentRoutes } from "./routes/maintenanceAttachments";
+import { registerSchedulingRoutes } from "./routes/scheduling";
+import { registerCompletionRoutes } from "./routes/completion";
 import { registerEventHandlers } from "./events";
 import {
   processSelectionTimeouts,
   processAttachmentRetention,
 } from "./services/ownerSelection";
+import { processSchedulingEscalations } from "./workflows/schedulingWorkflow";
 
 /* ── F1: Production boot guard ─────────────────────────────── */
 const isProdEnv = process.env.NODE_ENV === "production";
@@ -72,6 +75,8 @@ registerRentEstimationRoutes(router);
 registerFinancialRoutes(router);
 registerLegalRoutes(router);
 registerMaintenanceAttachmentRoutes(router);
+registerSchedulingRoutes(router);
+registerCompletionRoutes(router);
 
 /* ── Dev-only: background job trigger route ─────────────────── */
 router.post("/__dev/rental/run-jobs", async ({ res }) => {
@@ -162,9 +167,10 @@ async function runBackgroundJobs() {
   try {
     const timeouts = await processSelectionTimeouts();
     const attachments = await processAttachmentRetention();
-    if (timeouts > 0 || attachments > 0) {
+    const escalations = await processSchedulingEscalations(prisma);
+    if (timeouts > 0 || attachments > 0 || escalations > 0) {
       console.log(
-        `[BG-JOBS] Processed ${timeouts} selection timeout(s), ${attachments} attachment retention(s)`,
+        `[BG-JOBS] Processed ${timeouts} selection timeout(s), ${attachments} attachment retention(s), ${escalations} scheduling escalation(s)`,
       );
     }
   } catch (e) {

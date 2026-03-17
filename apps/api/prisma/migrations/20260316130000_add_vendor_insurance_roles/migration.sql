@@ -1,0 +1,3 @@
+-- AlterEnum: add VENDOR and INSURANCE to Role enum
+ALTER TYPE "Role" ADD VALUE 'VENDOR';
+ALTER TYPE "Role" ADD VALUE 'INSURANCE';
