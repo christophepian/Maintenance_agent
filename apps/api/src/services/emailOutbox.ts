@@ -1,12 +1,16 @@
 import { EmailOutboxStatus, EmailTemplate } from "@prisma/client";
 import prisma from "./prismaClient";
+import { trySendImmediate } from "./emailTransport";
 
 /* ══════════════════════════════════════════════════════════════
    EmailOutbox Service
    ══════════════════════════════════════════════════════════════
 
-   No email provider yet — messages are stored in the DB and visible
-   via the dev sink endpoint. Provider integration is Phase 2 backlog.
+   Emails are stored in the DB outbox with status PENDING.
+   When emailTransport.ts is configured (SMTP_HOST set), enqueue
+   attempts immediate delivery via SMTP and marks SENT/FAILED.
+   When SMTP_HOST is not set (dev mode), emails are logged to
+   stdout and remain visible via the dev sink endpoint.
    ══════════════════════════════════════════════════════════════ */
 
 /* ── DTOs ──────────────────────────────────────────────────── */
@@ -43,7 +47,8 @@ function mapEmailToDTO(e: any): EmailOutboxDTO {
 
 /**
  * Enqueue an email in the outbox.
- * In Phase 1, this simply writes to the DB. No actual sending.
+ * Writes to DB with status PENDING, then attempts immediate delivery
+ * via the configured transport (fire-and-forget — does not block the caller).
  */
 export async function enqueueEmail(
   orgId: string,
@@ -66,6 +71,9 @@ export async function enqueueEmail(
       metaJson: params.metaJson || undefined,
     },
   });
+
+  // Attempt immediate delivery (fire-and-forget — never throws)
+  trySendImmediate(email.id);
 
   return mapEmailToDTO(email);
 }

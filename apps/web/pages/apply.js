@@ -350,6 +350,9 @@ export default function ApplyPage() {
           netMonthlyIncome: Number(a.netMonthlyIncome) || 0,
           employedSince: a.employedSince || undefined,
           permitType: a.permitType || undefined,
+          // Strip empty strings for fields with strict Zod validators
+          email: a.email || undefined,
+          phone: a.phone || undefined,
         })),
         ...household,
         householdSize: Number(household.householdSize) || 1,

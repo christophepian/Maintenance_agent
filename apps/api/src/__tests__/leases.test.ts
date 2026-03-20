@@ -267,4 +267,108 @@ describe("Leases and Signature Requests", () => {
     const cancelled = await cancelLease(lease2.id, orgId);
     expect(cancelled.status).toBe(LeaseStatus.CANCELLED);
   });
+
+  // ==========================================
+  // A-4 Regression: Repository migration integrity
+  // ==========================================
+
+  describe("A-4 regression: lease repository migration", () => {
+    let regressionLeaseId: string;
+
+    it("createLease returns DTO with unit.building relation (canonical include)", async () => {
+      const lease = await createLease(orgId, {
+        unitId,
+        tenantName: "A4 Regression Tenant",
+        tenantPhone: "+41795551234",
+        tenantEmail: "a4@test.ch",
+        startDate: "2026-07-01",
+        netRentChf: 1500,
+        garageRentChf: 100,
+        chargesTotalChf: 250,
+        depositChf: 4500,
+        chargesItems: [
+          { label: "Chauffage", mode: "ACOMPTE", amountChf: 150 },
+          { label: "Eau", mode: "FORFAIT", amountChf: 100 },
+        ],
+      });
+      regressionLeaseId = lease.id;
+
+      // DTO must have nested unit + building from LEASE_FULL_INCLUDE
+      expect(lease.unit).toBeDefined();
+      expect(lease.unit?.unitNumber).toBe("3A");
+      expect(lease.unit?.building).toBeDefined();
+      expect(lease.unit?.building?.name).toBe("Central Plaza");
+      expect(lease.unit?.building?.id).toBe(buildingId);
+
+      // Computed fields must propagate
+      expect(lease.rentTotalChf).toBe(1500 + 100 + 250);
+      expect(lease.chargesItems).toHaveLength(2);
+    });
+
+    it("getLease returns DTO with unit.building relation", async () => {
+      const lease = await getLease(regressionLeaseId, orgId);
+      expect(lease).not.toBeNull();
+      expect(lease!.unit).toBeDefined();
+      expect(lease!.unit?.building).toBeDefined();
+      expect(lease!.unit?.building?.name).toBe("Central Plaza");
+    });
+
+    it("listLeases returns DTOs with unit.building relations", async () => {
+      const result = await listLeases(orgId, { status: "DRAFT" });
+      expect(result.data.length).toBeGreaterThanOrEqual(1);
+      const found = result.data.find(l => l.id === regressionLeaseId);
+      expect(found).toBeDefined();
+      expect(found!.unit?.building).toBeDefined();
+      expect(typeof result.total).toBe("number");
+    });
+
+    it("updateLease preserves DTO relations and computes rentTotal without as-any", async () => {
+      const updated = await updateLease(regressionLeaseId, orgId, {
+        netRentChf: 1600,
+        garageRentChf: 120,
+        otherStipulations: "A-4 regression update",
+      });
+
+      // Relation must survive the update path through repo
+      expect(updated.unit).toBeDefined();
+      expect(updated.unit?.building?.name).toBe("Central Plaza");
+
+      // Rent total recomputed correctly
+      expect(updated.netRentChf).toBe(1600);
+      expect(updated.garageRentChf).toBe(120);
+      expect(updated.rentTotalChf).toBe(1600 + 120 + 250); // charges unchanged
+      expect(updated.otherStipulations).toBe("A-4 regression update");
+    });
+
+    it("storeLeasePdfReference returns DTO with relations", async () => {
+      const updated = await storeLeasePdfReference(
+        regressionLeaseId, orgId,
+        "lease-pdf/regression/test.pdf", "deadbeef1234"
+      );
+      expect(updated.draftPdfStorageKey).toBe("lease-pdf/regression/test.pdf");
+      expect(updated.draftPdfSha256).toBe("deadbeef1234");
+      expect(updated.unit?.building).toBeDefined();
+    });
+
+    it("cancelLease returns DTO with status CANCELLED + relations", async () => {
+      const cancelled = await cancelLease(regressionLeaseId, orgId);
+      expect(cancelled.status).toBe(LeaseStatus.CANCELLED);
+      expect(cancelled.unit?.building?.name).toBe("Central Plaza");
+    });
+
+    it("markLeaseReadyToSign provisions tenant and returns DTO with relations", async () => {
+      // Create a fresh lease for this test
+      const fresh = await createLease(orgId, {
+        unitId,
+        tenantName: "Ready Regression",
+        tenantPhone: "+41795559876",
+        tenantEmail: "ready@test.ch",
+        startDate: "2026-08-01",
+        netRentChf: 2000,
+      });
+      const ready = await markLeaseReadyToSign(fresh.id, orgId);
+      expect(ready.status).toBe(LeaseStatus.READY_TO_SIGN);
+      expect(ready.unit?.building).toBeDefined();
+    });
+  });
 });

@@ -4,7 +4,7 @@ import { readJson } from "../http/body";
 import { parseBody } from "../http/body";
 import { first, getIntParam, getEnumParam } from "../http/query";
 import { withRole, withAuthRequired } from "../http/routeProtection";
-import { maybeRequireManager, requireAnyRole } from "../authz";
+import { maybeRequireManager, requireAnyRole, requireRole } from "../authz";
 import { readRawBody, parseMultipart, MAX_FILE_SIZE, storage } from "../storage/attachments";
 import { scanDocument } from "../services/documentScan";
 import prisma from "../services/prismaClient";
@@ -80,8 +80,7 @@ export function registerRentalRoutes(router: Router) {
    * Multipart: field "file" + optional field "hintDocType".
    */
   router.post("/document-scan", async ({ req, res }) => {
-    // SA-15: Require MANAGER or OWNER auth for document scanning
-    if (!maybeRequireManager(req, res)) return;
+    // Public endpoint — no auth required (used by unauthenticated apply wizard)
     try {
       const contentType = req.headers["content-type"] || "";
       const boundaryMatch = contentType.match(/boundary=(.+)/i);

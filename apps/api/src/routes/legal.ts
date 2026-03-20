@@ -6,8 +6,9 @@
  *
  * Route protection:
  *   - Decision: withAuthRequired (any authenticated user)
- *   - Admin: requireOrgViewer (MANAGER or OWNER)
- *   - Mutations: requireOrgViewer with MANAGER check
+ *   - Admin reads: requireOrgViewer (MANAGER or OWNER)
+ *   - Mutations: requireRole('MANAGER')
+ *   - RFP award: requireAnyRole(['MANAGER', 'OWNER'])
  */
 
 import { Router, HandlerContext } from "../http/router";
@@ -325,7 +326,7 @@ export function registerLegalRoutes(router: Router) {
   });
 
   router.post("/legal/sources", async ({ req, res, orgId }) => {
-    if (!requireOrgViewer(req, res)) return;
+    if (!requireRole(req, res, 'MANAGER')) return;
 
     // SA-11: LegalSource is intentionally global — see GET /legal/sources comment.
     try {
@@ -355,7 +356,7 @@ export function registerLegalRoutes(router: Router) {
     LEGAL_SOURCE_ID_PATTERN,
     ["id"],
     async ({ req, res, params }) => {
-    if (!requireOrgViewer(req, res)) return;
+    if (!requireRole(req, res, 'MANAGER')) return;
 
     try {
       const id = params?.id;
@@ -388,7 +389,7 @@ export function registerLegalRoutes(router: Router) {
     LEGAL_SOURCE_ID_PATTERN,
     ["id"],
     async ({ req, res, params }) => {
-    if (!requireOrgViewer(req, res)) return;
+    if (!requireRole(req, res, 'MANAGER')) return;
 
     try {
       const id = params?.id;
@@ -461,7 +462,7 @@ export function registerLegalRoutes(router: Router) {
   });
 
   router.post("/legal/rules", async ({ req, res }) => {
-    if (!requireOrgViewer(req, res)) return;
+    if (!requireRole(req, res, 'MANAGER')) return;
 
     // SA-11: LegalRule is intentionally global — see GET /legal/rules comment.
     try {
@@ -529,7 +530,7 @@ export function registerLegalRoutes(router: Router) {
   });
 
   router.post("/legal/category-mappings", async ({ req, res, orgId }) => {
-    if (!requireOrgViewer(req, res)) return;
+    if (!requireRole(req, res, 'MANAGER')) return;
 
     try {
       const body = await readJson(req);
@@ -563,7 +564,7 @@ export function registerLegalRoutes(router: Router) {
   });
 
   router.put("/legal/category-mappings/:id", async ({ req, res, params, orgId }) => {
-    if (!requireOrgViewer(req, res)) return;
+    if (!requireRole(req, res, 'MANAGER')) return;
 
     try {
       const body = await readJson(req);
@@ -599,7 +600,7 @@ export function registerLegalRoutes(router: Router) {
   });
 
   router.delete("/legal/category-mappings/:id", async ({ req, res, params, orgId }) => {
-    if (!requireOrgViewer(req, res)) return;
+    if (!requireRole(req, res, 'MANAGER')) return;
 
     try {
       const existing = await prisma.legalCategoryMapping.findUnique({
@@ -786,7 +787,7 @@ export function registerLegalRoutes(router: Router) {
   router.post(
     "/legal/depreciation-standards",
     async ({ req, res }) => {
-      if (!requireOrgViewer(req, res)) return;
+      if (!requireRole(req, res, 'MANAGER')) return;
 
       try {
         const body = await readJson(req);
@@ -912,7 +913,7 @@ export function registerLegalRoutes(router: Router) {
   });
 
   router.post("/assets", async ({ req, res, orgId }) => {
-    if (!requireOrgViewer(req, res)) return;
+    if (!requireRole(req, res, 'MANAGER')) return;
 
     try {
       const body = await readJson(req);
@@ -937,7 +938,7 @@ export function registerLegalRoutes(router: Router) {
   // ════════════════════════════════════════════════════════════
 
   router.post("/legal/ingest", async ({ req, res }) => {
-    if (!requireOrgViewer(req, res)) return;
+    if (!requireRole(req, res, 'MANAGER')) return;
 
     try {
       const body = await readJson(req).catch(() => ({}));

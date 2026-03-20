@@ -10,7 +10,7 @@
  * G9: canonical include constants live here.
  */
 
-import { PrismaClient, Prisma, RfpStatus, RfpQuoteStatus } from "@prisma/client";
+import { PrismaClient, Prisma, RfpStatus, RfpQuoteStatus, LegalObligation } from "@prisma/client";
 
 // ─── Canonical Includes ────────────────────────────────────────
 
@@ -68,6 +68,9 @@ export const RFP_FULL_INCLUDE = {
       createdAt: true,
       _count: {
         select: { attachments: true },
+      },
+      job: {
+        select: { id: true },
       },
     },
   },
@@ -251,8 +254,8 @@ export interface CreateRfpData {
   unitId: string;
   requestId: string;
   category: string;
-  legalObligation: string;
-  status: string;
+  legalObligation: LegalObligation;
+  status: RfpStatus;
   inviteCount: number;
   contractorIds: string[];
 }
@@ -273,8 +276,8 @@ export async function createRfpWithInvites(
         unitId: data.unitId,
         requestId: data.requestId,
         category: data.category,
-        legalObligation: data.legalObligation as any,
-        status: data.status as any,
+        legalObligation: data.legalObligation,
+        status: data.status,
         inviteCount: data.inviteCount,
       },
     });

@@ -27,6 +27,7 @@ export const JOB_FULL_INCLUDE = {
   },
   contractor: true,
   ratings: true,
+  appointmentSlots: true,
 } as const;
 
 /**
@@ -46,6 +47,7 @@ export const JOB_SUMMARY_INCLUDE = {
       },
     },
   },
+  appointmentSlots: true,
 } as const;
 
 // ─── Query Functions ───────────────────────────────────────────

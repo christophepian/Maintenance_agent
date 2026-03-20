@@ -17,6 +17,178 @@ const STATUS_COLORS = {
 };
 
 // ---------------------------------------------------------------------------
+// Scheduling Slots Panel (Tenant — accept / decline)
+// ---------------------------------------------------------------------------
+
+const SLOT_STATUS_COLORS = {
+  PROPOSED: "border-yellow-200 bg-yellow-50",
+  ACCEPTED: "border-green-200 bg-green-50",
+  DECLINED: "border-red-200 bg-red-50",
+};
+
+function formatSlotTime(iso) {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  return d.toLocaleString("en-CH", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function TenantSchedulingPanel({ requestId }) {
+  const [slots, setSlots] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [actionLoading, setActionLoading] = useState(null);
+
+  const loadSlots = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const res = await tenantFetch(
+        `/api/tenant-portal/requests/${requestId}/slots`,
+      );
+      const data = await res.json();
+      if (!res.ok) {
+        // 404 means no job yet — that's fine, just no slots
+        if (res.status === 404) { setSlots([]); return; }
+        throw new Error(data?.error?.message || "Failed to load slots");
+      }
+      setSlots(data?.data || []);
+    } catch (err) {
+      setError(String(err?.message || err));
+    } finally {
+      setLoading(false);
+    }
+  }, [requestId]);
+
+  useEffect(() => {
+    loadSlots();
+  }, [loadSlots]);
+
+  async function handleAction(slotId, action) {
+    setActionLoading(slotId);
+    setError("");
+    try {
+      const res = await tenantFetch(
+        `/api/tenant-portal/slots/${slotId}/${action}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({}),
+        },
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error?.message || `Failed to ${action} slot`);
+      loadSlots();
+    } catch (err) {
+      setError(String(err?.message || err));
+    } finally {
+      setActionLoading(null);
+    }
+  }
+
+  if (loading) return <p className="text-xs text-gray-400 mt-2">Checking appointments…</p>;
+  if (slots.length === 0) return null;
+
+  const accepted = slots.find((s) => s.status === "ACCEPTED");
+  const proposed = slots.filter((s) => s.status === "PROPOSED");
+  const allDeclined = slots.length > 0 && slots.every((s) => s.status === "DECLINED");
+
+  return (
+    <div className="mt-3 rounded-lg border border-indigo-100 bg-indigo-50/50 p-4">
+      <h3 className="text-sm font-semibold text-indigo-900 mb-2">
+        📅 Appointment Scheduling
+      </h3>
+
+      {error && (
+        <div className="mb-2 p-2 bg-red-50 border border-red-200 rounded text-xs text-red-800">
+          {error}
+        </div>
+      )}
+
+      {accepted ? (
+        <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-green-700">✓</span>
+            <span className="text-sm font-semibold text-green-900">
+              Appointment Confirmed
+            </span>
+          </div>
+          <p className="text-sm text-green-800">
+            {formatSlotTime(accepted.startTime)} – {formatSlotTime(accepted.endTime)}
+          </p>
+        </div>
+      ) : allDeclined ? (
+        <p className="text-sm text-red-700">
+          All proposed time slots have been declined. The manager will be notified
+          and the contractor may propose new slots.
+        </p>
+      ) : (
+        <>
+          <p className="text-xs text-indigo-700 mb-2">
+            The contractor has proposed the following time slots.
+            Please accept one or decline those that don't work.
+          </p>
+          <div className="space-y-2">
+            {proposed.map((slot) => (
+              <div
+                key={slot.id}
+                className={`flex items-center justify-between rounded-lg border p-3 ${
+                  SLOT_STATUS_COLORS[slot.status] || "bg-white border-gray-200"
+                }`}
+              >
+                <p className="text-sm font-medium text-slate-900">
+                  {formatSlotTime(slot.startTime)} – {formatSlotTime(slot.endTime)}
+                </p>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => handleAction(slot.id, "accept")}
+                    disabled={!!actionLoading}
+                    className="rounded-md bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-50"
+                  >
+                    {actionLoading === slot.id ? "…" : "Accept"}
+                  </button>
+                  <button
+                    onClick={() => handleAction(slot.id, "decline")}
+                    disabled={!!actionLoading}
+                    className="rounded-md border border-red-300 bg-white px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
+                  >
+                    Decline
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Show declined slots in muted style */}
+          {slots.filter((s) => s.status === "DECLINED").length > 0 && (
+            <div className="mt-2 space-y-1">
+              {slots
+                .filter((s) => s.status === "DECLINED")
+                .map((slot) => (
+                  <div
+                    key={slot.id}
+                    className="flex items-center justify-between rounded-lg border border-red-100 bg-red-50/50 p-2 opacity-60"
+                  >
+                    <p className="text-xs text-slate-500 line-through">
+                      {formatSlotTime(slot.startTime)} – {formatSlotTime(slot.endTime)}
+                    </p>
+                    <span className="text-xs text-red-600">Declined</span>
+                  </div>
+                ))}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Tenant Photos / Attachments Panel
 // ---------------------------------------------------------------------------
 
@@ -273,6 +445,11 @@ export default function TenantRequestsPage() {
 
                 {/* Photos / Attachments */}
                 <TenantPhotosPanel requestId={r.id} />
+
+                {/* Scheduling — show whenever a job may exist (component handles no-slots gracefully) */}
+                {r.status !== "PENDING_REVIEW" && r.status !== "OWNER_REJECTED" && (
+                  <TenantSchedulingPanel requestId={r.id} />
+                )}
               </div>
             ))}
           </div>

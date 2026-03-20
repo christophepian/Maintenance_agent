@@ -161,10 +161,11 @@ describe("Security Hardening Slice 2 (SA-10 → SA-20)", () => {
     expect(result.status).toBe(403);
   }, 10000);
 
-  /* SA-15: POST /document-scan with no auth → 401 */
-  it("SA-15: POST /document-scan without auth returns 401", async () => {
+  /* SA-15: POST /document-scan is public (apply wizard) — no auth required.
+     Without a multipart body the endpoint returns 400 BAD_REQUEST. */
+  it("SA-15: POST /document-scan without body returns 400", async () => {
     const result = await httpRequest(port, "POST", "/document-scan", "test");
-    expect(result.status).toBe(401);
+    expect(result.status).toBe(400);
   }, 10000);
 
   /* SA-18: POST /triage rate limit → 11th call returns 429 */

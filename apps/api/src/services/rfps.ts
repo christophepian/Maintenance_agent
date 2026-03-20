@@ -142,6 +142,8 @@ export interface ContractorRfpDTO {
   quoteCount: number;
   /** The contractor's own submitted quote (null if not yet submitted) */
   myQuote: RfpQuoteDTO | null;
+  /** Job ID — only populated when RFP is AWARDED and a Job was created. */
+  jobId: string | null;
 }
 
 // ==========================================
@@ -161,7 +163,7 @@ function mapRfpToDTO(rfp: RfpWithRelations): RfpDTO {
     inviteCount: rfp.inviteCount,
     deadlineAt: rfp.deadlineAt?.toISOString() ?? null,
     awardedContractorId: rfp.awardedContractorId ?? null,
-    awardedQuoteId: (rfp as any).awardedQuoteId ?? null,
+    awardedQuoteId: rfp.awardedQuoteId ?? null,
     createdAt: rfp.createdAt.toISOString(),
     updatedAt: rfp.updatedAt.toISOString(),
     building: rfp.building ?? undefined,
@@ -200,7 +202,7 @@ function mapRfpToDTO(rfp: RfpWithRelations): RfpDTO {
       assumptions: q.assumptions ?? null,
       validUntil: q.validUntil?.toISOString() ?? null,
       notes: q.notes ?? null,
-      status: (q as any).status ?? "SUBMITTED",
+      status: q.status,
       submittedAt: q.submittedAt.toISOString(),
       contractor: q.contractor ?? undefined,
     })),
@@ -363,7 +365,7 @@ function mapRfpToContractorDTO(
         assumptions: ownQuote.assumptions ?? null,
         validUntil: ownQuote.validUntil?.toISOString() ?? null,
         notes: ownQuote.notes ?? null,
-        status: (ownQuote as any).status ?? "SUBMITTED",
+        status: ownQuote.status,
         submittedAt: ownQuote.submittedAt.toISOString(),
         contractor: ownQuote.contractor ?? undefined,
       }
@@ -394,6 +396,7 @@ function mapRfpToContractorDTO(
     isInvited,
     quoteCount: rfp.quotes?.length ?? 0,
     myQuote,
+    jobId: rfp.request?.job?.id ?? null,
   };
 }
 

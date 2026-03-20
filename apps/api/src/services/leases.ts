@@ -1,16 +1,14 @@
-import { LeaseStatus } from '@prisma/client';
+import { LeaseStatus, Prisma, RequestStatus, JobStatus } from '@prisma/client';
 import prisma from './prismaClient';
 import { CreateLeasePayload, UpdateLeasePayload } from '../validation/leases';
 import { normalizePhoneToE164 } from '../utils/phoneNormalization';
+import * as leaseRepo from '../repositories/leaseRepository';
 
 /**
- * G9: Canonical include tree for Lease queries.
- * All Lease queries that feed mapLeaseToDTO MUST use this constant.
- * If LeaseDTO changes, update this include in the same PR.
+ * G9: Canonical include — re-exported from leaseRepository.
+ * The single source of truth lives in the repository.
  */
-export const LEASE_INCLUDE = {
-  unit: { include: { building: true } },
-} as const;
+export const LEASE_INCLUDE = leaseRepo.LEASE_FULL_INCLUDE;
 
 // ==========================================
 // DTOs
@@ -284,8 +282,7 @@ export async function createLease(orgId: string, payload: CreateLeasePayload): P
     chargesTotalChf,
   );
 
-  const lease = await prisma.lease.create({
-    data: {
+  const lease = await leaseRepo.createLease(prisma, {
       orgId,
       unitId: payload.unitId,
       status: LeaseStatus.DRAFT,
@@ -351,8 +348,6 @@ export async function createLease(orgId: string, payload: CreateLeasePayload): P
       otherStipulations: payload.otherStipulations || null,
       includesHouseRules: payload.includesHouseRules || false,
       otherAnnexesText: payload.otherAnnexesText || null,
-    },
-    include: LEASE_INCLUDE,
   });
 
   return mapLeaseToDTO(lease);
@@ -370,20 +365,19 @@ export interface ListLeasesFilter {
 }
 
 export async function listLeases(orgId: string, filter: ListLeasesFilter = {}): Promise<{ data: LeaseDTO[]; total: number }> {
-  const where: any = { orgId, isTemplate: false };
-  if (filter.status) where.status = filter.status;
-  if (filter.unitId) where.unitId = filter.unitId;
-  if (filter.applicationId) where.applicationId = filter.applicationId;
-
   const [leases, total] = await Promise.all([
-    prisma.lease.findMany({
-      where,
-      include: LEASE_INCLUDE,
-      orderBy: { createdAt: 'desc' },
-      take: filter.limit || 50,
-      skip: filter.offset || 0,
+    leaseRepo.listLeases(prisma, orgId, {
+      status: filter.status,
+      unitId: filter.unitId,
+      applicationId: filter.applicationId,
+      limit: filter.limit,
+      offset: filter.offset,
     }),
-    prisma.lease.count({ where }),
+    leaseRepo.countLeases(prisma, orgId, {
+      status: filter.status,
+      unitId: filter.unitId,
+      applicationId: filter.applicationId,
+    }),
   ]);
 
   return { data: leases.map(mapLeaseToDTO), total };
@@ -393,11 +387,7 @@ export async function listLeases(orgId: string, filter: ListLeasesFilter = {}): 
 // Get single lease
 // ==========================================
 export async function getLease(id: string, orgId: string): Promise<LeaseDTO | null> {
-  const lease = await prisma.lease.findUnique({
-    where: { id },
-    include: LEASE_INCLUDE,
-  });
-
+  const lease = await leaseRepo.findLeaseById(prisma, id);
   if (!lease || lease.orgId !== orgId) return null;
   return mapLeaseToDTO(lease);
 }
@@ -406,14 +396,14 @@ export async function getLease(id: string, orgId: string): Promise<LeaseDTO | nu
 // Update lease (editable fields only)
 // ==========================================
 export async function updateLease(id: string, orgId: string, payload: UpdateLeasePayload): Promise<LeaseDTO> {
-  const existing = await prisma.lease.findUnique({ where: { id } });
+  const existing = await leaseRepo.findLeaseRaw(prisma, id);
   if (!existing || existing.orgId !== orgId) throw new Error('Lease not found');
   // Templates are always editable; regular leases must be DRAFT
   if (!existing.isTemplate && existing.status !== LeaseStatus.DRAFT) throw new Error('Only DRAFT leases can be edited');
 
-  const data: any = {};
+  const data: Record<string, unknown> = {};
 
-  // Copy provided fields
+  // Copy provided fields — typed iteration avoids `as any`
   const fields = [
     'tenantName', 'tenantAddress', 'tenantZipCity', 'tenantPhone', 'tenantEmail', 'coTenantName',
     'landlordName', 'landlordAddress', 'landlordZipCity', 'landlordPhone', 'landlordEmail', 'landlordRepresentedBy',
@@ -425,11 +415,12 @@ export async function updateLease(id: string, orgId: string, payload: UpdateLeas
     'referenceRatePercent', 'referenceRateDate',
     'depositChf', 'depositDueRule',
     'otherStipulations', 'includesHouseRules', 'otherAnnexesText',
-  ];
+  ] as const;
 
+  const payloadRecord = payload as Record<string, unknown>;
   for (const f of fields) {
-    if ((payload as any)[f] !== undefined) {
-      data[f] = (payload as any)[f];
+    if (payloadRecord[f] !== undefined) {
+      data[f] = payloadRecord[f];
     }
   }
 
@@ -440,10 +431,10 @@ export async function updateLease(id: string, orgId: string, payload: UpdateLeas
   if (payload.depositDueDate !== undefined) data.depositDueDate = payload.depositDueDate ? new Date(payload.depositDueDate) : null;
 
   // Recompute rent total if any component changed
-  const netRent = data.netRentChf ?? existing.netRentChf;
-  const garage = data.garageRentChf !== undefined ? data.garageRentChf : existing.garageRentChf;
-  const other = data.otherServiceRentChf !== undefined ? data.otherServiceRentChf : existing.otherServiceRentChf;
-  const charges = data.chargesTotalChf !== undefined ? data.chargesTotalChf : existing.chargesTotalChf;
+  const netRent = (data.netRentChf as number | undefined) ?? existing.netRentChf;
+  const garage = data.garageRentChf !== undefined ? data.garageRentChf as number | null : existing.garageRentChf;
+  const other = data.otherServiceRentChf !== undefined ? data.otherServiceRentChf as number | null : existing.otherServiceRentChf;
+  const charges = data.chargesTotalChf !== undefined ? data.chargesTotalChf as number | null : existing.chargesTotalChf;
   data.rentTotalChf = computeRentTotal(netRent, garage, other, charges);
 
   // If this is a template, always ensure it stays DRAFT
@@ -451,12 +442,7 @@ export async function updateLease(id: string, orgId: string, payload: UpdateLeas
     data.status = LeaseStatus.DRAFT;
   }
 
-  const updated = await prisma.lease.update({
-    where: { id },
-    data,
-    include: LEASE_INCLUDE,
-  });
-
+  const updated = await leaseRepo.updateLease(prisma, id, data);
   return mapLeaseToDTO(updated);
 }
 
@@ -467,7 +453,7 @@ export async function markLeaseReadyToSign(
   id: string,
   orgId: string,
 ): Promise<LeaseDTO> {
-  const existing = await prisma.lease.findUnique({ where: { id } });
+  const existing = await leaseRepo.findLeaseRaw(prisma, id);
   if (!existing || existing.orgId !== orgId) throw new Error('Lease not found');
   if (existing.isTemplate) throw new Error('Cannot change status of a template');
   if (existing.status !== LeaseStatus.DRAFT) throw new Error('Only DRAFT leases can be marked ready to sign');
@@ -481,12 +467,7 @@ export async function markLeaseReadyToSign(
   // Auto-provision Tenant record + Occupancy so the tenant can log in and see the lease
   await ensureTenantAndOccupancy(existing);
 
-  const updated = await prisma.lease.update({
-    where: { id },
-    data: { status: LeaseStatus.READY_TO_SIGN },
-    include: LEASE_INCLUDE,
-  });
-
+  const updated = await leaseRepo.updateLease(prisma, id, { status: LeaseStatus.READY_TO_SIGN });
   return mapLeaseToDTO(updated);
 }
 
@@ -504,39 +485,31 @@ async function ensureTenantAndOccupancy(lease: {
   if (!normalizedPhone) throw new Error('Invalid tenant phone number format');
 
   // Find or create Tenant by (orgId, phone)
-  let tenant = await prisma.tenant.findUnique({
-    where: { orgId_phone: { orgId: lease.orgId, phone: normalizedPhone } },
-  });
+  let tenant = await leaseRepo.findTenantByOrgPhone(prisma, lease.orgId, normalizedPhone);
 
   if (!tenant) {
-    tenant = await prisma.tenant.create({
-      data: {
-        orgId: lease.orgId,
-        phone: normalizedPhone,
-        name: lease.tenantName,
-        email: lease.tenantEmail || null,
-      },
+    tenant = await leaseRepo.createTenant(prisma, {
+      orgId: lease.orgId,
+      phone: normalizedPhone,
+      name: lease.tenantName,
+      email: lease.tenantEmail || null,
     });
     console.log(`[LEASE] Auto-created Tenant ${tenant.id} (${lease.tenantName}, ${normalizedPhone})`);
   } else {
     // Update name/email if they changed on the lease
-    const updates: any = {};
+    const updates: Record<string, string> = {};
     if (lease.tenantName && lease.tenantName !== tenant.name) updates.name = lease.tenantName;
     if (lease.tenantEmail && lease.tenantEmail !== tenant.email) updates.email = lease.tenantEmail;
     if (Object.keys(updates).length > 0) {
-      await prisma.tenant.update({ where: { id: tenant.id }, data: updates });
+      await leaseRepo.updateTenant(prisma, tenant.id, updates);
     }
   }
 
   // Find or create Occupancy linking tenant → unit
-  const existingOccupancy = await prisma.occupancy.findFirst({
-    where: { tenantId: tenant.id, unitId: lease.unitId },
-  });
+  const existingOccupancy = await leaseRepo.findOccupancy(prisma, tenant.id, lease.unitId);
 
   if (!existingOccupancy) {
-    await prisma.occupancy.create({
-      data: { tenantId: tenant.id, unitId: lease.unitId },
-    });
+    await leaseRepo.createOccupancy(prisma, { tenantId: tenant.id, unitId: lease.unitId });
     console.log(`[LEASE] Auto-created Occupancy for Tenant ${tenant.id} → Unit ${lease.unitId}`);
   }
 
@@ -547,19 +520,14 @@ async function ensureTenantAndOccupancy(lease: {
 // Cancel lease
 // ==========================================
 export async function cancelLease(id: string, orgId: string): Promise<LeaseDTO> {
-  const existing = await prisma.lease.findUnique({ where: { id } });
+  const existing = await leaseRepo.findLeaseRaw(prisma, id);
   if (!existing || existing.orgId !== orgId) throw new Error('Lease not found');
   if (existing.isTemplate) throw new Error('Cannot change status of a template');
   if (existing.status === LeaseStatus.SIGNED || existing.status === LeaseStatus.ACTIVE) {
     throw new Error('Cannot cancel a signed or active lease');
   }
 
-  const updated = await prisma.lease.update({
-    where: { id },
-    data: { status: LeaseStatus.CANCELLED },
-    include: LEASE_INCLUDE,
-  });
-
+  const updated = await leaseRepo.updateLease(prisma, id, { status: LeaseStatus.CANCELLED });
   return mapLeaseToDTO(updated);
 }
 
@@ -572,18 +540,13 @@ export async function storeLeasePdfReference(
   storageKey: string,
   sha256: string,
 ): Promise<LeaseDTO> {
-  const existing = await prisma.lease.findUnique({ where: { id } });
+  const existing = await leaseRepo.findLeaseRaw(prisma, id);
   if (!existing || existing.orgId !== orgId) throw new Error('Lease not found');
 
-  const updated = await prisma.lease.update({
-    where: { id },
-    data: {
-      draftPdfStorageKey: storageKey,
-      draftPdfSha256: sha256,
-    },
-    include: LEASE_INCLUDE,
+  const updated = await leaseRepo.updateLease(prisma, id, {
+    draftPdfStorageKey: storageKey,
+    draftPdfSha256: sha256,
   });
-
   return mapLeaseToDTO(updated);
 }
 
@@ -596,21 +559,16 @@ export async function storeSignedPdfReference(
   storageKey: string,
   sha256: string,
 ): Promise<LeaseDTO> {
-  const existing = await prisma.lease.findUnique({ where: { id } });
+  const existing = await leaseRepo.findLeaseRaw(prisma, id);
   if (!existing || existing.orgId !== orgId) throw new Error('Lease not found');
   if (existing.status !== LeaseStatus.SIGNED && existing.status !== LeaseStatus.ACTIVE) {
     throw new Error('Only SIGNED or ACTIVE leases can store a signed PDF');
   }
 
-  const updated = await prisma.lease.update({
-    where: { id },
-    data: {
-      signedPdfStorageKey: storageKey,
-      signedPdfSha256: sha256,
-    },
-    include: LEASE_INCLUDE,
+  const updated = await leaseRepo.updateLease(prisma, id, {
+    signedPdfStorageKey: storageKey,
+    signedPdfSha256: sha256,
   });
-
   return mapLeaseToDTO(updated);
 }
 
@@ -627,20 +585,15 @@ export async function confirmDeposit(
   orgId: string,
   payload: ConfirmDepositPayload,
 ): Promise<LeaseDTO> {
-  const existing = await prisma.lease.findUnique({ where: { id } });
+  const existing = await leaseRepo.findLeaseRaw(prisma, id);
   if (!existing || existing.orgId !== orgId) throw new Error('Lease not found');
   if (existing.depositPaidAt) throw new Error('Deposit already confirmed');
 
-  const updated = await prisma.lease.update({
-    where: { id },
-    data: {
-      depositPaidAt: new Date(),
-      depositConfirmedBy: payload.confirmedBy || null,
-      depositBankRef: payload.bankRef || null,
-    },
-    include: LEASE_INCLUDE,
+  const updated = await leaseRepo.updateLease(prisma, id, {
+    depositPaidAt: new Date(),
+    depositConfirmedBy: payload.confirmedBy || null,
+    depositBankRef: payload.bankRef || null,
   });
-
   return mapLeaseToDTO(updated);
 }
 
@@ -648,21 +601,16 @@ export async function confirmDeposit(
 // Phase 5: Activate lease (SIGNED → ACTIVE)
 // ==========================================
 export async function activateLease(id: string, orgId: string): Promise<LeaseDTO> {
-  const existing = await prisma.lease.findUnique({ where: { id } });
+  const existing = await leaseRepo.findLeaseRaw(prisma, id);
   if (!existing || existing.orgId !== orgId) throw new Error('Lease not found');
   if (existing.status !== LeaseStatus.SIGNED) {
     throw new Error('Only SIGNED leases can be activated');
   }
 
-  const updated = await prisma.lease.update({
-    where: { id },
-    data: {
-      status: LeaseStatus.ACTIVE,
-      activatedAt: new Date(),
-    },
-    include: LEASE_INCLUDE,
+  const updated = await leaseRepo.updateLease(prisma, id, {
+    status: LeaseStatus.ACTIVE,
+    activatedAt: new Date(),
   });
-
   return mapLeaseToDTO(updated);
 }
 
@@ -679,23 +627,18 @@ export async function terminateLease(
   orgId: string,
   payload: TerminateLeasePayload,
 ): Promise<LeaseDTO> {
-  const existing = await prisma.lease.findUnique({ where: { id } });
+  const existing = await leaseRepo.findLeaseRaw(prisma, id);
   if (!existing || existing.orgId !== orgId) throw new Error('Lease not found');
   if (existing.status !== LeaseStatus.ACTIVE) {
     throw new Error('Only ACTIVE leases can be terminated');
   }
 
-  const updated = await prisma.lease.update({
-    where: { id },
-    data: {
-      status: LeaseStatus.TERMINATED,
-      terminatedAt: new Date(),
-      terminationReason: payload.reason,
-      terminationNotice: payload.notice || null,
-    },
-    include: LEASE_INCLUDE,
+  const updated = await leaseRepo.updateLease(prisma, id, {
+    status: LeaseStatus.TERMINATED,
+    terminatedAt: new Date(),
+    terminationReason: payload.reason,
+    terminationNotice: payload.notice || null,
   });
-
   return mapLeaseToDTO(updated);
 }
 
@@ -703,7 +646,7 @@ export async function terminateLease(
 // Phase 5: Archive lease (set archivedAt)
 // ==========================================
 export async function archiveLease(id: string, orgId: string): Promise<LeaseDTO> {
-  const existing = await prisma.lease.findUnique({ where: { id } });
+  const existing = await leaseRepo.findLeaseRaw(prisma, id);
   if (!existing || existing.orgId !== orgId) throw new Error('Lease not found');
   if (existing.status !== LeaseStatus.SIGNED &&
       existing.status !== LeaseStatus.ACTIVE &&
@@ -713,12 +656,7 @@ export async function archiveLease(id: string, orgId: string): Promise<LeaseDTO>
   }
   if (existing.archivedAt) throw new Error('Lease is already archived');
 
-  const updated = await prisma.lease.update({
-    where: { id },
-    data: { archivedAt: new Date() },
-    include: LEASE_INCLUDE,
-  });
-
+  const updated = await leaseRepo.updateLease(prisma, id, { archivedAt: new Date() });
   return mapLeaseToDTO(updated);
 }
 
@@ -736,10 +674,7 @@ export async function createLeaseInvoice(
   orgId: string,
   payload: CreateLeaseInvoicePayload,
 ): Promise<any> {
-  const lease = await prisma.lease.findUnique({
-    where: { id: leaseId },
-    include: LEASE_INCLUDE,
-  });
+  const lease = await leaseRepo.findLeaseById(prisma, leaseId);
   if (!lease || lease.orgId !== orgId) throw new Error('Lease not found');
 
   // Build description from type
@@ -755,70 +690,44 @@ export async function createLeaseInvoice(
 
   // Lease invoices need a jobId (Invoice schema requires it).
   // Use or create a system "Lease Admin" job.
-  // Tag the admin Request via contractorNotes since Job has no description field
-  // and Request has no orgId field.
-  let adminJob = await prisma.job.findFirst({
-    where: { orgId, request: { contractorNotes: '__LEASE_ADMIN__' } },
-  });
+  let adminJob = await leaseRepo.findAdminJob(prisma, orgId);
 
   if (!adminJob) {
-    // Need a contractor for the Job (contractorId is required)
-    let adminContractor = await prisma.contractor.findFirst({
-      where: { orgId },
-      orderBy: { createdAt: 'asc' },
+    const adminContractor = await leaseRepo.findOrCreateAdminContractor(prisma, orgId);
+
+    const adminRequest = await leaseRepo.createAdminRequest(prisma, {
+      description: 'System: Lease Administration',
+      category: 'other',
+      status: RequestStatus.AUTO_APPROVED,
+      contractorNotes: '__LEASE_ADMIN__',
     });
 
-    if (!adminContractor) {
-      adminContractor = await prisma.contractor.create({
-        data: {
-          orgId,
-          name: 'System Admin',
-          phone: '+41000000000',
-          email: 'admin@system.local',
-          serviceCategories: '[]',
-        },
-      });
-    }
-
-    const adminRequest = await prisma.request.create({
-      data: {
-        description: 'System: Lease Administration',
-        category: 'other',
-        status: 'AUTO_APPROVED',
-        contractorNotes: '__LEASE_ADMIN__',
-      },
-    });
-
-    adminJob = await prisma.job.create({
-      data: {
-        orgId,
-        requestId: adminRequest.id,
-        contractorId: adminContractor.id,
-        status: 'COMPLETED',
-      },
+    adminJob = await leaseRepo.createAdminJob(prisma, {
+      orgId,
+      requestId: adminRequest.id,
+      contractorId: adminContractor.id,
+      status: JobStatus.COMPLETED,
     });
   }
 
-  const invoice = await prisma.invoice.create({
-    data: {
-      orgId,
-      jobId: adminJob.id,
-      leaseId,
-      recipientName: lease.tenantName,
-      recipientAddressLine1: lease.tenantAddress || '',
-      recipientPostalCode: lease.tenantZipCity?.split(' ')[0] || '',
-      recipientCity: lease.tenantZipCity?.split(' ').slice(1).join(' ') || '',
-      recipientCountry: 'CH',
-      description,
-      subtotalAmount: amountCents,
-      vatAmount: 0,
-      totalAmount: amountCents,
-      amount: Math.round(payload.amountChf),  // legacy field (CHF)
-      currency: 'CHF',
-      vatRate: 0,  // no VAT on rent in Switzerland
-      status: 'DRAFT',
-      iban: lease.paymentIban || null,
-    },
+  const invoice = await leaseRepo.createInvoice(prisma, {
+    orgId,
+    jobId: adminJob.id,
+    leaseId,
+    recipientName: lease.tenantName,
+    recipientAddressLine1: lease.tenantAddress || '',
+    recipientPostalCode: lease.tenantZipCity?.split(' ')[0] || '',
+    recipientCity: lease.tenantZipCity?.split(' ').slice(1).join(' ') || '',
+    recipientCountry: 'CH',
+    description,
+    subtotalAmount: amountCents,
+    vatAmount: 0,
+    totalAmount: amountCents,
+    amount: Math.round(payload.amountChf),
+    currency: 'CHF',
+    vatRate: 0,
+    status: 'DRAFT',
+    iban: lease.paymentIban || null,
   });
 
   return {
@@ -837,13 +746,10 @@ export async function createLeaseInvoice(
 // Phase 5: List invoices for a lease
 // ==========================================
 export async function listLeaseInvoices(leaseId: string, orgId: string): Promise<any[]> {
-  const lease = await prisma.lease.findUnique({ where: { id: leaseId } });
+  const lease = await leaseRepo.findLeaseRaw(prisma, leaseId);
   if (!lease || lease.orgId !== orgId) throw new Error('Lease not found');
 
-  const invoices = await prisma.invoice.findMany({
-    where: { leaseId, orgId },
-    orderBy: { createdAt: 'desc' },
-  });
+  const invoices = await leaseRepo.listInvoicesByLease(prisma, leaseId, orgId);
 
   return invoices.map(inv => ({
     id: inv.id,
@@ -875,15 +781,7 @@ export async function listLeaseTemplates(
   orgId: string,
   buildingId?: string,
 ): Promise<LeaseDTO[]> {
-  const where: any = { orgId, isTemplate: true, deletedAt: null };
-  if (buildingId) where.templateBuildingId = buildingId;
-
-  const templates = await prisma.lease.findMany({
-    where,
-    include: LEASE_INCLUDE,
-    orderBy: { createdAt: 'desc' },
-  });
-
+  const templates = await leaseRepo.findTemplates(prisma, orgId, buildingId);
   return templates.map(mapLeaseToDTO);
 }
 
@@ -897,14 +795,11 @@ export async function deleteLeaseTemplate(
   templateId: string,
   orgId: string,
 ): Promise<void> {
-  const template = await prisma.lease.findUnique({ where: { id: templateId } });
+  const template = await leaseRepo.findLeaseRaw(prisma, templateId);
   if (!template || template.orgId !== orgId) throw new Error('Template not found');
   if (!template.isTemplate) throw new Error('Lease is not a template — cannot delete');
 
-  await prisma.lease.update({
-    where: { id: templateId },
-    data: { deletedAt: new Date() },
-  });
+  await leaseRepo.updateLeaseRaw(prisma, templateId, { deletedAt: new Date() });
 }
 
 /**
@@ -915,15 +810,12 @@ export async function restoreLeaseTemplate(
   templateId: string,
   orgId: string,
 ): Promise<void> {
-  const template = await prisma.lease.findUnique({ where: { id: templateId } });
+  const template = await leaseRepo.findLeaseRaw(prisma, templateId);
   if (!template || template.orgId !== orgId) throw new Error('Template not found');
   if (!template.isTemplate) throw new Error('Lease is not a template');
   if (!template.deletedAt) throw new Error('Template is not deleted');
 
-  await prisma.lease.update({
-    where: { id: templateId },
-    data: { deletedAt: null },
-  });
+  await leaseRepo.updateLeaseRaw(prisma, templateId, { deletedAt: null });
 }
 
 /**
@@ -936,14 +828,10 @@ export async function createLeaseTemplateFromLease(
   templateName: string,
   buildingId?: string,
 ): Promise<LeaseDTO> {
-  const source = await prisma.lease.findUnique({
-    where: { id: leaseId },
-    include: LEASE_INCLUDE,
-  });
+  const source = await leaseRepo.findLeaseById(prisma, leaseId);
   if (!source || source.orgId !== orgId) throw new Error('Source lease not found');
 
-  const template = await prisma.lease.create({
-    data: {
+  const template = await leaseRepo.createLease(prisma, {
       orgId,
       unitId: source.unitId,
       isTemplate: true,
@@ -969,10 +857,10 @@ export async function createLeaseTemplateFromLease(
       objectType: source.objectType,
       roomsCount: source.roomsCount,
       floor: source.floor,
-      buildingAddressLines: source.buildingAddressLines as any,
-      usageFlags: source.usageFlags as any,
-      serviceSpaces: source.serviceSpaces as any,
-      commonInstallations: source.commonInstallations as any,
+      buildingAddressLines: source.buildingAddressLines as Prisma.InputJsonValue,
+      usageFlags: source.usageFlags as Prisma.InputJsonValue,
+      serviceSpaces: source.serviceSpaces as Prisma.InputJsonValue,
+      commonInstallations: source.commonInstallations as Prisma.InputJsonValue,
 
       startDate: source.startDate,
       isFixedTerm: source.isFixedTerm,
@@ -986,7 +874,7 @@ export async function createLeaseTemplateFromLease(
       netRentChf: source.netRentChf,
       garageRentChf: source.garageRentChf,
       otherServiceRentChf: source.otherServiceRentChf,
-      chargesItems: source.chargesItems as any,
+      chargesItems: source.chargesItems as Prisma.InputJsonValue,
       chargesTotalChf: source.chargesTotalChf,
       rentTotalChf: source.rentTotalChf,
       chargesSettlementDate: source.chargesSettlementDate,
@@ -1006,8 +894,6 @@ export async function createLeaseTemplateFromLease(
       otherStipulations: source.otherStipulations,
       includesHouseRules: source.includesHouseRules,
       otherAnnexesText: source.otherAnnexesText,
-    },
-    include: LEASE_INCLUDE,
   });
 
   return mapLeaseToDTO(template);
@@ -1050,8 +936,7 @@ export async function createBlankLeaseTemplate(
   });
   if (!unit) throw new Error('Building has no units — create at least one unit first');
 
-  const template = await prisma.lease.create({
-    data: {
+  const template = await leaseRepo.createLease(prisma, {
       orgId,
       unitId: unit.id,
       isTemplate: true,
@@ -1086,8 +971,6 @@ export async function createBlankLeaseTemplate(
 
       depositDueRule: data.depositDueRule || 'AT_SIGNATURE',
       includesHouseRules: data.includesHouseRules ?? true,
-    },
-    include: LEASE_INCLUDE,
   });
 
   return mapLeaseToDTO(template);
@@ -1115,10 +998,7 @@ export async function createLeaseFromTemplate(
     netRentChf?: number;
   },
 ): Promise<LeaseDTO> {
-  const template = await prisma.lease.findUnique({
-    where: { id: templateId },
-    include: LEASE_INCLUDE,
-  });
+  const template = await leaseRepo.findLeaseById(prisma, templateId);
   if (!template || template.orgId !== orgId) throw new Error('Template not found');
   if (!template.isTemplate) throw new Error('Lease is not a template');
 
@@ -1129,8 +1009,7 @@ export async function createLeaseFromTemplate(
   });
   if (!unit) throw new Error('Unit not found');
 
-  const lease = await prisma.lease.create({
-    data: {
+  const lease = await leaseRepo.createLease(prisma, {
       orgId,
       unitId,
       applicationId: tenantInfo.applicationId || null,
@@ -1158,9 +1037,9 @@ export async function createLeaseFromTemplate(
       roomsCount: template.roomsCount,
       floor: unit.floor || template.floor,
       buildingAddressLines: [unit.building.address],
-      usageFlags: template.usageFlags as any,
-      serviceSpaces: template.serviceSpaces as any,
-      commonInstallations: template.commonInstallations as any,
+      usageFlags: template.usageFlags as Prisma.InputJsonValue,
+      serviceSpaces: template.serviceSpaces as Prisma.InputJsonValue,
+      commonInstallations: template.commonInstallations as Prisma.InputJsonValue,
 
       // Dates — override start date if provided
       startDate: tenantInfo.startDate ? new Date(tenantInfo.startDate) : template.startDate,
@@ -1176,7 +1055,7 @@ export async function createLeaseFromTemplate(
       netRentChf: tenantInfo.netRentChf ?? unit.monthlyRentChf ?? template.netRentChf,
       garageRentChf: template.garageRentChf,
       otherServiceRentChf: template.otherServiceRentChf,
-      chargesItems: template.chargesItems as any,
+      chargesItems: template.chargesItems as Prisma.InputJsonValue,
       chargesTotalChf: unit.monthlyChargesChf ?? template.chargesTotalChf,
       rentTotalChf: computeRentTotal(
         tenantInfo.netRentChf ?? unit.monthlyRentChf ?? template.netRentChf,
@@ -1203,8 +1082,6 @@ export async function createLeaseFromTemplate(
       otherStipulations: template.otherStipulations,
       includesHouseRules: template.includesHouseRules,
       otherAnnexesText: template.otherAnnexesText,
-    },
-    include: LEASE_INCLUDE,
   });
 
   // Auto-provision Tenant + Occupancy so the tenant can log in immediately

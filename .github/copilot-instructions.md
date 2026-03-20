@@ -21,7 +21,7 @@ Full-stack Swiss property management platform. Monorepo with Node.js + TypeScrip
 |-|-|
 | Backend | Raw `http.createServer()` — no Express/NestJS. Port 3001. |
 | Frontend | Next.js Pages Router. Port 3000. |
-| Database | PostgreSQL 16 via Docker. Prisma ORM. 45 models · 35 enums · 34 migrations. |
+| Database | PostgreSQL 16 via Docker. Prisma ORM. 48 models · 41 enums · 40 migrations. |
 | Auth | JWT-based. Role enum: MANAGER, CONTRACTOR, TENANT, OWNER. |
 | Personas | Manager · Contractor · Tenant · Owner |
 
@@ -117,13 +117,13 @@ Maintenance_Agent/
 │   ├── routes/          # Thin HTTP handlers
 │   ├── workflows/       # Orchestration + domain events
 │   ├── services/        # Domain logic
-│   ├── repositories/    # Prisma access + canonical includes (9 repos)
+│   ├── repositories/    # Prisma access + canonical includes (13 repos)
 │   ├── events/          # Domain event bus
 │   └── governance/      # Org scoping + authz
 ├── apps/api/prisma/
-│   ├── schema.prisma    # 45 models · 35 enums
-│   └── migrations/      # 34 dirs — never edit past migrations
-├── apps/web/pages/      # 185 pages (UI + API proxies)
+│   ├── schema.prisma    # 48 models · 41 enums
+│   └── migrations/      # 40 dirs — never edit past migrations
+├── apps/web/pages/      # 206 pages (75 UI + 131 API proxies)
 ├── apps/web/styles/
 │   └── globals.css       # Tailwind + CSS variables + @layer components (F8)
 ├── packages/api-client/ # Typed DTOs + fetch methods
@@ -140,8 +140,9 @@ Maintenance_Agent/
 
 ## Known Open Issues (check `docs/AUDIT.md` for full list)
 
-- **SA-10–SA-20** — security findings still open (role enforcement, org scoping, rate limiting)
-- **CQ-1–CQ-15** — layer violations in routes (legal.ts worst offender)
+- **A-1–A-4** — resolved in Slices 1–3 (invoice workflow bypass, RFP `as any`, auth hardening, lease layer violations)
+- **A-5** — `legal.ts` route-layer violation (19 direct Prisma calls) — still open
+- **CQ-1–CQ-15** — remaining layer violations in routes (legal.ts worst offender)
 - **TC-1–TC-3, TC-6–TC-15** — test coverage gaps
 - **Multi-org** — `Request` has no `orgId`; `DEFAULT_ORG_ID` still in `authz.ts` fallback (dev only)
 - **Legal DSL** — `LegalVariable` values not wired into DSL condition evaluation

@@ -42,7 +42,10 @@ export const ApplicantSchema = z.object({
 
   // Contact
   phone: z.string().transform(trimStr).optional(),
-  email: z.string().email().optional(),
+  email: z.preprocess(
+    (v) => (typeof v === "string" && v.trim() === "" ? undefined : v),
+    z.string().email().optional(),
+  ),
 
   // Address
   currentAddress: z.string().transform(trimStr).optional(),

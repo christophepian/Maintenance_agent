@@ -18,6 +18,12 @@ npm run dev:api
 npm run dev:web
 ```
 
+Roadmap server (optional — port 8111):
+
+```bash
+node scripts/roadmap-server.js &
+```
+
 ---
 
 ## Stop / Kill Everything
@@ -66,7 +72,7 @@ npm run dev:clean:all
 
 ```bash
 # Are the servers listening?
-lsof -nP -iTCP:3000,3001 -sTCP:LISTEN
+lsof -nP -iTCP:3000,3001,8111 -sTCP:LISTEN
 
 # Is Docker/Postgres running?
 docker ps
@@ -74,9 +80,10 @@ docker ps
 # Quick health check
 curl -sf http://127.0.0.1:3001/requests?limit=1 && echo "✅ API OK"
 curl -sf http://127.0.0.1:3000 && echo "✅ Frontend OK"
+curl -sf http://127.0.0.1:8111/api/roadmap && echo "✅ Roadmap OK"
 
 # Combined check
-lsof -nP -iTCP:3000,3001,5432 -sTCP:LISTEN 2>/dev/null || echo "No listeners found"
+lsof -nP -iTCP:3000,3001,5432,8111 -sTCP:LISTEN 2>/dev/null || echo "No listeners found"
 echo "---"
 docker ps --format "{{.Names}} {{.Status}}" 2>/dev/null || echo "Docker not running"
 ```
@@ -214,6 +221,65 @@ kill %1 2>/dev/null
 
 ---
 
+## Roadmap System
+
+The roadmap server runs on **port 8111** and operates on `ROADMAP.json` (no database).
+Dashboard HTML is generated to `docs/roadmap.html`.
+
+```bash
+# Start the roadmap server
+node scripts/roadmap-server.js &
+
+# Regenerate roadmap HTML (phases, intake, drafts, signals tabs)
+node scripts/generate-roadmap.js
+
+# Open dashboard in browser
+open http://localhost:8111
+
+# Stop roadmap server
+lsof -ti:8111 | xargs kill 2>/dev/null
+
+# Quick API check
+curl -s http://localhost:8111/api/roadmap | python3 -c "import sys,json; r=json.load(sys.stdin); print(f'Features: {len(r.get(\"features\",[])):}  Intake: {len(r.get(\"intake_items\",[])):}  Drafts: {len(r.get(\"draft_tickets\",[])):}')"
+```
+
+### Intake Pipeline (intake → triage → draft → promote)
+
+```bash
+# Create an intake item
+curl -s -X POST http://localhost:8111/api/intake \
+  -H 'Content-Type: application/json' \
+  -d '{"raw_text": "Add bulk job close feature", "source": "manual"}'
+
+# Auto-triage all raw/triaged items
+curl -s -X POST http://localhost:8111/api/intake/auto-triage \
+  -H 'Content-Type: application/json' -d '{}'
+
+# Promote a single item to draft ticket
+curl -s -X POST http://localhost:8111/api/intake/INT-001/promote \
+  -H 'Content-Type: application/json' -d '{}'
+
+# Batch promote all triaged items
+curl -s -X POST http://localhost:8111/api/intake/promote-all \
+  -H 'Content-Type: application/json' -d '{}'
+
+# Refresh top-5 recommendations
+curl -s -X POST http://localhost:8111/api/recommendations \
+  -H 'Content-Type: application/json' -d '{}'
+```
+
+### Roadmap CLI (ticket management)
+
+```bash
+# Create a new custom ticket interactively
+node scripts/roadmap-ticket.js
+
+# Validate a ticket
+node scripts/roadmap-ticket.js validate T-001
+```
+
+---
+
 ## Quick Reference Card
 
 | What | Command |
@@ -222,7 +288,7 @@ kill %1 2>/dev/null
 | Kill API | `pkill -f "ts-node.*src/server"` |
 | Kill frontend | `pkill -f "next dev"` |
 | Kill by port | `lsof -ti:3001 \| xargs kill -9` |
-| Check ports | `lsof -nP -iTCP:3000,3001 -sTCP:LISTEN` |
+| Check ports | `lsof -nP -iTCP:3000,3001,8111 -sTCP:LISTEN` |
 | API logs | `tail -f /tmp/api.log` |
 | Frontend logs | `tail -f /tmp/web.log` |
 | Run tests | `cd apps/api && npm test` |
@@ -231,6 +297,8 @@ kill %1 2>/dev/null
 | DB connect | `docker exec -it maint_agent_pg psql -U postgres -d maint_agent` |
 | Type check | `cd apps/api && npx tsc --noEmit` |
 | Drift check | See G5 smoke test above |
-
-#run architecture blueprint
-from apps/api/package.json run: npm run blueprint
+| Start roadmap | `node scripts/roadmap-server.js &` |
+| Stop roadmap | `lsof -ti:8111 \| xargs kill` |
+| Regen roadmap | `node scripts/generate-roadmap.js` |
+| Open roadmap | `open http://localhost:8111` |
+| Blueprint | `cd apps/api && npm run blueprint` |

@@ -40,7 +40,7 @@ export default function TenantInvoicesPage() {
     setError(null);
     try {
       const res = await tenantFetch(
-        `/api/tenant-portal/invoices?tenantId=${session.tenant.id}`
+        `/api/tenant-portal/invoices`
       );
       const data = await res.json();
       if (!res.ok) {

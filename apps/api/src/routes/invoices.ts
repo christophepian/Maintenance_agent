@@ -5,12 +5,15 @@ import { first } from "../http/query";
 import { getAuthUser } from "../authz";
 import { requireOrgViewer, requireOwnerAccess, logEvent } from "./helpers";
 import { getJob, listJobs, updateJob } from "../services/jobs";
-import { createInvoice, getInvoice, listInvoices, approveInvoice, markInvoicePaid, disputeInvoice, getOrCreateInvoiceForJob } from "../services/invoices";
+import { createInvoice, getInvoice, listInvoices, getOrCreateInvoiceForJob } from "../services/invoices";
 import { CreateInvoiceSchema } from "../validation/invoices";
 import { generateInvoiceQRBill, getInvoiceQRCodePNG } from "../services/invoiceQRBill";
 import { generateInvoicePDF } from "../services/invoicePDF";
 import { completeJobWorkflow } from "../workflows/completeJobWorkflow";
 import { issueInvoiceWorkflow } from "../workflows/issueInvoiceWorkflow";
+import { approveInvoiceWorkflow } from "../workflows/approveInvoiceWorkflow";
+import { payInvoiceWorkflow } from "../workflows/payInvoiceWorkflow";
+import { disputeInvoiceWorkflow } from "../workflows/disputeInvoiceWorkflow";
 import { InvalidTransitionError } from "../workflows/transitions";
 
 export function registerInvoiceRoutes(router: Router) {
@@ -167,20 +170,15 @@ export function registerInvoiceRoutes(router: Router) {
   router.post("/invoices/:id/approve", async ({ req, res, prisma, params, orgId }) => {
     if (!requireOwnerAccess(req, res)) return;
     try {
-      const invoice = await getInvoice(params.id);
-      if (!invoice || invoice.orgId !== orgId) return sendError(res, 404, "NOT_FOUND", "Invoice not found");
-
-      const approved = await approveInvoice(params.id);
       const actor = getAuthUser(req);
-      await logEvent(prisma, {
-        orgId,
-        type: "INVOICE_APPROVED",
-        actorUserId: actor?.userId,
-        payload: { invoiceId: params.id, amount: approved.amount },
-      });
-
-      sendJson(res, 200, { data: approved });
+      const result = await approveInvoiceWorkflow(
+        { orgId, prisma, actorUserId: actor?.userId ?? null },
+        { invoiceId: params.id },
+      );
+      sendJson(res, 200, { data: result.dto });
     } catch (e: any) {
+      if (e instanceof InvalidTransitionError) return sendError(res, 409, "INVALID_TRANSITION", e.message);
+      if (e.code === "NOT_FOUND") return sendError(res, 404, "NOT_FOUND", e.message);
       const msg = String(e?.message || e);
       if (msg === "ISSUER_BILLING_ENTITY_REQUIRED") {
         return sendError(res, 400, "VALIDATION_ERROR", "Invoice issuer billing entity is required before approval");
@@ -193,20 +191,15 @@ export function registerInvoiceRoutes(router: Router) {
   router.post("/invoices/:id/mark-paid", async ({ req, res, prisma, params, orgId }) => {
     if (!requireOwnerAccess(req, res)) return;
     try {
-      const invoice = await getInvoice(params.id);
-      if (!invoice || invoice.orgId !== orgId) return sendError(res, 404, "NOT_FOUND", "Invoice not found");
-
-      const paid = await markInvoicePaid(params.id);
       const actor = getAuthUser(req);
-      await logEvent(prisma, {
-        orgId,
-        type: "INVOICE_PAID",
-        actorUserId: actor?.userId,
-        payload: { invoiceId: params.id, amount: paid.amount },
-      });
-
-      sendJson(res, 200, { data: paid });
-    } catch (e) {
+      const result = await payInvoiceWorkflow(
+        { orgId, prisma, actorUserId: actor?.userId ?? null },
+        { invoiceId: params.id },
+      );
+      sendJson(res, 200, { data: result.dto });
+    } catch (e: any) {
+      if (e instanceof InvalidTransitionError) return sendError(res, 409, "INVALID_TRANSITION", e.message);
+      if (e.code === "NOT_FOUND") return sendError(res, 404, "NOT_FOUND", e.message);
       sendError(res, 500, "DB_ERROR", "Failed to mark invoice paid", String(e));
     }
   });
@@ -215,24 +208,22 @@ export function registerInvoiceRoutes(router: Router) {
   router.post("/invoices/:id/dispute", async ({ req, res, prisma, params, orgId }) => {
     if (!requireOwnerAccess(req, res)) return;
     try {
-      const invoice = await getInvoice(params.id);
-      if (!invoice || invoice.orgId !== orgId) return sendError(res, 404, "NOT_FOUND", "Invoice not found");
-
-      const raw = await readJson(req);
-      const disputed = await disputeInvoice(params.id);
       const actor = getAuthUser(req);
-      await logEvent(prisma, {
-        orgId,
-        type: "INVOICE_DISPUTED",
-        actorUserId: actor?.userId,
-        payload: { invoiceId: params.id, reason: raw?.reason || null },
-      });
-
-      sendJson(res, 200, { data: disputed });
+      let reason: string | undefined;
+      try {
+        const raw = await readJson(req);
+        reason = raw?.reason;
+      } catch {
+        // Body is optional for dispute
+      }
+      const result = await disputeInvoiceWorkflow(
+        { orgId, prisma, actorUserId: actor?.userId ?? null },
+        { invoiceId: params.id, reason },
+      );
+      sendJson(res, 200, { data: result.dto });
     } catch (e: any) {
-      const msg = String(e?.message || e);
-      if (msg === "Invalid JSON") return sendError(res, 400, "INVALID_JSON", "Invalid JSON");
-      if (msg === "Body too large") return sendError(res, 413, "BODY_TOO_LARGE", "Request body too large");
+      if (e instanceof InvalidTransitionError) return sendError(res, 409, "INVALID_TRANSITION", e.message);
+      if (e.code === "NOT_FOUND") return sendError(res, 404, "NOT_FOUND", e.message);
       sendError(res, 500, "DB_ERROR", "Failed to dispute invoice", String(e));
     }
   });

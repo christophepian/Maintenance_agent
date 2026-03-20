@@ -244,6 +244,12 @@ export interface JobDTO {
     appliance?: ApplianceSummary;
   };
   contractor?: ContractorSummary;
+  appointmentSlots?: Array<{
+    id: string;
+    startTime: string;
+    endTime: string;
+    status: string;
+  }>;
 }
 
 /**
@@ -1085,6 +1091,8 @@ export interface ContractorRfpDTO {
   isInvited: boolean;
   quoteCount: number;
   myQuote: RfpQuoteDTO | null;
+  /** Job ID — only populated when RFP is AWARDED and a Job was created. */
+  jobId: string | null;
 }
 
 export interface RfpQuoteDTO {

@@ -3,6 +3,7 @@ import { sendError, sendJson } from "../http/json";
 import { readJson } from "../http/body";
 import { first, getIntParam } from "../http/query";
 import { requireOrgViewer } from "./helpers";
+import { requireRole } from "../authz";
 import { createLease, listLeases, getLease, updateLease, cancelLease, storeLeasePdfReference, storeSignedPdfReference, confirmDeposit, archiveLease, createLeaseInvoice, listLeaseInvoices, listLeaseTemplates, deleteLeaseTemplate, restoreLeaseTemplate, createLeaseTemplateFromLease, createBlankLeaseTemplate, createLeaseFromTemplate } from "../services/leases";
 import { createSignatureRequest, listSignatureRequests, getSignatureRequest, sendSignatureRequest, markSignatureRequestSigned } from "../services/signatureRequests";
 import { generateLeasePDF } from "../services/leasePDFRenderer";
@@ -32,7 +33,7 @@ export function registerLeaseRoutes(router: Router) {
 
   // POST /leases
   router.post("/leases", async ({ req, res, orgId }) => {
-    if (!requireOrgViewer(req, res)) return;
+    if (!requireRole(req, res, 'MANAGER')) return;
     try {
       const raw = await readJson(req);
       const parsed = CreateLeaseSchema.safeParse(raw);
@@ -59,7 +60,7 @@ export function registerLeaseRoutes(router: Router) {
 
   // PATCH /leases/:id
   router.patch("/leases/:id", async ({ req, res, params, orgId }) => {
-    if (!requireOrgViewer(req, res)) return;
+    if (!requireRole(req, res, 'MANAGER')) return;
     try {
       const raw = await readJson(req);
       const parsed = UpdateLeaseSchema.safeParse(raw);
@@ -75,7 +76,7 @@ export function registerLeaseRoutes(router: Router) {
 
   // POST /leases/:id/generate-pdf
   router.post("/leases/:id/generate-pdf", async ({ req, res, params, orgId }) => {
-    if (!requireOrgViewer(req, res)) return;
+    if (!requireRole(req, res, 'MANAGER')) return;
     try {
       const { buffer, sha256 } = await generateLeasePDF(params.id, orgId);
       const storageKey = `lease-pdf/${params.id}/${Date.now()}.pdf`;
@@ -97,7 +98,7 @@ export function registerLeaseRoutes(router: Router) {
 
   // POST /leases/:id/ready-to-sign
   router.post("/leases/:id/ready-to-sign", async ({ req, res, params, orgId, prisma }) => {
-    if (!requireOrgViewer(req, res)) return;
+    if (!requireRole(req, res, 'MANAGER')) return;
     try {
       const raw = await readJson(req);
       const parsed = ReadyToSignSchema.safeParse(raw);
@@ -158,7 +159,7 @@ export function registerLeaseRoutes(router: Router) {
 
   // POST /leases/:id/cancel
   router.post("/leases/:id/cancel", async ({ req, res, params, orgId }) => {
-    if (!requireOrgViewer(req, res)) return;
+    if (!requireRole(req, res, 'MANAGER')) return;
     try {
       const lease = await cancelLease(params.id, orgId);
       sendJson(res, 200, { data: lease });
@@ -171,7 +172,7 @@ export function registerLeaseRoutes(router: Router) {
 
   // POST /leases/:id/store-signed-pdf
   router.post("/leases/:id/store-signed-pdf", async ({ req, res, params, orgId }) => {
-    if (!requireOrgViewer(req, res)) return;
+    if (!requireRole(req, res, 'MANAGER')) return;
     try {
       const raw = await readJson(req);
       if (!raw?.storageKey || !raw?.sha256) return sendError(res, 400, "VALIDATION_ERROR", "storageKey and sha256 are required");
@@ -189,7 +190,7 @@ export function registerLeaseRoutes(router: Router) {
 
   // POST /leases/:id/confirm-deposit
   router.post("/leases/:id/confirm-deposit", async ({ req, res, params, orgId }) => {
-    if (!requireOrgViewer(req, res)) return;
+    if (!requireRole(req, res, 'MANAGER')) return;
     try {
       const raw = await readJson(req);
       const lease = await confirmDeposit(params.id, orgId, raw || {});
@@ -206,7 +207,7 @@ export function registerLeaseRoutes(router: Router) {
 
   // POST /leases/:id/activate
   router.post("/leases/:id/activate", async ({ req, res, params, orgId, prisma }) => {
-    if (!requireOrgViewer(req, res)) return;
+    if (!requireRole(req, res, 'MANAGER')) return;
     try {
       const { dto } = await activateLeaseWorkflow(
         { orgId, prisma },
@@ -222,7 +223,7 @@ export function registerLeaseRoutes(router: Router) {
 
   // POST /leases/:id/terminate
   router.post("/leases/:id/terminate", async ({ req, res, params, orgId, prisma }) => {
-    if (!requireOrgViewer(req, res)) return;
+    if (!requireRole(req, res, 'MANAGER')) return;
     try {
       const raw = await readJson(req);
       if (!raw?.reason) return sendError(res, 400, "VALIDATION_ERROR", "reason is required");
@@ -243,7 +244,7 @@ export function registerLeaseRoutes(router: Router) {
 
   // POST /leases/:id/archive
   router.post("/leases/:id/archive", async ({ req, res, params, orgId }) => {
-    if (!requireOrgViewer(req, res)) return;
+    if (!requireRole(req, res, 'MANAGER')) return;
     try {
       const lease = await archiveLease(params.id, orgId);
       sendJson(res, 200, { data: lease });
@@ -269,7 +270,7 @@ export function registerLeaseRoutes(router: Router) {
 
   // POST /leases/:id/invoices
   router.post("/leases/:id/invoices", async ({ req, res, params, orgId }) => {
-    if (!requireOrgViewer(req, res)) return;
+    if (!requireRole(req, res, 'MANAGER')) return;
     try {
       const raw = await readJson(req);
       if (!raw?.type || !raw?.amountChf) return sendError(res, 400, "VALIDATION_ERROR", "type and amountChf are required");
@@ -311,7 +312,7 @@ export function registerLeaseRoutes(router: Router) {
 
   // POST /signature-requests/:id/send
   router.post("/signature-requests/:id/send", async ({ req, res, params, orgId }) => {
-    if (!requireOrgViewer(req, res)) return;
+    if (!requireRole(req, res, 'MANAGER')) return;
     try {
       const sr = await sendSignatureRequest(params.id, orgId);
       sendJson(res, 200, { data: sr });
@@ -324,7 +325,7 @@ export function registerLeaseRoutes(router: Router) {
 
   // POST /signature-requests/:id/mark-signed
   router.post("/signature-requests/:id/mark-signed", async ({ req, res, params, orgId }) => {
-    if (!requireOrgViewer(req, res)) return;
+    if (!requireRole(req, res, 'MANAGER')) return;
     try {
       const sr = await markSignatureRequestSigned(params.id, orgId);
       sendJson(res, 200, { data: sr });
@@ -351,7 +352,7 @@ export function registerLeaseRoutes(router: Router) {
 
   // POST /lease-templates (create blank template from scratch)
   router.post("/lease-templates", async ({ req, res, orgId }) => {
-    if (!requireOrgViewer(req, res)) return;
+    if (!requireRole(req, res, 'MANAGER')) return;
     try {
       const body = await readJson(req);
       if (!body.buildingId || !body.templateName || !body.landlordName || !body.landlordAddress || !body.landlordZipCity) {
@@ -388,7 +389,7 @@ export function registerLeaseRoutes(router: Router) {
 
   // POST /lease-templates/from-lease
   router.post("/lease-templates/from-lease", async ({ req, res, orgId }) => {
-    if (!requireOrgViewer(req, res)) return;
+    if (!requireRole(req, res, 'MANAGER')) return;
     try {
       const body = await readJson(req);
       if (!body.leaseId || !body.templateName) {
@@ -409,7 +410,7 @@ export function registerLeaseRoutes(router: Router) {
 
   // DELETE /lease-templates/:id
   router.delete("/lease-templates/:id", async ({ req, res, params, orgId }) => {
-    if (!requireOrgViewer(req, res)) return;
+    if (!requireRole(req, res, 'MANAGER')) return;
     try {
       await deleteLeaseTemplate(params.id, orgId);
       sendJson(res, 200, { ok: true });
@@ -422,7 +423,7 @@ export function registerLeaseRoutes(router: Router) {
 
   // POST /lease-templates/:id/restore
   router.post("/lease-templates/:id/restore", async ({ req, res, params, orgId }) => {
-    if (!requireOrgViewer(req, res)) return;
+    if (!requireRole(req, res, 'MANAGER')) return;
     try {
       await restoreLeaseTemplate(params.id, orgId);
       sendJson(res, 200, { ok: true });
@@ -435,7 +436,7 @@ export function registerLeaseRoutes(router: Router) {
 
   // POST /lease-templates/:id/create-lease
   router.post("/lease-templates/:id/create-lease", async ({ req, res, params, orgId }) => {
-    if (!requireOrgViewer(req, res)) return;
+    if (!requireRole(req, res, 'MANAGER')) return;
     try {
       const body = await readJson(req);
       if (!body.unitId || !body.tenantName) {

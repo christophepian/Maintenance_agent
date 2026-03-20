@@ -122,6 +122,13 @@ describe("Manager auth gates", () => {
     role: "CONTRACTOR",
   });
 
+  const ownerToken = encodeToken({
+    userId: "owner-user",
+    orgId: "default-org",
+    email: "owner@example.com",
+    role: "OWNER",
+  });
+
   beforeAll(async () => {
     requiredProc = await startServer({ AUTH_OPTIONAL: "false", NODE_ENV: "test" }, requiredPort);
     optionalProc = await startServer({ AUTH_OPTIONAL: "true", NODE_ENV: "test" }, optionalPort);
@@ -266,6 +273,65 @@ describe("Manager auth gates", () => {
       expect(result.status).toBe(200);
       const list = Array.isArray(result.data) ? result.data : result.data.data;
       expect(list.length).toBe(0);
+    }, 10000);
+  });
+
+  // ────────────── A-3: OWNER rejected on MANAGER-only mutations ──────────────
+
+  describe("OWNER token rejected on manager-only lease/legal mutations", () => {
+    it("OWNER cannot POST /leases (403)", async () => {
+      const result = await httpRequest(
+        requiredPort,
+        "POST",
+        "/leases",
+        { unitId: "fake-unit", tenantName: "Test" },
+        ownerToken
+      );
+      expect(result.status).toBe(403);
+    }, 10000);
+
+    it("OWNER cannot POST /legal/category-mappings (403)", async () => {
+      const result = await httpRequest(
+        requiredPort,
+        "POST",
+        "/legal/category-mappings",
+        { requestCategory: "plumbing", legalTopic: "PLUMBING" },
+        ownerToken
+      );
+      expect(result.status).toBe(403);
+    }, 10000);
+
+    it("OWNER cannot POST /lease-templates (403)", async () => {
+      const result = await httpRequest(
+        requiredPort,
+        "POST",
+        "/lease-templates",
+        { buildingId: "fake", templateName: "Test", landlordName: "X", landlordAddress: "Y", landlordZipCity: "Z" },
+        ownerToken
+      );
+      expect(result.status).toBe(403);
+    }, 10000);
+
+    it("OWNER cannot POST /legal/rules (403)", async () => {
+      const result = await httpRequest(
+        requiredPort,
+        "POST",
+        "/legal/rules",
+        { key: "test-rule", ruleType: "MAINTENANCE_OBLIGATION" },
+        ownerToken
+      );
+      expect(result.status).toBe(403);
+    }, 10000);
+
+    it("OWNER can still GET /leases (reads allowed)", async () => {
+      const result = await httpRequest(
+        requiredPort,
+        "GET",
+        "/leases",
+        undefined,
+        ownerToken
+      );
+      expect(result.status).toBe(200);
     }, 10000);
   });
 });

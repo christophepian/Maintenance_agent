@@ -1,7 +1,35 @@
 {
   "_meta": {
     "version": "2.0.0",
-    "description": "Product roadmap source of truth for Maintenance Agent. Edit custom_items[] to add user stories and tasks. Feature statuses are auto-detected from the codebase."
+    "description": "Product roadmap source of truth for Maintenance Agent. Edit custom_items[] to add user stories and tasks. Feature statuses are auto-detected from the codebase.",
+    "last_recommendations": [
+      {
+        "id": "S-P0-001-02",
+        "rank": 1,
+        "title": "Configure SMTP env vars"
+      },
+      {
+        "id": "F-P0-002",
+        "rank": 2,
+        "title": "Legal DSL Variable Resolver"
+      },
+      {
+        "id": "F-P0-003",
+        "rank": 3,
+        "title": "Skribble e-Sign Integration"
+      },
+      {
+        "id": "F-P0-004",
+        "rank": 4,
+        "title": "Route Layer Refactor (CQ-1/3/4)"
+      },
+      {
+        "id": "F-P1-001",
+        "rank": 5,
+        "title": "QR-Invoice Rent Demand Generation"
+      }
+    ],
+    "last_recommendations_at": "2026-03-20 14:26:06 UTC"
   },
   "project": {
     "name": "Maintenance Agent",
@@ -80,6 +108,95 @@
       ],
       "hooks_new": [
         "SMTP provider config"
+      ],
+      "slices": [
+        {
+          "id": "S-P0-001-01",
+          "title": "Wire SMTP transport",
+          "type": "service",
+          "status": "done",
+          "depends_on": [],
+          "files_expected": [
+            "apps/api/src/services/emailTransport.ts"
+          ],
+          "acceptance_criteria": [
+            "real SMTP transport is configured",
+            "notificationService can send via production transport"
+          ],
+          "completion_signals": [
+            {
+              "type": "file_exists",
+              "value": "apps/api/src/services/emailTransport.ts"
+            }
+          ],
+          "prompt_template": "Implement production email transport using existing EmailOutbox and notificationService patterns.",
+          "completed_at": "2026-03-19",
+          "validation": {
+            "tsc_clean": true,
+            "tests_pass": true,
+            "tests_added": [
+              "apps/api/src/__tests__/emailTransport.test.ts"
+            ],
+            "test_count": 20,
+            "files_created": [
+              "apps/api/src/services/emailTransport.ts",
+              "apps/api/src/__tests__/emailTransport.test.ts"
+            ],
+            "files_modified": [
+              "apps/api/src/services/emailOutbox.ts",
+              "apps/api/.env.example",
+              "apps/api/package.json"
+            ],
+            "notes": "nodemailer wired; dev console sink when SMTP_HOST unset; 20 unit tests all pass"
+          }
+        },
+        {
+          "id": "S-P0-001-02",
+          "title": "Configure SMTP env vars",
+          "type": "infra",
+          "status": "planned",
+          "depends_on": [
+            "S-P0-001-01"
+          ],
+          "files_expected": [
+            "SMTP provider config",
+            "emailOutbox model",
+            "notificationService"
+          ],
+          "acceptance_criteria": [
+            "SMTP_HOST env var is set in .env",
+            "SMTP_PORT, SMTP_USER, SMTP_PASS are configured"
+          ],
+          "completion_signals": [
+            {
+              "type": "env_key",
+              "value": "SMTP_HOST"
+            }
+          ],
+          "prompt_template": "Add SMTP configuration environment variables and update .env.example."
+        },
+        {
+          "id": "S-P0-001-03",
+          "title": "Integration test for email delivery",
+          "type": "test",
+          "status": "planned",
+          "depends_on": [
+            "S-P0-001-01"
+          ],
+          "files_expected": [
+            "apps/api/src/__tests__/emailTransport.test.ts"
+          ],
+          "acceptance_criteria": [
+            "test verifies email sent through SMTP transport",
+            "test covers failure/retry scenario"
+          ],
+          "completion_signals": [
+            {
+              "type": "file_exists",
+              "value": "apps/api/src/__tests__/emailTransport.test.ts"
+            }
+          ]
+        }
       ]
     },
     {
@@ -727,5 +844,2999 @@
       "GEAK energy ratings (no Swiss government API integration)",
       "Carbon tracking (no emissions calculation)"
     ]
-  }
+  },
+  "intake_items": [
+    {
+      "id": "INT-001",
+      "title": "Align UI of tenant, contractor and owner on the manager UI which is the baseline in terms of navigation, UI tokens, etc",
+      "raw_text": "Align UI of tenant, contractor and owner on the manager UI which is the baseline in terms of navigation, UI tokens, etc.\nMake all the table rows expandable by clicking on them, without having to click on a specific section of the row (e.g. actions). It should be possible to dissociate a row click from a specifc click: e.g. expand row vs click on the action button to enable a different action than expanding the row.",
+      "status": "drafted",
+      "source": "bulk_paste",
+      "product_area": "owner-portal",
+      "related_feature_ids": [],
+      "proposed_phase": "P0",
+      "dependencies": [],
+      "split_recommended": false,
+      "triage_notes": "Epic-sized item. Needs decomposition into smaller tickets before execution.",
+      "constraints": [],
+      "created_at": "2026-03-19T16:47:19.987Z",
+      "updated_at": "2026-03-19T21:20:35.379Z",
+      "recommended_action": "split",
+      "scope_size": "epic",
+      "proposed_parent_feature": null,
+      "proposed_split_plan": [],
+      "note_type": "ui_polish",
+      "duplicate_of": null,
+      "draft_ticket_ids": [
+        "DT-016",
+        "DT-017",
+        "DT-018",
+        "DT-019"
+      ]
+    },
+    {
+      "id": "INT-002",
+      "title": "Check all of the unit assets against their depreciation and present the landlord with maintenance decisions: cost of …",
+      "raw_text": "- check all of the unit assets against their depreciation and present the landlord with maintenance decisions: cost of maintenance with potential rent increase vs. cost of doing the work sensitivity analysis.",
+      "status": "drafted",
+      "source": "bulk_paste",
+      "product_area": "inventory",
+      "related_feature_ids": [],
+      "proposed_phase": "P1",
+      "dependencies": [],
+      "split_recommended": true,
+      "triage_notes": "Medium scope — single ticket, may need detailed acceptance criteria. | Split into 2 parts via split action.",
+      "constraints": [],
+      "created_at": "2026-03-19T16:47:20.204Z",
+      "updated_at": "2026-03-20T10:33:18.430Z",
+      "recommended_action": "split",
+      "scope_size": "medium",
+      "proposed_parent_feature": null,
+      "proposed_split_plan": [
+        {
+          "title": "Check all of the unit assets against their depreciation and present the landlord with maintenance decisions: cost of …",
+          "scope_hint": "tbd"
+        },
+        {
+          "title": "Cost of doing the work sensitivity analysis",
+          "scope_hint": "tbd"
+        }
+      ],
+      "note_type": "feature_request",
+      "duplicate_of": null,
+      "anti_split_reasons": [],
+      "draft_ticket_ids": [
+        "DT-022",
+        "DT-023"
+      ]
+    },
+    {
+      "id": "INT-003",
+      "title": "Clean up the sources and the mapping to rent reduction obligations, for now it’s not usable",
+      "raw_text": "- clean up the sources and the mapping to rent reduction obligations, for now it’s not usable",
+      "status": "triaged",
+      "source": "bulk_paste",
+      "product_area": "legal-engine",
+      "related_feature_ids": [],
+      "proposed_phase": "P1",
+      "dependencies": [],
+      "split_recommended": false,
+      "triage_notes": "Medium scope — single ticket, may need detailed acceptance criteria.",
+      "constraints": [],
+      "created_at": "2026-03-19T16:47:20.269Z",
+      "updated_at": "2026-03-20T08:39:49.090Z",
+      "recommended_action": "execute",
+      "scope_size": "medium",
+      "proposed_parent_feature": null,
+      "proposed_split_plan": [],
+      "note_type": "feature_request",
+      "duplicate_of": null,
+      "anti_split_reasons": []
+    },
+    {
+      "id": "INT-004",
+      "title": "Depreciation standards page should by default show collapsed items (UI change), no other alteration",
+      "raw_text": "- Depreciation standards page should by default show collapsed items (UI change), no other alteration",
+      "status": "drafted",
+      "source": "bulk_paste",
+      "product_area": "ui-polish",
+      "related_feature_ids": [],
+      "proposed_phase": "P2",
+      "dependencies": [],
+      "split_recommended": false,
+      "triage_notes": "Large scope — executable but may benefit from sub-tasks.",
+      "constraints": [],
+      "created_at": "2026-03-19T16:47:20.338Z",
+      "updated_at": "2026-03-19T21:36:41.417Z",
+      "recommended_action": "execute",
+      "scope_size": "large",
+      "proposed_parent_feature": null,
+      "proposed_split_plan": [],
+      "note_type": "feature_request",
+      "duplicate_of": null,
+      "draft_ticket_ids": [
+        "DT-020"
+      ]
+    },
+    {
+      "id": "INT-005",
+      "title": "Analyse a repair vs replace opportunity: map the asset against it’s useful life (data from the legal engine can answe…",
+      "raw_text": "- Analyse a repair vs replace opportunity: map the asset against it’s useful life (data from the legal engine can answer this), check repair history and run a cost of opportunity scenario so that the decision can be directly forwarded onto the owner for approval and/or the contractor if the cost estimation is below the defined threshold for auto-routing. Dependency on having all assets correctly mapped to buildings/units and have the repair history work proprerly. at the moment it’s there but it’s not working as expected.",
+      "status": "drafted",
+      "source": "bulk_paste",
+      "product_area": "owner-portal",
+      "related_feature_ids": [],
+      "proposed_phase": "P3",
+      "dependencies": [
+        "not yet implemented"
+      ],
+      "split_recommended": false,
+      "triage_notes": "Has unresolved dependency: not yet implemented. Cannot execute until resolved.",
+      "constraints": [],
+      "created_at": "2026-03-19T16:47:20.410Z",
+      "updated_at": "2026-03-19T23:03:55.363Z",
+      "recommended_action": "blocked",
+      "scope_size": "large",
+      "proposed_parent_feature": null,
+      "proposed_split_plan": [],
+      "note_type": "bug",
+      "duplicate_of": null,
+      "anti_split_reasons": [],
+      "draft_ticket_ids": [
+        "DT-021"
+      ]
+    },
+    {
+      "id": "INT-006",
+      "title": "Show a “work requestor” column in the table",
+      "raw_text": "- Show a “work requestor” column in the table",
+      "status": "triaged",
+      "source": "bulk_paste",
+      "product_area": "requests",
+      "related_feature_ids": [],
+      "proposed_phase": "P1",
+      "dependencies": [],
+      "split_recommended": false,
+      "triage_notes": "",
+      "constraints": [],
+      "created_at": "2026-03-19T16:47:20.472Z",
+      "updated_at": "2026-03-20T09:03:08.119Z",
+      "recommended_action": "execute",
+      "scope_size": "medium",
+      "proposed_parent_feature": null,
+      "proposed_split_plan": [],
+      "note_type": "feature_request",
+      "duplicate_of": "INT-007",
+      "anti_split_reasons": []
+    },
+    {
+      "id": "INT-007",
+      "title": "Show a “next approver” column in the table",
+      "raw_text": "- Show a “next approver” column in the table",
+      "status": "triaged",
+      "source": "bulk_paste",
+      "product_area": "requests",
+      "related_feature_ids": [],
+      "proposed_phase": "P1",
+      "dependencies": [],
+      "split_recommended": false,
+      "triage_notes": "Likely duplicate of INT-006 (Show a “work requestor” column in the table) — similarity: 50%",
+      "constraints": [],
+      "created_at": "2026-03-19T16:47:20.536Z",
+      "updated_at": "2026-03-20T08:39:49.090Z",
+      "recommended_action": "duplicate",
+      "scope_size": "medium",
+      "proposed_parent_feature": null,
+      "proposed_split_plan": [],
+      "note_type": "feature_request",
+      "duplicate_of": "INT-006",
+      "anti_split_reasons": []
+    },
+    {
+      "id": "INT-008",
+      "title": "Rental listings (URL):",
+      "raw_text": "Rental listings (URL):",
+      "status": "triaged",
+      "source": "bulk_paste",
+      "product_area": "requests",
+      "related_feature_ids": [],
+      "proposed_phase": "P1",
+      "dependencies": [],
+      "split_recommended": false,
+      "triage_notes": "Medium scope — single ticket, may need detailed acceptance criteria.",
+      "constraints": [],
+      "created_at": "2026-03-19T16:47:20.603Z",
+      "updated_at": "2026-03-20T08:39:49.090Z",
+      "recommended_action": "execute",
+      "scope_size": "medium",
+      "proposed_parent_feature": null,
+      "proposed_split_plan": [],
+      "note_type": "feature_request",
+      "duplicate_of": null,
+      "anti_split_reasons": []
+    },
+    {
+      "id": "INT-009",
+      "title": "Add advanced search/filters: by price, by location, etc",
+      "raw_text": "- Add advanced search/filters: by price, by location, etc.",
+      "status": "triaged",
+      "source": "bulk_paste",
+      "product_area": "search",
+      "related_feature_ids": [],
+      "proposed_phase": "P1",
+      "dependencies": [],
+      "split_recommended": false,
+      "triage_notes": "Epic-sized item. Needs decomposition into smaller tickets before execution.",
+      "constraints": [],
+      "created_at": "2026-03-19T16:47:20.665Z",
+      "updated_at": "2026-03-20T08:39:49.090Z",
+      "recommended_action": "split",
+      "scope_size": "epic",
+      "proposed_parent_feature": null,
+      "proposed_split_plan": [],
+      "note_type": "feature_request",
+      "duplicate_of": null,
+      "anti_split_reasons": []
+    },
+    {
+      "id": "INT-010",
+      "title": "Remove unselected units from the second page where we dump the supporting documents: creating confusion",
+      "raw_text": "- Remove unselected units from the second page where we dump the supporting documents: creating confusion. Maybe give the option to apply to two listings in one go: the UI pattern would have to be defined.",
+      "status": "triaged",
+      "source": "bulk_paste",
+      "product_area": "documents",
+      "related_feature_ids": [],
+      "proposed_phase": "P2",
+      "dependencies": [],
+      "split_recommended": false,
+      "triage_notes": "Large scope — executable but may benefit from sub-tasks.",
+      "constraints": [],
+      "created_at": "2026-03-19T16:47:20.730Z",
+      "updated_at": "2026-03-20T08:39:49.090Z",
+      "recommended_action": "execute",
+      "scope_size": "large",
+      "proposed_parent_feature": null,
+      "proposed_split_plan": [],
+      "note_type": "feature_request",
+      "duplicate_of": null,
+      "anti_split_reasons": []
+    },
+    {
+      "id": "INT-011",
+      "title": "Allow the user to view the uploaded documents from the browser, preview mode",
+      "raw_text": "- Allow the user to view the uploaded documents from the browser, preview mode",
+      "status": "triaged",
+      "source": "bulk_paste",
+      "product_area": "documents",
+      "related_feature_ids": [],
+      "proposed_phase": "P1",
+      "dependencies": [],
+      "split_recommended": false,
+      "triage_notes": "Medium scope — single ticket, may need detailed acceptance criteria.",
+      "constraints": [],
+      "created_at": "2026-03-19T16:47:20.793Z",
+      "updated_at": "2026-03-20T08:39:49.090Z",
+      "recommended_action": "execute",
+      "scope_size": "medium",
+      "proposed_parent_feature": null,
+      "proposed_split_plan": [],
+      "note_type": "feature_request",
+      "duplicate_of": null,
+      "anti_split_reasons": []
+    },
+    {
+      "id": "INT-012",
+      "title": "Student proof: remove from required documents",
+      "raw_text": "- Student proof: remove from required documents",
+      "status": "triaged",
+      "source": "bulk_paste",
+      "product_area": "documents",
+      "related_feature_ids": [],
+      "proposed_phase": "P1",
+      "dependencies": [],
+      "split_recommended": false,
+      "triage_notes": "Medium scope — single ticket, may need detailed acceptance criteria.",
+      "constraints": [],
+      "created_at": "2026-03-19T16:47:20.858Z",
+      "updated_at": "2026-03-20T08:39:49.090Z",
+      "recommended_action": "execute",
+      "scope_size": "medium",
+      "proposed_parent_feature": null,
+      "proposed_split_plan": [],
+      "note_type": "feature_request",
+      "duplicate_of": null,
+      "anti_split_reasons": []
+    },
+    {
+      "id": "INT-013",
+      "title": "Household size: unclear what this means",
+      "raw_text": "- Household size: unclear what this means",
+      "status": "triaged",
+      "source": "bulk_paste",
+      "product_area": "application-wizard",
+      "related_feature_ids": [],
+      "proposed_phase": "P1",
+      "dependencies": [],
+      "split_recommended": false,
+      "triage_notes": "Medium scope — single ticket, may need detailed acceptance criteria.",
+      "constraints": [],
+      "created_at": "2026-03-19T16:47:20.920Z",
+      "updated_at": "2026-03-20T08:39:49.090Z",
+      "recommended_action": "execute",
+      "scope_size": "medium",
+      "proposed_parent_feature": null,
+      "proposed_split_plan": [],
+      "note_type": "feature_request",
+      "duplicate_of": null,
+      "anti_split_reasons": []
+    },
+    {
+      "id": "INT-014",
+      "title": "Link the widgets to their subcontent - for now they aren’t clickable",
+      "raw_text": "- Link the widgets to their subcontent - for now they aren’t clickable",
+      "status": "triaged",
+      "source": "bulk_paste",
+      "product_area": "owner-portal",
+      "related_feature_ids": [],
+      "proposed_phase": "P1",
+      "dependencies": [],
+      "split_recommended": false,
+      "triage_notes": "Medium scope — single ticket, may need detailed acceptance criteria.",
+      "constraints": [],
+      "created_at": "2026-03-19T16:47:20.983Z",
+      "updated_at": "2026-03-20T08:39:49.090Z",
+      "recommended_action": "execute",
+      "scope_size": "medium",
+      "proposed_parent_feature": null,
+      "proposed_split_plan": [],
+      "note_type": "feature_request",
+      "duplicate_of": null,
+      "anti_split_reasons": []
+    },
+    {
+      "id": "INT-015",
+      "title": "Expected monthly rent widget: link to the details - to be analysed further",
+      "raw_text": "- Expected monthly rent widget: link to the details - to be analysed further",
+      "status": "triaged",
+      "source": "bulk_paste",
+      "product_area": "owner-portal",
+      "related_feature_ids": [],
+      "proposed_phase": "P3",
+      "dependencies": [
+        "needs analysis"
+      ],
+      "split_recommended": false,
+      "triage_notes": "Has unresolved dependency: needs analysis. Cannot execute until resolved.",
+      "constraints": [],
+      "created_at": "2026-03-19T16:47:21.049Z",
+      "updated_at": "2026-03-20T08:39:49.090Z",
+      "recommended_action": "blocked",
+      "scope_size": "large",
+      "proposed_parent_feature": null,
+      "proposed_split_plan": [],
+      "note_type": "feature_request",
+      "duplicate_of": null,
+      "anti_split_reasons": []
+    },
+    {
+      "id": "INT-016",
+      "title": "Vacancies: empty since: show date",
+      "raw_text": "- vacancies: empty since: show date",
+      "status": "triaged",
+      "source": "bulk_paste",
+      "product_area": "owner-portal",
+      "related_feature_ids": [],
+      "proposed_phase": "P1",
+      "dependencies": [],
+      "split_recommended": false,
+      "triage_notes": "Medium scope — single ticket, may need detailed acceptance criteria.",
+      "constraints": [],
+      "created_at": "2026-03-19T16:47:21.114Z",
+      "updated_at": "2026-03-20T08:39:49.090Z",
+      "recommended_action": "execute",
+      "scope_size": "medium",
+      "proposed_parent_feature": null,
+      "proposed_split_plan": [],
+      "note_type": "feature_request",
+      "duplicate_of": null,
+      "anti_split_reasons": []
+    },
+    {
+      "id": "INT-017",
+      "title": "If no vacancies: make the review button inactive",
+      "raw_text": "- if no vacancies: make the review button inactive",
+      "status": "triaged",
+      "source": "bulk_paste",
+      "product_area": "owner-portal",
+      "related_feature_ids": [],
+      "proposed_phase": "P1",
+      "dependencies": [],
+      "split_recommended": false,
+      "triage_notes": "Medium scope — single ticket, may need detailed acceptance criteria.",
+      "constraints": [],
+      "created_at": "2026-03-19T16:47:21.178Z",
+      "updated_at": "2026-03-20T08:39:49.090Z",
+      "recommended_action": "execute",
+      "scope_size": "medium",
+      "proposed_parent_feature": null,
+      "proposed_split_plan": [],
+      "note_type": "feature_request",
+      "duplicate_of": null,
+      "anti_split_reasons": []
+    },
+    {
+      "id": "INT-018",
+      "title": "Filling a vacancy: the awaiting signature stage should be in a separate tab than the rest of the vacancies, look into…",
+      "raw_text": "- filling a vacancy: the awaiting signature stage should be in a separate tab than the rest of the vacancies, look into how to split the page in seperate chronological tabs",
+      "status": "triaged",
+      "source": "bulk_paste",
+      "product_area": "owner-portal",
+      "related_feature_ids": [],
+      "proposed_phase": "P2",
+      "dependencies": [],
+      "split_recommended": false,
+      "triage_notes": "Large scope — executable but may benefit from sub-tasks.",
+      "constraints": [],
+      "created_at": "2026-03-19T16:47:21.240Z",
+      "updated_at": "2026-03-20T08:39:49.090Z",
+      "recommended_action": "execute",
+      "scope_size": "large",
+      "proposed_parent_feature": null,
+      "proposed_split_plan": [],
+      "note_type": "feature_request",
+      "duplicate_of": null,
+      "anti_split_reasons": []
+    },
+    {
+      "id": "INT-019",
+      "title": "Tenant score: show a breakdown of how it was computed: make it transparent —> click on score and show a pop up how th…",
+      "raw_text": "- Tenant score: show a breakdown of how it was computed: make it transparent —> click on score and show a pop up how the score was computed",
+      "status": "triaged",
+      "source": "bulk_paste",
+      "product_area": "tenant-portal",
+      "related_feature_ids": [],
+      "proposed_phase": "P1",
+      "dependencies": [],
+      "split_recommended": false,
+      "triage_notes": "Medium scope — single ticket, may need detailed acceptance criteria.",
+      "constraints": [],
+      "created_at": "2026-03-19T16:47:21.300Z",
+      "updated_at": "2026-03-20T08:39:49.090Z",
+      "recommended_action": "execute",
+      "scope_size": "medium",
+      "proposed_parent_feature": null,
+      "proposed_split_plan": [],
+      "note_type": "feature_request",
+      "duplicate_of": null,
+      "anti_split_reasons": []
+    },
+    {
+      "id": "INT-020",
+      "title": "Selecting candidates, enable a drag and drop from the candidates table to the zone that selects primary and fallback …",
+      "raw_text": "- Selecting candidates, enable a drag and drop from the candidates table to the zone that selects primary and fallback tenants, or click on primary and select from the list. This should come on top of the other pattern, not replace it.",
+      "status": "triaged",
+      "source": "bulk_paste",
+      "product_area": "tenant-portal",
+      "related_feature_ids": [],
+      "proposed_phase": "P1",
+      "dependencies": [],
+      "split_recommended": false,
+      "triage_notes": "Epic-sized item. Needs decomposition into smaller tickets before execution.",
+      "constraints": [],
+      "created_at": "2026-03-19T16:47:21.361Z",
+      "updated_at": "2026-03-20T08:39:49.090Z",
+      "recommended_action": "split",
+      "scope_size": "epic",
+      "proposed_parent_feature": null,
+      "proposed_split_plan": [],
+      "note_type": "feature_request",
+      "duplicate_of": null,
+      "anti_split_reasons": []
+    },
+    {
+      "id": "INT-021",
+      "title": "Candidate selection: give an option to the owner to plan a phone call or to meet with their favorite candidates, new …",
+      "raw_text": "- Candidate selection: give an option to the owner to plan a phone call or to meet with their favorite candidates, new action.",
+      "status": "triaged",
+      "source": "bulk_paste",
+      "product_area": "owner-portal",
+      "related_feature_ids": [],
+      "proposed_phase": "P1",
+      "dependencies": [],
+      "split_recommended": false,
+      "triage_notes": "Medium scope — single ticket, may need detailed acceptance criteria.",
+      "constraints": [],
+      "created_at": "2026-03-19T16:47:21.423Z",
+      "updated_at": "2026-03-20T08:39:49.090Z",
+      "recommended_action": "execute",
+      "scope_size": "medium",
+      "proposed_parent_feature": null,
+      "proposed_split_plan": [],
+      "note_type": "feature_request",
+      "duplicate_of": null,
+      "anti_split_reasons": []
+    },
+    {
+      "id": "INT-022",
+      "title": "When a lease is sent for tenant signature: put a countdown on it so that it automatically moves to the fallback candi…",
+      "raw_text": "- When a lease is sent for tenant signature: put a countdown on it so that it automatically moves to the fallback candidates when no response is received at the end of the countdown, make explicit when it was sent by showing a date next to the “sent” status",
+      "status": "triaged",
+      "source": "bulk_paste",
+      "product_area": "tenant-portal",
+      "related_feature_ids": [],
+      "proposed_phase": "P1",
+      "dependencies": [],
+      "split_recommended": false,
+      "triage_notes": "Medium scope — single ticket, may need detailed acceptance criteria.",
+      "constraints": [],
+      "created_at": "2026-03-19T16:47:21.487Z",
+      "updated_at": "2026-03-20T08:39:49.090Z",
+      "recommended_action": "execute",
+      "scope_size": "medium",
+      "proposed_parent_feature": null,
+      "proposed_split_plan": [],
+      "note_type": "workflow_improvement",
+      "duplicate_of": null,
+      "anti_split_reasons": []
+    },
+    {
+      "id": "INT-023",
+      "title": "Invoice in lease draft: enable a preview of the invoice",
+      "raw_text": "- Invoice in lease draft: enable a preview of the invoice",
+      "status": "triaged",
+      "source": "bulk_paste",
+      "product_area": "leases",
+      "related_feature_ids": [],
+      "proposed_phase": "P1",
+      "dependencies": [],
+      "split_recommended": false,
+      "triage_notes": "Medium scope — single ticket, may need detailed acceptance criteria.",
+      "constraints": [],
+      "created_at": "2026-03-19T16:47:21.549Z",
+      "updated_at": "2026-03-20T08:39:49.090Z",
+      "recommended_action": "execute",
+      "scope_size": "medium",
+      "proposed_parent_feature": null,
+      "proposed_split_plan": [],
+      "note_type": "feature_request",
+      "duplicate_of": null,
+      "anti_split_reasons": []
+    },
+    {
+      "id": "INT-024",
+      "title": "Send polite rejection email to candidates that haven’t been selected when the signed lease is returned, clear the rej…",
+      "raw_text": "- Send polite rejection email to candidates that haven’t been selected when the signed lease is returned, clear the rejected candidates files automatically and give them a confirmation",
+      "status": "triaged",
+      "source": "bulk_paste",
+      "product_area": "leases",
+      "related_feature_ids": [],
+      "proposed_phase": "P1",
+      "dependencies": [],
+      "split_recommended": false,
+      "triage_notes": "Medium scope — single ticket, may need detailed acceptance criteria.",
+      "constraints": [],
+      "created_at": "2026-03-19T16:47:21.608Z",
+      "updated_at": "2026-03-20T08:39:49.090Z",
+      "recommended_action": "execute",
+      "scope_size": "medium",
+      "proposed_parent_feature": null,
+      "proposed_split_plan": [],
+      "note_type": "workflow_improvement",
+      "duplicate_of": null,
+      "anti_split_reasons": []
+    },
+    {
+      "id": "INT-025",
+      "title": "Link assets inventory to appliances: appliances is the product catalog which shows all the models, with serial number…",
+      "raw_text": "- Link assets inventory to appliances: appliances is the product catalog which shows all the models, with serial number etc, whereas assets inventory lists all the properties of a building/unit, whether they are appliances (e.g. dishwaser, oven, lights, etc.) or walls, floor, ceiling etc. It lists the useful life and show a list of maintenances (if they took place)",
+      "status": "triaged",
+      "source": "bulk_paste",
+      "product_area": "inventory",
+      "related_feature_ids": [],
+      "proposed_phase": "P1",
+      "dependencies": [],
+      "split_recommended": false,
+      "triage_notes": "Epic-sized item. Needs decomposition into smaller tickets before execution.",
+      "constraints": [],
+      "created_at": "2026-03-19T16:47:21.673Z",
+      "updated_at": "2026-03-20T08:39:49.090Z",
+      "recommended_action": "split",
+      "scope_size": "epic",
+      "proposed_parent_feature": null,
+      "proposed_split_plan": [],
+      "note_type": "feature_request",
+      "duplicate_of": null,
+      "anti_split_reasons": []
+    },
+    {
+      "id": "INT-026",
+      "title": "2 edit buttons on the building details page, one generic and one that is specific to owner details —> keep 1",
+      "raw_text": "- 2 edit buttons on the building details page, one generic and one that is specific to owner details —> keep 1",
+      "status": "triaged",
+      "source": "bulk_paste",
+      "product_area": "owner-portal",
+      "related_feature_ids": [],
+      "proposed_phase": "P2",
+      "dependencies": [],
+      "split_recommended": false,
+      "triage_notes": "Large scope — executable but may benefit from sub-tasks.",
+      "constraints": [],
+      "created_at": "2026-03-19T16:47:21.733Z",
+      "updated_at": "2026-03-20T08:39:49.090Z",
+      "recommended_action": "execute",
+      "scope_size": "large",
+      "proposed_parent_feature": null,
+      "proposed_split_plan": [],
+      "note_type": "feature_request",
+      "duplicate_of": null,
+      "anti_split_reasons": []
+    },
+    {
+      "id": "INT-027",
+      "title": "Try to pool contracting jobs by postal code and if possible by building, so that they can easily self organize their …",
+      "raw_text": "- try to pool contracting jobs by postal code and if possible by building, so that they can easily self organize their day and log as many interventions as possible in a given day without having to go all over town. This would be displayed only for jobs that have been awarded and should probably have some kind of algorithm behind… tbd",
+      "status": "triaged",
+      "source": "bulk_paste",
+      "product_area": "jobs",
+      "related_feature_ids": [],
+      "proposed_phase": "P3",
+      "dependencies": [
+        "needs analysis"
+      ],
+      "split_recommended": false,
+      "triage_notes": "Has unresolved dependency: needs analysis. Cannot execute until resolved.",
+      "constraints": [],
+      "created_at": "2026-03-19T16:47:21.799Z",
+      "updated_at": "2026-03-20T08:39:49.090Z",
+      "recommended_action": "blocked",
+      "scope_size": "large",
+      "proposed_parent_feature": null,
+      "proposed_split_plan": [],
+      "note_type": "feature_request",
+      "duplicate_of": null,
+      "anti_split_reasons": []
+    },
+    {
+      "id": "INT-029",
+      "title": "Merge expenses and charges: keep expenses and remove charges",
+      "raw_text": "- Merge expenses and charges: keep expenses and remove charges",
+      "status": "triaged",
+      "source": "bulk_paste",
+      "product_area": "invoicing",
+      "related_feature_ids": [],
+      "proposed_phase": "P1",
+      "dependencies": [],
+      "split_recommended": false,
+      "triage_notes": "Medium scope — single ticket, may need detailed acceptance criteria.",
+      "constraints": [],
+      "created_at": "2026-03-19T16:47:21.927Z",
+      "updated_at": "2026-03-20T08:39:49.090Z",
+      "recommended_action": "execute",
+      "scope_size": "medium",
+      "proposed_parent_feature": null,
+      "proposed_split_plan": [],
+      "note_type": "feature_request",
+      "duplicate_of": null,
+      "anti_split_reasons": []
+    },
+    {
+      "id": "INT-030",
+      "title": "Look into how to integrate invoices with e-banking, like assura or let’s go, and possibly look into what it would tak…",
+      "raw_text": "- Look into how to integrate invoices with e-banking, like assura or let’s go, and possibly look into what it would take to generate e-bill",
+      "status": "triaged",
+      "source": "bulk_paste",
+      "product_area": "invoicing",
+      "related_feature_ids": [],
+      "proposed_phase": "P1",
+      "dependencies": [],
+      "split_recommended": false,
+      "triage_notes": "Epic-sized item. Needs decomposition into smaller tickets before execution.",
+      "constraints": [],
+      "created_at": "2026-03-19T16:47:21.989Z",
+      "updated_at": "2026-03-20T08:39:49.090Z",
+      "recommended_action": "split",
+      "scope_size": "epic",
+      "proposed_parent_feature": null,
+      "proposed_split_plan": [],
+      "note_type": "integration",
+      "duplicate_of": null,
+      "anti_split_reasons": []
+    },
+    {
+      "id": "INT-031",
+      "title": "When navigating to inventory/vacancies —> the highlighted item in the left panel nabigation defaults back to “dashboa…",
+      "raw_text": "- When navigating to inventory/vacancies —> the highlighted item in the left panel nabigation defaults back to “dashboard” item instead of keeping the highight over “inventory”",
+      "status": "triaged",
+      "source": "bulk_paste",
+      "product_area": "inventory",
+      "related_feature_ids": [],
+      "proposed_phase": "P2",
+      "dependencies": [],
+      "split_recommended": false,
+      "triage_notes": "Large scope — executable but may benefit from sub-tasks.",
+      "constraints": [],
+      "created_at": "2026-03-19T16:47:22.054Z",
+      "updated_at": "2026-03-20T08:39:49.090Z",
+      "recommended_action": "execute",
+      "scope_size": "large",
+      "proposed_parent_feature": null,
+      "proposed_split_plan": [],
+      "note_type": "reporting",
+      "duplicate_of": null,
+      "anti_split_reasons": []
+    },
+    {
+      "id": "INT-032",
+      "title": "Add email notifications for overdue invoices",
+      "raw_text": "Manager should get notified when invoices are past due. Also need SMS fallback for critical alerts.",
+      "status": "triaged",
+      "source": "meeting-notes",
+      "product_area": "invoicing",
+      "related_feature_ids": [],
+      "proposed_phase": "P1",
+      "dependencies": [],
+      "split_recommended": false,
+      "triage_notes": "Medium scope — single ticket, may need detailed acceptance criteria.",
+      "constraints": [],
+      "recommended_action": "execute",
+      "scope_size": "medium",
+      "proposed_parent_feature": null,
+      "proposed_split_plan": [],
+      "note_type": "feature_request",
+      "duplicate_of": null,
+      "created_at": "2026-03-19T17:03:40.208Z",
+      "updated_at": "2026-03-20T08:39:49.090Z",
+      "anti_split_reasons": []
+    },
+    {
+      "id": "INT-033",
+      "title": null,
+      "raw_text": "Owner financial dashboard with invoice metrics — summary cards showing total invoices, pending approvals, paid amount, disputed amount. Drill-down by building. Referenced as Slice 8 remaining work (Feb 11 epic entry). Partially overlaps F-P1-006 Owner Cashflow Dashboard but focuses specifically on invoice metrics rather than full cashflow.",
+      "status": "drafted",
+      "source": "EPIC_HISTORY.md — Slice 8 remaining work",
+      "product_area": "owner-portal",
+      "related_feature_ids": [],
+      "proposed_phase": "P3",
+      "dependencies": [],
+      "split_recommended": false,
+      "draft_ticket_ids": [
+        "DT-013"
+      ],
+      "triage_notes": "Attaches to F-P1-006 Owner Cashflow Dashboard. Invoice metrics subset of cashflow.",
+      "constraints": [],
+      "recommended_action": "attach",
+      "scope_size": "medium",
+      "proposed_parent_feature": "F-P1-006",
+      "proposed_split_plan": [],
+      "note_type": "workflow_improvement",
+      "duplicate_of": null,
+      "created_at": "2026-03-19T18:19:58.564Z",
+      "updated_at": "2026-03-19T18:36:06.088Z"
+    },
+    {
+      "id": "INT-034",
+      "title": null,
+      "raw_text": "Contractor performance reports — job completion rates, average time to completion, customer rating aggregation. Referenced as Slice 8 remaining work. No existing feature covers this. Would help managers evaluate contractor effectiveness and inform RFP award decisions.",
+      "status": "drafted",
+      "source": "EPIC_HISTORY.md — Slice 8 remaining work",
+      "product_area": "reporting",
+      "related_feature_ids": [],
+      "proposed_phase": "P3",
+      "dependencies": [],
+      "split_recommended": false,
+      "draft_ticket_ids": [
+        "DT-001"
+      ],
+      "triage_notes": "Single service + route + UI page. Contractor perf metrics from Job data.",
+      "constraints": [],
+      "recommended_action": "execute",
+      "scope_size": "medium",
+      "proposed_parent_feature": null,
+      "proposed_split_plan": [],
+      "note_type": "reporting",
+      "duplicate_of": null,
+      "created_at": "2026-03-19T18:19:58.642Z",
+      "updated_at": "2026-03-19T18:32:11.280Z"
+    },
+    {
+      "id": "INT-035",
+      "title": null,
+      "raw_text": "Cost analysis and overrun tracking — compare estimated vs actual costs per job, per contractor, per building. Identify patterns of cost overruns. Referenced as Slice 8 remaining work. Related to F-P4-001 Maintenance Cost Attribution Engine but more focused on overrun alerting and trend analysis.",
+      "status": "drafted",
+      "source": "EPIC_HISTORY.md — Slice 8 remaining work",
+      "product_area": "reporting",
+      "related_feature_ids": [
+        "F-P4-001"
+      ],
+      "proposed_phase": "P4",
+      "dependencies": [],
+      "split_recommended": false,
+      "draft_ticket_ids": [
+        "DT-002"
+      ],
+      "triage_notes": "Compare estimatedCost vs actualCost per job/contractor. Service + report page.",
+      "constraints": [],
+      "recommended_action": "execute",
+      "scope_size": "medium",
+      "proposed_parent_feature": {
+        "id": "F-P4-001",
+        "title": "Maintenance → Cost Attribution Engine",
+        "score": 0.16,
+        "type": "feature"
+      },
+      "proposed_split_plan": [],
+      "note_type": "feature_request",
+      "duplicate_of": null,
+      "created_at": "2026-03-19T18:19:58.700Z",
+      "updated_at": "2026-03-19T18:32:11.348Z"
+    },
+    {
+      "id": "INT-036",
+      "title": null,
+      "raw_text": "Job completion timeline reports — track how long jobs take from request creation to invoice payment, broken down by category, contractor, building. Referenced as Slice 8 remaining work. Feeds into contractor performance KPIs.",
+      "status": "drafted",
+      "source": "EPIC_HISTORY.md — Slice 8 remaining work",
+      "product_area": "reporting",
+      "related_feature_ids": [],
+      "proposed_phase": "P3",
+      "dependencies": [],
+      "split_recommended": false,
+      "draft_ticket_ids": [
+        "DT-003"
+      ],
+      "triage_notes": "Timeline tracking from Request.createdAt → Job completion → Invoice payment. Query + UI.",
+      "constraints": [],
+      "recommended_action": "execute",
+      "scope_size": "medium",
+      "proposed_parent_feature": null,
+      "proposed_split_plan": [],
+      "note_type": "feature_request",
+      "duplicate_of": null,
+      "created_at": "2026-03-19T18:19:58.760Z",
+      "updated_at": "2026-03-19T18:32:11.406Z"
+    },
+    {
+      "id": "INT-037",
+      "title": null,
+      "raw_text": "Roll out H1 auth wrappers (withAuthRequired/withRole) to remaining ~100 unprotected routes. Currently only 7 routes in config.ts + 25 GET endpoints are wrapped. The remaining mutation endpoints (POST/PUT/PATCH/DELETE) across requests.ts, invoices.ts, leases.ts, inventory.ts, legal.ts, and rentalApplications.ts still use ad-hoc auth or no auth. This is a security hardening task, not a behavior change.",
+      "status": "drafted",
+      "source": "EPIC_HISTORY.md — H1 next steps + Project Audit Mar 4",
+      "product_area": "auth",
+      "related_feature_ids": [],
+      "proposed_phase": "P3",
+      "dependencies": [],
+      "split_recommended": false,
+      "draft_ticket_ids": [
+        "DT-004"
+      ],
+      "triage_notes": "Mechanical refactor: wrap ~100 route handlers in withAuthRequired/withRole. No behavior change.",
+      "constraints": [],
+      "recommended_action": "execute",
+      "scope_size": "large",
+      "proposed_parent_feature": null,
+      "proposed_split_plan": [],
+      "note_type": "feature_request",
+      "duplicate_of": null,
+      "created_at": "2026-03-19T18:19:58.821Z",
+      "updated_at": "2026-03-19T18:32:11.466Z"
+    },
+    {
+      "id": "INT-038",
+      "title": null,
+      "raw_text": "Implement summary DTOs for requests, invoices, and leases (H5 expansion). JobSummaryDTO already exists with view=summary parameter. Same pattern needs to be applied to: MaintenanceRequestSummaryDTO (partially exists but list endpoint doesn't use it), InvoiceSummaryDTO (interface exists in api-client but not wired), LeaseSummaryDTO (doesn't exist yet). Reduces overfetch on list endpoints.",
+      "status": "drafted",
+      "source": "EPIC_HISTORY.md — H5 next steps",
+      "product_area": "api",
+      "related_feature_ids": [],
+      "proposed_phase": "P3",
+      "dependencies": [
+        "not yet implemented"
+      ],
+      "split_recommended": false,
+      "draft_ticket_ids": [
+        "DT-005"
+      ],
+      "triage_notes": "Unparked. Replicate JobSummaryDTO pattern to Request, Invoice, Lease. Mechanical.",
+      "constraints": [],
+      "recommended_action": "execute",
+      "scope_size": "medium",
+      "proposed_parent_feature": null,
+      "proposed_split_plan": [],
+      "note_type": "reporting",
+      "duplicate_of": null,
+      "created_at": "2026-03-19T18:19:58.883Z",
+      "updated_at": "2026-03-19T18:32:11.532Z"
+    },
+    {
+      "id": "INT-039",
+      "title": null,
+      "raw_text": "Create /manager/people/owners page — page referenced in ManagerSidebar nav config but doesn't exist yet. Should list all OWNER-role users in the org, show which buildings they own (via BuildingOwner junction), and allow managing ownership assignments. Similar to the existing tenants and contractors lists.",
+      "status": "parked",
+      "source": "EPIC_HISTORY.md — Manager Navigation Redesign TODO",
+      "product_area": "manager-portal",
+      "related_feature_ids": [],
+      "proposed_phase": "P2",
+      "dependencies": [],
+      "split_recommended": false,
+      "draft_ticket_ids": [
+        "DT-006"
+      ],
+      "triage_notes": "Large scope — executable but may benefit from sub-tasks.",
+      "constraints": [],
+      "recommended_action": "execute",
+      "scope_size": "large",
+      "proposed_parent_feature": null,
+      "proposed_split_plan": [],
+      "note_type": "feature_request",
+      "duplicate_of": null,
+      "created_at": "2026-03-19T18:19:58.945Z",
+      "updated_at": "2026-03-20T09:02:00.068Z"
+    },
+    {
+      "id": "INT-040",
+      "title": null,
+      "raw_text": "legal.ts route-layer violation (A-5 / CQ-5): 19 direct Prisma calls in routes/legal.ts. This is the worst-offending route file. Needs refactoring to use repository pattern (legalRepository.ts) and move orchestration to workflows. Related CQ-1 through CQ-15 cover other route files with smaller violations. legal.ts is the highest priority because it has the most violations and touches the most complex domain.",
+      "status": "drafted",
+      "source": "EPIC_HISTORY.md — Architecture Hardening + AUDIT.md A-5/CQ-5",
+      "product_area": "api",
+      "related_feature_ids": [],
+      "proposed_phase": "P1",
+      "dependencies": [],
+      "split_recommended": false,
+      "draft_ticket_ids": [
+        "DT-007"
+      ],
+      "triage_notes": "Medium scope — single ticket, may need detailed acceptance criteria.",
+      "constraints": [],
+      "recommended_action": "execute",
+      "scope_size": "medium",
+      "proposed_parent_feature": null,
+      "proposed_split_plan": [],
+      "note_type": "workflow_improvement",
+      "duplicate_of": null,
+      "created_at": "2026-03-19T18:19:59.008Z",
+      "updated_at": "2026-03-19T18:32:11.656Z"
+    },
+    {
+      "id": "INT-041",
+      "title": null,
+      "raw_text": "Request.orgId migration (H6) — add orgId column to Request model for direct org filtering instead of FK traversal. Currently resolved dynamically via resolveRequestOrg() which walks unit→building→org chain. 7-step migration plan documented: add nullable → backfill via SQL → make required → update queries → keep resolvers for validation. Deferred until multi-org launch or performance bottleneck. Estimated effort: 2-3 hours.",
+      "status": "drafted",
+      "source": "EPIC_HISTORY.md — H6 documented migration path",
+      "product_area": "database",
+      "related_feature_ids": [],
+      "proposed_phase": "P2",
+      "dependencies": [],
+      "split_recommended": false,
+      "draft_ticket_ids": [
+        "DT-008"
+      ],
+      "triage_notes": "Large scope — executable but may benefit from sub-tasks.",
+      "constraints": [],
+      "recommended_action": "execute",
+      "scope_size": "large",
+      "proposed_parent_feature": null,
+      "proposed_split_plan": [],
+      "note_type": "feature_request",
+      "duplicate_of": null,
+      "created_at": "2026-03-19T18:19:59.068Z",
+      "updated_at": "2026-03-19T18:32:11.719Z"
+    },
+    {
+      "id": "INT-042",
+      "title": null,
+      "raw_text": "LegalVariable values not wired into DSL condition evaluation — the LegalDecisionEngine evaluates DSL conditions (always_true, category_match, estimated_cost_above, asset_age_above_pct, etc.) but does not consume LegalVariable records. Variables are stored in the DB (LegalVariable + LegalVariableVersion) with versioning, but the DSL evaluator never reads them. This means variable-based conditions can't be used in rules. Referenced in copilot-instructions.md known issues and LKDE epic. Needs: wire variable resolution into evaluateCondition(), add variable_equals/variable_above DSL operators.",
+      "status": "triaged",
+      "source": "EPIC_HISTORY.md — LKDE epic + copilot-instructions.md",
+      "product_area": "legal-engine",
+      "related_feature_ids": [],
+      "proposed_phase": "P3",
+      "dependencies": [
+        "not yet implemented"
+      ],
+      "split_recommended": false,
+      "draft_ticket_ids": [],
+      "triage_notes": "Epic scope with unresolved prerequisites — park until dependencies are met.",
+      "constraints": [],
+      "recommended_action": "park",
+      "scope_size": "epic",
+      "proposed_parent_feature": null,
+      "proposed_split_plan": [],
+      "note_type": "legal_engine_cleanup",
+      "duplicate_of": null,
+      "created_at": "2026-03-19T18:19:59.131Z",
+      "updated_at": "2026-03-20T08:39:49.090Z",
+      "anti_split_reasons": []
+    },
+    {
+      "id": "INT-043",
+      "title": null,
+      "raw_text": "LegalDecisionEngine canton-specific filtering for DSL evaluator — currently the ingestion pipeline respects LegalSource scope (FEDERAL + canton), but the DSL evaluator itself does not filter rules by canton. All rules are evaluated regardless of the request's building canton. Needs: canton field on LegalRule or LegalRuleVersion, filter evaluated rules by canton before DSL evaluation. Noted as 'separate future slice' in LegalSource Scope epic.",
+      "status": "drafted",
+      "source": "EPIC_HISTORY.md — LegalSource Scope epic",
+      "product_area": "legal-engine",
+      "related_feature_ids": [],
+      "proposed_phase": "P3",
+      "dependencies": [],
+      "split_recommended": false,
+      "draft_ticket_ids": [
+        "DT-009"
+      ],
+      "triage_notes": "Add canton field to LegalRule, filter evaluated rules by building canton in DSL evaluator.",
+      "constraints": [],
+      "recommended_action": "execute",
+      "scope_size": "medium",
+      "proposed_parent_feature": null,
+      "proposed_split_plan": [],
+      "note_type": "workflow_improvement",
+      "duplicate_of": null,
+      "created_at": "2026-03-19T18:19:59.190Z",
+      "updated_at": "2026-03-19T18:32:11.782Z"
+    },
+    {
+      "id": "INT-044",
+      "title": null,
+      "raw_text": "Production email provider integration — EmailOutbox currently uses dev sink (emails queued in DB, viewable via GET /__dev/email-outbox). Need to integrate a real SMTP/SendGrid provider for production. Related to F-P0-001 Email Delivery. The EmailOutbox model + template system + queue logic already exist, just need the send adapter. Candidate rejection emails (INT-024), overdue invoice notifications (INT-032), lease signing feedback already generate outbox records.",
+      "status": "drafted",
+      "source": "EPIC_HISTORY.md — Rental Applications epic + email outbox references",
+      "product_area": "notifications",
+      "related_feature_ids": [
+        "F-P0-001"
+      ],
+      "proposed_phase": "P0",
+      "dependencies": [],
+      "split_recommended": false,
+      "draft_ticket_ids": [
+        "DT-014"
+      ],
+      "triage_notes": "Attaches to F-P0-001 Email Delivery. EmailOutbox + templates exist, need send adapter.",
+      "constraints": [],
+      "recommended_action": "attach",
+      "scope_size": "medium",
+      "proposed_parent_feature": "F-P0-001",
+      "proposed_split_plan": [],
+      "note_type": "integration",
+      "duplicate_of": null,
+      "created_at": "2026-03-19T18:19:59.250Z",
+      "updated_at": "2026-03-19T18:36:10.697Z"
+    },
+    {
+      "id": "INT-045",
+      "title": null,
+      "raw_text": "Formalize background job scheduler — processSelectionTimeouts() and processAttachmentRetention() currently run on hourly interval started in server.ts via setInterval. No formal scheduler, no retry logic, no dead letter, no monitoring. For production: need at minimum a proper scheduling mechanism (node-cron or pg-boss), execution logging, failure alerting. Currently also available via POST /__dev/rental/run-jobs (dev only).",
+      "status": "drafted",
+      "source": "EPIC_HISTORY.md — Rental Applications epic background jobs section",
+      "product_area": "api",
+      "related_feature_ids": [],
+      "proposed_phase": "P3",
+      "dependencies": [],
+      "split_recommended": false,
+      "draft_ticket_ids": [
+        "DT-010"
+      ],
+      "triage_notes": "Replace setInterval with node-cron or pg-boss. Add execution logging. Medium effort.",
+      "constraints": [],
+      "recommended_action": "execute",
+      "scope_size": "medium",
+      "proposed_parent_feature": null,
+      "proposed_split_plan": [],
+      "note_type": "workflow_improvement",
+      "duplicate_of": null,
+      "created_at": "2026-03-19T18:19:59.312Z",
+      "updated_at": "2026-03-19T18:32:11.845Z"
+    },
+    {
+      "id": "INT-046",
+      "title": null,
+      "raw_text": "Fix 28 pre-existing server-spawn test timeouts — multiple test suites (auth.manager-gates, tenantSession, ia, contracts, rentalContracts, rentEstimation) have server-spawn-based integration tests that intermittently timeout under Jest load. Root cause: each test suite spawns a full server process via tsx, and under parallel Jest workers + CI resource constraints, startup can exceed 15-30s timeouts. Possible fixes: shared server instance across suites, in-process testing with supertest, or increase CI resources.",
+      "status": "drafted",
+      "source": "EPIC_HISTORY.md — multiple test fix sections + verification tables",
+      "product_area": "testing",
+      "related_feature_ids": [],
+      "proposed_phase": "P3",
+      "dependencies": [],
+      "split_recommended": false,
+      "draft_ticket_ids": [
+        "DT-011"
+      ],
+      "triage_notes": "Consolidate to shared test server or supertest. Systematic fix across 6 suites.",
+      "constraints": [],
+      "recommended_action": "execute",
+      "scope_size": "medium",
+      "proposed_parent_feature": null,
+      "proposed_split_plan": [],
+      "note_type": "bug",
+      "duplicate_of": null,
+      "created_at": "2026-03-19T18:19:59.372Z",
+      "updated_at": "2026-03-19T18:32:11.909Z"
+    },
+    {
+      "id": "INT-047",
+      "title": null,
+      "raw_text": "Remaining route-level layer violations (CQ-1 through CQ-15 minus resolved) — routes/legal.ts (19 Prisma calls, worst offender), routes/rentalApplications.ts (direct service calls bypassing workflows for some endpoints), routes/inventory.ts (mixed pattern, some use repos, some don't). Each should be refactored to: routes → workflows → services → repositories. No behavior changes, structural only.",
+      "status": "drafted",
+      "source": "EPIC_HISTORY.md — Architecture Hardening + AUDIT.md CQ findings",
+      "product_area": "api",
+      "related_feature_ids": [],
+      "proposed_phase": "P3",
+      "dependencies": [],
+      "split_recommended": false,
+      "draft_ticket_ids": [
+        "DT-015"
+      ],
+      "triage_notes": "Attaches to F-P0-004 Route Layer Refactor. Covers rentalApplications.ts + inventory.ts.",
+      "constraints": [],
+      "recommended_action": "attach",
+      "scope_size": "large",
+      "proposed_parent_feature": "F-P0-004",
+      "proposed_split_plan": [],
+      "note_type": "workflow_improvement",
+      "duplicate_of": null,
+      "created_at": "2026-03-19T18:19:59.434Z",
+      "updated_at": "2026-03-19T18:36:14.618Z"
+    },
+    {
+      "id": "INT-048",
+      "title": null,
+      "raw_text": "3 proxy routes retain custom logic and can't use proxyToBackend() — requests.js (field rename on POST), contractors.js (multi-path routing), requests/approve.js (method + path transform). These are the last 3 of 94 total proxy routes not migrated to the shared helper. Document their custom logic in comments and consider if the backend can be adjusted to eliminate the need for client-side transforms.",
+      "status": "drafted",
+      "source": "EPIC_HISTORY.md — Project Audit Mar 4, H3 section",
+      "product_area": "frontend",
+      "related_feature_ids": [],
+      "proposed_phase": "P0",
+      "dependencies": [],
+      "split_recommended": false,
+      "draft_ticket_ids": [
+        "DT-012"
+      ],
+      "triage_notes": "Small scope — one focused ticket.",
+      "constraints": [],
+      "recommended_action": "execute",
+      "scope_size": "small",
+      "proposed_parent_feature": null,
+      "proposed_split_plan": [],
+      "note_type": "feature_request",
+      "duplicate_of": null,
+      "created_at": "2026-03-19T18:19:59.495Z",
+      "updated_at": "2026-03-19T18:32:11.976Z"
+    },
+    {
+      "id": "INT-049",
+      "title": "Invoice review",
+      "raw_text": "all invoices created/received should be viewable within the UI directly, wether on tenant, contractor, manager or owner side. We should have a standard template that shows on the top left the invoice emitter details, below that on the right the receiver details, underneath that a date and place, then the breakdown of the invoice, total, and at the bottom the swiss banking compatible QR code that enables users to scan and pay.",
+      "status": "triaged",
+      "source": "manual_paste",
+      "product_area": "owner-portal",
+      "related_feature_ids": [],
+      "proposed_phase": "P3",
+      "dependencies": [],
+      "split_recommended": false,
+      "draft_ticket_ids": [],
+      "triage_notes": "Epic-sized item. Needs decomposition into smaller tickets before execution.",
+      "constraints": [],
+      "recommended_action": "split",
+      "scope_size": "epic",
+      "proposed_parent_feature": null,
+      "proposed_split_plan": [],
+      "note_type": "feature_request",
+      "duplicate_of": null,
+      "created_at": "2026-03-20T13:41:51.671Z",
+      "updated_at": "2026-03-20T13:42:05.663Z",
+      "anti_split_reasons": []
+    }
+  ],
+  "draft_tickets": [
+    {
+      "id": "DT-001",
+      "source_intake_ids": [
+        "INT-034"
+      ],
+      "title": "Contractor performance reports — job completion rates, average time to completion, customer rating aggregation",
+      "goal": "Deliver \"Contractor performance reports — job completion rates, average time to completion, customer rating aggregation\" in the reporting domain to fulfill the original request: Contractor performance reports — job completion rates, average time to completion, customer rating aggregation. Referenc (UI/frontend changes only).",
+      "phase": "P3",
+      "order": 1,
+      "status": "draft",
+      "product_area": "reporting",
+      "parent_feature_id": null,
+      "depends_on": [],
+      "files_to_modify": [
+        "apps/web/pages/manager/dashboard/"
+      ],
+      "in_scope": [
+        "Contractor performance reports — job completion rates, average time to completion, customer rating aggregation"
+      ],
+      "out_of_scope": [
+        "Cross-portal changes (unless explicitly listed)",
+        "Performance optimization (separate ticket)"
+      ],
+      "acceptance_criteria": [
+        "Feature works as described in scope",
+        "All listed in_scope items implemented",
+        "Edge cases handled gracefully (empty state, missing data, permissions)"
+      ],
+      "tests_to_add_or_update": [
+        "UI smoke test: verify page renders without errors",
+        "No regressions in existing test suite (npm test)"
+      ],
+      "test_protocol": [
+        "npx tsc --noEmit — zero TypeScript errors",
+        "npm test — all tests pass",
+        "npm run blueprint — architecture docs sync",
+        "Ticket-specific verification: verify acceptance criteria manually",
+        "Regression checks: verify adjacent features still work",
+        "API contract sync: if API changed, verify DTOs/OpenAPI/api-client match",
+        "UI verification: if UI changed, manual check in browser",
+        "Edge cases: verify behavior with missing/null data"
+      ],
+      "validation_checklist": [
+        "All acceptance criteria verified",
+        "No TypeScript errors (npx tsc --noEmit)",
+        "All tests pass (npm test)",
+        "No layer violations introduced",
+        "Blueprint regenerated (npm run blueprint)"
+      ],
+      "post_validation_updates": [
+        "Refresh docs/blueprint.html — cd apps/api && node blueprint.js",
+        "Refresh docs/roadmap.html — node scripts/generate-roadmap.js",
+        "Review PROJECT_STATE.md — update if architecture decisions changed",
+        "Review ARCHITECTURE_LOW_CONTEXT_GUIDE.md — update if auth/layers touched",
+        "Review docs/AUDIT.md — mark resolved findings, add new ones",
+        "Review SCHEMA_REFERENCE.md — update if schema changed",
+        "Commit: npx tsc --noEmit → npm test → npm run blueprint"
+      ],
+      "canonical_implementation_prompt": "## Ticket: Contractor performance reports — job completion rates, average time to completion, customer rating aggregation\n\n**Goal:** Implement: Contractor performance reports — job completion rates, average time to completion, customer rating aggregation\n\n**Phase:** P3 | **Area:** reporting\n\n### In Scope\n- Contractor performance reports — job completion rates, average time to completion, customer rating aggregation\n\n### Out of Scope\n- Cross-portal changes (unless explicitly listed)\n- Performance optimization (separate ticket)\n\n### Files to Modify (in order)\n1. `apps/web/pages/manager/dashboard/`\n\n### Acceptance Criteria\n- [ ] Feature works as described in scope\n- [ ] All listed in_scope items implemented\n- [ ] Edge cases handled gracefully (empty state, missing data, permissions)\n\n### Test Plan\n- UI smoke test: verify page renders without errors\n- No regressions in existing test suite (npm test)\n\n### Test Protocol\n1. npx tsc --noEmit — zero TypeScript errors\n2. npm test — all tests pass\n3. npm run blueprint — architecture docs sync\n4. Ticket-specific verification: verify acceptance criteria manually\n5. Regression checks: verify adjacent features still work\n6. API contract sync: if API changed, verify DTOs/OpenAPI/api-client match\n7. UI verification: if UI changed, manual check in browser\n8. Edge cases: verify behavior with missing/null data\n\n### Validation Checklist\n- [ ] All acceptance criteria verified\n- [ ] No TypeScript errors (npx tsc --noEmit)\n- [ ] All tests pass (npm test)\n- [ ] No layer violations introduced\n- [ ] Blueprint regenerated (npm run blueprint)\n\n### Post-Validation Updates\n- Refresh docs/blueprint.html — cd apps/api && node blueprint.js\n- Refresh docs/roadmap.html — node scripts/generate-roadmap.js\n- Review PROJECT_STATE.md — update if architecture decisions changed\n- Review ARCHITECTURE_LOW_CONTEXT_GUIDE.md — update if auth/layers touched\n- Review docs/AUDIT.md — mark resolved findings, add new ones\n- Review SCHEMA_REFERENCE.md — update if schema changed\n- Commit: npx tsc --noEmit → npm test → npm run blueprint",
+      "parent_story_id": "INT-034",
+      "parent_story_title": "Contractor performance reports — job completion rates, average time to completion, customer rating aggregation",
+      "parent_story_raw_text": "Contractor performance reports — job completion rates, average time to completion, customer rating aggregation. Referenced as Slice 8 remaining work. No existing feature covers this. Would help managers evaluate contractor effectiveness and inform RFP award decisions.",
+      "sequence_role": "workflow",
+      "story_intent": "Originating from intake INT-034: Contractor performance reports — job completion rates, average time to completion, customer rating aggregation. Referenced as Slice 8 remaining work. No existing feature covers this. Would help manage",
+      "story_success_outcome": "Feature is functional and accessible to target users. Parent story intent (INT-034) is partially fulfilled by this slice. All acceptance criteria pass. CI green (tsc + tests + blueprint).",
+      "files_to_inspect": [
+        "PROJECT_STATE.md (guardrails section)",
+        "apps/api/src/ARCHITECTURE_LOW_CONTEXT_GUIDE.md"
+      ],
+      "implementation_shape": "ui_only",
+      "context_bundle": {
+        "architectural_constraints": [
+          "routes → workflows → services → repositories → Prisma (never skip)",
+          "Canonical includes required (G9) — no ad-hoc include trees"
+        ],
+        "shared_files": [],
+        "shared_assumptions": [],
+        "sibling_dependencies": []
+      },
+      "tests_to_add": [
+        "UI smoke test: verify page renders without errors",
+        "No regressions in existing test suite (npm test)"
+      ],
+      "tests_to_update": [],
+      "regression_checks": [
+        "npm test — full suite passes",
+        "npx tsc --noEmit — zero type errors"
+      ],
+      "refinement_status": "ready_candidate",
+      "refinement_notes": [],
+      "refined_at": "2026-03-19T22:16:47.812Z"
+    },
+    {
+      "id": "DT-002",
+      "source_intake_ids": [
+        "INT-035"
+      ],
+      "title": "Cost analysis and overrun tracking — compare estimated vs actual costs per job, per contractor, per building",
+      "goal": "Implement \"Cost analysis and overrun tracking — compare estimated vs actual costs per job, per contractor, per building\" in the reporting domain to fulfill the original request: Cost analysis and overrun tracking — compare estimated vs actual costs per job, per contractor, per building. Identify p (UI/frontend changes only).",
+      "phase": "P4",
+      "order": 1,
+      "status": "draft",
+      "product_area": "reporting",
+      "parent_feature_id": "F-P4-001",
+      "depends_on": [],
+      "files_to_modify": [
+        "apps/web/pages/manager/dashboard/"
+      ],
+      "in_scope": [
+        "Implement Cost analysis and overrun tracking — compare estimated vs actual costs per job, per contractor, per building",
+        "UI/page updates"
+      ],
+      "out_of_scope": [
+        "Cross-portal changes (unless explicitly listed)",
+        "Performance optimization (separate ticket)"
+      ],
+      "acceptance_criteria": [
+        "Feature works as described in scope",
+        "All listed in_scope items implemented",
+        "Edge cases handled gracefully (empty state, missing data, permissions)"
+      ],
+      "tests_to_add_or_update": [
+        "UI smoke test: verify page renders without errors",
+        "No regressions in existing test suite (npm test)"
+      ],
+      "test_protocol": [
+        "npx tsc --noEmit — zero TypeScript errors",
+        "npm test — all tests pass",
+        "npm run blueprint — architecture docs sync",
+        "Ticket-specific verification: verify acceptance criteria manually",
+        "Regression checks: verify adjacent features still work",
+        "API contract sync: if API changed, verify DTOs/OpenAPI/api-client match",
+        "UI verification: if UI changed, manual check in browser",
+        "Edge cases: verify behavior with missing/null data"
+      ],
+      "validation_checklist": [
+        "All acceptance criteria verified",
+        "No TypeScript errors (npx tsc --noEmit)",
+        "All tests pass (npm test)",
+        "No layer violations introduced",
+        "Blueprint regenerated (npm run blueprint)"
+      ],
+      "post_validation_updates": [
+        "Refresh docs/blueprint.html — cd apps/api && node blueprint.js",
+        "Refresh docs/roadmap.html — node scripts/generate-roadmap.js",
+        "Review PROJECT_STATE.md — update if architecture decisions changed",
+        "Review ARCHITECTURE_LOW_CONTEXT_GUIDE.md — update if auth/layers touched",
+        "Review docs/AUDIT.md — mark resolved findings, add new ones",
+        "Review SCHEMA_REFERENCE.md — update if schema changed",
+        "Commit: npx tsc --noEmit → npm test → npm run blueprint"
+      ],
+      "canonical_implementation_prompt": "## Ticket: Cost analysis and overrun tracking — compare estimated vs actual costs per job, per contractor, per building\n\n**Goal:** Implement: Cost analysis and overrun tracking — compare estimated vs actual costs per job, per contractor, per building\n\n**Phase:** P4 | **Area:** reporting\n**Parent Feature:** F-P4-001\n\n### In Scope\n- Implement Cost analysis and overrun tracking — compare estimated vs actual costs per job, per contractor, per building\n- UI/page updates\n\n### Out of Scope\n- Cross-portal changes (unless explicitly listed)\n- Performance optimization (separate ticket)\n\n### Files to Modify (in order)\n1. `apps/web/pages/manager/dashboard/`\n\n### Acceptance Criteria\n- [ ] Feature works as described in scope\n- [ ] All listed in_scope items implemented\n- [ ] Edge cases handled gracefully (empty state, missing data, permissions)\n\n### Test Plan\n- UI smoke test: verify page renders without errors\n- No regressions in existing test suite (npm test)\n\n### Test Protocol\n1. npx tsc --noEmit — zero TypeScript errors\n2. npm test — all tests pass\n3. npm run blueprint — architecture docs sync\n4. Ticket-specific verification: verify acceptance criteria manually\n5. Regression checks: verify adjacent features still work\n6. API contract sync: if API changed, verify DTOs/OpenAPI/api-client match\n7. UI verification: if UI changed, manual check in browser\n8. Edge cases: verify behavior with missing/null data\n\n### Validation Checklist\n- [ ] All acceptance criteria verified\n- [ ] No TypeScript errors (npx tsc --noEmit)\n- [ ] All tests pass (npm test)\n- [ ] No layer violations introduced\n- [ ] Blueprint regenerated (npm run blueprint)\n\n### Post-Validation Updates\n- Refresh docs/blueprint.html — cd apps/api && node blueprint.js\n- Refresh docs/roadmap.html — node scripts/generate-roadmap.js\n- Review PROJECT_STATE.md — update if architecture decisions changed\n- Review ARCHITECTURE_LOW_CONTEXT_GUIDE.md — update if auth/layers touched\n- Review docs/AUDIT.md — mark resolved findings, add new ones\n- Review SCHEMA_REFERENCE.md — update if schema changed\n- Commit: npx tsc --noEmit → npm test → npm run blueprint",
+      "parent_story_id": "INT-035",
+      "parent_story_title": "Cost analysis and overrun tracking — compare estimated vs actual costs per job, per contractor, per building",
+      "parent_story_raw_text": "Cost analysis and overrun tracking — compare estimated vs actual costs per job, per contractor, per building. Identify patterns of cost overruns. Referenced as Slice 8 remaining work. Related to F-P4-001 Maintenance Cost Attribution Engine but more focused on overrun alerting and trend analysis.",
+      "sequence_role": "ui_followup",
+      "story_intent": "Originating from intake INT-035: Cost analysis and overrun tracking — compare estimated vs actual costs per job, per contractor, per building. Identify patterns of cost overruns. Referenced as Slice 8 remaining work. Related to F-P4-",
+      "story_success_outcome": "Feature is functional and accessible to target users. Parent story intent (INT-035) is partially fulfilled by this slice. All acceptance criteria pass. CI green (tsc + tests + blueprint).",
+      "files_to_inspect": [
+        "PROJECT_STATE.md (guardrails section)",
+        "apps/api/src/ARCHITECTURE_LOW_CONTEXT_GUIDE.md"
+      ],
+      "implementation_shape": "ui_only",
+      "context_bundle": {
+        "architectural_constraints": [
+          "routes → workflows → services → repositories → Prisma (never skip)",
+          "Canonical includes required (G9) — no ad-hoc include trees"
+        ],
+        "shared_files": [],
+        "shared_assumptions": [],
+        "sibling_dependencies": []
+      },
+      "tests_to_add": [
+        "UI smoke test: verify page renders without errors",
+        "No regressions in existing test suite (npm test)"
+      ],
+      "tests_to_update": [],
+      "regression_checks": [
+        "npm test — full suite passes",
+        "npx tsc --noEmit — zero type errors"
+      ],
+      "refinement_status": "ready_candidate",
+      "refinement_notes": [],
+      "refined_at": "2026-03-19T22:58:29.503Z"
+    },
+    {
+      "id": "DT-003",
+      "source_intake_ids": [
+        "INT-036"
+      ],
+      "title": "Job completion timeline reports — track how long jobs take from request creation to invoice payment, broken down by c…",
+      "goal": "Implement: Job completion timeline reports — track how long jobs take from request creation to invoice payment, broken down by c…",
+      "phase": "P3",
+      "order": 1,
+      "status": "draft",
+      "product_area": "reporting",
+      "parent_feature_id": null,
+      "depends_on": [],
+      "files_to_modify": [
+        "apps/web/pages/manager/dashboard/"
+      ],
+      "in_scope": [
+        "Job completion timeline reports — track how long jobs take from request creation to invoice payment, broken down by c…",
+        "UI/page updates"
+      ],
+      "out_of_scope": [
+        "Cross-portal changes (unless explicitly listed)",
+        "Performance optimization (separate ticket)"
+      ],
+      "acceptance_criteria": [
+        "Feature works as described in scope",
+        "All listed in_scope items implemented",
+        "Edge cases handled gracefully (empty state, missing data, permissions)"
+      ],
+      "tests_to_add_or_update": [
+        "UI smoke test: verify page renders without errors",
+        "No regressions in existing test suite (npm test)"
+      ],
+      "test_protocol": [
+        "npx tsc --noEmit — zero TypeScript errors",
+        "npm test — all tests pass",
+        "npm run blueprint — architecture docs sync",
+        "Ticket-specific verification: verify acceptance criteria manually",
+        "Regression checks: verify adjacent features still work",
+        "API contract sync: if API changed, verify DTOs/OpenAPI/api-client match",
+        "UI verification: if UI changed, manual check in browser",
+        "Edge cases: verify behavior with missing/null data"
+      ],
+      "validation_checklist": [
+        "All acceptance criteria verified",
+        "No TypeScript errors (npx tsc --noEmit)",
+        "All tests pass (npm test)",
+        "No layer violations introduced",
+        "Blueprint regenerated (npm run blueprint)"
+      ],
+      "post_validation_updates": [
+        "Refresh docs/blueprint.html — cd apps/api && node blueprint.js",
+        "Refresh docs/roadmap.html — node scripts/generate-roadmap.js",
+        "Review PROJECT_STATE.md — update if architecture decisions changed",
+        "Review ARCHITECTURE_LOW_CONTEXT_GUIDE.md — update if auth/layers touched",
+        "Review docs/AUDIT.md — mark resolved findings, add new ones",
+        "Review SCHEMA_REFERENCE.md — update if schema changed",
+        "Commit: npx tsc --noEmit → npm test → npm run blueprint"
+      ],
+      "canonical_implementation_prompt": "## Ticket: Job completion timeline reports — track how long jobs take from request creation to invoice payment, broken down by c…\n\n**Goal:** Implement: Job completion timeline reports — track how long jobs take from request creation to invoice payment, broken down by c…\n\n**Phase:** P3 | **Area:** reporting\n\n### In Scope\n- Job completion timeline reports — track how long jobs take from request creation to invoice payment, broken down by c…\n- UI/page updates\n\n### Out of Scope\n- Cross-portal changes (unless explicitly listed)\n- Performance optimization (separate ticket)\n\n### Files to Modify (in order)\n1. `apps/web/pages/manager/dashboard/`\n\n### Acceptance Criteria\n- [ ] Feature works as described in scope\n- [ ] All listed in_scope items implemented\n- [ ] Edge cases handled gracefully (empty state, missing data, permissions)\n\n### Test Plan\n- UI smoke test: verify page renders without errors\n- No regressions in existing test suite (npm test)\n\n### Test Protocol\n1. npx tsc --noEmit — zero TypeScript errors\n2. npm test — all tests pass\n3. npm run blueprint — architecture docs sync\n4. Ticket-specific verification: verify acceptance criteria manually\n5. Regression checks: verify adjacent features still work\n6. API contract sync: if API changed, verify DTOs/OpenAPI/api-client match\n7. UI verification: if UI changed, manual check in browser\n8. Edge cases: verify behavior with missing/null data\n\n### Validation Checklist\n- [ ] All acceptance criteria verified\n- [ ] No TypeScript errors (npx tsc --noEmit)\n- [ ] All tests pass (npm test)\n- [ ] No layer violations introduced\n- [ ] Blueprint regenerated (npm run blueprint)\n\n### Post-Validation Updates\n- Refresh docs/blueprint.html — cd apps/api && node blueprint.js\n- Refresh docs/roadmap.html — node scripts/generate-roadmap.js\n- Review PROJECT_STATE.md — update if architecture decisions changed\n- Review ARCHITECTURE_LOW_CONTEXT_GUIDE.md — update if auth/layers touched\n- Review docs/AUDIT.md — mark resolved findings, add new ones\n- Review SCHEMA_REFERENCE.md — update if schema changed\n- Commit: npx tsc --noEmit → npm test → npm run blueprint"
+    },
+    {
+      "id": "DT-004",
+      "source_intake_ids": [
+        "INT-037"
+      ],
+      "title": "Roll out H1 auth wrappers (withAuthRequired/withRole) to remaining ~100 unprotected routes",
+      "goal": "Implement: Roll out H1 auth wrappers (withAuthRequired/withRole) to remaining ~100 unprotected routes",
+      "phase": "P3",
+      "order": 1,
+      "status": "draft",
+      "product_area": "auth",
+      "parent_feature_id": null,
+      "depends_on": [],
+      "files_to_modify": [
+        "apps/api/prisma/schema.prisma",
+        "apps/api/src/authz.ts",
+        "packages/api-client/src/"
+      ],
+      "in_scope": [
+        "Roll out H1 auth wrappers (withAuthRequired/withRole) to remaining ~100 unprotected routes",
+        "API endpoint changes",
+        "UI/page updates"
+      ],
+      "out_of_scope": [],
+      "acceptance_criteria": [
+        "Feature works as described in scope",
+        "All listed in_scope items implemented",
+        "Edge cases handled gracefully (empty state, missing data, permissions)"
+      ],
+      "tests_to_add_or_update": [
+        "Verify feature works per acceptance criteria",
+        "No regressions in existing test suite (npm test)"
+      ],
+      "test_protocol": [
+        "npx tsc --noEmit — zero TypeScript errors",
+        "npm test — all tests pass",
+        "npm run blueprint — architecture docs sync",
+        "Ticket-specific verification: verify acceptance criteria manually",
+        "Regression checks: verify adjacent features still work",
+        "API contract sync: if API changed, verify DTOs/OpenAPI/api-client match",
+        "UI verification: if UI changed, manual check in browser",
+        "Edge cases: verify behavior with missing/null data"
+      ],
+      "validation_checklist": [
+        "All acceptance criteria verified",
+        "No TypeScript errors (npx tsc --noEmit)",
+        "All tests pass (npm test)",
+        "No layer violations introduced",
+        "Blueprint regenerated (npm run blueprint)"
+      ],
+      "post_validation_updates": [
+        "Refresh docs/blueprint.html — cd apps/api && node blueprint.js",
+        "Refresh docs/roadmap.html — node scripts/generate-roadmap.js",
+        "Review PROJECT_STATE.md — update if architecture decisions changed",
+        "Review ARCHITECTURE_LOW_CONTEXT_GUIDE.md — update if auth/layers touched",
+        "Review docs/AUDIT.md — mark resolved findings, add new ones",
+        "Review SCHEMA_REFERENCE.md — update if schema changed",
+        "Commit: npx tsc --noEmit → npm test → npm run blueprint"
+      ],
+      "canonical_implementation_prompt": "## Ticket: Roll out H1 auth wrappers (withAuthRequired/withRole) to remaining ~100 unprotected routes\n\n**Goal:** Implement: Roll out H1 auth wrappers (withAuthRequired/withRole) to remaining ~100 unprotected routes\n\n**Phase:** P3 | **Area:** auth\n\n### In Scope\n- Roll out H1 auth wrappers (withAuthRequired/withRole) to remaining ~100 unprotected routes\n- API endpoint changes\n- UI/page updates\n\n### Files to Modify (in order)\n1. `apps/api/prisma/schema.prisma`\n2. `apps/api/src/authz.ts`\n3. `packages/api-client/src/`\n\n### Acceptance Criteria\n- [ ] Feature works as described in scope\n- [ ] All listed in_scope items implemented\n- [ ] Edge cases handled gracefully (empty state, missing data, permissions)\n\n### Test Plan\n- Verify feature works per acceptance criteria\n- No regressions in existing test suite (npm test)\n\n### Test Protocol\n1. npx tsc --noEmit — zero TypeScript errors\n2. npm test — all tests pass\n3. npm run blueprint — architecture docs sync\n4. Ticket-specific verification: verify acceptance criteria manually\n5. Regression checks: verify adjacent features still work\n6. API contract sync: if API changed, verify DTOs/OpenAPI/api-client match\n7. UI verification: if UI changed, manual check in browser\n8. Edge cases: verify behavior with missing/null data\n\n### Validation Checklist\n- [ ] All acceptance criteria verified\n- [ ] No TypeScript errors (npx tsc --noEmit)\n- [ ] All tests pass (npm test)\n- [ ] No layer violations introduced\n- [ ] Blueprint regenerated (npm run blueprint)\n\n### Post-Validation Updates\n- Refresh docs/blueprint.html — cd apps/api && node blueprint.js\n- Refresh docs/roadmap.html — node scripts/generate-roadmap.js\n- Review PROJECT_STATE.md — update if architecture decisions changed\n- Review ARCHITECTURE_LOW_CONTEXT_GUIDE.md — update if auth/layers touched\n- Review docs/AUDIT.md — mark resolved findings, add new ones\n- Review SCHEMA_REFERENCE.md — update if schema changed\n- Commit: npx tsc --noEmit → npm test → npm run blueprint"
+    },
+    {
+      "id": "DT-005",
+      "source_intake_ids": [
+        "INT-038"
+      ],
+      "title": "Implement summary DTOs for requests, invoices, and leases (H5 expansion)",
+      "goal": "Implement \"Implement summary DTOs for requests, invoices, and leases (H5 expansion)\" in the api domain to fulfill the original request: Implement summary DTOs for requests, invoices, and leases (H5 expansion). JobSummaryDTO already exists with view=summary (full-stack: API + UI).",
+      "phase": "P3",
+      "order": 1,
+      "status": "draft",
+      "product_area": "api",
+      "parent_feature_id": null,
+      "depends_on": [
+        "not yet implemented"
+      ],
+      "files_to_modify": [
+        "(needs manual file identification)"
+      ],
+      "in_scope": [
+        "Implement Implement summary DTOs for requests, invoices, and leases (H5 expansion)",
+        "API endpoint changes",
+        "UI/page updates"
+      ],
+      "out_of_scope": [
+        "Cross-portal changes (unless explicitly listed)",
+        "Performance optimization (separate ticket)"
+      ],
+      "acceptance_criteria": [
+        "Feature works as described in scope",
+        "All listed in_scope items implemented",
+        "Edge cases handled gracefully (empty state, missing data, permissions)"
+      ],
+      "tests_to_add_or_update": [
+        "Verify feature works per acceptance criteria",
+        "No regressions in existing test suite (npm test)"
+      ],
+      "test_protocol": [
+        "npx tsc --noEmit — zero TypeScript errors",
+        "npm test — all tests pass",
+        "npm run blueprint — architecture docs sync",
+        "Ticket-specific verification: verify acceptance criteria manually",
+        "Regression checks: verify adjacent features still work",
+        "API contract sync: if API changed, verify DTOs/OpenAPI/api-client match",
+        "UI verification: if UI changed, manual check in browser",
+        "Edge cases: verify behavior with missing/null data"
+      ],
+      "validation_checklist": [
+        "All acceptance criteria verified",
+        "No TypeScript errors (npx tsc --noEmit)",
+        "All tests pass (npm test)",
+        "No layer violations introduced",
+        "Blueprint regenerated (npm run blueprint)"
+      ],
+      "post_validation_updates": [
+        "Refresh docs/blueprint.html — cd apps/api && node blueprint.js",
+        "Refresh docs/roadmap.html — node scripts/generate-roadmap.js",
+        "Review PROJECT_STATE.md — update if architecture decisions changed",
+        "Review ARCHITECTURE_LOW_CONTEXT_GUIDE.md — update if auth/layers touched",
+        "Review docs/AUDIT.md — mark resolved findings, add new ones",
+        "Review SCHEMA_REFERENCE.md — update if schema changed",
+        "Commit: npx tsc --noEmit → npm test → npm run blueprint"
+      ],
+      "canonical_implementation_prompt": "## Ticket: Implement summary DTOs for requests, invoices, and leases (H5 expansion)\n\n**Goal:** Implement: Implement summary DTOs for requests, invoices, and leases (H5 expansion)\n\n**Phase:** P3 | **Area:** api\n\n### In Scope\n- Implement Implement summary DTOs for requests, invoices, and leases (H5 expansion)\n- API endpoint changes\n- UI/page updates\n\n### Out of Scope\n- Cross-portal changes (unless explicitly listed)\n- Performance optimization (separate ticket)\n\n### Files to Modify (in order)\n1. `(needs manual file identification)`\n\n### Dependencies\n- not yet implemented\n\n### Acceptance Criteria\n- [ ] Feature works as described in scope\n- [ ] All listed in_scope items implemented\n- [ ] Edge cases handled gracefully (empty state, missing data, permissions)\n\n### Test Plan\n- Verify feature works per acceptance criteria\n- No regressions in existing test suite (npm test)\n\n### Test Protocol\n1. npx tsc --noEmit — zero TypeScript errors\n2. npm test — all tests pass\n3. npm run blueprint — architecture docs sync\n4. Ticket-specific verification: verify acceptance criteria manually\n5. Regression checks: verify adjacent features still work\n6. API contract sync: if API changed, verify DTOs/OpenAPI/api-client match\n7. UI verification: if UI changed, manual check in browser\n8. Edge cases: verify behavior with missing/null data\n\n### Validation Checklist\n- [ ] All acceptance criteria verified\n- [ ] No TypeScript errors (npx tsc --noEmit)\n- [ ] All tests pass (npm test)\n- [ ] No layer violations introduced\n- [ ] Blueprint regenerated (npm run blueprint)\n\n### Post-Validation Updates\n- Refresh docs/blueprint.html — cd apps/api && node blueprint.js\n- Refresh docs/roadmap.html — node scripts/generate-roadmap.js\n- Review PROJECT_STATE.md — update if architecture decisions changed\n- Review ARCHITECTURE_LOW_CONTEXT_GUIDE.md — update if auth/layers touched\n- Review docs/AUDIT.md — mark resolved findings, add new ones\n- Review SCHEMA_REFERENCE.md — update if schema changed\n- Commit: npx tsc --noEmit → npm test → npm run blueprint",
+      "parent_story_id": "INT-038",
+      "parent_story_title": "Implement summary DTOs for requests, invoices, and leases (H5 expansion)",
+      "parent_story_raw_text": "Implement summary DTOs for requests, invoices, and leases (H5 expansion). JobSummaryDTO already exists with view=summary parameter. Same pattern needs to be applied to: MaintenanceRequestSummaryDTO (partially exists but list endpoint doesn't use it), InvoiceSummaryDTO (interface exists in api-client but not wired), LeaseSummaryDTO (doesn't exist yet). Reduces overfetch on list endpoints.",
+      "sequence_role": "ui_followup",
+      "story_intent": "Originating from intake INT-038: Implement summary DTOs for requests, invoices, and leases (H5 expansion). JobSummaryDTO already exists with view=summary parameter. Same pattern needs to be applied to: MaintenanceRequestSummaryDTO (p",
+      "story_success_outcome": "Feature is functional and accessible to target users. Parent story intent (INT-038) is partially fulfilled by this slice. All acceptance criteria pass. CI green (tsc + tests + blueprint).",
+      "files_to_inspect": [
+        "PROJECT_STATE.md (guardrails section)",
+        "apps/api/src/ARCHITECTURE_LOW_CONTEXT_GUIDE.md"
+      ],
+      "implementation_shape": "full_stack",
+      "context_bundle": {
+        "architectural_constraints": [
+          "routes → workflows → services → repositories → Prisma (never skip)",
+          "Canonical includes required (G9) — no ad-hoc include trees",
+          "Schema changes require migration (G1) — never db push",
+          "New fields: update schema → migration → repo include → DTO → OpenAPI → api-client → tests (G2)"
+        ],
+        "shared_files": [],
+        "shared_assumptions": [],
+        "sibling_dependencies": []
+      },
+      "tests_to_add": [
+        "Verify feature works per acceptance criteria",
+        "No regressions in existing test suite (npm test)"
+      ],
+      "tests_to_update": [],
+      "regression_checks": [
+        "npm test — full suite passes",
+        "npx tsc --noEmit — zero type errors"
+      ],
+      "refinement_status": "refined",
+      "refinement_notes": [
+        "No concrete files_to_modify"
+      ],
+      "refined_at": "2026-03-19T22:18:59.636Z"
+    },
+    {
+      "id": "DT-006",
+      "source_intake_ids": [
+        "INT-039"
+      ],
+      "title": "Create /manager/people/owners page — page referenced in ManagerSidebar nav config but doesn't exist yet",
+      "goal": "Implement \"Create /manager/people/owners page — page referenced in ManagerSidebar nav config but doesn't exist yet\" in the manager-portal domain to fulfill the original request: Create /manager/people/owners page — page referenced in ManagerSidebar nav config but doesn't exist yet. Should list all (backend changes only).",
+      "phase": "P2",
+      "order": 1,
+      "status": "draft",
+      "product_area": "manager-portal",
+      "parent_feature_id": null,
+      "depends_on": [],
+      "files_to_modify": [
+        "apps/api/prisma/schema.prisma"
+      ],
+      "in_scope": [
+        "Implement Create /manager/people/owners page — page referenced in ManagerSidebar nav config but doesn't exist yet",
+        "UI/page updates"
+      ],
+      "out_of_scope": [],
+      "acceptance_criteria": [
+        "Feature works as described in scope",
+        "All listed in_scope items implemented",
+        "Edge cases handled gracefully (empty state, missing data, permissions)",
+        "New functionality is accessible and discoverable"
+      ],
+      "tests_to_add_or_update": [
+        "Verify feature works per acceptance criteria",
+        "No regressions in existing test suite (npm test)"
+      ],
+      "test_protocol": [
+        "npx tsc --noEmit — zero TypeScript errors",
+        "npm test — all tests pass",
+        "npm run blueprint — architecture docs sync",
+        "Ticket-specific verification: verify acceptance criteria manually",
+        "Regression checks: verify adjacent features still work",
+        "API contract sync: if API changed, verify DTOs/OpenAPI/api-client match",
+        "UI verification: if UI changed, manual check in browser",
+        "Edge cases: verify behavior with missing/null data"
+      ],
+      "validation_checklist": [
+        "All acceptance criteria verified",
+        "No TypeScript errors (npx tsc --noEmit)",
+        "All tests pass (npm test)",
+        "No layer violations introduced",
+        "Blueprint regenerated (npm run blueprint)"
+      ],
+      "post_validation_updates": [
+        "Refresh docs/blueprint.html — cd apps/api && node blueprint.js",
+        "Refresh docs/roadmap.html — node scripts/generate-roadmap.js",
+        "Review PROJECT_STATE.md — update if architecture decisions changed",
+        "Review ARCHITECTURE_LOW_CONTEXT_GUIDE.md — update if auth/layers touched",
+        "Review docs/AUDIT.md — mark resolved findings, add new ones",
+        "Review SCHEMA_REFERENCE.md — update if schema changed",
+        "Commit: npx tsc --noEmit → npm test → npm run blueprint"
+      ],
+      "canonical_implementation_prompt": "## Ticket: Create /manager/people/owners page — page referenced in ManagerSidebar nav config but doesn't exist yet\n\n**Goal:** Implement: Create /manager/people/owners page — page referenced in ManagerSidebar nav config but doesn't exist yet\n\n**Phase:** P2 | **Area:** manager-portal\n\n### In Scope\n- Implement Create /manager/people/owners page — page referenced in ManagerSidebar nav config but doesn't exist yet\n- UI/page updates\n\n### Files to Modify (in order)\n1. `apps/api/prisma/schema.prisma`\n\n### Acceptance Criteria\n- [ ] Feature works as described in scope\n- [ ] All listed in_scope items implemented\n- [ ] Edge cases handled gracefully (empty state, missing data, permissions)\n- [ ] New functionality is accessible and discoverable\n\n### Test Plan\n- Verify feature works per acceptance criteria\n- No regressions in existing test suite (npm test)\n\n### Test Protocol\n1. npx tsc --noEmit — zero TypeScript errors\n2. npm test — all tests pass\n3. npm run blueprint — architecture docs sync\n4. Ticket-specific verification: verify acceptance criteria manually\n5. Regression checks: verify adjacent features still work\n6. API contract sync: if API changed, verify DTOs/OpenAPI/api-client match\n7. UI verification: if UI changed, manual check in browser\n8. Edge cases: verify behavior with missing/null data\n\n### Validation Checklist\n- [ ] All acceptance criteria verified\n- [ ] No TypeScript errors (npx tsc --noEmit)\n- [ ] All tests pass (npm test)\n- [ ] No layer violations introduced\n- [ ] Blueprint regenerated (npm run blueprint)\n\n### Post-Validation Updates\n- Refresh docs/blueprint.html — cd apps/api && node blueprint.js\n- Refresh docs/roadmap.html — node scripts/generate-roadmap.js\n- Review PROJECT_STATE.md — update if architecture decisions changed\n- Review ARCHITECTURE_LOW_CONTEXT_GUIDE.md — update if auth/layers touched\n- Review docs/AUDIT.md — mark resolved findings, add new ones\n- Review SCHEMA_REFERENCE.md — update if schema changed\n- Commit: npx tsc --noEmit → npm test → npm run blueprint",
+      "parent_story_id": "INT-039",
+      "parent_story_title": "Create /manager/people/owners page — page referenced in ManagerSidebar nav config but doesn't exist yet",
+      "parent_story_raw_text": "Create /manager/people/owners page — page referenced in ManagerSidebar nav config but doesn't exist yet. Should list all OWNER-role users in the org, show which buildings they own (via BuildingOwner junction), and allow managing ownership assignments. Similar to the existing tenants and contractors lists.",
+      "sequence_role": "ui_followup",
+      "story_intent": "Originating from intake INT-039: Create /manager/people/owners page — page referenced in ManagerSidebar nav config but doesn't exist yet. Should list all OWNER-role users in the org, show which buildings they own (via BuildingOwner j",
+      "story_success_outcome": "Feature is functional and accessible to target users. Parent story intent (INT-039) is partially fulfilled by this slice. All acceptance criteria pass. CI green (tsc + tests + blueprint).",
+      "files_to_inspect": [
+        "PROJECT_STATE.md (guardrails section)",
+        "apps/api/src/ARCHITECTURE_LOW_CONTEXT_GUIDE.md",
+        "SCHEMA_REFERENCE.md",
+        "apps/api/prisma/schema.prisma (current schema)"
+      ],
+      "implementation_shape": "backend_only",
+      "context_bundle": {
+        "architectural_constraints": [
+          "routes → workflows → services → repositories → Prisma (never skip)",
+          "Canonical includes required (G9) — no ad-hoc include trees",
+          "Schema changes require migration (G1) — never db push",
+          "New fields: update schema → migration → repo include → DTO → OpenAPI → api-client → tests (G2)"
+        ],
+        "shared_files": [],
+        "shared_assumptions": [],
+        "sibling_dependencies": []
+      },
+      "tests_to_add": [
+        "Verify feature works per acceptance criteria",
+        "No regressions in existing test suite (npm test)"
+      ],
+      "tests_to_update": [],
+      "regression_checks": [
+        "npm test — full suite passes",
+        "npx tsc --noEmit — zero type errors"
+      ],
+      "refinement_status": "ready_candidate",
+      "refinement_notes": [],
+      "refined_at": "2026-03-20T14:25:51.250Z"
+    },
+    {
+      "id": "DT-007",
+      "source_intake_ids": [
+        "INT-040"
+      ],
+      "title": "Legal.ts route-layer violation (A-5 / CQ-5): 19 direct Prisma calls in routes/legal.ts",
+      "goal": "Implement: Legal.ts route-layer violation (A-5 / CQ-5): 19 direct Prisma calls in routes/legal.ts",
+      "phase": "P1",
+      "order": 1,
+      "status": "draft",
+      "product_area": "api",
+      "parent_feature_id": null,
+      "depends_on": [],
+      "files_to_modify": [
+        "(needs manual file identification)"
+      ],
+      "in_scope": [
+        "Legal.ts route-layer violation (A-5 / CQ-5): 19 direct Prisma calls in routes/legal.ts",
+        "API endpoint changes"
+      ],
+      "out_of_scope": [
+        "Cross-portal changes (unless explicitly listed)",
+        "Performance optimization (separate ticket)"
+      ],
+      "acceptance_criteria": [
+        "Feature works as described in scope",
+        "All listed in_scope items implemented",
+        "Edge cases handled gracefully (empty state, missing data, permissions)"
+      ],
+      "tests_to_add_or_update": [
+        "Verify feature works per acceptance criteria",
+        "No regressions in existing test suite (npm test)"
+      ],
+      "test_protocol": [
+        "npx tsc --noEmit — zero TypeScript errors",
+        "npm test — all tests pass",
+        "npm run blueprint — architecture docs sync",
+        "Ticket-specific verification: verify acceptance criteria manually",
+        "Regression checks: verify adjacent features still work",
+        "API contract sync: if API changed, verify DTOs/OpenAPI/api-client match",
+        "UI verification: if UI changed, manual check in browser",
+        "Edge cases: verify behavior with missing/null data"
+      ],
+      "validation_checklist": [
+        "All acceptance criteria verified",
+        "No TypeScript errors (npx tsc --noEmit)",
+        "All tests pass (npm test)",
+        "No layer violations introduced",
+        "Blueprint regenerated (npm run blueprint)"
+      ],
+      "post_validation_updates": [
+        "Refresh docs/blueprint.html — cd apps/api && node blueprint.js",
+        "Refresh docs/roadmap.html — node scripts/generate-roadmap.js",
+        "Review PROJECT_STATE.md — update if architecture decisions changed",
+        "Review ARCHITECTURE_LOW_CONTEXT_GUIDE.md — update if auth/layers touched",
+        "Review docs/AUDIT.md — mark resolved findings, add new ones",
+        "Review SCHEMA_REFERENCE.md — update if schema changed",
+        "Commit: npx tsc --noEmit → npm test → npm run blueprint"
+      ],
+      "canonical_implementation_prompt": "## Ticket: Legal.ts route-layer violation (A-5 / CQ-5): 19 direct Prisma calls in routes/legal.ts\n\n**Goal:** Implement: Legal.ts route-layer violation (A-5 / CQ-5): 19 direct Prisma calls in routes/legal.ts\n\n**Phase:** P1 | **Area:** api\n\n### In Scope\n- Legal.ts route-layer violation (A-5 / CQ-5): 19 direct Prisma calls in routes/legal.ts\n- API endpoint changes\n\n### Out of Scope\n- Cross-portal changes (unless explicitly listed)\n- Performance optimization (separate ticket)\n\n### Files to Modify (in order)\n1. `(needs manual file identification)`\n\n### Acceptance Criteria\n- [ ] Feature works as described in scope\n- [ ] All listed in_scope items implemented\n- [ ] Edge cases handled gracefully (empty state, missing data, permissions)\n\n### Test Plan\n- Verify feature works per acceptance criteria\n- No regressions in existing test suite (npm test)\n\n### Test Protocol\n1. npx tsc --noEmit — zero TypeScript errors\n2. npm test — all tests pass\n3. npm run blueprint — architecture docs sync\n4. Ticket-specific verification: verify acceptance criteria manually\n5. Regression checks: verify adjacent features still work\n6. API contract sync: if API changed, verify DTOs/OpenAPI/api-client match\n7. UI verification: if UI changed, manual check in browser\n8. Edge cases: verify behavior with missing/null data\n\n### Validation Checklist\n- [ ] All acceptance criteria verified\n- [ ] No TypeScript errors (npx tsc --noEmit)\n- [ ] All tests pass (npm test)\n- [ ] No layer violations introduced\n- [ ] Blueprint regenerated (npm run blueprint)\n\n### Post-Validation Updates\n- Refresh docs/blueprint.html — cd apps/api && node blueprint.js\n- Refresh docs/roadmap.html — node scripts/generate-roadmap.js\n- Review PROJECT_STATE.md — update if architecture decisions changed\n- Review ARCHITECTURE_LOW_CONTEXT_GUIDE.md — update if auth/layers touched\n- Review docs/AUDIT.md — mark resolved findings, add new ones\n- Review SCHEMA_REFERENCE.md — update if schema changed\n- Commit: npx tsc --noEmit → npm test → npm run blueprint"
+    },
+    {
+      "id": "DT-008",
+      "source_intake_ids": [
+        "INT-041"
+      ],
+      "title": "Request.orgId migration (H6) — add orgId column to Request model for direct org filtering instead of FK traversal",
+      "goal": "Implement \"Request.orgId migration (H6) — add orgId column to Request model for direct org filtering instead of FK traversal\" in the database domain to fulfill the original request: Request.orgId migration (H6) — add orgId column to Request model for direct org filtering instead of FK traversal. Curre (backend changes only).",
+      "phase": "P2",
+      "order": 1,
+      "status": "draft",
+      "product_area": "database",
+      "parent_feature_id": null,
+      "depends_on": [],
+      "files_to_modify": [
+        "apps/api/prisma/schema.prisma"
+      ],
+      "in_scope": [
+        "Implement Request.orgId migration (H6) — add orgId column to Request model for direct org filtering instead of FK traversal",
+        "UI/page updates",
+        "Database schema changes",
+        "Input validation"
+      ],
+      "out_of_scope": [],
+      "acceptance_criteria": [
+        "Feature works as described in scope",
+        "All listed in_scope items implemented",
+        "Edge cases handled gracefully (empty state, missing data, permissions)",
+        "New functionality is accessible and discoverable",
+        "Filter/search returns correct results"
+      ],
+      "tests_to_add_or_update": [
+        "Verify feature works per acceptance criteria",
+        "No regressions in existing test suite (npm test)"
+      ],
+      "test_protocol": [
+        "npx tsc --noEmit — zero TypeScript errors",
+        "npm test — all tests pass",
+        "npm run blueprint — architecture docs sync",
+        "Ticket-specific verification: verify acceptance criteria manually",
+        "Regression checks: verify adjacent features still work",
+        "API contract sync: if API changed, verify DTOs/OpenAPI/api-client match",
+        "UI verification: if UI changed, manual check in browser",
+        "Edge cases: verify behavior with missing/null data"
+      ],
+      "validation_checklist": [
+        "All acceptance criteria verified",
+        "No TypeScript errors (npx tsc --noEmit)",
+        "All tests pass (npm test)",
+        "No layer violations introduced",
+        "Blueprint regenerated (npm run blueprint)"
+      ],
+      "post_validation_updates": [
+        "Refresh docs/blueprint.html — cd apps/api && node blueprint.js",
+        "Refresh docs/roadmap.html — node scripts/generate-roadmap.js",
+        "Review PROJECT_STATE.md — update if architecture decisions changed",
+        "Review ARCHITECTURE_LOW_CONTEXT_GUIDE.md — update if auth/layers touched",
+        "Review docs/AUDIT.md — mark resolved findings, add new ones",
+        "Review SCHEMA_REFERENCE.md — update if schema changed",
+        "Commit: npx tsc --noEmit → npm test → npm run blueprint"
+      ],
+      "canonical_implementation_prompt": "## Ticket: Request.orgId migration (H6) — add orgId column to Request model for direct org filtering instead of FK traversal\n\n**Goal:** Implement: Request.orgId migration (H6) — add orgId column to Request model for direct org filtering instead of FK traversal\n\n**Phase:** P2 | **Area:** database\n\n### In Scope\n- Implement Request.orgId migration (H6) — add orgId column to Request model for direct org filtering instead of FK traversal\n- UI/page updates\n- Database schema changes\n- Input validation\n\n### Files to Modify (in order)\n1. `apps/api/prisma/schema.prisma`\n\n### Acceptance Criteria\n- [ ] Feature works as described in scope\n- [ ] All listed in_scope items implemented\n- [ ] Edge cases handled gracefully (empty state, missing data, permissions)\n- [ ] New functionality is accessible and discoverable\n- [ ] Filter/search returns correct results\n\n### Test Plan\n- Verify feature works per acceptance criteria\n- No regressions in existing test suite (npm test)\n\n### Test Protocol\n1. npx tsc --noEmit — zero TypeScript errors\n2. npm test — all tests pass\n3. npm run blueprint — architecture docs sync\n4. Ticket-specific verification: verify acceptance criteria manually\n5. Regression checks: verify adjacent features still work\n6. API contract sync: if API changed, verify DTOs/OpenAPI/api-client match\n7. UI verification: if UI changed, manual check in browser\n8. Edge cases: verify behavior with missing/null data\n\n### Validation Checklist\n- [ ] All acceptance criteria verified\n- [ ] No TypeScript errors (npx tsc --noEmit)\n- [ ] All tests pass (npm test)\n- [ ] No layer violations introduced\n- [ ] Blueprint regenerated (npm run blueprint)\n\n### Post-Validation Updates\n- Refresh docs/blueprint.html — cd apps/api && node blueprint.js\n- Refresh docs/roadmap.html — node scripts/generate-roadmap.js\n- Review PROJECT_STATE.md — update if architecture decisions changed\n- Review ARCHITECTURE_LOW_CONTEXT_GUIDE.md — update if auth/layers touched\n- Review docs/AUDIT.md — mark resolved findings, add new ones\n- Review SCHEMA_REFERENCE.md — update if schema changed\n- Commit: npx tsc --noEmit → npm test → npm run blueprint",
+      "parent_story_id": "INT-041",
+      "parent_story_title": "Request.orgId migration (H6) — add orgId column to Request model for direct org filtering instead of FK traversal",
+      "parent_story_raw_text": "Request.orgId migration (H6) — add orgId column to Request model for direct org filtering instead of FK traversal. Currently resolved dynamically via resolveRequestOrg() which walks unit→building→org chain. 7-step migration plan documented: add nullable → backfill via SQL → make required → update queries → keep resolvers for validation. Deferred until multi-org launch or performance bottleneck. Estimated effort: 2-3 hours.",
+      "sequence_role": "foundation",
+      "story_intent": "Originating from intake INT-041: Request.orgId migration (H6) — add orgId column to Request model for direct org filtering instead of FK traversal. Currently resolved dynamically via resolveRequestOrg() which walks unit→building→org",
+      "story_success_outcome": "Feature is functional and accessible to target users. Parent story intent (INT-041) is partially fulfilled by this slice. All acceptance criteria pass. CI green (tsc + tests + blueprint).",
+      "files_to_inspect": [
+        "PROJECT_STATE.md (guardrails section)",
+        "apps/api/src/ARCHITECTURE_LOW_CONTEXT_GUIDE.md",
+        "SCHEMA_REFERENCE.md",
+        "apps/api/prisma/schema.prisma (current schema)"
+      ],
+      "implementation_shape": "backend_only",
+      "risk_notes": [
+        "SI-9: Request.orgId migration still pending"
+      ],
+      "context_bundle": {
+        "architectural_constraints": [
+          "routes → workflows → services → repositories → Prisma (never skip)",
+          "Canonical includes required (G9) — no ad-hoc include trees",
+          "Schema changes require migration (G1) — never db push",
+          "New fields: update schema → migration → repo include → DTO → OpenAPI → api-client → tests (G2)"
+        ],
+        "shared_files": [],
+        "shared_assumptions": [],
+        "sibling_dependencies": []
+      },
+      "tests_to_add": [
+        "Verify feature works per acceptance criteria",
+        "No regressions in existing test suite (npm test)"
+      ],
+      "tests_to_update": [],
+      "regression_checks": [
+        "npm test — full suite passes",
+        "npx tsc --noEmit — zero type errors"
+      ],
+      "refinement_status": "ready_candidate",
+      "refinement_notes": [],
+      "refined_at": "2026-03-20T13:06:28.273Z"
+    },
+    {
+      "id": "DT-009",
+      "source_intake_ids": [
+        "INT-043"
+      ],
+      "title": "LegalDecisionEngine canton-specific filtering for DSL evaluator — currently the ingestion pipeline respects LegalSour…",
+      "goal": "Implement: LegalDecisionEngine canton-specific filtering for DSL evaluator — currently the ingestion pipeline respects LegalSour…",
+      "phase": "P3",
+      "order": 1,
+      "status": "draft",
+      "product_area": "legal-engine",
+      "parent_feature_id": null,
+      "depends_on": [],
+      "files_to_modify": [
+        "apps/api/src/services/legal.service.ts",
+        "apps/api/src/routes/legal.ts",
+        "apps/web/pages/manager/legal/",
+        "packages/api-client/src/"
+      ],
+      "in_scope": [
+        "LegalDecisionEngine canton-specific filtering for DSL evaluator — currently the ingestion pipeline respects LegalSour…",
+        "UI/page updates",
+        "Test coverage updates"
+      ],
+      "out_of_scope": [
+        "Cross-portal changes (unless explicitly listed)",
+        "Performance optimization (separate ticket)"
+      ],
+      "acceptance_criteria": [
+        "Feature works as described in scope",
+        "All listed in_scope items implemented",
+        "Edge cases handled gracefully (empty state, missing data, permissions)",
+        "Filter/search returns correct results"
+      ],
+      "tests_to_add_or_update": [
+        "API contract test: verify request/response shape",
+        "Service unit test: verify business logic",
+        "UI smoke test: verify page renders without errors",
+        "No regressions in existing test suite (npm test)"
+      ],
+      "test_protocol": [
+        "npx tsc --noEmit — zero TypeScript errors",
+        "npm test — all tests pass",
+        "npm run blueprint — architecture docs sync",
+        "Ticket-specific verification: verify acceptance criteria manually",
+        "Regression checks: verify adjacent features still work",
+        "API contract sync: if API changed, verify DTOs/OpenAPI/api-client match",
+        "UI verification: if UI changed, manual check in browser",
+        "Edge cases: verify behavior with missing/null data"
+      ],
+      "validation_checklist": [
+        "All acceptance criteria verified",
+        "No TypeScript errors (npx tsc --noEmit)",
+        "All tests pass (npm test)",
+        "No layer violations introduced",
+        "Blueprint regenerated (npm run blueprint)"
+      ],
+      "post_validation_updates": [
+        "Refresh docs/blueprint.html — cd apps/api && node blueprint.js",
+        "Refresh docs/roadmap.html — node scripts/generate-roadmap.js",
+        "Review PROJECT_STATE.md — update if architecture decisions changed",
+        "Review ARCHITECTURE_LOW_CONTEXT_GUIDE.md — update if auth/layers touched",
+        "Review docs/AUDIT.md — mark resolved findings, add new ones",
+        "Review SCHEMA_REFERENCE.md — update if schema changed",
+        "Commit: npx tsc --noEmit → npm test → npm run blueprint"
+      ],
+      "canonical_implementation_prompt": "## Ticket: LegalDecisionEngine canton-specific filtering for DSL evaluator — currently the ingestion pipeline respects LegalSour…\n\n**Goal:** Implement: LegalDecisionEngine canton-specific filtering for DSL evaluator — currently the ingestion pipeline respects LegalSour…\n\n**Phase:** P3 | **Area:** legal-engine\n\n### In Scope\n- LegalDecisionEngine canton-specific filtering for DSL evaluator — currently the ingestion pipeline respects LegalSour…\n- UI/page updates\n- Test coverage updates\n\n### Out of Scope\n- Cross-portal changes (unless explicitly listed)\n- Performance optimization (separate ticket)\n\n### Files to Modify (in order)\n1. `apps/api/src/services/legal.service.ts`\n2. `apps/api/src/routes/legal.ts`\n3. `apps/web/pages/manager/legal/`\n4. `packages/api-client/src/`\n\n### Acceptance Criteria\n- [ ] Feature works as described in scope\n- [ ] All listed in_scope items implemented\n- [ ] Edge cases handled gracefully (empty state, missing data, permissions)\n- [ ] Filter/search returns correct results\n\n### Test Plan\n- API contract test: verify request/response shape\n- Service unit test: verify business logic\n- UI smoke test: verify page renders without errors\n- No regressions in existing test suite (npm test)\n\n### Test Protocol\n1. npx tsc --noEmit — zero TypeScript errors\n2. npm test — all tests pass\n3. npm run blueprint — architecture docs sync\n4. Ticket-specific verification: verify acceptance criteria manually\n5. Regression checks: verify adjacent features still work\n6. API contract sync: if API changed, verify DTOs/OpenAPI/api-client match\n7. UI verification: if UI changed, manual check in browser\n8. Edge cases: verify behavior with missing/null data\n\n### Validation Checklist\n- [ ] All acceptance criteria verified\n- [ ] No TypeScript errors (npx tsc --noEmit)\n- [ ] All tests pass (npm test)\n- [ ] No layer violations introduced\n- [ ] Blueprint regenerated (npm run blueprint)\n\n### Post-Validation Updates\n- Refresh docs/blueprint.html — cd apps/api && node blueprint.js\n- Refresh docs/roadmap.html — node scripts/generate-roadmap.js\n- Review PROJECT_STATE.md — update if architecture decisions changed\n- Review ARCHITECTURE_LOW_CONTEXT_GUIDE.md — update if auth/layers touched\n- Review docs/AUDIT.md — mark resolved findings, add new ones\n- Review SCHEMA_REFERENCE.md — update if schema changed\n- Commit: npx tsc --noEmit → npm test → npm run blueprint"
+    },
+    {
+      "id": "DT-010",
+      "source_intake_ids": [
+        "INT-045"
+      ],
+      "title": "Formalize background job scheduler — processSelectionTimeouts() and processAttachmentRetention() currently run on hou…",
+      "goal": "Deliver \"Formalize background job scheduler — processSelectionTimeouts() and processAttachmentRetention() currently run on hou…\" in the api domain to fulfill the original request: Formalize background job scheduler — processSelectionTimeouts() and processAttachmentRetention() currently run on hourly (full-stack: API + UI).",
+      "phase": "P3",
+      "order": 1,
+      "status": "draft",
+      "product_area": "api",
+      "parent_feature_id": null,
+      "depends_on": [],
+      "files_to_modify": [
+        "(needs manual file identification)"
+      ],
+      "in_scope": [
+        "Formalize background job scheduler — processSelectionTimeouts() and processAttachmentRetention() currently run on hou…"
+      ],
+      "out_of_scope": [
+        "Cross-portal changes (unless explicitly listed)",
+        "Performance optimization (separate ticket)"
+      ],
+      "acceptance_criteria": [
+        "Feature works as described in scope",
+        "All listed in_scope items implemented",
+        "Edge cases handled gracefully (empty state, missing data, permissions)"
+      ],
+      "tests_to_add_or_update": [
+        "Verify feature works per acceptance criteria",
+        "No regressions in existing test suite (npm test)"
+      ],
+      "test_protocol": [
+        "npx tsc --noEmit — zero TypeScript errors",
+        "npm test — all tests pass",
+        "npm run blueprint — architecture docs sync",
+        "Ticket-specific verification: verify acceptance criteria manually",
+        "Regression checks: verify adjacent features still work",
+        "API contract sync: if API changed, verify DTOs/OpenAPI/api-client match",
+        "UI verification: if UI changed, manual check in browser",
+        "Edge cases: verify behavior with missing/null data"
+      ],
+      "validation_checklist": [
+        "All acceptance criteria verified",
+        "No TypeScript errors (npx tsc --noEmit)",
+        "All tests pass (npm test)",
+        "No layer violations introduced",
+        "Blueprint regenerated (npm run blueprint)"
+      ],
+      "post_validation_updates": [
+        "Refresh docs/blueprint.html — cd apps/api && node blueprint.js",
+        "Refresh docs/roadmap.html — node scripts/generate-roadmap.js",
+        "Review PROJECT_STATE.md — update if architecture decisions changed",
+        "Review ARCHITECTURE_LOW_CONTEXT_GUIDE.md — update if auth/layers touched",
+        "Review docs/AUDIT.md — mark resolved findings, add new ones",
+        "Review SCHEMA_REFERENCE.md — update if schema changed",
+        "Commit: npx tsc --noEmit → npm test → npm run blueprint"
+      ],
+      "canonical_implementation_prompt": "## Ticket: Formalize background job scheduler — processSelectionTimeouts() and processAttachmentRetention() currently run on hou…\n\n**Goal:** Implement: Formalize background job scheduler — processSelectionTimeouts() and processAttachmentRetention() currently run on hou…\n\n**Phase:** P3 | **Area:** api\n\n### In Scope\n- Formalize background job scheduler — processSelectionTimeouts() and processAttachmentRetention() currently run on hou…\n\n### Out of Scope\n- Cross-portal changes (unless explicitly listed)\n- Performance optimization (separate ticket)\n\n### Files to Modify (in order)\n1. `(needs manual file identification)`\n\n### Acceptance Criteria\n- [ ] Feature works as described in scope\n- [ ] All listed in_scope items implemented\n- [ ] Edge cases handled gracefully (empty state, missing data, permissions)\n\n### Test Plan\n- Verify feature works per acceptance criteria\n- No regressions in existing test suite (npm test)\n\n### Test Protocol\n1. npx tsc --noEmit — zero TypeScript errors\n2. npm test — all tests pass\n3. npm run blueprint — architecture docs sync\n4. Ticket-specific verification: verify acceptance criteria manually\n5. Regression checks: verify adjacent features still work\n6. API contract sync: if API changed, verify DTOs/OpenAPI/api-client match\n7. UI verification: if UI changed, manual check in browser\n8. Edge cases: verify behavior with missing/null data\n\n### Validation Checklist\n- [ ] All acceptance criteria verified\n- [ ] No TypeScript errors (npx tsc --noEmit)\n- [ ] All tests pass (npm test)\n- [ ] No layer violations introduced\n- [ ] Blueprint regenerated (npm run blueprint)\n\n### Post-Validation Updates\n- Refresh docs/blueprint.html — cd apps/api && node blueprint.js\n- Refresh docs/roadmap.html — node scripts/generate-roadmap.js\n- Review PROJECT_STATE.md — update if architecture decisions changed\n- Review ARCHITECTURE_LOW_CONTEXT_GUIDE.md — update if auth/layers touched\n- Review docs/AUDIT.md — mark resolved findings, add new ones\n- Review SCHEMA_REFERENCE.md — update if schema changed\n- Commit: npx tsc --noEmit → npm test → npm run blueprint",
+      "parent_story_id": "INT-045",
+      "parent_story_title": "Formalize background job scheduler — processSelectionTimeouts() and processAttachmentRetention() currently run on hou…",
+      "parent_story_raw_text": "Formalize background job scheduler — processSelectionTimeouts() and processAttachmentRetention() currently run on hourly interval started in server.ts via setInterval. No formal scheduler, no retry logic, no dead letter, no monitoring. For production: need at minimum a proper scheduling mechanism (node-cron or pg-boss), execution logging, failure alerting. Currently also available via POST /__dev/rental/run-jobs (dev only).",
+      "sequence_role": "workflow",
+      "story_intent": "Originating from intake INT-045: Formalize background job scheduler — processSelectionTimeouts() and processAttachmentRetention() currently run on hourly interval started in server.ts via setInterval. No formal scheduler, no retry lo",
+      "story_success_outcome": "Feature is functional and accessible to target users. Parent story intent (INT-045) is partially fulfilled by this slice. All acceptance criteria pass. CI green (tsc + tests + blueprint).",
+      "files_to_inspect": [
+        "PROJECT_STATE.md (guardrails section)",
+        "apps/api/src/ARCHITECTURE_LOW_CONTEXT_GUIDE.md"
+      ],
+      "implementation_shape": "full_stack",
+      "context_bundle": {
+        "architectural_constraints": [
+          "routes → workflows → services → repositories → Prisma (never skip)",
+          "Canonical includes required (G9) — no ad-hoc include trees",
+          "Schema changes require migration (G1) — never db push",
+          "New fields: update schema → migration → repo include → DTO → OpenAPI → api-client → tests (G2)"
+        ],
+        "shared_files": [],
+        "shared_assumptions": [],
+        "sibling_dependencies": []
+      },
+      "tests_to_add": [
+        "Verify feature works per acceptance criteria",
+        "No regressions in existing test suite (npm test)"
+      ],
+      "tests_to_update": [],
+      "regression_checks": [
+        "npm test — full suite passes",
+        "npx tsc --noEmit — zero type errors"
+      ],
+      "refinement_status": "refined",
+      "refinement_notes": [
+        "No concrete files_to_modify"
+      ],
+      "refined_at": "2026-03-20T09:53:18.592Z"
+    },
+    {
+      "id": "DT-011",
+      "source_intake_ids": [
+        "INT-046"
+      ],
+      "title": "Fix 28 pre-existing server-spawn test timeouts — multiple test suites (auth.manager-gates, tenantSession, ia, contrac…",
+      "goal": "Fix: Fix 28 pre-existing server-spawn test timeouts — multiple test suites (auth.manager-gates, tenantSession, ia, contrac…",
+      "phase": "P3",
+      "order": 1,
+      "status": "draft",
+      "product_area": "testing",
+      "parent_feature_id": null,
+      "depends_on": [],
+      "files_to_modify": [
+        "(needs manual file identification)"
+      ],
+      "in_scope": [
+        "Fix Fix 28 pre-existing server-spawn test timeouts — multiple test suites (auth.manager-gates, tenantSession, ia, contrac…",
+        "UI/page updates",
+        "Test coverage updates"
+      ],
+      "out_of_scope": [
+        "Cross-portal changes (unless explicitly listed)",
+        "Performance optimization (separate ticket)",
+        "Feature enhancements beyond the fix",
+        "Refactoring the surrounding module"
+      ],
+      "acceptance_criteria": [
+        "The reported bug no longer reproduces",
+        "No regressions in related functionality"
+      ],
+      "tests_to_add_or_update": [
+        "Regression test: reproduce original bug scenario → verify fixed",
+        "No regressions in existing test suite (npm test)"
+      ],
+      "test_protocol": [
+        "npx tsc --noEmit — zero TypeScript errors",
+        "npm test — all tests pass",
+        "npm run blueprint — architecture docs sync",
+        "Ticket-specific verification: verify acceptance criteria manually",
+        "Regression checks: verify adjacent features still work",
+        "API contract sync: if API changed, verify DTOs/OpenAPI/api-client match",
+        "UI verification: if UI changed, manual check in browser",
+        "Edge cases: verify behavior with missing/null data"
+      ],
+      "validation_checklist": [
+        "All acceptance criteria verified",
+        "No TypeScript errors (npx tsc --noEmit)",
+        "All tests pass (npm test)",
+        "No layer violations introduced",
+        "Blueprint regenerated (npm run blueprint)"
+      ],
+      "post_validation_updates": [
+        "Refresh docs/blueprint.html — cd apps/api && node blueprint.js",
+        "Refresh docs/roadmap.html — node scripts/generate-roadmap.js",
+        "Review PROJECT_STATE.md — update if architecture decisions changed",
+        "Review ARCHITECTURE_LOW_CONTEXT_GUIDE.md — update if auth/layers touched",
+        "Review docs/AUDIT.md — mark resolved findings, add new ones",
+        "Review SCHEMA_REFERENCE.md — update if schema changed",
+        "Commit: npx tsc --noEmit → npm test → npm run blueprint"
+      ],
+      "canonical_implementation_prompt": "## Ticket: Fix 28 pre-existing server-spawn test timeouts — multiple test suites (auth.manager-gates, tenantSession, ia, contrac…\n\n**Goal:** Fix: Fix 28 pre-existing server-spawn test timeouts — multiple test suites (auth.manager-gates, tenantSession, ia, contrac…\n\n**Phase:** P3 | **Area:** testing\n\n### In Scope\n- Fix Fix 28 pre-existing server-spawn test timeouts — multiple test suites (auth.manager-gates, tenantSession, ia, contrac…\n- UI/page updates\n- Test coverage updates\n\n### Out of Scope\n- Cross-portal changes (unless explicitly listed)\n- Performance optimization (separate ticket)\n- Feature enhancements beyond the fix\n- Refactoring the surrounding module\n\n### Files to Modify (in order)\n1. `(needs manual file identification)`\n\n### Acceptance Criteria\n- [ ] The reported bug no longer reproduces\n- [ ] No regressions in related functionality\n\n### Test Plan\n- Regression test: reproduce original bug scenario → verify fixed\n- No regressions in existing test suite (npm test)\n\n### Test Protocol\n1. npx tsc --noEmit — zero TypeScript errors\n2. npm test — all tests pass\n3. npm run blueprint — architecture docs sync\n4. Ticket-specific verification: verify acceptance criteria manually\n5. Regression checks: verify adjacent features still work\n6. API contract sync: if API changed, verify DTOs/OpenAPI/api-client match\n7. UI verification: if UI changed, manual check in browser\n8. Edge cases: verify behavior with missing/null data\n\n### Validation Checklist\n- [ ] All acceptance criteria verified\n- [ ] No TypeScript errors (npx tsc --noEmit)\n- [ ] All tests pass (npm test)\n- [ ] No layer violations introduced\n- [ ] Blueprint regenerated (npm run blueprint)\n\n### Post-Validation Updates\n- Refresh docs/blueprint.html — cd apps/api && node blueprint.js\n- Refresh docs/roadmap.html — node scripts/generate-roadmap.js\n- Review PROJECT_STATE.md — update if architecture decisions changed\n- Review ARCHITECTURE_LOW_CONTEXT_GUIDE.md — update if auth/layers touched\n- Review docs/AUDIT.md — mark resolved findings, add new ones\n- Review SCHEMA_REFERENCE.md — update if schema changed\n- Commit: npx tsc --noEmit → npm test → npm run blueprint"
+    },
+    {
+      "id": "DT-012",
+      "source_intake_ids": [
+        "INT-048"
+      ],
+      "title": "3 proxy routes retain custom logic and can't use proxyToBackend() — requests.js (field rename on POST), contractors.j…",
+      "goal": "Deliver \"3 proxy routes retain custom logic and can't use proxyToBackend() — requests.js (field rename on POST), contractors.j…\" in the frontend domain to fulfill the original request: 3 proxy routes retain custom logic and can't use proxyToBackend() — requests.js (field rename on POST), contractors.js ( (full-stack: API + UI).",
+      "phase": "P0",
+      "order": 1,
+      "status": "draft",
+      "product_area": "frontend",
+      "parent_feature_id": null,
+      "depends_on": [],
+      "files_to_modify": [
+        "(needs manual file identification)"
+      ],
+      "in_scope": [
+        "3 proxy routes retain custom logic and can't use proxyToBackend() — requests.js (field rename on POST), contractors.j…",
+        "API endpoint changes"
+      ],
+      "out_of_scope": [
+        "Refactoring unrelated code",
+        "New model/migration creation"
+      ],
+      "acceptance_criteria": [
+        "Feature works as described in scope",
+        "Edge cases handled gracefully (empty state, missing data, permissions)"
+      ],
+      "tests_to_add_or_update": [
+        "Verify feature works per acceptance criteria",
+        "No regressions in existing test suite (npm test)"
+      ],
+      "test_protocol": [
+        "npx tsc --noEmit — zero TypeScript errors",
+        "npm test — all tests pass",
+        "npm run blueprint — architecture docs sync",
+        "Ticket-specific verification: verify acceptance criteria manually",
+        "Regression checks: verify adjacent features still work",
+        "API contract sync: if API changed, verify DTOs/OpenAPI/api-client match",
+        "UI verification: if UI changed, manual check in browser",
+        "Edge cases: verify behavior with missing/null data"
+      ],
+      "validation_checklist": [
+        "All acceptance criteria verified",
+        "No TypeScript errors (npx tsc --noEmit)",
+        "All tests pass (npm test)",
+        "No layer violations introduced",
+        "Blueprint regenerated (npm run blueprint)"
+      ],
+      "post_validation_updates": [
+        "Refresh docs/blueprint.html — cd apps/api && node blueprint.js",
+        "Refresh docs/roadmap.html — node scripts/generate-roadmap.js",
+        "Review PROJECT_STATE.md — update if architecture decisions changed",
+        "Review ARCHITECTURE_LOW_CONTEXT_GUIDE.md — update if auth/layers touched",
+        "Review docs/AUDIT.md — mark resolved findings, add new ones",
+        "Review SCHEMA_REFERENCE.md — update if schema changed",
+        "Commit: npx tsc --noEmit → npm test → npm run blueprint"
+      ],
+      "canonical_implementation_prompt": "## Ticket: 3 proxy routes retain custom logic and can't use proxyToBackend() — requests.js (field rename on POST), contractors.j…\n\n**Goal:** Implement: 3 proxy routes retain custom logic and can't use proxyToBackend() — requests.js (field rename on POST), contractors.j…\n\n**Phase:** P0 | **Area:** frontend\n\n### In Scope\n- 3 proxy routes retain custom logic and can't use proxyToBackend() — requests.js (field rename on POST), contractors.j…\n- API endpoint changes\n\n### Out of Scope\n- Refactoring unrelated code\n- New model/migration creation\n\n### Files to Modify (in order)\n1. `(needs manual file identification)`\n\n### Acceptance Criteria\n- [ ] Feature works as described in scope\n- [ ] Edge cases handled gracefully (empty state, missing data, permissions)\n\n### Test Plan\n- Verify feature works per acceptance criteria\n- No regressions in existing test suite (npm test)\n\n### Test Protocol\n1. npx tsc --noEmit — zero TypeScript errors\n2. npm test — all tests pass\n3. npm run blueprint — architecture docs sync\n4. Ticket-specific verification: verify acceptance criteria manually\n5. Regression checks: verify adjacent features still work\n6. API contract sync: if API changed, verify DTOs/OpenAPI/api-client match\n7. UI verification: if UI changed, manual check in browser\n8. Edge cases: verify behavior with missing/null data\n\n### Validation Checklist\n- [ ] All acceptance criteria verified\n- [ ] No TypeScript errors (npx tsc --noEmit)\n- [ ] All tests pass (npm test)\n- [ ] No layer violations introduced\n- [ ] Blueprint regenerated (npm run blueprint)\n\n### Post-Validation Updates\n- Refresh docs/blueprint.html — cd apps/api && node blueprint.js\n- Refresh docs/roadmap.html — node scripts/generate-roadmap.js\n- Review PROJECT_STATE.md — update if architecture decisions changed\n- Review ARCHITECTURE_LOW_CONTEXT_GUIDE.md — update if auth/layers touched\n- Review docs/AUDIT.md — mark resolved findings, add new ones\n- Review SCHEMA_REFERENCE.md — update if schema changed\n- Commit: npx tsc --noEmit → npm test → npm run blueprint",
+      "parent_story_id": "INT-048",
+      "parent_story_title": "3 proxy routes retain custom logic and can't use proxyToBackend() — requests.js (field rename on POST), contractors.j…",
+      "parent_story_raw_text": "3 proxy routes retain custom logic and can't use proxyToBackend() — requests.js (field rename on POST), contractors.js (multi-path routing), requests/approve.js (method + path transform). These are the last 3 of 94 total proxy routes not migrated to the shared helper. Document their custom logic in comments and consider if the backend can be adjusted to eliminate the need for client-side transforms.",
+      "sibling_ticket_ids": [],
+      "sequence_role": "workflow",
+      "story_intent": "Originating from intake INT-048: 3 proxy routes retain custom logic and can't use proxyToBackend() — requests.js (field rename on POST), contractors.js (multi-path routing), requests/approve.js (method + path transform). These are th",
+      "story_success_outcome": "Feature is functional and accessible to target users. Parent story intent (INT-048) is partially fulfilled by this slice. All acceptance criteria pass. CI green (tsc + tests + blueprint).",
+      "files_to_inspect": [
+        "PROJECT_STATE.md (guardrails section)",
+        "apps/api/src/ARCHITECTURE_LOW_CONTEXT_GUIDE.md"
+      ],
+      "implementation_shape": "full_stack",
+      "context_bundle": {
+        "architectural_constraints": [
+          "routes → workflows → services → repositories → Prisma (never skip)",
+          "Canonical includes required (G9) — no ad-hoc include trees",
+          "Schema changes require migration (G1) — never db push",
+          "New fields: update schema → migration → repo include → DTO → OpenAPI → api-client → tests (G2)"
+        ],
+        "shared_files": [],
+        "shared_assumptions": [],
+        "sibling_dependencies": []
+      },
+      "tests_to_add": [
+        "Verify feature works per acceptance criteria",
+        "No regressions in existing test suite (npm test)"
+      ],
+      "tests_to_update": [],
+      "regression_checks": [
+        "npm test — full suite passes",
+        "npx tsc --noEmit — zero type errors"
+      ],
+      "refinement_status": "refined",
+      "refinement_notes": [
+        "No concrete files_to_modify"
+      ],
+      "refined_at": "2026-03-20T08:57:42.786Z"
+    },
+    {
+      "id": "DT-013",
+      "source_intake_ids": [
+        "INT-033"
+      ],
+      "title": "Owner financial dashboard with invoice metrics — summary cards showing total invoices, pending approvals, paid amount…",
+      "goal": "Extend F-P1-006: Owner financial dashboard with invoice metrics — summary cards showing total invoices, pending approvals, paid amount…",
+      "phase": "P3",
+      "order": 1,
+      "status": "draft",
+      "product_area": "owner-portal",
+      "parent_feature_id": "F-P1-006",
+      "depends_on": [],
+      "files_to_modify": [
+        "apps/api/src/routes/owner-portal.ts",
+        "apps/web/pages/owner/",
+        "packages/api-client/src/"
+      ],
+      "in_scope": [
+        "Owner financial dashboard with invoice metrics — summary cards showing total invoices, pending approvals, paid amount…",
+        "UI/page updates",
+        "Test coverage updates"
+      ],
+      "out_of_scope": [
+        "Cross-portal changes (unless explicitly listed)",
+        "Performance optimization (separate ticket)"
+      ],
+      "acceptance_criteria": [
+        "Feature works as described in scope",
+        "All listed in_scope items implemented",
+        "Edge cases handled gracefully (empty state, missing data, permissions)"
+      ],
+      "tests_to_add_or_update": [
+        "API contract test: verify request/response shape",
+        "UI smoke test: verify page renders without errors",
+        "No regressions in existing test suite (npm test)"
+      ],
+      "test_protocol": [
+        "npx tsc --noEmit — zero TypeScript errors",
+        "npm test — all tests pass",
+        "npm run blueprint — architecture docs sync",
+        "Ticket-specific verification: verify acceptance criteria manually",
+        "Regression checks: verify adjacent features still work",
+        "API contract sync: if API changed, verify DTOs/OpenAPI/api-client match",
+        "UI verification: if UI changed, manual check in browser",
+        "Edge cases: verify behavior with missing/null data"
+      ],
+      "validation_checklist": [
+        "All acceptance criteria verified",
+        "No TypeScript errors (npx tsc --noEmit)",
+        "All tests pass (npm test)",
+        "No layer violations introduced",
+        "Blueprint regenerated (npm run blueprint)"
+      ],
+      "post_validation_updates": [
+        "Refresh docs/blueprint.html — cd apps/api && node blueprint.js",
+        "Refresh docs/roadmap.html — node scripts/generate-roadmap.js",
+        "Review PROJECT_STATE.md — update if architecture decisions changed",
+        "Review ARCHITECTURE_LOW_CONTEXT_GUIDE.md — update if auth/layers touched",
+        "Review docs/AUDIT.md — mark resolved findings, add new ones",
+        "Review SCHEMA_REFERENCE.md — update if schema changed",
+        "Commit: npx tsc --noEmit → npm test → npm run blueprint"
+      ],
+      "canonical_implementation_prompt": "## Ticket: Owner financial dashboard with invoice metrics — summary cards showing total invoices, pending approvals, paid amount…\n\n**Goal:** Extend F-P1-006: Owner financial dashboard with invoice metrics — summary cards showing total invoices, pending approvals, paid amount…\n\n**Phase:** P3 | **Area:** owner-portal\n**Parent Feature:** F-P1-006\n\n### In Scope\n- Owner financial dashboard with invoice metrics — summary cards showing total invoices, pending approvals, paid amount…\n- UI/page updates\n- Test coverage updates\n\n### Out of Scope\n- Cross-portal changes (unless explicitly listed)\n- Performance optimization (separate ticket)\n\n### Files to Modify (in order)\n1. `apps/api/src/routes/owner-portal.ts`\n2. `apps/web/pages/owner/`\n3. `packages/api-client/src/`\n\n### Acceptance Criteria\n- [ ] Feature works as described in scope\n- [ ] All listed in_scope items implemented\n- [ ] Edge cases handled gracefully (empty state, missing data, permissions)\n\n### Test Plan\n- API contract test: verify request/response shape\n- UI smoke test: verify page renders without errors\n- No regressions in existing test suite (npm test)\n\n### Test Protocol\n1. npx tsc --noEmit — zero TypeScript errors\n2. npm test — all tests pass\n3. npm run blueprint — architecture docs sync\n4. Ticket-specific verification: verify acceptance criteria manually\n5. Regression checks: verify adjacent features still work\n6. API contract sync: if API changed, verify DTOs/OpenAPI/api-client match\n7. UI verification: if UI changed, manual check in browser\n8. Edge cases: verify behavior with missing/null data\n\n### Validation Checklist\n- [ ] All acceptance criteria verified\n- [ ] No TypeScript errors (npx tsc --noEmit)\n- [ ] All tests pass (npm test)\n- [ ] No layer violations introduced\n- [ ] Blueprint regenerated (npm run blueprint)\n\n### Post-Validation Updates\n- Refresh docs/blueprint.html — cd apps/api && node blueprint.js\n- Refresh docs/roadmap.html — node scripts/generate-roadmap.js\n- Review PROJECT_STATE.md — update if architecture decisions changed\n- Review ARCHITECTURE_LOW_CONTEXT_GUIDE.md — update if auth/layers touched\n- Review docs/AUDIT.md — mark resolved findings, add new ones\n- Review SCHEMA_REFERENCE.md — update if schema changed\n- Commit: npx tsc --noEmit → npm test → npm run blueprint"
+    },
+    {
+      "id": "DT-014",
+      "source_intake_ids": [
+        "INT-044"
+      ],
+      "title": "Production email provider integration — EmailOutbox currently uses dev sink (emails queued in DB, viewable via GET /_…",
+      "goal": "Extend F-P0-001: Production email provider integration — EmailOutbox currently uses dev sink (emails queued in DB, viewable via GET /_…",
+      "phase": "P0",
+      "order": 1,
+      "status": "draft",
+      "product_area": "notifications",
+      "parent_feature_id": "F-P0-001",
+      "depends_on": [],
+      "files_to_modify": [
+        "apps/api/src/services/notification.service.ts",
+        "apps/api/src/workflows/notification.workflow.ts",
+        "apps/api/src/routes/notifications.ts",
+        "packages/api-client/src/"
+      ],
+      "in_scope": [
+        "Production email provider integration — EmailOutbox currently uses dev sink (emails queued in DB, viewable via GET /_…",
+        "UI/page updates",
+        "Notification delivery"
+      ],
+      "out_of_scope": [
+        "Cross-portal changes (unless explicitly listed)",
+        "Performance optimization (separate ticket)"
+      ],
+      "acceptance_criteria": [
+        "Feature works as described in scope",
+        "All listed in_scope items implemented",
+        "Edge cases handled gracefully (empty state, missing data, permissions)",
+        "Notifications delivered correctly"
+      ],
+      "tests_to_add_or_update": [
+        "API contract test: verify request/response shape",
+        "Service unit test: verify business logic",
+        "Workflow integration test: verify status transitions",
+        "No regressions in existing test suite (npm test)"
+      ],
+      "test_protocol": [
+        "npx tsc --noEmit — zero TypeScript errors",
+        "npm test — all tests pass",
+        "npm run blueprint — architecture docs sync",
+        "Ticket-specific verification: verify acceptance criteria manually",
+        "Regression checks: verify adjacent features still work",
+        "API contract sync: if API changed, verify DTOs/OpenAPI/api-client match",
+        "UI verification: if UI changed, manual check in browser",
+        "Edge cases: verify behavior with missing/null data"
+      ],
+      "validation_checklist": [
+        "All acceptance criteria verified",
+        "No TypeScript errors (npx tsc --noEmit)",
+        "All tests pass (npm test)",
+        "No layer violations introduced",
+        "Blueprint regenerated (npm run blueprint)"
+      ],
+      "post_validation_updates": [
+        "Refresh docs/blueprint.html — cd apps/api && node blueprint.js",
+        "Refresh docs/roadmap.html — node scripts/generate-roadmap.js",
+        "Review PROJECT_STATE.md — update if architecture decisions changed",
+        "Review ARCHITECTURE_LOW_CONTEXT_GUIDE.md — update if auth/layers touched",
+        "Review docs/AUDIT.md — mark resolved findings, add new ones",
+        "Review SCHEMA_REFERENCE.md — update if schema changed",
+        "Commit: npx tsc --noEmit → npm test → npm run blueprint"
+      ],
+      "canonical_implementation_prompt": "## Ticket: Production email provider integration — EmailOutbox currently uses dev sink (emails queued in DB, viewable via GET /_…\n\n**Goal:** Extend F-P0-001: Production email provider integration — EmailOutbox currently uses dev sink (emails queued in DB, viewable via GET /_…\n\n**Phase:** P0 | **Area:** notifications\n**Parent Feature:** F-P0-001\n\n### In Scope\n- Production email provider integration — EmailOutbox currently uses dev sink (emails queued in DB, viewable via GET /_…\n- UI/page updates\n- Notification delivery\n\n### Out of Scope\n- Cross-portal changes (unless explicitly listed)\n- Performance optimization (separate ticket)\n\n### Files to Modify (in order)\n1. `apps/api/src/services/notification.service.ts`\n2. `apps/api/src/workflows/notification.workflow.ts`\n3. `apps/api/src/routes/notifications.ts`\n4. `packages/api-client/src/`\n\n### Acceptance Criteria\n- [ ] Feature works as described in scope\n- [ ] All listed in_scope items implemented\n- [ ] Edge cases handled gracefully (empty state, missing data, permissions)\n- [ ] Notifications delivered correctly\n\n### Test Plan\n- API contract test: verify request/response shape\n- Service unit test: verify business logic\n- Workflow integration test: verify status transitions\n- No regressions in existing test suite (npm test)\n\n### Test Protocol\n1. npx tsc --noEmit — zero TypeScript errors\n2. npm test — all tests pass\n3. npm run blueprint — architecture docs sync\n4. Ticket-specific verification: verify acceptance criteria manually\n5. Regression checks: verify adjacent features still work\n6. API contract sync: if API changed, verify DTOs/OpenAPI/api-client match\n7. UI verification: if UI changed, manual check in browser\n8. Edge cases: verify behavior with missing/null data\n\n### Validation Checklist\n- [ ] All acceptance criteria verified\n- [ ] No TypeScript errors (npx tsc --noEmit)\n- [ ] All tests pass (npm test)\n- [ ] No layer violations introduced\n- [ ] Blueprint regenerated (npm run blueprint)\n\n### Post-Validation Updates\n- Refresh docs/blueprint.html — cd apps/api && node blueprint.js\n- Refresh docs/roadmap.html — node scripts/generate-roadmap.js\n- Review PROJECT_STATE.md — update if architecture decisions changed\n- Review ARCHITECTURE_LOW_CONTEXT_GUIDE.md — update if auth/layers touched\n- Review docs/AUDIT.md — mark resolved findings, add new ones\n- Review SCHEMA_REFERENCE.md — update if schema changed\n- Commit: npx tsc --noEmit → npm test → npm run blueprint"
+    },
+    {
+      "id": "DT-015",
+      "source_intake_ids": [
+        "INT-047"
+      ],
+      "title": "Remaining route-level layer violations (CQ-1 through CQ-15 minus resolved) — routes/legal.ts (19 Prisma calls, worst …",
+      "goal": "Extend F-P0-004: Remaining route-level layer violations (CQ-1 through CQ-15 minus resolved) — routes/legal.ts (19 Prisma calls, worst …",
+      "phase": "P3",
+      "order": 1,
+      "status": "draft",
+      "product_area": "api",
+      "parent_feature_id": "F-P0-004",
+      "depends_on": [],
+      "files_to_modify": [
+        "apps/api/prisma/schema.prisma"
+      ],
+      "in_scope": [
+        "Fix Remaining route-level layer violations (CQ-1 through CQ-15 minus resolved) — routes/legal.ts (19 Prisma calls, worst …",
+        "API endpoint changes"
+      ],
+      "out_of_scope": [],
+      "acceptance_criteria": [
+        "Feature works as described in scope",
+        "All listed in_scope items implemented",
+        "Edge cases handled gracefully (empty state, missing data, permissions)"
+      ],
+      "tests_to_add_or_update": [
+        "Verify feature works per acceptance criteria",
+        "No regressions in existing test suite (npm test)"
+      ],
+      "test_protocol": [
+        "npx tsc --noEmit — zero TypeScript errors",
+        "npm test — all tests pass",
+        "npm run blueprint — architecture docs sync",
+        "Ticket-specific verification: verify acceptance criteria manually",
+        "Regression checks: verify adjacent features still work",
+        "API contract sync: if API changed, verify DTOs/OpenAPI/api-client match",
+        "UI verification: if UI changed, manual check in browser",
+        "Edge cases: verify behavior with missing/null data"
+      ],
+      "validation_checklist": [
+        "All acceptance criteria verified",
+        "No TypeScript errors (npx tsc --noEmit)",
+        "All tests pass (npm test)",
+        "No layer violations introduced",
+        "Blueprint regenerated (npm run blueprint)"
+      ],
+      "post_validation_updates": [
+        "Refresh docs/blueprint.html — cd apps/api && node blueprint.js",
+        "Refresh docs/roadmap.html — node scripts/generate-roadmap.js",
+        "Review PROJECT_STATE.md — update if architecture decisions changed",
+        "Review ARCHITECTURE_LOW_CONTEXT_GUIDE.md — update if auth/layers touched",
+        "Review docs/AUDIT.md — mark resolved findings, add new ones",
+        "Review SCHEMA_REFERENCE.md — update if schema changed",
+        "Commit: npx tsc --noEmit → npm test → npm run blueprint"
+      ],
+      "canonical_implementation_prompt": "## Ticket: Remaining route-level layer violations (CQ-1 through CQ-15 minus resolved) — routes/legal.ts (19 Prisma calls, worst …\n\n**Goal:** Extend F-P0-004: Remaining route-level layer violations (CQ-1 through CQ-15 minus resolved) — routes/legal.ts (19 Prisma calls, worst …\n\n**Phase:** P3 | **Area:** api\n**Parent Feature:** F-P0-004\n\n### In Scope\n- Fix Remaining route-level layer violations (CQ-1 through CQ-15 minus resolved) — routes/legal.ts (19 Prisma calls, worst …\n- API endpoint changes\n\n### Files to Modify (in order)\n1. `apps/api/prisma/schema.prisma`\n\n### Acceptance Criteria\n- [ ] Feature works as described in scope\n- [ ] All listed in_scope items implemented\n- [ ] Edge cases handled gracefully (empty state, missing data, permissions)\n\n### Test Plan\n- Verify feature works per acceptance criteria\n- No regressions in existing test suite (npm test)\n\n### Test Protocol\n1. npx tsc --noEmit — zero TypeScript errors\n2. npm test — all tests pass\n3. npm run blueprint — architecture docs sync\n4. Ticket-specific verification: verify acceptance criteria manually\n5. Regression checks: verify adjacent features still work\n6. API contract sync: if API changed, verify DTOs/OpenAPI/api-client match\n7. UI verification: if UI changed, manual check in browser\n8. Edge cases: verify behavior with missing/null data\n\n### Validation Checklist\n- [ ] All acceptance criteria verified\n- [ ] No TypeScript errors (npx tsc --noEmit)\n- [ ] All tests pass (npm test)\n- [ ] No layer violations introduced\n- [ ] Blueprint regenerated (npm run blueprint)\n\n### Post-Validation Updates\n- Refresh docs/blueprint.html — cd apps/api && node blueprint.js\n- Refresh docs/roadmap.html — node scripts/generate-roadmap.js\n- Review PROJECT_STATE.md — update if architecture decisions changed\n- Review ARCHITECTURE_LOW_CONTEXT_GUIDE.md — update if auth/layers touched\n- Review docs/AUDIT.md — mark resolved findings, add new ones\n- Review SCHEMA_REFERENCE.md — update if schema changed\n- Commit: npx tsc --noEmit → npm test → npm run blueprint"
+    },
+    {
+      "id": "DT-016",
+      "source_intake_ids": [
+        "INT-001"
+      ],
+      "title": "Align UI of tenant, contractor and owner on the manager UI which is the baseline in terms of navigation, UI tokens, etc.",
+      "goal": "Align UI of tenant, contractor and owner on the manager UI which is the baseline in terms of navigation, UI tokens, etc.",
+      "phase": "P0",
+      "order": 1,
+      "status": "draft",
+      "product_area": "owner-portal",
+      "parent_feature_id": null,
+      "depends_on": [],
+      "files_to_modify": [
+        "apps/web/pages/owner/",
+        "packages/api-client/src/"
+      ],
+      "in_scope": [
+        "Align UI of tenant, contractor and owner on the manager UI which is the baseline in terms of navigation, UI tokens, etc.",
+        "UI/page updates",
+        "Test coverage updates"
+      ],
+      "out_of_scope": [
+        "Refactoring unrelated code",
+        "New model/migration creation",
+        "Split item: Make all the table rows expandable by clicking on them, without having to click on a specific section of the row (e.g. (handled in separate draft)",
+        "Split item: It should be possible to dissociate a row click from a specifc click: e.g. (handled in separate draft)",
+        "Split item: expand row vs click on the action button to enable a different action than expanding the row. (handled in separate draft)"
+      ],
+      "acceptance_criteria": [
+        "Feature works as described in scope",
+        "Edge cases handled gracefully (empty state, missing data, permissions)"
+      ],
+      "tests_to_add_or_update": [],
+      "test_protocol": [],
+      "validation_checklist": [],
+      "post_validation_updates": [],
+      "canonical_implementation_prompt": "",
+      "parent_story_id": "INT-001",
+      "parent_story_title": "Align UI of tenant, contractor and owner on the manager UI which is the baseline in terms of navigation, UI tokens, etc",
+      "parent_story_raw_text": "Align UI of tenant, contractor and owner on the manager UI which is the baseline in terms of navigation, UI tokens, etc.\nMake all the table rows expandable by clicking on them, without having to click on a specific section of the row (e.g. actions). It should be possible to dissociate a row click from a specifc click: e.g. expand row vs click on the action button to enable a different action than expanding the row.",
+      "sibling_ticket_ids": [
+        "DT-017",
+        "DT-018",
+        "DT-019"
+      ],
+      "slice_rationale": "This ticket was split from parent story INT-001. Sibling slices cover: \"Make all the table rows expandable by clicking on them, with\", \"It should be possible to dissociate a row click from a speci\", \"expand row vs click on the action button to enable a differe\". This slice focuses on: Align UI of tenant, contractor and owner on the manager UI which is the baseline",
+      "sequence_role": "ui_followup",
+      "story_intent": "Originating from intake INT-001: Align UI of tenant, contractor and owner on the manager UI which is the baseline in terms of navigation, UI tokens, etc",
+      "story_success_outcome": "Feature is functional and accessible to target users. Parent story intent (INT-001) is partially fulfilled by this slice. All acceptance criteria pass. CI green (tsc + tests + blueprint).",
+      "files_to_inspect": [
+        "PROJECT_STATE.md (guardrails section)",
+        "apps/api/src/ARCHITECTURE_LOW_CONTEXT_GUIDE.md",
+        "apps/api/src/routes/owner-portal.ts (existing route patterns)"
+      ],
+      "implementation_shape": "ui_only",
+      "context_bundle": {
+        "architectural_constraints": [
+          "routes → workflows → services → repositories → Prisma (never skip)",
+          "Canonical includes required (G9) — no ad-hoc include trees"
+        ],
+        "shared_files": [],
+        "shared_assumptions": [],
+        "sibling_dependencies": []
+      },
+      "tests_to_add": [
+        "UI smoke test: verify page renders without errors",
+        "No regressions in existing test suite (npm test)"
+      ],
+      "tests_to_update": [],
+      "regression_checks": [
+        "npm test — full suite passes",
+        "npx tsc --noEmit — zero type errors"
+      ],
+      "refinement_status": "ready_candidate",
+      "refinement_notes": [],
+      "refined_at": "2026-03-20T13:03:54.394Z"
+    },
+    {
+      "id": "DT-017",
+      "source_intake_ids": [
+        "INT-001"
+      ],
+      "title": "Make all the table rows expandable by clicking on them, without having to click on a specific section of the row (e.g.",
+      "goal": "Make all the table rows expandable by clicking on them, without having to click on a specific section of the row (e.g.",
+      "phase": "P0",
+      "order": 2,
+      "status": "draft",
+      "product_area": "owner-portal",
+      "parent_feature_id": null,
+      "depends_on": [],
+      "files_to_modify": [
+        "apps/web/pages/owner/",
+        "packages/api-client/src/"
+      ],
+      "in_scope": [
+        "Make all the table rows expandable by clicking on them, without having to click on a specific section of the row (e.g.",
+        "UI/page updates",
+        "Test coverage updates"
+      ],
+      "out_of_scope": [
+        "Refactoring unrelated code",
+        "New model/migration creation",
+        "Split item: Align UI of tenant, contractor and owner on the manager UI which is the baseline in terms of navigation, UI tokens, etc. (handled in separate draft)",
+        "Split item: It should be possible to dissociate a row click from a specifc click: e.g. (handled in separate draft)",
+        "Split item: expand row vs click on the action button to enable a different action than expanding the row. (handled in separate draft)"
+      ],
+      "acceptance_criteria": [
+        "Feature works as described in scope",
+        "Edge cases handled gracefully (empty state, missing data, permissions)"
+      ],
+      "tests_to_add_or_update": [],
+      "test_protocol": [],
+      "validation_checklist": [],
+      "post_validation_updates": [],
+      "canonical_implementation_prompt": "",
+      "parent_story_id": "INT-001",
+      "parent_story_title": "Align UI of tenant, contractor and owner on the manager UI which is the baseline in terms of navigation, UI tokens, etc",
+      "parent_story_raw_text": "Align UI of tenant, contractor and owner on the manager UI which is the baseline in terms of navigation, UI tokens, etc.\nMake all the table rows expandable by clicking on them, without having to click on a specific section of the row (e.g. actions). It should be possible to dissociate a row click from a specifc click: e.g. expand row vs click on the action button to enable a different action than expanding the row.",
+      "sibling_ticket_ids": [
+        "DT-016",
+        "DT-018",
+        "DT-019"
+      ],
+      "slice_rationale": "This ticket was split from parent story INT-001. Sibling slices cover: \"Align UI of tenant, contractor and owner on the manager UI w\", \"It should be possible to dissociate a row click from a speci\", \"expand row vs click on the action button to enable a differe\". This slice focuses on: Make all the table rows expandable by clicking on them, without having to click ",
+      "sequence_role": "workflow",
+      "story_intent": "Originating from intake INT-001: Align UI of tenant, contractor and owner on the manager UI which is the baseline in terms of navigation, UI tokens, etc",
+      "story_success_outcome": "Feature is functional and accessible to target users. Parent story intent (INT-001) is partially fulfilled by this slice. All acceptance criteria pass. CI green (tsc + tests + blueprint).",
+      "files_to_inspect": [
+        "PROJECT_STATE.md (guardrails section)",
+        "apps/api/src/ARCHITECTURE_LOW_CONTEXT_GUIDE.md",
+        "apps/api/src/routes/owner-portal.ts (existing route patterns)"
+      ],
+      "implementation_shape": "ui_only",
+      "context_bundle": {
+        "architectural_constraints": [
+          "routes → workflows → services → repositories → Prisma (never skip)",
+          "Canonical includes required (G9) — no ad-hoc include trees"
+        ],
+        "shared_files": [
+          "apps/web/pages/owner/",
+          "packages/api-client/src/"
+        ],
+        "shared_assumptions": [],
+        "sibling_dependencies": []
+      },
+      "tests_to_add": [
+        "UI smoke test: verify page renders without errors",
+        "No regressions in existing test suite (npm test)"
+      ],
+      "tests_to_update": [],
+      "regression_checks": [
+        "npm test — full suite passes",
+        "npx tsc --noEmit — zero type errors"
+      ],
+      "refinement_status": "ready_candidate",
+      "refinement_notes": [],
+      "refined_at": "2026-03-20T09:53:48.724Z"
+    },
+    {
+      "id": "DT-018",
+      "source_intake_ids": [
+        "INT-001"
+      ],
+      "title": "It should be possible to dissociate a row click from a specifc click: e.g.",
+      "goal": "It should be possible to dissociate a row click from a specifc click: e.g.",
+      "phase": "P0",
+      "order": 3,
+      "status": "draft",
+      "product_area": "owner-portal",
+      "parent_feature_id": null,
+      "depends_on": [],
+      "files_to_modify": [
+        "apps/web/pages/owner/",
+        "packages/api-client/src/"
+      ],
+      "in_scope": [
+        "It should be possible to dissociate a row click from a specifc click: e.g.",
+        "UI/page updates",
+        "Test coverage updates"
+      ],
+      "out_of_scope": [
+        "Refactoring unrelated code",
+        "New model/migration creation",
+        "Split item: Align UI of tenant, contractor and owner on the manager UI which is the baseline in terms of navigation, UI tokens, etc. (handled in separate draft)",
+        "Split item: Make all the table rows expandable by clicking on them, without having to click on a specific section of the row (e.g. (handled in separate draft)",
+        "Split item: expand row vs click on the action button to enable a different action than expanding the row. (handled in separate draft)"
+      ],
+      "acceptance_criteria": [
+        "Feature works as described in scope",
+        "Edge cases handled gracefully (empty state, missing data, permissions)"
+      ],
+      "tests_to_add_or_update": [],
+      "test_protocol": [],
+      "validation_checklist": [],
+      "post_validation_updates": [],
+      "canonical_implementation_prompt": "",
+      "parent_story_id": "INT-001",
+      "parent_story_title": "Align UI of tenant, contractor and owner on the manager UI which is the baseline in terms of navigation, UI tokens, etc",
+      "parent_story_raw_text": "Align UI of tenant, contractor and owner on the manager UI which is the baseline in terms of navigation, UI tokens, etc.\nMake all the table rows expandable by clicking on them, without having to click on a specific section of the row (e.g. actions). It should be possible to dissociate a row click from a specifc click: e.g. expand row vs click on the action button to enable a different action than expanding the row.",
+      "sibling_ticket_ids": [
+        "DT-016",
+        "DT-017",
+        "DT-019"
+      ],
+      "slice_rationale": "This ticket was split from parent story INT-001. Sibling slices cover: \"Align UI of tenant, contractor and owner on the manager UI w\", \"Make all the table rows expandable by clicking on them, with\", \"expand row vs click on the action button to enable a differe\". This slice focuses on: It should be possible to dissociate a row click from a specifc click: e.g.",
+      "sequence_role": "workflow",
+      "story_intent": "Originating from intake INT-001: Align UI of tenant, contractor and owner on the manager UI which is the baseline in terms of navigation, UI tokens, etc",
+      "story_success_outcome": "Feature is functional and accessible to target users. Parent story intent (INT-001) is partially fulfilled by this slice. All acceptance criteria pass. CI green (tsc + tests + blueprint).",
+      "files_to_inspect": [
+        "PROJECT_STATE.md (guardrails section)",
+        "apps/api/src/ARCHITECTURE_LOW_CONTEXT_GUIDE.md",
+        "apps/api/src/routes/owner-portal.ts (existing route patterns)"
+      ],
+      "implementation_shape": "ui_only",
+      "context_bundle": {
+        "architectural_constraints": [
+          "routes → workflows → services → repositories → Prisma (never skip)",
+          "Canonical includes required (G9) — no ad-hoc include trees"
+        ],
+        "shared_files": [
+          "apps/web/pages/owner/",
+          "packages/api-client/src/"
+        ],
+        "shared_assumptions": [],
+        "sibling_dependencies": []
+      },
+      "tests_to_add": [
+        "UI smoke test: verify page renders without errors",
+        "No regressions in existing test suite (npm test)"
+      ],
+      "tests_to_update": [],
+      "regression_checks": [
+        "npm test — full suite passes",
+        "npx tsc --noEmit — zero type errors"
+      ],
+      "refinement_status": "ready_candidate",
+      "refinement_notes": [],
+      "refined_at": "2026-03-20T09:53:48.724Z"
+    },
+    {
+      "id": "DT-019",
+      "source_intake_ids": [
+        "INT-001"
+      ],
+      "title": "expand row vs click on the action button to enable a different action than expanding the row.",
+      "goal": "expand row vs click on the action button to enable a different action than expanding the row.",
+      "phase": "P0",
+      "order": 4,
+      "status": "draft",
+      "product_area": "owner-portal",
+      "parent_feature_id": null,
+      "depends_on": [],
+      "files_to_modify": [
+        "apps/web/pages/owner/",
+        "packages/api-client/src/"
+      ],
+      "in_scope": [
+        "expand row vs click on the action button to enable a different action than expanding the row.",
+        "UI/page updates",
+        "Test coverage updates"
+      ],
+      "out_of_scope": [
+        "Refactoring unrelated code",
+        "New model/migration creation",
+        "Split item: Align UI of tenant, contractor and owner on the manager UI which is the baseline in terms of navigation, UI tokens, etc. (handled in separate draft)",
+        "Split item: Make all the table rows expandable by clicking on them, without having to click on a specific section of the row (e.g. (handled in separate draft)",
+        "Split item: It should be possible to dissociate a row click from a specifc click: e.g. (handled in separate draft)"
+      ],
+      "acceptance_criteria": [
+        "Feature works as described in scope",
+        "Edge cases handled gracefully (empty state, missing data, permissions)"
+      ],
+      "tests_to_add_or_update": [],
+      "test_protocol": [],
+      "validation_checklist": [],
+      "post_validation_updates": [],
+      "canonical_implementation_prompt": "",
+      "parent_story_id": "INT-001",
+      "parent_story_title": "Align UI of tenant, contractor and owner on the manager UI which is the baseline in terms of navigation, UI tokens, etc",
+      "parent_story_raw_text": "Align UI of tenant, contractor and owner on the manager UI which is the baseline in terms of navigation, UI tokens, etc.\nMake all the table rows expandable by clicking on them, without having to click on a specific section of the row (e.g. actions). It should be possible to dissociate a row click from a specifc click: e.g. expand row vs click on the action button to enable a different action than expanding the row.",
+      "sibling_ticket_ids": [
+        "DT-016",
+        "DT-017",
+        "DT-018"
+      ],
+      "slice_rationale": "This ticket was split from parent story INT-001. Sibling slices cover: \"Align UI of tenant, contractor and owner on the manager UI w\", \"Make all the table rows expandable by clicking on them, with\", \"It should be possible to dissociate a row click from a speci\". This slice focuses on: expand row vs click on the action button to enable a different action than expan",
+      "sequence_role": "enabler",
+      "story_intent": "Originating from intake INT-001: Align UI of tenant, contractor and owner on the manager UI which is the baseline in terms of navigation, UI tokens, etc",
+      "story_success_outcome": "Feature is functional and accessible to target users. Parent story intent (INT-001) is partially fulfilled by this slice. All acceptance criteria pass. CI green (tsc + tests + blueprint).",
+      "files_to_inspect": [
+        "PROJECT_STATE.md (guardrails section)",
+        "apps/api/src/ARCHITECTURE_LOW_CONTEXT_GUIDE.md",
+        "apps/api/src/routes/owner-portal.ts (existing route patterns)"
+      ],
+      "implementation_shape": "ui_only",
+      "context_bundle": {
+        "architectural_constraints": [
+          "routes → workflows → services → repositories → Prisma (never skip)",
+          "Canonical includes required (G9) — no ad-hoc include trees"
+        ],
+        "shared_files": [
+          "apps/web/pages/owner/",
+          "packages/api-client/src/"
+        ],
+        "shared_assumptions": [],
+        "sibling_dependencies": []
+      },
+      "tests_to_add": [
+        "UI smoke test: verify page renders without errors",
+        "No regressions in existing test suite (npm test)"
+      ],
+      "tests_to_update": [],
+      "regression_checks": [
+        "npm test — full suite passes",
+        "npx tsc --noEmit — zero type errors"
+      ],
+      "refinement_status": "ready_candidate",
+      "refinement_notes": [],
+      "refined_at": "2026-03-20T09:53:48.724Z"
+    },
+    {
+      "id": "DT-020",
+      "source_intake_ids": [
+        "INT-004"
+      ],
+      "title": "- Depreciation standards page should by default show collapsed items (UI change), no other alteration",
+      "goal": "- Depreciation standards page should by default show collapsed items (UI change), no other alteration",
+      "phase": "P2",
+      "order": 1,
+      "status": "draft",
+      "product_area": "ui-polish",
+      "parent_feature_id": null,
+      "depends_on": [],
+      "files_to_modify": [],
+      "in_scope": [],
+      "out_of_scope": [],
+      "acceptance_criteria": [],
+      "tests_to_add_or_update": [],
+      "test_protocol": [],
+      "validation_checklist": [],
+      "post_validation_updates": [],
+      "canonical_implementation_prompt": ""
+    },
+    {
+      "id": "DT-021",
+      "source_intake_ids": [
+        "INT-005"
+      ],
+      "title": "Analyse a repair vs replace opportunity: map the asset against it’s useful life (data from the legal engine can answe…",
+      "goal": "- Analyse a repair vs replace opportunity: map the asset against it’s useful life (data from the legal engine can answer this), check repair history and run a cost of opportunity scenario so that the",
+      "phase": "P3",
+      "order": 1,
+      "status": "draft",
+      "product_area": "owner-portal",
+      "parent_feature_id": null,
+      "depends_on": [],
+      "files_to_modify": [],
+      "files_to_inspect": [],
+      "in_scope": [],
+      "out_of_scope": [],
+      "acceptance_criteria": [],
+      "tests_to_add_or_update": [],
+      "test_protocol": [],
+      "validation_checklist": [],
+      "post_validation_updates": [],
+      "canonical_implementation_prompt": "",
+      "parent_story_id": null,
+      "parent_story_title": null,
+      "parent_story_raw_text": null,
+      "sibling_ticket_ids": [],
+      "slice_rationale": null,
+      "sequence_role": null,
+      "story_intent": null,
+      "story_success_outcome": null,
+      "implementation_shape": null,
+      "risk_notes": [],
+      "context_bundle": null,
+      "tests_to_add": [],
+      "tests_to_update": [],
+      "regression_checks": [],
+      "refinement_status": "unrefined",
+      "refinement_notes": [],
+      "refined_at": null
+    },
+    {
+      "id": "DT-022",
+      "source_intake_ids": [
+        "INT-002"
+      ],
+      "title": "Check all of the unit assets against their depreciation and present the landlord with maintenance decisions: cost of …",
+      "goal": "Deliver \"Check all of the unit assets against their depreciation and present the landlord with maintenance decisions: cost of …\" in the inventory domain to fulfill the original request: - check all of the unit assets against their depreciation and present the landlord with maintenance decisions: cost of m (full-stack: API + UI).",
+      "phase": "P1",
+      "order": 1,
+      "status": "draft",
+      "product_area": "inventory",
+      "parent_feature_id": null,
+      "depends_on": [],
+      "files_to_modify": [
+        "apps/api/src/repositories/inventory.repository.ts",
+        "apps/api/src/routes/inventory.ts",
+        "apps/web/pages/manager/inventory/",
+        "packages/api-client/src/"
+      ],
+      "files_to_inspect": [
+        "PROJECT_STATE.md (guardrails section)",
+        "apps/api/src/ARCHITECTURE_LOW_CONTEXT_GUIDE.md",
+        "apps/api/src/routes/inventory.ts (existing route patterns)",
+        "apps/api/src/repositories/inventory.repository.ts (canonical includes)"
+      ],
+      "in_scope": [
+        "Check all of the unit assets against their depreciation and present the landlord with maintenance decisions: cost of …"
+      ],
+      "out_of_scope": [
+        "Cross-portal changes (unless explicitly listed)",
+        "Performance optimization (separate ticket)",
+        "Split item: Cost of doing the work sensitivity analysis (handled in separate draft)"
+      ],
+      "acceptance_criteria": [
+        "Feature works as described in scope",
+        "All listed in_scope items implemented",
+        "Edge cases handled gracefully (empty state, missing data, permissions)"
+      ],
+      "tests_to_add_or_update": [
+        "API contract test: verify request/response shape",
+        "UI smoke test: verify page renders without errors",
+        "No regressions in existing test suite (npm test)"
+      ],
+      "test_protocol": [
+        "npx tsc --noEmit — zero TypeScript errors",
+        "npm test — all tests pass",
+        "npm run blueprint — architecture docs sync",
+        "Ticket-specific verification: verify acceptance criteria manually",
+        "Regression checks: verify adjacent features still work",
+        "API contract sync: if API changed, verify DTOs/OpenAPI/api-client match",
+        "UI verification: if UI changed, manual check in browser",
+        "Edge cases: verify behavior with missing/null data"
+      ],
+      "validation_checklist": [
+        "All acceptance criteria verified",
+        "No TypeScript errors (npx tsc --noEmit)",
+        "All tests pass (npm test)",
+        "No layer violations introduced",
+        "Blueprint regenerated (npm run blueprint)"
+      ],
+      "post_validation_updates": [
+        "Refresh docs/blueprint.html — cd apps/api && node blueprint.js",
+        "Refresh docs/roadmap.html — node scripts/generate-roadmap.js",
+        "Review PROJECT_STATE.md — update if architecture decisions changed",
+        "Review ARCHITECTURE_LOW_CONTEXT_GUIDE.md — update if auth/layers touched",
+        "Review docs/AUDIT.md — mark resolved findings, add new ones",
+        "Review SCHEMA_REFERENCE.md — update if schema changed",
+        "Commit: npx tsc --noEmit → npm test → npm run blueprint"
+      ],
+      "canonical_implementation_prompt": "## Ticket: Check all of the unit assets against their depreciation and present the landlord with maintenance decisions: cost of …\n\n**Goal:** Implement: Check all of the unit assets against their depreciation and present the landlord with maintenance decisions: cost of …\n\n**Phase:** P1 | **Area:** inventory\n\n### In Scope\n- Check all of the unit assets against their depreciation and present the landlord with maintenance decisions: cost of …\n\n### Out of Scope\n- Cross-portal changes (unless explicitly listed)\n- Performance optimization (separate ticket)\n- Split item: Cost of doing the work sensitivity analysis (handled in separate draft)\n\n### Files to Modify (in order)\n1. `apps/api/src/repositories/inventory.repository.ts`\n2. `apps/api/src/routes/inventory.ts`\n3. `apps/web/pages/manager/inventory/`\n4. `packages/api-client/src/`\n\n### Acceptance Criteria\n- [ ] Feature works as described in scope\n- [ ] All listed in_scope items implemented\n- [ ] Edge cases handled gracefully (empty state, missing data, permissions)\n\n### Test Plan\n- API contract test: verify request/response shape\n- UI smoke test: verify page renders without errors\n- No regressions in existing test suite (npm test)\n\n### Test Protocol\n1. npx tsc --noEmit — zero TypeScript errors\n2. npm test — all tests pass\n3. npm run blueprint — architecture docs sync\n4. Ticket-specific verification: verify acceptance criteria manually\n5. Regression checks: verify adjacent features still work\n6. API contract sync: if API changed, verify DTOs/OpenAPI/api-client match\n7. UI verification: if UI changed, manual check in browser\n8. Edge cases: verify behavior with missing/null data\n\n### Validation Checklist\n- [ ] All acceptance criteria verified\n- [ ] No TypeScript errors (npx tsc --noEmit)\n- [ ] All tests pass (npm test)\n- [ ] No layer violations introduced\n- [ ] Blueprint regenerated (npm run blueprint)\n\n### Post-Validation Updates\n- Refresh docs/blueprint.html — cd apps/api && node blueprint.js\n- Refresh docs/roadmap.html — node scripts/generate-roadmap.js\n- Review PROJECT_STATE.md — update if architecture decisions changed\n- Review ARCHITECTURE_LOW_CONTEXT_GUIDE.md — update if auth/layers touched\n- Review docs/AUDIT.md — mark resolved findings, add new ones\n- Review SCHEMA_REFERENCE.md — update if schema changed\n- Commit: npx tsc --noEmit → npm test → npm run blueprint",
+      "parent_story_id": "INT-002",
+      "parent_story_title": "Check all of the unit assets against their depreciation and present the landlord with maintenance decisions: cost of …",
+      "parent_story_raw_text": "- check all of the unit assets against their depreciation and present the landlord with maintenance decisions: cost of maintenance with potential rent increase vs. cost of doing the work sensitivity analysis.",
+      "sibling_ticket_ids": [
+        "DT-023"
+      ],
+      "slice_rationale": "This ticket was split from parent story INT-002. Sibling slices cover: \"Cost of doing the work sensitivity analysis\". This slice focuses on: Check all of the unit assets against their depreciation and present the landlord",
+      "sequence_role": "workflow",
+      "story_intent": "Originating from intake INT-002: Check all of the unit assets against their depreciation and present the landlord with maintenance decisions: cost of …",
+      "story_success_outcome": "Feature is functional and accessible to target users. Parent story intent (INT-002) is partially fulfilled by this slice. All acceptance criteria pass. CI green (tsc + tests + blueprint).",
+      "implementation_shape": "full_stack",
+      "risk_notes": [
+        "CQ-1: `routes/legal.ts` — massive layer violation",
+        "CQ-2: `routes/rentalApplications.ts` — selection pipeline duplicated",
+        "CQ-3: `routes/tenants.ts` — business logic in route",
+        "CQ-4: `routes/leases.ts` — notification logic in route",
+        "CQ-5: `routes/legal.ts` — coverage computation",
+        "CQ-8: `routes/auth.ts` — direct Prisma",
+        "CQ-11: `routes/invoices.ts` — workflows exist but not wired",
+        "CQ-14: `routes/rentalApplications.ts` — attachment download direct Prisma",
+        "CQ-15: `routes/invoices.ts` — job status branching in route",
+        "TC-2: `routes/config.ts` has zero test coverage",
+        "TC-7: `routes/helpers.ts` has zero test coverage"
+      ],
+      "context_bundle": {
+        "architectural_constraints": [
+          "routes → workflows → services → repositories → Prisma (never skip)",
+          "Canonical includes required (G9) — no ad-hoc include trees",
+          "Schema changes require migration (G1) — never db push",
+          "New fields: update schema → migration → repo include → DTO → OpenAPI → api-client → tests (G2)"
+        ],
+        "shared_files": [
+          "apps/api/src/repositories/inventory.repository.ts",
+          "apps/api/src/routes/inventory.ts",
+          "apps/web/pages/manager/inventory/",
+          "packages/api-client/src/"
+        ],
+        "shared_assumptions": [],
+        "sibling_dependencies": []
+      },
+      "tests_to_add": [
+        "API contract test: verify request/response shape",
+        "UI smoke test: verify page renders without errors",
+        "No regressions in existing test suite (npm test)"
+      ],
+      "tests_to_update": [],
+      "regression_checks": [
+        "npm test — full suite passes",
+        "npx tsc --noEmit — zero type errors"
+      ],
+      "refinement_status": "ready_candidate",
+      "refinement_notes": [],
+      "refined_at": "2026-03-20T13:06:38.295Z"
+    },
+    {
+      "id": "DT-023",
+      "source_intake_ids": [
+        "INT-002"
+      ],
+      "title": "Cost of doing the work sensitivity analysis",
+      "goal": "Deliver \"Cost of doing the work sensitivity analysis\" in the inventory domain to fulfill the original request: - check all of the unit assets against their depreciation and present the landlord with maintenance decisions: cost of m (full-stack: API + UI).",
+      "phase": "P1",
+      "order": 2,
+      "status": "draft",
+      "product_area": "inventory",
+      "parent_feature_id": null,
+      "depends_on": [],
+      "files_to_modify": [
+        "apps/api/src/repositories/inventory.repository.ts",
+        "apps/api/src/routes/inventory.ts",
+        "apps/web/pages/manager/inventory/",
+        "packages/api-client/src/"
+      ],
+      "files_to_inspect": [
+        "PROJECT_STATE.md (guardrails section)",
+        "apps/api/src/ARCHITECTURE_LOW_CONTEXT_GUIDE.md",
+        "apps/api/src/routes/inventory.ts (existing route patterns)",
+        "apps/api/src/repositories/inventory.repository.ts (canonical includes)"
+      ],
+      "in_scope": [
+        "Cost of doing the work sensitivity analysis"
+      ],
+      "out_of_scope": [
+        "Cross-portal changes (unless explicitly listed)",
+        "Performance optimization (separate ticket)",
+        "Split item: Check all of the unit assets against their depreciation and present the landlord with maintenance decisions: cost of … (handled in separate draft)"
+      ],
+      "acceptance_criteria": [
+        "Feature works as described in scope",
+        "All listed in_scope items implemented",
+        "Edge cases handled gracefully (empty state, missing data, permissions)"
+      ],
+      "tests_to_add_or_update": [
+        "API contract test: verify request/response shape",
+        "UI smoke test: verify page renders without errors",
+        "No regressions in existing test suite (npm test)"
+      ],
+      "test_protocol": [
+        "npx tsc --noEmit — zero TypeScript errors",
+        "npm test — all tests pass",
+        "npm run blueprint — architecture docs sync",
+        "Ticket-specific verification: verify acceptance criteria manually",
+        "Regression checks: verify adjacent features still work",
+        "API contract sync: if API changed, verify DTOs/OpenAPI/api-client match",
+        "UI verification: if UI changed, manual check in browser",
+        "Edge cases: verify behavior with missing/null data"
+      ],
+      "validation_checklist": [
+        "All acceptance criteria verified",
+        "No TypeScript errors (npx tsc --noEmit)",
+        "All tests pass (npm test)",
+        "No layer violations introduced",
+        "Blueprint regenerated (npm run blueprint)"
+      ],
+      "post_validation_updates": [
+        "Refresh docs/blueprint.html — cd apps/api && node blueprint.js",
+        "Refresh docs/roadmap.html — node scripts/generate-roadmap.js",
+        "Review PROJECT_STATE.md — update if architecture decisions changed",
+        "Review ARCHITECTURE_LOW_CONTEXT_GUIDE.md — update if auth/layers touched",
+        "Review docs/AUDIT.md — mark resolved findings, add new ones",
+        "Review SCHEMA_REFERENCE.md — update if schema changed",
+        "Commit: npx tsc --noEmit → npm test → npm run blueprint"
+      ],
+      "canonical_implementation_prompt": "## Ticket: Cost of doing the work sensitivity analysis\n\n**Goal:** Implement: Cost of doing the work sensitivity analysis\n\n**Phase:** P1 | **Area:** inventory\n\n### In Scope\n- Cost of doing the work sensitivity analysis\n\n### Out of Scope\n- Cross-portal changes (unless explicitly listed)\n- Performance optimization (separate ticket)\n- Split item: Check all of the unit assets against their depreciation and present the landlord with maintenance decisions: cost of … (handled in separate draft)\n\n### Files to Modify (in order)\n1. `apps/api/src/repositories/inventory.repository.ts`\n2. `apps/api/src/routes/inventory.ts`\n3. `apps/web/pages/manager/inventory/`\n4. `packages/api-client/src/`\n\n### Acceptance Criteria\n- [ ] Feature works as described in scope\n- [ ] All listed in_scope items implemented\n- [ ] Edge cases handled gracefully (empty state, missing data, permissions)\n\n### Test Plan\n- API contract test: verify request/response shape\n- UI smoke test: verify page renders without errors\n- No regressions in existing test suite (npm test)\n\n### Test Protocol\n1. npx tsc --noEmit — zero TypeScript errors\n2. npm test — all tests pass\n3. npm run blueprint — architecture docs sync\n4. Ticket-specific verification: verify acceptance criteria manually\n5. Regression checks: verify adjacent features still work\n6. API contract sync: if API changed, verify DTOs/OpenAPI/api-client match\n7. UI verification: if UI changed, manual check in browser\n8. Edge cases: verify behavior with missing/null data\n\n### Validation Checklist\n- [ ] All acceptance criteria verified\n- [ ] No TypeScript errors (npx tsc --noEmit)\n- [ ] All tests pass (npm test)\n- [ ] No layer violations introduced\n- [ ] Blueprint regenerated (npm run blueprint)\n\n### Post-Validation Updates\n- Refresh docs/blueprint.html — cd apps/api && node blueprint.js\n- Refresh docs/roadmap.html — node scripts/generate-roadmap.js\n- Review PROJECT_STATE.md — update if architecture decisions changed\n- Review ARCHITECTURE_LOW_CONTEXT_GUIDE.md — update if auth/layers touched\n- Review docs/AUDIT.md — mark resolved findings, add new ones\n- Review SCHEMA_REFERENCE.md — update if schema changed\n- Commit: npx tsc --noEmit → npm test → npm run blueprint",
+      "parent_story_id": "INT-002",
+      "parent_story_title": "Check all of the unit assets against their depreciation and present the landlord with maintenance decisions: cost of …",
+      "parent_story_raw_text": "- check all of the unit assets against their depreciation and present the landlord with maintenance decisions: cost of maintenance with potential rent increase vs. cost of doing the work sensitivity analysis.",
+      "sibling_ticket_ids": [
+        "DT-022"
+      ],
+      "slice_rationale": "This ticket was split from parent story INT-002. Sibling slices cover: \"Check all of the unit assets against their depreciation and \". This slice focuses on: Cost of doing the work sensitivity analysis",
+      "sequence_role": "workflow",
+      "story_intent": "Originating from intake INT-002: Check all of the unit assets against their depreciation and present the landlord with maintenance decisions: cost of …",
+      "story_success_outcome": "Feature is functional and accessible to target users. Parent story intent (INT-002) is partially fulfilled by this slice. All acceptance criteria pass. CI green (tsc + tests + blueprint).",
+      "implementation_shape": "full_stack",
+      "risk_notes": [
+        "CQ-1: `routes/legal.ts` — massive layer violation",
+        "CQ-2: `routes/rentalApplications.ts` — selection pipeline duplicated",
+        "CQ-3: `routes/tenants.ts` — business logic in route",
+        "CQ-4: `routes/leases.ts` — notification logic in route",
+        "CQ-5: `routes/legal.ts` — coverage computation",
+        "CQ-8: `routes/auth.ts` — direct Prisma",
+        "CQ-11: `routes/invoices.ts` — workflows exist but not wired",
+        "CQ-14: `routes/rentalApplications.ts` — attachment download direct Prisma",
+        "CQ-15: `routes/invoices.ts` — job status branching in route",
+        "TC-2: `routes/config.ts` has zero test coverage",
+        "TC-7: `routes/helpers.ts` has zero test coverage"
+      ],
+      "context_bundle": {
+        "architectural_constraints": [
+          "routes → workflows → services → repositories → Prisma (never skip)",
+          "Canonical includes required (G9) — no ad-hoc include trees",
+          "Schema changes require migration (G1) — never db push",
+          "New fields: update schema → migration → repo include → DTO → OpenAPI → api-client → tests (G2)"
+        ],
+        "shared_files": [
+          "apps/api/src/repositories/inventory.repository.ts",
+          "apps/api/src/routes/inventory.ts",
+          "apps/web/pages/manager/inventory/",
+          "packages/api-client/src/"
+        ],
+        "shared_assumptions": [],
+        "sibling_dependencies": []
+      },
+      "tests_to_add": [
+        "API contract test: verify request/response shape",
+        "UI smoke test: verify page renders without errors",
+        "No regressions in existing test suite (npm test)"
+      ],
+      "tests_to_update": [],
+      "regression_checks": [
+        "npm test — full suite passes",
+        "npx tsc --noEmit — zero type errors"
+      ],
+      "refinement_status": "ready_candidate",
+      "refinement_notes": [],
+      "refined_at": "2026-03-20T13:06:53.798Z"
+    }
+  ]
 }

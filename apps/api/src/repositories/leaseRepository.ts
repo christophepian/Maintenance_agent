@@ -10,7 +10,7 @@
  * G9: canonical include constants live here.
  */
 
-import { PrismaClient, LeaseStatus } from "@prisma/client";
+import { PrismaClient, LeaseStatus, RequestStatus, JobStatus } from "@prisma/client";
 
 // ─── Canonical Includes ────────────────────────────────────────
 
@@ -205,4 +205,57 @@ export async function findOrCreateAdminContractor(
     });
   }
   return contractor;
+}
+
+// ─── Lease Count ───────────────────────────────────────────────
+
+/** Count leases matching filter criteria (for pagination). */
+export async function countLeases(
+  prisma: PrismaClient,
+  orgId: string,
+  filters: { status?: string; unitId?: string; applicationId?: string } = {},
+) {
+  const where: any = { orgId, isTemplate: false };
+  if (filters.status) where.status = filters.status;
+  if (filters.unitId) where.unitId = filters.unitId;
+  if (filters.applicationId) where.applicationId = filters.applicationId;
+  return prisma.lease.count({ where });
+}
+
+// ─── Invoice Support (cross-model scaffolding) ────────────────
+
+/** Create a system admin Request for lease invoice scaffolding. */
+export async function createAdminRequest(
+  prisma: PrismaClient,
+  data: { description: string; category: string; status: RequestStatus; contractorNotes: string },
+) {
+  return prisma.request.create({ data });
+}
+
+/** Create a system admin Job for lease invoice scaffolding. */
+export async function createAdminJob(
+  prisma: PrismaClient,
+  data: { orgId: string; requestId: string; contractorId: string; status: JobStatus },
+) {
+  return prisma.job.create({ data });
+}
+
+/** Create an invoice (used for lease-linked invoices). */
+export async function createInvoice(
+  prisma: PrismaClient,
+  data: Record<string, unknown>,
+) {
+  return prisma.invoice.create({ data: data as any });
+}
+
+/** List invoices for a lease. */
+export async function listInvoicesByLease(
+  prisma: PrismaClient,
+  leaseId: string,
+  orgId: string,
+) {
+  return prisma.invoice.findMany({
+    where: { leaseId, orgId },
+    orderBy: { createdAt: "desc" },
+  });
 }

@@ -18,6 +18,7 @@ const VALID_REQUEST_TRANSITIONS: Record<string, RequestStatus[]> = {
   [RequestStatus.RFP_PENDING]: [
     RequestStatus.AUTO_APPROVED,             // avg quotes ≤ threshold
     RequestStatus.PENDING_OWNER_APPROVAL,    // avg quotes > threshold
+    RequestStatus.ASSIGNED,                  // quote awarded → contractor assigned
   ],
   [RequestStatus.PENDING_OWNER_APPROVAL]: [
     RequestStatus.APPROVED,                  // owner approves (post-RFP cost approval)
@@ -25,6 +26,7 @@ const VALID_REQUEST_TRANSITIONS: Record<string, RequestStatus[]> = {
     RequestStatus.OWNER_REJECTED,            // owner rejects (terminal)
   ],
   [RequestStatus.AUTO_APPROVED]: [
+    RequestStatus.ASSIGNED,                  // contractor assigned after auto-approval
     RequestStatus.IN_PROGRESS,               // contractor books appointment
   ],
   [RequestStatus.APPROVED]: [

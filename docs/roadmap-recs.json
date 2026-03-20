@@ -1,0 +1,156 @@
+{
+  "recommendations": [
+    {
+      "id": "S-P0-001-02",
+      "rank": 1,
+      "title": "Configure SMTP env vars",
+      "phase": "P0",
+      "type": "infra",
+      "column": "ready",
+      "isSlice": true,
+      "isCustom": false,
+      "parentId": "F-P0-001",
+      "parentTitle": "Email Delivery (SMTP / SendGrid)",
+      "reasons": [
+        "P0 critical-path — highest priority phase",
+        "all dependencies met — ready now",
+        "concrete slice (3 files)",
+        "declared position: feature #1, slice #2"
+      ],
+      "unlocks": 0,
+      "scopeFileCount": 3,
+      "movement": 0,
+      "movementLabel": "—",
+      "hasCompleteTests": false,
+      "files": [
+        "SMTP provider config",
+        "emailOutbox model",
+        "notificationService"
+      ],
+      "blockedBy": []
+    },
+    {
+      "id": "F-P0-002",
+      "rank": 2,
+      "title": "Legal DSL Variable Resolver",
+      "phase": "P0",
+      "type": "wire",
+      "column": "ready",
+      "isSlice": false,
+      "isCustom": false,
+      "parentId": null,
+      "parentTitle": null,
+      "reasons": [
+        "P0 critical-path — highest priority phase",
+        "all dependencies met — ready now",
+        "feature-level (4 hooks)",
+        "declared position: feature #2",
+        "completing this unlocks 1 downstream item"
+      ],
+      "unlocks": 1,
+      "scopeFileCount": 4,
+      "movement": 0,
+      "movementLabel": "—",
+      "hasCompleteTests": false,
+      "files": [
+        "data ingestion service",
+        "LegalVariable model",
+        "LegalRule + DSL",
+        "evaluateLegalRoutingWorkflow"
+      ],
+      "blockedBy": []
+    },
+    {
+      "id": "F-P0-003",
+      "rank": 3,
+      "title": "Skribble e-Sign Integration",
+      "phase": "P0",
+      "type": "wire",
+      "column": "ready",
+      "isSlice": false,
+      "isCustom": false,
+      "parentId": null,
+      "parentTitle": null,
+      "reasons": [
+        "P0 critical-path — highest priority phase",
+        "all dependencies met — ready now",
+        "feature-level (3 hooks)",
+        "declared position: feature #3"
+      ],
+      "unlocks": 0,
+      "scopeFileCount": 3,
+      "movement": 0,
+      "movementLabel": "—",
+      "hasCompleteTests": false,
+      "files": [
+        "Skribble API client",
+        "SignatureRequest model",
+        "leaseService"
+      ],
+      "blockedBy": []
+    },
+    {
+      "id": "F-P0-004",
+      "rank": 4,
+      "title": "Route Layer Refactor (CQ-1/3/4)",
+      "phase": "P0",
+      "type": "refactor",
+      "column": "ready",
+      "isSlice": false,
+      "isCustom": false,
+      "parentId": null,
+      "parentTitle": null,
+      "reasons": [
+        "P0 critical-path — highest priority phase",
+        "all dependencies met — ready now",
+        "feature-level (3 hooks)",
+        "declared position: feature #4"
+      ],
+      "unlocks": 0,
+      "scopeFileCount": 3,
+      "movement": 0,
+      "movementLabel": "—",
+      "hasCompleteTests": false,
+      "files": [
+        "legalService extraction",
+        "tenantService extraction",
+        "workflow pattern established"
+      ],
+      "blockedBy": []
+    },
+    {
+      "id": "F-P1-001",
+      "rank": 5,
+      "title": "QR-Invoice Rent Demand Generation",
+      "phase": "P1",
+      "type": "build",
+      "column": "ready",
+      "isSlice": false,
+      "isCustom": false,
+      "parentId": null,
+      "parentTitle": null,
+      "reasons": [
+        "P1 — phase position 2/6",
+        "all dependencies met — ready now",
+        "feature-level (5 hooks)",
+        "declared position: feature #5"
+      ],
+      "unlocks": 0,
+      "scopeFileCount": 5,
+      "movement": 0,
+      "movementLabel": "—",
+      "hasCompleteTests": false,
+      "files": [
+        "QR-bill library (qrbill-js)",
+        "rentDemandWorkflow",
+        "Lease model",
+        "invoiceService",
+        "pdfGenerator"
+      ],
+      "blockedBy": []
+    }
+  ],
+  "generated_at": "2026-03-20 14:26:06 UTC",
+  "total_in_queue": 25,
+  "next_id": "S-P0-001-02"
+}

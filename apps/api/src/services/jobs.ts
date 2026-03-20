@@ -82,6 +82,12 @@ export interface JobDTO {
     comment?: string | null;
     createdAt: string;
   }>;
+  appointmentSlots?: Array<{
+    id: string;
+    startTime: string;
+    endTime: string;
+    status: string;
+  }>;
 }
 
 /**
@@ -104,6 +110,12 @@ export interface JobSummaryDTO {
   requestDescription?: string;
   unitNumber?: string;
   buildingName?: string;
+  appointmentSlots?: Array<{
+    id: string;
+    startTime: string;
+    endTime: string;
+    status: string;
+  }>;
 }
 
 /**
@@ -181,22 +193,7 @@ export async function listJobs(
   const [jobs, total] = await Promise.all([
     prisma.job.findMany({
       where,
-      include: useSummary
-        ? {
-            contractor: { select: { name: true } },
-            request: {
-              select: {
-                description: true,
-                unit: {
-                  select: {
-                    unitNumber: true,
-                    building: { select: { name: true } },
-                  },
-                },
-              },
-            },
-          }
-        : JOB_INCLUDE,
+      include: useSummary ? JOB_SUMMARY_INCLUDE : JOB_INCLUDE,
       orderBy: { createdAt: 'desc' },
     }),
     prisma.job.count({ where }),
@@ -299,6 +296,12 @@ function mapJobToDTO(job: JobWithFullInclude): JobDTO {
       comment: r.comment,
       createdAt: r.createdAt.toISOString(),
     })),
+    appointmentSlots: job.appointmentSlots?.map((s) => ({
+      id: s.id,
+      startTime: s.startTime.toISOString(),
+      endTime: s.endTime.toISOString(),
+      status: s.status,
+    })),
   };
 }
 
@@ -322,5 +325,11 @@ function mapJobToSummaryDTO(job: JobWithSummaryInclude): JobSummaryDTO {
     requestDescription: job.request?.description,
     unitNumber: job.request?.unit?.unitNumber,
     buildingName: job.request?.unit?.building?.name,
+    appointmentSlots: job.appointmentSlots?.map((s) => ({
+      id: s.id,
+      startTime: s.startTime.toISOString(),
+      endTime: s.endTime.toISOString(),
+      status: s.status,
+    })),
   };
 }

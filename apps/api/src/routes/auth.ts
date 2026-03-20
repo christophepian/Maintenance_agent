@@ -233,43 +233,70 @@ export function registerAuthRoutes(router: Router) {
     const tenantId = requireTenantSession(req, res);
     if (!tenantId) return;
     try {
-
-      // Get all units this tenant occupies
+      // ── 1. Lease-based invoices (rent, charges linked to a lease) ──
       const occupancies = await prisma.occupancy.findMany({
         where: { tenantId },
         select: { unitId: true },
       });
-      if (occupancies.length === 0) {
-        sendJson(res, 200, { data: [] });
-        return;
-      }
       const unitIds = occupancies.map((o: any) => o.unitId);
 
-      // Get all leases for those units
-      const leases = await prisma.lease.findMany({
-        where: { orgId, unitId: { in: unitIds } },
-        include: LEASE_FULL_INCLUDE,
-      });
-      if (leases.length === 0) {
-        sendJson(res, 200, { data: [] });
-        return;
-      }
-      const leaseIds = leases.map((l: any) => l.id);
+      let leaseInvoices: any[] = [];
+      const leaseMap = new Map<string, any>();
 
-      // Get all invoices linked to those leases
-      const invoices = await prisma.invoice.findMany({
-        where: { orgId, leaseId: { in: leaseIds } },
+      if (unitIds.length > 0) {
+        const leases = await prisma.lease.findMany({
+          where: { orgId, unitId: { in: unitIds } },
+          include: LEASE_FULL_INCLUDE,
+        });
+        for (const l of leases) leaseMap.set(l.id, l);
+        const leaseIds = leases.map((l: any) => l.id);
+
+        if (leaseIds.length > 0) {
+          leaseInvoices = await prisma.invoice.findMany({
+            where: { orgId, leaseId: { in: leaseIds } },
+            orderBy: { createdAt: 'desc' },
+          });
+        }
+      }
+
+      // ── 2. Job-based invoices (maintenance repairs for this tenant) ──
+      const jobInvoices = await prisma.invoice.findMany({
+        where: {
+          orgId,
+          job: { request: { tenantId } },
+        },
+        include: {
+          job: {
+            include: {
+              request: {
+                include: {
+                  unit: { include: { building: true } },
+                },
+              },
+            },
+          },
+        },
         orderBy: { createdAt: 'desc' },
       });
 
-      // Build a lease lookup for enrichment
-      const leaseMap = new Map(leases.map((l: any) => [l.id, l]));
+      // ── 3. Merge + deduplicate ──
+      const seen = new Set<string>();
+      const merged: any[] = [];
+      for (const inv of [...leaseInvoices, ...jobInvoices]) {
+        if (seen.has(inv.id)) continue;
+        seen.add(inv.id);
+        merged.push(inv);
+      }
+      merged.sort((a: any, b: any) => b.createdAt.getTime() - a.createdAt.getTime());
 
-      const data = invoices.map((inv: any) => {
-        const lease = leaseMap.get(inv.leaseId);
+      // ── 4. Map to DTO ──
+      const data = merged.map((inv: any) => {
+        const lease = inv.leaseId ? leaseMap.get(inv.leaseId) : null;
+        const reqUnit = inv.job?.request?.unit;
         return {
           id: inv.id,
-          leaseId: inv.leaseId,
+          leaseId: inv.leaseId || null,
+          jobId: inv.jobId || null,
           description: inv.description,
           totalAmount: inv.totalAmount,
           totalAmountChf: inv.totalAmount / 100,
@@ -285,6 +312,12 @@ export function registerAuthRoutes(router: Router) {
             building: lease.unit.building ? {
               name: lease.unit.building.name,
               address: lease.unit.building.address,
+            } : null,
+          } : reqUnit ? {
+            unitNumber: reqUnit.unitNumber,
+            building: reqUnit.building ? {
+              name: reqUnit.building.name,
+              address: reqUnit.building.address,
             } : null,
           } : null,
         };

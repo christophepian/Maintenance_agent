@@ -893,6 +893,52 @@ describe("Contractor RFP Marketplace", () => {
     }, 15000);
   });
 
+  /* ── A-2 Regression: Manager DTO shape after award ───────────── */
+
+  describe("A-2 regression: Manager RFP DTO has typed awardedQuoteId + quote.status", () => {
+    it("GET /rfps/:id returns awardedQuoteId as string (not null from as-any fallback)", async () => {
+      const result = await httpGet(`/rfps/${awardRfpId}`, managerToken);
+      expect(result.status).toBe(200);
+
+      const rfp = result.data.data;
+      expect(rfp.awardedQuoteId).toBe(awardQuote1Id);
+      expect(typeof rfp.awardedQuoteId).toBe("string");
+      expect(rfp.awardedContractorId).toBe(contractorId);
+      expect(rfp.status).toBe("AWARDED");
+    }, 10000);
+
+    it("GET /rfps/:id returns quotes with typed status field (not as-any fallback)", async () => {
+      const result = await httpGet(`/rfps/${awardRfpId}`, managerToken);
+      expect(result.status).toBe(200);
+
+      const rfp = result.data.data;
+      expect(Array.isArray(rfp.quotes)).toBe(true);
+      expect(rfp.quotes.length).toBeGreaterThanOrEqual(2);
+
+      // Every quote should have a valid RfpQuoteStatus string
+      const validStatuses = ["SUBMITTED", "AWARDED", "REJECTED"];
+      for (const q of rfp.quotes) {
+        expect(validStatuses).toContain(q.status);
+        expect(typeof q.status).toBe("string");
+      }
+
+      // Winning quote = AWARDED, loser = REJECTED
+      const winner = rfp.quotes.find((q: any) => q.id === awardQuote1Id);
+      const loser = rfp.quotes.find((q: any) => q.id === awardQuote2Id);
+      expect(winner?.status).toBe("AWARDED");
+      expect(loser?.status).toBe("REJECTED");
+    }, 10000);
+
+    it("GET /rfps list includes awardedQuoteId in DTO", async () => {
+      const result = await httpGet(`/rfps?status=AWARDED`, managerToken);
+      expect(result.status).toBe(200);
+
+      const awardedRfp = result.data.data.find((r: any) => r.id === awardRfpId);
+      expect(awardedRfp).toBeDefined();
+      expect(awardedRfp.awardedQuoteId).toBe(awardQuote1Id);
+    }, 10000);
+  });
+
   /* ── Notification persistence (after award) ────────────────── */
 
   describe("Notification persistence after award", () => {

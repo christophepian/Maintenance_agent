@@ -47,7 +47,7 @@ export function registerContractorRoutes(router: Router) {
       const limit = getIntParam(query, "limit", { defaultValue: 50, min: 1, max: 200 });
       const offset = getIntParam(query, "offset", { defaultValue: 0, min: 0, max: 1_000_000 });
       const status = first(query, "status") as string | undefined;
-      const view = (first(query, "view") as "summary" | "full") || "summary";
+      const view = (first(query, "view") as "summary" | "full") || "full";
 
       // H1: Strict contractor isolation - only jobs assigned to this contractor
       const result = await listJobs(orgId, {

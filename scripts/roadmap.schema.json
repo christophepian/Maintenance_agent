@@ -80,7 +80,40 @@
           "hooks_existing": { "type": "array", "items": { "type": "string" } },
           "hooks_new": { "type": "array", "items": { "type": "string" } },
           "hooks_blocked": { "type": "array", "items": { "type": "string" } },
-          "depends_on": { "type": "array", "items": { "type": "string" } }
+          "depends_on": { "type": "array", "items": { "type": "string" } },
+          "priority": { "type": "integer", "minimum": 1, "maximum": 5 },
+          "effort": { "type": "string", "enum": ["xs", "s", "m", "l", "xl"] },
+          "slice": { "type": ["string", "null"] },
+          "slices": {
+            "type": "array",
+            "description": "Optional implementation slices for finer-grained backlog planning within a feature",
+            "items": {
+              "type": "object",
+              "required": ["id", "title"],
+              "properties": {
+                "id": { "type": "string", "description": "Slice ID, e.g. S-P0-001-01" },
+                "title": { "type": "string" },
+                "type": { "type": "string", "enum": ["service", "route", "workflow", "model", "page", "infra", "test", "refactor"] },
+                "status": { "type": "string", "enum": ["done", "in_progress", "planned", "blocked"] },
+                "depends_on": { "type": "array", "items": { "type": "string" }, "description": "IDs of other slices or features this slice depends on" },
+                "files_expected": { "type": "array", "items": { "type": "string" }, "description": "Paths of files this slice should create or modify" },
+                "acceptance_criteria": { "type": "array", "items": { "type": "string" } },
+                "completion_signals": {
+                  "type": "array",
+                  "description": "Auto-detection signals for this slice, same types as feature detection",
+                  "items": {
+                    "type": "object",
+                    "required": ["type", "value"],
+                    "properties": {
+                      "type": { "type": "string", "enum": ["file_exists", "env_key", "model_exists", "model_field", "enum_exists", "workflow_exists", "page_exists"] },
+                      "value": { "type": "string", "description": "The target to check: path, key name, model name, etc." }
+                    }
+                  }
+                },
+                "prompt_template": { "type": "string", "description": "Copilot prompt hint for implementing this slice" }
+              }
+            }
+          }
         }
       }
     },
@@ -88,7 +121,7 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["id", "phase", "type", "persona", "title", "status"],
+        "required": ["id", "phase", "type", "title", "status", "order", "required_tests", "test_protocol", "validation_checklist"],
         "properties": {
           "id": { "type": "string" },
           "phase": { "type": "string", "pattern": "^P\\d+$" },
@@ -105,8 +138,34 @@
             "type": "string",
             "enum": ["done", "in_progress", "planned", "blocked"]
           },
+          "description": { "type": "string" },
+          "order": { "type": "integer", "minimum": 1 },
           "ticket": { "type": ["string", "null"] },
-          "notes": { "type": ["string", "null"] }
+          "notes": { "type": ["string", "null"] },
+          "priority": { "type": "integer", "minimum": 1, "maximum": 5 },
+          "effort": { "type": "string", "enum": ["xs", "s", "m", "l", "xl"] },
+          "depends_on": { "type": "array", "items": { "type": "string" } },
+          "parent_feature": { "type": "string" },
+          "files_expected": { "type": "array", "items": { "type": "string" } },
+          "acceptance_criteria": { "type": "array", "items": { "type": "string" } },
+          "required_tests": {
+            "type": "array",
+            "items": { "type": "string" },
+            "minItems": 1,
+            "description": "Exact test coverage expected (tests_to_add_or_update)"
+          },
+          "test_protocol": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Exact validation procedure and commands — minimum 8 steps"
+          },
+          "validation_checklist": {
+            "type": "array",
+            "items": { "type": "string" },
+            "minItems": 1,
+            "description": "Completion gates before marking validated"
+          },
+          "post_validation": { "type": "array", "items": { "type": "string" } }
         }
       }
     },
@@ -117,6 +176,60 @@
         "we_own": { "type": "array", "items": { "type": "string" } },
         "grey_zone": { "type": "array", "items": { "type": "string" } },
         "we_dont_own": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "intake_items": {
+      "type": "array",
+      "description": "Raw unstructured product notes awaiting triage.\n\nLifecycle: raw → triaged → drafted → promoted | parked | duplicate\n  raw:       freshly pasted, unprocessed\n  triaged:   product_area + proposed_phase assigned, concerns extracted\n  drafted:   one or more DT-xxx draft tickets generated from this item\n  promoted:  all linked drafts promoted to executable custom_items[]\n  parked:    intentionally deferred — may be revisited later\n  duplicate: identified as duplicate of existing feature/ticket",
+      "items": {
+        "type": "object",
+        "required": ["id", "raw_text", "status", "created_at"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^INT-\\d{3}$", "description": "Unique intake ID, e.g. INT-001" },
+          "title": { "type": ["string", "null"], "description": "Optional normalized title — filled during triage" },
+          "raw_text": { "type": "string", "description": "Original pasted unstructured text" },
+          "status": { "type": "string", "enum": ["raw", "triaged", "drafted", "promoted", "parked", "duplicate"], "description": "Lifecycle state" },
+          "source": { "type": "string", "description": "Origin: manual_paste | meeting | retro | slack | user_feedback | idea" },
+          "product_area": { "type": ["string", "null"], "description": "Product area this note relates to (e.g. invoicing, tenant-portal, buildings)" },
+          "related_feature_ids": { "type": "array", "items": { "type": "string" }, "description": "Feature IDs this intake relates to (e.g. F-P1-002)" },
+          "proposed_phase": { "type": ["string", "null"], "pattern": "^P\\d+$", "description": "Suggested roadmap phase" },
+          "dependencies": { "type": "array", "items": { "type": "string" }, "description": "Known blockers or prerequisites" },
+          "split_recommended": { "type": "boolean", "description": "True if the raw text contains multiple distinct concerns that should become separate draft tickets" },
+          "draft_ticket_ids": { "type": "array", "items": { "type": "string" }, "description": "DT-xxx IDs generated from this intake during drafting" },
+          "triage_notes": { "type": "string", "description": "Freeform notes added during triage" },
+          "constraints": { "type": "array", "items": { "type": "string" }, "description": "Hard constraints (e.g. must not change public API)" },
+          "created_at": { "type": "string", "format": "date-time" },
+          "updated_at": { "type": "string", "format": "date-time" }
+        }
+      }
+    },
+    "draft_tickets": {
+      "type": "array",
+      "description": "Structured tickets under review before promotion to executable custom_items[].\n\nLifecycle: draft → ready → promoted | discarded\n  draft:     created from triage, fields still incomplete\n  ready:     all required fields filled, awaiting human review\n  promoted:  moved to custom_items[] as an executable ticket\n  discarded: rejected during review — kept for audit trail\n\nA raw intake item should NEVER automatically become executable unless\nit is clearly atomic and sufficiently scoped. Drafts exist to enforce\nthat review gate.",
+      "items": {
+        "type": "object",
+        "required": ["id", "source_intake_ids", "title", "status"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^DT-\\d{3}$", "description": "Unique draft ticket ID, e.g. DT-001" },
+          "source_intake_ids": { "type": "array", "items": { "type": "string" }, "description": "INT-xxx IDs this draft was generated from (may be multiple if merged)" },
+          "title": { "type": "string" },
+          "goal": { "type": "string", "description": "One-sentence goal statement" },
+          "phase": { "type": ["string", "null"], "pattern": "^P\\d+$" },
+          "order": { "type": ["integer", "null"], "minimum": 1 },
+          "status": { "type": "string", "enum": ["draft", "ready", "promoted", "discarded"] },
+          "product_area": { "type": "string", "description": "Product area (e.g. invoicing, tenant-portal, buildings)" },
+          "parent_feature_id": { "type": ["string", "null"], "description": "Feature ID this draft belongs under" },
+          "depends_on": { "type": "array", "items": { "type": "string" } },
+          "files_to_modify": { "type": "array", "items": { "type": "string" }, "description": "Expected file paths to create or modify" },
+          "in_scope": { "type": "array", "items": { "type": "string" }, "description": "Explicit scope boundaries — what IS included" },
+          "out_of_scope": { "type": "array", "items": { "type": "string" }, "description": "Explicit scope boundaries — what is NOT included" },
+          "acceptance_criteria": { "type": "array", "items": { "type": "string" } },
+          "tests_to_add_or_update": { "type": "array", "items": { "type": "string" }, "description": "Test files or test cases expected" },
+          "test_protocol": { "type": "array", "items": { "type": "string" }, "description": "Step-by-step validation procedure" },
+          "validation_checklist": { "type": "array", "items": { "type": "string" }, "description": "Completion gates before promotion" },
+          "post_validation_updates": { "type": "array", "items": { "type": "string" }, "description": "Docs/files to update after completion" },
+          "promoted_to": { "type": ["string", "null"], "description": "custom_items[] ID after promotion" }
+        }
       }
     }
   }

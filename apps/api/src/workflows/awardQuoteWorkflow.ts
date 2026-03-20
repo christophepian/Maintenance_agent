@@ -31,9 +31,12 @@
  */
 
 import { RfpStatus, RfpQuoteStatus } from "@prisma/client";
+import { RequestStatus } from "@prisma/client";
 import { WorkflowContext } from "./context";
-import { assertRfpTransition } from "./transitions";
+import { assertRfpTransition, assertRequestTransition, canTransitionRequest } from "./transitions";
 import { emit } from "../events/bus";
+import { updateRequestStatus } from "../repositories/requestRepository";
+import { assignContractor } from "../services/requestAssignment";
 import {
   findRfpById,
   findQuoteById,
@@ -43,6 +46,7 @@ import {
 } from "../repositories/rfpRepository";
 import { computeEffectiveConfig } from "../services/buildingConfig";
 import { createNotification } from "../services/notifications";
+import { getOrCreateJobForRequest } from "../services/jobs";
 
 // ─── Input / Output ────────────────────────────────────────────
 
@@ -205,6 +209,20 @@ export async function awardQuoteWorkflow(
     awardedContractorId: quote.contractorId,
     awardedQuoteId: quoteId,
   });
+
+  // ── 5b. Create Job + assign contractor to request ────────
+  if (rfp.requestId) {
+    await getOrCreateJobForRequest(orgId, rfp.requestId, quote.contractorId);
+
+    // Assign contractor FK on the request
+    await assignContractor(prisma, rfp.requestId, quote.contractorId);
+
+    // Transition request → ASSIGNED (guard: only if the transition is valid)
+    const request = await prisma.request.findUnique({ where: { id: rfp.requestId }, select: { status: true } });
+    if (request && canTransitionRequest(request.status as RequestStatus, RequestStatus.ASSIGNED)) {
+      await updateRequestStatus(prisma, rfp.requestId, RequestStatus.ASSIGNED);
+    }
+  }
 
   // ── 6. Emit events ───────────────────────────────────────
   await emit({

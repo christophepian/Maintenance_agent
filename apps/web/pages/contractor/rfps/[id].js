@@ -300,6 +300,292 @@ function QuoteForm({ rfpId, onSubmitted }) {
 
 /* ── Quote Summary (read-only, after submission) ───────────────── */
 
+/* ── Slot Proposal Form ────────────────────────────────────────── */
+
+function SlotProposalForm({ jobId, onProposed }) {
+  const [slots, setSlots] = useState([{ date: "", startTime: "", endTime: "" }]);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+
+  const addSlot = () => {
+    if (slots.length >= 5) return;
+    setSlots((prev) => [...prev, { date: "", startTime: "", endTime: "" }]);
+  };
+
+  const removeSlot = (idx) => {
+    setSlots((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const updateSlot = (idx, field, value) => {
+    setSlots((prev) =>
+      prev.map((s, i) => (i === idx ? { ...s, [field]: value } : s)),
+    );
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+
+    const contractorId =
+      typeof window !== "undefined" ? localStorage.getItem("contractorId") : null;
+    if (!contractorId) return setError("No contractor selected");
+
+    // Validate and build ISO timestamps
+    const parsed = [];
+    for (let i = 0; i < slots.length; i++) {
+      const { date, startTime, endTime } = slots[i];
+      if (!date || !startTime || !endTime) {
+        return setError(`Slot ${i + 1}: date, start time, and end time are all required`);
+      }
+      const start = new Date(`${date}T${startTime}`);
+      const end = new Date(`${date}T${endTime}`);
+      if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+        return setError(`Slot ${i + 1}: invalid date/time`);
+      }
+      if (start >= end) {
+        return setError(`Slot ${i + 1}: start time must be before end time`);
+      }
+      if (start <= new Date()) {
+        return setError(`Slot ${i + 1}: must be in the future`);
+      }
+      parsed.push({ startTime: start.toISOString(), endTime: end.toISOString() });
+    }
+
+    setSubmitting(true);
+    try {
+      const res = await fetch(
+        `/api/contractor/jobs/${jobId}/slots?contractorId=${contractorId}`,
+        {
+          method: "POST",
+          headers: { ...authHeaders(), "Content-Type": "application/json" },
+          body: JSON.stringify({ slots: parsed }),
+        },
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error?.message || "Failed to propose slots");
+      onProposed();
+    } catch (err) {
+      setError(String(err?.message || err));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      {error && (
+        <div className="p-3 bg-red-50 border border-red-200 rounded text-sm text-red-800">
+          {error}
+        </div>
+      )}
+
+      {slots.map((slot, idx) => (
+        <div key={idx} className="flex items-end gap-2 flex-wrap">
+          <div>
+            <label className="block text-xs font-medium text-slate-500 mb-1">Date</label>
+            <input
+              type="date"
+              value={slot.date}
+              onChange={(e) => updateSlot(idx, "date", e.target.value)}
+              required
+              className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-500 mb-1">From</label>
+            <input
+              type="time"
+              value={slot.startTime}
+              onChange={(e) => updateSlot(idx, "startTime", e.target.value)}
+              required
+              className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-500 mb-1">To</label>
+            <input
+              type="time"
+              value={slot.endTime}
+              onChange={(e) => updateSlot(idx, "endTime", e.target.value)}
+              required
+              className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+            />
+          </div>
+          {slots.length > 1 && (
+            <button
+              type="button"
+              onClick={() => removeSlot(idx)}
+              className="text-red-500 hover:text-red-700 text-sm px-2 py-2"
+            >
+              ✕
+            </button>
+          )}
+        </div>
+      ))}
+
+      <div className="flex items-center gap-3">
+        {slots.length < 5 && (
+          <button
+            type="button"
+            onClick={addSlot}
+            className="text-xs text-indigo-600 hover:underline"
+          >
+            + Add another time slot
+          </button>
+        )}
+        <span className="text-xs text-slate-400">{slots.length}/5 slots</span>
+      </div>
+
+      <button
+        type="submit"
+        disabled={submitting}
+        className="rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+      >
+        {submitting ? "Proposing…" : "Propose Time Slots"}
+      </button>
+    </form>
+  );
+}
+
+/* ── Existing Slots Display ────────────────────────────────────── */
+
+const SLOT_STATUS_COLORS = {
+  PROPOSED: "bg-yellow-50 border-yellow-200 text-yellow-800",
+  ACCEPTED: "bg-green-50 border-green-200 text-green-800",
+  DECLINED: "bg-red-50 border-red-200 text-red-800",
+};
+
+function formatSlotTime(iso) {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  return d.toLocaleString("en-CH", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function ExistingSlotsPanel({ slots }) {
+  if (!slots || slots.length === 0) return null;
+
+  const accepted = slots.find((s) => s.status === "ACCEPTED");
+
+  return (
+    <div className="space-y-3">
+      {accepted && (
+        <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-green-700 text-lg">✓</span>
+            <h3 className="text-sm font-semibold text-green-900">
+              Appointment Confirmed
+            </h3>
+          </div>
+          <p className="text-sm text-green-800">
+            {formatSlotTime(accepted.startTime)} – {formatSlotTime(accepted.endTime)}
+          </p>
+        </div>
+      )}
+
+      <div className="space-y-2">
+        {slots.map((slot) => (
+          <div
+            key={slot.id}
+            className={`flex items-center justify-between rounded-lg border p-3 ${
+              SLOT_STATUS_COLORS[slot.status] || "bg-slate-50 border-slate-200"
+            }`}
+          >
+            <div>
+              <p className="text-sm font-medium">
+                {formatSlotTime(slot.startTime)} – {formatSlotTime(slot.endTime)}
+              </p>
+            </div>
+            <span className="text-xs font-medium px-2 py-0.5 rounded-full border bg-white/50">
+              {slot.status}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ── Scheduling Section (Contractor) ──────────────────────────── */
+
+function SchedulingSection({ jobId }) {
+  const [slots, setSlots] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const loadSlots = useCallback(async () => {
+    if (!jobId) return;
+    const contractorId =
+      typeof window !== "undefined" ? localStorage.getItem("contractorId") : null;
+    if (!contractorId) return;
+
+    setLoading(true);
+    try {
+      const res = await fetch(
+        `/api/contractor/jobs/${jobId}/slots?contractorId=${contractorId}`,
+        { headers: authHeaders() },
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error?.message || "Failed to load slots");
+      setSlots(data?.data || []);
+    } catch (err) {
+      setError(String(err?.message || err));
+    } finally {
+      setLoading(false);
+    }
+  }, [jobId]);
+
+  useEffect(() => {
+    loadSlots();
+  }, [loadSlots]);
+
+  const hasAccepted = slots.some((s) => s.status === "ACCEPTED");
+  const hasProposed = slots.some((s) => s.status === "PROPOSED");
+
+  return (
+    <div className="bg-white border border-gray-200 rounded-lg p-6 mb-4">
+      <h2 className="text-base font-semibold text-slate-900 mb-1">
+        📅 Appointment Scheduling
+      </h2>
+      <p className="text-sm text-slate-500 mb-4">
+        Propose up to 5 time slots for the tenant to choose from.
+        The tenant has 72 hours to respond before the manager is notified.
+      </p>
+
+      {error && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded text-sm text-red-800">
+          {error}
+        </div>
+      )}
+
+      {loading ? (
+        <p className="text-sm text-slate-400">Loading slots…</p>
+      ) : (
+        <>
+          <ExistingSlotsPanel slots={slots} />
+
+          {hasAccepted ? (
+            <p className="mt-3 text-sm text-green-700 font-medium">
+              The tenant has accepted a time slot. No further action needed.
+            </p>
+          ) : hasProposed ? (
+            <p className="mt-3 text-sm text-yellow-700">
+              Waiting for tenant to respond to your proposed time slots…
+            </p>
+          ) : (
+            <SlotProposalForm jobId={jobId} onProposed={loadSlots} />
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
 const QUOTE_STATUS_CONFIG = {
   AWARDED: {
     borderClass: "border-green-300",
@@ -592,6 +878,11 @@ export default function ContractorRfpDetailPage() {
                   This RFP is no longer accepting quotes.
                 </p>
               </div>
+            )}
+
+            {/* Scheduling Section: appears after award when a job exists */}
+            {rfp.status === "AWARDED" && rfp.jobId && (
+              <SchedulingSection jobId={rfp.jobId} />
             )}
           </>
         ) : (

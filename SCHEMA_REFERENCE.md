@@ -5,11 +5,11 @@
 
 ## Database Schema (Prisma)
 
-**Status: ACTIVE AND IN USE — 35 migrations + `db push` for LKDE tables (shadow DB issue with legacy Lease migration prevents `migrate dev`)**
+**Status: ACTIVE AND IN USE — 40 migrations + `db push` for LKDE tables (shadow DB issue with legacy Lease migration prevents `migrate dev`)**
 
-**Last verified:** 2026-03-12
+**Last verified:** 2026-03-17
 
-### Models (46 total)
+### Models (48 total)
 
 | Model | Key Fields | Relations |
 |-------|-----------|-----------|
@@ -60,7 +60,7 @@
 | **RfpInvite** | rfpId, contractorId, status (RfpInviteStatus) | → Rfp, Contractor |
 | **RfpQuote** | rfpId, contractorId, amountCents (Int), notes?, submittedAt | → Rfp, Contractor |
 
-### Key Enums (38 total)
+### Key Enums (41 total)
 - `RequestStatus`: PENDING_REVIEW, AUTO_APPROVED, APPROVED, **RFP_PENDING**, ASSIGNED, IN_PROGRESS, COMPLETED, PENDING_OWNER_APPROVAL, **OWNER_REJECTED**
 - `ApprovalSource`: SYSTEM_AUTO, OWNER_APPROVED, OWNER_REJECTED, LEGAL_OBLIGATION
 - `PayingParty`: LANDLORD, TENANT

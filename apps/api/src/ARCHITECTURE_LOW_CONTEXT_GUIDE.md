@@ -288,7 +288,7 @@ export async function <name>Workflow(
 | **W7** | Route handlers call workflows; workflows call repositories + services. |
 | **W8** | JSDoc header lists orchestration steps as a numbered list. |
 
-### Inventory (16 workflows)
+### Inventory (23 workflows)
 
 | Workflow | Entity | Transition |
 |----------|--------|------------|
@@ -296,16 +296,25 @@ export async function <name>Workflow(
 | approveRequestWorkflow | Request | PENDING → APPROVED |
 | assignContractorWorkflow | Request | → ASSIGNED |
 | unassignContractorWorkflow | Request | ASSIGNED → previous |
+| ownerRejectWorkflow | Request | PENDING_OWNER_APPROVAL → OWNER_REJECTED |
 | evaluateLegalRoutingWorkflow | Request | → RFP_PENDING |
+| uploadMaintenanceAttachmentWorkflow | Request | (adds attachment) |
 | completeJobWorkflow | Job | → COMPLETED |
+| completionRatingWorkflow | Job | (adds rating after completion) |
+| schedulingWorkflow | Job | (scheduling escalation) |
 | issueInvoiceWorkflow | Invoice | → ISSUED |
 | approveInvoiceWorkflow | Invoice | → APPROVED |
 | disputeInvoiceWorkflow | Invoice | → DISPUTED |
 | payInvoiceWorkflow | Invoice | → PAID |
+| tenantSelfPayWorkflow | Invoice | (tenant-initiated payment) |
 | markLeaseReadyWorkflow | Lease | DRAFT → READY_TO_SIGN |
 | activateLeaseWorkflow | Lease | SIGNED → ACTIVE |
 | terminateLeaseWorkflow | Lease | ACTIVE → TERMINATED |
 | submitRentalApplicationWorkflow | RentalApplication | DRAFT → SUBMITTED |
+| awardQuoteWorkflow | Rfp | → AWARDED |
+| submitQuoteWorkflow | RfpQuote | (contractor submits quote) |
+| rfpDirectAssignWorkflow | Rfp | (direct assignment bypass) |
+| rfpReinviteWorkflow | Rfp | (re-invite contractors) |
 
 ---
 
