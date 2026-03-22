@@ -461,6 +461,59 @@ describe('G10: API Contract Tests', () => {
     });
   });
 
+  // ── RFPs ──
+  describe('GET /rfps?limit=1', () => {
+    it('returns envelope with data array and total', async () => {
+      const body = await fetchJson('/rfps?limit=1');
+      expect(Array.isArray(body.data)).toBe(true);
+      expect(typeof body.total).toBe('number');
+
+      if (body.data.length > 0) {
+        const rfp = body.data[0];
+        expectKeys(rfp, [
+          'id', 'orgId', 'requestId', 'status', 'createdAt',
+        ], 'RFP');
+      }
+    });
+  });
+
+  describe('GET /rfps/:id — 404 for unknown id', () => {
+    it('returns 404 for non-existent RFP', async () => {
+      const res = await fetch(`${API_BASE}/rfps/00000000-0000-0000-0000-000000000000`);
+      expect(res.status).toBe(404);
+      const body = await res.json();
+      expect(body.error).toHaveProperty('code', 'NOT_FOUND');
+    });
+  });
+
+  // ── Notifications (tenant/manager inbox) ──
+  describe('GET /notifications', () => {
+    it('returns envelope with nested notifications array and total', async () => {
+      const res = await fetchWithRole('/notifications', 'MANAGER');
+      expect(res.ok).toBe(true);
+      const body = await res.json();
+      expect(body).toHaveProperty('data');
+      expect(body.data).toHaveProperty('notifications');
+      expect(Array.isArray(body.data.notifications)).toBe(true);
+      expect(typeof body.data.total).toBe('number');
+
+      if (body.data.notifications.length > 0) {
+        const n = body.data.notifications[0];
+        expectKeys(n, ['id', 'orgId', 'userId', 'type', 'isRead', 'createdAt'], 'Notification');
+      }
+    });
+  });
+
+  describe('GET /notifications/unread-count', () => {
+    it('returns { data: { count: <number> } }', async () => {
+      const res = await fetchWithRole('/notifications/unread-count', 'MANAGER');
+      expect(res.ok).toBe(true);
+      const body = await res.json();
+      expect(body).toHaveProperty('data');
+      expect(typeof body.data.count).toBe('number');
+    });
+  });
+
   // ── Set Expense Category ──
   describe('POST /invoices/:id/set-expense-category', () => {
     it('returns 400 for invalid expense category', async () => {

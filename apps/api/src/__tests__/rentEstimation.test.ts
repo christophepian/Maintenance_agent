@@ -201,7 +201,7 @@ describe("computeRentEstimate (unit)", () => {
  * ═══════════════════════════════════════════════════════════════ */
 
 const API_ROOT = path.resolve(__dirname, "..", "..");
-const PORT = 3209; // unique port to avoid collisions with other test files
+const PORT = 3219;
 const API_BASE = `http://127.0.0.1:${PORT}`;
 
 function startServer() {

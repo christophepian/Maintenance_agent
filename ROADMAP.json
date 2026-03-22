@@ -29,7 +29,7 @@
         "title": "Align tenant, contractor, and owner portal UI with manager baseline (PageShell/Panel/inline-table/CSS tokens)"
       }
     ],
-    "last_recommendations_at": "2026-03-22 16:25:18 UTC"
+    "last_recommendations_at": "2026-03-22 20:35:20 UTC"
   },
   "project": {
     "name": "Maintenance Agent",
@@ -338,7 +338,7 @@
           "id": "S-P0-004-02",
           "title": "Extract depreciationAdminService.ts — depreciation standards CRUD",
           "type": "refactor",
-          "status": "planned",
+          "status": "done",
           "depends_on": [
             "S-P0-004-01"
           ],
@@ -357,7 +357,8 @@
               "path": "apps/api/src/services/depreciationAdminService.ts"
             }
           ],
-          "implementation_notes": "legal.ts lines 762-893 cover depreciation standards. Note: depreciation.ts service handles computation logic (computeDepreciationSignal). This slice is about CRUD admin ops only."
+          "implementation_notes": "listDepreciationStandards + createDepreciationStandard consolidated into legalService.ts rather than a separate file — scope too small to justify splitting.",
+          "completed_at": "2026-03-22T20:29:58.893Z"
         }
       ]
     },
@@ -5378,7 +5379,7 @@
       "goal": "Resolve two confirmed port collisions: PORT 3208 used by both legalEngine.test.ts and tenantSession.test.ts; PORT 3209 used by both assetInventory.test.ts and rentEstimation.test.ts.",
       "phase": "P3",
       "order": 2,
-      "status": "ready",
+      "status": "promoted",
       "product_area": "testing",
       "parent_feature_id": null,
       "depends_on": [
@@ -5423,7 +5424,8 @@
         "Commit: npx tsc --noEmit → npm test → npm run blueprint"
       ],
       "canonical_implementation_prompt": "## DT-111 — Fix PORT conflicts in test suites\n\n**Goal:** Resolve two confirmed port collisions.\n\n### Confirmed Conflicts\n- PORT 3208: legalEngine.test.ts + tenantSession.test.ts\n- PORT 3209: assetInventory.test.ts + rentEstimation.test.ts\n\n### Fix\nAssign unique ports (e.g. 3210, 3211, 3212, 3213) to eliminate collisions.\n\n### Acceptance Criteria\n- [ ] No shared ports\n- [ ] npm test passes\n- [ ] Parallel runs produce no EADDRINUSE",
-      "notes": "Part of THCG-001 epic. PORT 3208: legalEngine + tenantSession. PORT 3209: assetInventory + rentEstimation. Suite currently passes 518/518 but parallel runs may hit EADDRINUSE. Still worth fixing proactively. 2026-03-22."
+      "notes": "Part of THCG-001 epic. PORT 3208: legalEngine + tenantSession. PORT 3209: assetInventory + rentEstimation. Suite currently passes 518/518 but parallel runs may hit EADDRINUSE. Still worth fixing proactively. 2026-03-22.",
+      "promoted_at": "2026-03-22T20:35:20.374Z"
     },
     {
       "id": "DT-112",
@@ -5432,7 +5434,7 @@
       "goal": "contracts.test.ts already exists and covers 4 originally required endpoints. Extend it to cover RFP, contractor jobs, owner approvals, and tenant inbox as guard rails against accidental breaking changes.",
       "phase": "P3",
       "order": 3,
-      "status": "ready",
+      "status": "promoted",
       "product_area": "testing",
       "parent_feature_id": null,
       "depends_on": [
@@ -5476,7 +5478,8 @@
         "Commit: npx tsc --noEmit → npm test → npm run blueprint"
       ],
       "canonical_implementation_prompt": "## DT-112 — Extend contracts.test.ts\n\n**Goal:** Extend existing contracts.test.ts with additional endpoint coverage.\n\n### Context\n- contracts.test.ts already exists — extend only, do NOT recreate\n\n### New Coverage\n- RFP endpoints\n- Contractor job endpoints\n- Owner approval endpoints\n- Tenant inbox endpoints\n\n### Acceptance Criteria\n- [ ] 4 new endpoint groups covered\n- [ ] npm test passes",
-      "notes": "Part of THCG-001 epic. rentalContracts.test.ts already has 9 passing contract tests. Extend with RFP, contractor jobs, owner approvals coverage. Bug fixed: GET /vacant-units was returning 500 due to _count.rentalApplications (field does not exist on Unit) — corrected to rentalApplicationUnits. 2026-03-22."
+      "notes": "Part of THCG-001 epic. rentalContracts.test.ts already has 9 passing contract tests. Extend with RFP, contractor jobs, owner approvals coverage. Bug fixed: GET /vacant-units was returning 500 due to _count.rentalApplications (field does not exist on Unit) — corrected to rentalApplicationUnits. 2026-03-22.",
+      "promoted_at": "2026-03-22T20:35:20.375Z"
     },
     {
       "id": "DT-113",
@@ -5485,7 +5488,7 @@
       "goal": "Create CONTRIBUTING.md Testing section documenting the canonical patterns established by DT-110/DT-111/DT-112: lifecycle helpers, port assignment convention, and the contracts.test.ts guard-rail pattern.",
       "phase": "P3",
       "order": 4,
-      "status": "ready",
+      "status": "promoted",
       "product_area": "testing",
       "parent_feature_id": null,
       "depends_on": [
@@ -5527,7 +5530,8 @@
         "Commit: documentation update"
       ],
       "canonical_implementation_prompt": "## DT-113 — Document test patterns in CONTRIBUTING.md\n\n**Goal:** Write the Testing section of CONTRIBUTING.md.\n\n### Must Cover\n1. startTestServer / stopTestServer usage\n2. Port assignment convention (3210-3230)\n3. contracts.test.ts guard-rail pattern\n4. Pre-commit checks (npx tsc --noEmit, npm test)\n\n### Depends On\nDT-110 (helpers must exist), DT-111 (ports settled), DT-112 (contracts pattern finalised)",
-      "notes": "Part of THCG-001 epic. Slice 5 — zero prior documentation for test patterns. Depends on DT-110, DT-111, DT-112. 2026-03-22."
+      "notes": "Part of THCG-001 epic. Slice 5 — zero prior documentation for test patterns. Depends on DT-110, DT-111, DT-112. 2026-03-22.",
+      "promoted_at": "2026-03-22T20:35:20.375Z"
     }
   ]
 }
