@@ -29,7 +29,7 @@
         "title": "Align tenant, contractor, and owner portal UI with manager baseline (PageShell/Panel/inline-table/CSS tokens)"
       }
     ],
-    "last_recommendations_at": "2026-03-22 20:35:20 UTC"
+    "last_recommendations_at": "2026-03-22 21:48:53 UTC"
   },
   "project": {
     "name": "Maintenance Agent",
@@ -1093,10 +1093,10 @@
       "proposed_phase": "P1",
       "dependencies": [],
       "split_recommended": false,
-      "triage_notes": "Medium scope — single ticket, may need detailed acceptance criteria. | http://localhost:3000/manager/legal?tab=category_mappings: this was originally designed to map some maintenance requests topics to some broader legal areas. The rent reduction rules systematically return \"no rules\" which is not possible. This means that the reading of legal documents and interpretation in http://localhost:3000/manager/legal?tab=sources is done superficially or not at all. As http://localhost:3000/manager/legal?tab=category_mappings is used for the determination of legal obligation of an owner to address a tenant request, this has rippled effects downstream. Not sure where the problem is but we need to figure out a way to increase the confidence that the scanning of legal sources is done with meticulous attention. | http://localhost:3000/manager/legal?tab=category_mappings: this was originally designed to map some maintenance requests topics to some broader legal areas. The rent reduction rules systematically return \"no rules\" which is not possible. This means that the reading of legal documents and interpretation in http://localhost:3000/manager/legal?tab=sources is done superficially or not at all. As http://localhost:3000/manager/legal?tab=category_mappings is used for the determination of legal obligation of an owner to address a tenant request, this has rippled effects downstream. Not sure where the problem is but we need to figure out a way to increase the confidence that the scanning of legal sources is done with meticulous attention.",
+      "triage_notes": "Medium scope — single ticket, may need detailed acceptance criteria. | http://localhost:3000/manager/legal?tab=category_mappings: this was originally designed to map some maintenance requests topics to some broader legal areas. The rent reduction rules systematically return \"no rules\" which is not possible. This means that the reading of legal documents and interpretation in http://localhost:3000/manager/legal?tab=sources is done superficially or not at all. As http://localhost:3000/manager/legal?tab=category_mappings is used for the determination of legal obligation of an owner to address a tenant request, this has rippled effects downstream. Not sure where the problem is but we need to figure out a way to increase the confidence that the scanning of legal sources is done with meticulous attention. | http://localhost:3000/manager/legal?tab=category_mappings: this was originally designed to map some maintenance requests topics to some broader legal areas. The rent reduction rules systematically return \"no rules\" which is not possible. This means that the reading of legal documents and interpretation in http://localhost:3000/manager/legal?tab=sources is done superficially or not at all. As http://localhost:3000/manager/legal?tab=category_mappings is used for the determination of legal obligation of an owner to address a tenant request, this has rippled effects downstream. Not sure where the problem is but we need to figure out a way to increase the confidence that the scanning of legal sources is done with meticulous attention. | http://localhost:3000/manager/legal?tab=category_mappings: this was originally designed to map some maintenance requests topics to some broader legal areas. The rent reduction rules systematically return \"no rules\" which is not possible. This means that the reading of legal documents and interpretation in http://localhost:3000/manager/legal?tab=sources is done superficially or not at all. As http://localhost:3000/manager/legal?tab=category_mappings is used for the determination of legal obligation of an owner to address a tenant request, this has rippled effects downstream. Not sure where the problem is but we need to figure out a way to increase the confidence that the scanning of legal sources is done with meticulous attention. | http://localhost:3000/manager/legal?tab=category_mappings: this was originally designed to map some maintenance requests topics to some broader legal areas. The rent reduction rules systematically return \"no rules\" which is not possible. This means that the reading of legal documents and interpretation in http://localhost:3000/manager/legal?tab=sources is done superficially or not at all. As http://localhost:3000/manager/legal?tab=category_mappings is used for the determination of legal obligation of an owner to address a tenant request, this has rippled effects downstream. Not sure where the problem is but we need to figure out a way to increase the confidence that the scanning of legal sources is done with meticulous attention.",
       "constraints": [],
       "created_at": "2026-03-19T16:47:20.269Z",
-      "updated_at": "2026-03-22T10:59:16.529Z",
+      "updated_at": "2026-03-22T21:48:19.203Z",
       "recommended_action": "execute",
       "scope_size": "medium",
       "proposed_parent_feature": null,
@@ -1105,7 +1105,8 @@
       "duplicate_of": null,
       "anti_split_reasons": [],
       "story_success_outcome": "http://localhost:3000/manager/legal?tab=category_mappings: this was originally designed to map some maintenance requests topics to some broader legal areas. The rent reduction rules systematically return \"no rules\" which is not possible. This means that the reading of legal documents and interpretation in http://localhost:3000/manager/legal?tab=sources is done superficially or not at all. As http://localhost:3000/manager/legal?tab=category_mappings is used for the determination of legal obligation of an owner to address a tenant request, this has rippled effects downstream. Not sure where the problem is but we need to figure out a way to increase the confidence that the scanning of legal sources is done with meticulous attention.",
-      "persona": "manager"
+      "persona": "manager",
+      "story_intent": "http://localhost:3000/manager/legal?tab=category_mappings: this was originally designed to map some maintenance requests topics to some broader legal areas. The rent reduction rules systematically return \"no rules\" which is not possible. This means that the reading of legal documents and interpretation in http://localhost:3000/manager/legal?tab=sources is done superficially or not at all. As http://localhost:3000/manager/legal?tab=category_mappings is used for the determination of legal obligation of an owner to address a tenant request, this has rippled effects downstream. Not sure where the problem is but we need to figure out a way to increase the confidence that the scanning of legal sources is done with meticulous attention."
     },
     {
       "id": "INT-004",
@@ -2686,7 +2687,7 @@
         "INT-034"
       ],
       "title": "Contractor performance reports — job completion rates, average time to completion, customer rating aggregation",
-      "goal": "Deliver \"Contractor performance reports — job completion rates, average time to completion, customer rating aggregation\" in the reporting domain to fulfill the original request: Contractor performance reports — job completion rates, average time to completion, customer rating aggregation. Referenc (UI/frontend changes only).",
+      "goal": "Deliver a Contractor Performance report page under /manager/reports, replacing the current \"Coming Soon\" placeholder. Show per-contractor: job completion rate, average time-to-completion (request creation → job completedAt), and total billed vs total cost variance.",
       "phase": "P3",
       "order": 1,
       "status": "review",
@@ -2694,33 +2695,43 @@
       "parent_feature_id": null,
       "depends_on": [],
       "files_to_modify": [
-        "apps/web/pages/manager/dashboard/"
+        "apps/api/src/services/analyticsService.ts (new)",
+        "apps/api/src/routes/reports.ts (new)",
+        "apps/api/src/server.ts (register new route)",
+        "apps/web/pages/manager/reports.js",
+        "apps/web/pages/api/reports/contractor-performance.js (new proxy)",
+        "packages/api-client/src/index.ts"
       ],
       "in_scope": [
-        "Contractor performance reports — job completion rates, average time to completion, customer rating aggregation"
+        "Backend: GET /reports/contractor-performance?from=&to= endpoint returning per-contractor aggregates (completion rate, avg days, job count, actualCost total)",
+        "Aggregation queries on Job model using: status, createdAt, completedAt, actualCost, contractorId",
+        "Frontend: replace reports.js \"Coming Soon\" with a Panel + table showing contractor rows; sortable columns",
+        "Empty state when no jobs in date range",
+        "Date range picker (default: last 90 days)",
+        "api-client updated with new endpoint"
       ],
       "out_of_scope": [
-        "Cross-portal changes (unless explicitly listed)",
-        "Performance optimization (separate ticket)"
+        "Customer ratings — no rating model exists in schema",
+        "Charts/graphs — table only in first slice",
+        "Exporting to CSV",
+        "Per-building breakdown (DT-002 handles cost by building)"
       ],
       "acceptance_criteria": [
-        "Feature works as described in scope",
-        "All listed in_scope items implemented",
-        "Edge cases handled gracefully (empty state, missing data, permissions)"
+        "GET /reports/contractor-performance returns { data: [{ contractorId, contractorName, jobCount, completedCount, completionRate, avgDaysToComplete, totalActualCost }] }",
+        "completionRate = completedCount / jobCount (0 when no jobs)",
+        "avgDaysToComplete computed from job.createdAt → job.completedAt; null excluded from average",
+        "Empty state renders \"No jobs in selected period\" when data array is empty",
+        "/manager/reports page renders the contractor table with MANAGER auth",
+        "npx tsc --noEmit — zero errors | npm test — all tests pass"
       ],
       "tests_to_add_or_update": [
         "UI smoke test: verify page renders without errors",
         "No regressions in existing test suite (npm test)"
       ],
       "test_protocol": [
-        "npx tsc --noEmit — zero TypeScript errors",
-        "npm test — all tests pass",
-        "npm run blueprint — architecture docs sync",
-        "Ticket-specific verification: verify acceptance criteria manually",
-        "Regression checks: verify adjacent features still work",
-        "API contract sync: if API changed, verify DTOs/OpenAPI/api-client match",
-        "UI verification: if UI changed, manual check in browser",
-        "Edge cases: verify behavior with missing/null data"
+        "Integration test: seed 2 contractors with ≥1 job each (1 completed, 1 pending); assert completionRate and avgDaysToComplete",
+        "Browser: /manager/reports — table renders, date range defaults to last 90 days",
+        "Browser: empty state — no jobs seeded in range — placeholder renders"
       ],
       "validation_checklist": [
         "All acceptance criteria verified",
@@ -2768,9 +2779,9 @@
         "npm test — full suite passes",
         "npx tsc --noEmit — zero type errors"
       ],
-      "refinement_status": "ready_candidate",
+      "refinement_status": "refined",
       "refinement_notes": [],
-      "refined_at": "2026-03-19T22:16:47.812Z"
+      "refined_at": "2026-03-22T21:47:03.408Z"
     },
     {
       "id": "DT-002",
@@ -2778,42 +2789,48 @@
         "INT-035"
       ],
       "title": "Cost analysis and overrun tracking — compare estimated vs actual costs per job, per contractor, per building",
-      "goal": "Implement \"Cost analysis and overrun tracking — compare estimated vs actual costs per job, per contractor, per building\" in the reporting domain to fulfill the original request: Cost analysis and overrun tracking — compare estimated vs actual costs per job, per contractor, per building. Identify p (UI/frontend changes only).",
+      "goal": "Add a cost overrun report to /manager/reports showing estimated vs actual cost per job, per contractor, and per building. Surface jobs where actualCost > estimatedCost (overruns) and jobs where no actual cost is recorded yet (at-risk).",
       "phase": "P4",
       "order": 1,
       "status": "review",
       "product_area": "reporting",
       "parent_feature_id": "F-P4-001",
-      "depends_on": [],
+      "depends_on": [
+        "DT-001"
+      ],
       "files_to_modify": [
-        "apps/web/pages/manager/dashboard/"
+        "apps/api/src/services/analyticsService.ts (extend)",
+        "apps/api/src/routes/reports.ts (extend)",
+        "apps/web/pages/manager/reports.js",
+        "apps/web/pages/api/reports/cost-variance.js (new proxy)",
+        "packages/api-client/src/index.ts"
       ],
       "in_scope": [
-        "Implement Cost analysis and overrun tracking — compare estimated vs actual costs per job, per contractor, per building",
-        "UI/page updates"
+        "Backend: GET /reports/cost-variance?from=&to=&groupBy=job|contractor|building",
+        "Per-job: requestId, description, estimatedCost (Request.estimatedCost), actualCost (Invoice.totalAmount sum), variance, overrunPct",
+        "Per-contractor rollup: contractorId, contractorName, totalEstimated, totalActual, totalVariance",
+        "Per-building rollup: buildingId, buildingName, totalEstimated, totalActual",
+        "Frontend: second tab on /manager/reports \"Cost Variance\"; table with sortable variance column; overrun rows highlighted in amber",
+        "api-client updated"
       ],
       "out_of_scope": [
-        "Cross-portal changes (unless explicitly listed)",
-        "Performance optimization (separate ticket)"
+        "Budget forecasting or projections",
+        "Linking to vendor contracts or purchase orders"
       ],
       "acceptance_criteria": [
-        "Feature works as described in scope",
-        "All listed in_scope items implemented",
-        "Edge cases handled gracefully (empty state, missing data, permissions)"
+        "GET /reports/cost-variance?groupBy=contractor returns { data: [{ contractorId, contractorName, totalEstimated, totalActual, totalVariance, overrunCount }] }",
+        "overrunPct = (actualCost - estimatedCost) / estimatedCost * 100; 0 when estimatedCost is null",
+        "Jobs with no linked invoice show actualCost: null and flagged as at_risk: true",
+        "Table rows with overrunPct > 0 render with amber background class",
+        "npx tsc --noEmit — zero errors | npm test — all tests pass"
       ],
       "tests_to_add_or_update": [
         "UI smoke test: verify page renders without errors",
         "No regressions in existing test suite (npm test)"
       ],
       "test_protocol": [
-        "npx tsc --noEmit — zero TypeScript errors",
-        "npm test — all tests pass",
-        "npm run blueprint — architecture docs sync",
-        "Ticket-specific verification: verify acceptance criteria manually",
-        "Regression checks: verify adjacent features still work",
-        "API contract sync: if API changed, verify DTOs/OpenAPI/api-client match",
-        "UI verification: if UI changed, manual check in browser",
-        "Edge cases: verify behavior with missing/null data"
+        "Integration test: seed request with estimatedCost=100, paid invoice totalAmount=150 → assert variance=50, overrunPct=50",
+        "Integration test: request with no invoice → assert at_risk=true, actualCost=null"
       ],
       "validation_checklist": [
         "All acceptance criteria verified",
@@ -2861,9 +2878,9 @@
         "npm test — full suite passes",
         "npx tsc --noEmit — zero type errors"
       ],
-      "refinement_status": "ready_candidate",
+      "refinement_status": "refined",
       "refinement_notes": [],
-      "refined_at": "2026-03-19T22:58:29.503Z"
+      "refined_at": "2026-03-22T21:47:03.414Z"
     },
     {
       "id": "DT-003",
@@ -2871,42 +2888,46 @@
         "INT-036"
       ],
       "title": "Job completion timeline reports — track how long jobs take from request creation to invoice payment, broken down by c…",
-      "goal": "Implement: Job completion timeline reports — track how long jobs take from request creation to invoice payment, broken down by c…",
+      "goal": "Add a job completion timeline report to /manager/reports showing how long each stage of the maintenance lifecycle takes: request creation → approval → job start → job complete → invoice paid. Broken down by category and contractor.",
       "phase": "P3",
       "order": 1,
       "status": "review",
       "product_area": "reporting",
       "parent_feature_id": null,
-      "depends_on": [],
+      "depends_on": [
+        "DT-001"
+      ],
       "files_to_modify": [
-        "apps/web/pages/manager/dashboard/"
+        "apps/api/src/services/analyticsService.ts (extend)",
+        "apps/api/src/routes/reports.ts (extend)",
+        "apps/web/pages/manager/reports.js",
+        "apps/web/pages/api/reports/completion-timelines.js (new proxy)",
+        "packages/api-client/src/index.ts"
       ],
       "in_scope": [
-        "Job completion timeline reports — track how long jobs take from request creation to invoice payment, broken down by c…",
-        "UI/page updates"
+        "Backend: GET /reports/completion-timelines?from=&to=&groupBy=category|contractor",
+        "Per-job timestamps: createdAt, approvedAt (status transition), job.startedAt, job.completedAt, invoice.paidAt",
+        "Stage durations: requestToApproval (days), approvalToJobStart, jobStartToComplete, completedToPaid",
+        "Frontend: third tab on /manager/reports \"Timelines\"; median and p90 per stage per group",
+        "api-client updated"
       ],
       "out_of_scope": [
-        "Cross-portal changes (unless explicitly listed)",
-        "Performance optimization (separate ticket)"
+        "SLA breach alerting or automated escalation",
+        "Real-time tracking / live updates"
       ],
       "acceptance_criteria": [
-        "Feature works as described in scope",
-        "All listed in_scope items implemented",
-        "Edge cases handled gracefully (empty state, missing data, permissions)"
+        "GET /reports/completion-timelines returns { data: [{ group, medianDaysToComplete, p90DaysToComplete, sampleCount }] }",
+        "Null timestamps excluded from median/p90 computation",
+        "groupBy=category groups by Request.category; groupBy=contractor groups by job.contractorId",
+        "npx tsc --noEmit — zero errors | npm test — all tests pass"
       ],
       "tests_to_add_or_update": [
         "UI smoke test: verify page renders without errors",
         "No regressions in existing test suite (npm test)"
       ],
       "test_protocol": [
-        "npx tsc --noEmit — zero TypeScript errors",
-        "npm test — all tests pass",
-        "npm run blueprint — architecture docs sync",
-        "Ticket-specific verification: verify acceptance criteria manually",
-        "Regression checks: verify adjacent features still work",
-        "API contract sync: if API changed, verify DTOs/OpenAPI/api-client match",
-        "UI verification: if UI changed, manual check in browser",
-        "Edge cases: verify behavior with missing/null data"
+        "Integration test: seed 3 completed jobs with known timestamps; assert median = middle value",
+        "Integration test: jobs with null completedAt excluded from median"
       ],
       "validation_checklist": [
         "All acceptance criteria verified",
@@ -2924,7 +2945,9 @@
         "Review SCHEMA_REFERENCE.md — update if schema changed",
         "Commit: npx tsc --noEmit → npm test → npm run blueprint"
       ],
-      "canonical_implementation_prompt": "## Ticket: Job completion timeline reports — track how long jobs take from request creation to invoice payment, broken down by c…\n\n**Goal:** Implement: Job completion timeline reports — track how long jobs take from request creation to invoice payment, broken down by c…\n\n**Phase:** P3 | **Area:** reporting\n\n### In Scope\n- Job completion timeline reports — track how long jobs take from request creation to invoice payment, broken down by c…\n- UI/page updates\n\n### Out of Scope\n- Cross-portal changes (unless explicitly listed)\n- Performance optimization (separate ticket)\n\n### Files to Modify (in order)\n1. `apps/web/pages/manager/dashboard/`\n\n### Acceptance Criteria\n- [ ] Feature works as described in scope\n- [ ] All listed in_scope items implemented\n- [ ] Edge cases handled gracefully (empty state, missing data, permissions)\n\n### Test Plan\n- UI smoke test: verify page renders without errors\n- No regressions in existing test suite (npm test)\n\n### Test Protocol\n1. npx tsc --noEmit — zero TypeScript errors\n2. npm test — all tests pass\n3. npm run blueprint — architecture docs sync\n4. Ticket-specific verification: verify acceptance criteria manually\n5. Regression checks: verify adjacent features still work\n6. API contract sync: if API changed, verify DTOs/OpenAPI/api-client match\n7. UI verification: if UI changed, manual check in browser\n8. Edge cases: verify behavior with missing/null data\n\n### Validation Checklist\n- [ ] All acceptance criteria verified\n- [ ] No TypeScript errors (npx tsc --noEmit)\n- [ ] All tests pass (npm test)\n- [ ] No layer violations introduced\n- [ ] Blueprint regenerated (npm run blueprint)\n\n### Post-Validation Updates\n- Refresh docs/blueprint.html — cd apps/api && node blueprint.js\n- Refresh docs/roadmap.html — node scripts/generate-roadmap.js\n- Review PROJECT_STATE.md — update if architecture decisions changed\n- Review ARCHITECTURE_LOW_CONTEXT_GUIDE.md — update if auth/layers touched\n- Review docs/AUDIT.md — mark resolved findings, add new ones\n- Review SCHEMA_REFERENCE.md — update if schema changed\n- Commit: npx tsc --noEmit → npm test → npm run blueprint"
+      "canonical_implementation_prompt": "## Ticket: Job completion timeline reports — track how long jobs take from request creation to invoice payment, broken down by c…\n\n**Goal:** Implement: Job completion timeline reports — track how long jobs take from request creation to invoice payment, broken down by c…\n\n**Phase:** P3 | **Area:** reporting\n\n### In Scope\n- Job completion timeline reports — track how long jobs take from request creation to invoice payment, broken down by c…\n- UI/page updates\n\n### Out of Scope\n- Cross-portal changes (unless explicitly listed)\n- Performance optimization (separate ticket)\n\n### Files to Modify (in order)\n1. `apps/web/pages/manager/dashboard/`\n\n### Acceptance Criteria\n- [ ] Feature works as described in scope\n- [ ] All listed in_scope items implemented\n- [ ] Edge cases handled gracefully (empty state, missing data, permissions)\n\n### Test Plan\n- UI smoke test: verify page renders without errors\n- No regressions in existing test suite (npm test)\n\n### Test Protocol\n1. npx tsc --noEmit — zero TypeScript errors\n2. npm test — all tests pass\n3. npm run blueprint — architecture docs sync\n4. Ticket-specific verification: verify acceptance criteria manually\n5. Regression checks: verify adjacent features still work\n6. API contract sync: if API changed, verify DTOs/OpenAPI/api-client match\n7. UI verification: if UI changed, manual check in browser\n8. Edge cases: verify behavior with missing/null data\n\n### Validation Checklist\n- [ ] All acceptance criteria verified\n- [ ] No TypeScript errors (npx tsc --noEmit)\n- [ ] All tests pass (npm test)\n- [ ] No layer violations introduced\n- [ ] Blueprint regenerated (npm run blueprint)\n\n### Post-Validation Updates\n- Refresh docs/blueprint.html — cd apps/api && node blueprint.js\n- Refresh docs/roadmap.html — node scripts/generate-roadmap.js\n- Review PROJECT_STATE.md — update if architecture decisions changed\n- Review ARCHITECTURE_LOW_CONTEXT_GUIDE.md — update if auth/layers touched\n- Review docs/AUDIT.md — mark resolved findings, add new ones\n- Review SCHEMA_REFERENCE.md — update if schema changed\n- Commit: npx tsc --noEmit → npm test → npm run blueprint",
+      "refinement_status": "refined",
+      "refined_at": "2026-03-22T21:47:03.414Z"
     },
     {
       "id": "DT-004",
@@ -2932,28 +2955,32 @@
         "INT-037"
       ],
       "title": "Roll out H1 auth wrappers (withAuthRequired/withRole) to remaining ~100 unprotected routes",
-      "goal": "Implement: Roll out H1 auth wrappers (withAuthRequired/withRole) to remaining ~100 unprotected routes",
+      "goal": "Audit all route handlers in apps/api/src/routes/ to confirm every non-public endpoint has an auth guard (requireRole / requireOrgViewer / requireStaffAuth). Patch any gaps found. Update this ticket to ready once audit is complete.",
       "phase": "P3",
       "order": 1,
       "status": "review",
-      "product_area": "auth",
+      "product_area": "security",
       "parent_feature_id": null,
       "depends_on": [],
       "files_to_modify": [
-        "apps/api/prisma/schema.prisma",
-        "apps/api/src/authz.ts",
-        "packages/api-client/src/"
+        "apps/api/src/routes/*.ts (audit all; patch any gaps)"
       ],
       "in_scope": [
-        "Roll out H1 auth wrappers (withAuthRequired/withRole) to remaining ~100 unprotected routes",
-        "API endpoint changes",
-        "UI/page updates"
+        "Grep every router.get/post/put/delete/patch handler for presence of requireRole|requireOrgViewer|requireStaffAuth|requireAnyRole|requireTenantSession",
+        "Confirm intentional public endpoints are documented (triage, auth/login, auth/register, tenant-session POST, rental-applications POST, /apply, /listings)",
+        "Flag any handler missing an auth guard that is not explicitly public",
+        "Patch any genuine gaps",
+        "Add brief comment above each intentional public endpoint explaining why it is public"
       ],
-      "out_of_scope": [],
+      "out_of_scope": [
+        "Changing the auth architecture or middleware design",
+        "Adding auth to intentionally public endpoints"
+      ],
       "acceptance_criteria": [
-        "Feature works as described in scope",
-        "All listed in_scope items implemented",
-        "Edge cases handled gracefully (empty state, missing data, permissions)"
+        "Every non-public route handler calls at least one of: requireRole, requireOrgViewer, requireStaffAuth, requireAnyRole, requireTenantSession, withAuthRequired",
+        "All intentionally public endpoints have a // SA-XX: public because ... comment",
+        "Audit report added as implementation_notes in this ticket after completion",
+        "npm test — all tests pass"
       ],
       "tests_to_add_or_update": [
         "Verify feature works per acceptance criteria",
@@ -2985,7 +3012,12 @@
         "Review SCHEMA_REFERENCE.md — update if schema changed",
         "Commit: npx tsc --noEmit → npm test → npm run blueprint"
       ],
-      "canonical_implementation_prompt": "## Ticket: Roll out H1 auth wrappers (withAuthRequired/withRole) to remaining ~100 unprotected routes\n\n**Goal:** Implement: Roll out H1 auth wrappers (withAuthRequired/withRole) to remaining ~100 unprotected routes\n\n**Phase:** P3 | **Area:** auth\n\n### In Scope\n- Roll out H1 auth wrappers (withAuthRequired/withRole) to remaining ~100 unprotected routes\n- API endpoint changes\n- UI/page updates\n\n### Files to Modify (in order)\n1. `apps/api/prisma/schema.prisma`\n2. `apps/api/src/authz.ts`\n3. `packages/api-client/src/`\n\n### Acceptance Criteria\n- [ ] Feature works as described in scope\n- [ ] All listed in_scope items implemented\n- [ ] Edge cases handled gracefully (empty state, missing data, permissions)\n\n### Test Plan\n- Verify feature works per acceptance criteria\n- No regressions in existing test suite (npm test)\n\n### Test Protocol\n1. npx tsc --noEmit — zero TypeScript errors\n2. npm test — all tests pass\n3. npm run blueprint — architecture docs sync\n4. Ticket-specific verification: verify acceptance criteria manually\n5. Regression checks: verify adjacent features still work\n6. API contract sync: if API changed, verify DTOs/OpenAPI/api-client match\n7. UI verification: if UI changed, manual check in browser\n8. Edge cases: verify behavior with missing/null data\n\n### Validation Checklist\n- [ ] All acceptance criteria verified\n- [ ] No TypeScript errors (npx tsc --noEmit)\n- [ ] All tests pass (npm test)\n- [ ] No layer violations introduced\n- [ ] Blueprint regenerated (npm run blueprint)\n\n### Post-Validation Updates\n- Refresh docs/blueprint.html — cd apps/api && node blueprint.js\n- Refresh docs/roadmap.html — node scripts/generate-roadmap.js\n- Review PROJECT_STATE.md — update if architecture decisions changed\n- Review ARCHITECTURE_LOW_CONTEXT_GUIDE.md — update if auth/layers touched\n- Review docs/AUDIT.md — mark resolved findings, add new ones\n- Review SCHEMA_REFERENCE.md — update if schema changed\n- Commit: npx tsc --noEmit → npm test → npm run blueprint"
+      "canonical_implementation_prompt": "## Ticket: Roll out H1 auth wrappers (withAuthRequired/withRole) to remaining ~100 unprotected routes\n\n**Goal:** Implement: Roll out H1 auth wrappers (withAuthRequired/withRole) to remaining ~100 unprotected routes\n\n**Phase:** P3 | **Area:** auth\n\n### In Scope\n- Roll out H1 auth wrappers (withAuthRequired/withRole) to remaining ~100 unprotected routes\n- API endpoint changes\n- UI/page updates\n\n### Files to Modify (in order)\n1. `apps/api/prisma/schema.prisma`\n2. `apps/api/src/authz.ts`\n3. `packages/api-client/src/`\n\n### Acceptance Criteria\n- [ ] Feature works as described in scope\n- [ ] All listed in_scope items implemented\n- [ ] Edge cases handled gracefully (empty state, missing data, permissions)\n\n### Test Plan\n- Verify feature works per acceptance criteria\n- No regressions in existing test suite (npm test)\n\n### Test Protocol\n1. npx tsc --noEmit — zero TypeScript errors\n2. npm test — all tests pass\n3. npm run blueprint — architecture docs sync\n4. Ticket-specific verification: verify acceptance criteria manually\n5. Regression checks: verify adjacent features still work\n6. API contract sync: if API changed, verify DTOs/OpenAPI/api-client match\n7. UI verification: if UI changed, manual check in browser\n8. Edge cases: verify behavior with missing/null data\n\n### Validation Checklist\n- [ ] All acceptance criteria verified\n- [ ] No TypeScript errors (npx tsc --noEmit)\n- [ ] All tests pass (npm test)\n- [ ] No layer violations introduced\n- [ ] Blueprint regenerated (npm run blueprint)\n\n### Post-Validation Updates\n- Refresh docs/blueprint.html — cd apps/api && node blueprint.js\n- Refresh docs/roadmap.html — node scripts/generate-roadmap.js\n- Review PROJECT_STATE.md — update if architecture decisions changed\n- Review ARCHITECTURE_LOW_CONTEXT_GUIDE.md — update if auth/layers touched\n- Review docs/AUDIT.md — mark resolved findings, add new ones\n- Review SCHEMA_REFERENCE.md — update if schema changed\n- Commit: npx tsc --noEmit → npm test → npm run blueprint",
+      "refinement_status": "needs_investigation",
+      "refinement_notes": [
+        "Preliminary scan suggests most routes already have guards. Run: grep -L \"requireRole\\|requireOrgViewer\\|requireStaffAuth\\|requireAnyRole\\|requireTenantSession\" apps/api/src/routes/*.ts to find files with zero auth calls, then manually inspect each handler."
+      ],
+      "refined_at": "2026-03-22T21:47:03.414Z"
     },
     {
       "id": "DT-005",
@@ -2993,45 +3025,43 @@
         "INT-038"
       ],
       "title": "Implement summary DTOs for requests, invoices, and leases (H5 expansion)",
-      "goal": "Implement \"Implement summary DTOs for requests, invoices, and leases (H5 expansion)\" in the api domain to fulfill the original request: Implement summary DTOs for requests, invoices, and leases (H5 expansion). JobSummaryDTO already exists with view=summary (full-stack: API + UI).",
+      "goal": "Complete the ?view=summary DTO tier for all three major resource types. Request summary is already done. Verify jobs and invoices summary, then implement the missing Lease summary DTO so the manager dashboard and list pages can load lightweight payloads.",
       "phase": "P3",
       "order": 1,
       "status": "review",
       "product_area": "api",
       "parent_feature_id": null,
-      "depends_on": [
-        "not yet implemented"
-      ],
+      "depends_on": [],
       "files_to_modify": [
-        "(needs manual file identification)"
+        "apps/api/src/routes/leases.ts",
+        "apps/api/src/services/leases.ts or equivalent",
+        "apps/api/src/__tests__/contracts.test.ts (add lease summary contract test)",
+        "packages/api-client/src/index.ts"
       ],
       "in_scope": [
-        "Implement Implement summary DTOs for requests, invoices, and leases (H5 expansion)",
-        "API endpoint changes",
-        "UI/page updates"
+        "Verify GET /jobs?view=summary returns JobSummaryDTO (confirm fields: id, orgId, requestId, contractorId, status, createdAt, updatedAt — no nested relations)",
+        "Verify GET /invoices?view=summary returns InvoiceSummaryDTO (id, orgId, jobId, status, totalAmount, dueDate, paidAt, createdAt — no lineItems)",
+        "Implement GET /leases?view=summary returning LeaseSummaryDTO: { id, orgId, unitId, status, tenantName, startDate, netRentChf, unitNumber, buildingName }",
+        "Add lease summary proxy route in apps/web/pages/api/leases.js if not present",
+        "Update api-client with LeaseSummaryDTO type"
       ],
       "out_of_scope": [
-        "Cross-portal changes (unless explicitly listed)",
-        "Performance optimization (separate ticket)"
+        "Adding new summary DTOs beyond requests/jobs/invoices/leases",
+        "Changing existing full DTOs"
       ],
       "acceptance_criteria": [
-        "Feature works as described in scope",
-        "All listed in_scope items implemented",
-        "Edge cases handled gracefully (empty state, missing data, permissions)"
+        "GET /leases?view=summary returns { data: [LeaseSummaryDTO] } with no nested unit/building objects — unitNumber and buildingName are flat strings",
+        "GET /jobs?view=summary confirmed: returns array with no nested request/contractor objects",
+        "GET /invoices?view=summary confirmed: returns array with no lineItems field",
+        "contracts.test.ts covers GET /leases?view=summary shape",
+        "npx tsc --noEmit — zero errors | npm test — all tests pass"
       ],
       "tests_to_add_or_update": [
         "Verify feature works per acceptance criteria",
         "No regressions in existing test suite (npm test)"
       ],
       "test_protocol": [
-        "npx tsc --noEmit — zero TypeScript errors",
-        "npm test — all tests pass",
-        "npm run blueprint — architecture docs sync",
-        "Ticket-specific verification: verify acceptance criteria manually",
-        "Regression checks: verify adjacent features still work",
-        "API contract sync: if API changed, verify DTOs/OpenAPI/api-client match",
-        "UI verification: if UI changed, manual check in browser",
-        "Edge cases: verify behavior with missing/null data"
+        "Add contract test: GET /leases?view=summary — expect data[0] to have { id, status, tenantName, netRentChf, unitNumber, buildingName } and NOT have { unit, building, lineItems }"
       ],
       "validation_checklist": [
         "All acceptance criteria verified",
@@ -3085,7 +3115,7 @@
       "refinement_notes": [
         "No concrete files_to_modify"
       ],
-      "refined_at": "2026-03-19T22:18:59.636Z",
+      "refined_at": "2026-03-22T21:47:03.414Z",
       "notes": "Partial: RequestSummaryDTO (maintenanceRequests.ts) and InvoiceSummaryDTO (invoices.ts) implemented. LeaseSummaryDTO still missing from leases.ts. Remaining scope: lease summary DTO only."
     },
     {
@@ -3193,7 +3223,7 @@
       "goal": "Implement: Legal.ts route-layer violation (A-5 / CQ-5): 19 direct Prisma calls in routes/legal.ts",
       "phase": "P1",
       "order": 1,
-      "status": "review",
+      "status": "promoted",
       "product_area": "api",
       "parent_feature_id": null,
       "depends_on": [],
@@ -3244,7 +3274,8 @@
         "Commit: npx tsc --noEmit → npm test → npm run blueprint"
       ],
       "canonical_implementation_prompt": "## Ticket: Legal.ts route-layer violation (A-5 / CQ-5): 19 direct Prisma calls in routes/legal.ts\n\n**Goal:** Implement: Legal.ts route-layer violation (A-5 / CQ-5): 19 direct Prisma calls in routes/legal.ts\n\n**Phase:** P1 | **Area:** api\n\n### In Scope\n- Legal.ts route-layer violation (A-5 / CQ-5): 19 direct Prisma calls in routes/legal.ts\n- API endpoint changes\n\n### Out of Scope\n- Cross-portal changes (unless explicitly listed)\n- Performance optimization (separate ticket)\n\n### Files to Modify (in order)\n1. `(needs manual file identification)`\n\n### Acceptance Criteria\n- [ ] Feature works as described in scope\n- [ ] All listed in_scope items implemented\n- [ ] Edge cases handled gracefully (empty state, missing data, permissions)\n\n### Test Plan\n- Verify feature works per acceptance criteria\n- No regressions in existing test suite (npm test)\n\n### Test Protocol\n1. npx tsc --noEmit — zero TypeScript errors\n2. npm test — all tests pass\n3. npm run blueprint — architecture docs sync\n4. Ticket-specific verification: verify acceptance criteria manually\n5. Regression checks: verify adjacent features still work\n6. API contract sync: if API changed, verify DTOs/OpenAPI/api-client match\n7. UI verification: if UI changed, manual check in browser\n8. Edge cases: verify behavior with missing/null data\n\n### Validation Checklist\n- [ ] All acceptance criteria verified\n- [ ] No TypeScript errors (npx tsc --noEmit)\n- [ ] All tests pass (npm test)\n- [ ] No layer violations introduced\n- [ ] Blueprint regenerated (npm run blueprint)\n\n### Post-Validation Updates\n- Refresh docs/blueprint.html — cd apps/api && node blueprint.js\n- Refresh docs/roadmap.html — node scripts/generate-roadmap.js\n- Review PROJECT_STATE.md — update if architecture decisions changed\n- Review ARCHITECTURE_LOW_CONTEXT_GUIDE.md — update if auth/layers touched\n- Review docs/AUDIT.md — mark resolved findings, add new ones\n- Review SCHEMA_REFERENCE.md — update if schema changed\n- Commit: npx tsc --noEmit → npm test → npm run blueprint",
-      "notes": "routes/legal.ts: 17 direct Prisma calls remaining (was 19 at ticket creation). Still requires service-layer extraction."
+      "notes": "routes/legal.ts: 17 direct Prisma calls remaining (was 19 at ticket creation). Still requires service-layer extraction.\n[promoted 2026-03-22] Superseded by S-P0-004-01: legalService.ts extraction removed all 26 direct Prisma calls from legal.ts.",
+      "promoted_at": "2026-03-22T20:41:53.349Z"
     },
     {
       "id": "DT-008",
@@ -3252,7 +3283,7 @@
         "INT-041"
       ],
       "title": "Request.orgId migration (H6) — add orgId column to Request model for direct org filtering instead of FK traversal",
-      "goal": "Implement \"Request.orgId migration (H6) — add orgId column to Request model for direct org filtering instead of FK traversal\" in the database domain to fulfill the original request: Request.orgId migration (H6) — add orgId column to Request model for direct org filtering instead of FK traversal. Curre (backend changes only).",
+      "goal": "Denormalize orgId onto the Request model so org-scoped queries can use a direct WHERE orgId = ? instead of the current 4-way OR join (unit.orgId | tenant.orgId | appliance.orgId | assignedContractor.orgId). This eliminates FK traversal on every request query and unblocks H6 index optimisations.",
       "phase": "P2",
       "order": 1,
       "status": "review",
@@ -3260,35 +3291,41 @@
       "parent_feature_id": null,
       "depends_on": [],
       "files_to_modify": [
-        "apps/api/prisma/schema.prisma"
+        "apps/api/prisma/schema.prisma",
+        "apps/api/prisma/migrations/<timestamp>_request_orgid/ (new)",
+        "apps/api/src/services/maintenanceRequests.ts",
+        "apps/api/src/routes/requests.ts"
       ],
       "in_scope": [
-        "Implement Request.orgId migration (H6) — add orgId column to Request model for direct org filtering instead of FK traversal",
-        "UI/page updates",
-        "Database schema changes",
-        "Input validation"
+        "Add orgId String? to Request model in schema.prisma with @@index([orgId])",
+        "Write migration: ALTER TABLE \"Request\" ADD COLUMN \"orgId\" TEXT; plus backfill UPDATE SET orgId from unit.building.orgId (primary resolution)",
+        "Update maintenanceRequests.ts orgScopeWhere() to use { orgId } directly once non-null",
+        "Update all Request create paths to populate orgId from the resolved org at creation time",
+        "Keep orgScopeWhere fallback for any rows where orgId is still null post-backfill",
+        "Add NOT NULL constraint in a follow-up migration after confirming 100% backfill"
       ],
-      "out_of_scope": [],
+      "out_of_scope": [
+        "Making orgId NOT NULL in this slice — do additive first, enforce in follow-up",
+        "Removing orgScopeWhere fallback until backfill is verified complete",
+        "Applying the same pattern to other models (separate tickets)"
+      ],
       "acceptance_criteria": [
-        "Feature works as described in scope",
-        "All listed in_scope items implemented",
-        "Edge cases handled gracefully (empty state, missing data, permissions)",
-        "New functionality is accessible and discoverable",
-        "Filter/search returns correct results"
+        "Request model has orgId column after migration",
+        "All existing Request rows have orgId populated (backfill complete)",
+        "New request creation always sets orgId",
+        "orgScopeWhere returns { orgId } when orgId is non-null (no OR join)",
+        "@@index([orgId]) present in schema",
+        "npm test — all 522 tests pass",
+        "npx tsc --noEmit — zero errors"
       ],
       "tests_to_add_or_update": [
         "Verify feature works per acceptance criteria",
         "No regressions in existing test suite (npm test)"
       ],
       "test_protocol": [
-        "npx tsc --noEmit — zero TypeScript errors",
-        "npm test — all tests pass",
-        "npm run blueprint — architecture docs sync",
-        "Ticket-specific verification: verify acceptance criteria manually",
-        "Regression checks: verify adjacent features still work",
-        "API contract sync: if API changed, verify DTOs/OpenAPI/api-client match",
-        "UI verification: if UI changed, manual check in browser",
-        "Edge cases: verify behavior with missing/null data"
+        "After migration: SELECT COUNT(*) FROM \"Request\" WHERE \"orgId\" IS NULL should return 0",
+        "Create a new request via API; confirm Request.orgId is populated in DB",
+        "Run existing requests test suite — all pass (no regression)"
       ],
       "validation_checklist": [
         "All acceptance criteria verified",
@@ -3343,9 +3380,9 @@
         "npm test — full suite passes",
         "npx tsc --noEmit — zero type errors"
       ],
-      "refinement_status": "ready_candidate",
+      "refinement_status": "refined",
       "refinement_notes": [],
-      "refined_at": "2026-03-20T13:06:28.273Z"
+      "refined_at": "2026-03-22T21:47:03.414Z"
     },
     {
       "id": "DT-009",
@@ -3353,33 +3390,39 @@
         "INT-043"
       ],
       "title": "LegalDecisionEngine canton-specific filtering for DSL evaluator — currently the ingestion pipeline respects LegalSour…",
-      "goal": "Implement: LegalDecisionEngine canton-specific filtering for DSL evaluator — currently the ingestion pipeline respects LegalSour…",
+      "goal": "The legal decision engine already filters LegalRule by canton. Extend it to also filter LegalSource records by their scope (canton code) when building the evaluation context, so that canton-specific source data (e.g. cantonal reference rates) takes precedence over federal data.",
       "phase": "P3",
       "order": 1,
       "status": "review",
-      "product_area": "legal-engine",
+      "product_area": "legal",
       "parent_feature_id": null,
-      "depends_on": [],
+      "depends_on": [
+        "S-P0-002-01"
+      ],
       "files_to_modify": [
-        "apps/api/src/services/legal.service.ts",
-        "apps/api/src/routes/legal.ts",
-        "apps/web/pages/manager/legal/",
-        "packages/api-client/src/"
+        "apps/api/src/services/legalDecisionEngine.ts",
+        "apps/api/src/services/legalIngestion.ts",
+        "apps/api/src/services/legalService.ts",
+        "apps/api/src/__tests__/legalEngine.test.ts"
       ],
       "in_scope": [
-        "LegalDecisionEngine canton-specific filtering for DSL evaluator — currently the ingestion pipeline respects LegalSour…",
-        "UI/page updates",
-        "Test coverage updates"
+        "In legalDecisionEngine.ts: when fetching LegalSource for context, filter by scope matching the request canton (fall back to FEDERAL if no canton-specific source)",
+        "Ensure legalIngestion.ts correctly tags ingested data with the right LegalSourceScope (canton code or FEDERAL)",
+        "Add a test: seed a cantonal LegalSource (e.g. scope=ZH) and a FEDERAL source for the same key; assert ZH request uses ZH source, BE request uses FEDERAL fallback",
+        "Update legalService.ts listVariables() to accept optional canton filter"
       ],
       "out_of_scope": [
-        "Cross-portal changes (unless explicitly listed)",
-        "Performance optimization (separate ticket)"
+        "Changing the LegalSourceScope enum values",
+        "UI changes to the legal admin pages",
+        "Ingesting real cantonal data — stub values in tests are sufficient"
       ],
       "acceptance_criteria": [
-        "Feature works as described in scope",
-        "All listed in_scope items implemented",
-        "Edge cases handled gracefully (empty state, missing data, permissions)",
-        "Filter/search returns correct results"
+        "legalDecisionEngine fetches LegalSource filtered by canton scope first, falling back to FEDERAL",
+        "A request in canton ZH with a ZH-scoped source uses the ZH source values in evaluation",
+        "A request in canton BE with no BE-scoped source falls back to FEDERAL source",
+        "Existing legalEngine.test.ts tests still pass",
+        "New canton-scope test passes",
+        "npx tsc --noEmit — zero errors | npm test — all tests pass"
       ],
       "tests_to_add_or_update": [
         "API contract test: verify request/response shape",
@@ -3388,14 +3431,9 @@
         "No regressions in existing test suite (npm test)"
       ],
       "test_protocol": [
-        "npx tsc --noEmit — zero TypeScript errors",
-        "npm test — all tests pass",
-        "npm run blueprint — architecture docs sync",
-        "Ticket-specific verification: verify acceptance criteria manually",
-        "Regression checks: verify adjacent features still work",
-        "API contract sync: if API changed, verify DTOs/OpenAPI/api-client match",
-        "UI verification: if UI changed, manual check in browser",
-        "Edge cases: verify behavior with missing/null data"
+        "Seed: LegalVariable key=REF_RATE with FEDERAL value=1.75 and ZH value=1.50",
+        "Evaluate request in ZH → assert REF_RATE resolved to 1.50",
+        "Evaluate request in BE → assert REF_RATE resolved to 1.75 (FEDERAL fallback)"
       ],
       "validation_checklist": [
         "All acceptance criteria verified",
@@ -3413,7 +3451,9 @@
         "Review SCHEMA_REFERENCE.md — update if schema changed",
         "Commit: npx tsc --noEmit → npm test → npm run blueprint"
       ],
-      "canonical_implementation_prompt": "## Ticket: LegalDecisionEngine canton-specific filtering for DSL evaluator — currently the ingestion pipeline respects LegalSour…\n\n**Goal:** Implement: LegalDecisionEngine canton-specific filtering for DSL evaluator — currently the ingestion pipeline respects LegalSour…\n\n**Phase:** P3 | **Area:** legal-engine\n\n### In Scope\n- LegalDecisionEngine canton-specific filtering for DSL evaluator — currently the ingestion pipeline respects LegalSour…\n- UI/page updates\n- Test coverage updates\n\n### Out of Scope\n- Cross-portal changes (unless explicitly listed)\n- Performance optimization (separate ticket)\n\n### Files to Modify (in order)\n1. `apps/api/src/services/legal.service.ts`\n2. `apps/api/src/routes/legal.ts`\n3. `apps/web/pages/manager/legal/`\n4. `packages/api-client/src/`\n\n### Acceptance Criteria\n- [ ] Feature works as described in scope\n- [ ] All listed in_scope items implemented\n- [ ] Edge cases handled gracefully (empty state, missing data, permissions)\n- [ ] Filter/search returns correct results\n\n### Test Plan\n- API contract test: verify request/response shape\n- Service unit test: verify business logic\n- UI smoke test: verify page renders without errors\n- No regressions in existing test suite (npm test)\n\n### Test Protocol\n1. npx tsc --noEmit — zero TypeScript errors\n2. npm test — all tests pass\n3. npm run blueprint — architecture docs sync\n4. Ticket-specific verification: verify acceptance criteria manually\n5. Regression checks: verify adjacent features still work\n6. API contract sync: if API changed, verify DTOs/OpenAPI/api-client match\n7. UI verification: if UI changed, manual check in browser\n8. Edge cases: verify behavior with missing/null data\n\n### Validation Checklist\n- [ ] All acceptance criteria verified\n- [ ] No TypeScript errors (npx tsc --noEmit)\n- [ ] All tests pass (npm test)\n- [ ] No layer violations introduced\n- [ ] Blueprint regenerated (npm run blueprint)\n\n### Post-Validation Updates\n- Refresh docs/blueprint.html — cd apps/api && node blueprint.js\n- Refresh docs/roadmap.html — node scripts/generate-roadmap.js\n- Review PROJECT_STATE.md — update if architecture decisions changed\n- Review ARCHITECTURE_LOW_CONTEXT_GUIDE.md — update if auth/layers touched\n- Review docs/AUDIT.md — mark resolved findings, add new ones\n- Review SCHEMA_REFERENCE.md — update if schema changed\n- Commit: npx tsc --noEmit → npm test → npm run blueprint"
+      "canonical_implementation_prompt": "## Ticket: LegalDecisionEngine canton-specific filtering for DSL evaluator — currently the ingestion pipeline respects LegalSour…\n\n**Goal:** Implement: LegalDecisionEngine canton-specific filtering for DSL evaluator — currently the ingestion pipeline respects LegalSour…\n\n**Phase:** P3 | **Area:** legal-engine\n\n### In Scope\n- LegalDecisionEngine canton-specific filtering for DSL evaluator — currently the ingestion pipeline respects LegalSour…\n- UI/page updates\n- Test coverage updates\n\n### Out of Scope\n- Cross-portal changes (unless explicitly listed)\n- Performance optimization (separate ticket)\n\n### Files to Modify (in order)\n1. `apps/api/src/services/legal.service.ts`\n2. `apps/api/src/routes/legal.ts`\n3. `apps/web/pages/manager/legal/`\n4. `packages/api-client/src/`\n\n### Acceptance Criteria\n- [ ] Feature works as described in scope\n- [ ] All listed in_scope items implemented\n- [ ] Edge cases handled gracefully (empty state, missing data, permissions)\n- [ ] Filter/search returns correct results\n\n### Test Plan\n- API contract test: verify request/response shape\n- Service unit test: verify business logic\n- UI smoke test: verify page renders without errors\n- No regressions in existing test suite (npm test)\n\n### Test Protocol\n1. npx tsc --noEmit — zero TypeScript errors\n2. npm test — all tests pass\n3. npm run blueprint — architecture docs sync\n4. Ticket-specific verification: verify acceptance criteria manually\n5. Regression checks: verify adjacent features still work\n6. API contract sync: if API changed, verify DTOs/OpenAPI/api-client match\n7. UI verification: if UI changed, manual check in browser\n8. Edge cases: verify behavior with missing/null data\n\n### Validation Checklist\n- [ ] All acceptance criteria verified\n- [ ] No TypeScript errors (npx tsc --noEmit)\n- [ ] All tests pass (npm test)\n- [ ] No layer violations introduced\n- [ ] Blueprint regenerated (npm run blueprint)\n\n### Post-Validation Updates\n- Refresh docs/blueprint.html — cd apps/api && node blueprint.js\n- Refresh docs/roadmap.html — node scripts/generate-roadmap.js\n- Review PROJECT_STATE.md — update if architecture decisions changed\n- Review ARCHITECTURE_LOW_CONTEXT_GUIDE.md — update if auth/layers touched\n- Review docs/AUDIT.md — mark resolved findings, add new ones\n- Review SCHEMA_REFERENCE.md — update if schema changed\n- Commit: npx tsc --noEmit → npm test → npm run blueprint",
+      "refinement_status": "refined",
+      "refined_at": "2026-03-22T21:47:03.414Z"
     },
     {
       "id": "DT-010",
@@ -3421,7 +3461,7 @@
         "INT-045"
       ],
       "title": "Formalize background job scheduler — processSelectionTimeouts() and processAttachmentRetention() currently run on hou…",
-      "goal": "Deliver \"Formalize background job scheduler — processSelectionTimeouts() and processAttachmentRetention() currently run on hou…\" in the api domain to fulfill the original request: Formalize background job scheduler — processSelectionTimeouts() and processAttachmentRetention() currently run on hourly (full-stack: API + UI).",
+      "goal": "Formalise the background job runner: extract the three inline setInterval jobs from server.ts into a named registry with per-job enable/disable, structured logging, and a health endpoint that reports last-run time and status for each job.",
       "phase": "P3",
       "order": 1,
       "status": "review",
@@ -3429,33 +3469,38 @@
       "parent_feature_id": null,
       "depends_on": [],
       "files_to_modify": [
-        "(needs manual file identification)"
+        "apps/api/src/services/bgJobRunner.ts (new)",
+        "apps/api/src/server.ts (replace inline setInterval with bgJobRunner.start())",
+        "apps/api/src/routes/dev.ts (add /__dev/bg-jobs/status)"
       ],
       "in_scope": [
-        "Formalize background job scheduler — processSelectionTimeouts() and processAttachmentRetention() currently run on hou…"
+        "Create apps/api/src/services/bgJobRunner.ts: registry of named jobs (processSelectionTimeouts, processAttachmentRetention, processSchedulingEscalations)",
+        "Each job entry: { name, fn, intervalMs, enabled, lastRunAt, lastStatus, lastError }",
+        "bgJobRunner.start() replaces the inline setInterval block in server.ts",
+        "Add GET /__dev/bg-jobs/status endpoint returning job registry state (dev only)",
+        "Structured log format: [BG-JOBS] jobName | status=ok|error | durationMs=X",
+        "Individual job enable/disable via BG_JOB_<NAME>_ENABLED env var"
       ],
       "out_of_scope": [
-        "Cross-portal changes (unless explicitly listed)",
-        "Performance optimization (separate ticket)"
+        "Persistent job history in DB — in-memory last-run state only",
+        "Cron syntax / complex schedules — fixed interval per job is sufficient",
+        "Adding new jobs (separate tickets)"
       ],
       "acceptance_criteria": [
-        "Feature works as described in scope",
-        "All listed in_scope items implemented",
-        "Edge cases handled gracefully (empty state, missing data, permissions)"
+        "server.ts background job block is ≤5 lines, delegates entirely to bgJobRunner.start()",
+        "bgJobRunner exports getJobStatus() returning { name, lastRunAt, lastStatus, lastError }[] for all registered jobs",
+        "GET /__dev/bg-jobs/status returns job registry in test env",
+        "BG_JOBS_ENABLED=false disables all jobs (existing behaviour preserved)",
+        "Each job logs [BG-JOBS] <name> | status=ok | durationMs=<n> on success",
+        "npm test — all tests pass"
       ],
       "tests_to_add_or_update": [
         "Verify feature works per acceptance criteria",
         "No regressions in existing test suite (npm test)"
       ],
       "test_protocol": [
-        "npx tsc --noEmit — zero TypeScript errors",
-        "npm test — all tests pass",
-        "npm run blueprint — architecture docs sync",
-        "Ticket-specific verification: verify acceptance criteria manually",
-        "Regression checks: verify adjacent features still work",
-        "API contract sync: if API changed, verify DTOs/OpenAPI/api-client match",
-        "UI verification: if UI changed, manual check in browser",
-        "Edge cases: verify behavior with missing/null data"
+        "Unit test bgJobRunner: register a mock job, call start() with intervalMs=50, wait 120ms, assert job ran ≥2 times and lastStatus=ok",
+        "Unit test: BG_JOBS_ENABLED=false → start() returns without scheduling anything"
       ],
       "validation_checklist": [
         "All acceptance criteria verified",
@@ -3509,7 +3554,7 @@
       "refinement_notes": [
         "No concrete files_to_modify"
       ],
-      "refined_at": "2026-03-20T09:53:18.592Z"
+      "refined_at": "2026-03-22T21:47:03.415Z"
     },
     {
       "id": "DT-011",
@@ -3581,7 +3626,7 @@
         "INT-048"
       ],
       "title": "3 proxy routes retain custom logic and can't use proxyToBackend() — requests.js (field rename on POST), contractors.j…",
-      "goal": "Deliver \"3 proxy routes retain custom logic and can't use proxyToBackend() — requests.js (field rename on POST), contractors.j…\" in the frontend domain to fulfill the original request: 3 proxy routes retain custom logic and can't use proxyToBackend() — requests.js (field rename on POST), contractors.js ( (full-stack: API + UI).",
+      "goal": "The three proxy routes that have custom logic (contractors.js, owner/approvals.js, invoices/[id]/[action].js) cannot be replaced by proxyToBackend(). Document why each is an exception, add a comment block explaining the custom logic, and ensure each follows consistent error handling and content-type patterns.",
       "phase": "P0",
       "order": 1,
       "status": "review",
@@ -3589,33 +3634,32 @@
       "parent_feature_id": null,
       "depends_on": [],
       "files_to_modify": [
-        "(needs manual file identification)"
+        "apps/web/pages/api/contractors.js",
+        "apps/web/pages/api/owner/approvals.js",
+        "apps/web/pages/api/invoices/[id]/[action].js"
       ],
       "in_scope": [
-        "3 proxy routes retain custom logic and can't use proxyToBackend() — requests.js (field rename on POST), contractors.j…",
-        "API endpoint changes"
+        "apps/web/pages/api/contractors.js: add // PROXY-EXCEPTION comment explaining custom routing (GET list/match, POST create, PATCH update, DELETE); standardise error handling to match other proxy routes",
+        "apps/web/pages/api/owner/approvals.js: add // PROXY-EXCEPTION comment explaining action routing (GET→/owner/pending-approvals, POST approve→/requests/:id/owner-approve, POST reject→/requests/:id/owner-reject)",
+        "apps/web/pages/api/invoices/[id]/[action].js: add // PROXY-EXCEPTION comment explaining binary content handling (pdf, qr-code.png use binary:true flag)",
+        "Verify all three handle errors consistently (non-200 → forward status code, not throw)"
       ],
       "out_of_scope": [
-        "Refactoring unrelated code",
-        "New model/migration creation"
+        "Rewriting these routes to use proxyToBackend() — they have legitimate reasons for custom logic",
+        "Adding new endpoints to these files"
       ],
       "acceptance_criteria": [
-        "Feature works as described in scope",
-        "Edge cases handled gracefully (empty state, missing data, permissions)"
+        "Each of the 3 files has a // PROXY-EXCEPTION: <reason> comment at the top of the handler",
+        "Error responses forward the upstream status code rather than always returning 500",
+        "npx tsc --noEmit — zero errors | next build — zero errors"
       ],
       "tests_to_add_or_update": [
         "Verify feature works per acceptance criteria",
         "No regressions in existing test suite (npm test)"
       ],
       "test_protocol": [
-        "npx tsc --noEmit — zero TypeScript errors",
-        "npm test — all tests pass",
-        "npm run blueprint — architecture docs sync",
-        "Ticket-specific verification: verify acceptance criteria manually",
-        "Regression checks: verify adjacent features still work",
-        "API contract sync: if API changed, verify DTOs/OpenAPI/api-client match",
-        "UI verification: if UI changed, manual check in browser",
-        "Edge cases: verify behavior with missing/null data"
+        "Browser: POST /api/contractors with invalid body → should return 400, not 500",
+        "Browser: POST /api/owner/approvals with unknown id → should return 404"
       ],
       "validation_checklist": [
         "All acceptance criteria verified",
@@ -3670,7 +3714,7 @@
       "refinement_notes": [
         "No concrete files_to_modify"
       ],
-      "refined_at": "2026-03-20T08:57:42.786Z"
+      "refined_at": "2026-03-22T21:47:03.415Z"
     },
     {
       "id": "DT-013",
@@ -3744,33 +3788,40 @@
         "INT-044"
       ],
       "title": "Production email provider integration — EmailOutbox currently uses dev sink (emails queued in DB, viewable via GET /_…",
-      "goal": "Extend F-P0-001: Production email provider integration — EmailOutbox currently uses dev sink (emails queued in DB, viewable via GET /_…",
+      "goal": "The SMTP transport layer is complete (emailTransport.ts). What remains for production readiness: (1) wire the email flush job into bgJobRunner, (2) add a retry mechanism for FAILED emails, (3) document the available email templates.",
       "phase": "P0",
       "order": 1,
       "status": "review",
-      "product_area": "notifications",
+      "product_area": "api",
       "parent_feature_id": "F-P0-001",
-      "depends_on": [],
+      "depends_on": [
+        "DT-010",
+        "S-P0-001-02"
+      ],
       "files_to_modify": [
-        "apps/api/src/services/notification.service.ts",
-        "apps/api/src/workflows/notification.workflow.ts",
-        "apps/api/src/routes/notifications.ts",
-        "packages/api-client/src/"
+        "apps/api/src/services/emailOutbox.ts",
+        "apps/api/src/services/bgJobRunner.ts (register flush job)",
+        "apps/api/.env.example (add BG_JOB_EMAIL_FLUSH_INTERVAL_MS)"
       ],
       "in_scope": [
-        "Production email provider integration — EmailOutbox currently uses dev sink (emails queued in DB, viewable via GET /_…",
-        "UI/page updates",
-        "Notification delivery"
+        "Register flushPendingEmails() as a named bgJobRunner job (interval: BG_JOB_EMAIL_FLUSH_INTERVAL_MS, default 5 minutes)",
+        "Add retry: emails with status=FAILED and failedAt < 24h ago should be reset to PENDING and retried up to MAX_EMAIL_RETRIES (default 3)",
+        "Add emailOutbox.ts retryFailedEmails(maxAge: hours, maxRetries: number) function",
+        "Document all EmailTemplate enum values and their required variables in a code comment in emailOutbox.ts",
+        "Add GET /__dev/emails endpoint (already exists) to confirm it lists PENDING/SENT/FAILED emails"
       ],
       "out_of_scope": [
-        "Cross-portal changes (unless explicitly listed)",
-        "Performance optimization (separate ticket)"
+        "Building new email templates (separate feature work)",
+        "Email analytics or delivery tracking beyond SENT/FAILED status",
+        "Switching from nodemailer to a different provider SDK"
       ],
       "acceptance_criteria": [
-        "Feature works as described in scope",
-        "All listed in_scope items implemented",
-        "Edge cases handled gracefully (empty state, missing data, permissions)",
-        "Notifications delivered correctly"
+        "flushPendingEmails() runs on schedule via bgJobRunner (not ad-hoc)",
+        "retryFailedEmails() resets FAILED emails to PENDING when failedAt < 24h and retryCount < 3",
+        "EmailOutbox.retryCount field incremented on each retry attempt",
+        "EmailTemplate enum values documented with required variable names",
+        "GET /__dev/bg-jobs/status shows email-flush job with lastRunAt",
+        "npm test — all tests pass"
       ],
       "tests_to_add_or_update": [
         "API contract test: verify request/response shape",
@@ -3779,14 +3830,9 @@
         "No regressions in existing test suite (npm test)"
       ],
       "test_protocol": [
-        "npx tsc --noEmit — zero TypeScript errors",
-        "npm test — all tests pass",
-        "npm run blueprint — architecture docs sync",
-        "Ticket-specific verification: verify acceptance criteria manually",
-        "Regression checks: verify adjacent features still work",
-        "API contract sync: if API changed, verify DTOs/OpenAPI/api-client match",
-        "UI verification: if UI changed, manual check in browser",
-        "Edge cases: verify behavior with missing/null data"
+        "Unit test retryFailedEmails(): seed 1 FAILED email (failedAt=1h ago, retryCount=1); assert status reset to PENDING",
+        "Unit test: email with retryCount=3 not reset (max retries exceeded)",
+        "Unit test: email with failedAt=25h ago not reset (age limit exceeded)"
       ],
       "validation_checklist": [
         "All acceptance criteria verified",
@@ -3804,7 +3850,9 @@
         "Review SCHEMA_REFERENCE.md — update if schema changed",
         "Commit: npx tsc --noEmit → npm test → npm run blueprint"
       ],
-      "canonical_implementation_prompt": "## Ticket: Production email provider integration — EmailOutbox currently uses dev sink (emails queued in DB, viewable via GET /_…\n\n**Goal:** Extend F-P0-001: Production email provider integration — EmailOutbox currently uses dev sink (emails queued in DB, viewable via GET /_…\n\n**Phase:** P0 | **Area:** notifications\n**Parent Feature:** F-P0-001\n\n### In Scope\n- Production email provider integration — EmailOutbox currently uses dev sink (emails queued in DB, viewable via GET /_…\n- UI/page updates\n- Notification delivery\n\n### Out of Scope\n- Cross-portal changes (unless explicitly listed)\n- Performance optimization (separate ticket)\n\n### Files to Modify (in order)\n1. `apps/api/src/services/notification.service.ts`\n2. `apps/api/src/workflows/notification.workflow.ts`\n3. `apps/api/src/routes/notifications.ts`\n4. `packages/api-client/src/`\n\n### Acceptance Criteria\n- [ ] Feature works as described in scope\n- [ ] All listed in_scope items implemented\n- [ ] Edge cases handled gracefully (empty state, missing data, permissions)\n- [ ] Notifications delivered correctly\n\n### Test Plan\n- API contract test: verify request/response shape\n- Service unit test: verify business logic\n- Workflow integration test: verify status transitions\n- No regressions in existing test suite (npm test)\n\n### Test Protocol\n1. npx tsc --noEmit — zero TypeScript errors\n2. npm test — all tests pass\n3. npm run blueprint — architecture docs sync\n4. Ticket-specific verification: verify acceptance criteria manually\n5. Regression checks: verify adjacent features still work\n6. API contract sync: if API changed, verify DTOs/OpenAPI/api-client match\n7. UI verification: if UI changed, manual check in browser\n8. Edge cases: verify behavior with missing/null data\n\n### Validation Checklist\n- [ ] All acceptance criteria verified\n- [ ] No TypeScript errors (npx tsc --noEmit)\n- [ ] All tests pass (npm test)\n- [ ] No layer violations introduced\n- [ ] Blueprint regenerated (npm run blueprint)\n\n### Post-Validation Updates\n- Refresh docs/blueprint.html — cd apps/api && node blueprint.js\n- Refresh docs/roadmap.html — node scripts/generate-roadmap.js\n- Review PROJECT_STATE.md — update if architecture decisions changed\n- Review ARCHITECTURE_LOW_CONTEXT_GUIDE.md — update if auth/layers touched\n- Review docs/AUDIT.md — mark resolved findings, add new ones\n- Review SCHEMA_REFERENCE.md — update if schema changed\n- Commit: npx tsc --noEmit → npm test → npm run blueprint"
+      "canonical_implementation_prompt": "## Ticket: Production email provider integration — EmailOutbox currently uses dev sink (emails queued in DB, viewable via GET /_…\n\n**Goal:** Extend F-P0-001: Production email provider integration — EmailOutbox currently uses dev sink (emails queued in DB, viewable via GET /_…\n\n**Phase:** P0 | **Area:** notifications\n**Parent Feature:** F-P0-001\n\n### In Scope\n- Production email provider integration — EmailOutbox currently uses dev sink (emails queued in DB, viewable via GET /_…\n- UI/page updates\n- Notification delivery\n\n### Out of Scope\n- Cross-portal changes (unless explicitly listed)\n- Performance optimization (separate ticket)\n\n### Files to Modify (in order)\n1. `apps/api/src/services/notification.service.ts`\n2. `apps/api/src/workflows/notification.workflow.ts`\n3. `apps/api/src/routes/notifications.ts`\n4. `packages/api-client/src/`\n\n### Acceptance Criteria\n- [ ] Feature works as described in scope\n- [ ] All listed in_scope items implemented\n- [ ] Edge cases handled gracefully (empty state, missing data, permissions)\n- [ ] Notifications delivered correctly\n\n### Test Plan\n- API contract test: verify request/response shape\n- Service unit test: verify business logic\n- Workflow integration test: verify status transitions\n- No regressions in existing test suite (npm test)\n\n### Test Protocol\n1. npx tsc --noEmit — zero TypeScript errors\n2. npm test — all tests pass\n3. npm run blueprint — architecture docs sync\n4. Ticket-specific verification: verify acceptance criteria manually\n5. Regression checks: verify adjacent features still work\n6. API contract sync: if API changed, verify DTOs/OpenAPI/api-client match\n7. UI verification: if UI changed, manual check in browser\n8. Edge cases: verify behavior with missing/null data\n\n### Validation Checklist\n- [ ] All acceptance criteria verified\n- [ ] No TypeScript errors (npx tsc --noEmit)\n- [ ] All tests pass (npm test)\n- [ ] No layer violations introduced\n- [ ] Blueprint regenerated (npm run blueprint)\n\n### Post-Validation Updates\n- Refresh docs/blueprint.html — cd apps/api && node blueprint.js\n- Refresh docs/roadmap.html — node scripts/generate-roadmap.js\n- Review PROJECT_STATE.md — update if architecture decisions changed\n- Review ARCHITECTURE_LOW_CONTEXT_GUIDE.md — update if auth/layers touched\n- Review docs/AUDIT.md — mark resolved findings, add new ones\n- Review SCHEMA_REFERENCE.md — update if schema changed\n- Commit: npx tsc --noEmit → npm test → npm run blueprint",
+      "refinement_status": "refined",
+      "refined_at": "2026-03-22T21:47:03.415Z"
     },
     {
       "id": "DT-015",
@@ -3815,7 +3863,7 @@
       "goal": "Extend F-P0-004: Remaining route-level layer violations (CQ-1 through CQ-15 minus resolved) — routes/legal.ts (19 Prisma calls, worst …",
       "phase": "P3",
       "order": 1,
-      "status": "review",
+      "status": "promoted",
       "product_area": "api",
       "parent_feature_id": "F-P0-004",
       "depends_on": [],
@@ -3862,7 +3910,9 @@
         "Review SCHEMA_REFERENCE.md — update if schema changed",
         "Commit: npx tsc --noEmit → npm test → npm run blueprint"
       ],
-      "canonical_implementation_prompt": "## Ticket: Remaining route-level layer violations (CQ-1 through CQ-15 minus resolved) — routes/legal.ts (19 Prisma calls, worst …\n\n**Goal:** Extend F-P0-004: Remaining route-level layer violations (CQ-1 through CQ-15 minus resolved) — routes/legal.ts (19 Prisma calls, worst …\n\n**Phase:** P3 | **Area:** api\n**Parent Feature:** F-P0-004\n\n### In Scope\n- Fix Remaining route-level layer violations (CQ-1 through CQ-15 minus resolved) — routes/legal.ts (19 Prisma calls, worst …\n- API endpoint changes\n\n### Files to Modify (in order)\n1. `apps/api/prisma/schema.prisma`\n\n### Acceptance Criteria\n- [ ] Feature works as described in scope\n- [ ] All listed in_scope items implemented\n- [ ] Edge cases handled gracefully (empty state, missing data, permissions)\n\n### Test Plan\n- Verify feature works per acceptance criteria\n- No regressions in existing test suite (npm test)\n\n### Test Protocol\n1. npx tsc --noEmit — zero TypeScript errors\n2. npm test — all tests pass\n3. npm run blueprint — architecture docs sync\n4. Ticket-specific verification: verify acceptance criteria manually\n5. Regression checks: verify adjacent features still work\n6. API contract sync: if API changed, verify DTOs/OpenAPI/api-client match\n7. UI verification: if UI changed, manual check in browser\n8. Edge cases: verify behavior with missing/null data\n\n### Validation Checklist\n- [ ] All acceptance criteria verified\n- [ ] No TypeScript errors (npx tsc --noEmit)\n- [ ] All tests pass (npm test)\n- [ ] No layer violations introduced\n- [ ] Blueprint regenerated (npm run blueprint)\n\n### Post-Validation Updates\n- Refresh docs/blueprint.html — cd apps/api && node blueprint.js\n- Refresh docs/roadmap.html — node scripts/generate-roadmap.js\n- Review PROJECT_STATE.md — update if architecture decisions changed\n- Review ARCHITECTURE_LOW_CONTEXT_GUIDE.md — update if auth/layers touched\n- Review docs/AUDIT.md — mark resolved findings, add new ones\n- Review SCHEMA_REFERENCE.md — update if schema changed\n- Commit: npx tsc --noEmit → npm test → npm run blueprint"
+      "canonical_implementation_prompt": "## Ticket: Remaining route-level layer violations (CQ-1 through CQ-15 minus resolved) — routes/legal.ts (19 Prisma calls, worst …\n\n**Goal:** Extend F-P0-004: Remaining route-level layer violations (CQ-1 through CQ-15 minus resolved) — routes/legal.ts (19 Prisma calls, worst …\n\n**Phase:** P3 | **Area:** api\n**Parent Feature:** F-P0-004\n\n### In Scope\n- Fix Remaining route-level layer violations (CQ-1 through CQ-15 minus resolved) — routes/legal.ts (19 Prisma calls, worst …\n- API endpoint changes\n\n### Files to Modify (in order)\n1. `apps/api/prisma/schema.prisma`\n\n### Acceptance Criteria\n- [ ] Feature works as described in scope\n- [ ] All listed in_scope items implemented\n- [ ] Edge cases handled gracefully (empty state, missing data, permissions)\n\n### Test Plan\n- Verify feature works per acceptance criteria\n- No regressions in existing test suite (npm test)\n\n### Test Protocol\n1. npx tsc --noEmit — zero TypeScript errors\n2. npm test — all tests pass\n3. npm run blueprint — architecture docs sync\n4. Ticket-specific verification: verify acceptance criteria manually\n5. Regression checks: verify adjacent features still work\n6. API contract sync: if API changed, verify DTOs/OpenAPI/api-client match\n7. UI verification: if UI changed, manual check in browser\n8. Edge cases: verify behavior with missing/null data\n\n### Validation Checklist\n- [ ] All acceptance criteria verified\n- [ ] No TypeScript errors (npx tsc --noEmit)\n- [ ] All tests pass (npm test)\n- [ ] No layer violations introduced\n- [ ] Blueprint regenerated (npm run blueprint)\n\n### Post-Validation Updates\n- Refresh docs/blueprint.html — cd apps/api && node blueprint.js\n- Refresh docs/roadmap.html — node scripts/generate-roadmap.js\n- Review PROJECT_STATE.md — update if architecture decisions changed\n- Review ARCHITECTURE_LOW_CONTEXT_GUIDE.md — update if auth/layers touched\n- Review docs/AUDIT.md — mark resolved findings, add new ones\n- Review SCHEMA_REFERENCE.md — update if schema changed\n- Commit: npx tsc --noEmit → npm test → npm run blueprint",
+      "promoted_at": "2026-03-22T20:41:53.350Z",
+      "notes": "\n[promoted 2026-03-22] legal.ts violations resolved by S-P0-004-01."
     },
     {
       "id": "DT-016",
@@ -4651,7 +4701,7 @@
         "INT-002"
       ],
       "title": "Cost of doing the work sensitivity analysis",
-      "goal": "Deliver \"Cost of doing the work sensitivity analysis\" in the inventory domain to fulfill the original request: - check all of the unit assets against their depreciation and present the landlord with maintenance decisions: cost of m (full-stack: API + UI).",
+      "goal": "Add a \"Cost of Repair vs Replace\" sensitivity panel to the unit asset detail view in /manager/inventory. For each asset, show the break-even point: at what repair cost does replacing the asset become cheaper than repairing it, given depreciated value and remaining useful life.",
       "phase": "P1",
       "order": 2,
       "status": "review",
@@ -4659,10 +4709,9 @@
       "parent_feature_id": null,
       "depends_on": [],
       "files_to_modify": [
-        "apps/api/src/repositories/inventory.repository.ts",
-        "apps/api/src/routes/inventory.ts",
-        "apps/web/pages/manager/inventory/",
-        "packages/api-client/src/"
+        "apps/api/src/services/assetInventory.ts",
+        "apps/web/pages/api/units/[id]/repair-replace-analysis.js",
+        "apps/web/pages/manager/inventory.js"
       ],
       "files_to_inspect": [
         "PROJECT_STATE.md (guardrails section)",
@@ -4671,17 +4720,22 @@
         "apps/api/src/repositories/inventory.repository.ts (canonical includes)"
       ],
       "in_scope": [
-        "Cost of doing the work sensitivity analysis"
+        "Backend: extend GET /units/:id/repair-replace-analysis to include sensitivity data: repairCostThreshold (CHF), remainingUsefulLifePct, replacementCostEstimate",
+        "repairCostThreshold = replacementCost * (remainingUsefulLifeMonths / totalUsefulLifeMonths)",
+        "Frontend: in the asset detail panel (inventory.js or repair-replace-analysis page), add a \"Sensitivity\" row showing the threshold and a plain-English recommendation",
+        "Recommendation text: \"Repair if cost < CHF X; replace if cost ≥ CHF X\"",
+        "Handle null replacementCost or null usefulLifeMonths gracefully (show \"Insufficient data\")"
       ],
       "out_of_scope": [
-        "Cross-portal changes (unless explicitly listed)",
-        "Performance optimization (separate ticket)",
-        "Split item: Check all of the unit assets against their depreciation and present the landlord with maintenance decisions: cost of … (handled in separate draft)"
+        "Monte Carlo simulation or probabilistic analysis",
+        "Batch sensitivity across all assets simultaneously (per-asset only)"
       ],
       "acceptance_criteria": [
-        "Feature works as described in scope",
-        "All listed in_scope items implemented",
-        "Edge cases handled gracefully (empty state, missing data, permissions)"
+        "GET /units/:id/repair-replace-analysis returns repairCostThreshold (number or null), remainingUsefulLifePct (0–100 or null)",
+        "repairCostThreshold = null when replacementCost or usefulLifeMonths is null",
+        "Sensitivity row visible in asset detail when data is available",
+        "\"Insufficient data\" shown when repairCostThreshold is null",
+        "npx tsc --noEmit — zero errors | npm test — all tests pass"
       ],
       "tests_to_add_or_update": [
         "API contract test: verify request/response shape",
@@ -4689,14 +4743,8 @@
         "No regressions in existing test suite (npm test)"
       ],
       "test_protocol": [
-        "npx tsc --noEmit — zero TypeScript errors",
-        "npm test — all tests pass",
-        "npm run blueprint — architecture docs sync",
-        "Ticket-specific verification: verify acceptance criteria manually",
-        "Regression checks: verify adjacent features still work",
-        "API contract sync: if API changed, verify DTOs/OpenAPI/api-client match",
-        "UI verification: if UI changed, manual check in browser",
-        "Edge cases: verify behavior with missing/null data"
+        "Unit test: asset with usefulLifeMonths=120, ageMonths=60, replacementCost=1200 → threshold=600",
+        "Unit test: asset with null replacementCost → threshold=null"
       ],
       "validation_checklist": [
         "All acceptance criteria verified",
@@ -4765,9 +4813,9 @@
         "npm test — full suite passes",
         "npx tsc --noEmit — zero type errors"
       ],
-      "refinement_status": "ready_candidate",
+      "refinement_status": "refined",
       "refinement_notes": [],
-      "refined_at": "2026-03-22T10:07:55.624Z"
+      "refined_at": "2026-03-22T21:47:03.415Z"
     },
     {
       "id": "DT-024",
@@ -5043,7 +5091,7 @@
         "INT-051"
       ],
       "title": "Epic: Financial Account Structure & Charge Mapping (FIN-COA)",
-      "goal": "Introduce a configurable chart-of-accounts layer so the platform can classify invoices, expenses, and lease charge items by canonical charge types and account codes — without breaking any existing operational finance flows.",
+      "goal": "Epic container for the Financial Account Structure & Charge Mapping (FIN-COA) initiative. No direct implementation — tracks the 5 implementation slices: DT-052 (schema foundation) → DT-092/DT-093/DT-095 (wiring) → DT-097 (reporting). Promote this ticket when all 5 slices are promoted.",
       "phase": "P1",
       "order": 1,
       "status": "review",
@@ -5082,8 +5130,10 @@
         "Review PROJECT_STATE.md and SCHEMA_REFERENCE.md if schema changed"
       ],
       "canonical_implementation_prompt": "",
-      "refinement_status": "unrefined",
-      "notes": "Consists of 5 slices: FIN-COA-01 (foundation schema+API) → FIN-COA-02 (wire invoices) → FIN-COA-03 (wire lease charge items) → FIN-COA-04 (manager UI) → FIN-COA-05 (reporting views). Use account mapping as an additive layer first — default org mapping, optional building-specific override. Keep expenseCategory alive during migration. Do not start with ledger logic."
+      "refinement_status": "refined",
+      "notes": "Consists of 5 slices: FIN-COA-01 (foundation schema+API) → FIN-COA-02 (wire invoices) → FIN-COA-03 (wire lease charge items) → FIN-COA-04 (manager UI) → FIN-COA-05 (reporting views). Use account mapping as an additive layer first — default org mapping, optional building-specific override. Keep expenseCategory alive during migration. Do not start with ledger logic.",
+      "implementation_notes": "Start with DT-052. No blockers identified — all dependencies (Invoice model, Lease model, finance pages) are in place. LeaseChargeItem does not yet exist in schema; DT-093 must create it.",
+      "refined_at": "2026-03-22T21:47:03.415Z"
     },
     {
       "id": "DT-052",
@@ -5091,43 +5141,66 @@
         "INT-075"
       ],
       "title": "FIN-COA-01 — Introduce canonical charge types and account mapping foundation",
-      "goal": "Add the foundational Prisma schema and manager API surface for a configurable chart-of-accounts: org-scoped ChargeType, Account, and ChargeMapping models with canonical repository helpers and a seeded Swiss residential taxonomy. This is the smallest localized slice — it unlocks all later FIN-COA slices without touching invoices or leases yet.",
+      "goal": "Introduce the Prisma models, repositories, seed data, and manager API for the chart-of-accounts foundation: ChargeType (what a charge is), Account (the accounting bucket), and ChargeMapping (charge type → account assignment). All models are org-scoped.",
       "phase": "P1",
       "order": 1,
       "status": "review",
       "product_area": "finance",
       "parent_feature_id": null,
       "depends_on": [],
-      "files_to_modify": [],
+      "files_to_modify": [
+        "apps/api/prisma/schema.prisma",
+        "apps/api/prisma/migrations/<timestamp>_fin_coa_foundation/ (new)",
+        "apps/api/src/repositories/chargeTypeRepository.ts (new)",
+        "apps/api/src/repositories/accountRepository.ts (new)",
+        "apps/api/src/repositories/chargeMappingRepository.ts (new)",
+        "apps/api/src/services/coaService.ts (new)",
+        "apps/api/src/routes/coa.ts (new)",
+        "apps/api/src/server.ts",
+        "apps/api/src/__tests__/coa.test.ts (new)",
+        "apps/api/openapi.yaml",
+        "packages/api-client/src/index.ts"
+      ],
       "in_scope": [
-        "Add Prisma models: ChargeType, Account, ChargeMapping — all with orgId",
-        "ChargeType fields: name, recoverability (RECOVERABLE/NON_RECOVERABLE), billingFrequency, typicalInvoiceIssuerType (structured enum, not free text)",
-        "Seed canonical English Swiss residential charge taxonomy (electricity – common areas, façade maintenance, etc.)",
-        "Add repository layer with canonical include constants for DTO-bearing queries",
-        "Add manager-authenticated endpoints: GET/POST /financials/charge-types, GET/POST /financials/accounts, GET/POST/PATCH /financials/charge-mappings",
-        "Update OpenAPI spec, DTOs, and api-client in the same change",
-        "Add contract/integration tests for all new endpoints",
-        "Migration: npx prisma migrate dev --name add_finance_charge_mapping_foundation"
+        "Prisma models: ChargeType { id, orgId, name, recoverability (RECOVERABLE|NON_RECOVERABLE), billingFrequency (MONTHLY|ANNUAL|ONE_OFF), typicalIssuerType (LANDLORD|TENANT|UTILITY|INSURER|OTHER), isActive, createdAt }",
+        "Prisma models: Account { id, orgId, code, label, category (INCOME|EXPENSE|ASSET|LIABILITY), isActive, createdAt }",
+        "Prisma models: ChargeMapping { id, orgId, buildingId (optional — building-level override), chargeTypeId, accountId, createdAt } @@unique([orgId, chargeTypeId, buildingId])",
+        "Migration file with @@index([orgId]) on all three models",
+        "Repository: apps/api/src/repositories/chargeTypeRepository.ts (findAll, create, update)",
+        "Repository: apps/api/src/repositories/accountRepository.ts (findAll, create, update)",
+        "Repository: apps/api/src/repositories/chargeMappingRepository.ts (findAll, upsert, delete)",
+        "Canonical include constants for all 3 models (G2 guardrail)",
+        "Seed: POST /legal/coa/seed or a seed script for canonical Swiss residential taxonomy (electricity-common, facade-maintenance, water-cold, water-hot, building-insurance, lift-maintenance, caretaker, snow-removal)",
+        "API: GET/POST /coa/charge-types, GET/POST/PUT /coa/accounts, GET/POST/DELETE /coa/charge-mappings",
+        "Register routes in server.ts",
+        "OpenAPI + api-client updated",
+        "Integration tests for all new endpoints"
       ],
       "out_of_scope": [
-        "Do not yet require invoices or leases to use mappings (FIN-COA-02 and FIN-COA-03)",
-        "No manager UI in this slice (FIN-COA-04)",
-        "No reporting changes (FIN-COA-05)",
-        "No ledger or double-entry accounting logic"
+        "Invoice or LeaseChargeItem field additions (FIN-COA-02 and FIN-COA-03)",
+        "Manager UI (FIN-COA-04)",
+        "Reporting changes (FIN-COA-05)",
+        "Double-entry ledger logic",
+        "Removing or replacing expenseCategory on Invoice"
       ],
       "acceptance_criteria": [
-        "Org-scoped ChargeType, Account, ChargeMapping models exist in Prisma after migration",
-        "Canonical include constants are defined for DTO-bearing queries",
-        "Seed creates the canonical English Swiss charge taxonomy",
-        "Manager can list charge types, accounts, and mappings via API",
-        "Manager can create and update accounts and mappings via API",
-        "OpenAPI and api-client are updated in the same change",
-        "Contract/integration tests cover all new endpoints",
-        "Existing invoice, lease, and finance pages continue to behave unchanged",
-        "npx tsc --noEmit passes, npm test passes"
+        "ChargeType, Account, ChargeMapping models exist in schema with orgId and @@index([orgId])",
+        "GET /coa/charge-types returns { data: [ChargeTypeDTO] } scoped to authenticated org",
+        "POST /coa/charge-types creates a charge type; 409 on duplicate name within org",
+        "GET /coa/accounts and POST /coa/accounts work analogously",
+        "GET /coa/charge-mappings returns org-level mappings plus building-specific overrides",
+        "POST /coa/seed populates canonical Swiss residential charge taxonomy for the org",
+        "All new models have canonical include constants",
+        "Integration tests cover CRUD + seed for all 3 endpoints",
+        "npx tsc --noEmit — zero errors | npm test — all tests pass"
       ],
       "tests_to_add_or_update": [],
-      "test_protocol": [],
+      "test_protocol": [
+        "Integration test: POST /coa/seed → GET /coa/charge-types returns ≥8 seeded types",
+        "Integration test: POST /coa/charge-types with duplicate name → 409",
+        "Integration test: POST /coa/charge-mappings; GET returns mapping; DELETE removes it",
+        "Verify @@unique([orgId, chargeTypeId, buildingId]) on ChargeMapping enforced at DB level"
+      ],
       "validation_checklist": [],
       "post_validation_updates": [
         "Refresh docs/blueprint.html",
@@ -5135,8 +5208,9 @@
         "Review PROJECT_STATE.md and SCHEMA_REFERENCE.md if schema changed"
       ],
       "canonical_implementation_prompt": "",
-      "refinement_status": "unrefined",
-      "notes": "Rationale: smallest localized slice, unlocks every later FIN-COA integration, preserves existing behavior, matches architecture rules (schema → repo → workflow → route → test). All new models must include orgId. Use thin routes — business logic goes in workflows/services."
+      "refinement_status": "refined",
+      "notes": "Rationale: smallest localized slice, unlocks every later FIN-COA integration, preserves existing behavior, matches architecture rules (schema → repo → workflow → route → test). All new models must include orgId. Use thin routes — business logic goes in workflows/services.",
+      "refined_at": "2026-03-22T21:47:03.415Z"
     },
     {
       "id": "DT-092",
@@ -5144,7 +5218,7 @@
         "INT-098"
       ],
       "title": "FIN-COA-02 — Wire mapped accounts into invoices",
-      "goal": "Extend the Invoice model with optional accountId and chargeTypeId fields so invoices can be classified against the chart-of-accounts introduced in FIN-COA-01. Additive only — existing invoice creation flows must not break.",
+      "goal": "Extend the Invoice model with optional accountId and chargeTypeId fields so invoices can be classified against the chart-of-accounts. Purely additive — existing invoice creation flows are unaffected.",
       "phase": "P1",
       "order": 1,
       "status": "review",
@@ -5153,26 +5227,42 @@
       "depends_on": [
         "DT-052"
       ],
-      "files_to_modify": [],
+      "files_to_modify": [
+        "apps/api/prisma/schema.prisma",
+        "apps/api/prisma/migrations/<timestamp>_invoice_coa_fields/ (new)",
+        "apps/api/src/routes/invoices.ts",
+        "apps/api/src/services/invoices.ts or equivalent",
+        "apps/api/src/repositories/invoiceRepository.ts (update include constant)",
+        "apps/api/openapi.yaml",
+        "packages/api-client/src/index.ts"
+      ],
       "in_scope": [
-        "Add optional Invoice.accountId (→ Account) and Invoice.chargeTypeId (→ ChargeType) fields",
-        "Update invoice create/update endpoints to accept and persist these fields",
-        "Update invoice DTOs and api-client to expose account/chargeType metadata",
-        "Migration: add columns with NULL default — no backfill required"
+        "Add Invoice.accountId String? (→ Account) and Invoice.chargeTypeId String? (→ ChargeType)",
+        "Migration: nullable columns, no backfill required",
+        "Update invoice create/update endpoints to accept and persist accountId and chargeTypeId when provided",
+        "Update invoice DTO to include account: { id, code, label } and chargeType: { id, name, recoverability } when present",
+        "Update canonical INVOICE_INCLUDE constant (G9 guardrail)",
+        "api-client and OpenAPI updated"
       ],
       "out_of_scope": [
-        "Mandatory classification on existing invoices",
-        "Invoice listing/reporting UI changes (FIN-COA-05)"
+        "Making accountId/chargeTypeId required on new invoices",
+        "Backfilling existing invoices",
+        "Finance UI changes (FIN-COA-04)"
       ],
       "acceptance_criteria": [
-        "Invoice model has accountId and chargeTypeId columns (nullable)",
-        "Manager can optionally set account/chargeType when creating or editing an invoice",
-        "Existing invoice flows with no account/chargeType continue to work unchanged",
-        "DTOs and api-client expose the new fields",
-        "npx tsc --noEmit passes, npm test passes"
+        "Invoice model has accountId? and chargeTypeId? in schema",
+        "POST /invoices body accepts optional accountId and chargeTypeId; persists them",
+        "GET /invoices response includes account and chargeType nested objects when set",
+        "GET /invoices response is unchanged for invoices without classification (account: null, chargeType: null)",
+        "Existing invoice tests still pass",
+        "npx tsc --noEmit — zero errors | npm test — all tests pass"
       ],
       "tests_to_add_or_update": [],
-      "test_protocol": [],
+      "test_protocol": [
+        "Create invoice without accountId → GET returns account: null",
+        "Create invoice with accountId → GET returns account: { id, code, label }",
+        "Update existing invoice to add chargeTypeId → GET reflects change"
+      ],
       "validation_checklist": [],
       "post_validation_updates": [
         "Refresh docs/blueprint.html",
@@ -5180,8 +5270,9 @@
         "Review PROJECT_STATE.md and SCHEMA_REFERENCE.md if schema changed"
       ],
       "canonical_implementation_prompt": "",
-      "refinement_status": "unrefined",
-      "notes": "Depends on DT-052 (FIN-COA-01 must be merged first). Additive-only change."
+      "refinement_status": "refined",
+      "notes": "Depends on DT-052 (FIN-COA-01 must be merged first). Additive-only change.",
+      "refined_at": "2026-03-22T21:47:03.415Z"
     },
     {
       "id": "DT-093",
@@ -5189,53 +5280,7 @@
         "INT-100"
       ],
       "title": "FIN-COA-03 — Wire mapped accounts into lease charge items",
-      "goal": "Extend LeaseChargeItem with optional chargeTypeId and accountId fields so lease service charges can be classified against the chart-of-accounts. Also add recoverability metadata to support tenant-facing cost breakdowns. Additive only.",
-      "phase": "P1",
-      "order": 1,
-      "status": "review",
-      "product_area": "leases",
-      "parent_feature_id": null,
-      "depends_on": [
-        "DT-052"
-      ],
-      "files_to_modify": [],
-      "in_scope": [
-        "Add optional LeaseChargeItem.chargeTypeId (→ ChargeType) and LeaseChargeItem.accountId (→ Account) fields",
-        "Extend lease charge item create/update endpoints to accept and persist these fields",
-        "Expose recoverability and billing frequency from the linked ChargeType in lease DTOs",
-        "Update api-client with new fields",
-        "Migration: add columns with NULL default"
-      ],
-      "out_of_scope": [
-        "Mandatory classification on existing lease charge items",
-        "Lease UI redesign",
-        "Reporting changes (FIN-COA-05)"
-      ],
-      "acceptance_criteria": [
-        "LeaseChargeItem has chargeTypeId and accountId columns (nullable)",
-        "Recoverability and billing frequency from ChargeType are exposed in lease DTOs",
-        "Existing lease creation flows with no charge type continue to work unchanged",
-        "npx tsc --noEmit passes, npm test passes"
-      ],
-      "tests_to_add_or_update": [],
-      "test_protocol": [],
-      "validation_checklist": [],
-      "post_validation_updates": [
-        "Refresh docs/blueprint.html",
-        "Refresh docs/roadmap.html — node scripts/generate-roadmap.js",
-        "Review PROJECT_STATE.md and SCHEMA_REFERENCE.md if schema changed"
-      ],
-      "canonical_implementation_prompt": "",
-      "refinement_status": "unrefined",
-      "notes": "Depends on DT-052 (FIN-COA-01). Additive-only. Merged in scope from original DT-094 fragment."
-    },
-    {
-      "id": "DT-095",
-      "source_intake_ids": [
-        "INT-102"
-      ],
-      "title": "FIN-COA-04 — Manager finance settings UI",
-      "goal": "Build the manager-facing finance configuration page for browsing and editing the chart-of-accounts: charge types, accounts, and charge mappings. Uses the canonical manager layout (PageShell/Panel/inline-table pattern).",
+      "goal": "Introduce a proper LeaseChargeItem model replacing the current Lease.chargesItems Json array, and add optional chargeTypeId and accountId fields for COA classification. Migrate existing Json charge data to the new model.",
       "phase": "P1",
       "order": 1,
       "status": "review",
@@ -5244,25 +5289,42 @@
       "depends_on": [
         "DT-052"
       ],
-      "files_to_modify": [],
+      "files_to_modify": [
+        "apps/api/prisma/schema.prisma",
+        "apps/api/prisma/migrations/<timestamp>_lease_charge_items/ (new)",
+        "apps/api/src/routes/leases.ts",
+        "apps/api/src/services/leases.ts or equivalent",
+        "apps/api/src/repositories/leaseRepository.ts (update include constant)",
+        "apps/api/openapi.yaml",
+        "packages/api-client/src/index.ts"
+      ],
       "in_scope": [
-        "Add /manager/finance/chart-of-accounts page listing ChargeTypes, Accounts, and ChargeMappings",
-        "Inline editing for account label/code and mapping overrides",
-        "Create new charge type and account via modal or inline form",
-        "Use PageShell/PageHeader/PageContent/Panel layout consistent with other manager finance pages"
+        "Prisma model: LeaseChargeItem { id, leaseId, description, amountChf, frequency (MONTHLY|ANNUAL|ONE_OFF), chargeTypeId String? (→ ChargeType), accountId String? (→ Account), isActive, createdAt }",
+        "Migration: create LeaseChargeItem table; migrate data from Lease.chargesItems Json into rows",
+        "Update Lease model: add chargeItems LeaseChargeItem[] relation; deprecate but keep chargesItems Json for backwards compat during migration",
+        "Update lease DTO to include chargeItems array with nested chargeType.recoverability",
+        "Update canonical LEASE_INCLUDE constant",
+        "API: GET /leases/:id returns chargeItems; POST /leases/:id/charge-items, PUT /leases/:id/charge-items/:itemId, DELETE /leases/:id/charge-items/:itemId",
+        "api-client and OpenAPI updated"
       ],
       "out_of_scope": [
-        "Ledger or reporting views (FIN-COA-05)",
-        "Tenant-facing classification UI"
+        "Removing Lease.chargesItems Json in this slice — keep for backwards compat",
+        "Finance UI changes (FIN-COA-04)"
       ],
       "acceptance_criteria": [
-        "Manager can view all charge types, accounts, and mappings in a single settings page",
-        "Manager can create and edit accounts and mappings from the UI (calls FIN-COA-01 endpoints)",
-        "Page uses canonical CSS component classes (inline-table, tab-strip, etc.)",
-        "npx tsc --noEmit passes, npm test passes"
+        "LeaseChargeItem model exists in schema with leaseId, chargeTypeId?, accountId?",
+        "GET /leases/:id returns chargeItems: [{ id, description, amountChf, frequency, chargeType? }]",
+        "POST /leases/:id/charge-items creates a charge item; requires leaseId ownership check (G9: orgScope)",
+        "Existing Lease.chargesItems Json field still present (no breaking change)",
+        "Data migration: existing Json charge entries appear as LeaseChargeItem rows after migration runs",
+        "npx tsc --noEmit — zero errors | npm test — all tests pass"
       ],
       "tests_to_add_or_update": [],
-      "test_protocol": [],
+      "test_protocol": [
+        "Seed lease with chargesItems Json; run migration; assert LeaseChargeItem rows created with matching amounts",
+        "POST /leases/:id/charge-items with chargeTypeId → GET returns chargeType.recoverability",
+        "DELETE /leases/:id/charge-items/:itemId → item removed from list"
+      ],
       "validation_checklist": [],
       "post_validation_updates": [
         "Refresh docs/blueprint.html",
@@ -5270,8 +5332,72 @@
         "Review PROJECT_STATE.md and SCHEMA_REFERENCE.md if schema changed"
       ],
       "canonical_implementation_prompt": "",
-      "refinement_status": "unrefined",
-      "notes": "Depends on DT-052 (FIN-COA-01 API must exist). Uses canonical manager layout — see apps/web/pages/manager/finance/invoices.js as reference."
+      "refinement_status": "refined",
+      "notes": "Depends on DT-052 (FIN-COA-01). Additive-only. Merged in scope from original DT-094 fragment.",
+      "refined_at": "2026-03-22T21:47:03.415Z"
+    },
+    {
+      "id": "DT-095",
+      "source_intake_ids": [
+        "INT-102"
+      ],
+      "title": "FIN-COA-04 — Manager finance settings UI",
+      "goal": "Build the manager finance settings page at /manager/finance/chart-of-accounts for configuring charge types, accounts, and charge mappings. Uses the canonical manager layout (PageShell/Panel/inline-table) and the API introduced in FIN-COA-01.",
+      "phase": "P1",
+      "order": 1,
+      "status": "review",
+      "product_area": "finance",
+      "parent_feature_id": null,
+      "depends_on": [
+        "DT-052"
+      ],
+      "files_to_modify": [
+        "apps/web/pages/manager/finance/chart-of-accounts.js (new)",
+        "apps/web/pages/manager/finance/index.js (add nav link)",
+        "apps/web/pages/api/coa/charge-types.js (new proxy)",
+        "apps/web/pages/api/coa/accounts.js (new proxy)",
+        "apps/web/pages/api/coa/charge-mappings.js (new proxy)"
+      ],
+      "in_scope": [
+        "New page: apps/web/pages/manager/finance/chart-of-accounts.js",
+        "Three tabs: Charge Types | Accounts | Mappings",
+        "Charge Types tab: inline-table listing name, recoverability, billingFrequency, typicalIssuerType; \"Add\" button opens inline form",
+        "Accounts tab: inline-table listing code, label, category; inline editing for label and code",
+        "Mappings tab: inline-table listing chargeType → account mappings; per-building override indicator",
+        "\"Seed Swiss taxonomy\" button calling POST /coa/seed (idempotent)",
+        "Empty state for each tab with \"No charge types yet. Click Seed to get started.\"",
+        "Add link to /manager/finance/chart-of-accounts in the manager finance hub (finance/index.js)",
+        "New proxy routes: apps/web/pages/api/coa/ (charge-types.js, accounts.js, charge-mappings.js)",
+        "F-UI1/F-UI3/F-UI4 guardrails: PageShell/Panel/inline-table, no inline styles"
+      ],
+      "out_of_scope": [
+        "Per-building override UI (global mapping only in this slice)",
+        "Deleting charge types (deactivate only via isActive toggle)"
+      ],
+      "acceptance_criteria": [
+        "/manager/finance/chart-of-accounts renders with MANAGER auth; 403 for other roles",
+        "All three tabs render with canonical PageShell/Panel/inline-table layout (F-UI1)",
+        "\"Seed Swiss taxonomy\" button calls POST /coa/seed and reloads charge types",
+        "Empty state visible on first load (before seeding)",
+        "No inline style={} attributes (F-UI4)",
+        "npx tsc --noEmit — zero errors | next build — zero errors"
+      ],
+      "tests_to_add_or_update": [],
+      "test_protocol": [
+        "Browser: /manager/finance/chart-of-accounts — Seed button → 8+ charge types appear in table",
+        "Browser: Accounts tab → add account with code=7100, label=\"Maintenance expenses\" → appears in table",
+        "Browser: Mappings tab → map \"electricity-common\" charge type to account \"7100\" → mapping saved"
+      ],
+      "validation_checklist": [],
+      "post_validation_updates": [
+        "Refresh docs/blueprint.html",
+        "Refresh docs/roadmap.html — node scripts/generate-roadmap.js",
+        "Review PROJECT_STATE.md and SCHEMA_REFERENCE.md if schema changed"
+      ],
+      "canonical_implementation_prompt": "",
+      "refinement_status": "refined",
+      "notes": "Depends on DT-052 (FIN-COA-01 API must exist). Uses canonical manager layout — see apps/web/pages/manager/finance/invoices.js as reference.",
+      "refined_at": "2026-03-22T21:47:03.415Z"
     },
     {
       "id": "DT-097",
@@ -5279,7 +5405,7 @@
         "INT-104"
       ],
       "title": "FIN-COA-05 — Financial views expose account metadata",
-      "goal": "Add non-breaking account/charge-type filters and grouping to existing financial views (charges, expenses, building financials) so managers can slice data by account classification without a full reporting redesign.",
+      "goal": "Add non-breaking account/charge-type filter and grouping options to existing financial views (expenses, charges, building financials) so managers can slice data by COA classification without a full reporting overhaul.",
       "phase": "P1",
       "order": 1,
       "status": "review",
@@ -5289,26 +5415,40 @@
         "DT-092",
         "DT-093"
       ],
-      "files_to_modify": [],
+      "files_to_modify": [
+        "apps/api/src/routes/financials.ts",
+        "apps/api/src/routes/leases.ts (charges endpoint)",
+        "apps/web/pages/manager/finance/expenses.js",
+        "apps/web/pages/manager/finance/charges.js",
+        "apps/api/openapi.yaml",
+        "packages/api-client/src/index.ts"
+      ],
       "in_scope": [
-        "Add optional ?accountId= and ?chargeTypeId= query filters to /manager/finance/charges and /manager/finance/expenses",
-        "Add account/chargeType breakdown option to building financials summary",
-        "Update front-end financial pages to expose filter controls when account metadata is present",
-        "All filters are additive — pages work identically when no classification exists"
+        "GET /manager/finance/expenses: add optional ?accountId= and ?chargeTypeId= query filters",
+        "GET /manager/finance/charges (lease charges): add optional ?chargeTypeId= filter",
+        "GET /buildings/:id/financials: add optional groupByAccount=true — when set, return expensesByAccount breakdown alongside existing expensesByCategory",
+        "Frontend: expenses.js and charges.js — show account/chargeType filter dropdowns when COA data is present (feature-flag: only render if /coa/accounts returns ≥1 account)",
+        "api-client and OpenAPI updated for new query params"
       ],
       "out_of_scope": [
-        "Full ledger or P&L reporting",
-        "Mandatory account classification",
-        "New dedicated reports module"
+        "Removing existing expensesByCategory breakdown from building financials",
+        "New dedicated COA report page (DT-001/002/003 scope)",
+        "Mandatory COA classification — filters are optional"
       ],
       "acceptance_criteria": [
-        "Manager can filter charges by accountId or chargeTypeId",
-        "Building financials can group by account when data is classified",
-        "Pages are unchanged when no account metadata exists",
-        "npx tsc --noEmit passes, npm test passes"
+        "GET /manager/finance/expenses?accountId=X returns only invoices with that accountId",
+        "GET /manager/finance/charges?chargeTypeId=X returns only charge items with that chargeTypeId",
+        "GET /buildings/:id/financials?groupByAccount=true returns expensesByAccount: [{ accountId, accountLabel, totalCents }]",
+        "When no COA accounts exist, filter dropdowns are not rendered in the UI",
+        "Existing responses without filter params are unchanged",
+        "npx tsc --noEmit — zero errors | npm test — all tests pass"
       ],
       "tests_to_add_or_update": [],
-      "test_protocol": [],
+      "test_protocol": [
+        "Integration test: seed invoices with accountId=A and accountId=B; GET /finance/expenses?accountId=A returns only A invoices",
+        "Integration test: GET /buildings/:id/financials?groupByAccount=true with 2 accounts → expensesByAccount has 2 entries",
+        "Browser: finance/expenses — no filter dropdown when no accounts seeded; dropdown appears after seeding COA"
+      ],
       "validation_checklist": [],
       "post_validation_updates": [
         "Refresh docs/blueprint.html",
@@ -5316,8 +5456,9 @@
         "Review PROJECT_STATE.md and SCHEMA_REFERENCE.md if schema changed"
       ],
       "canonical_implementation_prompt": "",
-      "refinement_status": "unrefined",
-      "notes": "Depends on DT-092 (invoices wired) and DT-093 (leases wired). Purely additive filter layer — do not redesign reports."
+      "refinement_status": "refined",
+      "notes": "Depends on DT-092 (invoices wired) and DT-093 (leases wired). Purely additive filter layer — do not redesign reports.",
+      "refined_at": "2026-03-22T21:47:03.415Z"
     },
     {
       "id": "DT-110",
