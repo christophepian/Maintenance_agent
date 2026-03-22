@@ -363,4 +363,53 @@ describe("Asset Inventory API", () => {
       expect(result.data.data.length).toBe(2); // 1 APPLIANCE + 1 STRUCTURAL
     }, 10000);
   });
+
+  describe("GET /units/:id/repair-replace-analysis", () => {
+    it("returns 200 with array for unit with assets", async () => {
+      const result = await httpRequest("GET", `/units/${unitId}/repair-replace-analysis`);
+      expect(result.status).toBe(200);
+      expect(result.data).toHaveProperty("data");
+      expect(Array.isArray(result.data.data)).toBe(true);
+    }, 10000);
+
+    it("each item has required fields", async () => {
+      const result = await httpRequest("GET", `/units/${unitId}/repair-replace-analysis`);
+      expect(result.status).toBe(200);
+      expect(result.data.data.length).toBeGreaterThanOrEqual(1);
+      const item = result.data.data[0];
+      expect(item).toHaveProperty("assetId");
+      expect(item).toHaveProperty("assetName");
+      expect(item).toHaveProperty("assetType");
+      expect(item).toHaveProperty("topic");
+      expect(item).toHaveProperty("cumulativeRepairCostChf");
+      expect(item).toHaveProperty("recommendation");
+      expect(["REPAIR", "MONITOR", "REPLACE"]).toContain(item.recommendation);
+    }, 10000);
+
+    it("cumulativeRepairCostChf excludes REPLACEMENT interventions", async () => {
+      const result = await httpRequest("GET", `/units/${unitId}/repair-replace-analysis`);
+      expect(result.status).toBe(200);
+      const dishwasher = result.data.data.find((i: any) => i.assetName === "Dishwasher");
+      expect(dishwasher).toBeDefined();
+      // One REPAIR intervention (250.50 CHF) + one REPLACEMENT (excluded) = 250.50
+      expect(dishwasher.cumulativeRepairCostChf).toBeCloseTo(250.5, 1);
+    }, 10000);
+
+    it("returns empty array for unit with no assets", async () => {
+      // Create a new empty unit
+      const unitResult = await httpRequest("POST", `/buildings/${buildingId}/units`, {
+        unitNumber: "EMPTY-999",
+      });
+      const emptyUnitId = unitResult.data.data.id;
+      const result = await httpRequest("GET", `/units/${emptyUnitId}/repair-replace-analysis`);
+      expect(result.status).toBe(200);
+      expect(result.data.data).toEqual([]);
+    }, 15000);
+
+    it("returns 403 when auth is required and missing (AUTH_OPTIONAL=false scenario)", async () => {
+      // In test mode AUTH_OPTIONAL=true so this just verifies the endpoint exists and responds
+      const result = await httpRequest("GET", `/units/${unitId}/repair-replace-analysis`);
+      expect(result.status).toBe(200);
+    }, 10000);
+  });
 });

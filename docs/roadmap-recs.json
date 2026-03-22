@@ -30,33 +30,30 @@
       "blockedBy": []
     },
     {
-      "id": "F-P0-002",
+      "id": "S-P0-002-01",
       "rank": 2,
-      "title": "Legal DSL Variable Resolver",
+      "title": "Create legalVariableIngestion.ts — schedule-driven LegalVariable DB writes",
       "phase": "P0",
       "type": "wire",
       "column": "ready",
-      "isSlice": false,
+      "isSlice": true,
       "isCustom": false,
-      "parentId": null,
-      "parentTitle": null,
+      "parentId": "F-P0-002",
+      "parentTitle": "Legal DSL Variable Resolver",
       "reasons": [
         "P0 critical-path — highest priority phase",
         "all dependencies met — ready now",
-        "feature-level (4 hooks)",
-        "declared position: feature #2",
+        "concrete slice (1 file)",
+        "declared position: feature #2, slice #1",
         "completing this unlocks 1 downstream item"
       ],
       "unlocks": 1,
-      "scopeFileCount": 4,
+      "scopeFileCount": 1,
       "movement": 0,
       "movementLabel": "—",
       "hasCompleteTests": false,
       "files": [
-        "data ingestion service",
-        "LegalVariable model",
-        "LegalRule + DSL",
-        "evaluateLegalRoutingWorkflow"
+        "apps/api/src/services/legalVariableIngestion.ts"
       ],
       "blockedBy": []
     },
@@ -90,67 +87,68 @@
       "blockedBy": []
     },
     {
-      "id": "F-P0-004",
+      "id": "S-P0-004-01",
       "rank": 4,
-      "title": "Route Layer Refactor (CQ-1/3/4)",
+      "title": "Extract legalService.ts — legal variables, rules, category mappings, evaluation logs",
       "phase": "P0",
       "type": "refactor",
       "column": "ready",
-      "isSlice": false,
+      "isSlice": true,
       "isCustom": false,
+      "parentId": "F-P0-004",
+      "parentTitle": "Route Layer Refactor (CQ-1/3/4)",
+      "reasons": [
+        "P0 critical-path — highest priority phase",
+        "all dependencies met — ready now",
+        "concrete slice (1 file)",
+        "declared position: feature #4, slice #1",
+        "completing this unlocks 1 downstream item"
+      ],
+      "unlocks": 1,
+      "scopeFileCount": 1,
+      "movement": 0,
+      "movementLabel": "—",
+      "hasCompleteTests": false,
+      "files": [
+        "apps/api/src/services/legalService.ts"
+      ],
+      "blockedBy": []
+    },
+    {
+      "id": "TASK-001",
+      "rank": 5,
+      "title": "Align tenant, contractor, and owner portal UI with manager baseline (PageShell/Panel/inline-table/CSS tokens)",
+      "phase": "P0",
+      "type": "task",
+      "column": "ready",
+      "isSlice": false,
+      "isCustom": true,
       "parentId": null,
       "parentTitle": null,
       "reasons": [
         "P0 critical-path — highest priority phase",
         "all dependencies met — ready now",
-        "feature-level (3 hooks)",
-        "declared position: feature #4"
+        "feature-level (8 hooks)",
+        "declared position: feature #28",
+        "testing metadata complete",
+        "custom ticket"
       ],
       "unlocks": 0,
-      "scopeFileCount": 3,
+      "scopeFileCount": 8,
       "movement": 0,
       "movementLabel": "—",
-      "hasCompleteTests": false,
+      "hasCompleteTests": true,
       "files": [
-        "legalService extraction",
-        "tenantService extraction",
-        "workflow pattern established"
-      ],
-      "blockedBy": []
-    },
-    {
-      "id": "F-P1-001",
-      "rank": 5,
-      "title": "QR-Invoice Rent Demand Generation",
-      "phase": "P1",
-      "type": "build",
-      "column": "ready",
-      "isSlice": false,
-      "isCustom": false,
-      "parentId": null,
-      "parentTitle": null,
-      "reasons": [
-        "P1 — phase position 2/6",
-        "all dependencies met — ready now",
-        "feature-level (5 hooks)",
-        "declared position: feature #5"
-      ],
-      "unlocks": 0,
-      "scopeFileCount": 5,
-      "movement": 0,
-      "movementLabel": "—",
-      "hasCompleteTests": false,
-      "files": [
-        "QR-bill library (qrbill-js)",
-        "rentDemandWorkflow",
-        "Lease model",
-        "invoiceService",
-        "pdfGenerator"
+        "apps/web/pages/tenant/requests.js",
+        "apps/web/pages/tenant/inbox.js",
+        "apps/web/pages/owner/approvals.js",
+        "apps/web/pages/owner/invoices.js",
+        "apps/web/pages/owner/jobs.js"
       ],
       "blockedBy": []
     }
   ],
-  "generated_at": "2026-03-20 14:26:06 UTC",
-  "total_in_queue": 25,
+  "generated_at": "2026-03-22 15:29:56 UTC",
+  "total_in_queue": 28,
   "next_id": "S-P0-001-02"
 }

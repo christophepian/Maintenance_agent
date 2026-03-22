@@ -3,6 +3,9 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import NotificationBell from "./NotificationBell";
 import ManagerSidebar from "./ManagerSidebar";
+import OwnerSidebar from "./OwnerSidebar";
+import ContractorSidebar from "./ContractorSidebar";
+import TenantSidebar from "./TenantSidebar";
 
 function decodeRoleFromToken(token) {
   if (!token) return null;
@@ -110,6 +113,7 @@ export default function AppShell({ role: roleProp, children }) {
         section: "Properties",
         items: [
           { label: "Properties", href: "/manager/properties" },
+          { label: "Inventory", href: "/manager/inventory" },
           { label: "Buildings", href: "/admin-inventory/buildings" },
           { label: "Inventory admin", href: "/admin-inventory" },
         ],
@@ -375,6 +379,12 @@ export default function AppShell({ role: roleProp, children }) {
 
         {role === "MANAGER" ? (
           <ManagerSidebar />
+        ) : role === "OWNER" ? (
+          <OwnerSidebar />
+        ) : role === "CONTRACTOR" ? (
+          <ContractorSidebar />
+        ) : role === "TENANT" ? (
+          <TenantSidebar />
         ) : (
           nav.map((group) => (
             <div key={group.section} style={{ marginBottom: "16px" }}>

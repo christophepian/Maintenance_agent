@@ -114,7 +114,7 @@ components:
 
     InvoiceStatus:
       type: string
-      enum: [DRAFT, APPROVED, PAID, DISPUTED]
+      enum: [DRAFT, ISSUED, APPROVED, PAID, DISPUTED]
 
     LeaseStatus:
       type: string
@@ -3445,6 +3445,48 @@ paths:
       responses:
         '204':
           description: Deleted
+
+  /units/{id}/repair-replace-analysis:
+    get:
+      tags: [Inventory]
+      summary: Get repair-vs-replace recommendations for all assets in a unit
+      operationId: getUnitRepairReplaceAnalysis
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+        - name: canton
+          in: query
+          schema: { type: string }
+          required: false
+      responses:
+        '200':
+          description: Per-asset repair-vs-replace analysis
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        assetId: { type: string }
+                        assetName: { type: string }
+                        assetType: { type: string }
+                        topic: { type: string }
+                        installedAt: { type: string, nullable: true }
+                        ageMonths: { type: number, nullable: true }
+                        usefulLifeMonths: { type: number, nullable: true }
+                        depreciationPct: { type: number, nullable: true }
+                        residualPct: { type: number, nullable: true }
+                        cumulativeRepairCostChf: { type: number }
+                        recommendation:
+                          type: string
+                          enum: [REPAIR, MONITOR, REPLACE]
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden — MANAGER role required
 
   /units/{id}/asset-inventory:
     get:

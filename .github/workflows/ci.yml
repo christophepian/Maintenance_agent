@@ -90,6 +90,13 @@ jobs:
         env:
           API_BASE_URL: http://127.0.0.1:3001
 
+      # ── G7-4b: Frontend lint ──
+      - name: "G7: Lint frontend (next lint)"
+        run: npx next lint --dir . --max-warnings 0
+        working-directory: apps/web
+        env:
+          API_BASE_URL: http://127.0.0.1:3001
+
       # ── G7-5: Jest tests ──
       - name: "G7: Run Jest tests"
         run: npm test -- --ci --forceExit
@@ -115,6 +122,10 @@ jobs:
           curl -sf 'http://127.0.0.1:3001/leases?limit=1' > /dev/null && echo "✅ /leases" || exit 1
           curl -sf 'http://127.0.0.1:3001/invoices?limit=1' > /dev/null && echo "✅ /invoices" || exit 1
           curl -sf 'http://127.0.0.1:3001/contractors?limit=1' > /dev/null && echo "✅ /contractors" || exit 1
+          curl -sf 'http://127.0.0.1:3001/units?limit=1' > /dev/null && echo "✅ /units" || exit 1
+          curl -sf 'http://127.0.0.1:3001/buildings?limit=1' > /dev/null && echo "✅ /buildings" || exit 1
+          curl -sf 'http://127.0.0.1:3001/rental-applications?limit=1' > /dev/null && echo "✅ /rental-applications" || exit 1
+          curl -sf 'http://127.0.0.1:3001/rfp?limit=1' > /dev/null && echo "✅ /rfp" || exit 1
           kill $SERVER_PID 2>/dev/null || true
           echo "✅ All smoke tests passed"
         working-directory: apps/api

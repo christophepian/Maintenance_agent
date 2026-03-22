@@ -306,7 +306,8 @@ export function registerRequestRoutes(router: Router) {
     sendJson(res, 200, { data: requests });
   });
 
-  router.get("/requests/contractor", async ({ res, prisma, query, orgId }) => {
+  router.get("/requests/contractor", async ({ req, res, prisma, query, orgId }) => {
+    if (!requireRole(req, res, "CONTRACTOR")) return;
     const cid = first(query, "contractorId");
     if (!cid) return sendError(res, 400, "VALIDATION_ERROR", "Missing contractorId");
     const c = await prisma.contractor.findUnique({ where: { id: cid }, select: { orgId: true } });

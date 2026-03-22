@@ -230,22 +230,17 @@ export default function ManagerDashboard() {
           <CollapsibleSection title="Action Required" badge={pendingReviewRequests.length + pendingOwnerApprovalRequests.length + disputedInvoices.length + staleJobs.length + rfpPendingRequests.length || null}>
             <div className="grid gap-3">
               <Panel>
-                <div className="flex justify-between items-baseline">
-                  <div>
-                    <strong className="m-0">Requests Pending Review</strong>
-                    <div className="text-subtle">Manager approval required</div>
+                <Link href="/manager/requests?filter=PENDING_REVIEW" style={{ textDecoration: "none", color: "inherit", display: "block" }}>
+                  <div className="flex justify-between items-baseline">
+                    <div>
+                      <strong className="m-0">Requests Pending Review</strong>
+                      <div className="text-subtle">Manager approval required</div>
+                    </div>
+                    <div style={{ fontSize: "2em", fontWeight: 700, color: pendingReviewRequests.length > 0 ? "#7a4a00" : "#999" }}>
+                      {pendingReviewRequests.length}
+                    </div>
                   </div>
-                  <div style={{ fontSize: "2em", fontWeight: 700, color: pendingReviewRequests.length > 0 ? "#7a4a00" : "#999" }}>
-                    {pendingReviewRequests.length}
-                  </div>
-                </div>
-                {pendingReviewRequests.length > 0 && (
-                  <div className="mt-3">
-                    <button onClick={() => router.push("/manager/requests?filter=PENDING_REVIEW")}>
-                      Review Now →
-                    </button>
-                  </div>
-                )}
+                </Link>
               </Panel>
 
               {pendingOwnerApprovalRequests.length > 0 && (
@@ -266,20 +261,17 @@ export default function ManagerDashboard() {
 
               {disputedInvoices.length > 0 && (
                 <Panel>
-                  <div className="flex justify-between items-baseline">
-                    <div>
-                      <strong className="m-0">Disputed Invoices</strong>
-                      <div className="text-subtle">Require resolution</div>
+                  <Link href="/manager/finance/invoices?status=DISPUTED" style={{ textDecoration: "none", color: "inherit", display: "block" }}>
+                    <div className="flex justify-between items-baseline">
+                      <div>
+                        <strong className="m-0">Disputed Invoices</strong>
+                        <div className="text-subtle">Require resolution</div>
+                      </div>
+                      <div style={{ fontSize: "2em", fontWeight: 700, color: "#b30000" }}>
+                        {disputedInvoices.length}
+                      </div>
                     </div>
-                    <div style={{ fontSize: "2em", fontWeight: 700, color: "#b30000" }}>
-                      {disputedInvoices.length}
-                    </div>
-                  </div>
-                  <div className="mt-3">
-                    <button onClick={() => router.push("/manager/finance/invoices?status=DISPUTED")}>
-                      Resolve Disputes →
-                    </button>
-                  </div>
+                  </Link>
                 </Panel>
               )}
 
@@ -301,23 +293,17 @@ export default function ManagerDashboard() {
 
               {rfpPendingRequests.length > 0 && (
                 <Panel>
-                  <div className="flex justify-between items-baseline">
-                    <div>
-                      <strong className="m-0">Auto-routed to RFP</strong>
-                      <div className="text-subtle">Legal engine created RFPs</div>
+                  <Link href="/manager/rfps" style={{ textDecoration: "none", color: "inherit", display: "block" }}>
+                    <div className="flex justify-between items-baseline">
+                      <div>
+                        <strong className="m-0">Auto-routed to RFP</strong>
+                        <div className="text-subtle">Legal engine created RFPs</div>
+                      </div>
+                      <div style={{ fontSize: "2em", fontWeight: 700, color: "#4338ca" }}>
+                        {rfpPendingRequests.length}
+                      </div>
                     </div>
-                    <div style={{ fontSize: "2em", fontWeight: 700, color: "#4338ca" }}>
-                      {rfpPendingRequests.length}
-                    </div>
-                  </div>
-                  <div className="mt-3 flex gap-2">
-                    <button onClick={() => router.push("/manager/requests?filter=RFP_PENDING")}>
-                      View Requests →
-                    </button>
-                    <button onClick={() => router.push("/manager/rfps")}>
-                      Open RFPs →
-                    </button>
-                  </div>
+                  </Link>
                 </Panel>
               )}
 
@@ -351,15 +337,17 @@ export default function ManagerDashboard() {
               </Panel>
 
               <Panel>
-                <div className="flex justify-between items-baseline">
-                  <div>
-                    <strong className="m-0">Open Jobs</strong>
-                    <div className="text-subtle">Pending + in progress</div>
+                <Link href="/manager/jobs" style={{ textDecoration: "none", color: "inherit", display: "block" }}>
+                  <div className="flex justify-between items-baseline">
+                    <div>
+                      <strong className="m-0">Open Jobs</strong>
+                      <div className="text-subtle">Pending + in progress</div>
+                    </div>
+                    <div style={{ fontSize: "2em", fontWeight: 700, color: openJobsCount > 15 ? "#7a4a00" : "#0b3a75" }}>
+                      {openJobsCount}
+                    </div>
                   </div>
-                  <div style={{ fontSize: "2em", fontWeight: 700, color: openJobsCount > 15 ? "#7a4a00" : "#0b3a75" }}>
-                    {openJobsCount}
-                  </div>
-                </div>
+                </Link>
               </Panel>
 
               <Panel>

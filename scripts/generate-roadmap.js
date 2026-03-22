@@ -1747,9 +1747,9 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .intake-card{background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:10px 12px;margin-bottom:6px}
 .intake-card-head{display:flex;align-items:center;gap:8px;margin-bottom:5px;flex-wrap:wrap}
 .intake-status{font-family:'IBM Plex Mono',monospace;font-size:11px;padding:1px 5px;border-radius:2px;border:1px solid}
-.intake-status-raw{color:var(--accent-blue);border-color:rgba(61,126,255,.3);background:rgba(61,126,255,.08)}
-.intake-status-triaged{color:var(--accent-cyan);border-color:rgba(0,212,200,.3);background:rgba(0,212,200,.08)}
-.intake-status-drafted{color:var(--p3);border-color:rgba(245,166,35,.3);background:rgba(245,166,35,.08)}
+.intake-status-capture{color:var(--accent-blue);border-color:rgba(61,126,255,.3);background:rgba(61,126,255,.08)}
+.intake-status-clarify{color:var(--accent-cyan);border-color:rgba(0,212,200,.3);background:rgba(0,212,200,.08)}
+.intake-status-review{color:var(--p3);border-color:rgba(245,166,35,.3);background:rgba(245,166,35,.08)}
 .intake-status-promoted{color:var(--p0);border-color:rgba(0,255,136,.3);background:rgba(0,255,136,.08)}
 .intake-status-parked{color:var(--text-dim);border-color:var(--border2);background:var(--surface2)}
 .intake-status-duplicate{color:#c87040;border-color:rgba(200,112,64,.3);background:rgba(200,112,64,.08)}
@@ -1765,7 +1765,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .draft-card{background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:10px 12px;margin-bottom:6px;border-left:3px solid var(--accent-blue)}
 .draft-card-head{display:flex;align-items:center;gap:8px;margin-bottom:5px;flex-wrap:wrap}
 .draft-status{font-family:'IBM Plex Mono',monospace;font-size:11px;padding:1px 5px;border-radius:2px;border:1px solid}
-.draft-status-draft{color:var(--accent-blue);border-color:rgba(61,126,255,.3);background:rgba(61,126,255,.08)}
+.draft-status-review{color:var(--accent-blue);border-color:rgba(61,126,255,.3);background:rgba(61,126,255,.08)}
 .draft-status-ready{color:var(--p0);border-color:rgba(0,255,136,.3);background:rgba(0,255,136,.08)}
 .draft-status-promoted{color:var(--accent-cyan);border-color:rgba(0,212,200,.3);background:rgba(0,212,200,.08)}
 .draft-status-discarded{color:var(--text-dim);border-color:var(--border2);background:var(--surface2)}
@@ -2393,11 +2393,14 @@ function generateHtml(roadmap, signals, git) {
   const draftTickets = roadmap.draft_tickets || [];
 
   // Stage classification
-  const stage1Items = intakeItems.filter(i => i.status === 'raw');
-  const stage2Items = intakeItems.filter(i => i.status === 'triaged');
-  const stage3Intake = intakeItems.filter(i => i.status === 'drafted');
-  const stage3Drafts = draftTickets.filter(d => d.status === 'draft');
+  const stage1Items = intakeItems.filter(i => i.status === 'capture');
+  const stage2Items = intakeItems.filter(i => i.status === 'clarify');
+  const stage3Intake = intakeItems.filter(i => i.status === 'review');
+  const stage3Drafts = draftTickets.filter(d => d.status === 'review');
   const stage4Drafts = draftTickets.filter(d => d.status === 'ready' || d.ready_for_copilot);
+  const parkedItems = intakeItems.filter(i => i.status === 'parked');
+  const dupItems = intakeItems.filter(i => i.status === 'duplicate');
+  const discardedDrafts = draftTickets.filter(d => d.status === 'discarded');
 
   // ── Stage 1 cards (Capture) ──
   let stage1Html = '';
@@ -2446,6 +2449,10 @@ function generateHtml(roadmap, signals, git) {
       + '<textarea id="clarify-answer-' + esc(item.id) + '" style="display:none;width:100%;min-height:80px;background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:10px;color:var(--text);font-family:\'IBM Plex Mono\',monospace;font-size:13px;resize:vertical;box-sizing:border-box;margin-bottom:8px" placeholder="Answer in plain language \u2014 no technical details needed"></textarea>'
       + '<div class="capture-card-actions">'
       + '<button class="intake-btn intake-btn-primary" id="clarify-submit-' + esc(item.id) + '" onclick="clarifySubmitAnswer(\'' + esc(item.id) + '\')">' + 'Done, queue it</button>'
+      + (item.split_recommended
+        ? '<button class="intake-btn intake-btn-secondary" onclick="intakeSplit(\'' + esc(item.id) + '\')">&#10065; Split</button>'
+        : '<button class="intake-btn intake-btn-secondary" onclick="intakeTriage(\'' + esc(item.id) + '\')">&#9998; Triage</button>'
+      )
       + '<button class="intake-btn intake-btn-secondary" onclick="clarifyQueueIt(\'' + esc(item.id) + '\')">' + 'Skip, queue anyway</button>'
       + '</div>'
       + '<div id="clarify-fb-' + esc(item.id) + '" style="display:none;font-size:12px;color:var(--p0);margin-top:6px"></div>'
@@ -2453,28 +2460,61 @@ function generateHtml(roadmap, signals, git) {
   }
 
   // ── Stage 3 cards (Review) ──
-  let stage3Html = '';
+  // Section A: raw intake items still waiting to be triaged into drafts
+  let stage3IntakeHtml = '';
   for (const item of stage3Intake) {
     if (!item.title && !(item.raw_text || '').trim()) continue;
     const showArea = item.product_area && item.product_area !== 'general';
     const titleText = item.title || (item.raw_text || '').substring(0, 80);
-    stage3Html += '<div class="capture-card" data-intake-id="' + esc(item.id) + '" data-intake-status="' + esc(item.status) + '" style="border-left:3px solid var(--p3)">'
+    stage3IntakeHtml += '<div class="capture-card" data-intake-id="' + esc(item.id) + '" data-intake-status="' + esc(item.status) + '" style="border-left:3px solid var(--p3)">'
       + '<div style="font-size:14px;color:var(--text);line-height:1.5;margin-bottom:6px">' + esc(titleText) + '</div>'
-      + '<div style="display:flex;align-items:center;gap:8px">'
+      + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'
       + (showArea ? '<span class="intake-meta-tag intake-meta-tag-area">' + esc(item.product_area) + '</span>' : '')
       + (item.split_recommended ? '<span class="intake-meta-tag" style="color:var(--p3);border-color:rgba(245,166,35,.3)">Multiple topics</span>' : '')
       + '</div>'
+      + '<div class="capture-card-actions">'
+      + '<button class="intake-btn intake-btn-primary" onclick="intakeTriage(\'' + esc(item.id) + '\')">&#9998; Triage</button>'
+      + (item.split_recommended ? '<button class="intake-btn intake-btn-secondary" onclick="intakeSplit(\'' + esc(item.id) + '\')">&#10065; Split</button>' : '')
+      + '<button class="intake-btn intake-btn-secondary" onclick="intakeEdit(\'' + esc(item.id) + '\')">Edit</button>'
+      + '<button class="intake-btn intake-btn-secondary" onclick="intakePark(\'' + esc(item.id) + '\')" style="margin-left:auto">Park</button>'
+      + '</div>'
       + '</div>';
   }
-  // Orphan drafts (no parent intake) in Review stage
+
+  // Section B: draft tickets in review — per-card REFINE / MARK READY / DISCARD
   const parentedDraftIds = new Set(stage3Intake.flatMap(i => i.draft_ticket_ids || []));
   const orphanDrafts = stage3Drafts.filter(d => !parentedDraftIds.has(d.id));
+  let stage3DraftsHtml = '';
   for (const child of orphanDrafts) {
     const showArea = child.product_area && child.product_area !== 'general';
-    stage3Html += '<div class="capture-card" data-draft-id="' + esc(child.id) + '" data-draft-status="' + esc(child.status) + '" style="border-left:3px solid var(--p3)">'
-      + '<div style="font-size:14px;color:var(--text);line-height:1.5;margin-bottom:6px">' + esc((child.title || '').substring(0, 80)) + '</div>'
-      + (showArea ? '<div><span class="intake-meta-tag intake-meta-tag-area">' + esc(child.product_area) + '</span></div>' : '')
+    const hasGoal = child.goal && child.goal.trim();
+    const hasAC = child.acceptance_criteria && child.acceptance_criteria.length > 0;
+    stage3DraftsHtml += '<div class="capture-card" data-draft-id="' + esc(child.id) + '" data-draft-status="' + esc(child.status) + '" style="border-left:3px solid var(--accent-blue)">'
+      + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">'
+      + '<span style="font-family:\'IBM Plex Mono\',monospace;font-size:11px;color:var(--accent-blue)">' + esc(child.id) + '</span>'
+      + (showArea ? '<span class="intake-meta-tag intake-meta-tag-area">' + esc(child.product_area) + '</span>' : '')
+      + (!hasGoal ? '<span class="intake-meta-tag" style="color:#ff8080;border-color:rgba(255,128,128,.3)">needs goal</span>' : '')
+      + (!hasAC ? '<span class="intake-meta-tag" style="color:#ff8080;border-color:rgba(255,128,128,.3)">needs AC</span>' : '')
+      + '</div>'
+      + '<div style="font-size:14px;color:var(--text);line-height:1.5;margin-bottom:4px">' + esc((child.title || '').substring(0, 100)) + '</div>'
+      + (hasGoal ? '<div style="font-size:12px;color:var(--text-dim);margin-bottom:8px">' + esc(child.goal.substring(0, 160)) + (child.goal.length > 160 ? '\u2026' : '') + '</div>' : '<div style="margin-bottom:8px"></div>')
+      + '<div class="capture-card-actions">'
+      + '<button class="intake-btn intake-btn-primary" onclick="draftRefine(\'' + esc(child.id) + '\')">&#9889; Refine</button>'
+      + '<button class="intake-btn intake-btn-promote" onclick="draftMarkReady(\'' + esc(child.id) + '\')">&#10003; Mark Ready</button>'
+      + '<button class="intake-btn intake-btn-secondary" onclick="draftEdit(\'' + esc(child.id) + '\')">&#9998; Edit</button>'
+      + '<button class="intake-btn intake-btn-secondary" onclick="draftDiscard(\'' + esc(child.id) + '\')" style="margin-left:auto">Discard</button>'
+      + '</div>'
       + '</div>';
+  }
+
+  let stage3Html = '';
+  if (stage3IntakeHtml) {
+    stage3Html += '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-dim);margin-bottom:8px">Raw notes (' + stage3Intake.filter(i => i.title || (i.raw_text||'').trim()).length + ')</div>'
+      + stage3IntakeHtml;
+  }
+  if (stage3DraftsHtml) {
+    stage3Html += '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-dim);margin:' + (stage3IntakeHtml ? '16px' : '0') + ' 0 8px">Draft tickets (' + orphanDrafts.length + ')</div>'
+      + stage3DraftsHtml;
   }
 
   // ── Stage 4 cards (Ready) — grouped by parent intake item ──
@@ -2567,7 +2607,7 @@ function generateHtml(roadmap, signals, git) {
     + '<h3>\u270E Edit Intake Item: <span id="ie-id"></span></h3>'
     + '<div class="intake-edit-row"><label>Title</label><input type="text" id="ie-title"></div>'
     + '<div class="intake-edit-row"><label>Raw Text</label><textarea id="ie-raw-text"></textarea></div>'
-    + '<div class="intake-edit-row"><label>Status</label><select id="ie-status"><option value="raw">raw</option><option value="triaged">triaged</option><option value="drafted">drafted</option><option value="parked">parked</option><option value="duplicate">duplicate</option></select></div>'
+    + '<div class="intake-edit-row"><label>Status</label><select id="ie-status"><option value="capture">raw</option><option value="clarify">triaged</option><option value="review">drafted</option><option value="parked">parked</option><option value="duplicate">duplicate</option></select></div>'
     + '<div class="intake-edit-row"><label>Source</label><input type="text" id="ie-source"></div>'
     + '<div class="intake-edit-row"><label>Product Area</label><input type="text" id="ie-area"></div>'
     + '<div class="intake-edit-row"><label>Proposed Phase</label><input type="text" id="ie-phase" placeholder="e.g. P1, P2"></div>'
@@ -2724,6 +2764,34 @@ function generateHtml(roadmap, signals, git) {
       </div>
       ${stage4Html || '<div class="intake-empty">Your epics and stories will appear here once you review your notes and click <strong style="color:var(--accent-blue)">\u2728 Turn into epics &amp; stories</strong>.</div>'}
     </div>
+
+    <!-- Parked / Duplicate / Discarded archive -->
+    ${(parkedItems.length + dupItems.length + discardedDrafts.length) > 0 ? `
+    <details style="margin-top:24px;border:1px solid var(--border);border-radius:4px;overflow:hidden">
+      <summary style="cursor:pointer;padding:10px 14px;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text-dim);letter-spacing:.06em;text-transform:uppercase;background:var(--surface2);list-style:none;display:flex;align-items:center;gap:8px">
+        <span>&#9660;</span>
+        <span>Archive</span>
+        <span style="font-size:11px;padding:1px 6px;border-radius:8px;background:var(--bg);border:1px solid var(--border2)">${parkedItems.length + dupItems.length + discardedDrafts.length}</span>
+        <span style="margin-left:auto;font-size:11px;font-weight:400;text-transform:none;letter-spacing:0">Parked intake, duplicates, discarded drafts</span>
+      </summary>
+      <div style="padding:12px 14px;display:grid;gap:6px">
+        ${parkedItems.map(i => '<div class="capture-card" data-intake-id="' + esc(i.id) + '" style="border-left:3px solid var(--text-dim);opacity:.7">'
+          + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px"><span style="font-family:\'IBM Plex Mono\',monospace;font-size:11px;color:var(--text-dim)">' + esc(i.id) + '</span><span class="intake-meta-tag" style="color:var(--text-dim)">parked</span></div>'
+          + '<div style="font-size:13px;color:var(--text-dim);line-height:1.5;margin-bottom:8px">' + esc((i.title || i.raw_text || '').substring(0, 100)) + '</div>'
+          + '<div class="capture-card-actions"><button class="intake-btn intake-btn-secondary" onclick="intakeRestore(\'' + esc(i.id) + '\')">&#8593; Restore</button><button class="intake-btn intake-btn-secondary" onclick="intakeEdit(\'' + esc(i.id) + '\')">Edit</button><button class="intake-btn intake-btn-secondary" onclick="intakeDelete(\'' + esc(i.id) + '\')" style="margin-left:auto">Delete</button></div>'
+          + '</div>').join('')}
+        ${dupItems.map(i => '<div class="capture-card" data-intake-id="' + esc(i.id) + '" style="border-left:3px solid var(--text-dim);opacity:.7">'
+          + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px"><span style="font-family:\'IBM Plex Mono\',monospace;font-size:11px;color:var(--text-dim)">' + esc(i.id) + '</span><span class="intake-meta-tag" style="color:var(--p3);border-color:rgba(245,166,35,.3)">duplicate</span>' + (i.duplicate_of ? '<span style="font-size:11px;color:var(--text-dim)">of ' + esc(i.duplicate_of) + '</span>' : '') + '</div>'
+          + '<div style="font-size:13px;color:var(--text-dim);line-height:1.5;margin-bottom:8px">' + esc((i.title || i.raw_text || '').substring(0, 100)) + '</div>'
+          + '<div class="capture-card-actions"><button class="intake-btn intake-btn-secondary" onclick="intakeRestore(\'' + esc(i.id) + '\')">&#8593; Restore</button><button class="intake-btn intake-btn-secondary" onclick="intakeDelete(\'' + esc(i.id) + '\')" style="margin-left:auto">Delete</button></div>'
+          + '</div>').join('')}
+        ${discardedDrafts.map(d => '<div class="capture-card" data-draft-id="' + esc(d.id) + '" style="border-left:3px solid var(--text-dim);opacity:.7">'
+          + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px"><span style="font-family:\'IBM Plex Mono\',monospace;font-size:11px;color:var(--text-dim)">' + esc(d.id) + '</span><span class="intake-meta-tag" style="color:var(--text-dim)">discarded draft</span></div>'
+          + '<div style="font-size:13px;color:var(--text-dim);line-height:1.5;margin-bottom:8px">' + esc((d.title || '').substring(0, 100)) + '</div>'
+          + '<div class="capture-card-actions"><button class="intake-btn intake-btn-secondary" onclick="draftRestore(\'' + esc(d.id) + '\')">&#8593; Restore to review</button><button class="intake-btn intake-btn-secondary" onclick="draftDelete(\'' + esc(d.id) + '\')" style="margin-left:auto">Delete</button></div>'
+          + '</div>').join('')}
+      </div>
+    </details>` : ''}
 
     <!-- Edit overlays -->
     ${intakeEditHtml}
@@ -3304,6 +3372,23 @@ function generateHtml(roadmap, signals, git) {
 <style>${CSS}</style>
 </head>
 <body>
+<!-- Server status banner — shown when roadmap-server.js is NOT running -->
+<div id="server-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:#7f1d1d;color:#fecaca;font-family:system-ui,sans-serif;font-size:0.85rem;padding:10px 20px;text-align:center;box-shadow:0 -2px 8px rgba(0,0,0,.4);">
+  &#9888;&nbsp; Server offline &mdash; buttons disabled.&nbsp; Run: <code style="background:rgba(255,255,255,.15);padding:2px 6px;border-radius:3px;">node scripts/roadmap-server.js</code>
+</div>
+<script>
+(function(){
+  var banner = document.getElementById('server-banner');
+  if (!banner) return;
+  var ctrl = new AbortController();
+  var timer = setTimeout(function(){ ctrl.abort(); }, 2000);
+  fetch('http://localhost:8111/api/health', { signal: ctrl.signal })
+    .then(function(r){ return r.ok ? r.json() : Promise.reject(); })
+    .then(function(d){ if (d && d.ok) { banner.style.display = 'none'; } else { banner.style.display = ''; } })
+    .catch(function(){ banner.style.display = ''; })
+    .finally(function(){ clearTimeout(timer); });
+})();
+</script>
 <div class="page">
 
 <div class="header">
@@ -3349,6 +3434,7 @@ ${recPanelHtml}
   <button class="tab-btn" onclick="switchTab('intake',this)">Intake</button>
   <button class="tab-btn" onclick="switchTab('signals',this)">Codebase Signals</button>
   <button class="tab-btn" onclick="switchTab('howto',this)">How to Use</button>
+  <button class="tab-btn" onclick="regenerateHtml(this)" style="margin-left:auto;color:var(--text-dim)" title="Regenerate roadmap.html from ROADMAP.json without any mutations">&#8635; Regenerate</button>
 </div>
 
 <div class="tab-pane active" id="tab-phases">
@@ -4413,14 +4499,14 @@ function processAllDrafts() {
   var btn = document.getElementById('processAllBtn');
   if (btn) { btn.textContent = '\u27F3 Building your backlog\u2026'; btn.disabled = true; }
   // Try batch refine all drafts in draft status
-  var draftCards = document.querySelectorAll('[data-draft-status="draft"]');
+  var draftCards = document.querySelectorAll('[data-draft-status="review"]');
   var ids = [];
   draftCards.forEach(function(c) {
     var did = c.getAttribute('data-draft-id');
     if (did) ids.push(did);
   });
   // Also collect from parent intake cards
-  document.querySelectorAll('[data-intake-status="drafted"]').forEach(function(c) {
+  document.querySelectorAll('[data-intake-status="review"]').forEach(function(c) {
     c.style.opacity = '0.5';
   });
   // Use promote-all as fallback if no individual drafts
@@ -4775,7 +4861,7 @@ function intakeAutoTriageAll() {
   if (!confirm('Auto-triage all raw/triaged intake items?')) return;
   document.querySelectorAll('.intake-card').forEach(function(c) {
     var st = c.getAttribute('data-intake-status');
-    if (st === 'raw' || st === 'triaged') c.style.opacity = '0.5';
+    if (st === 'capture' || st === 'clarify') c.style.opacity = '0.5';
   });
   fetch(TF_API + '/api/intake/auto-triage', {
     method: 'POST',
@@ -4803,7 +4889,7 @@ function intakeEdit(intakeId) {
     document.getElementById('ie-id').setAttribute('data-id', item.id);
     document.getElementById('ie-title').value = item.title || '';
     document.getElementById('ie-raw-text').value = item.raw_text || '';
-    document.getElementById('ie-status').value = item.status || 'raw';
+    document.getElementById('ie-status').value = item.status || 'capture';
     document.getElementById('ie-source').value = item.source || '';
     document.getElementById('ie-area').value = item.product_area || '';
     document.getElementById('ie-phase').value = item.proposed_phase || '';
@@ -4894,7 +4980,7 @@ function intakePromote(intakeId) {
 function intakePromoteAll() {
   if (!confirm('Promote ALL triaged intake items to fully-scoped draft tickets?')) return;
   document.querySelectorAll('.intake-card').forEach(function(c) {
-    if (c.getAttribute('data-intake-status') === 'triaged') c.style.opacity = '0.5';
+    if (c.getAttribute('data-intake-status') === 'clarify') c.style.opacity = '0.5';
   });
   fetch(TF_API + '/api/intake/promote-all', {
     method: 'POST',
@@ -5091,6 +5177,88 @@ function intakeKeepAsOne(intakeId) {
     else { alert('Error: ' + (d.errors||[]).join(', ')); }
   })
   .catch(function(e){ alert('Server not running? ' + e.message); });
+}
+
+// Standalone draft refine (single draft — mirrors the per-draft step inside processAllDrafts)
+function draftRefine(draftId) {
+  var card = document.querySelector('[data-draft-id="' + draftId + '"]');
+  if (card) { card.style.opacity = '0.5'; card.style.pointerEvents = 'none'; }
+  fetch(TF_API + '/api/drafts/' + encodeURIComponent(draftId) + '/refine', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' }
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(d){
+    if (card) { card.style.opacity = ''; card.style.pointerEvents = ''; }
+    if (d.ok) { showToast('Refined ' + draftId + ' with project context', 'success'); reloadKeepTab(); }
+    else { alert('Refine failed: ' + (d.errors||[]).join(', ')); }
+  })
+  .catch(function(e){
+    if (card) { card.style.opacity = ''; card.style.pointerEvents = ''; }
+    alert('Server not running? ' + e.message);
+  });
+}
+
+// Discard a draft ticket (sets status to "discarded", moves it to Archive)
+function draftDiscard(draftId) {
+  if (!confirm('Discard draft ' + draftId + '? It will move to the Archive section.')) return;
+  fetch(TF_API + '/api/drafts/' + encodeURIComponent(draftId), {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status: 'discarded' })
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(d){
+    if (d.ok) { showToast('Discarded ' + draftId, 'info'); reloadKeepTab(); }
+    else { alert('Error: ' + (d.errors||[]).join(', ')); }
+  })
+  .catch(function(e){ alert('Server not running? ' + e.message); });
+}
+
+// Restore a discarded draft back to review
+function draftRestore(draftId) {
+  fetch(TF_API + '/api/drafts/' + encodeURIComponent(draftId), {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status: 'review' })
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(d){
+    if (d.ok) { showToast('Restored ' + draftId + ' to review', 'success'); reloadKeepTab(); }
+    else { alert('Error: ' + (d.errors||[]).join(', ')); }
+  })
+  .catch(function(e){ alert('Server not running? ' + e.message); });
+}
+
+// Restore a parked or duplicate intake item back to capture
+function intakeRestore(intakeId) {
+  fetch(TF_API + '/api/intake/' + encodeURIComponent(intakeId), {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status: 'capture' })
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(d){
+    if (d.ok) { showToast('Restored ' + intakeId + ' to Capture', 'success'); reloadKeepTab(); }
+    else { alert('Error: ' + (d.errors||[]).join(', ')); }
+  })
+  .catch(function(e){ alert('Server not running? ' + e.message); });
+}
+
+// Regenerate HTML from ROADMAP.json without any data mutations
+function regenerateHtml(btn) {
+  if (btn) { btn.disabled = true; btn.textContent = '\u231B Regenerating\u2026'; }
+  fetch(TF_API + '/api/regenerate', { method: 'POST' })
+  .then(function(r){ return r.json(); })
+  .then(function(d){
+    if (btn) { btn.disabled = false; btn.textContent = '\u21BB Regenerate'; }
+    if (d.ok) { showToast('Regenerated \u2014 reload to see changes', 'success'); setTimeout(function(){ location.reload(); }, 800); }
+    else { alert('Regeneration failed: ' + (d.error || 'unknown error')); }
+  })
+  .catch(function(e){
+    if (btn) { btn.disabled = false; btn.textContent = '\u21BB Regenerate'; }
+    alert('Server not running? ' + e.message);
+  });
 }
 
 // Prompt E — Story sync (call after draft promotion)

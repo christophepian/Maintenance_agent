@@ -765,6 +765,13 @@ export async function listVacantUnits(orgId: string) {
           address: true,
         },
       },
+      leases: {
+        where: { status: { in: ["TERMINATED", "SIGNED"] } },
+        orderBy: { endDate: "desc" },
+        take: 1,
+        select: { endDate: true, terminatedAt: true },
+      },
+      _count: { select: { rentalApplicationUnits: true } },
     },
     orderBy: [{ building: { name: "asc" } }, { unitNumber: "asc" }],
   });
@@ -775,6 +782,8 @@ export async function listVacantUnits(orgId: string) {
     floor: u.floor,
     monthlyRentChf: u.monthlyRentChf,
     monthlyChargesChf: u.monthlyChargesChf,
+    vacantSince: u.leases[0]?.endDate ?? u.leases[0]?.terminatedAt ?? null,
+    applicationCount: u._count.rentalApplicationUnits,
     building: u.building
       ? {
           id: u.building.id,

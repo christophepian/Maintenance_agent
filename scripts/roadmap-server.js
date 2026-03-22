@@ -434,8 +434,8 @@ function handleValidateTicket(req, res, ticketId) {
 // A raw intake item should NEVER automatically become executable unless
 // it is clearly atomic and sufficiently scoped.
 
-var INTAKE_STATUSES = ["raw", "triaged", "drafted", "promoted", "parked", "duplicate"];
-var DRAFT_STATUSES  = ["draft", "ready", "promoted", "discarded"];
+var INTAKE_STATUSES = ["capture", "clarify", "review", "promoted", "parked", "duplicate"];
+var DRAFT_STATUSES  = ["review", "ready", "promoted", "discarded"];
 
 function generateIntakeId(items) {
   var nums = items.map(function(i) { return parseInt((i.id || "").replace("INT-", ""), 10) || 0; });
@@ -455,7 +455,7 @@ function intakeDefaults() {
     id: null,
     title: null,
     raw_text: "",
-    status: "raw",
+    status: "capture",
     source: "manual_paste",
     product_area: null,
     related_feature_ids: [],
@@ -485,7 +485,7 @@ function draftDefaults() {
     goal: "",
     phase: null,
     order: null,
-    status: "draft",
+    status: "review",
     product_area: "",
     parent_feature_id: null,
     depends_on: [],
@@ -544,7 +544,7 @@ function handleCreateIntake(req, res) {
       id: generateIntakeId(roadmap.intake_items),
       raw_text: data.raw_text.trim(),
       source: (data.source || "manual_paste").trim(),
-      status: "raw",
+      status: "capture",
       created_at: now,
       updated_at: now,
     });
@@ -656,7 +656,7 @@ function handleBulkIngest(req, res) {
       if (triageResult.split_strategy) item.split_strategy = triageResult.split_strategy;
       if (triageResult.why_not_one_ticket) item.why_not_one_ticket = triageResult.why_not_one_ticket;
       if (triageResult.anti_split_reasons) item.anti_split_reasons = triageResult.anti_split_reasons;
-      item.status = "triaged";
+      item.status = "clarify";
       item.updated_at = new Date().toISOString();
       summary.triaged++;
 
@@ -706,7 +706,7 @@ function handleBulkIngest(req, res) {
         roadmap.draft_tickets = roadmap.draft_tickets.concat(splitDrafts);
         createdDrafts = createdDrafts.concat(splitDrafts);
         item.draft_ticket_ids = splitDrafts.map(function(d) { return d.id; });
-        item.status = "drafted";
+        item.status = "review";
         summary.split++;
         summary.drafted += splitDrafts.length;
       } else if (triageResult.recommended_action === "execute" || triageResult.recommended_action === "attach") {
@@ -718,7 +718,7 @@ function handleBulkIngest(req, res) {
           goal: item.triage_notes || item.raw_text.substring(0, 200),
           phase: item.proposed_phase || null,
           order: 1,
-          status: "draft",
+          status: "review",
           product_area: item.product_area || "",
           parent_feature_id: (item.related_feature_ids && item.related_feature_ids[0]) || null,
           depends_on: item.dependencies || [],
@@ -726,7 +726,7 @@ function handleBulkIngest(req, res) {
         roadmap.draft_tickets.push(singleDraft);
         createdDrafts.push(singleDraft);
         item.draft_ticket_ids = [singleDraft.id];
-        item.status = "drafted";
+        item.status = "review";
         summary.drafted++;
       } else if (triageResult.recommended_action === "blocked") {
         // Create draft but mark as blocked
@@ -745,7 +745,7 @@ function handleBulkIngest(req, res) {
         roadmap.draft_tickets.push(blockedDraft);
         createdDrafts.push(blockedDraft);
         item.draft_ticket_ids = [blockedDraft.id];
-        item.status = "drafted";
+        item.status = "review";
         summary.drafted++;
       }
 
@@ -797,7 +797,7 @@ function handleClarifyQuestions(req, res, intakeId) {
  *   1. Re-runs triageIntakeItem with the enriched item
  *   2. Applies all triage fields
  *   3. Parses the user's free-text answer to fill specific fields
- *   4. Sets status = "triaged"
+ *   4. Sets status = "clarify"
  *   5. Writes and regenerates
  *
  * PUT /api/intake/:id/clarify
@@ -852,7 +852,7 @@ function handleClarifyIntake(req, res, intakeId) {
     var fieldsFilled = parser.parseAnswerIntoFields(data.context, questions, item, context);
 
     // Step 5: Set status and timestamp
-    item.status = "triaged";
+    item.status = "clarify";
     item.updated_at = new Date().toISOString();
 
     roadmap.intake_items[idx] = item;
@@ -914,7 +914,7 @@ function handleAutoTriageSingle(req, res, intakeId) {
       if (result.split_strategy) item.split_strategy = result.split_strategy;
       if (result.why_not_one_ticket) item.why_not_one_ticket = result.why_not_one_ticket;
       if (result.anti_split_reasons) item.anti_split_reasons = result.anti_split_reasons;
-      if (item.status === "raw") item.status = "triaged";
+      if (item.status === "capture") item.status = "clarify";
       item.updated_at = new Date().toISOString();
 
       roadmap.intake_items[idx] = item;
@@ -972,7 +972,7 @@ function handleAutoTriageBatch(req, res) {
         if (r.split_strategy) item.split_strategy = r.split_strategy;
         if (r.why_not_one_ticket) item.why_not_one_ticket = r.why_not_one_ticket;
         if (r.anti_split_reasons) item.anti_split_reasons = r.anti_split_reasons;
-        if (item.status === "raw") item.status = "triaged";
+        if (item.status === "capture") item.status = "clarify";
         item.updated_at = new Date().toISOString();
       }
       writeRoadmap(roadmap);
@@ -998,7 +998,7 @@ function handleAutoTriageBatch(req, res) {
  * Promote a single intake item to draft ticket(s).
  *
  * Requirements:
- *   - Item must be status "triaged" with a recommended_action
+ *   - Item must be status "clarify" with a recommended_action
  *   - Duplicates and parked items are linked/flagged, not promoted
  *   - Result includes fully-scoped draft specs
  */
@@ -1014,7 +1014,7 @@ function handlePromoteIntakeSingle(req, res, intakeId) {
     var item = roadmap.intake_items[idx];
 
     // Gate: must be triaged
-    if (item.status !== "triaged") {
+    if (item.status !== "clarify") {
       return jsonResponse(res, 400, { ok: false, errors: ["Item must be triaged before promotion. Current status: " + item.status] });
     }
     if (!item.recommended_action) {
@@ -1087,7 +1087,7 @@ function handlePromoteIntakeSingle(req, res, intakeId) {
     // Persist drafts and update intake item
     roadmap.draft_tickets = roadmap.draft_tickets.concat(createdDrafts);
     item.draft_ticket_ids = (item.draft_ticket_ids || []).concat(createdDrafts.map(function(d) { return d.id; }));
-    item.status = "drafted";
+    item.status = "review";
     item.updated_at = new Date().toISOString();
     roadmap.intake_items[idx] = item;
 
@@ -1129,7 +1129,7 @@ function handlePromoteIntakeBatch(req, res) {
 
     for (var i = 0; i < roadmap.intake_items.length; i++) {
       var item = roadmap.intake_items[i];
-      if (item.status !== "triaged") { skippedCount++; continue; }
+      if (item.status !== "clarify") { skippedCount++; continue; }
       if (!item.recommended_action) { skippedCount++; continue; }
 
       var triage = {
@@ -1186,7 +1186,7 @@ function handlePromoteIntakeBatch(req, res) {
       roadmap.draft_tickets = roadmap.draft_tickets.concat(createdDrafts);
       allCreated = allCreated.concat(createdDrafts);
       item.draft_ticket_ids = (item.draft_ticket_ids || []).concat(createdDrafts.map(function(d) { return d.id; }));
-      item.status = "drafted";
+      item.status = "review";
       item.updated_at = new Date().toISOString();
       promotedCount++;
       itemResults[item.id] = { action: result.action, drafts: createdDrafts.length, notes: result.notes };
@@ -1345,7 +1345,7 @@ function handleSplitIntake(req, res, intakeId) {
     var item = roadmap.intake_items[idx];
 
     // Gate: cannot split items that already have draft tickets
-    if (item.status === "drafted" || item.status === "promoted") {
+    if (item.status === "review" || item.status === "promoted") {
       return jsonResponse(res, 400, { ok: false, errors: ["Item already has drafts (status: " + item.status + "). Delete existing drafts first."] });
     }
 
@@ -1418,7 +1418,7 @@ function handleSplitIntake(req, res, intakeId) {
     item.scope_size = item.scope_size || "large";
     item.proposed_split_plan = splitPlan;
     item.split_recommended = true;
-    item.status = "triaged"; // needs to be triaged for promote to work
+    item.status = "clarify"; // needs to be triaged for promote to work
     item.triage_notes = (item.triage_notes ? item.triage_notes + " | " : "") +
       "Split into " + splitPlan.length + " parts via split action.";
     item.updated_at = new Date().toISOString();
@@ -1454,7 +1454,7 @@ function handleSplitIntake(req, res, intakeId) {
     // Step 5: Persist
     roadmap.draft_tickets = roadmap.draft_tickets.concat(createdDrafts);
     item.draft_ticket_ids = (item.draft_ticket_ids || []).concat(createdDrafts.map(function(d) { return d.id; }));
-    item.status = "drafted";
+    item.status = "review";
     item.updated_at = new Date().toISOString();
     roadmap.intake_items[idx] = item;
 
@@ -1529,7 +1529,7 @@ function handleTriageIntake(req, res, intakeId) {
           goal: spec.goal || "",
           phase: spec.phase || item.proposed_phase || null,
           order: spec.order || ci + 1,
-          status: "draft",
+          status: "review",
           product_area: spec.product_area || item.product_area || "",
           parent_feature_id: spec.parent_feature_id || (item.related_feature_ids && item.related_feature_ids[0]) || null,
         });
@@ -1545,11 +1545,11 @@ function handleTriageIntake(req, res, intakeId) {
       roadmap.draft_tickets = roadmap.draft_tickets.concat(drafts);
       item.draft_ticket_ids = (item.draft_ticket_ids || []).concat(drafts.map(function(d) { return d.id; }));
       // Transition: raw → drafted (drafts were created)
-      item.status = "drafted";
+      item.status = "review";
     } else {
       // No drafts — just triaging (annotating)
       // Transition: raw → triaged
-      item.status = "triaged";
+      item.status = "clarify";
     }
 
     roadmap.intake_items[idx] = item;
@@ -2172,12 +2172,17 @@ const server = http.createServer(function (req, res) {
 
   // CORS preflight
   if (method === "OPTIONS") {
-    res.writeHead(204, {
+    res.writeHead(200, {
       "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
       "Access-Control-Allow-Headers": "Content-Type",
     });
     return res.end();
+  }
+
+  // Health check — lets the roadmap UI detect whether the server is running
+  if (method === "GET" && url === "/api/health") {
+    return jsonResponse(res, 200, { ok: true });
   }
 
   // Static: serve roadmap.html

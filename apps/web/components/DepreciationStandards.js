@@ -267,7 +267,10 @@ export default function DepreciationStandards() {
       const res = await fetch("/api/legal/depreciation-standards", { headers: authHeaders() });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error?.message || "Failed to load standards");
-      setStandards(data?.data || []);
+      const items = data?.data || [];
+      setStandards(items);
+      const categories = [...new Set(items.map((s) => extractCategory(s.notes) || "Other"))].filter(Boolean);
+      setCollapsedCats(Object.fromEntries(categories.map((c) => [c, true])));
     } catch (e) {
       setError(String(e?.message || e));
     } finally {

@@ -51,7 +51,19 @@ function formatCurrency(chf) {
   return `CHF\u00A0${formatted}`;
 }
 
-const REQUEST_SORT_FIELDS = ["requestNumber", "status", "building", "category", "estimatedCost", "contractor", "createdAt"];
+const REQUEST_SORT_FIELDS = ["requestNumber", "status", "building", "category", "estimatedCost", "contractor", "createdAt", "requestor", "nextApprover"];
+
+function nextApproverLabel(status) {
+  switch (status) {
+    case "PENDING_REVIEW":         return "Manager";
+    case "PENDING_OWNER_APPROVAL": return "Owner";
+    case "RFP_PENDING":            return "Manager (RFP)";
+    case "APPROVED":
+    case "ASSIGNED":
+    case "IN_PROGRESS":            return "Contractor";
+    default:                       return "—";
+  }
+}
 
 function requestFieldExtractor(r, field) {
   switch (field) {
@@ -62,6 +74,8 @@ function requestFieldExtractor(r, field) {
     case "estimatedCost": return r.estimatedCost ?? -1;
     case "contractor": return (r.assignedContractorName || "").toLowerCase();
     case "createdAt": return r.createdAt || "";
+    case "requestor": return r.tenant?.name ? r.tenant.name.toLowerCase() : "manager";
+    case "nextApprover": return nextApproverLabel(r.status).toLowerCase();
     default: return "";
   }
 }
@@ -783,6 +797,8 @@ export default function ManagerRequestsPage() {
                       <th className="py-2.5 pl-3 pr-1 w-8"></th>
                       <SortableHeader label="#" field="requestNumber" sortField={sortField} sortDir={sortDir} onSort={handleSort} className="w-16" />
                       <SortableHeader label="Status" field="status" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
+                      <SortableHeader label="Requestor" field="requestor" sortField={sortField} sortDir={sortDir} onSort={handleSort} className="hidden md:table-cell" />
+                      <SortableHeader label="Next Approver" field="nextApprover" sortField={sortField} sortDir={sortDir} onSort={handleSort} className="hidden lg:table-cell" />
                       <SortableHeader label="Building / Unit" field="building" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
                       <SortableHeader label="Category" field="category" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
                       <th className="px-3 py-2.5">Description</th>
@@ -824,6 +840,20 @@ export default function ManagerRequestsPage() {
                                   Tenant-funded
                                 </span>
                               )}
+                            </td>
+
+                            <td className="px-3 py-2.5 hidden md:table-cell" onClick={(e) => e.stopPropagation()}>
+                              {r.tenant?.id ? (
+                                <Link href={`/manager/people/tenants/${r.tenant.id}`} className="text-sm text-blue-600 hover:underline" onClick={(e) => e.stopPropagation()}>
+                                  {r.tenant.name || "Tenant"}
+                                </Link>
+                              ) : (
+                                <span className="text-sm text-slate-400">Manager</span>
+                              )}
+                            </td>
+
+                            <td className="px-3 py-2.5 hidden lg:table-cell text-sm text-slate-500">
+                              {nextApproverLabel(r.status)}
                             </td>
 
                             <td className="px-3 py-2.5 text-slate-700">

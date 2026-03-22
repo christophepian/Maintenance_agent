@@ -188,6 +188,7 @@ model User {
   ownedBuildings BuildingOwner[]
 
   @@unique([orgId, email], name: "user_org_email_unique")
+  @@index([orgId])
 }
 
 model Contractor {
@@ -673,7 +674,7 @@ enum RequestEventType {
   OTHER
   OWNER_APPROVED
   OWNER_REJECTED
-  TENANT_SELECTED
+  TENANT_SELECTED // Orphan: added during tenant-selection epic but never emitted in request event logs — kept for DB compatibility
 }
 
 enum RaterRole {
@@ -990,7 +991,7 @@ model Lease {
 
   // Relations
   org               Org                @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  unit              Unit               @relation(fields: [unitId], references: [id])
+  unit              Unit               @relation(fields: [unitId], references: [id], onDelete: Restrict)
   signatureRequests SignatureRequest[]
   invoices          Invoice[]
 

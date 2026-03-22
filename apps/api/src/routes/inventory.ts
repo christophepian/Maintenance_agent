@@ -24,7 +24,7 @@ import {
   deactivateAssetModel,
   addAssetModelName,
 } from "../services/inventory";
-import { getAssetInventoryForUnit, getAssetInventoryForBuilding } from "../services/assetInventory";
+import { getAssetInventoryForUnit, getAssetInventoryForBuilding, getRepairReplaceAnalysis } from "../services/assetInventory";
 import { assetRepo } from "../repositories";
 import { listUnitTenants, linkTenantToUnit, unlinkTenantFromUnit } from "../services/occupancies";
 import { listContractors } from "../services/contractorRequests";
@@ -462,6 +462,21 @@ export function registerInventoryRoutes(router: Router) {
       sendJson(res, 200, { message: "Tenant unlinked" });
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to unlink tenant", String(e));
+    }
+  });
+
+  /* ── Asset Inventory ───────────────────────────────────────── */
+
+  /* ── Repair vs Replace Analysis ────────────────────────────── */
+
+  router.get("/units/:id/repair-replace-analysis", async ({ req, res, orgId, params, prisma, query }) => {
+    if (!requireRole(req, res, "MANAGER")) return;
+    try {
+      const canton = first(query, "canton") || null;
+      const analysis = await getRepairReplaceAnalysis(prisma, orgId, params.id, canton);
+      sendJson(res, 200, { data: analysis });
+    } catch (e) {
+      sendError(res, 500, "DB_ERROR", "Failed to fetch repair-replace analysis", String(e));
     }
   });
 

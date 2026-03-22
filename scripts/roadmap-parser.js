@@ -977,7 +977,7 @@ function triageAll(intakeItems, context) {
   for (var i = 0; i < intakeItems.length; i++) {
     var item = intakeItems[i];
     // Only triage raw and triaged items
-    if (item.status !== "raw" && item.status !== "triaged") continue;
+    if (item.status !== "capture" && item.status !== "clarify") continue;
     results[item.id] = triageIntakeItem(item, context);
   }
   return results;
@@ -1353,7 +1353,7 @@ function promoteIntakeItem(item, triage, context) {
       goal: goal || "Implement: " + title,
       phase: phase,
       order: orderNum,
-      status: "draft",
+      status: "review",
       product_area: area,
       parent_feature_id: parentFeature,
       depends_on: deps,
@@ -1442,7 +1442,7 @@ function promoteIntakeItem(item, triage, context) {
       item.raw_text,
       2
     );
-    mainDraft.status = "draft"; // will be blocked once deps exist
+    mainDraft.status = "review"; // will be blocked once deps exist
 
     // Create prerequisite tickets for each unresolved dependency
     for (var bi = 0; bi < blockerDeps.length; bi++) {
@@ -1486,7 +1486,7 @@ function promoteAll(intakeItems, context) {
   for (var i = 0; i < intakeItems.length; i++) {
     var item = intakeItems[i];
     // Only promote triaged items
-    if (item.status !== "triaged") continue;
+    if (item.status !== "clarify") continue;
     if (!item.recommended_action) continue;
     // Skip duplicates and parked — these shouldn't produce drafts
     if (item.recommended_action === "duplicate" || item.recommended_action === "park") continue;
@@ -1882,7 +1882,7 @@ function inferImplementationShape(draft, ctx) {
     var allDrafts = ctx.draftTickets || [];
     for (var di = 0; di < deps.length; di++) {
       var depDraft = allDrafts.find(function(d) { return d.id === deps[di]; });
-      if (depDraft && depDraft.status === "draft" && depDraft.refinement_status !== "ready_candidate") {
+      if (depDraft && depDraft.status === "review" && depDraft.refinement_status !== "ready_candidate") {
         return "blocked";
       }
     }
@@ -2605,7 +2605,7 @@ function selectNextTicket(customItems, draftTickets, intakeItems) {
     if (readyDrafts.length > 0) {
       return {
         ticket: readyDrafts[0],
-        source: "draft",
+        source: "review",
         reason: "No promoted tickets available; selected earliest ready draft: " + readyDrafts[0].id,
       };
     }

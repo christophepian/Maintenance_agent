@@ -1,6 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 import AppShell from "../../components/AppShell";
+import PageShell from "../../components/layout/PageShell";
+import PageHeader from "../../components/layout/PageHeader";
+import PageContent from "../../components/layout/PageContent";
+import Panel from "../../components/layout/Panel.jsx";
 import { formatDateTime } from "../../lib/format";
 import { tenantFetch, tenantHeaders } from "../../lib/api";
 
@@ -312,6 +316,9 @@ export default function TenantRequestsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selfPayLoading, setSelfPayLoading] = useState(null);
+  const [expandedId, setExpandedId] = useState(null);
+
+  function toggleAccordion(id) { setExpandedId((prev) => (prev === id ? null : id)); }
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -366,95 +373,116 @@ export default function TenantRequestsPage() {
   if (!session) {
     return (
       <AppShell role="TENANT">
-        <div className="main-container max-w-3xl">
-          <h1 className="text-2xl font-bold mb-6">My Requests</h1>
-          <div className="card p-8 text-center">
-            <p className="text-gray-500">Please sign in to view your requests.</p>
-            <button
-              onClick={() => router.push("/tenant")}
-              className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700"
-            >
-              Sign in
-            </button>
-          </div>
-        </div>
+        <PageShell>
+          <PageHeader title="My Requests" />
+          <PageContent>
+            <Panel>
+              <div className="empty-state">
+                <p className="empty-state-text">Please sign in to view your requests.</p>
+                <button
+                  onClick={() => router.push("/tenant")}
+                  className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700"
+                >
+                  Sign in
+                </button>
+              </div>
+            </Panel>
+          </PageContent>
+        </PageShell>
       </AppShell>
     );
   }
 
   return (
     <AppShell role="TENANT">
-      <div className="main-container max-w-3xl">
-        <h1 className="text-2xl font-bold mb-6">My Maintenance Requests</h1>
+      <PageShell>
+        <PageHeader title="My Maintenance Requests" />
+        <PageContent>
+          {error && <div className="notice notice-err mb-4">{error}</div>}
 
-        {error && <div className="notice notice-err mb-4">{error}</div>}
-
-        {loading ? (
-          <div className="text-center py-8 text-gray-500">Loading…</div>
-        ) : requests.length === 0 ? (
-          <div className="card p-8 text-center">
-            <p className="text-gray-400 text-lg mb-2">📋</p>
-            <p className="text-gray-500">No maintenance requests found</p>
-            <p className="text-gray-400 text-sm mt-1">
-              Submit a work request to get started.
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {requests.map((r) => (
-              <div key={r.id} className="card p-4 border">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">
-                      {r.requestNumber ? <span className="text-gray-500 font-mono">#{r.requestNumber}</span> : null}
-                      {r.requestNumber ? " " : ""}{r.description}
-                    </p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLORS[r.status] || "bg-gray-100 text-gray-600"}`}>
-                        {r.status.replace(/_/g, " ")}
-                      </span>
-                      {r.payingParty === "TENANT" && (
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-orange-100 text-orange-800 font-medium">
-                          Self-pay
-                        </span>
-                      )}
-                    </div>
-                    {r.rejectionReason && r.status === "OWNER_REJECTED" && (
-                      <p className="text-xs text-red-600 mt-1">
-                        Reason: {r.rejectionReason}
+          <Panel bodyClassName="p-0">
+            {loading ? (
+              <p className="loading-text">Loading…</p>
+            ) : requests.length === 0 ? (
+              <div className="empty-state">
+                <p className="empty-state-text">No maintenance requests found. Submit a work request to get started.</p>
+              </div>
+            ) : (
+              <div className="space-y-2 p-4">
+                {requests.map((r) => {
+              const isExpanded = expandedId === r.id;
+              return (
+                <div key={r.id} className="card border overflow-hidden">
+                  {/* Clickable header */}
+                  <div
+                    className="flex cursor-pointer items-start justify-between p-4 hover:bg-gray-50"
+                    onClick={() => toggleAccordion(r.id)}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">
+                        {r.requestNumber ? <span className="text-gray-500 font-mono">#{r.requestNumber}</span> : null}
+                        {r.requestNumber ? " " : ""}{r.description}
                       </p>
-                    )}
-                    <div className="flex gap-3 mt-1 text-xs text-gray-400">
-                      {r.buildingName && <span>{r.buildingName}</span>}
-                      {r.unitNumber && <span>Unit {r.unitNumber}</span>}
-                      {r.category && <span>{r.category}</span>}
-                      <span>{formatDateTime(r.createdAt)}</span>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLORS[r.status] || "bg-gray-100 text-gray-600"}`}>
+                          {r.status.replace(/_/g, " ")}
+                        </span>
+                        {r.payingParty === "TENANT" && (
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-orange-100 text-orange-800 font-medium">
+                            Self-pay
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex gap-3 mt-1 text-xs text-gray-400">
+                        {r.buildingName && <span>{r.buildingName}</span>}
+                        {r.unitNumber && <span>Unit {r.unitNumber}</span>}
+                        {r.category && <span>{r.category}</span>}
+                        <span>{formatDateTime(r.createdAt)}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 ml-3 flex-shrink-0">
+                      {r.status === "OWNER_REJECTED" && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleSelfPay(r.id); }}
+                          disabled={selfPayLoading === r.id}
+                          className="px-3 py-1.5 bg-orange-500 text-white text-xs font-medium rounded hover:bg-orange-600 disabled:opacity-50"
+                        >
+                          {selfPayLoading === r.id ? "Processing…" : "Proceed at my own expense"}
+                        </button>
+                      )}
+                      <svg
+                        className={`h-4 w-4 text-gray-400 transition-transform ${isExpanded ? "rotate-90" : ""}`}
+                        fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
                     </div>
                   </div>
 
-                  {r.status === "OWNER_REJECTED" && (
-                    <button
-                      onClick={() => handleSelfPay(r.id)}
-                      disabled={selfPayLoading === r.id}
-                      className="ml-3 px-3 py-1.5 bg-orange-500 text-white text-xs font-medium rounded hover:bg-orange-600 disabled:opacity-50 flex-shrink-0"
-                    >
-                      {selfPayLoading === r.id ? "Processing…" : "Proceed at my own expense"}
-                    </button>
+                  {/* Expanded detail */}
+                  {isExpanded && (
+                    <div className="border-t border-gray-100 px-4 pb-4 pt-3">
+                      {r.rejectionReason && r.status === "OWNER_REJECTED" && (
+                        <p className="mb-2 text-xs text-red-600">Reason: {r.rejectionReason}</p>
+                      )}
+
+                      {/* Photos / Attachments */}
+                      <TenantPhotosPanel requestId={r.id} />
+
+                      {/* Scheduling — show whenever a job may exist (component handles no-slots gracefully) */}
+                      {r.status !== "PENDING_REVIEW" && r.status !== "OWNER_REJECTED" && (
+                        <TenantSchedulingPanel requestId={r.id} />
+                      )}
+                    </div>
                   )}
                 </div>
-
-                {/* Photos / Attachments */}
-                <TenantPhotosPanel requestId={r.id} />
-
-                {/* Scheduling — show whenever a job may exist (component handles no-slots gracefully) */}
-                {r.status !== "PENDING_REVIEW" && r.status !== "OWNER_REJECTED" && (
-                  <TenantSchedulingPanel requestId={r.id} />
-                )}
+              );
+            })}
               </div>
-            ))}
-          </div>
-        )}
-      </div>
+            )}
+          </Panel>
+        </PageContent>
+      </PageShell>
     </AppShell>
   );
 }

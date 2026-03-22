@@ -306,13 +306,24 @@ export default function ManagerVacanciesPage() {
                     <tbody>
                       {group.units.map((u) => (
                         <tr key={u.id}>
-                          <td className="cell-bold">{u.unitNumber || "—"}</td>
+                          <td className="cell-bold">
+                            {u.unitNumber || "—"}
+                            <div className="text-xs text-slate-400 font-normal mt-0.5">
+                              Empty since: {u.vacantSince
+                                ? new Date(u.vacantSince).toLocaleDateString("de-CH")
+                                : "unknown"}
+                            </div>
+                          </td>
                           <td>{u.floor || "—"}</td>
                           <td>{u.monthlyRentChf ?? "—"}</td>
                           <td>{u.monthlyChargesChf ?? "—"}</td>
                           <td className="text-right">
                             <ActionDropdown actions={[
-                              { label: "📋 View Applications", onClick: () => router.push("/manager/vacancies/" + u.id + "/applications") },
+                              {
+                                label: u.applicationCount > 0 ? "📋 View Applications" : "📋 View Applications (none yet)",
+                                onClick: () => router.push("/manager/vacancies/" + u.id + "/applications"),
+                                className: u.applicationCount === 0 ? "opacity-50 cursor-not-allowed text-slate-400" : "text-slate-700",
+                              },
                               ...(u.building?.id ? [
                                 { label: "🏢 View Building", onClick: () => router.push("/admin-inventory/buildings/" + u.building.id) },
                               ] : []),

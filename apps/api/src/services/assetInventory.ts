@@ -185,6 +185,69 @@ export async function getAssetInventoryForUnit(
   return result;
 }
 
+// ─── Repair vs Replace Analysis ────────────────────────────────
+
+export type RepairReplaceRecommendation = "REPAIR" | "MONITOR" | "REPLACE";
+
+export interface RepairReplaceItem {
+  assetId: string;
+  assetName: string;
+  assetType: string;
+  topic: string;
+  installedAt: string | null;
+  ageMonths: number | null;
+  usefulLifeMonths: number | null;
+  depreciationPct: number | null;
+  residualPct: number | null;
+  cumulativeRepairCostChf: number;
+  recommendation: RepairReplaceRecommendation;
+}
+
+/**
+ * Compute per-asset repair-vs-replace recommendations for a unit.
+ * Recommendation logic:
+ *   REPLACE  — depreciationPct >= 100 (end of useful life)
+ *   MONITOR  — depreciationPct >= 75  (within last 25% of useful life)
+ *   REPAIR   — otherwise
+ */
+export async function getRepairReplaceAnalysis(
+  prisma: PrismaClient,
+  orgId: string,
+  unitId: string,
+  canton?: string | null,
+): Promise<RepairReplaceItem[]> {
+  const assets = await getAssetInventoryForUnit(prisma, orgId, unitId, canton);
+
+  return assets.map((asset) => {
+    // Sum intervention costs for non-replacement interventions
+    const cumulativeRepairCostChf = asset.interventions
+      .filter((i) => i.type !== "REPLACEMENT")
+      .reduce((sum, i) => sum + (i.costChf ?? 0), 0);
+
+    const dep = asset.depreciation;
+
+    let recommendation: RepairReplaceRecommendation = "REPAIR";
+    if (dep !== null) {
+      if (dep.depreciationPct >= 100) recommendation = "REPLACE";
+      else if (dep.depreciationPct >= 75) recommendation = "MONITOR";
+    }
+
+    return {
+      assetId: asset.id,
+      assetName: asset.name,
+      assetType: asset.type,
+      topic: asset.topic,
+      installedAt: asset.installedAt ?? null,
+      ageMonths: dep?.ageMonths ?? null,
+      usefulLifeMonths: dep?.usefulLifeMonths ?? null,
+      depreciationPct: dep?.depreciationPct ?? null,
+      residualPct: dep?.residualPct ?? null,
+      cumulativeRepairCostChf,
+      recommendation,
+    };
+  });
+}
+
 /**
  * Get full asset inventory for a building with depreciation info.
  * Returns all assets across all units, enriched with unit info.

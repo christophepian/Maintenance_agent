@@ -4,7 +4,7 @@
 > be able to read this file and know *exactly which 1-3 files to touch*
 > for any given change.
 
-**Codebase:** 48 models · 41 enums · 41 migrations · 23 workflows · 13 repositories · ~43k backend LOC · ~29k frontend LOC
+**Codebase:** 48 models · 41 enums · 42 migrations · 23 workflows · 13 repositories · ~44k backend LOC · ~30k frontend LOC · 162 API routes
 
 ---
 
@@ -61,6 +61,18 @@ Every status change in the system passes through `assert*Transition()`.
 2. Add transition rule to **`src/workflows/transitions.ts`**
 3. Export from **`src/workflows/index.ts`**
 4. Wire into the relevant route handler
+
+### "I need to change the repair vs replace analysis"
+→ **`src/services/assetInventory.ts`** — `getRepairReplaceAnalysis()`
+→ Consumes `getAssetInventoryForUnit()` + `computeDepreciation()` in the same file
+→ Exposed via `GET /units/:id/repair-replace-analysis` in `src/routes/inventory.ts`
+→ Recommendation logic: REPLACE if `depreciationPct >= 100`, MONITOR if `>= 75`, REPAIR otherwise
+→ `cumulativeRepairCostChf` = sum of `AssetIntervention.costChf` where type ≠ REPLACEMENT
+
+### "I need to change how depreciation is computed"
+→ **`src/services/assetInventory.ts`** — `computeDepreciation()`
+→ Uses `replacedAt ?? installedAt` as clock start; caps at 100%
+→ Standard lookup by category/canton hierarchy lives in `getAssetInventoryForUnit()`
 
 ### "I need to change how auto-approval works"
 → **`src/services/autoApproval.ts`** — `decideRequestStatusWithRules()`
@@ -168,6 +180,19 @@ Routes build `WorkflowContext` from `HandlerContext` and pass it into workflows.
 | `workflows/disputeInvoiceWorkflow.ts` | Dispute invoice |
 | `workflows/payInvoiceWorkflow.ts` | Mark invoice paid |
 | `workflows/evaluateLegalRoutingWorkflow.ts` | Legal obligation evaluation |
+| `workflows/ownerRejectWorkflow.ts` | Owner rejects request |
+| `workflows/uploadMaintenanceAttachmentWorkflow.ts` | Attach file to maintenance request |
+| `workflows/completionRatingWorkflow.ts` | Rate job after completion |
+| `workflows/schedulingWorkflow.ts` | Scheduling escalation |
+| `workflows/tenantSelfPayWorkflow.ts` | Tenant self-pay initiation |
+| `workflows/markLeaseReadyWorkflow.ts` | Advance lease DRAFT → READY_TO_SIGN |
+| `workflows/activateLeaseWorkflow.ts` | Activate lease after signing |
+| `workflows/terminateLeaseWorkflow.ts` | Terminate active lease |
+| `workflows/submitRentalApplicationWorkflow.ts` | Submit rental application |
+| `workflows/awardQuoteWorkflow.ts` | Award RFP quote |
+| `workflows/submitQuoteWorkflow.ts` | Contractor submits RFP quote |
+| `workflows/rfpDirectAssignWorkflow.ts` | Direct contractor assignment (bypass RFP) |
+| `workflows/rfpReinviteWorkflow.ts` | Re-invite contractors to RFP |
 | `repositories/requestRepository.ts` | Request data access |
 | `repositories/jobRepository.ts` | Job data access |
 | `repositories/invoiceRepository.ts` | Invoice data access |
@@ -177,6 +202,7 @@ Routes build `WorkflowContext` from `HandlerContext` and pass it into workflows.
 | `services/autoApproval.ts` | Auto-approval rules engine |
 | `services/legalDecisionEngine.ts` | Legal routing decisions |
 | `services/requestAssignment.ts` | Contractor matching + assignment |
+| `services/assetInventory.ts` | Asset inventory, depreciation computation, repair vs replace analysis |
 | `events/bus.ts` | Domain event bus |
 
 ---
@@ -186,13 +212,14 @@ Routes build `WorkflowContext` from `HandlerContext` and pass it into workflows.
 ### Request Lifecycle
 ```
 PENDING_REVIEW → RFP_PENDING | PENDING_OWNER_APPROVAL
-RFP_PENDING → AUTO_APPROVED | PENDING_OWNER_APPROVAL
-PENDING_OWNER_APPROVAL → APPROVED | OWNER_REJECTED
-AUTO_APPROVED → IN_PROGRESS
-APPROVED → IN_PROGRESS
+RFP_PENDING → AUTO_APPROVED | PENDING_OWNER_APPROVAL | ASSIGNED
+PENDING_OWNER_APPROVAL → APPROVED | RFP_PENDING | OWNER_REJECTED
+AUTO_APPROVED → ASSIGNED | IN_PROGRESS
+APPROVED → ASSIGNED | IN_PROGRESS
+ASSIGNED → IN_PROGRESS | COMPLETED
 IN_PROGRESS → COMPLETED
 COMPLETED → (terminal)
-OWNER_REJECTED → (terminal)
+OWNER_REJECTED → RFP_PENDING (tenant self-pay path)
 ```
 
 **Key fields:**
@@ -328,6 +355,7 @@ export async function <name>Workflow(
 | `requireAnyRole(req, res, roles[])` | Multi-role — e.g. `['CONTRACTOR', 'MANAGER']` — returns false + 403 if fails |
 | `requireTenantSession(req, res)` | Tenant-portal routes only — validates tenant JWT, returns `tenantId` string or null |
 | `getOrgIdForRequest(req)` | Resolves orgId from auth context — returns `string \| null` — null in production when unauthenticated |
+| `requireOrgViewer(req, res)` | Read-only access for any authenticated org member (MANAGER or OWNER) |
 
 ### Usage pattern
 Every handler that calls an auth helper must check the return value and return early:

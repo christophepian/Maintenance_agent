@@ -112,18 +112,18 @@
   <!-- HEADER -->
   <div class="header">
     <div>
-      <div class="live-badge"><span class="live-dot"></span> LIVE — generated 2026-03-19 10:42:12 UTC</div>
+      <div class="live-badge"><span class="live-dot"></span> LIVE — generated 2026-03-21 16:42:39 UTC</div>
       <div class="doc-label">Architecture Blueprint · Tech Lead Reference</div>
       <div class="doc-title">Maintenance Agent</div>
       <div class="doc-subtitle">Full-stack property maintenance platform — Swiss market</div>
     </div>
     <div class="header-meta">
       <div>Branch <span class="meta-val">main</span></div>
-      <div>Commit <span class="meta-val">940aec9</span></div>
-      <div>Last commit <span class="meta-val">2026-03-17</span></div>
-      <div>Doc verified <span class="meta-val">2026-03-17 (D-1 doc integrity reconciliation — Slices 1–3 remediation)</span></div>
-      <div>Backend <span class="meta-val">43,209 LOC</span></div>
-      <div>Frontend <span class="meta-val">29,176 LOC</span></div>
+      <div>Commit <span class="meta-val">0839f59</span></div>
+      <div>Last commit <span class="meta-val">2026-03-20</span></div>
+      <div>Doc verified <span class="meta-val">2026-03-21 (audit remediation + roadmap pipeline status rename)</span></div>
+      <div>Backend <span class="meta-val">43,995 LOC</span></div>
+      <div>Frontend <span class="meta-val">30,129 LOC</span></div>
     </div>
   </div>
 
@@ -131,8 +131,8 @@
   <div class="stat-grid">
     <div class="stat-cell"><span class="stat-num blue">48</span><span class="stat-label">Models</span></div>
     <div class="stat-cell"><span class="stat-num cyan">41</span><span class="stat-label">Enums</span></div>
-    <div class="stat-cell"><span class="stat-num green">161</span><span class="stat-label">API Routes</span></div>
-    <div class="stat-cell"><span class="stat-num amber">207</span><span class="stat-label">FE Pages</span></div>
+    <div class="stat-cell"><span class="stat-num green">162</span><span class="stat-label">API Routes</span></div>
+    <div class="stat-cell"><span class="stat-num amber">210</span><span class="stat-label">FE Pages</span></div>
     <div class="stat-cell"><span class="stat-num purple">23</span><span class="stat-label">Workflows</span></div>
     <div class="stat-cell"><span class="stat-num ">13</span><span class="stat-label">Repositories</span></div>
     <div class="stat-cell"><span class="stat-num ">493</span><span class="stat-label">Tests</span></div>
@@ -184,7 +184,7 @@
         <div class="layer">
           <div class="layer-label">data / events</div>
           <div class="layer-content">
-            <div class="box accent-purple">Prisma ORM + PostgreSQL 16<small>48 models · 41 enums · 41 migrations</small></div>
+            <div class="box accent-purple">Prisma ORM + PostgreSQL 16<small>48 models · 41 enums · 42 migrations</small></div>
             <div class="box accent-purple">Domain Event Bus<small>15 event types</small></div>
           </div>
         </div>
@@ -199,7 +199,7 @@
           <div class="panel-head"><div class="panel-head-dot" style="background:var(--accent-blue)"></div><div class="panel-head-title">Request</div></div>
           <div class="panel-body">
             <div class="sm-flow">
-              <div class="sm-state initial">PENDING_REVIEW</div><div class="sm-arrow">→</div><div class="sm-state mid">RFP_PENDING</div><div class="sm-arrow">→</div><div class="sm-state mid">PENDING_OWNER_APPROVAL</div><div class="sm-arrow">→</div><div class="sm-state mid">AUTO_APPROVED</div><div class="sm-arrow">→</div><div class="sm-state mid">APPROVED</div><div class="sm-arrow">→</div><div class="sm-state mid">OWNER_REJECTED</div><div class="sm-arrow">→</div><div class="sm-state mid">IN_PROGRESS</div><div class="sm-arrow">→</div><div class="sm-state mid">ASSIGNED</div><div class="sm-arrow">→</div><div class="sm-state terminal">COMPLETED</div>
+              <div class="sm-state initial">PENDING_REVIEW</div><div class="sm-arrow">→</div><div class="sm-state mid">RFP_PENDING</div><div class="sm-arrow">→</div><div class="sm-state mid">PENDING_OWNER_APPROVAL</div><div class="sm-arrow">→</div><div class="sm-state mid">AUTO_APPROVED</div><div class="sm-arrow">→</div><div class="sm-state mid">ASSIGNED</div><div class="sm-arrow">→</div><div class="sm-state mid">APPROVED</div><div class="sm-arrow">→</div><div class="sm-state mid">OWNER_REJECTED</div><div class="sm-arrow">→</div><div class="sm-state mid">IN_PROGRESS</div><div class="sm-arrow">→</div><div class="sm-state terminal">COMPLETED</div>
             </div>
           </div>
         </div>
@@ -230,7 +230,7 @@
       <div class="layer-diagram">
         <div class="layer">
           <div class="layer-label">browser</div>
-          <div class="layer-content"><div class="box accent-blue">Next.js Pages Router<small>~207 pages (UI + API proxies) · AppShell role-scoped sidebar</small></div></div>
+          <div class="layer-content"><div class="box accent-blue">Next.js Pages Router<small>~210 pages (UI + API proxies) · AppShell role-scoped sidebar</small></div></div>
         </div>
         <div class="layer-connector">↓ pages/api/* — 103/106 use proxyToBackend()</div>
         <div class="layer">
@@ -432,8 +432,8 @@
       <div class="panel"><div class="panel-body mono">
         <span class="dim">Maintenance_Agent/</span><br>
         &nbsp;&nbsp;<span class="hi-blue">apps/api/src/</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="dim">routes/ · workflows/ · services/ · repositories/ · events/ · governance/</span><br>
-        &nbsp;&nbsp;<span class="hi-blue">apps/api/prisma/</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="dim">schema.prisma · migrations/ (41 dirs)</span><br>
-        &nbsp;&nbsp;<span class="hi-cyan">apps/web/pages/</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="dim">~207 pages (UI + API proxies)</span><br>
+        &nbsp;&nbsp;<span class="hi-blue">apps/api/prisma/</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="dim">schema.prisma · migrations/ (42 dirs)</span><br>
+        &nbsp;&nbsp;<span class="hi-cyan">apps/web/pages/</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="dim">~210 pages (UI + API proxies)</span><br>
         &nbsp;&nbsp;<span class="hi-cyan">apps/web/components/</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="dim">AppShell · layout primitives · shared UI</span><br>
         &nbsp;&nbsp;<span class="hi-cyan">apps/web/styles/</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="dim">managerStyles.js (locked — F8)</span><br>
         &nbsp;&nbsp;<span class="hi-green">packages/api-client/</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="dim">typed DTO types + fetch methods</span><br>
@@ -549,7 +549,7 @@
 
   <!-- FOOTER -->
   <div style="margin-top:40px;padding-top:16px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;font-family:'IBM Plex Mono',mono;font-size:10px;color:var(--text-dim)">
-    <div>Maintenance Agent · Architecture Blueprint · 2026-03-19 10:42:12 UTC · branch: main @ 940aec9</div>
+    <div>Maintenance Agent · Architecture Blueprint · 2026-03-21 16:42:39 UTC · branch: main @ 0839f59</div>
     <div style="display:flex;gap:14px">
       <span style="color:#5ed9a0">● Implemented</span>
       <span style="color:#f5c060">● Partial / Exception</span>

@@ -128,7 +128,7 @@ export function registerAuthRoutes(router: Router) {
     try {
       const userId = await resolveTenantUserId(prisma, orgId, tenantId);
       const count = await getUnreadNotificationCount(orgId, userId);
-      sendJson(res, 200, { count });
+      sendJson(res, 200, { data: { count } });
     } catch (e: any) {
       sendError(res, 500, "DB_ERROR", "Failed to get unread count", String(e));
     }
@@ -153,7 +153,7 @@ export function registerAuthRoutes(router: Router) {
     try {
       const userId = await resolveTenantUserId(prisma, orgId, tenantId);
       const count = await markAllNotificationsAsRead(orgId, userId);
-      sendJson(res, 200, { marked: count });
+      sendJson(res, 200, { data: { marked: count } });
     } catch (e: any) {
       sendError(res, 500, "DB_ERROR", "Failed to mark all as read", String(e));
     }
@@ -165,7 +165,7 @@ export function registerAuthRoutes(router: Router) {
     if (!tenantId) return;
     try {
       await deleteNotification(params.id, orgId);
-      sendJson(res, 200, { ok: true });
+      sendJson(res, 200, { data: { ok: true } });
     } catch (e: any) {
       sendError(res, 500, "DB_ERROR", "Failed to delete notification", String(e));
     }

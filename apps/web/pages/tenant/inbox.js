@@ -1,6 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 import AppShell from "../../components/AppShell";
+import PageShell from "../../components/layout/PageShell";
+import PageHeader from "../../components/layout/PageHeader";
+import PageContent from "../../components/layout/PageContent";
+import Panel from "../../components/layout/Panel.jsx";
 import { formatDateTime } from "../../lib/format";
 import { tenantFetch } from "../../lib/api";
 import { getNotificationLink } from "../../lib/notificationLinks";
@@ -166,59 +170,61 @@ export default function TenantInboxPage() {
   if (!session) {
     return (
       <AppShell role="TENANT">
-        <div className="main-container max-w-2xl">
-          <h1 className="text-2xl font-bold mb-6">Inbox</h1>
-          <div className="card p-8 text-center">
-            <p className="text-gray-500">Please sign in to view your notifications.</p>
-            <button
-              onClick={() => router.push("/tenant")}
-              className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700"
-            >
-              Sign in
-            </button>
-          </div>
-        </div>
+        <PageShell>
+          <PageHeader title="Inbox" />
+          <PageContent>
+            <Panel>
+              <div className="empty-state">
+                <p className="empty-state-text">Please sign in to view your notifications.</p>
+                <button
+                  onClick={() => router.push("/tenant")}
+                  className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700"
+                >
+                  Sign in
+                </button>
+              </div>
+            </Panel>
+          </PageContent>
+        </PageShell>
       </AppShell>
     );
   }
 
   return (
     <AppShell role="TENANT">
-      <div className="main-container max-w-2xl">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold">Inbox</h1>
-            {unreadCount > 0 && (
-              <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
-                {unreadCount}
-              </span>
-            )}
-          </div>
-          {unreadCount > 0 && (
-            <button
-              onClick={markAllRead}
-              className="text-sm text-blue-600 hover:underline"
-            >
-              Mark all as read
-            </button>
-          )}
-        </div>
+      <PageShell>
+        <PageHeader
+          title={
+            <span className="flex items-center gap-2">
+              Inbox
+              {unreadCount > 0 && (
+                <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                  {unreadCount}
+                </span>
+              )}
+            </span>
+          }
+          actions={
+            unreadCount > 0 ? (
+              <button onClick={markAllRead} className="text-sm text-blue-600 hover:underline">
+                Mark all as read
+              </button>
+            ) : null
+          }
+        />
+        <PageContent>
+          {error && <div className="notice notice-err mb-4">{error}</div>}
 
-        {error && <div className="notice notice-err mb-4">{error}</div>}
-
-        {loading ? (
-          <div className="text-center py-8 text-gray-500">Loading…</div>
-        ) : notifications.length === 0 ? (
-          <div className="card p-8 text-center">
-            <p className="text-gray-400 text-lg mb-2">📭</p>
-            <p className="text-gray-500">No notifications yet</p>
-            <p className="text-gray-400 text-sm mt-1">
-              You will be notified here when your lease is ready to sign, invoices are created, and more.
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {notifications.map((n) => (
+          <Panel bodyClassName="p-0">
+            {loading ? (
+              <p className="loading-text">Loading…</p>
+            ) : notifications.length === 0 ? (
+              <div className="empty-state">
+                <p className="empty-state-text">No notifications yet. You will be notified here when your lease is ready to sign, invoices are created, and more.</p>
+              </div>
+            ) : (
+              <div className="space-y-2 p-4">
+                {notifications.map((n) => (
               <div
                 key={n.id}
                 onClick={() => handleClick(n)}
@@ -271,9 +277,11 @@ export default function TenantInboxPage() {
                 </div>
               </div>
             ))}
-          </div>
-        )}
-      </div>
+              </div>
+            )}
+          </Panel>
+        </PageContent>
+      </PageShell>
     </AppShell>
   );
 }

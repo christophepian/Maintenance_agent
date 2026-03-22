@@ -3,7 +3,8 @@ import { sendError, sendJson } from "../http/json";
 import { readJson } from "../http/body";
 import { first } from "../http/query";
 import { getAuthUser } from "../authz";
-import { requireOrgViewer, requireOwnerAccess, logEvent } from "./helpers";
+import { requireOrgViewer, logEvent } from "./helpers";
+import { requireAnyRole } from "../authz";
 import { getJob, listJobs, updateJob } from "../services/jobs";
 import { createInvoice, getInvoice, listInvoices, getOrCreateInvoiceForJob } from "../services/invoices";
 import { CreateInvoiceSchema } from "../validation/invoices";
@@ -147,7 +148,7 @@ export function registerInvoiceRoutes(router: Router) {
 
   // POST /invoices/:id/issue → delegates to issueInvoiceWorkflow
   router.post("/invoices/:id/issue", async ({ req, res, prisma, params, orgId }) => {
-    if (!requireOwnerAccess(req, res)) return;
+    if (!requireAnyRole(req, res, ["MANAGER", "OWNER"])) return;
     try {
       const actor = getAuthUser(req);
       const result = await issueInvoiceWorkflow(
@@ -168,7 +169,7 @@ export function registerInvoiceRoutes(router: Router) {
 
   // POST /invoices/:id/approve
   router.post("/invoices/:id/approve", async ({ req, res, prisma, params, orgId }) => {
-    if (!requireOwnerAccess(req, res)) return;
+    if (!requireAnyRole(req, res, ["MANAGER", "OWNER"])) return;
     try {
       const actor = getAuthUser(req);
       const result = await approveInvoiceWorkflow(
@@ -189,7 +190,7 @@ export function registerInvoiceRoutes(router: Router) {
 
   // POST /invoices/:id/mark-paid
   router.post("/invoices/:id/mark-paid", async ({ req, res, prisma, params, orgId }) => {
-    if (!requireOwnerAccess(req, res)) return;
+    if (!requireAnyRole(req, res, ["MANAGER", "OWNER"])) return;
     try {
       const actor = getAuthUser(req);
       const result = await payInvoiceWorkflow(
@@ -206,7 +207,7 @@ export function registerInvoiceRoutes(router: Router) {
 
   // POST /invoices/:id/dispute
   router.post("/invoices/:id/dispute", async ({ req, res, prisma, params, orgId }) => {
-    if (!requireOwnerAccess(req, res)) return;
+    if (!requireAnyRole(req, res, ["MANAGER", "OWNER"])) return;
     try {
       const actor = getAuthUser(req);
       let reason: string | undefined;
@@ -230,7 +231,7 @@ export function registerInvoiceRoutes(router: Router) {
 
   // GET /owner/invoices
   router.get("/owner/invoices", async ({ req, res, query, orgId }) => {
-    if (!requireOwnerAccess(req, res)) return;
+    if (!requireAnyRole(req, res, ["MANAGER", "OWNER"])) return;
     try {
       const status = first(query, "status") || undefined;
         const view = first(query, "view") as "summary" | "full" | undefined;

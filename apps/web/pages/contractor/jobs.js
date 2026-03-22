@@ -5,6 +5,7 @@ import AppShell from "../../components/AppShell";
 import PageShell from "../../components/layout/PageShell";
 import PageHeader from "../../components/layout/PageHeader";
 import PageContent from "../../components/layout/PageContent";
+import Panel from "../../components/layout/Panel.jsx";
 import ContractorPicker from "../../components/ContractorPicker";
 import { formatDate, formatDateLong } from "../../lib/format";
 import { authHeaders } from "../../lib/api";
@@ -213,86 +214,88 @@ export default function ContractorJobs() {
             </div>
           )}
 
-          {/* Tab strip */}
-          <div className="tab-strip">
-            {TABS.map((tab, i) => (
-              <button
-                key={tab.key}
-                onClick={() => setActiveTab(i)}
-                className={activeTab === i ? "tab-btn-active" : "tab-btn"}
-              >
-                {tab.label}
-                <span className="tab-panel-count">
-                  {i === 0 ? upcomingJobs.length : historyJobs.length}
-                </span>
-              </button>
-            ))}
-          </div>
+          <Panel bodyClassName="p-0">
+            {/* Tab strip */}
+            <div className="tab-strip">
+              {TABS.map((tab, i) => (
+                <button
+                  key={tab.key}
+                  onClick={() => setActiveTab(i)}
+                  className={activeTab === i ? "tab-btn-active" : "tab-btn"}
+                >
+                  {tab.label}
+                  <span className="tab-panel-count">
+                    {i === 0 ? upcomingJobs.length : historyJobs.length}
+                  </span>
+                </button>
+              ))}
+            </div>
 
-          {/* ── Upcoming tab ── */}
-          <div className={activeTab === 0 ? "tab-panel-active" : "tab-panel"}>
-            {loading ? (
-              <p className="loading-text">Loading jobs…</p>
-            ) : dayGroups.length === 0 ? (
-              <div className="empty-state">
-                <p className="empty-state-text">No upcoming jobs</p>
-              </div>
-            ) : (
-              <div className="space-y-6">
-                {dayGroups.map((group) => (
-                  <div key={group.sortKey}>
-                    <p className="day-header">{group.label}</p>
-                    <div className="space-y-2">
-                      {group.jobs.map((job) => (
-                        <JobCard
-                          key={job.id}
-                          job={job}
-                          slot={job._slot || null}
-                          expanded={expandedId === job.id}
-                          onToggle={() => toggleExpand(job.id)}
-                          actionJobId={actionJobId}
-                          setActionJobId={setActionJobId}
-                          actualCost={actualCost}
-                          setActualCost={setActualCost}
-                          onStartJob={startJob}
-                          onCompleteJob={completeJob}
-                        />
-                      ))}
+            {/* ── Upcoming tab ── */}
+            <div className={activeTab === 0 ? "tab-panel-active" : "tab-panel"}>
+              {loading ? (
+                <p className="loading-text">Loading jobs…</p>
+              ) : dayGroups.length === 0 ? (
+                <div className="empty-state">
+                  <p className="empty-state-text">No upcoming jobs</p>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {dayGroups.map((group) => (
+                    <div key={group.sortKey}>
+                      <p className="day-header">{group.label}</p>
+                      <div className="space-y-2">
+                        {group.jobs.map((job) => (
+                          <JobCard
+                            key={job.id}
+                            job={job}
+                            slot={job._slot || null}
+                            expanded={expandedId === job.id}
+                            onToggle={() => toggleExpand(job.id)}
+                            actionJobId={actionJobId}
+                            setActionJobId={setActionJobId}
+                            actualCost={actualCost}
+                            setActualCost={setActualCost}
+                            onStartJob={startJob}
+                            onCompleteJob={completeJob}
+                          />
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+                  ))}
+                </div>
+              )}
+            </div>
 
-          {/* ── History tab ── */}
-          <div className={activeTab === 1 ? "tab-panel-active" : "tab-panel"}>
-            {loading ? (
-              <p className="loading-text">Loading jobs…</p>
-            ) : historyJobs.length === 0 ? (
-              <div className="empty-state">
-                <p className="empty-state-text">No completed jobs yet</p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {historyJobs.map((job) => (
-                  <JobCard
-                    key={job.id}
-                    job={job}
-                    slot={acceptedSlot(job)}
-                    expanded={expandedId === job.id}
-                    onToggle={() => toggleExpand(job.id)}
-                    actionJobId={actionJobId}
-                    setActionJobId={setActionJobId}
-                    actualCost={actualCost}
-                    setActualCost={setActualCost}
-                    onStartJob={startJob}
-                    onCompleteJob={completeJob}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
+            {/* ── History tab ── */}
+            <div className={activeTab === 1 ? "tab-panel-active" : "tab-panel"}>
+              {loading ? (
+                <p className="loading-text">Loading jobs…</p>
+              ) : historyJobs.length === 0 ? (
+                <div className="empty-state">
+                  <p className="empty-state-text">No completed jobs yet</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {historyJobs.map((job) => (
+                    <JobCard
+                      key={job.id}
+                      job={job}
+                      slot={acceptedSlot(job)}
+                      expanded={expandedId === job.id}
+                      onToggle={() => toggleExpand(job.id)}
+                      actionJobId={actionJobId}
+                      setActionJobId={setActionJobId}
+                      actualCost={actualCost}
+                      setActualCost={setActualCost}
+                      onStartJob={startJob}
+                      onCompleteJob={completeJob}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          </Panel>
         </PageContent>
       </PageShell>
     </AppShell>
