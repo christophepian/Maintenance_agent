@@ -83,6 +83,12 @@ Every status change in the system passes through `assert*Transition()`.
 → Used by `src/workflows/createRequestWorkflow.ts` step 6
 → And `src/workflows/evaluateLegalRoutingWorkflow.ts`
 
+### "I need to change legal variables, rules, category mappings, evaluation logs, or depreciation standards"
+→ **`src/services/legalService.ts`** — all CRUD and query logic for the legal domain
+→ Functions: `listVariables`, `listRules`, `createRule`, `listCategoryMappings`, `createCategoryMapping`, `updateCategoryMapping`, `deleteCategoryMapping`, `getMappingCoverage`, `listEvaluations`, `listDepreciationStandards`, `createDepreciationStandard`
+→ Error classes: `LegalConflictError`, `LegalNotFoundError`, `LegalForbiddenError`
+→ Called by route handlers in `src/routes/legal.ts` — do not add Prisma calls directly to that file
+
 ### "I need to change how contractor matching works"
 → **`src/services/requestAssignment.ts`** — `findMatchingContractor()`, `assignContractor()`
 
@@ -200,7 +206,8 @@ Routes build `WorkflowContext` from `HandlerContext` and pass it into workflows.
 | `services/jobs.ts` | Job DTOs + CRUD |
 | `services/invoices.ts` | Invoice DTOs + CRUD + financial logic |
 | `services/autoApproval.ts` | Auto-approval rules engine |
-| `services/legalDecisionEngine.ts` | Legal routing decisions |
+| `services/legalDecisionEngine.ts` | Legal routing decisions (DSL evaluator, obligation resolution) |
+| `services/legalService.ts` | Legal domain CRUD: variables, rules, category mappings, evaluation logs, depreciation standards |
 | `services/requestAssignment.ts` | Contractor matching + assignment |
 | `services/assetInventory.ts` | Asset inventory, depreciation computation, repair vs replace analysis |
 | `events/bus.ts` | Domain event bus |
