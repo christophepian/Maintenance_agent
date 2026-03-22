@@ -19,17 +19,17 @@
         "title": "Skribble e-Sign Integration"
       },
       {
-        "id": "S-P0-004-01",
+        "id": "F-P1-001",
         "rank": 4,
-        "title": "Extract legalService.ts — legal variables, rules, category mappings, evaluation logs"
+        "title": "QR-Invoice Rent Demand Generation"
       },
       {
-        "id": "TASK-001",
+        "id": "F-P1-002",
         "rank": 5,
-        "title": "Align tenant, contractor, and owner portal UI with manager baseline (PageShell/Panel/inline-table/CSS tokens)"
+        "title": "MT940 Bank Statement Import"
       }
     ],
-    "last_recommendations_at": "2026-03-22 21:48:53 UTC"
+    "last_recommendations_at": "2026-03-22 22:01:26 UTC"
   },
   "project": {
     "name": "Maintenance Agent",

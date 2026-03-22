@@ -87,68 +87,69 @@
       "blockedBy": []
     },
     {
-      "id": "S-P0-004-01",
+      "id": "F-P1-001",
       "rank": 4,
-      "title": "Extract legalService.ts — legal variables, rules, category mappings, evaluation logs",
-      "phase": "P0",
-      "type": "refactor",
+      "title": "QR-Invoice Rent Demand Generation",
+      "phase": "P1",
+      "type": "build",
       "column": "ready",
-      "isSlice": true,
+      "isSlice": false,
       "isCustom": false,
-      "parentId": "F-P0-004",
-      "parentTitle": "Route Layer Refactor (CQ-1/3/4)",
+      "parentId": null,
+      "parentTitle": null,
       "reasons": [
-        "P0 critical-path — highest priority phase",
+        "P1 — phase position 2/6",
         "all dependencies met — ready now",
-        "concrete slice (1 file)",
-        "declared position: feature #4, slice #1",
-        "completing this unlocks 1 downstream item"
+        "feature-level (5 hooks)",
+        "declared position: feature #5"
       ],
-      "unlocks": 1,
-      "scopeFileCount": 1,
+      "unlocks": 0,
+      "scopeFileCount": 5,
       "movement": 0,
       "movementLabel": "—",
       "hasCompleteTests": false,
       "files": [
-        "apps/api/src/services/legalService.ts"
+        "QR-bill library (qrbill-js)",
+        "rentDemandWorkflow",
+        "Lease model",
+        "invoiceService",
+        "pdfGenerator"
       ],
       "blockedBy": []
     },
     {
-      "id": "TASK-001",
+      "id": "F-P1-002",
       "rank": 5,
-      "title": "Align tenant, contractor, and owner portal UI with manager baseline (PageShell/Panel/inline-table/CSS tokens)",
-      "phase": "P0",
-      "type": "task",
+      "title": "MT940 Bank Statement Import",
+      "phase": "P1",
+      "type": "build",
       "column": "ready",
       "isSlice": false,
-      "isCustom": true,
+      "isCustom": false,
       "parentId": null,
       "parentTitle": null,
       "reasons": [
-        "P0 critical-path — highest priority phase",
+        "P1 — phase position 2/6",
         "all dependencies met — ready now",
-        "feature-level (8 hooks)",
-        "declared position: feature #28",
-        "testing metadata complete",
-        "custom ticket"
+        "feature-level (4 hooks)",
+        "declared position: feature #6",
+        "completing this unlocks 1 downstream item"
       ],
-      "unlocks": 0,
-      "scopeFileCount": 8,
+      "unlocks": 1,
+      "scopeFileCount": 4,
       "movement": 0,
       "movementLabel": "—",
-      "hasCompleteTests": true,
+      "hasCompleteTests": false,
       "files": [
-        "apps/web/pages/tenant/requests.js",
-        "apps/web/pages/tenant/inbox.js",
-        "apps/web/pages/owner/approvals.js",
-        "apps/web/pages/owner/invoices.js",
-        "apps/web/pages/owner/jobs.js"
+        "MT940 parser service",
+        "paymentMatchingWorkflow",
+        "Invoice model",
+        "invoiceRepository"
       ],
       "blockedBy": []
     }
   ],
-  "generated_at": "2026-03-22 21:48:53 UTC",
-  "total_in_queue": 28,
+  "generated_at": "2026-03-22 22:02:15 UTC",
+  "total_in_queue": 25,
   "next_id": "S-P0-001-02"
 }

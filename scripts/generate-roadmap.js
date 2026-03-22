@@ -196,26 +196,31 @@ function describeFailedCheck(check) {
  */
 function runSliceSignal(sig, signals) {
   const t = sig.type;
-  const v = sig.value;
+  // Signals support two schemas: { type, value } and { type, path/name/key/... }
+  // Accept both by checking the dedicated field first, then falling back to value.
+  const v = sig.value || sig.path || sig.name || sig.key || sig.field || "";
   switch (t) {
     case "file_exists":
     case "page_exists":
-      return runDetection({ type: t, path: v }, signals);
+      return runDetection({ type: t, path: sig.path || v }, signals);
     case "env_key":
-      return runDetection({ type: "env_key", key: v }, signals);
+      return runDetection({ type: "env_key", key: sig.key || v }, signals);
     case "model_exists":
-      return runDetection({ type: "model_exists", name: v }, signals);
+      return runDetection({ type: "model_exists", name: sig.name || v }, signals);
     case "model_field": {
-      // value can be "Model.field" or just "field"
+      // Support { type, model, field } or { type, value: "Model.field" }
+      if (sig.model && sig.field) {
+        return runDetection({ type: "model_field", model: sig.model, field: sig.field }, signals);
+      }
       const parts = v.split(".");
       return parts.length === 2
         ? runDetection({ type: "model_field", model: parts[0], field: parts[1] }, signals)
         : runDetection({ type: "model_field", field: v }, signals);
     }
     case "enum_exists":
-      return runDetection({ type: "enum_exists", name: v }, signals);
+      return runDetection({ type: "enum_exists", name: sig.name || v }, signals);
     case "workflow_exists":
-      return runDetection({ type: "workflow_exists", name: v }, signals);
+      return runDetection({ type: "workflow_exists", name: sig.name || v }, signals);
     default:
       return false;
   }
@@ -233,14 +238,19 @@ function getSliceStatus(slice, signals) {
     // No auto-detection — use the manual status or default to "planned"
     return { status: slice.status || "planned", signal: "manual" };
   }
+  // If the slice is explicitly marked done or discarded, trust it — signals are
+  // auto-detection helpers, not overrides of a deliberate human decision.
+  if (slice.status === "done" || slice.status === "discarded") {
+    return { status: slice.status, signal: "manual override" };
+  }
   let passed = 0;
   let lastSignal = "";
   for (const sig of sigs) {
     if (runSliceSignal(sig, signals)) {
       passed++;
-      lastSignal = `${sig.type}: ${sig.value} \u2714`;
+      lastSignal = `${sig.type}: ${sig.path || sig.name || sig.key || sig.value} \u2714`;
     } else {
-      lastSignal = `${sig.type}: ${sig.value} \u2718`;
+      lastSignal = `${sig.type}: ${sig.path || sig.name || sig.key || sig.value} \u2718`;
     }
   }
   if (passed === sigs.length) return { status: "done", signal: lastSignal };
@@ -479,7 +489,7 @@ function customItemsToBacklog(customItems, computed) {
       }
     }
     var column;
-    if (c.status === "done") column = "done";
+    if (c.status === "done" || c.status === "discarded") column = "done";
     else if (c.status === "in_progress") column = "in_progress";
     else if (c.status === "blocked" || !allDepsDone) column = "blocked";
     else column = "ready";
