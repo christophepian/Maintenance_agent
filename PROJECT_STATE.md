@@ -456,7 +456,7 @@ Maintenance_Agent/
 * **Layout:** `AppShell` component with role-scoped sidebar (MANAGER/CONTRACTOR/TENANT/OWNER)
 * **Reusable components:** `PageShell`, `PageHeader`, `PageContent`, `Panel`, `Section`, `ContractorPicker`, `NotificationBell`, `AssetInventoryPanel`
 * **Key page groups:** `/manager/*` (requests, inventory, legal, leases, settings), `/contractor/*` (jobs, invoices), `/tenant/*` (leases, chat), `/owner/*` (approvals, invoices, vacancies), `/admin-inventory/*`, `/apply` (rental wizard), `/listings`
-* **~210 frontend pages** (75 UI + 131 API proxies)
+* **~212 frontend pages** (75 UI + 131 API proxies)
 
 <!-- reviewed 2026-03-10 -->
 
@@ -562,7 +562,7 @@ Resolved remaining 11 audit findings (SA-10 through SA-20, all medium/low):
 
 `requireRole`/`requireAnyRole` now include AUTH_OPTIONAL dev bypass with warning log.
 New test suite: `security2.test.ts` (5 integration tests).
-312/313 tests pass, 38 suites, 0 TS errors. Only failure: pre-existing `openApiSync.test.ts` (missing owner routes in spec).
+312/313 tests pass, 39 suites, 0 TS errors. Only failure: pre-existing `openApiSync.test.ts` (missing owner routes in spec).
 
 ### UI Navigation & Finance Pages (Mar 2026)
 **Status:** ✅ COMPLETE
@@ -921,7 +921,7 @@ Conversational tenant intake with phone-based identification, automatic asset in
 
 ### Known Technical Debt
 
-- **TEST INTERACTION** — 38 suites (openApiSync, financials, jobs.and.invoices, notifications) fail in full serial run but pass individually. Root cause: `startServer` copy-pasted across 22 test files with no shared teardown — orphaned handles corrupt subsequent suites. Fix: extract shared `startServer`/`stopServer` into `testHelpers.ts` with proper `afterAll` cleanup (TC-11). Workaround: run failing suites individually with `--testPathPattern`.
+- **TEST INTERACTION** — 39 suites (openApiSync, financials, jobs.and.invoices, notifications) fail in full serial run but pass individually. Root cause: `startServer` copy-pasted across 22 test files with no shared teardown — orphaned handles corrupt subsequent suites. Fix: extract shared `startServer`/`stopServer` into `testHelpers.ts` with proper `afterAll` cleanup (TC-11). Workaround: run failing suites individually with `--testPathPattern`.
 
 <!-- reviewed 2026-03-10 -->
 
@@ -1023,6 +1023,9 @@ Conversational tenant intake with phone-based identification, automatic asset in
 
 <!-- auto-sync 2026-03-21: migrations 41→42, apiRoutes 161→162, apiRoutes 161→162 -->
 
+
+<!-- auto-sync 2026-03-22: tests 493→518, suites 38→39, suites 38→39, suites 38→39, fePages 210→212 -->
+
 ### State Integrity
 
 This document + companion files are the **single source of truth**:
@@ -1035,7 +1038,7 @@ This document + companion files are the **single source of truth**:
 * Dev auth bootstrap: Canonical dev manager is user `d93436c1-6568-4dba-8e65-fd8d34e6be2b` (email `manager@local.dev`), created via the auth flow. The legacy `dev-user` still exists in DB but is no longer used as the manager identity — notifications were migrated to `d93436c1`. Long-lived JWTs in `_app.js`; bootstrap is expiry-aware (expired tokens are auto-replaced on next page load, no manual `localStorage.clear()` needed). All three dev tokens expire 2027-03-15.
 * **Multi-role auth system:** `STAFF_ROLES` array in `apps/api/src/authz.ts` is the single extension point for adding new staff roles. Currently: MANAGER, OWNER, VENDOR, INSURANCE. `requireStaffAuth()` guards all notification endpoints. Frontend `_app.js` bootstraps role-specific tokens under `authToken` (manager), `ownerToken`, `vendorToken` keys; `NotificationBell` reads the token matching its `role` prop. Adding a new role: (1) add string to `STAFF_ROLES`, (2) add entry to `DEV_TOKENS` in `_app.js`, (3) add seed user in `prisma/seed.ts`. Nothing else changes. Dev users: `d93436c1` (MANAGER, canonical), `dev-owner` (OWNER), `dev-vendor` (VENDOR). Schema `Role` enum: TENANT, CONTRACTOR, MANAGER, OWNER, VENDOR, INSURANCE (migration 35).
 * Frontend navigation — sidebar: 7 flat primary nav items, no accordion. All 7 manager hub pages use inline tab content with URL-based tab persistence (?tab=key). Tab header links: always-visible "Full view →" for tabs with richer standalone pages; absent for equivalent pages. All manager pages wrapped in Panel component for consistent white card layout. Verified 2026-03-14.
-* Test suite — **493 tests, 38 suites against maint_agent_test** (isolated from dev DB `maint_agent`) (verified 2026-03-17). Includes 20 new asset inventory tests.
+* Test suite — **518 tests, 39 suites against maint_agent_test** (isolated from dev DB `maint_agent`) (verified 2026-03-17). Includes 20 new asset inventory tests.
   - ✅ **TC-4 resolved (2026-03-10):** `jest.config.js` now has `maxWorkers: 1` — integration tests run serially, eliminating parallel server spawning timeouts.
   - ✅ **TC-5 resolved (2026-03-10):** Port collision on 3206 fixed — ports reassigned: rentalContracts → 3206, rentEstimation → 3209, ia.test → 3210, tenantSession → 3208.
   - Pure-function suites (**domainEvents, httpErrors, orgIsolation, routeProtection, triage**) always pass — they do not spawn a server.

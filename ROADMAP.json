@@ -29,7 +29,7 @@
         "title": "Align tenant, contractor, and owner portal UI with manager baseline (PageShell/Panel/inline-table/CSS tokens)"
       }
     ],
-    "last_recommendations_at": "2026-03-22 15:29:56 UTC"
+    "last_recommendations_at": "2026-03-22 16:25:18 UTC"
   },
   "project": {
     "name": "Maintenance Agent",
@@ -315,7 +315,7 @@
           "id": "S-P0-004-01",
           "title": "Extract legalService.ts — legal variables, rules, category mappings, evaluation logs",
           "type": "refactor",
-          "status": "planned",
+          "status": "done",
           "files_expected": [
             "apps/api/src/services/legalService.ts"
           ],
@@ -331,7 +331,8 @@
               "path": "apps/api/src/services/legalService.ts"
             }
           ],
-          "implementation_notes": "legal.ts lines 426-461 (variables), 464-613 (rules+mappings), 830-893 (eval logs) contain the Prisma calls to extract. Follow G9 guardrail: use typed include constants from legalIncludes.ts. Architecture layer: route → service → prismaClient."
+          "implementation_notes": "legal.ts lines 426-461 (variables), 464-613 (rules+mappings), 830-893 (eval logs) contain the Prisma calls to extract. Follow G9 guardrail: use typed include constants from legalIncludes.ts. Architecture layer: route → service → prismaClient.",
+          "completed_at": "2026-03-22T16:25:18.580Z"
         },
         {
           "id": "S-P0-004-02",
@@ -4981,7 +4982,7 @@
       "goal": "The supporting documents upload page in the rental application flow currently shows all units, including ones the applicant did not select. Filter the displayed units to only those included in the application.",
       "phase": "P0",
       "order": 4,
-      "status": "ready",
+      "status": "promoted",
       "product_area": "tenant-portal",
       "parent_feature_id": null,
       "depends_on": [],
@@ -5031,7 +5032,9 @@
       "refinement_notes": [
         "No separate documents page found — apply.js uses a single-page multi-step flow. INT-010 refers to step 1 which shows all vacant units for selection. The fix is to show a condensed summary of selected units inline rather than the full list. Needs a focused investigation before implementing."
       ],
-      "refined_at": "2026-03-21T17:30:54.827Z"
+      "refined_at": "2026-03-21T17:30:54.827Z",
+      "promoted_at": "2026-03-22T15:47:34.862Z",
+      "implementation_notes": "Added selected-units summary above document upload section in apply.js Step 1. Shows only selected units with building/unit/rent. Single unit: flat label. Multi-unit: count + list."
     },
     {
       "id": "DT-028",

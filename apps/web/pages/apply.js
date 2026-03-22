@@ -558,6 +558,30 @@ export default function ApplyPage() {
                   You can also upload them one-by-one to a specific category.
                 </p>
 
+                {/* Selected-units summary — only shows units the applicant has chosen */}
+                {selectedUnitIds.length > 0 && (
+                  <div className="mt-3 rounded-lg border border-indigo-100 bg-indigo-50 px-4 py-3">
+                    <p className="text-xs font-medium text-indigo-700 mb-1">
+                      {selectedUnitIds.length === 1 ? "Applying for:" : `Applying for ${selectedUnitIds.length} units:`}
+                    </p>
+                    <ul className="space-y-0.5">
+                      {selectedUnitIds.map((id) => {
+                        const u = vacantUnits.find((u) => u.id === id);
+                        if (!u) return null;
+                        return (
+                          <li key={id} className="text-xs text-indigo-800">
+                            {u.building?.name} — Unit {u.unitNumber}
+                            {u.monthlyRentChf != null && ` · CHF ${u.monthlyRentChf}/mo`}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                    <p className="text-xs text-indigo-500 mt-1.5">
+                      Your documents will be attached to {selectedUnitIds.length === 1 ? "this application" : "all selected units"}.
+                    </p>
+                  </div>
+                )}
+
                 {/* Drag-and-drop zone */}
                 <DropZone onFiles={(files) => {
                   for (const f of files) handleDocUpload(f, null);

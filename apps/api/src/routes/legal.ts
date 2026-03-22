@@ -49,11 +49,21 @@ import prisma from "../services/prismaClient";
 import * as legalSourceRepo from "../repositories/legalSourceRepository";
 import * as assetRepo from "../repositories/assetRepository";
 import {
-  LEGAL_VARIABLE_INCLUDE,
-  LEGAL_RULE_INCLUDE,
-  LEGAL_RULE_WITH_VERSIONS_INCLUDE,
-  DEPRECIATION_STANDARD_INCLUDE,
-} from "../repositories/legalSourceRepository";
+  listVariables,
+  listRules,
+  createRule,
+  listCategoryMappings,
+  createCategoryMapping,
+  updateCategoryMapping,
+  deleteCategoryMapping,
+  getMappingCoverage,
+  listEvaluations,
+  listDepreciationStandards,
+  createDepreciationStandard,
+  LegalConflictError,
+  LegalNotFoundError,
+  LegalForbiddenError,
+} from "../services/legalService";
 import { LegalSourceStatus, LegalSourceScope, LegalSource } from "@prisma/client";
 
 // ─── LegalSource DTO + Mapper ──────────────────────────────────
@@ -425,15 +435,8 @@ export function registerLegalRoutes(router: Router) {
 
   router.get("/legal/variables", async ({ req, res }) => {
     if (!requireOrgViewer(req, res)) return;
-
-    // SA-11: LegalVariable is intentionally global (jurisdiction-scoped, no orgId)
-    // — variables like reference interest rates apply across all orgs.
     try {
-      const variables = await prisma.legalVariable.findMany({
-        include: LEGAL_VARIABLE_INCLUDE,
-        orderBy: { key: "asc" },
-      });
-      sendJson(res, 200, { data: variables });
+      sendJson(res, 200, { data: await listVariables() });
     } catch (e: any) {
       console.error("[GET /legal/variables]", e);
       sendError(res, 500, "INTERNAL_ERROR", "Failed to list variables");
@@ -446,15 +449,8 @@ export function registerLegalRoutes(router: Router) {
 
   router.get("/legal/rules", async ({ req, res }) => {
     if (!requireOrgViewer(req, res)) return;
-
-    // SA-11: LegalRule is intentionally global (jurisdiction-scoped, no orgId)
-    // — statutory rules apply uniformly across orgs within a jurisdiction.
     try {
-      const rules = await prisma.legalRule.findMany({
-        include: LEGAL_RULE_INCLUDE,
-        orderBy: [{ priority: "desc" }, { key: "asc" }],
-      });
-      sendJson(res, 200, { data: rules });
+      sendJson(res, 200, { data: await listRules() });
     } catch (e: any) {
       console.error("[GET /legal/rules]", e);
       sendError(res, 500, "INTERNAL_ERROR", "Failed to list rules");
@@ -463,46 +459,17 @@ export function registerLegalRoutes(router: Router) {
 
   router.post("/legal/rules", async ({ req, res }) => {
     if (!requireRole(req, res, 'MANAGER')) return;
-
-    // SA-11: LegalRule is intentionally global — see GET /legal/rules comment.
     try {
       const body = await readJson(req);
       const parsed = CreateLegalRuleSchema.safeParse(body);
       if (!parsed.success) {
-        const msg = parsed.error.issues
-          .map((i) => `${i.path.join(".")}: ${i.message}`)
-          .join("; ");
+        const msg = parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ");
         return sendError(res, 400, "VALIDATION_ERROR", msg);
       }
-
-      const {
-        dslJson,
-        citationsJson,
-        summary,
-        effectiveFrom,
-        ...ruleData
-      } = parsed.data;
-
-      const rule = await prisma.legalRule.create({
-        data: {
-          ...ruleData,
-          versions: {
-            create: {
-              effectiveFrom,
-              dslJson: dslJson as any,
-              citationsJson: (citationsJson as any) ?? null,
-              summary: summary ?? null,
-            },
-          },
-        },
-        include: LEGAL_RULE_WITH_VERSIONS_INCLUDE,
-      });
-
+      const rule = await createRule(parsed.data);
       sendJson(res, 201, { data: rule });
     } catch (e: any) {
-      if (e.code === "P2002") {
-        return sendError(res, 409, "CONFLICT", "Rule key already exists");
-      }
+      if (e instanceof LegalConflictError) return sendError(res, 409, "CONFLICT", e.message);
       console.error("[POST /legal/rules]", e);
       sendError(res, 500, "INTERNAL_ERROR", "Failed to create rule");
     }
@@ -514,15 +481,8 @@ export function registerLegalRoutes(router: Router) {
 
   router.get("/legal/category-mappings", async ({ req, res, orgId }) => {
     if (!requireOrgViewer(req, res)) return;
-
     try {
-      const mappings = await prisma.legalCategoryMapping.findMany({
-        where: {
-          OR: [{ orgId }, { orgId: null }],
-        },
-        orderBy: [{ orgId: "desc" }, { requestCategory: "asc" }],
-      });
-      sendJson(res, 200, { data: mappings });
+      sendJson(res, 200, { data: await listCategoryMappings(orgId) });
     } catch (e: any) {
       console.error("[GET /legal/category-mappings]", e);
       sendError(res, 500, "INTERNAL_ERROR", "Failed to list mappings");
@@ -531,33 +491,16 @@ export function registerLegalRoutes(router: Router) {
 
   router.post("/legal/category-mappings", async ({ req, res, orgId }) => {
     if (!requireRole(req, res, 'MANAGER')) return;
-
     try {
       const body = await readJson(req);
       const parsed = CreateCategoryMappingSchema.safeParse(body);
       if (!parsed.success) {
-        const msg = parsed.error.issues
-          .map((i) => `${i.path.join(".")}: ${i.message}`)
-          .join("; ");
+        const msg = parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ");
         return sendError(res, 400, "VALIDATION_ERROR", msg);
       }
-
-      const mapping = await prisma.legalCategoryMapping.create({
-        data: {
-          orgId,
-          ...parsed.data,
-        },
-      });
-      sendJson(res, 201, { data: mapping });
+      sendJson(res, 201, { data: await createCategoryMapping(orgId, parsed.data) });
     } catch (e: any) {
-      if (e.code === "P2002") {
-        return sendError(
-          res,
-          409,
-          "CONFLICT",
-          "Mapping for this category already exists in this org",
-        );
-      }
+      if (e instanceof LegalConflictError) return sendError(res, 409, "CONFLICT", e.message);
       console.error("[POST /legal/category-mappings]", e);
       sendError(res, 500, "INTERNAL_ERROR", "Failed to create mapping");
     }
@@ -565,35 +508,17 @@ export function registerLegalRoutes(router: Router) {
 
   router.put("/legal/category-mappings/:id", async ({ req, res, params, orgId }) => {
     if (!requireRole(req, res, 'MANAGER')) return;
-
     try {
       const body = await readJson(req);
       const parsed = UpdateCategoryMappingSchema.safeParse(body);
       if (!parsed.success) {
-        const msg = parsed.error.issues
-          .map((i) => `${i.path.join(".")}: ${i.message}`)
-          .join("; ");
+        const msg = parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ");
         return sendError(res, 400, "VALIDATION_ERROR", msg);
       }
-
-      const existing = await prisma.legalCategoryMapping.findUnique({
-        where: { id: params.id },
-      });
-      if (!existing) {
-        return sendError(res, 404, "NOT_FOUND", "Mapping not found");
-      }
-
-      // SA-11: Org-scope check — only allow editing org-owned or global mappings
-      if (existing.orgId && existing.orgId !== orgId) {
-        return sendError(res, 403, "FORBIDDEN", "Mapping belongs to another org");
-      }
-
-      const mapping = await prisma.legalCategoryMapping.update({
-        where: { id: params.id },
-        data: parsed.data,
-      });
-      sendJson(res, 200, { data: mapping });
+      sendJson(res, 200, { data: await updateCategoryMapping(params.id, orgId, parsed.data) });
     } catch (e: any) {
+      if (e instanceof LegalNotFoundError) return sendError(res, 404, "NOT_FOUND", e.message);
+      if (e instanceof LegalForbiddenError) return sendError(res, 403, "FORBIDDEN", e.message);
       console.error("[PUT /legal/category-mappings/:id]", e);
       sendError(res, 500, "INTERNAL_ERROR", "Failed to update mapping");
     }
@@ -601,25 +526,12 @@ export function registerLegalRoutes(router: Router) {
 
   router.delete("/legal/category-mappings/:id", async ({ req, res, params, orgId }) => {
     if (!requireRole(req, res, 'MANAGER')) return;
-
     try {
-      const existing = await prisma.legalCategoryMapping.findUnique({
-        where: { id: params.id },
-      });
-      if (!existing) {
-        return sendError(res, 404, "NOT_FOUND", "Mapping not found");
-      }
-
-      // SA-11: Org-scope check — only allow deleting org-owned mappings
-      if (existing.orgId && existing.orgId !== orgId) {
-        return sendError(res, 403, "FORBIDDEN", "Mapping belongs to another org");
-      }
-
-      await prisma.legalCategoryMapping.delete({
-        where: { id: params.id },
-      });
+      await deleteCategoryMapping(params.id, orgId);
       sendJson(res, 200, { data: { deleted: true } });
     } catch (e: any) {
+      if (e instanceof LegalNotFoundError) return sendError(res, 404, "NOT_FOUND", e.message);
+      if (e instanceof LegalForbiddenError) return sendError(res, 403, "FORBIDDEN", e.message);
       console.error("[DELETE /legal/category-mappings/:id]", e);
       sendError(res, 500, "INTERNAL_ERROR", "Failed to delete mapping");
     }
@@ -633,122 +545,9 @@ export function registerLegalRoutes(router: Router) {
    */
   router.get("/legal/category-mappings/coverage", async ({ req, res, orgId }) => {
     if (!requireOrgViewer(req, res)) return;
-
     try {
-      // All request categories in use
-      const requests = await prisma.request.findMany({
-        select: { category: true },
-        distinct: ["category"],
-      });
-      const usedCategories = requests.map((r) => r.category).filter(Boolean) as string[];
-
-      // All mappings (org + global)
-      const mappings = await prisma.legalCategoryMapping.findMany({
-        where: {
-          OR: [{ orgId }, { orgId: null }],
-          isActive: true,
-        },
-        orderBy: [{ orgId: "desc" }, { requestCategory: "asc" }],
-      });
-
-      // Keyword map for matching depreciation standards and rules
-      const TOPIC_KEYWORDS: Record<string, string[]> = {
-        STOVE_COOKTOP: ["STOVE", "COOKTOP", "HOB", "CUISIN", "COOKER"],
-        OVEN_APPLIANCE: ["OVEN", "FOUR", "COOKER"],
-        DISHWASHER: ["DISHWASHER", "LAVE_VAISSELLE"],
-        BATHROOM_PLUMBING: ["BATHROOM", "BATHTUB", "SHOWER", "WC", "TOILET", "BIDET"],
-        LIGHTING_ELECTRICAL: ["LIGHT", "SWITCH", "LAMP", "DIMMER"],
-        PLUMBING_WATER: ["TAP", "PIPE", "DRAIN", "WATER", "PLUMB", "FAUCET", "SIPHON"],
-        GENERAL_MAINTENANCE: [],
-      };
-
-      // Get all depreciation standards and rules for counting
-      const allDeps = await prisma.depreciationStandard.findMany({
-        select: { topic: true, assetType: true, usefulLifeMonths: true },
-      });
-      const allRules = await prisma.legalRule.findMany({
-        where: { key: { startsWith: "CH_RENT_RED" }, isActive: true },
-        select: { key: true, id: true },
-      });
-
-      // Build coverage for each known category
-      const knownCategories = ["stove", "oven", "dishwasher", "bathroom", "lighting", "plumbing", "other"];
-      const allCategories = [...new Set([...knownCategories, ...usedCategories])];
-
-      const coverage = allCategories.map((cat) => {
-        // Find mapping (org-specific first, then global)
-        const orgMapping = mappings.find(
-          (m) => m.requestCategory === cat && m.orgId === orgId,
-        );
-        const globalMapping = mappings.find(
-          (m) => m.requestCategory === cat && m.orgId === null,
-        );
-        const mapping = orgMapping || globalMapping;
-        const legalTopic = mapping?.legalTopic || null;
-        const scope = orgMapping ? "org" : globalMapping ? "global" : null;
-
-        // Count matching depreciation standards
-        const keywords = legalTopic ? (TOPIC_KEYWORDS[legalTopic] || []) : [];
-        const depMatches = keywords.length > 0
-          ? allDeps.filter((d) =>
-              keywords.some((k) => d.topic.toUpperCase().includes(k)),
-            )
-          : [];
-
-        // Count matching rent reduction rules
-        const ruleMatches = keywords.length > 0
-          ? allRules.filter((r) =>
-              keywords.some((k) => r.key.toUpperCase().includes(k)),
-            )
-          : [];
-
-        // Build human-readable summaries
-        const lifespanMonths = depMatches.map((d) => d.usefulLifeMonths);
-        const minLifeYears = lifespanMonths.length > 0 ? Math.round(Math.min(...lifespanMonths) / 12) : null;
-        const maxLifeYears = lifespanMonths.length > 0 ? Math.round(Math.max(...lifespanMonths) / 12) : null;
-
-        // Unique readable asset names (e.g. "Bathtub Acrylic" from "BATHTUB_ACRYLIC")
-        const readableAssets = [...new Set(depMatches.map((d) =>
-          d.topic.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (c: string) => c.toUpperCase()),
-        ))].slice(0, 6);
-
-        // Unique readable rule names
-        const readableRules = [...new Set(ruleMatches.map((r) =>
-          r.key.replace(/^CH_RENT_RED_/, "").replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (c: string) => c.toUpperCase()),
-        ))].slice(0, 5);
-
-        return {
-          category: cat,
-          mapped: !!mapping,
-          legalTopic,
-          scope,
-          mappingId: mapping?.id || null,
-          isActive: mapping?.isActive ?? null,
-          depreciationCount: depMatches.length,
-          ruleCount: ruleMatches.length,
-          depreciationSamples: depMatches.slice(0, 5).map((d) => ({
-            topic: d.topic,
-            assetType: d.assetType,
-            usefulLifeMonths: d.usefulLifeMonths,
-          })),
-          ruleSamples: ruleMatches.slice(0, 5).map((r) => r.key),
-          // Human-friendly summaries for the UI
-          lifespanRange: minLifeYears !== null
-            ? (minLifeYears === maxLifeYears ? `${minLifeYears} years` : `${minLifeYears}–${maxLifeYears} years`)
-            : null,
-          readableAssets,
-          readableRules,
-        };
-      });
-
-      sendJson(res, 200, {
-        data: coverage,
-        summary: {
-          totalCategories: allCategories.length,
-          mappedCategories: coverage.filter((c) => c.mapped).length,
-          unmappedCategories: coverage.filter((c) => !c.mapped).length,
-        },
-      });
+      const result = await getMappingCoverage(orgId);
+      sendJson(res, 200, result);
     } catch (e: any) {
       console.error("[GET /legal/category-mappings/coverage]", e);
       sendError(res, 500, "INTERNAL_ERROR", "Failed to compute coverage");
@@ -759,69 +558,32 @@ export function registerLegalRoutes(router: Router) {
   // Admin: Depreciation Standards
   // ════════════════════════════════════════════════════════════
 
-  router.get(
-    "/legal/depreciation-standards",
-    async ({ req, res }) => {
-      if (!requireOrgViewer(req, res)) return;
+  router.get("/legal/depreciation-standards", async ({ req, res }) => {
+    if (!requireOrgViewer(req, res)) return;
+    try {
+      sendJson(res, 200, { data: await listDepreciationStandards() });
+    } catch (e: any) {
+      console.error("[GET /legal/depreciation-standards]", e);
+      sendError(res, 500, "INTERNAL_ERROR", "Failed to list depreciation standards");
+    }
+  });
 
-      // SA-11: DepreciationStandard is intentionally global (jurisdiction-scoped, no orgId)
-      // — industry lifespan standards apply uniformly across orgs.
-      try {
-        const standards = await prisma.depreciationStandard.findMany({
-          include: DEPRECIATION_STANDARD_INCLUDE,
-          orderBy: [{ assetType: "asc" }, { topic: "asc" }],
-        });
-        sendJson(res, 200, { data: standards });
-      } catch (e: any) {
-        console.error("[GET /legal/depreciation-standards]", e);
-        sendError(
-          res,
-          500,
-          "INTERNAL_ERROR",
-          "Failed to list depreciation standards",
-        );
+  router.post("/legal/depreciation-standards", async ({ req, res }) => {
+    if (!requireRole(req, res, 'MANAGER')) return;
+    try {
+      const body = await readJson(req);
+      const parsed = CreateDepreciationStandardSchema.safeParse(body);
+      if (!parsed.success) {
+        const msg = parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ");
+        return sendError(res, 400, "VALIDATION_ERROR", msg);
       }
-    },
-  );
-
-  router.post(
-    "/legal/depreciation-standards",
-    async ({ req, res }) => {
-      if (!requireRole(req, res, 'MANAGER')) return;
-
-      try {
-        const body = await readJson(req);
-        const parsed = CreateDepreciationStandardSchema.safeParse(body);
-        if (!parsed.success) {
-          const msg = parsed.error.issues
-            .map((i) => `${i.path.join(".")}: ${i.message}`)
-            .join("; ");
-          return sendError(res, 400, "VALIDATION_ERROR", msg);
-        }
-
-        const standard = await prisma.depreciationStandard.create({
-          data: parsed.data,
-        });
-        sendJson(res, 201, { data: standard });
-      } catch (e: any) {
-        if (e.code === "P2002") {
-          return sendError(
-            res,
-            409,
-            "CONFLICT",
-            "Depreciation standard for this asset/topic/jurisdiction already exists",
-          );
-        }
-        console.error("[POST /legal/depreciation-standards]", e);
-        sendError(
-          res,
-          500,
-          "INTERNAL_ERROR",
-          "Failed to create depreciation standard",
-        );
-      }
-    },
-  );
+      sendJson(res, 201, { data: await createDepreciationStandard(parsed.data) });
+    } catch (e: any) {
+      if (e instanceof LegalConflictError) return sendError(res, 409, "CONFLICT", e.message);
+      console.error("[POST /legal/depreciation-standards]", e);
+      sendError(res, 500, "INTERNAL_ERROR", "Failed to create depreciation standard");
+    }
+  });
 
   // ════════════════════════════════════════════════════════════
   // Admin: Evaluation Logs
@@ -829,59 +591,16 @@ export function registerLegalRoutes(router: Router) {
 
   router.get("/legal/evaluations", async ({ req, res, query, orgId }) => {
     if (!requireOrgViewer(req, res)) return;
-
-    const limit = Math.min(100, Math.max(1, parseInt(first(query, "limit") ?? "20", 10)));
-    const offset = Math.max(0, parseInt(first(query, "offset") ?? "0", 10));
-    const obligationFilter = first(query, "obligation");
-    const categoryFilter = first(query, "category");
-    const requestIdFilter = first(query, "requestId");
-
     try {
-      const where: any = { orgId };
-      if (requestIdFilter) where.requestId = requestIdFilter;
-
-      const [rows, total] = await Promise.all([
-        prisma.legalEvaluationLog.findMany({
-          where,
-          orderBy: { createdAt: "desc" },
-          take: limit,
-          skip: offset,
-        }),
-        prisma.legalEvaluationLog.count({ where }),
-      ]);
-
-      // Flatten contextJson + resultJson into top-level fields
-      const data = rows
-        .map((row: any) => {
-          const ctx = (row.contextJson ?? {}) as Record<string, any>;
-          const res = (row.resultJson ?? {}) as Record<string, any>;
-          return {
-            id: row.id,
-            requestId: row.requestId,
-            buildingId: row.buildingId,
-            unitId: row.unitId,
-            createdAt: row.createdAt,
-            // from contextJson
-            category: ctx.category ?? null,
-            canton: ctx.canton ?? null,
-            legalTopic: res.legalTopic ?? ctx.legalTopic ?? null,
-            // from resultJson
-            obligation: res.obligation ?? null,
-            confidence: typeof res.confidence === "number" ? res.confidence / 100 : 0,
-            reasons: Array.isArray(res.reasons) ? res.reasons : [],
-            citations: deduplicateCitations(Array.isArray(res.citations) ? res.citations : []),
-            recommendedActions: Array.isArray(res.recommendedActions) ? res.recommendedActions : [],
-            depreciationSignal: res.depreciationSignal ?? null,
-            matchedRuleCount: res.matchedRuleCount ?? 0,
-          };
-        })
-        .filter((ev: any) => {
-          if (obligationFilter && ev.obligation !== obligationFilter) return false;
-          if (categoryFilter && ev.category !== categoryFilter) return false;
-          return true;
-        });
-
-      sendJson(res, 200, { data, total });
+      const result = await listEvaluations({
+        orgId,
+        limit: Math.min(100, Math.max(1, parseInt(first(query, "limit") ?? "20", 10))),
+        offset: Math.max(0, parseInt(first(query, "offset") ?? "0", 10)),
+        obligationFilter: first(query, "obligation") ?? undefined,
+        categoryFilter: first(query, "category") ?? undefined,
+        requestIdFilter: first(query, "requestId") ?? undefined,
+      });
+      sendJson(res, 200, result);
     } catch (e: any) {
       console.error("[GET /legal/evaluations]", e);
       sendError(res, 500, "INTERNAL_ERROR", "Failed to list evaluations");
@@ -960,25 +679,3 @@ export function registerLegalRoutes(router: Router) {
   });
 }
 
-// ════════════════════════════════════════════════════════════
-// Helpers
-// ════════════════════════════════════════════════════════════
-
-function deduplicateCitations(
-  citations: Array<{ article?: string; text?: string; authority?: string }>,
-): Array<{ article: string; text: string; authority: string }> {
-  const seen = new Set<string>();
-  const result: Array<{ article: string; text: string; authority: string }> = [];
-  for (const c of citations) {
-    const key = `${c.article || ""}|${c.text || ""}|${c.authority || ""}`;
-    if (!seen.has(key)) {
-      seen.add(key);
-      result.push({
-        article: c.article || "",
-        text: c.text || "",
-        authority: c.authority || "",
-      });
-    }
-  }
-  return result;
-}
