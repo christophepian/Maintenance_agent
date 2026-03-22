@@ -1824,6 +1824,83 @@ No schema changes. No migrations. Proxy unchanged.
 | 33 suites, 359 tests: all pass | ✅ |
 | Blueprint synced: 46 models, 38 enums, 146 routes, 193 pages | ✅ |
 
+### Legal Route Layer Extraction (Mar 22, 2026)
+**Status:** ✅ **COMPLETE** (S-P0-004-01)
+
+Extracted all Prisma access from `apps/api/src/routes/legal.ts` into a dedicated service, closing the last major G9 violation.
+
+**Problem:** `legal.ts` contained 26 direct `prisma.X` calls — the largest remaining route-layer violation after the CQ-series cleanup.
+
+**Files created:**
+- `apps/api/src/services/legalService.ts` — domain service for the full legal module: variables, rules, category mappings, coverage analysis, evaluation logs, depreciation standards. Error classes: `LegalConflictError`, `LegalNotFoundError`, `LegalForbiddenError`. `TOPIC_KEYWORDS` map and `deduplicateCitations` helper migrated from route file. Depreciation standards consolidated here (planned `depreciationAdminService.ts` was too small to justify a separate file).
+
+**Files modified:**
+- `apps/api/src/routes/legal.ts` — replaced 26 direct Prisma calls with service delegations. Zero `prisma.X` calls remain. Handlers are now: auth check → parse → call service → send response.
+
+**Verification:** tsc 0 errors · 518 tests · G9 compliant
+
+---
+
+### Apply Wizard Selected-Units Summary (Mar 22, 2026)
+**Status:** ✅ **COMPLETE** (DT-027)
+
+Added a selected-units confirmation panel in Step 1 of the tenant rental application wizard (`apps/web/pages/apply.js`), shown above the document upload section. Lists only the units the applicant has selected, with building name, unit number, and monthly rent. Addressed a UX gap where tenants couldn't confirm their unit selection before uploading documents.
+
+---
+
+### Test Infrastructure Hardening (Mar 22, 2026)
+**Status:** ✅ **COMPLETE** (DT-111 / DT-112 / DT-113)
+
+Three independent test infrastructure improvements:
+
+**DT-111 — Port deconfliction:**
+- `tenantSession.test.ts` moved from port 3208 → 3218
+- `rentEstimation.test.ts` moved from port 3209 → 3219
+- Port registry (3201–3219) now collision-free; next available: 3220
+
+**DT-112 — Contract guard-rails for RFPs and notifications:**
+Added 4 new tests to `contracts.test.ts`:
+- `GET /rfps?limit=1` — envelope shape + `{id, orgId, requestId, status, createdAt}` DTO fields
+- `GET /rfps/:id` 404 — `error.code === NOT_FOUND`
+- `GET /notifications` — uses `fetchWithRole('MANAGER')` (required: `requireStaffAuth` needs a role claim even under `AUTH_OPTIONAL=true`); asserts `data.notifications[]` + `data.total`
+- `GET /notifications/unread-count` — `data.count` is a number
+
+**DT-113 — CONTRIBUTING.md:**
+Created `CONTRIBUTING.md` at repo root:
+- Pre-commit checklist: `npx tsc --noEmit && npm test`
+- Full `startServer` / `afterAll` lifecycle pattern (copy-pasteable)
+- Port registry table (3201–3219)
+- `contracts.test.ts` guard-rail pattern (when to add, example structure)
+- Architecture guardrail quick reference (G1/G2/G9/G10/G11)
+
+---
+
+### Roadmap Sync & Generator Bugfixes (Mar 22, 2026)
+**Status:** ✅ **COMPLETE**
+
+Resolved persistent stale-dashboard problem and three generator bugs.
+
+**Tracking fix — `docs/roadmap.html` now in git:**
+- Removed from `.gitignore` — was never committed, so the dashboard was stale after every pull
+- Extended `.git/hooks/pre-commit`: whenever `ROADMAP.json` is staged, the hook runs `generate-roadmap.js` and stages the fresh HTML automatically — no manual `npm run roadmap` step needed
+
+**Generator fix 1 — `runSliceSignal` schema mismatch:**
+- `runSliceSignal` used `sig.value` exclusively; ROADMAP.json completion_signals use `sig.path` / `sig.name` / `sig.key`
+- Result: every `file_exists`/`model_exists` signal silently failed → slices with signals always appeared as "planned" regardless of delivery
+- Fix: accept both schemas — `sig.path || sig.name || sig.key || sig.value`
+
+**Generator fix 2 — manual `status: "done"` overridden by signals:**
+- `getSliceStatus` ran signals even when `slice.status === "done"` was set explicitly
+- Failing signals overrode the deliberate human decision → delivered slices showed as "planned"
+- Fix: if `slice.status` is `"done"` or `"discarded"`, return immediately without evaluating signals
+
+**Generator fix 3 — `discarded` custom items in recommendations:**
+- `customItemsToBacklog` only excluded `status === "done"` from the queue; `"discarded"` was treated as "ready"
+- TASK-001 (discarded) kept appearing as a top recommendation
+- Fix: treat `"discarded"` same as `"done"` (column = "done")
+
+**Impact:** TASK-001, S-P0-004-01, S-P0-004-02 no longer surface in recommendations. Current top-5: S-P0-001-02, S-P0-002-01, F-P0-003, F-P1-001, F-P1-002.
+
 ---
 
 ## Hardening Guidelines — Prototype → Production Seed (H1–H6)
