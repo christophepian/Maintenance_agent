@@ -9,8 +9,6 @@ pnpm-debug.log*
 .idea
 .vscode
 
-# Generated roadmap HTML (rebuild with `npm run roadmap`)
-docs/roadmap.html
 *.bak
 
 .env
