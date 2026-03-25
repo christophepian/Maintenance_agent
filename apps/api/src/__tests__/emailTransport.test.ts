@@ -22,6 +22,7 @@ jest.mock("../services/prismaClient", () => ({
     emailOutbox: {
       findUnique: jest.fn(),
       findMany: jest.fn(),
+      update: jest.fn(),
     },
   },
 }));
@@ -233,16 +234,34 @@ describe("sendEmail", () => {
     );
   });
 
-  test("marks FAILED on transport error", async () => {
+  test("increments retryCount on transport error (not yet FAILED)", async () => {
     (prisma.emailOutbox.findUnique as jest.Mock).mockResolvedValue(SAMPLE_EMAIL);
     mockSendMail.mockRejectedValue(new Error("SMTP connection refused"));
+    // retryCount after increment is 1 — below MAX_RETRY_COUNT (3)
+    (prisma.emailOutbox.update as jest.Mock).mockResolvedValue({ retryCount: 1 });
+
+    const result = await sendEmail("email-001");
+
+    expect(prisma.emailOutbox.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: { retryCount: { increment: 1 } } }),
+    );
+    expect(markEmailFailed).not.toHaveBeenCalled();
+    expect(markEmailSent).not.toHaveBeenCalled();
+    expect(result.success).toBe(false);
+    expect(result.error).toBe("SMTP connection refused");
+  });
+
+  test("marks FAILED permanently after MAX_RETRY_COUNT failures", async () => {
+    (prisma.emailOutbox.findUnique as jest.Mock).mockResolvedValue(SAMPLE_EMAIL);
+    mockSendMail.mockRejectedValue(new Error("SMTP connection refused"));
+    // retryCount has hit 3 — permanently failed
+    (prisma.emailOutbox.update as jest.Mock).mockResolvedValue({ retryCount: 3 });
 
     const result = await sendEmail("email-001");
 
     expect(markEmailFailed).toHaveBeenCalledWith("email-001");
     expect(markEmailSent).not.toHaveBeenCalled();
     expect(result.success).toBe(false);
-    expect(result.error).toBe("SMTP connection refused");
   });
 });
 

@@ -18,64 +18,17 @@
  */
 
 import * as http from "http";
-import { spawn, ChildProcessWithoutNullStreams } from "child_process";
-import * as path from "path";
+import { ChildProcessWithoutNullStreams } from 'child_process';
 import { PrismaClient } from "@prisma/client";
+import { startTestServer, stopTestServer } from './testHelpers';
 
 process.env.AUTH_SECRET = "test-secret";
 const { encodeToken } = require("../services/auth");
 
 const prisma = new PrismaClient();
-const API_ROOT = path.resolve(__dirname, "..", "..");
-const TS_NODE = path.resolve(API_ROOT, "node_modules", ".bin", "ts-node");
 const PORT = 3217;
 
 /* ── Server helpers ──────────────────────────────────────────── */
-
-function startServer(port: number) {
-  return new Promise<ChildProcessWithoutNullStreams>((resolve, reject) => {
-    const child = spawn(TS_NODE, ["--transpile-only", "src/server.ts"], {
-      cwd: API_ROOT,
-      env: {
-        ...process.env,
-        PORT: String(port),
-        AUTH_SECRET: "test-secret",
-        AUTH_OPTIONAL: "false",
-        NODE_ENV: "test",
-        BG_JOBS_ENABLED: "false",
-      },
-      stdio: ["ignore", "pipe", "pipe"],
-    });
-
-    const onData = (data: Buffer) => {
-      if (data.toString().includes("API running on")) {
-        cleanup();
-        resolve(child);
-      }
-    };
-
-    const onError = (err: Error) => {
-      cleanup();
-      reject(err);
-    };
-
-    const timeout = setTimeout(() => {
-      cleanup();
-      reject(new Error("Server did not start in time"));
-    }, 15000);
-
-    function cleanup() {
-      clearTimeout(timeout);
-      child.stdout?.off("data", onData);
-      child.stderr?.off("data", onData);
-      child.off("error", onError);
-    }
-
-    child.stdout?.on("data", onData);
-    child.stderr?.on("data", onData);
-    child.on("error", onError);
-  });
-}
 
 function httpPost(
   pathName: string,
@@ -298,14 +251,11 @@ beforeAll(async () => {
   jobId = job.id;
 
   // Start server
-  serverProcess = await startServer(PORT);
+  serverProcess = await startTestServer(PORT, { AUTH_OPTIONAL: "false", NODE_ENV: "test", BG_JOBS_ENABLED: "false" });
 }, 30000);
 
 afterAll(async () => {
-  if (serverProcess) {
-    serverProcess.kill("SIGTERM");
-    await new Promise((resolve) => setTimeout(resolve, 500));
-  }
+  await stopTestServer(serverProcess);
 
   await cleanupTestData();
   await prisma.$disconnect();

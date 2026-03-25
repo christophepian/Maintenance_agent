@@ -32,6 +32,7 @@ export function registerFinancialRoutes(router: Router) {
         from: first(query, "from"),
         to: first(query, "to"),
         forceRefresh: first(query, "forceRefresh"),
+        groupByAccount: first(query, "groupByAccount"),
       });
 
       if (!parsed.success) {
@@ -46,6 +47,7 @@ export function registerFinancialRoutes(router: Router) {
           from: parsed.data.from,
           to: parsed.data.to,
           forceRefresh: parsed.data.forceRefresh,
+          groupByAccount: parsed.data.groupByAccount,
         });
         sendJson(res, 200, { data: dto });
       } catch (e: any) {
@@ -57,6 +59,49 @@ export function registerFinancialRoutes(router: Router) {
         }
         console.error("[GET /buildings/:id/financials]", e);
         sendError(res, 500, "INTERNAL_ERROR", "Failed to load financials");
+      }
+    },
+  );
+
+  // ── GET /buildings/:id/financial-summary ──────────────────
+  // Clean-URL alias for /buildings/:id/financials — same handler, same auth
+  router.get(
+    "/buildings/:id/financial-summary",
+    async ({ req, res, params, query, orgId }) => {
+      if (!requireAuth(req, res)) return;
+      if (!requireOrgViewer(req, res)) return;
+
+      const parsed = GetBuildingFinancialsSchema.safeParse({
+        from: first(query, "from"),
+        to: first(query, "to"),
+        forceRefresh: first(query, "forceRefresh"),
+        groupByAccount: first(query, "groupByAccount"),
+      });
+
+      if (!parsed.success) {
+        const msg = parsed.error.issues
+          .map((i) => `${i.path.join(".")}: ${i.message}`)
+          .join("; ");
+        return sendError(res, 400, "VALIDATION_ERROR", msg);
+      }
+
+      try {
+        const dto = await getBuildingFinancials(orgId, params.id, {
+          from: parsed.data.from,
+          to: parsed.data.to,
+          forceRefresh: parsed.data.forceRefresh,
+          groupByAccount: parsed.data.groupByAccount,
+        });
+        sendJson(res, 200, { data: dto });
+      } catch (e: any) {
+        if (e instanceof NotFoundError) {
+          return sendError(res, 404, "NOT_FOUND", e.message);
+        }
+        if (e instanceof ValidationError) {
+          return sendError(res, 400, "VALIDATION_ERROR", e.message);
+        }
+        console.error("[GET /buildings/:id/financial-summary]", e);
+        sendError(res, 500, "INTERNAL_ERROR", "Failed to load financial summary");
       }
     },
   );

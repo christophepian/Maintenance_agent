@@ -9,9 +9,7 @@ import Panel from "../../../components/layout/Panel";
 import UndoToast, { useUndoToast } from "../../../components/ui/UndoToast";
 import AssetInventoryPanel from "../../../components/AssetInventoryPanel";
 import { authHeaders } from "../../../lib/api";
-import { formatChfCents, formatPercent } from "../../../lib/format";
 
-/* ─── Financials helpers ─── */
 function displayDate(iso) {
   if (!iso) return "—";
   const d = new Date(iso);
@@ -19,63 +17,6 @@ function displayDate(iso) {
   const dd = String(d.getDate()).padStart(2, "0");
   const mm = String(d.getMonth() + 1).padStart(2, "0");
   return `${dd}.${mm}.${d.getFullYear()}`;
-}
-
-function defaultRange() {
-  const now = new Date();
-  const from = `${now.getFullYear()}-01-01`;
-  const to = now.toISOString().slice(0, 10);
-  return { from, to };
-}
-
-const CATEGORY_LABELS = {
-  MAINTENANCE: "Maintenance",
-  UTILITIES: "Utilities",
-  CLEANING: "Cleaning",
-  INSURANCE: "Insurance",
-  TAX: "Tax",
-  ADMIN: "Administration",
-  CAPEX: "Capital Expenditure",
-  OTHER: "Other",
-};
-
-/* ─── Financials UI components ─── */
-function HealthBullet({ icon, text, color }) {
-  const bg = { green: "bg-emerald-50", amber: "bg-amber-50", red: "bg-red-50" }[color] || "bg-gray-50";
-  const border = { green: "border-emerald-200", amber: "border-amber-200", red: "border-red-200" }[color] || "border-gray-200";
-  return (
-    <div className={`flex items-start gap-2.5 px-4 py-3 rounded-lg border ${bg} ${border}`}>
-      <span className="text-lg leading-none mt-0.5">{icon}</span>
-      <span className="text-sm text-gray-800">{text}</span>
-    </div>
-  );
-}
-
-function HeroKpi({ label, value, color }) {
-  const textColor = color === "green" ? "text-emerald-700" : color === "red" ? "text-red-700" : "text-gray-900";
-  return (
-    <div className="bg-white rounded-lg border border-gray-200 p-5 flex flex-col items-center gap-1 text-center">
-      <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">{label}</span>
-      <span className={`text-2xl font-bold ${textColor}`}>{value}</span>
-    </div>
-  );
-}
-
-function DetailSection({ title, children, defaultOpen = false }) {
-  const [open, setOpen] = useState(defaultOpen);
-  return (
-    <div className="border border-gray-200 rounded-lg overflow-hidden">
-      <button
-        type="button"
-        className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100 transition-colors text-left"
-        onClick={() => setOpen((v) => !v)}
-      >
-        <span className="text-sm font-semibold text-gray-700">{title}</span>
-        <span className="text-gray-400 text-xs">{open ? "▲ Hide" : "▼ Show"}</span>
-      </button>
-      {open && <div className="p-4 bg-white">{children}</div>}
-    </div>
-  );
 }
 
 export default function BuildingDetail() {
@@ -156,88 +97,15 @@ export default function BuildingDetail() {
   const [selectedCandidateId, setSelectedCandidateId] = useState("");
   const [ownerLoading, setOwnerLoading] = useState(false);
 
-  // ─── Financials state ───
-  const [finLoading, setFinLoading] = useState(false);
-  const [finError, setFinError] = useState("");
-  const [finData, setFinData] = useState(null);
-  const [finRange, setFinRange] = useState(defaultRange);
-
   // ─── Asset inventory state ───
   const [assetInventory, setAssetInventory] = useState([]);
   const [assetInventoryLoading, setAssetInventoryLoading] = useState(false);
-
-  const fetchFinancials = useCallback(
-    async (forceRefresh = false) => {
-      if (!id) return;
-      setFinLoading(true);
-      setFinError("");
-      try {
-        const params = new URLSearchParams({ from: finRange.from, to: finRange.to });
-        if (forceRefresh) params.set("forceRefresh", "true");
-        const res = await fetch(`/api/buildings/${id}/financials?${params}`, {
-          headers: authHeaders(),
-        });
-        const json = await res.json();
-        if (!res.ok) throw new Error(json?.error?.message || "Failed to load financials");
-        setFinData(json.data);
-      } catch (e) {
-        setFinError(String(e?.message || e));
-      } finally {
-        setFinLoading(false);
-      }
-    },
-    [id, finRange],
-  );
-
-  // Load financials when the tab is activated
-  useEffect(() => {
-    if (activeTab === "Financials" && !finData && !finLoading) {
-      fetchFinancials();
-    }
-  }, [activeTab, finData, finLoading, fetchFinancials]);
 
   useEffect(() => {
     if (activeTab === "Assets" && assetInventory.length === 0 && !assetInventoryLoading) {
       loadAssetInventory();
     }
   }, [activeTab]);
-
-  const healthBullets = useMemo(() => {
-    if (!finData) return [];
-    const bullets = [];
-    // 1. Profitability
-    const net = finData.netIncomeCents;
-    if (net > 0) {
-      bullets.push({ icon: "🟢", color: "green", text: `This building is profitable — net income of ${formatChfCents(net)} for the period.` });
-    } else if (net === 0) {
-      bullets.push({ icon: "🟡", color: "amber", text: "Income and expenses are exactly balanced — no profit or loss this period." });
-    } else {
-      bullets.push({ icon: "🔴", color: "red", text: `Expenses exceed income by ${formatChfCents(Math.abs(net))} — review the breakdown below.` });
-    }
-    // 2. Collection
-    const cr = finData.collectionRate;
-    if (cr >= 0.95) {
-      bullets.push({ icon: "🟢", color: "green", text: `Collection rate is ${formatPercent(cr)} — rent is being paid on time.` });
-    } else if (cr >= 0.80) {
-      bullets.push({ icon: "🟡", color: "amber", text: `Collection rate is ${formatPercent(cr)} — some rent payments are outstanding.` });
-    } else if (finData.projectedIncomeCents > 0) {
-      bullets.push({ icon: "🔴", color: "red", text: `Collection rate is only ${formatPercent(cr)} — significant rent is overdue.` });
-    } else {
-      bullets.push({ icon: "🟡", color: "amber", text: "No projected income — collection rate cannot be assessed." });
-    }
-    // 3. Maintenance burden
-    const mr = finData.maintenanceRatio;
-    if (finData.earnedIncomeCents === 0 && finData.maintenanceTotalCents === 0) {
-      bullets.push({ icon: "🟡", color: "amber", text: "No maintenance spend and no income recorded this period." });
-    } else if (mr <= 0.15) {
-      bullets.push({ icon: "🟢", color: "green", text: `Maintenance is ${formatPercent(mr)} of income — well within healthy range.` });
-    } else if (mr <= 0.30) {
-      bullets.push({ icon: "🟡", color: "amber", text: `Maintenance is ${formatPercent(mr)} of income — monitor for rising costs.` });
-    } else {
-      bullets.push({ icon: "🔴", color: "red", text: `Maintenance is ${formatPercent(mr)} of income — unusually high, investigate major repairs.` });
-    }
-    return bullets;
-  }, [finData]);
 
   function setOk(message) {
     setNotice({ type: "ok", message });
@@ -258,7 +126,7 @@ export default function BuildingDetail() {
       data = text ? JSON.parse(text) : null;
     } catch {}
     if (!res.ok) {
-      const msg = (data && (data.error || data.message)) || `Request failed (${res.status})`;
+      const msg = (data && (data.error?.message || data.message || (typeof data.error === "string" && data.error))) || `Request failed (${res.status})`;
       throw new Error(msg);
     }
     return data;
@@ -1512,193 +1380,21 @@ export default function BuildingDetail() {
             </>
           )}
 
-          {/* Financials tab */}
-          {activeTab === "Financials" && (
-            <>
-              {/* Date range controls */}
-              <Panel>
-                <div className="flex flex-wrap items-end gap-4">
-                  <div className="flex flex-col gap-1">
-                    <label className="text-xs font-medium text-gray-600">From</label>
-                    <input
-                      type="date"
-                      value={finRange.from}
-                      onChange={(e) => setFinRange((r) => ({ ...r, from: e.target.value }))}
-                      className="border border-gray-300 rounded px-2 py-1 text-sm"
-                    />
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <label className="text-xs font-medium text-gray-600">To</label>
-                    <input
-                      type="date"
-                      value={finRange.to}
-                      onChange={(e) => setFinRange((r) => ({ ...r, to: e.target.value }))}
-                      className="border border-gray-300 rounded px-2 py-1 text-sm"
-                    />
-                  </div>
-                  <button
-                    onClick={() => fetchFinancials(false)}
-                    className="bg-blue-600 text-white text-sm font-medium px-4 py-1.5 rounded hover:bg-blue-700 transition-colors"
-                  >
-                    Apply
-                  </button>
-                  <button
-                    onClick={() => fetchFinancials(true)}
-                    className="bg-gray-100 text-gray-700 text-sm font-medium px-4 py-1.5 rounded border border-gray-300 hover:bg-gray-200 transition-colors"
-                    title="Re-compute snapshots from source data"
-                  >
-                    ↻ Refresh
-                  </button>
-                </div>
-                {finData && (
-                  <p className="text-xs text-gray-400 mt-2">
-                    Period: {displayDate(finData.from)} – {displayDate(finData.to)} · {finData.activeUnitsCount} active unit{finData.activeUnitsCount !== 1 ? "s" : ""}
-                  </p>
-                )}
-              </Panel>
-
-              {finError && (
-                <Panel><p className="text-red-600 font-medium">Error: {finError}</p></Panel>
-              )}
-
-              {finLoading && !finData && <p className="text-gray-500 mt-4">Loading financials…</p>}
-
-              {finData && (
-                <>
-                  {/* ── Layer 1: Health Summary ── */}
-                  <div className="mt-4 flex flex-col gap-2">
-                    {healthBullets.map((b, i) => (
-                      <HealthBullet key={i} icon={b.icon} text={b.text} color={b.color} />
-                    ))}
-                  </div>
-
-                  {/* ── Layer 2: Hero KPIs ── */}
-                  <div className="grid grid-cols-3 gap-4 mt-5">
-                    <HeroKpi label="Income" value={formatChfCents(finData.earnedIncomeCents)} color="green" />
-                    <HeroKpi label="Expenses" value={formatChfCents(finData.expensesTotalCents)} color="red" />
-                    <HeroKpi
-                      label="Net Result"
-                      value={formatChfCents(finData.netIncomeCents)}
-                      color={finData.netIncomeCents >= 0 ? "green" : "red"}
-                    />
-                  </div>
-
-                  {/* ── Layer 3: Detailed Breakdown (collapsed) ── */}
-                  <div className="mt-5 flex flex-col gap-3">
-                    <DetailSection title="Income Details">
-                      <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div>
-                          <span className="text-gray-500">Earned (paid)</span>
-                          <p className="font-semibold text-gray-900">{formatChfCents(finData.earnedIncomeCents)}</p>
-                        </div>
-                        <div>
-                          <span className="text-gray-500">Projected (full period)</span>
-                          <p className="font-semibold text-gray-900">{formatChfCents(finData.projectedIncomeCents)}</p>
-                        </div>
-                        <div>
-                          <span className="text-gray-500">Collection Rate</span>
-                          <p className="font-semibold text-gray-900">{formatPercent(finData.collectionRate)}</p>
-                        </div>
-                        <div>
-                          <span className="text-gray-500">Active Units</span>
-                          <p className="font-semibold text-gray-900">{finData.activeUnitsCount}</p>
-                        </div>
-                      </div>
-                    </DetailSection>
-
-                    <DetailSection title="Expense Breakdown">
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
-                        <div>
-                          <span className="text-gray-500">Maintenance</span>
-                          <p className="font-semibold text-gray-900">{formatChfCents(finData.maintenanceTotalCents)}</p>
-                        </div>
-                        <div>
-                          <span className="text-gray-500">Operating</span>
-                          <p className="font-semibold text-gray-900">{formatChfCents(finData.operatingTotalCents)}</p>
-                        </div>
-                        <div>
-                          <span className="text-gray-500">Capital Expenditure</span>
-                          <p className="font-semibold text-gray-900">{formatChfCents(finData.capexTotalCents)}</p>
-                        </div>
-                        <div>
-                          <span className="text-gray-500">Cost per Unit</span>
-                          <p className="font-semibold text-gray-900">{formatChfCents(finData.costPerUnitCents)}</p>
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4 text-sm mt-4">
-                        <div>
-                          <span className="text-gray-500">Net Operating Income</span>
-                          <p className="font-semibold text-gray-900">{formatChfCents(finData.netOperatingIncomeCents)}</p>
-                        </div>
-                        <div>
-                          <span className="text-gray-500">Maintenance Ratio</span>
-                          <p className="font-semibold text-gray-900">{formatPercent(finData.maintenanceRatio)}</p>
-                        </div>
-                      </div>
-                    </DetailSection>
-                  </div>
-
-                  {/* ── Tables ── */}
-                  <div className="mt-6 mb-2">
-                    <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wide">Expenses by Category</h3>
-                  </div>
-                  <Panel>
-                    {finData.expensesByCategory.length === 0 ? (
-                      <p className="text-gray-400 text-sm">No categorised expenses in this period.</p>
-                    ) : (
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="border-b border-gray-200 text-left">
-                            <th className="py-2 font-medium text-gray-600">Category</th>
-                            <th className="py-2 font-medium text-gray-600 text-right">Amount</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {finData.expensesByCategory.map((row) => (
-                            <tr key={row.category} className="border-b border-gray-100">
-                              <td className="py-2 text-gray-800">
-                                {CATEGORY_LABELS[row.category] || row.category}
-                              </td>
-                              <td className="py-2 text-gray-800 text-right font-mono">
-                                {formatChfCents(row.totalCents)}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    )}
-                  </Panel>
-
-                  <div className="mt-6 mb-2">
-                    <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wide">Top Contractors by Spend</h3>
-                  </div>
-                  <Panel>
-                    {finData.topContractorsBySpend.length === 0 ? (
-                      <p className="text-gray-400 text-sm">No contractor expenses in this period.</p>
-                    ) : (
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="border-b border-gray-200 text-left">
-                            <th className="py-2 font-medium text-gray-600">Contractor</th>
-                            <th className="py-2 font-medium text-gray-600 text-right">Total Spend</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {finData.topContractorsBySpend.map((row) => (
-                            <tr key={row.contractorId} className="border-b border-gray-100">
-                              <td className="py-2 text-gray-800">{row.contractorName}</td>
-                              <td className="py-2 text-gray-800 text-right font-mono">
-                                {formatChfCents(row.totalCents)}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    )}
-                  </Panel>
-                </>
-              )}
-            </>
+          {/* Financials tab — canonical view lives at manager/buildings/:id/financials */}
+          {activeTab === "Financials" && id && (
+            <Panel>
+              <div className="flex flex-col items-start gap-4">
+                <p className="text-sm text-slate-600">
+                  Full financial analysis including income, expenses, ledger breakdown, and health indicators.
+                </p>
+                <a
+                  href={`/manager/buildings/${id}/financials`}
+                  className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition-colors"
+                >
+                  Open Financial View →
+                </a>
+              </div>
+            </Panel>
           )}
         </PageContent>
         <UndoToast {...toast} />

@@ -8,6 +8,7 @@ import Panel from "../../components/layout/Panel.jsx";
 import { formatDateTime } from "../../lib/format";
 import { tenantFetch } from "../../lib/api";
 import { getNotificationLink } from "../../lib/notificationLinks";
+import TenantPicker from "../../components/TenantPicker";
 
 const EVENT_ICONS = {
   LEASE_READY_TO_SIGN: "📝",
@@ -190,9 +191,17 @@ export default function TenantInboxPage() {
     );
   }
 
+  function handleTenantSwitch() {
+    const raw = localStorage.getItem("tenantSession");
+    if (raw) {
+      try { setSession(JSON.parse(raw)); } catch { /* ignore */ }
+    }
+  }
+
   return (
     <AppShell role="TENANT">
       <PageShell>
+        <TenantPicker onSelect={handleTenantSwitch} />
         <PageHeader
           title={
             <span className="flex items-center gap-2">

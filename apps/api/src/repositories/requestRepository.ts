@@ -85,18 +85,10 @@ export const REQUEST_SUMMARY_INCLUDE = {
 
 /**
  * Build a Prisma WHERE clause that scopes Requests to a given org.
- * Since Request has no orgId column we filter through its nullable
- * FK chains: unit, tenant, appliance, assignedContractor.
+ * Request now has a direct orgId column (DT-114 migration).
  */
 export function requestOrgScopeWhere(orgId: string): Prisma.RequestWhereInput {
-  return {
-    OR: [
-      { unit: { orgId } },
-      { tenant: { orgId } },
-      { appliance: { orgId } },
-      { assignedContractor: { orgId } },
-    ],
-  };
+  return { orgId };
 }
 
 // ─── Query Functions ───────────────────────────────────────────
@@ -159,6 +151,7 @@ export async function findOwnerPendingApprovals(
 }
 
 export interface CreateRequestData {
+  orgId: string;
   description: string;
   category: string | null;
   estimatedCost: number | null;
@@ -175,6 +168,7 @@ export interface CreateRequestData {
 export async function createRequest(prisma: PrismaClient, data: CreateRequestData) {
   return prisma.request.create({
     data: {
+      orgId: data.orgId,
       description: data.description,
       category: data.category,
       estimatedCost: data.estimatedCost,

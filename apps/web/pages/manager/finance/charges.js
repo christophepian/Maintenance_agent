@@ -27,11 +27,24 @@ export default function ManagerChargesPage() {
   const [editForm, setEditForm] = useState({ chargesItems: [], chargesTotalChf: "", chargesSettlementDate: "" });
   const [saving, setSaving] = useState(false);
 
+  // COA filter (feature-flagged: only renders when expense types exist)
+  const [expenseTypeId, setExpenseTypeId] = useState("");
+  const [expenseTypes, setExpenseTypes] = useState([]);
+
+  useEffect(() => {
+    fetch("/api/coa/expense-types", { headers: authHeaders() })
+      .then((r) => r.json())
+      .then((data) => setExpenseTypes(data?.data || []))
+      .catch(() => {});
+  }, []);
+
   const loadData = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch("/api/leases?status=ACTIVE&limit=200", { headers: authHeaders() });
+      const params = new URLSearchParams({ status: "ACTIVE", limit: "200" });
+      if (expenseTypeId) params.set("expenseTypeId", expenseTypeId);
+      const res = await fetch(`/api/leases?${params.toString()}`, { headers: authHeaders() });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error?.message || "Failed to load leases");
       setLeases(data?.data || []);
@@ -40,7 +53,7 @@ export default function ManagerChargesPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [expenseTypeId]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -141,6 +154,38 @@ export default function ManagerChargesPage() {
             <Panel style={{ backgroundColor: "#fff0f0", borderColor: "#ffb3b3" }}>
               <strong className="text-err-text">Error:</strong> {error}
               <button onClick={() => setError("")} style={{ marginLeft: 12, fontSize: "0.85em" }}>Dismiss</button>
+            </Panel>
+          )}
+
+          {/* Filters — COA expense type (feature-flagged) */}
+          {expenseTypes.length > 0 && (
+            <Panel>
+              <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-end" }}>
+                <div>
+                  <label style={{ display: "block", fontSize: "0.8em", fontWeight: 600, marginBottom: 4 }}>Expense Type</label>
+                  <select
+                    value={expenseTypeId}
+                    onChange={(e) => setExpenseTypeId(e.target.value)}
+                    style={{ padding: "6px 10px", borderRadius: 4, border: "1px solid #ccc", fontSize: "0.9em", minWidth: 180 }}
+                  >
+                    <option value="">All expense types</option>
+                    {expenseTypes.map((et) => (
+                      <option key={et.id} value={et.id}>{et.code} — {et.name}</option>
+                    ))}
+                  </select>
+                </div>
+                {expenseTypeId && (
+                  <button
+                    onClick={() => setExpenseTypeId("")}
+                    style={{
+                      padding: "6px 14px", borderRadius: 4, fontSize: "0.85em",
+                      border: "1px solid #ccc", backgroundColor: "#f5f5f5", cursor: "pointer",
+                    }}
+                  >
+                    Clear filter
+                  </button>
+                )}
+              </div>
             </Panel>
           )}
 

@@ -1,60 +1,13 @@
 import * as http from "http";
-import { spawn, ChildProcessWithoutNullStreams } from "child_process";
-import * as path from "path";
+import { ChildProcessWithoutNullStreams } from 'child_process';
 import { PrismaClient } from "@prisma/client";
 import { computeEffectiveConfig } from "../services/buildingConfig";
 import { DEFAULT_ORG_ID } from "../services/orgConfig";
-import { createManagerToken, getAuthHeaders } from "./testHelpers";
+import { createManagerToken, getAuthHeaders, startTestServer, stopTestServer } from "./testHelpers";
 
-const API_ROOT = path.resolve(__dirname, "..", "..");
-const TS_NODE = path.resolve(API_ROOT, "node_modules", ".bin", "ts-node");
 const PORT = 3203;
 const BASE_URL = `http://127.0.0.1:${PORT}`;
 const prisma = new PrismaClient();
-
-function startServer(envOverrides: Record<string, string>, port: number) {
-  return new Promise<ChildProcessWithoutNullStreams>((resolve, reject) => {
-    const child = spawn(TS_NODE, ["--transpile-only", "src/server.ts"], {
-      cwd: API_ROOT,
-      env: {
-        ...process.env,
-        PORT: String(port),
-        AUTH_SECRET: "test-secret",
-        ...envOverrides,
-      },
-      stdio: ["ignore", "pipe", "pipe"],
-    });
-
-    const onData = (data: Buffer) => {
-      const text = data.toString();
-      if (text.includes("API running on")) {
-        cleanup();
-        resolve(child);
-      }
-    };
-
-    const onError = (err: Error) => {
-      cleanup();
-      reject(err);
-    };
-
-    const timeout = setTimeout(() => {
-      cleanup();
-      reject(new Error("Server did not start in time"));
-    }, 20000);
-
-    function cleanup() {
-      clearTimeout(timeout);
-      child.stdout?.off("data", onData);
-      child.stderr?.off("data", onData);
-      child.off("error", onError);
-    }
-
-    child.stdout?.on("data", onData);
-    child.stderr?.on("data", onData);
-    child.on("error", onError);
-  });
-}
 
 function httpRequest(method: string, path: string, body?: object): Promise<{ status: number; data: any }> {
   return new Promise((resolve, reject) => {
@@ -97,14 +50,12 @@ describe("Owner-direct foundations", () => {
   let buildingId: string;
 
   beforeAll(async () => {
-    proc = await startServer({ AUTH_OPTIONAL: "true", NODE_ENV: "test" }, PORT);
+    proc = await startTestServer(PORT, { AUTH_OPTIONAL: "true", NODE_ENV: "test" });
     // Reset org mode to MANAGED
     await httpRequest("PUT", "/org-config", { mode: "MANAGED" });
   }, 30000);
 
-  afterAll(() => {
-    proc?.kill();
-  });
+  afterAll(() => stopTestServer(proc));
 
   it("returns org mode default as MANAGED", async () => {
     const result = await httpRequest("GET", "/org-config");

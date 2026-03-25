@@ -6,57 +6,11 @@
  * Update contract expectations in the same PR as any DTO change.
  */
 
-import { spawn, ChildProcessWithoutNullStreams } from 'child_process';
-import * as path from 'path';
+import { ChildProcessWithoutNullStreams } from 'child_process';
+import { startTestServer, stopTestServer, createTenantToken, getAuthHeaders } from './testHelpers';
 
-const API_ROOT = path.resolve(__dirname, '..', '..');
-const TS_NODE = path.resolve(API_ROOT, 'node_modules', '.bin', 'ts-node');
 const PORT = 3205;
 const API_BASE = `http://127.0.0.1:${PORT}`;
-
-function startServer(envOverrides: Record<string, string>, port: number) {
-  return new Promise<ChildProcessWithoutNullStreams>((resolve, reject) => {
-    const child = spawn(TS_NODE, ['--transpile-only', 'src/server.ts'], {
-      cwd: API_ROOT,
-      env: {
-        ...process.env,
-        PORT: String(port),
-        AUTH_SECRET: 'test-secret',
-        ...envOverrides,
-      },
-      stdio: ['ignore', 'pipe', 'pipe'],
-    });
-
-    const onData = (data: Buffer) => {
-      const text = data.toString();
-      if (text.includes('API running on')) {
-        cleanup();
-        resolve(child);
-      }
-    };
-
-    const onError = (err: Error) => {
-      cleanup();
-      reject(err);
-    };
-
-    const cleanup = () => {
-      clearTimeout(timer);
-      child.stdout.off('data', onData);
-      child.stderr.off('data', onData);
-      child.off('error', onError);
-    };
-
-    child.stdout.on('data', onData);
-    child.stderr.on('data', onData);
-    child.on('error', onError);
-
-    const timer = setTimeout(() => {
-      cleanup();
-      reject(new Error('Server did not start within 15s'));
-    }, 15000);
-  });
-}
 
 async function fetchJson(path: string) {
   const res = await fetch(`${API_BASE}${path}`);
@@ -82,12 +36,10 @@ describe('G10: API Contract Tests', () => {
   let proc: ChildProcessWithoutNullStreams;
 
   beforeAll(async () => {
-    proc = await startServer({ AUTH_OPTIONAL: "true", NODE_ENV: "test" }, PORT);
+    proc = await startTestServer(PORT, { AUTH_OPTIONAL: "true", NODE_ENV: "test" });
   }, 20000);
 
-  afterAll(() => {
-    if (proc) proc.kill();
-  });
+  afterAll(() => stopTestServer(proc));
   // ── Requests ──
   describe('GET /requests?limit=1', () => {
     it('returns an array with expected request shape', async () => {
@@ -499,7 +451,7 @@ describe('G10: API Contract Tests', () => {
 
       if (body.data.notifications.length > 0) {
         const n = body.data.notifications[0];
-        expectKeys(n, ['id', 'orgId', 'userId', 'type', 'isRead', 'createdAt'], 'Notification');
+        expectKeys(n, ['id', 'orgId', 'userId', 'eventType', 'createdAt'], 'Notification');
       }
     });
   });
@@ -511,6 +463,58 @@ describe('G10: API Contract Tests', () => {
       const body = await res.json();
       expect(body).toHaveProperty('data');
       expect(typeof body.data.count).toBe('number');
+    });
+  });
+
+  // ── Tenant Portal Inbox ──
+  describe('GET /tenant-portal/notifications', () => {
+    it('returns envelope with notifications array and total', async () => {
+      const tenantToken = createTenantToken();
+      const res = await fetch(`${API_BASE}/tenant-portal/notifications`, {
+        headers: getAuthHeaders(tenantToken),
+      });
+      expect(res.ok).toBe(true);
+      const body = await res.json();
+      expect(body).toHaveProperty('data');
+      expect(body.data).toHaveProperty('notifications');
+      expect(Array.isArray(body.data.notifications)).toBe(true);
+      expect(typeof body.data.total).toBe('number');
+
+      if (body.data.notifications.length > 0) {
+        const n = body.data.notifications[0];
+        expectKeys(n, ['id', 'orgId', 'userId', 'eventType', 'createdAt'], 'TenantNotification');
+      }
+    });
+  });
+
+  describe('GET /tenant-portal/notifications/unread-count', () => {
+    it('returns { data: { count: <number> } }', async () => {
+      const tenantToken = createTenantToken();
+      const res = await fetch(`${API_BASE}/tenant-portal/notifications/unread-count`, {
+        headers: getAuthHeaders(tenantToken),
+      });
+      expect(res.ok).toBe(true);
+      const body = await res.json();
+      expect(body).toHaveProperty('data');
+      expect(typeof body.data.count).toBe('number');
+    });
+  });
+
+  describe('GET /tenant-portal/requests', () => {
+    it('returns envelope with requests array', async () => {
+      const tenantToken = createTenantToken();
+      const res = await fetch(`${API_BASE}/tenant-portal/requests`, {
+        headers: getAuthHeaders(tenantToken),
+      });
+      expect(res.ok).toBe(true);
+      const body = await res.json();
+      expect(body).toHaveProperty('data');
+      expect(Array.isArray(body.data)).toBe(true);
+
+      if (body.data.length > 0) {
+        const req = body.data[0];
+        expectKeys(req, ['id', 'status', 'description', 'createdAt'], 'TenantPortalRequest');
+      }
     });
   });
 

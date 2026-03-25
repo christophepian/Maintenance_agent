@@ -5,57 +5,11 @@
  * Requires the server to be running with test data seeded.
  */
 
-import { spawn, ChildProcessWithoutNullStreams } from "child_process";
-import * as path from "path";
+import { ChildProcessWithoutNullStreams } from 'child_process';
+import { startTestServer, stopTestServer } from './testHelpers';
 
-const API_ROOT = path.resolve(__dirname, "..", "..");
 const PORT = 3206;
 const API_BASE = `http://127.0.0.1:${PORT}`;
-
-function startServer(envOverrides: Record<string, string>, port: number) {
-  return new Promise<ChildProcessWithoutNullStreams>((resolve, reject) => {
-    const child = spawn("npx", ["tsx", "src/server.ts"], {
-      cwd: API_ROOT,
-      env: {
-        ...process.env,
-        PORT: String(port),
-        AUTH_OPTIONAL: "true",
-        BG_JOBS_ENABLED: "false",
-        ...envOverrides,
-      },
-      stdio: ["ignore", "pipe", "pipe"],
-    });
-
-    const onData = (data: Buffer) => {
-      const text = data.toString();
-      if (text.includes("API running on")) {
-        cleanup();
-        resolve(child);
-      }
-    };
-
-    const onError = (err: Error) => {
-      cleanup();
-      reject(err);
-    };
-
-    const cleanup = () => {
-      clearTimeout(timer);
-      child.stdout.off("data", onData);
-      child.stderr.off("data", onData);
-      child.off("error", onError);
-    };
-
-    child.stdout.on("data", onData);
-    child.stderr.on("data", onData);
-    child.on("error", onError);
-
-    const timer = setTimeout(() => {
-      cleanup();
-      reject(new Error("Server did not start within 20s"));
-    }, 20000);
-  });
-}
 
 async function fetchJson(path: string, opts?: RequestInit) {
   const res = await fetch(`${API_BASE}${path}`, opts);
@@ -72,12 +26,10 @@ describe("G10: Rental Application Contract Tests", () => {
   let proc: ChildProcessWithoutNullStreams;
 
   beforeAll(async () => {
-    proc = await startServer({}, PORT);
+    proc = await startTestServer(PORT);
   }, 25000);
 
-  afterAll(() => {
-    if (proc) proc.kill();
-  });
+  afterAll(() => stopTestServer(proc));
 
   // ── Vacant Units ──
   describe("GET /vacant-units", () => {

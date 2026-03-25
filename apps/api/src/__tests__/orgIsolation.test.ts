@@ -146,6 +146,42 @@ describe("resolveRequestOrg", () => {
     const result = await resolveRequestOrg(prisma, "nonexistent");
     expect(result).toEqual({ resolved: false, orgId: null, via: "none" });
   });
+
+  it("resolves directly from request.orgId (DT-114 direct column path)", async () => {
+    const prisma = mockPrisma({
+      requestFindUnique: jest.fn().mockResolvedValue({
+        orgId: ORG_A,
+        unitId: null,
+        tenantId: null,
+        applianceId: null,
+        assignedContractorId: null,
+        unit: null,
+        tenant: null,
+        appliance: null,
+        assignedContractor: null,
+      }),
+    });
+    const result = await resolveRequestOrg(prisma, "req-direct");
+    expect(result).toEqual({ resolved: true, orgId: ORG_A, via: "request" });
+  });
+
+  it("direct orgId takes priority over FK chains", async () => {
+    const prisma = mockPrisma({
+      requestFindUnique: jest.fn().mockResolvedValue({
+        orgId: ORG_A,
+        unitId: "u1",
+        tenantId: null,
+        applianceId: null,
+        assignedContractorId: null,
+        unit: { orgId: ORG_B }, // different org — should be ignored
+        tenant: null,
+        appliance: null,
+        assignedContractor: null,
+      }),
+    });
+    const result = await resolveRequestOrg(prisma, "req-priority");
+    expect(result).toEqual({ resolved: true, orgId: ORG_A, via: "request" });
+  });
 });
 
 // ────────────── resolveJobOrg ────────────────────────────────

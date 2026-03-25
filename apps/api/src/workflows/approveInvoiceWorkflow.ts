@@ -16,6 +16,7 @@ import { assertInvoiceTransition } from "./transitions";
 import { emit } from "../events/bus";
 import { getInvoice, approveInvoice } from "../services/invoices";
 import type { InvoiceDTO } from "../services/invoices";
+import { postInvoiceIssued } from "../services/ledgerService";
 
 // ─── Input / Output ────────────────────────────────────────────
 
@@ -33,7 +34,7 @@ export async function approveInvoiceWorkflow(
   ctx: WorkflowContext,
   input: ApproveInvoiceInput,
 ): Promise<ApproveInvoiceResult> {
-  const { orgId } = ctx;
+  const { orgId, prisma } = ctx;
   const { invoiceId } = input;
 
   // ── 1. Validate invoice exists and belongs to org ──────────
@@ -45,8 +46,19 @@ export async function approveInvoiceWorkflow(
   // ── 2. Transition guard ────────────────────────────────────
   assertInvoiceTransition(invoice.status, InvoiceStatus.APPROVED);
 
+  // Capture pre-approval status to detect auto-issue path
+  const wasAutoIssued = invoice.status === InvoiceStatus.DRAFT;
+
   // ── 3. Approve invoice (auto-issues if not yet issued) ─────
   const approved = await approveInvoice(invoiceId);
+
+  // ── 3a. Post INVOICE_ISSUED ledger entry when DRAFT was auto-issued ──
+  // DRAFT → APPROVED skips issueInvoiceWorkflow, so we must post here.
+  if (wasAutoIssued) {
+    postInvoiceIssued(prisma, orgId, approved).catch((err) =>
+      console.error("[LEDGER] Failed to post INVOICE_ISSUED (auto-issue path)", err),
+    );
+  }
 
   // ── 4. Emit event ──────────────────────────────────────────
   emit({

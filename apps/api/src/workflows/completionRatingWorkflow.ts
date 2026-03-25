@@ -20,6 +20,7 @@ import {
   findRatingForJobByRole,
 } from "../repositories/ratingRepository";
 import { createNotification } from "../services/notifications";
+import { issueInvoiceWorkflow } from "./issueInvoiceWorkflow";
 import type { JobDTO } from "../services/jobs";
 
 // ─── Error class ───────────────────────────────────────────────
@@ -186,6 +187,9 @@ export interface SubmitRatingInput {
   /** For CONTRACTOR: the contractorId; for TENANT: the tenantId */
   raterId: string;
   score: number;
+  scorePunctuality?: number | null;
+  scoreAccuracy?: number | null;
+  scoreCourtesy?: number | null;
   comment?: string;
 }
 
@@ -195,6 +199,9 @@ export interface SubmitRatingResult {
     jobId: string;
     raterRole: string;
     score: number;
+    scorePunctuality: number | null;
+    scoreAccuracy: number | null;
+    scoreCourtesy: number | null;
     comment: string | null;
     createdAt: string;
   };
@@ -250,6 +257,9 @@ export async function submitRatingWorkflow(
     jobId: input.jobId,
     raterRole: input.raterRole as RaterRole,
     score: input.score,
+    scorePunctuality: input.scorePunctuality ?? null,
+    scoreAccuracy:    input.scoreAccuracy    ?? null,
+    scoreCourtesy:    input.scoreCourtesy    ?? null,
     comment: input.comment ?? null,
   });
 
@@ -284,12 +294,41 @@ export async function submitRatingWorkflow(
     }
   }
 
+  // 7. Auto-issue draft invoice once BOTH parties have rated
+  //    This triggers the ledger posting for owner-addressed invoices.
+  try {
+    const otherRole: RaterRole =
+      input.raterRole === "CONTRACTOR" ? RaterRole.TENANT : RaterRole.CONTRACTOR;
+    const otherRating = await findRatingForJobByRole(prisma, input.jobId, otherRole);
+
+    if (otherRating) {
+      // Both rated — find the DRAFT invoice for this job and issue it
+      const draftInvoice = await prisma.invoice.findFirst({
+        where: { jobId: input.jobId, status: "DRAFT" },
+        select: { id: true },
+      });
+      if (draftInvoice) {
+        await issueInvoiceWorkflow(
+          { orgId, prisma, actorUserId: ctx.actorUserId ?? "system" },
+          { invoiceId: draftInvoice.id },
+        );
+        console.info(`[completionRating] Auto-issued invoice ${draftInvoice.id} after both parties rated job ${input.jobId}`);
+      }
+    }
+  } catch (err) {
+    // Non-blocking — invoice can still be issued manually
+    console.warn("[completionRating] Auto-invoice issue failed (non-blocking):", err);
+  }
+
   return {
     rating: {
       id: rating.id,
       jobId: rating.jobId,
       raterRole: rating.raterRole,
       score: rating.score,
+      scorePunctuality: rating.scorePunctuality,
+      scoreAccuracy:    rating.scoreAccuracy,
+      scoreCourtesy:    rating.scoreCourtesy,
       comment: rating.comment,
       createdAt: rating.createdAt.toISOString(),
     },

@@ -701,6 +701,24 @@ const html = `<!DOCTYPE html>
       </div></div>
     </div>
     <div class="section">
+      <div class="section-header"><span class="section-num">10b</span><span class="section-title">Invoice Lifecycle</span><div class="section-line"></div></div>
+      <div class="panel"><div class="panel-body">
+        <div class="flow" style="flex-wrap:wrap;gap:4px 0;margin-bottom:12px">
+          ${['Job COMPLETED','getOrCreateInvoiceForJob','DRAFT (submittedAt set)','Manager: POST /issue','ISSUED','Manager: POST /approve','APPROVED','Manager: POST /mark-paid','PAID'].map((s,i)=>`<div class="flow-node${i===0||i===8?' active':''}">${s}</div><div class="flow-arrow">→</div>`).join('').slice(0,-'<div class="flow-arrow">→</div>'.length)}
+        </div>
+        <div class="flow" style="flex-wrap:wrap;gap:4px 0;margin-bottom:12px">
+          ${['ISSUED or APPROVED','Manager: POST /dispute','DISPUTED','Manager: POST /approve','APPROVED (re-instated)'].map((s,i)=>`<div class="flow-node${i===0||i===4?' active':''}">${s}</div><div class="flow-arrow">→</div>`).join('').slice(0,-'<div class="flow-arrow">→</div>'.length)}
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;font-size:11px;margin-bottom:12px">
+          ${[['DRAFT','Invoice auto-created when job completes. submittedAt stamped. Contractor sees it as submitted.','#374151'],['ISSUED','Manager locked the invoice: invoice number assigned, issueDate set, IBAN attached.','#1d4ed8'],['APPROVED','Manager verified amount. Triggers INVOICE_ISSUED ledger entry (Dr Expense / Cr Payable).','#15803d'],['PAID','Payment confirmed. Triggers INVOICE_PAID ledger entry (Dr Payable / Cr Bank).','#14532d'],['DISPUTED','Amount or work contested. Can return to APPROVED or DRAFT.','#991b1b']].map(([s,d,c])=>`<div style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:8px"><div style="font-family:'IBM Plex Mono',mono;font-size:10px;color:${c};font-weight:600;margin-bottom:4px">${s}</div><div style="color:var(--text);line-height:1.4">${d}</div></div>`).join('')}
+        </div>
+        <div class="flow" style="flex-wrap:wrap;gap:4px 0">
+          ${['DRAFT → ISSUED','issueInvoiceWorkflow','auto-resolves BillingEntity from contractor'].map((s,i)=>`<div class="flow-node">${s}</div><div class="flow-arrow">→</div>`).join('').slice(0,-'<div class="flow-arrow">→</div>'.length)}
+        </div>
+        <div class="note" style="margin-top:8px">Ledger auto-posting: ISSUED fires Dr Expense (4200) / Cr Payable (2000). PAID fires Dr Payable (2000) / Cr Bank (1020). Posting is best-effort — silently skipped if COA not seeded. Use POST /ledger/backfill to seed COA + post historical entries.</div>
+      </div></div>
+    </div>
+    <div class="section">
       <div class="section-header"><span class="section-num">11</span><span class="section-title">Legal Auto-Routing</span><div class="section-line"></div></div>
       <div class="panel"><div class="panel-body">
         <div class="flow" style="flex-wrap:wrap;gap:4px 0">

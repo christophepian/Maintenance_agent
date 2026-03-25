@@ -151,6 +151,7 @@ export async function updateContractorRequestStatus(
 
 function toDTO(r: {
   id: string;
+  orgId: string;
   requestNumber: number;
   description: string;
   category: string | null;
@@ -167,6 +168,7 @@ function toDTO(r: {
 }): MaintenanceRequestDTO {
   return {
     id: r.id,
+    orgId: r.orgId,
     requestNumber: r.requestNumber,
     description: r.description,
     category: r.category ?? undefined,

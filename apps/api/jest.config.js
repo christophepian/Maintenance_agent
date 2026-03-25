@@ -6,4 +6,5 @@ module.exports = {
   roots: ['<rootDir>/src'],
   testTimeout: 30000,
   maxWorkers: 1,
+  setupFiles: ['<rootDir>/src/__tests__/jestSetup.ts'],
 };

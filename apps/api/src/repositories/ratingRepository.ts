@@ -49,6 +49,9 @@ export async function createRating(
     jobId: string;
     raterRole: RaterRole;
     score: number;
+    scorePunctuality?: number | null;
+    scoreAccuracy?: number | null;
+    scoreCourtesy?: number | null;
     comment?: string | null;
   },
 ) {
@@ -58,6 +61,9 @@ export async function createRating(
       jobId: data.jobId,
       raterRole: data.raterRole,
       score: data.score,
+      scorePunctuality: data.scorePunctuality ?? null,
+      scoreAccuracy:    data.scoreAccuracy    ?? null,
+      scoreCourtesy:    data.scoreCourtesy    ?? null,
       comment: data.comment ?? null,
     },
     include: RATING_INCLUDE,

@@ -38,6 +38,22 @@ function emptyApplicant(role = "PRIMARY") {
 
 const TOTAL_STEPS = 3;
 
+/**
+ * Normalizes a date string to YYYY-MM-DD (what the backend Zod schema accepts).
+ * Handles:
+ *   "1985-03-15"  → "1985-03-15"  (already correct)
+ *   "15.03.1985"  → "1985-03-15"  (European DD.MM.YYYY from OCR)
+ *   ""  / null    → undefined      (optional field — strip from payload)
+ */
+function normalizeBirthdate(raw) {
+  if (!raw) return undefined;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw; // already YYYY-MM-DD
+  // Try DD.MM.YYYY (common Swiss/European OCR output)
+  const m = raw.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+  if (m) return `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`;
+  return undefined; // unknown format — drop rather than send invalid value
+}
+
 export default function ApplyPage() {
   const router = useRouter();
   const [step, setStep] = useState(1);
@@ -344,10 +360,11 @@ export default function ApplyPage() {
         unitIds: validUnitIds,
         applicants: applicants.map((a) => ({
           ...a,
-          // Backend expects "birthdate" not "dateOfBirth"
-          birthdate: a.dateOfBirth || undefined,
+          // Backend expects "birthdate" not "dateOfBirth", must be YYYY-MM-DD
+          birthdate: normalizeBirthdate(a.dateOfBirth),
           dateOfBirth: undefined,
-          netMonthlyIncome: Number(a.netMonthlyIncome) || 0,
+          // Backend requires integer income (Zod .int()); round OCR floats
+          netMonthlyIncome: Math.round(Number(a.netMonthlyIncome)) || 0,
           employedSince: a.employedSince || undefined,
           permitType: a.permitType || undefined,
           // Strip empty strings for fields with strict Zod validators
@@ -355,7 +372,7 @@ export default function ApplyPage() {
           phone: a.phone || undefined,
         })),
         ...household,
-        householdSize: Number(household.householdSize) || 1,
+        householdSize: Math.round(Number(household.householdSize)) || 1,
         desiredMoveInDate: household.desiredMoveInDate || undefined,
       };
 

@@ -1,27 +1,39 @@
 /**
  * Email Transport Service
  *
- * Bridges the EmailOutbox (DB queue) with an actual SMTP transport.
+ * Bridges the EmailOutbox (DB queue) with an actual delivery provider.
  *
- * Design:
- *  • If SMTP_HOST is set, uses nodemailer with real SMTP credentials.
- *  • If SMTP_HOST is not set, uses a "dev console" transport that logs
- *    to stdout — no emails leave the machine in development.
- *  • `sendEmail(emailId)` — sends one PENDING email, marks SENT/FAILED.
- *  • `flushPendingEmails()` — processes all PENDING outbox items.
- *  • `trySendImmediate(emailId)` — fire-and-forget for inline use.
+ * Provider priority (first match wins):
+ *  1. Resend  — when RESEND_API_KEY is set
+ *  2. SMTP    — when SMTP_HOST is set (nodemailer)
+ *  3. Dev console — fallback; logs to stdout, nothing leaves the machine
+ *
+ * Retry logic:
+ *  • Each failed send increments retryCount on the EmailOutbox row.
+ *  • After MAX_RETRY_COUNT failures the record is marked FAILED permanently.
+ *
+ * Public API:
+ *  • `sendEmail(emailId)`        — send one PENDING email
+ *  • `flushPendingEmails()`      — process all PENDING outbox items
+ *  • `trySendImmediate(emailId)` — fire-and-forget for inline use
  *
  * Layer: service (calls emailOutbox service + prismaClient).
  *
  * Env vars (see .env.example):
+ *   RESEND_API_KEY, EMAIL_FROM_ADDRESS
  *   SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, EMAIL_FROM
  */
 
 import * as nodemailer from "nodemailer";
 import { Transporter } from "nodemailer";
+import { Resend } from "resend";
 import { EmailOutboxStatus } from "@prisma/client";
 import prisma from "./prismaClient";
 import { markEmailSent, markEmailFailed } from "./emailOutbox";
+
+/* ── Constants ─────────────────────────────────────────────── */
+
+const MAX_RETRY_COUNT = 3;
 
 /* ── Configuration ─────────────────────────────────────────── */
 
@@ -51,58 +63,59 @@ export function getSmtpConfig(): SmtpConfig | null {
   };
 }
 
-/* ── Transport singleton ───────────────────────────────────── */
-
-let _transporter: Transporter | null = null;
-let _isDevMode = false;
-
 /**
- * Returns true if SMTP is configured and transport is available.
+ * Returns the FROM address to use when sending.
+ * Priority: EMAIL_FROM_ADDRESS > SMTP config from > hard-coded default.
  */
-export function isSmtpConfigured(): boolean {
-  return getSmtpConfig() !== null;
+function getFromAddress(): string {
+  if (process.env.EMAIL_FROM_ADDRESS) return process.env.EMAIL_FROM_ADDRESS;
+  const smtp = getSmtpConfig();
+  if (smtp?.from) return smtp.from;
+  return "noreply@maintenance-agent.ch";
 }
 
-/**
- * Creates or returns the cached nodemailer transporter.
- * In dev mode (no SMTP_HOST), returns a "console" transport that
- * logs email details to stdout.
- */
+/* ── Provider detection ────────────────────────────────────── */
+
+type Provider = "resend" | "smtp" | "dev";
+
+function detectProvider(): Provider {
+  if (process.env.RESEND_API_KEY) return "resend";
+  if (process.env.SMTP_HOST) return "smtp";
+  return "dev";
+}
+
+/* ── SMTP transport singleton ──────────────────────────────── */
+
+let _transporter: Transporter | null = null;
+
 export function getTransporter(): Transporter {
   if (_transporter) return _transporter;
 
   const config = getSmtpConfig();
-
   if (config) {
     _transporter = nodemailer.createTransport({
       host: config.host,
       port: config.port,
       secure: config.secure,
-      auth: {
-        user: config.user,
-        pass: config.pass,
-      },
+      auth: { user: config.user, pass: config.pass },
     });
-    _isDevMode = false;
     console.log(`📧 Email transport: SMTP → ${config.host}:${config.port}`);
   } else {
-    // Dev console transport — logs but doesn't send
-    _transporter = nodemailer.createTransport({
-      jsonTransport: true,
-    });
-    _isDevMode = true;
-    console.log("📧 Email transport: dev console (SMTP_HOST not set — emails logged to stdout)");
+    _transporter = nodemailer.createTransport({ jsonTransport: true });
+    console.log("📧 Email transport: dev console (no provider configured — emails logged to stdout)");
   }
 
   return _transporter;
 }
 
-/**
- * Returns true if the transport is in dev/console mode.
- */
+/* ── Legacy helpers (kept for external callers) ────────────── */
+
+export function isSmtpConfigured(): boolean {
+  return getSmtpConfig() !== null;
+}
+
 export function isDevMode(): boolean {
-  getTransporter(); // ensure initialized
-  return _isDevMode;
+  return detectProvider() === "dev";
 }
 
 /* ── Send functions ────────────────────────────────────────── */
@@ -115,8 +128,29 @@ export interface SendResult {
 }
 
 /**
+ * Increment retryCount, then mark FAILED if we've hit the limit.
+ * Returns true if the record was permanently failed (caller should stop retrying).
+ */
+async function handleFailedAttempt(emailId: string, errorMessage: string): Promise<boolean> {
+  const updated = await prisma.emailOutbox.update({
+    where: { id: emailId },
+    data: { retryCount: { increment: 1 } },
+    select: { retryCount: true },
+  });
+
+  if (updated.retryCount >= MAX_RETRY_COUNT) {
+    await markEmailFailed(emailId);
+    console.error(`📧 Email ${emailId} permanently FAILED after ${updated.retryCount} attempts: ${errorMessage}`);
+    return true;
+  }
+
+  console.warn(`📧 Email ${emailId} send failed (attempt ${updated.retryCount}/${MAX_RETRY_COUNT}): ${errorMessage}`);
+  return false;
+}
+
+/**
  * Send a single email by its outbox ID.
- * Loads the record from DB, sends via transport, marks SENT or FAILED.
+ * Loads the record from DB, sends via the active provider, marks SENT or increments retry/FAILED.
  */
 export async function sendEmail(emailId: string): Promise<SendResult> {
   const email = await prisma.emailOutbox.findUnique({
@@ -131,10 +165,36 @@ export async function sendEmail(emailId: string): Promise<SendResult> {
     return { emailId, success: false, error: `Email status is ${email.status}, not PENDING` };
   }
 
-  const config = getSmtpConfig();
-  const from = config?.from || "noreply@maintenance-agent.ch";
-  const transport = getTransporter();
+  const provider = detectProvider();
+  const from = getFromAddress();
 
+  /* ── Resend ── */
+  if (provider === "resend") {
+    const resend = new Resend(process.env.RESEND_API_KEY!);
+    try {
+      const { data, error } = await resend.emails.send({
+        from,
+        to: [email.toEmail],
+        subject: email.subject,
+        text: email.bodyText,
+      });
+
+      if (error) {
+        await handleFailedAttempt(emailId, error.message);
+        return { emailId, success: false, error: error.message };
+      }
+
+      await markEmailSent(emailId);
+      return { emailId, success: true, messageId: data?.id };
+    } catch (err: any) {
+      const msg = err?.message || String(err);
+      await handleFailedAttempt(emailId, msg);
+      return { emailId, success: false, error: msg };
+    }
+  }
+
+  /* ── SMTP / dev console ── */
+  const transport = getTransporter();
   try {
     const info = await transport.sendMail({
       from,
@@ -143,29 +203,17 @@ export async function sendEmail(emailId: string): Promise<SendResult> {
       text: email.bodyText,
     });
 
-    if (_isDevMode) {
+    if (provider === "dev") {
       console.log(`📧 [DEV] Email → ${email.toEmail} | Subject: ${email.subject}`);
       console.log(`   Template: ${email.template} | ID: ${email.id}`);
     }
 
     await markEmailSent(emailId);
-
-    return {
-      emailId,
-      success: true,
-      messageId: info.messageId || info.message,
-    };
+    return { emailId, success: true, messageId: info.messageId || info.message };
   } catch (err: any) {
-    const errorMessage = err?.message || String(err);
-    console.error(`📧 FAILED to send email ${emailId}: ${errorMessage}`);
-
-    await markEmailFailed(emailId);
-
-    return {
-      emailId,
-      success: false,
-      error: errorMessage,
-    };
+    const msg = err?.message || String(err);
+    await handleFailedAttempt(emailId, msg);
+    return { emailId, success: false, error: msg };
   }
 }
 
@@ -201,7 +249,6 @@ export async function flushPendingEmails(): Promise<SendResult[]> {
 /**
  * Fire-and-forget send for inline use after enqueueEmail().
  * Does not throw — logs errors silently.
- * This is used to attempt immediate delivery after enqueueing.
  */
 export async function trySendImmediate(emailId: string): Promise<void> {
   try {
@@ -218,5 +265,4 @@ export async function trySendImmediate(emailId: string): Promise<void> {
  */
 export function _resetTransport(): void {
   _transporter = null;
-  _isDevMode = false;
 }

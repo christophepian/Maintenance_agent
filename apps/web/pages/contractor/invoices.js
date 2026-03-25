@@ -322,9 +322,10 @@ export default function ContractorInvoices() {
                       </div>
 
                       <div className="space-y-1 text-xs text-gray-500">
-                        <p>Submitted: {invoice.submittedAt ? formatDate(invoice.submittedAt) : "Pending"}</p>
+                        <p>Submitted: {invoice.submittedAt ? formatDate(invoice.submittedAt) : formatDate(invoice.createdAt)}</p>
+                        {invoice.issueDate  && <p>Issued: {formatDate(invoice.issueDate)}</p>}
                         {invoice.approvedAt && <p>Approved: {formatDate(invoice.approvedAt)}</p>}
-                        {invoice.paidAt && <p className="font-semibold text-green-700">Paid: {formatDate(invoice.paidAt)}</p>}
+                        {invoice.paidAt     && <p className="font-semibold text-green-700">Paid: {formatDate(invoice.paidAt)}</p>}
                       </div>
 
                       {invoice.status === "DISPUTED" && (

@@ -105,10 +105,20 @@ export async function proxyToBackend(req, res, path, options = {}) {
     }
   } catch (error) {
     console.error("[proxyToBackend] Error:", error);
-    res.status(500).json({
-      error: "PROXY_ERROR",
-      message: "Failed to connect to backend API",
-      details: error.message,
-    });
+
+    // Detect connection-refused errors and return a clear message
+    const isConnRefused = error.code === 'ECONNREFUSED' ||
+      (error.cause && error.cause.code === 'ECONNREFUSED') ||
+      (error.message && error.message.includes('ECONNREFUSED'));
+
+    if (isConnRefused) {
+      res.status(503).json({
+        error: { code: "API_UNAVAILABLE", message: "Backend API is not running. Start it with: cd apps/api && npx tsx src/server.ts" },
+      });
+    } else {
+      res.status(500).json({
+        error: { code: "PROXY_ERROR", message: "Failed to connect to backend API", details: error.message },
+      });
+    }
   }
 }

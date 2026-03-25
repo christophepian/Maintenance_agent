@@ -3,6 +3,7 @@ import { useRouter } from "next/router";
 import AppShell from "../../components/AppShell";
 import { formatDate, formatChf } from "../../lib/format";
 import { tenantFetch } from "../../lib/api";
+import TenantPicker from "../../components/TenantPicker";
 
 const STATUS_LABELS = {
   DRAFT: "Draft",
@@ -77,9 +78,17 @@ export default function TenantInvoicesPage() {
     );
   }
 
+  function handleTenantSwitch() {
+    const raw = localStorage.getItem("tenantSession");
+    if (raw) {
+      try { setSession(JSON.parse(raw)); } catch { /* ignore */ }
+    }
+  }
+
   return (
     <AppShell role="TENANT">
       <div className="main-container">
+        <TenantPicker onSelect={handleTenantSwitch} />
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold">My Invoices</h1>
           <span className="text-sm text-gray-500">

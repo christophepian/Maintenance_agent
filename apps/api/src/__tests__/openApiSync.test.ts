@@ -129,6 +129,9 @@ describe("OpenAPI spec ↔ Router sync", () => {
     "GET /buildings/:id/owners/candidates",
     "POST /buildings/:id/owners",
     "DELETE /buildings/:id/owners/:userId",
+    "POST /tenant-portal/requests",
+    "GET /buildings/:id/financial-summary",
+    "POST /ledger/backfill",
   ]);
 
   it("every code route has a spec entry", () => {

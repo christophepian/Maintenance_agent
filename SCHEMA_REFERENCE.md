@@ -5,11 +5,11 @@
 
 ## Database Schema (Prisma)
 
-**Status: ACTIVE AND IN USE — 40 migrations + `db push` for LKDE tables (shadow DB issue with legacy Lease migration prevents `migrate dev`)**
+**Status: ACTIVE AND IN USE — 53 migrations**
 
-**Last verified:** 2026-03-17
+**Last verified:** 2026-03-25
 
-### Models (48 total)
+### Models (53 total)
 
 | Model | Key Fields | Relations |
 |-------|-----------|-----------|
@@ -31,7 +31,7 @@
 | **RequestEvent** | requestId, type (RequestEventType), contractorId (required), message | → Request, Contractor |
 | **Event** | orgId, type, actorUserId?, requestId?, payload (JSON) | (standalone) |
 | **Job** | orgId, requestId (unique), **contractorId** (required), status, actualCost, startedAt?, completedAt? | → Request, Contractor, Invoices |
-| **Invoice** | orgId, **jobId** (required), leaseId?, issuer fields, recipient fields, amounts in cents, status, lineItems | → Job, Lease, BillingEntity, InvoiceLineItems |
+| **Invoice** | orgId, **jobId** (required), leaseId?, issuer fields, recipient fields, amounts in cents, status, lineItems, **expenseTypeId?**, **accountId?** | → Job, Lease, BillingEntity, InvoiceLineItems, ExpenseType?, Account? |
 | **InvoiceLineItem** | invoiceId, description, quantity, unitPrice (cents), vatRate, lineTotal | → Invoice |
 | **BillingEntity** | orgId, type, contractorId?, name, address, iban, vatNumber | → Org, Contractor |
 | **ApprovalRule** | orgId, buildingId?, name, priority, conditions (JSON), action, isActive | → Org, Building |
@@ -59,8 +59,14 @@
 | **Rfp** | orgId, buildingId (required), requestId?, unitId?, category, legalObligation (LegalObligation), status (RfpStatus), inviteCount (default 3), deadlineAt?, awardedContractorId? | → Org, Building, Request, Unit, RfpInvites, RfpQuotes |
 | **RfpInvite** | rfpId, contractorId, status (RfpInviteStatus) | → Rfp, Contractor |
 | **RfpQuote** | rfpId, contractorId, amountCents (Int), notes?, submittedAt | → Rfp, Contractor |
+| **AppointmentSlot** | orgId, jobId, startTime, endTime, status (SlotStatus, default PROPOSED), respondedAt? | → Job, Org |
+| **JobRating** | orgId, jobId, raterRole (RaterRole), score (Int), comment? | → Job, Org (@@unique jobId+raterRole) |
+| **ExpenseType** | orgId, name, description?, code?, isActive | → Org, ExpenseMappings, Invoices (@@unique orgId+name) |
+| **Account** | orgId, name, code?, accountType (default EXPENSE), isActive | → Org, ExpenseMappings, Invoices (@@unique orgId+name) |
+| **ExpenseMapping** | orgId, expenseTypeId, accountId, buildingId? (null=org-wide default) | → Org, ExpenseType, Account, Building? (@@unique orgId+expenseTypeId+buildingId) |
+| **LeaseExpenseItem** | leaseId, expenseTypeId?, accountId?, description, mode (ChargeMode: ACOMPTE/FORFAIT), amountChf, isActive | → Lease, ExpenseType?, Account? |
 
-### Key Enums (41 total)
+### Key Enums (42 total)
 - `RequestStatus`: PENDING_REVIEW, AUTO_APPROVED, APPROVED, **RFP_PENDING**, ASSIGNED, IN_PROGRESS, COMPLETED, PENDING_OWNER_APPROVAL, **OWNER_REJECTED**
 - `ApprovalSource`: SYSTEM_AUTO, OWNER_APPROVED, OWNER_REJECTED, LEGAL_OBLIGATION
 - `PayingParty`: LANDLORD, TENANT
@@ -99,6 +105,9 @@
 - `RfpStatus`: DRAFT, OPEN, CLOSED, AWARDED, CANCELLED
 - `RfpInviteStatus`: INVITED, DECLINED, RESPONDED
 - `LegalRuleScope`: FEDERAL, CANTONAL
+- `SlotStatus`: PROPOSED, ACCEPTED, DECLINED, EXPIRED
+- `RaterRole`: TENANT, MANAGER
+- `ChargeMode`: ACOMPTE, FORFAIT
 
 ### ⚠️ Schema Gotchas (fields that DON'T exist where you'd expect)
 - **`Request` has NO `orgId`** — requests are not directly org-scoped (they inherit scope through unit/building)

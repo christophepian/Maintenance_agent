@@ -1,0 +1,2 @@
+-- This migration was applied manually; the SQL was executed directly.
+-- Marking as applied to unblock Prisma migrate.

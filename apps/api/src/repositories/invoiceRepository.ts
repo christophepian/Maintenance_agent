@@ -19,6 +19,8 @@ import { PrismaClient, InvoiceStatus } from "@prisma/client";
  */
 export const INVOICE_FULL_INCLUDE = {
   lineItems: true,
+  classifiedExpenseType: true,
+  classifiedAccount: true,
 } as const;
 
 /**

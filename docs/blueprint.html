@@ -112,31 +112,31 @@
   <!-- HEADER -->
   <div class="header">
     <div>
-      <div class="live-badge"><span class="live-dot"></span> LIVE — generated 2026-03-21 16:42:39 UTC</div>
+      <div class="live-badge"><span class="live-dot"></span> LIVE — generated 2026-03-25 15:55:25 UTC</div>
       <div class="doc-label">Architecture Blueprint · Tech Lead Reference</div>
       <div class="doc-title">Maintenance Agent</div>
       <div class="doc-subtitle">Full-stack property maintenance platform — Swiss market</div>
     </div>
     <div class="header-meta">
       <div>Branch <span class="meta-val">main</span></div>
-      <div>Commit <span class="meta-val">0839f59</span></div>
-      <div>Last commit <span class="meta-val">2026-03-20</span></div>
-      <div>Doc verified <span class="meta-val">2026-03-21 (audit remediation + roadmap pipeline status rename)</span></div>
-      <div>Backend <span class="meta-val">43,995 LOC</span></div>
-      <div>Frontend <span class="meta-val">30,129 LOC</span></div>
+      <div>Commit <span class="meta-val">cbe8b48</span></div>
+      <div>Last commit <span class="meta-val">2026-03-22</span></div>
+      <div>Doc verified <span class="meta-val">2026-03-23 (General Ledger epic complete — Swiss COA expansion, LedgerEntry schema + migration, double-entry auto-posting, ledger API routes, journal + trial-balance UI)</span></div>
+      <div>Backend <span class="meta-val">47,271 LOC</span></div>
+      <div>Frontend <span class="meta-val">33,013 LOC</span></div>
     </div>
   </div>
 
   <!-- STAT STRIP -->
   <div class="stat-grid">
-    <div class="stat-cell"><span class="stat-num blue">48</span><span class="stat-label">Models</span></div>
-    <div class="stat-cell"><span class="stat-num cyan">41</span><span class="stat-label">Enums</span></div>
-    <div class="stat-cell"><span class="stat-num green">162</span><span class="stat-label">API Routes</span></div>
-    <div class="stat-cell"><span class="stat-num amber">210</span><span class="stat-label">FE Pages</span></div>
+    <div class="stat-cell"><span class="stat-num blue">53</span><span class="stat-label">Models</span></div>
+    <div class="stat-cell"><span class="stat-num cyan">42</span><span class="stat-label">Enums</span></div>
+    <div class="stat-cell"><span class="stat-num green">174</span><span class="stat-label">API Routes</span></div>
+    <div class="stat-cell"><span class="stat-num amber">229</span><span class="stat-label">FE Pages</span></div>
     <div class="stat-cell"><span class="stat-num purple">23</span><span class="stat-label">Workflows</span></div>
-    <div class="stat-cell"><span class="stat-num ">13</span><span class="stat-label">Repositories</span></div>
-    <div class="stat-cell"><span class="stat-num ">493</span><span class="stat-label">Tests</span></div>
-    <div class="stat-cell"><span class="stat-num ">38</span><span class="stat-label">Suites</span></div>
+    <div class="stat-cell"><span class="stat-num ">16</span><span class="stat-label">Repositories</span></div>
+    <div class="stat-cell"><span class="stat-num ">579</span><span class="stat-label">Tests</span></div>
+    <div class="stat-cell"><span class="stat-num ">43</span><span class="stat-label">Suites</span></div>
   </div>
 
   <!-- TABS -->
@@ -162,8 +162,8 @@
         </div>
         <div class="layer-connector">↓ registers all route modules</div>
         <div class="layer">
-          <div class="layer-label">routes (16)</div>
-          <div class="layer-content"><div class="box accent-blue">auth</div><div class="box accent-blue">config</div><div class="box accent-blue">inventory</div><div class="box accent-blue">request</div><div class="box accent-blue">tenant</div><div class="box accent-blue">invoice</div><div class="box accent-blue">contractor</div><div class="box accent-blue">notification</div><div class="box accent-blue">lease</div><div class="box accent-blue">rental</div><div class="box accent-blue">rent estimation</div><div class="box accent-blue">financial</div><div class="box accent-blue">legal</div><div class="box accent-blue">maintenance attachment</div><div class="box accent-blue">scheduling</div><div class="box accent-blue">completion</div></div>
+          <div class="layer-label">routes (18)</div>
+          <div class="layer-content"><div class="box accent-blue">auth</div><div class="box accent-blue">config</div><div class="box accent-blue">inventory</div><div class="box accent-blue">request</div><div class="box accent-blue">tenant</div><div class="box accent-blue">invoice</div><div class="box accent-blue">contractor</div><div class="box accent-blue">notification</div><div class="box accent-blue">lease</div><div class="box accent-blue">rental</div><div class="box accent-blue">rent estimation</div><div class="box accent-blue">financial</div><div class="box accent-blue">legal</div><div class="box accent-blue">maintenance attachment</div><div class="box accent-blue">scheduling</div><div class="box accent-blue">completion</div><div class="box accent-blue">coa</div><div class="box accent-blue">ledger</div></div>
         </div>
         <div class="layer-connector">↓ thin HTTP handlers only</div>
         <div class="layer">
@@ -177,19 +177,19 @@
         </div>
         <div class="layer-connector">↓ domain logic — no raw Prisma calls</div>
         <div class="layer">
-          <div class="layer-label">repositories (13)</div>
-          <div class="layer-content"><div class="box accent-amber">assetRepository</div><div class="box accent-amber">contractorRepository</div><div class="box accent-amber">inventoryRepository</div><div class="box accent-amber">invoiceRepository</div><div class="box accent-amber">jobRepository</div><div class="box accent-amber">leaseRepository</div><div class="box accent-amber">legalSourceRepository</div><div class="box accent-amber">maintenanceAttachmentRepo</div><div class="box accent-amber">ratingRepository</div><div class="box accent-amber">rentalApplicationRepository</div><div class="box accent-amber">requestRepository</div><div class="box accent-amber">rfpRepository</div><div class="box accent-amber">schedulingRepository</div></div>
+          <div class="layer-label">repositories (16)</div>
+          <div class="layer-content"><div class="box accent-amber">accountRepository</div><div class="box accent-amber">assetRepository</div><div class="box accent-amber">contractorRepository</div><div class="box accent-amber">expenseMappingRepository</div><div class="box accent-amber">expenseTypeRepository</div><div class="box accent-amber">inventoryRepository</div><div class="box accent-amber">invoiceRepository</div><div class="box accent-amber">jobRepository</div><div class="box accent-amber">leaseRepository</div><div class="box accent-amber">legalSourceRepository</div><div class="box accent-amber">maintenanceAttachmentRepo</div><div class="box accent-amber">ratingRepository</div><div class="box accent-amber">rentalApplicationRepository</div><div class="box accent-amber">requestRepository</div><div class="box accent-amber">rfpRepository</div><div class="box accent-amber">schedulingRepository</div></div>
         </div>
         <div class="layer-connector">↓ canonical Prisma access + include constants (G9)</div>
         <div class="layer">
           <div class="layer-label">data / events</div>
           <div class="layer-content">
-            <div class="box accent-purple">Prisma ORM + PostgreSQL 16<small>48 models · 41 enums · 42 migrations</small></div>
+            <div class="box accent-purple">Prisma ORM + PostgreSQL 16<small>53 models · 42 enums · 53 migrations</small></div>
             <div class="box accent-purple">Domain Event Bus<small>15 event types</small></div>
           </div>
         </div>
       </div>
-      <div class="success-note">0 TypeScript errors · 493 tests passing · openapi.yaml synced</div>
+      <div class="success-note">0 TypeScript errors · 579 tests passing · openapi.yaml synced</div>
     </div>
 
     <div class="section">
@@ -230,7 +230,7 @@
       <div class="layer-diagram">
         <div class="layer">
           <div class="layer-label">browser</div>
-          <div class="layer-content"><div class="box accent-blue">Next.js Pages Router<small>~210 pages (UI + API proxies) · AppShell role-scoped sidebar</small></div></div>
+          <div class="layer-content"><div class="box accent-blue">Next.js Pages Router<small>~229 pages (UI + API proxies) · AppShell role-scoped sidebar</small></div></div>
         </div>
         <div class="layer-connector">↓ pages/api/* — 103/106 use proxyToBackend()</div>
         <div class="layer">
@@ -270,16 +270,16 @@
   <!-- ══ DATABASE ══ -->
   <div class="tab-pane" id="tab-database">
     <div class="section">
-      <div class="section-header"><span class="section-num">05</span><span class="section-title">Schema Overview — 48 models · 41 enums</span><div class="section-line"></div></div>
+      <div class="section-header"><span class="section-num">05</span><span class="section-title">Schema Overview — 53 models · 42 enums</span><div class="section-line"></div></div>
       <div class="three-col">
         
     <div class="panel">
       <div class="panel-head">
         <div class="panel-head-dot" style="background:var(--accent-blue)"></div>
         <div class="panel-head-title">Core Domain</div>
-        <div class="panel-head-count">13 models</div>
+        <div class="panel-head-count">14 models</div>
       </div>
-      <div class="panel-body"><div class="tag-list"><span class="tag blue">RequestEvent</span><span class="tag blue">Request</span><span class="tag blue">Job</span><span class="tag blue">Invoice</span><span class="tag blue">InvoiceLineItem</span><span class="tag blue">Lease</span><span class="tag blue">SignatureRequest</span><span class="tag blue">RentalApplication</span><span class="tag blue">RentalApplicant</span><span class="tag blue">RentalAttachment</span><span class="tag blue">RentalApplicationUnit</span><span class="tag blue">RentalOwnerSelection</span><span class="tag blue">JobRating</span></div></div>
+      <div class="panel-body"><div class="tag-list"><span class="tag blue">RequestEvent</span><span class="tag blue">Request</span><span class="tag blue">Job</span><span class="tag blue">Invoice</span><span class="tag blue">InvoiceLineItem</span><span class="tag blue">Lease</span><span class="tag blue">LeaseExpenseItem</span><span class="tag blue">SignatureRequest</span><span class="tag blue">RentalApplication</span><span class="tag blue">RentalApplicant</span><span class="tag blue">RentalAttachment</span><span class="tag blue">RentalApplicationUnit</span><span class="tag blue">RentalOwnerSelection</span><span class="tag blue">JobRating</span></div></div>
     </div>
         
     <div class="panel">
@@ -432,8 +432,8 @@
       <div class="panel"><div class="panel-body mono">
         <span class="dim">Maintenance_Agent/</span><br>
         &nbsp;&nbsp;<span class="hi-blue">apps/api/src/</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="dim">routes/ · workflows/ · services/ · repositories/ · events/ · governance/</span><br>
-        &nbsp;&nbsp;<span class="hi-blue">apps/api/prisma/</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="dim">schema.prisma · migrations/ (42 dirs)</span><br>
-        &nbsp;&nbsp;<span class="hi-cyan">apps/web/pages/</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="dim">~210 pages (UI + API proxies)</span><br>
+        &nbsp;&nbsp;<span class="hi-blue">apps/api/prisma/</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="dim">schema.prisma · migrations/ (53 dirs)</span><br>
+        &nbsp;&nbsp;<span class="hi-cyan">apps/web/pages/</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="dim">~229 pages (UI + API proxies)</span><br>
         &nbsp;&nbsp;<span class="hi-cyan">apps/web/components/</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="dim">AppShell · layout primitives · shared UI</span><br>
         &nbsp;&nbsp;<span class="hi-cyan">apps/web/styles/</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="dim">managerStyles.js (locked — F8)</span><br>
         &nbsp;&nbsp;<span class="hi-green">packages/api-client/</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="dim">typed DTO types + fetch methods</span><br>
@@ -454,6 +454,24 @@
         <div class="flow" style="flex-wrap:wrap;gap:4px 0">
           <div class="flow-node">Assign contractor</div><div class="flow-arrow">→</div><div class="flow-node">Job CREATED</div><div class="flow-arrow">→</div><div class="flow-node">Contractor executes</div><div class="flow-arrow">→</div><div class="flow-node">IN_PROGRESS</div><div class="flow-arrow">→</div><div class="flow-node">COMPLETE</div><div class="flow-arrow">→</div><div class="flow-node">Invoice DRAFT → PAID</div><div class="flow-arrow">→</div><div class="flow-node active">Request CLOSED</div>
         </div>
+      </div></div>
+    </div>
+    <div class="section">
+      <div class="section-header"><span class="section-num">10b</span><span class="section-title">Invoice Lifecycle</span><div class="section-line"></div></div>
+      <div class="panel"><div class="panel-body">
+        <div class="flow" style="flex-wrap:wrap;gap:4px 0;margin-bottom:12px">
+          <div class="flow-node active">Job COMPLETED</div><div class="flow-arrow">→</div><div class="flow-node">getOrCreateInvoiceForJob</div><div class="flow-arrow">→</div><div class="flow-node">DRAFT (submittedAt set)</div><div class="flow-arrow">→</div><div class="flow-node">Manager: POST /issue</div><div class="flow-arrow">→</div><div class="flow-node">ISSUED</div><div class="flow-arrow">→</div><div class="flow-node">Manager: POST /approve</div><div class="flow-arrow">→</div><div class="flow-node">APPROVED</div><div class="flow-arrow">→</div><div class="flow-node">Manager: POST /mark-paid</div><div class="flow-arrow">→</div><div class="flow-node active">PAID</div>
+        </div>
+        <div class="flow" style="flex-wrap:wrap;gap:4px 0;margin-bottom:12px">
+          <div class="flow-node active">ISSUED or APPROVED</div><div class="flow-arrow">→</div><div class="flow-node">Manager: POST /dispute</div><div class="flow-arrow">→</div><div class="flow-node">DISPUTED</div><div class="flow-arrow">→</div><div class="flow-node">Manager: POST /approve</div><div class="flow-arrow">→</div><div class="flow-node active">APPROVED (re-instated)</div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;font-size:11px;margin-bottom:12px">
+          <div style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:8px"><div style="font-family:'IBM Plex Mono',mono;font-size:10px;color:#374151;font-weight:600;margin-bottom:4px">DRAFT</div><div style="color:var(--text);line-height:1.4">Invoice auto-created when job completes. submittedAt stamped. Contractor sees it as submitted.</div></div><div style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:8px"><div style="font-family:'IBM Plex Mono',mono;font-size:10px;color:#1d4ed8;font-weight:600;margin-bottom:4px">ISSUED</div><div style="color:var(--text);line-height:1.4">Manager locked the invoice: invoice number assigned, issueDate set, IBAN attached.</div></div><div style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:8px"><div style="font-family:'IBM Plex Mono',mono;font-size:10px;color:#15803d;font-weight:600;margin-bottom:4px">APPROVED</div><div style="color:var(--text);line-height:1.4">Manager verified amount. Triggers INVOICE_ISSUED ledger entry (Dr Expense / Cr Payable).</div></div><div style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:8px"><div style="font-family:'IBM Plex Mono',mono;font-size:10px;color:#14532d;font-weight:600;margin-bottom:4px">PAID</div><div style="color:var(--text);line-height:1.4">Payment confirmed. Triggers INVOICE_PAID ledger entry (Dr Payable / Cr Bank).</div></div><div style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:8px"><div style="font-family:'IBM Plex Mono',mono;font-size:10px;color:#991b1b;font-weight:600;margin-bottom:4px">DISPUTED</div><div style="color:var(--text);line-height:1.4">Amount or work contested. Can return to APPROVED or DRAFT.</div></div>
+        </div>
+        <div class="flow" style="flex-wrap:wrap;gap:4px 0">
+          <div class="flow-node">DRAFT → ISSUED</div><div class="flow-arrow">→</div><div class="flow-node">issueInvoiceWorkflow</div><div class="flow-arrow">→</div><div class="flow-node">auto-resolves BillingEntity from contractor</div>
+        </div>
+        <div class="note" style="margin-top:8px">Ledger auto-posting: ISSUED fires Dr Expense (4200) / Cr Payable (2000). PAID fires Dr Payable (2000) / Cr Bank (1020). Posting is best-effort — silently skipped if COA not seeded. Use POST /ledger/backfill to seed COA + post historical entries.</div>
       </div></div>
     </div>
     <div class="section">
@@ -549,7 +567,7 @@
 
   <!-- FOOTER -->
   <div style="margin-top:40px;padding-top:16px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;font-family:'IBM Plex Mono',mono;font-size:10px;color:var(--text-dim)">
-    <div>Maintenance Agent · Architecture Blueprint · 2026-03-21 16:42:39 UTC · branch: main @ 0839f59</div>
+    <div>Maintenance Agent · Architecture Blueprint · 2026-03-25 15:55:25 UTC · branch: main @ cbe8b48</div>
     <div style="display:flex;gap:14px">
       <span style="color:#5ed9a0">● Implemented</span>
       <span style="color:#f5c060">● Partial / Exception</span>

@@ -172,3 +172,25 @@ export const ReadyToSignSchema = z.object({
 export type CreateLeasePayload = z.infer<typeof CreateLeaseSchema>;
 export type UpdateLeasePayload = z.infer<typeof UpdateLeaseSchema>;
 export type ReadyToSignPayload = z.infer<typeof ReadyToSignSchema>;
+
+// ─── LeaseExpenseItem schemas ────────────────────────────
+
+export const CreateExpenseItemSchema = z.object({
+  description: z.string().min(1, "description is required"),
+  amountChf: z.number().positive("amountChf must be positive"),
+  mode: z.enum(["ACOMPTE", "FORFAIT"]).optional(),
+  expenseTypeId: z.string().uuid().optional(),
+  accountId: z.string().uuid().optional(),
+});
+
+export const UpdateExpenseItemSchema = z.object({
+  description: z.string().min(1).optional(),
+  amountChf: z.number().positive().optional(),
+  mode: z.enum(["ACOMPTE", "FORFAIT"]).optional(),
+  expenseTypeId: z.string().uuid().nullable().optional(),
+  accountId: z.string().uuid().nullable().optional(),
+  isActive: z.boolean().optional(),
+});
+
+export type CreateExpenseItemPayload = z.infer<typeof CreateExpenseItemSchema>;
+export type UpdateExpenseItemPayload = z.infer<typeof UpdateExpenseItemSchema>;

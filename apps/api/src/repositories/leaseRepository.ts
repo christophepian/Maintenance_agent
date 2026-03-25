@@ -17,6 +17,7 @@ import { PrismaClient, LeaseStatus, RequestStatus, JobStatus } from "@prisma/cli
 /** Full include for single-lease and full-list views. */
 export const LEASE_FULL_INCLUDE = {
   unit: { include: { building: true } },
+  expenseItems: { include: { expenseType: true, account: true } },
 } as const;
 
 // ─── Query Helpers ─────────────────────────────────────────────
@@ -48,6 +49,7 @@ export async function listLeases(
     status?: string;
     unitId?: string;
     applicationId?: string;
+    expenseTypeId?: string;
     limit?: number;
     offset?: number;
   } = {},
@@ -56,7 +58,7 @@ export async function listLeases(
   if (filters.status) where.status = filters.status;
   if (filters.unitId) where.unitId = filters.unitId;
   if (filters.applicationId) where.applicationId = filters.applicationId;
-
+  if (filters.expenseTypeId) where.expenseItems = { some: { expenseTypeId: filters.expenseTypeId } };
   return prisma.lease.findMany({
     where,
     include: LEASE_FULL_INCLUDE,
@@ -213,12 +215,13 @@ export async function findOrCreateAdminContractor(
 export async function countLeases(
   prisma: PrismaClient,
   orgId: string,
-  filters: { status?: string; unitId?: string; applicationId?: string } = {},
+  filters: { status?: string; unitId?: string; applicationId?: string; expenseTypeId?: string } = {},
 ) {
   const where: any = { orgId, isTemplate: false };
   if (filters.status) where.status = filters.status;
   if (filters.unitId) where.unitId = filters.unitId;
   if (filters.applicationId) where.applicationId = filters.applicationId;
+  if (filters.expenseTypeId) where.expenseItems = { some: { expenseTypeId: filters.expenseTypeId } };
   return prisma.lease.count({ where });
 }
 

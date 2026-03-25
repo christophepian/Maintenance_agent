@@ -55,6 +55,80 @@ function DepreciationBar({ depreciation }) {
   );
 }
 
+function DepreciationDetail({ depreciation, installedAt }) {
+  if (!depreciation && !installedAt) {
+    return (
+      <div className="rounded-lg border border-gray-100 bg-gray-50 px-4 py-3">
+        <p className="text-xs text-gray-400 italic">Install date unknown — depreciation cannot be computed.</p>
+      </div>
+    );
+  }
+  if (!depreciation) {
+    return (
+      <div className="rounded-lg border border-gray-100 bg-gray-50 px-4 py-3">
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-gray-500">Installed:</span>
+          <span className="text-xs font-medium">{formatDate(installedAt)}</span>
+        </div>
+        <p className="mt-1 text-xs text-gray-400 italic">No depreciation standard mapped for this asset type/topic.</p>
+      </div>
+    );
+  }
+
+  const { usefulLifeMonths, ageMonths, depreciationPct, residualPct } = depreciation;
+  const ageYears = (ageMonths / 12).toFixed(1);
+  const lifeYears = (usefulLifeMonths / 12).toFixed(1);
+  const remainingMonths = Math.max(0, usefulLifeMonths - ageMonths);
+  const remainingYears = (remainingMonths / 12).toFixed(1);
+  const isFullyDepreciated = depreciationPct >= 100;
+
+  const barColor =
+    depreciationPct < 40 ? "bg-emerald-500" :
+    depreciationPct < 70 ? "bg-amber-500" :
+    "bg-red-500";
+
+  return (
+    <div className="rounded-lg border border-gray-100 bg-gray-50 px-4 py-3 space-y-2">
+      <div className="flex items-center justify-between">
+        <h5 className="text-xs font-semibold text-gray-600">Useful Life / Depreciation</h5>
+        {isFullyDepreciated && (
+          <span className="text-[10px] font-semibold uppercase tracking-wide bg-red-100 text-red-700 border border-red-200 px-2 py-0.5 rounded-full">
+            Fully depreciated
+          </span>
+        )}
+      </div>
+
+      {/* Progress bar */}
+      <div className="flex items-center gap-3">
+        <div className="flex-1 h-3 bg-gray-200 rounded-full overflow-hidden" title={`${depreciationPct}% depreciated`}>
+          <div className={`h-full rounded-full transition-all ${barColor}`} style={{ width: `${Math.min(depreciationPct, 100)}%` }} />
+        </div>
+        <span className="text-xs font-semibold text-gray-700 whitespace-nowrap w-10 text-right">
+          {depreciationPct}%
+        </span>
+      </div>
+
+      {/* Summary stats */}
+      <div className="grid grid-cols-3 gap-3 text-xs">
+        <div>
+          <span className="text-gray-500">Time in service</span>
+          <div className="font-semibold text-gray-800">{ageYears} / {lifeYears} years</div>
+        </div>
+        <div>
+          <span className="text-gray-500">Remaining life</span>
+          <div className={`font-semibold ${isFullyDepreciated ? "text-red-600" : "text-gray-800"}`}>
+            {isFullyDepreciated ? "0 years" : `${remainingYears} years`}
+          </div>
+        </div>
+        <div>
+          <span className="text-gray-500">Residual value</span>
+          <div className="font-semibold text-gray-800">{residualPct}%</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function InterventionList({ interventions }) {
   if (!interventions || interventions.length === 0) {
     return <p className="text-xs text-gray-400 italic">No interventions recorded</p>;
@@ -465,6 +539,9 @@ export default function AssetInventoryPanel({ assets, onRefresh, scope, parentId
                           <div className="col-span-2"><span className="text-gray-500">Notes:</span> <span>{asset.notes}</span></div>
                         )}
                       </div>
+
+                      {/* Depreciation detail */}
+                      <DepreciationDetail depreciation={asset.depreciation} installedAt={asset.installedAt} />
 
                       {/* Intervention history */}
                       <div>

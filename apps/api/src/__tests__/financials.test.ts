@@ -102,7 +102,26 @@ describe("Financial Performance Engine", () => {
     );
     paidInvoiceId = invoice[0].id;
 
-    // 5. Active lease on the unit (covers full year 2025, 2000 CHF/month net)
+    // 5b. Account + LedgerEntry (mimics what postInvoiceIssued would create)
+    const account = await prisma.account.create({
+      data: { orgId, name: "Maintenance Expense", code: "4000", accountType: "EXPENSE" },
+    });
+    await prisma.ledgerEntry.create({
+      data: {
+        orgId,
+        buildingId,
+        accountId: account.id,
+        sourceType: "INVOICE_ISSUED",
+        sourceId: paidInvoiceId,
+        date: new Date("2025-01-15T00:00:00.000Z"),
+        debitCents: 53850,
+        creditCents: 0,
+        description: "Burst pipe repair invoice",
+        journalId: `journal-fin-${Date.now()}`,
+      },
+    });
+
+    // 6. Active lease on the unit (covers full year 2025, 2000 CHF/month net)
     const lease = await prisma.lease.create({
       data: {
         orgId,
@@ -125,6 +144,7 @@ describe("Financial Performance Engine", () => {
   afterAll(async () => {
     // Clean up in reverse dependency order
     await prisma.buildingFinancialSnapshot.deleteMany({ where: { orgId } }).catch(() => {});
+    await prisma.ledgerEntry.deleteMany({ where: { orgId } }).catch(() => {});
     await prisma.invoice.deleteMany({ where: { orgId } }).catch(() => {});
     await prisma.job.deleteMany({ where: { orgId } }).catch(() => {});
     await prisma.request.deleteMany({ where: { unitId } }).catch(() => {});
@@ -132,6 +152,7 @@ describe("Financial Performance Engine", () => {
     await prisma.unit.deleteMany({ where: { buildingId } }).catch(() => {});
     await prisma.building.delete({ where: { id: buildingId } }).catch(() => {});
     await prisma.contractor.deleteMany({ where: { orgId } }).catch(() => {});
+    await prisma.account.deleteMany({ where: { orgId } }).catch(() => {});
     await prisma.org.delete({ where: { id: orgId } }).catch(() => {});
     await prisma.$disconnect();
   });
@@ -335,6 +356,78 @@ describe("Financial Performance Engine", () => {
       });
       await prisma.building.delete({ where: { id: emptyBuilding.id } });
     }
+  });
+
+  // ── Income breakdown: rentalIncomeCents vs serviceChargeIncomeCents ──
+  it("separates rental income from service charge income", async () => {
+    // Lease: netRentChf=2000, chargesTotalChf=200 (full Jan 2025)
+    // rentalIncomeCents should be 2000*100 = 200000, serviceChargeIncomeCents = 200*100 = 20000
+    const result = await getBuildingFinancials(orgId, buildingId, {
+      from: "2025-01-01",
+      to: "2025-02-01",
+      forceRefresh: true,
+    });
+
+    expect(result.rentalIncomeCents).toBe(200000);
+    expect(result.serviceChargeIncomeCents).toBe(20000);
+    // Together they match projectedIncomeCents
+    expect(result.rentalIncomeCents + result.serviceChargeIncomeCents).toBe(
+      result.projectedIncomeCents,
+    );
+  });
+
+  // ── receivablesCents: 0 when no ISSUED lease invoices ──
+  it("receivablesCents is 0 when no ISSUED lease invoices exist", async () => {
+    // Note: Invoice.jobId is NOT NULL in the schema, so pure lease invoices cannot
+    // be created without a job. receivablesCents correctly returns 0 here.
+    const result = await getBuildingFinancials(orgId, buildingId, {
+      from: "2025-01-01",
+      to: "2025-02-01",
+    });
+
+    expect(result.receivablesCents).toBe(0);
+    expect(typeof result.receivablesCents).toBe("number");
+  });
+
+  // ── payablesCents: counts APPROVED job invoices as payables ──
+  it("counts APPROVED job invoices as payables", async () => {
+    // Create a second job invoice with status APPROVED (unpaid)
+    const approvedInvoice = await prisma.$queryRawUnsafe<Array<{ id: string }>>(
+      `INSERT INTO "Invoice" (id, "orgId", "jobId", description, "recipientName", "recipientAddressLine1",
+       "recipientPostalCode", "recipientCity", "subtotalAmount", "vatAmount", "totalAmount",
+       amount, status, "createdAt", "updatedAt")
+       VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12::"InvoiceStatus", NOW(), NOW())
+       RETURNING id`,
+      orgId, jobId,
+      "Plumbing quote pending payment",
+      "Fix-It Contractor", "1 Workshop Rd", "8000", "Zurich",
+      10000, 770, 10770, 10770,
+      "APPROVED",
+    );
+    const approvedInvoiceId = approvedInvoice[0].id;
+
+    try {
+      const result = await getBuildingFinancials(orgId, buildingId, {
+        from: "2025-01-01",
+        to: "2025-02-01",
+        forceRefresh: true,
+      });
+
+      expect(result.payablesCents).toBe(10770);
+    } finally {
+      await prisma.invoice.delete({ where: { id: approvedInvoiceId } });
+    }
+  });
+
+  // ── payablesCents: 0 when all job invoices are PAID ──
+  it("payablesCents is 0 when all job invoices are PAID", async () => {
+    const result = await getBuildingFinancials(orgId, buildingId, {
+      from: "2025-01-01",
+      to: "2025-02-01",
+    });
+
+    // The seeded job invoice is PAID, so payablesCents should be 0
+    expect(result.payablesCents).toBe(0);
   });
 
   // ── NotFoundError for non-existent building ──

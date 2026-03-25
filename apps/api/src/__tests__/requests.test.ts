@@ -1,56 +1,9 @@
 import * as http from "http";
-import { spawn, ChildProcessWithoutNullStreams } from "child_process";
-import * as path from "path";
-import { createManagerToken, getAuthHeaders } from "./testHelpers";
+import { ChildProcessWithoutNullStreams } from 'child_process';
+import { createManagerToken, getAuthHeaders, startTestServer, stopTestServer } from "./testHelpers";
 
-const API_ROOT = path.resolve(__dirname, "..", "..");
-const TS_NODE = path.resolve(API_ROOT, "node_modules", ".bin", "ts-node");
 const PORT = 3201;
 const BASE_URL = `http://127.0.0.1:${PORT}`;
-
-function startServer(envOverrides: Record<string, string>, port: number) {
-  return new Promise<ChildProcessWithoutNullStreams>((resolve, reject) => {
-    const child = spawn(TS_NODE, ["--transpile-only", "src/server.ts"], {
-      cwd: API_ROOT,
-      env: {
-        ...process.env,
-        PORT: String(port),
-        AUTH_SECRET: "test-secret",
-        ...envOverrides,
-      },
-      stdio: ["ignore", "pipe", "pipe"],
-    });
-
-    const onData = (data: Buffer) => {
-      const text = data.toString();
-      if (text.includes("API running on")) {
-        cleanup();
-        resolve(child);
-      }
-    };
-
-    const onError = (err: Error) => {
-      cleanup();
-      reject(err);
-    };
-
-    const timeout = setTimeout(() => {
-      cleanup();
-      reject(new Error("Server did not start in time"));
-    }, 15000);
-
-    function cleanup() {
-      clearTimeout(timeout);
-      child.stdout?.off("data", onData);
-      child.stderr?.off("data", onData);
-      child.off("error", onError);
-    }
-
-    child.stdout?.on("data", onData);
-    child.stderr?.on("data", onData);
-    child.on("error", onError);
-  });
-}
 
 // Helper for promise-based HTTP requests
 function apiRequest(
@@ -83,7 +36,7 @@ describe("Requests API Integration Tests", () => {
   let unitId: string;
 
   beforeAll(async () => {
-    proc = await startServer({ AUTH_OPTIONAL: "true", NODE_ENV: "test" }, PORT);
+    proc = await startTestServer(PORT, { AUTH_OPTIONAL: "true", NODE_ENV: "test" });
 
     // Create a building + unit for request creation tests
     const bRes = await apiRequest("POST", "/buildings", {
@@ -98,9 +51,7 @@ describe("Requests API Integration Tests", () => {
     unitId = uRes.data.data.id;
   }, 20000);
 
-  afterAll(() => {
-    proc?.kill();
-  });
+  afterAll(() => stopTestServer(proc));
 
   it("should fetch requests list (GET /requests)", (done) => {
     http.get(`${BASE_URL}/requests`, (res) => {

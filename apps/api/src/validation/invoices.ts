@@ -30,6 +30,8 @@ export const CreateInvoiceSchema = z
     issueDate: z.string().datetime().optional(),
     dueDate: z.string().datetime().optional(),
     vatRate: z.number().min(0).max(100).optional(),
+    expenseTypeId: z.string().uuid().optional(),
+    accountId: z.string().uuid().optional(),
     lineItems: z.array(LineItemSchema).optional(),
   })
   .refine((data) => data.amount !== undefined || (data.lineItems && data.lineItems.length > 0), {
@@ -51,6 +53,8 @@ export const UpdateInvoiceSchema = z.object({
   issueDate: z.string().datetime().nullable().optional(),
   dueDate: z.string().datetime().nullable().optional(),
   vatRate: z.number().min(0).max(100).optional(),
+  expenseTypeId: z.string().uuid().nullable().optional(),
+  accountId: z.string().uuid().nullable().optional(),
   lineItems: z.array(LineItemSchema).optional(),
 });
 

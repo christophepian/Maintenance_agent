@@ -20,9 +20,23 @@ export type ContractorCompleteInput = z.infer<typeof ContractorCompleteSchema>;
 
 // ─── Rating submission ─────────────────────────────────────────
 
-export const SubmitRatingSchema = z.object({
-  score: z.number().int().min(1).max(5),
-  comment: z.string().max(1000).optional(),
-});
+const criterionScore = () => z.number().int().min(1).max(5);
+
+export const SubmitRatingSchema = z
+  .object({
+    // Per-criteria scores (preferred from UI — 3 placeholder criteria)
+    scorePunctuality: criterionScore().optional(),
+    scoreAccuracy:    criterionScore().optional(),
+    scoreCourtesy:    criterionScore().optional(),
+    // Overall score: required if criteria absent; auto-computed as average otherwise
+    score:   z.number().int().min(1).max(5).optional(),
+    comment: z.string().max(1000).optional(),
+  })
+  .refine(
+    (d) =>
+      d.score != null ||
+      (d.scorePunctuality != null && d.scoreAccuracy != null && d.scoreCourtesy != null),
+    { message: "Provide either score or all three criteria scores" },
+  );
 
 export type SubmitRatingInput = z.infer<typeof SubmitRatingSchema>;

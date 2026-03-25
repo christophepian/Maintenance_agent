@@ -122,6 +122,24 @@ export interface LeaseDTO {
       address: string;
     };
   };
+
+  // Structured expense items (replaces chargesItems Json)
+  expenseItems?: LeaseExpenseItemDTO[];
+}
+
+export interface LeaseExpenseItemDTO {
+  id: string;
+  leaseId: string;
+  description: string;
+  amountChf: number;
+  mode: string;
+  expenseTypeId?: string;
+  accountId?: string;
+  expenseType?: { id: string; name: string; code?: string };
+  account?: { id: string; name: string; code?: string };
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 // ==========================================
@@ -224,6 +242,29 @@ export function mapLeaseToDTO(lease: any): LeaseDTO {
         address: lease.unit.building.address,
       } : undefined,
     } : undefined,
+
+    expenseItems: lease.expenseItems?.map((item: any) => ({
+      id: item.id,
+      leaseId: item.leaseId,
+      description: item.description,
+      amountChf: item.amountChf,
+      mode: item.mode,
+      expenseTypeId: item.expenseTypeId || undefined,
+      accountId: item.accountId || undefined,
+      expenseType: item.expenseType ? {
+        id: item.expenseType.id,
+        name: item.expenseType.name,
+        code: item.expenseType.code || undefined,
+      } : undefined,
+      account: item.account ? {
+        id: item.account.id,
+        name: item.account.name,
+        code: item.account.code || undefined,
+      } : undefined,
+      isActive: item.isActive,
+      createdAt: item.createdAt.toISOString(),
+      updatedAt: item.updatedAt.toISOString(),
+    })) || undefined,
   };
 }
 
@@ -360,6 +401,7 @@ export interface ListLeasesFilter {
   status?: string;
   unitId?: string;
   applicationId?: string;
+  expenseTypeId?: string;
   limit?: number;
   offset?: number;
 }
@@ -370,6 +412,7 @@ export async function listLeases(orgId: string, filter: ListLeasesFilter = {}): 
       status: filter.status,
       unitId: filter.unitId,
       applicationId: filter.applicationId,
+      expenseTypeId: filter.expenseTypeId,
       limit: filter.limit,
       offset: filter.offset,
     }),
@@ -377,6 +420,7 @@ export async function listLeases(orgId: string, filter: ListLeasesFilter = {}): 
       status: filter.status,
       unitId: filter.unitId,
       applicationId: filter.applicationId,
+      expenseTypeId: filter.expenseTypeId,
     }),
   ]);
 
@@ -1095,4 +1139,149 @@ export async function createLeaseFromTemplate(
   }
 
   return mapLeaseToDTO(lease);
+}
+
+// ==========================================
+// LeaseExpenseItem CRUD
+// ==========================================
+
+export interface CreateExpenseItemInput {
+  description: string;
+  amountChf: number;
+  mode?: 'ACOMPTE' | 'FORFAIT';
+  expenseTypeId?: string;
+  accountId?: string;
+}
+
+export interface UpdateExpenseItemInput {
+  description?: string;
+  amountChf?: number;
+  mode?: 'ACOMPTE' | 'FORFAIT';
+  expenseTypeId?: string | null;
+  accountId?: string | null;
+  isActive?: boolean;
+}
+
+const EXPENSE_ITEM_INCLUDE = {
+  expenseType: true,
+  account: true,
+} as const;
+
+export async function createLeaseExpenseItem(
+  orgId: string,
+  leaseId: string,
+  input: CreateExpenseItemInput,
+): Promise<LeaseExpenseItemDTO> {
+  const lease = await prisma.lease.findUnique({ where: { id: leaseId } });
+  if (!lease) throw new Error(`Lease not found: ${leaseId}`);
+  if (lease.orgId !== orgId) throw new Error('Lease does not belong to this org');
+
+  if (input.expenseTypeId) {
+    const et = await prisma.expenseType.findUnique({ where: { id: input.expenseTypeId } });
+    if (!et || et.orgId !== orgId) throw new Error(`ExpenseType not found or wrong org: ${input.expenseTypeId}`);
+  }
+  if (input.accountId) {
+    const acc = await prisma.account.findUnique({ where: { id: input.accountId } });
+    if (!acc || acc.orgId !== orgId) throw new Error(`Account not found or wrong org: ${input.accountId}`);
+  }
+
+  const item = await prisma.leaseExpenseItem.create({
+    data: {
+      lease: { connect: { id: leaseId } },
+      description: input.description,
+      amountChf: input.amountChf,
+      mode: input.mode || 'ACOMPTE',
+      ...(input.expenseTypeId ? { expenseType: { connect: { id: input.expenseTypeId } } } : {}),
+      ...(input.accountId ? { account: { connect: { id: input.accountId } } } : {}),
+    },
+    include: EXPENSE_ITEM_INCLUDE,
+  });
+
+  return mapExpenseItemToDTO(item);
+}
+
+export async function updateLeaseExpenseItem(
+  orgId: string,
+  leaseId: string,
+  itemId: string,
+  input: UpdateExpenseItemInput,
+): Promise<LeaseExpenseItemDTO> {
+  const lease = await prisma.lease.findUnique({ where: { id: leaseId } });
+  if (!lease) throw new Error(`Lease not found: ${leaseId}`);
+  if (lease.orgId !== orgId) throw new Error('Lease does not belong to this org');
+
+  const existing = await prisma.leaseExpenseItem.findUnique({ where: { id: itemId } });
+  if (!existing) throw new Error(`Expense item not found: ${itemId}`);
+  if (existing.leaseId !== leaseId) throw new Error('Expense item does not belong to this lease');
+
+  const data: any = {};
+  if (input.description !== undefined) data.description = input.description;
+  if (input.amountChf !== undefined) data.amountChf = input.amountChf;
+  if (input.mode !== undefined) data.mode = input.mode;
+  if (input.isActive !== undefined) data.isActive = input.isActive;
+
+  if (input.expenseTypeId === null) {
+    data.expenseType = { disconnect: true };
+  } else if (input.expenseTypeId) {
+    const et = await prisma.expenseType.findUnique({ where: { id: input.expenseTypeId } });
+    if (!et || et.orgId !== orgId) throw new Error(`ExpenseType not found or wrong org: ${input.expenseTypeId}`);
+    data.expenseType = { connect: { id: input.expenseTypeId } };
+  }
+
+  if (input.accountId === null) {
+    data.account = { disconnect: true };
+  } else if (input.accountId) {
+    const acc = await prisma.account.findUnique({ where: { id: input.accountId } });
+    if (!acc || acc.orgId !== orgId) throw new Error(`Account not found or wrong org: ${input.accountId}`);
+    data.account = { connect: { id: input.accountId } };
+  }
+
+  const item = await prisma.leaseExpenseItem.update({
+    where: { id: itemId },
+    data,
+    include: EXPENSE_ITEM_INCLUDE,
+  });
+
+  return mapExpenseItemToDTO(item);
+}
+
+export async function deleteLeaseExpenseItem(
+  orgId: string,
+  leaseId: string,
+  itemId: string,
+): Promise<void> {
+  const lease = await prisma.lease.findUnique({ where: { id: leaseId } });
+  if (!lease) throw new Error(`Lease not found: ${leaseId}`);
+  if (lease.orgId !== orgId) throw new Error('Lease does not belong to this org');
+
+  const existing = await prisma.leaseExpenseItem.findUnique({ where: { id: itemId } });
+  if (!existing) throw new Error(`Expense item not found: ${itemId}`);
+  if (existing.leaseId !== leaseId) throw new Error('Expense item does not belong to this lease');
+
+  await prisma.leaseExpenseItem.delete({ where: { id: itemId } });
+}
+
+function mapExpenseItemToDTO(item: any): LeaseExpenseItemDTO {
+  return {
+    id: item.id,
+    leaseId: item.leaseId,
+    description: item.description,
+    amountChf: item.amountChf,
+    mode: item.mode,
+    expenseTypeId: item.expenseTypeId || undefined,
+    accountId: item.accountId || undefined,
+    expenseType: item.expenseType ? {
+      id: item.expenseType.id,
+      name: item.expenseType.name,
+      code: item.expenseType.code || undefined,
+    } : undefined,
+    account: item.account ? {
+      id: item.account.id,
+      name: item.account.name,
+      code: item.account.code || undefined,
+    } : undefined,
+    isActive: item.isActive,
+    createdAt: item.createdAt.toISOString(),
+    updatedAt: item.updatedAt.toISOString(),
+  };
 }

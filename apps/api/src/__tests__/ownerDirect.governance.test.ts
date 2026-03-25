@@ -1,56 +1,10 @@
 import * as http from "http";
-import { spawn, ChildProcessWithoutNullStreams } from "child_process";
-import * as path from "path";
+import { ChildProcessWithoutNullStreams } from 'child_process';
+import { startTestServer, stopTestServer } from './testHelpers';
 
 process.env.AUTH_SECRET = "test-secret";
 const { encodeToken } = require("../services/auth");
 
-const API_ROOT = path.resolve(__dirname, "..", "..");
-const TS_NODE = path.resolve(API_ROOT, "node_modules", ".bin", "ts-node");
-
-function startServer(envOverrides: Record<string, string>, port: number) {
-  return new Promise<ChildProcessWithoutNullStreams>((resolve, reject) => {
-    const child = spawn(TS_NODE, ["--transpile-only", "src/server.ts"], {
-      cwd: API_ROOT,
-      env: {
-        ...process.env,
-        PORT: String(port),
-        AUTH_SECRET: "test-secret",
-        ...envOverrides,
-      },
-      stdio: ["ignore", "pipe", "pipe"],
-    });
-
-    const onData = (data: Buffer) => {
-      const text = data.toString();
-      if (text.includes("API running on")) {
-        cleanup();
-        resolve(child);
-      }
-    };
-
-    const onError = (err: Error) => {
-      cleanup();
-      reject(err);
-    };
-
-    const timeout = setTimeout(() => {
-      cleanup();
-      reject(new Error("Server did not start in time"));
-    }, 20000);
-
-    function cleanup() {
-      clearTimeout(timeout);
-      child.stdout?.off("data", onData);
-      child.stderr?.off("data", onData);
-      child.off("error", onError);
-    }
-
-    child.stdout?.on("data", onData);
-    child.stderr?.on("data", onData);
-    child.on("error", onError);
-  });
-}
 
 function httpRequest(
   port: number,
@@ -109,14 +63,12 @@ describe("Owner-direct governance access", () => {
   });
 
   beforeAll(async () => {
-    proc = await startServer({ AUTH_OPTIONAL: "false", NODE_ENV: "test" }, port);
+    proc = await startTestServer(port, { AUTH_OPTIONAL: "false", NODE_ENV: "test" });
     // Ensure org mode is MANAGED for test start
     await httpRequest(port, "PUT", "/org-config", { mode: "MANAGED" }, ownerToken);
   }, 20000);
 
-  afterAll(() => {
-    proc?.kill();
-  });
+  afterAll(() => stopTestServer(proc));
 
   it("enforces governance access by org mode", async () => {
     const buildingRes = await httpRequest(

@@ -10,6 +10,12 @@ import { SubmitQuoteSchema } from "../validation/quoteSchema";
 import { parseBody } from "../http/body";
 import { submitQuoteWorkflow, QuoteSubmissionError } from "../workflows";
 import * as contractorRepo from "../repositories/contractorRepository";
+import { ContractorCompleteSchema, SubmitRatingSchema } from "../validation/completionSchemas";
+import {
+  contractorCompleteJobWorkflow,
+  submitRatingWorkflow,
+  CompletionError,
+} from "../workflows/completionRatingWorkflow";
 
 /**
  * Contractor-scoped routes: /contractor/jobs, /contractor/invoices
@@ -215,6 +221,80 @@ export function registerContractorRoutes(router: Router) {
     } catch (e: any) {
       console.error("[GET /contractor/rfps]", e);
       sendError(res, 500, "DB_ERROR", "Failed to load contractor RFPs", String(e));
+    }
+  });
+
+  /* ── POST /contractor/jobs/:id/complete ─────────────────── */
+  router.post("/contractor/jobs/:id/complete", async ({ req, res, params, query, orgId, prisma }) => {
+    try {
+      const user = requireRole(req, res, "CONTRACTOR");
+      if (!user) return;
+
+      const contractorId = first(query, "contractorId") as string | undefined;
+      if (!contractorId) {
+        return sendError(res, 400, "VALIDATION_ERROR", "contractorId parameter required");
+      }
+
+      const contractor = await contractorRepo.verifyOrgOwnership(prisma, contractorId, orgId);
+      if (!contractor) return sendError(res, 404, "NOT_FOUND", "Contractor not found");
+
+      const body = await parseBody(req, ContractorCompleteSchema);
+      const result = await contractorCompleteJobWorkflow(
+        { orgId, prisma, actorUserId: contractorId },
+        { jobId: params.id, contractorId, ...body },
+      );
+      sendJson(res, 200, { data: result.dto });
+    } catch (e: any) {
+      if (e instanceof CompletionError) {
+        const statusMap: Record<string, number> = { NOT_FOUND: 404, FORBIDDEN: 403, INVALID_STATUS: 409 };
+        return sendError(res, statusMap[e.code] ?? 400, e.code, e.message);
+      }
+      sendError(res, 500, "DB_ERROR", "Failed to complete job", String(e));
+    }
+  });
+
+  /* ── POST /contractor/jobs/:id/rate ──────────────────────── */
+  router.post("/contractor/jobs/:id/rate", async ({ req, res, params, query, orgId, prisma }) => {
+    try {
+      const user = requireRole(req, res, "CONTRACTOR");
+      if (!user) return;
+
+      const contractorId = first(query, "contractorId") as string | undefined;
+      if (!contractorId) {
+        return sendError(res, 400, "VALIDATION_ERROR", "contractorId parameter required");
+      }
+
+      const contractor = await contractorRepo.verifyOrgOwnership(prisma, contractorId, orgId);
+      if (!contractor) return sendError(res, 404, "NOT_FOUND", "Contractor not found");
+
+      const body = await parseBody(req, SubmitRatingSchema);
+      const score =
+        body.score ??
+        Math.round(
+          ((body.scorePunctuality ?? 0) + (body.scoreAccuracy ?? 0) + (body.scoreCourtesy ?? 0)) / 3,
+        );
+      const result = await submitRatingWorkflow(
+        { orgId, prisma, actorUserId: contractorId },
+        {
+          jobId: params.id,
+          raterRole: "CONTRACTOR",
+          raterId: contractorId,
+          score,
+          scorePunctuality: body.scorePunctuality ?? null,
+          scoreAccuracy: body.scoreAccuracy ?? null,
+          scoreCourtesy: body.scoreCourtesy ?? null,
+          comment: body.comment,
+        },
+      );
+      sendJson(res, 201, { data: result.rating });
+    } catch (e: any) {
+      if (e instanceof CompletionError) {
+        const statusMap: Record<string, number> = {
+          NOT_FOUND: 404, FORBIDDEN: 403, INVALID_STATUS: 409, DUPLICATE_RATING: 409,
+        };
+        return sendError(res, statusMap[e.code] ?? 400, e.code, e.message);
+      }
+      sendError(res, 500, "DB_ERROR", "Failed to submit rating", String(e));
     }
   });
 

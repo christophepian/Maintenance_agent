@@ -28,6 +28,8 @@ export interface CreateInvoiceParams {
   issueDate?: Date;
   dueDate?: Date;
   vatRate?: number;
+  expenseTypeId?: string;
+  accountId?: string;
   lineItems?: Array<{
     description: string;
     quantity?: number;
@@ -50,6 +52,8 @@ export interface UpdateInvoiceParams {
   issueDate?: Date | null;
   dueDate?: Date | null;
   vatRate?: number;
+  expenseTypeId?: string | null;
+  accountId?: string | null;
   lineItems?: Array<{
     description: string;
     quantity?: number;
@@ -102,6 +106,15 @@ export interface InvoiceDTO {
   createdAt: string; // ISO
   updatedAt: string; // ISO
   lineItems: InvoiceLineItemDTO[];
+  leaseId?: string | null;
+  expenseTypeId?: string | null;
+  accountId?: string | null;
+  expenseType?: { id: string; name: string; code: string | null } | null;
+  account?: { id: string; name: string; code: string | null } | null;
+  /** Unit attribution derived from job.request.unit — populated when available */
+  unitId?: string | null;
+  /** Building attribution derived from job.request.unit.buildingId — populated when available */
+  buildingId?: string | null;
 }
 
   /**
@@ -287,6 +300,7 @@ export async function issueInvoice(
     const updated = await tx.invoice.update({
       where: { id: invoiceId },
       data: {
+        status: "ISSUED",
         issuerBillingEntityId,
         issueDate,
         dueDate,
@@ -346,6 +360,8 @@ export async function createInvoice(params: CreateInvoiceParams): Promise<Invoic
       org: { connect: { id: orgId } },
       job: { connect: { id: jobId } },
       issuer: issuerBillingEntityId ? { connect: { id: issuerBillingEntityId } } : undefined,
+      classifiedExpenseType: params.expenseTypeId ? { connect: { id: params.expenseTypeId } } : undefined,
+      classifiedAccount: params.accountId ? { connect: { id: params.accountId } } : undefined,
       recipientName: params.recipientName || recipientDefaults.recipientName,
       recipientAddressLine1:
         params.recipientAddressLine1 || recipientDefaults.recipientAddressLine1,
@@ -367,6 +383,7 @@ export async function createInvoice(params: CreateInvoiceParams): Promise<Invoic
       amount: totals.totalAmount ? Math.round(totals.totalAmount / 100) : 0,
       description: fallbackDescription,
       status: InvoiceStatus.DRAFT,
+      submittedAt: new Date(), // Record when the contractor/system submitted the invoice
       lineItems: normalizedLineItems.length
         ? {
             create: normalizedLineItems,
@@ -408,6 +425,8 @@ export async function listInvoices(
     buildingId?: string;
     paidAfter?: string;
     paidBefore?: string;
+    expenseTypeId?: string;
+    accountId?: string;
   }
 ): Promise<{ data: InvoiceDTO[] | InvoiceSummaryDTO[]; total: number }> {
   const useSummary = filters?.view === "summary";
@@ -417,6 +436,8 @@ export async function listInvoices(
     ...(filters?.jobId && { jobId: filters.jobId }),
     ...(filters?.status && { status: filters.status }),
     ...(filters?.expenseCategory && { expenseCategory: filters.expenseCategory }),
+    ...(filters?.expenseTypeId && { expenseTypeId: filters.expenseTypeId }),
+    ...(filters?.accountId && { accountId: filters.accountId }),
   };
 
   // Contractor and building filters both traverse the job relation
@@ -519,6 +540,12 @@ export async function updateInvoice(
           dueDate: params.dueDate === null ? null : params.dueDate,
         }),
         ...(params.vatRate !== undefined && { vatRate: params.vatRate }),
+        ...(params.expenseTypeId !== undefined && {
+          expenseTypeId: params.expenseTypeId === null ? null : params.expenseTypeId,
+        }),
+        ...(params.accountId !== undefined && {
+          accountId: params.accountId === null ? null : params.accountId,
+        }),
         ...(params.submittedAt !== undefined && { submittedAt: params.submittedAt }),
         ...(params.approvedAt !== undefined && { approvedAt: params.approvedAt }),
         ...(params.paidAt !== undefined && { paidAt: params.paidAt }),
@@ -670,6 +697,15 @@ function mapInvoiceToDTO(invoice: InvoiceWithFullInclude): InvoiceDTO {
     createdAt: invoice.createdAt.toISOString(),
     updatedAt: invoice.updatedAt.toISOString(),
     lineItems,
+    leaseId: (invoice as any).leaseId || null,
+    expenseTypeId: invoice.expenseTypeId || null,
+    accountId: invoice.accountId || null,
+    expenseType: (invoice as any).classifiedExpenseType
+      ? { id: (invoice as any).classifiedExpenseType.id, name: (invoice as any).classifiedExpenseType.name, code: (invoice as any).classifiedExpenseType.code }
+      : null,
+    account: (invoice as any).classifiedAccount
+      ? { id: (invoice as any).classifiedAccount.id, name: (invoice as any).classifiedAccount.name, code: (invoice as any).classifiedAccount.code }
+      : null,
   };
 }
 

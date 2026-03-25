@@ -47,6 +47,8 @@ tags:
     description: Lease template management
   - name: LegalEngine
     description: Swiss tenancy law decision engine, RFPs, depreciation, and legal rules
+  - name: ChartOfAccounts
+    description: Expense types, accounts, and expense-to-account mappings (COA)
 
 # ──────────────────────────────────────────────────────────────
 # Reusable components
@@ -201,6 +203,19 @@ components:
         topContractorsBySpend:
           type: array
           items: { $ref: '#/components/schemas/ContractorSpendDTO' }
+        expensesByAccount:
+          type: array
+          description: Only present when groupByAccount=true
+          items: { $ref: '#/components/schemas/AccountTotalDTO' }
+
+    AccountTotalDTO:
+      type: object
+      required: [accountId, accountName, totalCents]
+      properties:
+        accountId: { type: string, format: uuid }
+        accountName: { type: string }
+        accountCode: { type: string, nullable: true }
+        totalCents: { type: integer }
 
     UnitType:
       type: string
@@ -434,6 +449,22 @@ components:
         lineItems:
           type: array
           items: { $ref: '#/components/schemas/InvoiceLineItemDTO' }
+        expenseTypeId: { type: string, format: uuid, nullable: true }
+        accountId: { type: string, format: uuid, nullable: true }
+        expenseType:
+          nullable: true
+          type: object
+          properties:
+            id: { type: string, format: uuid }
+            name: { type: string }
+            code: { type: string, nullable: true }
+        account:
+          nullable: true
+          type: object
+          properties:
+            id: { type: string, format: uuid }
+            name: { type: string }
+            code: { type: string, nullable: true }
 
     InvoiceSummaryDTO:
       type: object
@@ -880,6 +911,11 @@ components:
       content:
         application/json:
           schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Conflict:
+      description: Conflict — resource already exists
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
 
     # ── Rental Application Enums ─────────────────────────────
 
@@ -1277,6 +1313,99 @@ components:
         uploadedBy: { type: string, nullable: true }
         createdAt: { type: string, format: date-time }
         url: { type: string }
+
+    # ── Chart of Accounts ────────────────────────────────────
+
+    ExpenseType:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        orgId: { type: string, format: uuid }
+        name: { type: string }
+        description: { type: string, nullable: true }
+        code: { type: string, nullable: true }
+        isActive: { type: boolean }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    Account:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        orgId: { type: string, format: uuid }
+        name: { type: string }
+        code: { type: string, nullable: true }
+        accountType: { type: string, enum: [EXPENSE, REVENUE, ASSET, LIABILITY] }
+        isActive: { type: boolean }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    LedgerEntry:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        orgId: { type: string, format: uuid }
+        date: { type: string, format: date-time }
+        accountId: { type: string, format: uuid }
+        accountCode: { type: string, nullable: true }
+        accountName: { type: string, nullable: true }
+        accountType: { type: string, nullable: true }
+        debitCents: { type: integer }
+        creditCents: { type: integer }
+        description: { type: string }
+        reference: { type: string, nullable: true }
+        sourceType: { type: string, nullable: true }
+        sourceId: { type: string, nullable: true }
+        journalId: { type: string, format: uuid }
+        buildingId: { type: string, format: uuid, nullable: true }
+        createdAt: { type: string, format: date-time }
+
+    AccountBalance:
+      type: object
+      properties:
+        accountId: { type: string, format: uuid }
+        accountCode: { type: string, nullable: true }
+        accountName: { type: string }
+        accountType: { type: string }
+        debitCents: { type: integer }
+        creditCents: { type: integer }
+        balanceCents: { type: integer }
+
+    Pagination:
+      type: object
+      properties:
+        total: { type: integer }
+        limit: { type: integer }
+        offset: { type: integer }
+
+    ExpenseMapping:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        orgId: { type: string, format: uuid }
+        expenseTypeId: { type: string, format: uuid }
+        accountId: { type: string, format: uuid }
+        buildingId: { type: string, format: uuid, nullable: true }
+        expenseType:
+          type: object
+          nullable: true
+          properties:
+            id: { type: string }
+            name: { type: string }
+        account:
+          type: object
+          nullable: true
+          properties:
+            id: { type: string }
+            name: { type: string }
+        building:
+          type: object
+          nullable: true
+          properties:
+            id: { type: string }
+            name: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
 
 # ──────────────────────────────────────────────────────────────
 # Paths
@@ -2367,6 +2496,14 @@ paths:
         - $ref: '#/components/parameters/OffsetParam'
         - $ref: '#/components/parameters/OrderParam'
         - $ref: '#/components/parameters/StatusFilter'
+        - name: expenseTypeId
+          in: query
+          schema: { type: string, format: uuid }
+          description: Filter by COA expense type ID
+        - name: accountId
+          in: query
+          schema: { type: string, format: uuid }
+          description: Filter by COA account ID
       responses:
         '200':
           description: Invoice list
@@ -2834,6 +2971,81 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/InvoiceDTO' }
+
+  # ═══════════════════════════════════════════════════════════
+  # Lease Expense Items
+  # ═══════════════════════════════════════════════════════════
+
+  /leases/{id}/expense-items:
+    post:
+      tags: [Leases]
+      summary: Add an expense item to a lease
+      operationId: createLeaseExpenseItem
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [description, amountChf]
+              properties:
+                description: { type: string }
+                amountChf: { type: integer }
+                mode: { type: string, enum: [ACOMPTE, FORFAIT] }
+                expenseTypeId: { type: string, format: uuid }
+                accountId: { type: string, format: uuid }
+      responses:
+        '201':
+          description: Created expense item
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LeaseExpenseItemDTO' }
+
+  /leases/{id}/expense-items/{itemId}:
+    patch:
+      tags: [Leases]
+      summary: Update a lease expense item
+      operationId: updateLeaseExpenseItem
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+        - name: itemId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                description: { type: string }
+                amountChf: { type: integer }
+                mode: { type: string, enum: [ACOMPTE, FORFAIT] }
+                expenseTypeId: { type: string, format: uuid, nullable: true }
+                accountId: { type: string, format: uuid, nullable: true }
+                isActive: { type: boolean }
+      responses:
+        '200':
+          description: Updated expense item
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LeaseExpenseItemDTO' }
+    delete:
+      tags: [Leases]
+      summary: Delete a lease expense item
+      operationId: deleteLeaseExpenseItem
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+        - name: itemId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Deleted
 
   # ═══════════════════════════════════════════════════════════
   # Signature Requests
@@ -5414,6 +5626,13 @@ paths:
             enum: ['true', 'false']
             default: 'false'
           description: If true, recompute all snapshots for the range
+        - name: groupByAccount
+          in: query
+          schema:
+            type: string
+            enum: ['true', 'false']
+            default: 'false'
+          description: If true, include expensesByAccount breakdown in the response
       responses:
         '200':
           description: Building financial KPIs and breakdowns
@@ -6151,3 +6370,373 @@ paths:
                 format: binary
         '404':
           $ref: '#/components/responses/NotFound'
+
+  # ═══════════════════════════════════════════════════════════════
+  # Chart of Accounts (COA)
+  # ═══════════════════════════════════════════════════════════════
+
+  /coa/expense-types:
+    get:
+      tags: [ChartOfAccounts]
+      summary: List expense types for the authenticated org
+      operationId: listExpenseTypes
+      responses:
+        '200':
+          description: List of expense types
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ExpenseType'
+    post:
+      tags: [ChartOfAccounts]
+      summary: Create a new expense type
+      operationId: createExpenseType
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string }
+                description: { type: string }
+                code: { type: string }
+      responses:
+        '201':
+          description: Created expense type
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/ExpenseType'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /coa/expense-types/{id}:
+    get:
+      tags: [ChartOfAccounts]
+      summary: Get a single expense type by ID
+      operationId: getExpenseType
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Expense type detail
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/ExpenseType'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [ChartOfAccounts]
+      summary: Update an expense type
+      operationId: updateExpenseType
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                description: { type: string }
+                code: { type: string }
+                isActive: { type: boolean }
+      responses:
+        '200':
+          description: Updated expense type
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/ExpenseType'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /coa/accounts:
+    get:
+      tags: [ChartOfAccounts]
+      summary: List accounts for the authenticated org
+      operationId: listAccounts
+      responses:
+        '200':
+          description: List of accounts
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Account'
+    post:
+      tags: [ChartOfAccounts]
+      summary: Create a new account
+      operationId: createAccount
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string }
+                code: { type: string }
+                accountType: { type: string, enum: [EXPENSE, REVENUE, ASSET] }
+      responses:
+        '201':
+          description: Created account
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Account'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /coa/accounts/{id}:
+    get:
+      tags: [ChartOfAccounts]
+      summary: Get a single account by ID
+      operationId: getAccount
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Account detail
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Account'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [ChartOfAccounts]
+      summary: Update an account
+      operationId: updateAccount
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                code: { type: string }
+                accountType: { type: string, enum: [EXPENSE, REVENUE, ASSET] }
+                isActive: { type: boolean }
+      responses:
+        '200':
+          description: Updated account
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Account'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /coa/expense-mappings:
+    get:
+      tags: [ChartOfAccounts]
+      summary: List expense mappings for the authenticated org
+      operationId: listExpenseMappings
+      responses:
+        '200':
+          description: List of expense mappings with joined expense type, account, and building
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ExpenseMapping'
+    post:
+      tags: [ChartOfAccounts]
+      summary: Create an expense mapping (expense type to account, optionally per building)
+      operationId: createExpenseMapping
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expenseTypeId, accountId]
+              properties:
+                expenseTypeId: { type: string, format: uuid }
+                accountId: { type: string, format: uuid }
+                buildingId: { type: string, format: uuid, nullable: true }
+      responses:
+        '201':
+          description: Created expense mapping
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/ExpenseMapping'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /coa/expense-mappings/{id}:
+    delete:
+      tags: [ChartOfAccounts]
+      summary: Delete an expense mapping
+      operationId: deleteExpenseMapping
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Mapping deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      success: { type: boolean }
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /ledger:
+    get:
+      tags: [Ledger]
+      summary: List paginated double-entry journal entries
+      operationId: listLedgerEntries
+      parameters:
+        - { name: limit,       in: query, schema: { type: integer, default: 50 } }
+        - { name: offset,      in: query, schema: { type: integer, default: 0 } }
+        - { name: from,        in: query, schema: { type: string, format: date } }
+        - { name: to,          in: query, schema: { type: string, format: date } }
+        - { name: accountCode, in: query, schema: { type: string } }
+        - { name: sourceType,  in: query, schema: { type: string } }
+      responses:
+        '200':
+          description: Paginated journal entries
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/LedgerEntry' }
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+
+  /ledger/trial-balance:
+    get:
+      tags: [Ledger]
+      summary: Get trial balance (aggregated debit/credit per account)
+      operationId: getTrialBalance
+      parameters:
+        - { name: from, in: query, schema: { type: string, format: date } }
+        - { name: to,   in: query, schema: { type: string, format: date } }
+      responses:
+        '200':
+          description: Trial balance rows
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/AccountBalance' }
+
+  /ledger/accounts/{accountId}/balance:
+    get:
+      tags: [Ledger]
+      summary: Get balance for a single account
+      operationId: getAccountBalance
+      parameters:
+        - name: accountId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - { name: from, in: query, schema: { type: string, format: date } }
+        - { name: to,   in: query, schema: { type: string, format: date } }
+      responses:
+        '200':
+          description: Account balance
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/AccountBalance' }
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /coa/seed:
+    post:
+      tags: [ChartOfAccounts]
+      summary: Seed the canonical Swiss residential expense taxonomy for the org
+      operationId: seedCoaTaxonomy
+      responses:
+        '200':
+          description: Seed result counts
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      expenseTypes: { type: integer }
+                      accounts: { type: integer }
+                      mappings: { type: integer }

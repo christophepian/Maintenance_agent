@@ -14,6 +14,7 @@ import { emit } from "../events/bus";
 import { findJobById } from "../repositories/jobRepository";
 import { getInvoice, issueInvoice } from "../services/invoices";
 import { notifyInvoiceStatusChanged } from "../services/notifications";
+import { postInvoiceIssued } from "../services/ledgerService";
 import type { InvoiceDTO } from "../services/invoices";
 
 // ─── Input / Output ────────────────────────────────────────────
@@ -45,14 +46,39 @@ export async function issueInvoiceWorkflow(
     throw Object.assign(new Error("Invoice not found"), { code: "NOT_FOUND" });
   }
 
-  // ── 2. Issue invoice ──────────────────────────────────────
+  // ── 2. Resolve billing entity if not provided ─────────────
+  // Auto-resolve from job's contractor, then org-level fallback — mirrors
+  // the same logic used by approveInvoice so callers don't need to know IDs.
+  let resolvedBillingEntityId = issuerBillingEntityId || invoice.issuerBillingEntityId || undefined;
+  if (!resolvedBillingEntityId && invoice.jobId) {
+    const job = await prisma.job.findUnique({
+      where: { id: invoice.jobId },
+      select: { contractorId: true },
+    });
+    if (job?.contractorId) {
+      const contractorEntity = await prisma.billingEntity.findFirst({
+        where: { orgId, contractorId: job.contractorId },
+        select: { id: true },
+      });
+      resolvedBillingEntityId = contractorEntity?.id;
+    }
+    if (!resolvedBillingEntityId) {
+      const orgEntity = await prisma.billingEntity.findFirst({
+        where: { orgId, type: "ORG" },
+        select: { id: true },
+      });
+      resolvedBillingEntityId = orgEntity?.id;
+    }
+  }
+
+  // ── 3. Issue invoice ──────────────────────────────────────
   const issued = await issueInvoice(invoiceId, {
-    issuerBillingEntityId,
+    issuerBillingEntityId: resolvedBillingEntityId,
     issueDate,
     dueDate,
   });
 
-  // ── 3. Notify tenant (best-effort) ────────────────────────
+  // ── 4. Notify tenant (best-effort) ────────────────────────
   let tenantNotified = false;
   try {
     const job = await findJobById(prisma, issued.jobId);
@@ -66,7 +92,12 @@ export async function issueInvoiceWorkflow(
     console.warn("Failed to send invoice issued notification", notifyErr);
   }
 
-  // ── 4. Emit event ─────────────────────────────────────────
+  // ── 5. Post ledger entry (best-effort) ────────────────────
+  postInvoiceIssued(prisma, orgId, issued).catch((err) =>
+    console.error("[LEDGER] Failed to post INVOICE_ISSUED", err),
+  );
+
+  // ── 6. Emit event ─────────────────────────────────────────
   emit({
     type: "INVOICE_ISSUED",
     orgId,

@@ -6,8 +6,8 @@
  */
 
 import { computeRentEstimate, EstimationInputs, EstimationConfig } from "../services/rentEstimation";
-import { spawn, ChildProcessWithoutNullStreams } from "child_process";
-import * as path from "path";
+import { ChildProcessWithoutNullStreams } from 'child_process';
+import { startTestServer, stopTestServer } from './testHelpers';
 
 /* ═══════════════════════════════════════════════════════════════
  * Shared default config (Swiss-typical defaults from schema)
@@ -200,63 +200,17 @@ describe("computeRentEstimate (unit)", () => {
  * Contract Tests: Rent Estimation API endpoints
  * ═══════════════════════════════════════════════════════════════ */
 
-const API_ROOT = path.resolve(__dirname, "..", "..");
 const PORT = 3219;
 const API_BASE = `http://127.0.0.1:${PORT}`;
-
-function startServer() {
-  return new Promise<ChildProcessWithoutNullStreams>((resolve, reject) => {
-    const child = spawn("npx", ["tsx", "src/server.ts"], {
-      cwd: API_ROOT,
-      env: {
-        ...process.env,
-        PORT: String(PORT),
-        AUTH_OPTIONAL: "true",
-        NODE_ENV: "test",
-      },
-      stdio: ["ignore", "pipe", "pipe"],
-    });
-
-    const onData = (data: Buffer) => {
-      if (data.toString().includes("API running on")) {
-        cleanup();
-        resolve(child);
-      }
-    };
-
-    const onError = (err: Error) => {
-      cleanup();
-      reject(err);
-    };
-
-    const cleanup = () => {
-      clearTimeout(timer);
-      child.stdout.off("data", onData);
-      child.stderr.off("data", onData);
-      child.off("error", onError);
-    };
-
-    child.stdout.on("data", onData);
-    child.stderr.on("data", onData);
-    child.on("error", onError);
-
-    const timer = setTimeout(() => {
-      cleanup();
-      reject(new Error("Server did not start within 30s"));
-    }, 30000);
-  });
-}
 
 describe("Rent Estimation Contract Tests", () => {
   let proc: ChildProcessWithoutNullStreams;
 
   beforeAll(async () => {
-    proc = await startServer();
+    proc = await startTestServer(PORT);
   }, 35000);
 
-  afterAll(() => {
-    if (proc) proc.kill();
-  });
+  afterAll(() => stopTestServer(proc));
 
   describe("GET /rent-estimation/config", () => {
     it("returns a config object (auto-created if missing)", async () => {

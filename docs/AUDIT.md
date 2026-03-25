@@ -534,18 +534,18 @@ Significant work completed since the original audit was generated. This section 
 
 ### Stats Delta
 
-| Metric | At Audit (2026-03-10) | Current (2026-03-17) |
+| Metric | At Audit (2026-03-10) | Current (2026-03-25) |
 |--------|----------------------|---------------------|
-| Models | 45 | 46 |
-| Enums | 35 | 38 |
-| Migrations | 32 | 37 |
-| Workflows | 14 | 17 |
-| Repositories | 8 | 11 |
-| Tests | ~312 | 384 |
-| Suites | ~28 | 34 |
-| Frontend pages | 185 | 200 |
-| Backend LOC | ~34k | ~38k |
-| Frontend LOC | ~25k | ~27k |
+| Models | 45 | 53 |
+| Enums | 35 | 42 |
+| Migrations | 32 | 53 |
+| Workflows | 14 | 23 |
+| Repositories | 8 | 16 |
+| Tests | ~312 | 589 |
+| Suites | ~28 | 45 |
+| Frontend pages | 185 | 223 |
+| Backend LOC | ~34k | ~44k |
+| Frontend LOC | ~25k | ~30k |
 | Audit resolved | 20 | 38 |
 | Audit open | 62 | 44 |
 

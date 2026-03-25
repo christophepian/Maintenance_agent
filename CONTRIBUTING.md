@@ -2,106 +2,81 @@
 
 ## Testing
 
-### Running tests
+### Pre-commit checks
 
 ```bash
-# All tests
-npm test --prefix apps/api
-
-# Type-check (no emit)
-npx tsc --noEmit --project apps/api/tsconfig.json
-
-# Both before committing
-npx tsc --noEmit --project apps/api/tsconfig.json && npm test --prefix apps/api
+# From the repo root
+npx tsc --noEmit --project apps/api/tsconfig.json   # must produce zero errors
+npm test --prefix apps/api                           # must pass all 589 tests
 ```
 
-All 518 tests must pass before merging. Zero TypeScript errors required.
+Both must be green before merging.
 
 ---
 
 ### Integration test structure
 
-Each test suite that needs a live API server follows the same pattern:
+All server-spawning test suites use the shared helpers in
+`apps/api/src/__tests__/testHelpers.ts`. Do **not** copy-paste a local `startServer`
+function — use the canonical helpers.
 
 ```ts
-import { spawn, ChildProcessWithoutNullStreams } from 'child_process';
-import * as path from 'path';
+import { ChildProcessWithoutNullStreams } from 'child_process';
+import { startTestServer, stopTestServer } from './testHelpers';
 
-const API_ROOT = path.resolve(__dirname, '..', '..');
-const TS_NODE  = path.resolve(API_ROOT, 'node_modules', '.bin', 'ts-node');
-const PORT     = 3205; // unique — see port registry below
+const PORT = 3221; // unique — see port registry below
 const API_BASE = `http://127.0.0.1:${PORT}`;
-
-function startServer(envOverrides: Record<string, string>, port: number) {
-  return new Promise<ChildProcessWithoutNullStreams>((resolve, reject) => {
-    const child = spawn(TS_NODE, ['--transpile-only', 'src/server.ts'], {
-      cwd: API_ROOT,
-      env: {
-        ...process.env,
-        PORT: String(port),
-        AUTH_SECRET: 'test-secret',
-        AUTH_OPTIONAL: 'false',
-        NODE_ENV: 'test',
-        BG_JOBS_ENABLED: 'false',
-        ...envOverrides,
-      },
-      stdio: ['ignore', 'pipe', 'pipe'],
-    });
-
-    const onData = (data: Buffer) => {
-      if (data.toString().includes('API running on')) { cleanup(); resolve(child); }
-    };
-    const onError = (err: Error) => { cleanup(); reject(err); };
-    const cleanup = () => {
-      clearTimeout(timer);
-      child.stdout.off('data', onData);
-      child.stderr.off('data', onData);
-      child.off('error', onError);
-    };
-
-    child.stdout.on('data', onData);
-    child.stderr.on('data', onData);
-    child.on('error', onError);
-    const timer = setTimeout(() => { cleanup(); reject(new Error('Server did not start within 15s')); }, 15000);
-  });
-}
 
 describe('My feature', () => {
   let proc: ChildProcessWithoutNullStreams;
 
   beforeAll(async () => {
-    proc = await startServer({ AUTH_OPTIONAL: 'true' }, PORT);
+    proc = await startTestServer(PORT, { AUTH_OPTIONAL: 'true', NODE_ENV: 'test' });
   }, 20000);
 
-  afterAll(() => { if (proc) proc.kill(); });
+  afterAll(() => stopTestServer(proc));
 
   it('works', async () => { /* ... */ });
 });
 ```
 
-**AUTH_OPTIONAL: 'true'** bypasses JWT checks. Use `AUTH_OPTIONAL: 'false'` with explicit
-`Authorization: Bearer <token>` headers when testing auth behaviour.
+**Key points:**
+- `startTestServer(port, envOverrides?)` — resolves once the server emits `"API running on"`, rejects after 15 s.
+- `stopTestServer(proc)` — sends SIGTERM and **awaits full process exit** before resolving. This prevents port leaks between serially-run suites.
+- `afterAll` must `return` or `await` the stop call so Jest waits for it.
 
-For token generation use the helpers in `src/__tests__/testHelpers.ts`:
+**Auth modes:**
+
+`AUTH_OPTIONAL: 'true'` bypasses JWT checks — use this for suites that test business
+logic rather than auth boundaries. Use `AUTH_OPTIONAL: 'false'` with explicit
+`Authorization: Bearer <token>` headers when testing auth enforcement (401/403 gates).
+
+**Token helpers:**
 
 ```ts
-import { createManagerToken, createContractorToken, getAuthHeaders } from './testHelpers';
+import { createManagerToken, createContractorToken, createTenantToken, getAuthHeaders } from './testHelpers';
 
 const token = createManagerToken('my-org-id');
 const res = await fetch(`${API_BASE}/some-route`, {
-  headers: { ...getAuthHeaders(token) },
+  headers: getAuthHeaders(token),
 });
 ```
+
+`AUTH_SECRET` is set to `"test-secret"` globally via `jestSetup.ts` — tokens created
+in the test process are automatically valid against all test servers.
 
 ---
 
 ### Port registry
 
-Every test suite that spawns a server **must use a unique hardcoded port**. Sharing ports
-causes `EADDRINUSE` failures in parallel runs.
+Every test suite that spawns a server **must use a unique hardcoded port**. Sharing
+ports causes `EADDRINUSE` failures.
 
 | Port | Suite |
 |------|-------|
+| 3101 | auth.manager-gates.test.ts (required-auth server) |
+| 3102 | auth.manager-gates.test.ts (optional-auth server) |
+| 3103 | ownerDirect.governance.test.ts |
 | 3201 | requests.test.ts |
 | 3202 | workflows.test.ts |
 | 3203 | ownerDirect.foundation.test.ts |
@@ -121,17 +96,17 @@ causes `EADDRINUSE` failures in parallel runs.
 | 3217 | completion.test.ts |
 | 3218 | tenantSession.test.ts |
 | 3219 | rentEstimation.test.ts |
+| 3220 | security2.test.ts |
 
-**Next available: 3220.** When adding a new suite, claim the next port and add it to this table
-in the same PR.
+**Next available: 3221.** Claim the next port and add it to this table in the same PR.
 
 ---
 
 ### API contract tests (`contracts.test.ts`)
 
-`src/__tests__/contracts.test.ts` is the **DTO guard-rail**. It asserts the response envelope
-shape of every public endpoint so that a renamed field or dropped property fails a test instead
-of silently breaking the frontend.
+`src/__tests__/contracts.test.ts` is the **DTO guard-rail**. It asserts the response
+envelope shape of every public endpoint so that a renamed field or dropped property
+fails a test instead of silently breaking the frontend.
 
 **Add a contract test whenever you:**
 - Add a new endpoint
@@ -154,8 +129,11 @@ describe('GET /my-endpoint?limit=1', () => {
 });
 ```
 
-**Update the contract test in the same PR as any DTO change.** If you change a field name and
-the contract test fails, update the test — do not delete it.
+`contracts.test.ts` runs on PORT 3205 with `AUTH_OPTIONAL: 'true'`. Endpoints that
+require role-specific tokens (e.g. tenant portal routes) use `getAuthHeaders(createTenantToken())`.
+
+**Update the contract test in the same PR as any DTO change.** If you change a field
+name and the contract test fails, update the test — do not delete it.
 
 ---
 

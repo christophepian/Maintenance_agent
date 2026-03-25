@@ -16,6 +16,15 @@ import { LEASE_FULL_INCLUDE } from "../repositories/leaseRepository";
 import { tenantSelfPayWorkflow } from "../workflows/tenantSelfPayWorkflow";
 import { InvalidTransitionError } from "../workflows/transitions";
 import { resolveTenantUserId } from "../services/tenantIdentity";
+import { parseBody } from "../http/body";
+import { CreateRequestSchema } from "../validation/requests";
+import { createRequestWorkflow } from "../workflows/createRequestWorkflow";
+import { SubmitRatingSchema } from "../validation/completionSchemas";
+import {
+  confirmCompletionWorkflow,
+  submitRatingWorkflow,
+  CompletionError,
+} from "../workflows/completionRatingWorkflow";
 
 // SA-18: In-memory rate limiter for POST /triage (10 calls/IP/minute)
 // NOTE: Resets on server restart — replace with Redis-backed limiter before multi-tenant production
@@ -205,24 +214,141 @@ export function registerAuthRoutes(router: Router) {
         include: {
           unit: { select: { unitNumber: true, building: { select: { name: true } } } },
           assignedContractor: { select: { name: true } },
+          job: {
+            select: {
+              id: true,
+              status: true,
+              confirmedAt: true,
+              completedAt: true,
+              ratings: {
+                select: { raterRole: true, score: true },
+              },
+            },
+          },
         },
       });
-      const data = rows.map((r: any) => ({
-        id: r.id,
-        requestNumber: r.requestNumber,
-        description: r.description,
-        category: r.category,
-        status: r.status,
-        payingParty: r.payingParty,
-        rejectionReason: r.rejectionReason,
-        unitNumber: r.unit?.unitNumber ?? null,
-        buildingName: r.unit?.building?.name ?? null,
-        assignedContractorName: r.assignedContractor?.name ?? null,
-        createdAt: r.createdAt instanceof Date ? r.createdAt.toISOString() : String(r.createdAt),
-      }));
+      const data = rows.map((r: any) => {
+        const job = r.job ?? null;
+        return {
+          id: r.id,
+          requestNumber: r.requestNumber,
+          description: r.description,
+          category: r.category,
+          status: r.status,
+          payingParty: r.payingParty,
+          rejectionReason: r.rejectionReason,
+          unitNumber: r.unit?.unitNumber ?? null,
+          buildingName: r.unit?.building?.name ?? null,
+          assignedContractorName: r.assignedContractor?.name ?? null,
+          createdAt: r.createdAt instanceof Date ? r.createdAt.toISOString() : String(r.createdAt),
+          job: job
+            ? {
+                id: job.id,
+                status: job.status,
+                completedAt: job.completedAt instanceof Date ? job.completedAt.toISOString() : job.completedAt,
+                confirmedAt: job.confirmedAt instanceof Date ? job.confirmedAt.toISOString() : job.confirmedAt,
+                tenantRated: job.ratings?.some((rr: any) => rr.raterRole === "TENANT") ?? false,
+              }
+            : null,
+        };
+      });
       sendJson(res, 200, { data });
     } catch (e: any) {
       sendError(res, 500, "DB_ERROR", "Failed to list tenant requests", String(e));
+    }
+  });
+
+  // POST /tenant-portal/requests
+  router.post("/tenant-portal/requests", async ({ req, res, orgId, prisma }) => {
+    const tenantId = requireTenantSession(req, res);
+    if (!tenantId) return;
+    try {
+      const input = await parseBody(req, CreateRequestSchema);
+
+      // Resolve unitId: prefer explicit value from body, then fall back to
+      // the tenant's active occupancy (Tenant has no direct unitId field).
+      let unitId: string | null = input.unitId ?? null;
+      if (!unitId) {
+        const occupancy = await prisma.occupancy.findFirst({
+          where: { tenantId },
+          select: { unitId: true },
+        });
+        unitId = occupancy?.unitId ?? null;
+      }
+
+      if (!unitId) {
+        return sendError(res, 422, "UNIT_REQUIRED", "Could not determine your unit. Please contact your property manager.");
+      }
+
+      const result = await createRequestWorkflow(
+        { orgId, prisma },
+        { input, tenantId, unitId },
+      );
+      sendJson(res, 201, { data: result.dto });
+    } catch (e: any) {
+      if (e.name === "ValidationError" || e.code === "VALIDATION_ERROR") {
+        return sendError(res, 400, "VALIDATION_ERROR", e.message, e.details);
+      }
+      sendError(res, 500, "DB_ERROR", "Failed to create request", String(e));
+    }
+  });
+
+  // ─── Tenant Job Review ──────────────────────────────────────
+
+  // POST /tenant-portal/jobs/:jobId/confirm
+  router.post("/tenant-portal/jobs/:jobId/confirm", async ({ req, res, params, orgId, prisma }) => {
+    const tenantId = requireTenantSession(req, res);
+    if (!tenantId) return;
+    try {
+      const result = await confirmCompletionWorkflow(
+        { orgId, prisma, actorUserId: tenantId },
+        { jobId: params.jobId, tenantId },
+      );
+      sendJson(res, 200, { data: result.dto });
+    } catch (e: any) {
+      if (e instanceof CompletionError) {
+        const statusMap: Record<string, number> = {
+          NOT_FOUND: 404, FORBIDDEN: 403, INVALID_STATUS: 409, ALREADY_CONFIRMED: 409,
+        };
+        return sendError(res, statusMap[e.code] ?? 400, e.code, e.message);
+      }
+      sendError(res, 500, "DB_ERROR", "Failed to confirm completion", String(e));
+    }
+  });
+
+  // POST /tenant-portal/jobs/:jobId/rate
+  router.post("/tenant-portal/jobs/:jobId/rate", async ({ req, res, params, orgId, prisma }) => {
+    const tenantId = requireTenantSession(req, res);
+    if (!tenantId) return;
+    try {
+      const body = await parseBody(req, SubmitRatingSchema);
+      const score =
+        body.score ??
+        Math.round(
+          ((body.scorePunctuality ?? 0) + (body.scoreAccuracy ?? 0) + (body.scoreCourtesy ?? 0)) / 3,
+        );
+      const result = await submitRatingWorkflow(
+        { orgId, prisma, actorUserId: tenantId },
+        {
+          jobId: params.jobId,
+          raterRole: "TENANT",
+          raterId: tenantId,
+          score,
+          scorePunctuality: body.scorePunctuality ?? null,
+          scoreAccuracy: body.scoreAccuracy ?? null,
+          scoreCourtesy: body.scoreCourtesy ?? null,
+          comment: body.comment,
+        },
+      );
+      sendJson(res, 201, { data: result.rating });
+    } catch (e: any) {
+      if (e instanceof CompletionError) {
+        const statusMap: Record<string, number> = {
+          NOT_FOUND: 404, FORBIDDEN: 403, INVALID_STATUS: 409, DUPLICATE_RATING: 409,
+        };
+        return sendError(res, statusMap[e.code] ?? 400, e.code, e.message);
+      }
+      sendError(res, 500, "DB_ERROR", "Failed to submit rating", String(e));
     }
   });
 

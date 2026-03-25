@@ -8,24 +8,15 @@ type RequestWithSummaryInclude = Prisma.RequestGetPayload<{ include: typeof REQU
 
 /**
  * Build a Prisma WHERE clause that scopes Requests to a given org.
- *
- * Since Request has no orgId column we filter through its nullable
- * FK chains: unit.orgId OR tenant.orgId OR appliance.orgId OR
- * assignedContractor.orgId.
+ * Request now has a direct orgId column (DT-114 migration).
  */
 function orgScopeWhere(orgId: string): Prisma.RequestWhereInput {
-  return {
-    OR: [
-      { unit: { orgId } },
-      { tenant: { orgId } },
-      { appliance: { orgId } },
-      { assignedContractor: { orgId } },
-    ],
-  };
+  return { orgId };
 }
 
 export type MaintenanceRequestDTO = {
   id: string;
+  orgId: string;
   requestNumber: number;
   description: string;
   category: string | null;
@@ -182,6 +173,7 @@ const requestInclude = {
 export function toDTO(r: RequestWithFullInclude): MaintenanceRequestDTO {
   return {
     id: r.id,
+    orgId: r.orgId,
     requestNumber: r.requestNumber,
     description: r.description,
     category: r.category ?? null,
@@ -303,6 +295,7 @@ export async function getMaintenanceRequestById(
 export async function createMaintenanceRequest(
   prisma: PrismaClient,
   input: {
+    orgId: string;
     description: string;
     category: string | null;
     estimatedCost: number | null;
@@ -315,6 +308,7 @@ export async function createMaintenanceRequest(
 ): Promise<MaintenanceRequestDTO> {
   const created = await prisma.request.create({
     data: {
+      orgId: input.orgId,
       description: input.description,
       category: input.category,
       estimatedCost: input.estimatedCost,

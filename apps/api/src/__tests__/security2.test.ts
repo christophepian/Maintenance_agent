@@ -6,59 +6,14 @@
  */
 
 import * as http from "http";
-import { spawn, ChildProcessWithoutNullStreams } from "child_process";
-import * as path from "path";
+import { ChildProcessWithoutNullStreams } from 'child_process';
+import { startTestServer, stopTestServer } from './testHelpers';
 
 process.env.AUTH_SECRET = "test-secret";
 const { encodeToken } = require("../services/auth");
 
-const API_ROOT = path.resolve(__dirname, "..", "..");
-const TS_NODE = path.resolve(API_ROOT, "node_modules", ".bin", "ts-node");
 
 /* ── Server helpers ─────────────────────────────────────────── */
-
-function startServer(envOverrides: Record<string, string>, port: number) {
-  return new Promise<ChildProcessWithoutNullStreams>((resolve, reject) => {
-    const child = spawn(TS_NODE, ["--transpile-only", "src/server.ts"], {
-      cwd: API_ROOT,
-      env: {
-        ...process.env,
-        PORT: String(port),
-        AUTH_SECRET: "test-secret",
-        ...envOverrides,
-      },
-      stdio: ["ignore", "pipe", "pipe"],
-    });
-
-    const onData = (data: Buffer) => {
-      if (data.toString().includes("API running on")) {
-        cleanup();
-        resolve(child);
-      }
-    };
-
-    const onError = (err: Error) => {
-      cleanup();
-      reject(err);
-    };
-
-    const timeout = setTimeout(() => {
-      cleanup();
-      reject(new Error("Server did not start in time"));
-    }, 15000);
-
-    function cleanup() {
-      clearTimeout(timeout);
-      child.stdout?.off("data", onData);
-      child.stderr?.off("data", onData);
-      child.off("error", onError);
-    }
-
-    child.stdout?.on("data", onData);
-    child.stderr?.on("data", onData);
-    child.on("error", onError);
-  });
-}
 
 function httpRequest(
   port: number,
@@ -117,18 +72,13 @@ const contractorToken = encodeToken({
 
 describe("Security Hardening Slice 2 (SA-10 → SA-20)", () => {
   let proc: ChildProcessWithoutNullStreams | null = null;
-  const port = 3211;
+  const port = 3220;
 
   beforeAll(async () => {
-    proc = await startServer(
-      { AUTH_OPTIONAL: "false", NODE_ENV: "test" },
-      port,
-    );
+    proc = await startTestServer(port, { AUTH_OPTIONAL: "false", NODE_ENV: "test" });
   }, 20000);
 
-  afterAll(() => {
-    proc?.kill();
-  });
+  afterAll(() => stopTestServer(proc));
 
   /* SA-12: POST /requests with no auth → 401 */
   it("SA-12: POST /requests without auth returns 401", async () => {

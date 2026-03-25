@@ -1,8 +1,7 @@
-import * as PDFKit from 'pdfkit';
+import PDFDocument from 'pdfkit';
 import { Readable } from 'stream';
 import prisma from './prismaClient';
 import { generateInvoiceQRBill, getInvoiceQRCodePNG } from './invoiceQRBill';
-const PDFDocument = PDFKit as any;
 
 export interface InvoicePDFOptions {
   includeQRBill?: boolean;

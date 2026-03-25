@@ -15,6 +15,10 @@ export const GetBuildingFinancialsSchema = z.object({
     .enum(["true", "false"])
     .optional()
     .transform((v) => v === "true"),
+  groupByAccount: z
+    .enum(["true", "false"])
+    .optional()
+    .transform((v) => v === "true"),
 });
 
 export type GetBuildingFinancialsQuery = z.infer<

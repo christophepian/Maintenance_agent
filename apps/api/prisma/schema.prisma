@@ -156,6 +156,12 @@ model Org {
   rfps                  Rfp[]
   appointmentSlots      AppointmentSlot[]
   jobRatings             JobRating[]
+  // Chart-of-Accounts (FIN-COA)
+  expenseTypes          ExpenseType[]
+  accounts              Account[]
+  expenseMappings       ExpenseMapping[]
+  // Ledger
+  ledgerEntries         LedgerEntry[]
 }
 
 model OrgConfig {
@@ -222,6 +228,7 @@ model Contractor {
 
 model Request {
   id                   String         @id @default(uuid())
+  orgId                String         @default("")
   requestNumber        Int            @default(autoincrement()) @unique
   description          String
   category             String?
@@ -248,6 +255,8 @@ model Request {
   events               RequestEvent[]
   attachments          MaintenanceAttachment[]
   rfps                 Rfp[]
+
+  @@index([orgId])
 }
 
 model MaintenanceAttachment {
@@ -323,6 +332,8 @@ model Building {
   financialSnapshots BuildingFinancialSnapshot[]
   rfps               Rfp[]
   owners             BuildingOwner[]
+  expenseMappings    ExpenseMapping[]
+  ledgerEntries      LedgerEntry[]
 
   @@index([orgId])
 }
@@ -418,6 +429,7 @@ model Unit {
   ownerSelections        RentalOwnerSelection[]
   assets                 Asset[]
   rfps                   Rfp[]
+  ledgerEntries          LedgerEntry[]
 
   @@unique([buildingId, unitNumber])
   @@index([buildingId])
@@ -563,7 +575,6 @@ model BillingEntity {
   org                 Org               @relation(fields: [orgId], references: [id], onDelete: Cascade)
   invoices            Invoice[]
 
-  @@unique([orgId, type])
   @@index([orgId])
 }
 
@@ -599,10 +610,14 @@ model Invoice {
   paymentReference      String?
   iban                  String?
   lockedAt              DateTime?
+  expenseTypeId         String?
+  accountId             String?
   issuer                BillingEntity?    @relation(fields: [issuerBillingEntityId], references: [id])
   job                   Job               @relation(fields: [jobId], references: [id], onDelete: Cascade)
   org                   Org               @relation(fields: [orgId], references: [id], onDelete: Cascade)
   lease                 Lease?            @relation(fields: [leaseId], references: [id], onDelete: SetNull)
+  classifiedExpenseType ExpenseType?      @relation(fields: [expenseTypeId], references: [id], onDelete: SetNull)
+  classifiedAccount     Account?          @relation(fields: [accountId], references: [id], onDelete: SetNull)
   expenseCategory       ExpenseCategory?
   lineItems             InvoiceLineItem[]
 
@@ -994,11 +1009,45 @@ model Lease {
   unit              Unit               @relation(fields: [unitId], references: [id], onDelete: Restrict)
   signatureRequests SignatureRequest[]
   invoices          Invoice[]
+  expenseItems      LeaseExpenseItem[]
 
   @@index([orgId])
   @@index([unitId])
   @@index([applicationId])
   @@index([status])
+}
+
+// ==========================================
+// Lease Expense Items (LKDE)
+// ==========================================
+
+enum ChargeMode {
+  ACOMPTE
+  FORFAIT
+}
+
+/// Per-lease recurring expense line (heating, water, etc.) with charge mode.
+model LeaseExpenseItem {
+  id          String     @id @default(uuid())
+  leaseId     String
+  description String
+  amountChf   Int
+  mode        ChargeMode @default(ACOMPTE)
+
+  expenseTypeId String?
+  accountId     String?
+
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  lease       Lease        @relation(fields: [leaseId], references: [id], onDelete: Cascade)
+  expenseType ExpenseType? @relation(fields: [expenseTypeId], references: [id], onDelete: SetNull)
+  account     Account?     @relation(fields: [accountId], references: [id], onDelete: SetNull)
+
+  @@index([leaseId])
+  @@index([expenseTypeId])
+  @@index([accountId])
 }
 
 // ==========================================
@@ -1206,15 +1255,16 @@ model RentalOwnerSelection {
 }
 
 model EmailOutbox {
-  id        String            @id @default(uuid())
-  orgId     String
-  createdAt DateTime          @default(now())
-  toEmail   String
-  template  EmailTemplate
-  subject   String
-  bodyText  String
-  status    EmailOutboxStatus @default(PENDING)
-  metaJson  Json?
+  id         String            @id @default(uuid())
+  orgId      String
+  createdAt  DateTime          @default(now())
+  toEmail    String
+  template   EmailTemplate
+  subject    String
+  bodyText   String
+  status     EmailOutboxStatus @default(PENDING)
+  retryCount Int               @default(0)
+  metaJson   Json?
 
   // Relations
   org Org @relation(fields: [orgId], references: [id], onDelete: Cascade)
@@ -1597,7 +1647,12 @@ model JobRating {
   orgId     String
   jobId     String
   raterRole RaterRole
-  score     Int
+  /// Overall / average score (1–5). Computed from criteria fields when submitted via UI.
+  score            Int
+  /// Per-criterion scores (1–5 each). Null on legacy single-score ratings.
+  scorePunctuality Int?
+  scoreAccuracy    Int?
+  scoreCourtesy    Int?
   comment   String?
   createdAt DateTime  @default(now())
 
@@ -1607,4 +1662,110 @@ model JobRating {
   @@unique([jobId, raterRole])
   @@index([jobId])
   @@index([orgId])
+}
+
+// ==========================================
+// Chart of Accounts (FIN-COA)
+// ==========================================
+
+/// Canonical expense category for a building cost (e.g. "Electricity – Common Areas").
+model ExpenseType {
+  id          String   @id @default(uuid())
+  orgId       String
+  name        String
+  description String?
+  code        String?  /// Optional short code like "ELEC-CA"
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  org      Org              @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  mappings ExpenseMapping[]
+  invoices Invoice[]
+  leaseExpenseItems LeaseExpenseItem[]
+
+  @@unique([orgId, name])
+  @@index([orgId])
+}
+
+/// Accounting bucket into which expenses are classified (e.g. "Nebenkosten – recoverable").
+model Account {
+  id          String   @id @default(uuid())
+  orgId       String
+  name        String
+  code        String?  /// e.g. "4000"
+  accountType String   @default("EXPENSE") /// EXPENSE | REVENUE | ASSET | LIABILITY — standard double-entry account classes
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  org      Org              @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  mappings           ExpenseMapping[]
+  invoices           Invoice[]
+  ledgerEntries      LedgerEntry[]
+  leaseExpenseItems  LeaseExpenseItem[]
+
+  @@unique([orgId, name])
+  @@index([orgId])
+}
+
+/// Links an ExpenseType to an Account, optionally scoped to a building.
+model ExpenseMapping {
+  id            String   @id @default(uuid())
+  orgId         String
+  expenseTypeId String
+  accountId     String
+  buildingId    String?  /// null = org-wide default; non-null = building override
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  org         Org         @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  expenseType ExpenseType @relation(fields: [expenseTypeId], references: [id], onDelete: Cascade)
+  account     Account     @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  building    Building?   @relation(fields: [buildingId], references: [id], onDelete: SetNull)
+
+  @@unique([orgId, expenseTypeId, buildingId])
+  @@index([orgId])
+  @@index([expenseTypeId])
+  @@index([accountId])
+}
+
+// ==========================================
+// Ledger
+// ==========================================
+
+/// One leg of a double-entry journal posting.
+/// Each economic event (invoice payment, rent receipt, etc.) produces two entries:
+/// a debit leg and a credit leg grouped by the same journalId.
+/// debitCents and creditCents are mutually exclusive — exactly one is non-zero per row.
+/// Amounts are stored in CHF cents (integer) to avoid floating-point rounding.
+model LedgerEntry {
+  id          String   @id @default(uuid())
+  orgId       String
+  date        DateTime /// Economic date of the transaction
+  accountId   String
+  debitCents  Int      @default(0) /// Amount debited in CHF cents (increases ASSET/EXPENSE accounts)
+  creditCents Int      @default(0) /// Amount credited in CHF cents (increases LIABILITY/REVENUE accounts)
+  description String   /// Human-readable posting description
+  reference   String?  /// Invoice number, payment reference, or other external identifier
+  sourceType  String?  /// "INVOICE_ISSUED" | "INVOICE_PAID" | "RENT_RECEIPT" | "MANUAL"
+  sourceId    String?  /// UUID of the originating domain record
+  journalId   String   /// UUID grouping all legs of one posting (generated per transaction)
+  buildingId  String?  /// Optional building scope for per-building reporting
+  unitId      String?  /// Optional unit scope for per-unit attribution
+  createdBy   String?  /// userId for manual entries; null for auto-posted entries
+  createdAt   DateTime @default(now())
+
+  org      Org       @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  account  Account   @relation(fields: [accountId], references: [id])
+  building Building? @relation(fields: [buildingId], references: [id], onDelete: SetNull)
+  unit     Unit?     @relation(fields: [unitId], references: [id], onDelete: SetNull)
+
+  @@index([orgId])
+  @@index([orgId, date])
+  @@index([accountId])
+  @@index([journalId])
+  @@index([sourceType, sourceId])
+  @@index([buildingId])
+  @@index([unitId])
 }

@@ -167,3 +167,4 @@ Maintenance_Agent/
 - Do not add inline styles to manager pages — use Tailwind classes or `@layer components` in globals.css
 - Do not change `maybeRequireManager` to allow writes — use `requireRole('MANAGER')` for mutations
 - Do not accept `tenantId` as a query param on tenant-portal routes — use `requireTenantSession()`
+- Do not add non-English labels, seed data, or UI text — English only until i18n epic lands (F-UI7)

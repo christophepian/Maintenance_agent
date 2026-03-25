@@ -17,6 +17,7 @@ import { assertInvoiceTransition, canTransitionJob } from "./transitions";
 import { emit } from "../events/bus";
 import { getInvoice, markInvoicePaid } from "../services/invoices";
 import { findJobRaw, updateJobRecord } from "../repositories/jobRepository";
+import { postInvoicePaid } from "../services/ledgerService";
 import type { InvoiceDTO } from "../services/invoices";
 
 // ─── Input / Output ────────────────────────────────────────────
@@ -63,7 +64,12 @@ export async function payInvoiceWorkflow(
     console.warn("Failed to transition job to INVOICED after payment", err);
   }
 
-  // ── 5. Emit event ──────────────────────────────────────────
+  // ── 5. Post ledger entry (best-effort) ────────────────────
+  postInvoicePaid(prisma, orgId, paid).catch((err) =>
+    console.error("[LEDGER] Failed to post INVOICE_PAID", err),
+  );
+
+  // ── 6. Emit event ──────────────────────────────────────────
   emit({
     type: "INVOICE_PAID",
     orgId,

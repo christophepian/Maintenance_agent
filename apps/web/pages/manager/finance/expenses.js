@@ -63,12 +63,26 @@ export default function ManagerExpensesPage() {
   // Filters
   const [categoryFilter, setCategoryFilter] = useState("");
   const [buildingId, setBuildingId] = useState("");
+  const [expenseTypeId, setExpenseTypeId] = useState("");
+  const [accountId, setAccountId] = useState("");
 
-  // Load buildings for dropdown
+  // COA lookups (feature-flagged: dropdowns only render when lists are non-empty)
+  const [expenseTypes, setExpenseTypes] = useState([]);
+  const [accounts, setAccounts] = useState([]);
+
+  // Load buildings + COA lookups for dropdowns
   useEffect(() => {
     fetch("/api/buildings", { headers: authHeaders() })
       .then((r) => r.json())
       .then((data) => setBuildings(data?.data || []))
+      .catch(() => {});
+    fetch("/api/coa/expense-types", { headers: authHeaders() })
+      .then((r) => r.json())
+      .then((data) => setExpenseTypes(data?.data || []))
+      .catch(() => {});
+    fetch("/api/coa/accounts", { headers: authHeaders() })
+      .then((r) => r.json())
+      .then((data) => setAccounts(data?.data || []))
       .catch(() => {});
   }, []);
 
@@ -79,6 +93,8 @@ export default function ManagerExpensesPage() {
       const params = new URLSearchParams({ view: "summary" });
       if (categoryFilter) params.set("expenseCategory", categoryFilter);
       if (buildingId) params.set("buildingId", buildingId);
+      if (expenseTypeId) params.set("expenseTypeId", expenseTypeId);
+      if (accountId) params.set("accountId", accountId);
 
       const res = await fetch(`/api/invoices?${params.toString()}`, { headers: authHeaders() });
       const data = await res.json();
@@ -91,13 +107,15 @@ export default function ManagerExpensesPage() {
     } finally {
       setLoading(false);
     }
-  }, [categoryFilter, buildingId]);
+  }, [categoryFilter, buildingId, expenseTypeId, accountId]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
   function clearFilters() {
     setCategoryFilter("");
     setBuildingId("");
+    setExpenseTypeId("");
+    setAccountId("");
   }
 
   async function setExpenseCategory(invoiceId, newCategory) {
@@ -120,7 +138,7 @@ export default function ManagerExpensesPage() {
     }
   }
 
-  const hasFilters = categoryFilter || buildingId;
+  const hasFilters = categoryFilter || buildingId || expenseTypeId || accountId;
 
   return (
     <AppShell role="MANAGER">
@@ -163,6 +181,36 @@ export default function ManagerExpensesPage() {
                   ))}
                 </select>
               </div>
+              {expenseTypes.length > 0 && (
+                <div>
+                  <label style={{ display: "block", fontSize: "0.8em", fontWeight: 600, marginBottom: 4 }}>Expense Type</label>
+                  <select
+                    value={expenseTypeId}
+                    onChange={(e) => setExpenseTypeId(e.target.value)}
+                    style={{ padding: "6px 10px", borderRadius: 4, border: "1px solid #ccc", fontSize: "0.9em", minWidth: 180 }}
+                  >
+                    <option value="">All expense types</option>
+                    {expenseTypes.map((et) => (
+                      <option key={et.id} value={et.id}>{et.code} — {et.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              {accounts.length > 0 && (
+                <div>
+                  <label style={{ display: "block", fontSize: "0.8em", fontWeight: 600, marginBottom: 4 }}>Account</label>
+                  <select
+                    value={accountId}
+                    onChange={(e) => setAccountId(e.target.value)}
+                    style={{ padding: "6px 10px", borderRadius: 4, border: "1px solid #ccc", fontSize: "0.9em", minWidth: 180 }}
+                  >
+                    <option value="">All accounts</option>
+                    {accounts.map((a) => (
+                      <option key={a.id} value={a.id}>{a.code} — {a.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
               {hasFilters && (
                 <button
                   onClick={clearFilters}

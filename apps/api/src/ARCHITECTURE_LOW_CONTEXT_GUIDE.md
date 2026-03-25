@@ -4,7 +4,7 @@
 > be able to read this file and know *exactly which 1-3 files to touch*
 > for any given change.
 
-**Codebase:** 48 models · 41 enums · 42 migrations · 23 workflows · 13 repositories · ~44k backend LOC · ~31k frontend LOC · 162 API routes
+**Codebase:** 53 models · 42 enums · 53 migrations · 23 workflows · 16 repositories · ~47k backend LOC · ~33k frontend LOC · ~170 API routes
 
 ---
 
@@ -98,6 +98,22 @@ Every status change in the system passes through `assert*Transition()`.
 ### "I need to change org/building configuration"
 → **`src/services/orgConfig.ts`** — `getOrgConfig()`
 → **`src/services/buildingConfig.ts`** — `computeEffectiveConfig()`
+
+### "I need to change Chart of Accounts (expense types, accounts, mappings)"
+→ **`src/services/coaService.ts`** — all COA CRUD + Swiss taxonomy seed
+→ **`src/repositories/expenseTypeRepository.ts`** — ExpenseType data access
+→ **`src/repositories/accountRepository.ts`** — Account data access
+→ **`src/repositories/expenseMappingRepository.ts`** — ExpenseMapping data access
+→ **`src/routes/coa.ts`** — 7 HTTP endpoints (expense-types, accounts, mappings CRUD + seed)
+→ **`src/validation/coaValidation.ts`** — Zod schemas for COA inputs
+→ Invoice COA classification: `invoiceRepository.ts` (INVOICE_INCLUDE), `invoices.ts` (DTO mapper)
+→ Lease expense items: `leaseRepository.ts` (LEASE_FULL_INCLUDE), `leases.ts` (expense item CRUD)
+
+### "I need to change the General Ledger (journal entries, trial balance)"
+→ **`src/services/ledgerService.ts`** — `postJournalEntries`, `postInvoiceIssued`, `postInvoicePaid`, `listLedgerEntries`, `getAccountBalance`, `getTrialBalance`
+→ **`src/routes/ledger.ts`** — `GET /ledger`, `GET /ledger/trial-balance`, `GET /ledger/accounts/:accountId/balance`
+→ Auto-posting wired in: `workflows/issueInvoiceWorkflow.ts` + `workflows/payInvoiceWorkflow.ts` (best-effort)
+→ UI: `apps/web/pages/manager/finance/ledger.js` (Journal tab + Trial Balance tab)
 
 ### "I need to add a new domain event handler"
 → **`src/events/bus.ts`** — event emission
@@ -210,6 +226,14 @@ Routes build `WorkflowContext` from `HandlerContext` and pass it into workflows.
 | `services/legalService.ts` | Legal domain CRUD: variables, rules, category mappings, evaluation logs, depreciation standards |
 | `services/requestAssignment.ts` | Contractor matching + assignment |
 | `services/assetInventory.ts` | Asset inventory, depreciation computation, repair vs replace analysis |
+| `services/coaService.ts` | Chart of Accounts CRUD + Swiss taxonomy seed |
+| `repositories/expenseTypeRepository.ts` | ExpenseType data access |
+| `repositories/accountRepository.ts` | Account data access |
+| `repositories/expenseMappingRepository.ts` | ExpenseMapping data access |
+| `routes/coa.ts` | COA HTTP endpoints (7 routes) |
+| `validation/coaValidation.ts` | Zod schemas for COA inputs |
+| `services/ledgerService.ts` | Double-entry journal: postInvoiceIssued/Paid, listLedgerEntries, getTrialBalance |
+| `routes/ledger.ts` | Ledger HTTP endpoints (3 routes: journal, trial-balance, account balance) |
 | `events/bus.ts` | Domain event bus |
 
 ---

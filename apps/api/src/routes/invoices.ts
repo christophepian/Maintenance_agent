@@ -91,8 +91,10 @@ export function registerInvoiceRoutes(router: Router) {
       const buildingId = first(query, "buildingId") || undefined;
       const paidAfter = first(query, "paidAfter") || undefined;
       const paidBefore = first(query, "paidBefore") || undefined;
+      const expenseTypeId = first(query, "expenseTypeId") || undefined;
+      const accountId = first(query, "accountId") || undefined;
       const view = first(query, "view") as "summary" | "full" | undefined;
-      const result = await listInvoices(orgId, { jobId, status: status as any, view, contractorId, expenseCategory, buildingId, paidAfter, paidBefore });
+      const result = await listInvoices(orgId, { jobId, status: status as any, view, contractorId, expenseCategory, buildingId, paidAfter, paidBefore, expenseTypeId, accountId });
       sendJson(res, 200, { data: result.data, total: result.total });
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to load invoices", String(e));
@@ -100,7 +102,9 @@ export function registerInvoiceRoutes(router: Router) {
   });
 
   // POST /invoices
-  router.post("/invoices", async ({ req, res, orgId }) => {
+  // Contractor-created invoices are auto-issued (DRAFT → ISSUED).
+  // Manager-created invoices stay in DRAFT for manual review.
+  router.post("/invoices", async ({ req, res, prisma, orgId }) => {
     if (!requireOrgViewer(req, res)) return;
     try {
       const raw = await readJson(req);
@@ -122,8 +126,24 @@ export function registerInvoiceRoutes(router: Router) {
         issueDate: parsed.data.issueDate ? new Date(parsed.data.issueDate) : undefined,
         dueDate: parsed.data.dueDate ? new Date(parsed.data.dueDate) : undefined,
         vatRate: parsed.data.vatRate,
+        expenseTypeId: parsed.data.expenseTypeId,
+        accountId: parsed.data.accountId,
         lineItems: parsed.data.lineItems,
       });
+
+      // Auto-issue when the caller is a contractor
+      const actor = getAuthUser(req);
+      if (actor?.role === "CONTRACTOR") {
+        try {
+          const issued = await issueInvoiceWorkflow(
+            { orgId, prisma, actorUserId: actor.userId },
+            { invoiceId: created.id },
+          );
+          return sendJson(res, 201, { data: issued.dto });
+        } catch {
+          // If auto-issue fails (e.g. missing billing entity), still return the DRAFT
+        }
+      }
 
       sendJson(res, 201, { data: created });
     } catch (e: any) {

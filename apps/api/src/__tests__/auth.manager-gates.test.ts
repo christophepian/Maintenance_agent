@@ -1,56 +1,10 @@
 import * as http from "http";
-import { spawn, ChildProcessWithoutNullStreams } from "child_process";
-import * as path from "path";
+import { ChildProcessWithoutNullStreams } from 'child_process';
+import { startTestServer, stopTestServer } from './testHelpers';
 
 process.env.AUTH_SECRET = "test-secret";
 const { encodeToken } = require("../services/auth");
 
-const API_ROOT = path.resolve(__dirname, "..", "..");
-const TS_NODE = path.resolve(API_ROOT, "node_modules", ".bin", "ts-node");
-
-function startServer(envOverrides: Record<string, string>, port: number) {
-  return new Promise<ChildProcessWithoutNullStreams>((resolve, reject) => {
-    const child = spawn(TS_NODE, ["--transpile-only", "src/server.ts"], {
-      cwd: API_ROOT,
-      env: {
-        ...process.env,
-        PORT: String(port),
-        AUTH_SECRET: "test-secret",
-        ...envOverrides,
-      },
-      stdio: ["ignore", "pipe", "pipe"],
-    });
-
-    const onData = (data: Buffer) => {
-      const text = data.toString();
-      if (text.includes("API running on")) {
-        cleanup();
-        resolve(child);
-      }
-    };
-
-    const onError = (err: Error) => {
-      cleanup();
-      reject(err);
-    };
-
-    const timeout = setTimeout(() => {
-      cleanup();
-      reject(new Error("Server did not start in time"));
-    }, 15000);
-
-    function cleanup() {
-      clearTimeout(timeout);
-      child.stdout?.off("data", onData);
-      child.stderr?.off("data", onData);
-      child.off("error", onError);
-    }
-
-    child.stdout?.on("data", onData);
-    child.stderr?.on("data", onData);
-    child.on("error", onError);
-  });
-}
 
 function httpRequest(
   port: number,
@@ -130,14 +84,11 @@ describe("Manager auth gates", () => {
   });
 
   beforeAll(async () => {
-    requiredProc = await startServer({ AUTH_OPTIONAL: "false", NODE_ENV: "test" }, requiredPort);
-    optionalProc = await startServer({ AUTH_OPTIONAL: "true", NODE_ENV: "test" }, optionalPort);
+    requiredProc = await startTestServer(requiredPort, { AUTH_OPTIONAL: "false", NODE_ENV: "test" });
+    optionalProc = await startTestServer(optionalPort, { AUTH_OPTIONAL: "true", NODE_ENV: "test" });
   }, 20000);
 
-  afterAll(() => {
-    requiredProc?.kill();
-    optionalProc?.kill();
-  });
+  afterAll(() => Promise.all([stopTestServer(requiredProc), stopTestServer(optionalProc)]));
 
   it("returns 401 without token when auth required", async () => {
     const result = await httpRequest(requiredPort, "POST", "/contractors", sampleContractorPayload());

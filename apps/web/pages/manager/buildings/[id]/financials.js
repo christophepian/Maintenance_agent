@@ -12,56 +12,100 @@ import { formatChfCents, formatPercent } from "../../../../lib/format";
 
 /* ─── Helpers ─── */
 
-/** Format ISO date string as DD.MM.YYYY for display */
+function defaultRange() {
+  const now = new Date();
+  return { from: `${now.getFullYear()}-01-01`, to: now.toISOString().slice(0, 10) };
+}
+
 function displayDate(iso) {
   if (!iso) return "—";
   const d = new Date(iso);
   if (isNaN(d.getTime())) return iso;
-  const dd = String(d.getDate()).padStart(2, "0");
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  return `${dd}.${mm}.${d.getFullYear()}`;
+  return `${String(d.getDate()).padStart(2, "0")}.${String(d.getMonth() + 1).padStart(2, "0")}.${d.getFullYear()}`;
 }
 
-/** Get default date range: first day of current year → today (ISO strings) */
-function defaultRange() {
-  const now = new Date();
-  const from = `${now.getFullYear()}-01-01`;
-  const to = now.toISOString().slice(0, 10);
-  return { from, to };
-}
+/* ─── RAG health bullet ─── */
 
-/* ─── Category display labels ─── */
-const CATEGORY_LABELS = {
-  MAINTENANCE: "Maintenance",
-  UTILITIES: "Utilities",
-  CLEANING: "Cleaning",
-  INSURANCE: "Insurance",
-  TAX: "Tax",
-  ADMIN: "Administration",
-  CAPEX: "Capital Expenditure",
-  OTHER: "Other",
-};
-
-/* ─── KPI Card ─── */
-function KpiCard({ label, value, subtitle }) {
+function HealthBullet({ icon, text, color }) {
+  const bg = { green: "bg-emerald-50", amber: "bg-amber-50", red: "bg-red-50" }[color] || "bg-gray-50";
+  const border = { green: "border-emerald-200", amber: "border-amber-200", red: "border-red-200" }[color] || "border-gray-200";
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-4 flex flex-col gap-1">
-      <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">{label}</span>
-      <span className="text-xl font-bold text-gray-900">{value}</span>
-      {subtitle && <span className="text-xs text-gray-400">{subtitle}</span>}
+    <div className={`flex items-start gap-2.5 px-4 py-3 rounded-lg border ${bg} ${border}`}>
+      <span className="text-lg leading-none mt-0.5">{icon}</span>
+      <span className="text-sm text-gray-800">{text}</span>
     </div>
   );
 }
 
+/* ─── Labels ─── */
+
+const CATEGORY_LABELS = {
+  MAINTENANCE: "Maintenance",
+  UTILITIES:   "Utilities",
+  CLEANING:    "Cleaning",
+  INSURANCE:   "Insurance",
+  TAX:         "Tax",
+  ADMIN:       "Administration",
+  CAPEX:       "Capital Expenditure",
+  OTHER:       "Other",
+};
+
+/* ─── KPI card ─── */
+
+function KpiCard({ label, value, sub, accent }) {
+  const cls = accent === "green" ? "text-emerald-700"
+    : accent === "red" ? "text-red-600"
+    : accent === "amber" ? "text-amber-700"
+    : "text-gray-900";
+  return (
+    <div className="bg-white rounded-lg border border-gray-200 p-4 flex flex-col gap-1">
+      <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">{label}</span>
+      <span className={`text-xl font-bold ${cls}`}>{value}</span>
+      {sub && <span className="text-xs text-gray-400">{sub}</span>}
+    </div>
+  );
+}
+
+/* ─── Simple stat row ─── */
+
+function StatRow({ label, value, sub, accent }) {
+  const cls = accent === "green" ? "text-emerald-700"
+    : accent === "red" ? "text-red-600"
+    : accent === "amber" ? "text-amber-700"
+    : "text-gray-900";
+  return (
+    <div className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
+      <div>
+        <span className="text-sm text-gray-700">{label}</span>
+        {sub && <span className="text-xs text-gray-400 ml-2">{sub}</span>}
+      </div>
+      <span className={`text-sm font-semibold font-mono ${cls}`}>{value}</span>
+    </div>
+  );
+}
+
+/* ─── Tab definitions ─── */
+
+const TABS = [
+  { key: "overview",     label: "Overview" },
+  { key: "income",       label: "Income" },
+  { key: "expenses",     label: "Expenses" },
+  { key: "balances",     label: "Receivables & Payables" },
+  { key: "advanced",     label: "Advanced" },
+];
+
 /* ─── Main Page ─── */
+
 export default function BuildingFinancialsPage() {
   const router = useRouter();
   const { id } = router.query;
 
+  const [activeTab, setActiveTab] = useState("overview");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [data, setData] = useState(null);
   const [range, setRange] = useState(defaultRange);
+  const [rangeInput, setRangeInput] = useState(defaultRange);
 
   const fetchFinancials = useCallback(
     async (forceRefresh = false) => {
@@ -69,9 +113,13 @@ export default function BuildingFinancialsPage() {
       setLoading(true);
       setError("");
       try {
-        const params = new URLSearchParams({ from: range.from, to: range.to });
+        const params = new URLSearchParams({
+          from: range.from,
+          to: range.to,
+          groupByAccount: "true",
+        });
         if (forceRefresh) params.set("forceRefresh", "true");
-        const res = await fetch(`/api/buildings/${id}/financials?${params}`, {
+        const res = await fetch(`/api/buildings/${id}/financial-summary?${params}`, {
           headers: authHeaders(),
         });
         const json = await res.json();
@@ -86,32 +134,51 @@ export default function BuildingFinancialsPage() {
     [id, range],
   );
 
-  useEffect(() => {
-    fetchFinancials();
-  }, [fetchFinancials]);
+  useEffect(() => { fetchFinancials(); }, [fetchFinancials]);
 
-  /* ─── KPI definitions ─── */
-  const kpis = useMemo(() => {
-    if (!data) return [];
-    return [
-      { label: "Earned Income", value: formatChfCents(data.earnedIncomeCents) },
-      { label: "Projected Income", value: formatChfCents(data.projectedIncomeCents) },
-      { label: "Total Expenses", value: formatChfCents(data.expensesTotalCents) },
-      { label: "Maintenance", value: formatChfCents(data.maintenanceTotalCents) },
-      { label: "Operating", value: formatChfCents(data.operatingTotalCents) },
-      { label: "Capex", value: formatChfCents(data.capexTotalCents) },
-      { label: "Net Operating Income", value: formatChfCents(data.netOperatingIncomeCents) },
-      { label: "Collection Rate", value: formatPercent(data.collectionRate) },
-    ];
-  }, [data]);
+  function applyRange() { setRange({ ...rangeInput }); }
 
-  /* ─── Loading state ─── */
+  const d = data;
+
+  const healthBullets = useMemo(() => {
+    if (!d) return [];
+    const bullets = [];
+    const net = d.netIncomeCents;
+    if (net > 0)
+      bullets.push({ icon: "🟢", color: "green", text: `Building is profitable — net income of ${formatChfCents(net)} for the period.` });
+    else if (net === 0)
+      bullets.push({ icon: "🟡", color: "amber", text: "Income and expenses are exactly balanced — no profit or loss." });
+    else
+      bullets.push({ icon: "🔴", color: "red", text: `Expenses exceed income by ${formatChfCents(Math.abs(net))} — review the breakdown below.` });
+    const cr = d.collectionRate;
+    if (cr >= 0.95)
+      bullets.push({ icon: "🟢", color: "green", text: `Collection rate is ${formatPercent(cr)} — rent is being paid on time.` });
+    else if (cr >= 0.80)
+      bullets.push({ icon: "🟡", color: "amber", text: `Collection rate is ${formatPercent(cr)} — some rent payments are outstanding.` });
+    else if (d.projectedIncomeCents > 0)
+      bullets.push({ icon: "🔴", color: "red", text: `Collection rate is only ${formatPercent(cr)} — significant rent is overdue.` });
+    else
+      bullets.push({ icon: "🟡", color: "amber", text: "No projected income — collection rate cannot be assessed." });
+    const mr = d.maintenanceRatio;
+    if (d.earnedIncomeCents === 0 && d.maintenanceTotalCents === 0)
+      bullets.push({ icon: "🟡", color: "amber", text: "No maintenance spend and no income recorded this period." });
+    else if (mr <= 0.15)
+      bullets.push({ icon: "🟢", color: "green", text: `Maintenance is ${formatPercent(mr)} of income — well within healthy range.` });
+    else if (mr <= 0.30)
+      bullets.push({ icon: "🟡", color: "amber", text: `Maintenance is ${formatPercent(mr)} of income — monitor for rising costs.` });
+    else
+      bullets.push({ icon: "🔴", color: "red", text: `Maintenance is ${formatPercent(mr)} of income — unusually high, investigate major repairs.` });
+    if (d.payablesCents > 0)
+      bullets.push({ icon: "🟡", color: "amber", text: `${formatChfCents(d.payablesCents)} in outstanding supplier invoices awaiting payment.` });
+    return bullets;
+  }, [d]);
+
   if (!id) {
     return (
       <AppShell role="MANAGER">
         <PageShell>
           <PageHeader title="Building Financials" />
-          <PageContent><p>Loading...</p></PageContent>
+          <PageContent><p className="loading-text">Loading…</p></PageContent>
         </PageShell>
       </AppShell>
     );
@@ -120,20 +187,22 @@ export default function BuildingFinancialsPage() {
   return (
     <AppShell role="MANAGER">
       <PageShell>
-        <PageHeader title={data ? `${data.buildingName} — Financials` : "Building Financials"} />
+        <PageHeader title={d ? `${d.buildingName} — Financials` : "Building Financials"} />
         <PageContent>
-          <Link href="/admin-inventory/buildings" className="text-sm text-blue-600 hover:text-blue-800 mb-4 inline-block">
-            ← Back to buildings
+
+          <Link href="/manager/finance" className="text-sm text-blue-600 hover:text-blue-800 mb-4 inline-block">
+            ← Back to Finance Dashboard
           </Link>
-          {/* ─── Controls ─── */}
+
+          {/* ─── Date range controls ─── */}
           <Panel>
             <div className="flex flex-wrap items-end gap-4">
               <div className="flex flex-col gap-1">
                 <label className="text-xs font-medium text-gray-600">From</label>
                 <input
                   type="date"
-                  value={range.from}
-                  onChange={(e) => setRange((r) => ({ ...r, from: e.target.value }))}
+                  value={rangeInput.from}
+                  onChange={(e) => setRangeInput((r) => ({ ...r, from: e.target.value }))}
                   className="border border-gray-300 rounded px-2 py-1 text-sm"
                 />
               </div>
@@ -141,13 +210,13 @@ export default function BuildingFinancialsPage() {
                 <label className="text-xs font-medium text-gray-600">To</label>
                 <input
                   type="date"
-                  value={range.to}
-                  onChange={(e) => setRange((r) => ({ ...r, to: e.target.value }))}
+                  value={rangeInput.to}
+                  onChange={(e) => setRangeInput((r) => ({ ...r, to: e.target.value }))}
                   className="border border-gray-300 rounded px-2 py-1 text-sm"
                 />
               </div>
               <button
-                onClick={() => fetchFinancials(false)}
+                onClick={applyRange}
                 className="bg-blue-600 text-white text-sm font-medium px-4 py-1.5 rounded hover:bg-blue-700 transition-colors"
               >
                 Apply
@@ -159,111 +228,312 @@ export default function BuildingFinancialsPage() {
               >
                 ↻ Refresh
               </button>
+              {d && (
+                <span className="text-xs text-gray-400 self-end pb-0.5">
+                  {displayDate(d.from)} – {displayDate(d.to)} · {d.activeUnitsCount} unit{d.activeUnitsCount !== 1 ? "s" : ""}
+                </span>
+              )}
             </div>
-            {data && (
-              <p className="text-xs text-gray-400 mt-2">
-                Period: {displayDate(data.from)} – {displayDate(data.to)} · {data.activeUnitsCount} active unit{data.activeUnitsCount !== 1 ? "s" : ""}
-              </p>
-            )}
           </Panel>
 
-          {/* ─── Error ─── */}
-          {error && (
-            <Panel>
-              <p className="text-red-600 font-medium">Error: {error}</p>
-            </Panel>
-          )}
+          {error && <div className="notice notice-err mb-4">{error}</div>}
+          {loading && !d && <p className="loading-text">Loading financials…</p>}
 
-          {/* ─── Loading ─── */}
-          {loading && !data && <p className="text-gray-500 mt-4">Loading financials…</p>}
-
-          {/* ─── KPI Cards ─── */}
-          {data && (
+          {d && (
             <>
-              <Section title="Key Performance Indicators">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {kpis.map((kpi) => (
-                    <KpiCard key={kpi.label} label={kpi.label} value={kpi.value} />
-                  ))}
-                </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3">
-                  <KpiCard
-                    label="Net Income"
-                    value={formatChfCents(data.netIncomeCents)}
-                    subtitle="Income − All Expenses"
-                  />
-                  <KpiCard
-                    label="Maintenance Ratio"
-                    value={formatPercent(data.maintenanceRatio)}
-                    subtitle="Maintenance ÷ Income"
-                  />
-                  <KpiCard
-                    label="Cost per Unit"
-                    value={formatChfCents(data.costPerUnitCents)}
-                    subtitle={`${data.activeUnitsCount} active unit${data.activeUnitsCount !== 1 ? "s" : ""}`}
-                  />
-                </div>
-              </Section>
+              {/* ─── Tab bar ─── */}
+              <div className="tab-strip mt-4">
+                {TABS.map((t) => (
+                  <button
+                    key={t.key}
+                    onClick={() => setActiveTab(t.key)}
+                    className={activeTab === t.key ? "tab-btn-active" : "tab-btn"}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
 
-              {/* ─── Expenses by Category ─── */}
-              <Section title="Expenses by Category">
-                <Panel>
-                  {data.expensesByCategory.length === 0 ? (
-                    <p className="text-gray-400 text-sm">No categorised expenses in this period.</p>
-                  ) : (
-                    <table className="inline-table">
-                      <thead>
-                        <tr>
-                          <th>Category</th>
-                          <th className="text-right">Amount</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {data.expensesByCategory.map((row) => (
-                          <tr key={row.category}>
-                            <td className="cell-bold">
-                              {CATEGORY_LABELS[row.category] || row.category}
-                            </td>
-                            <td className="text-right font-mono">
-                              {formatChfCents(row.totalCents)}
-                            </td>
-                          </tr>
+              {/* ═══ Overview tab ═══ */}
+              {activeTab === "overview" && (
+                <>
+                  {healthBullets.length > 0 && (
+                    <Section title="Health Summary">
+                      <div className="flex flex-col gap-2">
+                        {healthBullets.map((b, i) => (
+                          <HealthBullet key={i} icon={b.icon} text={b.text} color={b.color} />
                         ))}
-                      </tbody>
-                    </table>
+                      </div>
+                    </Section>
                   )}
-                </Panel>
-              </Section>
 
-              {/* ─── Top Contractors by Spend ─── */}
-              <Section title="Top Contractors by Spend">
-                <Panel>
-                  {data.topContractorsBySpend.length === 0 ? (
-                    <p className="text-gray-400 text-sm">No contractor expenses in this period.</p>
-                  ) : (
-                    <table className="inline-table">
-                      <thead>
-                        <tr>
-                          <th>Contractor</th>
-                          <th className="text-right">Total Spend</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {data.topContractorsBySpend.map((row) => (
-                          <tr key={row.contractorId}>
-                            <td className="cell-bold">{row.contractorName}</td>
-                            <td className="text-right font-mono">
-                              {formatChfCents(row.totalCents)}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                  <Section title="Financial Summary">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      <KpiCard label="Earned Income" value={formatChfCents(d.earnedIncomeCents)} accent="green" />
+                      <KpiCard label="Total Expenses" value={formatChfCents(d.expensesTotalCents)} />
+                      <KpiCard
+                        label="Net Operating Income"
+                        value={formatChfCents(d.netOperatingIncomeCents)}
+                        accent={d.netOperatingIncomeCents >= 0 ? "green" : "red"}
+                        sub="Income − Operating Expenses"
+                      />
+                      <KpiCard
+                        label="Collection Rate"
+                        value={formatPercent(d.collectionRate)}
+                        accent={d.collectionRate >= 0.95 ? "green" : d.collectionRate >= 0.8 ? "amber" : "red"}
+                        sub="Earned ÷ Projected"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3">
+                      <KpiCard label="Maintenance" value={formatChfCents(d.maintenanceTotalCents)} sub="of total expenses" />
+                      <KpiCard
+                        label="Maintenance Ratio"
+                        value={formatPercent(d.maintenanceRatio)}
+                        accent={d.maintenanceRatio > 0.3 ? "red" : d.maintenanceRatio > 0.15 ? "amber" : "green"}
+                        sub="Maintenance ÷ Income"
+                      />
+                      <KpiCard label="CapEx" value={formatChfCents(d.capexTotalCents)} sub="Capital expenditure" />
+                      <KpiCard
+                        label="Cost per Unit"
+                        value={formatChfCents(d.costPerUnitCents)}
+                        sub={`${d.activeUnitsCount} active unit${d.activeUnitsCount !== 1 ? "s" : ""}`}
+                      />
+                    </div>
+                    {(d.receivablesCents > 0 || d.payablesCents > 0) && (
+                      <div className="grid grid-cols-2 gap-3 mt-3">
+                        {d.receivablesCents > 0 && (
+                          <KpiCard
+                            label="Receivables"
+                            value={formatChfCents(d.receivablesCents)}
+                            accent="amber"
+                            sub="Unpaid rent invoices (now)"
+                          />
+                        )}
+                        {d.payablesCents > 0 && (
+                          <KpiCard
+                            label="Payables"
+                            value={formatChfCents(d.payablesCents)}
+                            accent="amber"
+                            sub="Unpaid supplier invoices (now)"
+                          />
+                        )}
+                      </div>
+                    )}
+                  </Section>
+
+                  {d.topContractorsBySpend.length > 0 && (
+                    <Section title="Top Expense Drivers">
+                      <Panel bodyClassName="p-0">
+                        <table className="inline-table">
+                          <thead>
+                            <tr>
+                              <th>Contractor</th>
+                              <th className="text-right">Total Spend</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {d.topContractorsBySpend.map((row) => (
+                              <tr key={row.contractorId}>
+                                <td className="cell-bold">{row.contractorName}</td>
+                                <td className="text-right font-mono">{formatChfCents(row.totalCents)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </Panel>
+                    </Section>
                   )}
-                </Panel>
-              </Section>
+                </>
+              )}
+
+              {/* ═══ Income tab ═══ */}
+              {activeTab === "income" && (
+                <Section title="Income Breakdown">
+                  <Panel>
+                    <div className="space-y-0">
+                      <StatRow
+                        label="Earned Income"
+                        value={formatChfCents(d.earnedIncomeCents)}
+                        sub="Cash received (paid invoices)"
+                        accent="green"
+                      />
+                      <StatRow
+                        label="Projected Income"
+                        value={formatChfCents(d.projectedIncomeCents)}
+                        sub="Expected from active leases, prorated"
+                      />
+                      <div className="mt-3 mb-1 pt-3 border-t border-gray-200">
+                        <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Projected breakdown</span>
+                      </div>
+                      <StatRow
+                        label="Rental Income"
+                        value={formatChfCents(d.rentalIncomeCents)}
+                        sub="Net rent + garage + other service"
+                      />
+                      <StatRow
+                        label="Service Charges"
+                        value={formatChfCents(d.serviceChargeIncomeCents)}
+                        sub="Ancillary charges (utilities, etc.)"
+                      />
+                      <div className="mt-3 mb-1 pt-3 border-t border-gray-200">
+                        <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Performance</span>
+                      </div>
+                      <StatRow
+                        label="Collection Rate"
+                        value={formatPercent(d.collectionRate)}
+                        sub="Earned ÷ Projected"
+                        accent={d.collectionRate >= 0.95 ? "green" : d.collectionRate >= 0.8 ? "amber" : "red"}
+                      />
+                      <StatRow
+                        label="Net Income"
+                        value={formatChfCents(d.netIncomeCents)}
+                        sub="Earned Income − All Expenses"
+                        accent={d.netIncomeCents >= 0 ? "green" : "red"}
+                      />
+                      <StatRow
+                        label="Net Operating Income"
+                        value={formatChfCents(d.netOperatingIncomeCents)}
+                        sub="Earned Income − Operating Expenses (excl. CapEx)"
+                        accent={d.netOperatingIncomeCents >= 0 ? "green" : "red"}
+                      />
+                    </div>
+                  </Panel>
+                </Section>
+              )}
+
+              {/* ═══ Expenses tab ═══ */}
+              {activeTab === "expenses" && (
+                <>
+                  <Section title="Expenses by Category">
+                    <Panel bodyClassName="p-0">
+                      {d.expensesByCategory.length === 0 ? (
+                        <div className="empty-state">
+                          <p className="empty-state-text">No categorised expenses in this period.</p>
+                        </div>
+                      ) : (
+                        <table className="inline-table">
+                          <thead>
+                            <tr>
+                              <th>Category</th>
+                              <th className="text-right">Amount</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {d.expensesByCategory.map((row) => (
+                              <tr key={row.category}>
+                                <td className="cell-bold">{CATEGORY_LABELS[row.category] || row.category}</td>
+                                <td className="text-right font-mono">{formatChfCents(row.totalCents)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                          <tfoot>
+                            <tr className="border-t-2 border-gray-300 font-semibold">
+                              <td>Total</td>
+                              <td className="text-right font-mono">{formatChfCents(d.expensesTotalCents)}</td>
+                            </tr>
+                          </tfoot>
+                        </table>
+                      )}
+                    </Panel>
+                  </Section>
+
+                  {d.expensesByAccount && d.expensesByAccount.length > 0 && (
+                    <Section title="Expenses by Account">
+                      <Panel bodyClassName="p-0">
+                        <table className="inline-table">
+                          <thead>
+                            <tr>
+                              <th>Code</th>
+                              <th>Account</th>
+                              <th className="text-right">Amount</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {d.expensesByAccount.map((row) => (
+                              <tr key={row.accountId}>
+                                <td className="font-mono text-xs text-gray-500">{row.accountCode || "—"}</td>
+                                <td className="cell-bold">{row.accountName}</td>
+                                <td className="text-right font-mono">{formatChfCents(row.totalCents)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </Panel>
+                    </Section>
+                  )}
+
+                  {d.topContractorsBySpend.length > 0 && (
+                    <Section title="Expenses by Contractor">
+                      <Panel bodyClassName="p-0">
+                        <table className="inline-table">
+                          <thead>
+                            <tr>
+                              <th>Contractor</th>
+                              <th className="text-right">Total</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {d.topContractorsBySpend.map((row) => (
+                              <tr key={row.contractorId}>
+                                <td className="cell-bold">{row.contractorName}</td>
+                                <td className="text-right font-mono">{formatChfCents(row.totalCents)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </Panel>
+                    </Section>
+                  )}
+                </>
+              )}
+
+              {/* ═══ Receivables & Payables tab ═══ */}
+              {activeTab === "balances" && (
+                <Section title="Outstanding Balances">
+                  <p className="text-xs text-gray-500 mb-3">
+                    Point-in-time snapshot — shows invoices currently awaiting payment, regardless of the date range above.
+                  </p>
+                  <Panel>
+                    <div className="space-y-0">
+                      <StatRow
+                        label="Receivables"
+                        value={d.receivablesCents > 0 ? formatChfCents(d.receivablesCents) : "None outstanding"}
+                        sub="ISSUED rent invoices not yet paid"
+                        accent={d.receivablesCents > 0 ? "amber" : "green"}
+                      />
+                      <StatRow
+                        label="Payables"
+                        value={d.payablesCents > 0 ? formatChfCents(d.payablesCents) : "None outstanding"}
+                        sub="ISSUED/APPROVED supplier invoices not yet paid"
+                        accent={d.payablesCents > 0 ? "amber" : "green"}
+                      />
+                    </div>
+                  </Panel>
+                  {d.receivablesCents === 0 && d.payablesCents === 0 && (
+                    <p className="text-sm text-emerald-700 font-medium mt-3">All invoices settled — no outstanding balances.</p>
+                  )}
+                </Section>
+              )}
+
+              {/* ═══ Advanced tab ═══ */}
+              {activeTab === "advanced" && (
+                <Section title="Advanced Accounting">
+                  <p className="text-xs text-gray-500 mb-4">
+                    The following tools show the raw double-entry ledger. Useful for auditing, but not required for day-to-day management.
+                  </p>
+                  <div className="flex flex-wrap gap-3">
+                    <Link href="/manager/finance/ledger" className="button-secondary text-sm">
+                      General Ledger →
+                    </Link>
+                    <Link href="/manager/finance/chart-of-accounts" className="button-secondary text-sm">
+                      Chart of Accounts →
+                    </Link>
+                  </div>
+                </Section>
+              )}
             </>
           )}
+
         </PageContent>
       </PageShell>
     </AppShell>

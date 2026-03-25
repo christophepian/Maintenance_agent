@@ -315,6 +315,10 @@ export interface InvoiceDTO {
   updatedAt: string;
   lineItems: InvoiceLineItemDTO[];
   expenseCategory?: ExpenseCategory | null;
+  expenseTypeId?: string | null;
+  accountId?: string | null;
+  expenseType?: { id: string; name: string; code: string | null } | null;
+  account?: { id: string; name: string; code: string | null } | null;
 }
 
 /**
@@ -403,6 +407,22 @@ export interface LeaseDTO {
   createdAt: string;
   updatedAt: string;
   unit?: UnitSummary;
+  expenseItems?: LeaseExpenseItemDTO[];
+}
+
+export interface LeaseExpenseItemDTO {
+  id: string;
+  leaseId: string;
+  description: string;
+  amountChf: number;
+  mode: 'ACOMPTE' | 'FORFAIT';
+  expenseTypeId?: string;
+  accountId?: string;
+  expenseType?: { id: string; name: string; code?: string };
+  account?: { id: string; name: string; code?: string };
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface SignatureRequestDTO {
@@ -894,11 +914,20 @@ async function request<T>(
     headers["content-type"] = "application/json";
   }
 
-  const res = await fetch(url.toString(), {
-    method,
-    headers,
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-  });
+  let res: Response;
+  try {
+    res = await fetch(url.toString(), {
+      method,
+      headers,
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    });
+  } catch (networkError: unknown) {
+    // Network-level failure (ECONNREFUSED, DNS failure, offline, etc.)
+    const msg = networkError instanceof Error ? networkError.message : String(networkError);
+    throw new ApiClientError(0, {
+      error: { code: "NETWORK_ERROR", message: `Unable to connect to API: ${msg}` },
+    });
+  }
 
   if (!res.ok) {
     let errorBody: ApiError;
@@ -1028,6 +1057,8 @@ function buildInvoicesApi(opts: ClientOptions) {
     create: (body: {
       jobId: string;
       description?: string;
+      expenseTypeId?: string;
+      accountId?: string;
       lineItems?: Array<{
         description: string;
         quantity: number;
@@ -1280,6 +1311,16 @@ function buildLeasesApi(opts: ClientOptions) {
 
     createInvoice: (id: string, body: Record<string, unknown>) =>
       request<InvoiceDTO>(opts, "POST", `/leases/${id}/invoices`, body),
+
+    // Lease expense items
+    createExpenseItem: (leaseId: string, body: { description: string; amountChf: number; mode?: 'ACOMPTE' | 'FORFAIT'; expenseTypeId?: string; accountId?: string }) =>
+      request<LeaseExpenseItemDTO>(opts, "POST", `/leases/${leaseId}/expense-items`, body),
+
+    updateExpenseItem: (leaseId: string, itemId: string, body: Partial<{ description: string; amountChf: number; mode: 'ACOMPTE' | 'FORFAIT'; expenseTypeId: string | null; accountId: string | null; isActive: boolean }>) =>
+      request<LeaseExpenseItemDTO>(opts, "PATCH", `/leases/${leaseId}/expense-items/${itemId}`, body),
+
+    deleteExpenseItem: (leaseId: string, itemId: string) =>
+      request<{ success: boolean }>(opts, "DELETE", `/leases/${leaseId}/expense-items/${itemId}`),
   };
 }
 
@@ -1708,6 +1749,13 @@ export interface ContractorSpendDTO {
   totalCents: number;
 }
 
+export interface AccountTotalDTO {
+  accountId: string;
+  accountName: string;
+  accountCode: string | null;
+  totalCents: number;
+}
+
 export interface BuildingFinancialsDTO {
   buildingId: string;
   buildingName: string;
@@ -1721,12 +1769,51 @@ export interface BuildingFinancialsDTO {
   operatingTotalCents: number;
   netIncomeCents: number;
   netOperatingIncomeCents: number;
+  /** Projected rent component (netRent + garageRent + otherServiceRent), prorated over range */
+  rentalIncomeCents: number;
+  /** Projected service-charge component (chargesTotalChf), prorated over range */
+  serviceChargeIncomeCents: number;
+  /** Point-in-time: ISSUED unpaid lease invoices */
+  receivablesCents: number;
+  /** Point-in-time: ISSUED/APPROVED unpaid job invoices */
+  payablesCents: number;
   maintenanceRatio: number;
   costPerUnitCents: number;
   collectionRate: number;
   activeUnitsCount: number;
   expensesByCategory: ExpenseCategoryTotalDTO[];
   topContractorsBySpend: ContractorSpendDTO[];
+  expensesByAccount?: AccountTotalDTO[];
+}
+
+export interface BuildingSummaryDTO {
+  buildingId: string;
+  buildingName: string;
+  health: "green" | "amber" | "red";
+  earnedIncomeCents: number;
+  expensesTotalCents: number;
+  netIncomeCents: number;
+  collectionRate: number;
+  maintenanceRatio: number;
+  activeUnitsCount: number;
+  receivablesCents: number;
+  payablesCents: number;
+}
+
+export interface PortfolioSummaryDTO {
+  from: string;
+  to: string;
+  totalEarnedIncomeCents: number;
+  totalExpensesCents: number;
+  totalNetIncomeCents: number;
+  avgCollectionRate: number;
+  avgMaintenanceRatio: number;
+  totalActiveUnits: number;
+  buildingsInRed: number;
+  buildingCount: number;
+  totalReceivablesCents: number;
+  totalPayablesCents: number;
+  buildings: BuildingSummaryDTO[];
 }
 
 function buildFinancialsApi(opts: ClientOptions) {
@@ -1734,7 +1821,7 @@ function buildFinancialsApi(opts: ClientOptions) {
     /** Get building financial performance KPIs for a date range. */
     getBuildingFinancials: (
       buildingId: string,
-      params: { from: string; to: string; forceRefresh?: boolean },
+      params: { from: string; to: string; forceRefresh?: boolean; groupByAccount?: boolean },
     ) =>
       request<{ data: BuildingFinancialsDTO }>(
         opts,
@@ -1745,8 +1832,134 @@ function buildFinancialsApi(opts: ClientOptions) {
           from: params.from,
           to: params.to,
           ...(params.forceRefresh ? { forceRefresh: "true" } : {}),
+          ...(params.groupByAccount ? { groupByAccount: "true" } : {}),
         },
       ),
+
+    /** Get building financial summary including income breakdown, receivables, and payables. */
+    getBuildingFinancialSummary: (
+      buildingId: string,
+      params: { from: string; to: string; forceRefresh?: boolean; groupByAccount?: boolean },
+    ) =>
+      request<{ data: BuildingFinancialsDTO }>(
+        opts,
+        "GET",
+        `/buildings/${buildingId}/financial-summary`,
+        undefined,
+        {
+          from: params.from,
+          to: params.to,
+          ...(params.forceRefresh ? { forceRefresh: "true" } : {}),
+          ...(params.groupByAccount ? { groupByAccount: "true" } : {}),
+        },
+      ),
+
+    /** Get portfolio-level financial summary across all buildings. */
+    getPortfolioSummary: (params: { from: string; to: string }) =>
+      request<{ data: PortfolioSummaryDTO }>(
+        opts,
+        "GET",
+        `/financials/portfolio-summary`,
+        undefined,
+        { from: params.from, to: params.to },
+      ),
+  };
+}
+
+/* ═══════════════════════════════════════════════════════════════
+ * Chart of Accounts (FIN-COA)
+ * ═══════════════════════════════════════════════════════════════ */
+
+export interface ExpenseTypeDTO {
+  id: string;
+  orgId: string;
+  name: string;
+  description: string | null;
+  code: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AccountDTO {
+  id: string;
+  orgId: string;
+  name: string;
+  code: string | null;
+  accountType: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ExpenseMappingDTO {
+  id: string;
+  orgId: string;
+  expenseTypeId: string;
+  accountId: string;
+  buildingId: string | null;
+  expenseType: { id: string; name: string } | null;
+  account: { id: string; name: string } | null;
+  building: { id: string; name: string } | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SeedResultDTO {
+  expenseTypes: number;
+  accounts: number;
+  mappings: number;
+}
+
+function buildCoaApi(opts: ClientOptions) {
+  return {
+    /** List expense types for the authenticated org. */
+    listExpenseTypes: () =>
+      request<{ data: ExpenseTypeDTO[] }>(opts, "GET", "/coa/expense-types"),
+
+    /** Get a single expense type. */
+    getExpenseType: (id: string) =>
+      request<{ data: ExpenseTypeDTO }>(opts, "GET", `/coa/expense-types/${id}`),
+
+    /** Create a new expense type. */
+    createExpenseType: (body: { name: string; description?: string; code?: string }) =>
+      request<{ data: ExpenseTypeDTO }>(opts, "POST", "/coa/expense-types", body),
+
+    /** Update an expense type. */
+    updateExpenseType: (id: string, body: { name?: string; description?: string; code?: string; isActive?: boolean }) =>
+      request<{ data: ExpenseTypeDTO }>(opts, "PATCH", `/coa/expense-types/${id}`, body),
+
+    /** List accounts for the authenticated org. */
+    listAccounts: () =>
+      request<{ data: AccountDTO[] }>(opts, "GET", "/coa/accounts"),
+
+    /** Get a single account. */
+    getAccount: (id: string) =>
+      request<{ data: AccountDTO }>(opts, "GET", `/coa/accounts/${id}`),
+
+    /** Create a new account. */
+    createAccount: (body: { name: string; code?: string; accountType?: string }) =>
+      request<{ data: AccountDTO }>(opts, "POST", "/coa/accounts", body),
+
+    /** Update an account. */
+    updateAccount: (id: string, body: { name?: string; code?: string; accountType?: string; isActive?: boolean }) =>
+      request<{ data: AccountDTO }>(opts, "PATCH", `/coa/accounts/${id}`, body),
+
+    /** List expense mappings for the authenticated org. */
+    listExpenseMappings: () =>
+      request<{ data: ExpenseMappingDTO[] }>(opts, "GET", "/coa/expense-mappings"),
+
+    /** Create an expense mapping (expense type → account). */
+    createExpenseMapping: (body: { expenseTypeId: string; accountId: string; buildingId?: string | null }) =>
+      request<{ data: ExpenseMappingDTO }>(opts, "POST", "/coa/expense-mappings", body),
+
+    /** Delete an expense mapping. */
+    deleteExpenseMapping: (id: string) =>
+      request<{ data: { success: boolean } }>(opts, "DELETE", `/coa/expense-mappings/${id}`),
+
+    /** Seed the canonical Swiss residential expense taxonomy. */
+    seed: () =>
+      request<{ data: SeedResultDTO }>(opts, "POST", "/coa/seed", {}),
   };
 }
 
@@ -1902,6 +2115,7 @@ export interface ApiClient {
   rentals: ReturnType<typeof buildRentalsApi>;
   rentEstimation: ReturnType<typeof buildRentEstimationApi>;
   financials: ReturnType<typeof buildFinancialsApi>;
+  coa: ReturnType<typeof buildCoaApi>;
   scheduling: ReturnType<typeof buildSchedulingApi>;
   completion: ReturnType<typeof buildCompletionApi>;
   dev: ReturnType<typeof buildDevApi>;
@@ -1938,6 +2152,7 @@ export function createApiClient(
     rentals: buildRentalsApi(opts),
     rentEstimation: buildRentEstimationApi(opts),
     financials: buildFinancialsApi(opts),
+    coa: buildCoaApi(opts),
     scheduling: buildSchedulingApi(opts),
     completion: buildCompletionApi(opts),
     dev: buildDevApi(opts),

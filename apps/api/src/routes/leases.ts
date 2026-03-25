@@ -4,12 +4,12 @@ import { readJson } from "../http/body";
 import { first, getIntParam } from "../http/query";
 import { requireOrgViewer } from "./helpers";
 import { requireRole } from "../authz";
-import { createLease, listLeases, getLease, updateLease, cancelLease, storeLeasePdfReference, storeSignedPdfReference, confirmDeposit, archiveLease, createLeaseInvoice, listLeaseInvoices, listLeaseTemplates, deleteLeaseTemplate, restoreLeaseTemplate, createLeaseTemplateFromLease, createBlankLeaseTemplate, createLeaseFromTemplate } from "../services/leases";
+import { createLease, listLeases, getLease, updateLease, cancelLease, storeLeasePdfReference, storeSignedPdfReference, confirmDeposit, archiveLease, createLeaseInvoice, listLeaseInvoices, listLeaseTemplates, deleteLeaseTemplate, restoreLeaseTemplate, createLeaseTemplateFromLease, createBlankLeaseTemplate, createLeaseFromTemplate, createLeaseExpenseItem, updateLeaseExpenseItem, deleteLeaseExpenseItem } from "../services/leases";
 import { createSignatureRequest, listSignatureRequests, getSignatureRequest, sendSignatureRequest, markSignatureRequestSigned } from "../services/signatureRequests";
 import { generateLeasePDF } from "../services/leasePDFRenderer";
 import { notifyTenantLeaseReady } from "../services/notifications";
 import { resolveTenantUserId } from "./auth";
-import { CreateLeaseSchema, UpdateLeaseSchema, ReadyToSignSchema } from "../validation/leases";
+import { CreateLeaseSchema, UpdateLeaseSchema, ReadyToSignSchema, CreateExpenseItemSchema, UpdateExpenseItemSchema } from "../validation/leases";
 import { activateLeaseWorkflow } from "../workflows/activateLeaseWorkflow";
 import { terminateLeaseWorkflow } from "../workflows/terminateLeaseWorkflow";
 import { markLeaseReadyWorkflow } from "../workflows/markLeaseReadyWorkflow";
@@ -22,9 +22,10 @@ export function registerLeaseRoutes(router: Router) {
       const status = first(query, "status") || undefined;
       const unitId = first(query, "unitId") || undefined;
       const applicationId = first(query, "applicationId") || undefined;
+      const expenseTypeId = first(query, "expenseTypeId") || undefined;
       const limit = getIntParam(query, "limit", { defaultValue: 50, min: 1, max: 200 });
       const offset = getIntParam(query, "offset", { defaultValue: 0, min: 0 });
-      const result = await listLeases(orgId, { status, unitId, applicationId, limit, offset });
+      const result = await listLeases(orgId, { status, unitId, applicationId, expenseTypeId, limit, offset });
       sendJson(res, 200, { data: result.data, total: result.total });
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to list leases", String(e));
@@ -458,6 +459,54 @@ export function registerLeaseRoutes(router: Router) {
       if (e.message?.includes("not found")) return sendError(res, 404, "NOT_FOUND", e.message);
       if (e.message?.includes("not a template")) return sendError(res, 400, "BAD_REQUEST", e.message);
       sendError(res, 500, "DB_ERROR", "Failed to create lease from template", String(e));
+    }
+  });
+
+  // ─── LeaseExpenseItem CRUD ──────────────────────────────
+
+  // POST /leases/:id/expense-items
+  router.post("/leases/:id/expense-items", async ({ req, res, params, orgId }) => {
+    if (!requireRole(req, res, 'MANAGER')) return;
+    try {
+      const body = await readJson(req);
+      const parsed = CreateExpenseItemSchema.safeParse(body);
+      if (!parsed.success) {
+        return sendError(res, 400, "VALIDATION_ERROR", parsed.error.issues.map(i => i.message).join("; "));
+      }
+      const item = await createLeaseExpenseItem(orgId, params.id, parsed.data);
+      sendJson(res, 201, { data: item });
+    } catch (e: any) {
+      if (e.message?.includes("not found")) return sendError(res, 404, "NOT_FOUND", e.message);
+      sendError(res, 500, "DB_ERROR", "Failed to create expense item", String(e));
+    }
+  });
+
+  // PATCH /leases/:id/expense-items/:itemId
+  router.patch("/leases/:id/expense-items/:itemId", async ({ req, res, params, orgId }) => {
+    if (!requireRole(req, res, 'MANAGER')) return;
+    try {
+      const body = await readJson(req);
+      const parsed = UpdateExpenseItemSchema.safeParse(body);
+      if (!parsed.success) {
+        return sendError(res, 400, "VALIDATION_ERROR", parsed.error.issues.map(i => i.message).join("; "));
+      }
+      const item = await updateLeaseExpenseItem(orgId, params.id, params.itemId, parsed.data);
+      sendJson(res, 200, { data: item });
+    } catch (e: any) {
+      if (e.message?.includes("not found")) return sendError(res, 404, "NOT_FOUND", e.message);
+      sendError(res, 500, "DB_ERROR", "Failed to update expense item", String(e));
+    }
+  });
+
+  // DELETE /leases/:id/expense-items/:itemId
+  router.delete("/leases/:id/expense-items/:itemId", async ({ req, res, params, orgId }) => {
+    if (!requireRole(req, res, 'MANAGER')) return;
+    try {
+      await deleteLeaseExpenseItem(orgId, params.id, params.itemId);
+      sendJson(res, 200, { data: { success: true } });
+    } catch (e: any) {
+      if (e.message?.includes("not found")) return sendError(res, 404, "NOT_FOUND", e.message);
+      sendError(res, 500, "DB_ERROR", "Failed to delete expense item", String(e));
     }
   });
 }

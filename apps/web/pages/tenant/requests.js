@@ -7,6 +7,7 @@ import PageContent from "../../components/layout/PageContent";
 import Panel from "../../components/layout/Panel.jsx";
 import { formatDateTime } from "../../lib/format";
 import { tenantFetch, tenantHeaders } from "../../lib/api";
+import TenantPicker from "../../components/TenantPicker";
 
 const STATUS_COLORS = {
   PENDING_REVIEW: "bg-yellow-100 text-yellow-800",
@@ -309,6 +310,287 @@ function TenantPhotosPanel({ requestId }) {
   );
 }
 
+// ---------------------------------------------------------------------------
+// Tenant Job Review Panel (confirm completion + rate)
+// ---------------------------------------------------------------------------
+
+const CRITERIA = [
+  { key: "scorePunctuality", label: "Punctuality" },
+  { key: "scoreAccuracy",    label: "Accuracy of information given" },
+  { key: "scoreCourtesy",    label: "Courtesy" },
+];
+
+function StarRow({ value, onChange, disabled }) {
+  return (
+    <div className="flex gap-1">
+      {[1, 2, 3, 4, 5].map((n) => (
+        <button
+          key={n}
+          type="button"
+          disabled={disabled}
+          onClick={() => onChange(n)}
+          className={`text-xl leading-none focus:outline-none disabled:cursor-default ${
+            n <= (value || 0) ? "text-yellow-400" : "text-gray-300"
+          }`}
+        >
+          ★
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function TenantJobReviewPanel({ job, onRefresh }) {
+  const [confirming, setConfirming] = useState(false);
+  const [showRating, setShowRating] = useState(false);
+  const [scores, setScores] = useState({ scorePunctuality: 0, scoreAccuracy: 0, scoreCourtesy: 0 });
+  const [comment, setComment] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+
+  if (!job) return null;
+  const isCompleted = job.status === "COMPLETED" || job.status === "INVOICED";
+  if (!isCompleted) return null;
+
+  async function handleConfirm() {
+    setConfirming(true);
+    setError("");
+    try {
+      const res = await tenantFetch(`/api/tenant-portal/jobs/${job.id}/confirm`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error?.message || "Failed to confirm");
+      onRefresh();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setConfirming(false);
+    }
+  }
+
+  async function handleRate(e) {
+    e.preventDefault();
+    const allFilled = CRITERIA.every((c) => scores[c.key] > 0);
+    if (!allFilled) { setError("Please rate all three criteria."); return; }
+    setSubmitting(true);
+    setError("");
+    try {
+      const res = await tenantFetch(`/api/tenant-portal/jobs/${job.id}/rate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...scores, comment: comment.trim() || undefined }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error?.message || "Failed to submit rating");
+      setShowRating(false);
+      onRefresh();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <div className="mt-3 rounded-lg border border-green-100 bg-green-50/50 p-4">
+      <h3 className="text-sm font-semibold text-green-900 mb-2">✅ Job Completed</h3>
+
+      {error && (
+        <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{error}</p>
+      )}
+
+      {/* Step 1: confirm */}
+      {!job.confirmedAt && (
+        <div className="flex items-center justify-between">
+          <p className="text-xs text-green-800">
+            The contractor has marked this job as done. Please confirm you are satisfied.
+          </p>
+          <button
+            onClick={handleConfirm}
+            disabled={confirming}
+            className="ml-3 flex-shrink-0 rounded-md bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-50"
+          >
+            {confirming ? "…" : "Confirm completion"}
+          </button>
+        </div>
+      )}
+
+      {/* Step 2: rate */}
+      {job.confirmedAt && !job.tenantRated && !showRating && (
+        <div className="flex items-center justify-between">
+          <p className="text-xs text-green-800">Completion confirmed. How was the service?</p>
+          <button
+            onClick={() => setShowRating(true)}
+            className="ml-3 flex-shrink-0 rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-700"
+          >
+            Rate the service
+          </button>
+        </div>
+      )}
+
+      {showRating && (
+        <form onSubmit={handleRate} className="mt-2 space-y-3">
+          {CRITERIA.map((c) => (
+            <div key={c.key} className="flex items-center justify-between">
+              <span className="text-xs text-gray-700 w-40">{c.label}</span>
+              <StarRow
+                value={scores[c.key]}
+                onChange={(v) => setScores((prev) => ({ ...prev, [c.key]: v }))}
+                disabled={submitting}
+              />
+            </div>
+          ))}
+          <div>
+            <textarea
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              placeholder="Comment (optional)"
+              rows={2}
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-xs placeholder-gray-400 focus:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-400"
+            />
+          </div>
+          <div className="flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setShowRating(false)}
+              className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={submitting}
+              className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+            >
+              {submitting ? "Submitting…" : "Submit rating"}
+            </button>
+          </div>
+        </form>
+      )}
+
+      {job.tenantRated && (
+        <p className="text-xs text-green-700 font-medium">Thank you — your rating has been submitted.</p>
+      )}
+    </div>
+  );
+}
+
+const CATEGORIES = ["stove", "oven", "dishwasher", "bathroom", "lighting"];
+
+function NewRequestModal({ onClose, onCreated }) {
+  const [description, setDescription] = useState("");
+  const [category, setCategory] = useState("");
+  const [contactPhone, setContactPhone] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    if (description.trim().length < 10) {
+      setError("Description must be at least 10 characters.");
+      return;
+    }
+    setSubmitting(true);
+    setError("");
+    try {
+      const body = { description: description.trim() };
+      if (category) body.category = category;
+      if (contactPhone.trim()) body.contactPhone = contactPhone.trim();
+
+      const res = await tenantFetch("/api/tenant-portal/requests", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error?.message || "Failed to submit request");
+      onCreated();
+    } catch (err) {
+      setError(err.message || "Something went wrong");
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-4">
+      <div className="w-full max-w-lg rounded-2xl bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
+          <h2 className="text-base font-semibold text-gray-900">New Maintenance Request</h2>
+          <button onClick={onClose} className="rounded-full p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600">
+            <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+            </svg>
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
+          {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
+
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-gray-700">
+              Description <span className="text-red-500">*</span>
+            </label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Describe the issue in detail (e.g. the kitchen faucet is dripping)"
+              rows={4}
+              required
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm placeholder-gray-400 focus:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-400"
+            />
+            <p className="mt-1 text-xs text-gray-400">{description.trim().length}/2000 — min 10 characters</p>
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-gray-700">Category</label>
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 focus:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-400"
+            >
+              <option value="">— Select a category (optional) —</option>
+              {CATEGORIES.map((c) => (
+                <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-gray-700">Contact phone</label>
+            <input
+              type="tel"
+              value={contactPhone}
+              onChange={(e) => setContactPhone(e.target.value)}
+              placeholder="+41 79 123 45 67"
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm placeholder-gray-400 focus:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-400"
+            />
+          </div>
+
+          <div className="flex justify-end gap-3 pt-1">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={submitting}
+              className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+            >
+              {submitting ? "Submitting…" : "Submit request"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 export default function TenantRequestsPage() {
   const router = useRouter();
   const [session, setSession] = useState(null);
@@ -317,6 +599,7 @@ export default function TenantRequestsPage() {
   const [error, setError] = useState(null);
   const [selfPayLoading, setSelfPayLoading] = useState(null);
   const [expandedId, setExpandedId] = useState(null);
+  const [showNewRequest, setShowNewRequest] = useState(false);
 
   function toggleAccordion(id) { setExpandedId((prev) => (prev === id ? null : id)); }
 
@@ -393,19 +676,50 @@ export default function TenantRequestsPage() {
     );
   }
 
+  function handleTenantSwitch() {
+    const raw = localStorage.getItem("tenantSession");
+    if (raw) {
+      try { setSession(JSON.parse(raw)); } catch { /* ignore */ }
+    }
+  }
+
   return (
     <AppShell role="TENANT">
       <PageShell>
-        <PageHeader title="My Maintenance Requests" />
+        <TenantPicker onSelect={handleTenantSwitch} />
+        <PageHeader
+          title="My Maintenance Requests"
+          actions={
+            <button
+              onClick={() => setShowNewRequest(true)}
+              className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+            >
+              + New request
+            </button>
+          }
+        />
         <PageContent>
           {error && <div className="notice notice-err mb-4">{error}</div>}
+
+          {showNewRequest && (
+            <NewRequestModal
+              onClose={() => setShowNewRequest(false)}
+              onCreated={() => { setShowNewRequest(false); fetchRequests(); }}
+            />
+          )}
 
           <Panel bodyClassName="p-0">
             {loading ? (
               <p className="loading-text">Loading…</p>
             ) : requests.length === 0 ? (
               <div className="empty-state">
-                <p className="empty-state-text">No maintenance requests found. Submit a work request to get started.</p>
+                <p className="empty-state-text">No maintenance requests yet.</p>
+                <button
+                  onClick={() => setShowNewRequest(true)}
+                  className="mt-3 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+                >
+                  Submit your first request
+                </button>
               </div>
             ) : (
               <div className="space-y-2 p-4">
@@ -472,6 +786,14 @@ export default function TenantRequestsPage() {
                       {/* Scheduling — show whenever a job may exist (component handles no-slots gracefully) */}
                       {r.status !== "PENDING_REVIEW" && r.status !== "OWNER_REJECTED" && (
                         <TenantSchedulingPanel requestId={r.id} />
+                      )}
+
+                      {/* Job completion review */}
+                      {r.job && (
+                        <TenantJobReviewPanel
+                          job={r.job}
+                          onRefresh={fetchRequests}
+                        />
                       )}
                     </div>
                   )}

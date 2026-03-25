@@ -25,12 +25,15 @@ import { registerLegalRoutes } from "./routes/legal";
 import { registerMaintenanceAttachmentRoutes } from "./routes/maintenanceAttachments";
 import { registerSchedulingRoutes } from "./routes/scheduling";
 import { registerCompletionRoutes } from "./routes/completion";
+import { registerCoaRoutes } from "./routes/coa";
+import { registerLedgerRoutes } from "./routes/ledger";
 import { registerEventHandlers } from "./events";
 import {
   processSelectionTimeouts,
   processAttachmentRetention,
 } from "./services/ownerSelection";
 import { processSchedulingEscalations } from "./workflows/schedulingWorkflow";
+import { flushPendingEmails } from "./services/emailTransport";
 
 /* ── F1: Production boot guard ─────────────────────────────── */
 const isProdEnv = process.env.NODE_ENV === "production";
@@ -77,6 +80,8 @@ registerLegalRoutes(router);
 registerMaintenanceAttachmentRoutes(router);
 registerSchedulingRoutes(router);
 registerCompletionRoutes(router);
+registerCoaRoutes(router);
+registerLedgerRoutes(router);
 
 /* ── Dev-only: background job trigger route ─────────────────── */
 router.post("/__dev/rental/run-jobs", async ({ res }) => {
@@ -175,6 +180,12 @@ async function runBackgroundJobs() {
     }
   } catch (e) {
     console.error("[BG-JOBS] Error:", e);
+  }
+
+  try {
+    await flushPendingEmails();
+  } catch (e) {
+    console.error("[BG-JOBS] Email flush error:", e);
   }
 }
 

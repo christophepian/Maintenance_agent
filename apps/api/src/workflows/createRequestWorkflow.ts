@@ -127,6 +127,7 @@ export async function createRequestWorkflow(
 
   // ── 4. Persist the request ─────────────────────────────────
   const created = await repoCreateRequest(prisma, {
+    orgId,
     description,
     category,
     estimatedCost,

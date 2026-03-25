@@ -14,12 +14,9 @@
  */
 
 import * as http from "http";
-import { spawn, ChildProcessWithoutNullStreams } from "child_process";
-import * as path from "path";
-import { createManagerToken, getAuthHeaders } from "./testHelpers";
+import { ChildProcessWithoutNullStreams } from 'child_process';
+import { createManagerToken, getAuthHeaders, startTestServer, stopTestServer } from "./testHelpers";
 
-const API_ROOT = path.resolve(__dirname, "..", "..");
-const TS_NODE = path.resolve(API_ROOT, "node_modules", ".bin", "ts-node");
 const PORT = 3202;
 const BASE = `http://127.0.0.1:${PORT}`;
 
@@ -68,50 +65,6 @@ const PATCH = (p: string, b?: unknown, h?: Record<string, string>) => request("P
 
 // ─── Server lifecycle ───────────────────────────────────────────
 
-function startServer(): Promise<ChildProcessWithoutNullStreams> {
-  return new Promise((resolve, reject) => {
-    const child = spawn(TS_NODE, ["--transpile-only", "src/server.ts"], {
-      cwd: API_ROOT,
-      env: {
-        ...process.env,
-        PORT: String(PORT),
-        AUTH_SECRET: "test-secret",
-        AUTH_OPTIONAL: "true",
-        NODE_ENV: "test",
-      },
-      stdio: ["ignore", "pipe", "pipe"],
-    });
-
-    const timeout = setTimeout(() => {
-      cleanup();
-      reject(new Error("Server did not start in time"));
-    }, 20000);
-
-    const onData = (data: Buffer) => {
-      if (data.toString().includes("API running on")) {
-        cleanup();
-        resolve(child);
-      }
-    };
-
-    const onError = (err: Error) => {
-      cleanup();
-      reject(err);
-    };
-
-    function cleanup() {
-      clearTimeout(timeout);
-      child.stdout?.off("data", onData);
-      child.stderr?.off("data", onData);
-      child.off("error", onError);
-    }
-
-    child.stdout?.on("data", onData);
-    child.stderr?.on("data", onData);
-    child.on("error", onError);
-  });
-}
-
 // ─── Test Suite ─────────────────────────────────────────────────
 
 describe("Workflow Layer — Integration", () => {
@@ -120,7 +73,7 @@ describe("Workflow Layer — Integration", () => {
   const auth = getAuthHeaders(createManagerToken());
 
   beforeAll(async () => {
-    proc = await startServer();
+    proc = await startTestServer(PORT);
 
     // Create a building + unit for all request creation tests
     const bRes = await POST("/buildings", {
@@ -135,9 +88,7 @@ describe("Workflow Layer — Integration", () => {
     unitId = uRes.data.data.id;
   }, 25000);
 
-  afterAll(() => {
-    proc?.kill();
-  });
+  afterAll(() => stopTestServer(proc));
 
   // ═══════════════════════════════════════════════════════════
   // 1. createRequestWorkflow

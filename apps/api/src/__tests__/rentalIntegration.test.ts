@@ -12,60 +12,16 @@
  *  8. Dev background-jobs endpoint
  */
 
-import { spawn, ChildProcessWithoutNullStreams } from "child_process";
-import * as path from "path";
+import { ChildProcessWithoutNullStreams } from 'child_process';
 import { PrismaClient } from "@prisma/client";
+import { startTestServer, stopTestServer } from './testHelpers';
 
-const API_ROOT = path.resolve(__dirname, "..", "..");
 const PORT = 3207;
 const API_BASE = `http://127.0.0.1:${PORT}`;
 const prisma = new PrismaClient();
 const DEFAULT_ORG_ID = "default-org";
 
 /* ── Helpers ──────────────────────────────────────────────── */
-
-function startServer(): Promise<ChildProcessWithoutNullStreams> {
-  return new Promise((resolve, reject) => {
-    const child = spawn("npx", ["tsx", "src/server.ts"], {
-      cwd: API_ROOT,
-      env: {
-        ...process.env,
-        PORT: String(PORT),
-        AUTH_OPTIONAL: "true",
-        BG_JOBS_ENABLED: "false",
-      },
-      stdio: ["ignore", "pipe", "pipe"],
-    });
-
-    const onData = (data: Buffer) => {
-      if (data.toString().includes("API running on")) {
-        cleanup();
-        resolve(child);
-      }
-    };
-
-    const onError = (err: Error) => {
-      cleanup();
-      reject(err);
-    };
-
-    const cleanup = () => {
-      clearTimeout(timer);
-      child.stdout.off("data", onData);
-      child.stderr.off("data", onData);
-      child.off("error", onError);
-    };
-
-    child.stdout.on("data", onData);
-    child.stderr.on("data", onData);
-    child.on("error", onError);
-
-    const timer = setTimeout(() => {
-      cleanup();
-      reject(new Error("Server did not start within 20s"));
-    }, 20000);
-  });
-}
 
 async function api(
   path: string,
@@ -125,11 +81,11 @@ describe("Rental Application Lifecycle (Integration)", () => {
     });
     vacantUnitId = unit.id;
 
-    proc = await startServer();
+    proc = await startTestServer(PORT);
   }, 25000);
 
   afterAll(async () => {
-    if (proc) proc.kill();
+    await stopTestServer(proc);
 
     // Cleanup seeded test data (cascade deletes units via building)
     if (seededBuildingId) {

@@ -1,12 +1,12 @@
 /**
  * Org Scope Enforcement
  *
- * Since the `Request` model has NO orgId column, we must resolve org
- * membership by traversing nullable FK chains to entities that DO have
- * orgId (Tenant, Unit, Appliance, Contractor).
+ * The `Request` model has a direct orgId column (DT-114). Resolution
+ * reads it first; FK chain fallback handles any pre-migration rows
+ * with an empty orgId.
  *
  * This module provides:
- *  - resolveRequestOrg: best-effort org resolution for a Request
+ *  - resolveRequestOrg: org resolution for a Request
  *  - assertOrgScope: throws 403 if resolved org ≠ caller org
  *  - requireOrgScopeForRequest: convenience wrapper used in routes
  */
@@ -20,12 +20,10 @@ export type OrgResolution =
   | { resolved: false; orgId: null; via: "none" };
 
 /**
- * Resolve the orgId that owns a Request by walking its nullable FK
- * chains in priority order:
- *   1. unit.orgId       (most reliable — unit always has orgId)
- *   2. tenant.orgId
- *   3. appliance.orgId
- *   4. assignedContractor.orgId
+ * Resolve the orgId that owns a Request.
+ *
+ * Primary: read Request.orgId directly (DT-114 migration).
+ * Fallback: walk FK chains for any pre-migration rows with orgId="".
  *
  * Returns { resolved: true, orgId, via } or { resolved: false }.
  */
@@ -36,6 +34,7 @@ export async function resolveRequestOrg(
   const row = await prisma.request.findUnique({
     where: { id: requestId },
     select: {
+      orgId: true,
       unitId: true,
       tenantId: true,
       applianceId: true,
@@ -49,6 +48,10 @@ export async function resolveRequestOrg(
 
   if (!row) return { resolved: false, orgId: null, via: "none" };
 
+  // Primary: direct orgId (all rows post-DT-114 migration)
+  if (row.orgId) return { resolved: true, orgId: row.orgId, via: "request" };
+
+  // Fallback: FK chains (pre-migration rows with empty orgId)
   if (row.unit?.orgId) return { resolved: true, orgId: row.unit.orgId, via: "unit" };
   if (row.tenant?.orgId) return { resolved: true, orgId: row.tenant.orgId, via: "tenant" };
   if (row.appliance?.orgId) return { resolved: true, orgId: row.appliance.orgId, via: "appliance" };
