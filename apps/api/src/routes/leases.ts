@@ -4,12 +4,11 @@ import { readJson } from "../http/body";
 import { first, getIntParam } from "../http/query";
 import { requireOrgViewer } from "./helpers";
 import { requireRole } from "../authz";
-import { createLease, listLeases, getLease, updateLease, cancelLease, storeLeasePdfReference, storeSignedPdfReference, confirmDeposit, archiveLease, createLeaseInvoice, listLeaseInvoices, listLeaseTemplates, deleteLeaseTemplate, restoreLeaseTemplate, createLeaseTemplateFromLease, createBlankLeaseTemplate, createLeaseFromTemplate, createLeaseExpenseItem, updateLeaseExpenseItem, deleteLeaseExpenseItem } from "../services/leases";
+import { createLease, listLeases, getLease, updateLease, cancelLease, storeLeasePdfReference, storeSignedPdfReference, confirmDeposit, archiveLease, handleLeaseExpiry, createLeaseInvoice, listLeaseInvoices, listLeaseTemplates, deleteLeaseTemplate, restoreLeaseTemplate, createLeaseTemplateFromLease, createBlankLeaseTemplate, createLeaseFromTemplate, createLeaseExpenseItem, updateLeaseExpenseItem, deleteLeaseExpenseItem } from "../services/leases";
 import { createSignatureRequest, listSignatureRequests, getSignatureRequest, sendSignatureRequest, markSignatureRequestSigned } from "../services/signatureRequests";
 import { generateLeasePDF } from "../services/leasePDFRenderer";
-import { notifyTenantLeaseReady } from "../services/notifications";
-import { resolveTenantUserId } from "./auth";
 import { CreateLeaseSchema, UpdateLeaseSchema, ReadyToSignSchema, CreateExpenseItemSchema, UpdateExpenseItemSchema } from "../validation/leases";
+import { findLeaseRaw } from "../repositories/leaseRepository";
 import { activateLeaseWorkflow } from "../workflows/activateLeaseWorkflow";
 import { terminateLeaseWorkflow } from "../workflows/terminateLeaseWorkflow";
 import { markLeaseReadyWorkflow } from "../workflows/markLeaseReadyWorkflow";
@@ -23,9 +22,13 @@ export function registerLeaseRoutes(router: Router) {
       const unitId = first(query, "unitId") || undefined;
       const applicationId = first(query, "applicationId") || undefined;
       const expenseTypeId = first(query, "expenseTypeId") || undefined;
+      const startDateFrom = first(query, "startDateFrom") || undefined;
+      const startDateTo = first(query, "startDateTo") || undefined;
+      const endDateFrom = first(query, "endDateFrom") || undefined;
+      const endDateTo = first(query, "endDateTo") || undefined;
       const limit = getIntParam(query, "limit", { defaultValue: 50, min: 1, max: 200 });
       const offset = getIntParam(query, "offset", { defaultValue: 0, min: 0 });
-      const result = await listLeases(orgId, { status, unitId, applicationId, expenseTypeId, limit, offset });
+      const result = await listLeases(orgId, { status, unitId, applicationId, expenseTypeId, startDateFrom, startDateTo, endDateFrom, endDateTo, limit, offset });
       sendJson(res, 200, { data: result.data, total: result.total });
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to list leases", String(e));
@@ -105,46 +108,12 @@ export function registerLeaseRoutes(router: Router) {
       const parsed = ReadyToSignSchema.safeParse(raw);
       if (!parsed.success) return sendError(res, 400, "VALIDATION_ERROR", "Invalid data", parsed.error.flatten());
 
-      // Workflow handles: validate, provision tenant, transition DRAFT → READY_TO_SIGN
-      const { dto: lease } = await markLeaseReadyWorkflow(
+      // Workflow handles: validate, provision tenant, transition DRAFT → READY_TO_SIGN,
+      // create SignatureRequest, immediately send it, and notify tenant.
+      const { dto: lease, signatureRequest: sigReq } = await markLeaseReadyWorkflow(
         { orgId, prisma },
-        { leaseId: params.id },
+        { leaseId: params.id, level: parsed.data.level as any, signers: parsed.data.signers },
       );
-
-      const sigReq = await createSignatureRequest({
-        orgId,
-        leaseId: params.id,
-        level: parsed.data.level as any,
-        signers: parsed.data.signers,
-      });
-
-      // Notify the tenant occupying this unit that a lease is ready to sign
-      try {
-        const fullLease = await getLease(params.id, orgId);
-        if (fullLease?.unitId) {
-          const prismaClient = (await import("../services/prismaClient")).default;
-          const occupancy = await prismaClient.occupancy.findFirst({
-            where: { unitId: fullLease.unitId },
-            include: { tenant: true },
-          });
-          if (occupancy?.tenant) {
-            // Use the same resolveTenantUserId that the inbox uses — keeps ids consistent
-            const userId = await resolveTenantUserId(prismaClient, orgId, occupancy.tenantId);
-            const unit = await prismaClient.unit.findUnique({
-              where: { id: fullLease.unitId },
-              include: { building: true },
-            });
-            await notifyTenantLeaseReady(
-              params.id, orgId, userId,
-              unit?.unitNumber || 'unknown',
-              unit?.building?.name || 'Property',
-              unit?.buildingId || undefined
-            );
-          }
-        }
-      } catch (notifErr) {
-        console.error('[LEASE] Failed to notify tenant of ready-to-sign:', notifErr);
-      }
 
       sendJson(res, 200, { data: { lease, signatureRequest: sigReq } });
     } catch (e: any) {
@@ -155,6 +124,26 @@ export function registerLeaseRoutes(router: Router) {
       if (e.message?.includes("Only DRAFT")) return sendError(res, 409, "CONFLICT", e.message);
       if (e.message?.includes("Tenant phone") || e.message?.includes("phone number format")) return sendError(res, 422, "VALIDATION_ERROR", e.message);
       sendError(res, 500, "DB_ERROR", "Failed to mark lease ready to sign", String(e));
+    }
+  });
+
+  // POST /leases/:id/resend-for-signature
+  // Remediation path for READY_TO_SIGN leases that have no SENT SignatureRequest.
+  // Creates a new SignatureRequest and immediately sends it so sentForSignatureAt
+  // is populated on the next GET /leases response. Safe to call multiple times —
+  // listLeases picks the most-recent sentAt per lease.
+  router.post("/leases/:id/resend-for-signature", async ({ req, res, params, orgId, prisma }) => {
+    if (!requireRole(req, res, 'MANAGER')) return;
+    try {
+      const existing = await findLeaseRaw(prisma, params.id);
+      if (!existing || existing.orgId !== orgId) return sendError(res, 404, "NOT_FOUND", "Lease not found");
+      if (existing.status !== 'READY_TO_SIGN') return sendError(res, 409, "CONFLICT", "Only READY_TO_SIGN leases can be re-sent for signature");
+      const draft = await createSignatureRequest({ orgId, leaseId: params.id });
+      const sent = await sendSignatureRequest(draft.id, orgId);
+      sendJson(res, 200, { data: sent });
+    } catch (e: any) {
+      if (e.message?.includes("not found")) return sendError(res, 404, "NOT_FOUND", e.message);
+      sendError(res, 500, "DB_ERROR", "Failed to resend for signature", String(e));
     }
   });
 
@@ -257,6 +246,20 @@ export function registerLeaseRoutes(router: Router) {
     }
   });
 
+  // POST /leases/:id/handle-expiry
+  router.post("/leases/:id/handle-expiry", async ({ req, res, params, orgId }) => {
+    if (!requireRole(req, res, 'MANAGER')) return;
+    try {
+      const result = await handleLeaseExpiry(params.id, orgId);
+      sendJson(res, 200, { data: result });
+    } catch (e: any) {
+      if (e.message?.includes("not found")) return sendError(res, 404, "NOT_FOUND", e.message);
+      if (e.message?.includes("Only READY_TO_SIGN")) return sendError(res, 409, "CONFLICT", e.message);
+      if (e.message?.includes("not yet expired")) return sendError(res, 422, "NOT_EXPIRED", e.message);
+      sendError(res, 500, "DB_ERROR", "Failed to handle lease expiry", String(e));
+    }
+  });
+
   // GET /leases/:id/invoices
   router.get("/leases/:id/invoices", async ({ req, res, params, orgId }) => {
     if (!requireOrgViewer(req, res)) return;
@@ -356,8 +359,8 @@ export function registerLeaseRoutes(router: Router) {
     if (!requireRole(req, res, 'MANAGER')) return;
     try {
       const body = await readJson(req);
-      if (!body.buildingId || !body.templateName || !body.landlordName || !body.landlordAddress || !body.landlordZipCity) {
-        return sendError(res, 400, "VALIDATION_ERROR", "buildingId, templateName, landlordName, landlordAddress, and landlordZipCity are required");
+      if (!body.buildingId || !body.landlordName || !body.landlordAddress || !body.landlordZipCity) {
+        return sendError(res, 400, "VALIDATION_ERROR", "buildingId, landlordName, landlordAddress, and landlordZipCity are required");
       }
       const template = await createBlankLeaseTemplate(orgId, body.buildingId, {
         templateName: body.templateName,

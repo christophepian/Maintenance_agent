@@ -7,6 +7,7 @@ const IbanSchema = z.string().min(10, "IBAN must be at least 10 characters");
 export const CreateBillingEntitySchema = z.object({
   type: BillingEntityTypeEnum,
   contractorId: z.string().uuid().optional(),
+  userId: z.string().uuid().optional(),
   name: z.string().min(2, "Name must be at least 2 characters"),
   addressLine1: z.string().min(2, "Address line 1 is required"),
   addressLine2: z.string().optional(),

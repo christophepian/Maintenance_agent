@@ -48,6 +48,7 @@ export default function InventoryAdmin() {
   const [unitFormVisible, setUnitFormVisible] = useState(false);
   const [buildingSortKey, setBuildingSortKey] = useState("name");
   const [buildingSortDir, setBuildingSortDir] = useState("asc");
+  const [buildingsTableExpanded, setBuildingsTableExpanded] = useState(false);
   const [buildingAddress, setBuildingAddress] = useState("");
   const [buildingCityCode, setBuildingCityCode] = useState("");
   const [buildingCity, setBuildingCity] = useState("");
@@ -524,41 +525,30 @@ export default function InventoryAdmin() {
               <table className="w-full border-collapse text-sm">
                 <thead className="bg-slate-50/70">
                   <tr>
-                    <th className="h-12 px-4 text-left align-middle text-xs font-semibold text-slate-600 border-b border-slate-200">
-                      <button
-                        type="button"
-                        className="flex items-center gap-2 text-xs font-semibold text-slate-600"
-                        onClick={() => toggleBuildingSort("name")}
-                      >
-                        Name
-                        <span className="text-slate-400">↕</span>
-                      </button>
-                    </th>
-                    <th className="h-12 px-4 text-left align-middle text-xs font-semibold text-slate-600 border-b border-slate-200">
-                      <button
-                        type="button"
-                        className="flex items-center gap-2 text-xs font-semibold text-slate-600"
-                        onClick={() => toggleBuildingSort("address")}
-                      >
-                        Address
-                        <span className="text-slate-400">↕</span>
-                      </button>
-                    </th>
-                    <th className="h-12 px-4 text-left align-middle text-xs font-semibold text-slate-600 border-b border-slate-200">
-                      <button
-                        type="button"
-                        className="flex items-center gap-2 text-xs font-semibold text-slate-600"
-                        onClick={() => toggleBuildingSort("id")}
-                      >
-                        Building ID
-                        <span className="text-slate-400">↕</span>
-                      </button>
-                    </th>
+                    {[
+                      { key: "name", label: "Name" },
+                      { key: "address", label: "Address" },
+                      { key: "id", label: "Building ID" },
+                    ].map(({ key, label }) => (
+                      <th key={key} className="h-12 px-4 text-left align-middle text-xs font-semibold text-slate-600 border-b border-slate-200">
+                        <button
+                          type="button"
+                          className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 cursor-pointer select-none hover:text-slate-800 transition-colors"
+                          onClick={() => toggleBuildingSort(key)}
+                        >
+                          {label}
+                          <span className="inline-flex flex-col leading-none -space-y-0.5">
+                            <span className={`text-[8px] ${buildingSortKey === key && buildingSortDir === "asc" ? "text-indigo-600" : "text-slate-300"}`}>▲</span>
+                            <span className={`text-[8px] ${buildingSortKey === key && buildingSortDir === "desc" ? "text-indigo-600" : "text-slate-300"}`}>▼</span>
+                          </span>
+                        </button>
+                      </th>
+                    ))}
                     <th className="h-12 px-4 text-right align-middle text-xs font-semibold text-slate-600 border-b border-slate-200">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {sortedBuildings.map((b) => (
+                  {(buildingsTableExpanded ? sortedBuildings : sortedBuildings.slice(0, 5)).map((b) => (
                     <tr key={b.id} className="border-b border-slate-100 hover:bg-slate-50/70 transition-colors">
                       <td className="px-4 py-3 align-middle text-sm text-slate-700">
                         <Link href={`/admin-inventory/buildings/${b.id}`} className="font-semibold text-slate-900 hover:underline">
@@ -609,6 +599,24 @@ export default function InventoryAdmin() {
                   ))}
                 </tbody>
               </table>
+              {sortedBuildings.length > 5 && (
+                <div
+                  className="flex items-center justify-center gap-1.5 px-4 py-2.5 border-t border-slate-100 cursor-pointer hover:bg-slate-50 transition-colors text-sm text-slate-500 select-none"
+                  onClick={() => setBuildingsTableExpanded((e) => !e)}
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                    className={`w-4 h-4 transition-transform duration-200 ${buildingsTableExpanded ? "rotate-180" : ""}`}
+                  >
+                    <path fillRule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
+                  </svg>
+                  {buildingsTableExpanded
+                    ? "Show less"
+                    : `Show all ${sortedBuildings.length} buildings`}
+                </div>
+              )}
             </div>
           )}
           </div>

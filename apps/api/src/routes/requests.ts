@@ -5,7 +5,7 @@
  * All orchestration logic lives in workflows/.
  */
 
-import { RequestStatus } from "@prisma/client";
+import { RequestStatus, RequestUrgency } from "@prisma/client";
 import { Router, HandlerContext } from "../http/router";
 import { sendError, sendJson } from "../http/json";
 import { readJson } from "../http/body";
@@ -27,6 +27,7 @@ import type { MaintenanceRequestDTO } from "../services/maintenanceRequests";
 import { updateContractorRequestStatus, getContractorAssignedRequests } from "../services/contractorRequests";
 import { findMatchingContractor } from "../services/requestAssignment";
 import { workRequestFromRequest } from "../services/adapters/workRequestAdapter";
+import { listRequestEvents, createRequestEvent } from "../services/requestEventService";
 
 // Workflows
 import { createRequestWorkflow } from "../workflows/createRequestWorkflow";
@@ -58,10 +59,7 @@ export function registerRequestRoutes(router: Router) {
     try { assertOrgScope(orgId, resolution); } catch {
       return sendError(res, 404, "NOT_FOUND", "Request not found");
     }
-    const events = await prisma.requestEvent.findMany({
-      where: { requestId: params.id },
-      orderBy: { timestamp: "asc" },
-    });
+    const events = await listRequestEvents(prisma, params.id);
     sendJson(res, 200, { data: events });
   }));
 
@@ -76,15 +74,18 @@ export function registerRequestRoutes(router: Router) {
     if (!contractorId || !type || !message) {
       return sendError(res, 400, "VALIDATION_ERROR", "Missing contractorId, type, or message");
     }
-    const reqExists = await prisma.request.findUnique({ where: { id: params.id } });
-    if (!reqExists) return sendError(res, 404, "NOT_FOUND", "Request not found");
-    const contractorExists = await prisma.contractor.findUnique({ where: { id: contractorId } });
-    if (!contractorExists) return sendError(res, 404, "NOT_FOUND", "Contractor not found");
-
-    const event = await prisma.requestEvent.create({
-      data: { requestId: params.id, contractorId, type, message },
-    });
-    sendJson(res, 201, { data: event });
+    try {
+      const event = await createRequestEvent(prisma, {
+        requestId: params.id,
+        contractorId,
+        type,
+        message,
+      });
+      sendJson(res, 201, { data: event });
+    } catch (e: any) {
+      if (e.code === "NOT_FOUND") return sendError(res, 404, "NOT_FOUND", e.message);
+      sendError(res, 500, "DB_ERROR", "Failed to create event", String(e));
+    }
   });
 
   /* ── Owner pending approvals (thin — just query + respond) ── */
@@ -197,6 +198,31 @@ export function registerRequestRoutes(router: Router) {
       if (e.code === "NOT_FOUND") return sendError(res, 404, "NOT_FOUND", e.message);
       throw e;
     }
+  });
+
+  /* ── Urgency update ────────────────────────────────────────── */
+
+  router.patch("/requests/:id/urgency", async (ctx) => {
+    const { req, res, prisma, params, orgId } = ctx;
+    if (!requireRole(req, res, "MANAGER")) return;
+
+    const resolution = await resolveRequestOrg(prisma, params.id);
+    try { assertOrgScope(orgId, resolution); } catch {
+      return sendError(res, 404, "NOT_FOUND", "Request not found");
+    }
+
+    const raw = await readJson(req);
+    const urgency = raw?.urgency as string;
+    if (!urgency || !Object.values(RequestUrgency).includes(urgency as RequestUrgency)) {
+      return sendError(res, 400, "VALIDATION_ERROR", `urgency must be one of: ${Object.values(RequestUrgency).join(", ")}`);
+    }
+
+    const updated = await prisma.request.update({
+      where: { id: params.id },
+      data: { urgency: urgency as RequestUrgency },
+      include: { assignedContractor: { select: { id: true, name: true, phone: true, email: true, hourlyRate: true } }, tenant: { select: { id: true, name: true, phone: true, email: true } }, unit: { select: { id: true, unitNumber: true, floor: true, building: { select: { id: true, name: true, address: true } } } }, appliance: { select: { id: true, name: true, serial: true, installDate: true, notes: true, assetModel: { select: { id: true, manufacturer: true, model: true, category: true } } } } },
+    });
+    sendJson(res, 200, { data: updated });
   });
 
   /* ── DEV: delete all requests ──────────────────────────────── */

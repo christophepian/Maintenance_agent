@@ -1,4 +1,4 @@
-import { InvoiceStatus, BillingEntityType, Prisma } from '@prisma/client';
+import { InvoiceStatus, BillingEntityType, Prisma, InvoiceDirection, InvoiceSourceChannel, IngestionStatus } from '@prisma/client';
 import prisma from './prismaClient';
 import { INVOICE_FULL_INCLUDE, INVOICE_SUMMARY_INCLUDE } from '../repositories/invoiceRepository';
 
@@ -15,7 +15,7 @@ export const INVOICE_INCLUDE = INVOICE_FULL_INCLUDE;
 
 export interface CreateInvoiceParams {
   orgId: string;
-  jobId: string;
+  jobId?: string;
   amount?: number; // CHF (legacy)
   description?: string;
   issuerBillingEntityId?: string;
@@ -36,6 +36,20 @@ export interface CreateInvoiceParams {
     unitPrice: number; // CHF
     vatRate?: number;
   }>;
+  // INV-HUB ingestion fields
+  direction?: InvoiceDirection;
+  sourceChannel?: InvoiceSourceChannel;
+  ingestionStatus?: IngestionStatus;
+  rawOcrText?: string;
+  ocrConfidence?: number;
+  sourceFileUrl?: string;
+  matchedJobId?: string;
+  matchedLeaseId?: string;
+  matchedBuildingId?: string;
+  // Extracted payment details (from OCR / ingestion)
+  iban?: string;
+  paymentReference?: string;
+  currency?: string;
 }
 
 export interface UpdateInvoiceParams {
@@ -77,7 +91,8 @@ export interface InvoiceLineItemDTO {
 export interface InvoiceDTO {
   id: string;
   orgId: string;
-  jobId: string;
+  jobId: string | null;
+  requestId?: string | null;
   amount: number; // CHF (legacy)
   description?: string;
   issuerBillingEntityId?: string;
@@ -115,6 +130,16 @@ export interface InvoiceDTO {
   unitId?: string | null;
   /** Building attribution derived from job.request.unit.buildingId — populated when available */
   buildingId?: string | null;
+  // INV-HUB ingestion fields
+  direction: InvoiceDirection;
+  sourceChannel: InvoiceSourceChannel;
+  ingestionStatus?: IngestionStatus | null;
+  rawOcrText?: string | null;
+  ocrConfidence?: number | null;
+  sourceFileUrl?: string | null;
+  matchedJobId?: string | null;
+  matchedLeaseId?: string | null;
+  matchedBuildingId?: string | null;
 }
 
   /**
@@ -125,7 +150,8 @@ export interface InvoiceDTO {
   export interface InvoiceSummaryDTO {
     id: string;
     orgId: string;
-    jobId: string;
+    jobId: string | null;
+    leaseId?: string | null;
     status: InvoiceStatus;
     invoiceNumber?: string;
     totalAmount: number; // CHF
@@ -135,6 +161,14 @@ export interface InvoiceDTO {
     description?: string;
     expenseCategory?: string;
     paymentReference?: string;
+    issuerName?: string;
+    recipientName?: string;
+    unitNumber?: string;
+    buildingName?: string;
+    // INV-HUB ingestion fields
+    direction: InvoiceDirection;
+    sourceChannel: InvoiceSourceChannel;
+    ingestionStatus?: IngestionStatus | null;
   }
 
 function toCents(amount: number): number {
@@ -247,8 +281,12 @@ async function resolveRecipientDetails(orgId: string, jobId: string) {
   };
 }
 
-async function resolveIssuerBillingEntityId(orgId: string, contractorId?: string | null) {
-  if (contractorId) {
+async function resolveIssuerBillingEntityId(
+  orgId: string,
+  contractorId?: string | null,
+  preferOrg?: boolean,
+) {
+  if (!preferOrg && contractorId) {
     const contractorEntity = await prisma.billingEntity.findFirst({
       where: { orgId, contractorId },
     });
@@ -275,8 +313,13 @@ export async function issueInvoice(
     if (!invoice) throw new Error('INVOICE_NOT_FOUND');
     if (invoice.lockedAt || invoice.invoiceNumber) throw new Error('INVOICE_ALREADY_ISSUED');
 
-    const issuerBillingEntityId =
-      params?.issuerBillingEntityId || invoice.issuerBillingEntityId || undefined;
+    // Lease invoices use the already-stamped issuerBillingEntityId (set at creation time).
+    // If not stamped yet, fall back to ORG billing entity (skipping contractor resolution).
+    const isLeaseInvoice = !!(invoice as any).leaseId;
+    const resolvedIssuerBillingEntityId = isLeaseInvoice
+      ? (invoice.issuerBillingEntityId || await resolveIssuerBillingEntityId(invoice.orgId, null, true))
+      : (invoice.issuerBillingEntityId || await resolveIssuerBillingEntityId(invoice.orgId, (invoice as any).job?.contractorId));
+    const issuerBillingEntityId = params?.issuerBillingEntityId || resolvedIssuerBillingEntityId;
 
     if (!issuerBillingEntityId) throw new Error('ISSUER_BILLING_ENTITY_REQUIRED');
 
@@ -316,23 +359,28 @@ export async function issueInvoice(
 }
 
 /**
- * Create an invoice for a completed job.
+ * Create an invoice, optionally linked to a job.
+ * When jobId is provided, verifies the job exists and resolves recipient/issuer from it.
+ * When jobId is omitted (incoming invoices), uses params directly.
  */
 export async function createInvoice(params: CreateInvoiceParams): Promise<InvoiceDTO> {
   const { orgId, jobId, amount, description } = params;
 
-  // Verify job exists and belongs to org
-  const job = await prisma.job.findUnique({
-    where: { id: jobId },
-    include: { request: { include: { tenant: true, unit: { include: { building: true } } } } },
-  });
+  // Resolve job-related context when a job is linked
+  let job: Awaited<ReturnType<typeof prisma.job.findUnique>> & { request?: any } | null = null;
+  if (jobId) {
+    job = await prisma.job.findUnique({
+      where: { id: jobId },
+      include: { request: { include: { tenant: true, unit: { include: { building: true } } } } },
+    });
 
-  if (!job || job.orgId !== orgId) {
-    throw new Error(`Job not found or doesn't belong to org: ${jobId}`);
+    if (!job || job.orgId !== orgId) {
+      throw new Error(`Job not found or doesn't belong to org: ${jobId}`);
+    }
   }
 
   const fallbackDescription =
-    description || job.request?.description || `Invoice for Request #${job.request.id.slice(0, 8)}`;
+    description || job?.request?.description || 'Invoice';
 
   const baseLineItems = params.lineItems?.length
     ? params.lineItems
@@ -350,15 +398,25 @@ export async function createInvoice(params: CreateInvoiceParams): Promise<Invoic
   const normalizedLineItems = normalizeLineItems(baseLineItems, fallbackDescription, params.vatRate);
   const totals = summarizeTotals(normalizedLineItems);
 
-  const recipientDefaults = await resolveRecipientDetails(orgId, jobId);
+  // Resolve recipient and issuer from job when available, otherwise use params
+  const recipientDefaults = jobId
+    ? await resolveRecipientDetails(orgId, jobId)
+    : {
+        recipientName: 'Unknown',
+        recipientAddressLine1: 'Unknown',
+        recipientAddressLine2: undefined,
+        recipientPostalCode: '0000',
+        recipientCity: 'Unknown',
+        recipientCountry: 'CH',
+      };
   const issuerBillingEntityId =
     params.issuerBillingEntityId ||
-    (await resolveIssuerBillingEntityId(orgId, job.contractorId));
+    (job ? await resolveIssuerBillingEntityId(orgId, job.contractorId) : undefined);
 
   const invoice = await prisma.invoice.create({
     data: {
       org: { connect: { id: orgId } },
-      job: { connect: { id: jobId } },
+      ...(jobId ? { job: { connect: { id: jobId } } } : {}),
       issuer: issuerBillingEntityId ? { connect: { id: issuerBillingEntityId } } : undefined,
       classifiedExpenseType: params.expenseTypeId ? { connect: { id: params.expenseTypeId } } : undefined,
       classifiedAccount: params.accountId ? { connect: { id: params.accountId } } : undefined,
@@ -373,17 +431,33 @@ export async function createInvoice(params: CreateInvoiceParams): Promise<Invoic
       recipientCountry: params.recipientCountry || recipientDefaults.recipientCountry,
       issueDate: params.issueDate || null,
       dueDate: params.dueDate || null,
+      // For ingested invoices, the vendor's invoice number is stored in the
+      // description and rawOcrText. The invoiceNumber column is reserved for
+      // system-generated numbers assigned during issueInvoice() and has a
+      // unique constraint per org.
       invoiceNumber: null,
       invoiceNumberFormat: 'YYYY-NNN',
       subtotalAmount: totals.subtotalAmount,
       vatAmount: totals.vatAmount,
       totalAmount: totals.totalAmount,
-      currency: 'CHF',
+      currency: params.currency ?? 'CHF',
+      ...(params.iban ? { iban: params.iban } : {}),
+      ...(params.paymentReference ? { paymentReference: params.paymentReference } : {}),
       vatRate: params.vatRate ?? 7.7,
       amount: totals.totalAmount ? Math.round(totals.totalAmount / 100) : 0,
       description: fallbackDescription,
       status: InvoiceStatus.DRAFT,
-      submittedAt: new Date(), // Record when the contractor/system submitted the invoice
+      submittedAt: new Date(),
+      // INV-HUB ingestion fields
+      direction: params.direction ?? 'OUTGOING',
+      sourceChannel: params.sourceChannel ?? 'MANUAL',
+      ...(params.ingestionStatus ? { ingestionStatus: params.ingestionStatus } : {}),
+      ...(params.rawOcrText ? { rawOcrText: params.rawOcrText } : {}),
+      ...(params.ocrConfidence !== undefined ? { ocrConfidence: params.ocrConfidence } : {}),
+      ...(params.sourceFileUrl ? { sourceFileUrl: params.sourceFileUrl } : {}),
+      ...(params.matchedJobId ? { matchedJobId: params.matchedJobId } : {}),
+      ...(params.matchedLeaseId ? { matchedLeaseId: params.matchedLeaseId } : {}),
+      ...(params.matchedBuildingId ? { matchedBuildingId: params.matchedBuildingId } : {}),
       lineItems: normalizedLineItems.length
         ? {
             create: normalizedLineItems,
@@ -427,6 +501,8 @@ export async function listInvoices(
     paidBefore?: string;
     expenseTypeId?: string;
     accountId?: string;
+    direction?: string;
+    ingestionStatus?: string;
   }
 ): Promise<{ data: InvoiceDTO[] | InvoiceSummaryDTO[]; total: number }> {
   const useSummary = filters?.view === "summary";
@@ -438,16 +514,23 @@ export async function listInvoices(
     ...(filters?.expenseCategory && { expenseCategory: filters.expenseCategory }),
     ...(filters?.expenseTypeId && { expenseTypeId: filters.expenseTypeId }),
     ...(filters?.accountId && { accountId: filters.accountId }),
+    ...(filters?.direction && { direction: filters.direction }),
+    ...(filters?.ingestionStatus && { ingestionStatus: filters.ingestionStatus }),
   };
 
   // Contractor and building filters both traverse the job relation
+  // Only apply job-based filters when jobId is not null
   const jobFilter: any = {};
   if (filters?.contractorId) jobFilter.contractorId = filters.contractorId;
   if (filters?.buildingId) {
     jobFilter.request = { unit: { buildingId: filters.buildingId } };
   }
   if (Object.keys(jobFilter).length > 0) {
-    where.job = jobFilter;
+    // Include invoices that match the job filter OR have no job (incoming invoices)
+    where.OR = [
+      { job: jobFilter },
+      ...(filters?.contractorId ? [] : [{ jobId: null }]),
+    ];
   }
 
   // Date range filters on paidAt
@@ -461,7 +544,7 @@ export async function listInvoices(
     prisma.invoice.findMany({
       where,
       orderBy: { createdAt: 'desc' },
-      include: useSummary ? undefined : INVOICE_INCLUDE,
+      include: useSummary ? INVOICE_SUMMARY_INCLUDE : INVOICE_INCLUDE,
     }),
     prisma.invoice.count({ where }),
   ]);
@@ -590,9 +673,14 @@ export async function approveInvoice(invoiceId: string): Promise<InvoiceDTO> {
   if (!invoice) throw new Error('INVOICE_NOT_FOUND');
 
   if (!invoice.lockedAt) {
+    const isLeaseInvoice = !!(invoice as any).leaseId;
     const issuerBillingEntityId =
       invoice.issuerBillingEntityId ||
-      (await resolveIssuerBillingEntityId(invoice.orgId, invoice.job?.contractorId));
+      (await resolveIssuerBillingEntityId(
+        invoice.orgId,
+        isLeaseInvoice ? null : invoice.job?.contractorId,
+        isLeaseInvoice,
+      ));
     await issueInvoice(invoiceId, { issuerBillingEntityId });
   }
 
@@ -666,6 +754,7 @@ function mapInvoiceToDTO(invoice: InvoiceWithFullInclude): InvoiceDTO {
     id: invoice.id,
     orgId: invoice.orgId,
     jobId: invoice.jobId,
+    requestId: (invoice as any).job?.requestId ?? null,
     amount:
       invoice.amount !== null && invoice.amount !== undefined
         ? invoice.amount
@@ -706,11 +795,22 @@ function mapInvoiceToDTO(invoice: InvoiceWithFullInclude): InvoiceDTO {
     account: (invoice as any).classifiedAccount
       ? { id: (invoice as any).classifiedAccount.id, name: (invoice as any).classifiedAccount.name, code: (invoice as any).classifiedAccount.code }
       : null,
+    // INV-HUB ingestion fields
+    direction: (invoice as any).direction ?? 'OUTGOING',
+    sourceChannel: (invoice as any).sourceChannel ?? 'MANUAL',
+    ingestionStatus: (invoice as any).ingestionStatus ?? null,
+    rawOcrText: (invoice as any).rawOcrText ?? null,
+    ocrConfidence: (invoice as any).ocrConfidence ?? null,
+    sourceFileUrl: (invoice as any).sourceFileUrl ?? null,
+    matchedJobId: (invoice as any).matchedJobId ?? null,
+    matchedLeaseId: (invoice as any).matchedLeaseId ?? null,
+    matchedBuildingId: (invoice as any).matchedBuildingId ?? null,
   };
 }
 
   function mapInvoiceToSummaryDTO(invoice: InvoiceWithSummaryInclude): InvoiceSummaryDTO {
     const totalAmount = invoice.totalAmount ?? 0;
+    const unit = (invoice as any).job?.request?.unit;
     return {
       id: invoice.id,
       orgId: invoice.orgId,
@@ -724,5 +824,14 @@ function mapInvoiceToDTO(invoice: InvoiceWithFullInclude): InvoiceDTO {
       description: invoice.description || undefined,
       expenseCategory: invoice.expenseCategory || undefined,
       paymentReference: invoice.paymentReference || undefined,
+      leaseId: invoice.leaseId ?? null,
+      issuerName: (invoice as any).issuer?.name || undefined,
+      recipientName: invoice.recipientName || undefined,
+      unitNumber: unit?.unitNumber || undefined,
+      buildingName: unit?.building?.name || undefined,
+      // INV-HUB ingestion fields
+      direction: (invoice as any).direction ?? 'OUTGOING',
+      sourceChannel: (invoice as any).sourceChannel ?? 'MANUAL',
+      ingestionStatus: (invoice as any).ingestionStatus ?? null,
     };
   }

@@ -17,7 +17,7 @@ const LineItemSchema = z.object({
 
 export const CreateInvoiceSchema = z
   .object({
-    jobId: z.string().uuid('Invalid job ID'),
+    jobId: z.string().uuid('Invalid job ID').optional(),
     amount: z.number().min(0).max(100000).optional(),
     description: z.string().max(500).optional(),
     issuerBillingEntityId: z.string().uuid().optional(),
@@ -33,6 +33,13 @@ export const CreateInvoiceSchema = z
     expenseTypeId: z.string().uuid().optional(),
     accountId: z.string().uuid().optional(),
     lineItems: z.array(LineItemSchema).optional(),
+    // INV-HUB ingestion fields
+    direction: z.enum(['OUTGOING', 'INCOMING']).optional(),
+    sourceChannel: z.enum(['MANUAL', 'BROWSER_UPLOAD', 'EMAIL_PDF', 'MOBILE_CAPTURE']).optional(),
+    ingestionStatus: z.enum(['PENDING_REVIEW', 'CONFIRMED', 'AUTO_CONFIRMED', 'REJECTED']).optional(),
+    matchedJobId: z.string().uuid().optional(),
+    matchedLeaseId: z.string().uuid().optional(),
+    matchedBuildingId: z.string().uuid().optional(),
   })
   .refine((data) => data.amount !== undefined || (data.lineItems && data.lineItems.length > 0), {
     message: 'Either amount or lineItems must be provided',

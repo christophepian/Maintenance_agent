@@ -7,6 +7,242 @@ import PageContent from "../../../components/layout/PageContent";
 import Panel from "../../../components/layout/Panel";
 import Link from "next/link";
 import { authHeaders } from "../../../lib/api";
+
+/* ─── Owner create form ──────────────────────────────────── */
+
+const OWNER_FORM_DEFAULT = { name: "", email: "", password: "" };
+const BILLING_FORM_DEFAULT = { addressLine1: "", addressLine2: "", postalCode: "", city: "", country: "CH", iban: "", vatNumber: "", defaultVatRate: "0" };
+
+function OwnersTab({ showAddForm, onAddFormClose }) {
+  const [owners, setOwners] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+
+  const [ownerForm, setOwnerForm] = useState(OWNER_FORM_DEFAULT);
+  const [ownerSubmitting, setOwnerSubmitting] = useState(false);
+
+  // Billing entity inline expansion: billingForms[ownerId] = form state
+  const [expandedBilling, setExpandedBilling] = useState(null); // ownerId
+  const [billingForm, setBillingForm] = useState(BILLING_FORM_DEFAULT);
+  const [billingSubmitting, setBillingSubmitting] = useState(false);
+
+  async function loadOwners() {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/people/owners", { headers: authHeaders() });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error?.message || "Failed to load owners");
+      setOwners(data.data || []);
+    } catch (e) {
+      setError(String(e?.message || e));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => { loadOwners(); }, []);
+
+  async function handleCreateOwner(e) {
+    e.preventDefault();
+    setOwnerSubmitting(true);
+    setError(""); setNotice("");
+    try {
+      const res = await fetch("/api/people/owners", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify(ownerForm),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error?.message || "Failed to create owner");
+      setNotice(`Owner "${ownerForm.name}" created.`);
+      setOwnerForm(OWNER_FORM_DEFAULT);
+      onAddFormClose();
+      await loadOwners();
+    } catch (e) {
+      setError(String(e?.message || e));
+    } finally {
+      setOwnerSubmitting(false);
+    }
+  }
+
+  function openBilling(owner) {
+    setExpandedBilling(owner.id);
+    setBillingForm({ ...BILLING_FORM_DEFAULT, name: owner.name });
+  }
+
+  async function handleCreateBillingEntity(e, ownerId) {
+    e.preventDefault();
+    setBillingSubmitting(true);
+    setError(""); setNotice("");
+    try {
+      const res = await fetch(`/api/people/owners/${ownerId}/billing-entity`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({ ...billingForm, defaultVatRate: Number(billingForm.defaultVatRate) }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error?.message || "Failed to create billing entity");
+      setNotice("Billing entity created.");
+      setExpandedBilling(null);
+      await loadOwners();
+    } catch (e) {
+      setError(String(e?.message || e));
+    } finally {
+      setBillingSubmitting(false);
+    }
+  }
+
+  return (
+    <div>
+      {(error || notice) && (
+        <div className={`mb-3 rounded-lg border px-4 py-2.5 text-sm ${error ? "border-red-200 bg-red-50 text-red-700" : "border-emerald-200 bg-emerald-50 text-emerald-700"}`}>
+          {error || notice}
+          <button onClick={() => { setError(""); setNotice(""); }} className="ml-3 opacity-60 hover:opacity-100">✕</button>
+        </div>
+      )}
+
+      {/* Add owner form */}
+      {showAddForm && (
+        <div className="mb-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
+          <p className="text-sm font-semibold text-slate-700 mb-3">New owner</p>
+          <form onSubmit={handleCreateOwner} className="flex flex-wrap gap-3 items-end">
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1">Name</label>
+              <input
+                required value={ownerForm.name}
+                onChange={(e) => setOwnerForm((f) => ({ ...f, name: e.target.value }))}
+                className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-44"
+                placeholder="Jean Dupont"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1">Email</label>
+              <input
+                required type="email" value={ownerForm.email}
+                onChange={(e) => setOwnerForm((f) => ({ ...f, email: e.target.value }))}
+                className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-52"
+                placeholder="jean@example.com"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1">Password</label>
+              <input
+                required type="password" value={ownerForm.password}
+                onChange={(e) => setOwnerForm((f) => ({ ...f, password: e.target.value }))}
+                className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-40"
+                placeholder="Temporary password"
+              />
+            </div>
+            <button type="submit" disabled={ownerSubmitting}
+              className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-50">
+              {ownerSubmitting ? "Creating…" : "Create"}
+            </button>
+            <button type="button" onClick={onAddFormClose}
+              className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50">
+              Cancel
+            </button>
+          </form>
+        </div>
+      )}
+
+      <Panel bodyClassName="p-0">
+        {loading ? (
+          <p className="loading-text">Loading owners…</p>
+        ) : owners.length === 0 && !showAddForm ? (
+          <div className="empty-state">
+            <p className="empty-state-text">No owners yet. Use the "+ Add owner" button above to create one.</p>
+          </div>
+        ) : (
+          <table className="inline-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Billing entity</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {owners.map((owner) => (
+                <>
+                  <tr key={owner.id}>
+                    <td className="cell-bold">{owner.name}</td>
+                    <td className="text-slate-500">{owner.email || "—"}</td>
+                    <td>
+                      {owner.billingEntity ? (
+                        <span className="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
+                          ✓ {owner.billingEntity.name}
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-500">
+                          Not set
+                        </span>
+                      )}
+                    </td>
+                    <td className="text-right">
+                      {!owner.billingEntity && (
+                        <button
+                          onClick={() => expandedBilling === owner.id ? setExpandedBilling(null) : openBilling(owner)}
+                          className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                        >
+                          {expandedBilling === owner.id ? "Cancel" : "Set up billing →"}
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                  {expandedBilling === owner.id && (
+                    <tr key={`${owner.id}-billing`}>
+                      <td colSpan={4} className="bg-slate-50 px-4 py-4">
+                        <p className="text-xs font-semibold text-slate-600 mb-3">Billing entity for {owner.name}</p>
+                        <form onSubmit={(e) => handleCreateBillingEntity(e, owner.id)} className="flex flex-wrap gap-3 items-end">
+                          <div>
+                            <label className="block text-xs font-medium text-slate-600 mb-1">Address</label>
+                            <input required value={billingForm.addressLine1}
+                              onChange={(e) => setBillingForm((f) => ({ ...f, addressLine1: e.target.value }))}
+                              className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-52" placeholder="Rue de la Paix 1" />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-slate-600 mb-1">Postal code</label>
+                            <input required value={billingForm.postalCode}
+                              onChange={(e) => setBillingForm((f) => ({ ...f, postalCode: e.target.value }))}
+                              className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-24" placeholder="1200" />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-slate-600 mb-1">City</label>
+                            <input required value={billingForm.city}
+                              onChange={(e) => setBillingForm((f) => ({ ...f, city: e.target.value }))}
+                              className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-32" placeholder="Genève" />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-slate-600 mb-1">IBAN</label>
+                            <input required value={billingForm.iban}
+                              onChange={(e) => setBillingForm((f) => ({ ...f, iban: e.target.value }))}
+                              className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-52 font-mono" placeholder="CH56 0483 5012 3456 7800 9" />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-slate-600 mb-1">VAT number</label>
+                            <input value={billingForm.vatNumber}
+                              onChange={(e) => setBillingForm((f) => ({ ...f, vatNumber: e.target.value }))}
+                              className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-36" placeholder="CHE-123.456.789" />
+                          </div>
+                          <button type="submit" disabled={billingSubmitting}
+                            className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-50">
+                            {billingSubmitting ? "Saving…" : "Save billing entity"}
+                          </button>
+                        </form>
+                      </td>
+                    </tr>
+                  )}
+                </>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </Panel>
+    </div>
+  );
+}
 const PEOPLE_TABS = [
   { key: "TENANTS", label: "Tenants" },
   { key: "VENDORS", label: "Vendors" },
@@ -31,6 +267,7 @@ export default function ManagerPeoplePage() {
   const [contractorsTotal, setContractorsTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [showAddOwner, setShowAddOwner] = useState(false);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -59,7 +296,18 @@ export default function ManagerPeoplePage() {
   return (
     <AppShell role="MANAGER">
       <PageShell>
-        <PageHeader title="People" subtitle="Contacts across tenants, vendors and owners." />
+        <PageHeader
+          title="People"
+          subtitle="Contacts across tenants, vendors and owners."
+          actions={activeTab === 2 ? (
+            <button
+              onClick={() => setShowAddOwner((v) => !v)}
+              className="rounded-lg bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-700"
+            >
+              + Add owner
+            </button>
+          ) : null}
+        />
         <PageContent>
           {error && <div className="error-banner">{error}</div>}
 
@@ -163,17 +411,9 @@ export default function ManagerPeoplePage() {
             )}
           </div>
 
-          {/* Owners tab — stub (no API endpoint yet) */}
+          {/* Owners tab */}
           <div className={activeTab === 2 ? "tab-panel-active" : "tab-panel"}>
-            <div className="px-4 py-4">
-            <div className="coming-soon">
-              <span className="coming-soon-badge">Coming Soon</span>
-              <p className="coming-soon-title">Owner Management</p>
-              <p className="coming-soon-text">
-                Owner profiles, ownership stakes, and communication preferences will appear here.
-              </p>
-            </div>
-            </div>
+            <OwnersTab showAddForm={showAddOwner} onAddFormClose={() => setShowAddOwner(false)} />
           </div>
           </Panel>
         </PageContent>

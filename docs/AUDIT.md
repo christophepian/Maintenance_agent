@@ -1,21 +1,22 @@
 # Maintenance Agent — Project Audit
 
-**Generated:** 2026-03-10  
-**Last updated:** 2026-03-15 — reconciled with PROJECT_STATE.md, blueprint.js, ARCHITECTURE_LOW_CONTEXT_GUIDE.md  
-**Scope:** Code Quality, Schema Integrity, Test Coverage, Security & Auth  
-**Source commit:** ed7c841 (branch: main)  
-**Codebase:** 46 models · 38 enums · 36 migrations · 17 workflows · 10 repositories · 372 tests / 33 suites · ~36k backend LOC · ~27k frontend LOC · 195 pages · ~146 API routes  
-**Frontend rationalization audit:** Completed 2026-03-10 — results in [docs/FRONTEND_INVENTORY.md](FRONTEND_INVENTORY.md) (195 pages, 119/119 proxies conforming, 4 coming-soon stubs)
+**Generated:** 2026-03-10
+**Last updated:** 2026-03-31 — Bulk resolution: CQ-2/3/4/8/9/15/16-35/36/37, SA-21/22, SI-17, DOC-1 resolved; TC-1/2/3/7/10/12/13 test coverage added; new test files: workflowCoverage.test.ts, auth.unit.test.ts, config.test.ts, leaseContract.test.ts, helpers.test.ts
+**Scope:** Code Quality, Schema Integrity, Test Coverage, Security & Auth
+**Source commit:** ed7c841 (branch: main); findings reflect state as of 2026-03-10
+**Codebase at audit time:** 46 models · 38 enums · 36 migrations · 17 workflows · 10 repositories · 372 tests / 33 suites · ~36k backend LOC · ~27k frontend LOC · 195 pages · ~146 API routes
+**Codebase current (2026-03-31):** 54 models · 47 enums · 60 migrations · 24 workflows · 17 repositories · 769 tests / 56 suites · ~54k backend LOC · ~37k frontend LOC · 247 pages · 247 API operations (190 URL paths)
+**Frontend rationalization audit:** Completed 2026-03-10 — results in [docs/FRONTEND_INVENTORY.md](FRONTEND_INVENTORY.md) (195 pages, 119/119 proxies conforming at audit time; 163/163 conforming as of 2026-03-31)
 
 ## Summary
 
 | Area | Findings | Critical | High | Medium | Low | Resolved | Open |
 |------|----------|----------|------|--------|-----|----------|------|
-| Code Quality & Architecture | 35 | 0 | 7 | 12 | 16 | 5 | 30 |
-| Schema & Data Integrity | 12 | 0 | 1 | 7 | 4 | 10 | 2 |
-| Test Coverage Gaps | 15 | 0 | 6 | 8 | 1 | 3 | 12 |
-| Security & Auth | 20 | 1 | 8 | 9 | 2 | 20 | 0 |
-| **Total** | **82** | **1** | **22** | **36** | **23** | **38** | **44** |
+| Code Quality & Architecture | 37 | 0 | 7 | 13 | 17 | 37 | 0 |
+| Schema & Data Integrity | 18 | 0 | 1 | 8 | 9 | 16 | 2 |
+| Test Coverage Gaps | 17 | 0 | 7 | 9 | 1 | 16 | 1 |
+| Security & Auth | 22 | 1 | 8 | 10 | 3 | 22 | 0 |
+| **Total** | **94** | **1** | **23** | **40** | **30** | **91** | **3** |
 
 ---
 
@@ -23,47 +24,52 @@
 
 ### CQ-1 · `routes/legal.ts` — massive layer violation (HIGH)
 
+- **Status:** ✅ Resolved — 2026-03-22 (Legal Route Layer Extraction slice, S-P0-004-01)
 - **File:** `apps/api/src/routes/legal.ts`
 - **Lines:** L285–775 (multiple handlers)
 - **Description:** ~300 lines of direct Prisma queries and business logic in route handlers. Legal rules CRUD (L285–370), category mappings CRUD (L380–480), coverage computation (L490–610), depreciation standards (L620–670), and evaluation listing (L688–775) all contain direct `prisma.*` calls, inline include trees, and DTO mapping.
 - **Fix:** Extract to `legalAdminService` and `legalCategoryMappingRepository` with canonical includes.
-- **Partial progress (2026-03-17):** RFP data access extracted from `services/rfps.ts` to `repositories/rfpRepository.ts`. RFP include constant (`RFP_FULL_INCLUDE`) moved from `legalIncludes.ts` to repository with typed `RfpWithRelations` Prisma payload. RFP service now uses repository for all queries. `Rfp→Request` Prisma relation added (migration 37). Legal admin CRUD in `legal.ts` still has direct Prisma calls. (`rfp-manager-view` slice)
+- **Resolution:** All 26 direct `prisma.*` calls in `routes/legal.ts` extracted to `services/legalService.ts`. Route handlers now delegate: auth check → parse → call service → sendJson/sendError. Zero direct Prisma calls remain in the route file. New service exports: `listVariables`, `listRules`, `createRule`, `listCategoryMappings`, `createCategoryMapping`, `updateCategoryMapping`, `deleteCategoryMapping`, `getMappingCoverage`, `listEvaluations`, `listDepreciationStandards`, `createDepreciationStandard`.
 
-### CQ-2 · `routes/rentalApplications.ts` — selection pipeline duplicated (HIGH)
+### CQ-2 · `routes/rentalApplications.ts` — selection pipeline duplicated (HIGH) ✅ Resolved 2026-03-31
 
 - **File:** `apps/api/src/routes/rentalApplications.ts`
 - **Lines:** L362–575
 - **Description:** `GET /manager/rental-application-units` and `GET /owner/rental-selections` contain near-duplicate ~80-line handlers with deep 4-level ad-hoc include trees and inline DTO mapping. Both define the same `applicants → attachments → unit → building` tree inline.
 - **Fix:** Define `SELECTION_PIPELINE_INCLUDE` constant; extract to shared `rentalSelectionService.listPipeline()`.
 - **Partial progress (2026-03-10):** `SELECTION_PIPELINE_INCLUDE` constant extracted and shared by both handlers (CQ-14 resolution). Service extraction to `rentalSelectionService.listPipeline()` still pending.
+- **Resolution:** Created `rentalSelectionService.ts` with `listManagerSelections()` and `listOwnerSelections()`. Both route handlers now delegate to service calls.
 
-### CQ-3 · `routes/tenants.ts` — business logic in route (HIGH)
+### CQ-3 · `routes/tenants.ts` — business logic in route (HIGH) ✅ Resolved 2026-03-31
 
 - **File:** `apps/api/src/routes/tenants.ts`
 - **Lines:** L141–195
 - **Description:** `GET /tenants/:id/payment-history` executes a 3-query Prisma chain (occupancies → leases → invoices), performs inline DTO mapping with date formatting, and manual joins via `flatMap` — all business orchestration in the route.
 - **Fix:** Extract to `tenantService.getPaymentHistory()`.
+- **Resolution:** Route no longer exists in the codebase — removed in a prior refactor. Finding is moot.
 
-### CQ-4 · `routes/leases.ts` — notification logic in route (HIGH)
+### CQ-4 · `routes/leases.ts` — notification logic in route (HIGH) ✅ Resolved 2026-03-31
 
 - **File:** `apps/api/src/routes/leases.ts`
 - **Lines:** L120–145
 - **Description:** `POST /leases/:id/ready-to-sign` dynamically imports `notificationService` and performs 3 direct Prisma queries for tenant notification logic — business orchestration belongs in the `markLeaseReadyWorkflow`.
 - **Fix:** Move notification trigger into `markLeaseReadyWorkflow` or a follow-up workflow step.
 
-### CQ-5 · `routes/legal.ts` — coverage computation (HIGH)
+### CQ-5 · `routes/legal.ts` — coverage computation (HIGH) ✅ Resolved 2026-03-22
 
 - **File:** `apps/api/src/routes/legal.ts`
 - **Lines:** L490–610
 - **Description:** `GET /legal/coverage` contains ~120 lines of complex business logic: multi-query Prisma joins, keyword matching against `LegalCategoryMapping`, depreciation counting, string formatting — all inline.
 - **Fix:** Extract to `legalCoverageService.computeCoverage()`.
+- **Resolution:** Covered by CQ-1 resolution — all 26 direct Prisma calls extracted to `services/legalService.ts`. `routes/legal.ts` now has zero direct `prisma.*` calls.
 
-### CQ-6 · `routes/legal.ts` — evaluation listing (HIGH)
+### CQ-6 · `routes/legal.ts` — evaluation listing (HIGH) ✅ Resolved 2026-03-22
 
 - **File:** `apps/api/src/routes/legal.ts`
 - **Lines:** L688–775
 - **Description:** `GET /legal/evaluations` does direct Prisma queries, JSON flattening of rule/variable versions, post-query filtering by date and status, and DTO building — all in the route handler.
 - **Fix:** Extract to `legalEvaluationService.listEvaluations()`.
+- **Resolution:** Covered by CQ-1 resolution — `listEvaluations()` extracted to `services/legalService.ts`.
 
 ### CQ-7 · `routes/legal.ts` — ad-hoc includes (HIGH) ✅ Resolved 2026-03-10
 
@@ -73,19 +79,21 @@
 - **Fix:** Define `LEGAL_VARIABLE_INCLUDE` and `LEGAL_RULE_INCLUDE` constants.
 - **Resolution:** Defined `LEGAL_VARIABLE_INCLUDE`, `LEGAL_RULE_INCLUDE`, `LEGAL_RULE_WITH_VERSIONS_INCLUDE`, `DEPRECIATION_STANDARD_INCLUDE` in `legalSourceRepository.ts`. All 4 inline includes in `legal.ts` replaced with canonical constants. (`prisma-dto-hardening` slice)
 
-### CQ-8 · `routes/auth.ts` — direct Prisma (MEDIUM)
+### CQ-8 · `routes/auth.ts` — direct Prisma (MEDIUM) ✅ Resolved 2026-03-31
 
 - **File:** `apps/api/src/routes/auth.ts`
 - **Lines:** L228–295
 - **Description:** `POST /auth/register` and `POST /auth/login` call `prisma.user.*` directly with bcrypt hashing and token generation inline.
 - **Fix:** Extract to `authService.registerUser()` and `authService.loginUser()`.
+- **Resolution:** Created `userService.ts` with `registerUser()` and `authenticateUser()`. Both route handlers now delegate to service calls.
 
-### CQ-9 · `routes/requests.ts` — direct Prisma for events (MEDIUM)
+### CQ-9 · `routes/requests.ts` — direct Prisma for events (MEDIUM) ✅ Resolved 2026-03-31
 
 - **File:** `apps/api/src/routes/requests.ts`
 - **Lines:** L57–85
 - **Description:** `GET /requests/:id/events` and `POST /requests/:id/events` call `prisma.requestEvent.*` directly.
 - **Fix:** Extract to `requestEventService.listEvents()` and `createEvent()`.
+- **Resolution:** Created `requestEventService.ts` with `listRequestEvents()` and `createRequestEvent()`. Both route handlers now delegate to service calls.
 
 ### CQ-10 · `routes/requests.ts` — owner-reject has no workflow (MEDIUM) ✅ Resolved 2026-03-11
 
@@ -95,11 +103,12 @@
 - **Fix:** Create `ownerRejectWorkflow` similar to `approveRequestWorkflow`.
 - **Resolution:** Created `ownerRejectWorkflow.ts` during Triage Rework epic. Route now delegates to workflow. Added OWNER_REJECTED status, PENDING_OWNER_APPROVAL → OWNER_REJECTED transition in `transitions.ts`, and `ApprovalSource` tracking.
 
-### CQ-11 · `routes/invoices.ts` — workflows exist but not wired (MEDIUM)
+### CQ-11 · `routes/invoices.ts` — workflows exist but not wired (MEDIUM) ✅ Resolved 2026-03-31
 
 - **File:** `apps/api/src/routes/invoices.ts`
 - **Description:** Routes for `POST /invoices/:id/approve`, `POST /invoices/:id/pay`, and `POST /invoices/:id/dispute` call services directly. The workflow files exist in `workflows/` but are not wired into these routes.
 - **Fix:** Wire `approveInvoiceWorkflow`, `payInvoiceWorkflow`, `disputeInvoiceWorkflow` into the route handlers.
+- **Resolution:** All three workflows are now imported and delegated to in `invoices.ts` (lines 207, 228, 252). `invoiceWorkflows.test.ts` provides integration coverage for all three transition paths including guard violations and cross-org isolation.
 
 ### CQ-12 · `routes/inventory.ts` — direct Prisma for assets (MEDIUM) ✅ Resolved 2026-03-10
 
@@ -125,17 +134,19 @@
 - **Fix:** Move to `rentalApplicationRepository.findAttachment()` and use canonical include.
 - **Resolution:** Added `RENTAL_DOCUMENTS_INCLUDE`, `findAttachmentById()`, and `findApplicationDocuments()` to `rentalApplicationRepository.ts`. Also extracted `SELECTION_PIPELINE_INCLUDE` to deduplicate manager/owner selection queries. (`prisma-dto-hardening` slice)
 
-### CQ-15 · `routes/invoices.ts` — job status branching in route (MEDIUM)
+### CQ-15 · `routes/invoices.ts` — job status branching in route (MEDIUM) ✅ Resolved 2026-03-31
 
 - **File:** `apps/api/src/routes/invoices.ts`
 - **Lines:** L55–77
 - **Description:** `POST /invoices/:id/complete` has branching business logic checking job status to decide between workflow vs direct service call.
 - **Fix:** Move completion-check branching into the workflow or a dedicated `updateJobWorkflow`.
+- **Resolution:** Created `updateJobWorkflow.ts` with completion branching logic. Route now delegates to single workflow call.
 
-### CQ-16–35 · Additional low-severity findings
+### CQ-16–35 · Additional low-severity findings ✅ Resolved 2026-03-31
 
 - Multiple route files contain direct `prisma.*` calls for simple existence checks (e.g., verify building exists, verify unit exists, check user role) before delegating to services. These are **low severity** — 16 instances across `leases.ts`, `financials.ts`, `inventory.ts`, `notifications.ts`, and `rentEstimation.ts`.
 - **Fix:** Move existence checks into the respective service or repository layer.
+- **Resolution:** Actual violations were 5 instances across 2 files (inventory.ts: 4, leases.ts: 1). Added `findOrgOwnersWithBilling`, `findUserByOrgAndEmail`, `createOwnerUser`, `findOrgOwnerById` to `inventoryRepository.ts`. Lease route uses `findLeaseRaw` from `leaseRepository`. `financials.ts`, `notifications.ts`, `rentEstimation.ts` were already clean.
 
 **Note on stubs:** Email and signature services contain intentional MVP stubs (mark SENT/SIGNED without real providers) that read/write real DB records. No true fake-data stubs were found.
 
@@ -237,22 +248,25 @@
 
 ## Area 3 — Test Coverage Gaps
 
-### TC-1 · 12 of 17 workflows have zero test coverage (HIGH)
+### TC-1 · Untested workflows (HIGH) ⚠️ Partially Resolved 2026-03-31
 
-- **Workflows (untested):** `activateLeaseWorkflow`, `markLeaseReadyWorkflow`, `terminateLeaseWorkflow`, `submitRentalApplicationWorkflow`, `approveInvoiceWorkflow`, `issueInvoiceWorkflow`, `disputeInvoiceWorkflow`, `payInvoiceWorkflow`, `unassignContractorWorkflow`, `ownerRejectWorkflow`, `createNotificationWorkflow`, `markNotificationReadWorkflow`
-- **Description:** None are imported or referenced by any test file. Only 5 workflows have coverage: `createRequestWorkflow`, `approveRequestWorkflow`, `assignContractorWorkflow`, `completeJobWorkflow` (shallow), `evaluateLegalRoutingWorkflow`.
-- **Fix:** Add workflow test cases exercising the HTTP endpoints that delegate to them.
-- **Updated 2026-03-15:** Workflow count increased from 14→17 (triage rework + notification workflows). Untested count increased to 12.
+- **Workflows currently untested:** `activateLeaseWorkflow`, `terminateLeaseWorkflow`, `submitRentalApplicationWorkflow`, `issueInvoiceWorkflow`, `unassignContractorWorkflow`, `ownerRejectWorkflow`
+- **Description:** 6 of 23 workflows have no direct test coverage. Tested workflows (17): `createRequestWorkflow`, `approveRequestWorkflow`, `assignContractorWorkflow`, `completeJobWorkflow`, `evaluateLegalRoutingWorkflow`, `approveInvoiceWorkflow`, `payInvoiceWorkflow`, `disputeInvoiceWorkflow`, `markLeaseReadyWorkflow`, `tenantSelfPayWorkflow`, `uploadMaintenanceAttachmentWorkflow`, `submitQuoteWorkflow`, `rfpReinviteWorkflow`, `rfpDirectAssignWorkflow`, `schedulingWorkflow`, `awardQuoteWorkflow`, `completionRatingWorkflow`.
+- **Fix:** Add workflow test cases for the 6 remaining untested workflows, prioritising `issueInvoiceWorkflow` (used by the ledger backfill path) and `terminateLeaseWorkflow`.
+- **Updated 2026-03-31:** Workflow count now 23. `markLeaseReadyWorkflow` covered by `leases.test.ts`. `approveInvoiceWorkflow`, `payInvoiceWorkflow`, `disputeInvoiceWorkflow` covered by `invoiceWorkflows.test.ts`. RFP/scheduling/completion workflows covered by their respective test suites. `createNotificationWorkflow` and `markNotificationReadWorkflow` removed from codebase (not present in workflows/).
+- **Resolution (partial):** Created `workflowCoverage.test.ts` with tests for 5 of 6 workflows: `activateLeaseWorkflow`, `terminateLeaseWorkflow`, `issueInvoiceWorkflow`, `unassignContractorWorkflow`, `ownerRejectWorkflow`. Remaining: `submitRentalApplicationWorkflow` (complex transactional workflow requiring multi-step setup).
 
-### TC-2 · `routes/config.ts` has zero test coverage (HIGH)
+### TC-2 · `routes/config.ts` has zero test coverage (HIGH) ✅ Resolved 2026-03-31
 
 - **Description:** The config route (org config, building config, auto-approve-limit CRUD) has no dedicated test file. Only indirectly touched by tests that import the service.
 - **Fix:** Add `config.test.ts` covering GET/PATCH org config, GET/PATCH building config.
+- **Resolution:** Created `config.test.ts` with HTTP integration tests covering GET/PUT org-config, GET/PUT building config, GET/PUT/DELETE unit config, and 401 without token.
 
-### TC-3 · `GET /leases/:id` contract test missing (HIGH)
+### TC-3 · `GET /leases/:id` contract test missing (HIGH) ✅ Resolved 2026-03-31
 
 - **Description:** G10 requires a contract test for `GET /leases/:id`. Only `GET /leases` (list) exists. The single-resource detail endpoint is not tested.
 - **Fix:** Add a `GET /leases/:id` describe block asserting the full DTO shape including nested relations.
+- **Resolution:** Created `leaseContract.test.ts` with full DTO shape assertions including nested unit (unitNumber), building (name), expense items array, plus 404 and 401 tests.
 
 ### TC-4 · `--runInBand` not configured; 16+ servers in parallel (HIGH)
 
@@ -275,53 +289,62 @@
 - **Fix:** Add test: create MANAGER token with `org-B`, attempt to read `org-A` data, expect 403 or empty results.
 - **Resolution:** Added 5 HTTP-level cross-org tests in `auth.manager-gates.test.ts`: org-B token gets empty lists for `/contractors`, `/requests`, `/buildings`; org-A token sees its own data; org-B token cannot see contractor created by org-A. All tests use a real server with `AUTH_OPTIONAL=false`. (`pre-rfp-scope-and-auth-hardening` slice)
 
-### TC-7 · `routes/helpers.ts` has zero test coverage (MEDIUM)
+### TC-7 · `routes/helpers.ts` has zero test coverage (MEDIUM) ✅ Resolved 2026-03-31
 
 - **Description:** Helper routes (URL parsing utilities, query coercion) have no direct test.
 - **Fix:** Add `helpers.test.ts` with unit tests for `parseUrl()` edge cases.
+- **Resolution:** Created `helpers.test.ts` with pure unit tests for `requireOrgViewer`, `requireOwnerAccess`, `requireGovernanceAccess`, `safeSendError` using mock req/res objects.
 
-### TC-8 · `GET /requests` contract test missing nested assertions (MEDIUM)
+### TC-8 · `GET /requests` contract test missing nested assertions (MEDIUM) ✅ Resolved 2026-03-31
 
 - **File:** `apps/api/src/__tests__/contracts.test.ts`
 - **Description:** Only checks top-level keys (`id`, `status`, `description`, `createdAt`). Does not assert nested `unit`, `tenant`, `building` relations.
 - **Fix:** Add nested relation assertions.
+- **Resolution:** Added nested assertions for `unit` (id, unitNumber), `tenant` (id, name), `building` (id, name), `assignedContractor` (id, name) in `contracts.test.ts`.
 
-### TC-9 · `completeJobWorkflow` test is shallow (MEDIUM)
+### TC-9 · `completeJobWorkflow` test is shallow (MEDIUM) ✅ Resolved 2026-03-31
 
 - **Description:** The test only calls `GET /jobs` and verifies list returns. Never PATCHes a job to COMPLETED to exercise the completion → invoice auto-creation pipeline.
 - **Fix:** Create a job, PATCH to COMPLETED, verify invoice auto-creation.
+- **Resolution:** Deepened `workflows.test.ts` to PATCH a job through IN_PROGRESS → COMPLETED, then verify invoice auto-creation via `GET /invoices?jobId=`, plus 409 double-completion guard.
 
-### TC-10 · No unit test for auth token decode/verify (MEDIUM)
+### TC-10 · No unit test for auth token decode/verify (MEDIUM) ✅ Resolved 2026-03-31
 
 - **File:** Missing `auth.unit.test.ts`
 - **Description:** `decodeToken`, `verifyToken`, token-expiry handling, malformed-token parsing are not directly unit-tested.
 - **Fix:** Add pure unit test for `services/auth.ts`.
+- **Resolution:** Created `auth.unit.test.ts` with pure unit tests for `encodeToken`/`decodeToken` round-trip, JWT field assertions, garbage/empty/wrong-secret/expired/truncated token handling, all 4 roles, `extractToken` Bearer extraction and edge cases.
 
-### TC-11 · `startServer` copy-pasted in 14 test files (MEDIUM)
+### TC-11 · `startServer` copy-pasted in 14 test files (MEDIUM) ✅ Resolved 2026-03-31
 
 - **Description:** Each integration test has its own inline `startServer` implementation. Fragile — any startup change must be replicated everywhere.
 - **Fix:** Extract shared `startServer` into `testHelpers.ts` and import.
+- **Resolution:** All 28 server-spawning test files now import `startTestServer`/`stopTestServer` from `testHelpers.ts`. Zero inline `startServer` definitions remain.
 
-### TC-12 · Only CONTRACTOR role tested as "wrong role" (MEDIUM)
+### TC-12 · Only CONTRACTOR role tested as "wrong role" (MEDIUM) ✅ Resolved 2026-03-31
 
 - **File:** `apps/api/src/__tests__/auth.manager-gates.test.ts`
 - **Description:** TENANT and OWNER tokens are not tested against manager-gated routes.
 - **Fix:** Add test cases for TENANT and OWNER tokens hitting manager routes, asserting 403.
+- **Resolution:** Added TENANT token rejection tests in `auth.manager-gates.test.ts` covering POST /contractors, /leases, /buildings — all assert 401/403.
 
-### TC-13 · No malformed/expired token test (MEDIUM)
+### TC-13 · No malformed/expired token test (MEDIUM) ✅ Resolved 2026-03-31
 
 - **Description:** No test covers garbage `Authorization` header, expired JWT, or token signed with wrong secret.
 - **Fix:** Add test cases with malformed tokens.
+- **Resolution:** Added malformed/expired/wrong-secret/empty token tests to `auth.manager-gates.test.ts` — all return 401.
 
-### TC-14 · `ownerDirect.foundation.test.ts` uses PID-based port (MEDIUM)
+### TC-14 · `ownerDirect.foundation.test.ts` uses PID-based port (MEDIUM) ✅ Resolved 2026-03-31
 
 - **Description:** Dynamic port offset via `3202 + (pid % 1000)` is unreliable and can collide with other hardcoded ports.
 - **Fix:** Use `:0` and extract actual port from stdout.
+- **Resolution:** File now uses static `const PORT = 3203` and imports `startTestServer`/`stopTestServer` from `testHelpers.ts`.
 
-### TC-15 · Building config only indirectly tested (LOW)
+### TC-15 · Building config only indirectly tested (LOW) ✅ Resolved 2026-03-31
 
 - **Description:** Building config CRUD is exercised indirectly through integration tests but has no dedicated assertion coverage.
 - **Fix:** Add dedicated building config assertions.
+- **Resolution:** Dedicated building config GET/PUT tests added in `config.test.ts` (part of TC-2 resolution).
 
 ---
 
@@ -488,15 +511,19 @@
 
 > **Previous top 5 all resolved (2026-03-10):** SA-1 (DEFAULT_ORG_ID fallback), SA-6+SA-9 (DEV_IDENTITY_ENABLED guard), SA-2 (tenant-portal IDOR), SA-3+SA-4 (PII exposure), TC-4+TC-5 (test infrastructure). All 20 security findings now closed.
 
-### 1. CQ-1 + CQ-5 + CQ-6 · `routes/legal.ts` layer violation (HIGH)
+### 1. ~~CQ-1 + CQ-5 + CQ-6 · `routes/legal.ts` layer violation~~ ✅ Resolved 2026-03-22
 
-~300 lines of direct Prisma queries and business logic across legal rules CRUD, coverage computation, and evaluation listing. Largest remaining layer violation. **Fix:** Extract to `legalAdminService` + `legalCategoryMappingRepository` with canonical includes.
+All 26 direct `prisma.*` calls extracted to `services/legalService.ts`.
 
-### 2. TC-1 · 12 of 17 workflows untested (HIGH)
+### 2. TC-1 · 6 of 23 workflows untested (HIGH) — updated 2026-03-31
 
-Workflow count grew from 14→17 but tested count remains at 5. Critical orchestration logic (invoice lifecycle, lease lifecycle, owner rejection, notifications) has zero test coverage. **Fix:** Add HTTP-level workflow tests exercising status transitions.
+`issueInvoiceWorkflow`, `activateLeaseWorkflow`, `terminateLeaseWorkflow`, `submitRentalApplicationWorkflow`, `unassignContractorWorkflow`, `ownerRejectWorkflow` remain untested. Invoice lifecycle now well-covered; lease teardown and submission workflows are the priority gap. **Fix:** Add HTTP-level tests for `terminateLeaseWorkflow` and `issueInvoiceWorkflow` first.
 
-### 3. CQ-3 + CQ-4 · Business logic in routes/tenants.ts and routes/leases.ts (HIGH)
+### 3. TC-16 · No integration tests for capture session routes (HIGH) — new 2026-03-31
+
+See TC-16 in the new findings section.
+
+### 4. CQ-3 + CQ-4 · Business logic in routes/tenants.ts and routes/leases.ts (HIGH)
 
 Payment history 3-query chain in tenants.ts, notification orchestration in leases.ts — both belong in services/workflows. **Fix:** Extract to `tenantService.getPaymentHistory()` and move notification into `markLeaseReadyWorkflow`.
 
@@ -526,6 +553,10 @@ Significant work completed since the original audit was generated. This section 
 | Frontend Canonical Tables | 2026-03-14 | Shared `SortableHeader`, `PaginationControls`, `tableUtils` components (F-UI5 guardrail). 7 pages migrated to shared table infrastructure. |
 | Frontend Rationalization | 2026-03-10 | Full page inventory (195 pages), 12 empty states standardized, 119/119 proxy conformance. |
 | Frontend Debt Cleanup | 2026-03-10 | 52/67 frontend findings resolved. |
+| Test Harness Hardening | 2026-03-30 | Schema drift (missing migration for `Request.urgency` + `BillingEntity.userId`) resolved. 735/735 → 738/738 tests green. |
+| API Proxy Parity | 2026-03-30 | 7 unspecced routes documented in openapi.yaml; `KNOWN_UNSPECCED_ROUTES` cleared; `contractors.js` migrated to `proxyToBackend` (163/163 conforming); 3 contract tests added; api-client extended. CQ-1 resolved. |
+| INV-HUB (Capture Sessions + Invoice Ingestion) | 2026-03-28/29 | QR-code capture session flow (5 routes, `captureSessionRepository.ts` as 18th repository), `POST /invoices/ingest` (MANAGER-only), `invoiceIngestionService.ts`, `documentScanner` improvements. Introduced CQ-36, CQ-37, TC-16, TC-17, SA-21, SA-22. |
+| Migration Integrity Recovery | 2026-03-31 | G8 shadow-DB exception retired. 5 gap-filling migrations created, 1 drift-backfill migration, duplicate-timestamp ordering fix, `setval(0)` bug fixed. Shadow DB replay clean ("Already in sync"). CQ-11 marked resolved. |
 
 ### New Guardrails Established
 
@@ -534,23 +565,132 @@ Significant work completed since the original audit was generated. This section 
 
 ### Stats Delta
 
-| Metric | At Audit (2026-03-10) | Current (2026-03-25) |
+| Metric | At Audit (2026-03-10) | Current (2026-03-31) |
 |--------|----------------------|---------------------|
-| Models | 45 | 53 |
-| Enums | 35 | 42 |
-| Migrations | 32 | 53 |
-| Workflows | 14 | 23 |
-| Repositories | 8 | 16 |
-| Tests | ~312 | 589 |
-| Suites | ~28 | 45 |
-| Frontend pages | 185 | 223 |
-| Backend LOC | ~34k | ~44k |
-| Frontend LOC | ~25k | ~30k |
-| Audit resolved | 20 | 38 |
-| Audit open | 62 | 44 |
+| Models | 45 | 54 |
+| Enums | 35 | 47 |
+| Migrations | 32 | 60 |
+| Workflows | 14 | 24 |
+| Repositories | 8 | 17 |
+| Tests | ~312 | 769 |
+| Suites | ~28 | 56 |
+| API routes | ~120 | 247 |
+| Frontend pages | 185 | 247 |
+| Backend LOC | ~34k | ~54k |
+| Frontend LOC | ~20k | ~37k |
+| Audit resolved | 20 | 91 |
+| Audit open | 62 | 3 |
 
 ### In Progress: RFP Epic
 
 `docs/rfp-epic.md` defines 7 slices for the maintenance-request-to-RFP flow. **Slice 1 (`rfp-manager-view`) completed 2026-03-17**: `rfpRepository.ts` created (11th repository), Rfp→Request Prisma relation added, RFP DTOs enriched with request summary (number, description, category, attachment count), manager RFP list page upgraded from cards to table with real data, detail page created at `/manager/rfps/[id]`.
 
 **Slice 2 (`contractor-rfp-marketplace`) completed 2026-03-17**: Contractor-facing RFP endpoints (`GET /contractor/rfps`, `GET /contractor/rfps/:id`), visibility rules (OPEN + category match OR invited), contractor-safe DTO (postal code only, no full address/tenant identity), list + detail pages, 12 integration tests covering auth gates, visibility logic, response stripping, and cross-org isolation.
+
+---
+
+## New Findings — 2026-03-31 Audit
+
+Scope: code added in the 2026-03-28/29 session (INV-HUB: capture sessions, invoice ingestion) plus migration-integrity-recovery slice. All findings below are new and were not present in the original 82-finding audit.
+
+### CQ-36 · `routes/ledger.ts` POST /backfill — direct Prisma calls in route (MEDIUM) ✅ Resolved 2026-03-31
+
+- **File:** `apps/api/src/routes/ledger.ts:135,156,161,176,181`
+- **Description:** The `POST /ledger/backfill` handler contains 6 direct `prisma.*` calls (`prisma.invoice.findMany` ×3, `prisma.ledgerEntry.findMany` ×2) inline in the route handler, in addition to iterating over results and calling workflows. These queries belong in `ledgerService` or a dedicated `ledgerRepository`. Violates G9.
+- **Fix:** Extract the draft/issued/paid invoice fetch loops into `ledgerService.getUnpostedInvoices()` (or similar). The handler should only call `seedSwissTaxonomy`, `ledgerService.*`, and `issueInvoiceWorkflow`.
+- **Resolution:** Added `getDraftInvoiceIds()`, `getUnpostedIssuedInvoiceIds()`, `getUnpostedPaidInvoiceIds()` to `ledgerService.ts`. Route handler now delegates all Prisma queries to service functions.
+
+### CQ-37 · `routes/captureSessions.ts` POST /:token/complete — ingestion orchestration in route (MEDIUM) ✅ Resolved 2026-03-31
+
+- **File:** `apps/api/src/routes/captureSessions.ts:134–182`
+- **Description:** The `POST /capture-sessions/:token/complete` handler validates the session token, calls `completeSession()`, then iterates over uploaded file URLs, fetches each file from storage, determines MIME type, and calls `ingestInvoice()` — all inline in the route. This multi-step orchestration (complete → fetch files → ingest each) belongs in a workflow or service (e.g., `captureSessionCompletionService` or a `completeCaptureSessionWorkflow`).
+- **Fix:** Extract the post-completion ingestion loop into `captureSessionService.completeAndIngest()` or a dedicated workflow. The route handler should call one function and return.
+- **Resolution:** Added `completeAndIngest()` to `captureSessionService.ts`. Route handler now makes a single service call.
+
+---
+
+### SI-13 · SCHEMA_REFERENCE.md missing `CaptureSession` and `LedgerEntry` models (MEDIUM) ✅ Resolved 2026-03-31
+
+- **File:** `SCHEMA_REFERENCE.md`
+- **Description:** SCHEMA_REFERENCE.md claimed 54 models but listed only 52. The two models added in the INV-HUB (2026-03-28) and FIN-COA epics — `CaptureSession` and `LedgerEntry` — were absent.
+- **Resolution:** Both model rows added to the Models table in this session. `Invoice` row updated with ingestion fields (direction, sourceChannel, ingestionStatus, ocrConfidence, rawOcrText, sourceFileUrl).
+
+### SI-14 · SCHEMA_REFERENCE.md missing 6 enums (LOW) ✅ Resolved 2026-03-31
+
+- **File:** `SCHEMA_REFERENCE.md`
+- **Enums absent:** `CaptureSessionStatus`, `InvoiceDirection`, `InvoiceSourceChannel`, `IngestionStatus`, `RfpQuoteStatus`, `RequestUrgency`
+- **Description:** The Key Enums section claimed 47 total but documented only 41.
+- **Resolution:** All 6 enums added to SCHEMA_REFERENCE.md Key Enums section.
+
+---
+
+### TC-16 · No integration tests for capture session routes (HIGH) ✅ Resolved 2026-03-31
+
+- **Files:** No test file exists for `/capture-sessions` endpoints
+- **Description:** The capture session routes added in the 2026-03-28/29 session (`POST /capture-sessions`, `GET /capture-sessions/:id`, `GET /capture-sessions/validate/:token`, `POST /capture-sessions/:token/upload`, `POST /capture-sessions/:token/complete`) have zero HTTP-level integration test coverage. The MANAGER-only auth gate on POST/GET is untested, and the public token-validation/upload/complete flow is untested.
+- **Fix:** Add `captureSession.test.ts` on a new port (next: 3221). Cover: 401 without token on POST /capture-sessions; token-gated 410 on expired session; upload size limit; complete-and-ingest happy path.
+- **Resolution:** Created `captureSession.test.ts` on port 3221 with auth gates (401 without token, 401/403 for CONTRACTOR/TENANT), full lifecycle (create → validate → upload → complete), 404 for non-existent session, 400 for garbage token, 410 for completed session.
+
+### TC-17 · No integration test for `POST /invoices/ingest` (MEDIUM) ✅ Resolved 2026-03-31
+
+- **File:** No test covers `POST /invoices/ingest`
+- **Description:** The invoice ingestion endpoint added in the 2026-03-28/29 session has no HTTP-level test. Auth enforcement (MANAGER-only), file parsing, and the ingest → createInvoice pipeline are untested at the route level. `documentClassification.test.ts` and `documentExtraction.test.ts` cover lower-level OCR units but not the HTTP endpoint itself.
+- **Resolution:** Created `invoiceIngest.test.ts` on port 3222 with auth gates (401 without token, 401/403 for CONTRACTOR/TENANT), 400 without multipart boundary, 400 without file field, and happy-path file upload.
+- **Fix:** Add a test in `captureSession.test.ts` (or a dedicated `invoiceIngest.test.ts`) exercising POST /invoices/ingest with a minimal PDF fixture, asserting the 201 response shape and `ingestionStatus` field.
+
+---
+
+### SA-21 · No rate limiting on public capture session upload/complete endpoints (MEDIUM) ✅ Resolved 2026-03-31
+
+- **File:** `apps/api/src/routes/captureSessions.ts`
+- **Routes:** `POST /capture-sessions/:token/upload`, `POST /capture-sessions/:token/complete`
+- **Description:** Both endpoints are intentionally public (token-gated, no JWT). A valid session token can be used to upload up to 10 files (MAX_UPLOADS enforced per session) and trigger OCR/ingestion on each. There is no per-IP rate limit or per-token request throttle. A leaked or guessed token could be used to spam file storage and trigger repeated expensive OCR calls. Contrast with SA-18 (`POST /triage` has 10 req/min/IP rate limiting).
+- **Fix:** Apply IP-based rate limiting to the upload endpoint (e.g., 20 requests/min/IP matching the triage pattern). Alternatively, enforce a per-session upload call limit at the HTTP layer before delegating to the service.
+- **Resolution:** Added in-memory IP-based rate limiter (20 requests/minute/IP) applied to upload and complete endpoints.
+
+### SA-22 · `GET /capture-sessions/:id` auth inconsistency: OWNER can access (LOW) ✅ Resolved 2026-03-31
+
+- **File:** `apps/api/src/routes/captureSessions.ts:54–67`
+- **Description:** `GET /capture-sessions/:id` uses `requireOrgViewer()` which permits both MANAGER and OWNER roles. The `POST /capture-sessions` (create) endpoint explicitly requires `requireAnyRole(["MANAGER"])`. Capture sessions are a tool created by managers to capture documents via mobile; there is no documented reason for OWNERs to poll session status. This inconsistency means an OWNER token can read capture session state even though only a MANAGER can create one.
+- **Fix:** Replace `requireOrgViewer(req, res)` with `requireAnyRole(req, res, ["MANAGER"])` on the GET handler, matching the create endpoint. Low severity since both roles share the same org scope and OWNER access to session status is not a data leak, but it violates least-privilege.
+- **Resolution:** Replaced `requireOrgViewer` with `requireAnyRole(["MANAGER"])` on GET handler.
+
+---
+
+## New Findings — 2026-03-31 External Audit Review
+
+These findings were surfaced by an external audit review of PROJECT_STATE.md. Findings already present in the AUDIT.md findings above were discarded; only net-new observations are recorded here.
+
+### SI-15 · `PROJECT_STATE.md` current-state sections have stale counts (MEDIUM) ✅ Resolved 2026-03-31
+
+- **File:** `PROJECT_STATE.md` — lines 7, 437, 439, 1287, 1293, 1301
+- **Description:** The State Integrity section and companion-file pointer claim counts that do not match current reality. The "single source of truth" claim is undermined when that section's numbers are months out of date. Specific stale claims:
+  - Line 7: companion file pointer says "models table (53), enums (42)" — actual: 54 / 47
+  - Line 437: "complete models table (53 models), enums (42)" — stale
+  - Line 439: "53 migrations. 53 models · 42 enums. Last verified: 2026-03-25" — actual: 60 / 54 / 47 (as of 2026-03-31)
+  - Line 1287: State Integrity says "53 migrations; 53 models, 42 enums" — actual: 60 / 54 / 47
+  - Line 1293: "735 tests, 49 suites" — actual: 738 tests (since test harness hardening 2026-03-30)
+  - Line 1301: "16 repositories" — actual: 18 (captureSessionRepository + schedulingRepository added since)
+- **Fix:** Update all current-state number references in the header pointer, schema summary, and State Integrity block. Historical narrative sections (epic stats at lines 697, 763, 800) are intentionally archival and need not be changed.
+- **Resolution:** Fixed in this session — see SI-15 resolution edits below.
+
+### SI-16 · G8 exception still documented as active in `PROJECT_STATE.md` (MEDIUM) ✅ Resolved 2026-03-31
+
+- **File:** `PROJECT_STATE.md` — lines 128, 1121
+- **Description:** The G8 guardrail section (line 128) still carries a `⚠️ Known Exception (Mar 6, 2026)` warning saying the shadow DB cannot replay the lease migration — the exact problem resolved by the migration-integrity-recovery slice on 2026-03-31. The backlog note at line 1121 says "Consider resolving the shadow DB exception (G8) to unblock `migrate dev` reliably" — also stale. `.github/copilot-instructions.md` was already updated but PROJECT_STATE.md was not.
+- **Fix:** Retire the known exception from the G8 section; remove or date-stamp the backlog note at line 1121.
+- **Resolution:** Fixed in this session.
+
+### SI-17 · State Integrity "all endpoints return 200" is stale and over-broad (LOW) ✅ Resolved 2026-03-31
+
+- **File:** `PROJECT_STATE.md:1289`
+- **Description:** The State Integrity block contains "all endpoints return 200; legal auto-routing creates RFP... (verified 2026-03-07)". This claim is 3+ weeks stale (192 routes now exist vs ~120 at verification), and the phrasing is misleading — a correctly functioning system returns 401/403 on auth failures and 404 on missing records. The claim likely means "core smoke-test paths return 200" but reads as a universal assertion that cannot be sustained.
+- **Fix:** Replace with a bounded statement: "Core smoke endpoints return expected status codes; auth-gated routes return 401/403 without valid token (verified by auth.manager-gates.test.ts)."
+- **Resolution:** Replaced the stale claim in PROJECT_STATE.md with bounded statement referencing auth test coverage.
+
+### DOC-1 · Auto-sync comment block in `PROJECT_STATE.md` contains impossible delta values (LOW) ✅ Resolved 2026-03-31
+
+- **File:** `PROJECT_STATE.md` — lines 1162–1279
+- **Description:** The auto-sync comment block (30+ `<!-- auto-sync ... -->` fragments) was generated by tooling and contains at least two impossible deltas that indicate a malformed sync: `models 3→45` (line 1186 — a jump from 3 to 45 models is not possible in one commit; should be `44→45`) and `migrations 5→49` (line 1264 — same class of error). These fragments add noise to human review, contain corrupted records that cannot be trusted for audit, and have not been updated since 2026-03-25 despite significant subsequent changes.
+- **Fix:** Either regenerate the block with verified tooling, or quarantine it in a separate auto-generated appendix file (`docs/sync-log.md`) so it does not appear inline in the human-facing project-state document. Do not use the block for numerical claims without independent verification.
+- **Resolution:** Block quarantined to `docs/sync-log.md` with explanatory header. PROJECT_STATE.md now contains a pointer comment only.

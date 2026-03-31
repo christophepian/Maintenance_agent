@@ -2,6 +2,7 @@ import { PrismaClient, LeaseStatus, SignatureRequestStatus } from "@prisma/clien
 import { createLease, listLeases, getLease, updateLease, markLeaseReadyToSign, cancelLease, storeLeasePdfReference } from "../services/leases";
 import { createSignatureRequest, listSignatureRequests, getSignatureRequest, sendSignatureRequest, markSignatureRequestSigned } from "../services/signatureRequests";
 import { generateLeasePDF } from "../services/leasePDFRenderer";
+import { markLeaseReadyWorkflow } from "../workflows/markLeaseReadyWorkflow";
 
 const prisma = new PrismaClient();
 
@@ -369,6 +370,74 @@ describe("Leases and Signature Requests", () => {
       const ready = await markLeaseReadyToSign(fresh.id, orgId);
       expect(ready.status).toBe(LeaseStatus.READY_TO_SIGN);
       expect(ready.unit?.building).toBeDefined();
+    });
+  });
+
+  // ==========================================
+  // Regression: lease-ready-to-sign-send-lifecycle-fix
+  // ==========================================
+  //
+  // Root cause: POST /leases/:id/ready-to-sign created a SignatureRequest in
+  // DRAFT but never called sendSignatureRequest, leaving sentAt = null.
+  // listLeases derives sentForSignatureAt from SignatureRequest.sentAt, so
+  // the Submitted tab showed "Sent date unavailable" for all READY_TO_SIGN leases.
+  //
+  // Fix: markLeaseReadyWorkflow now creates + immediately sends the
+  // SignatureRequest so sentAt is always populated.
+
+  describe("markLeaseReadyWorkflow — SignatureRequest sent lifecycle", () => {
+    let workflowLeaseId: string;
+
+    beforeAll(async () => {
+      const lease = await createLease(orgId, {
+        unitId,
+        tenantName: "Workflow Lifecycle Tenant",
+        tenantPhone: "+41795550001",
+        tenantEmail: "workflow@test.ch",
+        startDate: "2026-09-01",
+        netRentChf: 2200,
+      });
+      workflowLeaseId = lease.id;
+    });
+
+    it("markLeaseReadyWorkflow creates a SignatureRequest with status SENT", async () => {
+      const { dto, signatureRequest } = await markLeaseReadyWorkflow(
+        { orgId, prisma },
+        {
+          leaseId: workflowLeaseId,
+          level: "SES",
+          signers: [
+            { role: "TENANT", name: "Workflow Lifecycle Tenant", email: "workflow@test.ch" },
+            { role: "LANDLORD", name: "Immobilien AG", email: "info@immobilien.ch" },
+          ],
+        },
+      );
+
+      expect(dto.status).toBe(LeaseStatus.READY_TO_SIGN);
+      expect(signatureRequest.status).toBe(SignatureRequestStatus.SENT);
+      expect(signatureRequest.sentAt).toBeDefined();
+      expect(signatureRequest.entityId).toBe(workflowLeaseId);
+    });
+
+    it("listLeases returns sentForSignatureAt for READY_TO_SIGN leases after workflow", async () => {
+      const result = await listLeases(orgId, { status: "READY_TO_SIGN" });
+      const lease = result.data.find((l) => l.id === workflowLeaseId);
+
+      expect(lease).toBeDefined();
+      expect(lease!.sentForSignatureAt).toBeDefined();
+      expect(typeof lease!.sentForSignatureAt).toBe("string");
+      // Ensure it is a valid ISO timestamp
+      expect(new Date(lease!.sentForSignatureAt!).getTime()).not.toBeNaN();
+    });
+
+    it("SignatureRequest in DB has status SENT and non-null sentAt", async () => {
+      const sigReqs = await prisma.signatureRequest.findMany({
+        where: { entityId: workflowLeaseId, entityType: "LEASE" },
+      });
+
+      expect(sigReqs.length).toBe(1);
+      expect(sigReqs[0].status).toBe(SignatureRequestStatus.SENT);
+      expect(sigReqs[0].sentAt).not.toBeNull();
     });
   });
 });

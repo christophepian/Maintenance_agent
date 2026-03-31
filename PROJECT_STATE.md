@@ -1,10 +1,15 @@
 # Maintenance Agent — Project State
 
-**Last updated:** 2026-03-23 (General Ledger epic complete — Swiss COA expansion, LedgerEntry schema + migration, double-entry auto-posting, ledger API routes, journal + trial-balance UI)
+**Last updated:** 2026-03-31 (Audit remediation complete — 91/94 findings resolved; all key docs synchronized with current codebase counts)
+
+> **For routine implementation work, start with [PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md)** (~220 lines).
+> This file is the canonical deep reference — guardrail details, backlog, state integrity, epic summaries.
+> Open it when you need full context beyond what the overview provides.
 
 **Companion files (do not duplicate content here):**
+* [PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md) — primary entry-point doc for routine work (guardrails, architecture, task routing)
 * [EPIC_HISTORY.md](EPIC_HISTORY.md) — all completed epic/slice narratives + hardening guidelines (H1–H6)
-* [SCHEMA_REFERENCE.md](SCHEMA_REFERENCE.md) — full models table (53), enums (42), schema gotchas, Request.orgId migration path
+* [SCHEMA_REFERENCE.md](SCHEMA_REFERENCE.md) — full models table (54), enums (47), schema gotchas, Request.orgId migration path
 * `apps/api/src/ARCHITECTURE_LOW_CONTEXT_GUIDE.md` — low-context lookup table for "what file to change for X"
 
 ---
@@ -125,7 +130,7 @@ CI must run and pass **all** of the following before merge:
 CI should fail if `db push` is detected. Schema changes require migrations — no exceptions.
 This reinforces G1 with enforcement at the tooling level.
 
-**⚠️ Known Exception (Mar 6, 2026):** LKDE epic used `db push` because the shadow database cannot replay the migration `20260223_add_leases` (Lease model was significantly restructured in subsequent migrations, causing shadow DB to fail midway through the migration sequence). This was a one-time additive-only change (12 new tables, no modifications to existing data). See the LKDE epic section below for full context. Future schema changes should attempt `migrate dev` first.
+**✅ Exception resolved (2026-03-31):** The shadow DB replay failure that prompted the LKDE `db push` exception (Mar 6, 2026) was caused by missing gap-filling migrations and two ordering/drift bugs. The migration-integrity-recovery slice created 5 gap-filling migrations, a drift-backfill migration, fixed a duplicate-timestamp ordering issue, and resolved a `setval(0)` bug. Shadow DB replay now succeeds cleanly ("Already in sync"). No exceptions to G8 remain.
 
 ### G9: Canonical Include Definitions (No Ad-Hoc Include Trees)
 For any service that returns a DTO, define a **centralized include constant** rather than
@@ -341,51 +346,11 @@ Manager UI styling uses **Tailwind utility classes** backed by CSS custom proper
 >
 > Summary: Route protection wrappers (H1), production boot guard (H2), shared proxy helper (H3), DTO tiers (H5), Request.orgId migration path (H6). All infrastructure delivered; incremental rollout in progress.
 
-## 1. Project Goal (MVP)
+## 1. Project Goal & Architecture
 
-Build a web-first maintenance platform for Swiss property managers that:
-
-* Allows tenants to submit repair requests conversationally
-* Automatically routes requests to preferred contractors *(future)*
-* Auto-approves low-cost work
-  *(approval threshold configurable per property manager; default CHF 200)*
-* Handles exceptions via manager review
-* Minimizes property manager involvement in standard cases
-
-### Personas
-
-* **Tenant** — submits repair requests
-* **Property Manager** — configures rules, approves escalations
-* **Contractor** — executes work *(portal + status updates implemented)*
-* **Owner** — approves work, manages invoices *(NEW in Slice 4+)*
-
----
-
-## 2. High-Level Architecture
-
-### Monorepo
-
-* `apps/` — runtime applications (api + web)
-* `infra/` — infrastructure (Docker)
-* `packages/` — shared packages (api-client)
-* `_archive/` — archived docs, scripts, legacy backups
-
-### Backend API — `apps/api/src/server.ts` (port 3001)
-
-* Node.js + TypeScript, raw `http.createServer` — **no Express/NestJS**
-* Layered: `routes/` → `workflows/` (23) → `services/` → `repositories/` (16) → `events/` (30 types)
-* State machines: `workflows/transitions.ts` (Request, Job, Invoice, Lease, RentalApplication)
-* Org scoping: `governance/orgScope.ts`
-* Prisma ORM + PostgreSQL + Zod validation
-
-### Frontend — `apps/web/` (port 3000)
-
-* Next.js Pages Router, proxy layer to backend via `pages/api/`
-* Personas: Tenant `/`, Manager `/manager`, Contractor `/contractor`, Owner `/owner`
-
-### Database — PostgreSQL 16 via Docker, Prisma migrations
-
-<!-- reviewed 2026-03-10 -->
+> See [PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md) for the full project summary, architecture diagram, personas, and task routing.
+>
+> Swiss property management platform. Node.js + TypeScript backend (raw `http.createServer`, port 3001), Next.js Pages Router frontend (port 3000), PostgreSQL 16 via Docker (Prisma ORM). Four personas: Manager, Contractor, Tenant, Owner.
 
 ---
 
@@ -403,17 +368,17 @@ Maintenance_Agent/
 │   │   └── src/
 │   │       ├── server.ts     # Raw HTTP entry point (port 3001)
 │   │       ├── routes/       # Thin HTTP handlers (19 route modules)
-│   │       ├── workflows/    # Orchestration layer (23 workflows + transitions)
+│   │       ├── workflows/    # Orchestration layer (24 workflows + transitions)
 │   │       ├── services/     # Domain logic
-│   │       ├── repositories/ # Canonical Prisma access (16 repos)
+│   │       ├── repositories/ # Canonical Prisma access (17 repos)
 │   │       ├── events/       # Domain event bus
 │   │       ├── governance/   # Org scope resolvers
 │   │       ├── validation/   # Zod schemas
 │   │       ├── http/         # Body/JSON/query/errors/router helpers
-│   │       ├── __tests__/    # 45 test suites
+│   │       ├── __tests__/    # 56 test suites
 │   │       └── ARCHITECTURE_LOW_CONTEXT_GUIDE.md
 │   └── web/
-│       ├── pages/            # ~212 pages (75 UI + 135 API proxies)
+│       ├── pages/            # 247 pages (83 UI + 163 API proxies + _app.js)
 │       ├── components/       # AppShell, layout primitives, shared UI
 │       ├── lib/              # proxy.js, api.js, formatDisqualificationReasons.js
 │       └── styles/           # globals.css (Tailwind + CSS variables)
@@ -434,9 +399,9 @@ Maintenance_Agent/
 
 ## 4. Database Schema (Prisma)
 
-> **Full schema reference:** See [SCHEMA_REFERENCE.md](SCHEMA_REFERENCE.md) for the complete models table (53 models), enums (42), schema gotchas, and Request.orgId migration path.
+> **Full schema reference:** See [SCHEMA_REFERENCE.md](SCHEMA_REFERENCE.md) for the complete models table (54 models), enums (47), schema gotchas, and Request.orgId migration path.
 >
-> **Status:** 53 migrations. 53 models · 42 enums. Last verified: 2026-03-25.
+> **Status:** 60 migrations. 54 models · 47 enums. Last verified: 2026-03-31 (shadow DB replay clean — migration-integrity-recovery slice).
 >
 > **Quick gotchas (always check SCHEMA_REFERENCE.md for full list):**
 > - `Request` has NO `orgId` — scope inherited via unit/building FK chain
@@ -447,43 +412,15 @@ Maintenance_Agent/
 <!-- reviewed 2026-03-10 -->
 ---
 
-## 5. Backend API
+## 5. System Summary
 
-* **Entry:** `apps/api/src/server.ts` — raw `http.createServer`, port **3001**
-* **Architecture:** `routes/` (thin HTTP) → `workflows/` (23) → `services/` → `repositories/` (16) → `events/`
-* **Route modules (19):** requests, leases, invoices, inventory, tenants, config, notifications, auth, rentalApplications, contractor, financials, legal, helpers, completion, maintenanceAttachments, rentEstimation, scheduling, coa, ledger — all registered via `register*Routes(router)` in server.ts
-* **Full endpoint list:** See `apps/api/openapi.yaml` (~174 API routes, 14 tags) or `ARCHITECTURE_LOW_CONTEXT_GUIDE.md`
+> Architecture, backend layers, frontend layout, and styling rules → [PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md).
+> Route module index, domain file maps, repository index → [ARCHITECTURE_LOW_CONTEXT_GUIDE.md](apps/api/src/ARCHITECTURE_LOW_CONTEXT_GUIDE.md).
 
-<!-- reviewed 2026-03-10 -->
-
----
-
-## 6. Frontend (Next.js)
-
-* **Port:** 3000 (Next.js Pages Router)
-* **Proxy pattern:** `apps/web/pages/api/` routes proxy to backend (130/131 use centralized `proxyToBackend()` from `lib/proxy.js`; 1 legacy non-conforming: `contractors.js`)
-* **Auth utilities:** Shared `apps/web/lib/api.js` — `authHeaders()`, `fetchWithAuth()`, `apiFetch()`
-* **Layout:** `AppShell` component with role-scoped sidebar (MANAGER/CONTRACTOR/TENANT/OWNER)
-* **Reusable components:** `PageShell`, `PageHeader`, `PageContent`, `Panel`, `Section`, `ContractorPicker`, `NotificationBell`, `AssetInventoryPanel`
-* **Key page groups:** `/manager/*` (requests, inventory, legal, leases, settings), `/contractor/*` (jobs, invoices), `/tenant/*` (leases, chat), `/owner/*` (approvals, invoices, vacancies), `/admin-inventory/*`, `/apply` (rental wizard), `/listings`
-* **~229 frontend pages** (78 UI + 142 API proxies)
-
-<!-- reviewed 2026-03-10 -->
-
----
-
-## 7. Styling Policy
-
-* Manager UI styles use **Tailwind utility classes** + `@layer components` in `apps/web/styles/globals.css`. CSS custom properties in `:root` for shared tokens. `managerStyles.js` was deleted (see F8); no JS style objects for manager pages.
-
----
-
-## 8. Infrastructure & DevOps
-
-* PostgreSQL via Docker: `infra/docker-compose.yml` (port 5432)
-* Dev DB: `maint_agent` | Test DB: `maint_agent_test` (isolated)
-* CI: `.github/workflows/ci.yml` — 6-gate pipeline enforcing G1–G11
-* Prisma migrations: `apps/api/prisma/migrations/` (53 migrations)
+* **Backend:** 19 route modules · 24 workflows · 17 repositories · 247 operations (190 URL paths) · `apps/api/openapi.yaml`
+* **Frontend:** 247 pages (83 UI + 163 API proxies + `_app.js`) · 163/163 proxies conforming (`proxyToBackend()`)
+* **Styling:** Tailwind + `@layer components` in `globals.css` · CSS variables in `:root` · `managerStyles.js` deleted (F8)
+* **Infra:** PostgreSQL via Docker (`infra/docker-compose.yml`) · Dev DB `maint_agent` · Test DB `maint_agent_test` · CI: 6-gate pipeline (G1–G11)
 
 ---
 
@@ -503,34 +440,15 @@ PORT=3001
 
 ---
 
-## 10. Running the Project (Local)
+## 10. Running the Project
 
-```bash
-# Database
-npm run dev:db          # or: cd infra && docker compose up -d
-
-# Backend
-npm run dev:api         # or: cd apps/api && npm run start:dev
-
-# Frontend
-npm run dev:web         # or: cd apps/web && npm run dev
-
-# Roadmap server (port 8111) — intake, triage, drafts, tickets
-node scripts/roadmap-server.js &
-
-# Regenerate roadmap HTML
-node scripts/generate-roadmap.js
-
-# Clean restart (kills stale processes, clears caches)
-npm run dev:clean:all
-
-# Check ports
-lsof -nP -iTCP:3000,3001,8111 -sTCP:LISTEN
-```
-
-<!-- reviewed 2026-03-10 -->
+> Full dev commands → [docs/DEV_COMMANDS.md](docs/DEV_COMMANDS.md).
+>
+> Quick start: `npm run dev:db` · `npm run dev:api` · `npm run dev:web` · `npm run dev:clean:all`
 
 ---
+
+<!-- SYNC-FENCE: historical content below — do not auto-update counts -->
 
 ## 11. Completed Epics & Slices
 
@@ -538,518 +456,31 @@ lsof -nP -iTCP:3000,3001,8111 -sTCP:LISTEN
 >
 > Summary: 20+ epics completed (Feb–Mar 2026) covering cleanup, tenant asset context, inventory admin, owner-direct workflow, job lifecycle, invoicing, leases, digital signatures, tenant portal, org scoping, auth hardening, domain events, OpenAPI sync, rental applications, document OCR, financial performance, legal engine, legal auto-routing, workflow layer refactor, architecture hardening, asset inventory & depreciation, test database isolation, UI navigation & finance pages, and Chart of Accounts (FIN-COA).
 
-### Security Hardening Slice — 2026-03-10
-**Status:** ✅ COMPLETE
-
-Resolved 8 audit findings (1 critical, 7 high) from the 2026-03-10 security audit:
-- SA-1: `getOrgIdForRequest()` production null guard
-- SA-2: Tenant-portal IDOR → JWT-based auth
-- SA-3/SA-4: Rental PII endpoints auth-gated
-- SA-5: Dev email routes production-guarded + auth-gated
-- SA-6/SA-9: `DEV_IDENTITY_ENABLED` production boot guard
-- SA-7: Request events POST auth-gated (`requireAnyRole`)
-- SA-8: Contractor requests GET auth-gated
-- TC-4/TC-5: Jest `maxWorkers:1` + port collision fix
-
-New helpers: `requireAnyRole()`, `requireTenantSession()`
-0 TypeScript errors post-slice.
-
-### Security Hardening Slice 2 — 2026-03-10
-**Status:** ✅ COMPLETE
-
-Resolved remaining 11 audit findings (SA-10 through SA-20, all medium/low):
-- SA-10: `maybeRequireManager` → `requireRole('MANAGER')` on all mutation routes (×35 across 6 route files)
-- SA-11: Legal routes org scoping — global models documented; category-mapping mutations now validate orgId
-- SA-12: `POST /requests` and `POST /work-requests` upfront `requireAuth` guard
-- SA-13: Contractor suggest/match endpoints auth-gated
-- SA-14: `DELETE /__dev/requests` requires MANAGER role
-- SA-15: `POST /document-scan` auth-gated (in rentalApplications.ts)
-- SA-16: All financial handlers require auth; mutations require MANAGER
-- SA-17: `maybeRequireManager` logs warning when AUTH_OPTIONAL bypasses without dev-role header
-- SA-18: `POST /triage` rate-limited (10 req/min/IP, 429 on exceed)
-- SA-19: Non-test environments `process.exit(1)` if AUTH_SECRET unset
-- SA-20: Event log payloads redacted (token, password, secret, email, tenantId, iban, accountNumber)
-
-`requireRole`/`requireAnyRole` now include AUTH_OPTIONAL dev bypass with warning log.
-New test suite: `security2.test.ts` (5 integration tests).
-312/313 tests pass, 45 suites, 0 TS errors. Only failure: pre-existing `openApiSync.test.ts` (missing owner routes in spec).
-
-### UI Navigation & Finance Pages (Mar 2026)
-**Status:** ✅ COMPLETE
-
-Resolved 51 of 67 findings from a full frontend audit covering dead CTAs, empty states, missing links, and orphaned pages across all 4 portals.
-
-**Batches completed:**
-- **Login redirect:** post-login role-based redirect added
-- **Navigation link pass:** ~30 plain-text references converted to working `next/link` navigation across manager, contractor, owner, and tenant portals
-- **Orphaned pages:** legacy `manager.js` + `contractor.js` deleted; `operations/` pages redirect; building financials wired into sidebar; fill vacancy wizard linked from vacancies list
-- **People detail tabs:** tenant + vendor Contracts and Invoices tabs replaced with real data (leases, invoices, jobs fetched by tenantId/contractorId)
-- **Contractor job flow:** job detail page built out, `status-updates.js` redirects to jobs, invoice creation form with jobId pre-fill added
-- **Finance pages:** `payments.js`, `expenses.js`, `charges.js` replaced — all derive from Invoice + Lease models, no new Prisma models or migrations
-  - **payments:** filtered view of PAID invoices with building/date filters
-  - **expenses:** filtered view by ExpenseCategory with inline category editing
-  - **charges:** lease chargesItems editor with summary and itemized tabs
-  - `GET /invoices` extended with `status`, `expenseCategory`, `buildingId`, `paidAfter`, `paidBefore` query params
-
-**Remaining (parked):**
-- `reports.js` — product decision required
-- `tenant/assets.js` — belongs with Asset Inventory epic
-- ~8 cosmetic items (back links, minor empty states)
-
-<!-- reviewed 2026-03-10 -->
-
-### Frontend Rationalization Slice — 2026-03-11
-**Status:** ✅ COMPLETE
-
-Audit + standardization slice — no new features, reduces frontend maintenance cost.
-
-**Deliverables:**
-- **Full page inventory** → `docs/FRONTEND_INVENTORY.md` (69 UI pages, 119 API proxies, 4 persona portals)
-- **Proxy standardization audit** — 116/119 proxies use `proxyToBackend()`; 3 legacy files flagged (`requests.js`, `requests/approve.js`, `work-requests.js`)
-- **Page archetypes defined** — 8 archetypes (CRUD List, Detail/Edit, Hub Dashboard, Form Wizard, Config/Settings, Inbox/Queue, Redirect/Alias, Pipeline/Kanban) with conformance tables
-- **Empty state standardization** — `emptyState` + `emptyStateText` added to `managerStyles.js`; 12 manager list pages converted from ad-hoc Tailwind classes to centralized style tokens
-
-**Files modified:**
-- `styles/managerStyles.js` — added `emptyState`, `emptyStateText`
-- 12 manager pages: `requests`, `leases/index`, `leases/templates`, `people/tenants`, `people/vendors`, `legal/rules`, `legal/evaluations`, `legal/depreciation`, `legal/mappings`, `rfps`, `emails`, `vacancies/index`
-
-**Flagged issues (not fixed — parked):**
-- ~~`/manager/people/owners` nav link exists but page does not~~ → ✅ Fixed in frontend-debt-cleanup
-- ~~`/contractors` (root) duplicates `/manager/people/vendors`~~ → ✅ Fixed in frontend-debt-cleanup
-- ~~3 non-conforming proxy files use manual `fetch` instead of `proxyToBackend()`~~ → ✅ Fixed in frontend-debt-cleanup
-- ~~4 placeholder pages: `properties.js`, `work-requests.js`, `people/index.js`, `operations/*`~~ → ✅ Resolved in frontend-debt-cleanup (properties.js is a working redirect; settings.js is functional; stubs converted)
-
-Next.js build: 0 errors. Blueprint synced.
-
-### Frontend Debt Cleanup Slice — 2026-03-12
-**Status:** ✅ COMPLETE
-
-Bug-fix + debt-retirement slice. Fixes 2 live bugs (broken nav link, non-conforming proxies) and retires obvious frontend debt (4 deleted pages, 2 placeholder→coming-soon conversions, 2 proxy migrations).
-
-**Deliverables:**
-- **Fix 1:** Created `/manager/people/owners` — coming-soon stub; resolves orphaned ManagerSidebar nav link (was 404)
-- **Fix 2:** Migrated `pages/api/requests.js` (97→14 lines) and `pages/api/requests/approve.js` (58→22 lines) to `proxyToBackend()`; `work-requests.js` was already conforming (inventory corrected)
-- **Fix 3:** Deleted 3 redirect pages in `manager/operations/*`; replaced with `next.config.js` permanent redirects
-- **Fix 4:** Deleted `/contractors` (555-line duplicate); added `next.config.js` redirect → `/manager/people/vendors`; updated index.js hub link
-- **Fix 5:** Converted `manager/reports.js` and `tenant/assets.js` from bare placeholders to explicit coming-soon stubs with layout components + comingSoon styles
-
-**Files created:**
-- `apps/web/next.config.js` — 4 permanent redirects (3 operations/*, 1 /contractors)
-- `apps/web/pages/manager/people/owners.js` — coming-soon stub
-
-**Files modified:**
-- `styles/managerStyles.js` — added `comingSoonContainer`, `comingSoonBadge`, `comingSoonTitle`, `comingSoonText`
-- `pages/api/requests.js` — migrated to proxyToBackend (preserves text→description compat)
-- `pages/api/requests/approve.js` — migrated to proxyToBackend with `{ method: "PATCH" }` override
-- `pages/manager/reports.js` — placeholder → coming-soon stub
-- `pages/tenant/assets.js` — placeholder → coming-soon stub (uses local styles, not managerStyles per G1)
-- `pages/index.js` — updated /contractors link → /manager/people/vendors
-- `docs/FRONTEND_INVENTORY.md` — 13 targeted edits reflecting all changes
-
-**Files deleted (4):**
-- `pages/manager/operations/contractors.js`, `pages/manager/operations/inventory.js`, `pages/manager/operations/tenants.js` — redirect pages (replaced by next.config.js)
-- `pages/contractors.js` — 555-line duplicate CRUD page
-
-**Intentionally not changed:**
-- `settings.js` — 190-line functional page (org config editor), NOT a placeholder
-- `properties.js` — 10-line redirect to /admin-inventory, NOT a placeholder
-- `work-requests.js` — already used proxyToBackend (6 lines); inventory corrected
-
-**Net impact:** 185 pages (was 188); 119/119 proxies conforming (was 116/119); ~570 lines deleted
-
-Next.js build: 0 errors. Blueprint synced.
-
-### Prisma DTO Hardening Final Slice — 2026-03-10
-**Status:** ✅ COMPLETE
-
-Closes remaining open items from the prisma-dto-hardening slice.
-
-**Deliverables:**
-- **Fix 1:** Added 4 canonical include constants to `inventoryRepository.ts` (`BUILDING_FULL_INCLUDE`, `BUILDING_LIST_INCLUDE`, `UNIT_FULL_INCLUDE`, `APPLIANCE_INCLUDE`) — resolves G9 violation
-- **Fix 2:** `legal.ts` — confirmed all 4 inline includes already replaced with canonical constants in prior slice (no change needed)
-- **Fix 3:** Replaced `unit?: any | null` and `appliance?: any | null` in `MaintenanceRequestDTO` with properly typed shapes matching `REQUEST_FULL_INCLUDE`
-- **Fix 4:** Added inventory includes to `includeIntegrity.test.ts` — 4 compile-time type assertions + 4 runtime entries (25 tests total, all passing)
-
-**Files modified:**
-- `apps/api/src/repositories/inventoryRepository.ts` — added 4 canonical include constants
-- `apps/api/src/services/maintenanceRequests.ts` — replaced 2 `any` types in `MaintenanceRequestDTO`
-- `apps/api/src/__tests__/includeIntegrity.test.ts` — added inventory import, type assertions, runtime entries
-
-**Audit:** CQ-7 already resolved in prior slice. No new audit items.
-
-tsc: 0 errors. Blueprint synced.
-
-### Roadmap Visual Redesign — 2026-03-10
-**Status:** ✅ COMPLETE
-
-Full rewrite of the product roadmap generator to match the original IBM Plex dark-grid visual design.
-
-**Deliverables:**
-- **ROADMAP.json** rewritten — 26 features across 6 phases (P0–P5), up from 16 features. New feature ID scheme `F-P0-001`…`F-P4-006`. New fields: `hooks_blocked`, `depends_on`. New detection types: `page_exists`, `model_field` (with `model` property), `audit_finding`.
-- **scripts/generate-roadmap.js** rewritten (~340 lines) — zero-dependency Node.js generator producing:
-  - IBM Plex Sans/Mono fonts, dark grid background, CSS variables
-  - Phase blocks with colored headers, progress bars, inline status
-  - Feature cards with status dots, type badges (WIRE/BUILD/EXTEND/PRODUCT/INFRA/REFACTOR), detection signals
-  - Hook badges: green (exists), yellow (new), red (blocked)
-  - Stat grid: Done / In Progress / Planned / Total / Custom Items / % Complete
-  - 4 tabs: Phases (with filter bar), Custom Items, Codebase Signals (detection table + 3-column panels), How to Use
-- **scripts/roadmap.schema.json** updated — new feature ID pattern, `hooks_blocked` array, `page_exists`/`audit_finding` detection types, `model` property on checks, `future` phase status
-- **Codebase signals verified:** 53 models, 42 enums, 53 migrations, 16 workflows, 14 routes — all detected correctly
-
-**Files created/rewritten:**
-- `ROADMAP.json` — 26 features, 6 phases, empty `custom_items[]`
-- `scripts/generate-roadmap.js` — full visual redesign
-
-**Files modified:**
-- `scripts/roadmap.schema.json` — updated for new fields
-
-**Usage:** `npm run roadmap` generates `docs/roadmap.html`. Serve with `python3 -m http.server 8080` from `docs/` or use VS Code Live Server.
-
-### Triage Rework (Slices 1–3) — 2026-03-11
-**Status:** ✅ COMPLETE (Slices 1–3 of 4; Slice 4 parked per scope doc)
-
-Full rework of the request triage pipeline: fixed wrong state machine transitions, status-blind CTAs, and legal engine structural gaps that caused 12 requests to stall in PENDING_REVIEW.
-
-**Scope doc:** `TRIAGE_REWORK_SCOPE.md` — 3 problems fixed, 4 slices defined, slices 1–3 shipped.
-
-**Slice 1 — Backend State Machine Rewrite:**
-- Added `OWNER_REJECTED` to `RequestStatus` enum (terminal status)
-- Added `ApprovalSource` enum: SYSTEM_AUTO, OWNER_APPROVED, OWNER_REJECTED, LEGAL_OBLIGATION
-- Added `approvalSource` (ApprovalSource?) and `rejectionReason` (String?) fields on `Request`
-- Rewrote `VALID_REQUEST_TRANSITIONS` — removed 8 invalid transitions, added OWNER_REJECTED terminal state
-- Created `ownerRejectWorkflow.ts` — canonical workflow: PENDING_OWNER_APPROVAL → OWNER_REJECTED
-- Wired `approvalSource` writes into `createRequestWorkflow`, `approveRequestWorkflow`, `ownerRejectWorkflow`
-- Extended `updateRequestStatus` in requestRepository with optional `extra` param for approvalSource/rejectionReason
-- Updated `MaintenanceRequestDTO` + `toDTO()` mapper with new fields
-
-**Slice 2 — Manager Requests Page CTA Fix:**
-- Added `getAvailableCTAs(r, assigningId)` — status-driven CTA map, single source of truth
-- Replaced entire inline CTA JSX block with `getAvailableCTAs().map(switch)` pattern
-- Added `rejectRequest()` handler (prompt for reason → PATCH status)
-- Added OWNER_REJECTED tab, status badge (red), and canExpand support
-
-**Slice 3 — Legal Engine Hardening:**
-- Fix 1: Added `LegalRuleScope` enum (FEDERAL, CANTONAL, MUNICIPAL), `topic`/`scope` on LegalRule, `confidence` on LegalCategoryMapping
-- Fix 2: Pushed topic filter into Prisma query (was in-loop); backwards-compat for unmigrated rules
-- Fix 3: Split `RuleEvaluationResult` into `federalObligation`/`cantonalObligation`; federal always wins
-- Fix 4: Confidence gate (0.7 threshold) on category mapping — below threshold routes to owner
-- Fix 5: UNKNOWN/DISCRETIONARY → `ROUTE_TO_OWNER` action + `PENDING_OWNER_APPROVAL` routing in createRequestWorkflow
-
-**Parked (per scope doc):**
-- Fix 6: LegalVariable resolver — "non-blocking, parked"
-- Slice 4: Owner rejection tenant notification — "Parked — implement after Slices 1–3 are stable"
-
-**Deviation:** Transition map keeps APPROVED → [ASSIGNED, IN_PROGRESS] (scope doc removes ASSIGNED). Kept for backwards compat with existing requests.
-
-**Schema changes applied via `db push`** (G8 shadow DB exception — additive only, no data loss).
-
-**Files created:**
-- `apps/api/src/workflows/ownerRejectWorkflow.ts`
-
-**Files modified:**
-- `apps/api/prisma/schema.prisma` — 3 enum additions, 4 new fields across 53 models
-- `apps/api/src/workflows/transitions.ts` — VALID_REQUEST_TRANSITIONS rewritten
-- `apps/api/src/workflows/index.ts` — ownerRejectWorkflow export (17 workflows total)
-- `apps/api/src/workflows/approveRequestWorkflow.ts` — approvalSource writes
-- `apps/api/src/workflows/createRequestWorkflow.ts` — approvalSource + UNKNOWN routing
-- `apps/api/src/routes/requests.ts` — owner-reject delegates to ownerRejectWorkflow
-- `apps/api/src/repositories/requestRepository.ts` — updateRequestStatus extra param
-- `apps/api/src/services/maintenanceRequests.ts` — DTO + mapper updated
-- `apps/api/src/services/legalDecisionEngine.ts` — 5 structural fixes
-- `apps/web/pages/manager/requests.js` — CTA rewrite + OWNER_REJECTED UI
-- `apps/api/src/__tests__/workflows.test.ts` — obligation assertion fixed
-- `apps/api/src/ARCHITECTURE_LOW_CONTEXT_GUIDE.md` — transition map + counts updated
-
-**Stats:** 53 models · 42 enums · 17 workflows. tsc: 0 errors. Tests: pass (12 pre-existing integration test timeouts unchanged).
-
-### Legal Engine Remediation + DSL Evaluator Update — 2026-03-11
-**Status:** ✅ COMPLETE
-
-Cleaned up 93 corrupt legal rules (duplicates, missing topics, wrong ruleType) and fixed the DSL evaluator to handle `topic_match` conditions so the legal engine can reliably route requests.
-
-**Problem:** All 93 MAINTENANCE_OBLIGATION rules had `topic: null` and 53 had `authority: INDUSTRY_STANDARD`. The DSL evaluator only supported legacy `field/op/value` conditions, not the `topic_match` format used by canonical rules. Result: no rules ever matched → all requests got UNKNOWN → PENDING_OWNER_APPROVAL.
-
-**Schema change:**
-- Added `RENT_REDUCTION` to `LegalRuleType` enum (applied via `db push` — G8 additive exception)
-
-**Data remediation (one-time script):**
-1. Deactivated 34 duplicate/test rules (33 `co-259a-dishwasher-leak-*` + 1 `duplicate-test-key-for-conflict`)
-2. Deactivated 4 per-appliance rules (OVEN, DISHWASHER_V2, STOVE, BATHROOM)
-3. Updated CH_CO_259A_PLUMBING → topic: PLUMBING, canonical DSL
-4. Updated CH_CO_259A_LIGHTING → topic: ELECTRICAL, canonical DSL
-5. Reclassified 53 INDUSTRY_STANDARD rules → ruleType: RENT_REDUCTION
-6. Seeded 3 new canonical rules: CH_CO259A_HEATING, CH_CO259A_STRUCTURAL, CH_CO259A_SAFETY
-7. Upserted 34 global category mappings (HEATING: 6, PLUMBING: 8, ELECTRICAL: 7, STRUCTURAL: 8, SAFETY: 5)
-
-**Final state:** 5 active MAINTENANCE_OBLIGATION rules, all STATUTE, all FEDERAL scope, topics: ELECTRICAL, HEATING, PLUMBING, SAFETY, STRUCTURAL. 37 active category mappings.
-
-**DSL evaluator fixes (legalDecisionEngine.ts):**
-- Fix A: Rewrote `evaluateDslConditions()` → supports `topic_match`, `always_true`, `always_false`, `AND`, `OR` + legacy `field/op/value`
-- Fix B: Pass `legalTopic` as third arg to `evaluateDslConditions` in `evaluateStatutoryRules`
-- Fix D: Added `authority: 'STATUTE'` filter to Prisma query in `evaluateStatutoryRules`
-
-**Files created:**
-- `apps/api/scripts/remediate-legal-rules.ts` — idempotent one-time cleanup script
-- `apps/api/scripts/verify-legal-engine.ts` — 26-assertion verification script
-- `apps/api/scripts/inspect-legal-rules.ts` — DB inspection utility
-
-**Files modified:**
-- `apps/api/prisma/schema.prisma` — RENT_REDUCTION enum value
-- `apps/api/src/services/legalDecisionEngine.ts` — DSL evaluator rewrite + authority filter
-
-**Stats:** 53 models · 42 enums · 17 workflows. tsc: 0 errors. 26 verification assertions passed. 12 pre-existing integration test timeouts unchanged.
-
-### Navigation & UI Consistency — 2026-03-14
-**Status:** ✅ COMPLETE
-
-Full redesign of manager workspace navigation and visual consistency across 14 slices:
-- Sidebar flattened — accordion removed, 7 flat primary nav items
-- All 7 hub pages: inline tab content, URL tab persistence (?tab=key)
-- Tailwind unified — managerStyles.js deleted, single globals.css source of truth with CSS variables + @layer components
-- All list endpoints return { data, total } — accurate count badges
-- 26 tables migrated to inline-table component class
-- CSS tokens aligned to requests.js visual standard
-- Panel wrapper applied to all manager pages — white card layout
-- Tab header links: always-visible for richer standalone pages, absent otherwise
-- leases/[id].js Panel wrapper, duplicate invoice proxy removed, notification auth guard
-- Shared VacanciesPanel component — inventory vacancies tab and owner vacancies page unified
-- Shared CategoryMappings component — legal hub tab and standalone page unified
-- Count labels moved outside card on all 7 hub pages
-- router.isReady guard added to all 7 hub pages — fixes cold-load with ?tab= query param
-
-### Roadmap Pipeline Status Rename + Ticket Refinement — 2026-03-21
-**Status:** ✅ COMPLETE
-
-Renamed roadmap status strings to match the UI bucket labels; refined 6 draft tickets to ready state.
-
-**Status renames:**
-- `raw` → `capture` (intake_items), `triaged` → `clarify` (intake_items), `drafted` → `review` (intake_items), `draft` → `review` (draft_tickets)
-- Applied across ROADMAP.json data + 5 scripts: roadmap-server.js, roadmap-parser.js, generate-roadmap.js, roadmap-shared.js, roadmap-ticket.js, roadmap.schema.json, roadmap-ticket.js
-- CSS class names and HTML data attributes updated accordingly
-
-**Ticket refinement (DT-016 to DT-021):**
-- DT-016 (UI alignment), DT-017 (row expand on click), DT-020 (depreciation collapsed default), DT-021 (repair vs replace) — filled in all fields (acceptance_criteria, test_protocol, validation_checklist, canonical_implementation_prompt, files_to_modify), set status to `ready`
-- DT-018 and DT-019 — merged into DT-017, set to `discarded`
-
-**Current roadmap state:** 26 features (P0–P4), 49 intake items, 23 draft tickets (4 ready, 15 review, 2 discarded, 2 promoted).
-
-### Audit Remediation Slice — 2026-03-21
-**Status:** ✅ COMPLETE
-
-Addressed 10 findings from a comprehensive project audit.
-
-**Security / Authorization (Critical + High):**
-- **BA-01 (Critical):** Added `requireRole(req, res, "CONTRACTOR")` guard to `GET /requests/contractor` (was completely unguarded). File: `apps/api/src/routes/requests.ts`
-- **BA-02 (High):** Invoice lifecycle routes (issue, approve, mark-paid, dispute, list) now allow MANAGER and OWNER via `requireAnyRole(["MANAGER", "OWNER"])` — was OWNER-only. File: `apps/api/src/routes/invoices.ts`
-- **API-02 (Medium):** Fixed inconsistent response envelopes in tenant-portal notification endpoints — `{count}`, `{marked: count}`, `{ok: true}` wrapped in `{data: ...}`. File: `apps/api/src/routes/auth.ts`
-
-**Schema / API Contract:**
-- **API-01:** Added `ISSUED` to InvoiceStatus enum in `apps/api/openapi.yaml` (was `[DRAFT, APPROVED, PAID, DISPUTED]`, now `[DRAFT, ISSUED, APPROVED, PAID, DISPUTED]`)
-- **DB-02:** Documented `RequestEventType.TENANT_SELECTED` orphan value with inline comment in `schema.prisma` (added during tenant-selection epic but never emitted in request event logs — kept for DB compatibility)
-- **DB-03:** Added `onDelete: Restrict` to `Lease.unit` relation (prevents silent unit deletion with active leases); added `@@index([orgId])` to `User` model for multi-tenant query performance. File: `apps/api/prisma/schema.prisma` (migration pending — apply with `prisma migrate dev`)
-
-**Environment / Ops:**
-- **ENV-01:** Expanded `apps/api/.env.example` from 9 lines (PORT + SMTP only) to full 30-line reference covering DATABASE_URL, AUTH_SECRET, AUTH_OPTIONAL, DEV_IDENTITY_ENABLED, CORS_ORIGIN, BG_JOBS_ENABLED, ATTACHMENTS_STORAGE, NODE_ENV, REQUEST_TIMEOUT_MS, and all SMTP vars.
-- **CI-02/03:** Added 4 smoke test URLs to CI (units, buildings, rental-applications, rfp); added frontend lint step (`next lint --max-warnings 0`).
-
-**Documentation:**
-- **DOC-01/02:** Updated `ARCHITECTURE_LOW_CONTEXT_GUIDE.md` — corrected Request Lifecycle transition map (added ASSIGNED state with correct transitions); expanded File Index from 10 to 24 entries covering all 23 workflows; corrected migration count (41→40); added `requireOrgViewer` to auth helpers table.
-
-### Legal Route Layer Extraction — 2026-03-22
-**Status:** ✅ COMPLETE (S-P0-004-01)
-
-Extracted all business logic from `apps/api/src/routes/legal.ts` into a dedicated `apps/api/src/services/legalService.ts`, eliminating 26 direct `prisma.X` calls from the route layer (G9 violation).
-
-**Deliverables:**
-- **`apps/api/src/services/legalService.ts`** (new) — full legal domain service: `listVariables`, `listRules`, `createRule`, `listCategoryMappings`, `createCategoryMapping`, `updateCategoryMapping`, `deleteCategoryMapping`, `getMappingCoverage`, `listEvaluations`, `listDepreciationStandards`, `createDepreciationStandard`. Error classes: `LegalConflictError`, `LegalNotFoundError`, `LegalForbiddenError`. `TOPIC_KEYWORDS` map and `deduplicateCitations` helper moved from route file. Depreciation standards included here (consolidated from planned `depreciationAdminService.ts` — too small to justify a separate file).
-- **`apps/api/src/routes/legal.ts`** — 26 direct Prisma calls replaced with service delegations. Slim handlers: auth check → parse → call service → `sendJson`/`sendError`. Zero direct Prisma calls remain.
-
-**Architecture:** Resolves G9 for the full legal route module. `legal.ts` is now pattern-compliant: routes → service → repositories.
-
-tsc: 0 errors. 518 tests pass.
-
-### Apply Wizard Selected-Units Summary — 2026-03-22
-**Status:** ✅ COMPLETE (DT-027)
-
-Added a selected-units summary panel in Step 1 of the tenant rental application wizard (`apps/web/pages/apply.js`), displayed above the document upload section. Shows only the units the applicant has chosen, with building name, unit number, and monthly rent.
-
-### Test Infrastructure Hardening — 2026-03-22
-**Status:** ✅ COMPLETE (DT-111 / DT-112 / DT-113)
-
-- **DT-111 (port deconfliction):** Fixed two collisions — `tenantSession.test.ts` 3208→3218, `rentEstimation.test.ts` 3209→3219. All 19 test suites now have unique hardcoded ports 3201–3219.
-- **DT-112 (contract tests):** Added 4 new guard-rail tests to `contracts.test.ts`: `GET /rfps?limit=1` (envelope + DTO shape), `GET /rfps/:id` 404 (error code), `GET /notifications` (role-aware fetch + envelope), `GET /notifications/unread-count` (count field). Notification tests use `fetchWithRole('MANAGER')` — required because `requireStaffAuth` needs a role claim even with `AUTH_OPTIONAL=true`.
-- **DT-113 (CONTRIBUTING.md):** Created `CONTRIBUTING.md` with: pre-commit test checklist, `startServer` integration test lifecycle pattern, full port registry (3201–3219, next: 3220), `contracts.test.ts` guard-rail pattern, architecture guardrail quick reference (G1/G2/G9/G10/G11).
-
-### Ticket Refinement Pass — 2026-03-22
-**Status:** ✅ COMPLETE
-
-Full refinement of all 17 `review`-status draft tickets. Each now has: `goal`, `in_scope`, `out_of_scope`, `acceptance_criteria`, `files_to_modify`, `test_protocol`, `implementation_notes`, `depends_on`.
-
-**Tickets refined:** DT-001 (contractor performance), DT-002 (cost variance), DT-003 (completion timelines), DT-004 (auth wrappers — `needs_investigation`), DT-005 (summary DTOs), DT-008 (Request.orgId migration), DT-009 (canton DSL filtering), DT-010 (bg job scheduler), DT-012 (proxy exceptions), DT-014 (production email), DT-023 (cost sensitivity), DT-028 (FIN-COA epic container — no-code), DT-052/092/093/095/097 (FIN-COA slices 1–5).
-
-### Roadmap Sync & Generator Bugfixes — 2026-03-22
-**Status:** ✅ COMPLETE
-
-Resolved three issues preventing the roadmap dashboard from staying current.
-
-**Problem 1 — HTML never committed:** `docs/roadmap.html` was in `.gitignore`; every pull left the viewer stale. Fix: removed from `.gitignore`; added to pre-commit hook — the hook now regenerates and stages `docs/roadmap.html` automatically whenever `ROADMAP.json` is part of a commit.
-
-**Problem 2 — Stale recommendations:** Three bugs in `scripts/generate-roadmap.js` caused completed/discarded items to persist in the top-5 recommendations panel:
-- `runSliceSignal` read `sig.value` exclusively; ROADMAP.json signals use `sig.path`/`sig.name`/`sig.key` → every `file_exists`/`model_exists` signal silently failed → delivered slices showed as "planned".
-- `getSliceStatus` ignored an explicit manual `status: "done"` when `completion_signals` were present — auto-detection overrode a deliberate human decision.
-- `customItemsToBacklog` treated `status: "discarded"` as "ready" → discarded items (TASK-001) appeared in recommendations.
-
-All three fixed. TASK-001 and S-P0-004-01/02 no longer surface.
-
-**Files modified:** `.gitignore`, `.git/hooks/pre-commit`, `scripts/generate-roadmap.js`.
-
-### Chart of Accounts Epic (FIN-COA) — 2026-03-23
-**Status:** ✅ COMPLETE (DT-028 epic + 5 slices: DT-052, DT-092, DT-093, DT-095, DT-097)
-
-Full Chart of Accounts infrastructure for Swiss property management: org-scoped expense types, accounts, and mappings with optional classification on invoices and lease expense items. Additive — no breaking changes to existing financial flows.
-
-**Slice 1 — FIN-COA-01: Foundation (DT-052)**
-- 3 new Prisma models: `ExpenseType`, `Account`, `ExpenseMapping`
-- 53 migrations (foundation + null building unique fix)
-- Repository layer: `expenseTypeRepository.ts`, `accountRepository.ts`, `expenseMappingRepository.ts`
-- Service: `coaService.ts` — CRUD + `seedSwissTaxonomy()` (idempotent seed of 8+ expense types, 2+ accounts, 8+ default mappings)
-- Validation: `coaValidation.ts` — Zod schemas for all COA entities
-- Route: `coa.ts` — 7 endpoints (seed, expense-type CRUD, account CRUD, mapping CRUD)
-- OpenAPI + api-client updated
-- Tests: `coa.test.ts` (14 tests)
-
-**Slice 2 — FIN-COA-02: Invoice Classification (DT-092)**
-- Added `expenseTypeId` and `accountId` optional FK fields on `Invoice` model
-- Migration: `20260323150000_invoice_coa_fields`
-- Updated Invoice DTO, mapper, repository include, validation, routes (POST + PATCH), OpenAPI, api-client
-- Tests: existing invoice tests pass with new fields
-
-**Slice 3 — FIN-COA-03: Lease Expense Items (DT-093)**
-- Added `LeaseExpenseItem` model with `ChargeMode` enum (ACOMPTE/FORFAIT)
-- Migration: `20260323160000_lease_expense_items` (data migration from JSON `chargesItems` → relational table)
-- Updated `LEASE_FULL_INCLUDE` with `expenseItems` relation
-- Lease DTO extended with `expenseItems[]`; service + routes for CRUD
-- Tests: `leaseExpenseItems.test.ts` (11 tests)
-
-**Slice 4 — FIN-COA-04: Manager Finance Settings UI (DT-095)**
-- New page: `apps/web/pages/manager/finance/chart-of-accounts.js` — canonical layout, 3 tabs (Expense Types | Accounts | Mappings)
-- Zero inline styles (F-UI4 compliant), uses `tab-strip`/`tab-btn`/`inline-table` CSS classes
-- 7 new API proxy routes under `apps/web/pages/api/coa/`
-- Navigation link added to finance index
-
-**Slice 5 — FIN-COA-05: Financial Views (DT-097)**
-- Backend: `expenseTypeId` + `accountId` query filters on `GET /invoices`; `expenseTypeId` filter on `GET /leases`; `groupByAccount` on `GET /buildings/:id/financials`
-- New service function: `getExpensesByAccount()` → `AccountTotalDTO[]`
-- Frontend: expenses.js + charges.js gain COA filter dropdowns (feature-flagged — only render when COA data exists)
-- OpenAPI + api-client updated with new query params + `AccountTotalDTO` schema
-- Tests: `coaFilters.test.ts` (13 tests)
-
-**Files created (13):**
-- `apps/api/src/repositories/expenseTypeRepository.ts`, `accountRepository.ts`, `expenseMappingRepository.ts`
-- `apps/api/src/services/coaService.ts`
-- `apps/api/src/validation/coaValidation.ts`
-- `apps/api/src/routes/coa.ts`
-- `apps/api/src/__tests__/coa.test.ts`, `leaseExpenseItems.test.ts`, `coaFilters.test.ts`
-- `apps/web/pages/manager/finance/chart-of-accounts.js`
-- `apps/web/pages/api/coa/` (7 proxy files: seed.js, expense-types/index.js, expense-types/[id].js, accounts/index.js, accounts/[id].js, expense-mappings/index.js, expense-mappings/[id].js)
-
-**Files modified (15+):**
-- `apps/api/prisma/schema.prisma` — 3 new models, 2 new fields on Invoice
-- 53 migrations in `apps/api/prisma/migrations/`
-- `apps/api/src/routes/invoices.ts`, `leases.ts`, `financials.ts` — new query param parsing
-- `apps/api/src/services/invoices.ts`, `leases.ts`, `financials.ts` — new filter interfaces + groupByAccount logic
-- `apps/api/src/repositories/leaseRepository.ts` — expenseTypeId relational filter
-- `apps/api/src/validation/financials.ts` — groupByAccount param
-- `apps/api/openapi.yaml` — new schemas + query params
-- `packages/api-client/src/index.ts` — new DTOs + function params
-- `apps/web/pages/manager/finance/expenses.js`, `charges.js` — COA filter dropdowns
-
-**Stats:** 53 models · 42 enums · 53 migrations · 579 tests / 45 suites. tsc: 0 errors.
-
-### Roadmap Intake & Triage System — 2026-03-19
-**Status:** ✅ COMPLETE
-
-Full-featured product roadmap management system with intake ingestion, auto-triage, and promotion pipeline. Zero-dependency Node.js tooling — no database required (operates on `ROADMAP.json`).
-
-**Architecture (8.2k lines across 5 scripts):**
-- **`roadmap-server.js`** (1421 lines) — REST API on port 8111 with 25+ endpoints. CRUD for tickets, intake items, and draft tickets. Handles parse, auto-triage, promote (single + batch), recommendations, context refresh.
-- **`roadmap-parser.js`** (1381 lines) — Intake parser (section/bullet splitting, title normalization, 22 area rules, 7 type rules, dependency detection), contextual auto-triage engine (scope sizing, action classification, parent feature matching, phase inference), and promotion engine (`buildDraftFromIntake` with file path inference, acceptance criteria generation, test protocol, validation checklist, canonical implementation prompt).
-- **`generate-roadmap.js`** (4689 lines) — HTML dashboard generator. 4 tabs: Phases (feature cards with status dots, progress bars, hook badges), Intake (toolbar, filters, card actions, edit overlay, bulk parse, promote), Drafts (collapsible detail cards, full edit overlay), Codebase Signals (detection table, 3-column panels). IBM Plex dark-grid design.
-- **`roadmap-shared.js`** (273 lines) — Shared constants, sequential ID generators (F-Px-nnn, INT-nnn, DT-nnn, T-nnn), file utilities.
-- **`roadmap-ticket.js`** (412 lines) — CLI ticket creator with validate-ticket workflow and interactive prompts.
-
-**Intake pipeline lifecycle:** `capture` → parse → `clarify` → promote → `review` → (manual review) → `promoted` to custom_items
-
-**Current state:** 26 features (P0–P4), 49 intake items (33 triaged, 15 drafted, 1 raw), 15 draft tickets. 16 items mined from EPIC_HISTORY.md deferred/TODO work and promoted to draft tickets with full canonical ticket structure.
-
-**Data model (stored in ROADMAP.json):**
-- `intake_items[]` — INT-xxx IDs, status enum (capture|clarify|review|promoted|parked|duplicate), 15+ fields including product_area, recommended_action, scope_size, proposed_phase, proposed_parent_feature, dependencies
-- `draft_tickets[]` — DT-xxx IDs, status enum (review|ready|promoted|discarded), 18+ fields including files_to_modify, acceptance_criteria, test_protocol, validation_checklist, canonical_implementation_prompt
-
-**Usage:**
-```bash
-# Start server
-node scripts/roadmap-server.js &
-
-# Regenerate HTML
-node scripts/generate-roadmap.js
-
-# Open dashboard
-open http://localhost:8111
-```
-
-### General Ledger (FIN-LEDGER) — 2026-03-23
-**Status:** ✅ COMPLETE
-
-Double-entry bookkeeping infrastructure for Swiss Liegenschaftsbuchhaltung. Automatically posts journal entries when invoices are issued or paid, exposes a paginated journal and trial balance via API, and replaces the `ledger.js` placeholder with a working UI.
-
-**Step A — Swiss COA Expansion**
-- Replaced 4-account generic English seed with 27 properly-coded Swiss accounts (1xxx–4xxx: Bankkonto, Mietzinsdebitoren, Kreditoren, Hypothek, Mieteinnahmen, Nebenkosten, Unterhalt, Verwaltung, etc.)
-- Expanded `SWISS_RESIDENTIAL_TAXONOMY` from 8 generic types to 20 with specific `defaultAccountCode` per type (NK-HEIZ→4310, NK-WASSER→4320, etc.)
-- Added LIABILITY to `accountType` enum comment + frontend `<select>` in `chart-of-accounts.js`
-- `listAccounts` / `listExpenseTypes` now sort in application code using `localeCompare('en-US')` for consistency across PG collations
-
-**Step B — LedgerEntry Schema + Auto-Posting**
-- New `LedgerEntry` model: orgId, date, accountId, debitCents, creditCents, description, reference, sourceType (INVOICE_ISSUED|INVOICE_PAID|RENT_RECEIPT|MANUAL), sourceId, journalId, buildingId, 6 indexes
-- Migration: `20260323140000_add_ledger_entry`
-- New `ledgerService.ts`: `postJournalEntries`, `postInvoiceIssued`, `postInvoicePaid`, `listLedgerEntries`, `getAccountBalance`, `getTrialBalance`
-- Posting rules: rent invoices Dr. 1100/Cr. 3200 (issued), Dr. 1020/Cr. 1100 (paid); cost invoices Dr. expense/Cr. 2000 (issued), Dr. 2000/Cr. 1020 (paid)
-- Best-effort fire-and-forget from `issueInvoiceWorkflow` and `payInvoiceWorkflow` — never blocks if COA not seeded
-
-**Step C — Ledger API Routes**
-- New `routes/ledger.ts`: `GET /ledger` (paginated journal, filters: from/to/accountCode/sourceType), `GET /ledger/trial-balance` (period filters), `GET /ledger/accounts/:accountId/balance`
-- Uses `requireOrgViewer` (covers MANAGER + OWNER)
-- 3 Next.js API proxy files: `pages/api/ledger/index.js`, `trial-balance.js`, `accounts/[accountId]/balance.js`
-
-**Step D — Ledger UI**
-- Replaced 9-line placeholder `pages/manager/finance/ledger.js` with full 400-line page
-- Two tabs: Journal (paginated table — date, account code+name, type badge, description, reference, debit/credit CHF) and Trial Balance (per-account debit/credit/balance with footer showing "Balanced" or diff)
-- `AccountTypeBadge` with ASSET (slate), LIABILITY (red), REVENUE (blue), EXPENSE (amber)
-- `formatCHF(cents)` → de-CH locale, 2 decimals
-
-**OpenAPI + tests:**
-- Added 3 ledger routes + `LedgerEntry`, `AccountBalance`, `Pagination` schemas to `openapi.yaml`
-- Sort-order fix in `coa.test.ts` (uses `localeCompare('en-US')` to match PG collation)
-
-**Files created (5):**
-- `apps/api/src/services/ledgerService.ts`
-- `apps/api/src/routes/ledger.ts`
-- `apps/api/prisma/migrations/20260323140000_add_ledger_entry/migration.sql`
-- `apps/web/pages/api/ledger/index.js`, `trial-balance.js`, `accounts/[accountId]/balance.js`
-
-**Files modified (6):**
-- `apps/api/prisma/schema.prisma` — LedgerEntry model + relations on Org/Building/Account
-- `apps/api/src/services/coaService.ts` — Swiss COA seed + in-app sort
-- `apps/api/src/services/invoices.ts` — `leaseId` added to InvoiceDTO
-- `apps/api/src/workflows/issueInvoiceWorkflow.ts` — `postInvoiceIssued` call
-- `apps/api/src/workflows/payInvoiceWorkflow.ts` — `postInvoicePaid` call
-- `apps/api/src/server.ts` — `registerLedgerRoutes(router)`
-- `apps/api/openapi.yaml` — 3 new routes + 3 new schemas
-- `apps/web/pages/manager/finance/ledger.js` — full replacement
-- `apps/web/pages/manager/finance/chart-of-accounts.js` — LIABILITY option added
-- `apps/api/src/__tests__/coa.test.ts` — sort comparison fix
-
-**Stats:** 53 models · 42 enums · 53 migrations · 533 runnable tests / 45 suites (531 pass; 2 pre-existing failures from leaseExpenseItem schema drift).
+| Epic | Date | Key Impact |
+|------|------|------------|
+| Security Hardening 1 + 2 | 2026-03-10 | SA-1 through SA-20 resolved (19 findings); `requireAnyRole()`, `requireTenantSession()` added |
+| UI Navigation & Finance Pages | 2026-03 | 51/67 frontend audit findings fixed; payments/expenses/charges pages built |
+| Frontend Rationalization | 2026-03-11 | Page inventory (`FRONTEND_INVENTORY.md`), proxy audit (116/119→119/119 conforming) |
+| Frontend Debt Cleanup | 2026-03-12 | 4 pages deleted, 3 proxy migrations, `next.config.js` redirects |
+| Prisma DTO Hardening Final | 2026-03-10 | 4 canonical includes for inventory, 2 `any` types eliminated |
+| Roadmap Visual Redesign | 2026-03-10 | `generate-roadmap.js` rewritten, 26 features across 6 phases |
+| Triage Rework (Slices 1–3) | 2026-03-11 | `OWNER_REJECTED` status + `ApprovalSource` enum; CTA rewrite; legal engine hardening |
+| Legal Engine Remediation | 2026-03-11 | 93 corrupt rules cleaned; DSL evaluator supports `topic_match`, `AND`/`OR` |
+| Navigation & UI Consistency | 2026-03-14 | Sidebar flattened, Tailwind unified, `managerStyles.js` deleted, Panel layout |
+| Roadmap Pipeline Status Rename | 2026-03-21 | Status labels renamed (raw→capture, triaged→clarify, etc.) |
+| Audit Remediation | 2026-03-21 | BA-01/BA-02 security fixes; `ISSUED` added to OpenAPI; `onDelete: Restrict` on Lease.unit |
+| Legal Route Layer Extraction | 2026-03-22 | `legalService.ts` created; 26 direct Prisma calls removed from routes |
+| Apply Wizard Selected-Units | 2026-03-22 | Selected-units summary panel in rental application wizard |
+| Test Infrastructure Hardening | 2026-03-22 | Port deconfliction (3201–3219); 4 contract tests added; `CONTRIBUTING.md` created |
+| Ticket Refinement Pass | 2026-03-22 | 17 draft tickets refined to full spec |
+| Roadmap Sync & Generator Bugfixes | 2026-03-22 | `docs/roadmap.html` tracked in git; auto-regen on commit; 3 stale-signal bugs fixed |
+| Chart of Accounts (FIN-COA) | 2026-03-23 | 3 new models (ExpenseType, Account, ExpenseMapping); 5 slices; invoice + lease classification |
+| Roadmap Intake & Triage System | 2026-03-19 | 8.2k-line tooling: intake parser, auto-triage, promotion engine, REST API, HTML dashboard |
+| General Ledger (FIN-LEDGER) | 2026-03-23 | LedgerEntry model; auto-posting from invoice workflows; journal + trial balance UI |
+| Azure Document Intelligence | 2026-03-29 | Replaced Tesseract with Azure DI; `prebuilt-layout` model; Tesseract fallback intact |
+| Migration Integrity Recovery | 2026-03-30 | 5 gap-filling migrations; G8 shadow DB exception retired permanently |
+| Invoice Ingestion & Capture Sessions | 2026-03-30 | CaptureSession model; `POST /invoices/ingest`; QR code → phone upload → OCR → draft |
+| Comprehensive Audit Remediation | 2026-03-31 | 46 findings resolved (CQ/SA/TC/SI/DOC); route→service extraction; 7 new test files |
 
 ---
 
@@ -1057,6 +488,9 @@ Double-entry bookkeeping infrastructure for Swiss Liegenschaftsbuchhaltung. Auto
 
 ### Not Implemented Yet (Active Backlog)
 
+* Azure Document Intelligence tier upgrade — current Free F0 tier allows 500
+  pages/month. Upgrade to S0 (~$1.50/1000 pages) before production go-live.
+  Resource: `maintenance-agent-docintel`, West Europe.
 * Lease Phase 3–5: DocuSign/Skribble integration, deposit payment tracking, archive workflow
 * Role enforcement refinement (all routes protected; role granularity can be tightened further)
 * Email delivery provider integration (EmailOutbox + dev sink implemented; no SMTP/SendGrid wired yet)
@@ -1065,17 +499,15 @@ Double-entry bookkeeping infrastructure for Swiss Liegenschaftsbuchhaltung. Auto
 * Multi-org support (org scoping via M1; auth centralized via M2; DEFAULT_ORG_ID remains only in authz.ts dev/test fallback + orgConfig.ts bootstrap + tests; production returns null via SA-1 fix)
 * Legal DSL variable resolver — wire LegalVariable values into DSL condition evaluation so rules can condition on ingested data (e.g. reference interest rate > 1.5%). Prerequisite for full canton-scoped rule evaluation. Depends on: LegalSource Scope slice (done).
 * Consolidate DTO files — buildingDetail.ts was created as a standalone file; review whether it should be merged with other DTO definitions for consistency
-* G8 consistency — `migrate deploy` was used instead of `migrate dev` for the building owner migration. Confirm local dev workflow always uses `migrate dev` going forward. Consider resolving the shadow DB exception (G8) to unblock `migrate dev` reliably.
+* G8 consistency — `migrate deploy` was used instead of `migrate dev` for the building owner migration. Confirm local dev workflow always uses `migrate dev` going forward. *(Shadow DB exception retired 2026-03-31.)*
 * Finance sub-pages (Payments, Expenses, Charges) — inline tab content shows plain text overflow with no link; implement full sub-pages when finance reporting scope is defined
 * Sources tab in legal.js — confirm inline or stub, close the finding in AUDIT.md
-* ~~router.isReady guard~~ — ✅ Resolved 2026-03-14: added `router.isReady` ternary to activeTab derivation in all 7 hub pages + template
 * Hub tab content polish (low priority, on-demand): legal/rules, legal/evaluations, people/tenants, people/vendors, rfps tabs still use flat inline-table. Enrich when pages become high-traffic or users report friction
 * ASSET_TYPE_COLORS in legal/depreciation.js uses hardcoded Tailwind color strings (bg-violet-100 text-violet-700 etc.) — these bypass the token system; migrate to CSS variables when depreciation page is next touched
 * Dev auth token (`apps/web/pages/_app.js` `DEV_MANAGER_TOKEN`) expires 2027-03-15.
   Regenerate with: `cd apps/api && node -e "const jwt=require('jsonwebtoken'); console.log(jwt.sign({userId:'dev-user',orgId:'default-org',email:'dev@local',role:'MANAGER'},'dev-secret-key-12345',{expiresIn:'365d'}))"`
   Replace `DEV_MANAGER_TOKEN` in `_app.js` with the new value.
   Also ensure `dev-user` exists in the DB: `cd apps/api && npx prisma db seed` (safe — upsert only).
-* ~~Fix server-spawn test timeouts~~ — ✅ Resolved 2026-03-10 (TC-4/TC-5): `maxWorkers: 1` + port deconfliction
 
 ### Multi-org Architecture Initiative
 **Priority:** High — every new feature built around current partial scoping increases future migration cost
@@ -1086,7 +518,7 @@ Double-entry bookkeeping infrastructure for Swiss Liegenschaftsbuchhaltung. Auto
 ### Custom HTTP Stack Evaluation
 **Priority:** Medium — evaluate before the team grows or route count exceeds ~200
 **Status:** Deferred — explicit re-evaluation recommended at next architecture review
-**Context:** Backend uses raw `http.createServer()` with custom routing (~174 API routes, manual URL parsing, custom auth wrappers, binary forwarding). This was the right call early. At current scale the question is whether the maintenance burden of a bespoke stack outweighs the dependency cost of Express or Fastify. Decision should be made explicitly rather than by default.
+**Context:** Backend uses raw `http.createServer()` with custom routing (247 operations across 190 URL paths, manual URL parsing, custom auth wrappers, binary forwarding). This was the right call early. At current scale the question is whether the maintenance burden of a bespoke stack outweighs the dependency cost of Express or Fastify. Decision should be made explicitly rather than by default.
 **Prerequisite:** Architecture review session — not a Copilot task.
 
 ### Future Vision (Deferred)
@@ -1095,145 +527,30 @@ Conversational tenant intake with phone-based identification, automatic asset in
 
 ### Known Technical Debt
 
-- **TEST INTERACTION** — 45 suites (openApiSync, financials, jobs.and.invoices, notifications) fail in full serial run but pass individually. Root cause: `startServer` copy-pasted across 22 test files with no shared teardown — orphaned handles corrupt subsequent suites. Fix: extract shared `startServer`/`stopServer` into `testHelpers.ts` with proper `afterAll` cleanup (TC-11). Workaround: run failing suites individually with `--testPathPattern`.
+- **Pre-existing test interaction failures (TC-11):** ~10 legacy test suites still use local `startServer` copies instead of canonical `testHelpers.ts`. These can fail when run in full serial mode but pass individually. All new test files (since 2026-03-22) use the shared helpers. Migration of remaining suites is low priority — track via `--testPathPattern` workaround. *(Partially resolved 2026-03-31: `startTestServer`/`stopTestServer` extracted to `testHelpers.ts`; all new tests use canonical helpers.)*
 
 <!-- reviewed 2026-03-10 -->
 
 ---
 
+<!-- Auto-sync log quarantined to docs/sync-log.md (DOC-1, 2026-03-31) -->
 
-<!-- auto-sync 2026-03-10: models 44→45, suites 6→28, suites 6→28, backendLOC 30→34, frontendLOC 22→25, fePages 171→188, fePages 171→188, apiRoutes 153→140, apiRoutes 157→140 -->
 
-
-<!-- auto-sync 2026-03-10: tests 313→308, suites 29→28, suites 29→28 -->
-
-
-<!-- auto-sync 2026-03-10: tests 313→334, suites 29→28, suites 29→28, suites 29→28, suites 30→28 -->
-
-
-<!-- auto-sync 2026-03-10: suites 30→28, frontendLOC 25→24, fePages 188→185, fePages 188→185 -->
-
-
-<!-- auto-sync 2026-03-10: suites 28→30, frontendLOC 25→24 -->
-
-
-<!-- auto-sync 2026-03-10: repositories 8→9, repositories 8→9, repositories 8→9, repositories 8→9 -->
-
-
-<!-- auto-sync 2026-03-10: repositories 8→9, repositories 8→9 -->
-
-
-<!-- auto-sync 2026-03-10: suites 4→30 -->
-
-
-<!-- auto-sync 2026-03-11: models 3→45, enums 35→37, enums 35→37, enums 35→37, migrations 31→32, backendLOC 34→35 -->
-
-
-<!-- auto-sync 2026-03-11: enums 38→37, enums 38→37 -->
-
-
-<!-- auto-sync 2026-03-11: frontendLOC 24→25 -->
-
-
-<!-- auto-sync 2026-03-12: models 45→46, models 45→46, models 45→46, models 45→46, models 45→46, models 45→46, migrations 32→33, repositories 9→10, repositories 9→10, repositories 9→10, repositories 9→10, repositories 9→10, repositories 9→10, fePages 185→187, apiRoutes 140→142, apiRoutes 140→142, apiRoutes 140→142 -->
-
-
-<!-- auto-sync 2026-03-12: enums 37→38, enums 37→38, enums 37→38, enums 37→38, enums 37→38, migrations 33→34, backendLOC 35→36, fePages 187→190, apiRoutes 142→144, apiRoutes 142→144, apiRoutes 142→144 -->
-
-
-<!-- auto-sync 2026-03-12: fePages 190→192, apiRoutes 144→146, apiRoutes 144→146, apiRoutes 144→146 -->
-
-
-<!-- auto-sync 2026-03-12: migrations 34→35, fePages 192→193 -->
-
-
-<!-- auto-sync 2026-03-12: tests 359→334, suites 33→30 -->
-
-
-<!-- auto-sync 2026-03-12: tests 334→359, suites 30→33, suites 30→33, suites 30→33 -->
-
-
-<!-- auto-sync 2026-03-13: frontendLOC 25→26, fePages 193→194 -->
-
-
-<!-- auto-sync 2026-03-14: fePages 194→195 -->
-
-
-<!-- auto-sync 2026-03-15: migrations 35→36 -->
-
-
-<!-- auto-sync 2026-03-15: frontendLOC 26→27 -->
-
-
-<!-- auto-sync 2026-03-16: migrations 36→37, repositories 10→11, repositories 10→11, repositories 10→11, repositories 10→11, repositories 10→11, repositories 10→11, backendLOC 36→37, fePages 195→196 -->
-
-
-<!-- auto-sync 2026-03-16: backendLOC 37→38, fePages 196→200, apiRoutes 146→148, apiRoutes 146→148, apiRoutes 146→148 -->
-
-
-<!-- auto-sync 2026-03-16: migrations 37→39, frontendLOC 27→28, fePages 200→201, apiRoutes 148→149, apiRoutes 148→149, apiRoutes 148→149 -->
-
-
-<!-- auto-sync 2026-03-16: enums 38→39, enums 38→39, enums 38→39, enums 38→39, enums 38→39, migrations 39→41, backendLOC 38→39, fePages 201→204, apiRoutes 149→150, apiRoutes 149→150, apiRoutes 149→150 -->
-
-
-<!-- auto-sync 2026-03-16: backendLOC 39→40, fePages 204→206, apiRoutes 150→152, apiRoutes 150→152, apiRoutes 150→152 -->
-
-
-<!-- auto-sync 2026-03-16: models 46→47, models 46→47, models 46→47, models 46→47, models 46→47, models 46→47, enums 39→40, enums 39→40, enums 39→40, enums 39→40, enums 39→40, repositories 11→12, repositories 11→12, repositories 11→12, repositories 11→12, repositories 11→12, repositories 11→12, backendLOC 40→41, apiRoutes 152→156, apiRoutes 152→156, apiRoutes 152→156 -->
-
-
-<!-- auto-sync 2026-03-16: models 47→48, models 47→48, models 47→48, models 47→48, models 47→48, models 47→48, enums 40→41, enums 40→41, enums 40→41, enums 40→41, enums 40→41, repositories 12→13, repositories 12→13, repositories 12→13, repositories 12→13, repositories 12→13, repositories 12→13, backendLOC 41→43, apiRoutes 156→161, apiRoutes 156→161, apiRoutes 156→161 -->
-
-
-<!-- auto-sync 2026-03-17: frontendLOC 28→29, fePages 206→207 -->
-
-
-<!-- auto-sync 2026-03-19: suites 33→38, fePages 206→207, apiRoutes 209→161, apiRoutes 209→161 -->
-
-
-<!-- auto-sync 2026-03-20: fePages 207→210 -->
-
-
-<!-- auto-sync 2026-03-21: migrations 41→42, apiRoutes 161→162, apiRoutes 161→162 -->
-
-
-<!-- auto-sync 2026-03-22: tests 493→518, suites 38→39, suites 38→39, suites 38→39, fePages 210→212 -->
-
-
-<!-- auto-sync 2026-03-22: repositories 14→13 -->
-
-
-<!-- auto-sync 2026-03-24: models 48→52, models 48→52, models 48→52, models 48→52, models 48→52, models 51→52, migrations 42→49, migrations 5→49, migrations 5→49, migrations 47→49, migrations 48→49, repositories 13→16, repositories 13→16, suites 39→43, suites 39→43, fePages 220→228, apiRoutes 162→174, apiRoutes 162→174 -->
-
-
-<!-- auto-sync 2026-03-24: migrations 49→51, migrations 49→51, migrations 49→51, migrations 49→51, migrations 49→51 -->
-
-
-<!-- auto-sync 2026-03-24: fePages 228→229 -->
-
-
-<!-- auto-sync 2026-03-24: migrations 51→52, migrations 51→52, migrations 51→52, migrations 51→52, migrations 51→52 -->
-
-
-<!-- auto-sync 2026-03-25: models 52→53, models 52→53, models 52→53, models 52→53, models 52→53, models 52→53, models 52→53, models 52→53, models 52→53, enums 41→42, enums 41→42, enums 41→42, enums 41→42, enums 41→42, enums 41→42, enums 41→42, enums 41→42, migrations 52→53, migrations 52→53, migrations 52→53, migrations 52→53, migrations 52→53 -->
-
-
-<!-- auto-sync 2026-03-25: migrations 52→53, migrations 52→53, migrations 52→53, suites 43→45, suites 43→45, suites 43→45, suites 43→45 -->
+<!-- auto-sync 2026-03-31: models 53→54, models 53→54, models 53→54, models 53→54, models 53→54, models 53→54, enums 42→47, enums 42→47, enums 42→47, enums 42→47, enums 42→47, migrations 53→60, migrations 53→60, migrations 53→60, migrations 53→60, migrations 53→60, suites 45→56, suites 45→56, suites 45→56, suites 10→56 -->
 
 ### State Integrity
 
 This document + companion files are the **single source of truth**:
 
-* **Doc structure:** PROJECT_STATE.md (~1050 lines) + EPIC_HISTORY.md (epics) + SCHEMA_REFERENCE.md (schema) + ARCHITECTURE_LOW_CONTEXT_GUIDE.md (lookup)
+* **Doc structure:** PROJECT_STATE.md (~630 lines) + EPIC_HISTORY.md (epics) + SCHEMA_REFERENCE.md (schema) + ARCHITECTURE_LOW_CONTEXT_GUIDE.md (lookup)
 * Filesystem (verified 2026-03-10)
-* Database schema — 53 migrations; 53 models, 42 enums verified in live DB
+* Database schema — 60 migrations; 54 models, 47 enums verified in live DB (shadow DB replay clean 2026-03-31)
 * Database data — 99+ assets across 19 units (with interventions tracking), 274 depreciation standards (including 5 added for mapped topics), 16 category mappings, buildings with cantons set, 6 CO 259a statutory rules with proper DSL (verified 2026-03-07)
-* Running system — all endpoints return 200; legal auto-routing creates RFP and sets RFP_PENDING for requests with mapped categories when autoLegalRouting=true; asset inventory endpoints serve depreciation data (verified 2026-03-07)
+* Running system — core smoke endpoints return expected status codes; auth-gated routes return 401/403 without valid token (verified by `auth.manager-gates.test.ts`); legal auto-routing creates RFP and sets RFP_PENDING for requests with mapped categories when autoLegalRouting=true; asset inventory endpoints serve depreciation data (verified 2026-03-31)
 * Dev auth bootstrap: Canonical dev manager is user `d93436c1-6568-4dba-8e65-fd8d34e6be2b` (email `manager@local.dev`), created via the auth flow. The legacy `dev-user` still exists in DB but is no longer used as the manager identity — notifications were migrated to `d93436c1`. Long-lived JWTs in `_app.js`; bootstrap is expiry-aware (expired tokens are auto-replaced on next page load, no manual `localStorage.clear()` needed). All three dev tokens expire 2027-03-15.
 * **Multi-role auth system:** `STAFF_ROLES` array in `apps/api/src/authz.ts` is the single extension point for adding new staff roles. Currently: MANAGER, OWNER, VENDOR, INSURANCE. `requireStaffAuth()` guards all notification endpoints. Frontend `_app.js` bootstraps role-specific tokens under `authToken` (manager), `ownerToken`, `vendorToken` keys; `NotificationBell` reads the token matching its `role` prop. Adding a new role: (1) add string to `STAFF_ROLES`, (2) add entry to `DEV_TOKENS` in `_app.js`, (3) add seed user in `prisma/seed.ts`. Nothing else changes. Dev users: `d93436c1` (MANAGER, canonical), `dev-owner` (OWNER), `dev-vendor` (VENDOR). Schema `Role` enum: TENANT, CONTRACTOR, MANAGER, OWNER, VENDOR, INSURANCE (migration 35).
 * Frontend navigation — sidebar: 7 flat primary nav items, no accordion. All 7 manager hub pages use inline tab content with URL-based tab persistence (?tab=key). Tab header links: always-visible "Full view →" for tabs with richer standalone pages; absent for equivalent pages. All manager pages wrapped in Panel component for consistent white card layout. Verified 2026-03-14.
-* Test suite — **589 tests, 45 suites against maint_agent_test** (isolated from dev DB `maint_agent`) (verified 2026-03-25); all passing.
+* Test suite — **769 tests, 56 suites against maint_agent_test** (isolated from dev DB `maint_agent`) (verified 2026-03-31); pre-existing test interaction failures (TC-11 — legacy `startServer` copy-paste in ~56 suites; canonical `testHelpers.ts` used by all new tests).
   - ✅ **TC-4 resolved (2026-03-10):** `jest.config.js` now has `maxWorkers: 1` — integration tests run serially, eliminating parallel server spawning timeouts.
   - ✅ **TC-5 resolved (2026-03-10):** Port collision on 3206 fixed — ports reassigned: rentalContracts → 3206, rentEstimation → 3209, ia.test → 3210, tenantSession → 3208.
   - Pure-function suites (**domainEvents, httpErrors, orgIsolation, routeProtection, triage**) always pass — they do not spawn a server.
@@ -1241,7 +558,7 @@ This document + companion files are the **single source of truth**:
 * TypeScript compilation — 0 errors (verified 2026-03-12)
 * OpenAPI spec — ISSUED added to InvoiceStatus enum (2026-03-21); 3 ledger routes + LedgerEntry/AccountBalance/Pagination schemas added (2026-03-23); building owner routes remain in KNOWN_UNSPECCED_ROUTES (API-03, medium priority)
 * Git — all recent work committed to main. Legal route extraction (legalService.ts), DT-027/111/112/113, ticket refinements, roadmap sync fixes, CONTRIBUTING.md, General Ledger epic — all in history.
-* Architectural intent — 23 workflows, 16 repositories, 7 transition maps (Request, Job, Invoice, Lease, RentalApplication, Rfp, RfpQuote)
+* Architectural intent — 24 workflows, 17 repositories, 19 route modules, 7 transition maps (Request, Job, Invoice, Lease, RentalApplication, Rfp, RfpQuote)
 * Roadmap system — 26 features (P0–P4), 66 intake items, 37 draft tickets (18 refined, 9 ready_candidate, 2 needs_investigation, 8 promoted), 0 custom items. Server on port 8111. HTML dashboard at `docs/roadmap.html` (now tracked in git, auto-regenerated by pre-commit hook). Status labels: capture/clarify/review/ready (renamed from raw/triaged/drafted/draft).
 * CI pipeline enforces G1–G11 guardrails
 
@@ -1258,57 +575,24 @@ Safe to:
 
 ---
 
-✅ **Project stabilized, security-hardened, org-scoped, and UI-connected (2026-03-25).** 589/589 tests pass, 45 suites, 0 TS errors. ~52/67 frontend audit findings resolved. Backend: ~44k LOC | Frontend: ~30k LOC | 228 API routes | 53 Prisma models | 42 enums | 223 frontend pages | 23 workflows | 19 route modules. Roadmap: 26 features, 66 intake items, 37 draft tickets (all refined), 8.2k+ lines tooling; HTML dashboard tracked in git with auto-regeneration on commit. Recent: Stabilization slice complete (LeaseExpenseItem migration, test DB alignment, snapshot persistence, 8 TS errors + 13 failing suites fixed). See [EPIC_HISTORY.md](EPIC_HISTORY.md) for full completion details.
+✅ **Project stabilized, security-hardened, org-scoped, and UI-connected (2026-03-31).** 769/769 tests pass, 56 suites, 0 TS errors. 91/94 audit findings resolved. Backend: ~54k LOC | Frontend: ~37k LOC | 247 API operations (190 URL paths) | 54 Prisma models | 47 enums | 247 frontend pages | 24 workflows | 19 route modules. Roadmap: 26 features, 66 intake items, 37 draft tickets (all refined), 8.2k+ lines tooling; HTML dashboard tracked in git with auto-regeneration on commit. Recent: Comprehensive audit remediation (46 findings resolved), migration integrity recovery (G8 shadow DB exception retired), invoice ingestion pipeline (capture sessions + OCR). See [EPIC_HISTORY.md](EPIC_HISTORY.md) for full completion details.
 
 
 ## 13. Authentication & Testing
 
-### Auth — Implemented and hardened (Mar 4, updated Mar 10)
+### Auth — Implemented and hardened (2026-03-10)
 
-* `AUTH_OPTIONAL` defaults to **false** (required). Set `"true"` in `.env` for dev.
-* All routes wrapped with `withAuthRequired()` or `withRole()`. Production boot guard enforced.
-* JWT via `services/auth.ts`, middleware via `auth.ts` + `http/routeProtection.ts`
-* Production boot guard (F1): refuses start if `AUTH_OPTIONAL=true`, `AUTH_SECRET` missing, or `DEV_IDENTITY_ENABLED=true`
+JWT-based. Production boot guard enforced (F1). All routes auth-gated. `AUTH_OPTIONAL=true` for dev only.
 
-**Auth helpers in `authz.ts`:**
+> **Auth helpers table:** See [PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md) § Auth Helpers.
+> **Security hardening (SA-1–SA-22):** All resolved — see [EPIC_HISTORY.md](EPIC_HISTORY.md).
+> **Prisma/DTO hardening (CQ-7/12/13/14):** All resolved — see [EPIC_HISTORY.md](EPIC_HISTORY.md).
 
-| Helper | Use case |
-|--------|----------|
-| `requireAuth(req, res)` | Any authenticated route — returns user or null + 401 |
-| `maybeRequireManager(req, res)` | Manager or Owner reads |
-| `requireRole(req, res, role)` | Single role enforcement |
-| `requireAnyRole(req, res, roles[])` | Multi-role — e.g. CONTRACTOR or MANAGER |
-| `requireTenantSession(req, res)` | Tenant-portal routes — validates tenant JWT, returns tenantId |
-| `getOrgIdForRequest(req)` | Resolves orgId from auth context — returns `null` in production if unauthenticated |
+### Testing — 769 tests, 56 suites
 
-**Security hardening (2026-03-10):**
-- ✅ SA-1: `getOrgIdForRequest()` returns `null` in production (was falling back to DEFAULT_ORG_ID)
-- ✅ SA-2: Tenant-portal IDOR fixed — all 10 `/tenant-portal/*` routes require tenant JWT
-- ✅ SA-3/SA-4: Rental PII endpoints (attachments, documents) auth-gated
-- ✅ SA-5: Dev email routes production-guarded + auth-gated
-- ✅ SA-6/SA-9: `DEV_IDENTITY_ENABLED=true` added to production boot guard
-- ✅ SA-7: `POST /requests/:id/events` requires CONTRACTOR or MANAGER
-- ✅ SA-8: `GET /requests/contractor/:contractorId` requires CONTRACTOR; `GET /requests/contractor` also fixed (BA-01, 2026-03-21)
-- ✅ SA-10–SA-20: Resolved (security-hardening-2 slice) — role enforcement on mutations, org scoping, rate limiting, JWT hardening, event log redaction
-
-**Prisma/DTO hardening (2026-03-10):**
-- ✅ CQ-7: Legal inline includes replaced with canonical constants (`LEGAL_VARIABLE_INCLUDE`, `LEGAL_RULE_INCLUDE`, `LEGAL_RULE_WITH_VERSIONS_INCLUDE`, `DEPRECIATION_STANDARD_INCLUDE`)
-- ✅ CQ-12: `prisma.asset.*` calls in legal.ts replaced with `assetRepo.findAssetsForOrg()` / `createAssetSimple()`
-- ✅ CQ-13: Created `contractorRepository.ts` — all 4 contractor handlers use `contractorRepo.verifyOrgOwnership()`
-- ✅ CQ-14: Attachment/document routes use `rentalApplicationRepo.findAttachmentById()` / `findApplicationDocuments()`
-- ✅ Selection pipeline deduplicated — `SELECTION_PIPELINE_INCLUDE` shared by manager + owner routes
-- ✅ Auth.ts tenant portal lease query now uses `LEASE_FULL_INCLUDE`
-- ✅ Compile-time mapper constraints: `toDTO()`, `toSummaryDTO()`, `mapJobToDTO()`, `mapInvoiceToDTO()` etc. typed with `Prisma.XxxGetPayload<>`
-- ✅ `includeIntegrity.test.ts` — compile-time + runtime drift detection for all 18 canonical include constants
-
-### Testing — 589 tests, 45 suites
-
-* Jest + ts-jest, pattern: `src/__tests__/**/*.test.ts`
-* `maxWorkers: 1` in `jest.config.js` — integration tests run serially ✅ (TC-4, 2026-03-10)
-* Port collision on 3206 resolved — unique ports assigned ✅ (TC-5, 2026-03-10)
-* Test DB: `maint_agent_test` (isolated from dev via `.env.test` + `dotenv-cli`)
-* `npm test` / `npm run test:watch` / `npm run test:dev` (debug against dev DB)
-* CI: `.github/workflows/ci.yml` with PostgreSQL service container
+* Jest + ts-jest, `maxWorkers: 1` (serial integration). Test DB: `maint_agent_test` (isolated via `.env.test`).
+* CI: `.github/workflows/ci.yml` with PostgreSQL service container.
+* Pre-existing test interaction (TC-11): ~10 legacy suites use local `startServer` copies; all new tests use canonical `testHelpers.ts`.
 
 <!-- reviewed 2026-03-10 -->
 
@@ -1318,23 +602,29 @@ Safe to:
 
 | Field | Value | Source |
 |-------|-------|--------|
-| Models | 53 | prisma/schema.prisma — derived |
-| Enums | 42 | prisma/schema.prisma — derived |
-| Migrations | 53 | prisma/migrations/ — derived |
-| Workflows | 23 | src/workflows/ — derived |
-| Repositories | 16 | src/repositories/ — derived |
-| Route modules | 19 | src/routes/ — derived |
-| Backend LOC | ~44k | src/ (incl. tests) — derived |
-| Frontend LOC | ~30k | apps/web/ — derived |
-| Frontend pages | 223 | apps/web/pages/ — derived (78 UI + 145 API) |
-| API routes | 228 | openapi.yaml operationId count — derived |
-| Tests | 589 / 45 suites (all pass) | jest — derived |
-| Proxy conformance | 133 / 145 | apps/web/pages/api/ — derived |
+| Models | 54 | prisma/schema.prisma — derived |
+| Enums | 47 | prisma/schema.prisma — derived |
+| Migrations | 60 | prisma/migrations/ — derived |
+| Workflows | 24 | src/workflows/ — derived |
+| Repositories | 17 | src/repositories/ — derived |
+| Route modules | 19 | src/routes/ — derived (excl. helpers.ts utility) |
+| Backend LOC | ~54k | src/ (incl. tests) — derived |
+| Frontend LOC | ~37k | apps/web/ — derived |
+| Frontend pages | 247 | apps/web/pages/ — derived (83 UI + 163 API + _app.js) |
+| API operations | 247 | openapi.yaml operationId count — derived |
+| URL paths | 190 | openapi.yaml unique paths — derived |
+| Tests | 769 / 56 suites (pre-existing test interaction failures, see TC-11) | jest — derived |
+| Proxy conformance | 163 / 163 | apps/web/pages/api/ — derived |
 | Transition maps | 7 | src/workflows/transitions.ts — derived |
-| Audit findings open | 1 (API-03: owner routes in openapi.yaml) | docs/AUDIT.md — manual |
-| Audit findings resolved | 9 (BA-01, BA-02, API-01/02, DB-02/03, ENV-01, CI-02/03, DOC-01/02) | 2026-03-21 |
-| Last auto-sync | 2026-03-22 | blueprint.js |
-| Last manual review | 2026-03-25 | human |
+| Audit findings open | 3 (SI-2/3/4: legal model orgId doc drift) | docs/AUDIT.md — manual |
+| Audit findings resolved | 91 | docs/AUDIT.md — manual |
+| Last auto-sync | 2026-03-31 | blueprint.js |
+| Last manual review | 2026-03-31 | human |
 
 > Derived fields are auto-updated by `npm run blueprint`. Manual fields must be updated at the end of each slice.
-> Audit finding counts marked ⚠️ — AUDIT.md predates Slices 1–3 remediation; reconcile after committing those slices.
+
+---
+
+## Owner Surface Segregation Rules
+
+> **Full rules:** See [docs/OWNER_SURFACE.md](docs/OWNER_SURFACE.md) — dashboard vs reporting separation, shared-topic framing, implementation preference, copy guidance.

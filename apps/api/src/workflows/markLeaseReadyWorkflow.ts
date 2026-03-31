@@ -3,7 +3,8 @@
  *
  * Canonical entry point for marking a lease as READY_TO_SIGN.
  * This is the heaviest lease orchestration: validates required fields,
- * auto-provisions Tenant + Occupancy records, and transitions status.
+ * auto-provisions Tenant + Occupancy records, transitions status, and
+ * creates + immediately sends the SignatureRequest so sentAt is populated.
  *
  * Orchestrates:
  *   1. Fetch lease + org ownership check
@@ -13,7 +14,8 @@
  *   5. Auto-provision Tenant + Occupancy (ensureTenantAndOccupancy)
  *   6. Persist status change
  *   7. Emit LEASE_STATUS_CHANGED event
- *   8. Return updated lease DTO
+ *   8. Create SignatureRequest (DRAFT) then immediately send it (SENT + sentAt)
+ *   9. Return updated lease DTO + sent SignatureRequest
  */
 
 import { LeaseStatus } from "@prisma/client";
@@ -31,15 +33,26 @@ import {
 } from "../repositories/leaseRepository";
 import { mapLeaseToDTO, type LeaseDTO } from "../services/leases";
 import { normalizePhoneToE164 } from "../utils/phoneNormalization";
+import {
+  createSignatureRequest,
+  sendSignatureRequest,
+  type SignatureRequestDTO,
+  type SignerInfo,
+} from "../services/signatureRequests";
+import { notifyTenantLeaseReady } from "../services/notifications";
+import { resolveTenantUserId } from "../services/tenantIdentity";
 
 // ─── Input / Output ────────────────────────────────────────────
 
 export interface MarkLeaseReadyInput {
   leaseId: string;
+  level?: 'SES' | 'AES' | 'QES';
+  signers?: SignerInfo[];
 }
 
 export interface MarkLeaseReadyResult {
   dto: LeaseDTO;
+  signatureRequest: SignatureRequestDTO;
 }
 
 // ─── Workflow ──────────────────────────────────────────────────
@@ -49,7 +62,7 @@ export async function markLeaseReadyWorkflow(
   input: MarkLeaseReadyInput,
 ): Promise<MarkLeaseReadyResult> {
   const { orgId, prisma } = ctx;
-  const { leaseId } = input;
+  const { leaseId, level, signers } = input;
 
   // ── 1. Fetch + org check ───────────────────────────────────
   const existing = await findLeaseRaw(prisma, leaseId);
@@ -101,7 +114,39 @@ export async function markLeaseReadyWorkflow(
     },
   }).catch((err) => console.error("[EVENT] Failed to emit LEASE_STATUS_CHANGED", err));
 
-  return { dto };
+  // ── 8. Create + send SignatureRequest ──────────────────────
+  // Creating in DRAFT then immediately sending ensures sentAt is always
+  // populated, which is the canonical source for sentForSignatureAt in
+  // LeaseDTO (batch-joined in listLeases).
+  const draftSigReq = await createSignatureRequest({ orgId, leaseId, level, signers });
+  const signatureRequest = await sendSignatureRequest(draftSigReq.id, orgId);
+
+  // ── 9. Notify tenant that lease is ready to sign ───────────
+  try {
+    if (existing.unitId) {
+      const occupancy = await prisma.occupancy.findFirst({
+        where: { unitId: existing.unitId },
+        include: { tenant: true },
+      });
+      if (occupancy?.tenant) {
+        const userId = await resolveTenantUserId(prisma, orgId, occupancy.tenantId);
+        const unit = await prisma.unit.findUnique({
+          where: { id: existing.unitId },
+          include: { building: true },
+        });
+        await notifyTenantLeaseReady(
+          leaseId, orgId, userId,
+          unit?.unitNumber || "unknown",
+          unit?.building?.name || "Property",
+          unit?.buildingId || undefined,
+        );
+      }
+    }
+  } catch (notifErr) {
+    console.error("[LEASE-WORKFLOW] Failed to notify tenant of ready-to-sign:", notifErr);
+  }
+
+  return { dto, signatureRequest };
 }
 
 // ─── Private: Tenant + Occupancy provisioning ──────────────────

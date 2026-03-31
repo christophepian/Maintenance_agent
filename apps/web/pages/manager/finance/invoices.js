@@ -1,5 +1,7 @@
 import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { useRouter } from "next/router";
+import Link from "next/link";
+import { QRCodeSVG } from "qrcode.react";
 import AppShell from "../../../components/AppShell";
 import PageShell from "../../../components/layout/PageShell";
 import PageHeader from "../../../components/layout/PageHeader";
@@ -12,7 +14,7 @@ import { authHeaders } from "../../../lib/api";
 
 /* ─── Helpers ─────────────────────────────────────────────── */
 
-const INVOICE_SORT_FIELDS = ["status", "invoiceNumber", "amount", "createdAt"];
+const INVOICE_SORT_FIELDS = ["status", "invoiceNumber", "amount", "createdAt", "issuer", "recipient", "building"];
 
 function invoiceFieldExtractor(inv, field) {
   switch (field) {
@@ -20,15 +22,27 @@ function invoiceFieldExtractor(inv, field) {
     case "invoiceNumber": return inv.invoiceNumber ?? "";
     case "amount": return inv.totalAmount ?? inv.amount ?? -1;
     case "createdAt": return inv.createdAt || "";
+    case "issuer": return (inv.issuerName || "").toLowerCase();
+    case "recipient": return (inv.recipientName || "").toLowerCase();
+    case "building": return ((inv.buildingName || "") + (inv.unitNumber || "")).toLowerCase();
     default: return "";
   }
 }
 
-const STATUS_TABS = [
+const INCOMING_STATUS_TABS = [
   { key: "ALL", label: "All" },
   { key: "DRAFT", label: "Draft" },
   { key: "ISSUED", label: "Issued" },
   { key: "APPROVED", label: "Approved" },
+  { key: "PAID", label: "Paid" },
+  { key: "DISPUTED", label: "Disputed" },
+];
+
+const OUTGOING_STATUS_TABS = [
+  { key: "ALL", label: "All" },
+  { key: "DRAFT", label: "Draft" },
+  { key: "ISSUED", label: "Sent" },
+  { key: "APPROVED", label: "Pending" },
   { key: "PAID", label: "Paid" },
   { key: "DISPUTED", label: "Disputed" },
 ];
@@ -62,6 +76,43 @@ function StatusBadge({ status }) {
       {status}
     </span>
   );
+}
+
+/* ─── Ingestion badges & source icons ─────────────────────── */
+
+const INGESTION_CLS = {
+  PENDING_REVIEW: "bg-amber-100 text-amber-700",
+  AUTO_CONFIRMED: "bg-green-100 text-green-700",
+  CONFIRMED: "bg-emerald-100 text-emerald-700",
+  REJECTED: "bg-red-100 text-red-700",
+};
+const INGESTION_LABEL = {
+  PENDING_REVIEW: "Needs review",
+  AUTO_CONFIRMED: "Auto-confirmed",
+  CONFIRMED: "Confirmed",
+  REJECTED: "Rejected",
+};
+
+function IngestionBadge({ ingestionStatus }) {
+  if (!ingestionStatus) return null;
+  return (
+    <span className={"inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ml-1.5 " + (INGESTION_CLS[ingestionStatus] || "bg-slate-100 text-slate-600")}>
+      {INGESTION_LABEL[ingestionStatus] || ingestionStatus}
+    </span>
+  );
+}
+
+const SOURCE_LABEL = {
+  BROWSER_UPLOAD: { text: "Upload", cls: "bg-sky-50 text-sky-700 border-sky-200" },
+  EMAIL_PDF: { text: "Email", cls: "bg-violet-50 text-violet-700 border-violet-200" },
+  MOBILE_CAPTURE: { text: "Mobile", cls: "bg-teal-50 text-teal-700 border-teal-200" },
+  MANUAL: { text: "Manual", cls: "bg-slate-50 text-slate-600 border-slate-200" },
+};
+
+function SourceChannelIcon({ channel }) {
+  if (!channel || !SOURCE_LABEL[channel]) return null;
+  const { text, cls } = SOURCE_LABEL[channel];
+  return <span title={channel} className={"inline-flex items-center rounded border px-1.5 py-0.5 text-[10px] font-medium mr-1 " + cls}>{text}</span>;
 }
 
 /* ─── ActionDropdown (same pattern as vacancies) ──────────── */
@@ -280,14 +331,195 @@ function DisputeModal({ invoiceId, onConfirm, onCancel }) {
   );
 }
 
-/* ─── Main Page ───────────────────────────────────────────── */
+/* ─── Upload Invoice Modal ────────────────────────────────── */
 
-export default function ManagerInvoicesPage() {
+function UploadInvoiceModal({ onClose, onSuccess }) {
+  const [file, setFile] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+
+  useEffect(() => {
+    function onKey(e) { if (e.key === "Escape") onClose(); }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  async function handleUpload(e) {
+    e.preventDefault();
+    if (!file) return;
+    setUploading(true);
+    setUploadError("");
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("sourceChannel", "BROWSER_UPLOAD");
+      formData.append("direction", "INCOMING");
+      const res = await fetch("/api/invoices/ingest", {
+        method: "POST",
+        headers: authHeaders(),
+        body: formData,
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data?.error?.message || "Upload failed");
+      }
+      onSuccess();
+      onClose();
+    } catch (err) {
+      setUploadError(err.message || "Upload failed");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={onClose}>
+      <form
+        onSubmit={handleUpload}
+        onClick={(e) => e.stopPropagation()}
+        className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 p-6"
+      >
+        <h3 className="text-lg font-semibold text-slate-900 mt-0 mb-1">Upload Invoice</h3>
+        <p className="text-sm text-slate-500 mt-0 mb-4">
+          Upload a PDF or image of an invoice. It will be scanned and pre-filled automatically.
+        </p>
+        <input
+          type="file"
+          accept=".pdf,image/*"
+          onChange={(e) => setFile(e.target.files?.[0] || null)}
+          className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+        />
+        {uploadError && (
+          <p className="text-sm text-red-600 mt-2">{uploadError}</p>
+        )}
+        <div className="flex justify-end gap-2 mt-4">
+          <button type="button" onClick={onClose} className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition">Cancel</button>
+          <button type="submit" disabled={!file || uploading} className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition disabled:opacity-50">
+            {uploading ? "Scanning…" : "Upload & Scan"}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+/* ─── Capture Session (QR) Modal ──────────────────────────── */
+
+function CaptureSessionModal({ onClose, onComplete }) {
+  const [session, setSession] = useState(null);
+  const [creating, setCreating] = useState(true);
+  const [createError, setCreateError] = useState("");
+  const [completed, setCompleted] = useState(false);
+  const pollRef = useRef(null);
+
+  useEffect(() => {
+    function onKey(e) { if (e.key === "Escape") onClose(); }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  // Create capture session on mount
+  useEffect(() => {
+    let cancelled = false;
+    async function create() {
+      try {
+        const res = await fetch("/api/capture-sessions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...authHeaders() },
+          body: JSON.stringify({}),
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data?.error?.message || "Failed to create session");
+        }
+        const data = await res.json();
+        if (!cancelled) {
+          setSession(data.data);
+          setCreating(false);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setCreateError(err.message || "Failed to create session");
+          setCreating(false);
+        }
+      }
+    }
+    create();
+    return () => { cancelled = true; };
+  }, []);
+
+  // Poll for session completion
+  useEffect(() => {
+    if (!session?.id || completed) return;
+    pollRef.current = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/capture-sessions/${session.id}`, { headers: authHeaders() });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.data?.status === "COMPLETED") {
+            setCompleted(true);
+            clearInterval(pollRef.current);
+            onComplete();
+          }
+        }
+      } catch { /* ignore poll errors */ }
+    }, 3000);
+    return () => clearInterval(pollRef.current);
+  }, [session?.id, completed, onComplete]);
+
+  const mobileUrl = session?.mobileUrl || "";
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={onClose}>
+      <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-xl shadow-2xl w-full max-w-sm mx-4 p-6">
+        <h3 className="text-lg font-semibold text-slate-900 mt-0 mb-1">📷 Capture with Phone</h3>
+        {creating ? (
+          <p className="text-sm text-slate-500">Creating capture session…</p>
+        ) : createError ? (
+          <div>
+            <p className="text-sm text-red-600 mb-3">{createError}</p>
+            <button onClick={onClose} className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition">Close</button>
+          </div>
+        ) : completed ? (
+          <div className="text-center py-4">
+            <p className="text-2xl mb-2">✅</p>
+            <p className="text-sm font-medium text-emerald-700 mb-1">Photos received!</p>
+            <p className="text-xs text-slate-500 mb-4">The invoice is being processed.</p>
+            <button onClick={onClose} className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 transition">Done</button>
+          </div>
+        ) : (
+          <div>
+            <p className="text-sm text-slate-500 mt-0 mb-4">
+              Scan this QR code with your phone to capture a paper invoice.
+            </p>
+            <div className="flex justify-center mb-4">
+              <QRCodeSVG value={mobileUrl} size={200} level="M" />
+            </div>
+            <div className="bg-slate-50 rounded-lg p-2 mb-3">
+              <p className="text-[10px] text-slate-400 uppercase tracking-wide mb-0.5">Mobile link</p>
+              <p className="text-xs text-slate-600 break-all font-mono select-all m-0">{mobileUrl}</p>
+            </div>
+            <p className="text-[10px] text-slate-400 text-center mb-3">
+              Session expires in 15 minutes. Waiting for photos…
+            </p>
+            <div className="flex justify-end">
+              <button onClick={onClose} className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition">Cancel</button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Embeddable invoices content ─────────────────────────── */
+
+export function InvoicesContent() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [invoices, setInvoices] = useState([]);
-  const [activeTab, setActiveTab] = useState("ALL");
+  const [direction, setDirection] = useState("incoming"); // "incoming" | "outgoing" | "pending"
   const [actionLoading, setActionLoading] = useState(null);
 
   // Overlay state
@@ -296,9 +528,9 @@ export default function ManagerInvoicesPage() {
   // Dispute modal state
   const [disputeInvoiceId, setDisputeInvoiceId] = useState(null);
 
-  useEffect(() => {
-    if (router.query.status) setActiveTab(router.query.status);
-  }, [router.query.status]);
+  // Upload & capture modals
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [showCaptureModal, setShowCaptureModal] = useState(false);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -317,10 +549,28 @@ export default function ManagerInvoicesPage() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  const filteredInvoices = useMemo(() => {
-    if (activeTab === "ALL") return invoices;
-    return invoices.filter((inv) => inv.status === activeTab);
-  }, [invoices, activeTab]);
+  const isOutgoing = direction === "outgoing";
+  const isPending = direction === "pending";
+
+  const pendingReviewCount = useMemo(
+    () => invoices.filter((inv) => inv.ingestionStatus === "PENDING_REVIEW").length,
+    [invoices]
+  );
+
+  const directionFiltered = useMemo(() => {
+    if (isPending) {
+      return invoices.filter((inv) => inv.ingestionStatus === "PENDING_REVIEW");
+    }
+    // Use direction field if available, fallback to leaseId heuristic
+    return invoices.filter((inv) => {
+      if (inv.direction) return isOutgoing ? inv.direction === "OUTGOING" : inv.direction === "INCOMING";
+      return isOutgoing ? !!inv.leaseId : !inv.leaseId;
+    });
+  }, [invoices, isOutgoing, isPending]);
+
+  const filteredInvoices = directionFiltered;
+
+  const [tableExpanded, setTableExpanded] = useState(false);
 
   const { sortField, sortDir, handleSort } = useTableSort(router, INVOICE_SORT_FIELDS);
   const sortedInvoices = useMemo(
@@ -332,6 +582,9 @@ export default function ManagerInvoicesPage() {
     () => pager.pageSlice(sortedInvoices),
     [sortedInvoices, pager.pageSlice]
   );
+
+  const COLLAPSED_ROWS = 5;
+  const visibleInvoices = tableExpanded ? pageInvoices : sortedInvoices.slice(0, COLLAPSED_ROWS);
 
   /* ─── Actions ─── */
 
@@ -419,80 +672,145 @@ export default function ManagerInvoicesPage() {
   }
 
   return (
-    <AppShell role="MANAGER">
-      <PageShell>
-        <PageHeader title="Invoices" />
-        <PageContent>
-          {error && (
-            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 mb-4 flex items-center justify-between">
-              <span className="text-sm text-red-700"><strong>Error:</strong> {error}</span>
-              <button onClick={() => setError("")} className="text-xs text-red-500 hover:text-red-700 ml-4">Dismiss</button>
-            </div>
-          )}
+    <>
+      {error && (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 mb-4 flex items-center justify-between">
+          <span className="text-sm text-red-700"><strong>Error:</strong> {error}</span>
+          <button onClick={() => setError("")} className="text-xs text-red-500 hover:text-red-700 ml-4">Dismiss</button>
+        </div>
+      )}
 
-          {/* Status Tabs */}
-          <div className="tab-strip">
-            {STATUS_TABS.map((tab) => {
-              const count = tab.key === "ALL"
-                ? invoices.length
-                : invoices.filter((inv) => inv.status === tab.key).length;
-              return (
-                <button
-                  key={tab.key}
-                  onClick={() => setActiveTab(tab.key)}
-                  className={activeTab === tab.key ? "tab-btn-active" : "tab-btn"}
+      {/* Top bar: direction toggle + action buttons */}
+      <div className="flex flex-wrap items-center justify-between gap-3 my-4">
+        {/* Direction toggle */}
+        <div className="inline-flex rounded-lg border border-slate-200 bg-slate-100 p-0.5 gap-0.5">
+          {[
+            { key: "incoming", label: "Incoming" },
+            { key: "outgoing", label: "Outgoing" },
+            { key: "pending", label: `Pending Review${pendingReviewCount ? ` (${pendingReviewCount})` : ""}` },
+          ].map(({ key, label }) => (
+            <button
+              key={key}
+              onClick={() => { setDirection(key); setTableExpanded(false); }}
+              className={[
+                "rounded-md px-4 py-1.5 text-sm font-medium transition-colors",
+                direction === key
+                  ? key === "pending"
+                    ? "bg-amber-50 text-amber-800 shadow-sm"
+                    : "bg-white text-slate-900 shadow-sm"
+                  : "text-slate-500 hover:text-slate-700",
+              ].join(" ")}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {/* Action buttons */}
+        <div className="flex gap-2">
+          {direction === "outgoing" && (
+            <Link
+              href="/manager/finance/invoices/new"
+              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition no-underline"
+            >
+              + New Invoice
+            </Link>
+          )}
+          {direction !== "outgoing" && (
+            <>
+              <button
+                onClick={() => setShowUploadModal(true)}
+                className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-medium text-blue-700 hover:bg-blue-100 transition"
+              >
+                🖥 Upload Invoice
+              </button>
+              <button
+                onClick={() => setShowCaptureModal(true)}
+                className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-medium text-blue-700 hover:bg-blue-100 transition"
+              >
+                📷 Capture with Phone
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+
+      {loading ? (
+        <Panel><p className="loading-text">Loading invoices…</p></Panel>
+      ) : filteredInvoices.length === 0 ? (
+        <div className="empty-state"><p className="empty-state-text">No invoices match this filter.</p></div>
+      ) : (
+        <Panel bodyClassName="p-0">
+          <table className="inline-table">
+            <thead>
+              <tr>
+                <SortableHeader label="Status" field="status" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
+                <SortableHeader label="Invoice #" field="invoiceNumber" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
+                <SortableHeader label={isOutgoing ? "Tenant" : "Issuer"} field={isOutgoing ? "recipient" : "issuer"} sortField={sortField} sortDir={sortDir} onSort={handleSort} />
+                <SortableHeader label="Building · Unit" field="building" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
+                <SortableHeader label="Amount" field="amount" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
+                <SortableHeader label="Created" field="createdAt" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
+                <th className="text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {visibleInvoices.map((inv) => (
+                <tr
+                  key={inv.id}
+                  onClick={() => router.push(`/manager/finance/invoices/${inv.id}`)}
+                  className="cursor-pointer"
                 >
-                  {tab.label} ({count})
-                </button>
-              );
-            })}
+                  <td>
+                    <div className="flex items-center flex-wrap gap-1">
+                      {!isOutgoing && <SourceChannelIcon channel={inv.sourceChannel} />}
+                      <StatusBadge status={inv.status} />
+                      <IngestionBadge ingestionStatus={inv.ingestionStatus} />
+                    </div>
+                  </td>
+                  <td className="cell-bold">{inv.invoiceNumber || inv.id.slice(0, 8)}</td>
+                  <td>{isOutgoing ? (inv.recipientName || "—") : (inv.issuerName || "—")}</td>
+                  <td>
+                    {inv.buildingName || inv.unitNumber
+                      ? <span>{inv.buildingName || "—"}{inv.unitNumber ? <span className="text-slate-400"> · {inv.unitNumber}</span> : null}</span>
+                      : "—"}
+                  </td>
+                  <td>{getAmount(inv)}</td>
+                  <td>{formatDate(inv.createdAt)}</td>
+                  <td className="text-right">
+                    <ActionDropdown actions={buildActions(inv)} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {/* Expand / collapse row */}
+          <div
+            className="flex items-center justify-center gap-1.5 px-4 py-2.5 border-t border-slate-100 cursor-pointer hover:bg-slate-50 transition-colors text-sm text-slate-500 select-none"
+            onClick={() => setTableExpanded((e) => !e)}
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+              className={`w-4 h-4 transition-transform duration-200 ${tableExpanded ? "rotate-180" : ""}`}
+            >
+              <path fillRule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
+            </svg>
+            {tableExpanded
+              ? "Show less"
+              : `Show all ${sortedInvoices.length} invoice${sortedInvoices.length !== 1 ? "s" : ""}`}
           </div>
-
-          {loading ? (
-            <Panel><p className="loading-text">Loading invoices…</p></Panel>
-          ) : filteredInvoices.length === 0 ? (
-            <div className="empty-state"><p className="empty-state-text">No invoices match this filter.</p></div>
-          ) : (
-            <Panel bodyClassName="p-0">
-              <table className="inline-table">
-                <thead>
-                  <tr>
-                    <SortableHeader label="Status" field="status" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
-                    <SortableHeader label="Invoice #" field="invoiceNumber" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
-                    <SortableHeader label="Amount" field="amount" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
-                    <SortableHeader label="Created" field="createdAt" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
-                    <th className="text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {pageInvoices.map((inv) => (
-                    <tr
-                      key={inv.id}
-                      onClick={() => setOverlayInvoiceId(inv.id)}
-                      className="cursor-pointer"
-                    >
-                      <td><StatusBadge status={inv.status} /></td>
-                      <td className="cell-bold">{inv.invoiceNumber || inv.id.slice(0, 8)}</td>
-                      <td>{getAmount(inv)}</td>
-                      <td>{formatDate(inv.createdAt)}</td>
-                      <td className="text-right">
-                        <ActionDropdown actions={buildActions(inv)} />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              <PaginationControls
-                currentPage={pager.currentPage}
-                totalPages={pager.totalPages}
-                totalItems={sortedInvoices.length}
-                pageSize={pager.pageSize}
-                onPageChange={pager.setPage}
-              />
-            </Panel>
+          {tableExpanded && (
+            <PaginationControls
+              currentPage={pager.currentPage}
+              totalPages={pager.totalPages}
+              totalItems={sortedInvoices.length}
+              pageSize={pager.pageSize}
+              onPageChange={pager.setPage}
+            />
           )}
-        </PageContent>
-      </PageShell>
+        </Panel>
+      )}
 
       {/* Invoice PDF Overlay */}
       <InvoiceOverlay
@@ -508,6 +826,37 @@ export default function ManagerInvoicesPage() {
           onCancel={() => setDisputeInvoiceId(null)}
         />
       )}
+
+      {/* Upload Invoice Modal */}
+      {showUploadModal && (
+        <UploadInvoiceModal
+          onClose={() => setShowUploadModal(false)}
+          onSuccess={loadData}
+        />
+      )}
+
+      {/* Capture Session (QR) Modal */}
+      {showCaptureModal && (
+        <CaptureSessionModal
+          onClose={() => setShowCaptureModal(false)}
+          onComplete={loadData}
+        />
+      )}
+    </>
+  );
+}
+
+/* ─── Main Page ───────────────────────────────────────────── */
+
+export default function ManagerInvoicesPage() {
+  return (
+    <AppShell role="MANAGER">
+      <PageShell>
+        <PageHeader title="Invoices" />
+        <PageContent>
+          <InvoicesContent />
+        </PageContent>
+      </PageShell>
     </AppShell>
   );
 }

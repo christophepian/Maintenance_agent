@@ -4,6 +4,7 @@ import { sendError, sendJson } from "../http/json";
 import { readJson } from "../http/body";
 import { first } from "../http/query";
 import { encodeToken } from "../services/auth";
+import { registerUser, authenticateUser } from "../services/userService";
 import { requireTenantSession } from "../authz";
 import { getTenantSession } from "../services/tenantSession";
 import { listTenantLeases, getTenantLease, tenantAcceptLease } from "../services/tenantPortal";
@@ -488,24 +489,8 @@ export function registerAuthRoutes(router: Router) {
         if (!allowOwner) return sendError(res, 403, "FORBIDDEN", "OWNER registration disabled");
       }
 
-      const passwordHash = await bcrypt.hash(password, 10);
-      const user = await prisma.user.create({
-        data: { orgId, email, name, passwordHash, role: role || "TENANT" },
-      });
-
-      const token = encodeToken({
-        userId: user.id,
-        orgId: user.orgId,
-        email: user.email || email,
-        role: user.role,
-      });
-
-      sendJson(res, 201, {
-        data: {
-          token,
-          user: { id: user.id, orgId: user.orgId, email: user.email, name: user.name, role: user.role },
-        },
-      });
+      const result = await registerUser(prisma, orgId, { email, password, name, role });
+      sendJson(res, 201, { data: result });
     } catch (e: any) {
       if (e?.code === "P2002") return sendError(res, 409, "CONFLICT", "Email already registered");
       const msg = String(e?.message || e);
@@ -522,28 +507,10 @@ export function registerAuthRoutes(router: Router) {
       if (!parsed.success) return sendError(res, 400, "VALIDATION_ERROR", "Invalid login input", parsed.error.flatten());
 
       const { email, password } = parsed.data;
-      const user = await prisma.user.findUnique({
-        where: { user_org_email_unique: { orgId, email } },
-      });
+      const result = await authenticateUser(prisma, orgId, { email, password });
+      if (!result) return sendError(res, 401, "UNAUTHORIZED", "Invalid credentials");
 
-      if (!user || !user.passwordHash) return sendError(res, 401, "UNAUTHORIZED", "Invalid credentials");
-
-      const ok = await bcrypt.compare(password, user.passwordHash);
-      if (!ok) return sendError(res, 401, "UNAUTHORIZED", "Invalid credentials");
-
-      const token = encodeToken({
-        userId: user.id,
-        orgId: user.orgId,
-        email: user.email || email,
-        role: user.role,
-      });
-
-      sendJson(res, 200, {
-        data: {
-          token,
-          user: { id: user.id, orgId: user.orgId, email: user.email, name: user.name, role: user.role },
-        },
-      });
+      sendJson(res, 200, { data: result });
     } catch (e: any) {
       const msg = String(e?.message || e);
       if (msg === "Invalid JSON") return sendError(res, 400, "INVALID_JSON", "Invalid JSON");

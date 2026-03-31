@@ -6,6 +6,7 @@ export type BillingEntityDTO = {
   orgId: string;
   type: BillingEntityType;
   contractorId?: string;
+  userId?: string;
   name: string;
   addressLine1: string;
   addressLine2?: string;
@@ -24,6 +25,7 @@ export type CreateBillingEntityParams = {
   orgId: string;
   type: BillingEntityType;
   contractorId?: string;
+  userId?: string;
   name: string;
   addressLine1: string;
   addressLine2?: string;
@@ -64,13 +66,12 @@ export async function createBillingEntity(
     }
   }
 
-  const existing = await prisma.billingEntity.findFirst({
-    where: {
-      orgId: params.orgId,
-      type: params.type,
-    },
-  });
+  // For OWNER type: one billing entity per user. For other types: one per org.
+  const existingWhere = params.type === BillingEntityType.OWNER && params.userId
+    ? { orgId: params.orgId, type: params.type, userId: params.userId }
+    : { orgId: params.orgId, type: params.type, userId: null };
 
+  const existing = await prisma.billingEntity.findFirst({ where: existingWhere });
   if (existing) {
     throw new Error("BILLING_ENTITY_TYPE_EXISTS");
   }
@@ -80,6 +81,7 @@ export async function createBillingEntity(
       orgId: params.orgId,
       type: params.type,
       contractorId: params.contractorId ?? null,
+      userId: params.userId ?? null,
       name: params.name,
       addressLine1: params.addressLine1,
       addressLine2: params.addressLine2 ?? null,
@@ -193,6 +195,7 @@ function mapBillingEntityToDTO(entity: any): BillingEntityDTO {
     orgId: entity.orgId,
     type: entity.type,
     contractorId: entity.contractorId || undefined,
+    userId: entity.userId || undefined,
     name: entity.name,
     addressLine1: entity.addressLine1,
     addressLine2: entity.addressLine2 || undefined,

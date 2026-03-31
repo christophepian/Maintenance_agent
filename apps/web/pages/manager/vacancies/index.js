@@ -200,9 +200,9 @@ export default function ManagerVacanciesPage() {
           {/* Inventory tab strip — mirrors /manager/inventory */}
           <div className="tab-strip">
             <Link href="/manager/inventory?tab=buildings" className="tab-btn">Buildings</Link>
-            <Link href="/manager/inventory?tab=units" className="tab-btn">Units</Link>
             <button className="tab-btn-active">Vacancies</button>
             <Link href="/manager/inventory?tab=assets" className="tab-btn">Assets</Link>
+            <Link href="/manager/inventory?tab=decisions" className="tab-btn">Maintenance Decisions</Link>
             <Link href="/manager/inventory?tab=depreciation" className="tab-btn">Depreciation</Link>
           </div>
 

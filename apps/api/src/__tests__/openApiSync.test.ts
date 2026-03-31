@@ -124,14 +124,8 @@ describe("OpenAPI spec ↔ Router sync", () => {
 
   // Routes registered in code but not yet documented in openapi.yaml.
   // Track here so the sync test stays green while spec catches up.
-  const KNOWN_UNSPECCED_ROUTES = new Set([
-    "GET /buildings/:id/owners",
-    "GET /buildings/:id/owners/candidates",
-    "POST /buildings/:id/owners",
-    "DELETE /buildings/:id/owners/:userId",
-    "POST /tenant-portal/requests",
-    "GET /buildings/:id/financial-summary",
-    "POST /ledger/backfill",
+  const KNOWN_UNSPECCED_ROUTES = new Set<string>([
+    // All previously-unspecced routes are now documented. Keep set empty.
   ]);
 
   it("every code route has a spec entry", () => {

@@ -23,7 +23,7 @@ ALTER TABLE "Request"
   ALTER COLUMN "requestNumber" SET DEFAULT nextval('"Request_requestNumber_seq"');
 
 -- 5. Set the sequence to continue after the max existing value
-SELECT setval('"Request_requestNumber_seq"', COALESCE((SELECT MAX("requestNumber") FROM "Request"), 0));
+SELECT setval('"Request_requestNumber_seq"', COALESCE((SELECT MAX("requestNumber") FROM "Request"), 1));
 
 -- 6. Add unique constraint
 ALTER TABLE "Request" ADD CONSTRAINT "Request_requestNumber_key" UNIQUE ("requestNumber");

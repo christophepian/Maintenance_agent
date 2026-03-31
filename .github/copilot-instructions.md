@@ -2,10 +2,13 @@
 
 ## Before Every Session
 
-Read these files in full before writing any code:
-1. `PROJECT_STATE.md` — guardrails, architecture decisions, backlog, epic history
-2. `apps/api/src/ARCHITECTURE_LOW_CONTEXT_GUIDE.md` — compact auth helpers, layer rules, quick reference
+Read these files before writing any code:
+1. `PROJECT_OVERVIEW.md` — essential guardrails, architecture, task routing (~220 lines — the default first-read for routine work)
+2. `apps/api/src/ARCHITECTURE_LOW_CONTEXT_GUIDE.md` — file-level lookup for "what file to change for X"
 3. `docs/AUDIT.md` — open findings; check if any apply to files you are about to touch
+
+For deep dives also read:
+- `PROJECT_STATE.md` — full guardrail prose, backlog, state integrity, epic summary table
 
 For schema work also read:
 - `SCHEMA_REFERENCE.md`
@@ -21,7 +24,7 @@ Full-stack Swiss property management platform. Monorepo with Node.js + TypeScrip
 |-|-|
 | Backend | Raw `http.createServer()` — no Express/NestJS. Port 3001. |
 | Frontend | Next.js Pages Router. Port 3000. |
-| Database | PostgreSQL 16 via Docker. Prisma ORM. 48 models · 41 enums · 40 migrations. |
+| Database | PostgreSQL 16 via Docker. Prisma ORM. 54 models · 47 enums · 60 migrations. |
 | Auth | JWT-based. Role enum: MANAGER, CONTRACTOR, TENANT, OWNER. |
 | Personas | Manager · Contractor · Tenant · Owner |
 
@@ -54,7 +57,7 @@ prisma migrate reset  # destroys data
 docker-compose down -v  # destroys volume
 ```
 
-One known exception: LKDE epic used `db push` for shadow DB replay issue — this is a documented one-time exception, not a precedent.
+No exceptions. The former LKDE shadow-DB exception was resolved 2026-03-30 (migration-integrity-recovery slice).
 
 ---
 
@@ -117,20 +120,20 @@ Maintenance_Agent/
 │   ├── routes/          # Thin HTTP handlers
 │   ├── workflows/       # Orchestration + domain events
 │   ├── services/        # Domain logic
-│   ├── repositories/    # Prisma access + canonical includes (13 repos)
-│   ├── events/          # Domain event bus
-│   └── governance/      # Org scoping + authz
+│   ├── repositories/    # Prisma access + canonical includes (17 repos)
+│   ├── events/          # Domain event bus
+│   └── governance/      # Org scoping + authz
 ├── apps/api/prisma/
-│   ├── schema.prisma    # 48 models · 41 enums
-│   └── migrations/      # 40 dirs — never edit past migrations
-├── apps/web/pages/      # 206 pages (75 UI + 131 API proxies)
+│   ├── schema.prisma    # 54 models · 47 enums
+│   └── migrations/      # 60 dirs — never edit past migrations
+├── apps/web/pages/      # 247 pages (83 UI + 163 API proxies)
 ├── apps/web/styles/
 │   └── globals.css       # Tailwind + CSS variables + @layer components (F8)
 ├── packages/api-client/ # Typed DTOs + fetch methods
 ├── infra/               # Docker — PostgreSQL 16
 ├── docs/
 │   ├── blueprint.html   # Live architecture blueprint
-│   ├── AUDIT.md         # 82 findings · 20 resolved
+│   ├── AUDIT.md         # 94 findings · 91 resolved
 │   └── FRONTEND_INVENTORY.md
 └── .github/
     └── copilot-instructions.md  # This file
@@ -140,10 +143,7 @@ Maintenance_Agent/
 
 ## Known Open Issues (check `docs/AUDIT.md` for full list)
 
-- **A-1–A-4** — resolved in Slices 1–3 (invoice workflow bypass, RFP `as any`, auth hardening, lease layer violations)
-- **A-5** — `legal.ts` route-layer violation (19 direct Prisma calls) — still open
-- **CQ-1–CQ-15** — remaining layer violations in routes (legal.ts worst offender)
-- **TC-1–TC-3, TC-6–TC-15** — test coverage gaps
+- **94 findings total, 91 resolved, 3 remaining** (SI-2/3/4 schema doc drift, TC-11 partial)
 - **Multi-org** — `Request` has no `orgId`; `DEFAULT_ORG_ID` still in `authz.ts` fallback (dev only)
 - **Legal DSL** — `LegalVariable` values not wired into DSL condition evaluation
 
@@ -168,3 +168,5 @@ Maintenance_Agent/
 - Do not change `maybeRequireManager` to allow writes — use `requireRole('MANAGER')` for mutations
 - Do not accept `tenantId` as a query param on tenant-portal routes — use `requireTenantSession()`
 - Do not add non-English labels, seed data, or UI text — English only until i18n epic lands (F-UI7)
+- Do not skip contract test updates when changing DTOs
+- Do not run `docker-compose down -v` or `prisma migrate reset` without explicit approval

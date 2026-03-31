@@ -13,12 +13,35 @@ const STATUS_COLORS = {
   INVOICED: "bg-purple-100 text-purple-700",
 };
 
+const URGENCY_COLORS = {
+  LOW:       "bg-slate-100 text-slate-600",
+  MEDIUM:    "bg-blue-100 text-blue-700",
+  HIGH:      "bg-amber-100 text-amber-800",
+  EMERGENCY: "bg-red-100 text-red-700",
+};
+
+function UrgencyPill({ urgency }) {
+  if (!urgency) return null;
+  return (
+    <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${URGENCY_COLORS[urgency] || URGENCY_COLORS.MEDIUM}`}>
+      {urgency.charAt(0) + urgency.slice(1).toLowerCase()}
+    </span>
+  );
+}
+
 export default function OwnerJobs() {
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [filter, setFilter] = useState("ALL");
   const [expandedId, setExpandedId] = useState(null);
+
+  // Filters
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [buildingFilter, setBuildingFilter] = useState("");
+  const [unitFilter, setUnitFilter] = useState("");
+  const [urgencyFilter, setUrgencyFilter] = useState("");
 
   function toggleAccordion(id) { setExpandedId((prev) => (prev === id ? null : id)); }
 
@@ -39,29 +62,29 @@ export default function OwnerJobs() {
     setLoading(false);
   };
 
-  const filteredJobs = filter === "ALL"
-    ? jobs
-    : jobs.filter((j) => j.status === filter);
+  // Derived filter options
+  const buildings = [...new Set(jobs.map((j) => j.request?.unit?.building?.name).filter(Boolean))].sort();
+  const units = [...new Set(
+    jobs
+      .filter((j) => !buildingFilter || j.request?.unit?.building?.name === buildingFilter)
+      .map((j) => j.request?.unit?.unitNumber)
+      .filter(Boolean)
+  )].sort();
+
+  const filteredJobs = jobs.filter((j) => {
+    if (filter !== "ALL" && j.status !== filter) return false;
+    if (dateFrom && j.createdAt < dateFrom) return false;
+    if (dateTo && j.createdAt > dateTo + "T23:59:59") return false;
+    if (buildingFilter && j.request?.unit?.building?.name !== buildingFilter) return false;
+    if (unitFilter && j.request?.unit?.unitNumber !== unitFilter) return false;
+    if (urgencyFilter && j.request?.urgency !== urgencyFilter) return false;
+    return true;
+  });
 
   return (
     <AppShell role="OWNER">
       <PageShell>
-        <PageHeader
-          title="Jobs Overview"
-          actions={
-            <select
-              value={filter}
-              onChange={(e) => setFilter(e.target.value)}
-              className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
-            >
-              <option value="ALL">All Jobs ({jobs.length})</option>
-              <option value="PENDING">Pending ({jobs.filter((j) => j.status === "PENDING").length})</option>
-              <option value="IN_PROGRESS">In Progress ({jobs.filter((j) => j.status === "IN_PROGRESS").length})</option>
-              <option value="COMPLETED">Completed ({jobs.filter((j) => j.status === "COMPLETED").length})</option>
-              <option value="INVOICED">Invoiced ({jobs.filter((j) => j.status === "INVOICED").length})</option>
-            </select>
-          }
-        />
+        <PageHeader title="Jobs Overview" />
 
         <PageContent>
           {error && (
@@ -69,6 +92,67 @@ export default function OwnerJobs() {
               {error}
             </div>
           )}
+
+          {/* Filter bar */}
+          <div className="mb-4 flex flex-wrap items-start gap-3">
+            <div className="flex flex-col items-center justify-end gap-1">
+              <label className="text-xs font-medium text-slate-500">Status</label>
+              <select value={filter} onChange={(e) => setFilter(e.target.value)}
+                className="min-h-[36px] appearance-none rounded-lg border border-slate-200 bg-white px-3 py-2 leading-tight text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                <option value="ALL">All statuses</option>
+                <option value="PENDING">Pending</option>
+                <option value="IN_PROGRESS">In Progress</option>
+                <option value="COMPLETED">Completed</option>
+                <option value="INVOICED">Invoiced</option>
+              </select>
+            </div>
+            <div className="flex flex-col justify-end gap-1">
+              <label className="text-xs font-medium text-slate-500">From</label>
+              <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)}
+                className="h-9 appearance-none rounded-lg border border-slate-200 bg-white px-3 py-2 leading-tight text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+            </div>
+            <div className="flex flex-col justify-end gap-1">
+              <label className="text-xs font-medium text-slate-500">To</label>
+              <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)}
+                className="h-9 appearance-none rounded-lg border border-slate-200 bg-white px-3 py-2 leading-tight text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+            </div>
+            <div className="flex flex-col items-center justify-end gap-1">
+              <label className="text-xs font-medium text-slate-500">Building</label>
+              <select value={buildingFilter} onChange={(e) => { setBuildingFilter(e.target.value); setUnitFilter(""); }}
+                className="min-h-[36px] appearance-none rounded-lg border border-slate-200 bg-white px-3 py-2 leading-tight text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                <option value="">All buildings</option>
+                {buildings.map((b) => <option key={b} value={b}>{b}</option>)}
+              </select>
+            </div>
+            <div className="flex flex-col items-center justify-end gap-1">
+              <label className="text-xs font-medium text-slate-500">Unit</label>
+              <select value={unitFilter} onChange={(e) => setUnitFilter(e.target.value)}
+                className="min-h-[36px] appearance-none rounded-lg border border-slate-200 bg-white px-3 py-2 leading-tight text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                <option value="">All units</option>
+                {units.map((u) => <option key={u} value={u}>{u}</option>)}
+              </select>
+            </div>
+            <div className="flex flex-col items-center justify-end gap-1">
+              <label className="text-xs font-medium text-slate-500">Urgency</label>
+              <select value={urgencyFilter} onChange={(e) => setUrgencyFilter(e.target.value)}
+                className="min-h-[36px] appearance-none rounded-lg border border-slate-200 bg-white px-3 py-2 leading-tight text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                <option value="">All</option>
+                <option value="LOW">Low</option>
+                <option value="MEDIUM">Medium</option>
+                <option value="HIGH">High</option>
+                <option value="EMERGENCY">Emergency</option>
+              </select>
+            </div>
+            {(filter !== "ALL" || dateFrom || dateTo || buildingFilter || unitFilter || urgencyFilter) && (
+              <div className="flex flex-col justify-end gap-1">
+                <span className="text-xs opacity-0 select-none">x</span>
+                <button onClick={() => { setFilter("ALL"); setDateFrom(""); setDateTo(""); setBuildingFilter(""); setUnitFilter(""); setUrgencyFilter(""); }}
+                  className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-500 hover:bg-slate-50">
+                  Clear
+                </button>
+              </div>
+            )}
+          </div>
 
           <Panel>
             {loading ? (
@@ -97,6 +181,7 @@ export default function OwnerJobs() {
                           </span>
                         </div>
                         <div className="flex items-center gap-3">
+                          <UrgencyPill urgency={job.request?.urgency} />
                           {job.actualCost && (
                             <span className="text-sm font-semibold text-slate-700">CHF {job.actualCost}</span>
                           )}

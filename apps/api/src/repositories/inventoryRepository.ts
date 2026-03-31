@@ -567,3 +567,57 @@ export async function findOrgOwners(
     orderBy: { name: "asc" },
   });
 }
+
+/**
+ * Return all OWNER-role users in an org with billing entity data.
+ * Used by GET /people/owners.
+ */
+export async function findOrgOwnersWithBilling(
+  prisma: PrismaClient,
+  orgId: string,
+) {
+  return prisma.user.findMany({
+    where: { orgId, role: "OWNER" },
+    include: { billingEntity: { select: { id: true, name: true, iban: true } } },
+    orderBy: { name: "asc" },
+  });
+}
+
+/**
+ * Find a user by email within an org. Used for duplicate checks.
+ */
+export async function findUserByOrgAndEmail(
+  prisma: PrismaClient,
+  orgId: string,
+  email: string,
+) {
+  return prisma.user.findFirst({ where: { orgId, email } });
+}
+
+/**
+ * Create an owner user with hashed password.
+ */
+export async function createOwnerUser(
+  prisma: PrismaClient,
+  data: { orgId: string; name: string; email: string; passwordHash: string },
+) {
+  return prisma.user.create({
+    data: { orgId: data.orgId, name: data.name, email: data.email, passwordHash: data.passwordHash, role: "OWNER" },
+  });
+}
+
+/**
+ * Find a user by ID within an org and verify they have the OWNER role.
+ * Returns the user if found and is an owner, null otherwise.
+ */
+export async function findOrgOwnerById(
+  prisma: PrismaClient,
+  orgId: string,
+  userId: string,
+): Promise<{ id: string; role: string } | null> {
+  const user = await prisma.user.findFirst({
+    where: { id: userId, orgId },
+    select: { id: true, role: true },
+  });
+  return user;
+}

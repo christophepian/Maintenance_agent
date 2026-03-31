@@ -13,7 +13,6 @@
  * Auth: MANAGER or OWNER only.
  */
 
-import { InvoiceStatus } from "@prisma/client";
 import { Router } from "../http/router";
 import { sendError, sendJson } from "../http/json";
 import { readJson } from "../http/body";
@@ -26,6 +25,9 @@ import {
   getTrialBalance,
   postInvoiceIssued,
   postInvoicePaid,
+  getDraftInvoiceIds,
+  getUnpostedIssuedInvoiceIds,
+  getUnpostedPaidInvoiceIds,
 } from "../services/ledgerService";
 import { getInvoice } from "../services/invoices";
 import { seedSwissTaxonomy } from "../services/coaService";
@@ -132,60 +134,37 @@ export function registerLedgerRoutes(router: Router) {
       // ── 2. Issue DRAFT invoices (fires postInvoiceIssued inside workflow) ──
       let invoicesIssued = 0, invoicesIssuedErrors = 0;
       if (issueDrafts) {
-        const drafts = await prisma.invoice.findMany({
-          where: { orgId, status: InvoiceStatus.DRAFT },
-          select: { id: true },
-        });
-        for (const inv of drafts) {
+        const draftIds = await getDraftInvoiceIds(prisma, orgId);
+        for (const invId of draftIds) {
           try {
             await issueInvoiceWorkflow(
               { orgId, prisma, actorUserId: null },
-              { invoiceId: inv.id },
+              { invoiceId: invId },
             );
             invoicesIssued++;
           } catch (e: any) {
             // Missing billing entity, already issued, etc. — skip gracefully
-            console.warn(`[BACKFILL] Skipping DRAFT invoice ${inv.id}: ${e.message}`);
+            console.warn(`[BACKFILL] Skipping DRAFT invoice ${invId}: ${e.message}`);
             invoicesIssuedErrors++;
           }
         }
       }
 
       // ── 3. Backfill INVOICE_ISSUED for already-issued invoices ──
-      const postedIssued = new Set(
-        (await prisma.ledgerEntry.findMany({
-          where: { orgId, sourceType: "INVOICE_ISSUED" },
-          select: { sourceId: true },
-        })).map((e) => e.sourceId).filter(Boolean) as string[],
-      );
-      const needIssued = await prisma.invoice.findMany({
-        where: { orgId, status: { in: [InvoiceStatus.ISSUED, InvoiceStatus.APPROVED, InvoiceStatus.PAID] } },
-        select: { id: true },
-        orderBy: { createdAt: "asc" },
-      });
+      const unpostedIssuedIds = await getUnpostedIssuedInvoiceIds(prisma, orgId);
       let ledgerIssuedPosted = 0, ledgerIssuedSkipped = 0;
-      for (const inv of needIssued.filter((i) => !postedIssued.has(i.id))) {
-        const dto = await getInvoice(inv.id);
+      for (const invId of unpostedIssuedIds) {
+        const dto = await getInvoice(invId);
         if (!dto) { ledgerIssuedSkipped++; continue; }
         const result = await postInvoiceIssued(prisma, orgId, dto);
         if (result) ledgerIssuedPosted++; else ledgerIssuedSkipped++;
       }
 
       // ── 4. Backfill INVOICE_PAID for paid invoices ─────────
-      const postedPaid = new Set(
-        (await prisma.ledgerEntry.findMany({
-          where: { orgId, sourceType: "INVOICE_PAID" },
-          select: { sourceId: true },
-        })).map((e) => e.sourceId).filter(Boolean) as string[],
-      );
-      const needPaid = await prisma.invoice.findMany({
-        where: { orgId, status: InvoiceStatus.PAID },
-        select: { id: true },
-        orderBy: { createdAt: "asc" },
-      });
+      const unpostedPaidIds = await getUnpostedPaidInvoiceIds(prisma, orgId);
       let ledgerPaidPosted = 0, ledgerPaidSkipped = 0;
-      for (const inv of needPaid.filter((i) => !postedPaid.has(i.id))) {
-        const dto = await getInvoice(inv.id);
+      for (const invId of unpostedPaidIds) {
+        const dto = await getInvoice(invId);
         if (!dto) { ledgerPaidSkipped++; continue; }
         const result = await postInvoicePaid(prisma, orgId, dto);
         if (result) ledgerPaidPosted++; else ledgerPaidSkipped++;

@@ -203,8 +203,8 @@ export default function LeaseTemplatesPage() {
   async function handleCreateFromScratch(e) {
     e.preventDefault();
     setCreateError(null);
-    if (!scratchForm.buildingId || !scratchForm.templateName || !scratchForm.landlordName || !scratchForm.landlordAddress || !scratchForm.landlordZipCity) {
-      setCreateError("Building, template name, landlord name, address, and zip/city are required.");
+    if (!scratchForm.buildingId || !scratchForm.landlordName || !scratchForm.landlordAddress || !scratchForm.landlordZipCity) {
+      setCreateError("Building, landlord name, address, and zip/city are required.");
       return;
     }
     setCreating(true);
@@ -240,16 +240,18 @@ export default function LeaseTemplatesPage() {
     }
   }
 
-  // Auto-fill landlord address from selected building
+  // Auto-fill landlord address and canonical template name from selected building
   function onScratchBuildingChange(id) {
     setScratchForm((f) => ({ ...f, buildingId: id }));
     const b = buildings.find((x) => x.id === id);
-    if (b && !scratchForm.landlordAddress) {
+    if (b) {
       setScratchForm((f) => ({
         ...f,
         buildingId: id,
-        landlordAddress: b.address?.split(",")[0]?.trim() || "",
-        landlordZipCity: b.address?.split(",").slice(1).join(",").trim() || "",
+        // Canonical name: "{Building Name} Template" — always derived from building
+        templateName: `${b.name} Template`,
+        landlordAddress: f.landlordAddress || b.address?.split(",")[0]?.trim() || "",
+        landlordZipCity: f.landlordZipCity || b.address?.split(",").slice(1).join(",").trim() || "",
       }));
     }
   }
@@ -321,13 +323,6 @@ export default function LeaseTemplatesPage() {
                 <form onSubmit={handleCreateFromScratch} className="bg-white rounded-lg border p-6 space-y-4 max-w-2xl">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="col-span-2">
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Template Name *</label>
-                      <input type="text" value={scratchForm.templateName}
-                        onChange={(e) => setScratchForm((f) => ({ ...f, templateName: e.target.value }))}
-                        className="w-full border rounded-md px-3 py-2 text-sm"
-                        placeholder="e.g. Standard 3-room apartment" />
-                    </div>
-                    <div className="col-span-2">
                       <label className="block text-sm font-medium text-slate-700 mb-1">Building *</label>
                       <select value={scratchForm.buildingId}
                         onChange={(e) => onScratchBuildingChange(e.target.value)}
@@ -340,6 +335,16 @@ export default function LeaseTemplatesPage() {
                       {availableBuildings.length === 0 && buildings.length > 0 && (
                         <p className="text-xs text-amber-600 mt-1">All buildings already have a template.</p>
                       )}
+                    </div>
+                    <div className="col-span-2">
+                      <label className="block text-sm font-medium text-slate-700 mb-1">
+                        Template Name
+                        <span className="ml-2 text-xs font-normal text-slate-400">(auto-derived from building)</span>
+                      </label>
+                      <input type="text" value={scratchForm.templateName}
+                        onChange={(e) => setScratchForm((f) => ({ ...f, templateName: e.target.value }))}
+                        className="w-full border rounded-md px-3 py-2 text-sm"
+                        placeholder="Select a building to auto-fill" />
                     </div>
                   </div>
 

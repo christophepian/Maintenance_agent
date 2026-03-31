@@ -1,4 +1,4 @@
-import { PrismaClient, Prisma, RequestStatus, ApprovalSource, PayingParty } from "@prisma/client";
+import { PrismaClient, Prisma, RequestStatus, ApprovalSource, PayingParty, RequestUrgency } from "@prisma/client";
 import { REQUEST_FULL_INCLUDE, REQUEST_SUMMARY_INCLUDE } from "../repositories/requestRepository";
 
 /** Compile-time type for a Request row loaded with REQUEST_FULL_INCLUDE. */
@@ -31,6 +31,7 @@ export type MaintenanceRequestDTO = {
   approvalSource?: ApprovalSource | null;
   rejectionReason?: string | null;
   payingParty?: PayingParty;
+  urgency?: RequestUrgency;
 
   assignedContractor: null | {
     id: string;
@@ -92,6 +93,7 @@ export type MaintenanceRequestDTO = {
     assignedContractorName: string | null;
     payingParty?: PayingParty;
     approvalSource?: ApprovalSource | null;
+    urgency?: RequestUrgency;
   }
 
 type ListOpts = {
@@ -188,6 +190,7 @@ export function toDTO(r: RequestWithFullInclude): MaintenanceRequestDTO {
     approvalSource: r.approvalSource ?? null,
     rejectionReason: r.rejectionReason ?? null,
     payingParty: r.payingParty,
+    urgency: r.urgency,
 
     assignedContractor: r.assignedContractor
       ? {
@@ -228,6 +231,7 @@ export function toSummaryDTO(r: RequestWithSummaryInclude): MaintenanceRequestSu
       assignedContractorName: r.assignedContractor?.name ?? null,
       payingParty: r.payingParty,
       approvalSource: r.approvalSource ?? null,
+      urgency: r.urgency,
       createdAt: r.createdAt instanceof Date ? r.createdAt.toISOString() : String(r.createdAt),
     };
   }

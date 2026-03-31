@@ -21,7 +21,8 @@ function displayDate(iso) {
 
 export default function BuildingDetail() {
   const router = useRouter();
-  const { id } = router.query;
+  const { id, from } = router.query;
+  const backHref = from || "/admin-inventory";
   const [activeTab, setActiveTab] = useState("Building information");
 
   const ui = {
@@ -497,7 +498,7 @@ export default function BuildingDetail() {
     <AppShell role="MANAGER">
       <PageShell variant="embedded">
         <div className="mb-3">
-          <Link href="/admin-inventory" className="text-sm font-medium text-slate-600 hover:text-slate-900">
+          <Link href={backHref} className="text-sm font-medium text-slate-600 hover:text-slate-900">
             ← Back to Inventory
           </Link>
         </div>

@@ -1002,11 +1002,11 @@ This works but adds query complexity and prevents direct org filtering on `Reque
 
 **Status:** ✅ **COMPLETE** — 12 new Prisma models, 6 new enums, 7 service files, 16 API routes, 12 frontend proxy routes, 6 manager pages, 26 integration tests all green
 
-**⚠️ G8 Exception:** Schema applied via `prisma db push` instead of `prisma migrate dev`. Reason: shadow database cannot replay migration `20260223_add_leases` because the `Lease` model was significantly altered in later migrations. The shadow DB migration sequence fails midway. `db push` was used as a one-time exception to sync the 12 LKDE tables. All 43 models verified in the live database. Future schema changes should attempt `migrate dev` first; if the shadow DB issue persists, `db push` remains the fallback for additive-only changes.
+**⚠️ G8 Exception (RESOLVED 2026-03-30):** Schema was originally applied via `prisma db push` instead of `prisma migrate dev`. Reason: shadow database could not replay migration `20260223_add_leases` because the `Lease` model was significantly altered in later migrations. The shadow DB migration sequence failed midway. `db push` was used as a one-time exception to sync the 12 LKDE tables. **This exception was fully resolved in the migration-integrity-recovery slice (2026-03-30):** 5 gap-filling migrations were added, the duplicate-timestamp ordering bug was fixed, and the shadow DB now replays cleanly. `db push` is fully banned — no exceptions remain.
 
 **Overview:** Implements Swiss legal knowledge management for property maintenance — legal source ingestion, rule versioning with DSL evaluation, category-to-topic mappings, depreciation computation from cantonal/national standards, automated legal decision engine for maintenance requests, and RFP (Request for Proposal) lifecycle for contractor bidding. Originally designed as a sidecar system; now wired inline via Legal Auto-Routing (Mar 7) — when `autoLegalRouting` is enabled and a category mapping exists, the engine fires during request creation and auto-creates RFP + sets status to `RFP_PENDING` when obligation is `OBLIGATED`.
 
-**Database Schema (applied via `db push` — 12 new models, 6 new enums):**
+**Database Schema (originally applied via `db push`; retroactively covered by gap-filling migrations — 12 new models, 6 new enums):**
 - New models: `LegalSource`, `LegalVariable`, `LegalVariableVersion`, `LegalRule`, `LegalRuleVersion`, `LegalEvaluationLog`, `LegalCategoryMapping`, `Asset`, `DepreciationStandard`, `Rfp`, `RfpInvite`, `RfpQuote`
 - New enums: `LegalAuthority` (STATUTE, INDUSTRY_STANDARD), `LegalRuleType` (MAINTENANCE_OBLIGATION, DEPRECIATION, RENT_INDEXATION, TERMINATION_DEADLINE), `LegalObligation` (OBLIGATED, DISCRETIONARY, TENANT_RESPONSIBLE, UNKNOWN), `AssetType` (APPLIANCE, FIXTURE, FINISH, STRUCTURAL, SYSTEM, OTHER), `RfpStatus` (DRAFT, OPEN, CLOSED, AWARDED, CANCELLED), `RfpInviteStatus` (INVITED, DECLINED, RESPONDED)
 - Modified models: `Building` (+canton, cantonDerivedAt), `BuildingConfig` (+rfpDefaultInviteCount), `Contractor` (+rfpInvites, rfpQuotes), `Unit` (+assets, rfps)
@@ -2374,4 +2374,60 @@ Added `GET /ledger`, `GET /ledger/trial-balance`, `GET /ledger/accounts/{account
 | Test suites | 43 (13 failing) | 45 (all passing) |
 | Tests | 579 (many failing) | 589 (all passing) |
 | TS errors | 8 | 0 |
+
+---
+
+## Migration Integrity Recovery — 2026-03-30
+
+**Status:** ✅ COMPLETE
+**Motivation:** The G8 `db push` exception had been active since the Legal Knowledge & Decision Engine epic (Mar 6). Multiple schema changes had been applied via `db push` instead of proper migrations, leaving the migration history incomplete and the shadow database unable to replay. This slice retroactively created the missing migrations, fixed ordering bugs, and restored full migration integrity so that `prisma migrate dev` completes with "Already in sync" and the drift check returns an empty migration.
+
+### Root Causes Found and Fixed
+
+1. **Missing gap-filling migrations** — Several schema additions (leases, legal models, asset table, RFP models, and accumulated `db push` drift) had no corresponding migration files. The shadow database could not replay because models referenced in later migrations didn't exist yet.
+
+2. **Duplicate-timestamp ordering bug** — Migration `20260323140000_add_ledger_entry` shared a timestamp prefix with `20260323140000_fin_coa_foundation`, causing non-deterministic ordering. Renamed to `20260323145000_add_ledger_entry` to establish correct sequence.
+
+3. **`setval(0)` bug** — Migration `20260316120000_add_request_number` contained `SELECT setval('"Request_requestNumber_seq"', 0)` which is invalid for PostgreSQL sequences (minimum value is 1). Patched to `setval(..., 1, false)`.
+
+### Gap-Filling Migrations Created
+
+| Migration | Purpose |
+|-----------|---------|
+| `20260223000000_add_leases` | Retroactive migration for `Lease` model and related enums |
+| `20260302000000_add_legal_models` | Retroactive migration for 12 LKDE models and 6 enums |
+| `20260309000000_add_asset_table` | Retroactive migration for `Asset` + `AssetIntervention` models |
+| `20260316140000_add_rfp_models` | Retroactive migration for `Rfp`, `RfpInvite`, `RfpQuote` |
+| `20260330100000_backfill_db_push_drift` | Catches any remaining column/enum drift from prior `db push` usage |
+
+### Verification
+
+- `prisma migrate dev` → "Already in sync" (no pending migrations)
+- `prisma migrate diff --from-schema-datasource --to-schema-datamodel --script` → empty migration
+- Shadow database replays all 60 migrations cleanly from scratch
+- `db push` fully banned — CI step `G8: Reject prisma db push` enforced in `.github/workflows/ci.yml`
+
+### Post-Recovery Hardening (documentation truth pass)
+
+Stale exception language was removed or annotated as resolved across all source-of-truth documents:
+
+| File | Change |
+|------|--------|
+| `apps/api/blueprint.js` | G8 guardrail: removed "LKDE exception" warning, set `warn:false`. SHADOW DB debt item marked ✅ Resolved. |
+| `PROJECT_STATE.md` | Triage Rework + Legal Engine epic summaries: replaced "applied via `db push`" with historical annotation noting resolution. |
+| `SCHEMA_REFERENCE.md` | Updated model count 53→54, enum count 42→47 to match actual schema. |
+| `apps/api/src/ARCHITECTURE_LOW_CONTEXT_GUIDE.md` | Updated header stats: 54 models · 47 enums · 60 migrations · 17 repositories. |
+| `docs/AUDIT.md` | Updated codebase current migration count 55→60. Updated summary table: CQ-1 resolved (40/82 total resolved). |
+| `EPIC_HISTORY.md` | LKDE epic G8 exception annotated as "RESOLVED 2026-03-30". This recovery epic added. |
+
+### Epic Totals
+
+| Metric | Before | After |
+|--------|--------|-------|
+| Models | 54 | 54 |
+| Enums | 47 | 47 |
+| Migrations | 55 | 60 (+5 gap-filling) |
+| Test suites | 49 | 49 |
+| Tests | 738 | 738 |
+| G8 exceptions | 1 (LKDE) | 0 |
 

@@ -4,19 +4,19 @@ import { useRouter } from "next/router";
 import {
   LayoutDashboard,
   ClipboardCheck,
-  Wrench,
-  Receipt,
-  FileSearch,
+  Landmark,
   Building2,
+  BarChart2,
+  FileText,
 } from "lucide-react";
 
 const OWNER_NAV = [
   { label: "Dashboard",  icon: LayoutDashboard, href: "/owner" },
-  { label: "Approvals",  icon: ClipboardCheck,  href: "/owner/approvals" },
-  { label: "Jobs",       icon: Wrench,          href: "/owner/jobs" },
-  { label: "Invoices",   icon: Receipt,         href: "/owner/invoices" },
-  { label: "RFPs",       icon: FileSearch,      href: "/owner/rfps" },
-  { label: "Properties", icon: Building2,       href: "/owner/properties" },
+  { label: "Reporting",  icon: BarChart2,        href: "/owner/reporting" },
+  { label: "Properties", icon: Building2,        href: "/owner/properties" },
+  { label: "Approvals",  icon: ClipboardCheck,   href: "/owner/approvals" },
+  { label: "Finance",    icon: Landmark,         href: "/owner/finance" },
+  { label: "Invoices",   icon: FileText,         href: "/owner/invoices" },
 ];
 
 export default function OwnerSidebar() {

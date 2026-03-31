@@ -11,6 +11,8 @@ import SortableHeader from "../../../components/SortableHeader";
 import { useTableSort, clientSort } from "../../../lib/tableUtils";
 import { formatChfCents, formatPercent } from "../../../lib/format";
 import { authHeaders } from "../../../lib/api";
+import { InvoicesContent } from "./invoices";
+import BillingEntityManager from "../../../components/BillingEntityManager";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -124,17 +126,15 @@ function fieldExtractor(row, field) {
 
 // ─── Tab definitions ─────────────────────────────────────────────────────────
 
-const TABS = [
+const FINANCE_TABS = [
+  { key: "overview", label: "Overview" },
+  { key: "invoices", label: "Invoices" },
   { key: "payments", label: "Payments" },
   { key: "expenses", label: "Expenses" },
   { key: "charges", label: "Charges" },
-  { key: "invoices", label: "Invoices" },
-];
-
-const ADVANCED_LINKS = [
-  { href: "/manager/finance/ledger", label: "Ledger" },
-  { href: "/manager/finance/chart-of-accounts", label: "Chart of Accounts" },
-  { href: "/manager/finance/billing-entities", label: "Billing Entities" },
+  { key: "billing-entities", label: "Billing Entities" },
+  { key: "accounting", label: "Accounting" },
+  { key: "setup", label: "Setup" },
 ];
 
 // ─── Main Page ───────────────────────────────────────────────────────────────
@@ -142,8 +142,8 @@ const ADVANCED_LINKS = [
 export default function ManagerFinanceHome() {
   const router = useRouter();
 
-  // Tab state
-  const tabKeys = TABS.map((t) => t.key);
+  // Tab state — top-level finance tabs
+  const tabKeys = FINANCE_TABS.map((t) => t.key);
   const activeTab = router.isReady ? (Math.max(0, tabKeys.indexOf(router.query.tab)) || 0) : 0;
   const setActiveTab = useCallback((i) => {
     router.push({ pathname: router.pathname, query: { ...router.query, tab: tabKeys[i] } }, undefined, { shallow: true });
@@ -163,6 +163,7 @@ export default function ManagerFinanceHome() {
   const [leases, setLeases] = useState([]);
   const [recordsLoading, setRecordsLoading] = useState(true);
   const [recordsError, setRecordsError] = useState("");
+  const [buildingsExpanded, setBuildingsExpanded] = useState(false);
 
   // Fetch portfolio summary
   const fetchPortfolio = useCallback(async () => {
@@ -229,159 +230,185 @@ export default function ManagerFinanceHome() {
         <PageHeader title="Finances" />
         <PageContent>
 
-          {/* ── Date range controls ── */}
-          <Panel>
-            <div className="flex flex-wrap items-end gap-3">
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-medium text-gray-600">From</label>
-                <input
-                  type="date"
-                  value={rangeInput.from}
-                  onChange={(e) => setRangeInput((r) => ({ ...r, from: e.target.value }))}
-                  className="border border-gray-300 rounded px-2 py-1 text-sm"
-                />
-              </div>
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-medium text-gray-600">To</label>
-                <input
-                  type="date"
-                  value={rangeInput.to}
-                  onChange={(e) => setRangeInput((r) => ({ ...r, to: e.target.value }))}
-                  className="border border-gray-300 rounded px-2 py-1 text-sm"
-                />
-              </div>
+          {/* ── Top-level finance tab strip ── */}
+          <div className="tab-strip">
+            {FINANCE_TABS.map((tab, i) => (
               <button
-                onClick={applyRange}
-                className="bg-blue-600 text-white text-sm font-medium px-4 py-1.5 rounded hover:bg-blue-700 transition-colors"
+                key={tab.key}
+                onClick={() => setActiveTab(i)}
+                className={activeTab === i ? "tab-btn-active" : "tab-btn"}
               >
-                Apply
+                {tab.label}
               </button>
-              {p && (
-                <span className="text-xs text-gray-400 self-end pb-0.5">
-                  {p.buildingCount} building{p.buildingCount !== 1 ? "s" : ""} · {p.totalActiveUnits} unit{p.totalActiveUnits !== 1 ? "s" : ""}
-                </span>
-              )}
-            </div>
-          </Panel>
+            ))}
+          </div>
 
-          {portfolioError && <div className="notice notice-err mb-4">{portfolioError}</div>}
-
-          {/* ── Portfolio summary cards ── */}
-          {portfolioLoading && !p ? (
-            <p className="loading-text">Loading portfolio summary…</p>
-          ) : p && (
-            <Section title="Portfolio Overview">
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                <SummaryCard label="Earned Income" value={formatChfCents(p.totalEarnedIncomeCents)} accent="green" />
-                <SummaryCard label="Total Expenses" value={formatChfCents(p.totalExpensesCents)} />
-                <SummaryCard
-                  label="Net Result"
-                  value={formatChfCents(p.totalNetIncomeCents)}
-                  accent={netAccent}
-                  sub="Income − Expenses"
-                />
-                <SummaryCard
-                  label="Receivables"
-                  value={formatChfCents(p.totalReceivablesCents)}
-                  accent={p.totalReceivablesCents > 0 ? "amber" : ""}
-                  sub="Unpaid rent invoices"
-                />
-                <SummaryCard
-                  label="Payables"
-                  value={formatChfCents(p.totalPayablesCents)}
-                  accent={p.totalPayablesCents > 0 ? "amber" : ""}
-                  sub="Unpaid supplier invoices"
-                />
-              </div>
-              <div className="flex gap-4 mt-2 text-xs text-gray-500">
-                <span>Avg collection rate: <strong>{formatPercent(p.avgCollectionRate)}</strong></span>
-                {p.buildingsInRed > 0 && (
-                  <span className="text-red-600 font-medium">{p.buildingsInRed} building{p.buildingsInRed !== 1 ? "s" : ""} need attention</span>
-                )}
-              </div>
-            </Section>
-          )}
-
-          {/* ── Per-building table ── */}
-          {p && p.buildings.length > 0 && (
-            <Section title="Buildings">
-              <Panel bodyClassName="p-0">
-                <div style={{ overflowX: "auto" }}>
-                  <table className="inline-table">
-                    <thead>
-                      <tr>
-                        <th>Building</th>
-                        <th className="text-right">Earned Income</th>
-                        <th className="text-right">Expenses</th>
-                        <th className="text-right">Net</th>
-                        <th className="text-right">Collection</th>
-                        <th className="text-right">Receivables</th>
-                        <th></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {p.buildings.map((b) => (
-                        <tr key={b.buildingId}>
-                          <td>
-                            <span className="flex items-center gap-2">
-                              <HealthDot health={b.health} />
-                              <span className="cell-bold">{b.buildingName}</span>
-                            </span>
-                          </td>
-                          <td className="text-right font-mono">{formatChfCents(b.earnedIncomeCents)}</td>
-                          <td className="text-right font-mono">{formatChfCents(b.expensesTotalCents)}</td>
-                          <td className={`text-right font-mono font-semibold ${b.netIncomeCents >= 0 ? "text-emerald-700" : "text-red-600"}`}>
-                            {formatChfCents(b.netIncomeCents)}
-                          </td>
-                          <td className="text-right">{formatPercent(b.collectionRate)}</td>
-                          <td className="text-right font-mono">
-                            {b.receivablesCents > 0
-                              ? <span className="text-amber-700">{formatChfCents(b.receivablesCents)}</span>
-                              : <span className="text-gray-400">—</span>}
-                          </td>
-                          <td className="text-right">
-                            <Link href={`/manager/buildings/${b.buildingId}/financials`} className="text-blue-600 hover:underline text-sm">
-                              Details →
-                            </Link>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+          {/* ══════════════════════════════════════════════════════
+              Tab 0 — Overview
+             ══════════════════════════════════════════════════════ */}
+          {activeTab === 0 && (
+            <>
+              {/* Date range controls */}
+              <Panel>
+                <div className="flex flex-wrap items-end gap-3">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs font-medium text-gray-600">From</label>
+                    <input
+                      type="date"
+                      value={rangeInput.from}
+                      onChange={(e) => setRangeInput((r) => ({ ...r, from: e.target.value }))}
+                      className="border border-gray-300 rounded px-2 py-1 text-sm"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs font-medium text-gray-600">To</label>
+                    <input
+                      type="date"
+                      value={rangeInput.to}
+                      onChange={(e) => setRangeInput((r) => ({ ...r, to: e.target.value }))}
+                      className="border border-gray-300 rounded px-2 py-1 text-sm"
+                    />
+                  </div>
+                  <button
+                    onClick={applyRange}
+                    className="bg-blue-600 text-white text-sm font-medium px-4 py-1.5 rounded hover:bg-blue-700 transition-colors"
+                  >
+                    Apply
+                  </button>
+                  {p && (
+                    <span className="text-xs text-gray-400 self-end pb-0.5">
+                      {p.buildingCount} building{p.buildingCount !== 1 ? "s" : ""} · {p.totalActiveUnits} unit{p.totalActiveUnits !== 1 ? "s" : ""}
+                    </span>
+                  )}
                 </div>
               </Panel>
-            </Section>
+
+              {portfolioError && <div className="notice notice-err mb-4">{portfolioError}</div>}
+
+              {/* Portfolio summary cards */}
+              {portfolioLoading && !p ? (
+                <p className="loading-text">Loading portfolio summary…</p>
+              ) : p && (
+                <Section title="Portfolio Overview">
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                    <SummaryCard label="Earned Income" value={formatChfCents(p.totalEarnedIncomeCents)} accent="green" />
+                    <SummaryCard label="Total Expenses" value={formatChfCents(p.totalExpensesCents)} />
+                    <SummaryCard
+                      label="Net Result"
+                      value={formatChfCents(p.totalNetIncomeCents)}
+                      accent={netAccent}
+                      sub="Income − Expenses"
+                    />
+                    <SummaryCard
+                      label="Receivables"
+                      value={formatChfCents(p.totalReceivablesCents)}
+                      accent={p.totalReceivablesCents > 0 ? "amber" : ""}
+                      sub="Unpaid rent invoices"
+                    />
+                    <SummaryCard
+                      label="Payables"
+                      value={formatChfCents(p.totalPayablesCents)}
+                      accent={p.totalPayablesCents > 0 ? "amber" : ""}
+                      sub="Unpaid supplier invoices"
+                    />
+                  </div>
+                  <div className="flex gap-4 mt-2 text-xs text-gray-500">
+                    <span>Avg collection rate: <strong>{formatPercent(p.avgCollectionRate)}</strong></span>
+                    {p.buildingsInRed > 0 && (
+                      <span className="text-red-600 font-medium">{p.buildingsInRed} building{p.buildingsInRed !== 1 ? "s" : ""} need attention</span>
+                    )}
+                  </div>
+                </Section>
+              )}
+
+              {/* Per-building table */}
+              {p && p.buildings.length > 0 && (
+                <Section title="Buildings">
+                  <Panel bodyClassName="p-0">
+                    <div style={{ overflowX: "auto" }}>
+                      <table className="inline-table">
+                        <thead>
+                          <tr>
+                            <th>Building</th>
+                            <th className="text-right">Earned Income</th>
+                            <th className="text-right">Expenses</th>
+                            <th className="text-right">Net</th>
+                            <th className="text-right">Collection</th>
+                            <th className="text-right">Receivables</th>
+                            <th></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(buildingsExpanded ? p.buildings : p.buildings.slice(0, 5)).map((b) => (
+                            <tr key={b.buildingId}>
+                              <td>
+                                <span className="flex items-center gap-2">
+                                  <HealthDot health={b.health} />
+                                  <span className="cell-bold">{b.buildingName}</span>
+                                </span>
+                              </td>
+                              <td className="text-right font-mono">{formatChfCents(b.earnedIncomeCents)}</td>
+                              <td className="text-right font-mono">{formatChfCents(b.expensesTotalCents)}</td>
+                              <td className={`text-right font-mono font-semibold ${b.netIncomeCents >= 0 ? "text-emerald-700" : "text-red-600"}`}>
+                                {formatChfCents(b.netIncomeCents)}
+                              </td>
+                              <td className="text-right">{formatPercent(b.collectionRate)}</td>
+                              <td className="text-right font-mono">
+                                {b.receivablesCents > 0
+                                  ? <span className="text-amber-700">{formatChfCents(b.receivablesCents)}</span>
+                                  : <span className="text-gray-400">—</span>}
+                              </td>
+                              <td className="text-right">
+                                <Link href={`/manager/buildings/${b.buildingId}/financials`} className="text-blue-600 hover:underline text-sm">
+                                  Details →
+                                </Link>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    {p.buildings.length > 5 && (
+                      <div
+                        className="flex items-center justify-center gap-1.5 px-4 py-2.5 border-t border-slate-100 cursor-pointer hover:bg-slate-50 transition-colors text-sm text-slate-500 select-none"
+                        onClick={() => setBuildingsExpanded((e) => !e)}
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          viewBox="0 0 20 20"
+                          fill="currentColor"
+                          className={`w-4 h-4 transition-transform duration-200 ${buildingsExpanded ? "rotate-180" : ""}`}
+                        >
+                          <path fillRule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
+                        </svg>
+                        {buildingsExpanded
+                          ? "Show less"
+                          : `Show all ${p.buildings.length} buildings`}
+                      </div>
+                    )}
+                  </Panel>
+                </Section>
+              )}
+            </>
           )}
 
-          {/* ── Detailed records ── */}
-          <Section title="Detailed Records">
-            <div className="tab-strip">
-              {TABS.map((tab, i) => (
-                <button
-                  key={tab.key}
-                  onClick={() => setActiveTab(i)}
-                  className={activeTab === i ? "tab-btn-active" : "tab-btn"}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
+          {/* ══════════════════════════════════════════════════════
+              Tab 1 — Invoices
+             ══════════════════════════════════════════════════════ */}
+          {activeTab === 1 && <InvoicesContent />}
 
-            <div className="flex items-center justify-between mb-1">
+          {/* ══════════════════════════════════════════════════════
+              Tab 2 — Payments
+             ══════════════════════════════════════════════════════ */}
+          {activeTab === 2 && (
+            <>
               <span className="tab-panel-count">
-                {activeTab === 0 && `${payments.length} payment${payments.length !== 1 ? "s" : ""}`}
-                {activeTab === 1 && `${expenses.length} expense${expenses.length !== 1 ? "s" : ""}`}
-                {activeTab === 2 && `${leasesWithCharges.length} lease${leasesWithCharges.length !== 1 ? "s" : ""} with charges`}
-                {activeTab === 3 && `${invoices.length} invoice${invoices.length !== 1 ? "s" : ""}`}
+                {`${payments.length} payment${payments.length !== 1 ? "s" : ""}`}
               </span>
-              {activeTab === 3 && <Link href="/manager/finance/invoices" className="full-page-link">Full view →</Link>}
-            </div>
 
-            {recordsError && <div className="notice notice-err mb-2">{recordsError}</div>}
+              {recordsError && <div className="notice notice-err mb-2">{recordsError}</div>}
 
-            <Panel bodyClassName="p-0">
-              {/* Payments */}
-              <div className={activeTab === 0 ? "tab-panel-active" : "tab-panel"}>
+              <Panel bodyClassName="p-0">
                 {recordsLoading ? <p className="loading-text">Loading…</p> : payments.length === 0 ? (
                   <div className="empty-state"><p className="empty-state-text">No paid invoices yet.</p></div>
                 ) : (
@@ -408,10 +435,22 @@ export default function ManagerFinanceHome() {
                     </table>
                   </div>
                 )}
-              </div>
+              </Panel>
+            </>
+          )}
 
-              {/* Expenses */}
-              <div className={activeTab === 1 ? "tab-panel-active" : "tab-panel"}>
+          {/* ══════════════════════════════════════════════════════
+              Tab 3 — Expenses
+             ══════════════════════════════════════════════════════ */}
+          {activeTab === 3 && (
+            <>
+              <span className="tab-panel-count">
+                {`${expenses.length} expense${expenses.length !== 1 ? "s" : ""}`}
+              </span>
+
+              {recordsError && <div className="notice notice-err mb-2">{recordsError}</div>}
+
+              <Panel bodyClassName="p-0">
                 {recordsLoading ? <p className="loading-text">Loading…</p> : expenses.length === 0 ? (
                   <div className="empty-state"><p className="empty-state-text">No categorised expenses yet.</p></div>
                 ) : (
@@ -438,10 +477,22 @@ export default function ManagerFinanceHome() {
                     </table>
                   </div>
                 )}
-              </div>
+              </Panel>
+            </>
+          )}
 
-              {/* Charges */}
-              <div className={activeTab === 2 ? "tab-panel-active" : "tab-panel"}>
+          {/* ══════════════════════════════════════════════════════
+              Tab 4 — Charges
+             ══════════════════════════════════════════════════════ */}
+          {activeTab === 4 && (
+            <>
+              <span className="tab-panel-count">
+                {`${leasesWithCharges.length} lease${leasesWithCharges.length !== 1 ? "s" : ""} with charges`}
+              </span>
+
+              {recordsError && <div className="notice notice-err mb-2">{recordsError}</div>}
+
+              <Panel bodyClassName="p-0">
                 {recordsLoading ? <p className="loading-text">Loading…</p> : leasesWithCharges.length === 0 ? (
                   <div className="empty-state"><p className="empty-state-text">No charge data on any active lease.</p></div>
                 ) : (
@@ -468,52 +519,51 @@ export default function ManagerFinanceHome() {
                     </table>
                   </div>
                 )}
-              </div>
+              </Panel>
+            </>
+          )}
 
-              {/* Invoices */}
-              <div className={activeTab === 3 ? "tab-panel-active" : "tab-panel"}>
-                {recordsLoading ? <p className="loading-text">Loading…</p> : invoices.length === 0 ? (
-                  <div className="empty-state"><p className="empty-state-text">No invoices yet.</p></div>
-                ) : (
-                  <div style={{ overflowX: "auto" }}>
-                    <table className="inline-table">
-                      <thead>
-                        <tr>
-                          <SortableHeader label="Invoice #" field="invoiceNumber" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
-                          <SortableHeader label="Description" field="description" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
-                          <SortableHeader label="Amount" field="amount" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
-                          <SortableHeader label="Status" field="status" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
-                          <SortableHeader label="Date" field="createdAt" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {sortedInvoices.map((inv) => (
-                          <tr key={inv.id}>
-                            <td className="cell-bold">{inv.invoiceNumber || inv.id?.slice(0, 8)}</td>
-                            <td>{inv.description || "—"}</td>
-                            <td>{getInvoiceAmount(inv)}</td>
-                            <td><StatusBadge status={inv.status} /></td>
-                            <td>{formatDate(inv.createdAt)}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
+          {/* ══════════════════════════════════════════════════════
+              Tab 5 — Billing Entities
+             ══════════════════════════════════════════════════════ */}
+          {activeTab === 5 && <BillingEntityManager />}
+
+          {/* ══════════════════════════════════════════════════════
+              Tab 6 — Accounting
+             ══════════════════════════════════════════════════════ */}
+          {activeTab === 6 && (
+            <Panel>
+              <div className="flex flex-col gap-4">
+                <p className="text-sm text-gray-600">
+                  Double-entry ledger and account structure for your portfolio.
+                </p>
+                <div className="flex flex-wrap gap-3">
+                  <Link href="/manager/finance/ledger" className="button-secondary text-sm">
+                    General Ledger
+                  </Link>
+                  <Link href="/manager/finance/chart-of-accounts" className="button-secondary text-sm">
+                    Chart of Accounts
+                  </Link>
+                </div>
               </div>
             </Panel>
-          </Section>
+          )}
 
-          {/* ── Advanced accounting tools ── */}
-          <Section title="Advanced">
-            <div className="flex flex-wrap gap-3">
-              {ADVANCED_LINKS.map((link) => (
-                <Link key={link.href} href={link.href} className="button-secondary text-sm">
-                  {link.label}
-                </Link>
-              ))}
-            </div>
-          </Section>
+          {/* ══════════════════════════════════════════════════════
+              Tab 7 — Setup
+             ══════════════════════════════════════════════════════ */}
+          {activeTab === 7 && (
+            <Panel>
+              <div className="flex flex-col gap-2">
+                <p className="text-sm text-gray-600">
+                  Finance configuration options will appear here as they become available.
+                </p>
+                <p className="text-xs text-gray-400">
+                  Coming soon: default payment terms, VAT presets, currency settings, and invoice templates.
+                </p>
+              </div>
+            </Panel>
+          )}
 
         </PageContent>
       </PageShell>

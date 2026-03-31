@@ -14,17 +14,94 @@ const STATUS_COLORS = {
   DRAFT: "bg-yellow-100 text-yellow-800",
   READY_TO_SIGN: "bg-blue-100 text-blue-800",
   SIGNED: "bg-green-100 text-green-800",
+  ACTIVE: "bg-emerald-100 text-emerald-800",
+  TERMINATED: "bg-slate-100 text-slate-700",
   CANCELLED: "bg-red-100 text-red-800",
 };
 
+// Tabs: Active (ACTIVE+SIGNED), Draft (DRAFT), Submitted (READY_TO_SIGN), Archive (CANCELLED+TERMINATED)
 const LEASE_TABS = [
-  { key: "ACTIVE", label: "Active", statuses: ["SIGNED", "READY_TO_SIGN"] },
-  { key: "DRAFTS", label: "Drafts", statuses: ["DRAFT"] },
-  { key: "TEMPLATES", label: "Templates", statuses: null },
-  { key: "ARCHIVE", label: "Archive", statuses: ["CANCELLED"] },
+  { key: "ACTIVE",     label: "Active",    statuses: ["ACTIVE", "SIGNED"] },
+  { key: "DRAFTS",     label: "Draft",     statuses: ["DRAFT"] },
+  { key: "SUBMITTED",  label: "Submitted", statuses: ["READY_TO_SIGN"] },
+  { key: "TEMPLATES",  label: "Templates", statuses: null },
+  { key: "ARCHIVE",    label: "Archive",   statuses: ["CANCELLED", "TERMINATED"] },
 ];
 
-const TAB_KEYS = ['active', 'drafts', 'templates', 'archive'];
+const TAB_KEYS = ["active", "drafts", "submitted", "templates", "archive"];
+
+// ─── Business-day countdown helpers ────────────────────────────────────────
+
+/** Add N business days (Mon–Fri) to a Date. */
+function addBusinessDays(date, days) {
+  const result = new Date(date);
+  let added = 0;
+  while (added < days) {
+    result.setDate(result.getDate() + 1);
+    const day = result.getDay();
+    if (day !== 0 && day !== 6) added++;
+  }
+  return result;
+}
+
+/** Count business days remaining from today until expiryDate (negative = past). */
+function businessDaysUntil(expiryDate) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const target = new Date(expiryDate);
+  target.setHours(0, 0, 0, 0);
+
+  if (target < today) {
+    // Already expired — count how many business days ago
+    let count = 0;
+    const cursor = new Date(target);
+    while (cursor < today) {
+      cursor.setDate(cursor.getDate() + 1);
+      const d = cursor.getDay();
+      if (d !== 0 && d !== 6) count++;
+    }
+    return -count;
+  }
+
+  let count = 0;
+  const cursor = new Date(today);
+  while (cursor < target) {
+    cursor.setDate(cursor.getDate() + 1);
+    const d = cursor.getDay();
+    if (d !== 0 && d !== 6) count++;
+  }
+  return count;
+}
+
+function CountdownBadge({ sentForSignatureAt }) {
+  if (!sentForSignatureAt) {
+    return <span className="inline-block px-2 py-0.5 rounded text-xs bg-slate-100 text-slate-500">Sent date unavailable</span>;
+  }
+  const expiry = addBusinessDays(new Date(sentForSignatureAt), 5);
+  const remaining = businessDaysUntil(expiry);
+
+  if (remaining < 0) {
+    return (
+      <span className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700">
+        Expired {Math.abs(remaining)} business day{Math.abs(remaining) !== 1 ? "s" : ""} ago
+      </span>
+    );
+  }
+  if (remaining === 0) {
+    return <span className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-700">Due today</span>;
+  }
+  return (
+    <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${remaining <= 1 ? "bg-orange-100 text-orange-700" : "bg-blue-50 text-blue-700"}`}>
+      {remaining} business day{remaining !== 1 ? "s" : ""} left
+    </span>
+  );
+}
+
+function isExpired(sentForSignatureAt) {
+  if (!sentForSignatureAt) return false;
+  const expiry = addBusinessDays(new Date(sentForSignatureAt), 5);
+  return new Date() > expiry;
+}
 
 export default function LeasesPage() {
   const router = useRouter();
@@ -59,6 +136,8 @@ export default function LeasesPage() {
     depositChf: "",
   });
   const [createError, setCreateError] = useState(null);
+  const [expiryLoading, setExpiryLoading] = useState({});
+  const [expiryResult, setExpiryResult] = useState({});
 
   const fetchLeases = useCallback(async () => {
     setLoading(true);
@@ -85,7 +164,7 @@ export default function LeasesPage() {
   // Load buildings for create form
   useEffect(() => {
     if (!showCreate) return;
-    fetch("/api/buildings")
+    fetch("/api/buildings", { headers: authHeaders() })
       .then(r => r.json())
       .then(json => setBuildings(json.data || []))
       .catch(() => {});
@@ -94,7 +173,7 @@ export default function LeasesPage() {
   // Load units when building selected
   useEffect(() => {
     if (!selectedBuildingId) { setUnits([]); return; }
-    fetch(`/api/buildings/${selectedBuildingId}/units`)
+    fetch(`/api/buildings/${selectedBuildingId}/units`, { headers: authHeaders() })
       .then(r => r.json())
       .then(json => setUnits(json.data || []))
       .catch(() => {});
@@ -110,7 +189,7 @@ export default function LeasesPage() {
     try {
       const res = await fetch("/api/leases", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...authHeaders() },
         body: JSON.stringify({
           ...createForm,
           netRentChf: parseInt(createForm.netRentChf, 10),
@@ -128,6 +207,37 @@ export default function LeasesPage() {
       setCreateError(err.message);
     }
   }
+
+  async function handleExpiry(lease) {
+    if (!window.confirm(`Handle expired lease for ${lease.tenantName}?\n\nThis will cancel the lease and either create a new draft for the backup candidate or relist the unit.`)) return;
+    setExpiryLoading(l => ({ ...l, [lease.id]: true }));
+    setExpiryResult(r => ({ ...r, [lease.id]: null }));
+    try {
+      const res = await fetch(`/api/leases/${lease.id}/handle-expiry`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setExpiryResult(r => ({ ...r, [lease.id]: { error: json.error?.message || "Failed" } }));
+      } else {
+        setExpiryResult(r => ({ ...r, [lease.id]: { ok: json.data } }));
+        fetchLeases();
+      }
+    } catch (err) {
+      setExpiryResult(r => ({ ...r, [lease.id]: { error: err.message } }));
+    } finally {
+      setExpiryLoading(l => ({ ...l, [lease.id]: false }));
+    }
+  }
+
+  // Derive filtered lease lists
+  const activeLease  = leases.filter(l => ["ACTIVE", "SIGNED"].includes(l.status));
+  const draftLeases  = leases.filter(l => l.status === "DRAFT");
+  const submitted    = leases.filter(l => l.status === "READY_TO_SIGN");
+  const archived     = leases.filter(l => ["CANCELLED", "TERMINATED"].includes(l.status));
+
+  const tabCounts = [activeLease.length, draftLeases.length, submitted.length, templates.length, archived.length];
 
   return (
     <AppShell role="MANAGER">
@@ -258,113 +368,194 @@ export default function LeasesPage() {
 
           {/* Count + full-view link — outside the Panel card */}
           <span className="tab-panel-count">
-            {activeTab === 0 ? `${leases.filter(l => ["SIGNED","READY_TO_SIGN"].includes(l.status)).length} active lease${leases.filter(l => ["SIGNED","READY_TO_SIGN"].includes(l.status)).length !== 1 ? "s" : ""}` : null}
-            {activeTab === 1 ? `${leases.filter(l => l.status === "DRAFT").length} draft${leases.filter(l => l.status === "DRAFT").length !== 1 ? "s" : ""}` : null}
-            {activeTab === 2 ? `${templates.length} template${templates.length !== 1 ? "s" : ""}` : null}
-            {activeTab === 3 ? `${leases.filter(l => l.status === "CANCELLED").length} archived` : null}
+            {activeTab === 0 && `${activeLease.length} active lease${activeLease.length !== 1 ? "s" : ""}`}
+            {activeTab === 1 && `${draftLeases.length} draft${draftLeases.length !== 1 ? "s" : ""}`}
+            {activeTab === 2 && `${submitted.length} awaiting signature`}
+            {activeTab === 3 && `${templates.length} template${templates.length !== 1 ? "s" : ""}`}
+            {activeTab === 4 && `${archived.length} archived`}
           </span>
-          {activeTab === 2 && <Link href="/manager/leases/templates" className="full-page-link">Full view →</Link>}
+          {activeTab === 3 && <Link href="/manager/leases/templates" className="full-page-link">Full view →</Link>}
 
           <Panel bodyClassName="p-0">
-          {/* Templates tab */}
-          <div className={activeTab === 2 ? "tab-panel-active" : "tab-panel"}>
-            {loading ? (
-              <p className="loading-text">Loading templates…</p>
-            ) : templates.length === 0 ? (
-              <div className="empty-state">
-                <p className="empty-state-text text-lg mb-2">No templates yet</p>
-                <p className="empty-state-text">
-                  Create one on the{" "}
-                  <Link href="/manager/leases/templates" className="text-blue-600 hover:underline">
-                    templates page
-                  </Link>.
-                </p>
-              </div>
-            ) : (
-              <div style={{ overflowX: "auto" }}>
-                <table className="inline-table">
-                  <thead>
-                    <tr>
-                      <th>Name</th>
-                      <th>Building</th>
-                      <th>Created</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {templates.map((t) => (
-                      <tr key={t.id}>
-                        <td className="cell-bold">{t.templateName || "Unnamed"}</td>
-                        <td>{t.building?.name || t.building?.address || "—"}</td>
-                        <td>{formatDate(t.createdAt)}</td>
+            {/* Templates tab (index 3) */}
+            <div className={activeTab === 3 ? "tab-panel-active" : "tab-panel"}>
+              {loading ? (
+                <p className="loading-text">Loading templates…</p>
+              ) : templates.length === 0 ? (
+                <div className="empty-state">
+                  <p className="empty-state-text text-lg mb-2">No templates yet</p>
+                  <p className="empty-state-text">
+                    Create one on the{" "}
+                    <Link href="/manager/leases/templates" className="text-blue-600 hover:underline">
+                      templates page
+                    </Link>.
+                  </p>
+                </div>
+              ) : (
+                <div style={{ overflowX: "auto" }}>
+                  <table className="inline-table">
+                    <thead>
+                      <tr>
+                        <th>Name</th>
+                        <th>Building</th>
+                        <th>Created</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
+                    </thead>
+                    <tbody>
+                      {templates.map((t) => (
+                        <tr key={t.id}>
+                          <td className="cell-bold">{t.templateName || "Unnamed"}</td>
+                          <td>{t.unit?.building?.name || t.unit?.building?.address || "—"}</td>
+                          <td>{formatDate(t.createdAt)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
 
-          {/* List tabs (Active / Drafts / Archive) */}
-          {[0, 1, 3].map((tabIndex) => {
-            const tab = LEASE_TABS[tabIndex];
-            const filtered = tab.statuses
-              ? leases.filter((l) => tab.statuses.includes(l.status))
-              : leases;
-            return (
-              <div key={tabIndex} className={activeTab === tabIndex ? "tab-panel-active" : "tab-panel"}>
+            {/* Submitted tab (index 2) */}
+            <div className={activeTab === 2 ? "tab-panel-active" : "tab-panel"}>
+              <div className="px-4 py-4">
                 {loading ? (
-                  <p className="text-sm text-slate-500">Loading leases...</p>
+                  <p className="loading-text">Loading…</p>
                 ) : error ? (
                   <p className="text-sm text-red-600">{error}</p>
-                ) : filtered.length === 0 ? (
+                ) : submitted.length === 0 ? (
                   <div className="empty-state">
-                    <p className="empty-state-text text-lg mb-2">No leases found</p>
-                    <p className="empty-state-text">Click "+ New Lease" to create your first rental contract.</p>
+                    <p className="empty-state-text text-lg mb-2">No submitted leases</p>
+                    <p className="empty-state-text">Leases sent to candidates for signature appear here.</p>
                   </div>
                 ) : (
-                  <div>
-                    <table className="inline-table">
-                      <thead>
-                        <tr>
-                          <th>Tenant</th>
-                          <th>Unit</th>
-                          <th>Building</th>
-                          <th>Rent</th>
-                          <th>Start</th>
-                          <th>Status</th>
-                          <th>Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {filtered.slice(0, 200).map(lease => (
-                          <tr key={lease.id}>
+                  <table className="inline-table">
+                    <thead>
+                      <tr>
+                        <th>Tenant</th>
+                        <th>Unit</th>
+                        <th>Building</th>
+                        <th>Rent</th>
+                        <th>Sent</th>
+                        <th>Deadline</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {submitted.map(lease => {
+                        const expired = isExpired(lease.sentForSignatureAt);
+                        const result = expiryResult[lease.id];
+                        return (
+                          <tr key={lease.id} className={expired ? "bg-red-50" : undefined}>
                             <td className="cell-bold">{lease.tenantName}</td>
                             <td>{lease.unit?.unitNumber || "—"}</td>
                             <td>{lease.unit?.building?.name || "—"}</td>
                             <td>CHF {lease.rentTotalChf ?? lease.netRentChf}.-</td>
-                            <td>{formatDate(lease.startDate)}</td>
+                            <td>{lease.sentForSignatureAt ? formatDate(lease.sentForSignatureAt) : "—"}</td>
+                            <td><CountdownBadge sentForSignatureAt={lease.sentForSignatureAt} /></td>
                             <td>
-                              <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${STATUS_COLORS[lease.status] || "bg-slate-100 text-slate-700"}`}>
-                                {lease.status.replace(/_/g, " ")}
-                              </span>
-                            </td>
-                            <td>
-                              <button
-                                onClick={() => router.push(`/manager/leases/${lease.id}`)}
-                                className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                              >
-                                Edit →
-                              </button>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <button
+                                  onClick={() => router.push(`/manager/leases/${lease.id}`)}
+                                  className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                                >
+                                  View →
+                                </button>
+                                {expired && (
+                                  <button
+                                    onClick={() => handleExpiry(lease)}
+                                    disabled={expiryLoading[lease.id]}
+                                    className="text-xs px-2 py-1 rounded bg-red-100 text-red-700 hover:bg-red-200 disabled:opacity-50 font-medium"
+                                  >
+                                    {expiryLoading[lease.id] ? "Processing…" : "Handle expired"}
+                                  </button>
+                                )}
+                              </div>
+                              {result?.ok && (
+                                <p className="text-xs text-green-700 mt-1">{result.ok.message}</p>
+                              )}
+                              {result?.error && (
+                                <p className="text-xs text-red-600 mt-1">{result.error}</p>
+                              )}
                             </td>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 )}
               </div>
-            );
-          })}
+            </div>
+
+            {/* List tabs: Active (0), Draft (1), Archive (4) */}
+            {[0, 1, 4].map((tabIndex) => {
+              const tab = LEASE_TABS[tabIndex];
+              const filtered = [activeLease, draftLeases, null, null, archived][tabIndex];
+              return (
+                <div key={tabIndex} className={activeTab === tabIndex ? "tab-panel-active" : "tab-panel"}>
+                  {loading ? (
+                    <p className="loading-text">Loading leases...</p>
+                  ) : error ? (
+                    <p className="text-sm text-red-600">{error}</p>
+                  ) : filtered.length === 0 ? (
+                    <div className="empty-state">
+                      <p className="empty-state-text text-lg mb-2">No leases found</p>
+                      <p className="empty-state-text">Click &quot;+ New Lease&quot; to create your first rental contract.</p>
+                    </div>
+                  ) : (
+                    <div style={{ overflowX: "auto" }}>
+                      <table className="inline-table">
+                        <thead>
+                          <tr>
+                            <th>Tenant</th>
+                            <th>Unit</th>
+                            <th>Building</th>
+                            <th>Rent</th>
+                            <th>Start</th>
+                            <th>Status</th>
+                            {tabIndex === 1 && <th>Tag</th>}
+                            <th>Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filtered.slice(0, 200).map(lease => (
+                            <tr key={lease.id}>
+                              <td className="cell-bold">{lease.tenantName}</td>
+                              <td>{lease.unit?.unitNumber || "—"}</td>
+                              <td>{lease.unit?.building?.name || "—"}</td>
+                              <td>CHF {lease.rentTotalChf ?? lease.netRentChf}.-</td>
+                              <td>{formatDate(lease.startDate)}</td>
+                              <td>
+                                <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${STATUS_COLORS[lease.status] || "bg-slate-100 text-slate-700"}`}>
+                                  {lease.status.replace(/_/g, " ")}
+                                </span>
+                              </td>
+                              {tabIndex === 1 && (
+                                <td>
+                                  {/* "Ready for review" tag for backup-candidate redrafts */}
+                                  {lease.applicationId ? (
+                                    <span className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800">
+                                      Ready for review
+                                    </span>
+                                  ) : null}
+                                </td>
+                              )}
+                              <td>
+                                <button
+                                  onClick={() => router.push(`/manager/leases/${lease.id}`)}
+                                  className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                                >
+                                  Edit →
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </Panel>
         </PageContent>
       </PageShell>

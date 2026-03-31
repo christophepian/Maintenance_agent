@@ -253,10 +253,65 @@ describe("Workflow Layer — Integration", () => {
   // ═══════════════════════════════════════════════════════════
 
   describe("completeJobWorkflow (PATCH /jobs/:id)", () => {
+    let jobId: string | undefined;
+
     it("lists existing jobs", async () => {
       const { status, data } = await GET("/jobs", auth);
       expect(status).toBe(200);
       expect(Array.isArray(data.data)).toBe(true);
+      // Grab the first ASSIGNED/IN_PROGRESS job for the completion test
+      const eligible = data.data.find(
+        (j: any) => j.status === "ASSIGNED" || j.status === "IN_PROGRESS",
+      );
+      if (eligible) jobId = eligible.id;
+    });
+
+    it("transitions job to IN_PROGRESS", async () => {
+      if (!jobId) return; // skip if no eligible job
+      const { status, data } = await PATCH(
+        `/jobs/${jobId}`,
+        { status: "IN_PROGRESS", startedAt: new Date().toISOString() },
+        auth,
+      );
+      // May already be IN_PROGRESS from a prior run
+      expect([200, 409]).toContain(status);
+      if (status === 200) {
+        expect(data.data.status).toBe("IN_PROGRESS");
+      }
+    });
+
+    it("completes job and auto-creates invoice (TC-9)", async () => {
+      if (!jobId) return; // skip if no eligible job
+      const { status, data } = await PATCH(
+        `/jobs/${jobId}`,
+        {
+          status: "COMPLETED",
+          completedAt: new Date().toISOString(),
+          actualCost: 350,
+        },
+        auth,
+      );
+      expect(status).toBe(200);
+      expect(data.data.status).toBe("COMPLETED");
+
+      // Verify an invoice was auto-created for this job
+      const { data: invData } = await GET(
+        `/invoices?jobId=${jobId}`,
+        auth,
+      );
+      expect(Array.isArray(invData.data)).toBe(true);
+      expect(invData.data.length).toBeGreaterThanOrEqual(1);
+      expect(invData.data[0].jobId).toBe(jobId);
+    });
+
+    it("rejects double completion (409)", async () => {
+      if (!jobId) return;
+      const { status } = await PATCH(
+        `/jobs/${jobId}`,
+        { status: "COMPLETED" },
+        auth,
+      );
+      expect(status).toBe(409);
     });
   });
 

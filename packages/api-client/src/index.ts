@@ -29,7 +29,15 @@ export type PayingParty = "LANDLORD" | "TENANT";
 
 export type JobStatus = "PENDING" | "IN_PROGRESS" | "COMPLETED" | "INVOICED";
 
-export type InvoiceStatus = "DRAFT" | "APPROVED" | "PAID" | "DISPUTED";
+export type InvoiceStatus = "DRAFT" | "APPROVED" | "PAID" | "DISPUTED" | "ISSUED";
+
+export type InvoiceDirection = "OUTGOING" | "INCOMING";
+
+export type InvoiceSourceChannel = "MANUAL" | "BROWSER_UPLOAD" | "EMAIL_PDF" | "MOBILE_CAPTURE";
+
+export type IngestionStatus = "PENDING_REVIEW" | "CONFIRMED" | "AUTO_CONFIRMED" | "REJECTED";
+
+export type CaptureSessionStatus = "CREATED" | "ACTIVE" | "COMPLETED" | "EXPIRED" | "CANCELLED";
 
 export type LeaseStatus =
   | "DRAFT"
@@ -285,7 +293,7 @@ export interface InvoiceLineItemDTO {
 export interface InvoiceDTO {
   id: string;
   orgId: string;
-  jobId: string;
+  jobId: string | null;
   amount: number;
   description?: string;
   issuerBillingEntityId?: string;
@@ -319,6 +327,16 @@ export interface InvoiceDTO {
   accountId?: string | null;
   expenseType?: { id: string; name: string; code: string | null } | null;
   account?: { id: string; name: string; code: string | null } | null;
+  // INV-HUB ingestion fields
+  direction: InvoiceDirection;
+  sourceChannel: InvoiceSourceChannel;
+  ingestionStatus?: IngestionStatus | null;
+  rawOcrText?: string | null;
+  ocrConfidence?: number | null;
+  sourceFileUrl?: string | null;
+  matchedJobId?: string | null;
+  matchedLeaseId?: string | null;
+  matchedBuildingId?: string | null;
 }
 
 /**
@@ -328,7 +346,7 @@ export interface InvoiceDTO {
 export interface InvoiceSummaryDTO {
   id: string;
   orgId: string;
-  jobId: string;
+  jobId: string | null;
   status: InvoiceStatus;
   invoiceNumber?: string | null;
   totalAmount: number;
@@ -337,6 +355,36 @@ export interface InvoiceSummaryDTO {
   createdAt: string;
   description?: string;
   expenseCategory?: ExpenseCategory | null;
+  // INV-HUB ingestion fields
+  direction: InvoiceDirection;
+  sourceChannel: InvoiceSourceChannel;
+  ingestionStatus?: IngestionStatus | null;
+}
+
+/** Result from POST /invoices/ingest */
+export interface IngestInvoiceResult {
+  data: InvoiceDTO;
+  scanResult: {
+    docType: string;
+    confidence: number;
+    fields: Record<string, string | number | boolean | null>;
+    summary: string;
+  };
+  ingestionStatus: IngestionStatus;
+}
+
+/** DTO returned by capture-session endpoints */
+export interface CaptureSessionDTO {
+  id: string;
+  orgId: string;
+  createdBy: string;
+  status: CaptureSessionStatus;
+  expiresAt: string;
+  targetType: string;
+  uploadedFileUrls: string[];
+  createdInvoiceId: string | null;
+  mobileUrl?: string;
+  createdAt: string;
 }
 
 export interface LeaseDTO {
@@ -404,6 +452,7 @@ export interface LeaseDTO {
   terminationReason?: string;
   terminationNotice?: string;
   archivedAt?: string;
+  sentForSignatureAt?: string;
   createdAt: string;
   updatedAt: string;
   unit?: UnitSummary;
@@ -1092,6 +1141,39 @@ function buildInvoicesApi(opts: ClientOptions) {
       request<{ data: { id: string; expenseCategory: ExpenseCategory } }>(
         opts, "POST", `/invoices/${id}/set-expense-category`, body,
       ),
+
+    /**
+     * Ingest an invoice document via OCR scanning.
+     * Requires multipart/form-data with a "file" field.
+     * Optional form fields: sourceChannel, direction, hintDocType.
+     *
+     * Usage:
+     *   const formData = new FormData();
+     *   formData.append("file", file);
+     *   formData.append("sourceChannel", "BROWSER_UPLOAD");
+     *   formData.append("direction", "INCOMING");
+     *   const result = await api.invoices.ingest(formData);
+     */
+    ingest: async (formData: FormData): Promise<IngestInvoiceResult> => {
+      const url = new URL("/invoices/ingest", opts.baseUrl);
+      const headers: Record<string, string> = { ...opts.headers };
+      // Do NOT set content-type — browser will auto-set with boundary for FormData
+      delete headers["content-type"];
+
+      const res = await fetch(url.toString(), {
+        method: "POST",
+        headers,
+        body: formData,
+      });
+
+      if (!res.ok) {
+        let errorBody;
+        try { errorBody = await res.json(); } catch { errorBody = { error: { code: "UNKNOWN", message: res.statusText } }; }
+        throw new ApiClientError(res.status, errorBody);
+      }
+
+      return res.json();
+    },
   };
 }
 
@@ -1449,6 +1531,18 @@ function buildInventoryApi(opts: ClientOptions) {
 
     createBuildingUnit: (id: string, body: { unitNumber: string; floor?: string; type?: UnitType }) =>
       request<UnitDTO>(opts, "POST", `/buildings/${id}/units`, body),
+
+    listBuildingOwners: (id: string) =>
+      request<{ data: Array<{ id: string; name: string; email: string; role: string }> }>(opts, "GET", `/buildings/${id}/owners`),
+
+    listBuildingOwnerCandidates: (id: string) =>
+      request<{ data: Array<{ id: string; name: string; email: string }> }>(opts, "GET", `/buildings/${id}/owners/candidates`),
+
+    addBuildingOwner: (id: string, body: { userId: string }) =>
+      request<{ data: { id: string } }>(opts, "POST", `/buildings/${id}/owners`, body),
+
+    removeBuildingOwner: (buildingId: string, userId: string) =>
+      request<void>(opts, "DELETE", `/buildings/${buildingId}/owners/${userId}`),
 
     /* Units */
     listUnits: (params?: { limit?: number; offset?: number; buildingId?: string }) =>
@@ -1960,6 +2054,10 @@ function buildCoaApi(opts: ClientOptions) {
     /** Seed the canonical Swiss residential expense taxonomy. */
     seed: () =>
       request<{ data: SeedResultDTO }>(opts, "POST", "/coa/seed", {}),
+
+    /** Backfill COA and historical ledger entries for the org. */
+    backfillLedger: (body?: { seedCoa?: boolean; issueDrafts?: boolean }) =>
+      request<{ data: { coaSeeded: boolean; coaAccounts: number; invoicesIssued: number; invoicesIssuedErrors: number; ledgerIssuedPosted: number; ledgerIssuedSkipped: number; ledgerPaidPosted: number; ledgerPaidSkipped: number } }>(opts, "POST", "/ledger/backfill", body ?? {}),
   };
 }
 
@@ -2014,6 +2112,62 @@ function buildSchedulingApi(opts: ClientOptions) {
     declineSlot: (slotId: string) =>
       request<{ data: AppointmentSlotDTO }>(
         opts, "POST", `/tenant-portal/slots/${slotId}/decline`, {},
+      ),
+  };
+}
+
+/* ═══════════════════════════════════════════════════════════════
+ * Capture Sessions (INV-HUB: mobile invoice capture)
+ * ═══════════════════════════════════════════════════════════════ */
+
+function buildCaptureSessionsApi(opts: ClientOptions) {
+  return {
+    /** Create a new capture session — returns session + mobileUrl + token. */
+    create: () =>
+      request<{ data: CaptureSessionDTO & { token: string; mobileUrl: string } }>(
+        opts, "POST", "/capture-sessions", {},
+      ),
+
+    /** Poll a session by ID (manager view). */
+    get: (id: string) =>
+      request<{ data: CaptureSessionDTO }>(
+        opts, "GET", `/capture-sessions/${id}`,
+      ),
+
+    /** Validate a token (public / mobile). */
+    validate: (token: string) =>
+      request<{ data: CaptureSessionDTO }>(
+        opts, "GET", `/capture-sessions/validate/${token}`,
+      ),
+
+    /**
+     * Upload a file to a capture session (public / mobile, token-gated).
+     * Accepts FormData with a "file" field.
+     */
+    upload: async (token: string, formData: FormData): Promise<{ data: CaptureSessionDTO }> => {
+      const url = new URL(`/capture-sessions/${token}/upload`, opts.baseUrl);
+      const headers: Record<string, string> = { ...opts.headers };
+      delete headers["content-type"];
+
+      const res = await fetch(url.toString(), {
+        method: "POST",
+        headers,
+        body: formData,
+      });
+
+      if (!res.ok) {
+        let errorBody;
+        try { errorBody = await res.json(); } catch { errorBody = { error: { code: "UNKNOWN", message: res.statusText } }; }
+        throw new ApiClientError(res.status, errorBody);
+      }
+
+      return res.json();
+    },
+
+    /** Complete a capture session — triggers ingestion pipeline. */
+    complete: (token: string) =>
+      request<{ data: CaptureSessionDTO; ingestionResults?: IngestInvoiceResult[] }>(
+        opts, "POST", `/capture-sessions/${token}/complete`, {},
       ),
   };
 }
@@ -2118,6 +2272,7 @@ export interface ApiClient {
   coa: ReturnType<typeof buildCoaApi>;
   scheduling: ReturnType<typeof buildSchedulingApi>;
   completion: ReturnType<typeof buildCompletionApi>;
+  captureSessions: ReturnType<typeof buildCaptureSessionsApi>;
   dev: ReturnType<typeof buildDevApi>;
 }
 
@@ -2155,6 +2310,7 @@ export function createApiClient(
     coa: buildCoaApi(opts),
     scheduling: buildSchedulingApi(opts),
     completion: buildCompletionApi(opts),
+    captureSessions: buildCaptureSessionsApi(opts),
     dev: buildDevApi(opts),
   };
 }

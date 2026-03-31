@@ -401,3 +401,67 @@ function mapEntryToDTO(entry: any): LedgerEntryDTO {
     createdAt: entry.createdAt.toISOString(),
   };
 }
+
+/* ── Backfill helpers (CQ-36 resolution) ───────────────────────── */
+
+/**
+ * Find invoice IDs that have not yet been posted as INVOICE_ISSUED entries.
+ * Returns IDs of ISSUED, APPROVED, or PAID invoices missing ledger postings.
+ */
+export async function getUnpostedIssuedInvoiceIds(
+  prisma: PrismaClient,
+  orgId: string,
+): Promise<string[]> {
+  const postedIds = new Set(
+    (await prisma.ledgerEntry.findMany({
+      where: { orgId, sourceType: "INVOICE_ISSUED" },
+      select: { sourceId: true },
+    })).map((e) => e.sourceId).filter(Boolean) as string[],
+  );
+
+  const candidates = await prisma.invoice.findMany({
+    where: { orgId, status: { in: ["ISSUED", "APPROVED", "PAID"] } },
+    select: { id: true },
+    orderBy: { createdAt: "asc" },
+  });
+
+  return candidates.filter((i) => !postedIds.has(i.id)).map((i) => i.id);
+}
+
+/**
+ * Find invoice IDs that have not yet been posted as INVOICE_PAID entries.
+ * Returns IDs of PAID invoices missing ledger postings.
+ */
+export async function getUnpostedPaidInvoiceIds(
+  prisma: PrismaClient,
+  orgId: string,
+): Promise<string[]> {
+  const postedIds = new Set(
+    (await prisma.ledgerEntry.findMany({
+      where: { orgId, sourceType: "INVOICE_PAID" },
+      select: { sourceId: true },
+    })).map((e) => e.sourceId).filter(Boolean) as string[],
+  );
+
+  const candidates = await prisma.invoice.findMany({
+    where: { orgId, status: "PAID" },
+    select: { id: true },
+    orderBy: { createdAt: "asc" },
+  });
+
+  return candidates.filter((i) => !postedIds.has(i.id)).map((i) => i.id);
+}
+
+/**
+ * Find DRAFT invoice IDs for backfill issuing.
+ */
+export async function getDraftInvoiceIds(
+  prisma: PrismaClient,
+  orgId: string,
+): Promise<string[]> {
+  const drafts = await prisma.invoice.findMany({
+    where: { orgId, status: "DRAFT" },
+    select: { id: true },
+  });
+  return drafts.map((i) => i.id);
+}

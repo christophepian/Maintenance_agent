@@ -28,14 +28,13 @@ function inventoryFieldExtractor(row, field) {
 
 const INVENTORY_TABS = [
   { key: "BUILDINGS", label: "Buildings" },
-  { key: "UNITS", label: "Units" },
   { key: "VACANCIES", label: "Vacancies", href: "/manager/vacancies" },
   { key: "ASSETS", label: "Assets" },
   { key: "DECISIONS", label: "Maintenance Decisions" },
   { key: "DEPRECIATION", label: "Depreciation" },
 ];
 
-const TAB_KEYS = ['buildings', 'units', 'assets', 'decisions', 'depreciation'];
+const TAB_KEYS = ['buildings', 'assets', 'decisions', 'depreciation'];
 
 const RECOMMENDATION_STYLES = {
   REPAIR: { badge: "bg-green-100 text-green-700", label: "Repair" },
@@ -114,7 +113,7 @@ export default function ManagerInventoryPage() {
   }, []);
 
   useEffect(() => {
-    if (activeTab === 3) loadDecisions(decisionsUnitId);
+    if (activeTab === 2) loadDecisions(decisionsUnitId);
   }, [activeTab, decisionsUnitId, loadDecisions]);
 
   const { sortField, sortDir, handleSort } = useTableSort(router, INVENTORY_SORT_FIELDS, { defaultField: "name", defaultDir: "asc" });
@@ -130,36 +129,42 @@ export default function ManagerInventoryPage() {
 
           {/* Tab strip */}
           <div className="tab-strip">
-            {INVENTORY_TABS.map((tab, i) => (
-              tab.href ? (
-                <Link key={tab.key} href={tab.href} className="tab-btn">
-                  {tab.label}
-                </Link>
-              ) : (
-                <button
-                  key={tab.key}
-                  onClick={() => setActiveTab(i > 2 ? i - 1 : i)}
-                  className={activeTab === (i > 2 ? i - 1 : i) ? "tab-btn-active" : "tab-btn"}
-                >
-                  {tab.label}
-                </button>
-              )
-            ))}
+            {(() => {
+              let tabIndex = 0;
+              return INVENTORY_TABS.map((tab) => {
+                if (tab.href) {
+                  return (
+                    <Link key={tab.key} href={tab.href} className="tab-btn">
+                      {tab.label}
+                    </Link>
+                  );
+                }
+                const idx = tabIndex++;
+                return (
+                  <button
+                    key={tab.key}
+                    onClick={() => setActiveTab(idx)}
+                    className={activeTab === idx ? "tab-btn-active" : "tab-btn"}
+                  >
+                    {tab.label}
+                  </button>
+                );
+              });
+            })()}
           </div>
 
           {/* Count + full-view link — outside the Panel card */}
           <span className="tab-panel-count">
             {activeTab === 0 ? `${buildings.length} building${buildings.length !== 1 ? "s" : ""}` : null}
-            {activeTab === 1 ? `Units across ${buildings.length} building${buildings.length !== 1 ? "s" : ""}` : null}
-            {activeTab === 2 ? `${assetModels.length} asset model${assetModels.length !== 1 ? "s" : ""}` : null}
-            {activeTab === 3 ? "Maintenance decisions — select a unit to see repair vs replace analysis" : null}
-            {activeTab === 4 ? "Depreciation standards" : null}
+            {activeTab === 1 ? `${assetModels.length} asset model${assetModels.length !== 1 ? "s" : ""}` : null}
+            {activeTab === 2 ? "Maintenance decisions — select a unit to see repair vs replace analysis" : null}
+            {activeTab === 3 ? "Depreciation standards" : null}
           </span>
           {activeTab === 0 && <Link href="/admin-inventory/buildings" className="full-page-link">Full view →</Link>}
-          {activeTab === 2 && <Link href="/admin-inventory/asset-models" className="full-page-link">Full view →</Link>}
+          {activeTab === 1 && <Link href="/admin-inventory/asset-models" className="full-page-link">Full view →</Link>}
 
-          {/* Tabs 0,1,2,3 in Panel; tab 4 (Depreciation) renders its own Panels */}
-          {activeTab !== 4 && (
+          {/* Tabs 0,1,2 in Panel; tab 3 (Depreciation) renders its own Panels */}
+          {activeTab !== 3 && (
           <Panel bodyClassName="p-0">
           {/* Buildings tab */}
           <div className={activeTab === 0 ? "tab-panel-active" : "tab-panel"}>
@@ -177,54 +182,18 @@ export default function ManagerInventoryPage() {
                       <SortableHeader label="Name" field="name" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
                       <SortableHeader label="Address" field="address" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
                       <SortableHeader label="Canton" field="canton" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
-                      <th></th>
                     </tr>
                   </thead>
                   <tbody>
                     {sortedBuildings.map((b) => (
-                      <tr key={b.id}>
+                      <tr
+                        key={b.id}
+                        className="cursor-pointer hover:bg-slate-50"
+                        onClick={() => router.push(`/admin-inventory/buildings/${b.id}?from=/manager/inventory`)}
+                      >
                         <td className="cell-bold">{b.name || "Unnamed"}</td>
                         <td>{b.address || "—"}</td>
                         <td>{b.canton || "—"}</td>
-                        <td>
-                          <Link href={`/admin-inventory/buildings/${b.id}`} className="full-page-link">View →</Link>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-
-          {/* Units tab — summary from buildings (no top-level units API) */}
-          <div className={activeTab === 1 ? "tab-panel-active" : "tab-panel"}>
-            {loading ? (
-              <p className="loading-text">Loading…</p>
-            ) : buildings.length === 0 ? (
-              <div className="empty-state">
-                <p className="empty-state-text">No buildings found — add a building first.</p>
-              </div>
-            ) : (
-              <div style={{ overflowX: "auto" }}>
-                <table className="inline-table">
-                  <thead>
-                    <tr>
-                      <SortableHeader label="Building" field="name" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
-                      <SortableHeader label="Address" field="address" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
-                      <SortableHeader label="Units" field="unitCount" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
-                      <th></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {sortedBuildings.map((b) => (
-                      <tr key={b.id}>
-                        <td className="cell-bold">{b.name || "Unnamed"}</td>
-                        <td>{b.address || "—"}</td>
-                        <td>{b._count?.units ?? b.unitCount ?? "—"}</td>
-                        <td>
-                          <Link href={`/admin-inventory/buildings/${b.id}`} className="full-page-link">Manage →</Link>
-                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -234,7 +203,7 @@ export default function ManagerInventoryPage() {
           </div>
 
           {/* Assets tab */}
-          <div className={activeTab === 2 ? "tab-panel-active" : "tab-panel"}>
+          <div className={activeTab === 1 ? "tab-panel-active" : "tab-panel"}>
             {loading ? (
               <p className="loading-text">Loading asset models…</p>
             ) : assetModels.length === 0 ? (
@@ -267,7 +236,7 @@ export default function ManagerInventoryPage() {
             )}
           </div>
           {/* Decisions tab */}
-          <div className={activeTab === 3 ? "tab-panel-active" : "tab-panel"}>
+          <div className={activeTab === 2 ? "tab-panel-active" : "tab-panel"}>
             <div className="p-4 border-b border-slate-100">
               <label className="text-xs font-medium text-slate-600 mr-2">Unit</label>
               <select
@@ -352,7 +321,7 @@ export default function ManagerInventoryPage() {
           )}
 
           {/* Depreciation tab — rendered outside Panel, uses shared component */}
-          {activeTab === 4 && <DepreciationStandards />}
+          {activeTab === 3 && <DepreciationStandards />}
         </PageContent>
       </PageShell>
     </AppShell>

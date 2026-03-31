@@ -113,7 +113,11 @@ const packageJson     = (() => { try { return JSON.parse(readFile('package.json'
 // ── Stats ──
 const prismaModels    = (schemaFile.match(/^model\s+\w+/gm) || []).length;
 const prismaEnums     = (schemaFile.match(/^enum\s+\w+/gm) || []).length;
-const migrations      = countFiles('apps/api/prisma/migrations', '');  // directories
+const migrations      = (() => {                                       // count migration directories only
+  const abs = path.join(ROOT, 'apps/api/prisma/migrations');
+  if (!fs.existsSync(abs)) return 0;
+  return fs.readdirSync(abs, { withFileTypes: true }).filter(f => f.isDirectory()).length;
+})();
 const apiRoutes       = (openapi.match(/^\s{2}\/[^\s]/gm) || []).length || 
                         parseInt((projectState.match(/~?(\d+)\s*(?:API\s+)?routes/i) || [])[1] || 0);
 const frontendPages   = countFiles('apps/web/pages', '.js') + countFiles('apps/web/pages', '.tsx');
@@ -750,7 +754,7 @@ const html = `<!DOCTYPE html>
            ['G5','Smoke Test','Pre-commit: drift + generate + boot + 3 smoke curls.',false],
            ['G6','DB Safety','docker-compose down -v requires explicit approval.',false],
            ['G7','CI Gate','6-gate CI. Red = no merge, no defer.',false],
-           ['G8','db push Ban','Banned in all scripts. LKDE exception: shadow DB issue.',true],
+           ['G8','db push Ban','Banned in all scripts + CI. No exceptions.',false],
            ['G9','Includes','Canonical JOB_INCLUDE etc. per model. No ad-hoc trees.',false],
            ['G10','Contracts','Contract tests for /requests /jobs /invoices /leases.',false],
            ['G11','Test DB Seed','migrate deploy → db seed → seed scripts, in order.',false]]
@@ -834,7 +838,7 @@ const html = `<!DOCTYPE html>
       <div class="panel"><div class="panel-body">
         <ul class="row-list">
           <li><span class="row-key" style="color:#5ed9a0">TEST FLAKE</span><span class="row-val">✅ Resolved (TC-4/TC-5): maxWorkers:1 + port deconfliction</span></li>
-          <li><span class="row-key" style="color:#f5c060">SHADOW DB</span><span class="row-val">G8 exception: LKDE tables via db push; shadow DB can’t replay migration 20260223_add_leases</span></li>
+          <li><span class="row-key" style="color:#5ed9a0">SHADOW DB</span><span class="row-val">✅ Resolved (2026-03-30): 5 gap-filling migrations, shadow DB replays clean, db push fully banned</span></li>
           <li><span class="row-key" style="color:#f5c060">DSL VARS</span><span class="row-val">LegalVariable values not wired into DSL condition evaluation (blocks canton-scoped rules)</span></li>
           <li><span class="row-key" style="color:#f5c060">MULTI-ORG</span><span class="row-val">DEFAULT_ORG_ID in authz.ts dev/test fallback — production returns null (SA-1 ✅)</span></li>
           <li><span class="row-key" style="color:#5a6580">DEFERRED</span><span class="row-val">Email delivery, push notifications, DocuSign/Skribble, reports.js</span></li>
@@ -885,6 +889,13 @@ function syncProjectState() {
   const stateFile = path.join(ROOT, 'PROJECT_STATE.md');
   let stateMd = fs.readFileSync(stateFile, 'utf8');
 
+  // Only sync counts in the current-state portion of the file.
+  // Historical epic narratives below the fence retain period-accurate counts.
+  const FENCE = '<!-- SYNC-FENCE: historical content below — do not auto-update counts -->';
+  const fenceIdx = stateMd.indexOf(FENCE);
+  let syncPart = fenceIdx >= 0 ? stateMd.slice(0, fenceIdx) : stateMd;
+  const keepPart = fenceIdx >= 0 ? stateMd.slice(fenceIdx) : '';
+
   const liveValues = {
     models:       prismaModels,
     enums:        prismaEnums,
@@ -919,23 +930,24 @@ function syncProjectState() {
 
   const changes = [];
   for (const p of patterns) {
-    const newMd = stateMd.replace(p.re, (match, g1) => {
+    const newMd = syncPart.replace(p.re, (match, g1) => {
       const oldVal = parseInt(g1);
       const newVal = liveValues[p.key];
       if (oldVal === newVal) return match;
       changes.push(`${p.key} ${oldVal}→${newVal}`);
       return p.wrap ? p.wrap(newVal) : `${newVal}${p.unit}`;
     });
-    stateMd = newMd;
+    syncPart = newMd;
   }
 
   if (changes.length > 0) {
     const entry = `\n<!-- auto-sync ${new Date().toISOString().slice(0,10)}: ${changes.join(', ')} -->`;
-    stateMd = stateMd.replace(
+    syncPart = syncPart.replace(
       /(### State Integrity)/,
       `${entry}\n\n$1`
     );
-    fs.writeFileSync(stateFile, stateMd, 'utf8');
+    const finalMd = syncPart + keepPart;
+    fs.writeFileSync(stateFile, finalMd, 'utf8');
     console.log(`📝 PROJECT_STATE.md updated: ${changes.join(', ')}`);
   } else {
     console.log('📝 PROJECT_STATE.md — counts already in sync');
@@ -967,19 +979,6 @@ function syncLowContextGuide() {
     guide = guide.replace(statsPattern, newStats);
   } else if (!statsMatch) {
     console.log('⚠ ARCHITECTURE_LOW_CONTEXT_GUIDE.md — stats line not found, skipping stats sync');
-  }
-
-  // Sync getOrgIdForRequest return type description
-  const orgIdRowPattern = /(\| `getOrgIdForRequest\(req\)` \|)[^\n]+/;
-  const newOrgIdRow = `| \`getOrgIdForRequest(req)\` | Resolves orgId from auth context — returns \`string \\| null\` — null in production when unauthenticated |`;
-  if (orgIdRowPattern.test(guide)) {
-    const current = guide.match(orgIdRowPattern)[0];
-    if (current !== newOrgIdRow) {
-      changes.push('getOrgIdForRequest row updated');
-      guide = guide.replace(orgIdRowPattern, newOrgIdRow);
-    }
-  } else {
-    console.log('⚠ ARCHITECTURE_LOW_CONTEXT_GUIDE.md — getOrgIdForRequest row not found, skipping auth table sync');
   }
 
   if (changes.length > 0) {

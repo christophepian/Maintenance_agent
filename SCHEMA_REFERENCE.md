@@ -5,11 +5,11 @@
 
 ## Database Schema (Prisma)
 
-**Status: ACTIVE AND IN USE — 53 migrations**
+**Status: ACTIVE AND IN USE — 60 migrations** (shadow DB replay verified clean 2026-03-30)
 
-**Last verified:** 2026-03-25
+**Last verified:** 2026-03-30
 
-### Models (53 total)
+### Models (54 total) <!-- 52 listed above + CaptureSession + LedgerEntry -->
 
 | Model | Key Fields | Relations |
 |-------|-----------|-----------|
@@ -31,7 +31,7 @@
 | **RequestEvent** | requestId, type (RequestEventType), contractorId (required), message | → Request, Contractor |
 | **Event** | orgId, type, actorUserId?, requestId?, payload (JSON) | (standalone) |
 | **Job** | orgId, requestId (unique), **contractorId** (required), status, actualCost, startedAt?, completedAt? | → Request, Contractor, Invoices |
-| **Invoice** | orgId, **jobId** (required), leaseId?, issuer fields, recipient fields, amounts in cents, status, lineItems, **expenseTypeId?**, **accountId?** | → Job, Lease, BillingEntity, InvoiceLineItems, ExpenseType?, Account? |
+| **Invoice** | orgId, **jobId** (required), leaseId?, issuer fields, recipient fields, amounts in cents, status, lineItems, **expenseTypeId?**, **accountId?**, direction (InvoiceDirection), sourceChannel (InvoiceSourceChannel), ingestionStatus (IngestionStatus)?, ocrConfidence?, rawOcrText?, sourceFileUrl? | → Job, Lease, BillingEntity, InvoiceLineItems, ExpenseType?, Account? |
 | **InvoiceLineItem** | invoiceId, description, quantity, unitPrice (cents), vatRate, lineTotal | → Invoice |
 | **BillingEntity** | orgId, type, contractorId?, name, address, iban, vatNumber | → Org, Contractor |
 | **ApprovalRule** | orgId, buildingId?, name, priority, conditions (JSON), action, isActive | → Org, Building |
@@ -65,8 +65,10 @@
 | **Account** | orgId, name, code?, accountType (default EXPENSE), isActive | → Org, ExpenseMappings, Invoices (@@unique orgId+name) |
 | **ExpenseMapping** | orgId, expenseTypeId, accountId, buildingId? (null=org-wide default) | → Org, ExpenseType, Account, Building? (@@unique orgId+expenseTypeId+buildingId) |
 | **LeaseExpenseItem** | leaseId, expenseTypeId?, accountId?, description, mode (ChargeMode: ACOMPTE/FORFAIT), amountChf, isActive | → Lease, ExpenseType?, Account? |
+| **CaptureSession** | orgId, createdBy (userId), token (unique), status (CaptureSessionStatus), expiresAt, sourceChannel, targetType, uploadedFileUrls (String[]), createdInvoiceId? | → Org |
+| **LedgerEntry** | orgId, date, accountId, debitCents, creditCents, description, reference?, sourceType?, sourceId?, journalId (groups posting legs), buildingId?, unitId?, createdBy? | → Org, Account, Building?, Unit? |
 
-### Key Enums (42 total)
+### Key Enums (47 total) <!-- 41 original + CaptureSessionStatus + InvoiceDirection + InvoiceSourceChannel + IngestionStatus + RfpQuoteStatus + RequestUrgency -->
 - `RequestStatus`: PENDING_REVIEW, AUTO_APPROVED, APPROVED, **RFP_PENDING**, ASSIGNED, IN_PROGRESS, COMPLETED, PENDING_OWNER_APPROVAL, **OWNER_REJECTED**
 - `ApprovalSource`: SYSTEM_AUTO, OWNER_APPROVED, OWNER_REJECTED, LEGAL_OBLIGATION
 - `PayingParty`: LANDLORD, TENANT
@@ -108,6 +110,12 @@
 - `SlotStatus`: PROPOSED, ACCEPTED, DECLINED, EXPIRED
 - `RaterRole`: TENANT, MANAGER
 - `ChargeMode`: ACOMPTE, FORFAIT
+- `CaptureSessionStatus`: CREATED, ACTIVE, COMPLETED, EXPIRED, CANCELLED
+- `InvoiceDirection`: OUTGOING, INCOMING
+- `InvoiceSourceChannel`: MANUAL, BROWSER_UPLOAD, EMAIL_PDF, MOBILE_CAPTURE
+- `IngestionStatus`: PENDING_REVIEW, CONFIRMED, AUTO_CONFIRMED, REJECTED
+- `RfpQuoteStatus`: SUBMITTED, AWARDED, REJECTED
+- `RequestUrgency`: LOW, MEDIUM, HIGH, EMERGENCY
 
 ### ⚠️ Schema Gotchas (fields that DON'T exist where you'd expect)
 - **`Request` has NO `orgId`** — requests are not directly org-scoped (they inherit scope through unit/building)

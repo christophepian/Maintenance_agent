@@ -156,7 +156,9 @@ export default function ApplyPage() {
       }
 
       if (detectedType === "DEBT_ENFORCEMENT_EXTRACT") {
-        if (f.hasDebtEnforcement !== undefined) {
+        // Only auto-fill when the scanner is confident (true or false).
+        // null means ambiguous/unknown — leave for manual review.
+        if (f.hasDebtEnforcement === true || f.hasDebtEnforcement === false) {
           primary.hasDebtEnforcement = f.hasDebtEnforcement;
           changed = true;
         }
@@ -708,6 +710,9 @@ export default function ApplyPage() {
                       <label className="text-sm text-slate-700">Has debt enforcement proceedings</label>
                       {idx === 0 && scanResults.DEBT_ENFORCEMENT_EXTRACT?.fields?.hasDebtEnforcement === false && (
                         <span className="text-xs text-green-600 ml-1">✓ Clean record detected</span>
+                      )}
+                      {idx === 0 && scanResults.DEBT_ENFORCEMENT_EXTRACT?.fields?.hasDebtEnforcement === null && (
+                        <span className="text-xs text-amber-600 ml-1">⚠ Could not determine — please verify manually</span>
                       )}
                     </div>
                   </div>

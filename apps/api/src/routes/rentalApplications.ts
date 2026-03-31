@@ -29,6 +29,7 @@ import { ownerSelectCandidates } from "../services/ownerSelection";
 import { listEmails, getEmail } from "../services/emailOutbox";
 import { submitRentalApplicationWorkflow } from "../workflows/submitRentalApplicationWorkflow";
 import * as rentalApplicationRepo from "../repositories/rentalApplicationRepository";
+import { listManagerSelections, listOwnerSelections } from "../services/rentalSelectionService";
 
 /* ══════════════════════════════════════════════════════════════
    Rental Application Routes
@@ -365,51 +366,7 @@ export function registerRentalRoutes(router: Router) {
     "/manager/selections",
     withRole("MANAGER", async ({ res, orgId }) => {
       try {
-        const selections = await prisma.rentalOwnerSelection.findMany({
-          where: {
-            unit: { building: { orgId } },
-            status: { in: ["AWAITING_SIGNATURE", "FALLBACK_1", "FALLBACK_2", "EXHAUSTED"] },
-          },
-          include: rentalApplicationRepo.SELECTION_PIPELINE_INCLUDE,
-          orderBy: { createdAt: "desc" },
-        });
-
-        // Check which buildings have at least one lease template
-        const buildingIds = [...new Set(selections.map((s: any) => s.unit?.building?.id).filter(Boolean))];
-        const templatesPerBuilding = await prisma.lease.groupBy({
-          by: ["templateBuildingId"],
-          where: { isTemplate: true, deletedAt: null, templateBuildingId: { in: buildingIds } },
-          _count: { id: true },
-        });
-        const buildingsWithTemplate = new Set(templatesPerBuilding.map((t: any) => t.templateBuildingId));
-
-        const data = selections.map((s: any) => {
-          const primaryApplicant = s.primarySelection?.application?.applicants?.[0];
-          const lease = s.unit?.leases?.[0] || null;
-          const bid = s.unit?.building?.id;
-          return {
-            id: s.id,
-            unitId: s.unitId,
-            unitNumber: s.unit?.unitNumber,
-            buildingId: bid,
-            buildingName: s.unit?.building?.name,
-            buildingAddress: s.unit?.building?.address,
-            status: s.status,
-            deadlineAt: s.deadlineAt.toISOString(),
-            createdAt: s.createdAt.toISOString(),
-            primaryCandidate: primaryApplicant
-              ? {
-                  name: `${primaryApplicant.firstName} ${primaryApplicant.lastName}`,
-                  email: primaryApplicant.email,
-                  phone: primaryApplicant.phone || null,
-                  applicationId: s.primarySelection?.applicationId || null,
-                }
-              : null,
-            lease: lease ? { id: lease.id, status: lease.status, tenantName: lease.tenantName } : null,
-            hasLeaseTemplate: bid ? buildingsWithTemplate.has(bid) : false,
-          };
-        });
-
+        const data = await listManagerSelections(prisma, orgId);
         sendJson(res, 200, { data });
       } catch (e: any) {
         console.error("[RENTAL] manager listSelections error:", e);
@@ -511,34 +468,7 @@ export function registerRentalRoutes(router: Router) {
     withAuthRequired(async ({ req, res, orgId }) => {
       if (!requireAnyRole(req, res, ["OWNER", "MANAGER"])) return;
       try {
-        const selections = await prisma.rentalOwnerSelection.findMany({
-          where: {
-            unit: { building: { orgId } },
-            status: { in: ["AWAITING_SIGNATURE", "FALLBACK_1", "FALLBACK_2"] },
-          },
-          include: rentalApplicationRepo.SELECTION_PIPELINE_INCLUDE,
-          orderBy: { createdAt: "desc" },
-        });
-
-        const data = selections.map((s: any) => {
-          const primaryApplicant = s.primarySelection?.application?.applicants?.[0];
-          const lease = s.unit?.leases?.[0] || null;
-          return {
-            id: s.id,
-            unitId: s.unitId,
-            unitNumber: s.unit?.unitNumber,
-            buildingName: s.unit?.building?.name,
-            buildingAddress: s.unit?.building?.address,
-            status: s.status,
-            deadlineAt: s.deadlineAt.toISOString(),
-            createdAt: s.createdAt.toISOString(),
-            primaryCandidate: primaryApplicant
-              ? { name: `${primaryApplicant.firstName} ${primaryApplicant.lastName}`, email: primaryApplicant.email }
-              : null,
-            lease: lease ? { id: lease.id, status: lease.status, tenantName: lease.tenantName } : null,
-          };
-        });
-
+        const data = await listOwnerSelections(prisma, orgId);
         sendJson(res, 200, { data });
       } catch (e: any) {
         console.error("[RENTAL] listSelections error:", e);

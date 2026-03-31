@@ -393,6 +393,35 @@ components:
         vatRate: { type: number }
         lineTotal: { type: number }
 
+    CaptureSessionStatus:
+      type: string
+      enum: [CREATED, ACTIVE, COMPLETED, EXPIRED, CANCELLED]
+
+    CaptureSessionDTO:
+      type: object
+      required:
+        - id
+        - orgId
+        - createdBy
+        - status
+        - expiresAt
+        - targetType
+        - uploadedFileUrls
+        - createdAt
+      properties:
+        id: { type: string }
+        orgId: { type: string }
+        createdBy: { type: string }
+        status: { $ref: '#/components/schemas/CaptureSessionStatus' }
+        expiresAt: { type: string, format: date-time }
+        targetType: { type: string }
+        uploadedFileUrls:
+          type: array
+          items: { type: string }
+        createdInvoiceId: { type: string, nullable: true }
+        mobileUrl: { type: string, description: "URL for mobile capture (only returned on create)" }
+        createdAt: { type: string, format: date-time }
+
     InvoiceDTO:
       type: object
       required:
@@ -583,6 +612,7 @@ components:
         terminationReason: { type: string }
         terminationNotice: { type: string }
         archivedAt: { type: string, format: date-time }
+        sentForSignatureAt: { type: string, format: date-time, description: "Timestamp when the signature request was sent to the tenant. Populated only for READY_TO_SIGN leases." }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
         unit: { $ref: '#/components/schemas/UnitSummary' }
@@ -1646,6 +1676,36 @@ paths:
                         buildingName: { type: string, nullable: true }
                         assignedContractorName: { type: string, nullable: true }
                         createdAt: { type: string, format: date-time }
+    post:
+      tags: [TenantPortal]
+      summary: Create a maintenance request as a tenant
+      operationId: createTenantPortalRequest
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                description: { type: string }
+                category: { type: string }
+                unitId: { type: string, format: uuid, description: Optional — resolved from active occupancy if omitted }
+              required: [description]
+      responses:
+        '201':
+          description: Created maintenance request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/MaintenanceRequestDTO' }
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '422':
+          description: Cannot determine unit (tenant has no active occupancy)
 
   /tenant-portal/requests/{id}/self-pay:
     post:
@@ -2285,6 +2345,17 @@ paths:
             application/json:
               schema: { type: object }
 
+  /requests/{id}/urgency:
+    patch:
+      tags: [Requests]
+      summary: Update the urgency level of a request
+      operationId: updateRequestUrgency
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Updated request
+
   /requests/contractor/{contractorId}:
     get:
       tags: [Requests]
@@ -2712,6 +2783,59 @@ paths:
                 type: string
                 format: binary
 
+  /invoices/ingest:
+    post:
+      tags: [Invoices]
+      summary: Ingest an invoice document via OCR scanning
+      operationId: ingestInvoice
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: The invoice file (PDF, JPEG, PNG)
+                sourceChannel:
+                  type: string
+                  enum: [MANUAL, BROWSER_UPLOAD, EMAIL_PDF, MOBILE_CAPTURE]
+                  default: BROWSER_UPLOAD
+                direction:
+                  type: string
+                  enum: [INCOMING, OUTGOING]
+                  default: INCOMING
+                hintDocType:
+                  type: string
+                  description: Optional document type hint
+      responses:
+        '201':
+          description: Invoice created from scanned document
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/InvoiceDTO'
+                  scanResult:
+                    type: object
+                    properties:
+                      docType: { type: string }
+                      confidence: { type: number }
+                      fields: { type: object }
+                      summary: { type: string }
+                  ingestionStatus:
+                    type: string
+                    enum: [PENDING_REVIEW, CONFIRMED, AUTO_CONFIRMED, REJECTED]
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '413':
+          description: File too large
+
   # ═══════════════════════════════════════════════════════════
   # Leases
   # ═══════════════════════════════════════════════════════════
@@ -2923,6 +3047,36 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/LeaseDTO' }
+
+  /leases/{id}/handle-expiry:
+    post:
+      tags: [Leases]
+      summary: Handle an expired READY_TO_SIGN lease (cancel + relist or redraft)
+      operationId: handleLeaseExpiry
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Expiry handled
+        '404':
+          description: Lease not found
+        '409':
+          description: Lease not eligible for expiry handling
+
+  /leases/{id}/resend-for-signature:
+    post:
+      tags: [Leases]
+      summary: Create and send a new SignatureRequest for a READY_TO_SIGN lease (remediation for legacy leases without sentAt)
+      operationId: resendLeaseForSignature
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Sent signature request
+        '404':
+          description: Lease not found
+        '409':
+          description: Lease is not READY_TO_SIGN
 
   /leases/{id}/archive:
     post:
@@ -3782,6 +3936,101 @@ paths:
         '201':
           description: Created or updated asset
 
+  /buildings/{id}/owners:
+    get:
+      tags: [Owners]
+      summary: List owners assigned to a building
+      operationId: listBuildingOwners
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Building owner list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string, format: uuid }
+                        name: { type: string }
+                        email: { type: string }
+                        role: { type: string }
+    post:
+      tags: [Owners]
+      summary: Assign an owner to a building (MANAGER only)
+      operationId: addBuildingOwner
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                userId: { type: string, format: uuid }
+              required: [userId]
+      responses:
+        '201':
+          description: Owner assigned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id: { type: string, format: uuid }
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '422':
+          description: User not found in org or not OWNER role
+
+  /buildings/{id}/owners/candidates:
+    get:
+      tags: [Owners]
+      summary: List org users with OWNER role (candidates to assign to a building)
+      operationId: listBuildingOwnerCandidates
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Owner candidate list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string, format: uuid }
+                        name: { type: string }
+                        email: { type: string }
+
+  /buildings/{id}/owners/{userId}:
+    delete:
+      tags: [Owners]
+      summary: Remove an owner from a building (MANAGER only)
+      operationId: removeBuildingOwner
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+        - name: userId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '204':
+          description: Owner removed
+
   /assets/{id}/interventions:
     post:
       tags: [Inventory]
@@ -4018,6 +4267,33 @@ paths:
   # ═══════════════════════════════════════════════════════════
   # People — Tenants
   # ═══════════════════════════════════════════════════════════
+
+  /people/owners:
+    get:
+      tags: [Owners]
+      summary: List owners (people view)
+      operationId: listPeopleOwners
+      responses:
+        '200':
+          description: Owner list
+    post:
+      tags: [Owners]
+      summary: Create an owner
+      operationId: createPeopleOwner
+      responses:
+        '201':
+          description: Created owner
+
+  /people/owners/{id}/billing-entity:
+    post:
+      tags: [Owners]
+      summary: Assign a billing entity to an owner
+      operationId: assignOwnerBillingEntity
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Updated owner
 
   /people/tenants:
     get:
@@ -5647,6 +5923,41 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /buildings/{id}/financial-summary:
+    get:
+      tags: [Financials]
+      summary: Get building financial performance (clean-URL alias for /buildings/{id}/financials)
+      operationId: getBuildingFinancialSummary
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+        - name: from
+          in: query
+          schema: { type: string, format: date, example: '2026-01-01' }
+          description: Period start (inclusive), YYYY-MM-DD
+        - name: to
+          in: query
+          schema: { type: string, format: date, example: '2026-07-01' }
+          description: Period end (exclusive), YYYY-MM-DD
+        - name: forceRefresh
+          in: query
+          schema: { type: string, enum: ['true', 'false'], default: 'false' }
+        - name: groupByAccount
+          in: query
+          schema: { type: string, enum: ['true', 'false'], default: 'false' }
+      responses:
+        '200':
+          description: Building financial KPIs and breakdowns
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/BuildingFinancialsDTO' }
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /invoices/{id}/set-expense-category:
     post:
       tags: [Financials]
@@ -6721,6 +7032,45 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /ledger/backfill:
+    post:
+      tags: [Ledger]
+      summary: Backfill COA and historical ledger entries for the org (MANAGER/OWNER)
+      operationId: backfillLedger
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                seedCoa:
+                  type: boolean
+                  default: false
+                  description: If true, seed the Swiss COA taxonomy before backfilling
+                issueDrafts:
+                  type: boolean
+                  default: true
+                  description: If true, issue all DRAFT invoices as part of backfill
+      responses:
+        '200':
+          description: Backfill result counts
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      coaSeeded: { type: boolean }
+                      coaAccounts: { type: integer }
+                      invoicesIssued: { type: integer }
+                      invoicesIssuedErrors: { type: integer }
+                      ledgerIssuedPosted: { type: integer }
+                      ledgerIssuedSkipped: { type: integer }
+                      ledgerPaidPosted: { type: integer }
+                      ledgerPaidSkipped: { type: integer }
+
   /coa/seed:
     post:
       tags: [ChartOfAccounts]
@@ -6740,3 +7090,133 @@ paths:
                       expenseTypes: { type: integer }
                       accounts: { type: integer }
                       mappings: { type: integer }
+
+  # ═══════════════════════════════════════════════════════════
+  # Capture Sessions (INV-HUB: QR phone handoff)
+  # ═══════════════════════════════════════════════════════════
+
+  /capture-sessions:
+    post:
+      tags: [Capture Sessions]
+      summary: Create a new capture session for phone-based invoice capture
+      operationId: createCaptureSession
+      responses:
+        '201':
+          description: Session created with token and mobile URL
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/CaptureSessionDTO'
+                  token: { type: string }
+                  mobileUrl: { type: string }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /capture-sessions/{id}:
+    get:
+      tags: [Capture Sessions]
+      summary: Get capture session status (for polling)
+      operationId: getCaptureSession
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Session status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/CaptureSessionDTO'
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /capture-sessions/validate/{token}:
+    get:
+      tags: [Capture Sessions]
+      summary: Validate a capture session token (public, token-gated)
+      operationId: validateCaptureSession
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Session is valid
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      status: { type: string }
+                      expiresAt: { type: string, format: date-time }
+        '410':
+          description: Session expired or completed
+
+  /capture-sessions/{token}/upload:
+    post:
+      tags: [Capture Sessions]
+      summary: Upload a file to a capture session (public, token-gated)
+      operationId: uploadToCaptureSession
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: File uploaded successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/CaptureSessionDTO'
+                  fileUrl: { type: string }
+        '410':
+          description: Session expired or completed
+        '413':
+          description: File too large
+        '429':
+          description: Max uploads reached
+
+  /capture-sessions/{token}/complete:
+    post:
+      tags: [Capture Sessions]
+      summary: Complete a capture session and trigger ingestion (public, token-gated)
+      operationId: completeCaptureSession
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Session completed, ingestion triggered
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/CaptureSessionDTO'
+        '410':
+          description: Session expired or completed

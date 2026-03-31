@@ -285,4 +285,102 @@ describe("Manager auth gates", () => {
       expect(result.status).toBe(200);
     }, 10000);
   });
+
+  // ────────────── TC-12: TENANT rejected on manager-only mutations ──────────
+
+  describe("TENANT token rejected on manager-only mutations", () => {
+    const tenantToken = encodeToken({
+      userId: "tenant-user",
+      orgId: "default-org",
+      email: "tenant@example.com",
+      role: "TENANT",
+    });
+
+    it("TENANT cannot POST /contractors (403)", async () => {
+      const result = await httpRequest(
+        requiredPort,
+        "POST",
+        "/contractors",
+        sampleContractorPayload(),
+        tenantToken
+      );
+      expect(result.status).toBe(403);
+    }, 10000);
+
+    it("TENANT cannot POST /leases (403)", async () => {
+      const result = await httpRequest(
+        requiredPort,
+        "POST",
+        "/leases",
+        { unitId: "fake-unit", tenantName: "Test" },
+        tenantToken
+      );
+      expect(result.status).toBe(403);
+    }, 10000);
+
+    it("TENANT cannot POST /buildings (403)", async () => {
+      const result = await httpRequest(
+        requiredPort,
+        "POST",
+        "/buildings",
+        { name: "Test", address: "A", postalCode: "8000", city: "Zurich" },
+        tenantToken
+      );
+      expect(result.status).toBe(403);
+    }, 10000);
+  });
+
+  // ────────────── TC-13: Malformed / expired token tests ────────────────────
+
+  describe("malformed and expired tokens", () => {
+    it("garbage Authorization header returns 401", async () => {
+      const result = await httpRequest(
+        requiredPort,
+        "POST",
+        "/contractors",
+        sampleContractorPayload(),
+        "not-a-valid-jwt-at-all"
+      );
+      expect(result.status).toBe(401);
+    }, 10000);
+
+    it("expired JWT returns 401", async () => {
+      const jwt = require("jsonwebtoken");
+      const expiredToken = jwt.sign(
+        { userId: "u", orgId: "default-org", email: "x@x.com", role: "MANAGER" },
+        "test-secret",
+        { expiresIn: -10 }
+      );
+      const result = await httpRequest(
+        requiredPort,
+        "POST",
+        "/contractors",
+        sampleContractorPayload(),
+        expiredToken
+      );
+      expect(result.status).toBe(401);
+    }, 10000);
+
+    it("token signed with wrong secret returns 401", async () => {
+      const jwt = require("jsonwebtoken");
+      const wrongSecretToken = jwt.sign(
+        { userId: "u", orgId: "default-org", email: "x@x.com", role: "MANAGER" },
+        "wrong-secret-key",
+        { expiresIn: 3600 }
+      );
+      const result = await httpRequest(
+        requiredPort,
+        "POST",
+        "/contractors",
+        sampleContractorPayload(),
+        wrongSecretToken
+      );
+      expect(result.status).toBe(401);
+    }, 10000);
+
+    it("empty Authorization header returns 401", async () => {
+      const result = await httpRequest(requiredPort, "POST", "/contractors", sampleContractorPayload());
+      expect(result.status).toBe(401);
+    }, 10000);
+  });
 });

@@ -65,6 +65,7 @@ export const RFP_FULL_INCLUDE = {
       description: true,
       category: true,
       status: true,
+      urgency: true,
       createdAt: true,
       _count: {
         select: { attachments: true },

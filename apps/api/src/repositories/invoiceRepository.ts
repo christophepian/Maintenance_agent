@@ -21,13 +21,30 @@ export const INVOICE_FULL_INCLUDE = {
   lineItems: true,
   classifiedExpenseType: true,
   classifiedAccount: true,
+  job: { select: { requestId: true } },
 } as const;
 
 /**
  * H5: Summary include (no line items) for list views.
  * Must stay in sync with mapInvoiceToSummaryDTO in services/invoices.ts.
  */
-export const INVOICE_SUMMARY_INCLUDE = {} as const;
+export const INVOICE_SUMMARY_INCLUDE = {
+  issuer: { select: { name: true } },
+  job: {
+    select: {
+      request: {
+        select: {
+          unit: {
+            select: {
+              unitNumber: true,
+              building: { select: { name: true } },
+            },
+          },
+        },
+      },
+    },
+  },
+} as const;
 
 // ─── Query Functions ───────────────────────────────────────────
 

@@ -27,30 +27,43 @@ const TYPE_COLORS = {
   OTHER: "bg-gray-100 text-gray-600",
 };
 
-function DepreciationBar({ depreciation }) {
-  if (!depreciation) {
-    return <span className="text-xs text-gray-400 italic">No date / standard</span>;
+function DepreciationBar({ depreciation, installedAt }) {
+  if (!depreciation && !installedAt) {
+    return <span className="text-xs text-gray-400 italic">Install date unknown</span>;
   }
-  const { residualPct, ageMonths, usefulLifeMonths } = depreciation;
+  if (!depreciation) {
+    return <span className="text-xs text-gray-400 italic">No depreciation standard</span>;
+  }
+  const { residualPct, ageMonths, usefulLifeMonths, depreciationPct } = depreciation;
+  const isFullyDepreciated = depreciationPct >= 100;
   const color =
+    isFullyDepreciated ? "bg-red-500" :
     residualPct > 60 ? "bg-emerald-500" :
     residualPct > 30 ? "bg-amber-500" :
     "bg-red-500";
-  const years = Math.floor(ageMonths / 12);
-  const months = ageMonths % 12;
-  const lifeYears = Math.floor(usefulLifeMonths / 12);
+  const ageYears = (ageMonths / 12).toFixed(1);
+  const lifeYears = (usefulLifeMonths / 12).toFixed(1);
+  const remainingMonths = Math.max(0, usefulLifeMonths - ageMonths);
+  const remainingYears = (remainingMonths / 12).toFixed(1);
 
   return (
-    <div className="flex items-center gap-2 min-w-[180px]">
-      <div className="flex-1 h-2.5 bg-gray-200 rounded-full overflow-hidden" title={`${residualPct}% residual value`}>
-        <div className={`h-full rounded-full transition-all ${color}`} style={{ width: `${residualPct}%` }} />
+    <div className="flex items-center gap-2 min-w-[220px]">
+      {isFullyDepreciated && (
+        <span className="text-[10px] font-semibold uppercase tracking-wide bg-red-100 text-red-700 border border-red-200 px-1.5 py-0.5 rounded-full whitespace-nowrap">
+          Fully depreciated
+        </span>
+      )}
+      <div className="flex-1 h-2.5 bg-gray-200 rounded-full overflow-hidden" title={`${ageYears} / ${lifeYears} years used — ${residualPct}% residual value`}>
+        <div className={`h-full rounded-full transition-all ${color}`} style={{ width: `${Math.min(depreciationPct, 100)}%` }} />
       </div>
       <span className="text-xs text-gray-600 whitespace-nowrap font-medium">
-        {residualPct}%
+        {ageYears} / {lifeYears}y
       </span>
-      <span className="text-xs text-gray-400 whitespace-nowrap">
-        ({years}y{months > 0 ? `${months}m` : ""} / {lifeYears}y)
-      </span>
+      {!isFullyDepreciated && (
+        <span className="text-xs text-gray-400 whitespace-nowrap">
+          ({remainingYears}y left)
+        </span>
+      )}
     </div>
   );
 }
@@ -509,7 +522,7 @@ export default function AssetInventoryPanel({ assets, onRefresh, scope, parentId
                     )}
                     {asset.brand && <span className="text-xs text-gray-400">{asset.brand}</span>}
                     <div className="flex-1" />
-                    <DepreciationBar depreciation={asset.depreciation} />
+                    <DepreciationBar depreciation={asset.depreciation} installedAt={asset.installedAt} />
                     {!asset.isPresent && (
                       <span className="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-semibold">ABSENT</span>
                     )}

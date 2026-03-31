@@ -29,7 +29,7 @@
         "title": "MT940 Bank Statement Import"
       }
     ],
-    "last_recommendations_at": "2026-03-24 16:21:32 UTC"
+    "last_recommendations_at": "2026-03-31 17:57:11 UTC"
   },
   "project": {
     "name": "Maintenance Agent",
@@ -1010,7 +1010,29 @@
         "apps/api/src/routes/ledger.ts",
         "apps/web/pages/manager/finance/ledger.js"
       ],
-      "product_area": "finance-accounting"
+      "product_area": "finance-accounting",
+      "required_tests": [
+        "Verify feature works as described in acceptance criteria",
+        "No regressions in existing test suite"
+      ],
+      "test_protocol": "1. npx tsc --noEmit — zero TypeScript errors\n2. npm test — all tests pass\n3. npm run blueprint — architecture docs sync\n4. Ticket-specific verification: verify acceptance criteria manually\n5. Regression checks: verify adjacent features still work\n6. API contract sync: if API changed, verify DTOs/OpenAPI/api-client match\n7. UI verification: if UI changed, manual check in browser\n8. Edge cases: verify behavior with missing/null data",
+      "validation_checklist": [
+        "All acceptance criteria verified",
+        "No TypeScript errors (npx tsc --noEmit)",
+        "All tests pass (npm test)",
+        "No layer violations introduced",
+        "Blueprint regenerated (npm run blueprint)"
+      ],
+      "post_validation": [
+        "Run validation wizard: click ✓ VALIDATE on ticket card (or: node scripts/roadmap-ticket.js validate TASK-002)",
+        "Auto-refresh: cd apps/api && node blueprint.js → docs/blueprint.html",
+        "Auto-refresh: node scripts/generate-roadmap.js → docs/roadmap.html",
+        "Manual review: PROJECT_STATE.md — update if architecture decisions changed",
+        "Manual review: ARCHITECTURE_LOW_CONTEXT_GUIDE.md — update if auth/layers touched",
+        "Manual review: docs/AUDIT.md — mark resolved findings, add new ones",
+        "Manual review: SCHEMA_REFERENCE.md — update if schema changed",
+        "Commit: npx tsc --noEmit → npm test → npm run blueprint"
+      ]
     },
     {
       "id": "TASK-003",
@@ -1033,7 +1055,29 @@
         "apps/api/src/services/leases.ts",
         "apps/api/src/routes/leases.ts"
       ],
-      "product_area": "finance-accounting"
+      "product_area": "finance-accounting",
+      "required_tests": [
+        "Verify feature works as described in acceptance criteria",
+        "No regressions in existing test suite"
+      ],
+      "test_protocol": "1. npx tsc --noEmit — zero TypeScript errors\n2. npm test — all tests pass\n3. npm run blueprint — architecture docs sync\n4. Ticket-specific verification: verify acceptance criteria manually\n5. Regression checks: verify adjacent features still work\n6. API contract sync: if API changed, verify DTOs/OpenAPI/api-client match\n7. UI verification: if UI changed, manual check in browser\n8. Edge cases: verify behavior with missing/null data",
+      "validation_checklist": [
+        "All acceptance criteria verified",
+        "No TypeScript errors (npx tsc --noEmit)",
+        "All tests pass (npm test)",
+        "No layer violations introduced",
+        "Blueprint regenerated (npm run blueprint)"
+      ],
+      "post_validation": [
+        "Run validation wizard: click ✓ VALIDATE on ticket card (or: node scripts/roadmap-ticket.js validate TASK-003)",
+        "Auto-refresh: cd apps/api && node blueprint.js → docs/blueprint.html",
+        "Auto-refresh: node scripts/generate-roadmap.js → docs/roadmap.html",
+        "Manual review: PROJECT_STATE.md — update if architecture decisions changed",
+        "Manual review: ARCHITECTURE_LOW_CONTEXT_GUIDE.md — update if auth/layers touched",
+        "Manual review: docs/AUDIT.md — mark resolved findings, add new ones",
+        "Manual review: SCHEMA_REFERENCE.md — update if schema changed",
+        "Commit: npx tsc --noEmit → npm test → npm run blueprint"
+      ]
     },
     {
       "id": "TASK-004",
@@ -1054,7 +1098,29 @@
         "apps/api/src/routes/ledger.ts",
         "apps/web/pages/manager/finance/ledger.js"
       ],
-      "product_area": "finance-accounting"
+      "product_area": "finance-accounting",
+      "required_tests": [
+        "Verify feature works as described in acceptance criteria",
+        "No regressions in existing test suite"
+      ],
+      "test_protocol": "1. npx tsc --noEmit — zero TypeScript errors\n2. npm test — all tests pass\n3. npm run blueprint — architecture docs sync\n4. Ticket-specific verification: verify acceptance criteria manually\n5. Regression checks: verify adjacent features still work\n6. API contract sync: if API changed, verify DTOs/OpenAPI/api-client match\n7. UI verification: if UI changed, manual check in browser\n8. Edge cases: verify behavior with missing/null data",
+      "validation_checklist": [
+        "All acceptance criteria verified",
+        "No TypeScript errors (npx tsc --noEmit)",
+        "All tests pass (npm test)",
+        "No layer violations introduced",
+        "Blueprint regenerated (npm run blueprint)"
+      ],
+      "post_validation": [
+        "Run validation wizard: click ✓ VALIDATE on ticket card (or: node scripts/roadmap-ticket.js validate TASK-004)",
+        "Auto-refresh: cd apps/api && node blueprint.js → docs/blueprint.html",
+        "Auto-refresh: node scripts/generate-roadmap.js → docs/roadmap.html",
+        "Manual review: PROJECT_STATE.md — update if architecture decisions changed",
+        "Manual review: ARCHITECTURE_LOW_CONTEXT_GUIDE.md — update if auth/layers touched",
+        "Manual review: docs/AUDIT.md — mark resolved findings, add new ones",
+        "Manual review: SCHEMA_REFERENCE.md — update if schema changed",
+        "Commit: npx tsc --noEmit → npm test → npm run blueprint"
+      ]
     },
     {
       "id": "TASK-005",
@@ -1076,7 +1142,29 @@
         "apps/api/src/routes/ledger.ts",
         "apps/api/prisma/schema.prisma"
       ],
-      "product_area": "finance-accounting"
+      "product_area": "finance-accounting",
+      "required_tests": [
+        "Verify feature works as described in acceptance criteria",
+        "No regressions in existing test suite"
+      ],
+      "test_protocol": "1. npx tsc --noEmit — zero TypeScript errors\n2. npm test — all tests pass\n3. npm run blueprint — architecture docs sync\n4. Ticket-specific verification: verify acceptance criteria manually\n5. Regression checks: verify adjacent features still work\n6. API contract sync: if API changed, verify DTOs/OpenAPI/api-client match\n7. UI verification: if UI changed, manual check in browser\n8. Edge cases: verify behavior with missing/null data",
+      "validation_checklist": [
+        "All acceptance criteria verified",
+        "No TypeScript errors (npx tsc --noEmit)",
+        "All tests pass (npm test)",
+        "No layer violations introduced",
+        "Blueprint regenerated (npm run blueprint)"
+      ],
+      "post_validation": [
+        "Run validation wizard: click ✓ VALIDATE on ticket card (or: node scripts/roadmap-ticket.js validate TASK-005)",
+        "Auto-refresh: cd apps/api && node blueprint.js → docs/blueprint.html",
+        "Auto-refresh: node scripts/generate-roadmap.js → docs/roadmap.html",
+        "Manual review: PROJECT_STATE.md — update if architecture decisions changed",
+        "Manual review: ARCHITECTURE_LOW_CONTEXT_GUIDE.md — update if auth/layers touched",
+        "Manual review: docs/AUDIT.md — mark resolved findings, add new ones",
+        "Manual review: SCHEMA_REFERENCE.md — update if schema changed",
+        "Commit: npx tsc --noEmit → npm test → npm run blueprint"
+      ]
     },
     {
       "id": "TASK-006",
@@ -1102,7 +1190,29 @@
         "apps/web/pages/api/financials/balance-sheet.js",
         "apps/web/pages/api/financials/cash-flow.js"
       ],
-      "product_area": "finance-accounting"
+      "product_area": "finance-accounting",
+      "required_tests": [
+        "Verify feature works as described in acceptance criteria",
+        "No regressions in existing test suite"
+      ],
+      "test_protocol": "1. npx tsc --noEmit — zero TypeScript errors\n2. npm test — all tests pass\n3. npm run blueprint — architecture docs sync\n4. Ticket-specific verification: verify acceptance criteria manually\n5. Regression checks: verify adjacent features still work\n6. API contract sync: if API changed, verify DTOs/OpenAPI/api-client match\n7. UI verification: if UI changed, manual check in browser\n8. Edge cases: verify behavior with missing/null data",
+      "validation_checklist": [
+        "All acceptance criteria verified",
+        "No TypeScript errors (npx tsc --noEmit)",
+        "All tests pass (npm test)",
+        "No layer violations introduced",
+        "Blueprint regenerated (npm run blueprint)"
+      ],
+      "post_validation": [
+        "Run validation wizard: click ✓ VALIDATE on ticket card (or: node scripts/roadmap-ticket.js validate TASK-006)",
+        "Auto-refresh: cd apps/api && node blueprint.js → docs/blueprint.html",
+        "Auto-refresh: node scripts/generate-roadmap.js → docs/roadmap.html",
+        "Manual review: PROJECT_STATE.md — update if architecture decisions changed",
+        "Manual review: ARCHITECTURE_LOW_CONTEXT_GUIDE.md — update if auth/layers touched",
+        "Manual review: docs/AUDIT.md — mark resolved findings, add new ones",
+        "Manual review: SCHEMA_REFERENCE.md — update if schema changed",
+        "Commit: npx tsc --noEmit → npm test → npm run blueprint"
+      ]
     },
     {
       "id": "TASK-007",
@@ -1124,7 +1234,29 @@
         "apps/api/src/jobs/depreciationJob.ts",
         "apps/web/pages/admin-inventory/buildings/[id].js"
       ],
-      "product_area": "finance-accounting"
+      "product_area": "finance-accounting",
+      "required_tests": [
+        "Verify feature works as described in acceptance criteria",
+        "No regressions in existing test suite"
+      ],
+      "test_protocol": "1. npx tsc --noEmit — zero TypeScript errors\n2. npm test — all tests pass\n3. npm run blueprint — architecture docs sync\n4. Ticket-specific verification: verify acceptance criteria manually\n5. Regression checks: verify adjacent features still work\n6. API contract sync: if API changed, verify DTOs/OpenAPI/api-client match\n7. UI verification: if UI changed, manual check in browser\n8. Edge cases: verify behavior with missing/null data",
+      "validation_checklist": [
+        "All acceptance criteria verified",
+        "No TypeScript errors (npx tsc --noEmit)",
+        "All tests pass (npm test)",
+        "No layer violations introduced",
+        "Blueprint regenerated (npm run blueprint)"
+      ],
+      "post_validation": [
+        "Run validation wizard: click ✓ VALIDATE on ticket card (or: node scripts/roadmap-ticket.js validate TASK-007)",
+        "Auto-refresh: cd apps/api && node blueprint.js → docs/blueprint.html",
+        "Auto-refresh: node scripts/generate-roadmap.js → docs/roadmap.html",
+        "Manual review: PROJECT_STATE.md — update if architecture decisions changed",
+        "Manual review: ARCHITECTURE_LOW_CONTEXT_GUIDE.md — update if auth/layers touched",
+        "Manual review: docs/AUDIT.md — mark resolved findings, add new ones",
+        "Manual review: SCHEMA_REFERENCE.md — update if schema changed",
+        "Commit: npx tsc --noEmit → npm test → npm run blueprint"
+      ]
     },
     {
       "id": "TASK-008",
@@ -1149,7 +1281,29 @@
         "apps/web/pages/manager/buildings/[id]/tax-report.js",
         "apps/web/pages/owner/tax-reports.js"
       ],
-      "product_area": "finance-accounting"
+      "product_area": "finance-accounting",
+      "required_tests": [
+        "Verify feature works as described in acceptance criteria",
+        "No regressions in existing test suite"
+      ],
+      "test_protocol": "1. npx tsc --noEmit — zero TypeScript errors\n2. npm test — all tests pass\n3. npm run blueprint — architecture docs sync\n4. Ticket-specific verification: verify acceptance criteria manually\n5. Regression checks: verify adjacent features still work\n6. API contract sync: if API changed, verify DTOs/OpenAPI/api-client match\n7. UI verification: if UI changed, manual check in browser\n8. Edge cases: verify behavior with missing/null data",
+      "validation_checklist": [
+        "All acceptance criteria verified",
+        "No TypeScript errors (npx tsc --noEmit)",
+        "All tests pass (npm test)",
+        "No layer violations introduced",
+        "Blueprint regenerated (npm run blueprint)"
+      ],
+      "post_validation": [
+        "Run validation wizard: click ✓ VALIDATE on ticket card (or: node scripts/roadmap-ticket.js validate TASK-008)",
+        "Auto-refresh: cd apps/api && node blueprint.js → docs/blueprint.html",
+        "Auto-refresh: node scripts/generate-roadmap.js → docs/roadmap.html",
+        "Manual review: PROJECT_STATE.md — update if architecture decisions changed",
+        "Manual review: ARCHITECTURE_LOW_CONTEXT_GUIDE.md — update if auth/layers touched",
+        "Manual review: docs/AUDIT.md — mark resolved findings, add new ones",
+        "Manual review: SCHEMA_REFERENCE.md — update if schema changed",
+        "Commit: npx tsc --noEmit → npm test → npm run blueprint"
+      ]
     }
   ],
   "financial_boundary": {

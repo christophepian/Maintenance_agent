@@ -50,6 +50,10 @@ export async function listLeases(
     unitId?: string;
     applicationId?: string;
     expenseTypeId?: string;
+    startDateFrom?: Date;
+    startDateTo?: Date;
+    endDateFrom?: Date;
+    endDateTo?: Date;
     limit?: number;
     offset?: number;
   } = {},
@@ -59,6 +63,18 @@ export async function listLeases(
   if (filters.unitId) where.unitId = filters.unitId;
   if (filters.applicationId) where.applicationId = filters.applicationId;
   if (filters.expenseTypeId) where.expenseItems = { some: { expenseTypeId: filters.expenseTypeId } };
+  if (filters.startDateFrom || filters.startDateTo) {
+    where.startDate = {
+      ...(filters.startDateFrom && { gte: filters.startDateFrom }),
+      ...(filters.startDateTo && { lte: filters.startDateTo }),
+    };
+  }
+  if (filters.endDateFrom || filters.endDateTo) {
+    where.endDate = {
+      ...(filters.endDateFrom && { gte: filters.endDateFrom }),
+      ...(filters.endDateTo && { lte: filters.endDateTo }),
+    };
+  }
   return prisma.lease.findMany({
     where,
     include: LEASE_FULL_INCLUDE,

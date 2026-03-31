@@ -7,6 +7,22 @@ import PageContent from "../../../components/layout/PageContent";
 import Panel from "../../../components/layout/Panel";
 import { ownerAuthHeaders } from "../../../lib/api";
 
+const URGENCY_COLORS = {
+  LOW:       "bg-slate-100 text-slate-600",
+  MEDIUM:    "bg-blue-100 text-blue-700",
+  HIGH:      "bg-amber-100 text-amber-800",
+  EMERGENCY: "bg-red-100 text-red-700",
+};
+
+function UrgencyPill({ urgency }) {
+  if (!urgency) return null;
+  return (
+    <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${URGENCY_COLORS[urgency] || URGENCY_COLORS.MEDIUM}`}>
+      {urgency.charAt(0) + urgency.slice(1).toLowerCase()}
+    </span>
+  );
+}
+
 const STATUS_COLORS = {
   DRAFT: "bg-slate-50 text-slate-600 border-slate-200",
   OPEN: "bg-blue-50 text-blue-700 border-blue-200",
@@ -40,6 +56,12 @@ export default function OwnerRfpsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  // Filters
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [buildingFilter, setBuildingFilter] = useState("");
+  const [urgencyFilter, setUrgencyFilter] = useState("");
+
   useEffect(() => {
     async function load() {
       setLoading(true);
@@ -58,8 +80,19 @@ export default function OwnerRfpsPage() {
     load();
   }, []);
 
-  const pendingApproval = rfps.filter((r) => r.status === "PENDING_OWNER_APPROVAL");
-  const otherRfps = rfps.filter((r) => r.status !== "PENDING_OWNER_APPROVAL");
+  // Derived filter options
+  const buildings = [...new Set(rfps.map((r) => r.building?.name).filter(Boolean))].sort();
+
+  const filtered = rfps.filter((r) => {
+    if (dateFrom && r.createdAt < dateFrom) return false;
+    if (dateTo && r.createdAt > dateTo + "T23:59:59") return false;
+    if (buildingFilter && r.building?.name !== buildingFilter) return false;
+    if (urgencyFilter && r.request?.urgency !== urgencyFilter) return false;
+    return true;
+  });
+
+  const pendingApproval = filtered.filter((r) => r.status === "PENDING_OWNER_APPROVAL");
+  const otherRfps = filtered.filter((r) => r.status !== "PENDING_OWNER_APPROVAL");
 
   return (
     <AppShell role="OWNER">
@@ -75,6 +108,48 @@ export default function OwnerRfpsPage() {
             </div>
           )}
 
+          {/* Filter bar */}
+          <div className="mb-4 flex flex-wrap items-start gap-3">
+            <div className="flex flex-col justify-end gap-1">
+              <label className="text-xs font-medium text-slate-500">From</label>
+              <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)}
+                className="h-9 appearance-none rounded-lg border border-slate-200 bg-white px-3 py-2 leading-tight text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+            </div>
+            <div className="flex flex-col justify-end gap-1">
+              <label className="text-xs font-medium text-slate-500">To</label>
+              <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)}
+                className="h-9 appearance-none rounded-lg border border-slate-200 bg-white px-3 py-2 leading-tight text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+            </div>
+            <div className="flex flex-col items-center justify-end gap-1">
+              <label className="text-xs font-medium text-slate-500">Building</label>
+              <select value={buildingFilter} onChange={(e) => setBuildingFilter(e.target.value)}
+                className="min-h-[36px] appearance-none rounded-lg border border-slate-200 bg-white px-3 py-2 leading-tight text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                <option value="">All buildings</option>
+                {buildings.map((b) => <option key={b} value={b}>{b}</option>)}
+              </select>
+            </div>
+            <div className="flex flex-col items-center justify-end gap-1">
+              <label className="text-xs font-medium text-slate-500">Urgency</label>
+              <select value={urgencyFilter} onChange={(e) => setUrgencyFilter(e.target.value)}
+                className="min-h-[36px] appearance-none rounded-lg border border-slate-200 bg-white px-3 py-2 leading-tight text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                <option value="">All</option>
+                <option value="LOW">Low</option>
+                <option value="MEDIUM">Medium</option>
+                <option value="HIGH">High</option>
+                <option value="EMERGENCY">Emergency</option>
+              </select>
+            </div>
+            {(dateFrom || dateTo || buildingFilter || urgencyFilter) && (
+              <div className="flex flex-col justify-end gap-1">
+                <span className="text-xs opacity-0 select-none">x</span>
+                <button onClick={() => { setDateFrom(""); setDateTo(""); setBuildingFilter(""); setUrgencyFilter(""); }}
+                  className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-500 hover:bg-slate-50">
+                  Clear
+                </button>
+              </div>
+            )}
+          </div>
+
           {loading ? (
             <p className="text-sm text-slate-500">Loading…</p>
           ) : (
@@ -87,6 +162,7 @@ export default function OwnerRfpsPage() {
                         <th>RFP</th>
                         <th>Category</th>
                         <th>Building</th>
+                        <th>Urgency</th>
                         <th>Quotes</th>
                         <th>Status</th>
                         <th>Created</th>
@@ -99,6 +175,7 @@ export default function OwnerRfpsPage() {
                           <td className="font-mono text-xs">{r.id?.slice(0, 8)}</td>
                           <td>{r.category || "—"}</td>
                           <td>{r.building?.name || "—"}</td>
+                          <td><UrgencyPill urgency={r.request?.urgency} /></td>
                           <td>{r.quoteCount ?? r.quotes?.length ?? 0}</td>
                           <td><StatusPill status={r.status} /></td>
                           <td>{formatDate(r.createdAt)}</td>
@@ -117,14 +194,15 @@ export default function OwnerRfpsPage() {
                 </Panel>
               )}
 
-              <Panel title={`All RFPs (${rfps.length})`} bodyClassName="p-0">
-                {rfps.length > 0 ? (
+              <Panel title={`All RFPs (${filtered.length})`} bodyClassName="p-0">
+                {filtered.length > 0 ? (
                   <table className="inline-table">
                     <thead>
                       <tr>
                         <th>RFP</th>
                         <th>Category</th>
                         <th>Building</th>
+                        <th>Urgency</th>
                         <th>Quotes</th>
                         <th>Status</th>
                         <th>Created</th>
@@ -132,11 +210,12 @@ export default function OwnerRfpsPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {rfps.map((r) => (
+                      {filtered.map((r) => (
                         <tr key={r.id}>
                           <td className="font-mono text-xs">{r.id?.slice(0, 8)}</td>
                           <td>{r.category || "—"}</td>
                           <td>{r.building?.name || "—"}</td>
+                          <td><UrgencyPill urgency={r.request?.urgency} /></td>
                           <td>{r.quoteCount ?? r.quotes?.length ?? 0}</td>
                           <td><StatusPill status={r.status} /></td>
                           <td>{formatDate(r.createdAt)}</td>
@@ -154,7 +233,7 @@ export default function OwnerRfpsPage() {
                   </table>
                 ) : (
                   <p className="px-4 py-8 text-center text-sm text-slate-400">
-                    No RFPs found.
+                    {rfps.length === 0 ? "No RFPs found." : "No results match the current filters."}
                   </p>
                 )}
               </Panel>

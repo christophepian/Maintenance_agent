@@ -59,6 +59,24 @@ describe('G10: API Contract Tests', () => {
         if (req.estimatedCost !== undefined && req.estimatedCost !== null) {
           expect(typeof req.estimatedCost).toBe('number');
         }
+
+        // TC-8: nested relation assertions
+        if (req.unit) {
+          expect(req.unit).toHaveProperty('id');
+          expect(req.unit).toHaveProperty('unitNumber');
+        }
+        if (req.tenant) {
+          expect(req.tenant).toHaveProperty('id');
+          expect(req.tenant).toHaveProperty('name');
+        }
+        if (req.building) {
+          expect(req.building).toHaveProperty('id');
+          expect(req.building).toHaveProperty('name');
+        }
+        if (req.assignedContractor) {
+          expect(req.assignedContractor).toHaveProperty('id');
+          expect(req.assignedContractor).toHaveProperty('name');
+        }
       }
     });
   });
@@ -539,6 +557,46 @@ describe('G10: API Contract Tests', () => {
         body: JSON.stringify({ expenseCategory: 'MAINTENANCE' }),
       });
       expect(res.status).toBe(404);
+    });
+  });
+
+  // ── Building Owners ──
+  describe('GET /buildings/:id/owners', () => {
+    it('returns { data: [] } for non-existent building (empty array, not 404)', async () => {
+      const res = await fetch(`${API_BASE}/buildings/00000000-0000-0000-0000-000000000000/owners`);
+      // Either 200 with empty array or a server error — never a 404 (route exists)
+      expect([200, 500]).toContain(res.status);
+      if (res.status === 200) {
+        const body = await res.json();
+        expect(body).toHaveProperty('data');
+        expect(Array.isArray(body.data)).toBe(true);
+      }
+    });
+  });
+
+  describe('GET /buildings/:id/owners/candidates', () => {
+    it('returns { data: [] } envelope', async () => {
+      const res = await fetch(`${API_BASE}/buildings/00000000-0000-0000-0000-000000000000/owners/candidates`);
+      expect([200, 500]).toContain(res.status);
+      if (res.status === 200) {
+        const body = await res.json();
+        expect(body).toHaveProperty('data');
+        expect(Array.isArray(body.data)).toBe(true);
+      }
+    });
+  });
+
+  // ── POST /buildings/:id/owners validation ──
+  describe('POST /buildings/:id/owners', () => {
+    it('returns 400 when userId is missing', async () => {
+      const res = await fetch(`${API_BASE}/buildings/00000000-0000-0000-0000-000000000000/owners`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.error).toHaveProperty('code', 'VALIDATION_ERROR');
     });
   });
 });

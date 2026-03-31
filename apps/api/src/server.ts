@@ -27,6 +27,7 @@ import { registerSchedulingRoutes } from "./routes/scheduling";
 import { registerCompletionRoutes } from "./routes/completion";
 import { registerCoaRoutes } from "./routes/coa";
 import { registerLedgerRoutes } from "./routes/ledger";
+import { registerCaptureSessionRoutes } from "./routes/captureSessions";
 import { registerEventHandlers } from "./events";
 import {
   processSelectionTimeouts,
@@ -82,6 +83,7 @@ registerSchedulingRoutes(router);
 registerCompletionRoutes(router);
 registerCoaRoutes(router);
 registerLedgerRoutes(router);
+registerCaptureSessionRoutes(router);
 
 /* ── Dev-only: background job trigger route ─────────────────── */
 router.post("/__dev/rental/run-jobs", async ({ res }) => {

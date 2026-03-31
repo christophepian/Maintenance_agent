@@ -5,17 +5,21 @@ import { first } from "../http/query";
 import { getAuthUser } from "../authz";
 import { requireOrgViewer, logEvent } from "./helpers";
 import { requireAnyRole } from "../authz";
-import { getJob, listJobs, updateJob } from "../services/jobs";
+import { getJob, listJobs } from "../services/jobs";
 import { createInvoice, getInvoice, listInvoices, getOrCreateInvoiceForJob } from "../services/invoices";
 import { CreateInvoiceSchema } from "../validation/invoices";
 import { generateInvoiceQRBill, getInvoiceQRCodePNG } from "../services/invoiceQRBill";
 import { generateInvoicePDF } from "../services/invoicePDF";
 import { completeJobWorkflow } from "../workflows/completeJobWorkflow";
+import { updateJobWorkflow } from "../workflows/updateJobWorkflow";
 import { issueInvoiceWorkflow } from "../workflows/issueInvoiceWorkflow";
 import { approveInvoiceWorkflow } from "../workflows/approveInvoiceWorkflow";
 import { payInvoiceWorkflow } from "../workflows/payInvoiceWorkflow";
 import { disputeInvoiceWorkflow } from "../workflows/disputeInvoiceWorkflow";
 import { InvalidTransitionError } from "../workflows/transitions";
+import { ingestInvoice } from "../services/invoiceIngestionService";
+import { readRawBody, parseMultipart, MAX_FILE_SIZE } from "../storage/attachments";
+import { InvoiceSourceChannel, InvoiceDirection } from "@prisma/client";
 
 export function registerInvoiceRoutes(router: Router) {
   // GET /jobs
@@ -44,35 +48,20 @@ export function registerInvoiceRoutes(router: Router) {
     }
   });
 
-  // PATCH /jobs/:id — uses completeJobWorkflow when status=COMPLETED
+  // PATCH /jobs/:id — delegates to updateJobWorkflow
   router.patch("/jobs/:id", async ({ req, res, params, orgId, prisma }) => {
     if (!requireOrgViewer(req, res)) return;
     try {
       const raw = await readJson(req);
-      const job = await getJob(params.id);
-      if (!job || job.orgId !== orgId) return sendError(res, 404, "NOT_FOUND", "Job not found");
-
-      // Delegate to workflow when completing a job
-      if (raw.status === "COMPLETED" && job.status !== "COMPLETED") {
-        const actor = getAuthUser(req);
-        const result = await completeJobWorkflow(
-          { orgId, prisma, actorUserId: actor?.userId ?? null },
-          { jobId: params.id, actualCost: raw.actualCost, startedAt: raw.startedAt, completedAt: raw.completedAt },
-        );
-        return sendJson(res, 200, { data: result.dto });
-      }
-
-      // Non-completion updates: pass through directly
-      const updated = await updateJob(params.id, {
-        status: raw.status,
-        actualCost: raw.actualCost,
-        startedAt: raw.startedAt ? new Date(raw.startedAt) : undefined,
-        completedAt: raw.completedAt ? new Date(raw.completedAt) : undefined,
-      });
-
-      sendJson(res, 200, { data: updated });
+      const actor = getAuthUser(req);
+      const result = await updateJobWorkflow(
+        { orgId, prisma, actorUserId: actor?.userId ?? null },
+        { jobId: params.id, status: raw.status, actualCost: raw.actualCost, startedAt: raw.startedAt, completedAt: raw.completedAt },
+      );
+      sendJson(res, 200, { data: result.dto });
     } catch (e: any) {
       if (e instanceof InvalidTransitionError) return sendError(res, 409, "INVALID_TRANSITION", e.message);
+      if (e.code === "NOT_FOUND") return sendError(res, 404, "NOT_FOUND", e.message);
       const msg = String(e?.message || e);
       if (msg === "Invalid JSON") return sendError(res, 400, "INVALID_JSON", "Invalid JSON");
       if (msg === "Body too large") return sendError(res, 413, "BODY_TOO_LARGE", "Request body too large");
@@ -93,8 +82,10 @@ export function registerInvoiceRoutes(router: Router) {
       const paidBefore = first(query, "paidBefore") || undefined;
       const expenseTypeId = first(query, "expenseTypeId") || undefined;
       const accountId = first(query, "accountId") || undefined;
+      const direction = first(query, "direction") || undefined;
+      const ingestionStatus = first(query, "ingestionStatus") || undefined;
       const view = first(query, "view") as "summary" | "full" | undefined;
-      const result = await listInvoices(orgId, { jobId, status: status as any, view, contractorId, expenseCategory, buildingId, paidAfter, paidBefore, expenseTypeId, accountId });
+      const result = await listInvoices(orgId, { jobId, status: status as any, view, contractorId, expenseCategory, buildingId, paidAfter, paidBefore, expenseTypeId, accountId, direction, ingestionStatus });
       sendJson(res, 200, { data: result.data, total: result.total });
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to load invoices", String(e));
@@ -129,6 +120,13 @@ export function registerInvoiceRoutes(router: Router) {
         expenseTypeId: parsed.data.expenseTypeId,
         accountId: parsed.data.accountId,
         lineItems: parsed.data.lineItems,
+        // INV-HUB ingestion fields
+        direction: (parsed.data as any).direction,
+        sourceChannel: (parsed.data as any).sourceChannel,
+        ingestionStatus: (parsed.data as any).ingestionStatus,
+        matchedJobId: (parsed.data as any).matchedJobId,
+        matchedLeaseId: (parsed.data as any).matchedLeaseId,
+        matchedBuildingId: (parsed.data as any).matchedBuildingId,
       });
 
       // Auto-issue when the caller is a contractor
@@ -324,6 +322,80 @@ export function registerInvoiceRoutes(router: Router) {
       if (msg.includes("not found")) return sendError(res, 404, "NOT_FOUND", "Invoice not found");
       if (msg.includes("Unauthorized")) return sendError(res, 403, "FORBIDDEN", "You do not have access to this invoice");
       sendError(res, 500, "PDF_ERROR", "Failed to generate PDF", String(e));
+    }
+  });
+
+  // POST /invoices/ingest — scan and ingest an invoice document
+  router.post("/invoices/ingest", async ({ req, res, orgId }) => {
+    if (!requireAnyRole(req, res, ["MANAGER"])) return;
+    try {
+      const contentType = req.headers["content-type"] || "";
+      const boundaryMatch = contentType.match(/boundary=(.+)/i);
+
+      if (!boundaryMatch) {
+        sendError(res, 400, "BAD_REQUEST", "Content-Type must be multipart/form-data with boundary");
+        return;
+      }
+
+      const rawBody = await readRawBody(req, MAX_FILE_SIZE + 128 * 1024);
+      const parts = parseMultipart(rawBody, boundaryMatch[1]);
+
+      const filePart = parts.find((p) => p.name === "file" && p.filename);
+      if (!filePart) {
+        sendError(res, 400, "BAD_REQUEST", 'Missing "file" field with filename');
+        return;
+      }
+
+      if (filePart.data.length > MAX_FILE_SIZE) {
+        sendError(res, 413, "PAYLOAD_TOO_LARGE", `File exceeds ${MAX_FILE_SIZE / (1024 * 1024)}MB limit`);
+        return;
+      }
+
+      // Optional metadata fields from form parts
+      const sourceChannelPart = parts.find((p) => p.name === "sourceChannel");
+      const directionPart = parts.find((p) => p.name === "direction");
+      const hintPart = parts.find((p) => p.name === "hintDocType");
+
+      const sourceChannelRaw = sourceChannelPart?.data.toString("utf8").trim() || "BROWSER_UPLOAD";
+      const directionRaw = directionPart?.data.toString("utf8").trim() || "INCOMING";
+
+      // Validate sourceChannel enum
+      const validChannels: InvoiceSourceChannel[] = ["MANUAL", "BROWSER_UPLOAD", "EMAIL_PDF", "MOBILE_CAPTURE"];
+      const sourceChannel = validChannels.includes(sourceChannelRaw as InvoiceSourceChannel)
+        ? (sourceChannelRaw as InvoiceSourceChannel)
+        : "BROWSER_UPLOAD" as InvoiceSourceChannel;
+
+      // Validate direction enum
+      const validDirections: InvoiceDirection[] = ["INCOMING", "OUTGOING"];
+      const direction = validDirections.includes(directionRaw as InvoiceDirection)
+        ? (directionRaw as InvoiceDirection)
+        : "INCOMING";
+
+      const hint = hintPart ? hintPart.data.toString("utf8").trim() : undefined;
+
+      const result = await ingestInvoice({
+        buffer: filePart.data,
+        fileName: filePart.filename!,
+        mimeType: filePart.contentType || "application/octet-stream",
+        orgId,
+        sourceChannel,
+        direction,
+        hintDocType: hint,
+      });
+
+      sendJson(res, 201, {
+        data: result.invoice,
+        scanResult: {
+          docType: result.scanResult.docType,
+          confidence: result.scanResult.confidence,
+          fields: result.scanResult.fields,
+          summary: result.scanResult.summary,
+        },
+        ingestionStatus: result.ingestionStatus,
+      });
+    } catch (e: any) {
+      console.error("[INVOICE-INGEST] error:", e);
+      sendError(res, 500, "INTERNAL_ERROR", "Invoice ingestion failed", e.message);
     }
   });
 }

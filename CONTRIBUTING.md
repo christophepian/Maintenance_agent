@@ -7,7 +7,7 @@
 ```bash
 # From the repo root
 npx tsc --noEmit --project apps/api/tsconfig.json   # must produce zero errors
-npm test --prefix apps/api                           # must pass all 589 tests
+npm test --prefix apps/api                           # must pass all tests (769/769, 56 suites — last verified 2026-03-31)
 ```
 
 Both must be green before merging.
@@ -97,8 +97,10 @@ ports causes `EADDRINUSE` failures.
 | 3218 | tenantSession.test.ts |
 | 3219 | rentEstimation.test.ts |
 | 3220 | security2.test.ts |
+| 3221 | captureSession.test.ts |
+| 3222 | invoiceIngest.test.ts |
 
-**Next available: 3221.** Claim the next port and add it to this table in the same PR.
+**Next available: 3223.** Claim the next port and add it to this table in the same PR.
 
 ---
 
@@ -141,10 +143,11 @@ name and the contract test fails, update the test — do not delete it.
 
 | Rule | Description |
 |------|-------------|
-| G1 | No schema migrations without a migration file in `prisma/migrations/` |
+| G1 | No schema migrations without a migration file in `prisma/migrations/` — adding a field to `schema.prisma` without a matching migration breaks all DB-touching tests |
 | G2 | Every new Prisma model needs a canonical include constant |
 | G9 | Route handlers must not call `prisma` directly — delegate to services or repositories |
 | G10 | Update `contracts.test.ts` when changing a DTO |
 | G11 | No stub services — every service must have real implementation |
 
-Full guardrail list: `apps/api/src/ARCHITECTURE_LOW_CONTEXT_GUIDE.md`
+Full guardrail list: `PROJECT_OVERVIEW.md`
+File-routing map: `apps/api/src/ARCHITECTURE_LOW_CONTEXT_GUIDE.md`

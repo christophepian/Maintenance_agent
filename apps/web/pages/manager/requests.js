@@ -587,10 +587,40 @@ export default function ManagerRequestsPage() {
   const [assigningId, setAssigningId] = useState(null);
   const [selectedContractorId, setSelectedContractorId] = useState("");
 
-  // Accordion state
+  // Accordion state — auto-expand if ?requestId= is present
+  const initialRequestId = router.isReady ? (router.query.requestId || null) : null;
   const [expandedId, setExpandedId] = useState(null);
   const [legalDecisions, setLegalDecisions] = useState({});
   const [requestDetails, setRequestDetails] = useState({});
+  const [didAutoExpand, setDidAutoExpand] = useState(false);
+
+  // Auto-expand from ?requestId= deep-link after data loads
+  useEffect(() => {
+    if (didAutoExpand || !initialRequestId || loading || !requests.length) return;
+    const match = requests.find((r) => r.id === initialRequestId);
+    if (match) {
+      setExpandedId(initialRequestId);
+      setDidAutoExpand(true);
+      // Lazy-fetch detail for the auto-expanded request
+      if (!requestDetails[initialRequestId]) {
+        setRequestDetails((prev) => ({ ...prev, [initialRequestId]: { loading: true, data: null } }));
+        fetch(`/api/requests/${initialRequestId}`, { headers: authHeaders() })
+          .then(async (res) => {
+            const body = await res.json();
+            if (!res.ok) throw new Error("Failed to load detail");
+            setRequestDetails((prev) => ({ ...prev, [initialRequestId]: { loading: false, data: body.data } }));
+          })
+          .catch(() => {
+            setRequestDetails((prev) => ({ ...prev, [initialRequestId]: { loading: false, data: null } }));
+          });
+      }
+      // Scroll to the row after a short delay for render
+      setTimeout(() => {
+        const el = document.getElementById(`request-row-${initialRequestId}`);
+        if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 200);
+    }
+  }, [initialRequestId, loading, requests, didAutoExpand]);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -697,6 +727,18 @@ export default function ManagerRequestsPage() {
       await loadData();
     } catch (e) { setError(String(e?.message || e)); }
     finally { setActionLoading(null); }
+  }
+
+  async function setUrgency(id, urgency) {
+    try {
+      const res = await fetch(`/api/requests/${id}/urgency`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({ urgency }),
+      });
+      if (!res.ok) { const d = await res.json(); throw new Error(d?.error?.message || "Failed to set urgency"); }
+      await loadData();
+    } catch (e) { setError(String(e?.message || e)); }
   }
 
   async function doAssignContractor(requestId) {
@@ -817,6 +859,7 @@ export default function ManagerRequestsPage() {
                       return (
                         <Fragment key={r.id}>
                           <tr
+                            id={`request-row-${r.id}`}
                             onClick={expandable ? () => toggleAccordion(r.id) : undefined}
                             className={[
                               "border-b border-slate-50 transition-colors",
@@ -1070,7 +1113,25 @@ export default function ManagerRequestsPage() {
                                         );
                                       })()}
 
-                                      {/* Section 6 — RFP link (conditional) */}
+                                      {/* Section 6 — Urgency */}
+                                      <div className="flex items-center justify-between px-6 py-3 border-t border-slate-100">
+                                        <div>
+                                          <span className="text-sm font-medium text-slate-700">Urgency</span>
+                                          <p className="text-xs text-slate-400 mt-0.5">Drives contractor dispatch priority</p>
+                                        </div>
+                                        <select
+                                          value={d?.urgency || r.urgency || "MEDIUM"}
+                                          onChange={(e) => setUrgency(r.id, e.target.value)}
+                                          className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                        >
+                                          <option value="LOW">Low</option>
+                                          <option value="MEDIUM">Medium</option>
+                                          <option value="HIGH">High</option>
+                                          <option value="EMERGENCY">Emergency</option>
+                                        </select>
+                                      </div>
+
+                                      {/* Section 7 — RFP link (conditional) */}
                                       {rfpId && (
                                         <div className="flex items-center justify-between px-6 py-3 border-t border-slate-100">
                                           <span className="text-sm text-slate-500">Request for Proposal</span>

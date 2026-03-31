@@ -41,6 +41,8 @@ describe("Ledger unit attribution", () => {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       lineItems: [],
+      direction: "OUTGOING",
+      sourceChannel: "MANUAL",
       ...overrides,
     };
   }

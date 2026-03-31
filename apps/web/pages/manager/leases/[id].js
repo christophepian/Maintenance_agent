@@ -80,6 +80,8 @@ export default function LeaseEditorPage() {
   const [showSignModal, setShowSignModal] = useState(false);
   const [signLevel, setSignLevel] = useState("SES");
   const [sigRequests, setSigRequests] = useState([]);
+  const [sendingSigReqId, setSendingSigReqId] = useState(null);
+  const [resendingForSignature, setResendingForSignature] = useState(false);
 
   // Phase 5 state
   const [invoices, setInvoices] = useState([]);
@@ -93,9 +95,13 @@ export default function LeaseEditorPage() {
   const [invoiceDesc, setInvoiceDesc] = useState("");
 
   const isDraft = lease?.status === "DRAFT";
+  const isReadyToSign = lease?.status === "READY_TO_SIGN";
   const isSigned = lease?.status === "SIGNED";
   const isActive = lease?.status === "ACTIVE";
   const isTemplate = lease?.isTemplate === true;
+  // True when the READY_TO_SIGN lease has no canonical sent timestamp yet
+  // (legacy leases created before the lifecycle fix, or a failed send).
+  const needsResend = isReadyToSign && !sigRequests.some(sr => sr.status === "SENT" || sr.status === "SIGNED");
 
   const fetchLease = useCallback(async () => {
     if (!id) return;
@@ -241,6 +247,43 @@ export default function LeaseEditorPage() {
     }
   }
 
+  // Send a DRAFT signature request (remediation for legacy submitted leases)
+  async function handleSendSigReq(srId) {
+    setSendingSigReqId(srId);
+    setError(null);
+    try {
+      const res = await fetch(`/api/signature-requests/${srId}/send`, { method: "POST" });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error?.message || "Failed to send");
+      setSigRequests(prev => prev.map(sr => sr.id === srId ? json.data : sr));
+      setSuccess("Signature request sent. Submitted tab will now show the sent date.");
+      setTimeout(() => setSuccess(null), 5000);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSendingSigReqId(null);
+    }
+  }
+
+  // Re-send for signature (remediation for READY_TO_SIGN leases with no sent sig req)
+  async function handleResendForSignature() {
+    if (!confirm("Create and send a new signature request for this lease?")) return;
+    setResendingForSignature(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/leases/${id}/resend-for-signature`, { method: "POST" });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error?.message || "Failed");
+      setSigRequests(prev => [json.data, ...prev]);
+      setSuccess("New signature request created and sent.");
+      setTimeout(() => setSuccess(null), 5000);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setResendingForSignature(false);
+    }
+  }
+
   async function handleCancel() {
     if (!confirm("Cancel this lease? This cannot be undone for signed leases.")) return;
     try {
@@ -382,6 +425,13 @@ export default function LeaseEditorPage() {
                 <button onClick={() => setShowSignModal(true)}
                   className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700">
                   ✍️ Send for Signature
+                </button>
+              )}
+              {needsResend && (
+                <button onClick={handleResendForSignature} disabled={resendingForSignature}
+                  className="px-4 py-2 bg-amber-600 text-white rounded-lg text-sm font-medium hover:bg-amber-700 disabled:opacity-50"
+                  title="This submitted lease has no sent signature request. Click to create and send one now.">
+                  {resendingForSignature ? "Sending…" : "↩️ Re-send for Signature"}
                 </button>
               )}
               {isSigned && !isTemplate && (
@@ -578,7 +628,9 @@ export default function LeaseEditorPage() {
                       <th>Level</th>
                       <th>Status</th>
                       <th>Signers</th>
+                      <th>Sent</th>
                       <th>Created</th>
+                      <th>Action</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -594,7 +646,19 @@ export default function LeaseEditorPage() {
                           }`}>{sr.status}</span>
                         </td>
                         <td>{sr.signers?.map(s => s.name).join(", ") || "—"}</td>
+                        <td>{sr.sentAt ? fmtD(sr.sentAt) : "—"}</td>
                         <td>{fmtD(sr.createdAt)}</td>
+                        <td>
+                          {sr.status === "DRAFT" && (
+                            <button
+                              onClick={() => handleSendSigReq(sr.id)}
+                              disabled={sendingSigReqId === sr.id}
+                              className="text-xs px-2 py-1 rounded bg-blue-100 text-blue-700 hover:bg-blue-200 disabled:opacity-50 font-medium"
+                            >
+                              {sendingSigReqId === sr.id ? "Sending…" : "Send"}
+                            </button>
+                          )}
+                        </td>
                       </tr>
                     ))}
                   </tbody>

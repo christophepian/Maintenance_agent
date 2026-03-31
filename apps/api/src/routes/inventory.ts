@@ -41,6 +41,9 @@ import { normalizePhoneToE164 } from "../utils/phoneNormalization";
 import * as inventoryRepo from "../repositories/inventoryRepository";
 import { mapBuildingToDetailDTO } from "../dto/buildingDetail";
 import { mapUnitToListDTO } from "../dto/unitList";
+import { createBillingEntity } from "../services/billingEntities";
+import { CreateBillingEntitySchema } from "../validation/billingEntities";
+import * as bcrypt from "bcryptjs";
 
 export function registerInventoryRoutes(router: Router) {
   /* ── Properties (alias over Buildings) ─────────────────────── */
@@ -91,6 +94,63 @@ export function registerInventoryRoutes(router: Router) {
       sendError(res, 500, "DB_ERROR", "Failed to fetch vendor contacts", String(e));
     }
   }));
+
+  /* ── Owners ────────────────────────────────────────────────── */
+
+  router.get("/people/owners", withAuthRequired(async ({ res, orgId, prisma }) => {
+    try {
+      const owners = await inventoryRepo.findOrgOwnersWithBilling(prisma, orgId);
+      sendJson(res, 200, { data: owners.map((o) => ({
+        id: o.id,
+        name: o.name,
+        email: o.email || undefined,
+        createdAt: o.createdAt.toISOString(),
+        billingEntity: o.billingEntity
+          ? { id: o.billingEntity.id, name: o.billingEntity.name, iban: o.billingEntity.iban }
+          : null,
+      })), total: owners.length });
+    } catch (e) {
+      sendError(res, 500, "DB_ERROR", "Failed to fetch owners", String(e));
+    }
+  }));
+
+  router.post("/people/owners", async ({ req, res, orgId, prisma }) => {
+    if (!requireRole(req, res, "MANAGER")) return;
+    try {
+      const raw = await readJson(req);
+      const { name, email, password } = raw as any;
+      if (!name?.trim()) return sendError(res, 400, "VALIDATION_ERROR", "name is required");
+      if (!email?.trim()) return sendError(res, 400, "VALIDATION_ERROR", "email is required");
+      if (!password?.trim()) return sendError(res, 400, "VALIDATION_ERROR", "password is required");
+
+      const existing = await inventoryRepo.findUserByOrgAndEmail(prisma, orgId, email.trim());
+      if (existing) return sendError(res, 409, "CONFLICT", "A user with this email already exists");
+
+      const passwordHash = await bcrypt.hash(password, 10);
+      const owner = await inventoryRepo.createOwnerUser(prisma, {
+        orgId, name: name.trim(), email: email.trim(), passwordHash,
+      });
+      sendJson(res, 201, { data: { id: owner.id, name: owner.name, email: owner.email, createdAt: owner.createdAt.toISOString(), billingEntity: null } });
+    } catch (e: any) {
+      if (e.message === "Invalid JSON") return sendError(res, 400, "INVALID_JSON", "Invalid JSON");
+      sendError(res, 500, "DB_ERROR", "Failed to create owner", String(e));
+    }
+  });
+
+  router.post("/people/owners/:id/billing-entity", async ({ req, res, params, orgId }) => {
+    if (!requireRole(req, res, "MANAGER")) return;
+    try {
+      const raw = await readJson(req);
+      const parsed = CreateBillingEntitySchema.safeParse({ ...raw, type: "OWNER", userId: params.id });
+      if (!parsed.success) return sendError(res, 400, "VALIDATION_ERROR", "Invalid billing entity data", parsed.error.flatten());
+      const created = await createBillingEntity({ orgId, ...parsed.data, userId: params.id });
+      sendJson(res, 201, { data: created });
+    } catch (e: any) {
+      if (e.message === "Invalid JSON") return sendError(res, 400, "INVALID_JSON", "Invalid JSON");
+      if (e.message === "BILLING_ENTITY_TYPE_EXISTS") return sendError(res, 409, "CONFLICT", "Billing entity already exists for this owner");
+      sendError(res, 500, "DB_ERROR", "Failed to create billing entity", String(e));
+    }
+  });
 
   /* ── Buildings ─────────────────────────────────────────────── */
 
@@ -196,9 +256,7 @@ export function registerInventoryRoutes(router: Router) {
       }
 
       // Validate user exists, same org, role=OWNER
-      const user = await prisma.user.findFirst({
-        where: { id: userId, orgId },
-      });
+      const user = await inventoryRepo.findOrgOwnerById(prisma, orgId, userId);
       if (!user) {
         return sendError(res, 422, "VALIDATION_ERROR", "User not found in this org");
       }

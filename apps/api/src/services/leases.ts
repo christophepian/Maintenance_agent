@@ -106,6 +106,9 @@ export interface LeaseDTO {
   terminationNotice?: string;
   archivedAt?: string;
 
+  // Signature tracking — populated from associated SignatureRequest (batch join)
+  sentForSignatureAt?: string;
+
   // Timestamps
   createdAt: string;
   updatedAt: string;
@@ -402,6 +405,10 @@ export interface ListLeasesFilter {
   unitId?: string;
   applicationId?: string;
   expenseTypeId?: string;
+  startDateFrom?: string; // ISO date
+  startDateTo?: string;   // ISO date
+  endDateFrom?: string;   // ISO date
+  endDateTo?: string;     // ISO date
   limit?: number;
   offset?: number;
 }
@@ -413,6 +420,10 @@ export async function listLeases(orgId: string, filter: ListLeasesFilter = {}): 
       unitId: filter.unitId,
       applicationId: filter.applicationId,
       expenseTypeId: filter.expenseTypeId,
+      startDateFrom: filter.startDateFrom ? new Date(filter.startDateFrom) : undefined,
+      startDateTo: filter.startDateTo ? new Date(filter.startDateTo + "T23:59:59.999Z") : undefined,
+      endDateFrom: filter.endDateFrom ? new Date(filter.endDateFrom) : undefined,
+      endDateTo: filter.endDateTo ? new Date(filter.endDateTo + "T23:59:59.999Z") : undefined,
       limit: filter.limit,
       offset: filter.offset,
     }),
@@ -424,7 +435,34 @@ export async function listLeases(orgId: string, filter: ListLeasesFilter = {}): 
     }),
   ]);
 
-  return { data: leases.map(mapLeaseToDTO), total };
+  // Batch-join sentForSignatureAt from SignatureRequest for READY_TO_SIGN leases
+  const submittedIds = leases
+    .filter((l) => l.status === LeaseStatus.READY_TO_SIGN)
+    .map((l) => l.id);
+
+  const sentAtMap = new Map<string, string>();
+  if (submittedIds.length > 0) {
+    const sigReqs = await prisma.signatureRequest.findMany({
+      where: { entityId: { in: submittedIds }, entityType: 'LEASE' },
+      select: { entityId: true, sentAt: true },
+      orderBy: { createdAt: 'desc' },
+    });
+    for (const sr of sigReqs) {
+      // Keep the most-recent sentAt per lease (findMany is ordered desc)
+      if (!sentAtMap.has(sr.entityId) && sr.sentAt) {
+        sentAtMap.set(sr.entityId, sr.sentAt.toISOString());
+      }
+    }
+  }
+
+  const dtos = leases.map((l) => {
+    const dto = mapLeaseToDTO(l);
+    const sentAt = sentAtMap.get(l.id);
+    if (sentAt) dto.sentForSignatureAt = sentAt;
+    return dto;
+  });
+
+  return { data: dtos, total };
 }
 
 // ==========================================
@@ -705,6 +743,158 @@ export async function archiveLease(id: string, orgId: string): Promise<LeaseDTO>
 }
 
 // ==========================================
+// Handle expired submitted lease
+// ==========================================
+
+/** Add N business days (Mon–Fri) to a date. */
+function addBusinessDays(date: Date, days: number): Date {
+  const result = new Date(date);
+  let added = 0;
+  while (added < days) {
+    result.setDate(result.getDate() + 1);
+    const day = result.getDay();
+    if (day !== 0 && day !== 6) added++;
+  }
+  return result;
+}
+
+export interface LeaseExpiryResult {
+  action: 'REDRAFTED_FOR_BACKUP' | 'ARCHIVED_NO_BACKUP';
+  newLeaseId?: string;
+  message: string;
+}
+
+/**
+ * Handle a READY_TO_SIGN lease that has passed its 5-business-day window.
+ *
+ * Decision tree:
+ *   1. If lease has an applicationId, find the RentalOwnerSelection for the unit.
+ *      - If backup1 exists (status not VOIDED): create a new DRAFT lease for
+ *        the backup candidate from the building template, cancel the expired lease.
+ *      - If no backup: cancel the expired lease, relist the unit (isVacant = true).
+ *   2. If no applicationId (manually-created lease): cancel and relist.
+ */
+export async function handleLeaseExpiry(
+  leaseId: string,
+  orgId: string,
+): Promise<LeaseExpiryResult> {
+  const existing = await leaseRepo.findLeaseById(prisma, leaseId);
+  if (!existing || existing.orgId !== orgId) throw new Error('Lease not found');
+  if (existing.isTemplate) throw new Error('Cannot expire a template');
+  if (existing.status !== LeaseStatus.READY_TO_SIGN) {
+    throw new Error('Only READY_TO_SIGN leases can be expired');
+  }
+
+  // Confirm 5 business days have actually elapsed from sentAt
+  const sigReq = await prisma.signatureRequest.findFirst({
+    where: { entityId: leaseId, entityType: 'LEASE' },
+    orderBy: { createdAt: 'desc' },
+    select: { sentAt: true },
+  });
+  if (sigReq?.sentAt) {
+    const expiryDate = addBusinessDays(sigReq.sentAt, 5);
+    if (new Date() < expiryDate) {
+      throw new Error('Lease has not yet expired (5 business days not elapsed)');
+    }
+  }
+  // If no sentAt found we allow the manager to manually trigger expiry
+
+  // Cancel the expired lease
+  await leaseRepo.updateLeaseRaw(prisma, leaseId, { status: LeaseStatus.CANCELLED });
+
+  // If no applicationId, relist unit and return
+  if (!existing.applicationId) {
+    await prisma.unit.updateMany({
+      where: { id: existing.unitId, orgId },
+      data: { isVacant: true },
+    });
+    return { action: 'ARCHIVED_NO_BACKUP', message: 'Lease cancelled. Unit relisted (no application link found).' };
+  }
+
+  // Find RentalOwnerSelection for this unit (most recent one covering this application)
+  const selection = await prisma.rentalOwnerSelection.findFirst({
+    where: { unitId: existing.unitId },
+    orderBy: { createdAt: 'desc' },
+    include: {
+      backup1Selection: {
+        include: {
+          application: {
+            include: { applicants: { where: { role: 'PRIMARY' }, take: 1 } },
+          },
+        },
+      },
+    },
+  });
+
+  const backup1 = (selection as any)?.backup1Selection;
+  const backup1Applicant = backup1?.application?.applicants?.[0];
+
+  if (!backup1 || backup1.status === 'VOIDED') {
+    // No viable backup — relist unit
+    await prisma.unit.updateMany({
+      where: { id: existing.unitId, orgId },
+      data: { isVacant: true },
+    });
+    return { action: 'ARCHIVED_NO_BACKUP', message: 'Lease cancelled. No backup candidate — unit relisted.' };
+  }
+
+  // Create a new DRAFT lease for the backup candidate using the building template
+  let newLeaseId: string | undefined;
+  try {
+    const buildingId = existing.unit?.building?.id;
+    const templates = buildingId ? await listLeaseTemplates(orgId, buildingId) : [];
+    if (templates.length > 0) {
+      const template = templates[0];
+      const tenantName = backup1Applicant
+        ? `${backup1Applicant.firstName} ${backup1Applicant.lastName}`
+        : 'Unknown';
+      const newLease = await createLeaseFromTemplate(
+        template.id,
+        orgId,
+        existing.unitId,
+        {
+          tenantName,
+          tenantEmail: backup1Applicant?.email || undefined,
+          tenantPhone: (backup1Applicant as any)?.phone || undefined,
+          tenantAddress: (backup1Applicant as any)?.currentAddress || undefined,
+          tenantZipCity: (backup1Applicant as any)?.currentZipCity || undefined,
+          applicationId: backup1.applicationId,
+        },
+      );
+      newLeaseId = newLease.id;
+    }
+  } catch (e) {
+    console.error('[LEASE_EXPIRY] Failed to create backup candidate lease (non-critical):', e);
+  }
+
+  // Advance selection to FALLBACK_1
+  if (selection) {
+    await prisma.rentalOwnerSelection.update({
+      where: { id: selection.id },
+      data: {
+        status: 'FALLBACK_1',
+        primaryApplicationUnitId: backup1.id,
+        backup1ApplicationUnitId: selection.backup2ApplicationUnitId || null,
+        backup2ApplicationUnitId: null,
+        deadlineAt: addBusinessDays(new Date(), 5),
+      },
+    });
+    await prisma.rentalApplicationUnit.update({
+      where: { id: backup1.id },
+      data: { status: 'SELECTED_PRIMARY' },
+    });
+  }
+
+  return {
+    action: 'REDRAFTED_FOR_BACKUP',
+    newLeaseId,
+    message: newLeaseId
+      ? `Lease cancelled. New draft created for backup candidate (lease ${newLeaseId}).`
+      : 'Lease cancelled. Backup candidate promoted but no building template found — create lease manually.',
+  };
+}
+
+// ==========================================
 // Phase 5: Create invoice linked to lease
 // ==========================================
 export interface CreateLeaseInvoicePayload {
@@ -754,10 +944,31 @@ export async function createLeaseInvoice(
     });
   }
 
+  // Resolve issuer: prefer the building owner's billing entity, fall back to org billing entity.
+  let issuerBillingEntityId: string | undefined;
+  if (lease.unitId) {
+    const unit = await prisma.unit.findUnique({
+      where: { id: lease.unitId },
+      select: { building: { select: { owners: {
+        include: { user: { select: { billingEntity: { select: { id: true } } } } },
+        take: 1,
+      }}}},
+    });
+    issuerBillingEntityId = unit?.building?.owners?.[0]?.user?.billingEntity?.id ?? undefined;
+  }
+  if (!issuerBillingEntityId) {
+    const orgBillingEntity = await prisma.billingEntity.findFirst({
+      where: { orgId, type: 'ORG' },
+      select: { id: true },
+    });
+    issuerBillingEntityId = orgBillingEntity?.id;
+  }
+
   const invoice = await leaseRepo.createInvoice(prisma, {
     orgId,
     jobId: adminJob.id,
     leaseId,
+    ...(issuerBillingEntityId ? { issuerBillingEntityId } : {}),
     recipientName: lease.tenantName,
     recipientAddressLine1: lease.tenantAddress || '',
     recipientPostalCode: lease.tenantZipCity?.split(' ')[0] || '',
@@ -951,7 +1162,7 @@ export async function createBlankLeaseTemplate(
   orgId: string,
   buildingId: string,
   data: {
-    templateName: string;
+    templateName?: string;
     landlordName: string;
     landlordAddress: string;
     landlordZipCity: string;
@@ -980,12 +1191,15 @@ export async function createBlankLeaseTemplate(
   });
   if (!unit) throw new Error('Building has no units — create at least one unit first');
 
+  // Derive canonical name from building if caller did not supply one
+  const templateName = data.templateName?.trim() || `${building.name} Template`;
+
   const template = await leaseRepo.createLease(prisma, {
       orgId,
       unitId: unit.id,
       isTemplate: true,
       templateBuildingId: buildingId,
-      templateName: data.templateName,
+      templateName,
       status: 'DRAFT' as LeaseStatus,
 
       landlordName: data.landlordName,

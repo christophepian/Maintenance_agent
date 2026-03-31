@@ -1,246 +1,240 @@
 # Low-Context Architecture Guide
 
-> **Purpose:** A future agent (or developer) with no prior context should
-> be able to read this file and know *exactly which 1-3 files to touch*
-> for any given change.
+> **File-routing map.** Find which 1–3 files to touch for any change.
+> For guardrails, rules, and task routing → **[PROJECT_OVERVIEW.md](../../../PROJECT_OVERVIEW.md)**.
+> For auth helpers, security rules, boot guards → same file.
 
-**Codebase:** 53 models · 42 enums · 53 migrations · 23 workflows · 16 repositories · ~47k backend LOC · ~33k frontend LOC · ~170 API routes
+**Codebase:** 54 models · 47 enums · 60 migrations · 24 workflows · 17 repositories · ~54k backend LOC · ~37k frontend LOC · 247 API operations (190 URL paths)
 
----
-
-## Layer Diagram
-
-```
-┌─────────────┐
-│   routes/    │  Thin HTTP glue: parse params → build WorkflowContext → call workflow → send response
-├─────────────┤
-│  workflows/  │  Business orchestration: sequence of service calls, transition guards, event emission
-├─────────────┤
-│  services/   │  Domain logic: DTO mapping, business rules, complex calculations
-├─────────────┤
-│ repositories/│  Data access: Prisma queries, canonical includes, org-scoping
-├─────────────┤
-│   events/    │  Side-effects: async event bus, notification triggers
-└─────────────┘
-```
-
-**Rule:** Each layer only calls the layer directly below it.
-Routes → Workflows → Services → Repositories → Prisma.
+**Layer order (never skip):** routes → workflows → services → repositories → Prisma
 
 ---
 
-## Where to Change Things
+## 1 · Where to Change Things
 
-### "I need to change a status transition rule"
-→ **`src/workflows/transitions.ts`** — the `VALID_*_TRANSITIONS` maps.
-Every status change in the system passes through `assert*Transition()`.
+**Status transitions** → `workflows/transitions.ts` (all `VALID_*_TRANSITIONS` maps + `assert*Transition()`)
 
-### "I need to add a new field to the Request/Job/Invoice API response"
-1. Add column to **`prisma/schema.prisma`** + run migration
-2. Update the **include constant** in the relevant repository:
-   - `src/repositories/requestRepository.ts` → `REQUEST_FULL_INCLUDE`
-   - `src/repositories/jobRepository.ts` → `JOB_FULL_INCLUDE`
-   - `src/repositories/invoiceRepository.ts` → `INVOICE_FULL_INCLUDE`
-3. Update the **DTO mapper** in the relevant service:
-   - `src/services/maintenanceRequests.ts` → `toDTO()`
-   - `src/services/jobs.ts` → `mapJobToDTO()`
-   - `src/services/invoices.ts` → `mapInvoiceToDTO()`
+**Add a field to Request/Job/Invoice response:**
+1. `prisma/schema.prisma` + migration
+2. Repository include constant: `requestRepository.ts` → `REQUEST_FULL_INCLUDE`, `jobRepository.ts` → `JOB_FULL_INCLUDE`, `invoiceRepository.ts` → `INVOICE_FULL_INCLUDE`
+3. DTO mapper: `services/maintenanceRequests.ts` → `toDTO()`, `services/jobs.ts` → `mapJobToDTO()`, `services/invoices.ts` → `mapInvoiceToDTO()`
 
-### "I need to add a new HTTP endpoint"
-1. Add the route handler in the appropriate file under **`src/routes/`**
-2. If it mutates state, create or use an existing **workflow** in `src/workflows/`
-3. If the workflow needs new data queries, add them to the relevant **repository**
+**Add an HTTP endpoint** → route in `routes/`, workflow in `workflows/` (if mutation), repository for new queries
 
-### "I need to add a new business action (e.g., cancel a request)"
-1. Create **`src/workflows/cancelRequestWorkflow.ts`** with:
-   - Explicit `Input` and `Result` types at the top
-   - Transition guard via `assertRequestTransition()`
-   - Service delegation
-   - Event emission via `emit()`
-   - Canonical reload + DTO return
-2. Add transition rule to **`src/workflows/transitions.ts`**
-3. Export from **`src/workflows/index.ts`**
-4. Wire into the relevant route handler
+**Add a business action** → new `workflows/<name>Workflow.ts` (typed `Input`/`Result`, transition guard, service calls, `emit()`, canonical reload) + transition rule in `transitions.ts` + export from `workflows/index.ts` + route handler
 
-### "I need to change the repair vs replace analysis"
-→ **`src/services/assetInventory.ts`** — `getRepairReplaceAnalysis()`
-→ Consumes `getAssetInventoryForUnit()` + `computeDepreciation()` in the same file
-→ Exposed via `GET /units/:id/repair-replace-analysis` in `src/routes/inventory.ts`
-→ Recommendation logic: REPLACE if `depreciationPct >= 100`, MONITOR if `>= 75`, REPAIR otherwise
-→ `cumulativeRepairCostChf` = sum of `AssetIntervention.costChf` where type ≠ REPLACEMENT
-
-### "I need to change how depreciation is computed"
-→ **`src/services/assetInventory.ts`** — `computeDepreciation()`
-→ Uses `replacedAt ?? installedAt` as clock start; caps at 100%
-→ Standard lookup by category/canton hierarchy lives in `getAssetInventoryForUnit()`
-
-### "I need to change how auto-approval works"
-→ **`src/services/autoApproval.ts`** — `decideRequestStatusWithRules()`
-→ Used by `src/workflows/createRequestWorkflow.ts` step 2
-
-### "I need to change the legal auto-routing logic"
-→ **`src/services/legalDecisionEngine.ts`** — `evaluateRequestLegalDecision()`
-→ Used by `src/workflows/createRequestWorkflow.ts` step 6
-→ And `src/workflows/evaluateLegalRoutingWorkflow.ts`
-
-### "I need to change legal variables, rules, category mappings, evaluation logs, or depreciation standards"
-→ **`src/services/legalService.ts`** — all CRUD and query logic for the legal domain
-→ Functions: `listVariables`, `listRules`, `createRule`, `listCategoryMappings`, `createCategoryMapping`, `updateCategoryMapping`, `deleteCategoryMapping`, `getMappingCoverage`, `listEvaluations`, `listDepreciationStandards`, `createDepreciationStandard`
-→ Error classes: `LegalConflictError`, `LegalNotFoundError`, `LegalForbiddenError`
-→ Called by route handlers in `src/routes/legal.ts` — do not add Prisma calls directly to that file
-
-### "I need to change how contractor matching works"
-→ **`src/services/requestAssignment.ts`** — `findMatchingContractor()`, `assignContractor()`
-
-### "I need to change invoice financial calculations (VAT, line items)"
-→ **`src/services/invoices.ts`** — `normalizeLineItems()`, `summarizeTotals()`
-
-### "I need to change org/building configuration"
-→ **`src/services/orgConfig.ts`** — `getOrgConfig()`
-→ **`src/services/buildingConfig.ts`** — `computeEffectiveConfig()`
-
-### "I need to change Chart of Accounts (expense types, accounts, mappings)"
-→ **`src/services/coaService.ts`** — all COA CRUD + Swiss taxonomy seed
-→ **`src/repositories/expenseTypeRepository.ts`** — ExpenseType data access
-→ **`src/repositories/accountRepository.ts`** — Account data access
-→ **`src/repositories/expenseMappingRepository.ts`** — ExpenseMapping data access
-→ **`src/routes/coa.ts`** — 7 HTTP endpoints (expense-types, accounts, mappings CRUD + seed)
-→ **`src/validation/coaValidation.ts`** — Zod schemas for COA inputs
-→ Invoice COA classification: `invoiceRepository.ts` (INVOICE_INCLUDE), `invoices.ts` (DTO mapper)
-→ Lease expense items: `leaseRepository.ts` (LEASE_FULL_INCLUDE), `leases.ts` (expense item CRUD)
-
-### "I need to change the General Ledger (journal entries, trial balance)"
-→ **`src/services/ledgerService.ts`** — `postJournalEntries`, `postInvoiceIssued`, `postInvoicePaid`, `listLedgerEntries`, `getAccountBalance`, `getTrialBalance`
-→ **`src/routes/ledger.ts`** — `GET /ledger`, `GET /ledger/trial-balance`, `GET /ledger/accounts/:accountId/balance`
-→ Auto-posting wired in: `workflows/issueInvoiceWorkflow.ts` + `workflows/payInvoiceWorkflow.ts` (best-effort)
-→ UI: `apps/web/pages/manager/finance/ledger.js` (Journal tab + Trial Balance tab)
-
-### "I need to add a new domain event handler"
-→ **`src/events/bus.ts`** — event emission
-→ **`src/events/handlers/`** — add new handler file
+**Add a domain event handler** → `events/bus.ts` (emission), `events/handlers.ts` (handler registration)
 
 ---
 
-## Workflow Pattern (Template)
+## 2 · Domain File Maps
 
-Every workflow follows this structure:
+### Requests & Maintenance
+| Layer | File | Key exports |
+|-------|------|-------------|
+| Route | `routes/requests.ts` | CRUD + status endpoints |
+| Workflows | `createRequestWorkflow.ts`, `approveRequestWorkflow.ts`, `assignContractorWorkflow.ts`, `unassignContractorWorkflow.ts`, `ownerRejectWorkflow.ts`, `uploadMaintenanceAttachmentWorkflow.ts` | |
+| Service | `services/maintenanceRequests.ts` | `toDTO()` |
+| Service | `services/autoApproval.ts` | `decideRequestStatusWithRules()` — used by createRequestWorkflow step 2 |
+| Service | `services/requestAssignment.ts` | `findMatchingContractor()`, `assignContractor()` |
+| Repo | `repositories/requestRepository.ts` | `REQUEST_FULL_INCLUDE` |
+| Validation | `validation/requests.ts` | Zod schemas |
 
-```typescript
-// src/workflows/doSomethingWorkflow.ts
+### Jobs
+| Layer | File | Key exports |
+|-------|------|-------------|
+| Route | `routes/completion.ts` | Job completion + rating endpoints |
+| Workflows | `completeJobWorkflow.ts`, `completionRatingWorkflow.ts`, `schedulingWorkflow.ts`, `updateJobWorkflow.ts` | |
+| Service | `services/jobs.ts` | `mapJobToDTO()` |
+| Repo | `repositories/jobRepository.ts` | `JOB_FULL_INCLUDE` |
+| Note | `Job` has no `description` — use `Request.description` | `Job.contractorId` is required, not optional |
 
-import { WorkflowContext } from "./context";
-import { assertXxxTransition } from "./transitions";
-import { emit } from "../events/bus";
+### Invoices
+| Layer | File | Key exports |
+|-------|------|-------------|
+| Route | `routes/invoices.ts` | CRUD + status endpoints |
+| Workflows | `issueInvoiceWorkflow.ts`, `approveInvoiceWorkflow.ts`, `disputeInvoiceWorkflow.ts`, `payInvoiceWorkflow.ts`, `tenantSelfPayWorkflow.ts` | |
+| Service | `services/invoices.ts` | `mapInvoiceToDTO()`, `normalizeLineItems()`, `summarizeTotals()` |
+| Repo | `repositories/invoiceRepository.ts` | `INVOICE_FULL_INCLUDE` |
+| Ingestion | `services/invoiceIngestionService.ts` | OCR → draft invoice |
 
-// ─── Input / Output (explicit, exported) ───────
-export interface DoSomethingInput { ... }
-export interface DoSomethingResult { ... }
+### Leases
+| Layer | File | Key exports |
+|-------|------|-------------|
+| Route | `routes/leases.ts` | CRUD + expense items |
+| Workflows | `markLeaseReadyWorkflow.ts`, `activateLeaseWorkflow.ts`, `terminateLeaseWorkflow.ts` | |
+| Service | `services/leases.ts` | DTO mapping, expense item CRUD |
+| Service | `services/leasePDFRenderer.ts` | PDF generation |
+| Repo | `repositories/leaseRepository.ts` | `LEASE_FULL_INCLUDE` |
 
-// ─── Workflow ──────────────────────────────────
-export async function doSomethingWorkflow(
-  ctx: WorkflowContext,
-  input: DoSomethingInput,
-): Promise<DoSomethingResult> {
-  // 1. Fetch + validate (via repository)
-  // 2. Transition guard (via transitions.ts)
-  // 3. Business logic (via service calls)
-  // 4. Emit domain event (best-effort)
-  // 5. Canonical reload + DTO return
-}
-```
+### Legal
+| Layer | File | Key exports |
+|-------|------|-------------|
+| Route | `routes/legal.ts` | Variables, rules, category mappings, evaluations, depreciation standards |
+| Workflow | `evaluateLegalRoutingWorkflow.ts` | Legal obligation evaluation |
+| Service | `services/legalDecisionEngine.ts` | `evaluateRequestLegalDecision()` — used by createRequestWorkflow step 6 |
+| Service | `services/legalService.ts` | All legal CRUD: `listVariables`, `listRules`, `createRule`, `listCategoryMappings`, `getMappingCoverage`, `listEvaluations`, `listDepreciationStandards` |
+| Service | `services/legalIngestion.ts` | Legal document ingestion |
+| Repo | `repositories/legalSourceRepository.ts` | Legal source data access |
+| Includes | `services/legalIncludes.ts` | Shared include constants |
+
+### Inventory & Assets
+| Layer | File | Key exports |
+|-------|------|-------------|
+| Route | `routes/inventory.ts` | Asset CRUD, repair-replace analysis, depreciation |
+| Service | `services/assetInventory.ts` | `getRepairReplaceAnalysis()`, `computeDepreciation()`, `getAssetInventoryForUnit()` |
+| Service | `services/inventory.ts` | Asset management logic |
+| Repo | `repositories/inventoryRepository.ts` | Asset data access |
+| Repo | `repositories/assetRepository.ts` | AssetModel data access |
+| Note | `Appliance` has no `category` — lives on `AssetModel` | Depreciation: `replacedAt ?? installedAt` as clock start, caps at 100% |
+
+### Auth & Tenants
+| Layer | File | Key exports |
+|-------|------|-------------|
+| Route | `routes/auth.ts` | Login, registration |
+| Route | `routes/tenants.ts` | Tenant portal endpoints |
+| Service | `services/tenantSession.ts` | Tenant JWT validation |
+| Service | `services/tenantPortal.ts` | Tenant-facing logic |
+| Service | `services/tenantIdentity.ts` | Tenant identity management |
+| Authz | `authz.ts` | All auth helpers (see PROJECT_OVERVIEW.md) |
+| Gotcha | Tenant-portal routes: use `requireTenantSession()` — never accept `tenantId` as query param | `POST /tenant-session` is the only unauthenticated entry point |
+
+### Notifications
+| Layer | File | Key exports |
+|-------|------|-------------|
+| Route | `routes/notifications.ts` | Notification endpoints |
+| Service | `services/notifications.ts` | Notification logic |
+| Service | `services/emailOutbox.ts` | Email queuing |
+| Service | `services/emailTransport.ts` | Email delivery |
+| Events | `events/handlers.ts` | Domain event → notification triggers |
+
+### Financials · COA · Ledger
+| Layer | File | Key exports |
+|-------|------|-------------|
+| Route | `routes/coa.ts` | 7 endpoints: expense-types, accounts, mappings CRUD + seed |
+| Route | `routes/ledger.ts` | 3 endpoints: journal, trial-balance, account balance |
+| Route | `routes/financials.ts` | Financial summary endpoints |
+| Service | `services/coaService.ts` | COA CRUD + Swiss taxonomy seed |
+| Service | `services/ledgerService.ts` | `postJournalEntries`, `postInvoiceIssued/Paid`, `getTrialBalance` |
+| Service | `services/financials.ts` | Financial aggregations |
+| Repo | `repositories/expenseTypeRepository.ts`, `accountRepository.ts`, `expenseMappingRepository.ts` | COA data access |
+| Validation | `validation/coaValidation.ts` | Zod schemas |
+| Wiring | Ledger auto-posts from `issueInvoiceWorkflow` + `payInvoiceWorkflow` (best-effort) | |
+
+### Capture Sessions & Ingestion
+| Layer | File | Key exports |
+|-------|------|-------------|
+| Route | `routes/captureSessions.ts` | Capture session endpoints |
+| Service | `services/captureSessionService.ts` | Session management |
+| Service | `services/documentScan.ts` | Document scanning |
+| Service | `services/documentScanner.ts` | Scanner abstraction |
+| Service | `services/invoiceIngestionService.ts` | Invoice OCR → draft |
+| Repo | `repositories/captureSessionRepository.ts` | Session data access |
+
+### RFPs (Request for Proposals)
+| Layer | File | Key exports |
+|-------|------|-------------|
+| Route | `routes/contractor.ts` | Contractor + RFP endpoints |
+| Workflows | `awardQuoteWorkflow.ts`, `submitQuoteWorkflow.ts`, `rfpDirectAssignWorkflow.ts`, `rfpReinviteWorkflow.ts` | |
+| Service | `services/rfps.ts` | RFP logic |
+| Repo | `repositories/rfpRepository.ts` | RFP data access |
+
+### Rental Applications
+| Layer | File | Key exports |
+|-------|------|-------------|
+| Route | `routes/rentalApplications.ts` | Application CRUD |
+| Workflow | `submitRentalApplicationWorkflow.ts` | DRAFT → SUBMITTED |
+| Service | `services/rentalApplications.ts` | Application logic |
+| Service | `services/ownerSelection.ts` | Per-unit selection status |
+| Service | `services/rentalSelectionService.ts` | Selection workflow |
+| Repo | `repositories/rentalApplicationRepository.ts` | Application data access |
+| Includes | `services/rentalIncludes.ts` | Shared include constants |
 
 ---
 
-## Repository Pattern
+## 3 · Route Module Index (20 files)
 
-```typescript
-// src/repositories/xxxRepository.ts
+| File | Domain |
+|------|--------|
+| `routes/auth.ts` | Login, registration |
+| `routes/captureSessions.ts` | Capture sessions |
+| `routes/coa.ts` | Chart of Accounts (7 endpoints) |
+| `routes/completion.ts` | Job completion + rating |
+| `routes/config.ts` | Org + building config |
+| `routes/contractor.ts` | Contractor profiles + RFPs |
+| `routes/financials.ts` | Financial summaries |
+| `routes/helpers.ts` | Shared route utilities |
+| `routes/inventory.ts` | Assets, depreciation, repair-replace |
+| `routes/invoices.ts` | Invoice CRUD + lifecycle |
+| `routes/leases.ts` | Lease CRUD + expense items |
+| `routes/ledger.ts` | Journal entries, trial balance |
+| `routes/legal.ts` | Legal variables, rules, mappings |
+| `routes/maintenanceAttachments.ts` | File attachments |
+| `routes/notifications.ts` | Notification endpoints |
+| `routes/rentEstimation.ts` | Rent estimation |
+| `routes/rentalApplications.ts` | Rental applications |
+| `routes/requests.ts` | Maintenance requests |
+| `routes/scheduling.ts` | Scheduling |
+| `routes/tenants.ts` | Tenant portal |
 
-import { PrismaClient } from "@prisma/client";
+## 4 · Repository Index (18 files)
 
-// Canonical includes (single source of truth for DTO shape)
-export const XXX_FULL_INCLUDE = { ... } as const;
-export const XXX_SUMMARY_INCLUDE = { ... } as const;
+| File | Include constant | Entity |
+|------|-----------------|--------|
+| `requestRepository.ts` | `REQUEST_FULL_INCLUDE` | Request |
+| `jobRepository.ts` | `JOB_FULL_INCLUDE` | Job |
+| `invoiceRepository.ts` | `INVOICE_FULL_INCLUDE` | Invoice |
+| `leaseRepository.ts` | `LEASE_FULL_INCLUDE` | Lease |
+| `contractorRepository.ts` | `CONTRACTOR_INCLUDE` | Contractor |
+| `inventoryRepository.ts` | — | Appliance / AssetIntervention |
+| `assetRepository.ts` | — | AssetModel |
+| `rfpRepository.ts` | — | Rfp / RfpQuote |
+| `rentalApplicationRepository.ts` | — | RentalApplication |
+| `captureSessionRepository.ts` | — | CaptureSession |
+| `legalSourceRepository.ts` | — | LegalSource |
+| `schedulingRepository.ts` | — | ScheduledMaintenance |
+| `ratingRepository.ts` | — | CompletionRating |
+| `maintenanceAttachmentRepo.ts` | — | MaintenanceAttachment |
+| `expenseTypeRepository.ts` | — | ExpenseType |
+| `accountRepository.ts` | — | Account |
+| `expenseMappingRepository.ts` | — | ExpenseMapping |
 
-// All functions take `prisma: PrismaClient` as first arg (injectable)
-export async function findXxxById(prisma: PrismaClient, id: string) { ... }
-export async function findXxxsByOrg(prisma: PrismaClient, opts: ListOpts) { ... }
-```
+## 5 · Workflow Index (24 workflows)
 
-**Key:** Repositories are the *only* place raw Prisma calls live.
-Services and workflows never call `prisma.xxx.findUnique()` directly.
+| Workflow | Entity | Transition |
+|----------|--------|------------|
+| `createRequestWorkflow` | Request | → PENDING_REVIEW / AUTO_APPROVED |
+| `approveRequestWorkflow` | Request | PENDING → APPROVED |
+| `assignContractorWorkflow` | Request | → ASSIGNED |
+| `unassignContractorWorkflow` | Request | ASSIGNED → previous |
+| `ownerRejectWorkflow` | Request | → OWNER_REJECTED |
+| `evaluateLegalRoutingWorkflow` | Request | → RFP_PENDING |
+| `uploadMaintenanceAttachmentWorkflow` | Request | (attachment) |
+| `completeJobWorkflow` | Job | → COMPLETED |
+| `completionRatingWorkflow` | Job | (rating) |
+| `schedulingWorkflow` | Job | (scheduling) |
+| `updateJobWorkflow` | Job | (update) |
+| `issueInvoiceWorkflow` | Invoice | → ISSUED |
+| `approveInvoiceWorkflow` | Invoice | → APPROVED |
+| `disputeInvoiceWorkflow` | Invoice | → DISPUTED |
+| `payInvoiceWorkflow` | Invoice | → PAID |
+| `tenantSelfPayWorkflow` | Invoice | (tenant pay) |
+| `markLeaseReadyWorkflow` | Lease | DRAFT → READY_TO_SIGN |
+| `activateLeaseWorkflow` | Lease | SIGNED → ACTIVE |
+| `terminateLeaseWorkflow` | Lease | ACTIVE → TERMINATED |
+| `submitRentalApplicationWorkflow` | RentalApp | DRAFT → SUBMITTED |
+| `awardQuoteWorkflow` | Rfp | → AWARDED |
+| `submitQuoteWorkflow` | RfpQuote | (submit) |
+| `rfpDirectAssignWorkflow` | Rfp | (direct assign) |
+| `rfpReinviteWorkflow` | Rfp | (re-invite) |
 
----
-
-## Context Object
-
-```typescript
-interface WorkflowContext {
-  orgId: string;        // Resolved from auth/route
-  prisma: PrismaClient; // Injectable (for testing)
-  actorUserId?: string | null; // For audit trail
-}
-```
-
-Routes build `WorkflowContext` from `HandlerContext` and pass it into workflows.
-
----
-
-## File Index
-
-| File | Purpose |
-|------|---------|
-| `workflows/transitions.ts` | State transition maps + guards |
-| `workflows/context.ts` | WorkflowContext type |
-| `workflows/createRequestWorkflow.ts` | Create maintenance request |
-| `workflows/approveRequestWorkflow.ts` | Approve request (manager + owner) |
-| `workflows/assignContractorWorkflow.ts` | Assign contractor to request |
-| `workflows/unassignContractorWorkflow.ts` | Remove contractor assignment |
-| `workflows/completeJobWorkflow.ts` | Mark job completed |
-| `workflows/issueInvoiceWorkflow.ts` | Issue (lock + number) invoice |
-| `workflows/approveInvoiceWorkflow.ts` | Approve invoice |
-| `workflows/disputeInvoiceWorkflow.ts` | Dispute invoice |
-| `workflows/payInvoiceWorkflow.ts` | Mark invoice paid |
-| `workflows/evaluateLegalRoutingWorkflow.ts` | Legal obligation evaluation |
-| `workflows/ownerRejectWorkflow.ts` | Owner rejects request |
-| `workflows/uploadMaintenanceAttachmentWorkflow.ts` | Attach file to maintenance request |
-| `workflows/completionRatingWorkflow.ts` | Rate job after completion |
-| `workflows/schedulingWorkflow.ts` | Scheduling escalation |
-| `workflows/tenantSelfPayWorkflow.ts` | Tenant self-pay initiation |
-| `workflows/markLeaseReadyWorkflow.ts` | Advance lease DRAFT → READY_TO_SIGN |
-| `workflows/activateLeaseWorkflow.ts` | Activate lease after signing |
-| `workflows/terminateLeaseWorkflow.ts` | Terminate active lease |
-| `workflows/submitRentalApplicationWorkflow.ts` | Submit rental application |
-| `workflows/awardQuoteWorkflow.ts` | Award RFP quote |
-| `workflows/submitQuoteWorkflow.ts` | Contractor submits RFP quote |
-| `workflows/rfpDirectAssignWorkflow.ts` | Direct contractor assignment (bypass RFP) |
-| `workflows/rfpReinviteWorkflow.ts` | Re-invite contractors to RFP |
-| `repositories/requestRepository.ts` | Request data access |
-| `repositories/jobRepository.ts` | Job data access |
-| `repositories/invoiceRepository.ts` | Invoice data access |
-| `services/maintenanceRequests.ts` | Request DTOs + business logic |
-| `services/jobs.ts` | Job DTOs + CRUD |
-| `services/invoices.ts` | Invoice DTOs + CRUD + financial logic |
-| `services/autoApproval.ts` | Auto-approval rules engine |
-| `services/legalDecisionEngine.ts` | Legal routing decisions (DSL evaluator, obligation resolution) |
-| `services/legalService.ts` | Legal domain CRUD: variables, rules, category mappings, evaluation logs, depreciation standards |
-| `services/requestAssignment.ts` | Contractor matching + assignment |
-| `services/assetInventory.ts` | Asset inventory, depreciation computation, repair vs replace analysis |
-| `services/coaService.ts` | Chart of Accounts CRUD + Swiss taxonomy seed |
-| `repositories/expenseTypeRepository.ts` | ExpenseType data access |
-| `repositories/accountRepository.ts` | Account data access |
-| `repositories/expenseMappingRepository.ts` | ExpenseMapping data access |
-| `routes/coa.ts` | COA HTTP endpoints (7 routes) |
-| `validation/coaValidation.ts` | Zod schemas for COA inputs |
-| `services/ledgerService.ts` | Double-entry journal: postInvoiceIssued/Paid, listLedgerEntries, getTrialBalance |
-| `routes/ledger.ts` | Ledger HTTP endpoints (3 routes: journal, trial-balance, account balance) |
-| `events/bus.ts` | Domain event bus |
+Support files: `workflows/transitions.ts` (guards), `workflows/context.ts` (WorkflowContext type)
 
 ---
 
-## Transition Maps
+## 6 · Transition Maps
 
-### Request Lifecycle
+### Request
 ```
 PENDING_REVIEW → RFP_PENDING | PENDING_OWNER_APPROVAL
 RFP_PENDING → AUTO_APPROVED | PENDING_OWNER_APPROVAL | ASSIGNED
@@ -252,12 +246,9 @@ IN_PROGRESS → COMPLETED
 COMPLETED → (terminal)
 OWNER_REJECTED → RFP_PENDING (tenant self-pay path)
 ```
+Key fields: `approvalSource` (SYSTEM_AUTO | OWNER_APPROVED | OWNER_REJECTED | LEGAL_OBLIGATION), `rejectionReason` (String?)
 
-**Key fields:**
-- `approvalSource` (ApprovalSource?) — SYSTEM_AUTO | OWNER_APPROVED | OWNER_REJECTED | LEGAL_OBLIGATION
-- `rejectionReason` (String?) — free-text reason when owner rejects
-
-### Job Lifecycle
+### Job
 ```
 PENDING → IN_PROGRESS | COMPLETED
 IN_PROGRESS → COMPLETED
@@ -265,7 +256,7 @@ COMPLETED → INVOICED
 INVOICED → (terminal)
 ```
 
-### Invoice Lifecycle
+### Invoice
 ```
 DRAFT → ISSUED | APPROVED
 ISSUED → APPROVED | DISPUTED
@@ -274,173 +265,36 @@ DISPUTED → APPROVED | DRAFT
 PAID → (terminal)
 ```
 
-### Lease Lifecycle
+### Lease
 ```
 DRAFT → READY_TO_SIGN | CANCELLED
 READY_TO_SIGN → SIGNED | CANCELLED
 SIGNED → ACTIVE
 ACTIVE → TERMINATED
-TERMINATED → (terminal)
-CANCELLED → (terminal)
+TERMINATED / CANCELLED → (terminal)
 ```
 
-### Rental Application Lifecycle
+### Rental Application
 ```
-DRAFT → SUBMITTED
-SUBMITTED → (terminal; per-unit status managed by ownerSelection)
+DRAFT → SUBMITTED → (terminal; per-unit status via ownerSelection)
 ```
 
 ---
 
-## Workflow Conventions
+## 7 · Architecture Notes (non-obvious)
 
-Every workflow is a single async function that orchestrates one business
-action.  It lives in `workflows/<name>Workflow.ts` and is the **only**
-entry point for that action from route handlers.
+**WorkflowContext** — every workflow takes `{ orgId, prisma, actorUserId? }` as first arg. Routes build it from `HandlerContext`. Workflows never import the singleton `prismaClient`.
 
-### File Structure (canonical template)
+**Repository pattern** — repos export canonical include constants (`XXX_FULL_INCLUDE`). All Prisma calls live here. DTO mappers use `Prisma.XGetPayload<{ include: typeof X_INCLUDE }>` — never `any`.
 
-```typescript
-/**
- * <name>Workflow
- *
- * Canonical entry point for <action description>.
- * Orchestrates:
- *   1. Fetch entity + org ownership check
- *   2. Assert state transition is valid
- *   3. Persist changes (via repository)
- *   4. Emit domain event
- *   5. Return typed result
- */
+**Workflow rules** — typed `Input`/`Result` interfaces · transitions via `assert*Transition()` only · emit domain events · JSDoc header lists steps as numbered list.
 
-import { WorkflowContext } from "./context";
-import { assert<Entity>Transition } from "./transitions";
-import { emit } from "../events/bus";
-// ... repository + service imports
-
-// ─── Input / Output ────────────────────────────────────────────
-
-export interface <Name>Input { ... }
-export interface <Name>Result { dto: <EntityDTO>; }
-
-// ─── Workflow ──────────────────────────────────────────────────
-
-export async function <name>Workflow(
-  ctx: WorkflowContext,
-  input: <Name>Input,
-): Promise<<Name>Result> {
-  // Steps 1–5 ...
-}
-```
-
-### Rules
-
-| Rule | Description |
-|------|-------------|
-| **W1** | Every workflow has typed `Input` and `Result` interfaces. |
-| **W2** | First parameter is always `WorkflowContext { orgId, prisma, actorUserId? }`. |
-| **W3** | State transitions use `assert*Transition()` from `transitions.ts` — never inline status checks. |
-| **W4** | Persistence goes through repository functions, never direct `prisma.*` in the workflow (exception: transactions). |
-| **W5** | Every state change emits a domain event via `emit()` (fire-and-forget with `.catch()`). |
-| **W6** | Workflows never import the singleton `prismaClient` — they use `ctx.prisma`. |
-| **W7** | Route handlers call workflows; workflows call repositories + services. |
-| **W8** | JSDoc header lists orchestration steps as a numbered list. |
-
-### Inventory (23 workflows)
-
-| Workflow | Entity | Transition |
-|----------|--------|------------|
-| createRequestWorkflow | Request | → PENDING_REVIEW / AUTO_APPROVED |
-| approveRequestWorkflow | Request | PENDING → APPROVED |
-| assignContractorWorkflow | Request | → ASSIGNED |
-| unassignContractorWorkflow | Request | ASSIGNED → previous |
-| ownerRejectWorkflow | Request | PENDING_OWNER_APPROVAL → OWNER_REJECTED |
-| evaluateLegalRoutingWorkflow | Request | → RFP_PENDING |
-| uploadMaintenanceAttachmentWorkflow | Request | (adds attachment) |
-| completeJobWorkflow | Job | → COMPLETED |
-| completionRatingWorkflow | Job | (adds rating after completion) |
-| schedulingWorkflow | Job | (scheduling escalation) |
-| issueInvoiceWorkflow | Invoice | → ISSUED |
-| approveInvoiceWorkflow | Invoice | → APPROVED |
-| disputeInvoiceWorkflow | Invoice | → DISPUTED |
-| payInvoiceWorkflow | Invoice | → PAID |
-| tenantSelfPayWorkflow | Invoice | (tenant-initiated payment) |
-| markLeaseReadyWorkflow | Lease | DRAFT → READY_TO_SIGN |
-| activateLeaseWorkflow | Lease | SIGNED → ACTIVE |
-| terminateLeaseWorkflow | Lease | ACTIVE → TERMINATED |
-| submitRentalApplicationWorkflow | RentalApplication | DRAFT → SUBMITTED |
-| awardQuoteWorkflow | Rfp | → AWARDED |
-| submitQuoteWorkflow | RfpQuote | (contractor submits quote) |
-| rfpDirectAssignWorkflow | Rfp | (direct assignment bypass) |
-| rfpReinviteWorkflow | Rfp | (re-invite contractors) |
+**Schema gotchas** — `Request` has no `orgId` (scoped via unit→building FK chain) · `Job` has no `description` (use `Request.description`) · `Appliance` has no `category` (lives on `AssetModel`) · `Job.contractorId` is required
 
 ---
 
-## Auth Helpers — `authz.ts`
+## 8 · Frontend Patterns
 
-| Helper | Roles / Use case |
-|--------|------------------|
-| `requireAuth(req, res)` | Any authenticated route — returns user or 401 |
-| `maybeRequireManager(req, res)` | MANAGER or OWNER reads — returns false + 401/403 if fails |
-| `requireRole(req, res, role)` | Single role enforcement — returns false + 403 if fails |
-| `requireAnyRole(req, res, roles[])` | Multi-role — e.g. `['CONTRACTOR', 'MANAGER']` — returns false + 403 if fails |
-| `requireTenantSession(req, res)` | Tenant-portal routes only — validates tenant JWT, returns `tenantId` string or null |
-| `getOrgIdForRequest(req)` | Resolves orgId from auth context — returns `string \| null` — null in production when unauthenticated |
-| `requireOrgViewer(req, res)` | Read-only access for any authenticated org member (MANAGER or OWNER) |
-
-### Usage pattern
-Every handler that calls an auth helper must check the return value and return early:
-```typescript
-if (!maybeRequireManager(req, res)) return;
-// or
-const tenantId = requireTenantSession(req, res);
-if (!tenantId) return;
-```
-
-### Production boot guards
-Server refuses to start (`process.exit(1)`) if any of the following are true in `NODE_ENV=production`:
-- `AUTH_OPTIONAL=true`
-- `DEV_IDENTITY_ENABLED=true`
-- `AUTH_SECRET` not set
-
----
-
-## Tenant Portal Auth
-
-All `/tenant-portal/*` routes require a tenant JWT:
-- Header: `Authorization: Bearer <token>`
-- Token must have `role: TENANT` and `tenantId` claim
-- Use `requireTenantSession(req, res)` — returns `tenantId` or null
-- `POST /tenant-session` is the unauthenticated login entry point
-- Do NOT accept `tenantId` as a query parameter on tenant-portal routes
-
----
-
-## Security Rules
-
-- Every route handler must have an explicit auth wrapper — no unauthenticated handlers except public entry points (`POST /tenant-session`, `GET /listings`, `POST /triage`)
-- `maybeRequireManager` is for reads only — use `requireRole('MANAGER')` for all mutation routes
-- `DEV_IDENTITY_ENABLED` headers (`x-dev-role`, `x-dev-org-id`, `x-dev-user-id`) are dev-only and blocked at boot in production
-- `getOrgIdForRequest()` returns null in production for unauthenticated requests — always null-check at the call site
-- Rental attachment downloads and document listings require manager auth — they contain PII
-- Dev-only routes (`/dev/emails`, `/dev/*`) must have a production guard returning 404 before any logic runs
-
----
-
-## Frontend Page Patterns
-
-### "I need to add a new manager hub page (with tabs)"
-→ Copy **`apps/web/pages/manager/_template_hub.js`** as your starting point
-→ Tab strip outside Panel, Panel wraps content only, CTAs in PageHeader, styles from `globals.css` only
-→ See **F-UI1** in `PROJECT_STATE.md` for the full rule set
-→ Visual reference: `requests.js`
-
-### "I need to add a new manager detail page (no tabs)"
-→ Copy **`apps/web/pages/manager/_template_detail.js`** as your starting point
-→ Each section in its own Panel, tables use `bodyClassName="p-0"`
-→ See **F-UI2** in `PROJECT_STATE.md` for the full rule set
-
-### "I need to add a new content-rich layout (not tabular)"
-→ Use grid, category sections, or stat cards as appropriate — see **F-UI3**
-→ If it has its own state and appears in multiple places → extract to `apps/web/components/`
-→ Visual reference: `legal/depreciation.js`, `DepreciationStandards.js`
+**Hub page (with tabs)** → copy `apps/web/pages/manager/_template_hub.js` · see F-UI1 in PROJECT_STATE.md
+**Detail page (no tabs)** → copy `apps/web/pages/manager/_template_detail.js` · see F-UI2
+**Content-rich layout** → see F-UI3 · visual reference: `legal/depreciation.js`

@@ -162,6 +162,8 @@ model Org {
   expenseMappings       ExpenseMapping[]
   // Ledger
   ledgerEntries         LedgerEntry[]
+  // Capture Sessions (INV-HUB)
+  captureSessions       CaptureSession[]
 }
 
 model OrgConfig {
@@ -192,6 +194,7 @@ model User {
   updatedAt      DateTime        @updatedAt
   org            Org             @relation(fields: [orgId], references: [id])
   ownedBuildings BuildingOwner[]
+  billingEntity  BillingEntity?
 
   @@unique([orgId, email], name: "user_org_email_unique")
   @@index([orgId])
@@ -247,6 +250,7 @@ model Request {
   approvalSource       ApprovalSource?
   rejectionReason      String?
   payingParty          PayingParty     @default(LANDLORD)
+  urgency              RequestUrgency  @default(MEDIUM)
   job                  Job?
   appliance            Appliance?     @relation(fields: [applianceId], references: [id])
   assignedContractor   Contractor?    @relation(fields: [assignedContractorId], references: [id])
@@ -571,7 +575,9 @@ model BillingEntity {
   createdAt           DateTime          @default(now())
   updatedAt           DateTime          @updatedAt
   contractorId        String?           @unique
+  userId              String?           @unique
   contractor          Contractor?       @relation(fields: [contractorId], references: [id])
+  user                User?             @relation(fields: [userId], references: [id])
   org                 Org               @relation(fields: [orgId], references: [id], onDelete: Cascade)
   invoices            Invoice[]
 
@@ -579,45 +585,56 @@ model BillingEntity {
 }
 
 model Invoice {
-  id                    String            @id @default(uuid())
+  id                    String                @id @default(uuid())
   orgId                 String
-  jobId                 String
+  jobId                 String?
   leaseId               String?
   amount                Int
   description           String
-  status                InvoiceStatus     @default(DRAFT)
+  status                InvoiceStatus         @default(DRAFT)
   submittedAt           DateTime?
   approvedAt            DateTime?
   paidAt                DateTime?
-  createdAt             DateTime          @default(now())
-  updatedAt             DateTime          @updatedAt
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
   issuerBillingEntityId String?
-  recipientName         String            @default("Unknown")
-  recipientAddressLine1 String            @default("Unknown")
+  recipientName         String                @default("Unknown")
+  recipientAddressLine1 String                @default("Unknown")
   recipientAddressLine2 String?
-  recipientPostalCode   String            @default("0000")
-  recipientCity         String            @default("Unknown")
-  recipientCountry      String            @default("CH")
+  recipientPostalCode   String                @default("0000")
+  recipientCity         String                @default("Unknown")
+  recipientCountry      String                @default("CH")
   issueDate             DateTime?
   dueDate               DateTime?
   invoiceNumber         String?
-  invoiceNumberFormat   String            @default("YYYY-NNN")
-  subtotalAmount        Int               @default(0)
-  vatAmount             Int               @default(0)
-  totalAmount           Int               @default(0)
-  currency              String            @default("CHF")
-  vatRate               Float             @default(7.7)
+  invoiceNumberFormat   String                @default("YYYY-NNN")
+  subtotalAmount        Int                   @default(0)
+  vatAmount             Int                   @default(0)
+  totalAmount           Int                   @default(0)
+  currency              String                @default("CHF")
+  vatRate               Float                 @default(7.7)
   paymentReference      String?
   iban                  String?
   lockedAt              DateTime?
   expenseTypeId         String?
   accountId             String?
-  issuer                BillingEntity?    @relation(fields: [issuerBillingEntityId], references: [id])
-  job                   Job               @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  org                   Org               @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  lease                 Lease?            @relation(fields: [leaseId], references: [id], onDelete: SetNull)
-  classifiedExpenseType ExpenseType?      @relation(fields: [expenseTypeId], references: [id], onDelete: SetNull)
-  classifiedAccount     Account?          @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  // ── Ingestion / Hub fields (INV-HUB epic) ────────────────
+  direction             InvoiceDirection      @default(OUTGOING)
+  sourceChannel         InvoiceSourceChannel  @default(MANUAL)
+  ingestionStatus       IngestionStatus?
+  rawOcrText            String?
+  ocrConfidence         Int?
+  sourceFileUrl         String?
+  matchedJobId          String?
+  matchedLeaseId        String?
+  matchedBuildingId     String?
+  // ── Relations ────────────────────────────────────────────
+  issuer                BillingEntity?        @relation(fields: [issuerBillingEntityId], references: [id])
+  job                   Job?                  @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  org                   Org                   @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  lease                 Lease?                @relation(fields: [leaseId], references: [id], onDelete: SetNull)
+  classifiedExpenseType ExpenseType?          @relation(fields: [expenseTypeId], references: [id], onDelete: SetNull)
+  classifiedAccount     Account?              @relation(fields: [accountId], references: [id], onDelete: SetNull)
   expenseCategory       ExpenseCategory?
   lineItems             InvoiceLineItem[]
 
@@ -627,6 +644,8 @@ model Invoice {
   @@index([leaseId])
   @@index([status])
   @@index([issuerBillingEntityId])
+  @@index([direction])
+  @@index([ingestionStatus])
 }
 
 model InvoiceLineItem {
@@ -681,6 +700,38 @@ model Notification {
   @@index([orgId, userId, readAt])
 }
 
+// ═══════════════════════════════════════════════════════════
+// Capture Sessions (INV-HUB: QR-based phone handoff for paper invoices)
+// ═══════════════════════════════════════════════════════════
+
+model CaptureSession {
+  id               String               @id @default(cuid())
+  orgId            String
+  createdBy        String               // userId of the manager who created the session
+  token            String               @unique // signed JWT for token-gated access
+  status           CaptureSessionStatus @default(CREATED)
+  expiresAt        DateTime
+  sourceChannel    InvoiceSourceChannel @default(MOBILE_CAPTURE)
+  targetType       String               @default("INVOICE") // extensible for future doc types
+  uploadedFileUrls String[]             @default([])
+  createdInvoiceId String?              // FK to Invoice created from this session
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+  org              Org                  @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@index([orgId, status])
+  @@index([token])
+  @@index([expiresAt])
+}
+
+enum CaptureSessionStatus {
+  CREATED
+  ACTIVE
+  COMPLETED
+  EXPIRED
+  CANCELLED
+}
+
 enum RequestEventType {
   ARRIVED
   PARTS_ORDERED
@@ -710,6 +761,25 @@ enum InvoiceStatus {
   PAID
   DISPUTED
   ISSUED
+}
+
+enum InvoiceDirection {
+  OUTGOING
+  INCOMING
+}
+
+enum InvoiceSourceChannel {
+  MANUAL
+  BROWSER_UPLOAD
+  EMAIL_PDF
+  MOBILE_CAPTURE
+}
+
+enum IngestionStatus {
+  PENDING_REVIEW
+  CONFIRMED
+  AUTO_CONFIRMED
+  REJECTED
 }
 
 enum ExpenseCategory {
@@ -754,6 +824,13 @@ enum ApprovalSource {
 enum PayingParty {
   LANDLORD
   TENANT
+}
+
+enum RequestUrgency {
+  LOW
+  MEDIUM
+  HIGH
+  EMERGENCY
 }
 
 enum UnitType {

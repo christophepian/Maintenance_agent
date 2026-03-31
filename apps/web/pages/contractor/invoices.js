@@ -27,15 +27,92 @@ const STATUS_COLORS = {
   DISPUTED: "bg-red-100 text-red-700",
 };
 
+/* ── Status tracking pipeline ────────────────────────────────── */
+const STATUS_PIPELINE = ["DRAFT", "ISSUED", "APPROVED", "PAID"];
+function StatusPipeline({ status }) {
+  const idx = STATUS_PIPELINE.indexOf(status);
+  const isDisputed = status === "DISPUTED";
+  return (
+    <div className="flex items-center gap-1">
+      {STATUS_PIPELINE.map((step, i) => {
+        const reached = !isDisputed && i <= idx;
+        return (
+          <div key={step} className="flex items-center gap-1">
+            <div
+              className={
+                "h-2 w-2 rounded-full " +
+                (reached ? "bg-emerald-500" : "bg-slate-200")
+              }
+              title={step}
+            />
+            {i < STATUS_PIPELINE.length - 1 && (
+              <div className={"h-0.5 w-3 " + (reached && i < idx ? "bg-emerald-400" : "bg-slate-200")} />
+            )}
+          </div>
+        );
+      })}
+      {isDisputed && (
+        <span className="ml-1.5 text-[10px] font-semibold text-rose-600">⚠ DISPUTED</span>
+      )}
+    </div>
+  );
+}
+
+/* ── Ingestion helpers ───────────────────────────────────────── */
+const INGESTION_LABEL = {
+  PENDING_REVIEW: "Needs review",
+  AUTO_CONFIRMED: "Auto-confirmed",
+  CONFIRMED: "Confirmed",
+  REJECTED: "Rejected",
+};
+const INGESTION_CLS = {
+  PENDING_REVIEW: "bg-amber-100 text-amber-700",
+  AUTO_CONFIRMED: "bg-green-100 text-green-700",
+  CONFIRMED: "bg-green-100 text-green-700",
+  REJECTED: "bg-red-100 text-red-700",
+};
+
+function IngestionBadge({ ingestionStatus }) {
+  if (!ingestionStatus) return null;
+  return (
+    <span className={"inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ml-1.5 " + (INGESTION_CLS[ingestionStatus] || "bg-slate-100 text-slate-600")}>
+      {INGESTION_LABEL[ingestionStatus] || ingestionStatus}
+    </span>
+  );
+}
+
+const SOURCE_LABEL = {
+  BROWSER_UPLOAD: { text: "Upload", cls: "bg-sky-50 text-sky-700 border-sky-200" },
+  EMAIL_PDF: { text: "Email", cls: "bg-violet-50 text-violet-700 border-violet-200" },
+  MOBILE_CAPTURE: { text: "Mobile", cls: "bg-teal-50 text-teal-700 border-teal-200" },
+  MANUAL: { text: "Manual", cls: "bg-slate-50 text-slate-600 border-slate-200" },
+};
+function SourceChannelIcon({ channel }) {
+  if (!channel || !SOURCE_LABEL[channel]) return null;
+  const { text, cls } = SOURCE_LABEL[channel];
+  return <span title={channel} className={"inline-flex items-center rounded border px-1.5 py-0.5 text-[10px] font-medium ml-1 " + cls}>{text}</span>;
+}
+
+/* ── Currency helper ─────────────────────────────────────────── */
+function formatCurrency(value) {
+  const safeValue = Number.isFinite(value) ? value : 0;
+  const formatted = safeValue.toFixed(2);
+  return `CHF ${formatted}`;
+}
+
+function getInvoiceTotal(invoice) {
+  if (typeof invoice.totalAmount === "number") return invoice.totalAmount;
+  if (typeof invoice.amount === "number") return invoice.amount;
+  if (typeof invoice.totalAmountCents === "number") return invoice.totalAmountCents / 100;
+  return 0;
+}
+
 export default function ContractorInvoices() {
   const router = useRouter();
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [activeTab, setActiveTab] = useState("ALL");
-  const [expandedId, setExpandedId] = useState(null);
-
-  function toggleAccordion(id) { setExpandedId((prev) => (prev === id ? null : id)); }
 
   // Create invoice form
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -45,6 +122,16 @@ export default function ContractorInvoices() {
   const [formSubmitting, setFormSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
   const [formSuccess, setFormSuccess] = useState("");
+
+  // Available jobs for dropdown
+  const [availableJobs, setAvailableJobs] = useState([]);
+  const [loadingJobs, setLoadingJobs] = useState(false);
+
+  // Upload invoice
+  const [showUpload, setShowUpload] = useState(false);
+  const [uploadFile, setUploadFile] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
 
   // Auto-open form when jobId query param present
   useEffect(() => {
@@ -61,6 +148,29 @@ export default function ContractorInvoices() {
   useEffect(() => {
     fetchInvoices();
   }, []);
+
+  // Fetch available jobs when create form is shown
+  useEffect(() => {
+    if (showCreateForm && availableJobs.length === 0) {
+      fetchJobs();
+    }
+  }, [showCreateForm]);
+
+  const fetchJobs = async () => {
+    setLoadingJobs(true);
+    try {
+      const contractorId = localStorage.getItem("contractorId");
+      const url = contractorId
+        ? `/api/contractor/jobs?contractorId=${contractorId}`
+        : "/api/contractor/jobs";
+      const res = await fetch(url, { headers: authHeaders() });
+      const data = await res.json();
+      setAvailableJobs(data.data || []);
+    } catch (err) {
+      console.error("Failed to load jobs:", err);
+    }
+    setLoadingJobs(false);
+  };
 
   const fetchInvoices = async () => {
     setLoading(true);
@@ -97,11 +207,14 @@ export default function ContractorInvoices() {
           jobId: formJobId,
           amount: Number(formAmount),
           description: formDescription || undefined,
+          direction: "INCOMING",
+          sourceChannel: "MANUAL",
         }),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        throw new Error(body.message || `Failed to create invoice (${res.status})`);
+        const msg = body.message || (typeof body.error === "string" ? body.error : body.error?.message) || `Failed to create invoice (${res.status})`;
+        throw new Error(msg);
       }
       setFormSuccess("Invoice created successfully!");
       setFormAmount("");
@@ -118,6 +231,35 @@ export default function ContractorInvoices() {
     }
   };
 
+  const handleUpload = async () => {
+    if (!uploadFile) return;
+    setUploadError("");
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", uploadFile);
+      formData.append("sourceChannel", "BROWSER_UPLOAD");
+      formData.append("direction", "INCOMING");
+      const res = await fetch("/api/invoices/ingest", {
+        method: "POST",
+        headers: authHeaders(),
+        body: formData,
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        const msg = body.message || (typeof body.error === "string" ? body.error : body.error?.message) || `Upload failed (${res.status})`;
+        throw new Error(msg);
+      }
+      setShowUpload(false);
+      setUploadFile(null);
+      await fetchInvoices();
+    } catch (err) {
+      setUploadError(err.message);
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const filteredInvoices = useMemo(() => {
     if (activeTab === "ALL") return invoices;
     return invoices.filter((inv) => inv.status === activeTab);
@@ -131,18 +273,65 @@ export default function ContractorInvoices() {
           actions={
             <div className="flex items-center gap-2">
               <ContractorPicker onSelect={() => fetchInvoices()} />
-              {!showCreateForm && (
-                <button
-                  onClick={() => setShowCreateForm(true)}
-                  className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-indigo-700"
-                >
-                  + Create Invoice
-                </button>
+              {!showUpload && !showCreateForm && (
+                <>
+                  <button
+                    onClick={() => setShowUpload(true)}
+                    className="rounded-lg border border-indigo-200 bg-white px-4 py-2 text-sm font-medium text-indigo-600 transition-colors hover:bg-indigo-50"
+                  >
+                    📤 Upload Invoice
+                  </button>
+                  <button
+                    onClick={() => setShowCreateForm(true)}
+                    className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-indigo-700"
+                  >
+                    + Create Invoice
+                  </button>
+                </>
               )}
             </div>
           }
         />
         <PageContent>
+
+        {/* Upload invoice panel */}
+        {showUpload && (
+          <div className="mb-6 rounded-lg border-2 border-indigo-200 bg-white p-5">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900">📤 Upload Invoice</h3>
+              <button
+                onClick={() => { setShowUpload(false); setUploadFile(null); setUploadError(""); }}
+                className="text-sm text-gray-400 hover:text-gray-600"
+              >
+                ✕ Close
+              </button>
+            </div>
+            <p className="mb-3 text-sm text-slate-600">
+              Upload a scanned invoice or PDF. It will be processed with OCR and matched to jobs automatically.
+            </p>
+            {uploadError && (
+              <div className="mb-3 rounded border border-red-200 bg-red-50 p-3 text-sm text-red-800">{uploadError}</div>
+            )}
+            <div className="flex items-center gap-3">
+              <input
+                type="file"
+                accept="image/*,.pdf"
+                onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
+                className="block w-full text-sm text-slate-500 file:mr-4 file:rounded-lg file:border-0 file:bg-indigo-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-indigo-700 hover:file:bg-indigo-100"
+              />
+              <button
+                onClick={handleUpload}
+                disabled={!uploadFile || uploading}
+                className="rounded-lg bg-indigo-600 px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-indigo-700 disabled:opacity-50 whitespace-nowrap"
+              >
+                {uploading ? "Processing…" : "Upload & Scan"}
+              </button>
+            </div>
+            {uploadFile && (
+              <p className="mt-2 text-xs text-slate-500">Selected: {uploadFile.name} ({(uploadFile.size / 1024).toFixed(0)} KB)</p>
+            )}
+          </div>
+        )}
 
         {showCreateForm && (
           <div className="mb-6 rounded-lg border-2 border-indigo-200 bg-white p-5">
@@ -160,17 +349,31 @@ export default function ContractorInvoices() {
             )}
             <form onSubmit={submitInvoice} className="space-y-4">
               <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">Job ID</label>
-                <input
-                  type="text"
-                  value={formJobId}
-                  onChange={(e) => setFormJobId(e.target.value)}
-                  readOnly={!!router.query.jobId}
-                  placeholder="Job UUID"
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  style={router.query.jobId ? { backgroundColor: "#f3f4f6", cursor: "not-allowed" } : {}}
-                  required
-                />
+                <label className="mb-1 block text-sm font-medium text-gray-700">Job</label>
+                {router.query.jobId ? (
+                  <input
+                    type="text"
+                    value={formJobId}
+                    readOnly
+                    className="w-full rounded-md border border-gray-300 bg-gray-100 px-3 py-2 text-sm cursor-not-allowed"
+                  />
+                ) : (
+                  <select
+                    value={formJobId}
+                    onChange={(e) => setFormJobId(e.target.value)}
+                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    required
+                  >
+                    <option value="">
+                      {loadingJobs ? "Loading jobs…" : "Select a job"}
+                    </option>
+                    {availableJobs.map((job) => (
+                      <option key={job.id} value={job.id}>
+                        {job.title || job.description || job.id.slice(0, 8)} — {job.status || ""}
+                      </option>
+                    ))}
+                  </select>
+                )}
                 {router.query.jobId && (
                   <p className="mt-1 text-xs text-gray-500">Pre-filled from job detail page</p>
                 )}
@@ -220,7 +423,7 @@ export default function ContractorInvoices() {
         {error && (
           <div className="mb-4 rounded border border-red-200 bg-red-50 p-4 text-red-800">
             {error}
-            <button onClick={() => setError("")} style={{ marginLeft: 12, fontSize: "0.85em" }}>Dismiss</button>
+            <button onClick={() => setError("")} className="ml-3 text-xs text-red-500 hover:text-red-700">Dismiss</button>
           </div>
         )}
 
@@ -245,103 +448,80 @@ export default function ContractorInvoices() {
           </div>
 
           {loading ? (
-            <p className="loading-text">Loading invoices…</p>
+            <p className="p-4 text-sm text-slate-600">Loading invoices…</p>
           ) : filteredInvoices.length === 0 ? (
-            <div className="empty-state">
-              <p className="empty-state-text">No invoices match this filter</p>
+            <div className="p-6 text-center text-slate-500">
+              <p className="text-sm">No invoices match this filter</p>
             </div>
           ) : (
-            <div className="flex flex-col gap-1 p-4">
-            {filteredInvoices.map((invoice) => {
-              const isExpanded = expandedId === invoice.id;
-              return (
-                <div key={invoice.id} className="rounded-lg border border-gray-200 bg-white">
-                  {/* Clickable header */}
-                  <div
-                    className="flex cursor-pointer items-center justify-between px-5 py-3 hover:bg-gray-50"
-                    onClick={() => toggleAccordion(invoice.id)}
-                  >
-                    <div className="flex items-center gap-3">
-                      <p className="text-sm font-semibold text-gray-900">
-                        Invoice {invoice.invoiceNumber ? `#${invoice.invoiceNumber}` : `#${invoice.id.slice(0, 8)}`}
-                      </p>
-                      <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_COLORS[invoice.status] || "bg-gray-100 text-gray-700"}`}>
-                        {invoice.status}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <p className="text-base font-bold text-gray-900">
-                        CHF {invoice.totalAmount ?? invoice.amount ?? (invoice.totalAmountCents ? (invoice.totalAmountCents / 100).toFixed(2) : "—")}
-                      </p>
-                      <svg
-                        className={`h-4 w-4 text-gray-400 transition-transform ${isExpanded ? "rotate-90" : ""}`}
-                        fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </div>
+            <div className="divide-y divide-gray-100">
+            {filteredInvoices.map((invoice) => (
+              <div
+                key={invoice.id}
+                className="flex items-center justify-between px-5 py-3.5 hover:bg-gray-50 cursor-pointer transition-colors"
+                onClick={() => router.push(`/manager/finance/invoices/${invoice.id}`)}
+              >
+                {/* Left side */}
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-semibold text-gray-900 truncate">
+                      {invoice.invoiceNumber ? `#${invoice.invoiceNumber}` : `#${invoice.id.slice(0, 8)}`}
+                    </p>
+                    <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_COLORS[invoice.status] || "bg-gray-100 text-gray-700"}`}>
+                      {invoice.status}
+                    </span>
+                    <SourceChannelIcon channel={invoice.sourceChannel} />
+                    <IngestionBadge ingestionStatus={invoice.ingestionStatus} />
                   </div>
-
-                  {/* Expanded detail */}
-                  {isExpanded && (
-                    <div className="border-t border-gray-100 px-5 py-4">
-                      {invoice.description && (
-                        <p className="mb-3 text-sm text-gray-700">{invoice.description}</p>
-                      )}
-
-                      <p className="mb-3 text-xs text-gray-500">
-                        Job:{" "}
-                        <Link
-                          href={`/contractor/jobs/${invoice.jobId}`}
-                          className="text-indigo-600 hover:underline"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          {invoice.jobId.slice(0, 8)}
-                        </Link>
-                      </p>
-
-                      <div className="mb-3 flex gap-2" onClick={(e) => e.stopPropagation()}>
-                        <a
-                          href={`/api/invoices/${invoice.id}/pdf`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="rounded border border-gray-300 bg-gray-100 px-3 py-1 text-sm text-gray-700 hover:bg-gray-200"
-                          style={{ textDecoration: "none" }}
-                        >
-                          📄 Download PDF
-                        </a>
-                        <a
-                          href={`/api/invoices/${invoice.id}/qr-code.png`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="rounded border border-gray-300 bg-gray-100 px-3 py-1 text-sm text-gray-700 hover:bg-gray-200"
-                          style={{ textDecoration: "none" }}
-                        >
-                          📱 QR Code
-                        </a>
-                      </div>
-
-                      <div className="space-y-1 text-xs text-gray-500">
-                        <p>Submitted: {invoice.submittedAt ? formatDate(invoice.submittedAt) : formatDate(invoice.createdAt)}</p>
-                        {invoice.issueDate  && <p>Issued: {formatDate(invoice.issueDate)}</p>}
-                        {invoice.approvedAt && <p>Approved: {formatDate(invoice.approvedAt)}</p>}
-                        {invoice.paidAt     && <p className="font-semibold text-green-700">Paid: {formatDate(invoice.paidAt)}</p>}
-                      </div>
-
-                      {invoice.status === "DISPUTED" && (
-                        <div className="mt-3 rounded border border-red-200 bg-red-50 p-3">
-                          <p className="text-sm font-medium text-red-800">⚠️ This invoice is under dispute</p>
-                          <p className="mt-1 text-xs text-red-700">Please contact the property owner to resolve</p>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                  <div className="mt-1 flex items-center gap-3">
+                    <StatusPipeline status={invoice.status} />
+                    <span className="text-xs text-gray-400">·</span>
+                    <span className="text-xs text-gray-500">{formatDate(invoice.createdAt)}</span>
+                    {invoice.jobId && (
+                      <>
+                        <span className="text-xs text-gray-400">·</span>
+                        <span className="text-xs text-gray-500">
+                          Job {invoice.jobId.slice(0, 8)}
+                        </span>
+                      </>
+                    )}
+                  </div>
                 </div>
-              );
-            })}
+
+                {/* Right side */}
+                <div className="flex items-center gap-3 flex-shrink-0">
+                  <p className="text-base font-bold text-gray-900">
+                    {formatCurrency(getInvoiceTotal(invoice))}
+                  </p>
+                  <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                    <a
+                      href={`/api/invoices/${invoice.id}/pdf`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="rounded border border-gray-200 bg-white px-2 py-1 text-xs text-gray-600 hover:bg-gray-50"
+                    >
+                      📄
+                    </a>
+                  </div>
+                  <svg className="h-4 w-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
+              </div>
+            ))}
             </div>
           )}
         </Panel>
+
+        {/* Summary */}
+        {!loading && filteredInvoices.length > 0 && (
+          <div className="mt-3 flex items-center justify-between text-xs text-slate-500 px-1">
+            <span>{filteredInvoices.length} invoice{filteredInvoices.length !== 1 ? "s" : ""}</span>
+            <span>
+              Total: {formatCurrency(filteredInvoices.reduce((sum, inv) => sum + getInvoiceTotal(inv), 0))}
+            </span>
+          </div>
+        )}
         </PageContent>
       </PageShell>
     </AppShell>
