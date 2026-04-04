@@ -30,6 +30,7 @@ const EVENT_ICONS = {
   QUOTE_AWARDED: "🏆",
   QUOTE_REJECTED: "❌",
   RATING_SUBMITTED: "⭐",
+  INVOICE_OVERDUE: "⏰",
 };
 
 export default function TenantInboxPage() {

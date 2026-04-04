@@ -28,6 +28,7 @@ export const NotificationEventTypeSchema = z.enum([
   'SCHEDULING_ESCALATED',
   'JOB_CONFIRMED',
   'RATING_SUBMITTED',
+  'INVOICE_OVERDUE',
 ]);
 
 export type NotificationEventType = z.infer<typeof NotificationEventTypeSchema>;

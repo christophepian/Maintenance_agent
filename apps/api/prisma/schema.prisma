@@ -918,6 +918,7 @@ enum NotificationEventType {
   SLOT_DECLINED
   SCHEDULING_ESCALATED
   JOB_CONFIRMED
+  INVOICE_OVERDUE
   RATING_SUBMITTED
 }
 
@@ -1010,6 +1011,7 @@ enum EmailTemplate {
   REJECTED
   SELECTED_LEASE_LINK
   MANAGER_TENANT_SELECTED
+  INVOICE_OVERDUE
 }
 
 // ==========================================

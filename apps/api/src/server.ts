@@ -42,6 +42,7 @@ import {
 import { processSchedulingEscalations } from "./workflows/schedulingWorkflow";
 import { flushPendingEmails } from "./services/emailTransport";
 import { processRecurringBilling } from "./services/recurringBillingService";
+import { processOverdueInvoices } from "./services/overdueInvoiceService";
 
 /* ── F1: Production boot guard ─────────────────────────────── */
 const isProdEnv = process.env.NODE_ENV === "production";
@@ -210,6 +211,15 @@ async function runBackgroundJobs() {
     }
   } catch (e) {
     console.error("[BG-JOBS] Recurring billing error:", e);
+  }
+
+  try {
+    const overdueCount = await processOverdueInvoices(prisma);
+    if (overdueCount > 0) {
+      console.log(`[BG-JOBS] Sent ${overdueCount} overdue invoice notification(s)`);
+    }
+  } catch (e) {
+    console.error("[BG-JOBS] Overdue invoice error:", e);
   }
 }
 

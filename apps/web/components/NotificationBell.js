@@ -181,6 +181,7 @@ export default function NotificationBell({ role }) {
       case "SCHEDULING_ESCALATED": return "bg-yellow-100 text-yellow-800";
       case "RATING_SUBMITTED": return "bg-violet-100 text-violet-800";
       case "JOB_CONFIRMED": return "bg-teal-100 text-teal-800";
+      case "INVOICE_OVERDUE": return "bg-red-100 text-red-800";
       default: return "bg-gray-100 text-gray-800";
     }
   };

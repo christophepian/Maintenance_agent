@@ -2101,11 +2101,11 @@
       "id": "INT-032",
       "title": "Add email notifications for overdue invoices",
       "raw_text": "Manager should get notified when invoices are past due. Also need SMS fallback for critical alerts.",
-      "status": "clarify",
+      "status": "done",
       "source": "meeting-notes",
       "product_area": "invoicing",
       "related_feature_ids": [],
-      "proposed_phase": "P1",
+      "proposed_phase": "P0",
       "dependencies": [],
       "split_recommended": false,
       "triage_notes": "Triage 2026-04-03: Automatic overdue invoice notifications to tenant + manager. First reminder 48h after missed payment. Rent due last day of m-1 for month m. Need to verify existing due date rules. No overdue detection exists yet — genuine gap.",
@@ -2117,8 +2117,10 @@
       "note_type": "feature_request",
       "duplicate_of": null,
       "created_at": "2026-03-19T17:03:40.208Z",
-      "updated_at": "2026-03-20T08:39:49.090Z",
-      "anti_split_reasons": []
+      "updated_at": "2026-04-04T19:40:00.000Z",
+      "anti_split_reasons": [],
+      "resolved_date": "2026-04-04",
+      "resolution_note": "Implemented: overdue detection service (48h grace), in-app notifications for managers, email alerts to managers + tenants via EmailOutbox. Hooked into background job scheduler."
     },
     {
       "id": "INT-033",
