@@ -686,7 +686,7 @@ const html = `<!DOCTYPE html>
         &nbsp;&nbsp;<span class="hi-cyan">apps/web/styles/</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="dim">managerStyles.js (locked — F8)</span><br>
         &nbsp;&nbsp;<span class="hi-green">packages/api-client/</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="dim">typed DTO types + fetch methods</span><br>
         &nbsp;&nbsp;<span class="hi-amber">infra/docker-compose.yml</span>&nbsp;&nbsp;<span class="dim">PostgreSQL 16</span><br>
-        &nbsp;&nbsp;<span class="dim">.github/workflows/ci.yml&nbsp;&nbsp;&nbsp;6-gate pipeline (G1–G11)</span>
+        &nbsp;&nbsp;<span class="dim">.github/workflows/ci.yml&nbsp;&nbsp;&nbsp;6-gate pipeline (G1–G15)</span>
       </div></div>
     </div>
   </div>
@@ -744,7 +744,7 @@ const html = `<!DOCTYPE html>
   <!-- ══ GUARDRAILS ══ -->
   <div class="tab-pane" id="tab-guardrails">
     <div class="section">
-      <div class="section-header"><span class="section-num">13</span><span class="section-title">Architecture Guardrails (G1–G11)</span><div class="section-line"></div></div>
+      <div class="section-header"><span class="section-num">13</span><span class="section-title">Architecture Guardrails (G1–G15)</span><div class="section-line"></div></div>
       <div class="guardrail-grid">
         ${guardrails.filter(g=>g.id.startsWith('G')).slice(0,12).map(guardrailHtml).join('') || 
           [['G1','Schema','Always migrate dev, never db push. Drift check required.',false],
@@ -757,7 +757,11 @@ const html = `<!DOCTYPE html>
            ['G8','db push Ban','Banned in all scripts + CI. No exceptions.',false],
            ['G9','Includes','Canonical JOB_INCLUDE etc. per model. No ad-hoc trees.',false],
            ['G10','Contracts','Contract tests for /requests /jobs /invoices /leases.',false],
-           ['G11','Test DB Seed','migrate deploy → db seed → seed scripts, in order.',false]]
+           ['G11','Test DB Seed','migrate deploy → db seed → seed scripts, in order.',false],
+           ['G12','Commit Deliverables','Commit every deliverable (>100 lines) before moving on.',false],
+           ['G13','Atomic FE+BE','Frontend + backend changes land in the same commit.',false],
+           ['G14','Session-End Check','git status + stash list + diff --stat before closing.',false],
+           ['G15','Stash Safety','Never stash drop without inspection; prefer stash branch.',false]]
           .map(([id,t,b,w])=>guardrailHtml({id,title:t,body:b,warn:w})).join('')}
       </div>
     </div>

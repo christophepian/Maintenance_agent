@@ -10,6 +10,12 @@ export const UpdateOrgConfigSchema = z.object({
     .max(100000, { message: "autoApproveLimit must be <= 100000" })
     .optional(),
   autoLegalRouting: z.boolean().optional(),
+  invoiceLeadTimeDays: z
+    .number()
+    .int()
+    .min(1, { message: "invoiceLeadTimeDays must be >= 1" })
+    .max(60, { message: "invoiceLeadTimeDays must be <= 60" })
+    .optional(),
   mode: OrgModeSchema.optional(),
 });
 

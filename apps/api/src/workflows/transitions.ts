@@ -6,7 +6,7 @@
  * invalid transitions are rejected in exactly one place.
  */
 
-import { RequestStatus, JobStatus, InvoiceStatus, LeaseStatus, RfpStatus, RfpQuoteStatus } from "@prisma/client";
+import { RequestStatus, JobStatus, InvoiceStatus, LeaseStatus, RfpStatus, RfpQuoteStatus, CashflowPlanStatus } from "@prisma/client";
 
 // ─── Request Transitions ───────────────────────────────────────
 
@@ -207,5 +207,34 @@ export function assertRfpQuoteTransition(from: RfpQuoteStatus, to: RfpQuoteStatu
 
 export function canTransitionRfpQuote(from: RfpQuoteStatus, to: RfpQuoteStatus): boolean {
   const allowed = VALID_RFP_QUOTE_TRANSITIONS[from];
+  return !!allowed && allowed.includes(to);
+}
+
+// ─── Cashflow Plan Transitions ─────────────────────────────────
+
+const VALID_CASHFLOW_PLAN_TRANSITIONS: Record<string, CashflowPlanStatus[]> = {
+  [CashflowPlanStatus.DRAFT]: [CashflowPlanStatus.SUBMITTED],
+  [CashflowPlanStatus.SUBMITTED]: [
+    CashflowPlanStatus.APPROVED,
+    CashflowPlanStatus.DRAFT,  // allow recall back to draft
+  ],
+  [CashflowPlanStatus.APPROVED]: [], // terminal
+};
+
+export function assertCashflowPlanTransition(
+  from: CashflowPlanStatus,
+  to: CashflowPlanStatus,
+): void {
+  const allowed = VALID_CASHFLOW_PLAN_TRANSITIONS[from];
+  if (!allowed || !allowed.includes(to)) {
+    throw new InvalidTransitionError("CashflowPlan", from, to);
+  }
+}
+
+export function canTransitionCashflowPlan(
+  from: CashflowPlanStatus,
+  to: CashflowPlanStatus,
+): boolean {
+  const allowed = VALID_CASHFLOW_PLAN_TRANSITIONS[from];
   return !!allowed && allowed.includes(to);
 }

@@ -7,7 +7,7 @@
 ```bash
 # From the repo root
 npx tsc --noEmit --project apps/api/tsconfig.json   # must produce zero errors
-npm test --prefix apps/api                           # must pass all tests (769/769, 56 suites — last verified 2026-03-31)
+npm test --prefix apps/api                           # must pass all tests (57 suites — last verified 2026-04-03)
 ```
 
 Both must be green before merging.
@@ -99,8 +99,9 @@ ports causes `EADDRINUSE` failures.
 | 3220 | security2.test.ts |
 | 3221 | captureSession.test.ts |
 | 3222 | invoiceIngest.test.ts |
+| 3223 | assetHealthForecast.test.ts |
 
-**Next available: 3223.** Claim the next port and add it to this table in the same PR.
+**Next available: 3224.** Claim the next port and add it to this table in the same PR.
 
 ---
 
@@ -147,7 +148,11 @@ name and the contract test fails, update the test — do not delete it.
 | G2 | Every new Prisma model needs a canonical include constant |
 | G9 | Route handlers must not call `prisma` directly — delegate to services or repositories |
 | G10 | Update `contracts.test.ts` when changing a DTO |
-| G11 | No stub services — every service must have real implementation |
+| G11 | Test DB requires seed after fresh creation (see PROJECT_STATE.md) |
+| G12 | Commit every deliverable — no session-long uncommitted work |
+| G13 | Frontend + backend = one atomic commit |
+| G14 | Session-end: verify nothing valuable is left uncommitted |
+| G15 | Never `git stash drop` without inspection; prefer `stash branch` |
 
 Full guardrail list: `PROJECT_OVERVIEW.md`
 File-routing map: `apps/api/src/ARCHITECTURE_LOW_CONTEXT_GUIDE.md`

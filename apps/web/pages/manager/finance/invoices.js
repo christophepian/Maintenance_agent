@@ -520,6 +520,8 @@ export function InvoicesContent() {
   const [error, setError] = useState("");
   const [invoices, setInvoices] = useState([]);
   const [direction, setDirection] = useState("incoming"); // "incoming" | "outgoing" | "pending"
+  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [categoryFilter, setCategoryFilter] = useState("");
   const [actionLoading, setActionLoading] = useState(null);
 
   // Overlay state
@@ -568,7 +570,24 @@ export function InvoicesContent() {
     });
   }, [invoices, isOutgoing, isPending]);
 
-  const filteredInvoices = directionFiltered;
+  // Apply status + category filters on top of direction
+  const filteredInvoices = useMemo(() => {
+    let list = directionFiltered;
+    if (statusFilter !== "ALL") {
+      list = list.filter((inv) => inv.status === statusFilter);
+    }
+    if (categoryFilter) {
+      list = list.filter((inv) => inv.expenseCategory === categoryFilter);
+    }
+    return list;
+  }, [directionFiltered, statusFilter, categoryFilter]);
+
+  // Unique expense categories across all invoices for the filter dropdown
+  const availableCategories = useMemo(() => {
+    const cats = new Set();
+    directionFiltered.forEach((inv) => { if (inv.expenseCategory) cats.add(inv.expenseCategory); });
+    return [...cats].sort();
+  }, [directionFiltered]);
 
   const [tableExpanded, setTableExpanded] = useState(false);
 
@@ -735,6 +754,39 @@ export function InvoicesContent() {
         </div>
       </div>
 
+      {/* Status sub-tabs + category filter */}
+      <div className="flex flex-wrap items-center gap-3 mb-4">
+        <div className="inline-flex rounded-lg border border-slate-200 bg-slate-100 p-0.5 gap-0.5">
+          {(isOutgoing ? OUTGOING_STATUS_TABS : INCOMING_STATUS_TABS).map(({ key, label }) => (
+            <button
+              key={key}
+              onClick={() => { setStatusFilter(key); setTableExpanded(false); }}
+              className={[
+                "rounded-md px-3 py-1 text-xs font-medium transition-colors",
+                statusFilter === key
+                  ? "bg-white text-slate-900 shadow-sm"
+                  : "text-slate-500 hover:text-slate-700",
+              ].join(" ")}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        {availableCategories.length > 0 && (
+          <select
+            value={categoryFilter}
+            onChange={(e) => { setCategoryFilter(e.target.value); setTableExpanded(false); }}
+            className="rounded-md border border-slate-200 px-3 py-1.5 text-xs text-slate-700 bg-white"
+          >
+            <option value="">All categories</option>
+            {availableCategories.map((cat) => (
+              <option key={cat} value={cat}>{cat.charAt(0) + cat.slice(1).toLowerCase()}</option>
+            ))}
+          </select>
+        )}
+        <span className="text-xs text-slate-400">{filteredInvoices.length} invoice{filteredInvoices.length !== 1 ? "s" : ""}</span>
+      </div>
+
       {loading ? (
         <Panel><p className="loading-text">Loading invoices…</p></Panel>
       ) : filteredInvoices.length === 0 ? (
@@ -750,11 +802,15 @@ export function InvoicesContent() {
                 <SortableHeader label="Building · Unit" field="building" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
                 <SortableHeader label="Amount" field="amount" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
                 <SortableHeader label="Created" field="createdAt" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
+                <th>Recurring</th>
+                <th>Category</th>
                 <th className="text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {visibleInvoices.map((inv) => (
+              {visibleInvoices.map((inv) => {
+                const isRecurring = !!(inv.billingScheduleId || inv.contractorBillingScheduleId);
+                return (
                 <tr
                   key={inv.id}
                   onClick={() => router.push(`/manager/finance/invoices/${inv.id}`)}
@@ -776,11 +832,22 @@ export function InvoicesContent() {
                   </td>
                   <td>{getAmount(inv)}</td>
                   <td>{formatDate(inv.createdAt)}</td>
+                  <td>
+                    {isRecurring
+                      ? <span className="inline-flex items-center rounded-full bg-indigo-50 text-indigo-700 px-2 py-0.5 text-[10px] font-semibold">Recurring</span>
+                      : <span className="text-slate-300 text-xs">—</span>}
+                  </td>
+                  <td>
+                    {inv.expenseCategory
+                      ? <span className="text-xs text-slate-600">{inv.expenseCategory.charAt(0) + inv.expenseCategory.slice(1).toLowerCase()}</span>
+                      : <span className="text-slate-300 text-xs">—</span>}
+                  </td>
                   <td className="text-right">
                     <ActionDropdown actions={buildActions(inv)} />
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
           {/* Expand / collapse row */}

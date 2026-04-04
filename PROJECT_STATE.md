@@ -1,6 +1,6 @@
 # Maintenance Agent — Project State
 
-**Last updated:** 2026-03-31 (Audit remediation complete — 91/94 findings resolved; all key docs synchronized with current codebase counts)
+**Last updated:** 2026-04-03 (Recurring Invoices epic complete — 6 slices, 5 new models, 6 new enums, 4 new migrations)
 
 > **For routine implementation work, start with [PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md)** (~220 lines).
 > This file is the canonical deep reference — guardrail details, backlog, state integrity, epic summaries.
@@ -9,7 +9,7 @@
 **Companion files (do not duplicate content here):**
 * [PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md) — primary entry-point doc for routine work (guardrails, architecture, task routing)
 * [EPIC_HISTORY.md](EPIC_HISTORY.md) — all completed epic/slice narratives + hardening guidelines (H1–H6)
-* [SCHEMA_REFERENCE.md](SCHEMA_REFERENCE.md) — full models table (54), enums (47), schema gotchas, Request.orgId migration path
+* [SCHEMA_REFERENCE.md](SCHEMA_REFERENCE.md) — full models table (64), enums (55), schema gotchas, Request.orgId migration path
 * `apps/api/src/ARCHITECTURE_LOW_CONTEXT_GUIDE.md` — low-context lookup table for "what file to change for X"
 
 ---
@@ -175,6 +175,43 @@ The test database (`maint_agent_test`) requires seed data for some test suites. 
 
 `rentalIntegration.test.ts` depends on `default-org` existing in the test DB with correct seed data.
 **Never run these seed scripts against `maint_agent` (dev DB).**
+
+### G12: Commit Every Deliverable — No Session-Long Uncommitted Work
+Every self-contained deliverable (new component, service, route, migration) must be committed
+**before** moving to the next task. Code that exists only in the working tree is one `git stash`
+or editor reload away from being lost.
+
+**Rule:** If you've produced >100 lines of working code without a commit, stop and commit.
+
+Pre-commit addendum:
+```bash
+git status  # Verify no untracked/modified files that are part of the current deliverable
+```
+
+### G13: Frontend + Backend = One Atomic Commit
+When a feature spans frontend and backend (route + proxy + UI component), all layers must
+land in the **same commit**. Never leave the UI as the only uncommitted layer while the backend
+is already committed — that's how the Forecast tab was lost (April 2026 incident).
+
+If the backend is ready but the UI is still in progress, commit the backend separately with
+a clear message like `feat(forecasting): backend routes (UI pending)`.
+
+### G14: Session-End Verification
+At the end of every coding session, run:
+```bash
+git status && git stash list && git diff --stat
+```
+If any meaningful work is uncommitted, commit it — even as `wip: <description>` — before
+closing. Never rely on `git stash` as persistent storage.
+
+### G15: Protect Stashes With Branches
+If you must stash work, immediately convert it to a named branch:
+```bash
+git stash
+git stash branch wip/<feature-name>   # creates branch from stash
+```
+This converts the stash into a proper branch that won't be silently garbage-collected.
+**Never `git stash drop` without first running `git stash show --stat`.**
 
 ---
 
@@ -367,18 +404,18 @@ Maintenance_Agent/
 │   │   ├── prisma/           # schema.prisma + migrations/
 │   │   └── src/
 │   │       ├── server.ts     # Raw HTTP entry point (port 3001)
-│   │       ├── routes/       # Thin HTTP handlers (19 route modules)
-│   │       ├── workflows/    # Orchestration layer (24 workflows + transitions)
+│   │       ├── routes/       # Thin HTTP handlers (25 route modules)
+│   │       ├── workflows/    # Orchestration layer (26 workflows + transitions)
 │   │       ├── services/     # Domain logic
-│   │       ├── repositories/ # Canonical Prisma access (17 repos)
+│   │       ├── repositories/ # Canonical Prisma access (24 repos)
 │   │       ├── events/       # Domain event bus
 │   │       ├── governance/   # Org scope resolvers
 │   │       ├── validation/   # Zod schemas
 │   │       ├── http/         # Body/JSON/query/errors/router helpers
-│   │       ├── __tests__/    # 56 test suites
+│   │       ├── __tests__/    # 57 test suites
 │   │       └── ARCHITECTURE_LOW_CONTEXT_GUIDE.md
 │   └── web/
-│       ├── pages/            # 247 pages (83 UI + 163 API proxies + _app.js)
+│       ├── pages/            # 275 pages (92 UI + 182 API proxies + _app.js)
 │       ├── components/       # AppShell, layout primitives, shared UI
 │       ├── lib/              # proxy.js, api.js, formatDisqualificationReasons.js
 │       └── styles/           # globals.css (Tailwind + CSS variables)
@@ -399,9 +436,9 @@ Maintenance_Agent/
 
 ## 4. Database Schema (Prisma)
 
-> **Full schema reference:** See [SCHEMA_REFERENCE.md](SCHEMA_REFERENCE.md) for the complete models table (54 models), enums (47), schema gotchas, and Request.orgId migration path.
+> **Full schema reference:** See [SCHEMA_REFERENCE.md](SCHEMA_REFERENCE.md) for the complete models table (64 models), enums (55), schema gotchas, and Request.orgId migration path.
 >
-> **Status:** 60 migrations. 54 models · 47 enums. Last verified: 2026-03-31 (shadow DB replay clean — migration-integrity-recovery slice).
+> **Status:** 69 migrations. 64 models · 55 enums. Last verified: 2026-04-03 (recurring invoices epic).
 >
 > **Quick gotchas (always check SCHEMA_REFERENCE.md for full list):**
 > - `Request` has NO `orgId` — scope inherited via unit/building FK chain
@@ -417,10 +454,10 @@ Maintenance_Agent/
 > Architecture, backend layers, frontend layout, and styling rules → [PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md).
 > Route module index, domain file maps, repository index → [ARCHITECTURE_LOW_CONTEXT_GUIDE.md](apps/api/src/ARCHITECTURE_LOW_CONTEXT_GUIDE.md).
 
-* **Backend:** 19 route modules · 24 workflows · 17 repositories · 247 operations (190 URL paths) · `apps/api/openapi.yaml`
-* **Frontend:** 247 pages (83 UI + 163 API proxies + `_app.js`) · 163/163 proxies conforming (`proxyToBackend()`)
+* **Backend:** 25 route modules · 26 workflows · 24 repositories · 289 operations (224 URL paths) · `apps/api/openapi.yaml`
+* **Frontend:** 275 pages (92 UI + 182 API proxies + `_app.js`) · 182/182 proxies conforming (`proxyToBackend()`)
 * **Styling:** Tailwind + `@layer components` in `globals.css` · CSS variables in `:root` · `managerStyles.js` deleted (F8)
-* **Infra:** PostgreSQL via Docker (`infra/docker-compose.yml`) · Dev DB `maint_agent` · Test DB `maint_agent_test` · CI: 6-gate pipeline (G1–G11)
+* **Infra:** PostgreSQL via Docker (`infra/docker-compose.yml`) · Dev DB `maint_agent` · Test DB `maint_agent_test` · CI: 6-gate pipeline (G1–G15)
 
 ---
 
@@ -481,6 +518,7 @@ PORT=3001
 | Migration Integrity Recovery | 2026-03-30 | 5 gap-filling migrations; G8 shadow DB exception retired permanently |
 | Invoice Ingestion & Capture Sessions | 2026-03-30 | CaptureSession model; `POST /invoices/ingest`; QR code → phone upload → OCR → draft |
 | Comprehensive Audit Remediation | 2026-03-31 | 46 findings resolved (CQ/SA/TC/SI/DOC); route→service extraction; 7 new test files |
+| Recurring Invoices (6 slices) | 2026-04-03 | RecurringBillingSchedule, ChargeReconciliation, RentAdjustment, ContractorBillingSchedule; 5 new models, 6 enums, 4 migrations, 4 route modules, 4 repos, 10 frontend pages |
 
 ---
 
@@ -544,13 +582,13 @@ This document + companion files are the **single source of truth**:
 
 * **Doc structure:** PROJECT_STATE.md (~630 lines) + EPIC_HISTORY.md (epics) + SCHEMA_REFERENCE.md (schema) + ARCHITECTURE_LOW_CONTEXT_GUIDE.md (lookup)
 * Filesystem (verified 2026-03-10)
-* Database schema — 60 migrations; 54 models, 47 enums verified in live DB (shadow DB replay clean 2026-03-31)
+* Database schema — 69 migrations; 64 models, 55 enums verified in live DB (shadow DB replay clean 2026-03-31)
 * Database data — 99+ assets across 19 units (with interventions tracking), 274 depreciation standards (including 5 added for mapped topics), 16 category mappings, buildings with cantons set, 6 CO 259a statutory rules with proper DSL (verified 2026-03-07)
 * Running system — core smoke endpoints return expected status codes; auth-gated routes return 401/403 without valid token (verified by `auth.manager-gates.test.ts`); legal auto-routing creates RFP and sets RFP_PENDING for requests with mapped categories when autoLegalRouting=true; asset inventory endpoints serve depreciation data (verified 2026-03-31)
 * Dev auth bootstrap: Canonical dev manager is user `d93436c1-6568-4dba-8e65-fd8d34e6be2b` (email `manager@local.dev`), created via the auth flow. The legacy `dev-user` still exists in DB but is no longer used as the manager identity — notifications were migrated to `d93436c1`. Long-lived JWTs in `_app.js`; bootstrap is expiry-aware (expired tokens are auto-replaced on next page load, no manual `localStorage.clear()` needed). All three dev tokens expire 2027-03-15.
 * **Multi-role auth system:** `STAFF_ROLES` array in `apps/api/src/authz.ts` is the single extension point for adding new staff roles. Currently: MANAGER, OWNER, VENDOR, INSURANCE. `requireStaffAuth()` guards all notification endpoints. Frontend `_app.js` bootstraps role-specific tokens under `authToken` (manager), `ownerToken`, `vendorToken` keys; `NotificationBell` reads the token matching its `role` prop. Adding a new role: (1) add string to `STAFF_ROLES`, (2) add entry to `DEV_TOKENS` in `_app.js`, (3) add seed user in `prisma/seed.ts`. Nothing else changes. Dev users: `d93436c1` (MANAGER, canonical), `dev-owner` (OWNER), `dev-vendor` (VENDOR). Schema `Role` enum: TENANT, CONTRACTOR, MANAGER, OWNER, VENDOR, INSURANCE (migration 35).
 * Frontend navigation — sidebar: 7 flat primary nav items, no accordion. All 7 manager hub pages use inline tab content with URL-based tab persistence (?tab=key). Tab header links: always-visible "Full view →" for tabs with richer standalone pages; absent for equivalent pages. All manager pages wrapped in Panel component for consistent white card layout. Verified 2026-03-14.
-* Test suite — **769 tests, 56 suites against maint_agent_test** (isolated from dev DB `maint_agent`) (verified 2026-03-31); pre-existing test interaction failures (TC-11 — legacy `startServer` copy-paste in ~56 suites; canonical `testHelpers.ts` used by all new tests).
+* Test suite — **823 tests, 57 suites against maint_agent_test** (isolated from dev DB `maint_agent`) (verified 2026-04-03); pre-existing test interaction failures (TC-11 — legacy `startServer` copy-paste in ~57 suites; canonical `testHelpers.ts` used by all new tests).
   - ✅ **TC-4 resolved (2026-03-10):** `jest.config.js` now has `maxWorkers: 1` — integration tests run serially, eliminating parallel server spawning timeouts.
   - ✅ **TC-5 resolved (2026-03-10):** Port collision on 3206 fixed — ports reassigned: rentalContracts → 3206, rentEstimation → 3209, ia.test → 3210, tenantSession → 3208.
   - Pure-function suites (**domainEvents, httpErrors, orgIsolation, routeProtection, triage**) always pass — they do not spawn a server.
@@ -558,9 +596,9 @@ This document + companion files are the **single source of truth**:
 * TypeScript compilation — 0 errors (verified 2026-03-12)
 * OpenAPI spec — ISSUED added to InvoiceStatus enum (2026-03-21); 3 ledger routes + LedgerEntry/AccountBalance/Pagination schemas added (2026-03-23); building owner routes remain in KNOWN_UNSPECCED_ROUTES (API-03, medium priority)
 * Git — all recent work committed to main. Legal route extraction (legalService.ts), DT-027/111/112/113, ticket refinements, roadmap sync fixes, CONTRIBUTING.md, General Ledger epic — all in history.
-* Architectural intent — 24 workflows, 17 repositories, 19 route modules, 7 transition maps (Request, Job, Invoice, Lease, RentalApplication, Rfp, RfpQuote)
+* Architectural intent — 26 workflows, 24 repositories, 25 route modules, 7 transition maps (Request, Job, Invoice, Lease, RentalApplication, Rfp, RfpQuote)
 * Roadmap system — 26 features (P0–P4), 66 intake items, 37 draft tickets (18 refined, 9 ready_candidate, 2 needs_investigation, 8 promoted), 0 custom items. Server on port 8111. HTML dashboard at `docs/roadmap.html` (now tracked in git, auto-regenerated by pre-commit hook). Status labels: capture/clarify/review/ready (renamed from raw/triaged/drafted/draft).
-* CI pipeline enforces G1–G11 guardrails
+* CI pipeline enforces G1–G15 guardrails
 
 Safe to:
 
@@ -575,7 +613,7 @@ Safe to:
 
 ---
 
-✅ **Project stabilized, security-hardened, org-scoped, and UI-connected (2026-03-31).** 769/769 tests pass, 56 suites, 0 TS errors. 91/94 audit findings resolved. Backend: ~54k LOC | Frontend: ~37k LOC | 247 API operations (190 URL paths) | 54 Prisma models | 47 enums | 247 frontend pages | 24 workflows | 19 route modules. Roadmap: 26 features, 66 intake items, 37 draft tickets (all refined), 8.2k+ lines tooling; HTML dashboard tracked in git with auto-regeneration on commit. Recent: Comprehensive audit remediation (46 findings resolved), migration integrity recovery (G8 shadow DB exception retired), invoice ingestion pipeline (capture sessions + OCR). See [EPIC_HISTORY.md](EPIC_HISTORY.md) for full completion details.
+✅ **Project stabilized, security-hardened, org-scoped, and UI-connected (2026-04-03).** 823/823 tests pass, 57 suites, 0 TS errors. 91/94 audit findings resolved. Backend: ~62k LOC | Frontend: ~42k LOC | 289 API operations | 64 Prisma models | 55 enums | 275 frontend pages | 26 workflows | 25 route modules. Recurring Invoices epic complete (6 slices): RecurringBillingSchedule + ChargeReconciliation + ChargeReconciliationLine + RentAdjustment + ContractorBillingSchedule models; ACOMPTE reconciliation, CPI rent indexation, contractor recurring invoices with full lifecycle. Roadmap: 26 features, 66 intake items, 37 draft tickets (all refined), 8.2k+ lines tooling; HTML dashboard tracked in git with auto-regeneration on commit. See [EPIC_HISTORY.md](EPIC_HISTORY.md) for full completion details.
 
 
 ## 13. Authentication & Testing
@@ -588,7 +626,7 @@ JWT-based. Production boot guard enforced (F1). All routes auth-gated. `AUTH_OPT
 > **Security hardening (SA-1–SA-22):** All resolved — see [EPIC_HISTORY.md](EPIC_HISTORY.md).
 > **Prisma/DTO hardening (CQ-7/12/13/14):** All resolved — see [EPIC_HISTORY.md](EPIC_HISTORY.md).
 
-### Testing — 769 tests, 56 suites
+### Testing — 823 tests, 57 suites
 
 * Jest + ts-jest, `maxWorkers: 1` (serial integration). Test DB: `maint_agent_test` (isolated via `.env.test`).
 * CI: `.github/workflows/ci.yml` with PostgreSQL service container.
@@ -602,24 +640,24 @@ JWT-based. Production boot guard enforced (F1). All routes auth-gated. `AUTH_OPT
 
 | Field | Value | Source |
 |-------|-------|--------|
-| Models | 54 | prisma/schema.prisma — derived |
-| Enums | 47 | prisma/schema.prisma — derived |
-| Migrations | 60 | prisma/migrations/ — derived |
-| Workflows | 24 | src/workflows/ — derived |
-| Repositories | 17 | src/repositories/ — derived |
-| Route modules | 19 | src/routes/ — derived (excl. helpers.ts utility) |
-| Backend LOC | ~54k | src/ (incl. tests) — derived |
-| Frontend LOC | ~37k | apps/web/ — derived |
-| Frontend pages | 247 | apps/web/pages/ — derived (83 UI + 163 API + _app.js) |
-| API operations | 247 | openapi.yaml operationId count — derived |
-| URL paths | 190 | openapi.yaml unique paths — derived |
-| Tests | 769 / 56 suites (pre-existing test interaction failures, see TC-11) | jest — derived |
-| Proxy conformance | 163 / 163 | apps/web/pages/api/ — derived |
+| Models | 64 | prisma/schema.prisma — derived |
+| Enums | 55 | prisma/schema.prisma — derived |
+| Migrations | 69 | prisma/migrations/ — derived |
+| Workflows | 26 | src/workflows/ — derived |
+| Repositories | 24 | src/repositories/ — derived |
+| Route modules | 25 | src/routes/ — derived (excl. helpers.ts utility) |
+| Backend LOC | ~62k | src/ (incl. tests) — derived |
+| Frontend LOC | ~42k | apps/web/ — derived |
+| Frontend pages | 275 | apps/web/pages/ — derived (92 UI + 182 API + _app.js) |
+| API operations | 289 | openapi.yaml operationId count — derived |
+| URL paths | 224 | openapi.yaml unique paths — derived |
+| Tests | 57 suites (pre-existing test interaction failures, see TC-11) | jest — derived |
+| Proxy conformance | 182 / 182 | apps/web/pages/api/ — derived |
 | Transition maps | 7 | src/workflows/transitions.ts — derived |
 | Audit findings open | 3 (SI-2/3/4: legal model orgId doc drift) | docs/AUDIT.md — manual |
 | Audit findings resolved | 91 | docs/AUDIT.md — manual |
-| Last auto-sync | 2026-03-31 | blueprint.js |
-| Last manual review | 2026-03-31 | human |
+| Last auto-sync | 2026-04-03 | blueprint.js |
+| Last manual review | 2026-04-03 | human |
 
 > Derived fields are auto-updated by `npm run blueprint`. Manual fields must be updated at the end of each slice.
 

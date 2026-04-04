@@ -4,7 +4,7 @@
 > For guardrails, rules, and task routing → **[PROJECT_OVERVIEW.md](../../../PROJECT_OVERVIEW.md)**.
 > For auth helpers, security rules, boot guards → same file.
 
-**Codebase:** 54 models · 47 enums · 60 migrations · 24 workflows · 17 repositories · ~54k backend LOC · ~37k frontend LOC · 247 API operations (190 URL paths)
+**Codebase:** 64 models · 55 enums · 69 migrations · 26 workflows · 24 repositories · ~62k backend LOC · ~42k frontend LOC · 289 API operations (224 URL paths)
 
 **Layer order (never skip):** routes → workflows → services → repositories → Prisma
 
@@ -139,6 +139,17 @@
 | Service | `services/rfps.ts` | RFP logic |
 | Repo | `repositories/rfpRepository.ts` | RFP data access |
 
+### Cashflow Planning
+| Layer | File | Key exports |
+|-------|------|-------------|
+| Route | `routes/cashflowPlans.ts` | List, create, update, submit, approve, RFP candidate generation and creation |
+| Workflow | `workflows/cashflowPlanWorkflow.ts` | `createPlanWorkflow`, `updatePlanWorkflow`, `addOverrideWorkflow`, `removeOverrideWorkflow`, `submitPlanWorkflow`, `approvePlanWorkflow` |
+| Service | `services/cashflowPlanningService.ts` | `computeMonthlyCashflow()`, `computeRfpCandidates()` |
+| Service | `services/capexProjectionService.ts` | CapEx projection + timing recommendations (shared) |
+| Repo | `repositories/cashflowPlanRepository.ts` | `CASHFLOW_PLAN_INCLUDE`, CashflowPlan / CashflowOverride data access |
+| Repo | `repositories/taxRuleRepository.ts` | TaxRule / TaxRuleVersion data access |
+| Note | Status flow: DRAFT → SUBMITTED → APPROVED. RFP candidates only available for APPROVED plans. |  |
+
 ### Rental Applications
 | Layer | File | Key exports |
 |-------|------|-------------|
@@ -152,12 +163,13 @@
 
 ---
 
-## 3 · Route Module Index (20 files)
+## 3 · Route Module Index (21 files)
 
 | File | Domain |
 |------|--------|
 | `routes/auth.ts` | Login, registration |
 | `routes/captureSessions.ts` | Capture sessions |
+| `routes/cashflowPlans.ts` | Cashflow planning — list, create, update, submit, approve, RFP candidates |
 | `routes/coa.ts` | Chart of Accounts (7 endpoints) |
 | `routes/completion.ts` | Job completion + rating |
 | `routes/config.ts` | Org + building config |
@@ -177,7 +189,7 @@
 | `routes/scheduling.ts` | Scheduling |
 | `routes/tenants.ts` | Tenant portal |
 
-## 4 · Repository Index (18 files)
+## 4 · Repository Index (20 files)
 
 | File | Include constant | Entity |
 |------|-----------------|--------|
@@ -198,8 +210,10 @@
 | `expenseTypeRepository.ts` | — | ExpenseType |
 | `accountRepository.ts` | — | Account |
 | `expenseMappingRepository.ts` | — | ExpenseMapping |
+| `cashflowPlanRepository.ts` | `CASHFLOW_PLAN_INCLUDE` | CashflowPlan / CashflowOverride |
+| `taxRuleRepository.ts` | — | TaxRule / TaxRuleVersion |
 
-## 5 · Workflow Index (24 workflows)
+## 5 · Workflow Index (25 workflows)
 
 | Workflow | Entity | Transition |
 |----------|--------|------------|
@@ -227,6 +241,7 @@
 | `submitQuoteWorkflow` | RfpQuote | (submit) |
 | `rfpDirectAssignWorkflow` | Rfp | (direct assign) |
 | `rfpReinviteWorkflow` | Rfp | (re-invite) |
+| `cashflowPlanWorkflow` | CashflowPlan | DRAFT → SUBMITTED → APPROVED |
 
 Support files: `workflows/transitions.ts` (guards), `workflows/context.ts` (WorkflowContext type)
 

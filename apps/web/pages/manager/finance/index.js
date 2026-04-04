@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import AppShell from "../../../components/AppShell";
@@ -7,12 +7,11 @@ import PageHeader from "../../../components/layout/PageHeader";
 import PageContent from "../../../components/layout/PageContent";
 import Panel from "../../../components/layout/Panel";
 import Section from "../../../components/layout/Section";
-import SortableHeader from "../../../components/SortableHeader";
-import { useTableSort, clientSort } from "../../../lib/tableUtils";
 import { formatChfCents, formatPercent } from "../../../lib/format";
 import { authHeaders } from "../../../lib/api";
 import { InvoicesContent } from "./invoices";
 import BillingEntityManager from "../../../components/BillingEntityManager";
+import RenovationTaxPlanning from "../../../components/RenovationTaxPlanning";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -28,17 +27,6 @@ function formatDate(iso) {
   return `${String(d.getDate()).padStart(2, "0")}.${String(d.getMonth() + 1).padStart(2, "0")}.${d.getFullYear()}`;
 }
 
-function formatCurrencyWhole(amount) {
-  if (typeof amount !== "number") return "—";
-  return `CHF ${amount.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, "'")}`;
-}
-
-function getInvoiceAmount(inv) {
-  if (typeof inv.totalAmountCents === "number") return formatChfCents(inv.totalAmountCents);
-  if (typeof inv.totalAmount === "number") return formatCurrencyWhole(inv.totalAmount);
-  if (typeof inv.amount === "number") return formatCurrencyWhole(inv.amount);
-  return "—";
-}
 
 // ─── Summary card ────────────────────────────────────────────────────────────
 
@@ -83,57 +71,14 @@ function HealthDot({ health }) {
   );
 }
 
-// ─── Status badge for invoices ───────────────────────────────────────────────
-
-const STATUS_COLORS = {
-  DRAFT: "bg-gray-100 text-gray-600",
-  ISSUED: "bg-blue-100 text-blue-800",
-  APPROVED: "bg-green-100 text-green-800",
-  PAID: "bg-emerald-100 text-emerald-800",
-  DISPUTED: "bg-red-100 text-red-800",
-};
-
-function StatusBadge({ status }) {
-  return (
-    <span className={"status-pill " + (STATUS_COLORS[status] || "bg-gray-100 text-gray-600")}>
-      {status}
-    </span>
-  );
-}
-
-// ─── Table sort config ───────────────────────────────────────────────────────
-
-const SORT_FIELDS = ["invoiceNumber", "description", "amount", "status", "createdAt", "expenseCategory", "tenantName", "unitNumber", "chargesTotalChf"];
-
-function fieldExtractor(row, field) {
-  switch (field) {
-    case "invoiceNumber": return row.invoiceNumber ?? "";
-    case "description": return (row.description || "").toLowerCase();
-    case "amount":
-      if (typeof row.totalAmountCents === "number") return row.totalAmountCents;
-      if (typeof row.totalAmount === "number") return row.totalAmount;
-      if (typeof row.amount === "number") return row.amount;
-      return -1;
-    case "status": return row.status ?? "";
-    case "createdAt": return row.createdAt || row.paidAt || row.updatedAt || "";
-    case "expenseCategory": return (row.expenseCategory || "").toLowerCase();
-    case "tenantName": return (row.tenantName || "").toLowerCase();
-    case "unitNumber": return (row.unit?.unitNumber || "").toLowerCase();
-    case "chargesTotalChf": return row.chargesTotalChf ?? -1;
-    default: return "";
-  }
-}
-
 // ─── Tab definitions ─────────────────────────────────────────────────────────
 
 const FINANCE_TABS = [
   { key: "overview", label: "Overview" },
   { key: "invoices", label: "Invoices" },
-  { key: "payments", label: "Payments" },
-  { key: "expenses", label: "Expenses" },
-  { key: "charges", label: "Charges" },
   { key: "billing-entities", label: "Billing Entities" },
   { key: "accounting", label: "Accounting" },
+  { key: "renovation-tax", label: "Renovation & Tax" },
   { key: "setup", label: "Setup" },
 ];
 
@@ -159,10 +104,6 @@ export default function ManagerFinanceHome() {
   const [portfolioError, setPortfolioError] = useState("");
 
   // Detailed records state
-  const [invoices, setInvoices] = useState([]);
-  const [leases, setLeases] = useState([]);
-  const [recordsLoading, setRecordsLoading] = useState(true);
-  const [recordsError, setRecordsError] = useState("");
   const [buildingsExpanded, setBuildingsExpanded] = useState(false);
 
   // Fetch portfolio summary
@@ -182,40 +123,7 @@ export default function ManagerFinanceHome() {
     }
   }, [range]);
 
-  // Fetch detailed records (invoices + leases)
-  const fetchRecords = useCallback(async () => {
-    setRecordsLoading(true);
-    setRecordsError("");
-    try {
-      const [invRes, leaseRes] = await Promise.all([
-        fetch("/api/invoices?view=summary&limit=200", { headers: authHeaders() }),
-        fetch("/api/leases?status=ACTIVE&limit=200", { headers: authHeaders() }),
-      ]);
-      const invData = await invRes.json();
-      const leaseData = await leaseRes.json();
-      if (!invRes.ok) throw new Error(invData?.error?.message || "Failed to load invoices");
-      setInvoices(invData?.data || []);
-      setLeases(leaseData?.data || []);
-    } catch (e) {
-      setRecordsError(String(e?.message || e));
-    } finally {
-      setRecordsLoading(false);
-    }
-  }, []);
-
   useEffect(() => { fetchPortfolio(); }, [fetchPortfolio]);
-  useEffect(() => { fetchRecords(); }, [fetchRecords]);
-
-  // Derived record lists
-  const payments = useMemo(() => invoices.filter((i) => i.status === "PAID"), [invoices]);
-  const expenses = useMemo(() => invoices.filter((i) => i.expenseCategory), [invoices]);
-  const leasesWithCharges = useMemo(() => leases.filter((l) => l.chargesTotalChf || l.chargesItems?.length), [leases]);
-
-  const { sortField, sortDir, handleSort } = useTableSort(router, SORT_FIELDS, { defaultField: "createdAt", defaultDir: "desc" });
-  const sortedPayments = useMemo(() => clientSort(payments, sortField, sortDir, fieldExtractor), [payments, sortField, sortDir]);
-  const sortedExpenses = useMemo(() => clientSort(expenses, sortField, sortDir, fieldExtractor), [expenses, sortField, sortDir]);
-  const sortedCharges = useMemo(() => clientSort(leasesWithCharges, sortField, sortDir, fieldExtractor), [leasesWithCharges, sortField, sortDir]);
-  const sortedInvoices = useMemo(() => clientSort(invoices, sortField, sortDir, fieldExtractor), [invoices, sortField, sortDir]);
 
   function applyRange() {
     setRange({ ...rangeInput });
@@ -398,140 +306,14 @@ export default function ManagerFinanceHome() {
           {activeTab === 1 && <InvoicesContent />}
 
           {/* ══════════════════════════════════════════════════════
-              Tab 2 — Payments
+              Tab 2 — Billing Entities
              ══════════════════════════════════════════════════════ */}
-          {activeTab === 2 && (
-            <>
-              <span className="tab-panel-count">
-                {`${payments.length} payment${payments.length !== 1 ? "s" : ""}`}
-              </span>
-
-              {recordsError && <div className="notice notice-err mb-2">{recordsError}</div>}
-
-              <Panel bodyClassName="p-0">
-                {recordsLoading ? <p className="loading-text">Loading…</p> : payments.length === 0 ? (
-                  <div className="empty-state"><p className="empty-state-text">No paid invoices yet.</p></div>
-                ) : (
-                  <div style={{ overflowX: "auto" }}>
-                    <table className="inline-table">
-                      <thead>
-                        <tr>
-                          <SortableHeader label="Invoice #" field="invoiceNumber" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
-                          <SortableHeader label="Description" field="description" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
-                          <SortableHeader label="Amount" field="amount" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
-                          <SortableHeader label="Paid" field="createdAt" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {sortedPayments.map((inv) => (
-                          <tr key={inv.id}>
-                            <td className="cell-bold">{inv.invoiceNumber || inv.id?.slice(0, 8)}</td>
-                            <td>{inv.description || "—"}</td>
-                            <td>{getInvoiceAmount(inv)}</td>
-                            <td>{formatDate(inv.paidAt || inv.updatedAt)}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </Panel>
-            </>
-          )}
+          {activeTab === 2 && <BillingEntityManager />}
 
           {/* ══════════════════════════════════════════════════════
-              Tab 3 — Expenses
+              Tab 3 — Accounting
              ══════════════════════════════════════════════════════ */}
           {activeTab === 3 && (
-            <>
-              <span className="tab-panel-count">
-                {`${expenses.length} expense${expenses.length !== 1 ? "s" : ""}`}
-              </span>
-
-              {recordsError && <div className="notice notice-err mb-2">{recordsError}</div>}
-
-              <Panel bodyClassName="p-0">
-                {recordsLoading ? <p className="loading-text">Loading…</p> : expenses.length === 0 ? (
-                  <div className="empty-state"><p className="empty-state-text">No categorised expenses yet.</p></div>
-                ) : (
-                  <div style={{ overflowX: "auto" }}>
-                    <table className="inline-table">
-                      <thead>
-                        <tr>
-                          <SortableHeader label="Invoice #" field="invoiceNumber" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
-                          <SortableHeader label="Category" field="expenseCategory" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
-                          <SortableHeader label="Amount" field="amount" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
-                          <SortableHeader label="Status" field="status" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {sortedExpenses.map((inv) => (
-                          <tr key={inv.id}>
-                            <td className="cell-bold">{inv.invoiceNumber || inv.id?.slice(0, 8)}</td>
-                            <td>{inv.expenseCategory || "—"}</td>
-                            <td>{getInvoiceAmount(inv)}</td>
-                            <td><StatusBadge status={inv.status} /></td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </Panel>
-            </>
-          )}
-
-          {/* ══════════════════════════════════════════════════════
-              Tab 4 — Charges
-             ══════════════════════════════════════════════════════ */}
-          {activeTab === 4 && (
-            <>
-              <span className="tab-panel-count">
-                {`${leasesWithCharges.length} lease${leasesWithCharges.length !== 1 ? "s" : ""} with charges`}
-              </span>
-
-              {recordsError && <div className="notice notice-err mb-2">{recordsError}</div>}
-
-              <Panel bodyClassName="p-0">
-                {recordsLoading ? <p className="loading-text">Loading…</p> : leasesWithCharges.length === 0 ? (
-                  <div className="empty-state"><p className="empty-state-text">No charge data on any active lease.</p></div>
-                ) : (
-                  <div style={{ overflowX: "auto" }}>
-                    <table className="inline-table">
-                      <thead>
-                        <tr>
-                          <SortableHeader label="Tenant" field="tenantName" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
-                          <SortableHeader label="Unit" field="unitNumber" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
-                          <SortableHeader label="Total (CHF)" field="chargesTotalChf" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
-                          <th>Items</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {sortedCharges.map((l) => (
-                          <tr key={l.id}>
-                            <td className="cell-bold">{l.tenantName || "—"}</td>
-                            <td>{l.unit?.unitNumber || "—"}</td>
-                            <td>{l.chargesTotalChf != null ? formatCurrencyWhole(l.chargesTotalChf) : "—"}</td>
-                            <td>{l.chargesItems?.length || 0}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </Panel>
-            </>
-          )}
-
-          {/* ══════════════════════════════════════════════════════
-              Tab 5 — Billing Entities
-             ══════════════════════════════════════════════════════ */}
-          {activeTab === 5 && <BillingEntityManager />}
-
-          {/* ══════════════════════════════════════════════════════
-              Tab 6 — Accounting
-             ══════════════════════════════════════════════════════ */}
-          {activeTab === 6 && (
             <Panel>
               <div className="flex flex-col gap-4">
                 <p className="text-sm text-gray-600">
@@ -550,9 +332,14 @@ export default function ManagerFinanceHome() {
           )}
 
           {/* ══════════════════════════════════════════════════════
-              Tab 7 — Setup
+              Tab 4 — Renovation & Tax
              ══════════════════════════════════════════════════════ */}
-          {activeTab === 7 && (
+          {activeTab === 4 && <RenovationTaxPlanning />}
+
+          {/* ══════════════════════════════════════════════════════
+              Tab 5 — Setup
+             ══════════════════════════════════════════════════════ */}
+          {activeTab === 5 && (
             <Panel>
               <div className="flex flex-col gap-2">
                 <p className="text-sm text-gray-600">

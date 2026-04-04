@@ -40,13 +40,13 @@ routes → workflows → services → repositories → Prisma → PostgreSQL
 
 ### Frontend
 
-- Next.js Pages Router. `apps/web/pages/api/` proxies to backend via `proxyToBackend()` (163/163 conforming).
+- Next.js Pages Router. `apps/web/pages/api/` proxies to backend via `proxyToBackend()` (127/127 conforming).
 - Layout: `AppShell` → `PageShell` → `PageHeader` → `PageContent` → `Panel`.
 - Styling: Tailwind classes + `@layer components` in `globals.css`. No inline styles, no JS style objects.
 
 ### Database
 
-- PostgreSQL 16 via Docker. Prisma ORM. 54 models · 47 enums · 60 migrations.
+- PostgreSQL 16 via Docker. Prisma ORM. 64 models · 55 enums · 69 migrations.
 - Dev DB: `maint_agent` | Test DB: `maint_agent_test` (isolated).
 
 ---
@@ -181,7 +181,17 @@ npm test
 
 # 3. Blueprint sync (also runs automatically via pre-commit hook)
 npm run blueprint
+
+# 4. Verify nothing is left uncommitted (G12/G14)
+git status && git stash list
 ```
+
+### G12–G15: Session & Commit Safety
+
+- **G12** — Commit every deliverable (>100 new lines → stop and commit)
+- **G13** — Frontend + backend = one atomic commit (never leave UI as only uncommitted layer)
+- **G14** — Session-end: `git status && git stash list && git diff --stat` before closing
+- **G15** — Never `git stash drop` without `git stash show --stat`; prefer `git stash branch wip/<name>`
 
 After schema changes, also run:
 ```bash
@@ -210,7 +220,7 @@ npx prisma migrate diff \
 
 ## Current System Snapshot
 
-769 tests · 56 suites · 0 TS errors · 91/94 audit findings resolved.
+57 suites · 0 TS errors · 91/94 audit findings resolved. Recurring Invoices epic complete (6 slices, 5 new models, 4 new migration files).
 
 For full counts, state integrity verification, and Document Integrity table, see [PROJECT_STATE.md](PROJECT_STATE.md).
 

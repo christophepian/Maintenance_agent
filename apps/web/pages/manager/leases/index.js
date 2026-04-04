@@ -509,7 +509,9 @@ export default function LeasesPage() {
                             <th>Tenant</th>
                             <th>Unit</th>
                             <th>Building</th>
-                            <th>Rent</th>
+                            <th>Net Rent</th>
+                            {tabIndex === 0 && <th>Charges</th>}
+                            {tabIndex === 0 && <th>Total/mo</th>}
                             <th>Start</th>
                             <th>Status</th>
                             {tabIndex === 1 && <th>Tag</th>}
@@ -517,12 +519,18 @@ export default function LeasesPage() {
                           </tr>
                         </thead>
                         <tbody>
-                          {filtered.slice(0, 200).map(lease => (
+                          {filtered.slice(0, 200).map(lease => {
+                            const netRent = lease.netRentChf ?? 0;
+                            const charges = lease.chargesTotalChf ?? 0;
+                            const totalMo = netRent + charges;
+                            return (
                             <tr key={lease.id}>
                               <td className="cell-bold">{lease.tenantName}</td>
                               <td>{lease.unit?.unitNumber || "—"}</td>
                               <td>{lease.unit?.building?.name || "—"}</td>
-                              <td>CHF {lease.rentTotalChf ?? lease.netRentChf}.-</td>
+                              <td>CHF {netRent}.-</td>
+                              {tabIndex === 0 && <td>{charges ? `CHF ${charges}.-` : "—"}</td>}
+                              {tabIndex === 0 && <td className="font-semibold">CHF {totalMo}.-</td>}
                               <td>{formatDate(lease.startDate)}</td>
                               <td>
                                 <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${STATUS_COLORS[lease.status] || "bg-slate-100 text-slate-700"}`}>
@@ -548,7 +556,8 @@ export default function LeasesPage() {
                                 </button>
                               </td>
                             </tr>
-                          ))}
+                            );
+                          })}
                         </tbody>
                       </table>
                     </div>

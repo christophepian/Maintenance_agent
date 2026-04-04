@@ -5,11 +5,11 @@
 
 ## Database Schema (Prisma)
 
-**Status: ACTIVE AND IN USE — 60 migrations** (shadow DB replay verified clean 2026-03-30)
+**Status: ACTIVE AND IN USE — 69 migrations** (shadow DB replay verified clean 2026-03-30)
 
-**Last verified:** 2026-03-30
+**Last verified:** 2026-04-03
 
-### Models (54 total) <!-- 52 listed above + CaptureSession + LedgerEntry -->
+### Models (64 total)
 
 | Model | Key Fields | Relations |
 |-------|-----------|-----------|
@@ -25,18 +25,18 @@
 | **Occupancy** | tenantId, unitId (unique pair) | → Tenant, Unit |
 | **Appliance** | unitId, orgId, assetModelId?, name, serial, isActive, installDate?, notes? | → Unit, AssetModel, Requests |
 | **AssetModel** | orgId?, manufacturer, model, **category**, specs, isActive | → Appliances |
-| **Contractor** | orgId, name, phone, email, hourlyRate, serviceCategories (JSON), isActive, addressLine1?, addressLine2?, postalCode?, city?, country?, iban?, vatNumber?, defaultVatRate? | → Requests, Jobs, BillingEntity, RfpInvites, RfpQuotes |
+| **Contractor** | orgId, name, phone, email, hourlyRate, serviceCategories (JSON), isActive, addressLine1?, addressLine2?, postalCode?, city?, country?, iban?, vatNumber?, defaultVatRate? | → Requests, Jobs, BillingEntity, RfpInvites, RfpQuotes, Invoices[], ContractorBillingSchedule[] |
 | **Request** | **requestNumber** (@default(autoincrement()) @unique), description, category?, estimatedCost?, status, contactPhone, assignedContractorId?, tenantId?, unitId?, applianceId?, contractorNotes, startedAt?, completedAt?, updatedAt, approvalSource? (ApprovalSource), rejectionReason?, payingParty (PayingParty, default LANDLORD) | → Contractor, Tenant, Unit, Appliance, Job, RequestEvents, MaintenanceAttachments |
 | **MaintenanceAttachment** | requestId, fileName, mimeType, storageKey, sizeBytes, uploadedBy?, createdAt | → Request |
 | **RequestEvent** | requestId, type (RequestEventType), contractorId (required), message | → Request, Contractor |
 | **Event** | orgId, type, actorUserId?, requestId?, payload (JSON) | (standalone) |
 | **Job** | orgId, requestId (unique), **contractorId** (required), status, actualCost, startedAt?, completedAt? | → Request, Contractor, Invoices |
-| **Invoice** | orgId, **jobId** (required), leaseId?, issuer fields, recipient fields, amounts in cents, status, lineItems, **expenseTypeId?**, **accountId?**, direction (InvoiceDirection), sourceChannel (InvoiceSourceChannel), ingestionStatus (IngestionStatus)?, ocrConfidence?, rawOcrText?, sourceFileUrl? | → Job, Lease, BillingEntity, InvoiceLineItems, ExpenseType?, Account? |
+| **Invoice** | orgId, **jobId** (required), leaseId?, issuer fields, recipient fields, amounts in cents, status, lineItems, **expenseTypeId?**, **accountId?**, direction (InvoiceDirection), sourceChannel (InvoiceSourceChannel), ingestionStatus (IngestionStatus)?, ocrConfidence?, rawOcrText?, sourceFileUrl?, **contractorId?**, **contractorBillingScheduleId?** | → Job, Lease, BillingEntity, InvoiceLineItems, ExpenseType?, Account?, Contractor?, ContractorBillingSchedule? |
 | **InvoiceLineItem** | invoiceId, description, quantity, unitPrice (cents), vatRate, lineTotal | → Invoice |
 | **BillingEntity** | orgId, type, contractorId?, name, address, iban, vatNumber | → Org, Contractor |
 | **ApprovalRule** | orgId, buildingId?, name, priority, conditions (JSON), action, isActive | → Org, Building |
 | **Notification** | orgId, userId, buildingId?, entityType, entityId, eventType, message?, readAt | → Org, Building |
-| **Lease** | orgId, status, unitId, 40+ fields (parties, object, dates, rent, deposit, PDF refs, lifecycle timestamps) | → Org, Unit, SignatureRequests, Invoices |
+| **Lease** | orgId, status, unitId, 40+ fields (parties, object, dates, rent, deposit, PDF refs, lifecycle timestamps), **indexClauseType?** (IndexClauseType), **cpiBaseIndex?**, **initialNetRentChf?**, **lastIndexationDate?** | → Org, Unit, SignatureRequests, Invoices, RecurringBillingSchedule?, RentAdjustment[], ChargeReconciliation[], LeaseExpenseItem[] |
 | **SignatureRequest** | orgId, entityType, entityId, provider, level, status, signersJson, providerEnvelopeId?, auditTrailStorageKey?, sentAt?, signedAt? | → Org, Lease |
 | **RentalApplication** | orgId, status (RentalApplicationStatus), householdSize?, desiredMoveInDate?, hasPets?, petsDescription?, currentLandlordName?, currentLandlordAddress?, currentLandlordPhone?, reasonForLeaving?, remarks, hasRcInsurance?, rcInsuranceCompany?, hasVehicle?, vehicleDescription?, needsParking?, signedName?, signedAt?, signatureIp?, signatureUserAgent?, submittedAt?, applicationDataJson? | → Org, Applicants, Attachments, ApplicationUnits |
 | **RentalApplicant** | applicationId, role (PRIMARY/CO_APPLICANT), firstName, lastName, birthdate?, nationality, civilStatus?, permitType, phone?, email?, currentAddress?, currentZipCity?, employer, jobTitle?, workLocation?, employedSince?, netMonthlyIncome?, hasDebtEnforcement? | → RentalApplication |
@@ -67,8 +67,18 @@
 | **LeaseExpenseItem** | leaseId, expenseTypeId?, accountId?, description, mode (ChargeMode: ACOMPTE/FORFAIT), amountChf, isActive | → Lease, ExpenseType?, Account? |
 | **CaptureSession** | orgId, createdBy (userId), token (unique), status (CaptureSessionStatus), expiresAt, sourceChannel, targetType, uploadedFileUrls (String[]), createdInvoiceId? | → Org |
 | **LedgerEntry** | orgId, date, accountId, debitCents, creditCents, description, reference?, sourceType?, sourceId?, journalId (groups posting legs), buildingId?, unitId?, createdBy? | → Org, Account, Building?, Unit? |
+| **CashflowPlan** | orgId, buildingId?, name, status (CashflowPlanStatus), incomeGrowthRatePct, openingBalanceCents (BigInt?), horizonMonths, lastComputedAt? | → Org, Building?, CashflowOverride[], Rfp[] |
+| **CashflowOverride** | planId, assetId, originalYear, overriddenYear | → CashflowPlan, Asset |
+| **TaxRule** | jurisdiction, canton?, assetType, topic, scope (LegalRuleScope), isActive | → TaxRuleVersion[] |
+| **TaxRuleVersion** | ruleId, effectiveFrom, effectiveTo?, classification (TaxClassification), deductiblePct, confidence, notes?, citationsJson? | → TaxRule |
+| **ReplacementBenchmark** | assetType, topic, lowChf, medianChf, highChf, sourceNotes?, isActive | (standalone — unique on assetType+topic) |
+| **RecurringBillingSchedule** | orgId, leaseId, status (BillingScheduleStatus), anchorDay, nextPeriodStart, lastGeneratedPeriod?, baseRentCents, totalChargesCents | → Org, Lease |
+| **RentAdjustment** | orgId, leaseId, adjustmentType (RentAdjustmentType), status (RentAdjustmentStatus), effectiveDate, previousRentCents, newRentCents, adjustmentCents, cpiOldIndex?, cpiNewIndex?, referenceRateOld?, referenceRateNew?, calculationDetails?, approvedAt?, appliedAt?, rejectedAt?, rejectionReason? | → Org, Lease |
+| **ChargeReconciliation** | orgId, leaseId, fiscalYear, status (ChargeReconciliationStatus), totalAcompteCents?, totalActualCents?, balanceCents?, settledAt? | → Org, Lease, ChargeReconciliationLine[] |
+| **ChargeReconciliationLine** | reconciliationId, expenseTypeId?, description, acompteCents, actualCents | → ChargeReconciliation, ExpenseType? |
+| **ContractorBillingSchedule** | orgId, contractorId, status (BillingScheduleStatus), description, frequency (BillingFrequency), anchorDay, nextPeriodStart, lastGeneratedPeriod?, amountCents, vatRate, buildingId?, completedAt?, completionReason? | → Org, Contractor, Building?, Invoice[] |
 
-### Key Enums (47 total) <!-- 41 original + CaptureSessionStatus + InvoiceDirection + InvoiceSourceChannel + IngestionStatus + RfpQuoteStatus + RequestUrgency -->
+### Key Enums (55 total) <!-- 49 prior + BillingScheduleStatus + IndexClauseType + RentAdjustmentType + RentAdjustmentStatus + ChargeReconciliationStatus + BillingFrequency -->
 - `RequestStatus`: PENDING_REVIEW, AUTO_APPROVED, APPROVED, **RFP_PENDING**, ASSIGNED, IN_PROGRESS, COMPLETED, PENDING_OWNER_APPROVAL, **OWNER_REJECTED**
 - `ApprovalSource`: SYSTEM_AUTO, OWNER_APPROVED, OWNER_REJECTED, LEGAL_OBLIGATION
 - `PayingParty`: LANDLORD, TENANT
@@ -116,6 +126,14 @@
 - `IngestionStatus`: PENDING_REVIEW, CONFIRMED, AUTO_CONFIRMED, REJECTED
 - `RfpQuoteStatus`: SUBMITTED, AWARDED, REJECTED
 - `RequestUrgency`: LOW, MEDIUM, HIGH, EMERGENCY
+- `CashflowPlanStatus`: DRAFT, SUBMITTED, APPROVED
+- `TaxClassification`: WERTERHALTEND, WERTVERMEHREND, MIXED
+- `BillingScheduleStatus`: ACTIVE, PAUSED, COMPLETED
+- `IndexClauseType`: NONE, CPI_100, CPI_40_REFRATE_60
+- `RentAdjustmentType`: CPI_INDEXATION, REFERENCE_RATE_CHANGE, MANUAL
+- `RentAdjustmentStatus`: DRAFT, APPROVED, APPLIED, REJECTED
+- `ChargeReconciliationStatus`: DRAFT, FINALIZED, SETTLED
+- `BillingFrequency`: MONTHLY, QUARTERLY, SEMI_ANNUAL, ANNUAL
 
 ### ⚠️ Schema Gotchas (fields that DON'T exist where you'd expect)
 - **`Request` has NO `orgId`** — requests are not directly org-scoped (they inherit scope through unit/building)

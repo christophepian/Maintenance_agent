@@ -203,6 +203,19 @@ export interface RatingSubmittedPayload {
   score: number;
 }
 
+export interface CashflowPlanCreatedPayload {
+  planId: string;
+  name: string;
+}
+
+export interface CashflowPlanSubmittedPayload {
+  planId: string;
+}
+
+export interface CashflowPlanApprovedPayload {
+  planId: string;
+}
+
 /* ── Event map: type → payload ──────────────────────────────── */
 
 export interface DomainEventMap {
@@ -236,6 +249,9 @@ export interface DomainEventMap {
   SCHEDULING_ESCALATED: SchedulingEscalatedPayload;
   JOB_CONFIRMED: JobConfirmedPayload;
   RATING_SUBMITTED: RatingSubmittedPayload;
+  CASHFLOW_PLAN_CREATED: CashflowPlanCreatedPayload;
+  CASHFLOW_PLAN_SUBMITTED: CashflowPlanSubmittedPayload;
+  CASHFLOW_PLAN_APPROVED: CashflowPlanApprovedPayload;
 }
 
 export type DomainEventType = keyof DomainEventMap;

@@ -1,6 +1,6 @@
 # Frontend Page Inventory
 
-Updated: 2026-03-12 (frontend-debt-cleanup slice)
+Updated: 2026-04-03 (recurring invoices epic)
 
 ---
 
@@ -8,20 +8,20 @@ Updated: 2026-03-12 (frontend-debt-cleanup slice)
 
 | Persona | Page count | API proxy count | Has empty state | Has loading state |
 |---------|-----------|-----------------|-----------------|-------------------|
-| manager | 34 | ~60 | Y | Y |
+| manager | 42 | ~78 | Y | Y |
 | contractor | 6 | 4 | Y | Y |
 | tenant | 8 | ~12 | Y | Y |
 | owner | 8 | ~6 | Y | Y |
 | public | 2 | 2 | Y | Y |
 | shared/api | 8 | ~35 | — | — |
 
-**Totals:** 66 UI pages · 119 API proxy files
+**Totals:** 74 UI pages · 137 API proxy files
 
 ---
 
 ## Full Page List
 
-### Manager Pages (34)
+### Manager Pages (42)
 
 | Path | Type | Uses proxyToBackend | Has empty state | Last modified | Status |
 |------|------|--------------------|-----------------|----|--------|
@@ -60,6 +60,16 @@ Updated: 2026-03-12 (frontend-debt-cleanup slice)
 | /manager/vacancies/index | UI — list | N/A | yes | 2026-03-04 | active |
 | /manager/vacancies/[unitId]/applications | UI — detail | N/A | yes | 2026-03-08 | active |
 | /manager/buildings/[id]/financials | UI — detail | N/A | yes | 2026-03-08 | active |
+| /manager/cashflow/index | UI — plan list | N/A | yes | 2026-04-01 | active |
+| /manager/cashflow/[id] | UI — plan detail + chart + overrides + RFP panel | N/A | yes | 2026-04-01 | active |
+| /manager/billing-schedules/index | UI — recurring billing schedule list | N/A | yes | 2026-04-03 | active |
+| /manager/billing-schedules/[id] | UI — billing schedule detail + lifecycle | N/A | yes | 2026-04-03 | active |
+| /manager/charge-reconciliations/index | UI — ACOMPTE reconciliation list | N/A | yes | 2026-04-03 | active |
+| /manager/charge-reconciliations/[id] | UI — reconciliation detail + lines | N/A | yes | 2026-04-03 | active |
+| /manager/rent-adjustments/index | UI — CPI/manual rent adjustment list | N/A | yes | 2026-04-03 | active |
+| /manager/rent-adjustments/[id] | UI — rent adjustment detail | N/A | yes | 2026-04-03 | active |
+| /manager/contractor-billing-schedules/index | UI — contractor recurring billing list + create | N/A | yes | 2026-04-03 | active |
+| /manager/contractor-billing-schedules/[id] | UI — contractor billing detail + lifecycle | N/A | yes | 2026-04-03 | active |
 
 ### Contractor Pages (6)
 
@@ -160,7 +170,7 @@ The shared proxy utility at `apps/web/lib/proxy.js` (`proxyToBackend`) handles a
 | ④ Query param passthrough | ✅ | Splits URL at `?` and appends raw query string unchanged |
 | ⑤ Transparent error status codes | ✅ | `res.status(upstreamRes.status)` — all 4xx/5xx pass through |
 
-### Proxy Files Using `proxyToBackend` (119 of 119) — All Pass ✅
+### Proxy Files Using `proxyToBackend` (127 of 127) — All Pass ✅
 
 All files using `proxyToBackend()` automatically pass all 5 checks. Patterns include:
 - **Simple passthrough** (~85 files): `proxyToBackend(req, res, "/path")`

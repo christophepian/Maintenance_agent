@@ -506,6 +506,21 @@ export async function findBuildingOwners(
   });
 }
 
+export async function findBuildingOwnersWithTaxRate(
+  prisma: PrismaClient,
+  buildingId: string,
+) {
+  return prisma.buildingOwner.findMany({
+    where: { buildingId },
+    include: {
+      user: {
+        select: { id: true, name: true, email: true, marginalTaxRate: true },
+      },
+    },
+    orderBy: { createdAt: "asc" },
+  });
+}
+
 /**
  * Add an owner to a building.  Silently returns existing row if the
  * pair already exists (idempotent).

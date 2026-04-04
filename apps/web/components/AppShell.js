@@ -146,11 +146,8 @@ export default function AppShell({ role: roleProp, children }) {
         section: "Finance",
         items: [
           { label: "Finance overview", href: "/manager/finance" },
-          { label: "Charges", href: "/manager/finance/charges" },
-          { label: "Payments", href: "/manager/finance/payments" },
           { label: "Invoices & Bills", href: "/manager/finance/invoices" },
           { label: "Billing Entities", href: "/manager/finance/billing-entities" },
-          { label: "Expenses", href: "/manager/finance/expenses" },
           { label: "Ledger", href: "/manager/finance/ledger" },
         ],
       },

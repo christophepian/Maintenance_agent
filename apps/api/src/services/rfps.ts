@@ -51,6 +51,8 @@ export interface RfpDTO {
   buildingId: string;
   unitId: string | null;
   requestId: string | null;
+  cashflowPlanId: string | null;
+  cashflowGroupKey: string | null;
   category: string;
   legalObligation: LegalObligation;
   status: string;
@@ -157,6 +159,8 @@ function mapRfpToDTO(rfp: RfpWithRelations): RfpDTO {
     buildingId: rfp.buildingId,
     unitId: rfp.unitId ?? null,
     requestId: rfp.requestId ?? null,
+    cashflowPlanId: rfp.cashflowPlanId ?? null,
+    cashflowGroupKey: rfp.cashflowGroupKey ?? null,
     category: rfp.category,
     legalObligation: rfp.legalObligation,
     status: rfp.status,

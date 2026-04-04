@@ -47,6 +47,7 @@ describe("Ledger posting coverage", () => {
       lineItems: [],
       direction: "OUTGOING",
       sourceChannel: "MANUAL",
+      isBackfilled: false,
       ...overrides,
     };
   }

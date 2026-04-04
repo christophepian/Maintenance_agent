@@ -85,3 +85,17 @@ export async function findContractorsByIds(
     select: { id: true, name: true },
   });
 }
+
+/**
+ * Find all active contractors for an org.
+ * Used when matching contractors to an RFP by trade group / category.
+ */
+export async function findActiveByOrg(
+  prisma: PrismaClient,
+  orgId: string,
+): Promise<Array<{ id: string; serviceCategories: string }>> {
+  return prisma.contractor.findMany({
+    where: { orgId, isActive: true },
+    select: { id: true, serviceCategories: true },
+  });
+}

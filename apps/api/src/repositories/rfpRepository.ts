@@ -144,6 +144,17 @@ export async function findRfpByRequestId(
   }) as Promise<RfpWithRelations | null>;
 }
 
+export async function findRfpByCashflowGroup(
+  prisma: PrismaClient,
+  cashflowPlanId: string,
+  cashflowGroupKey: string,
+): Promise<RfpWithRelations | null> {
+  return prisma.rfp.findFirst({
+    where: { cashflowPlanId, cashflowGroupKey },
+    include: RFP_FULL_INCLUDE,
+  }) as Promise<RfpWithRelations | null>;
+}
+
 /**
  * Find RFPs visible to a specific contractor.
  * Visibility: status=OPEN AND category matches, OR contractor has an invite.
@@ -252,8 +263,10 @@ export async function createQuoteForRfp(
 export interface CreateRfpData {
   orgId: string;
   buildingId: string;
-  unitId: string;
-  requestId: string;
+  unitId?: string | null;
+  requestId?: string | null;
+  cashflowPlanId?: string | null;
+  cashflowGroupKey?: string | null;
   category: string;
   legalObligation: LegalObligation;
   status: RfpStatus;
@@ -274,8 +287,10 @@ export async function createRfpWithInvites(
       data: {
         orgId: data.orgId,
         buildingId: data.buildingId,
-        unitId: data.unitId,
-        requestId: data.requestId,
+        unitId: data.unitId ?? null,
+        requestId: data.requestId ?? null,
+        cashflowPlanId: data.cashflowPlanId ?? null,
+        cashflowGroupKey: data.cashflowGroupKey ?? null,
         category: data.category,
         legalObligation: data.legalObligation,
         status: data.status,

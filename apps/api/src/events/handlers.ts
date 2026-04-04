@@ -13,6 +13,15 @@ import { PrismaClient } from "@prisma/client";
 import { onAll, on } from "./bus";
 import { DomainEvent } from "./types";
 import { createNotification } from "../services/notifications";
+import {
+  createScheduleForLease,
+  generateInvoiceForPeriod,
+  stopScheduleForLease,
+} from "../services/recurringBillingService";
+import {
+  findScheduleByLeaseId,
+  advanceSchedule,
+} from "../repositories/recurringBillingRepository";
 
 // SA-20: Redact sensitive fields from event log output
 function redactPayload(payload: Record<string, unknown>): Record<string, unknown> {
@@ -91,6 +100,135 @@ export function registerEventHandlers(prisma: PrismaClient): void {
       });
     } catch (err) {
       console.error("[EVENT HANDLER] INVOICE_ISSUED notification failed", err);
+    }
+  });
+
+  /* ── Recurring billing: auto-create / stop billing schedule on lease lifecycle ── */
+  on("LEASE_STATUS_CHANGED", async (event) => {
+    const { leaseId, toStatus } = event.payload;
+
+    // ── Lease activated → create billing schedule + first invoice ──
+    if (toStatus === "ACTIVE") {
+      try {
+        // Check if a schedule already exists (idempotency — e.g. event replayed)
+        const existingSchedule = await findScheduleByLeaseId(prisma, leaseId);
+        if (existingSchedule) {
+          console.log(
+            `[BILLING] Schedule already exists for lease ${leaseId}, skipping creation`,
+          );
+          return;
+        }
+
+        // Fetch lease with expense items to compute charges
+        const lease = await prisma.lease.findUnique({
+          where: { id: leaseId },
+          include: {
+            expenseItems: { where: { isActive: true } },
+          },
+        });
+        if (!lease) {
+          console.error(`[BILLING] Lease ${leaseId} not found after activation`);
+          return;
+        }
+
+        const activationDate = lease.activatedAt ?? new Date();
+
+        // If this unit already has another lease with an active billing schedule,
+        // stop the old one (lease replacement scenario — e.g. rent increase via new lease)
+        if (lease.unitId) {
+          const otherActiveLeases = await prisma.lease.findMany({
+            where: {
+              unitId: lease.unitId,
+              id: { not: leaseId },
+              billingSchedule: { status: { in: ["ACTIVE", "PAUSED"] } },
+            },
+            select: { id: true },
+          });
+          for (const oldLease of otherActiveLeases) {
+            await stopScheduleForLease(prisma, oldLease.id, "REPLACED_BY_NEW_LEASE");
+            console.log(
+              `[BILLING] Stopped old schedule for lease ${oldLease.id} ` +
+                `(replaced by ${leaseId} on unit ${lease.unitId})`,
+            );
+          }
+        }
+
+        const totalChargesChf = lease.expenseItems.reduce(
+          (sum, item) => sum + (item.amountChf ?? 0),
+          0,
+        );
+
+        // 1. Create the schedule
+        const schedule = await createScheduleForLease(prisma, {
+          orgId: event.orgId,
+          leaseId,
+          activationDate,
+          netRentChf: lease.netRentChf ?? 0,
+          totalChargesChf,
+        });
+
+        console.log(
+          `[BILLING] Created schedule ${schedule.id} for lease ${leaseId} ` +
+            `(rent=${lease.netRentChf} CHF, charges=${totalChargesChf} CHF, ` +
+            `first period=${schedule.nextPeriodStart.toISOString()})`,
+        );
+
+        // 2. Generate the first invoice immediately
+        //    Re-fetch the schedule with the full include (lease + expenseItems)
+        const fullSchedule = await findScheduleByLeaseId(prisma, leaseId);
+        if (fullSchedule) {
+          try {
+            const result = await generateInvoiceForPeriod(
+              prisma,
+              fullSchedule,
+              new Date(fullSchedule.nextPeriodStart),
+              { isBackfilled: false },
+            );
+
+            // Advance the schedule to the next period
+            const nextStart = new Date(
+              fullSchedule.nextPeriodStart.getFullYear(),
+              fullSchedule.nextPeriodStart.getMonth() + 1,
+              1,
+            );
+
+            await advanceSchedule(
+              prisma,
+              fullSchedule.id,
+              fullSchedule.nextPeriodStart,
+              nextStart,
+            );
+
+            console.log(
+              `[BILLING] Generated first invoice ${result.invoiceId} for lease ${leaseId} ` +
+                `(amount=${result.totalAmountCents} cents, pro-rata=${result.isProRata})`,
+            );
+          } catch (err) {
+            console.error(
+              `[BILLING] Failed to generate first invoice for lease ${leaseId}:`,
+              err,
+            );
+          }
+        }
+      } catch (err) {
+        console.error(
+          `[BILLING] Failed to create billing schedule for lease ${leaseId}:`,
+          err,
+        );
+      }
+    }
+
+    // ── Lease terminated → stop billing schedule ──────────────
+    if (toStatus === "TERMINATED") {
+      try {
+        await stopScheduleForLease(prisma, leaseId, "LEASE_TERMINATED");
+        console.log(`[BILLING] Stopped schedule for terminated lease ${leaseId}`);
+      } catch (err) {
+        console.error(
+          `[BILLING] Failed to stop schedule for lease ${leaseId}:`,
+          err,
+        );
+      }
     }
   });
 

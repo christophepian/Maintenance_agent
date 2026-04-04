@@ -599,4 +599,68 @@ describe('G10: API Contract Tests', () => {
       expect(body.error).toHaveProperty('code', 'VALIDATION_ERROR');
     });
   });
+
+  // ── Cashflow Plans ──
+  describe('GET /cashflow-plans', () => {
+    it('returns { data: [] } envelope', async () => {
+      const res = await fetch(`${API_BASE}/cashflow-plans`);
+      expect(res.ok).toBe(true);
+      const body = await res.json();
+      expect(body).toHaveProperty('data');
+      expect(Array.isArray(body.data)).toBe(true);
+    });
+  });
+
+  describe('POST /cashflow-plans → GET /cashflow-plans/:id', () => {
+    it('creates a plan and retrieves it with cashflow buckets', async () => {
+      const createRes = await fetch(`${API_BASE}/cashflow-plans`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ name: 'Test Plan', horizonMonths: 12 }),
+      });
+      expect(createRes.status).toBe(201);
+      const createBody = await createRes.json();
+      expect(createBody).toHaveProperty('data');
+      const plan = createBody.data;
+      expectKeys(plan, ['id', 'orgId', 'name', 'status', 'incomeGrowthRatePct', 'horizonMonths', 'overrides'], 'CashflowPlan');
+      expect(plan.status).toBe('DRAFT');
+      expect(plan.overrides).toEqual([]);
+
+      const getRes = await fetch(`${API_BASE}/cashflow-plans/${plan.id}`);
+      expect(getRes.ok).toBe(true);
+      const getBody = await getRes.json();
+      expect(getBody.data).toHaveProperty('cashflow');
+      const { cashflow } = getBody.data;
+      expect(Array.isArray(cashflow.buckets)).toBe(true);
+      if (cashflow.buckets.length > 0) {
+        const bucket = cashflow.buckets[0];
+        expectKeys(bucket, ['year', 'month', 'isActual', 'projectedIncomeCents', 'projectedOpexCents', 'scheduledCapexCents', 'netCents', 'cumulativeBalanceCents'], 'MonthlyBucket');
+      }
+    });
+  });
+
+  describe('POST /cashflow-plans/:id/approve from DRAFT', () => {
+    it('returns 400 — DRAFT cannot skip directly to APPROVED', async () => {
+      const createRes = await fetch(`${API_BASE}/cashflow-plans`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ name: 'Transition Test Plan' }),
+      });
+      const { data: plan } = await createRes.json();
+
+      const approveRes = await fetch(`${API_BASE}/cashflow-plans/${plan.id}/approve`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      expect(approveRes.status).toBe(400);
+    });
+  });
+
+  describe('GET /cashflow-plans/:id/rfp-candidates — non-existent plan', () => {
+    it('returns 404', async () => {
+      const res = await fetch(`${API_BASE}/cashflow-plans/00000000-0000-0000-0000-000000000000/rfp-candidates`);
+      expect(res.status).toBe(404);
+    });
+  });
 });

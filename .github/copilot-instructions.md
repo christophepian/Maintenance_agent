@@ -24,7 +24,7 @@ Full-stack Swiss property management platform. Monorepo with Node.js + TypeScrip
 |-|-|
 | Backend | Raw `http.createServer()` — no Express/NestJS. Port 3001. |
 | Frontend | Next.js Pages Router. Port 3000. |
-| Database | PostgreSQL 16 via Docker. Prisma ORM. 54 models · 47 enums · 60 migrations. |
+| Database | PostgreSQL 16 via Docker. Prisma ORM. 64 models · 55 enums · 69 migrations. |
 | Auth | JWT-based. Role enum: MANAGER, CONTRACTOR, TENANT, OWNER. |
 | Personas | Manager · Contractor · Tenant · Owner |
 
@@ -110,6 +110,12 @@ Before every commit:
 - [ ] `npx tsc --noEmit` — 0 errors
 - [ ] `npm test` — all tests pass
 - [ ] `npm run blueprint` — docs sync (runs automatically via pre-commit hook)
+- [ ] `git status` — no untracked/modified files belonging to current deliverable (G12)
+- [ ] Frontend + backend changes in the same commit (G13)
+
+Before closing a session:
+- [ ] `git status && git stash list && git diff --stat` — nothing valuable left uncommitted (G14)
+- [ ] Never `git stash drop` without `git stash show --stat` (G15)
 
 ---
 
@@ -124,9 +130,9 @@ Maintenance_Agent/
 │   ├── events/          # Domain event bus
 │   └── governance/      # Org scoping + authz
 ├── apps/api/prisma/
-│   ├── schema.prisma    # 54 models · 47 enums
-│   └── migrations/      # 60 dirs — never edit past migrations
-├── apps/web/pages/      # 247 pages (83 UI + 163 API proxies)
+│   ├── schema.prisma    # 64 models · 55 enums
+│   └── migrations/      # 69 dirs — never edit past migrations
+├── apps/web/pages/      # 275 pages (92 UI + 182 API proxies)
 ├── apps/web/styles/
 │   └── globals.css       # Tailwind + CSS variables + @layer components (F8)
 ├── packages/api-client/ # Typed DTOs + fetch methods

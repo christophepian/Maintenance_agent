@@ -494,6 +494,11 @@ components:
             id: { type: string, format: uuid }
             name: { type: string }
             code: { type: string, nullable: true }
+        # Recurring billing fields
+        isBackfilled: { type: boolean, default: false }
+        billingPeriodStart: { type: string, format: date-time, nullable: true }
+        billingPeriodEnd: { type: string, format: date-time, nullable: true }
+        billingScheduleId: { type: string, format: uuid, nullable: true }
 
     InvoiceSummaryDTO:
       type: object
@@ -510,6 +515,11 @@ components:
         paidAt: { type: string, format: date-time }
         createdAt: { type: string, format: date-time }
         description: { type: string }
+        # Recurring billing fields
+        isBackfilled: { type: boolean, default: false }
+        billingPeriodStart: { type: string, format: date-time, nullable: true }
+        billingPeriodEnd: { type: string, format: date-time, nullable: true }
+        billingScheduleId: { type: string, format: uuid, nullable: true }
 
     LeaseDTO:
       type: object
@@ -638,6 +648,9 @@ components:
         id: { type: string, format: uuid }
         orgId: { type: string, format: uuid }
         autoApproveLimit: { type: integer }
+        autoLegalRouting: { type: boolean }
+        invoiceLeadTimeDays: { type: integer, default: 20, minimum: 1, maximum: 60 }
+        mode: { type: string, enum: [MANAGED, DIRECT] }
         landlordName: { type: string }
         landlordAddress: { type: string }
         landlordZipCity: { type: string }
@@ -1436,6 +1449,258 @@ components:
             name: { type: string }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
+
+    CashflowOverrideDTO:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        planId: { type: string, format: uuid }
+        assetId: { type: string, format: uuid }
+        originalYear: { type: integer }
+        overriddenYear: { type: integer }
+
+    CashflowPlanDTO:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        orgId: { type: string, format: uuid }
+        buildingId: { type: string, format: uuid, nullable: true }
+        name: { type: string }
+        status: { type: string, enum: [DRAFT, SUBMITTED, APPROVED] }
+        incomeGrowthRatePct: { type: number }
+        openingBalanceCents: { type: integer, nullable: true }
+        horizonMonths: { type: integer }
+        lastComputedAt: { type: string, format: date-time, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        overrides:
+          type: array
+          items:
+            $ref: '#/components/schemas/CashflowOverrideDTO'
+
+    BillingScheduleDTO:
+      type: object
+      required: [id, orgId, leaseId, status, anchorDay, nextPeriodStart, baseRentCents, totalChargesCents, createdAt, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        orgId: { type: string, format: uuid }
+        leaseId: { type: string, format: uuid }
+        status: { type: string, enum: [ACTIVE, PAUSED, COMPLETED] }
+        anchorDay: { type: integer }
+        nextPeriodStart: { type: string, format: date-time }
+        lastGeneratedPeriod: { type: string, format: date-time, nullable: true }
+        baseRentCents: { type: integer }
+        totalChargesCents: { type: integer }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        completedAt: { type: string, format: date-time, nullable: true }
+        completionReason: { type: string, nullable: true }
+        lease:
+          type: object
+          nullable: true
+          properties:
+            id: { type: string, format: uuid }
+            tenantName: { type: string }
+            startDate: { type: string, format: date-time }
+            endDate: { type: string, format: date-time, nullable: true }
+            status: { type: string }
+            netRentChf: { type: number }
+            chargesTotalChf: { type: number }
+            unitId: { type: string, format: uuid }
+
+    ChargeReconciliationDTO:
+      type: object
+      required: [id, orgId, leaseId, fiscalYear, status, totalAcomptePaidCents, totalActualCostsCents, balanceCents, createdAt, updatedAt, lineItems]
+      properties:
+        id: { type: string, format: uuid }
+        orgId: { type: string, format: uuid }
+        leaseId: { type: string, format: uuid }
+        fiscalYear: { type: integer }
+        status: { type: string, enum: [DRAFT, FINALIZED, SETTLED] }
+        totalAcomptePaidCents: { type: integer }
+        totalActualCostsCents: { type: integer }
+        balanceCents: { type: integer }
+        settlementInvoiceId: { type: string, format: uuid, nullable: true }
+        settledAt: { type: string, format: date-time, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        lineItems:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChargeReconciliationLineDTO'
+        lease:
+          type: object
+          nullable: true
+          properties:
+            id: { type: string, format: uuid }
+            tenantName: { type: string }
+            startDate: { type: string, format: date-time }
+            endDate: { type: string, format: date-time, nullable: true }
+            status: { type: string }
+            netRentChf: { type: number }
+            chargesTotalChf: { type: number }
+            unitId: { type: string, format: uuid }
+        settlementInvoice:
+          type: object
+          nullable: true
+          properties:
+            id: { type: string, format: uuid }
+            invoiceNumber: { type: string, nullable: true }
+            status: { type: string }
+            totalAmount: { type: integer }
+            description: { type: string }
+
+    ChargeReconciliationLineDTO:
+      type: object
+      required: [id, description, chargeMode, acomptePaidCents, actualCostCents, balanceCents]
+      properties:
+        id: { type: string, format: uuid }
+        description: { type: string }
+        chargeMode: { type: string, enum: [ACOMPTE, FORFAIT] }
+        acomptePaidCents: { type: integer }
+        actualCostCents: { type: integer }
+        balanceCents: { type: integer }
+
+    RentAdjustmentDTO:
+      type: object
+      required: [id, orgId, leaseId, adjustmentType, status, effectiveDate, previousRentCents, newRentCents, adjustmentCents]
+      properties:
+        id: { type: string, format: uuid }
+        orgId: { type: string }
+        leaseId: { type: string, format: uuid }
+        adjustmentType: { type: string, enum: [CPI_INDEXATION, REFERENCE_RATE_CHANGE, MANUAL] }
+        status: { type: string, enum: [DRAFT, APPROVED, APPLIED, REJECTED] }
+        effectiveDate: { type: string, format: date-time }
+        previousRentCents: { type: integer }
+        newRentCents: { type: integer }
+        adjustmentCents: { type: integer }
+        cpiOldIndex: { type: number, nullable: true }
+        cpiNewIndex: { type: number, nullable: true }
+        referenceRateOld: { type: string, nullable: true }
+        referenceRateNew: { type: string, nullable: true }
+        calculationDetails: { type: object, nullable: true }
+        approvedAt: { type: string, format: date-time, nullable: true }
+        appliedAt: { type: string, format: date-time, nullable: true }
+        rejectedAt: { type: string, format: date-time, nullable: true }
+        rejectionReason: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        lease:
+          type: object
+          properties:
+            id: { type: string, format: uuid }
+            tenantName: { type: string }
+            netRentChf: { type: integer }
+            startDate: { type: string, format: date-time }
+            endDate: { type: string, format: date-time, nullable: true }
+            status: { type: string }
+            indexClauseType: { type: string, enum: [NONE, CPI_100, CPI_40_REFRATE_60] }
+            cpiBaseIndex: { type: number, nullable: true }
+            initialNetRentChf: { type: integer, nullable: true }
+            lastIndexationDate: { type: string, format: date-time, nullable: true }
+
+    ContractorBillingScheduleDTO:
+      type: object
+      required: [id, orgId, contractorId, status, description, frequency, anchorDay, nextPeriodStart, amountCents, vatRate, createdAt, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        orgId: { type: string }
+        contractorId: { type: string, format: uuid }
+        status: { type: string, enum: [ACTIVE, PAUSED, COMPLETED] }
+        description: { type: string }
+        frequency: { type: string, enum: [MONTHLY, QUARTERLY, SEMI_ANNUAL, ANNUAL] }
+        anchorDay: { type: integer }
+        nextPeriodStart: { type: string, format: date-time }
+        lastGeneratedPeriod: { type: string, format: date-time, nullable: true }
+        amountCents: { type: integer }
+        vatRate: { type: number }
+        buildingId: { type: string, format: uuid, nullable: true }
+        completedAt: { type: string, format: date-time, nullable: true }
+        completionReason: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        contractor:
+          type: object
+          properties:
+            id: { type: string, format: uuid }
+            name: { type: string }
+            email: { type: string }
+            phone: { type: string }
+            iban: { type: string, nullable: true }
+            vatNumber: { type: string, nullable: true }
+            defaultVatRate: { type: number, nullable: true }
+            isActive: { type: boolean }
+        building:
+          type: object
+          nullable: true
+          properties:
+            id: { type: string, format: uuid }
+            name: { type: string }
+            address: { type: string }
+
+    MonthlyBucketDTO:
+      type: object
+      properties:
+        year: { type: integer }
+        month: { type: integer }
+        isActual: { type: boolean }
+        projectedIncomeCents: { type: integer }
+        projectedOpexCents: { type: integer }
+        scheduledCapexCents: { type: integer }
+        netCents: { type: integer }
+        cumulativeBalanceCents: { type: integer }
+        capexItems:
+          type: array
+          items:
+            type: object
+            properties:
+              assetId: { type: string }
+              assetName: { type: string }
+              costCents: { type: integer }
+
+    TimingRecommendationDTO:
+      type: object
+      properties:
+        assetId: { type: string, format: uuid }
+        assetName: { type: string }
+        buildingId: { type: string, format: uuid }
+        scheduledYear: { type: integer }
+        recommendedYear: { type: integer }
+        direction: { type: string, enum: [advance, defer] }
+        estimatedCostChf: { type: number }
+        estimatedTaxSavingChf: { type: number }
+        rationale: { type: string }
+
+    CashflowResultDTO:
+      type: object
+      properties:
+        hasOpeningBalance: { type: boolean }
+        buckets:
+          type: array
+          items:
+            $ref: '#/components/schemas/MonthlyBucketDTO'
+        timingRecommendations:
+          type: array
+          items:
+            $ref: '#/components/schemas/TimingRecommendationDTO'
+
+    CashflowPlanDetailDTO:
+      allOf:
+        - $ref: '#/components/schemas/CashflowPlanDTO'
+        - type: object
+          properties:
+            cashflow:
+              $ref: '#/components/schemas/CashflowResultDTO'
+
+    RfpCandidateDTO:
+      type: object
+      properties:
+        assetId: { type: string, format: uuid }
+        assetName: { type: string }
+        tradeGroup: { type: string }
+        effectiveYear: { type: integer }
+        estimatedCostChf: { type: number }
+        suggestedRfpSendDate: { type: string, format: date }
 
 # ──────────────────────────────────────────────────────────────
 # Paths
@@ -7220,3 +7485,970 @@ paths:
                     $ref: '#/components/schemas/CaptureSessionDTO'
         '410':
           description: Session expired or completed
+  /cashflow-plans:
+    get:
+      tags: [Cashflow Plans]
+      summary: List cashflow plans for the org
+      operationId: listCashflowPlans
+      parameters:
+        - name: buildingId
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: List of cashflow plans
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CashflowPlanDTO'
+    post:
+      tags: [Cashflow Plans]
+      summary: Create a cashflow plan
+      operationId: createCashflowPlan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string }
+                buildingId: { type: string }
+                incomeGrowthRatePct: { type: number }
+                openingBalanceCents: { type: integer }
+                horizonMonths: { type: integer }
+      responses:
+        '201':
+          description: Created cashflow plan
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/CashflowPlanDTO'
+
+  /cashflow-plans/{id}:
+    get:
+      tags: [Cashflow Plans]
+      summary: Get a cashflow plan with computed monthly cashflow
+      operationId: getCashflowPlan
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Cashflow plan with computed cashflow
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/CashflowPlanDetailDTO'
+        '404':
+          description: Plan not found
+    put:
+      tags: [Cashflow Plans]
+      summary: Update cashflow plan metadata
+      operationId: updateCashflowPlan
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                incomeGrowthRatePct: { type: number }
+                openingBalanceCents: { type: integer, nullable: true }
+                horizonMonths: { type: integer }
+      responses:
+        '200':
+          description: Updated cashflow plan
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/CashflowPlanDTO'
+
+  /cashflow-plans/{id}/overrides:
+    post:
+      tags: [Cashflow Plans]
+      summary: Add a year override for an asset
+      operationId: addCashflowOverride
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [assetId, originalYear, overriddenYear]
+              properties:
+                assetId: { type: string }
+                originalYear: { type: integer }
+                overriddenYear: { type: integer }
+      responses:
+        '201':
+          description: Override created
+
+  /cashflow-plans/{id}/overrides/{oid}:
+    delete:
+      tags: [Cashflow Plans]
+      summary: Remove a year override
+      operationId: removeCashflowOverride
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+        - name: oid
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Override deleted
+
+  /cashflow-plans/{id}/submit:
+    post:
+      tags: [Cashflow Plans]
+      summary: Submit a cashflow plan for approval
+      operationId: submitCashflowPlan
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Plan submitted
+
+  /cashflow-plans/{id}/approve:
+    post:
+      tags: [Cashflow Plans]
+      summary: Approve a submitted cashflow plan
+      operationId: approveCashflowPlan
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Plan approved
+
+  /cashflow-plans/{id}/rfp-candidates:
+    get:
+      tags: [Cashflow Plans]
+      summary: Get suggested RFP candidates for a plan
+      operationId: getCashflowPlanRfpCandidates
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: List of RFP candidates
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/RfpCandidateDTO'
+        '404':
+          description: Plan not found
+
+  /cashflow-plans/{id}/rfp-candidates/{groupKey}/create-rfp:
+    post:
+      tags: [Cashflow Plans]
+      summary: Create an RFP from a cashflow plan candidate group
+      operationId: createRfpFromCashflowGroup
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+        - name: groupKey
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '201':
+          description: RFP created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    required: [rfpId, alreadyExisted]
+                    properties:
+                      rfpId: { type: string, format: uuid }
+                      title: { type: string }
+                      scopeDescription: { type: string }
+                      alreadyExisted: { type: boolean }
+        '200':
+          description: RFP already existed (idempotent)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    required: [rfpId, alreadyExisted]
+                    properties:
+                      rfpId: { type: string, format: uuid }
+                      alreadyExisted: { type: boolean }
+        '400':
+          description: Plan is not APPROVED
+        '404':
+          description: Plan or group not found
+
+  # ── Billing Schedules ────────────────────────────────────────
+  /billing-schedules:
+    get:
+      tags: [Billing Schedules]
+      summary: List all recurring billing schedules for the org
+      operationId: listBillingSchedules
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [ACTIVE, PAUSED, COMPLETED]
+      responses:
+        '200':
+          description: List of billing schedules
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/BillingScheduleDTO'
+
+  /billing-schedules/{id}:
+    get:
+      tags: [Billing Schedules]
+      summary: Get a billing schedule by ID
+      operationId: getBillingSchedule
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Billing schedule details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BillingScheduleDTO'
+        '404':
+          description: Schedule not found
+
+  /billing-schedules/{id}/pause:
+    post:
+      tags: [Billing Schedules]
+      summary: Pause an active billing schedule
+      operationId: pauseBillingSchedule
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Schedule paused
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BillingScheduleDTO'
+        '404':
+          description: Schedule not found
+        '409':
+          description: Schedule is not in ACTIVE state
+
+  /billing-schedules/{id}/resume:
+    post:
+      tags: [Billing Schedules]
+      summary: Resume a paused billing schedule
+      operationId: resumeBillingSchedule
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Schedule resumed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BillingScheduleDTO'
+        '404':
+          description: Schedule not found
+        '409':
+          description: Schedule is not in PAUSED state
+
+  # ── Charge Reconciliations ───────────────────────────────────
+  /charge-reconciliations:
+    get:
+      tags: [Charge Reconciliations]
+      summary: List charge reconciliations
+      operationId: listChargeReconciliations
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string, enum: [DRAFT, FINALIZED, SETTLED] }
+        - name: leaseId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: fiscalYear
+          in: query
+          schema: { type: integer }
+      responses:
+        '200':
+          description: List of charge reconciliations
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ChargeReconciliationDTO'
+    post:
+      tags: [Charge Reconciliations]
+      summary: Create a charge reconciliation for a lease and fiscal year
+      operationId: createChargeReconciliation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [leaseId, fiscalYear]
+              properties:
+                leaseId: { type: string, format: uuid }
+                fiscalYear: { type: integer }
+      responses:
+        '201':
+          description: Reconciliation created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChargeReconciliationDTO'
+        '409':
+          description: Reconciliation already exists for this lease and year
+
+  /charge-reconciliations/{id}:
+    get:
+      tags: [Charge Reconciliations]
+      summary: Get a single charge reconciliation
+      operationId: getChargeReconciliation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Reconciliation detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChargeReconciliationDTO'
+        '404':
+          description: Not found
+    delete:
+      tags: [Charge Reconciliations]
+      summary: Delete a DRAFT reconciliation
+      operationId: deleteChargeReconciliation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Deleted
+        '404':
+          description: Not found
+        '409':
+          description: Cannot delete non-DRAFT reconciliation
+
+  /charge-reconciliations/{id}/lines/{lid}:
+    put:
+      tags: [Charge Reconciliations]
+      summary: Update actual cost on a reconciliation line
+      operationId: updateChargeReconciliationLine
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: lid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [actualCostCents]
+              properties:
+                actualCostCents: { type: integer, minimum: 0 }
+      responses:
+        '200':
+          description: Line updated, reconciliation returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChargeReconciliationDTO'
+        '404':
+          description: Reconciliation or line not found
+        '409':
+          description: Reconciliation is not in DRAFT status
+
+  /charge-reconciliations/{id}/finalize:
+    post:
+      tags: [Charge Reconciliations]
+      summary: Finalize a reconciliation (lock for settlement)
+      operationId: finalizeChargeReconciliation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Reconciliation finalized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChargeReconciliationDTO'
+        '404':
+          description: Not found
+        '409':
+          description: Cannot finalize (not DRAFT or missing actual costs)
+
+  /charge-reconciliations/{id}/settle:
+    post:
+      tags: [Charge Reconciliations]
+      summary: Generate settlement invoice from finalized reconciliation
+      operationId: settleChargeReconciliation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Settlement invoice generated, reconciliation settled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChargeReconciliationDTO'
+        '404':
+          description: Not found
+        '409':
+          description: Reconciliation is not in FINALIZED status
+
+  /charge-reconciliations/{id}/reopen:
+    post:
+      tags: [Charge Reconciliations]
+      summary: Reopen a finalized reconciliation back to DRAFT
+      operationId: reopenChargeReconciliation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Reconciliation reopened
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChargeReconciliationDTO'
+        '404':
+          description: Not found
+        '409':
+          description: Cannot reopen a settled reconciliation
+
+  # ── Rent Adjustments ─────────────────────────────────────────
+  /rent-adjustments:
+    get:
+      tags: [Rent Adjustments]
+      summary: List rent adjustments
+      operationId: listRentAdjustments
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string, enum: [DRAFT, APPROVED, APPLIED, REJECTED] }
+        - name: leaseId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: adjustmentType
+          in: query
+          schema: { type: string, enum: [CPI_INDEXATION, REFERENCE_RATE_CHANGE, MANUAL] }
+      responses:
+        '200':
+          description: List of rent adjustments
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/RentAdjustmentDTO'
+
+  /rent-adjustments/{id}:
+    get:
+      tags: [Rent Adjustments]
+      summary: Get a single rent adjustment
+      operationId: getRentAdjustment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Rent adjustment detail
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/RentAdjustmentDTO'
+        '404':
+          description: Not found
+    delete:
+      tags: [Rent Adjustments]
+      summary: Delete a DRAFT rent adjustment
+      operationId: deleteRentAdjustment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '204':
+          description: Deleted
+        '400':
+          description: Cannot delete non-DRAFT adjustment
+
+  /rent-adjustments/compute:
+    post:
+      tags: [Rent Adjustments]
+      summary: Compute CPI-based rent indexation
+      operationId: computeRentIndexation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [leaseId, cpiNewIndex, effectiveDate]
+              properties:
+                leaseId: { type: string, format: uuid }
+                cpiNewIndex: { type: number }
+                effectiveDate: { type: string, format: date }
+                referenceRateNew: { type: string }
+      responses:
+        '201':
+          description: Indexation computed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/RentAdjustmentDTO'
+        '400':
+          description: Computation error
+
+  /rent-adjustments/manual:
+    post:
+      tags: [Rent Adjustments]
+      summary: Create manual rent adjustment
+      operationId: createManualRentAdjustment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [leaseId, newRentCents, effectiveDate]
+              properties:
+                leaseId: { type: string, format: uuid }
+                newRentCents: { type: integer }
+                effectiveDate: { type: string, format: date }
+                reason: { type: string }
+      responses:
+        '201':
+          description: Manual adjustment created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/RentAdjustmentDTO'
+        '400':
+          description: Creation error
+
+  /rent-adjustments/{id}/approve:
+    post:
+      tags: [Rent Adjustments]
+      summary: Approve a DRAFT adjustment
+      operationId: approveRentAdjustment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Adjustment approved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/RentAdjustmentDTO'
+        '400':
+          description: Invalid state
+
+  /rent-adjustments/{id}/apply:
+    post:
+      tags: [Rent Adjustments]
+      summary: Apply an approved adjustment (updates lease + billing schedule)
+      operationId: applyRentAdjustment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Adjustment applied
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/RentAdjustmentDTO'
+        '400':
+          description: Invalid state
+
+  /rent-adjustments/{id}/reject:
+    post:
+      tags: [Rent Adjustments]
+      summary: Reject a DRAFT adjustment
+      operationId: rejectRentAdjustment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason: { type: string }
+      responses:
+        '200':
+          description: Adjustment rejected
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/RentAdjustmentDTO'
+        '400':
+          description: Invalid state
+
+  # ── Contractor Billing Schedules ─────────────────────────────
+  /contractor-billing-schedules:
+    get:
+      tags: [Contractor Billing]
+      summary: List contractor billing schedules
+      operationId: listContractorBillingSchedules
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string, enum: [ACTIVE, PAUSED, COMPLETED] }
+        - name: contractorId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: buildingId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: frequency
+          in: query
+          schema: { type: string, enum: [MONTHLY, QUARTERLY, SEMI_ANNUAL, ANNUAL] }
+      responses:
+        '200':
+          description: List of contractor billing schedules
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ContractorBillingScheduleDTO'
+    post:
+      tags: [Contractor Billing]
+      summary: Create a contractor billing schedule
+      operationId: createContractorBillingSchedule
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [contractorId, description, frequency, anchorDay, startDate, amountCents, vatRate]
+              properties:
+                contractorId: { type: string, format: uuid }
+                description: { type: string }
+                frequency: { type: string, enum: [MONTHLY, QUARTERLY, SEMI_ANNUAL, ANNUAL] }
+                anchorDay: { type: integer, minimum: 1, maximum: 28 }
+                startDate: { type: string, format: date-time }
+                amountCents: { type: integer }
+                vatRate: { type: number }
+                buildingId: { type: string, format: uuid, nullable: true }
+      responses:
+        '201':
+          description: Schedule created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/ContractorBillingScheduleDTO'
+
+  /contractor-billing-schedules/{id}:
+    get:
+      tags: [Contractor Billing]
+      summary: Get a contractor billing schedule
+      operationId: getContractorBillingSchedule
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Schedule detail
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/ContractorBillingScheduleDTO'
+        '404':
+          description: Not found
+    put:
+      tags: [Contractor Billing]
+      summary: Update a contractor billing schedule
+      operationId: updateContractorBillingSchedule
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                description: { type: string }
+                frequency: { type: string, enum: [MONTHLY, QUARTERLY, SEMI_ANNUAL, ANNUAL] }
+                anchorDay: { type: integer, minimum: 1, maximum: 28 }
+                nextPeriodStart: { type: string, format: date-time }
+                amountCents: { type: integer }
+                vatRate: { type: number }
+                buildingId: { type: string, format: uuid, nullable: true }
+      responses:
+        '200':
+          description: Schedule updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/ContractorBillingScheduleDTO'
+        '400':
+          description: Invalid state
+    delete:
+      tags: [Contractor Billing]
+      summary: Delete a contractor billing schedule
+      operationId: deleteContractorBillingSchedule
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '204':
+          description: Schedule deleted
+        '404':
+          description: Not found
+
+  /contractor-billing-schedules/{id}/pause:
+    post:
+      tags: [Contractor Billing]
+      summary: Pause an active contractor billing schedule
+      operationId: pauseContractorBillingSchedule
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Schedule paused
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/ContractorBillingScheduleDTO'
+        '400':
+          description: Invalid state
+
+  /contractor-billing-schedules/{id}/resume:
+    post:
+      tags: [Contractor Billing]
+      summary: Resume a paused contractor billing schedule
+      operationId: resumeContractorBillingSchedule
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Schedule resumed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/ContractorBillingScheduleDTO'
+        '400':
+          description: Invalid state
+
+  /contractor-billing-schedules/{id}/stop:
+    post:
+      tags: [Contractor Billing]
+      summary: Stop (complete) a contractor billing schedule
+      operationId: stopContractorBillingSchedule
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason: { type: string }
+      responses:
+        '200':
+          description: Schedule stopped
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/ContractorBillingScheduleDTO'
+        '400':
+          description: Invalid state
+
+  /contractor-billing-schedules/{id}/generate:
+    post:
+      tags: [Contractor Billing]
+      summary: Manually generate next invoice for schedule
+      operationId: generateContractorBillingInvoice
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '201':
+          description: Invoice generated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      schedule:
+                        $ref: '#/components/schemas/ContractorBillingScheduleDTO'
+                      invoice:
+                        $ref: '#/components/schemas/InvoiceDTO'
+        '400':
+          description: Invalid state
+
+  # ── Forecasting ──────────────────────────────────────────────
+  /forecasting/asset-health:
+    get:
+      tags: [Forecasting]
+      summary: Get asset health scores
+      operationId: getAssetHealth
+      responses:
+        '200':
+          description: Asset health data
+
+  /forecasting/capex-projection:
+    get:
+      tags: [Forecasting]
+      summary: Get CapEx projection
+      operationId: getCapexProjection
+      responses:
+        '200':
+          description: CapEx projection data
+
+  /forecasting/renovation-catalog:
+    get:
+      tags: [Forecasting]
+      summary: Get renovation catalog entries
+      operationId: getRenovationCatalog
+      responses:
+        '200':
+          description: Renovation catalog data

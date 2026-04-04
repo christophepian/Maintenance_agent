@@ -5,8 +5,8 @@
 **Scope:** Code Quality, Schema Integrity, Test Coverage, Security & Auth
 **Source commit:** ed7c841 (branch: main); findings reflect state as of 2026-03-10
 **Codebase at audit time:** 46 models · 38 enums · 36 migrations · 17 workflows · 10 repositories · 372 tests / 33 suites · ~36k backend LOC · ~27k frontend LOC · 195 pages · ~146 API routes
-**Codebase current (2026-03-31):** 54 models · 47 enums · 60 migrations · 24 workflows · 17 repositories · 769 tests / 56 suites · ~54k backend LOC · ~37k frontend LOC · 247 pages · 247 API operations (190 URL paths)
-**Frontend rationalization audit:** Completed 2026-03-10 — results in [docs/FRONTEND_INVENTORY.md](FRONTEND_INVENTORY.md) (195 pages, 119/119 proxies conforming at audit time; 163/163 conforming as of 2026-03-31)
+**Codebase current (2026-04-03):** 64 models · 55 enums · 69 migrations · 26 workflows · 24 repositories · 823 tests / 57 suites · ~62k backend LOC · ~42k frontend LOC · 275 pages · 289 API operations (224 URL paths)
+**Frontend rationalization audit:** Completed 2026-03-10 — results in [docs/FRONTEND_INVENTORY.md](FRONTEND_INVENTORY.md) (195 pages, 119/119 proxies conforming at audit time; 182/182 conforming as of 2026-04-03)
 
 ## Summary
 

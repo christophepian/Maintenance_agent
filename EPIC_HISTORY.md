@@ -2431,3 +2431,68 @@ Stale exception language was removed or annotated as resolved across all source-
 | Tests | 738 | 738 |
 | G8 exceptions | 1 (LKDE) | 0 |
 
+
+## Recurring Invoices Epic — 2026-04-03
+
+**Status:** ✅ COMPLETE (6 slices)
+**Motivation:** Implement automated recurring invoice generation for tenant leases, ACOMPTE year-end charge reconciliation, CPI-indexed rent adjustments, and contractor recurring billing schedules. Completes the financial lifecycle from lease signing through ongoing invoicing, rent indexation, and contractor payments.
+
+### Slice 1 — Schema + Core Engine
+
+**New models:** `RecurringBillingSchedule` (orgId, leaseId, status, anchorDay, nextPeriodStart, lastGeneratedPeriod, baseRentCents, totalChargesCents)
+**New enums:** `BillingScheduleStatus` (ACTIVE, PAUSED, COMPLETED)
+**Migration:** `20260402164353_add_recurring_billing_schedule`
+**Backend:** `recurringBillingRepository.ts` (CRUD + lifecycle queries), `recurringBillingService.ts` (createFromLease, generateInvoice, advanceSchedule, batch generateDueInvoices), `billingSchedules.ts` routes (list, get, create-from-lease, pause, resume, stop, generate, generate-all-due), registered in server.ts, api-client DTOs + builder, OpenAPI spec entries.
+
+### Slice 2 — Lease Lifecycle Integration
+
+**Backend:** `LEASE_STATUS_CHANGED` domain event handler in `events/leaseStatusHandler.ts`. When a lease transitions to `ACTIVE`, automatically creates a `RecurringBillingSchedule` with rent + charges from the lease. Wired into `domainEventBus.ts`. Service retrieves lease data via repository to compute schedule parameters.
+
+### Slice 3 — Org Settings UI + Schedule Visibility
+
+**Frontend:** Manager billing-schedules list page (`pages/manager/billing-schedules/index.js`) with status tabs (All/Active/Paused/Completed), data table with lease/status/frequency/amount/next-period columns, and lifecycle action buttons. Detail page (`pages/manager/billing-schedules/[id].js`) with schedule info panel, lease info panel, and actions panel (pause/resume/stop/generate). Nav link added to Finance section in AppShell. Proxy routes (`pages/api/billing-schedules/index.js`, `[...id].js`).
+
+### Slice 4 — ACOMPTE Year-End Reconciliation
+
+**New models:** `ChargeReconciliation` (orgId, leaseId, fiscalYear, status, totalAcompteCents, totalActualCents, balanceCents, settledAt), `ChargeReconciliationLine` (reconciliationId, expenseTypeId, description, acompteCents, actualCents)
+**New enum:** `ChargeReconciliationStatus` (DRAFT, FINALIZED, SETTLED)
+**Migration:** `20260403090246_add_charge_reconciliation`
+**Backend:** `chargeReconciliationRepository.ts` (CRUD + lifecycle + lines), `chargeReconciliationService.ts` (create, addLine/updateLine/removeLine, finalize/settle/reopen with state validation, balance computation), `chargeReconciliations.ts` routes (8 endpoints), api-client DTOs + builder, OpenAPI spec entries.
+**Frontend:** Manager charge-reconciliations list page with status tabs, detail page with reconciliation summary + line items table + lifecycle actions. Lease detail page integration (reconciliation section with create form + fiscal year selector). Proxy routes.
+**Smoke tested:** Create → add lines → finalize → settle → reopen-blocked all passed.
+
+### Slice 5 — Indexed Rent (CPI Adjustments)
+
+**New models:** `RentAdjustment` (orgId, leaseId, adjustmentType, status, effectiveDate, previousRentCents, newRentCents, adjustmentCents, CPI/reference-rate fields, calculation details, lifecycle timestamps)
+**New enums:** `IndexClauseType` (NONE, CPI_100, CPI_40_REFRATE_60), `RentAdjustmentType` (CPI_INDEXATION, REFERENCE_RATE_CHANGE, MANUAL), `RentAdjustmentStatus` (DRAFT, APPROVED, APPLIED, REJECTED)
+**New fields on Lease:** `indexClauseType`, `cpiBaseIndex`, `initialNetRentChf`, `lastIndexationDate`
+**Migration:** `20260403093903_add_rent_indexation`
+**Backend:** `rentAdjustmentRepository.ts` (CRUD + lifecycle), `rentAdjustmentService.ts` (CPI_100 and CPI_40_REFRATE_60 indexation formulas, compute → approve → apply → reject lifecycle, apply updates lease netRentChf + lastIndexationDate), `rentAdjustments.ts` routes (7 endpoints), api-client DTOs + builder, OpenAPI spec entries.
+**Frontend:** Manager rent-adjustments list page with status tabs and change-percentage column. Detail page. Lease detail page integration (rent adjustments section with CPI compute form). Proxy routes.
+**Smoke tested:** Seeded CPI_100 on Marco Rossi's lease (cpiBase=105, initialNetRent=1650). Computed indexation (CPI 107.1 → +2% → 1683 CHF). Approved and applied — lease rent updated to 1683, lastIndexationDate set.
+
+### Slice 6 — Contractor Recurring Invoices
+
+**New models:** `ContractorBillingSchedule` (orgId, contractorId, status, description, frequency, anchorDay, nextPeriodStart, lastGeneratedPeriod, amountCents, vatRate, buildingId, completedAt, completionReason)
+**New enum:** `BillingFrequency` (MONTHLY, QUARTERLY, SEMI_ANNUAL, ANNUAL)
+**New fields on Invoice:** `contractorId` (String?), `contractorBillingScheduleId` (String?)
+**Migration:** `20260403103616_add_contractor_billing_schedule`
+**Backend:** `contractorBillingRepository.ts` (CRUD + lifecycle + findDueSchedules), `contractorBillingService.ts` (create/update/pause/resume/stop/delete, generateInvoiceForSchedule creates INCOMING invoice with VAT calc + contractor attribution + period labeling per frequency, generateDueContractorInvoices batch processor), `contractorBillingSchedules.ts` routes (9 endpoints), api-client DTOs + builder, OpenAPI spec entries (9 paths + ContractorBillingScheduleDTO schema).
+**Frontend:** Manager contractor-billing-schedules list page with status tabs, create form with contractor dropdown, data table. Detail page with schedule details, contractor info, lifecycle actions (pause/resume/stop/generate). Nav link "Contractor Billing" in Finance section. Proxy routes.
+**Smoke tested:** Created monthly cleaning schedule for Plomberie Suisse SA (500 CHF, 8.1% VAT). Generated invoice → pause → resume → stop (reason: "Contract ended") — all lifecycle operations confirmed.
+
+### Epic Totals
+
+| Metric | Before | After |
+|--------|--------|-------|
+| Models | 59 | 64 (+5) |
+| Enums | 49 | 55 (+6) |
+| Migrations | 65 | 69 (+4) |
+| Repositories | 20 | 24 (+4) |
+| Route modules | 21 | 25 (+4) |
+| Frontend pages | 259 | 275 (+16: 6 UI + 10 API proxies) |
+| API operations | 257 | 289 (+32) |
+| Backend LOC | ~58k | ~62k |
+| Frontend LOC | ~39k | ~42k |
+| Test suites | 57 | 57 |
+| Tests | 802 | 823 |

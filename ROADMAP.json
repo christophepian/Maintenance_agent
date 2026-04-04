@@ -29,7 +29,7 @@
         "title": "MT940 Bank Statement Import"
       }
     ],
-    "last_recommendations_at": "2026-03-31 17:57:11 UTC"
+    "last_recommendations_at": "2026-04-03 17:03:47 UTC"
   },
   "project": {
     "name": "Maintenance Agent",
@@ -1039,7 +1039,7 @@
       "phase": "P1",
       "title": "Automatic Monthly Rent Invoice Generation",
       "type": "task",
-      "status": "backlog",
+      "status": "done",
       "order": 3,
       "description": "Generate and issue one rent invoice per active lease per month, posting Dr. Rent Receivables (1100) / Cr. Rental Income (3200) to the ledger. Currently leases carry monthly amounts but nothing creates invoices or ledger entries for rent — accounts 3200/1100 are empty. Prerequisite for the Income Statement revenue side and the collection rate KPI being meaningful.",
       "acceptance_criteria": [
@@ -1077,7 +1077,9 @@
         "Manual review: docs/AUDIT.md — mark resolved findings, add new ones",
         "Manual review: SCHEMA_REFERENCE.md — update if schema changed",
         "Commit: npx tsc --noEmit → npm test → npm run blueprint"
-      ]
+      ],
+      "resolved_date": "2026-04-04",
+      "resolution_note": "Recurring billing engine fully implemented (recurringBillingService.ts)"
     },
     {
       "id": "TASK-004",
@@ -1337,7 +1339,7 @@
       "id": "INT-001",
       "title": "Align UI of tenant, contractor and owner on the manager UI which is the baseline in terms of navigation, UI tokens, etc",
       "raw_text": "Align UI of tenant, contractor and owner on the manager UI which is the baseline in terms of navigation, UI tokens, etc.\nMake all the table rows expandable by clicking on them, without having to click on a specific section of the row (e.g. actions). It should be possible to dissociate a row click from a specifc click: e.g. expand row vs click on the action button to enable a different action than expanding the row.",
-      "status": "promoted",
+      "status": "done",
       "source": "bulk_paste",
       "product_area": "owner-portal",
       "related_feature_ids": [],
@@ -1359,13 +1361,15 @@
         "DT-017",
         "DT-018",
         "DT-019"
-      ]
+      ],
+      "resolved_date": "2026-04-04",
+      "resolution_note": "Promoted to draft DT-016/DT-017 — intake is redundant"
     },
     {
       "id": "INT-002",
       "title": "Check all of the unit assets against their depreciation and present the landlord with maintenance decisions: cost of …",
       "raw_text": "- check all of the unit assets against their depreciation and present the landlord with maintenance decisions: cost of maintenance with potential rent increase vs. cost of doing the work sensitivity analysis.",
-      "status": "promoted",
+      "status": "done",
       "source": "bulk_paste",
       "product_area": "inventory",
       "related_feature_ids": [],
@@ -1395,7 +1399,9 @@
       "draft_ticket_ids": [
         "DT-022",
         "DT-023"
-      ]
+      ],
+      "resolved_date": "2026-04-04",
+      "resolution_note": "Promoted to draft DT-022/DT-023 — intake is redundant"
     },
     {
       "id": "INT-003",
@@ -1408,12 +1414,12 @@
       "proposed_phase": "P1",
       "dependencies": [],
       "split_recommended": false,
-      "triage_notes": "Medium scope — single ticket, may need detailed acceptance criteria. | http://localhost:3000/manager/legal?tab=category_mappings: this was originally designed to map some maintenance requests topics to some broader legal areas. The rent reduction rules systematically return \"no rules\" which is not possible. This means that the reading of legal documents and interpretation in http://localhost:3000/manager/legal?tab=sources is done superficially or not at all. As http://localhost:3000/manager/legal?tab=category_mappings is used for the determination of legal obligation of an owner to address a tenant request, this has rippled effects downstream. Not sure where the problem is but we need to figure out a way to increase the confidence that the scanning of legal sources is done with meticulous attention. | http://localhost:3000/manager/legal?tab=category_mappings: this was originally designed to map some maintenance requests topics to some broader legal areas. The rent reduction rules systematically return \"no rules\" which is not possible. This means that the reading of legal documents and interpretation in http://localhost:3000/manager/legal?tab=sources is done superficially or not at all. As http://localhost:3000/manager/legal?tab=category_mappings is used for the determination of legal obligation of an owner to address a tenant request, this has rippled effects downstream. Not sure where the problem is but we need to figure out a way to increase the confidence that the scanning of legal sources is done with meticulous attention. | http://localhost:3000/manager/legal?tab=category_mappings: this was originally designed to map some maintenance requests topics to some broader legal areas. The rent reduction rules systematically return \"no rules\" which is not possible. This means that the reading of legal documents and interpretation in http://localhost:3000/manager/legal?tab=sources is done superficially or not at all. As http://localhost:3000/manager/legal?tab=category_mappings is used for the determination of legal obligation of an owner to address a tenant request, this has rippled effects downstream. Not sure where the problem is but we need to figure out a way to increase the confidence that the scanning of legal sources is done with meticulous attention. | http://localhost:3000/manager/legal?tab=category_mappings: this was originally designed to map some maintenance requests topics to some broader legal areas. The rent reduction rules systematically return \"no rules\" which is not possible. This means that the reading of legal documents and interpretation in http://localhost:3000/manager/legal?tab=sources is done superficially or not at all. As http://localhost:3000/manager/legal?tab=category_mappings is used for the determination of legal obligation of an owner to address a tenant request, this has rippled effects downstream. Not sure where the problem is but we need to figure out a way to increase the confidence that the scanning of legal sources is done with meticulous attention.",
+      "triage_notes": "Triage 2026-04-03: Legal sources have vague descriptions; engine fails on obvious obligations when parsing documents. Needs detailed scoping of what obligations should be auto-detected and which document patterns to match. Tied to INT-116.",
       "constraints": [],
       "created_at": "2026-03-19T16:47:20.269Z",
       "updated_at": "2026-03-22T21:48:19.203Z",
       "recommended_action": "execute",
-      "scope_size": "medium",
+      "scope_size": "epic",
       "proposed_parent_feature": null,
       "proposed_split_plan": [],
       "note_type": "feature_request",
@@ -1427,7 +1433,7 @@
       "id": "INT-004",
       "title": "Depreciation standards page should by default show collapsed items (UI change), no other alteration",
       "raw_text": "- Depreciation standards page should by default show collapsed items (UI change), no other alteration",
-      "status": "promoted",
+      "status": "done",
       "source": "bulk_paste",
       "product_area": "ui-polish",
       "related_feature_ids": [],
@@ -1446,13 +1452,15 @@
       "duplicate_of": null,
       "draft_ticket_ids": [
         "DT-020"
-      ]
+      ],
+      "resolved_date": "2026-04-04",
+      "resolution_note": "Promoted to draft DT-020 — intake is redundant"
     },
     {
       "id": "INT-005",
       "title": "Analyse a repair vs replace opportunity: map the asset against it’s useful life (data from the legal engine can answe…",
       "raw_text": "- Analyse a repair vs replace opportunity: map the asset against it’s useful life (data from the legal engine can answer this), check repair history and run a cost of opportunity scenario so that the decision can be directly forwarded onto the owner for approval and/or the contractor if the cost estimation is below the defined threshold for auto-routing. Dependency on having all assets correctly mapped to buildings/units and have the repair history work proprerly. at the moment it’s there but it’s not working as expected.",
-      "status": "promoted",
+      "status": "done",
       "source": "bulk_paste",
       "product_area": "owner-portal",
       "related_feature_ids": [],
@@ -1474,13 +1482,15 @@
       "anti_split_reasons": [],
       "draft_ticket_ids": [
         "DT-021"
-      ]
+      ],
+      "resolved_date": "2026-04-04",
+      "resolution_note": "Promoted to draft DT-021 — intake is redundant"
     },
     {
       "id": "INT-006",
       "title": "Show a “work requestor” column in the table",
       "raw_text": "- Show a “work requestor” column in the table",
-      "status": "promoted",
+      "status": "done",
       "source": "bulk_paste",
       "product_area": "requests",
       "related_feature_ids": [],
@@ -1497,13 +1507,15 @@
       "proposed_split_plan": [],
       "note_type": "feature_request",
       "duplicate_of": "INT-007",
-      "anti_split_reasons": []
+      "anti_split_reasons": [],
+      "resolved_date": "2026-04-03",
+      "resolution_note": "Verified implemented in codebase — closed during triage 2026-04-03"
     },
     {
       "id": "INT-007",
       "title": "Show a “next approver” column in the table",
       "raw_text": "- Show a “next approver” column in the table",
-      "status": "promoted",
+      "status": "done",
       "source": "bulk_paste",
       "product_area": "requests",
       "related_feature_ids": [],
@@ -1520,13 +1532,15 @@
       "proposed_split_plan": [],
       "note_type": "feature_request",
       "duplicate_of": "INT-006",
-      "anti_split_reasons": []
+      "anti_split_reasons": [],
+      "resolved_date": "2026-04-03",
+      "resolution_note": "Verified implemented in codebase — closed during triage 2026-04-03"
     },
     {
       "id": "INT-008",
       "title": "Rental listings (URL):",
       "raw_text": "Rental listings (URL):",
-      "status": "clarify",
+      "status": "done",
       "source": "bulk_paste",
       "product_area": "requests",
       "related_feature_ids": [],
@@ -1543,7 +1557,9 @@
       "proposed_split_plan": [],
       "note_type": "feature_request",
       "duplicate_of": null,
-      "anti_split_reasons": []
+      "anti_split_reasons": [],
+      "resolved_date": "2026-04-03",
+      "resolution_note": "Public /listings page exists with vacant units + apply flow — verified implemented"
     },
     {
       "id": "INT-009",
@@ -1556,12 +1572,12 @@
       "proposed_phase": "P1",
       "dependencies": [],
       "split_recommended": false,
-      "triage_notes": "Epic-sized item. Needs decomposition into smaller tickets before execution.",
+      "triage_notes": "Triage 2026-04-03: Advanced search/filters for property search/listings page (/listings). Add filters by price range, location/postal code, etc.",
       "constraints": [],
       "created_at": "2026-03-19T16:47:20.665Z",
       "updated_at": "2026-03-20T08:39:49.090Z",
       "recommended_action": "split",
-      "scope_size": "epic",
+      "scope_size": "medium",
       "proposed_parent_feature": null,
       "proposed_split_plan": [],
       "note_type": "feature_request",
@@ -1572,24 +1588,26 @@
       "id": "INT-010",
       "title": "Remove unselected units from the second page where we dump the supporting documents: creating confusion",
       "raw_text": "- Remove unselected units from the second page where we dump the supporting documents: creating confusion. Maybe give the option to apply to two listings in one go: the UI pattern would have to be defined.",
-      "status": "clarify",
+      "status": "done",
       "source": "bulk_paste",
       "product_area": "documents",
       "related_feature_ids": [],
       "proposed_phase": "P2",
       "dependencies": [],
       "split_recommended": false,
-      "triage_notes": "Large scope — executable but may benefit from sub-tasks.",
+      "triage_notes": "Triage 2026-04-03: In rental application flow step 2 (documents), hide units not selected by candidate. Only show the unit(s) the candidate selected.",
       "constraints": [],
       "created_at": "2026-03-19T16:47:20.730Z",
       "updated_at": "2026-03-20T08:39:49.090Z",
       "recommended_action": "execute",
-      "scope_size": "large",
+      "scope_size": "small",
       "proposed_parent_feature": null,
       "proposed_split_plan": [],
       "note_type": "feature_request",
       "duplicate_of": null,
-      "anti_split_reasons": []
+      "anti_split_reasons": [],
+      "resolved_date": "2026-04-04",
+      "resolution_note": "Promoted to DT-027 — intake redundant"
     },
     {
       "id": "INT-011",
@@ -1602,7 +1620,7 @@
       "proposed_phase": "P1",
       "dependencies": [],
       "split_recommended": false,
-      "triage_notes": "Medium scope — single ticket, may need detailed acceptance criteria.",
+      "triage_notes": "Triage 2026-04-03: ALL documents across the platform should open in browser preview mode by default. Download only on explicit CTA. Needs analysis pass to identify which file views currently trigger download instead of preview. Applies to tenant docs, lease attachments, invoice attachments, etc.",
       "constraints": [],
       "created_at": "2026-03-19T16:47:20.793Z",
       "updated_at": "2026-03-20T08:39:49.090Z",
@@ -1618,19 +1636,19 @@
       "id": "INT-012",
       "title": "Student proof: remove from required documents",
       "raw_text": "- Student proof: remove from required documents",
-      "status": "clarify",
+      "status": "promoted",
       "source": "bulk_paste",
       "product_area": "documents",
       "related_feature_ids": [],
       "proposed_phase": "P1",
       "dependencies": [],
       "split_recommended": false,
-      "triage_notes": "Medium scope — single ticket, may need detailed acceptance criteria.",
+      "triage_notes": "Triage 2026-04-03: Remove student proof from required documents entirely. Small config change.",
       "constraints": [],
       "created_at": "2026-03-19T16:47:20.858Z",
       "updated_at": "2026-03-20T08:39:49.090Z",
       "recommended_action": "execute",
-      "scope_size": "medium",
+      "scope_size": "small",
       "proposed_parent_feature": null,
       "proposed_split_plan": [],
       "note_type": "feature_request",
@@ -1641,7 +1659,7 @@
       "id": "INT-013",
       "title": "Household size: unclear what this means",
       "raw_text": "- Household size: unclear what this means",
-      "status": "clarify",
+      "status": "discarded",
       "source": "bulk_paste",
       "product_area": "application-wizard",
       "related_feature_ids": [],
@@ -1658,13 +1676,15 @@
       "proposed_split_plan": [],
       "note_type": "feature_request",
       "duplicate_of": null,
-      "anti_split_reasons": []
+      "anti_split_reasons": [],
+      "resolved_date": "2026-04-03",
+      "resolution_note": "Triage 2026-04-03: User says ignore for now"
     },
     {
       "id": "INT-014",
       "title": "Link the widgets to their subcontent - for now they aren’t clickable",
       "raw_text": "- Link the widgets to their subcontent - for now they aren’t clickable",
-      "status": "promoted",
+      "status": "done",
       "source": "bulk_paste",
       "product_area": "owner-portal",
       "related_feature_ids": [],
@@ -1681,7 +1701,9 @@
       "proposed_split_plan": [],
       "note_type": "feature_request",
       "duplicate_of": null,
-      "anti_split_reasons": []
+      "anti_split_reasons": [],
+      "resolved_date": "2026-04-03",
+      "resolution_note": "Verified implemented in codebase — closed during triage 2026-04-03"
     },
     {
       "id": "INT-015",
@@ -1712,7 +1734,7 @@
       "id": "INT-016",
       "title": "Vacancies: empty since: show date",
       "raw_text": "- vacancies: empty since: show date",
-      "status": "promoted",
+      "status": "done",
       "source": "bulk_paste",
       "product_area": "owner-portal",
       "related_feature_ids": [],
@@ -1729,13 +1751,15 @@
       "proposed_split_plan": [],
       "note_type": "feature_request",
       "duplicate_of": null,
-      "anti_split_reasons": []
+      "anti_split_reasons": [],
+      "resolved_date": "2026-04-03",
+      "resolution_note": "Verified implemented in codebase — closed during triage 2026-04-03"
     },
     {
       "id": "INT-017",
       "title": "If no vacancies: make the review button inactive",
       "raw_text": "- if no vacancies: make the review button inactive",
-      "status": "promoted",
+      "status": "done",
       "source": "bulk_paste",
       "product_area": "owner-portal",
       "related_feature_ids": [],
@@ -1752,7 +1776,9 @@
       "proposed_split_plan": [],
       "note_type": "feature_request",
       "duplicate_of": null,
-      "anti_split_reasons": []
+      "anti_split_reasons": [],
+      "resolved_date": "2026-04-04",
+      "resolution_note": "Covered by DT-025 — intake redundant"
     },
     {
       "id": "INT-018",
@@ -1765,12 +1791,12 @@
       "proposed_phase": "P2",
       "dependencies": [],
       "split_recommended": false,
-      "triage_notes": "Large scope — executable but may benefit from sub-tasks.",
+      "triage_notes": "Triage 2026-04-03: Replace stacked tables in vacancy flow with tabs sorted by lifecycle status (e.g., New Applications | Under Review | Awaiting Signature | Signed).",
       "constraints": [],
       "created_at": "2026-03-19T16:47:21.240Z",
       "updated_at": "2026-03-20T08:39:49.090Z",
       "recommended_action": "execute",
-      "scope_size": "large",
+      "scope_size": "medium",
       "proposed_parent_feature": null,
       "proposed_split_plan": [],
       "note_type": "feature_request",
@@ -1781,7 +1807,7 @@
       "id": "INT-019",
       "title": "Tenant score: show a breakdown of how it was computed: make it transparent —> click on score and show a pop up how th…",
       "raw_text": "- Tenant score: show a breakdown of how it was computed: make it transparent —> click on score and show a pop up how the score was computed",
-      "status": "clarify",
+      "status": "done",
       "source": "bulk_paste",
       "product_area": "tenant-portal",
       "related_feature_ids": [],
@@ -1798,7 +1824,9 @@
       "proposed_split_plan": [],
       "note_type": "feature_request",
       "duplicate_of": null,
-      "anti_split_reasons": []
+      "anti_split_reasons": [],
+      "resolved_date": "2026-04-03",
+      "resolution_note": "Tenant scoring engine exists with multi-factor algorithm + full breakdown returned in DTO"
     },
     {
       "id": "INT-020",
@@ -1811,12 +1839,12 @@
       "proposed_phase": "P1",
       "dependencies": [],
       "split_recommended": false,
-      "triage_notes": "Epic-sized item. Needs decomposition into smaller tickets before execution.",
+      "triage_notes": "Triage 2026-04-03: Candidate selection can use a dropdown selector instead of drag-and-drop. Simpler UX: dropdown to assign Primary/Backup 1/Backup 2 role per candidate.",
       "constraints": [],
       "created_at": "2026-03-19T16:47:21.361Z",
       "updated_at": "2026-03-20T08:39:49.090Z",
       "recommended_action": "split",
-      "scope_size": "epic",
+      "scope_size": "small",
       "proposed_parent_feature": null,
       "proposed_split_plan": [],
       "note_type": "feature_request",
@@ -1827,7 +1855,7 @@
       "id": "INT-021",
       "title": "Candidate selection: give an option to the owner to plan a phone call or to meet with their favorite candidates, new …",
       "raw_text": "- Candidate selection: give an option to the owner to plan a phone call or to meet with their favorite candidates, new action.",
-      "status": "clarify",
+      "status": "discarded",
       "source": "bulk_paste",
       "product_area": "owner-portal",
       "related_feature_ids": [],
@@ -1844,13 +1872,15 @@
       "proposed_split_plan": [],
       "note_type": "feature_request",
       "duplicate_of": null,
-      "anti_split_reasons": []
+      "anti_split_reasons": [],
+      "resolved_date": "2026-04-03",
+      "resolution_note": "Triage 2026-04-03: User says table for now, needs further scoping"
     },
     {
       "id": "INT-022",
       "title": "When a lease is sent for tenant signature: put a countdown on it so that it automatically moves to the fallback candi…",
       "raw_text": "- When a lease is sent for tenant signature: put a countdown on it so that it automatically moves to the fallback candidates when no response is received at the end of the countdown, make explicit when it was sent by showing a date next to the “sent” status",
-      "status": "clarify",
+      "status": "done",
       "source": "bulk_paste",
       "product_area": "tenant-portal",
       "related_feature_ids": [],
@@ -1867,7 +1897,9 @@
       "proposed_split_plan": [],
       "note_type": "workflow_improvement",
       "duplicate_of": null,
-      "anti_split_reasons": []
+      "anti_split_reasons": [],
+      "resolved_date": "2026-04-03",
+      "resolution_note": "Lease signature deadline + fallback candidate promotion fully implemented (ownerSelection.ts)"
     },
     {
       "id": "INT-023",
@@ -1876,16 +1908,18 @@
       "status": "clarify",
       "source": "bulk_paste",
       "product_area": "leases",
-      "related_feature_ids": [],
+      "related_feature_ids": [
+        "INT-011"
+      ],
       "proposed_phase": "P1",
       "dependencies": [],
       "split_recommended": false,
-      "triage_notes": "Medium scope — single ticket, may need detailed acceptance criteria.",
+      "triage_notes": "Triage 2026-04-03: Same concept as INT-011 — documents should preview in browser. Specifically about invoice preview on lease detail page. Implement together with INT-011.",
       "constraints": [],
       "created_at": "2026-03-19T16:47:21.549Z",
       "updated_at": "2026-03-20T08:39:49.090Z",
       "recommended_action": "execute",
-      "scope_size": "medium",
+      "scope_size": "small",
       "proposed_parent_feature": null,
       "proposed_split_plan": [],
       "note_type": "feature_request",
@@ -1896,7 +1930,7 @@
       "id": "INT-024",
       "title": "Send polite rejection email to candidates that haven’t been selected when the signed lease is returned, clear the rej…",
       "raw_text": "- Send polite rejection email to candidates that haven’t been selected when the signed lease is returned, clear the rejected candidates files automatically and give them a confirmation",
-      "status": "clarify",
+      "status": "done",
       "source": "bulk_paste",
       "product_area": "leases",
       "related_feature_ids": [],
@@ -1913,7 +1947,9 @@
       "proposed_split_plan": [],
       "note_type": "workflow_improvement",
       "duplicate_of": null,
-      "anti_split_reasons": []
+      "anti_split_reasons": [],
+      "resolved_date": "2026-04-03",
+      "resolution_note": "Rejection emails enqueued on candidate selection, flushed hourly via EmailOutbox"
     },
     {
       "id": "INT-025",
@@ -1926,12 +1962,12 @@
       "proposed_phase": "P1",
       "dependencies": [],
       "split_recommended": false,
-      "triage_notes": "Epic-sized item. Needs decomposition into smaller tickets before execution.",
+      "triage_notes": "Triage 2026-04-03: Asset = type (dishwasher, window, etc). Appliance = product catalog model (Siemens Model XYZ). Link each unit asset to a specific product model from the appliance catalog. Assets stay same but mapping to model evolves as items get replaced.",
       "constraints": [],
       "created_at": "2026-03-19T16:47:21.673Z",
       "updated_at": "2026-03-20T08:39:49.090Z",
       "recommended_action": "split",
-      "scope_size": "epic",
+      "scope_size": "medium",
       "proposed_parent_feature": null,
       "proposed_split_plan": [],
       "note_type": "feature_request",
@@ -1949,12 +1985,12 @@
       "proposed_phase": "P2",
       "dependencies": [],
       "split_recommended": false,
-      "triage_notes": "Large scope — executable but may benefit from sub-tasks.",
+      "triage_notes": "Triage 2026-04-03: Keep only the top edit button for everything. Remove the separate owner-details-only edit button. Owner details should be editable alongside all other building info.",
       "constraints": [],
       "created_at": "2026-03-19T16:47:21.733Z",
       "updated_at": "2026-03-20T08:39:49.090Z",
       "recommended_action": "execute",
-      "scope_size": "large",
+      "scope_size": "small",
       "proposed_parent_feature": null,
       "proposed_split_plan": [],
       "note_type": "feature_request",
@@ -1974,12 +2010,12 @@
         "needs analysis"
       ],
       "split_recommended": false,
-      "triage_notes": "Has unresolved dependency: needs analysis. Cannot execute until resolved.",
+      "triage_notes": "Triage 2026-04-04: Pool AWARDED jobs only by postal code/building for contractor assignment optimization. Must not affect RFP views or other contractor screens. Scope: group awarded jobs in manager job assignment UI by geography.",
       "constraints": [],
       "created_at": "2026-03-19T16:47:21.799Z",
       "updated_at": "2026-03-20T08:39:49.090Z",
       "recommended_action": "blocked",
-      "scope_size": "large",
+      "scope_size": "medium",
       "proposed_parent_feature": null,
       "proposed_split_plan": [],
       "note_type": "feature_request",
@@ -1990,7 +2026,7 @@
       "id": "INT-029",
       "title": "Merge expenses and charges: keep expenses and remove charges",
       "raw_text": "- Merge expenses and charges: keep expenses and remove charges",
-      "status": "clarify",
+      "status": "done",
       "source": "bulk_paste",
       "product_area": "invoicing",
       "related_feature_ids": [],
@@ -2007,13 +2043,15 @@
       "proposed_split_plan": [],
       "note_type": "feature_request",
       "duplicate_of": null,
-      "anti_split_reasons": []
+      "anti_split_reasons": [],
+      "resolved_date": "2026-04-03",
+      "resolution_note": "Verified implemented in codebase — closed during triage 2026-04-03"
     },
     {
       "id": "INT-030",
       "title": "Look into how to integrate invoices with e-banking, like assura or let’s go, and possibly look into what it would tak…",
       "raw_text": "- Look into how to integrate invoices with e-banking, like assura or let’s go, and possibly look into what it would take to generate e-bill",
-      "status": "clarify",
+      "status": "discarded",
       "source": "bulk_paste",
       "product_area": "invoicing",
       "related_feature_ids": [],
@@ -2030,13 +2068,15 @@
       "proposed_split_plan": [],
       "note_type": "integration",
       "duplicate_of": null,
-      "anti_split_reasons": []
+      "anti_split_reasons": [],
+      "resolved_date": "2026-04-03",
+      "resolution_note": "Triage 2026-04-03: Future epic, tabled"
     },
     {
       "id": "INT-031",
       "title": "When navigating to inventory/vacancies —> the highlighted item in the left panel nabigation defaults back to “dashboa…",
       "raw_text": "- When navigating to inventory/vacancies —> the highlighted item in the left panel nabigation defaults back to “dashboard” item instead of keeping the highight over “inventory”",
-      "status": "promoted",
+      "status": "done",
       "source": "bulk_paste",
       "product_area": "inventory",
       "related_feature_ids": [],
@@ -2053,7 +2093,9 @@
       "proposed_split_plan": [],
       "note_type": "reporting",
       "duplicate_of": null,
-      "anti_split_reasons": []
+      "anti_split_reasons": [],
+      "resolved_date": "2026-04-03",
+      "resolution_note": "Verified implemented in codebase — closed during triage 2026-04-03"
     },
     {
       "id": "INT-032",
@@ -2066,7 +2108,7 @@
       "proposed_phase": "P1",
       "dependencies": [],
       "split_recommended": false,
-      "triage_notes": "Medium scope — single ticket, may need detailed acceptance criteria.",
+      "triage_notes": "Triage 2026-04-03: Automatic overdue invoice notifications to tenant + manager. First reminder 48h after missed payment. Rent due last day of m-1 for month m. Need to verify existing due date rules. No overdue detection exists yet — genuine gap.",
       "constraints": [],
       "recommended_action": "execute",
       "scope_size": "medium",
@@ -2082,7 +2124,7 @@
       "id": "INT-033",
       "title": null,
       "raw_text": "Owner financial dashboard with invoice metrics — summary cards showing total invoices, pending approvals, paid amount, disputed amount. Drill-down by building. Referenced as Slice 8 remaining work (Feb 11 epic entry). Partially overlaps F-P1-006 Owner Cashflow Dashboard but focuses specifically on invoice metrics rather than full cashflow.",
-      "status": "promoted",
+      "status": "done",
       "source": "EPIC_HISTORY.md — Slice 8 remaining work",
       "product_area": "owner-portal",
       "related_feature_ids": [],
@@ -2101,13 +2143,15 @@
       "note_type": "workflow_improvement",
       "duplicate_of": null,
       "created_at": "2026-03-19T18:19:58.564Z",
-      "updated_at": "2026-03-19T18:36:06.088Z"
+      "updated_at": "2026-03-19T18:36:06.088Z",
+      "resolved_date": "2026-04-04",
+      "resolution_note": "Promoted to draft DT-013 — intake is redundant"
     },
     {
       "id": "INT-034",
       "title": null,
       "raw_text": "Contractor performance reports — job completion rates, average time to completion, customer rating aggregation. Referenced as Slice 8 remaining work. No existing feature covers this. Would help managers evaluate contractor effectiveness and inform RFP award decisions.",
-      "status": "promoted",
+      "status": "done",
       "source": "EPIC_HISTORY.md — Slice 8 remaining work",
       "product_area": "reporting",
       "related_feature_ids": [],
@@ -2126,13 +2170,15 @@
       "note_type": "reporting",
       "duplicate_of": null,
       "created_at": "2026-03-19T18:19:58.642Z",
-      "updated_at": "2026-03-19T18:32:11.280Z"
+      "updated_at": "2026-03-19T18:32:11.280Z",
+      "resolved_date": "2026-04-04",
+      "resolution_note": "Promoted to draft DT-001 — intake is redundant"
     },
     {
       "id": "INT-035",
       "title": null,
       "raw_text": "Cost analysis and overrun tracking — compare estimated vs actual costs per job, per contractor, per building. Identify patterns of cost overruns. Referenced as Slice 8 remaining work. Related to F-P4-001 Maintenance Cost Attribution Engine but more focused on overrun alerting and trend analysis.",
-      "status": "promoted",
+      "status": "done",
       "source": "EPIC_HISTORY.md — Slice 8 remaining work",
       "product_area": "reporting",
       "related_feature_ids": [
@@ -2158,13 +2204,15 @@
       "note_type": "feature_request",
       "duplicate_of": null,
       "created_at": "2026-03-19T18:19:58.700Z",
-      "updated_at": "2026-03-19T18:32:11.348Z"
+      "updated_at": "2026-03-19T18:32:11.348Z",
+      "resolved_date": "2026-04-04",
+      "resolution_note": "Promoted to draft DT-002 — intake is redundant"
     },
     {
       "id": "INT-036",
       "title": null,
       "raw_text": "Job completion timeline reports — track how long jobs take from request creation to invoice payment, broken down by category, contractor, building. Referenced as Slice 8 remaining work. Feeds into contractor performance KPIs.",
-      "status": "promoted",
+      "status": "done",
       "source": "EPIC_HISTORY.md — Slice 8 remaining work",
       "product_area": "reporting",
       "related_feature_ids": [],
@@ -2183,13 +2231,15 @@
       "note_type": "feature_request",
       "duplicate_of": null,
       "created_at": "2026-03-19T18:19:58.760Z",
-      "updated_at": "2026-03-19T18:32:11.406Z"
+      "updated_at": "2026-03-19T18:32:11.406Z",
+      "resolved_date": "2026-04-04",
+      "resolution_note": "Promoted to draft DT-003 — intake is redundant"
     },
     {
       "id": "INT-037",
       "title": null,
       "raw_text": "Roll out H1 auth wrappers (withAuthRequired/withRole) to remaining ~100 unprotected routes. Currently only 7 routes in config.ts + 25 GET endpoints are wrapped. The remaining mutation endpoints (POST/PUT/PATCH/DELETE) across requests.ts, invoices.ts, leases.ts, inventory.ts, legal.ts, and rentalApplications.ts still use ad-hoc auth or no auth. This is a security hardening task, not a behavior change.",
-      "status": "promoted",
+      "status": "done",
       "source": "EPIC_HISTORY.md — H1 next steps + Project Audit Mar 4",
       "product_area": "auth",
       "related_feature_ids": [],
@@ -2208,13 +2258,15 @@
       "note_type": "feature_request",
       "duplicate_of": null,
       "created_at": "2026-03-19T18:19:58.821Z",
-      "updated_at": "2026-03-19T18:32:11.466Z"
+      "updated_at": "2026-03-19T18:32:11.466Z",
+      "resolved_date": "2026-04-04",
+      "resolution_note": "Promoted to draft DT-004 — intake is redundant"
     },
     {
       "id": "INT-038",
       "title": null,
       "raw_text": "Implement summary DTOs for requests, invoices, and leases (H5 expansion). JobSummaryDTO already exists with view=summary parameter. Same pattern needs to be applied to: MaintenanceRequestSummaryDTO (partially exists but list endpoint doesn't use it), InvoiceSummaryDTO (interface exists in api-client but not wired), LeaseSummaryDTO (doesn't exist yet). Reduces overfetch on list endpoints.",
-      "status": "promoted",
+      "status": "done",
       "source": "EPIC_HISTORY.md — H5 next steps",
       "product_area": "api",
       "related_feature_ids": [],
@@ -2235,13 +2287,15 @@
       "note_type": "reporting",
       "duplicate_of": null,
       "created_at": "2026-03-19T18:19:58.883Z",
-      "updated_at": "2026-03-19T18:32:11.532Z"
+      "updated_at": "2026-03-19T18:32:11.532Z",
+      "resolved_date": "2026-04-04",
+      "resolution_note": "Promoted to draft DT-005 — intake is redundant"
     },
     {
       "id": "INT-039",
       "title": null,
       "raw_text": "Create /manager/people/owners page — page referenced in ManagerSidebar nav config but doesn't exist yet. Should list all OWNER-role users in the org, show which buildings they own (via BuildingOwner junction), and allow managing ownership assignments. Similar to the existing tenants and contractors lists.",
-      "status": "promoted",
+      "status": "done",
       "source": "EPIC_HISTORY.md — Manager Navigation Redesign TODO",
       "product_area": "manager-portal",
       "related_feature_ids": [],
@@ -2260,13 +2314,15 @@
       "note_type": "feature_request",
       "duplicate_of": null,
       "created_at": "2026-03-19T18:19:58.945Z",
-      "updated_at": "2026-03-20T09:02:00.068Z"
+      "updated_at": "2026-03-20T09:02:00.068Z",
+      "resolved_date": "2026-04-04",
+      "resolution_note": "Promoted to draft DT-006 — intake is redundant"
     },
     {
       "id": "INT-040",
       "title": null,
       "raw_text": "legal.ts route-layer violation (A-5 / CQ-5): 19 direct Prisma calls in routes/legal.ts. This is the worst-offending route file. Needs refactoring to use repository pattern (legalRepository.ts) and move orchestration to workflows. Related CQ-1 through CQ-15 cover other route files with smaller violations. legal.ts is the highest priority because it has the most violations and touches the most complex domain.",
-      "status": "promoted",
+      "status": "done",
       "source": "EPIC_HISTORY.md — Architecture Hardening + AUDIT.md A-5/CQ-5",
       "product_area": "api",
       "related_feature_ids": [],
@@ -2285,13 +2341,15 @@
       "note_type": "workflow_improvement",
       "duplicate_of": null,
       "created_at": "2026-03-19T18:19:59.008Z",
-      "updated_at": "2026-03-19T18:32:11.656Z"
+      "updated_at": "2026-03-19T18:32:11.656Z",
+      "resolved_date": "2026-04-04",
+      "resolution_note": "Promoted to draft DT-007 — intake is redundant"
     },
     {
       "id": "INT-041",
       "title": null,
       "raw_text": "Request.orgId migration (H6) — add orgId column to Request model for direct org filtering instead of FK traversal. Currently resolved dynamically via resolveRequestOrg() which walks unit→building→org chain. 7-step migration plan documented: add nullable → backfill via SQL → make required → update queries → keep resolvers for validation. Deferred until multi-org launch or performance bottleneck. Estimated effort: 2-3 hours.",
-      "status": "promoted",
+      "status": "done",
       "source": "EPIC_HISTORY.md — H6 documented migration path",
       "product_area": "database",
       "related_feature_ids": [],
@@ -2310,13 +2368,15 @@
       "note_type": "feature_request",
       "duplicate_of": null,
       "created_at": "2026-03-19T18:19:59.068Z",
-      "updated_at": "2026-03-19T18:32:11.719Z"
+      "updated_at": "2026-03-19T18:32:11.719Z",
+      "resolved_date": "2026-04-04",
+      "resolution_note": "Promoted to draft DT-008 — intake is redundant"
     },
     {
       "id": "INT-042",
       "title": null,
       "raw_text": "LegalVariable values not wired into DSL condition evaluation — the LegalDecisionEngine evaluates DSL conditions (always_true, category_match, estimated_cost_above, asset_age_above_pct, etc.) but does not consume LegalVariable records. Variables are stored in the DB (LegalVariable + LegalVariableVersion) with versioning, but the DSL evaluator never reads them. This means variable-based conditions can't be used in rules. Referenced in copilot-instructions.md known issues and LKDE epic. Needs: wire variable resolution into evaluateCondition(), add variable_equals/variable_above DSL operators.",
-      "status": "clarify",
+      "status": "discarded",
       "source": "EPIC_HISTORY.md — LKDE epic + copilot-instructions.md",
       "product_area": "legal-engine",
       "related_feature_ids": [],
@@ -2336,13 +2396,15 @@
       "duplicate_of": null,
       "created_at": "2026-03-19T18:19:59.131Z",
       "updated_at": "2026-03-20T08:39:49.090Z",
-      "anti_split_reasons": []
+      "anti_split_reasons": [],
+      "resolved_date": "2026-04-03",
+      "resolution_note": "Triage 2026-04-03: User says ignore — no content, parked dependencies"
     },
     {
       "id": "INT-043",
       "title": null,
       "raw_text": "LegalDecisionEngine canton-specific filtering for DSL evaluator — currently the ingestion pipeline respects LegalSource scope (FEDERAL + canton), but the DSL evaluator itself does not filter rules by canton. All rules are evaluated regardless of the request's building canton. Needs: canton field on LegalRule or LegalRuleVersion, filter evaluated rules by canton before DSL evaluation. Noted as 'separate future slice' in LegalSource Scope epic.",
-      "status": "promoted",
+      "status": "done",
       "source": "EPIC_HISTORY.md — LegalSource Scope epic",
       "product_area": "legal-engine",
       "related_feature_ids": [],
@@ -2361,13 +2423,15 @@
       "note_type": "workflow_improvement",
       "duplicate_of": null,
       "created_at": "2026-03-19T18:19:59.190Z",
-      "updated_at": "2026-03-19T18:32:11.782Z"
+      "updated_at": "2026-03-19T18:32:11.782Z",
+      "resolved_date": "2026-04-04",
+      "resolution_note": "Promoted to draft DT-009 — intake is redundant"
     },
     {
       "id": "INT-044",
       "title": null,
       "raw_text": "Production email provider integration — EmailOutbox currently uses dev sink (emails queued in DB, viewable via GET /__dev/email-outbox). Need to integrate a real SMTP/SendGrid provider for production. Related to F-P0-001 Email Delivery. The EmailOutbox model + template system + queue logic already exist, just need the send adapter. Candidate rejection emails (INT-024), overdue invoice notifications (INT-032), lease signing feedback already generate outbox records.",
-      "status": "promoted",
+      "status": "done",
       "source": "EPIC_HISTORY.md — Rental Applications epic + email outbox references",
       "product_area": "notifications",
       "related_feature_ids": [
@@ -2388,13 +2452,15 @@
       "note_type": "integration",
       "duplicate_of": null,
       "created_at": "2026-03-19T18:19:59.250Z",
-      "updated_at": "2026-03-19T18:36:10.697Z"
+      "updated_at": "2026-03-19T18:36:10.697Z",
+      "resolved_date": "2026-04-04",
+      "resolution_note": "Promoted to draft DT-014 — intake is redundant"
     },
     {
       "id": "INT-045",
       "title": null,
       "raw_text": "Formalize background job scheduler — processSelectionTimeouts() and processAttachmentRetention() currently run on hourly interval started in server.ts via setInterval. No formal scheduler, no retry logic, no dead letter, no monitoring. For production: need at minimum a proper scheduling mechanism (node-cron or pg-boss), execution logging, failure alerting. Currently also available via POST /__dev/rental/run-jobs (dev only).",
-      "status": "promoted",
+      "status": "done",
       "source": "EPIC_HISTORY.md — Rental Applications epic background jobs section",
       "product_area": "api",
       "related_feature_ids": [],
@@ -2413,13 +2479,15 @@
       "note_type": "workflow_improvement",
       "duplicate_of": null,
       "created_at": "2026-03-19T18:19:59.312Z",
-      "updated_at": "2026-03-19T18:32:11.845Z"
+      "updated_at": "2026-03-19T18:32:11.845Z",
+      "resolved_date": "2026-04-04",
+      "resolution_note": "Promoted to draft DT-010 — intake is redundant"
     },
     {
       "id": "INT-046",
       "title": null,
       "raw_text": "Fix 28 pre-existing server-spawn test timeouts — multiple test suites (auth.manager-gates, tenantSession, ia, contracts, rentalContracts, rentEstimation) have server-spawn-based integration tests that intermittently timeout under Jest load. Root cause: each test suite spawns a full server process via tsx, and under parallel Jest workers + CI resource constraints, startup can exceed 15-30s timeouts. Possible fixes: shared server instance across suites, in-process testing with supertest, or increase CI resources.",
-      "status": "promoted",
+      "status": "done",
       "source": "EPIC_HISTORY.md — multiple test fix sections + verification tables",
       "product_area": "testing",
       "related_feature_ids": [],
@@ -2438,13 +2506,15 @@
       "note_type": "bug",
       "duplicate_of": null,
       "created_at": "2026-03-19T18:19:59.372Z",
-      "updated_at": "2026-03-19T18:32:11.909Z"
+      "updated_at": "2026-03-19T18:32:11.909Z",
+      "resolved_date": "2026-04-04",
+      "resolution_note": "Promoted to draft DT-011 — intake is redundant"
     },
     {
       "id": "INT-047",
       "title": null,
       "raw_text": "Remaining route-level layer violations (CQ-1 through CQ-15 minus resolved) — routes/legal.ts (19 Prisma calls, worst offender), routes/rentalApplications.ts (direct service calls bypassing workflows for some endpoints), routes/inventory.ts (mixed pattern, some use repos, some don't). Each should be refactored to: routes → workflows → services → repositories. No behavior changes, structural only.",
-      "status": "promoted",
+      "status": "done",
       "source": "EPIC_HISTORY.md — Architecture Hardening + AUDIT.md CQ findings",
       "product_area": "api",
       "related_feature_ids": [],
@@ -2463,13 +2533,15 @@
       "note_type": "workflow_improvement",
       "duplicate_of": null,
       "created_at": "2026-03-19T18:19:59.434Z",
-      "updated_at": "2026-03-19T18:36:14.618Z"
+      "updated_at": "2026-03-19T18:36:14.618Z",
+      "resolved_date": "2026-04-04",
+      "resolution_note": "Promoted to draft DT-015 — intake is redundant"
     },
     {
       "id": "INT-048",
       "title": null,
       "raw_text": "3 proxy routes retain custom logic and can't use proxyToBackend() — requests.js (field rename on POST), contractors.js (multi-path routing), requests/approve.js (method + path transform). These are the last 3 of 94 total proxy routes not migrated to the shared helper. Document their custom logic in comments and consider if the backend can be adjusted to eliminate the need for client-side transforms.",
-      "status": "promoted",
+      "status": "done",
       "source": "EPIC_HISTORY.md — Project Audit Mar 4, H3 section",
       "product_area": "frontend",
       "related_feature_ids": [],
@@ -2488,7 +2560,9 @@
       "note_type": "feature_request",
       "duplicate_of": null,
       "created_at": "2026-03-19T18:19:59.495Z",
-      "updated_at": "2026-03-19T18:32:11.976Z"
+      "updated_at": "2026-03-19T18:32:11.976Z",
+      "resolved_date": "2026-04-04",
+      "resolution_note": "Promoted to draft DT-012 — intake is redundant"
     },
     {
       "id": "INT-049",
@@ -2502,7 +2576,7 @@
       "dependencies": [],
       "split_recommended": false,
       "draft_ticket_ids": [],
-      "triage_notes": "Epic-sized item. Needs decomposition into smaller tickets before execution.",
+      "triage_notes": "Triage 2026-04-03: Epic — standardize invoice viewing across all portals (tenant, contractor, manager, owner). Standard template layout: top-left sender, top-right recipient, line items, totals. All invoices viewable inline in UI. Overlaps with INT-127 (owner overlay). Needs decomposition.",
       "constraints": [],
       "recommended_action": "split",
       "scope_size": "epic",
@@ -2518,7 +2592,7 @@
       "id": "INT-050",
       "title": null,
       "raw_text": "EPIC — Swiss Property Tax Statement Journey (Owner / Manager Workspace)\n\nProposed date: 2026-03-22\nStatus: Draft\nPriority: High\nType: PRODUCT / FINANCIAL / WORKFLOW\nSuggested ID: EPIC-TAX-STATEMENT-001\n\nSummary\n\nAdd a structured Tax Statement Journey to the platform so a Swiss property owner or property manager can compile the data needed for annual tax declaration of real estate holdings directly from the tool.\n\nThe journey should support:\n\nproperty wealth reporting (tax value / fiscal value),\nproperty income reporting (actual rent or owner-occupancy imputed rental value),\ndeduction reporting (mortgage interest, maintenance, eligible costs),\nand source reconciliation so users can see exactly where each reported number came from.\n\nThis epic does not attempt to fully automate Swiss tax filing submission. It creates a tax-ready statement and reconciliation workflow that helps users prepare, verify, and export the numbers needed for their declaration with strong auditability and jurisdiction-aware rules.\n\nWhy this epic now\n\nThe product already contains a growing set of real-estate operational data:\n\nleases,\nbuildings,\nunits,\nowners,\ninvoices,\ncharges,\nexpenses,\nfinancial pages,\nlegal/rules infrastructure,\nand document/PDF generation patterns.\n\nThat makes the platform close to being able to support a high-value owner workflow:\nturning operational property data into a tax-preparation artifact.\n\nToday, users likely need to assemble tax inputs manually from:\n\nleases,\nbank statements,\nmaintenance invoices,\nvaluation notices,\nrent rolls,\nand ad hoc spreadsheets.\n\nThis epic closes that gap by introducing a guided workflow that:\n\nidentifies the relevant tax treatment per property,\ncomputes or imports the required values,\nreconciles them against source documents,\nand generates a tax statement package for owner review.\n\nThis fits the product direction because it extends existing financial/property data into an owner-facing annual workflow without requiring a full accounting or tax filing product.\n\nProblem statement\n\nSwiss property owners generally need a reliable annual summary for tax reporting that can distinguish between:\n\nwealth-side reporting of property value,\nincome-side reporting of rent or imputed rental value,\ndeductible financing costs such as mortgage interest,\nmaintenance and eligible property costs,\nand special treatment such as foreign property rate effects or canton-specific valuation rules.\n\nThe system currently has pieces of the data, but no end-to-end journey that answers:\n\nWhich numbers belong in the tax declaration?\nWhich values are imported versus computed?\nWhich source document supports each line?\nWhich items are deductible vs informational only?\nHow does owner-occupied property differ from rented property?\nHow can the user export a clean, reviewable statement?\n\nWithout this journey, users must manually reconcile scattered property data, which is slow, error-prone, and low-confidence.\n\nUser personas\nPrimary\nOwner — wants a tax-ready annual property statement\nProperty Manager — prepares the statement package on behalf of the owner\nSecondary\nAccountant / fiduciary — reviews exported statement and source mapping\nInternal staff — uses the system to classify and validate costs\nProduct goals\nG1. Tax-prep journey, not raw data dump\n\nGuide the user through a clear annual workflow rather than exposing disconnected reports.\n\nG2. Rule-aware treatment of Swiss property tax inputs\n\nSupport the core distinctions discussed earlier:\n\nproperty tax value / fiscal value,\nowner-occupied imputed rental value,\nactual rental income,\nmortgage interest,\nmaintenance deductions,\nproperty classification / usage,\noptional foreign property handling.\nG3. Source-backed numbers\n\nEvery figure shown in the tax statement must be marked as:\n\nimported,\ncomputed,\nmanually entered,\nor unresolved.\nG4. Reconciliation confidence\n\nUsers should be able to compare statement lines to source evidence, similar in spirit to a salary certificate workflow, even if no single Swiss-standard property certificate exists.\n\nG5. Configurable jurisdiction model\n\nSwiss treatment varies by canton and by property situation. The system must be configurable and explicit about assumptions rather than hard-coding fragile tax logic.\n\nNon-goals\n\nThis epic does not:\n\nsubmit tax returns to cantonal authorities,\nprovide certified legal or tax advice,\nreplace accountants/fiduciaries,\nguarantee full canton-by-canton legal completeness on day 1,\nor attempt full mortgage/banking integration in the first slice.\n\nIt produces a tax-preparation statement and evidence trail, not a filing system.\n\nCore user journey\n1. Start annual tax statement\n\nFrom the Owner or Manager workspace, the user starts a new Tax Statement for a given tax year.\n\nThey choose:\n\ntax year,\nowner,\none or more properties,\ndeclaration context (owner-prepared or manager-prepared),\ncanton / tax jurisdiction context.\n2. Classify each property for tax treatment\n\nFor each property, the journey asks for or infers:\n\nownership type,\nproperty location,\nwhether the property is:\nowner-occupied,\nfully rented,\npartially rented,\nvacant,\nforeign property.\n\nThis classification determines which lines are required.\n\n3. Gather statement inputs\n\nThe journey pulls from platform data where available and requests missing data where needed.\n\nImported or existing platform data\nleases and rent rolls,\ninvoices and expense records,\nbuilding/unit ownership links,\ncharges and related property income structures,\nknown property metadata.\nManually entered or attached external data\nofficial tax value / fiscal value,\nimputed rental value when authority-provided,\nmortgage balances and annual interest,\nvaluation notices,\nbank mortgage attestations,\noff-platform maintenance costs,\nforeign property values where relevant.\n4. Compute statement lines\n\nThe system computes draft values using rule-aware logic.\n\nWealth section\nproperty fiscal/tax value\nrelated debt reference where included in the statement package\nIncome section\n\nDepending on property classification:\n\nactual rental income, or\nimputed rental value for owner-occupied property\nDeduction section\nmortgage interest\nmaintenance costs\neligible renovation / upkeep costs\nexcluded or ambiguous expenses flagged for review\n5. Reconcile numbers to evidence\n\nFor every tax statement line, the UI shows:\n\nvalue,\nsource type,\nsource record(s),\nrule used,\nconfidence / review status,\nunresolved issues.\n\nThis creates a “property tax statement workbook” equivalent to the confidence people get from a salary certificate, even though no single standard Swiss document exists for property reporting.\n\n6. Review exceptions\n\nThe system flags issues such as:\n\nmissing tax value,\nmissing mortgage interest attestation,\noccupancy classification conflict,\nmaintenance cost not fully categorized,\nproperty with both owner-use and rental use,\nforeign property missing rate-only handling flag,\ncanton rule set incomplete or unconfigured.\n7. Generate export package\n\nExport a tax-prep package containing:\n\ntax statement summary by property,\naggregated owner summary,\nreconciliation appendix,\nsource checklist,\noptional PDF and CSV export.\nFunctional scope\nIn scope\nTax statement entity and workflow\n\nA new annual statement workflow for owners/managers.\n\nProperty tax data model\n\nA normalized place to store:\n\ntax year,\nproperty classification,\ntax values,\nincome treatment,\ndeductions,\nsource mappings,\nreview status.\nRule-aware line generation\n\nLine-item logic for:\n\nwealth value,\nrental income,\nimputed rental value,\nmortgage interest,\nmaintenance deductions,\nmanual adjustments.\nEvidence and reconciliation layer\n\nEach statement line maps to supporting records or uploaded attestations.\n\nExport layer\n\nGenerate statement summary and supporting package.\n\nOut of scope for first version\ndirect e-filing integrations,\nautomated bank ingestion,\nOCR-first automation for all third-party tax documents,\ncanton-perfect legal coverage across all Switzerland,\nproperty sale / capital gains tax workflows,\ndepreciation-based accounting treatment as a tax filing substitute.\nTax rules to incorporate in v1\n\nThese should be modeled as configurable tax treatment rules, not brittle hard-coded assumptions.\n\nR1. Property wealth reporting\n\nEach property may require a declared tax/fiscal value for wealth reporting.\n\nSystem behavior:\n\nsupport official imported value,\nsupport manual entry with source attachment,\nsupport jurisdiction metadata,\ndo not silently derive a fiscal value unless rule configuration explicitly allows it.\nR2. Income reporting by usage\n\nA property is taxed differently depending on use.\n\nSupported classifications:\n\nowner-occupied,\nrented,\nmixed-use,\nvacant,\nforeign property.\n\nSystem behavior:\n\nowner-occupied → imputed rental path\nrented → actual rent path\nmixed-use → split or manual review path\nforeign property → marked for jurisdiction-specific handling\nR3. Imputed rental value\n\nFor owner-occupied property, a statement may require imputed rental value.\n\nSystem behavior:\n\nsupport authority-provided amount,\nsupport configured calculation method where enabled,\nalways display calculation basis and assumption source,\nflag for review if the canton rule set is missing or ambiguous.\nR4. Actual rental income\n\nFor rented properties, statement includes actual rental income.\n\nSystem behavior:\n\nderive from lease/rent data where available,\ndistinguish rent from non-taxable pass-through reimbursements where configured,\nsupport manual override with explanation.\nR5. Mortgage interest deduction\n\nMortgage interest may be deductible.\n\nSystem behavior:\n\nsupport annual imported/manual bank attestation entry,\nseparate principal from interest,\nattach the attestation to the statement line,\ndo not infer interest from outstanding balance alone.\nR6. Maintenance cost deduction\n\nMaintenance and upkeep may be deductible, subject to classification.\n\nSystem behavior:\n\nmap invoices/expenses into tax categories:\nmaintenance,\ncapital / improvement,\ninsurance/admin,\nenergy/other eligible category,\nunclassified.\nallow actual-cost method,\nallow flat-rate method if configured,\nnever double-count both actual and flat-rate deduction.\nR7. Foreign property informational handling\n\nForeign property may affect the tax rate even when not directly taxed in the same way.\n\nSystem behavior:\n\nstore separately,\nlabel as rate-influencing / jurisdiction-dependent,\nrequire explicit configuration and review.\nR8. No single standard Swiss “property salary certificate”\n\nThere is no universal salary-certificate equivalent for property reporting.\n\nSystem behavior:\n\ngenerate an internal Tax Statement Reconciliation Report that plays the same role:\nstatement line,\nsource document,\nsource field,\ncomputed value,\ndeclaration target field,\nreview status.\nProposed new product objects\n\nThese are conceptual and may map to Prisma models, supporting tables, or existing entities.\n\n1. TaxStatement\n\nAnnual container for an owner/tax year.\n\nSuggested fields:\n\nid\norgId\nownerId\ntaxYear\njurisdictionType\ncanton\nstatus (DRAFT, IN_REVIEW, READY, EXPORTED, ARCHIVED)\npreparedByUserId\nreviewedByUserId\ntimestamps\n2. TaxStatementProperty\n\nLinks a statement to a building/property and stores tax treatment.\n\nSuggested fields:\n\ntaxStatementId\nbuildingId or canonical property reference\nusageType\nisForeignProperty\ncountryCode\ncanton\nofficialTaxValue\nofficialImputedRentalValue\nnotes\nreviewStatus\n3. TaxStatementLine\n\nNormalized line items.\n\nSuggested fields:\n\ntaxStatementPropertyId\nlineType\nPROPERTY_TAX_VALUE\nRENTAL_INCOME\nIMPUTED_RENTAL_VALUE\nMORTGAGE_INTEREST\nMAINTENANCE_DEDUCTION\nMANUAL_ADJUSTMENT\nRATE_ONLY_FOREIGN_PROPERTY\namount\ncurrency\nsourceMode (IMPORTED, COMPUTED, MANUAL)\nruleKey\nconfidence\nisOverride\nreviewStatus\n4. TaxStatementEvidence\n\nSource linkage.\n\nSuggested fields:\n\ntaxStatementLineId\nsourceEntityType\nsourceEntityId\nsourceDocumentId\nsourceLabel\nsourceField\nnotes\n5. TaxRuleProfile\n\nConfiguration layer by canton/jurisdiction.\n\nSuggested fields:\n\njurisdictionCode\ntaxYear\nsupportsImputedRental\nimputedRentalMethod\nmaintenanceDeductionMethod\nrequiresOfficialTaxValue\nsupportsForeignRateOnlyHandling\nisActive\nUX scope\nOwner / Manager entry points\nOwner portal\n\nAdd a new navigation item or finance sub-page:\n\n/owner/tax-statements\nManager portal\n\nAdd a corresponding workspace:\n\n/manager/financials/tax-statements\nor a finance tab under the existing finance area.\n\nUse existing manager layout guardrails:\n\nhub page if multiple tabs are needed,\ndetail page structure for statement review,\nPanel sections for summary / sources / exceptions / export.\nSuggested screen flow\nA. Statement list page\n\nShows:\n\ntax year\nowner\nnumber of properties\nstatus\nunresolved issues\nlast export date\nB. Statement builder wizard\n\nSteps:\n\nSelect year + owner\nSelect properties\nClassify usage\nEnter/import official values\nReview income and deductions\nResolve issues\nGenerate package\nC. Statement detail page\n\nSections:\n\nSummary\nProperties\nIncome lines\nDeduction lines\nReconciliation\nExceptions\nExports\nD. Reconciliation view\n\nMost important UX in the epic.\n\nA table-like or grouped view:\n\ndeclaration field / statement line\namount\nsource\ncalculation method\nevidence attached\nconfidence\nissue badge\nBackend architecture fit\n\nThis epic should fit the existing backend shape:\n\nroutes/ → thin handlers\nworkflows/ → orchestration for statement creation / recompute / finalize\nservices/ → tax line generation, deduction classification, validation\nrepositories/ → canonical access to statements, evidence, property financials\nvalidation/ → zod schemas for manual entries and overrides\nProposed workflow additions\ncreateTaxStatementWorkflow.ts\nrecomputeTaxStatementWorkflow.ts\nfinalizeTaxStatementWorkflow.ts\nexportTaxStatementWorkflow.ts\nProposed repository additions\ntaxStatementRepository.ts\npossibly financialEvidenceRepository.ts if the evidence layer becomes reusable\nGuardrails for this epic\n\nThis epic touches financial and semi-regulatory data, so the guardrails should be stricter than average.\n\nTX1: No silent tax assumptions\n\nIf a figure depends on jurisdiction-specific logic and the rule profile is missing, the line must be flagged REQUIRES_REVIEW, not silently computed.\n\nTX2: Every computed line needs provenance\n\nEach computed line must store:\n\nrule used,\ninput values,\ncalculation basis,\nsource mode.\nTX3: Manual override must remain visible\n\nIf a user overrides a computed figure, the original computed value must remain inspectable.\n\nTX4: Imported bank/official values are authoritative when configured\n\nFor mortgage interest and official tax values, imported/manual official figures should take precedence over inferred approximations.\n\nTX5: No mixing actual and flat-rate maintenance deduction\n\nIf the tax profile supports both methods, the statement must enforce one chosen method per property/year.\n\nTX6: Tax statement output is “tax-prep support,” not certified advice\n\nUI and export must clearly indicate:\n\nprepared from available data,\nsubject to owner/accountant review,\njurisdiction configuration dependent.\nTX7: Canonical include definitions apply\n\nAny DTO that returns tax statement detail must use centralized includes per G9.\n\nTX8: Contract tests required\n\nNew endpoints must have contract tests asserting:\n\nline shape,\nevidence linkage,\nproperty classification,\ntotals and status fields.\nProposed implementation slices\nSlice 1 — Data model + statement shell\n\nCreate the core statement object and basic CRUD/listing.\n\nDeliverables\nschema additions for tax statement entities\nroutes for create/list/get/update\nowner/manager list page\nstatement detail shell\nAcceptance criteria\nuser can create a tax statement for a year/owner\nuser can attach one or more properties\nstatement persists status and review metadata\nno DTO/include drift\nSlice 2 — Property classification + official values capture\n\nAdd property usage classification and input of official tax values / imputed rental values.\n\nDeliverables\nwizard step or detail form\nvalidation schemas\nsupport for official value entry\noptional source attachment linkage\nAcceptance criteria\neach property must be classified before statement can finalize\nowner-occupied and rented properties take different paths\nmissing required official values block readiness and produce actionable issues\nSlice 3 — Income line generation\n\nGenerate rental or imputed-rent lines per property.\n\nDeliverables\ntax line generator service\nlease/rent roll extraction for rental income\nimputed rental manual/imported/configured-calculation path\nproperty-level income section UI\nAcceptance criteria\nrented property generates rental-income line\nowner-occupied property generates imputed-rental path\nmixed-use property creates split/review issue instead of bad silent output\nSlice 4 — Deduction engine for mortgage interest and maintenance\n\nAdd deductions with evidence mapping.\n\nDeliverables\nmortgage interest input + evidence\nexpense classification into deductible buckets\nactual-vs-flat-rate method selection\nstatement deduction section\nAcceptance criteria\nmortgage interest cannot be inferred from balance alone\nmaintenance deduction source records are inspectable\ndisallowed or unclassified expenses are visibly excluded or flagged\nno double counting across deduction methods\nSlice 5 — Reconciliation report\n\nBuild the “salary certificate equivalent” inside the product.\n\nDeliverables\nreconciliation grid/report\nsource-to-line mapping\nexportable appendix\nconfidence / issue badges\nAcceptance criteria\nevery material statement line has a visible source path\nexported report helps an accountant map numbers into a tax declaration\nmanual entries are distinguishable from computed/imported lines\nSlice 6 — Export package\n\nGenerate PDF/CSV package for owner/accountant review.\n\nDeliverables\nPDF summary\nCSV line export\nevidence checklist\noptional per-property appendix\nAcceptance criteria\nuser can export statement package\nexport includes assumptions and unresolved issues\ntotals in export match UI totals exactly\nFuture slices\ncanton-specific rule packs\nOCR-assisted import of bank/tax authority attestations\naccountant review mode\ncross-year carry-forward comparisons\nforeign property expanded handling\nsale / capital gains / major renovation treatment\nValidation checklist\n\nBefore merge of any slice:\n\nBackend\nschema drift check empty\nprisma generate\ntsc --noEmit\ncanonical include constants for tax statement DTOs\ncontract tests for new tax statement endpoints\nFrontend\nfollows F-UI1/F-UI2 depending on page type\nno inline styles\nrepeated stateful tax UI extracted into shared components if reused\nempty states and review banners use global component classes\nFinancial correctness\ntotals = sum of constituent lines\noverride state is preserved\nexcluded lines are visible, not dropped\nsource mapping exists for all material statement lines\nRisks\nR1. Canton specificity\n\nSwiss tax treatment varies. Hard-coding one-size-fits-all logic will create false confidence.\n\nMitigation: rule profiles + review-required status when incomplete.\n\nR2. Source incompleteness\n\nThe platform may not hold all necessary external tax data.\n\nMitigation: first-class manual entry and evidence attachment, not fake automation.\n\nR3. Expense classification ambiguity\n\nMaintenance vs improvement may not always be derivable from invoice data.\n\nMitigation: classification workflow + review queue + manual override.\n\nR4. Overlap with finance/reporting\n\nThis epic can sprawl into full accounting.\n\nMitigation: keep scope to annual tax-prep statement generation.\n\nDefinition of done\n\nThis epic is done when:\n\nAn owner or manager can create an annual tax statement in the tool.\nProperties can be classified by tax treatment.\nThe system generates the key wealth, income, and deduction lines.\nEvery material line has visible provenance.\nThe user can export a reviewable statement package.\nMissing legal/jurisdiction data results in explicit review flags, not silent assumptions.\nContract tests and financial correctness tests protect the new surface.\nSuggested epic-history narrative\n\nDelivered a Swiss Property Tax Statement Journey for owners and managers, turning operational real-estate data into a tax-preparation workflow inside the platform. Added annual tax statement entities, property usage classification, line generation for tax value, rental income or imputed rental value, mortgage interest, and maintenance deductions, plus a reconciliation layer that maps each figure to its evidence and calculation rule. The journey does not file taxes directly; instead it produces a jurisdiction-aware, reviewable statement package that gives owners and accountants confidence similar to a salary certificate workflow, without hiding missing data or hard-coding brittle legal assumptions.\n\nCopy-paste roadmap ticket version\nTitle\n\nSwiss property tax statement journey\n\nProblem\n\nOwners and managers need a tax-ready annual property statement, but the platform currently has no end-to-end workflow for assembling fiscal property value, rental/imputed income, mortgage interest, maintenance deductions, and source reconciliation.\n\nScope\nannual tax statement object\nowner/manager statement workflow\nproperty classification by use\nline generation for wealth/income/deductions\nevidence mapping and reconciliation report\nPDF/CSV export\njurisdiction/rule-profile support\nAcceptance criteria\nuser can create a statement by owner + year\neach property is classified as owner-occupied, rented, mixed-use, vacant, or foreign\nsystem generates tax value, income, and deduction lines where supported\nall material lines show source mode and provenance\nmissing official values or missing rule profiles produce review issues\nexport package contains summary + reconciliation appendix\ncontract tests cover statement endpoints and nested relations\nFiles likely to modify\napps/api/prisma/schema.prisma\napps/api/src/routes/financials.ts or new taxStatements.ts\napps/api/src/workflows/*taxStatement*\napps/api/src/services/*tax*\napps/api/src/repositories/*taxStatement*\napps/api/src/validation/*tax*\napps/api/src/__tests__/*tax*\napps/web/pages/owner/*tax-statements*\napps/web/pages/manager/financials/*tax-statements*\napps/web/components/*TaxStatement*\napps/web/styles/globals.css\napps/api/openapi.yaml\nPROJECT_STATE.md\nEPIC_HISTORY.md\n\nIf you want, I can now turn this into a DT-style draft ticket matching your roadmap fields exactly, including:\nacceptance_criteria, test_protocol, validation_checklist, canonical_implementation_prompt, and files_to_modify.",
-      "status": "review",
+      "status": "done",
       "source": "manual_paste",
       "product_area": "owner-portal",
       "related_feature_ids": [],
@@ -2530,7 +2604,7 @@
       "draft_ticket_ids": [
         "DT-114"
       ],
-      "triage_notes": "Has dependencies (jurisdiction-specific logic and the rule profile is missing) but appears resolvable.",
+      "triage_notes": "Triage 2026-04-03: Swiss Property Tax Statement epic. Has DT-114 draft. Overlaps with TASK-008 (Per-Owner Tax Report). Dependencies: jurisdiction-specific rules, legal rule profiles. Keep as epic, sequence after FIN-COA is wired into views.",
       "constraints": [],
       "recommended_action": "execute",
       "scope_size": "epic",
@@ -2540,13 +2614,15 @@
       "duplicate_of": null,
       "created_at": "2026-03-22T11:33:19.680Z",
       "updated_at": "2026-03-23T17:28:04.614Z",
-      "anti_split_reasons": []
+      "anti_split_reasons": [],
+      "resolved_date": "2026-04-04",
+      "resolution_note": "Promoted to DT-114 (Tax Statement Journey)"
     },
     {
       "id": "INT-051",
       "title": "Epic title: Financial Account Structure & Expense Mapping",
       "raw_text": "Epic title: Financial Account Structure & Expense Mapping\nEpic id: EPIC-FIN-COA-001",
-      "status": "promoted",
+      "status": "done",
       "source": "bulk_ingest",
       "product_area": "",
       "related_feature_ids": [],
@@ -2567,13 +2643,15 @@
       "created_at": "2026-03-22T11:45:50.257Z",
       "updated_at": "2026-03-22T11:45:50.261Z",
       "section_heading": null,
-      "anti_split_reasons": []
+      "anti_split_reasons": [],
+      "resolved_date": "2026-04-04",
+      "resolution_note": "FIN-COA epic fully implemented — draft ticket is done"
     },
     {
       "id": "INT-052",
       "title": "Introduce a configurable chart-of-accounts and expense-mapping layer so Swiss residential building costs can be classi…",
       "raw_text": "Introduce a configurable chart-of-accounts and expense-mapping layer so Swiss residential building costs can be classified, assigned to recoverable/non-recoverable buckets, mapped to invoice issuers/vendors, and reused by existing invoice, lease-expense, and financial reporting flows.",
-      "status": "clarify",
+      "status": "done",
       "source": "bulk_ingest",
       "product_area": "leases",
       "related_feature_ids": [],
@@ -2592,13 +2670,15 @@
       "created_at": "2026-03-22T11:45:50.261Z",
       "updated_at": "2026-03-22T11:45:50.264Z",
       "section_heading": "Goal",
-      "anti_split_reasons": []
+      "anti_split_reasons": [],
+      "resolved_date": "2026-04-03",
+      "resolution_note": "FIN-COA epic fully implemented: ExpenseType, Account, ExpenseMapping models + API + UI"
     },
     {
       "id": "INT-056",
       "title": "OrgId",
       "raw_text": "orgId\nkey\nnameEn\nnameFr\ncategory (OPERATING_RECOVERABLE, OPERATING_NON_RECOVERABLE, MAINTENANCE, CAPEX, FINANCING, VACANCY)\nisRecoverable\nbillingFrequency (MONTHLY, QUARTERLY, ANNUAL, SEASONAL, AS_NEEDED, ONE_OFF)\ntypicalInvoiceIssuerType (UTILITY, MUNICIPALITY, INSURER, BANK, PROPERTY_MANAGER, TECHNICAL_CONTRACTOR, GENERAL_CONTRACTOR, OTHER)\ndescription",
-      "status": "clarify",
+      "status": "done",
       "source": "bulk_ingest",
       "product_area": "invoicing",
       "related_feature_ids": [],
@@ -2617,13 +2697,15 @@
       "created_at": "2026-03-22T11:45:50.273Z",
       "updated_at": "2026-03-22T11:45:50.275Z",
       "section_heading": "For ExpenseType",
-      "anti_split_reasons": []
+      "anti_split_reasons": [],
+      "resolved_date": "2026-04-04",
+      "resolution_note": "FIN-COA fragment (ExpenseType schema) — implemented in FIN-COA epic"
     },
     {
       "id": "INT-057",
       "title": "OrgId",
       "raw_text": "orgId\ncode\nname\naccountClass (REVENUE, RECOVERABLE_OPEX, NON_RECOVERABLE_OPEX, MAINTENANCE, CAPEX, FINANCIAL)\nisActive",
-      "status": "clarify",
+      "status": "done",
       "source": "bulk_ingest",
       "product_area": "for-account",
       "related_feature_ids": [],
@@ -2642,13 +2724,15 @@
       "created_at": "2026-03-22T11:45:50.275Z",
       "updated_at": "2026-03-22T11:45:50.277Z",
       "section_heading": "For Account",
-      "anti_split_reasons": []
+      "anti_split_reasons": [],
+      "resolved_date": "2026-04-04",
+      "resolution_note": "FIN-COA fragment (Account schema) — implemented in FIN-COA epic"
     },
     {
       "id": "INT-063",
       "title": "Recoverability, billing frequency, typical issuer metadata",
       "raw_text": "Recoverability, billing frequency, typical issuer metadata\nStory 2 — Account structure configuration",
-      "status": "clarify",
+      "status": "done",
       "source": "bulk_ingest",
       "product_area": "invoicing",
       "related_feature_ids": [],
@@ -2667,13 +2751,15 @@
       "created_at": "2026-03-22T11:45:50.289Z",
       "updated_at": "2026-03-22T11:45:50.291Z",
       "section_heading": "English labels",
-      "anti_split_reasons": []
+      "anti_split_reasons": [],
+      "resolved_date": "2026-04-04",
+      "resolution_note": "FIN-COA story 2 (account structure) — implemented in FIN-COA epic"
     },
     {
       "id": "INT-067",
       "title": "Story 4 — Invoice integration",
       "raw_text": "Story 4 — Invoice integration",
-      "status": "clarify",
+      "status": "done",
       "source": "bulk_ingest",
       "product_area": "invoicing",
       "related_feature_ids": [
@@ -2699,13 +2785,15 @@
       "created_at": "2026-03-22T11:45:50.298Z",
       "updated_at": "2026-03-22T11:45:50.301Z",
       "section_heading": "Building override support",
-      "anti_split_reasons": []
+      "anti_split_reasons": [],
+      "resolved_date": "2026-04-04",
+      "resolution_note": "FIN-COA story 4 (invoice integration) — implemented in FIN-COA epic"
     },
     {
       "id": "INT-069",
       "title": "Story 5 — Lease/service expense integration",
       "raw_text": "Story 5 — Lease/service expense integration",
-      "status": "clarify",
+      "status": "done",
       "source": "bulk_ingest",
       "product_area": "leases",
       "related_feature_ids": [
@@ -2731,13 +2819,15 @@
       "created_at": "2026-03-22T11:45:50.304Z",
       "updated_at": "2026-03-22T11:45:50.306Z",
       "section_heading": "Backfill fallback from current category fields",
-      "anti_split_reasons": []
+      "anti_split_reasons": [],
+      "resolved_date": "2026-04-04",
+      "resolution_note": "FIN-COA story 5 (lease/service expense) — implemented in FIN-COA epic"
     },
     {
       "id": "INT-075",
       "title": "FIN-COA-01 — Introduce canonical expense types and account mapping foundation",
       "raw_text": "FIN-COA-01 — Introduce canonical expense types and account mapping foundation",
-      "status": "promoted",
+      "status": "done",
       "source": "bulk_ingest",
       "product_area": "selected-ticket-id-and-why-it-was-selected",
       "related_feature_ids": [],
@@ -2758,13 +2848,15 @@
       "created_at": "2026-03-22T11:45:50.317Z",
       "updated_at": "2026-03-22T11:45:50.320Z",
       "section_heading": "Selected ticket id and why it was selected",
-      "anti_split_reasons": []
+      "anti_split_reasons": [],
+      "resolved_date": "2026-04-04",
+      "resolution_note": "FIN-COA epic fully implemented — draft ticket is done"
     },
     {
       "id": "INT-078",
       "title": "FIN-COA-01 — Canonical expense types and account mapping foundation",
       "raw_text": "FIN-COA-01 — Canonical expense types and account mapping foundation",
-      "status": "duplicate",
+      "status": "discarded",
       "source": "bulk_ingest",
       "product_area": "canonical-ticket-prompt",
       "related_feature_ids": [],
@@ -2783,13 +2875,15 @@
       "created_at": "2026-03-22T11:45:50.324Z",
       "updated_at": "2026-03-22T11:45:50.329Z",
       "section_heading": "Canonical ticket prompt",
-      "anti_split_reasons": []
+      "anti_split_reasons": [],
+      "resolved_date": "2026-04-04",
+      "resolution_note": "Duplicate of INT-075 (FIN-COA-01)"
     },
     {
       "id": "INT-081",
       "title": "The platform already has financial pages derived from Invoice and Lease, but there is no accounting configuration layer",
       "raw_text": "The platform already has financial pages derived from Invoice and Lease, but there is no accounting configuration layer. This ticket introduces that layer in a non-breaking way and prepares later tickets to wire account mapping into expenses, charges, and reporting.",
-      "status": "clarify",
+      "status": "done",
       "source": "bulk_ingest",
       "product_area": "leases",
       "related_feature_ids": [],
@@ -2808,13 +2902,15 @@
       "created_at": "2026-03-22T11:45:50.337Z",
       "updated_at": "2026-03-22T11:45:50.339Z",
       "section_heading": "Why this ticket",
-      "anti_split_reasons": []
+      "anti_split_reasons": [],
+      "resolved_date": "2026-04-04",
+      "resolution_note": "FIN-COA epic description (accounting config layer) — implemented"
     },
     {
       "id": "INT-096",
       "title": "OpenAPI, DTO, api-client, tests updated together",
       "raw_text": "OpenAPI, DTO, api-client, tests updated together",
-      "status": "clarify",
+      "status": "done",
       "source": "bulk_ingest",
       "product_area": "api",
       "related_feature_ids": [],
@@ -2833,13 +2929,15 @@
       "created_at": "2026-03-22T11:45:50.435Z",
       "updated_at": "2026-03-22T11:45:50.438Z",
       "section_heading": "No existing financial behavior regressed",
-      "anti_split_reasons": []
+      "anti_split_reasons": [],
+      "resolved_date": "2026-04-04",
+      "resolution_note": "FIN-COA cross-cutting concern (OpenAPI/DTO/tests together) — done"
     },
     {
       "id": "INT-098",
       "title": "FIN-COA-02 — Wire mapped accounts into invoices",
       "raw_text": "FIN-COA-02 — Wire mapped accounts into invoices",
-      "status": "promoted",
+      "status": "done",
       "source": "bulk_ingest",
       "product_area": "invoicing",
       "related_feature_ids": [],
@@ -2860,13 +2958,15 @@
       "created_at": "2026-03-22T11:45:50.442Z",
       "updated_at": "2026-03-22T11:45:50.453Z",
       "section_heading": "Suggested follow-up tickets",
-      "anti_split_reasons": []
+      "anti_split_reasons": [],
+      "resolved_date": "2026-04-04",
+      "resolution_note": "FIN-COA epic fully implemented — draft ticket is done"
     },
     {
       "id": "INT-099",
       "title": "Extend invoice DTOs, repository includes, and update flows so expenses can carry expenseTypeId and accountId while pre…",
       "raw_text": "Extend invoice DTOs, repository includes, and update flows so expenses can carry expenseTypeId and accountId while preserving current expenseCategory behavior.",
-      "status": "clarify",
+      "status": "done",
       "source": "bulk_ingest",
       "product_area": "invoicing",
       "related_feature_ids": [],
@@ -2885,13 +2985,15 @@
       "created_at": "2026-03-22T11:45:50.453Z",
       "updated_at": "2026-03-22T11:45:50.464Z",
       "section_heading": "Suggested follow-up tickets",
-      "anti_split_reasons": []
+      "anti_split_reasons": [],
+      "resolved_date": "2026-04-04",
+      "resolution_note": "FIN-COA invoice DTO extension for expenseTypeId/accountId — done"
     },
     {
       "id": "INT-100",
       "title": "FIN-COA-03 — Wire mapped accounts into lease expense items",
       "raw_text": "FIN-COA-03 — Wire mapped accounts into lease expense items",
-      "status": "promoted",
+      "status": "done",
       "source": "bulk_ingest",
       "product_area": "leases",
       "related_feature_ids": [],
@@ -2912,13 +3014,15 @@
       "created_at": "2026-03-22T11:45:50.464Z",
       "updated_at": "2026-03-22T11:45:50.471Z",
       "section_heading": "Suggested follow-up tickets",
-      "anti_split_reasons": []
+      "anti_split_reasons": [],
+      "resolved_date": "2026-04-04",
+      "resolution_note": "FIN-COA epic fully implemented — draft ticket is done"
     },
     {
       "id": "INT-102",
       "title": "FIN-COA-04 — Manager finance settings UI",
       "raw_text": "FIN-COA-04 — Manager finance settings UI",
-      "status": "promoted",
+      "status": "done",
       "source": "bulk_ingest",
       "product_area": "invoicing",
       "related_feature_ids": [],
@@ -2939,13 +3043,15 @@
       "created_at": "2026-03-22T11:45:50.477Z",
       "updated_at": "2026-03-22T11:45:50.480Z",
       "section_heading": "Suggested follow-up tickets",
-      "anti_split_reasons": []
+      "anti_split_reasons": [],
+      "resolved_date": "2026-04-04",
+      "resolution_note": "FIN-COA epic fully implemented — draft ticket is done"
     },
     {
       "id": "INT-104",
       "title": "FIN-COA-05 — Financial views expose account metadata",
       "raw_text": "FIN-COA-05 — Financial views expose account metadata",
-      "status": "promoted",
+      "status": "done",
       "source": "bulk_ingest",
       "product_area": "suggested-follow-up-tickets",
       "related_feature_ids": [],
@@ -2966,13 +3072,15 @@
       "created_at": "2026-03-22T11:45:50.482Z",
       "updated_at": "2026-03-22T11:45:50.485Z",
       "section_heading": "Suggested follow-up tickets",
-      "anti_split_reasons": []
+      "anti_split_reasons": [],
+      "resolved_date": "2026-04-04",
+      "resolution_note": "FIN-COA epic fully implemented — draft ticket is done"
     },
     {
       "id": "INT-108",
       "title": "EPIC — Swiss Property Tax Statement Journey (Owner / Manager Workspace) Proposed date: 2026-03-22 Status: Draft Prior…",
       "raw_text": "EPIC — Swiss Property Tax Statement Journey (Owner / Manager Workspace) Proposed date: 2026-03-22 Status: Draft Priority: High Type: PRODUCT / FINANCIAL / WORKFLOW Suggested ID: EPIC-TAX-STATEMENT-001 Summary Add a structured Tax Statement Journey to the platform so a Swiss property owner or property manager can compile the data needed for annual tax declaration of real estate holdings directly from the tool. The journey should support: property wealth reporting (tax value / fiscal value), property income reporting (actual rent or owner-occupancy imputed rental value), deduction reporting (mortgage interest, maintenance, eligible costs), and source reconciliation so users can see exactly where each reported number came from. This epic does not attempt to fully automate Swiss tax filing submission. It creates a tax-ready statement and reconciliation workflow that helps users prepare, verify, and export the numbers needed for their declaration with strong auditability and jurisdiction-aware rules. Why this epic now The product already contains a growing set of real-estate operational data: leases, buildings, units, owners, invoices, charges, expenses, financial pages, legal/rules infrastructure, and document/PDF generation patterns. That makes the platform close to being able to support a high-value owner workflow: turning operational property data into a tax-preparation artifact. Today, users likely need to assemble tax inputs manually from: leases, bank statements, maintenance invoices, valuation notices, rent rolls, and ad hoc spreadsheets. This epic closes that gap by introducing a guided workflow that: identifies the relevant tax treatment per property, computes or imports the required values, reconciles them against source documents, and generates a tax statement package for owner review. This fits the product direction because it extends existing financial/property data into an owner-facing annual workflow without requiring a full accounting or tax filing product. Problem statement Swiss property owners generally need a reliable annual summary for tax reporting that can distinguish between: wealth-side reporting of property value, income-side reporting of rent or imputed rental value, deductible financing costs such as mortgage interest, maintenance and eligible property costs, and special treatment such as foreign property rate effects or canton-specific valuation rules. The system currently has pieces of the data, but no end-to-end journey that answers: Which numbers belong in the tax declaration? Which values are imported versus computed? Which source document supports each line? Which items are deductible vs informational only? How does owner-occupied property differ from rented property? How can the user export a clean, reviewable statement? Without this journey, users must manually reconcile scattered property data, which is slow, error-prone, and low-confidence. User personas Primary Owner — wants a tax-ready annual property statement Property Manager — prepares the statement package on behalf of the owner Secondary Accountant / fiduciary — reviews exported statement and source mapping Internal staff — uses the system to classify and validate costs Product goals G1. Tax-prep journey, not raw data dump Guide the user through a clear annual workflow rather than exposing disconnected reports. G2. Rule-aware treatment of Swiss property tax inputs Support the core distinctions discussed earlier: property tax value / fiscal value, owner-occupied imputed rental value, actual rental income, mortgage interest, maintenance deductions, property classification / usage, optional foreign property handling. G3. Source-backed numbers Every figure shown in the tax statement must be marked as: imported, computed, manually entered, or unresolved. G4. Reconciliation confidence Users should be able to compare statement lines to source evidence, similar in spirit to a salary certificate workflow, even if no single Swiss-standard property certificate exists. G5. Configurable jurisdiction model Swiss treatment varies by canton and by property situation. The system must be configurable and explicit about assumptions rather than hard-coding fragile tax logic. Non-goals This epic does not: submit tax returns to cantonal authorities, provide certified legal or tax advice, replace accountants/fiduciaries, guarantee full canton-by-canton legal completeness on day 1, or attempt full mortgage/banking integration in the first slice. It produces a tax-preparation statement and evidence trail, not a filing system. Core user journey 1. Start annual tax statement From the Owner or Manager workspace, the user starts a new Tax Statement for a given tax year. They choose: tax year, owner, one or more properties, declaration context (owner-prepared or manager-prepared), canton / tax jurisdiction context. 2. Classify each property for tax treatment For each property, the journey asks for or infers: ownership type, property location, whether the property is: owner-occupied, fully rented, partially rented, vacant, foreign property. This classification determines which lines are required. 3. Gather statement inputs The journey pulls from platform data where available and requests missing data where needed. Imported or existing platform data leases and rent rolls, invoices and expense records, building/unit ownership links, charges and related property income structures, known property metadata. Manually entered or attached external data official tax value / fiscal value, imputed rental value when authority-provided, mortgage balances and annual interest, valuation notices, bank mortgage attestations, off-platform maintenance costs, foreign property values where relevant. 4. Compute statement lines The system computes draft values using rule-aware logic. Wealth section property fiscal/tax value related debt reference where included in the statement package Income section Depending on property classification: actual rental income, or imputed rental value for owner-occupied property Deduction section mortgage interest maintenance costs eligible renovation / upkeep costs excluded or ambiguous expenses flagged for review 5. Reconcile numbers to evidence For every tax statement line, the UI shows: value, source type, source record(s), rule used, confidence / review status, unresolved issues. This creates a “property tax statement workbook” equivalent to the confidence people get from a salary certificate, even though no single standard Swiss document exists for property reporting. 6. Review exceptions The system flags issues such as: missing tax value, missing mortgage interest attestation, occupancy classification conflict, maintenance cost not fully categorized, property with both owner-use and rental use, foreign property missing rate-only handling flag, canton rule set incomplete or unconfigured. 7. Generate export package Export a tax-prep package containing: tax statement summary by property, aggregated owner summary, reconciliation appendix, source checklist, optional PDF and CSV export. Functional scope In scope Tax statement entity and workflow A new annual statement workflow for owners/managers. Property tax data model A normalized place to store: tax year, property classification, tax values, income treatment, deductions, source mappings, review status. Rule-aware line generation Line-item logic for: wealth value, rental income, imputed rental value, mortgage interest, maintenance deductions, manual adjustments. Evidence and reconciliation layer Each statement line maps to supporting records or uploaded attestations. Export layer Generate statement summary and supporting package. Out of scope for first version direct e-filing integrations, automated bank ingestion, OCR-first automation for all third-party tax documents, canton-perfect legal coverage across all Switzerland, property sale / capital gains tax workflows, depreciation-based accounting treatment as a tax filing substitute. Tax rules to incorporate in v1 These should be modeled as configurable tax treatment rules, not brittle hard-coded assumptions. R1. Property wealth reporting Each property may require a declared tax/fiscal value for wealth reporting. System behavior: support official imported value, support manual entry with source attachment, support jurisdiction metadata, do not silently derive a fiscal value unless rule configuration explicitly allows it. R2. Income reporting by usage A property is taxed differently depending on use. Supported classifications: owner-occupied, rented, mixed-use, vacant, foreign property. System behavior: owner-occupied → imputed rental path rented → actual rent path mixed-use → split or manual review path foreign property → marked for jurisdiction-specific handling R3. Imputed rental value For owner-occupied property, a statement may require imputed rental value. System behavior: support authority-provided amount, support configured calculation method where enabled, always display calculation basis and assumption source, flag for review if the canton rule set is missing or ambiguous. R4. Actual rental income For rented properties, statement includes actual rental income. System behavior: derive from lease/rent data where available, distinguish rent from non-taxable pass-through reimbursements where configured, support manual override with explanation. R5. Mortgage interest deduction Mortgage interest may be deductible. System behavior: support annual imported/manual bank attestation entry, separate principal from interest, attach the attestation to the statement line, do not infer interest from outstanding balance alone. R6. Maintenance cost deduction Maintenance and upkeep may be deductible, subject to classification. System behavior: map invoices/expenses into tax categories: maintenance, capital / improvement, insurance/admin, energy/other eligible category, unclassified. allow actual-cost method, allow flat-rate method if configured, never double-count both actual and flat-rate deduction. R7. Foreign property informational handling Foreign property may affect the tax rate even when not directly taxed in the same way. System behavior: store separately, label as rate-influencing / jurisdiction-dependent, require explicit configuration and review. R8. No single standard Swiss “property salary certificate” There is no universal salary-certificate equivalent for property reporting. System behavior: generate an internal Tax Statement Reconciliation Report that plays the same role: statement line, source document, source field, computed value, declaration target field, review status. Proposed new product objects These are conceptual and may map to Prisma models, supporting tables, or existing entities. 1. TaxStatement Annual container for an owner/tax year. Suggested fields: id orgId ownerId taxYear jurisdictionType canton status (DRAFT, IN_REVIEW, READY, EXPORTED, ARCHIVED) preparedByUserId reviewedByUserId timestamps 2. TaxStatementProperty Links a statement to a building/property and stores tax treatment. Suggested fields: taxStatementId buildingId or canonical property reference usageType isForeignProperty countryCode canton officialTaxValue officialImputedRentalValue notes reviewStatus 3. TaxStatementLine Normalized line items. Suggested fields: taxStatementPropertyId lineType PROPERTY_TAX_VALUE RENTAL_INCOME IMPUTED_RENTAL_VALUE MORTGAGE_INTEREST MAINTENANCE_DEDUCTION MANUAL_ADJUSTMENT RATE_ONLY_FOREIGN_PROPERTY amount currency sourceMode (IMPORTED, COMPUTED, MANUAL) ruleKey confidence isOverride reviewStatus 4. TaxStatementEvidence Source linkage. Suggested fields: taxStatementLineId sourceEntityType sourceEntityId sourceDocumentId sourceLabel sourceField notes 5. TaxRuleProfile Configuration layer by canton/jurisdiction. Suggested fields: jurisdictionCode taxYear supportsImputedRental imputedRentalMethod maintenanceDeductionMethod requiresOfficialTaxValue supportsForeignRateOnlyHandling isActive UX scope Owner / Manager entry points Owner portal Add a new navigation item or finance sub-page: /owner/tax-statements Manager portal Add a corresponding workspace: /manager/financials/tax-statements or a finance tab under the existing finance area. Use existing manager layout guardrails: hub page if multiple tabs are needed, detail page structure for statement review, Panel sections for summary / sources / exceptions / export. Suggested screen flow A. Statement list page Shows: tax year owner number of properties status unresolved issues last export date B. Statement builder wizard Steps: Select year + owner Select properties Classify usage Enter/import official values Review income and deductions Resolve issues Generate package C. Statement detail page Sections: Summary Properties Income lines Deduction lines Reconciliation Exceptions Exports D. Reconciliation view Most important UX in the epic. A table-like or grouped view: declaration field / statement line amount source calculation method evidence attached confidence issue badge Backend architecture fit This epic should fit the existing backend shape: routes/ → thin handlers workflows/ → orchestration for statement creation / recompute / finalize services/ → tax line generation, deduction classification, validation repositories/ → canonical access to statements, evidence, property financials validation/ → zod schemas for manual entries and overrides Proposed workflow additions createTaxStatementWorkflow.ts recomputeTaxStatementWorkflow.ts finalizeTaxStatementWorkflow.ts exportTaxStatementWorkflow.ts Proposed repository additions taxStatementRepository.ts possibly financialEvidenceRepository.ts if the evidence layer becomes reusable Guardrails for this epic This epic touches financial and semi-regulatory data, so the guardrails should be stricter than average. TX1: No silent tax assumptions If a figure depends on jurisdiction-specific logic and the rule profile is missing, the line must be flagged REQUIRES_REVIEW, not silently computed. TX2: Every computed line needs provenance Each computed line must store: rule used, input values, calculation basis, source mode. TX3: Manual override must remain visible If a user overrides a computed figure, the original computed value must remain inspectable. TX4: Imported bank/official values are authoritative when configured For mortgage interest and official tax values, imported/manual official figures should take precedence over inferred approximations. TX5: No mixing actual and flat-rate maintenance deduction If the tax profile supports both methods, the statement must enforce one chosen method per property/year. TX6: Tax statement output is “tax-prep support,” not certified advice UI and export must clearly indicate: prepared from available data, subject to owner/accountant review, jurisdiction configuration dependent. TX7: Canonical include definitions apply Any DTO that returns tax statement detail must use centralized includes per G9. TX8: Contract tests required New endpoints must have contract tests asserting: line shape, evidence linkage, property classification, totals and status fields. Proposed implementation slices Slice 1 — Data model + statement shell Create the core statement object and basic CRUD/listing. Deliverables schema additions for tax statement entities routes for create/list/get/update owner/manager list page statement detail shell Acceptance criteria user can create a tax statement for a year/owner user can attach one or more properties statement persists status and review metadata no DTO/include drift Slice 2 — Property classification + official values capture Add property usage classification and input of official tax values / imputed rental values. Deliverables wizard step or detail form validation schemas support for official value entry optional source attachment linkage Acceptance criteria each property must be classified before statement can finalize owner-occupied and rented properties take different paths missing required official values block readiness and produce actionable issues Slice 3 — Income line generation Generate rental or imputed-rent lines per property. Deliverables tax line generator service lease/rent roll extraction for rental income imputed rental manual/imported/configured-calculation path property-level income section UI Acceptance criteria rented property generates rental-income line owner-occupied property generates imputed-rental path mixed-use property creates split/review issue instead of bad silent output Slice 4 — Deduction engine for mortgage interest and maintenance Add deductions with evidence mapping. Deliverables mortgage interest input + evidence expense classification into deductible buckets actual-vs-flat-rate method selection statement deduction section Acceptance criteria mortgage interest cannot be inferred from balance alone maintenance deduction source records are inspectable disallowed or unclassified expenses are visibly excluded or flagged no double counting across deduction methods Slice 5 — Reconciliation report Build the “salary certificate equivalent” inside the product. Deliverables reconciliation grid/report source-to-line mapping exportable appendix confidence / issue badges Acceptance criteria every material statement line has a visible source path exported report helps an accountant map numbers into a tax declaration manual entries are distinguishable from computed/imported lines Slice 6 — Export package Generate PDF/CSV package for owner/accountant review. Deliverables PDF summary CSV line export evidence checklist optional per-property appendix Acceptance criteria user can export statement package export includes assumptions and unresolved issues totals in export match UI totals exactly Future slices canton-specific rule packs OCR-assisted import of bank/tax authority attestations accountant review mode cross-year carry-forward comparisons foreign property expanded handling sale / capital gains / major renovation treatment Validation checklist Before merge of any slice: Backend schema drift check empty prisma generate tsc --noEmit canonical include constants for tax statement DTOs contract tests for new tax statement endpoints Frontend follows F-UI1/F-UI2 depending on page type no inline styles repeated stateful tax UI extracted into shared components if reused empty states and review banners use global component classes Financial correctness totals = sum of constituent lines override state is preserved excluded lines are visible, not dropped source mapping exists for all material statement lines Risks R1. Canton specificity Swiss tax treatment varies. Hard-coding one-size-fits-all logic will create false confidence. Mitigation: rule profiles + review-required status when incomplete. R2. Source incompleteness The platform may not hold all necessary external tax data. Mitigation: first-class manual entry and evidence attachment, not fake automation. R3. Expense classification ambiguity Maintenance vs improvement may not always be derivable from invoice data. Mitigation: classification workflow + review queue + manual override. R4. Overlap with finance/reporting This epic can sprawl into full accounting. Mitigation: keep scope to annual tax-prep statement generation. Definition of done This epic is done when: An owner or manager can create an annual tax statement in the tool. Properties can be classified by tax treatment. The system generates the key wealth, income, and deduction lines. Every material line has visible provenance. The user can export a reviewable statement package. Missing legal/jurisdiction data results in explicit review flags, not silent assumptions. Contract tests and financial correctness tests protect the new surface. Suggested epic-history narrative Delivered a Swiss Property Tax Statement Journey for owners and managers, turning operational real-estate data into a tax-preparation workflow inside the platform. Added annual tax statement entities, property usage classification, line generation for tax value, rental income or imputed rental value, mortgage interest, and maintenance deductions, plus a reconciliation layer that maps each figure to its evidence and calculation rule. The journey does not file taxes directly; instead it produces a jurisdiction-aware, reviewable statement package that gives owners and accountants confidence similar to a salary certificate workflow, without hiding missing data or hard-coding brittle legal assumptions. Copy-paste roadmap ticket version Title Swiss property tax statement journey Problem Owners and managers need a tax-ready annual property statement, but the platform currently has no end-to-end workflow for assembling fiscal property value, rental/imputed income, mortgage interest, maintenance deductions, and source reconciliation. Scope annual tax statement object owner/manager statement workflow property classification by use line generation for wealth/income/deductions evidence mapping and reconciliation report PDF/CSV export jurisdiction/rule-profile support Acceptance criteria user can create a statement by owner + year each property is classified as owner-occupied, rented, mixed-use, vacant, or foreign system generates tax value, income, and deduction lines where supported all material lines show source mode and provenance missing official values or missing rule profiles produce review issues export package contains summary + reconciliation appendix contract tests cover statement endpoints and nested relations Files likely to modify apps/api/prisma/schema.prisma apps/api/src/routes/financials.ts or new taxStatements.ts apps/api/src/workflows/*taxStatement* apps/api/src/services/*tax* apps/api/src/repositories/*taxStatement* apps/api/src/validation/*tax* apps/api/src/__tests__/*tax* apps/web/pages/owner/*tax-statements* apps/web/pages/manager/financials/*tax-statements* apps/web/components/*TaxStatement* apps/web/styles/globals.css apps/api/openapi.yaml PROJECT_STATE.md EPIC_HISTORY.md If you want, I can now turn this into a DT-style draft ticket matching your roadmap fields exactly, including: acceptance_criteria, test_protocol, validation_checklist, canonical_implementation_prompt, and files_to_modify.",
-      "status": "clarify",
+      "status": "discarded",
       "source": "bulk_paste",
       "product_area": "owner-portal",
       "related_feature_ids": [],
@@ -2994,7 +3102,9 @@
       "duplicate_of": "INT-050",
       "created_at": "2026-03-22T11:47:04.846Z",
       "updated_at": "2026-03-22T11:47:18.372Z",
-      "anti_split_reasons": []
+      "anti_split_reasons": [],
+      "resolved_date": "2026-04-04",
+      "resolution_note": "Duplicate of INT-050 (Tax Statement)"
     },
     {
       "id": "INT-109",
@@ -3023,7 +3133,7 @@
       "id": "INT-110",
       "title": null,
       "raw_text": "TC-11 — Shared test server lifecycle helpers\nGoal\n\nEliminate cross-suite integration test instability by extracting a single shared startServer / stopServer test helper and migrating server-spawning suites to use it consistently.\n\nWhy this ticket\n\nProject state still calls out this technical debt:\n\ncopied startServer logic exists across many test files\norphaned handles corrupt later suites\nsome suites fail in full serial runs but pass individually\n\nThis is now the highest-leverage reliability ticket because:\n\nthe finance and ledger surface area has grown\nCI trust matters more than ever\nthis is infrastructure debt, not product ambiguity\nTicket classification\nTicket id: TC-11\nType: INFRA / TEST HARDENING\nPriority: High\nScope size: Medium\nStatus: ready\nDepends on: none\nProblem statement\n\nIntegration tests currently duplicate backend bootstrapping logic across many files. That duplication causes subtle differences in:\n\nport usage\nteardown behavior\nenvironment setup\nasync shutdown timing\n\nResult:\n\nfull-suite runs are less reliable than isolated runs\nstale listeners and open handles leak between suites\nfailures are harder to diagnose because each file owns its own lifecycle logic\nOutcome\n\nCreate one canonical test helper for API integration suites and migrate server-based tests to use it, so serial full-suite runs behave the same as single-suite runs.\n\nIn scope\nAdd shared server lifecycle helper(s)\nStandardize server boot/shutdown behavior\nStandardize per-suite port handling pattern\nMigrate server-spawning suites to shared helper\nEnsure teardown closes server handles cleanly\nUpdate contributor guidance if needed\nAdd regression coverage for helper usage or teardown assumptions where practical\nOut of scope\nRewriting pure-function tests\nReplacing Jest\nChanging production server bootstrap architecture\nBroad test data/fixture redesign\nNon-test refactors unrelated to lifecycle stability\nArchitecture fit\n\nThis lands cleanly in the current architecture because it:\n\naffects only test infrastructure\npreserves runtime behavior\naligns with hardening goals already documented in CONTRIBUTING.md\nsupports guardrails G5, G7, G10, G11 without touching domain logic\nLikely files to inspect\nPROJECT_STATE.md\nCONTRIBUTING.md\napps/api/src/__tests__/ across all suites that spin up a server\nexisting test utilities, if any\napps/api/src/server.ts\napps/api/jest.config.js or equivalent Jest config\nany helper currently used in a subset of tests\nblueprint.js if test counts are tracked there\nLikely files to modify\napps/api/src/__tests__/testHelpers.ts or similar new shared helper file\nmultiple integration test suites under apps/api/src/__tests__/\nCONTRIBUTING.md\npossibly apps/api/src/__tests__/contracts.test.ts if helper usage should be canonical there\npossibly Jest setup files if one exists\nProposed implementation shape\n1. Add canonical helper\n\nCreate a shared helper with a small, explicit API, for example:\n\nstartTestServer({ port })\nstopTestServer(server)\noptional helpers for:\nunique base URL generation\nfetch wrapper\nauth header setup\nwait-until-listening\n2. Normalize teardown\n\nMake shutdown deterministic:\n\nawait server.close()\nclose any related resources opened by the helper\nensure failures in one suite do not skip cleanup\nfavor afterAll ownership at suite level\n3. Standardize port pattern\n\nKeep explicit hardcoded ports if that is current project convention, but centralize how they are used. Respect the registry already documented in CONTRIBUTING.md.\n\n4. Migrate high-risk suites first\n\nPrioritize suites known to spawn servers and historically fail in full-run mode.\n\n5. Update docs\n\nDocument the canonical pattern once and point future tests to it.\n\nAcceptance criteria\nA shared server lifecycle helper exists and is used by server-spawning integration suites\nNo test suite keeps its own copy-pasted server bootstrap/teardown logic\nFull serial suite reliability improves by eliminating orphaned-handle leakage from duplicated lifecycle code\nContributor guidance documents the canonical integration-test pattern\nExisting behavior and assertions remain unchanged except where necessary to adopt the helper\nNo production code behavior changes\nValidation checklist\nNo Prisma schema changes\nNo runtime API contract changes\nNo ad-hoc per-file lifecycle patterns remain in migrated suites\nServer shutdown is awaited explicitly\nPorts remain unique and documented\nTests still pass individually\nFull suite run is improved or at minimum no worse\nTest protocol\n\nRun at minimum:\n\ntargeted migrated suites individually\na multi-suite serial run covering previously flaky combinations\nfull backend test suite if feasible in local workflow\nbackend type check if helper is typed\nlint if test files are linted in CI\n\nSuggested sequence:\n\nrun 2–3 historically sensitive suites individually\nrun them together in serial\nrun all backend tests\nconfirm no new open-handle / EADDRINUSE / teardown errors\nImplementation notes\nKeep helper minimal; avoid building a framework\nPrefer explicit suite ownership over hidden global hooks\nDo not silently change ports in existing suites unless collisions are already documented\nIf auth/bootstrap helpers are repeated too, consider a very small second helper only if it reduces repetition without obscuring behavior\nIf some suites need special setup, let them compose on top of the shared helper rather than bypassing it\nSuggested deliverables\nnew testHelpers.ts\nmigrated integration suites\nupdated CONTRIBUTING.md section with canonical pattern\nshort note in PROJECT_STATE.md once completed\nCanonical implementation prompt\n\nYou are operating in roadmap execution mode.\n\nRead the roadmap source of truth and roadmap-generated planning state first.\n\nYour job is to select and develop the next chronological ready ticket.\n\nSelection rules:\n\nchoose the earliest phase first\nwithin that phase, choose the earliest ordered ticket\nskip done tickets\nskip blocked tickets until blockers are complete\nprefer tickets explicitly marked ready\nif multiple tickets are ready, choose the smallest/localized one\nobey the roadmap’s computed next-ticket recommendation if available\n\nBefore coding:\n\nread the canonical ticket prompt for the selected ticket\nread PROJECT_STATE.md\nread apps/api/src/ARCHITECTURE_LOW_CONTEXT_GUIDE.md\nread docs/AUDIT.md\nread blueprint.js\ninspect relevant files named by the ticket\noutput a short implementation plan\n\nDuring implementation:\n\npreserve existing behavior unless explicitly required for consistency or safety\nkeep routes thin\nkeep orchestration in workflows\nkeep Prisma access in repositories\nkeep status rules in transitions\nreuse shared UI/components and existing business logic patterns\nif API contract changes, update DTO / include / OpenAPI / api-client / tests together\nwrite/update the required tests\n\nBefore marking complete:\n\nrun or satisfy the ticket’s test protocol\nsatisfy the validation checklist\ncomplete post-validation updates\nrefresh roadmap/planning state\nrecalculate next ticket\n\nOutput:\n\nselected ticket id and why it was selected\nshort implementation plan\nimplementation\ntests added/updated\nvalidation summary\ncontext/guiding files refreshed\nnext ticket after refresh\nTicket: TC-11 — Extract shared test server lifecycle helper\nGoal\n\nStabilize backend integration tests by replacing copy-pasted server bootstrap/teardown code with a shared canonical helper used across all server-spawning suites.\n\nWhy this ticket\n\nThe current test suite still has known interaction issues caused by duplicated lifecycle management. Some suites pass in isolation but fail when run serially because open handles and listener teardown are inconsistent.\n\nIn scope\nadd shared helper(s) for starting/stopping the backend server in tests\nmigrate server-spawning suites to use the helper\npreserve existing test logic and assertions\ndocument the pattern in CONTRIBUTING.md\nOut of scope\npure-function suites\nproduct behavior changes\nschema changes\nauth redesign\ntest runner replacement\nFiles to inspect first\nPROJECT_STATE.md\nCONTRIBUTING.md\napps/api/src/server.ts\nall server-spawning test files in apps/api/src/__tests__/\nexisting helper files, if any\nJest config/setup files\nAcceptance criteria\nshared lifecycle helper exists\nmigrated suites no longer duplicate server bootstrap logic\nteardown is deterministic and awaited\ncontributor docs show the canonical pattern\nno production behavior changes\ntargeted suites pass individually and together\nTest protocol\nrun migrated suites individually\nrun migrated suites together in serial\nrun backend test suite\nrun type check if helper types changed\nValidation checklist\nno runtime contract change\nno schema change\nno duplicated lifecycle helpers remain in migrated files\nports stay unique\ndocs updated\nPost-validation updates\nrefresh roadmap/planning state\nupdate PROJECT_STATE.md technical debt entry if resolved\nrecalculate next ticket",
-      "status": "capture",
+      "status": "done",
       "source": "manual_paste",
       "product_area": null,
       "related_feature_ids": [],
@@ -3040,13 +3150,15 @@
       "note_type": null,
       "duplicate_of": null,
       "created_at": "2026-03-24T08:22:01.663Z",
-      "updated_at": "2026-03-24T08:22:01.663Z"
+      "updated_at": "2026-03-24T08:22:01.663Z",
+      "resolved_date": "2026-04-04",
+      "resolution_note": "Promoted to DT-110..113 (test helper slices)"
     },
     {
       "id": "INT-111",
-      "title": null,
+      "title": "Building + portfolio financial summary API",
       "raw_text": "Prompt 1 — Building + portfolio financial summary API\n\nRead PROJECT_STATE.md, apps/api/src/ARCHITECTURE_LOW_CONTEXT_GUIDE.md, docs/AUDIT.md, and blueprint.js first and obey all guardrails exactly. Preserve existing behavior unless explicitly required for consistency or safety.\n\nBefore writing code:\n\nInspect the current finance backend surfaces that already aggregate financial data, especially:\napps/api/src/routes/financials.ts\napps/api/src/services/financials.ts\nany existing building financial endpoints already used by manager finance pages\nInspect the current ledger source of truth and posting model:\napps/api/src/routes/ledger.ts\napps/api/src/services/ledgerService.ts\napps/api/prisma/schema.prisma (LedgerEntry, Account, Invoice, LeaseExpenseItem, related relations)\nInspect the current finance UI entry points and API usage:\napps/web/pages/manager/finance/index.js\napps/web/pages/manager/finance/expenses.js\napps/web/pages/manager/finance/charges.js\napps/web/pages/manager/finance/ledger.js\nReview blueprint.js so you do not duplicate existing financial aggregation logic, DTOs, or page patterns.\nOutput a short implementation plan before coding, including:\nwhat financial aggregation already exists\nwhether current building financial endpoints can be extended cleanly\nwhether the summary should be ledger-derived, invoice-derived, or mixed\nwhether DTO / OpenAPI / api-client updates are required\n\nArchitecture rules:\n\nKeep routes thin.\nPut orchestration in workflows.\nKeep Prisma access in repositories.\nKeep status rules in transitions.\nEmit domain events only from workflows.\nIf an API contract changes, update DTO / include / OpenAPI / api-client / tests together.\nReuse existing shared UI/business logic where possible.\nDo not create a second financial aggregation system if one already exists.\n\nSlice name: financial-summary-api\nGoal: Add actionable financial summary read models for building-level and portfolio-level finance views so the UI can show income, expenses, net operating result, receivables, payables, and account/category breakdowns without forcing users to interpret raw journal entries.\n\nPrimary workflow affected: none\n\nFiles to modify — in this order:\n\napps/api/src/services/financials.ts\napps/api/src/routes/financials.ts\nrepositories used by financials — only if existing queries are insufficient\nDTOs / OpenAPI / api-client / tests\nmanager finance pages only if a minimal wiring change is needed for validation\n\nAuth:\nno auth model changes; preserve current manager/owner visibility rules\n\nIn scope:\n\nAdd a building financial summary endpoint, such as:\nGET /buildings/:id/financial-summary\nAdd a portfolio financial summary endpoint, such as:\nGET /financials/portfolio-summary\nReturn an actionable summary model including, where data is available:\nrental income total\nservice charge income total\noperating expenses total\nmaintenance expenses total\nfinancing expenses total if already supported\nnet operating result / NOI-style subtotal\nreceivables / unpaid rent or unpaid invoices\npayables / unpaid supplier invoices if available\nexpenses grouped by account\nexpenses grouped by expense type/category\nUse the current accounting source of truth consistently:\nledger-derived when ledger data is the canonical financial source\ninvoice-derived only where ledger coverage is incomplete and that fallback is already part of the current model\nPreserve existing financial endpoints and behavior\n\nOut of scope:\n\nNo schema changes unless absolutely required\nNo UI redesign in this slice\nNo new accounting rules\nNo cash flow forecasting\nNo budget vs actual\nNo changes to invoice issuance/payment workflows\nNo portfolio hierarchy redesign\n\nImplementation requirements:\n\nFirst inspect whether the current building financial endpoint already computes any of the required totals.\nPrefer extending existing financial summary logic instead of creating a parallel “dashboard-only” aggregation path.\nBe explicit about the semantic meaning of totals:\nwhether they are recognized/accrual-based\nwhether they are cash-based\nwhether they depend on posted ledger entries vs raw invoices\nIf ledger coverage is partial, keep the read model honest and document the fallback in code comments / DTO naming.\nGroupings should be directly usable by UI without client-side accounting logic.\nGracefully handle buildings with no ledger entries yet.\n\nRequired output before code:\n\nCurrent financial summary / aggregation data shape found\nCurrent ledger source of truth found\nWhether backend changes alone are sufficient for this slice\nFiles to change\nAny relevant open audit items\nShort implementation plan\n\nDefinition of done:\n\nnpx tsc --noEmit — 0 errors\ntargeted backend tests pass\nnpm run blueprint — docs sync cleanly\nbuilding and portfolio financial summary endpoints return actionable totals and groupings\nno existing financial endpoint regressed\nif any contract changed: DTOs, OpenAPI, api-client, and tests were updated together\nPrompt 2 — Manager finance dashboard UX\n\nRead PROJECT_STATE.md, apps/api/src/ARCHITECTURE_LOW_CONTEXT_GUIDE.md, docs/AUDIT.md, and blueprint.js first and obey all guardrails exactly. Preserve existing behavior unless explicitly required for consistency or safety.\n\nBefore writing code:\n\nInspect the current manager finance entry pages and layout patterns:\napps/web/pages/manager/finance/index.js\napps/web/pages/manager/finance/expenses.js\napps/web/pages/manager/finance/charges.js\napps/web/pages/manager/finance/ledger.js\nInspect the manager hub/detail page layout conventions and shared components:\napps/web/pages/manager/requests.js\napps/web/pages/manager/_template_hub.js\napps/web/pages/manager/_template_detail.js\nshared layout components under apps/web/components/\nInspect the backend financial summary endpoints and DTOs already available after the financial summary API slice.\nReview blueprint.js so you do not duplicate existing finance page logic, summary-card patterns, or shared components.\nOutput a short implementation plan before coding, including:\nwhat the current finance landing page does\nwhat summary data is already available\nwhether a shared component should be extracted for finance summary cards / building rows\nwhat UI-only changes are sufficient vs any proxy/api-client wiring needed\n\nArchitecture rules:\n\nKeep routes thin.\nPut orchestration in workflows.\nKeep Prisma access in repositories.\nKeep status rules in transitions.\nEmit domain events only from workflows.\nIf an API contract changes, update DTO / include / OpenAPI / api-client / tests together.\nReuse existing shared UI/components where possible.\nDo not make the journal the primary finance entry point.\n\nSlice name: manager-finance-dashboard\nGoal: Turn the manager finance entry point into a useful operational dashboard that surfaces portfolio-level and building-level financial health without requiring ledger knowledge.\n\nPrimary workflow affected: none\n\nFiles to modify — in this order:\n\napps/web/pages/manager/finance/index.js\nshared finance dashboard component(s) — only if extracted for reuse\napps/web/pages/api/... proxy files — only if new endpoints are required\napi-client wiring — only if already used by the page\ntests for the new UI behavior\n\nAuth:\nno auth changes\n\nIn scope:\n\nReplace or enhance the finance landing page so it clearly shows:\nportfolio-level income / expenses / net summary cards\noutstanding receivables / unpaid invoices\nbuilding-level rows/cards with key KPIs\nquick links or drill-down paths to building financial detail, expenses, charges, and advanced ledger views\nMake the finance landing page understandable without accounting knowledge\nUse building / portfolio summary APIs as the primary data source\nKeep the journal/trial balance accessible, but secondary\n\nOut of scope:\n\nNo schema changes\nNo posting-rule changes\nNo new accounting computations in the frontend\nNo manager navigation redesign outside what is needed for finance usability\nNo reporting exports in this slice\n\nImplementation requirements:\n\nFollow F-UI1/F-UI2 guardrails exactly depending on whether this page remains a hub or becomes a detail-style dashboard.\nDo not make users guess account codes or dates to see useful information.\nThe default view should answer:\nhow much income came in\nwhat was spent\nwhere costs are concentrated\nwhich buildings need attention\nPrefer shared summary-card or breakdown UI if the same visual pattern will be reused on building financial pages.\nKeep styling consistent with current manager finance pages and global CSS classes.\n\nRequired output before code:\n\nCurrent finance landing page shape\nExisting shared page/component patterns found\nWhether backend data already supports the intended dashboard\nFiles to change\nAny relevant open audit items\nShort implementation plan\n\nDefinition of done:\n\nnpx tsc --noEmit — 0 errors\nfrontend tests / page tests pass\nnpm run blueprint — docs sync cleanly\n/manager/finance becomes an actionable dashboard rather than an accounting-only entry point\njournal and trial balance remain available but clearly secondary\nno inline styles or repeated ad-hoc styling patterns introduced\nPrompt 3 — Building financial overview page\n\nRead PROJECT_STATE.md, apps/api/src/ARCHITECTURE_LOW_CONTEXT_GUIDE.md, docs/AUDIT.md, and blueprint.js first and obey all guardrails exactly. Preserve existing behavior unless explicitly required for consistency or safety.\n\nBefore writing code:\n\nInspect the current building financial page, if one already exists, and identify what it currently shows and how it is wired.\nInspect manager building-related detail pages and shared detail-page layout patterns.\nInspect the finance summary APIs and any existing building financial DTOs.\nInspect current expense/account grouping logic so the UI does not recompute accounting structure in the client.\nReview blueprint.js so you do not duplicate building finance UI or existing account grouping logic.\nOutput a short implementation plan before coding, including:\nwhether a building financial page already exists\nwhat data it already receives\nwhether the new page can be built entirely from current financial summary endpoints\nwhether shared components should be extracted\n\nArchitecture rules:\n\nKeep routes thin.\nPut orchestration in workflows.\nKeep Prisma access in repositories.\nKeep status rules in transitions.\nEmit domain events only from workflows.\nIf an API contract changes, update DTO / include / OpenAPI / api-client / tests together.\nReuse existing shared UI/components where possible.\nDo not make the building page depend on raw journal interpretation for its core summary.\n\nSlice name: building-financial-overview\nGoal: Add a building-level finance page that gives property managers a clear picture of income, expenses, net result, and cost composition for one building, with optional drill-down into advanced accounting detail.\n\nPrimary workflow affected: none\n\nFiles to modify — in this order:\n\nbuilding financial page under apps/web/pages/manager/...\nshared finance detail components — if extraction is the cleanest approach\nproxy/api-client wiring if required\nbackend financials only if the current summary DTO is insufficient\ntests\n\nAuth:\nno auth changes\n\nIn scope:\n\nCreate or enhance a building financial detail page with sections/tabs such as:\nOverview\nExpenses by account\nExpenses by expense type\nIncome\nReceivables / unpaid items\nAdvanced ledger access\nShow a clear building-level summary:\nincome\nexpenses\nnet operating result\ntop expense drivers\nSupport drill-down from the portfolio finance dashboard\nUse readable labels, not just account numbers\n\nOut of scope:\n\nNo schema changes unless absolutely required\nNo new posting logic\nNo budgeting\nNo forecasting\nNo PDF export in this slice\nNo redesign of unrelated building pages\n\nImplementation requirements:\n\nThis should be a property-management view first, accounting view second.\nThe default tab/section should be “Overview”.\nIf advanced journal/trial-balance access is included, it should be clearly labeled as advanced.\nReuse grouping data from backend DTOs rather than reproducing grouping rules in the page.\nFollow canonical manager detail-page layout rules.\n\nRequired output before code:\n\nCurrent building financial page/data shape found\nExisting shared detail-page patterns found\nWhether backend changes are needed or current summary DTOs are sufficient\nFiles to change\nAny relevant open audit items\nShort implementation plan\n\nDefinition of done:\n\nnpx tsc --noEmit — 0 errors\nrelevant frontend/backend tests pass\nnpm run blueprint — docs sync cleanly\nusers can understand one building’s financial state without reading raw journal rows\nadvanced accounting views remain accessible but secondary\nno duplicated accounting/grouping logic introduced in the frontend\nPrompt 4 — Journal UX hardening\n\nRead PROJECT_STATE.md, apps/api/src/ARCHITECTURE_LOW_CONTEXT_GUIDE.md, docs/AUDIT.md, and blueprint.js first and obey all guardrails exactly. Preserve existing behavior unless explicitly required for consistency or safety.\n\nBefore writing code:\n\nInspect the current ledger journal page and identify exactly how filters, defaults, and table rendering work:\napps/web/pages/manager/finance/ledger.js\nInspect the current backend journal endpoint and supported filters:\napps/api/src/routes/ledger.ts\napps/api/src/services/ledgerService.ts\nInspect current account / building / sourceType data sources already available to the page.\nReview blueprint.js so you do not duplicate ledger filter logic or existing finance UI components.\nOutput a short implementation plan before coding, including:\ncurrent journal defaults\nwhether the page currently requires users to guess filters to get value\nwhether backend changes are required or UI-only improvements are sufficient\n\nArchitecture rules:\n\nKeep routes thin.\nPut orchestration in workflows.\nKeep Prisma access in repositories.\nKeep status rules in transitions.\nEmit domain events only from workflows.\nIf an API contract changes, update DTO / include / OpenAPI / api-client / tests together.\nReuse existing shared UI/components where possible.\nDo not change posting logic in this slice.\n\nSlice name: ledger-journal-ux-hardening\nGoal: Make the ledger journal understandable and useful as an advanced audit view by improving defaults, filters, labels, and drill-down context.\n\nPrimary workflow affected: none\n\nFiles to modify — in this order:\n\napps/web/pages/manager/finance/ledger.js\napps/api/src/routes/ledger.ts — only if additional read filters are clearly needed\napps/api/src/services/ledgerService.ts — only if filter support needs extension\nOpenAPI / api-client / tests — only if contract changes\nshared finance/ledger UI helpers — only if reuse is cleanest\n\nAuth:\nno auth changes\n\nIn scope:\n\nImprove journal usability with defaults such as:\nlast 30 days by default\nno mandatory account guessing\nAdd or improve readable filters:\nbuilding\naccount\nsource type\ndate range\nUse human-readable labels for source types and accounts\nMake it clear the journal is an advanced / audit view\nImprove empty-state messaging when filters return no data\n\nOut of scope:\n\nNo schema changes\nNo posting-rule changes\nNo redesign of the trial balance in this slice\nNo export functionality unless already trivial and existing\n\nImplementation requirements:\n\nThe journal should be useful on first load.\nAvoid requiring users to know account codes to see activity.\nPreserve paginated journal behavior.\nKeep raw accounting detail available, but with better explanation / labeling.\nIf backend already supports enough filters, prefer UI-only changes.\n\nRequired output before code:\n\nCurrent journal page/filter behavior found\nExisting ledger backend filter support found\nWhether backend changes are needed or UI-only is sufficient\nFiles to change\nAny relevant open audit items\nShort implementation plan\n\nDefinition of done:\n\nnpx tsc --noEmit — 0 errors\nrelevant tests pass\nnpm run blueprint — docs sync cleanly\njournal is useful on first load with sane defaults\nusers can filter by meaningful business dimensions\nno posting or schema behavior changed unless explicitly required\nPrompt 5 — Trial balance UX hardening\n\nRead PROJECT_STATE.md, apps/api/src/ARCHITECTURE_LOW_CONTEXT_GUIDE.md, docs/AUDIT.md, and blueprint.js first and obey all guardrails exactly. Preserve existing behavior unless explicitly required for consistency or safety.\n\nBefore writing code:\n\nInspect the current trial balance UI and identify how balances are presented and grouped.\nInspect the current trial balance backend DTO shape:\napps/api/src/routes/ledger.ts\napps/api/src/services/ledgerService.ts\nInspect the account model and account type usage in COA UI to ensure consistent labels and grouping.\nReview blueprint.js so you do not duplicate account-grouping or balance presentation logic.\nOutput a short implementation plan before coding, including:\ncurrent trial balance shape\nwhether the page is technically correct but UX-poor\nwhether backend changes are needed to support grouped or normalized display\n\nArchitecture rules:\n\nKeep routes thin.\nPut orchestration in workflows.\nKeep Prisma access in repositories.\nKeep status rules in transitions.\nEmit domain events only from workflows.\nIf an API contract changes, update DTO / include / OpenAPI / api-client / tests together.\nReuse existing shared UI/components where possible.\nDo not alter accounting balances incorrectly for the sake of presentation.\n\nSlice name: trial-balance-ux-hardening\nGoal: Make the trial balance understandable for non-accountant property managers while preserving accounting correctness.\n\nPrimary workflow affected: none\n\nFiles to modify — in this order:\n\napps/web/pages/manager/finance/ledger.js\napps/api/src/services/ledgerService.ts — only if grouped or display-ready DTOs are needed\napps/api/src/routes/ledger.ts — only if endpoint output shape changes\nOpenAPI / api-client / tests — only if contract changes\nshared ledger/account presentation helpers — if reuse is cleanest\n\nAuth:\nno auth changes\n\nIn scope:\n\nImprove trial balance presentation by:\ngrouping accounts by account type\nshowing clearer per-section subtotals\nmaking balanced/unbalanced status obvious\nusing readable account names and codes together\nIf appropriate, expose a more UI-friendly grouped DTO while preserving raw correctness\nReduce cognitive load for non-accountants\n\nOut of scope:\n\nNo schema changes\nNo changes to posting logic\nNo P&L or balance sheet generation in this slice\nNo export/reporting package in this slice\n\nImplementation requirements:\n\nDo not hide accounting correctness, but make the display easier to interpret.\nPreserve the ability to see debit/credit totals where useful.\nIf grouped DTOs are added, keep them canonical and reusable for future finance pages.\nEnsure totals still reconcile exactly.\n\nRequired output before code:\n\nCurrent trial balance data/presentation shape found\nExisting account grouping/type information found\nWhether backend changes are needed or UI-only is sufficient\nFiles to change\nAny relevant open audit items\nShort implementation plan\n\nDefinition of done:\n\nnpx tsc --noEmit — 0 errors\nrelevant tests pass\nnpm run blueprint — docs sync cleanly\ntrial balance is materially easier to understand\nbalances remain correct and reconcilable\nno duplicated balance/grouping logic introduced\nPrompt 6 — Unit-level ledger attribution\n\nRead PROJECT_STATE.md, apps/api/src/ARCHITECTURE_LOW_CONTEXT_GUIDE.md, docs/AUDIT.md, and blueprint.js first and obey all guardrails exactly. Preserve existing behavior unless explicitly required for consistency or safety.\n\nBefore writing code:\n\nInspect the current ledger schema and posting flow:\napps/api/prisma/schema.prisma\napps/api/src/services/ledgerService.ts\napps/api/src/workflows/issueInvoiceWorkflow.ts\napps/api/src/workflows/payInvoiceWorkflow.ts\nInspect invoice and lease relations to determine whether unit attribution can already be resolved canonically from source records.\nInspect any existing building-level attribution on LedgerEntry and how it is populated today.\nReview finance pages and APIs that may benefit from unit-level attribution later, but do not overbuild beyond the slice.\nReview blueprint.js so you do not duplicate attribution logic or introduce a second source of truth.\nOutput a short implementation plan before coding, including:\nwhether LedgerEntry currently has building-level only attribution\nwhether unit attribution can be derived reliably from invoice/lease/request relations\nall contract and migration implications\n\nArchitecture rules:\n\nKeep routes thin.\nPut orchestration in workflows.\nKeep Prisma access in repositories.\nKeep status rules in transitions.\nEmit domain events only from workflows.\nIf an API contract changes, update DTO / include / OpenAPI / api-client / tests together.\nReuse existing canonical posting logic where possible.\nDo not create a separate “unit ledger”; use dimensional attribution on canonical ledger entries.\n\nSlice name: ledger-unit-attribution\nGoal: Add unit-level attribution to ledger entries so finance can be analyzed at unit, building, and portfolio level from one canonical ledger.\n\nPrimary workflow affected:\n\ninvoice issue workflow\ninvoice payment workflow\n\nFiles to modify — in this order:\n\napps/api/prisma/schema.prisma\nmigration(s)\napps/api/src/services/ledgerService.ts\naffected workflows (issueInvoiceWorkflow.ts, payInvoiceWorkflow.ts, others only if required)\nrepositories / routes only if read-model exposure is needed\nDTOs / OpenAPI / api-client / tests\nfinance UI only if minimal validation wiring is needed\n\nAuth:\nno auth changes\n\nIn scope:\n\nAdd unitId attribution to LedgerEntry if not already present\nPopulate it automatically when the source transaction is clearly tied to a unit / lease\nPreserve building-level attribution\nKeep one canonical ledger; do not create per-unit subledgers\nMake future unit/building/portfolio filtering possible\n\nOut of scope:\n\nNo separate ledger per unit/building/portfolio\nNo new UI-heavy slice here unless needed to validate the read model\nNo change to COA\nNo new accounting rules beyond attribution enrichment\n\nImplementation requirements:\n\nPrefer deriving unitId from existing canonical relations such as lease → unit or invoice → lease/unit/building.\nKeep posting best-effort behavior only if that is already the existing ledger pattern.\nIf schema changes are required, use proper migrations and update all consumers.\nPreserve existing posting amounts and account selection exactly.\n\nRequired output before code:\n\nCurrent LedgerEntry attribution fields found\nCurrent posting attribution path found\nWhether unit attribution can be derived canonically\nFiles to change\nAny relevant open audit items\nShort implementation plan\n\nDefinition of done:\n\nnpx prisma migrate dev --name ...\ndrift check returns empty migration\nnpx prisma generate\nnpx tsc --noEmit — 0 errors\ntests pass\nnpm run blueprint — docs sync cleanly\nledger entries can be attributed at unit level when source data supports it\nexisting posting behavior remains otherwise unchanged\nPrompt 7 — Posting coverage and accounting correctness hardening\n\nRead PROJECT_STATE.md, apps/api/src/ARCHITECTURE_LOW_CONTEXT_GUIDE.md, docs/AUDIT.md, and blueprint.js first and obey all guardrails exactly. Preserve existing behavior unless explicitly required for consistency or safety.\n\nBefore writing code:\n\nInspect all current ledger posting entry points and identify exactly which business events do and do not post to the ledger:\napps/api/src/services/ledgerService.ts\napps/api/src/workflows/issueInvoiceWorkflow.ts\napps/api/src/workflows/payInvoiceWorkflow.ts\nany other finance/invoice/lease workflows that create financially meaningful state changes\nInspect current invoice types / classifications and their mapped account behavior.\nInspect current tests covering ledger posting and financial correctness.\nReview blueprint.js so you do not duplicate posting logic or create posting behavior outside workflows/services.\nOutput a short implementation plan before coding, including:\nwhat currently posts to the ledger\nwhat does not yet post but probably should\nwhether missing coverage is a workflow gap, classification gap, or mapping gap\n\nArchitecture rules:\n\nKeep routes thin.\nPut orchestration in workflows.\nKeep Prisma access in repositories.\nKeep status rules in transitions.\nEmit domain events only from workflows.\nIf an API contract changes, update DTO / include / OpenAPI / api-client / tests together.\nReuse existing ledger posting helpers where possible.\nDo not post journal entries from routes.\n\nSlice name: ledger-posting-coverage-hardening\nGoal: Ensure financially meaningful invoice events are consistently journaled automatically under the correct accounts and entity attribution so finance views can be trusted operationally.\n\nPrimary workflow affected:\n\ninvoice issue workflow\ninvoice payment workflow\nother finance workflows only if currently missing canonical posting coverage\n\nFiles to modify — in this order:\n\napps/api/src/services/ledgerService.ts\naffected workflows\nrepositories only if additional source relations must be loaded canonically\nDTO / OpenAPI / api-client only if a contract changes\ntests\nfinance UI only if a very small explanatory note is needed\n\nAuth:\nno auth changes\n\nIn scope:\n\nAudit and harden automatic posting coverage for:\nrent invoice issued\nrent invoice paid\nexpense invoice issued\nexpense invoice paid\nEnsure correct account selection based on existing COA / mapping rules\nEnsure correct building/unit/source attribution where available\nAdd or improve tests proving debit/credit correctness and source linkage\n\nOut of scope:\n\nNo manual journal entry UI\nNo new accounting regime\nNo redesign of invoice lifecycle\nNo budget/forecast features\nNo general close / period-locking functionality\n\nImplementation requirements:\n\nPreserve current best-effort/non-blocking posting semantics only if intentionally part of the current design.\nKeep posting logic centralized in ledger service helpers and workflow orchestration.\nPrefer adding golden/business-correctness tests over ad-hoc spot checks.\nBe explicit in code/tests about whether amounts are accrual-based and when posting occurs.\n\nRequired output before code:\n\nCurrent posting coverage found\nGaps found in invoice/expense posting coverage\nWhether schema/API changes are needed or workflow/service-only changes are sufficient\nFiles to change\nAny relevant open audit items\nShort implementation plan\n\nDefinition of done:\n\nnpx tsc --noEmit — 0 errors\nrelevant ledger/invoice tests pass\nnpm run blueprint — docs sync cleanly\ninvoice issue/payment events are journaled consistently and test-covered\naccount selection and entity attribution are correct according to current COA/mapping rules\nno posting logic moved into routes or UI\nRecommended order\n\nI’d run these prompts in this order:\n\n1 → 2 → 3 → 4 → 5 → 6 → 7\n\nWhy:\n\n1 gives you the backend read models\n2 and 3 make finance actually usable\n4 and 5 clean up the advanced accounting UI\n6 strengthens the dimensional model\n7 hardens trust in the accounting engine\nMy recommendation on scope\n\nIf you want the fastest path to “finance feels actionable,” do Prompts 1–3 first before touching deeper ledger correctness work.\n\nThat gives you:\n\nportfolio overview\nbuilding overview\nusable finance entry point\n\nAnd only then improve the advanced accounting layer.\n\nI can also turn these into a roadmap-ready DT ticket series with IDs, dependencies, acceptance criteria, and test protocols formatted like your existing tickets.",
-      "status": "clarify",
+      "status": "discarded",
       "source": "manual_paste",
       "product_area": "owner-portal",
       "related_feature_ids": [],
@@ -3056,7 +3168,7 @@
       ],
       "split_recommended": false,
       "draft_ticket_ids": [],
-      "triage_notes": "Has dependencies (raw journal interpretation for its core summary) but appears resolvable.",
+      "triage_notes": "Triage 2026-04-04: API endpoint for building-level and portfolio-level financial summaries. Different from DT-013 (owner dashboard UI). Needs proper scoping.",
       "constraints": [],
       "recommended_action": "execute",
       "scope_size": "epic",
@@ -3066,13 +3178,15 @@
       "duplicate_of": null,
       "created_at": "2026-03-24T09:20:24.304Z",
       "updated_at": "2026-03-24T09:20:52.496Z",
-      "anti_split_reasons": []
+      "anti_split_reasons": [],
+      "resolved_date": "2026-04-04",
+      "resolution_note": "Triage 2026-04-04: User closed — can re-spec later if gaps found. Reporting infrastructure already covers most of this."
     },
     {
       "id": "INT-112",
       "title": "Automate rent invoices generation",
       "raw_text": "When a lease is signed, we should be able to look into the lease to grab the rent, the charges, and compute an invoice and submit it automatically to the tenant every end of the month for the next month, e.g. the rent for a month m is due at latest on m/d-1. For the invoice to be visible to the tenant, we should always send on the first day of current month the invoice for m+1 with a payment maturity on the last day of m. so for example if the tenant has signed a lease that starts on april 1st, the rent is due latest on the last day of march. the invoice for may should go out to the tenant as early as the 1st of april and is payable on the last day of april. etc. Invoices should contain clear lines that separate net rent from charges, and the last line should be the gross due rent in bold.",
-      "status": "clarify",
+      "status": "done",
       "source": "manual_paste",
       "product_area": "finance, inventory management",
       "related_feature_ids": [],
@@ -3090,7 +3204,449 @@
       "duplicate_of": null,
       "created_at": "2026-03-24T16:21:15.767Z",
       "updated_at": "2026-03-24T16:21:32.506Z",
-      "anti_split_reasons": []
+      "anti_split_reasons": [],
+      "resolved_date": "2026-04-03",
+      "resolution_note": "Verified implemented in codebase — closed during triage 2026-04-03"
+    },
+    {
+      "id": "INT-113",
+      "title": "Next stories 25.03.26",
+      "raw_text": "Next stories 25.03.26",
+      "status": "discarded",
+      "source": "bulk_paste",
+      "product_area": null,
+      "related_feature_ids": [],
+      "proposed_phase": null,
+      "dependencies": [],
+      "split_recommended": false,
+      "draft_ticket_ids": [],
+      "triage_notes": "",
+      "constraints": [],
+      "recommended_action": null,
+      "scope_size": null,
+      "proposed_parent_feature": null,
+      "proposed_split_plan": [],
+      "note_type": null,
+      "duplicate_of": null,
+      "created_at": "2026-04-03T17:03:46.247Z",
+      "updated_at": "2026-04-03T17:03:46.247Z",
+      "resolved_date": "2026-04-04",
+      "resolution_note": "Empty capture note \"Next stories 25.03.26\" — no actionable content"
+    },
+    {
+      "id": "INT-114",
+      "title": "Unassign button in http://localhost:3000/manager/requests?tab=active&page=0 is hollow: nothing happens when clicking",
+      "raw_text": "Unassign button in http://localhost:3000/manager/requests?tab=active&page=0 is hollow: nothing happens when clicking",
+      "status": "capture",
+      "source": "bulk_paste",
+      "product_area": "requests",
+      "related_feature_ids": [],
+      "proposed_phase": null,
+      "dependencies": [],
+      "split_recommended": false,
+      "draft_ticket_ids": [],
+      "triage_notes": "",
+      "constraints": [],
+      "recommended_action": null,
+      "scope_size": null,
+      "proposed_parent_feature": null,
+      "proposed_split_plan": [],
+      "note_type": null,
+      "duplicate_of": null,
+      "created_at": "2026-04-03T17:03:46.408Z",
+      "updated_at": "2026-04-03T17:03:46.408Z"
+    },
+    {
+      "id": "INT-115",
+      "title": "Http://localhost:3000/manager/requests?tab=all&page=0: overview shows manager as requestor instead of tenant",
+      "raw_text": "http://localhost:3000/manager/requests?tab=all&page=0: overview shows manager as requestor instead of tenant",
+      "status": "done",
+      "source": "bulk_paste",
+      "product_area": "tenant-portal",
+      "related_feature_ids": [],
+      "proposed_phase": null,
+      "dependencies": [],
+      "split_recommended": false,
+      "draft_ticket_ids": [],
+      "triage_notes": "",
+      "constraints": [],
+      "recommended_action": null,
+      "scope_size": null,
+      "proposed_parent_feature": null,
+      "proposed_split_plan": [],
+      "note_type": null,
+      "duplicate_of": null,
+      "created_at": "2026-04-03T17:03:46.484Z",
+      "updated_at": "2026-04-03T17:03:46.484Z",
+      "resolved_date": "2026-04-03",
+      "resolution_note": "Verified implemented in codebase — closed during triage 2026-04-03"
+    },
+    {
+      "id": "INT-116",
+      "title": "Http://localhost:3000/manager/legal?tab=category_mappings: this was originally designed to map some maintenance reque…",
+      "raw_text": "http://localhost:3000/manager/legal?tab=category_mappings: this was originally designed to map some maintenance requests topics to some broader legal areas. The rent reduction rules systematically return \"no rules\" which is not possible. This means that the reading of legal documents and interpretation in http://localhost:3000/manager/legal?tab=sources is done superficially or not at all. As http://localhost:3000/manager/legal?tab=category_mappings is used for the determination of legal obligation of an owner to address a tenant request, this has ripple effects downstream. Not sure where the problem is but we need to figure out a way to increase the confidence that the scanning of legal sources is done with meticulous attention.",
+      "status": "capture",
+      "source": "bulk_paste",
+      "product_area": "owner-portal",
+      "related_feature_ids": [
+        "INT-003"
+      ],
+      "proposed_phase": null,
+      "dependencies": [],
+      "split_recommended": false,
+      "draft_ticket_ids": [],
+      "triage_notes": "Triage 2026-04-03: Tied to INT-003 — legal category mappings to rent reduction rules work poorly. Needs hardening. Scope together with INT-003 as a legal engine hardening epic.",
+      "constraints": [],
+      "recommended_action": null,
+      "scope_size": null,
+      "proposed_parent_feature": null,
+      "proposed_split_plan": [],
+      "note_type": null,
+      "duplicate_of": null,
+      "created_at": "2026-04-03T17:03:46.565Z",
+      "updated_at": "2026-04-03T17:03:46.565Z"
+    },
+    {
+      "id": "INT-117",
+      "title": "Lease templates aren’t clickable in the table anymore: http://localhost:3000/manager/leases?tab=templates, when click…",
+      "raw_text": "Lease templates aren’t clickable in the table anymore: http://localhost:3000/manager/leases?tab=templates, when clicking a table row it should lead to the corresponding lease template",
+      "status": "capture",
+      "source": "bulk_paste",
+      "product_area": "leases",
+      "related_feature_ids": [],
+      "proposed_phase": null,
+      "dependencies": [],
+      "split_recommended": false,
+      "draft_ticket_ids": [],
+      "triage_notes": "",
+      "constraints": [],
+      "recommended_action": null,
+      "scope_size": null,
+      "proposed_parent_feature": null,
+      "proposed_split_plan": [],
+      "note_type": null,
+      "duplicate_of": null,
+      "created_at": "2026-04-03T17:03:46.642Z",
+      "updated_at": "2026-04-03T17:03:46.642Z"
+    },
+    {
+      "id": "INT-118",
+      "title": "Template name should always bear the name of the property for which it is created",
+      "raw_text": "Template name should always bear the name of the property for which it is created. For now the template for Les Terrasses de Montreux is named “Template Adrien”, shouldn’t be allowed.",
+      "status": "done",
+      "source": "bulk_paste",
+      "product_area": "buildings",
+      "related_feature_ids": [],
+      "proposed_phase": null,
+      "dependencies": [],
+      "split_recommended": false,
+      "draft_ticket_ids": [],
+      "triage_notes": "",
+      "constraints": [],
+      "recommended_action": null,
+      "scope_size": null,
+      "proposed_parent_feature": null,
+      "proposed_split_plan": [],
+      "note_type": null,
+      "duplicate_of": null,
+      "created_at": "2026-04-03T17:03:46.723Z",
+      "updated_at": "2026-04-03T17:03:46.723Z",
+      "resolved_date": "2026-04-03",
+      "resolution_note": "Verified implemented in codebase — closed during triage 2026-04-03"
+    },
+    {
+      "id": "INT-119",
+      "title": "When manager awards an RFP and the system shows: ⏳ This RFP requires owner approval",
+      "raw_text": "when manager awards an RFP and the system shows: ⏳ This RFP requires owner approval. The owner must review and confirm the award. For those requests, add an explanation of why the approval is required (e.g. rule  defined on the building, or any other logic that triggered the requirement of the owner approval.)",
+      "status": "done",
+      "source": "bulk_paste",
+      "product_area": "owner-portal",
+      "related_feature_ids": [],
+      "proposed_phase": null,
+      "dependencies": [],
+      "split_recommended": false,
+      "draft_ticket_ids": [],
+      "triage_notes": "",
+      "constraints": [],
+      "recommended_action": null,
+      "scope_size": null,
+      "proposed_parent_feature": null,
+      "proposed_split_plan": [],
+      "note_type": null,
+      "duplicate_of": null,
+      "created_at": "2026-04-03T17:03:46.803Z",
+      "updated_at": "2026-04-03T17:03:46.803Z",
+      "resolved_date": "2026-04-03",
+      "resolution_note": "Verified implemented in codebase — closed during triage 2026-04-03"
+    },
+    {
+      "id": "INT-120",
+      "title": "On http://localhost:3000/contractor/jobs: the appointment booking is hidden in the section that appears when clicking…",
+      "raw_text": "on http://localhost:3000/contractor/jobs: the appointment booking is hidden in the section that appears when clicking View Detail →, it should be possible to book the appointment directly from the job card without having to navigate in a sub-section. When the job card expands",
+      "status": "done",
+      "source": "bulk_paste",
+      "product_area": "jobs",
+      "related_feature_ids": [],
+      "proposed_phase": null,
+      "dependencies": [],
+      "split_recommended": false,
+      "draft_ticket_ids": [],
+      "triage_notes": "",
+      "constraints": [],
+      "recommended_action": null,
+      "scope_size": null,
+      "proposed_parent_feature": null,
+      "proposed_split_plan": [],
+      "note_type": null,
+      "duplicate_of": null,
+      "created_at": "2026-04-03T17:03:46.879Z",
+      "updated_at": "2026-04-03T17:03:46.879Z",
+      "resolved_date": "2026-04-03",
+      "resolution_note": "Verified implemented in codebase — closed during triage 2026-04-03"
+    },
+    {
+      "id": "INT-121",
+      "title": "Tenant does not receive a notification when the job was completed",
+      "raw_text": "Tenant does not receive a notification when the job was completed. Should not receive contractor feedback from the job: inbox shows ⭐\nA rating has been submitted for a completed job. This should be oppaque for the two parties, only the manager should be able to see the ratings. The “provide rating button” is a bit too hidden: whole UI to review anyways",
+      "status": "done",
+      "source": "bulk_paste",
+      "product_area": "tenant-portal",
+      "related_feature_ids": [],
+      "proposed_phase": null,
+      "dependencies": [],
+      "split_recommended": false,
+      "draft_ticket_ids": [],
+      "triage_notes": "",
+      "constraints": [],
+      "recommended_action": null,
+      "scope_size": null,
+      "proposed_parent_feature": null,
+      "proposed_split_plan": [],
+      "note_type": null,
+      "duplicate_of": null,
+      "created_at": "2026-04-03T17:03:46.958Z",
+      "updated_at": "2026-04-03T17:03:46.958Z",
+      "resolved_date": "2026-04-03",
+      "resolution_note": "Verified implemented in codebase — closed during triage 2026-04-03"
+    },
+    {
+      "id": "INT-122",
+      "title": "Tenant maintenance request: add photos in pop up form, at the moment the photo upload affordance only appears once th…",
+      "raw_text": "Tenant maintenance request: add photos in pop up form, at the moment the photo upload affordance only appears once the request has already been submitted",
+      "status": "capture",
+      "source": "bulk_paste",
+      "product_area": "tenant-portal",
+      "related_feature_ids": [],
+      "proposed_phase": null,
+      "dependencies": [],
+      "split_recommended": false,
+      "draft_ticket_ids": [],
+      "triage_notes": "",
+      "constraints": [],
+      "recommended_action": null,
+      "scope_size": null,
+      "proposed_parent_feature": null,
+      "proposed_split_plan": [],
+      "note_type": null,
+      "duplicate_of": null,
+      "created_at": "2026-04-03T17:03:47.040Z",
+      "updated_at": "2026-04-03T17:03:47.040Z"
+    },
+    {
+      "id": "INT-123",
+      "title": "In owner UI: show the same tabs over properties as in manager “inventory”, make sure that naming are ISO, is somethin…",
+      "raw_text": "In owner UI: show the same tabs over properties as in manager “inventory”, make sure that naming are ISO, is something is called “inventory” on the manager side it must be called “inventory” on the owner side, we don’t want to see drifts for this.",
+      "status": "done",
+      "source": "bulk_paste",
+      "product_area": "owner-portal",
+      "related_feature_ids": [],
+      "proposed_phase": null,
+      "dependencies": [],
+      "split_recommended": false,
+      "draft_ticket_ids": [],
+      "triage_notes": "",
+      "constraints": [],
+      "recommended_action": null,
+      "scope_size": null,
+      "proposed_parent_feature": null,
+      "proposed_split_plan": [],
+      "note_type": null,
+      "duplicate_of": null,
+      "created_at": "2026-04-03T17:03:47.123Z",
+      "updated_at": "2026-04-03T17:03:47.123Z",
+      "resolved_date": "2026-04-03",
+      "resolution_note": "Verified implemented in codebase — closed during triage 2026-04-03"
+    },
+    {
+      "id": "INT-124",
+      "title": "Http://localhost:3000/owner/rfps: use tabs pattern",
+      "raw_text": "http://localhost:3000/owner/rfps: use tabs pattern. Create tabs for: Open, Pending your approval, Awarded, Closed. This will enable the removal of the status column in the rfps table.",
+      "status": "capture",
+      "source": "bulk_paste",
+      "product_area": "owner-portal",
+      "related_feature_ids": [],
+      "proposed_phase": null,
+      "dependencies": [],
+      "split_recommended": false,
+      "draft_ticket_ids": [],
+      "triage_notes": "",
+      "constraints": [],
+      "recommended_action": null,
+      "scope_size": null,
+      "proposed_parent_feature": null,
+      "proposed_split_plan": [],
+      "note_type": null,
+      "duplicate_of": null,
+      "created_at": "2026-04-03T17:03:47.201Z",
+      "updated_at": "2026-04-03T17:03:47.201Z"
+    },
+    {
+      "id": "INT-125",
+      "title": "Deeplink the owner dashboard items (e.g",
+      "raw_text": "deeplink the owner dashboard items (e.g. pending approval # xyz) to the approval, not to the overview of all approvals, same for invoices, vacancies: show the count of new candidates, that exists on http://localhost:3000/owner/vacancies, this way the owner knows whether it’s worth clicking on: if count = 0, then no point in showing the vacancy in the dashboard as it’s redundant with the vacancy KPI standing above it. Vacancies should be renamed to “review tenant candidates” —> if there are no candidates to review, consider hiding the tab? TBD. Same logic for RFP’s. Should only show the RFP’s that have complete quotes and that require owner approval, else they can be ignored, shouldn’t waste time when not needed.",
+      "status": "done",
+      "source": "bulk_paste",
+      "product_area": "owner-portal",
+      "related_feature_ids": [],
+      "proposed_phase": null,
+      "dependencies": [
+        "needs analysis"
+      ],
+      "split_recommended": false,
+      "draft_ticket_ids": [],
+      "triage_notes": "",
+      "constraints": [],
+      "recommended_action": null,
+      "scope_size": null,
+      "proposed_parent_feature": null,
+      "proposed_split_plan": [],
+      "note_type": null,
+      "duplicate_of": null,
+      "created_at": "2026-04-03T17:03:47.283Z",
+      "updated_at": "2026-04-03T17:03:47.283Z",
+      "resolved_date": "2026-04-03",
+      "resolution_note": "Verified implemented in codebase — closed during triage 2026-04-03"
+    },
+    {
+      "id": "INT-126",
+      "title": "When a lease gets cancelled, it should put back the unit into the inventory —> not yet implemented",
+      "raw_text": "When a lease gets cancelled, it should put back the unit into the inventory —> not yet implemented. exhausted status for a unit when a lease is cancelled is probably not the right wording. Think of what could be used instead",
+      "status": "capture",
+      "source": "bulk_paste",
+      "product_area": "leases",
+      "related_feature_ids": [],
+      "proposed_phase": null,
+      "dependencies": [
+        "not yet implemented"
+      ],
+      "split_recommended": false,
+      "draft_ticket_ids": [],
+      "triage_notes": "",
+      "constraints": [],
+      "recommended_action": null,
+      "scope_size": null,
+      "proposed_parent_feature": null,
+      "proposed_split_plan": [],
+      "note_type": null,
+      "duplicate_of": null,
+      "created_at": "2026-04-03T17:03:47.362Z",
+      "updated_at": "2026-04-03T17:03:47.362Z"
+    },
+    {
+      "id": "INT-127",
+      "title": "Http://localhost:3000/owner/invoices: ensure that invoices can be viewed as an overlay similar to http://localhost:30…",
+      "raw_text": "http://localhost:3000/owner/invoices: ensure that invoices can be viewed as an overlay similar to http://localhost:3000/manager/finance/invoices",
+      "status": "capture",
+      "source": "bulk_paste",
+      "product_area": "owner-portal",
+      "related_feature_ids": [],
+      "proposed_phase": null,
+      "dependencies": [],
+      "split_recommended": false,
+      "draft_ticket_ids": [],
+      "triage_notes": "",
+      "constraints": [],
+      "recommended_action": null,
+      "scope_size": null,
+      "proposed_parent_feature": null,
+      "proposed_split_plan": [],
+      "note_type": null,
+      "duplicate_of": null,
+      "created_at": "2026-04-03T17:03:47.440Z",
+      "updated_at": "2026-04-03T17:03:47.440Z"
+    },
+    {
+      "id": "INT-128",
+      "title": "Add a place where invoices can be generated besides http://localhost:3000/manager/leases/d2d32fd0-23ac-443c-801b-9756…",
+      "raw_text": "Add a place where invoices can be generated besides http://localhost:3000/manager/leases/d2d32fd0-23ac-443c-801b-97566b9b8b46",
+      "status": "done",
+      "source": "bulk_paste",
+      "product_area": "leases",
+      "related_feature_ids": [],
+      "proposed_phase": null,
+      "dependencies": [],
+      "split_recommended": false,
+      "draft_ticket_ids": [],
+      "triage_notes": "",
+      "constraints": [],
+      "recommended_action": null,
+      "scope_size": null,
+      "proposed_parent_feature": null,
+      "proposed_split_plan": [],
+      "note_type": null,
+      "duplicate_of": null,
+      "created_at": "2026-04-03T17:03:47.522Z",
+      "updated_at": "2026-04-03T17:03:47.522Z",
+      "resolved_date": "2026-04-03",
+      "resolution_note": "Verified implemented in codebase — closed during triage 2026-04-03"
+    },
+    {
+      "id": "INT-129",
+      "title": "Http://localhost:3000/manager/leases/templates is not the same page as what is shown through: http://localhost:3000/m…",
+      "raw_text": "http://localhost:3000/manager/leases/templates is not the same page as what is shown through: http://localhost:3000/manager/leases and then clicking on templates !!!",
+      "status": "done",
+      "source": "bulk_paste",
+      "product_area": "leases",
+      "related_feature_ids": [],
+      "proposed_phase": null,
+      "dependencies": [],
+      "split_recommended": false,
+      "draft_ticket_ids": [],
+      "triage_notes": "",
+      "constraints": [],
+      "recommended_action": null,
+      "scope_size": null,
+      "proposed_parent_feature": null,
+      "proposed_split_plan": [],
+      "note_type": null,
+      "duplicate_of": null,
+      "created_at": "2026-04-03T17:03:47.601Z",
+      "updated_at": "2026-04-03T17:03:47.601Z",
+      "resolved_date": "2026-04-03",
+      "resolution_note": "Verified implemented in codebase — closed during triage 2026-04-03"
+    },
+    {
+      "id": "INT-130",
+      "title": "Cashflow graph X-axis labels not aligned to calendar year",
+      "raw_text": "http://localhost:3000/manager/cashflow/ffef9f69-f28e-4408-83f6-22bacb607a3e: needs to show what building(s) the cashflow plan relates to. The graph should have a january june gradation instead of april october.",
+      "status": "capture",
+      "source": "bulk_paste",
+      "product_area": "buildings",
+      "related_feature_ids": [],
+      "proposed_phase": null,
+      "dependencies": [],
+      "split_recommended": false,
+      "draft_ticket_ids": [],
+      "triage_notes": "Triage 2026-04-04: X-axis labels show Apr-Oct because window is anchored at current date, not fiscal year. User wants calendar-year-aligned labels (Jan-Jun or Jan-Jul). Fix: align label sampling to calendar year boundaries instead of sliding window start.",
+      "constraints": [],
+      "recommended_action": null,
+      "scope_size": null,
+      "proposed_parent_feature": null,
+      "proposed_split_plan": [],
+      "note_type": null,
+      "duplicate_of": null,
+      "created_at": "2026-04-03T17:03:47.676Z",
+      "updated_at": "2026-04-03T17:03:47.676Z"
     }
   ],
   "draft_tickets": [
@@ -3540,7 +4096,9 @@
       "goal": "Implement \"Create /manager/people/owners page — page referenced in ManagerSidebar nav config but doesn't exist yet\" in the manager-portal domain to fulfill the original request: Create /manager/people/owners page — page referenced in ManagerSidebar nav config but doesn't exist yet. Should list all (backend changes only).",
       "phase": "P2",
       "order": 1,
-      "status": "promoted",
+      "status": "done",
+      "resolved_date": "2026-04-04",
+      "resolution_note": "Owners tab in /manager/people?tab=owners is fully functional: owner list table (name, email, billing entity badge), '+ Add owner' create form, inline billing entity setup. 3 API endpoints working (GET /people/owners, POST /people/owners, POST /people/owners/:id/billing-entity). Standalone /manager/people/owners page is a placeholder but the tab-based UX serves the same purpose — consistent with other People sub-tabs.",
       "product_area": "manager-portal",
       "parent_feature_id": null,
       "depends_on": [],
@@ -3625,7 +4183,8 @@
       "refinement_status": "ready_candidate",
       "refinement_notes": [],
       "refined_at": "2026-03-22T10:07:55.533Z",
-      "notes": "Page /manager/people/owners.js exists with full PageShell/Panel layout. Promoted 2026-03-22."
+      "notes": "Page /manager/people/owners.js exists with full PageShell/Panel layout. Promoted 2026-03-22.",
+      "triage_notes": "Triage 2026-04-04: User believes this has been developed but codebase check shows it is still a 27-line placeholder with Coming Soon badge. No API calls, no data rendering. Needs verification with user — perhaps work exists in a branch or was reverted."
     },
     {
       "id": "DT-007",
@@ -3636,7 +4195,7 @@
       "goal": "Implement: Legal.ts route-layer violation (A-5 / CQ-5): 19 direct Prisma calls in routes/legal.ts",
       "phase": "P1",
       "order": 1,
-      "status": "promoted",
+      "status": "discarded",
       "product_area": "api",
       "parent_feature_id": null,
       "depends_on": [],
@@ -3688,7 +4247,9 @@
       ],
       "canonical_implementation_prompt": "## Ticket: Legal.ts route-layer violation (A-5 / CQ-5): 19 direct Prisma calls in routes/legal.ts\n\n**Goal:** Implement: Legal.ts route-layer violation (A-5 / CQ-5): 19 direct Prisma calls in routes/legal.ts\n\n**Phase:** P1 | **Area:** api\n\n### In Scope\n- Legal.ts route-layer violation (A-5 / CQ-5): 19 direct Prisma calls in routes/legal.ts\n- API endpoint changes\n\n### Out of Scope\n- Cross-portal changes (unless explicitly listed)\n- Performance optimization (separate ticket)\n\n### Files to Modify (in order)\n1. `(needs manual file identification)`\n\n### Acceptance Criteria\n- [ ] Feature works as described in scope\n- [ ] All listed in_scope items implemented\n- [ ] Edge cases handled gracefully (empty state, missing data, permissions)\n\n### Test Plan\n- Verify feature works per acceptance criteria\n- No regressions in existing test suite (npm test)\n\n### Test Protocol\n1. npx tsc --noEmit — zero TypeScript errors\n2. npm test — all tests pass\n3. npm run blueprint — architecture docs sync\n4. Ticket-specific verification: verify acceptance criteria manually\n5. Regression checks: verify adjacent features still work\n6. API contract sync: if API changed, verify DTOs/OpenAPI/api-client match\n7. UI verification: if UI changed, manual check in browser\n8. Edge cases: verify behavior with missing/null data\n\n### Validation Checklist\n- [ ] All acceptance criteria verified\n- [ ] No TypeScript errors (npx tsc --noEmit)\n- [ ] All tests pass (npm test)\n- [ ] No layer violations introduced\n- [ ] Blueprint regenerated (npm run blueprint)\n\n### Post-Validation Updates\n- Refresh docs/blueprint.html — cd apps/api && node blueprint.js\n- Refresh docs/roadmap.html — node scripts/generate-roadmap.js\n- Review PROJECT_STATE.md — update if architecture decisions changed\n- Review ARCHITECTURE_LOW_CONTEXT_GUIDE.md — update if auth/layers touched\n- Review docs/AUDIT.md — mark resolved findings, add new ones\n- Review SCHEMA_REFERENCE.md — update if schema changed\n- Commit: npx tsc --noEmit → npm test → npm run blueprint",
       "notes": "routes/legal.ts: 17 direct Prisma calls remaining (was 19 at ticket creation). Still requires service-layer extraction.\n[promoted 2026-03-22] Superseded by S-P0-004-01: legalService.ts extraction removed all 26 direct Prisma calls from legal.ts.",
-      "promoted_at": "2026-03-22T20:41:53.349Z"
+      "promoted_at": "2026-03-22T20:41:53.349Z",
+      "resolved_date": "2026-04-04",
+      "resolution_note": "Merged into DT-015 — legal.ts is part of remaining route violations"
     },
     {
       "id": "DT-008",
@@ -4134,7 +4695,7 @@
       "source_intake_ids": [
         "INT-033"
       ],
-      "title": "Owner financial dashboard with invoice metrics — summary cards showing total invoices, pending approvals, paid amount…",
+      "title": "Reporting enhancements — charts, exports, trends, owner scoping",
       "goal": "Extend F-P1-006: Owner financial dashboard with invoice metrics — summary cards showing total invoices, pending approvals, paid amount…",
       "phase": "P3",
       "order": 1,
@@ -4193,7 +4754,9 @@
         "Commit: npx tsc --noEmit → npm test → npm run blueprint"
       ],
       "canonical_implementation_prompt": "## Ticket: Owner financial dashboard with invoice metrics — summary cards showing total invoices, pending approvals, paid amount…\n\n**Goal:** Extend F-P1-006: Owner financial dashboard with invoice metrics — summary cards showing total invoices, pending approvals, paid amount…\n\n**Phase:** P3 | **Area:** owner-portal\n**Parent Feature:** F-P1-006\n\n### In Scope\n- Owner financial dashboard with invoice metrics — summary cards showing total invoices, pending approvals, paid amount…\n- UI/page updates\n- Test coverage updates\n\n### Out of Scope\n- Cross-portal changes (unless explicitly listed)\n- Performance optimization (separate ticket)\n\n### Files to Modify (in order)\n1. `apps/api/src/routes/owner-portal.ts`\n2. `apps/web/pages/owner/`\n3. `packages/api-client/src/`\n\n### Acceptance Criteria\n- [ ] Feature works as described in scope\n- [ ] All listed in_scope items implemented\n- [ ] Edge cases handled gracefully (empty state, missing data, permissions)\n\n### Test Plan\n- API contract test: verify request/response shape\n- UI smoke test: verify page renders without errors\n- No regressions in existing test suite (npm test)\n\n### Test Protocol\n1. npx tsc --noEmit — zero TypeScript errors\n2. npm test — all tests pass\n3. npm run blueprint — architecture docs sync\n4. Ticket-specific verification: verify acceptance criteria manually\n5. Regression checks: verify adjacent features still work\n6. API contract sync: if API changed, verify DTOs/OpenAPI/api-client match\n7. UI verification: if UI changed, manual check in browser\n8. Edge cases: verify behavior with missing/null data\n\n### Validation Checklist\n- [ ] All acceptance criteria verified\n- [ ] No TypeScript errors (npx tsc --noEmit)\n- [ ] All tests pass (npm test)\n- [ ] No layer violations introduced\n- [ ] Blueprint regenerated (npm run blueprint)\n\n### Post-Validation Updates\n- Refresh docs/blueprint.html — cd apps/api && node blueprint.js\n- Refresh docs/roadmap.html — node scripts/generate-roadmap.js\n- Review PROJECT_STATE.md — update if architecture decisions changed\n- Review ARCHITECTURE_LOW_CONTEXT_GUIDE.md — update if auth/layers touched\n- Review docs/AUDIT.md — mark resolved findings, add new ones\n- Review SCHEMA_REFERENCE.md — update if schema changed\n- Commit: npx tsc --noEmit → npm test → npm run blueprint",
-      "notes": "Owner dashboard /owner/index.js has portfolio performance (YTD), invoice metrics (pending/paid totals), approvals, leases, RFPs, vacancies. Promoted 2026-03-22."
+      "notes": "Owner dashboard /owner/index.js has portfolio performance (YTD), invoice metrics (pending/paid totals), approvals, leases, RFPs, vacancies. Promoted 2026-03-22.",
+      "triage_notes": "Triage 2026-04-04: Reframed as reporting territory. Current state: strong financial aggregation (ledger-based, building + portfolio endpoints, snapshot caching), two substantial pages (owner monthly report 764 lines, building financials 542 lines), Finance Hub overview tab. Gaps to address: (1) No charts/graphs — all tabular, zero charting libraries. (2) No data export (CSV/PDF). (3) No multi-month trend views — only single-month with vs-previous delta. (4) Manager /reports page is placeholder. (5) No rent arrears aging (30/60/90 days). (6) No owner-scoped portfolio filter. (7) No date presets (YTD, This quarter, Last 12 months). Needs decomposition into reporting sub-tickets.",
+      "scope_size": "epic"
     },
     {
       "id": "DT-014",
@@ -4270,7 +4833,8 @@
     {
       "id": "DT-015",
       "source_intake_ids": [
-        "INT-047"
+        "INT-047",
+        "INT-040"
       ],
       "title": "Remaining route-level layer violations (CQ-1 through CQ-15 minus resolved) — routes/legal.ts (19 Prisma calls, worst …",
       "goal": "Extend F-P0-004: Remaining route-level layer violations (CQ-1 through CQ-15 minus resolved) — routes/legal.ts (19 Prisma calls, worst …",
@@ -4325,7 +4889,8 @@
       ],
       "canonical_implementation_prompt": "## Ticket: Remaining route-level layer violations (CQ-1 through CQ-15 minus resolved) — routes/legal.ts (19 Prisma calls, worst …\n\n**Goal:** Extend F-P0-004: Remaining route-level layer violations (CQ-1 through CQ-15 minus resolved) — routes/legal.ts (19 Prisma calls, worst …\n\n**Phase:** P3 | **Area:** api\n**Parent Feature:** F-P0-004\n\n### In Scope\n- Fix Remaining route-level layer violations (CQ-1 through CQ-15 minus resolved) — routes/legal.ts (19 Prisma calls, worst …\n- API endpoint changes\n\n### Files to Modify (in order)\n1. `apps/api/prisma/schema.prisma`\n\n### Acceptance Criteria\n- [ ] Feature works as described in scope\n- [ ] All listed in_scope items implemented\n- [ ] Edge cases handled gracefully (empty state, missing data, permissions)\n\n### Test Plan\n- Verify feature works per acceptance criteria\n- No regressions in existing test suite (npm test)\n\n### Test Protocol\n1. npx tsc --noEmit — zero TypeScript errors\n2. npm test — all tests pass\n3. npm run blueprint — architecture docs sync\n4. Ticket-specific verification: verify acceptance criteria manually\n5. Regression checks: verify adjacent features still work\n6. API contract sync: if API changed, verify DTOs/OpenAPI/api-client match\n7. UI verification: if UI changed, manual check in browser\n8. Edge cases: verify behavior with missing/null data\n\n### Validation Checklist\n- [ ] All acceptance criteria verified\n- [ ] No TypeScript errors (npx tsc --noEmit)\n- [ ] All tests pass (npm test)\n- [ ] No layer violations introduced\n- [ ] Blueprint regenerated (npm run blueprint)\n\n### Post-Validation Updates\n- Refresh docs/blueprint.html — cd apps/api && node blueprint.js\n- Refresh docs/roadmap.html — node scripts/generate-roadmap.js\n- Review PROJECT_STATE.md — update if architecture decisions changed\n- Review ARCHITECTURE_LOW_CONTEXT_GUIDE.md — update if auth/layers touched\n- Review docs/AUDIT.md — mark resolved findings, add new ones\n- Review SCHEMA_REFERENCE.md — update if schema changed\n- Commit: npx tsc --noEmit → npm test → npm run blueprint",
       "promoted_at": "2026-03-22T20:41:53.350Z",
-      "notes": "\n[promoted 2026-03-22] legal.ts violations resolved by S-P0-004-01."
+      "notes": "\n[promoted 2026-03-22] legal.ts violations resolved by S-P0-004-01.",
+      "triage_notes": " DT-007 (legal.ts) merged in."
     },
     {
       "id": "DT-016",
@@ -4336,7 +4901,7 @@
       "goal": "Bring tenant, contractor, and owner portals up to the same structural standard as the manager portal: AppShell > PageShell > PageHeader + PageContent > Panel layout, inline-table class for all data tables, and globals.css CSS component classes for empty states and loading text. apps/web/pages/manager/requests.js is the reference implementation (F-UI1/F-UI4).",
       "phase": "P0",
       "order": 1,
-      "status": "promoted",
+      "status": "discarded",
       "product_area": "ui-consistency",
       "parent_feature_id": null,
       "depends_on": [],
@@ -4464,7 +5029,9 @@
       "refinement_status": "ready_candidate",
       "refinement_notes": [],
       "refined_at": "2026-03-20T15:18:40.441Z",
-      "promoted_to": "TASK-001"
+      "promoted_to": "TASK-001",
+      "resolved_date": "2026-04-04",
+      "resolution_note": "Triage 2026-04-04: User says already worked on, ignore for now"
     },
     {
       "id": "DT-017",
@@ -4758,7 +5325,7 @@
       "goal": "On the depreciation standards page (/manager/legal/depreciation), all category sections should be collapsed by default when the page first loads. Currently collapsedCats starts as {} which means everything is expanded. Initialise collapsedCats with every category key set to true after standards are loaded.",
       "phase": "P0",
       "order": 1,
-      "status": "promoted",
+      "status": "done",
       "product_area": "ui-polish",
       "parent_feature_id": null,
       "depends_on": [],
@@ -4836,7 +5403,9 @@
         "next build — zero errors"
       ],
       "refinement_status": "ready_candidate",
-      "refined_at": "2026-03-20T15:18:40.441Z"
+      "refined_at": "2026-03-20T15:18:40.441Z",
+      "resolved_date": "2026-04-04",
+      "resolution_note": "Verified: DepreciationStandards.js sets all categories to collapsed on load — implemented"
     },
     {
       "id": "DT-021",
@@ -5240,7 +5809,7 @@
       "goal": "Surface two key context columns in the manager/requests table: who submitted the request (tenant name or \"Manager\") and who needs to act next (derived from current status). Both columns sortable.",
       "phase": "P0",
       "order": 1,
-      "status": "promoted",
+      "status": "done",
       "product_area": "manager-portal",
       "parent_feature_id": null,
       "depends_on": [],
@@ -5294,7 +5863,9 @@
       ],
       "refinement_status": "ready_candidate",
       "refinement_notes": [],
-      "refined_at": "2026-03-21T17:30:54.823Z"
+      "refined_at": "2026-03-21T17:30:54.823Z",
+      "resolved_date": "2026-04-03",
+      "resolution_note": "Duplicate of implemented intake item — closed during triage 2026-04-03"
     },
     {
       "id": "DT-025",
@@ -5303,7 +5874,7 @@
         "INT-017",
         "INT-031"
       ],
-      "title": "Vacancies: show empty-since date, disable review when no applications, fix left-nav highlight",
+      "title": "Vacancies: disable review button when no applications",
       "goal": "Three small UX fixes on the manager vacancies page: (1) show how long each unit has been vacant; (2) disable the review/candidates button when no applications exist; (3) fix the left-nav active highlight for /manager/vacancies.",
       "phase": "P0",
       "order": 2,
@@ -5364,7 +5935,8 @@
       ],
       "refinement_status": "ready_candidate",
       "refinement_notes": [],
-      "refined_at": "2026-03-21T17:30:54.827Z"
+      "refined_at": "2026-03-21T17:30:54.827Z",
+      "triage_notes": "Triage 2026-04-04: INT-016 (empty-since) and INT-031 (nav highlight) are done. Only INT-017 remains: disable review button when applicationCount === 0."
     },
     {
       "id": "DT-026",
@@ -5375,7 +5947,7 @@
       "goal": "Every KPI widget on the manager dashboard already shows a number, but most are not navigable. Wrap each stat card in a Next.js Link so clicking it navigates to the relevant filtered list page.",
       "phase": "P0",
       "order": 3,
-      "status": "promoted",
+      "status": "done",
       "product_area": "manager-portal",
       "parent_feature_id": null,
       "depends_on": [],
@@ -5433,14 +6005,16 @@
       ],
       "refinement_status": "ready_candidate",
       "refinement_notes": [],
-      "refined_at": "2026-03-21T17:30:54.827Z"
+      "refined_at": "2026-03-21T17:30:54.827Z",
+      "resolved_date": "2026-04-03",
+      "resolution_note": "Duplicate of implemented intake item — closed during triage 2026-04-03"
     },
     {
       "id": "DT-027",
       "source_intake_ids": [
         "INT-010"
       ],
-      "title": "Filter rental application documents page to only show selected units",
+      "title": "Rental application step 2: hide unselected units",
       "goal": "The supporting documents upload page in the rental application flow currently shows all units, including ones the applicant did not select. Filter the displayed units to only those included in the application.",
       "phase": "P0",
       "order": 4,
@@ -5496,7 +6070,8 @@
       ],
       "refined_at": "2026-03-21T17:30:54.827Z",
       "promoted_at": "2026-03-22T15:47:34.862Z",
-      "implementation_notes": "Added selected-units summary above document upload section in apply.js Step 1. Shows only selected units with building/unit/rent. Single unit: flat label. Multi-unit: count + list."
+      "implementation_notes": "Added selected-units summary above document upload section in apply.js Step 1. Shows only selected units with building/unit/rent. Single unit: flat label. Multi-unit: count + list.",
+      "triage_notes": "Triage 2026-04-04: When navigating to /apply?unitId=xxx, step 2 shows the pre-selected unit with a tick mark BUT also displays other available units that were not selected. Fix: in step 2, only show units the candidate selected in step 1. Step 1 should allow multi-unit selection so candidates can apply to multiple units in one go. Step 2 should only display those selected units — no others."
     },
     {
       "id": "DT-028",

@@ -337,6 +337,11 @@ export interface InvoiceDTO {
   matchedJobId?: string | null;
   matchedLeaseId?: string | null;
   matchedBuildingId?: string | null;
+  // Recurring billing fields
+  isBackfilled: boolean;
+  billingPeriodStart?: string | null;
+  billingPeriodEnd?: string | null;
+  billingScheduleId?: string | null;
 }
 
 /**
@@ -359,6 +364,11 @@ export interface InvoiceSummaryDTO {
   direction: InvoiceDirection;
   sourceChannel: InvoiceSourceChannel;
   ingestionStatus?: IngestionStatus | null;
+  // Recurring billing fields
+  isBackfilled: boolean;
+  billingPeriodStart?: string | null;
+  billingPeriodEnd?: string | null;
+  billingScheduleId?: string | null;
 }
 
 /** Result from POST /invoices/ingest */
@@ -491,12 +501,43 @@ export interface OrgConfigDTO {
   id: string;
   orgId: string;
   autoApproveLimit: number;
+  autoLegalRouting: boolean;
+  invoiceLeadTimeDays: number;
+  mode: string;
   landlordName?: string;
   landlordAddress?: string;
   landlordZipCity?: string;
   landlordPhone?: string;
   landlordEmail?: string;
   landlordRepresentedBy?: string;
+}
+
+export type BillingScheduleStatus = "ACTIVE" | "PAUSED" | "COMPLETED";
+
+export interface BillingScheduleDTO {
+  id: string;
+  orgId: string;
+  leaseId: string;
+  status: BillingScheduleStatus;
+  anchorDay: number;
+  nextPeriodStart: string;
+  lastGeneratedPeriod: string | null;
+  baseRentCents: number;
+  totalChargesCents: number;
+  createdAt: string;
+  updatedAt: string;
+  completedAt: string | null;
+  completionReason: string | null;
+  lease: {
+    id: string;
+    tenantName: string;
+    startDate: string;
+    endDate: string | null;
+    status: string;
+    netRentChf: number;
+    chargesTotalChf: number;
+    unitId: string;
+  } | null;
 }
 
 export interface BuildingConfigDTO {
@@ -1301,6 +1342,8 @@ export interface ManagerRfpDTO {
   buildingId: string;
   unitId: string | null;
   requestId: string | null;
+  cashflowPlanId: string | null;
+  cashflowGroupKey: string | null;
   category: string;
   legalObligation: LegalObligation;
   status: RfpStatus;
@@ -1444,6 +1487,229 @@ function buildConfigApi(opts: ClientOptions) {
 
     deleteUnitConfig: (id: string) =>
       request<void>(opts, "DELETE", `/units/${id}/config`),
+  };
+}
+
+function buildBillingSchedulesApi(opts: ClientOptions) {
+  return {
+    list: (params?: { status?: BillingScheduleStatus }) =>
+      request<{ data: BillingScheduleDTO[] }>(opts, "GET", "/billing-schedules", undefined, params as Record<string, string | number | boolean | undefined>),
+
+    get: (id: string) =>
+      request<BillingScheduleDTO>(opts, "GET", `/billing-schedules/${id}`),
+
+    pause: (id: string) =>
+      request<BillingScheduleDTO>(opts, "POST", `/billing-schedules/${id}/pause`, {}),
+
+    resume: (id: string) =>
+      request<BillingScheduleDTO>(opts, "POST", `/billing-schedules/${id}/resume`, {}),
+  };
+}
+
+// ─── Charge Reconciliation DTOs ────────────────────────────────
+
+export interface ChargeReconciliationLineDTO {
+  id: string;
+  description: string;
+  chargeMode: string;
+  acomptePaidCents: number;
+  actualCostCents: number;
+  balanceCents: number;
+}
+
+export interface ChargeReconciliationDTO {
+  id: string;
+  orgId: string;
+  leaseId: string;
+  fiscalYear: number;
+  status: string;
+  totalAcomptePaidCents: number;
+  totalActualCostsCents: number;
+  balanceCents: number;
+  settlementInvoiceId: string | null;
+  settledAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  lineItems: ChargeReconciliationLineDTO[];
+  lease: {
+    id: string;
+    tenantName: string;
+    startDate: string;
+    endDate: string | null;
+    status: string;
+    netRentChf: number;
+    chargesTotalChf: number;
+    unitId: string;
+  } | null;
+  settlementInvoice: {
+    id: string;
+    invoiceNumber: string | null;
+    status: string;
+    totalAmount: number;
+    description: string;
+  } | null;
+}
+
+export type ChargeReconciliationStatus = "DRAFT" | "FINALIZED" | "SETTLED";
+
+function buildChargeReconciliationsApi(opts: ClientOptions) {
+  return {
+    list: (params?: { status?: ChargeReconciliationStatus; leaseId?: string; fiscalYear?: number }) =>
+      request<{ data: ChargeReconciliationDTO[] }>(opts, "GET", "/charge-reconciliations", undefined, params as Record<string, string | number | boolean | undefined>),
+
+    get: (id: string) =>
+      request<ChargeReconciliationDTO>(opts, "GET", `/charge-reconciliations/${id}`),
+
+    create: (body: { leaseId: string; fiscalYear: number }) =>
+      request<ChargeReconciliationDTO>(opts, "POST", "/charge-reconciliations", body),
+
+    updateLine: (reconciliationId: string, lineId: string, body: { actualCostCents: number }) =>
+      request<ChargeReconciliationDTO>(opts, "PUT", `/charge-reconciliations/${reconciliationId}/lines/${lineId}`, body),
+
+    finalize: (id: string) =>
+      request<ChargeReconciliationDTO>(opts, "POST", `/charge-reconciliations/${id}/finalize`, {}),
+
+    settle: (id: string) =>
+      request<ChargeReconciliationDTO>(opts, "POST", `/charge-reconciliations/${id}/settle`, {}),
+
+    reopen: (id: string) =>
+      request<ChargeReconciliationDTO>(opts, "POST", `/charge-reconciliations/${id}/reopen`, {}),
+
+    delete: (id: string) =>
+      request<{ success: boolean }>(opts, "DELETE", `/charge-reconciliations/${id}`),
+  };
+}
+
+// ─── Rent Adjustment DTOs ───────────────────────────────────
+
+export interface RentAdjustmentDTO {
+  id: string;
+  orgId: string;
+  leaseId: string;
+  adjustmentType: RentAdjustmentType;
+  status: RentAdjustmentStatus;
+  effectiveDate: string;
+  previousRentCents: number;
+  newRentCents: number;
+  adjustmentCents: number;
+  cpiOldIndex: number | null;
+  cpiNewIndex: number | null;
+  referenceRateOld: string | null;
+  referenceRateNew: string | null;
+  calculationDetails: any;
+  approvedAt: string | null;
+  appliedAt: string | null;
+  rejectedAt: string | null;
+  rejectionReason: string | null;
+  createdAt: string;
+  updatedAt: string;
+  lease: {
+    id: string;
+    tenantName: string;
+    netRentChf: number;
+    startDate: string;
+    endDate: string | null;
+    status: string;
+    indexClauseType: string;
+    cpiBaseIndex: number | null;
+    initialNetRentChf: number | null;
+    lastIndexationDate: string | null;
+  };
+}
+
+export type RentAdjustmentType = "CPI_INDEXATION" | "REFERENCE_RATE_CHANGE" | "MANUAL";
+export type RentAdjustmentStatus = "DRAFT" | "APPROVED" | "APPLIED" | "REJECTED";
+
+function buildRentAdjustmentsApi(opts: ClientOptions) {
+  return {
+    list: (params?: { status?: string; leaseId?: string; adjustmentType?: string }) =>
+      request<{ data: RentAdjustmentDTO[] }>(opts, "GET", "/rent-adjustments", undefined, params as Record<string, string | number | boolean | undefined>),
+
+    get: (id: string) =>
+      request<{ data: RentAdjustmentDTO }>(opts, "GET", `/rent-adjustments/${id}`),
+
+    compute: (body: { leaseId: string; cpiNewIndex: number; effectiveDate: string; referenceRateNew?: string }) =>
+      request<{ data: RentAdjustmentDTO }>(opts, "POST", "/rent-adjustments/compute", body),
+
+    manual: (body: { leaseId: string; newRentCents: number; effectiveDate: string; reason?: string }) =>
+      request<{ data: RentAdjustmentDTO }>(opts, "POST", "/rent-adjustments/manual", body),
+
+    approve: (id: string) =>
+      request<{ data: RentAdjustmentDTO }>(opts, "POST", `/rent-adjustments/${id}/approve`, {}),
+
+    apply: (id: string) =>
+      request<{ data: RentAdjustmentDTO }>(opts, "POST", `/rent-adjustments/${id}/apply`, {}),
+
+    reject: (id: string, reason?: string) =>
+      request<{ data: RentAdjustmentDTO }>(opts, "POST", `/rent-adjustments/${id}/reject`, { reason }),
+
+    delete: (id: string) =>
+      request<{ success: boolean }>(opts, "DELETE", `/rent-adjustments/${id}`),
+  };
+}
+
+// ─── Contractor Billing Schedule DTOs ─────────────────────────
+
+export interface ContractorBillingScheduleDTO {
+  id: string;
+  orgId: string;
+  contractorId: string;
+  status: string;
+  description: string;
+  frequency: string;
+  anchorDay: number;
+  nextPeriodStart: string;
+  lastGeneratedPeriod: string | null;
+  amountCents: number;
+  vatRate: number;
+  buildingId: string | null;
+  completedAt: string | null;
+  completionReason: string | null;
+  createdAt: string;
+  updatedAt: string;
+  contractor: {
+    id: string;
+    name: string;
+    email: string;
+    phone: string;
+    iban: string | null;
+    vatNumber: string | null;
+    defaultVatRate: number | null;
+    isActive: boolean;
+  };
+  building: { id: string; name: string; address: string } | null;
+}
+
+export type BillingFrequency = "MONTHLY" | "QUARTERLY" | "SEMI_ANNUAL" | "ANNUAL";
+
+function buildContractorBillingApi(opts: ClientOptions) {
+  return {
+    list: (params?: { status?: string; contractorId?: string; buildingId?: string; frequency?: string }) =>
+      request<{ data: ContractorBillingScheduleDTO[] }>(opts, "GET", "/contractor-billing-schedules", undefined, params as Record<string, string | number | boolean | undefined>),
+
+    get: (id: string) =>
+      request<{ data: ContractorBillingScheduleDTO }>(opts, "GET", `/contractor-billing-schedules/${id}`),
+
+    create: (body: { contractorId: string; description: string; amountCents: number; startDate: string; frequency?: string; vatRate?: number; anchorDay?: number; buildingId?: string }) =>
+      request<{ data: ContractorBillingScheduleDTO }>(opts, "POST", "/contractor-billing-schedules", body),
+
+    update: (id: string, body: { description?: string; amountCents?: number; vatRate?: number; frequency?: string; buildingId?: string | null }) =>
+      request<{ data: ContractorBillingScheduleDTO }>(opts, "PUT", `/contractor-billing-schedules/${id}`, body),
+
+    pause: (id: string) =>
+      request<{ data: ContractorBillingScheduleDTO }>(opts, "POST", `/contractor-billing-schedules/${id}/pause`, {}),
+
+    resume: (id: string) =>
+      request<{ data: ContractorBillingScheduleDTO }>(opts, "POST", `/contractor-billing-schedules/${id}/resume`, {}),
+
+    stop: (id: string, reason?: string) =>
+      request<{ data: ContractorBillingScheduleDTO }>(opts, "POST", `/contractor-billing-schedules/${id}/stop`, { reason }),
+
+    generate: (id: string) =>
+      request<{ data: { invoiceId: string; nextPeriodStart: string } }>(opts, "POST", `/contractor-billing-schedules/${id}/generate`, {}),
+
+    delete: (id: string) =>
+      request<{ success: boolean }>(opts, "DELETE", `/contractor-billing-schedules/${id}`),
   };
 }
 
@@ -2246,6 +2512,188 @@ function buildCompletionApi(opts: ClientOptions) {
 }
 
 /* ═══════════════════════════════════════════════════════════════
+ * Cashflow Planning
+ * ═══════════════════════════════════════════════════════════════ */
+
+export type CashflowPlanStatus = "DRAFT" | "SUBMITTED" | "APPROVED";
+
+export interface CashflowOverrideDTO {
+  id: string;
+  planId: string;
+  assetId: string;
+  originalYear: number;
+  overriddenYear: number;
+}
+
+export interface CashflowPlanDTO {
+  id: string;
+  orgId: string;
+  buildingId: string | null;
+  name: string;
+  status: CashflowPlanStatus;
+  incomeGrowthRatePct: number;
+  openingBalanceCents: number | null;
+  horizonMonths: number;
+  lastComputedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  overrides: CashflowOverrideDTO[];
+}
+
+export interface MonthlyBucketDTO {
+  year: number;
+  month: number;                  // 1-12
+  isActual: boolean;              // true for historical months with snapshot data
+  projectedIncomeCents: number;
+  projectedOpexCents: number;
+  scheduledCapexCents: number;
+  netCents: number;
+  cumulativeBalanceCents: number;
+  capexItems: Array<{ assetId: string; assetName: string; costCents: number }>;
+}
+
+export interface TimingRecommendationDTO {
+  assetId: string;
+  assetName: string;
+  buildingId: string;
+  buildingName?: string;
+  assetType?: string;
+  topic?: string;
+  unitNumber?: string | null;
+  scheduledYear: number;
+  recommendedYear: number;
+  direction: "advance" | "defer";
+  estimatedCostChf: number;
+  isDeductible?: boolean;
+  deductiblePct?: number;
+  ownerMarginalTaxRate?: number | null;
+  estimatedTaxSavingChf: number;
+  rationale: string;
+  // Bracket-based comparison fields
+  scheduledYearIncomeChf?: number;
+  recommendedYearIncomeChf?: number;
+  taxSavingScheduledChf?: number;
+  taxSavingRecommendedChf?: number;
+  additionalSavingChf?: number;
+  scheduledYearMarginalPct?: number;
+  recommendedYearMarginalPct?: number;
+  bracketSource?: string;
+}
+
+export interface CashflowResultDTO {
+  hasOpeningBalance: boolean;
+  buckets: MonthlyBucketDTO[];
+  timingRecommendations: TimingRecommendationDTO[];
+}
+
+export interface CashflowPlanDetailDTO extends CashflowPlanDTO {
+  cashflow: CashflowResultDTO;
+}
+
+export interface RfpCandidateDTO {
+  assetId: string;
+  assetName: string;
+  tradeGroup: string;
+  effectiveYear: number;
+  estimatedCostChf: number;
+  suggestedRfpSendDate: string; // ISO date
+}
+
+// ─── Swiss Renovation Classification DTOs ──────────────────────
+
+export type TaxCategoryDTO = "WERTERHALTEND" | "WERTVERMEHREND" | "MIXED" | "ENERGY_ENVIRONMENT";
+export type AccountingTreatmentDTO = "IMMEDIATE_DEDUCTION" | "CAPITALIZED" | "SPLIT" | "ENERGY_DEDUCTION";
+export type TimingSensitivityDTO = "HIGH" | "MODERATE" | "LOW";
+export type BuildingSystemDTO =
+  | "FACADE" | "WINDOWS" | "ROOF" | "INTERIOR" | "COMMON_AREAS"
+  | "BATHROOM" | "KITCHEN" | "APPLIANCES" | "MEP" | "EXTERIOR" | "LAUNDRY";
+
+export interface RenovationCatalogEntryDTO {
+  code: string;
+  label: string;
+  aliases: string[];
+  buildingSystem: BuildingSystemDTO;
+  taxCategory: TaxCategoryDTO;
+  accountingTreatment: AccountingTreatmentDTO;
+  typicalDeductibility: string;
+  deductiblePct: number;
+  notes: string;
+  assetLinkable: boolean;
+  timingSensitivity: TimingSensitivityDTO;
+  assetMappings?: Array<{ assetType: string; topic: string }>;
+}
+
+export interface CreateCashflowPlanInput {
+  name: string;
+  buildingId?: string;
+  incomeGrowthRatePct?: number;
+  openingBalanceCents?: number;
+  horizonMonths?: number;
+}
+
+export interface UpdateCashflowPlanInput {
+  name?: string;
+  incomeGrowthRatePct?: number;
+  openingBalanceCents?: number | null;
+  horizonMonths?: number;
+}
+
+export interface AddCashflowOverrideInput {
+  assetId: string;
+  originalYear: number;
+  overriddenYear: number;
+}
+
+function buildCashflowPlansApi(opts: ClientOptions) {
+  return {
+    /** List all cashflow plans for the org, optionally filtered by buildingId. */
+    list: (params?: { buildingId?: string }) =>
+      request<{ data: CashflowPlanDTO[] }>(opts, "GET", "/cashflow-plans", undefined, params as Record<string, any>),
+
+    /** Create a new cashflow plan. */
+    create: (input: CreateCashflowPlanInput) =>
+      request<{ data: CashflowPlanDTO }>(opts, "POST", "/cashflow-plans", input),
+
+    /** Get a plan with computed monthly cashflow. */
+    get: (id: string) =>
+      request<{ data: CashflowPlanDetailDTO }>(opts, "GET", `/cashflow-plans/${id}`),
+
+    /** Update plan metadata. */
+    update: (id: string, input: UpdateCashflowPlanInput) =>
+      request<{ data: CashflowPlanDTO }>(opts, "PUT", `/cashflow-plans/${id}`, input),
+
+    /** Add a year override for an asset. */
+    addOverride: (id: string, input: AddCashflowOverrideInput) =>
+      request<{ data: CashflowOverrideDTO }>(opts, "POST", `/cashflow-plans/${id}/overrides`, input),
+
+    /** Remove a year override. */
+    removeOverride: (id: string, overrideId: string) =>
+      request<{ data: { deleted: boolean } }>(opts, "DELETE", `/cashflow-plans/${id}/overrides/${overrideId}`),
+
+    /** Submit a plan for approval. */
+    submit: (id: string) =>
+      request<{ data: CashflowPlanDTO }>(opts, "POST", `/cashflow-plans/${id}/submit`, {}),
+
+    /** Approve a plan (manager/owner role). */
+    approve: (id: string) =>
+      request<{ data: CashflowPlanDTO }>(opts, "POST", `/cashflow-plans/${id}/approve`, {}),
+
+    /** Get suggested RFP candidates for a plan. */
+    getRfpCandidates: (id: string) =>
+      request<{ data: RfpCandidateDTO[] }>(opts, "GET", `/cashflow-plans/${id}/rfp-candidates`),
+
+    /** Create an RFP from a candidate trade-group (idempotent). */
+    createRfpFromGroup: (id: string, groupKey: string) =>
+      request<{ data: { rfpId: string; title?: string; scopeDescription?: string; alreadyExisted: boolean } }>(
+        opts,
+        "POST",
+        `/cashflow-plans/${id}/rfp-candidates/${encodeURIComponent(groupKey)}/create-rfp`,
+        {},
+      ),
+  };
+}
+
+/* ═══════════════════════════════════════════════════════════════
  * Public factory
  * ═══════════════════════════════════════════════════════════════ */
 
@@ -2273,6 +2721,11 @@ export interface ApiClient {
   scheduling: ReturnType<typeof buildSchedulingApi>;
   completion: ReturnType<typeof buildCompletionApi>;
   captureSessions: ReturnType<typeof buildCaptureSessionsApi>;
+  cashflowPlans: ReturnType<typeof buildCashflowPlansApi>;
+  billingSchedules: ReturnType<typeof buildBillingSchedulesApi>;
+  chargeReconciliations: ReturnType<typeof buildChargeReconciliationsApi>;
+  rentAdjustments: ReturnType<typeof buildRentAdjustmentsApi>;
+  contractorBilling: ReturnType<typeof buildContractorBillingApi>;
   dev: ReturnType<typeof buildDevApi>;
 }
 
@@ -2311,6 +2764,11 @@ export function createApiClient(
     scheduling: buildSchedulingApi(opts),
     completion: buildCompletionApi(opts),
     captureSessions: buildCaptureSessionsApi(opts),
+    cashflowPlans: buildCashflowPlansApi(opts),
+    billingSchedules: buildBillingSchedulesApi(opts),
+    chargeReconciliations: buildChargeReconciliationsApi(opts),
+    rentAdjustments: buildRentAdjustmentsApi(opts),
+    contractorBilling: buildContractorBillingApi(opts),
     dev: buildDevApi(opts),
   };
 }

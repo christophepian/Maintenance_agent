@@ -20,11 +20,14 @@ export default function ManagerSettingsPage() {
   const [loading, setLoading] = useState(true);
   const [savingMode, setSavingMode] = useState(false);
   const [savingLimit, setSavingLimit] = useState(false);
+  const [savingLeadTime, setSavingLeadTime] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [orgMode, setOrgMode] = useState("MANAGED");
   const [autoApproveLimit, setAutoApproveLimit] = useState(null);
   const [limitDraft, setLimitDraft] = useState("");
+  const [invoiceLeadTimeDays, setInvoiceLeadTimeDays] = useState(20);
+  const [leadTimeDraft, setLeadTimeDraft] = useState("20");
   const router = useRouter();
   const activeTab = router.isReady ? (Math.max(0, TAB_KEYS.indexOf(router.query.tab)) || 0) : 0;
   const setActiveTab = useCallback((index) => {
@@ -68,6 +71,9 @@ export default function ManagerSettingsPage() {
         setOrgMode(cfg?.mode || "MANAGED");
         setAutoApproveLimit(cfg?.autoApproveLimit ?? null);
         setLimitDraft(cfg?.autoApproveLimit != null ? String(cfg.autoApproveLimit) : "");
+        const lt = cfg?.invoiceLeadTimeDays ?? 20;
+        setInvoiceLeadTimeDays(lt);
+        setLeadTimeDraft(String(lt));
       })
       .catch((e) => setError(String(e?.message || e)))
       .finally(() => setLoading(false));
@@ -89,6 +95,20 @@ export default function ManagerSettingsPage() {
   }
 
   const limitValidation = useMemo(() => parseLimitDraft(limitDraft), [limitDraft]);
+
+  function parseLeadTimeDraft(s) {
+    const raw = String(s ?? "").trim();
+    if (!raw) return { ok: false, value: null, error: "Lead time is required." };
+    const n = Number(raw);
+    if (!Number.isFinite(n) || !Number.isInteger(n)) {
+      return { ok: false, value: null, error: "Lead time must be a whole number." };
+    }
+    if (n < 1) return { ok: false, value: null, error: "Lead time must be ≥ 1 day." };
+    if (n > 60) return { ok: false, value: null, error: "Lead time must be ≤ 60 days." };
+    return { ok: true, value: n, error: "" };
+  }
+
+  const leadTimeValidation = useMemo(() => parseLeadTimeDraft(leadTimeDraft), [leadTimeDraft]);
 
   async function saveOrgMode() {
     setError("");
@@ -137,6 +157,36 @@ export default function ManagerSettingsPage() {
       setError(String(e?.message || e));
     } finally {
       setSavingLimit(false);
+    }
+  }
+
+  async function saveLeadTime() {
+    setError("");
+    setNotice("");
+
+    const v = parseLeadTimeDraft(leadTimeDraft);
+    if (!v.ok) {
+      setError(v.error);
+      return;
+    }
+
+    setSavingLeadTime(true);
+    try {
+      const r = await fetch("/api/org-config", {
+        method: "PUT",
+        headers: { "content-type": "application/json", ...authHeaders() },
+        body: JSON.stringify({ invoiceLeadTimeDays: v.value }),
+      });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j?.error?.message || j?.error || "Failed to update lead time");
+      const newVal = j?.data?.invoiceLeadTimeDays ?? v.value;
+      setInvoiceLeadTimeDays(newVal);
+      setLeadTimeDraft(String(newVal));
+      setNotice("Invoice lead time updated.");
+    } catch (e) {
+      setError(String(e?.message || e));
+    } finally {
+      setSavingLeadTime(false);
     }
   }
 
@@ -237,6 +287,43 @@ export default function ManagerSettingsPage() {
                   </span>
                 ) : (
                   <span className="help">Requests with estimated cost ≤ this value auto-approve.</span>
+                )}
+              </div>
+            </div>
+
+            <div className="card grid gap-3 mt-4">
+              <div className="font-bold">Invoice lead time</div>
+              <div className="subtle">
+                Current: <strong>{invoiceLeadTimeDays} days</strong> before period start
+              </div>
+              <div className="flex gap-2 flex-wrap">
+                <label className="flex gap-2 items-center">
+                  <span className="text-subtle">Generate</span>
+                  <input
+                    type="number"
+                    step="1"
+                    min="1"
+                    max="60"
+                    value={leadTimeDraft}
+                    onChange={(e) => setLeadTimeDraft(e.target.value)}
+                    className="input w-[100px] mb-0"
+                    disabled={loading}
+                  />
+                  <span className="text-subtle">days before billing period</span>
+                </label>
+                <button
+                  className="button-primary"
+                  onClick={saveLeadTime}
+                  disabled={savingLeadTime || loading || !leadTimeValidation.ok}
+                >
+                  {savingLeadTime ? "Saving…" : "Save lead time"}
+                </button>
+                {!leadTimeValidation.ok ? (
+                  <span className="notice notice-err p-1.5 mb-0">
+                    {leadTimeValidation.error}
+                  </span>
+                ) : (
+                  <span className="help">Recurring invoices are generated this many days before the billing period starts.</span>
                 )}
               </div>
             </div>

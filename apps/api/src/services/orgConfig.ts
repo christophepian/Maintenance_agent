@@ -3,6 +3,7 @@ import { OrgMode, PrismaClient } from "@prisma/client";
 export type OrgConfigDTO = {
   autoApproveLimit: number;
   autoLegalRouting: boolean;
+  invoiceLeadTimeDays: number;
   mode: OrgMode;
 };
 
@@ -40,13 +41,13 @@ export async function getOrgConfig(
 
   if (!config || !org) throw new Error("ORG_CONFIG_NOT_FOUND");
 
-  return { autoApproveLimit: config.autoApproveLimit, autoLegalRouting: config.autoLegalRouting, mode: org.mode };
+  return { autoApproveLimit: config.autoApproveLimit, autoLegalRouting: config.autoLegalRouting, invoiceLeadTimeDays: config.invoiceLeadTimeDays, mode: org.mode };
 }
 
 export async function updateOrgConfig(
   prisma: PrismaClient,
   orgId: string,
-  input: { autoApproveLimit?: number; autoLegalRouting?: boolean; mode?: OrgMode }
+  input: { autoApproveLimit?: number; autoLegalRouting?: boolean; invoiceLeadTimeDays?: number; mode?: OrgMode }
 ): Promise<OrgConfigDTO> {
   const [config, org] = await Promise.all([
     prisma.orgConfig.update({
@@ -54,6 +55,7 @@ export async function updateOrgConfig(
       data: {
         autoApproveLimit: input.autoApproveLimit ?? undefined,
         autoLegalRouting: input.autoLegalRouting ?? undefined,
+        invoiceLeadTimeDays: input.invoiceLeadTimeDays ?? undefined,
       },
     }),
     input.mode
@@ -63,5 +65,5 @@ export async function updateOrgConfig(
 
   if (!org) throw new Error("ORG_NOT_FOUND");
 
-  return { autoApproveLimit: config.autoApproveLimit, autoLegalRouting: config.autoLegalRouting, mode: org.mode };
+  return { autoApproveLimit: config.autoApproveLimit, autoLegalRouting: config.autoLegalRouting, invoiceLeadTimeDays: config.invoiceLeadTimeDays, mode: org.mode };
 }

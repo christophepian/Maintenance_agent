@@ -28,6 +28,12 @@ import { registerCompletionRoutes } from "./routes/completion";
 import { registerCoaRoutes } from "./routes/coa";
 import { registerLedgerRoutes } from "./routes/ledger";
 import { registerCaptureSessionRoutes } from "./routes/captureSessions";
+import { registerCashflowPlanRoutes } from "./routes/cashflowPlans";
+import { registerForecastingRoutes } from "./routes/forecasting";
+import { registerBillingScheduleRoutes } from "./routes/billingSchedules";
+import { registerChargeReconciliationRoutes } from "./routes/chargeReconciliations";
+import { registerRentAdjustmentRoutes } from "./routes/rentAdjustments";
+import { registerContractorBillingRoutes } from "./routes/contractorBillingSchedules";
 import { registerEventHandlers } from "./events";
 import {
   processSelectionTimeouts,
@@ -35,6 +41,7 @@ import {
 } from "./services/ownerSelection";
 import { processSchedulingEscalations } from "./workflows/schedulingWorkflow";
 import { flushPendingEmails } from "./services/emailTransport";
+import { processRecurringBilling } from "./services/recurringBillingService";
 
 /* ── F1: Production boot guard ─────────────────────────────── */
 const isProdEnv = process.env.NODE_ENV === "production";
@@ -84,6 +91,12 @@ registerCompletionRoutes(router);
 registerCoaRoutes(router);
 registerLedgerRoutes(router);
 registerCaptureSessionRoutes(router);
+registerCashflowPlanRoutes(router);
+registerForecastingRoutes(router);
+registerBillingScheduleRoutes(router);
+registerChargeReconciliationRoutes(router);
+registerRentAdjustmentRoutes(router);
+registerContractorBillingRoutes(router);
 
 /* ── Dev-only: background job trigger route ─────────────────── */
 router.post("/__dev/rental/run-jobs", async ({ res }) => {
@@ -188,6 +201,15 @@ async function runBackgroundJobs() {
     await flushPendingEmails();
   } catch (e) {
     console.error("[BG-JOBS] Email flush error:", e);
+  }
+
+  try {
+    const invoicesGenerated = await processRecurringBilling(prisma);
+    if (invoicesGenerated > 0) {
+      console.log(`[BG-JOBS] Generated ${invoicesGenerated} recurring invoice(s)`);
+    }
+  } catch (e) {
+    console.error("[BG-JOBS] Recurring billing error:", e);
   }
 }
 

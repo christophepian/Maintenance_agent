@@ -43,6 +43,7 @@ describe("Ledger unit attribution", () => {
       lineItems: [],
       direction: "OUTGOING",
       sourceChannel: "MANUAL",
+      isBackfilled: false,
       ...overrides,
     };
   }

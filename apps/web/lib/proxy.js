@@ -96,7 +96,8 @@ export async function proxyToBackend(req, res, path, options = {}) {
       // JSON or text response
       const contentType = backendRes.headers.get("content-type") || "";
       if (contentType.includes("application/json")) {
-        const data = await backendRes.json();
+        const text = await backendRes.text();
+        const data = text ? JSON.parse(text) : null;
         res.json(data);
       } else {
         const text = await backendRes.text();
@@ -117,7 +118,7 @@ export async function proxyToBackend(req, res, path, options = {}) {
       });
     } else {
       res.status(500).json({
-        error: { code: "PROXY_ERROR", message: "Failed to connect to backend API", details: error.message },
+        error: { code: "PROXY_ERROR", message: "Failed to proxy request to backend API", details: error.message },
       });
     }
   }

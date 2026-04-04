@@ -140,6 +140,11 @@ export interface InvoiceDTO {
   matchedJobId?: string | null;
   matchedLeaseId?: string | null;
   matchedBuildingId?: string | null;
+  // Recurring billing fields
+  isBackfilled: boolean;
+  billingPeriodStart?: string | null;
+  billingPeriodEnd?: string | null;
+  billingScheduleId?: string | null;
 }
 
   /**
@@ -169,6 +174,11 @@ export interface InvoiceDTO {
     direction: InvoiceDirection;
     sourceChannel: InvoiceSourceChannel;
     ingestionStatus?: IngestionStatus | null;
+    // Recurring billing fields
+    isBackfilled: boolean;
+    billingPeriodStart?: string | null;
+    billingPeriodEnd?: string | null;
+    billingScheduleId?: string | null;
   }
 
 function toCents(amount: number): number {
@@ -746,7 +756,7 @@ function mapInvoiceToDTO(invoice: InvoiceWithFullInclude): InvoiceDTO {
         quantity: item.quantity,
         unitPrice: fromCents(item.unitPrice),
         vatRate: item.vatRate,
-        lineTotal: item.lineTotal, // Already in cents, no conversion needed for internal representation
+        lineTotal: fromCents(item.lineTotal),
       }))
     : [];
 
@@ -805,6 +815,15 @@ function mapInvoiceToDTO(invoice: InvoiceWithFullInclude): InvoiceDTO {
     matchedJobId: (invoice as any).matchedJobId ?? null,
     matchedLeaseId: (invoice as any).matchedLeaseId ?? null,
     matchedBuildingId: (invoice as any).matchedBuildingId ?? null,
+    // Recurring billing fields
+    isBackfilled: (invoice as any).isBackfilled ?? false,
+    billingPeriodStart: (invoice as any).billingPeriodStart
+      ? (invoice as any).billingPeriodStart.toISOString()
+      : null,
+    billingPeriodEnd: (invoice as any).billingPeriodEnd
+      ? (invoice as any).billingPeriodEnd.toISOString()
+      : null,
+    billingScheduleId: (invoice as any).billingScheduleId ?? null,
   };
 }
 
@@ -833,5 +852,14 @@ function mapInvoiceToDTO(invoice: InvoiceWithFullInclude): InvoiceDTO {
       direction: (invoice as any).direction ?? 'OUTGOING',
       sourceChannel: (invoice as any).sourceChannel ?? 'MANUAL',
       ingestionStatus: (invoice as any).ingestionStatus ?? null,
+      // Recurring billing fields
+      isBackfilled: (invoice as any).isBackfilled ?? false,
+      billingPeriodStart: (invoice as any).billingPeriodStart
+        ? (invoice as any).billingPeriodStart.toISOString()
+        : null,
+      billingPeriodEnd: (invoice as any).billingPeriodEnd
+        ? (invoice as any).billingPeriodEnd.toISOString()
+        : null,
+      billingScheduleId: (invoice as any).billingScheduleId ?? null,
     };
   }

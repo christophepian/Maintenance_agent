@@ -7,6 +7,7 @@ import { formatDate as fmtD } from "../../../lib/format";
 import PageHeader from "../../../components/layout/PageHeader";
 import PageContent from "../../../components/layout/PageContent";
 import Panel from "../../../components/layout/Panel";
+import { authHeaders } from "../../../lib/api";
 
 const STATUS_COLORS = {
   DRAFT: "bg-yellow-100 text-yellow-800",
@@ -94,6 +95,25 @@ export default function LeaseEditorPage() {
   const [invoiceAmount, setInvoiceAmount] = useState("");
   const [invoiceDesc, setInvoiceDesc] = useState("");
 
+  // Billing schedule state
+  const [billingSchedule, setBillingSchedule] = useState(null);
+  const [billingScheduleLoading, setBillingScheduleLoading] = useState(false);
+  const [billingAction, setBillingAction] = useState(null);
+
+  // Charge reconciliation state
+  const [reconciliations, setReconciliations] = useState([]);
+  const [reconLoading, setReconLoading] = useState(false);
+  const [showCreateRecon, setShowCreateRecon] = useState(false);
+  const [reconYear, setReconYear] = useState(new Date().getFullYear() - 1);
+  const [reconCreating, setReconCreating] = useState(false);
+
+  // Rent adjustment state
+  const [rentAdjustments, setRentAdjustments] = useState([]);
+  const [showComputeAdj, setShowComputeAdj] = useState(false);
+  const [adjCpiNew, setAdjCpiNew] = useState("");
+  const [adjEffective, setAdjEffective] = useState("");
+  const [adjComputing, setAdjComputing] = useState(false);
+
   const isDraft = lease?.status === "DRAFT";
   const isReadyToSign = lease?.status === "READY_TO_SIGN";
   const isSigned = lease?.status === "SIGNED";
@@ -141,6 +161,109 @@ export default function LeaseEditorPage() {
     } catch { /* ignore */ }
   }, [id]);
   useEffect(() => { fetchInvoices(); }, [fetchInvoices]);
+
+  // Billing schedule fetch
+  const fetchBillingSchedule = useCallback(async () => {
+    if (!id) return;
+    setBillingScheduleLoading(true);
+    try {
+      const res = await fetch(`/api/billing-schedules?leaseId=${id}`);
+      const json = await res.json();
+      const schedules = json.data || [];
+      // Show the most relevant schedule (ACTIVE > PAUSED > most recent COMPLETED)
+      const active = schedules.find(s => s.status === "ACTIVE");
+      const paused = schedules.find(s => s.status === "PAUSED");
+      setBillingSchedule(active || paused || schedules[0] || null);
+    } catch { /* ignore */ }
+    finally { setBillingScheduleLoading(false); }
+  }, [id]);
+  useEffect(() => { fetchBillingSchedule(); }, [fetchBillingSchedule]);
+
+  // Charge reconciliation fetch
+  const fetchReconciliations = useCallback(async () => {
+    if (!id) return;
+    setReconLoading(true);
+    try {
+      const res = await fetch(`/api/charge-reconciliations?leaseId=${id}`, { headers: authHeaders() });
+      const json = await res.json();
+      setReconciliations(json.data || []);
+    } catch { /* ignore */ }
+    finally { setReconLoading(false); }
+  }, [id]);
+  useEffect(() => { fetchReconciliations(); }, [fetchReconciliations]);
+
+  async function handleCreateRecon() {
+    setReconCreating(true);
+    try {
+      const res = await fetch("/api/charge-reconciliations", {
+        method: "POST",
+        headers: { ...authHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({ leaseId: id, fiscalYear: reconYear }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error?.message || "Failed to create");
+      setShowCreateRecon(false);
+      router.push(`/manager/charge-reconciliations/${json.id}`);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setReconCreating(false);
+    }
+  }
+
+  // Rent adjustment fetch
+  const fetchRentAdjustments = useCallback(async () => {
+    if (!id) return;
+    try {
+      const res = await fetch(`/api/rent-adjustments?leaseId=${id}`, { headers: authHeaders() });
+      const json = await res.json();
+      setRentAdjustments(json.data || []);
+    } catch { /* ignore */ }
+  }, [id]);
+  useEffect(() => { fetchRentAdjustments(); }, [fetchRentAdjustments]);
+
+  async function handleComputeIndexation() {
+    setAdjComputing(true);
+    try {
+      const res = await fetch("/api/rent-adjustments/compute", {
+        method: "POST",
+        headers: { ...authHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({
+          leaseId: id,
+          cpiNewIndex: parseFloat(adjCpiNew),
+          effectiveDate: adjEffective,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error?.message || "Failed to compute");
+      setShowComputeAdj(false);
+      router.push(`/manager/rent-adjustments/${json.data?.id || json.id}`);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setAdjComputing(false);
+    }
+  }
+
+  async function handleBillingAction(action) {
+    if (!billingSchedule) return;
+    setBillingAction(action);
+    try {
+      const res = await fetch(`/api/billing-schedules/${billingSchedule.id}/${action}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      if (!res.ok) {
+        const json = await res.json();
+        throw new Error(json.error?.message || `Failed to ${action}`);
+      }
+      await fetchBillingSchedule();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBillingAction(null);
+    }
+  }
 
   function updateField(field, value) {
     setLease(prev => ({ ...prev, [field]: value }));
@@ -748,6 +871,252 @@ export default function LeaseEditorPage() {
             </Panel>
           )}
 
+          {/* Billing Schedule */}
+          {(billingSchedule || (isActive && !billingScheduleLoading)) && (
+            <Panel title="🔄 Recurring Billing">
+              {billingScheduleLoading ? (
+                <p className="text-sm text-slate-500">Loading…</p>
+              ) : !billingSchedule ? (
+                <p className="text-sm text-slate-500">No recurring billing schedule for this lease.</p>
+              ) : (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
+                        billingSchedule.status === "ACTIVE" ? "bg-emerald-100 text-emerald-800" :
+                        billingSchedule.status === "PAUSED" ? "bg-yellow-100 text-yellow-800" :
+                        "bg-slate-100 text-slate-700"
+                      }`}>{billingSchedule.status}</span>
+                      <span className="text-sm text-slate-600">Anchor day: {billingSchedule.anchorDay}</span>
+                    </div>
+                    <div className="flex gap-2">
+                      {billingSchedule.status === "ACTIVE" && (
+                        <button onClick={() => handleBillingAction("pause")} disabled={!!billingAction}
+                          className="px-3 py-1 text-xs font-medium rounded border border-yellow-300 text-yellow-700 hover:bg-yellow-50 disabled:opacity-50">
+                          {billingAction === "pause" ? "…" : "Pause"}
+                        </button>
+                      )}
+                      {billingSchedule.status === "PAUSED" && (
+                        <button onClick={() => handleBillingAction("resume")} disabled={!!billingAction}
+                          className="px-3 py-1 text-xs font-medium rounded border border-emerald-300 text-emerald-700 hover:bg-emerald-50 disabled:opacity-50">
+                          {billingAction === "resume" ? "…" : "Resume"}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+                    <div>
+                      <p className="text-xs text-slate-500">Base rent</p>
+                      <p className="font-medium">CHF {(billingSchedule.baseRentCents / 100).toFixed(2)}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-500">Charges</p>
+                      <p className="font-medium">CHF {(billingSchedule.totalChargesCents / 100).toFixed(2)}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-500">Next period</p>
+                      <p className="font-medium">{billingSchedule.nextPeriodStart ? new Date(billingSchedule.nextPeriodStart).toLocaleDateString("de-CH") : "—"}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-500">Last generated</p>
+                      <p className="font-medium">{billingSchedule.lastGeneratedPeriod ? new Date(billingSchedule.lastGeneratedPeriod).toLocaleDateString("de-CH") : "—"}</p>
+                    </div>
+                  </div>
+                  {billingSchedule.completedAt && (
+                    <p className="text-xs text-slate-500">
+                      Completed: {fmtD(billingSchedule.completedAt)}
+                      {billingSchedule.completionReason ? ` (${billingSchedule.completionReason})` : ""}
+                    </p>
+                  )}
+                </div>
+              )}
+            </Panel>
+          )}
+
+          {/* Charge Reconciliations */}
+          {(lease.status === "ACTIVE" || lease.status === "TERMINATED" || reconciliations.length > 0) && (
+            <Panel title="📊 Charge Reconciliations">
+              {reconLoading ? (
+                <p className="text-sm text-slate-500">Loading…</p>
+              ) : (
+                <div>
+                  {reconciliations.length > 0 && (
+                    <div className="overflow-x-auto mb-4">
+                      <table className="w-full text-sm">
+                        <thead className="text-left text-xs text-muted-foreground uppercase border-b">
+                          <tr>
+                            <th className="py-2 pr-4">Year</th>
+                            <th className="py-2 pr-4">Status</th>
+                            <th className="py-2 pr-4 text-right">ACOMPTE</th>
+                            <th className="py-2 pr-4 text-right">Actual</th>
+                            <th className="py-2 pr-4 text-right">Balance</th>
+                            <th className="py-2 text-right">Action</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {reconciliations.map((r) => (
+                            <tr key={r.id} className="border-b last:border-0">
+                              <td className="py-2 pr-4 font-medium">{r.fiscalYear}</td>
+                              <td className="py-2 pr-4">
+                                <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${
+                                  r.status === "DRAFT" ? "bg-blue-100 text-blue-800" :
+                                  r.status === "FINALIZED" ? "bg-amber-100 text-amber-800" :
+                                  "bg-emerald-100 text-emerald-800"
+                                }`}>{r.status}</span>
+                              </td>
+                              <td className="py-2 pr-4 text-right tabular-nums">{(r.totalAcomptePaidCents / 100).toFixed(2)}</td>
+                              <td className="py-2 pr-4 text-right tabular-nums">{(r.totalActualCostsCents / 100).toFixed(2)}</td>
+                              <td className={`py-2 pr-4 text-right tabular-nums ${
+                                r.balanceCents > 0 ? "text-red-600" : r.balanceCents < 0 ? "text-emerald-600" : ""
+                              }`}>{r.balanceCents > 0 ? "+" : ""}{(r.balanceCents / 100).toFixed(2)}</td>
+                              <td className="py-2 text-right">
+                                <a href={`/manager/charge-reconciliations/${r.id}`}
+                                  className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700">
+                                  {r.status === "DRAFT" ? "Edit" : "View"}
+                                </a>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                  {reconciliations.length === 0 && !showCreateRecon && (
+                    <p className="text-sm text-slate-500 mb-3">No charge reconciliations for this lease yet.</p>
+                  )}
+                  {showCreateRecon ? (
+                    <div className="flex items-center gap-3">
+                      <label className="text-sm font-medium">Fiscal year:</label>
+                      <input
+                        type="number"
+                        className="w-24 border rounded px-2 py-1 text-sm"
+                        value={reconYear}
+                        onChange={(e) => setReconYear(parseInt(e.target.value, 10) || new Date().getFullYear() - 1)}
+                      />
+                      <button
+                        onClick={handleCreateRecon}
+                        disabled={reconCreating}
+                        className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+                      >{reconCreating ? "Creating…" : "Create"}</button>
+                      <button
+                        onClick={() => setShowCreateRecon(false)}
+                        className="px-3 py-1 text-sm border rounded hover:bg-gray-50"
+                      >Cancel</button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setShowCreateRecon(true)}
+                      className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
+                    >+ New Reconciliation</button>
+                  )}
+                </div>
+              )}
+            </Panel>
+          )}
+
+          {/* Rent Adjustments */}
+          {(lease.status === "ACTIVE" || rentAdjustments.length > 0) && (
+            <Panel title="📈 Rent Adjustments">
+              <div className="space-y-3">
+                {rentAdjustments.length > 0 && (
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200 text-sm">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-3 py-2 text-left font-medium text-gray-500">Type</th>
+                          <th className="px-3 py-2 text-left font-medium text-gray-500">Effective</th>
+                          <th className="px-3 py-2 text-left font-medium text-gray-500">Status</th>
+                          <th className="px-3 py-2 text-right font-medium text-gray-500">Old</th>
+                          <th className="px-3 py-2 text-right font-medium text-gray-500">New</th>
+                          <th className="px-3 py-2 text-right font-medium text-gray-500">Change</th>
+                          <th className="px-3 py-2 text-left font-medium text-gray-500"></th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {rentAdjustments.map((a) => {
+                          const fmtC = (c) => (c / 100).toLocaleString("de-CH", { style: "currency", currency: "CHF" });
+                          return (
+                            <tr key={a.id} className="hover:bg-gray-50">
+                              <td className="px-3 py-2">{a.adjustmentType === "CPI_INDEXATION" ? "CPI" : a.adjustmentType === "MANUAL" ? "Manual" : a.adjustmentType}</td>
+                              <td className="px-3 py-2">{new Date(a.effectiveDate).toLocaleDateString("de-CH")}</td>
+                              <td className="px-3 py-2">
+                                <span className={`px-2 py-0.5 rounded text-xs font-semibold ${a.status === "DRAFT" ? "bg-yellow-100 text-yellow-800" : a.status === "APPROVED" ? "bg-blue-100 text-blue-800" : a.status === "APPLIED" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
+                                  {a.status}
+                                </span>
+                              </td>
+                              <td className="px-3 py-2 text-right">{fmtC(a.previousRentCents)}</td>
+                              <td className="px-3 py-2 text-right font-semibold">{fmtC(a.newRentCents)}</td>
+                              <td className={`px-3 py-2 text-right ${a.adjustmentCents > 0 ? "text-red-600" : a.adjustmentCents < 0 ? "text-green-600" : ""}`}>
+                                {a.adjustmentCents > 0 ? "+" : ""}{fmtC(a.adjustmentCents)}
+                              </td>
+                              <td className="px-3 py-2">
+                                <a href={`/manager/rent-adjustments/${a.id}`} className="text-indigo-600 hover:underline text-sm">
+                                  {a.status === "DRAFT" ? "Edit" : "View"}
+                                </a>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+
+                {rentAdjustments.length === 0 && !showComputeAdj && (
+                  <p className="text-sm text-slate-500 mb-3">No rent adjustments for this lease yet.</p>
+                )}
+
+                {/* Compute CPI Indexation form */}
+                {lease.indexClauseType && lease.indexClauseType !== "NONE" ? (
+                  showComputeAdj ? (
+                    <div className="flex gap-2 items-end flex-wrap">
+                      <div>
+                        <label className="text-xs text-gray-500 block">Current CPI</label>
+                        <input
+                          type="number"
+                          step="0.1"
+                          value={adjCpiNew}
+                          onChange={(e) => setAdjCpiNew(e.target.value)}
+                          className="w-28 border rounded px-2 py-1 text-sm"
+                          placeholder="e.g. 108.5"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-500 block">Effective Date</label>
+                        <input
+                          type="date"
+                          value={adjEffective}
+                          onChange={(e) => setAdjEffective(e.target.value)}
+                          className="border rounded px-2 py-1 text-sm"
+                        />
+                      </div>
+                      <button
+                        onClick={handleComputeIndexation}
+                        disabled={adjComputing || !adjCpiNew || !adjEffective}
+                        className="px-3 py-1 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:opacity-50"
+                      >
+                        {adjComputing ? "Computing…" : "Compute Indexation"}
+                      </button>
+                      <button
+                        onClick={() => setShowComputeAdj(false)}
+                        className="px-3 py-1 text-sm bg-gray-200 text-gray-600 rounded"
+                      >Cancel</button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setShowComputeAdj(true)}
+                      className="px-3 py-1 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700"
+                    >+ Compute CPI Indexation</button>
+                  )
+                ) : (
+                  <p className="text-xs text-slate-400">
+                    Index clause: NONE — set the lease index clause type and CPI base to enable automatic indexation.
+                  </p>
+                )}
+              </div>
+            </Panel>
+          )}
+
           {/* Invoices */}
           {(invoices.length > 0 || lease.status !== "DRAFT") && (
             <Panel title={`💰 Invoices (${invoices.length})`} bodyClassName={invoices.length > 0 ? "p-0" : undefined}>
@@ -767,7 +1136,7 @@ export default function LeaseEditorPage() {
                       {invoices.map(inv => (
                         <tr key={inv.id}>
                           <td>
-                            <Link href="/manager/finance/invoices" className="text-indigo-600 hover:underline">
+                            <Link href={`/manager/finance/invoices/${inv.id}`} className="text-indigo-600 hover:underline">
                               {inv.description || "—"}
                             </Link>
                           </td>
