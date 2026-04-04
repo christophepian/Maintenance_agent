@@ -280,6 +280,7 @@ export function registerRequestRoutes(router: Router) {
       });
       sendJson(res, 200, { data: result.dto, message: result.message });
     } catch (e: any) {
+      if (e instanceof InvalidTransitionError) return sendError(res, 409, "INVALID_TRANSITION", e.message);
       if (e.code === "NOT_FOUND") return sendError(res, 404, "NOT_FOUND", e.message);
       throw e;
     }

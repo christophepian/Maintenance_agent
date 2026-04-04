@@ -19,7 +19,6 @@ const DOC_TYPES = [
   { value: "DEBT_ENFORCEMENT_EXTRACT", label: "Debt enforcement extract", required: true, icon: "📋", hint: "We'll check if you have any outstanding debts" },
   { value: "PERMIT", label: "Residence permit (if non-CH)", required: false, icon: "🛂", hint: "We'll extract your permit type and validity" },
   { value: "HOUSEHOLD_INSURANCE", label: "Household insurance (RC)", required: false, icon: "🛡️", hint: "We'll extract your insurance company" },
-  { value: "STUDENT_PROOF", label: "Student proof (if applicable)", required: false, icon: "🎓", hint: "" },
   { value: "PARKING_DOCS", label: "Parking / vehicle registration", required: false, icon: "🚗", hint: "" },
 ];
 

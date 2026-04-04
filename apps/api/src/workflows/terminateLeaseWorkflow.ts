@@ -55,6 +55,14 @@ export async function terminateLeaseWorkflow(
     terminationNotice: notice || null,
   });
 
+  // ── 3b. Relist the unit so it re-enters the vacancy pipeline ──
+  if (existing.unitId) {
+    await prisma.unit.update({
+      where: { id: existing.unitId },
+      data: { isVacant: true },
+    });
+  }
+
   const dto = mapLeaseToDTO(updated);
 
   // ── 4. Emit event ──────────────────────────────────────────

@@ -76,10 +76,10 @@ export async function computeMonthlyCashflow(
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth() + 1; // 1-based
 
-  // Window: 12 historical months + horizonMonths forward
-  const HISTORICAL_MONTHS = 12;
-  const windowStart = addMonths(now, -HISTORICAL_MONTHS);
-  windowStart.setDate(1);
+  // Window: from Jan of prior year (calendar-aligned) + forward to end of horizon
+  const windowStart = new Date(currentYear - 1, 0, 1); // Jan 1 of prior year
+  const HISTORICAL_MONTHS = (currentYear - (currentYear - 1)) * 12 + (currentMonth - 1);
+  // e.g. if currentMonth=4 (April 2026): 12 + 3 = 15 months (Jan 2025 → Mar 2026)
 
   // ── 1. Fetch historical snapshots ─────────────────────────────
   const buildingIds = plan.buildingId
@@ -275,7 +275,10 @@ export async function computeMonthlyCashflow(
   }
 
   // ── 5. Build monthly buckets ───────────────────────────────────
-  const totalMonths = HISTORICAL_MONTHS + plan.horizonMonths;
+  // Forward horizon snapped to end-of-year (December)
+  const horizonEndYear = currentYear + Math.ceil(plan.horizonMonths / 12);
+  const forwardMonths = (horizonEndYear - currentYear) * 12 + (12 - currentMonth + 1);
+  const totalMonths = HISTORICAL_MONTHS + forwardMonths;
   const buckets: MonthlyBucket[] = [];
   let cumulativeBalance = Number(plan.openingBalanceCents ?? 0);
   const hasOpeningBalance = plan.openingBalanceCents !== null;

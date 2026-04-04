@@ -610,6 +610,15 @@ export async function cancelLease(id: string, orgId: string): Promise<LeaseDTO> 
   }
 
   const updated = await leaseRepo.updateLease(prisma, id, { status: LeaseStatus.CANCELLED });
+
+  // Relist the unit so it re-enters the vacancy pipeline
+  if (existing.unitId) {
+    await prisma.unit.update({
+      where: { id: existing.unitId },
+      data: { isVacant: true },
+    });
+  }
+
   return mapLeaseToDTO(updated);
 }
 

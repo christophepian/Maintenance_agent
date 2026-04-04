@@ -34,6 +34,7 @@ const VALID_REQUEST_TRANSITIONS: Record<string, RequestStatus[]> = {
     RequestStatus.IN_PROGRESS,
   ],
   [RequestStatus.ASSIGNED]: [
+    RequestStatus.APPROVED,                  // contractor unassigned → back to assignable
     RequestStatus.IN_PROGRESS,
     RequestStatus.COMPLETED,
   ],

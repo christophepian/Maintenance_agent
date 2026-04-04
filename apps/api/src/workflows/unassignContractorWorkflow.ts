@@ -7,11 +7,13 @@
  *   2. Canonical reload + DTO return
  */
 
+import { RequestStatus } from "@prisma/client";
 import { WorkflowContext } from "./context";
 import { emit } from "../events/bus";
 import { findRequestById } from "../repositories/requestRepository";
 import { unassignContractor } from "../services/requestAssignment";
 import { toDTO, type MaintenanceRequestDTO } from "../services/maintenanceRequests";
+import { assertRequestTransition } from "./transitions";
 
 // ─── Input / Output ────────────────────────────────────────────
 
@@ -32,6 +34,17 @@ export async function unassignContractorWorkflow(
 ): Promise<UnassignContractorResult> {
   const { prisma } = ctx;
   const { requestId } = input;
+
+  // ── 0. Validate transition ─────────────────────────────────
+  const current = await prisma.request.findUnique({
+    where: { id: requestId },
+    select: { status: true },
+  });
+  if (!current) throw Object.assign(new Error("Request not found"), { code: "NOT_FOUND" });
+  // Idempotent: if already APPROVED, skip transition check — just clear stale contractor
+  if (current.status !== RequestStatus.APPROVED) {
+    assertRequestTransition(current.status as RequestStatus, RequestStatus.APPROVED);
+  }
 
   // ── 1. Unassign ────────────────────────────────────────────
   const result = await unassignContractor(prisma, requestId);

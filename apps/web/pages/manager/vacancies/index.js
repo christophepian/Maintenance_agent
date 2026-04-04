@@ -42,7 +42,8 @@ function ActionDropdown({ actions }) {
               <button
                 key={i}
                 type="button"
-                onClick={() => { setOpen(false); a.onClick(); }}
+                onClick={() => { if (!a.onClick) return; setOpen(false); a.onClick(); }}
+                title={a.title}
                 className={"w-full text-left px-4 py-2 text-sm hover:bg-slate-50 transition " + (a.className || "text-slate-700")}
               >
                 {a.label}
@@ -59,7 +60,7 @@ function selectionStatusBadge(status) {
     AWAITING_SIGNATURE: { label: "Awaiting Signature", cls: "bg-amber-100 text-amber-700" },
     FALLBACK_1: { label: "Fallback 1 Active", cls: "bg-orange-100 text-orange-700" },
     FALLBACK_2: { label: "Fallback 2 Active", cls: "bg-red-100 text-red-700" },
-    EXHAUSTED: { label: "Exhausted", cls: "bg-slate-100 text-slate-600" },
+    EXHAUSTED: { label: "No Remaining Candidates", cls: "bg-slate-100 text-slate-600" },
   };
   const info = map[status] || { label: status, cls: "bg-slate-100 text-slate-600" };
   return (
@@ -321,8 +322,9 @@ export default function ManagerVacanciesPage() {
                             <ActionDropdown actions={[
                               {
                                 label: u.applicationCount > 0 ? "📋 View Applications" : "📋 View Applications (none yet)",
-                                onClick: () => router.push("/manager/vacancies/" + u.id + "/applications"),
+                                onClick: u.applicationCount > 0 ? () => router.push("/manager/vacancies/" + u.id + "/applications") : undefined,
                                 className: u.applicationCount === 0 ? "opacity-50 cursor-not-allowed text-slate-400" : "text-slate-700",
+                                title: u.applicationCount === 0 ? "No applications yet" : undefined,
                               },
                               ...(u.building?.id ? [
                                 { label: "🏢 View Building", onClick: () => router.push("/admin-inventory/buildings/" + u.building.id) },

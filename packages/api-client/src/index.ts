@@ -85,7 +85,6 @@ export type RentalDocType =
   | "PERMIT"
   | "DEBT_ENFORCEMENT_EXTRACT"
   | "HOUSEHOLD_INSURANCE"
-  | "STUDENT_PROOF"
   | "PARKING_DOCS";
 
 export type RentalApplicationUnitStatus =

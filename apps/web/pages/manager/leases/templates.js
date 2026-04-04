@@ -539,7 +539,7 @@ export default function LeaseTemplatesPage() {
                   </thead>
                   <tbody>
                     {sortedTemplates.map((t) => (
-                      <tr key={t.id}>
+                      <tr key={t.id} onClick={() => router.push(`/manager/leases/${t.id}`)} className="cursor-pointer hover:bg-slate-50">
                         <td className="cell-bold">
                           {t.templateName || "Unnamed template"}
                         </td>
@@ -552,7 +552,7 @@ export default function LeaseTemplatesPage() {
                         <td>
                           {formatDate(t.createdAt)}
                         </td>
-                        <td className="text-right">
+                        <td className="text-right" onClick={(e) => e.stopPropagation()}>
                           <ActionDropdown actions={[
                             { label: "📄 View Template", onClick: () => router.push(`/manager/leases/${t.id}`) },
                             { label: "🗑️ Delete", onClick: () => handleDeleteTemplate(t.id, t.templateName), className: "text-red-600" },

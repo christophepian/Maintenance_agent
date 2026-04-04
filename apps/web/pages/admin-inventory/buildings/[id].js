@@ -93,7 +93,6 @@ export default function BuildingDetail() {
   const [unitFilter, setUnitFilter] = useState("ALL");
 
   // ─── Ownership editing state ───
-  const [editingOwnership, setEditingOwnership] = useState(false);
   const [ownerCandidates, setOwnerCandidates] = useState([]);
   const [selectedCandidateId, setSelectedCandidateId] = useState("");
   const [ownerLoading, setOwnerLoading] = useState(false);
@@ -271,11 +270,6 @@ export default function BuildingDetail() {
     } finally {
       setOwnerLoading(false);
     }
-  }
-
-  function startEditingOwnership() {
-    setEditingOwnership(true);
-    loadOwnerCandidates();
   }
 
   useEffect(() => {
@@ -511,7 +505,7 @@ export default function BuildingDetail() {
                 <button
                   type="button"
                   className="button-primary"
-                  onClick={() => setEditMode(true)}
+                  onClick={() => { setEditMode(true); loadOwnerCandidates(); }}
                   disabled={loading}
                 >
                   Edit
@@ -676,30 +670,13 @@ export default function BuildingDetail() {
                   <div className="mt-6 pt-4 border-t border-slate-200">
                     <div className="flex items-center justify-between mb-3">
                       <h3 className="text-sm font-semibold text-slate-900">Ownership & Management</h3>
-                      {!editingOwnership ? (
-                        <button
-                          type="button"
-                          className="text-xs text-blue-600 hover:text-blue-800 font-medium"
-                          onClick={startEditingOwnership}
-                        >
-                          Edit
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          className="text-xs text-slate-500 hover:text-slate-700 font-medium"
-                          onClick={() => setEditingOwnership(false)}
-                        >
-                          Done
-                        </button>
-                      )}
                     </div>
 
                     {/* Managed Since — inline date input when editing */}
                     <div className="grid gap-4 sm:grid-cols-2 mb-3">
                       <div>
                         <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Managed Since</div>
-                        {editingOwnership ? (
+                        {editMode ? (
                           <div className="flex items-center gap-2 mt-1">
                             <input
                               type="date"
@@ -751,7 +728,7 @@ export default function BuildingDetail() {
                                 <div className="font-semibold text-sm text-slate-900">{owner.name}</div>
                                 {owner.email && <div className="text-xs text-slate-500 mt-0.5">{owner.email}</div>}
                               </div>
-                              {editingOwnership && (
+                              {editMode && (
                                 <button
                                   type="button"
                                   className="text-xs text-red-500 hover:text-red-700 font-medium ml-2"
@@ -770,7 +747,7 @@ export default function BuildingDetail() {
                     )}
 
                     {/* Add owner picker (visible when editing) */}
-                    {editingOwnership && (
+                    {editMode && (
                       <div className="mt-3 flex items-end gap-2">
                         <div className="flex-1">
                           <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">Add Owner</div>

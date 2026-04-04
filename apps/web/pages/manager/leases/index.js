@@ -403,7 +403,7 @@ export default function LeasesPage() {
                     </thead>
                     <tbody>
                       {templates.map((t) => (
-                        <tr key={t.id}>
+                        <tr key={t.id} onClick={() => router.push(`/manager/leases/${t.id}`)} className="cursor-pointer hover:bg-slate-50">
                           <td className="cell-bold">{t.templateName || "Unnamed"}</td>
                           <td>{t.unit?.building?.name || t.unit?.building?.address || "—"}</td>
                           <td>{formatDate(t.createdAt)}</td>
