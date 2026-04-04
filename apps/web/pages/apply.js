@@ -451,15 +451,21 @@ export default function ApplyPage() {
     }
   }
 
+  // When deep-linked via ?unitId=, only show that unit (hide others)
+  const linkedUnitId = router.query.unitId || null;
+
   const unitsByBuilding = useMemo(() => {
+    const source = linkedUnitId
+      ? vacantUnits.filter((u) => u.id === linkedUnitId)
+      : vacantUnits;
     const map = new Map();
-    vacantUnits.forEach((u) => {
+    source.forEach((u) => {
       const bName = u.building?.name || "Unknown building";
       if (!map.has(bName)) map.set(bName, []);
       map.get(bName).push(u);
     });
     return map;
-  }, [vacantUnits]);
+  }, [vacantUnits, linkedUnitId]);
 
   // Count extracted fields across all scans
   const extractedFieldCount = useMemo(() => {
@@ -534,7 +540,7 @@ export default function ApplyPage() {
                         {units.map((u) => (
                           <label
                             key={u.id}
-                            className="flex cursor-pointer items-center gap-3 px-4 py-3 hover:bg-slate-50"
+                            className={`flex cursor-pointer items-center gap-3 px-4 py-3 transition-colors ${selectedUnitIds.includes(u.id) ? "bg-indigo-50 ring-1 ring-inset ring-indigo-200" : "hover:bg-slate-50"}`}
                           >
                             <input
                               type="checkbox"

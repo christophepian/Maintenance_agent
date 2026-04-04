@@ -438,7 +438,7 @@ Maintenance_Agent/
 
 > **Full schema reference:** See [SCHEMA_REFERENCE.md](SCHEMA_REFERENCE.md) for the complete models table (64 models), enums (55), schema gotchas, and Request.orgId migration path.
 >
-> **Status:** 69 migrations. 64 models · 55 enums. Last verified: 2026-04-03 (recurring invoices epic).
+> **Status:** 70 migrations. 64 models · 55 enums. Last verified: 2026-04-03 (recurring invoices epic).
 >
 > **Quick gotchas (always check SCHEMA_REFERENCE.md for full list):**
 > - `Request` has NO `orgId` — scope inherited via unit/building FK chain

@@ -445,14 +445,14 @@ export default function LeasesPage() {
                         const expired = isExpired(lease.sentForSignatureAt);
                         const result = expiryResult[lease.id];
                         return (
-                          <tr key={lease.id} className={expired ? "bg-red-50" : undefined}>
+                          <tr key={lease.id} onClick={() => router.push(`/manager/leases/${lease.id}`)} className={`cursor-pointer hover:bg-slate-50 ${expired ? "bg-red-50" : ""}`}>
                             <td className="cell-bold">{lease.tenantName}</td>
                             <td>{lease.unit?.unitNumber || "—"}</td>
                             <td>{lease.unit?.building?.name || "—"}</td>
                             <td>CHF {lease.rentTotalChf ?? lease.netRentChf}.-</td>
                             <td>{lease.sentForSignatureAt ? formatDate(lease.sentForSignatureAt) : "—"}</td>
                             <td><CountdownBadge sentForSignatureAt={lease.sentForSignatureAt} /></td>
-                            <td>
+                            <td onClick={(e) => e.stopPropagation()}>
                               <div className="flex items-center gap-2 flex-wrap">
                                 <button
                                   onClick={() => router.push(`/manager/leases/${lease.id}`)}
@@ -524,7 +524,7 @@ export default function LeasesPage() {
                             const charges = lease.chargesTotalChf ?? 0;
                             const totalMo = netRent + charges;
                             return (
-                            <tr key={lease.id}>
+                            <tr key={lease.id} onClick={() => router.push(`/manager/leases/${lease.id}`)} className="cursor-pointer hover:bg-slate-50">
                               <td className="cell-bold">{lease.tenantName}</td>
                               <td>{lease.unit?.unitNumber || "—"}</td>
                               <td>{lease.unit?.building?.name || "—"}</td>
@@ -547,7 +547,7 @@ export default function LeasesPage() {
                                   ) : null}
                                 </td>
                               )}
-                              <td>
+                              <td onClick={(e) => e.stopPropagation()}>
                                 <button
                                   onClick={() => router.push(`/manager/leases/${lease.id}`)}
                                   className="text-blue-600 hover:text-blue-800 text-sm font-medium"

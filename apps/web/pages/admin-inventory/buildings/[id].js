@@ -665,9 +665,11 @@ export default function BuildingDetail() {
                       </div>
                     </div>
                   </div>
+                </>
+              )}
 
-                  {/* Ownership & Management */}
-                  <div className="mt-6 pt-4 border-t border-slate-200">
+              {/* Ownership & Management — always visible regardless of edit mode */}
+              <div className="mt-6 pt-4 border-t border-slate-200">
                     <div className="flex items-center justify-between mb-3">
                       <h3 className="text-sm font-semibold text-slate-900">Ownership & Management</h3>
                     </div>
@@ -777,8 +779,6 @@ export default function BuildingDetail() {
                       </div>
                     )}
                   </div>
-                </>
-              )}
             </Panel>
           )}
 
