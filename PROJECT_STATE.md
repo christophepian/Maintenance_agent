@@ -407,7 +407,7 @@ Maintenance_Agent/
 │   │       ├── routes/       # Thin HTTP handlers (25 route modules)
 │   │       ├── workflows/    # Orchestration layer (26 workflows + transitions)
 │   │       ├── services/     # Domain logic
-│   │       ├── repositories/ # Canonical Prisma access (24 repos)
+│   │       ├── repositories/ # Canonical Prisma access (23 repos)
 │   │       ├── events/       # Domain event bus
 │   │       ├── governance/   # Org scope resolvers
 │   │       ├── validation/   # Zod schemas
@@ -454,7 +454,7 @@ Maintenance_Agent/
 > Architecture, backend layers, frontend layout, and styling rules → [PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md).
 > Route module index, domain file maps, repository index → [ARCHITECTURE_LOW_CONTEXT_GUIDE.md](apps/api/src/ARCHITECTURE_LOW_CONTEXT_GUIDE.md).
 
-* **Backend:** 25 route modules · 26 workflows · 24 repositories · 289 operations (224 URL paths) · `apps/api/openapi.yaml`
+* **Backend:** 25 route modules · 26 workflows · 23 repositories · 289 operations (224 URL paths) · `apps/api/openapi.yaml`
 * **Frontend:** 275 pages (92 UI + 182 API proxies + `_app.js`) · 182/182 proxies conforming (`proxyToBackend()`)
 * **Styling:** Tailwind + `@layer components` in `globals.css` · CSS variables in `:root` · `managerStyles.js` deleted (F8)
 * **Infra:** PostgreSQL via Docker (`infra/docker-compose.yml`) · Dev DB `maint_agent` · Test DB `maint_agent_test` · CI: 6-gate pipeline (G1–G15)
