@@ -42,7 +42,7 @@ export default function OwnerPropertiesPage() {
           }
         />
         <PageContent>
-          {/* Tab bar — same pattern as approvals.js */}
+          {/* Tab bar */}
           <div className="mb-6 flex border-b border-slate-200">
             {[
               { key: "buildings", label: "Buildings" },

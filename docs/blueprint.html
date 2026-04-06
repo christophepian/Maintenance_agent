@@ -112,30 +112,30 @@
   <!-- HEADER -->
   <div class="header">
     <div>
-      <div class="live-badge"><span class="live-dot"></span> LIVE — generated 2026-04-02 08:14:24 UTC</div>
+      <div class="live-badge"><span class="live-dot"></span> LIVE — generated 2026-04-06 18:21:08 UTC</div>
       <div class="doc-label">Architecture Blueprint · Tech Lead Reference</div>
       <div class="doc-title">Maintenance Agent</div>
       <div class="doc-subtitle">Full-stack property maintenance platform — Swiss market</div>
     </div>
     <div class="header-meta">
       <div>Branch <span class="meta-val">main</span></div>
-      <div>Commit <span class="meta-val">8c9a5a1</span></div>
-      <div>Last commit <span class="meta-val">2026-03-31</span></div>
-      <div>Doc verified <span class="meta-val">2026-03-31 (Audit remediation complete — 91/94 findings resolved; all key docs synchronized with current codebase counts)</span></div>
-      <div>Backend <span class="meta-val">57,693 LOC</span></div>
-      <div>Frontend <span class="meta-val">38,566 LOC</span></div>
+      <div>Commit <span class="meta-val">321730f</span></div>
+      <div>Last commit <span class="meta-val">2026-04-06</span></div>
+      <div>Doc verified <span class="meta-val">2026-04-03 (Recurring Invoices epic complete — 6 slices, 5 new models, 6 new enums, 4 new migrations)</span></div>
+      <div>Backend <span class="meta-val">62,924 LOC</span></div>
+      <div>Frontend <span class="meta-val">42,112 LOC</span></div>
     </div>
   </div>
 
   <!-- STAT STRIP -->
   <div class="stat-grid">
-    <div class="stat-cell"><span class="stat-num blue">59</span><span class="stat-label">Models</span></div>
-    <div class="stat-cell"><span class="stat-num cyan">49</span><span class="stat-label">Enums</span></div>
-    <div class="stat-cell"><span class="stat-num green">198</span><span class="stat-label">API Routes</span></div>
-    <div class="stat-cell"><span class="stat-num amber">259</span><span class="stat-label">FE Pages</span></div>
+    <div class="stat-cell"><span class="stat-num blue">64</span><span class="stat-label">Models</span></div>
+    <div class="stat-cell"><span class="stat-num cyan">55</span><span class="stat-label">Enums</span></div>
+    <div class="stat-cell"><span class="stat-num green">225</span><span class="stat-label">API Routes</span></div>
+    <div class="stat-cell"><span class="stat-num amber">276</span><span class="stat-label">FE Pages</span></div>
     <div class="stat-cell"><span class="stat-num purple">25</span><span class="stat-label">Workflows</span></div>
-    <div class="stat-cell"><span class="stat-num ">19</span><span class="stat-label">Repositories</span></div>
-    <div class="stat-cell"><span class="stat-num ">769</span><span class="stat-label">Tests</span></div>
+    <div class="stat-cell"><span class="stat-num ">23</span><span class="stat-label">Repositories</span></div>
+    <div class="stat-cell"><span class="stat-num ">823</span><span class="stat-label">Tests</span></div>
     <div class="stat-cell"><span class="stat-num ">57</span><span class="stat-label">Suites</span></div>
   </div>
 
@@ -162,8 +162,8 @@
         </div>
         <div class="layer-connector">↓ registers all route modules</div>
         <div class="layer">
-          <div class="layer-label">routes (20)</div>
-          <div class="layer-content"><div class="box accent-blue">auth</div><div class="box accent-blue">config</div><div class="box accent-blue">inventory</div><div class="box accent-blue">request</div><div class="box accent-blue">tenant</div><div class="box accent-blue">invoice</div><div class="box accent-blue">contractor</div><div class="box accent-blue">notification</div><div class="box accent-blue">lease</div><div class="box accent-blue">rental</div><div class="box accent-blue">rent estimation</div><div class="box accent-blue">financial</div><div class="box accent-blue">legal</div><div class="box accent-blue">maintenance attachment</div><div class="box accent-blue">scheduling</div><div class="box accent-blue">completion</div><div class="box accent-blue">coa</div><div class="box accent-blue">ledger</div><div class="box accent-blue">capture session</div><div class="box accent-blue">cashflow plan</div></div>
+          <div class="layer-label">routes (25)</div>
+          <div class="layer-content"><div class="box accent-blue">auth</div><div class="box accent-blue">config</div><div class="box accent-blue">inventory</div><div class="box accent-blue">request</div><div class="box accent-blue">tenant</div><div class="box accent-blue">invoice</div><div class="box accent-blue">contractor</div><div class="box accent-blue">notification</div><div class="box accent-blue">lease</div><div class="box accent-blue">rental</div><div class="box accent-blue">rent estimation</div><div class="box accent-blue">financial</div><div class="box accent-blue">legal</div><div class="box accent-blue">maintenance attachment</div><div class="box accent-blue">scheduling</div><div class="box accent-blue">completion</div><div class="box accent-blue">coa</div><div class="box accent-blue">ledger</div><div class="box accent-blue">capture session</div><div class="box accent-blue">cashflow plan</div><div class="box accent-blue">forecasting</div><div class="box accent-blue">billing schedule</div><div class="box accent-blue">charge reconciliation</div><div class="box accent-blue">rent adjustment</div><div class="box accent-blue">contractor billing</div></div>
         </div>
         <div class="layer-connector">↓ thin HTTP handlers only</div>
         <div class="layer">
@@ -177,19 +177,19 @@
         </div>
         <div class="layer-connector">↓ domain logic — no raw Prisma calls</div>
         <div class="layer">
-          <div class="layer-label">repositories (19)</div>
-          <div class="layer-content"><div class="box accent-amber">accountRepository</div><div class="box accent-amber">assetRepository</div><div class="box accent-amber">captureSessionRepository</div><div class="box accent-amber">cashflowPlanRepository</div><div class="box accent-amber">contractorRepository</div><div class="box accent-amber">expenseMappingRepository</div><div class="box accent-amber">expenseTypeRepository</div><div class="box accent-amber">inventoryRepository</div><div class="box accent-amber">invoiceRepository</div><div class="box accent-amber">jobRepository</div><div class="box accent-amber">leaseRepository</div><div class="box accent-amber">legalSourceRepository</div><div class="box accent-amber">maintenanceAttachmentRepo</div><div class="box accent-amber">ratingRepository</div><div class="box accent-amber">rentalApplicationRepository</div><div class="box accent-amber">requestRepository</div><div class="box accent-amber">rfpRepository</div><div class="box accent-amber">schedulingRepository</div><div class="box accent-amber">taxRuleRepository</div></div>
+          <div class="layer-label">repositories (23)</div>
+          <div class="layer-content"><div class="box accent-amber">accountRepository</div><div class="box accent-amber">assetRepository</div><div class="box accent-amber">captureSessionRepository</div><div class="box accent-amber">cashflowPlanRepository</div><div class="box accent-amber">chargeReconciliationRepository</div><div class="box accent-amber">contractorBillingRepository</div><div class="box accent-amber">contractorRepository</div><div class="box accent-amber">expenseMappingRepository</div><div class="box accent-amber">expenseTypeRepository</div><div class="box accent-amber">inventoryRepository</div><div class="box accent-amber">invoiceRepository</div><div class="box accent-amber">jobRepository</div><div class="box accent-amber">leaseRepository</div><div class="box accent-amber">legalSourceRepository</div><div class="box accent-amber">maintenanceAttachmentRepo</div><div class="box accent-amber">ratingRepository</div><div class="box accent-amber">recurringBillingRepository</div><div class="box accent-amber">rentAdjustmentRepository</div><div class="box accent-amber">rentalApplicationRepository</div><div class="box accent-amber">requestRepository</div><div class="box accent-amber">rfpRepository</div><div class="box accent-amber">schedulingRepository</div><div class="box accent-amber">taxRuleRepository</div></div>
         </div>
         <div class="layer-connector">↓ canonical Prisma access + include constants (G9)</div>
         <div class="layer">
           <div class="layer-label">data / events</div>
           <div class="layer-content">
-            <div class="box accent-purple">Prisma ORM + PostgreSQL 16<small>59 models · 49 enums · 64 migrations</small></div>
+            <div class="box accent-purple">Prisma ORM + PostgreSQL 16<small>64 models · 55 enums · 71 migrations</small></div>
             <div class="box accent-purple">Domain Event Bus<small>15 event types</small></div>
           </div>
         </div>
       </div>
-      <div class="success-note">0 TypeScript errors · 769 tests passing · openapi.yaml synced</div>
+      <div class="success-note">0 TypeScript errors · 823 tests passing · openapi.yaml synced</div>
     </div>
 
     <div class="section">
@@ -230,7 +230,7 @@
       <div class="layer-diagram">
         <div class="layer">
           <div class="layer-label">browser</div>
-          <div class="layer-content"><div class="box accent-blue">Next.js Pages Router<small>~259 pages (UI + API proxies) · AppShell role-scoped sidebar</small></div></div>
+          <div class="layer-content"><div class="box accent-blue">Next.js Pages Router<small>~276 pages (UI + API proxies) · AppShell role-scoped sidebar</small></div></div>
         </div>
         <div class="layer-connector">↓ pages/api/* — 103/106 use proxyToBackend()</div>
         <div class="layer">
@@ -270,16 +270,16 @@
   <!-- ══ DATABASE ══ -->
   <div class="tab-pane" id="tab-database">
     <div class="section">
-      <div class="section-header"><span class="section-num">05</span><span class="section-title">Schema Overview — 59 models · 49 enums</span><div class="section-line"></div></div>
+      <div class="section-header"><span class="section-num">05</span><span class="section-title">Schema Overview — 64 models · 55 enums</span><div class="section-line"></div></div>
       <div class="three-col">
         
     <div class="panel">
       <div class="panel-head">
         <div class="panel-head-dot" style="background:var(--accent-blue)"></div>
         <div class="panel-head-title">Core Domain</div>
-        <div class="panel-head-count">14 models</div>
+        <div class="panel-head-count">16 models</div>
       </div>
-      <div class="panel-body"><div class="tag-list"><span class="tag blue">RequestEvent</span><span class="tag blue">Request</span><span class="tag blue">Job</span><span class="tag blue">Invoice</span><span class="tag blue">InvoiceLineItem</span><span class="tag blue">Lease</span><span class="tag blue">LeaseExpenseItem</span><span class="tag blue">SignatureRequest</span><span class="tag blue">RentalApplication</span><span class="tag blue">RentalApplicant</span><span class="tag blue">RentalAttachment</span><span class="tag blue">RentalApplicationUnit</span><span class="tag blue">RentalOwnerSelection</span><span class="tag blue">JobRating</span></div></div>
+      <div class="panel-body"><div class="tag-list"><span class="tag blue">RequestEvent</span><span class="tag blue">Request</span><span class="tag blue">Job</span><span class="tag blue">Invoice</span><span class="tag blue">InvoiceLineItem</span><span class="tag blue">Lease</span><span class="tag blue">LeaseExpenseItem</span><span class="tag blue">SignatureRequest</span><span class="tag blue">RentalApplication</span><span class="tag blue">RentalApplicant</span><span class="tag blue">RentalAttachment</span><span class="tag blue">RentalApplicationUnit</span><span class="tag blue">RentalOwnerSelection</span><span class="tag blue">JobRating</span><span class="tag blue">ChargeReconciliation</span><span class="tag blue">ChargeReconciliationLine</span></div></div>
     </div>
         
     <div class="panel">
@@ -295,9 +295,9 @@
       <div class="panel-head">
         <div class="panel-head-dot" style="background:var(--accent-green)"></div>
         <div class="panel-head-title">People & Org</div>
-        <div class="panel-head-count">7 models</div>
+        <div class="panel-head-count">8 models</div>
       </div>
-      <div class="panel-body"><div class="tag-list"><span class="tag green">Org</span><span class="tag green">OrgConfig</span><span class="tag green">User</span><span class="tag green">Contractor</span><span class="tag green">Tenant</span><span class="tag green">BuildingOwner</span><span class="tag green">RentalOwnerSelection</span></div></div>
+      <div class="panel-body"><div class="tag-list"><span class="tag green">Org</span><span class="tag green">OrgConfig</span><span class="tag green">User</span><span class="tag green">Contractor</span><span class="tag green">Tenant</span><span class="tag green">BuildingOwner</span><span class="tag green">RentalOwnerSelection</span><span class="tag green">ContractorBillingSchedule</span></div></div>
     </div>
         
     <div class="panel">
@@ -432,13 +432,13 @@
       <div class="panel"><div class="panel-body mono">
         <span class="dim">Maintenance_Agent/</span><br>
         &nbsp;&nbsp;<span class="hi-blue">apps/api/src/</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="dim">routes/ · workflows/ · services/ · repositories/ · events/ · governance/</span><br>
-        &nbsp;&nbsp;<span class="hi-blue">apps/api/prisma/</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="dim">schema.prisma · migrations/ (64 dirs)</span><br>
-        &nbsp;&nbsp;<span class="hi-cyan">apps/web/pages/</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="dim">~259 pages (UI + API proxies)</span><br>
+        &nbsp;&nbsp;<span class="hi-blue">apps/api/prisma/</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="dim">schema.prisma · migrations/ (71 dirs)</span><br>
+        &nbsp;&nbsp;<span class="hi-cyan">apps/web/pages/</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="dim">~276 pages (UI + API proxies)</span><br>
         &nbsp;&nbsp;<span class="hi-cyan">apps/web/components/</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="dim">AppShell · layout primitives · shared UI</span><br>
         &nbsp;&nbsp;<span class="hi-cyan">apps/web/styles/</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="dim">managerStyles.js (locked — F8)</span><br>
         &nbsp;&nbsp;<span class="hi-green">packages/api-client/</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="dim">typed DTO types + fetch methods</span><br>
         &nbsp;&nbsp;<span class="hi-amber">infra/docker-compose.yml</span>&nbsp;&nbsp;<span class="dim">PostgreSQL 16</span><br>
-        &nbsp;&nbsp;<span class="dim">.github/workflows/ci.yml&nbsp;&nbsp;&nbsp;6-gate pipeline (G1–G11)</span>
+        &nbsp;&nbsp;<span class="dim">.github/workflows/ci.yml&nbsp;&nbsp;&nbsp;6-gate pipeline (G1–G15)</span>
       </div></div>
     </div>
   </div>
@@ -496,9 +496,9 @@
   <!-- ══ GUARDRAILS ══ -->
   <div class="tab-pane" id="tab-guardrails">
     <div class="section">
-      <div class="section-header"><span class="section-num">13</span><span class="section-title">Architecture Guardrails (G1–G11)</span><div class="section-line"></div></div>
+      <div class="section-header"><span class="section-num">13</span><span class="section-title">Architecture Guardrails (G1–G15)</span><div class="section-line"></div></div>
       <div class="guardrail-grid">
-        <div class="guardrail ok"><div class="guardrail-id">G1 — Schema Changes — Always Migrate, Never `db push`</div><div class="guardrail-title">- NEVER use npx prisma db push in dev or production. It creates drift between the</div></div><div class="guardrail ok"><div class="guardrail-id">G2 — New Model Fields — Update All Consumers</div><div class="guardrail-title">When adding a field to a Prisma model, you MUST update:</div></div><div class="guardrail ok"><div class="guardrail-id">G3 — Prisma `include` — Always Include What You Map</div><div class="guardrail-title">If a DTO mapper accesses a relation (e.g., job.request.tenant), the query that feeds it</div></div><div class="guardrail ok"><div class="guardrail-id">G4 — No Stub Services in Production Paths</div><div class="guardrail-title">Never leave a stub function (returns fake data without writing to DB) in a file that</div></div><div class="guardrail ok"><div class="guardrail-id">G5 — Pre-Commit Smoke Test</div><div class="guardrail-title">Before committing backend changes, run this 30-second check:</div></div><div class="guardrail ok"><div class="guardrail-id">G6 — Destructive Database Commands — Require Explicit Approval</div><div class="guardrail-title">The PostgreSQL database uses Docker volume maintagentpgdata for persistent storage.</div></div><div class="guardrail ok"><div class="guardrail-id">G7 — CI Is a Hard Gate</div><div class="guardrail-title">CI must run and pass all of the following before merge:</div></div><div class="guardrail ok"><div class="guardrail-id">G8 — `prisma db push` Is Banned</div><div class="guardrail-title">db push must never appear in any script, CI step, or developer workflow.</div></div><div class="guardrail ok"><div class="guardrail-id">G9 — Canonical Include Definitions (No Ad-Hoc Include Trees)</div><div class="guardrail-title">For any service that returns a DTO, define a centralized include constant rather than</div></div><div class="guardrail ok"><div class="guardrail-id">G10 — API Contract Tests (Prevent Silent DTO Drift)</div><div class="guardrail-title">Maintain contract tests for key endpoints:</div></div><div class="guardrail ok"><div class="guardrail-id">G11 — Test Database Requires Seed After Fresh Creation</div><div class="guardrail-title">The test database (maintagenttest) requires seed data for some test suites. After creating a fresh maintagenttest, run i</div></div>
+        <div class="guardrail ok"><div class="guardrail-id">G1 — Schema Changes — Always Migrate, Never `db push`</div><div class="guardrail-title">- NEVER use npx prisma db push in dev or production. It creates drift between the</div></div><div class="guardrail ok"><div class="guardrail-id">G2 — New Model Fields — Update All Consumers</div><div class="guardrail-title">When adding a field to a Prisma model, you MUST update:</div></div><div class="guardrail ok"><div class="guardrail-id">G3 — Prisma `include` — Always Include What You Map</div><div class="guardrail-title">If a DTO mapper accesses a relation (e.g., job.request.tenant), the query that feeds it</div></div><div class="guardrail ok"><div class="guardrail-id">G4 — No Stub Services in Production Paths</div><div class="guardrail-title">Never leave a stub function (returns fake data without writing to DB) in a file that</div></div><div class="guardrail ok"><div class="guardrail-id">G5 — Pre-Commit Smoke Test</div><div class="guardrail-title">Before committing backend changes, run this 30-second check:</div></div><div class="guardrail ok"><div class="guardrail-id">G6 — Destructive Database Commands — Require Explicit Approval</div><div class="guardrail-title">The PostgreSQL database uses Docker volume maintagentpgdata for persistent storage.</div></div><div class="guardrail ok"><div class="guardrail-id">G7 — CI Is a Hard Gate</div><div class="guardrail-title">CI must run and pass all of the following before merge:</div></div><div class="guardrail ok"><div class="guardrail-id">G8 — `prisma db push` Is Banned</div><div class="guardrail-title">db push must never appear in any script, CI step, or developer workflow.</div></div><div class="guardrail ok"><div class="guardrail-id">G9 — Canonical Include Definitions (No Ad-Hoc Include Trees)</div><div class="guardrail-title">For any service that returns a DTO, define a centralized include constant rather than</div></div><div class="guardrail ok"><div class="guardrail-id">G10 — API Contract Tests (Prevent Silent DTO Drift)</div><div class="guardrail-title">Maintain contract tests for key endpoints:</div></div><div class="guardrail ok"><div class="guardrail-id">G11 — Test Database Requires Seed After Fresh Creation</div><div class="guardrail-title">The test database (maintagenttest) requires seed data for some test suites. After creating a fresh maintagenttest, run i</div></div><div class="guardrail ok"><div class="guardrail-id">G12 — Commit Every Deliverable — No Session-Long Uncommitted Work</div><div class="guardrail-title">Every self-contained deliverable (new component, service, route, migration) must be committed</div></div>
       </div>
     </div>
     <div class="section">
@@ -567,7 +567,7 @@
 
   <!-- FOOTER -->
   <div style="margin-top:40px;padding-top:16px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;font-family:'IBM Plex Mono',mono;font-size:10px;color:var(--text-dim)">
-    <div>Maintenance Agent · Architecture Blueprint · 2026-04-02 08:14:24 UTC · branch: main @ 8c9a5a1</div>
+    <div>Maintenance Agent · Architecture Blueprint · 2026-04-06 18:21:08 UTC · branch: main @ 321730f</div>
     <div style="display:flex;gap:14px">
       <span style="color:#5ed9a0">● Implemented</span>
       <span style="color:#f5c060">● Partial / Exception</span>

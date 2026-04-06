@@ -14,24 +14,62 @@ const MAX_PHOTOS = 5;
 
 export default function MobileCapturePage() {
   const router = useRouter();
-  const { token } = router.query;
+  const { token: sessionIdOrToken } = router.query;
 
   const [state, setState] = useState("LOADING"); // LOADING | READY | UPLOADING | SUCCESS | EXPIRED | ERROR
   const [errorMsg, setErrorMsg] = useState("");
   const [photos, setPhotos] = useState([]); // { file: File, preview: string }[]
   const [uploadProgress, setUploadProgress] = useState(0); // 0 .. photos.length
   const fileInputRef = useRef(null);
+  const [resolvedToken, setResolvedToken] = useState(null);
 
-  /* ─── Validate session on mount ───── */
+  /* ─── Resolve session ID → JWT, then validate ───── */
 
   useEffect(() => {
-    if (!token) return;
+    if (!sessionIdOrToken) return;
 
     let cancelled = false;
 
-    async function validate() {
+    async function resolveAndValidate() {
+      let jwt = sessionIdOrToken;
+
+      // If the value looks like a short session ID (not a JWT), resolve it first
+      if (!sessionIdOrToken.includes(".")) {
+        try {
+          const resolveRes = await fetch(`/api/capture-sessions/resolve/${sessionIdOrToken}`);
+          if (!resolveRes.ok) {
+            const data = await resolveRes.json().catch(() => ({}));
+            const code = data?.error?.code;
+            if (code === "SESSION_EXPIRED" || code === "SESSION_COMPLETED" || resolveRes.status === 410) {
+              if (!cancelled) setState("EXPIRED");
+            } else {
+              if (!cancelled) {
+                setState("ERROR");
+                setErrorMsg(data?.error?.message || "Invalid capture session");
+              }
+            }
+            return;
+          }
+          const resolveData = await resolveRes.json();
+          jwt = resolveData?.data?.token;
+          if (!jwt) {
+            if (!cancelled) { setState("ERROR"); setErrorMsg("Failed to resolve session"); }
+            return;
+          }
+        } catch (err) {
+          if (!cancelled) {
+            setState("ERROR");
+            setErrorMsg("Unable to connect. Check your internet connection.");
+          }
+          return;
+        }
+      }
+
+      if (!cancelled) setResolvedToken(jwt);
+
+      // Now validate the JWT
       try {
-        const res = await fetch(`/api/capture/${token}/validate`);
+        const res = await fetch(`/api/capture/${jwt}/validate`);
         if (!res.ok) {
           const data = await res.json().catch(() => ({}));
           const code = data?.error?.code;
@@ -54,9 +92,9 @@ export default function MobileCapturePage() {
       }
     }
 
-    validate();
+    resolveAndValidate();
     return () => { cancelled = true; };
-  }, [token]);
+  }, [sessionIdOrToken]);
 
   /* ─── Photo management ───── */
 
@@ -95,7 +133,7 @@ export default function MobileCapturePage() {
   /* ─── Upload & complete ───── */
 
   const handleSubmit = useCallback(async () => {
-    if (photos.length === 0 || !token) return;
+    if (photos.length === 0 || !resolvedToken) return;
     setState("UPLOADING");
     setUploadProgress(0);
 
@@ -105,7 +143,7 @@ export default function MobileCapturePage() {
         const formData = new FormData();
         formData.append("file", photos[i].file);
 
-        const res = await fetch(`/api/capture/${token}/upload`, {
+        const res = await fetch(`/api/capture/${resolvedToken}/upload`, {
           method: "POST",
           body: formData,
         });
@@ -119,7 +157,7 @@ export default function MobileCapturePage() {
       }
 
       // Complete the session
-      const completeRes = await fetch(`/api/capture/${token}/complete`, {
+      const completeRes = await fetch(`/api/capture/${resolvedToken}/complete`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({}),
@@ -135,7 +173,7 @@ export default function MobileCapturePage() {
       setState("ERROR");
       setErrorMsg(err.message || "Upload failed. Please try again.");
     }
-  }, [photos, token]);
+  }, [photos, resolvedToken]);
 
   /* ─── Render ───── */
 

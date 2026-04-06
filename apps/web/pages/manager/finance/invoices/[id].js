@@ -91,6 +91,11 @@ export default function InvoiceDetailPage() {
   const [error, setError] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
   const [pdfUrl, setPdfUrl] = useState(null);
+  const [billingEntities, setBillingEntities] = useState([]);
+  const [selectedBillingEntityId, setSelectedBillingEntityId] = useState("");
+  const [showCreateBE, setShowCreateBE] = useState(false);
+  const [beForm, setBeForm] = useState({ name: "", addressLine1: "", postalCode: "", city: "", iban: "", vatNumber: "", defaultVatRate: "7.7" });
+  const [beSaving, setBeSaving] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!id) return;
@@ -109,6 +114,23 @@ export default function InvoiceDetailPage() {
   }, [id]);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  // Load billing entities
+  useEffect(() => {
+    fetch("/api/billing-entities", { headers: authHeaders() })
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => {
+        if (d?.data) setBillingEntities(d.data);
+      })
+      .catch(() => {});
+  }, []);
+
+  // Sync selected billing entity when invoice loads
+  useEffect(() => {
+    if (invoice?.issuerBillingEntityId) {
+      setSelectedBillingEntityId(invoice.issuerBillingEntityId);
+    }
+  }, [invoice?.issuerBillingEntityId]);
 
   // Load PDF preview
   useEffect(() => {
@@ -133,7 +155,7 @@ export default function InvoiceDetailPage() {
       const res = await fetch(`/api/invoices/${id}/${action}`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...authHeaders() },
-        body: body ? JSON.stringify(body) : undefined,
+        body: body ? JSON.stringify(body) : JSON.stringify({}),
       });
       if (!res.ok) {
         const data = await res.json();
@@ -144,6 +166,60 @@ export default function InvoiceDetailPage() {
       setError(String(e?.message || e));
     } finally {
       setActionLoading(false);
+    }
+  }
+
+  async function saveBillingEntity(billingEntityId) {
+    try {
+      const res = await fetch(`/api/invoices/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({ issuerBillingEntityId: billingEntityId }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data?.error?.message || "Failed to link billing entity");
+      }
+      await loadData();
+    } catch (e) {
+      setError(String(e?.message || e));
+    }
+  }
+
+  async function createAndLinkBE() {
+    setBeSaving(true);
+    try {
+      const res = await fetch("/api/billing-entities", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({
+          type: "ORG",
+          name: beForm.name,
+          addressLine1: beForm.addressLine1,
+          postalCode: beForm.postalCode,
+          city: beForm.city,
+          iban: beForm.iban,
+          vatNumber: beForm.vatNumber || undefined,
+          defaultVatRate: parseFloat(beForm.defaultVatRate) || 7.7,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data?.error?.message || "Failed to create billing entity");
+      }
+      const data = await res.json();
+      const newBE = data?.data;
+      if (newBE?.id) {
+        setBillingEntities((prev) => [newBE, ...prev]);
+        setSelectedBillingEntityId(newBE.id);
+        setShowCreateBE(false);
+        setBeForm({ name: "", addressLine1: "", postalCode: "", city: "", iban: "", vatNumber: "", defaultVatRate: "7.7" });
+        await saveBillingEntity(newBE.id);
+      }
+    } catch (e) {
+      setError(String(e?.message || e));
+    } finally {
+      setBeSaving(false);
     }
   }
 
@@ -287,6 +363,113 @@ export default function InvoiceDetailPage() {
                     <Field label="Postal Code · City" value={[inv.recipientPostalCode, inv.recipientCity].filter(Boolean).join(" ")} />
                     <Field label="Country" value={inv.recipientCountry} />
                   </dl>
+                </Panel>
+
+                {/* Issuer / Billing Entity */}
+                <Panel title="Issuer (Billing Entity)">
+                  {inv.issuerBillingEntityId ? (
+                    (() => {
+                      const linked = billingEntities.find((be) => be.id === inv.issuerBillingEntityId);
+                      return linked ? (
+                        <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-4">
+                          <Field label="Name" value={linked.name} />
+                          <Field label="Address" value={linked.addressLine1} />
+                          <Field label="City" value={`${linked.postalCode} ${linked.city}`} />
+                          <Field label="IBAN" value={linked.iban} />
+                          {linked.vatNumber && <Field label="VAT Number" value={linked.vatNumber} />}
+                          <Field label="Type" value={linked.type} />
+                        </dl>
+                      ) : (
+                        <p className="text-sm text-slate-500">Billing entity linked (ID: {inv.issuerBillingEntityId.slice(0, 8)}…)</p>
+                      );
+                    })()
+                  ) : inv.status === "DRAFT" ? (
+                    <div className="space-y-3">
+                      <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 m-0">
+                        ⚠ No billing entity linked — required before issuing.
+                      </p>
+                      <div className="flex items-end gap-2">
+                        <div className="flex-1">
+                          <label className="block text-xs font-medium text-slate-500 mb-1">Select billing entity</label>
+                          <select
+                            value={selectedBillingEntityId}
+                            onChange={(e) => setSelectedBillingEntityId(e.target.value)}
+                            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          >
+                            <option value="">— Choose —</option>
+                            {billingEntities.map((be) => (
+                              <option key={be.id} value={be.id}>
+                                {be.name} ({be.type})
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <button
+                          onClick={() => selectedBillingEntityId && saveBillingEntity(selectedBillingEntityId)}
+                          disabled={!selectedBillingEntityId}
+                          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition disabled:opacity-50"
+                        >
+                          Link
+                        </button>
+                      </div>
+
+                      {!showCreateBE ? (
+                        <button
+                          onClick={() => setShowCreateBE(true)}
+                          className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                        >
+                          + Create new billing entity
+                        </button>
+                      ) : (
+                        <div className="border border-slate-200 rounded-lg p-4 space-y-3 bg-slate-50">
+                          <p className="text-sm font-medium text-slate-700 m-0">New Billing Entity</p>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-xs text-slate-500 mb-0.5">Name *</label>
+                              <input value={beForm.name} onChange={(e) => setBeForm((f) => ({ ...f, name: e.target.value }))} className="w-full rounded border border-slate-300 px-2 py-1.5 text-sm" placeholder="Company name" />
+                            </div>
+                            <div>
+                              <label className="block text-xs text-slate-500 mb-0.5">Address *</label>
+                              <input value={beForm.addressLine1} onChange={(e) => setBeForm((f) => ({ ...f, addressLine1: e.target.value }))} className="w-full rounded border border-slate-300 px-2 py-1.5 text-sm" placeholder="Street & number" />
+                            </div>
+                            <div>
+                              <label className="block text-xs text-slate-500 mb-0.5">Postal Code *</label>
+                              <input value={beForm.postalCode} onChange={(e) => setBeForm((f) => ({ ...f, postalCode: e.target.value }))} className="w-full rounded border border-slate-300 px-2 py-1.5 text-sm" placeholder="1000" />
+                            </div>
+                            <div>
+                              <label className="block text-xs text-slate-500 mb-0.5">City *</label>
+                              <input value={beForm.city} onChange={(e) => setBeForm((f) => ({ ...f, city: e.target.value }))} className="w-full rounded border border-slate-300 px-2 py-1.5 text-sm" placeholder="Lausanne" />
+                            </div>
+                            <div>
+                              <label className="block text-xs text-slate-500 mb-0.5">IBAN *</label>
+                              <input value={beForm.iban} onChange={(e) => setBeForm((f) => ({ ...f, iban: e.target.value }))} className="w-full rounded border border-slate-300 px-2 py-1.5 text-sm" placeholder="CH..." />
+                            </div>
+                            <div>
+                              <label className="block text-xs text-slate-500 mb-0.5">VAT Number</label>
+                              <input value={beForm.vatNumber} onChange={(e) => setBeForm((f) => ({ ...f, vatNumber: e.target.value }))} className="w-full rounded border border-slate-300 px-2 py-1.5 text-sm" placeholder="CHE-..." />
+                            </div>
+                          </div>
+                          <div className="flex gap-2 pt-1">
+                            <button
+                              onClick={createAndLinkBE}
+                              disabled={beSaving || !beForm.name || !beForm.addressLine1 || !beForm.postalCode || !beForm.city || !beForm.iban}
+                              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition disabled:opacity-50"
+                            >
+                              {beSaving ? "Creating…" : "Create & Link"}
+                            </button>
+                            <button
+                              onClick={() => setShowCreateBE(false)}
+                              className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 transition"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-slate-500">No billing entity linked.</p>
+                  )}
                 </Panel>
 
                 {/* Line items */}

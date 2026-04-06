@@ -434,7 +434,7 @@ function CaptureSessionModal({ onClose, onComplete }) {
         }
         const data = await res.json();
         if (!cancelled) {
-          setSession(data.data);
+          setSession({ ...data.data, mobileUrl: data.mobileUrl });
           setCreating(false);
         }
       } catch (err) {
@@ -493,7 +493,7 @@ function CaptureSessionModal({ onClose, onComplete }) {
               Scan this QR code with your phone to capture a paper invoice.
             </p>
             <div className="flex justify-center mb-4">
-              <QRCodeSVG value={mobileUrl} size={200} level="M" />
+              <QRCodeSVG value={mobileUrl} size={300} level="L" />
             </div>
             <div className="bg-slate-50 rounded-lg p-2 mb-3">
               <p className="text-[10px] text-slate-400 uppercase tracking-wide mb-0.5">Mobile link</p>

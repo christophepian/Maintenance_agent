@@ -524,17 +524,17 @@ export default function BuildingDetail() {
           )}
 
           {/* Tabs Navigation */}
-          <div className="flex flex-wrap gap-2 mb-4">
+          <div className="mb-6 flex border-b border-slate-200 overflow-x-auto">
             {["Building information", "Units", "Tenants", "Assets", "Documents", "Policies", "Financials"].map((tab) => (
               <button
                 key={tab}
                 type="button"
-                className={
-                  "rounded-full border px-3 py-1.5 text-xs font-semibold transition " +
-                  (activeTab === tab
-                    ? "border-slate-900 bg-slate-900 text-white"
-                    : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-900")
-                }
+                className={[
+                  "whitespace-nowrap px-5 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors",
+                  activeTab === tab
+                    ? "border-indigo-600 text-indigo-600"
+                    : "border-transparent text-slate-500 hover:text-slate-700",
+                ].join(" ")}
                 onClick={() => setActiveTab(tab)}
               >
                 {tab}

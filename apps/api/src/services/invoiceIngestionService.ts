@@ -178,7 +178,17 @@ export async function ingestInvoice(
     params.vatRate = 0;
   }
 
-  // 5. Create the invoice record
+  // 5. Auto-match billing entity from vendor name or org fallback
+  const matchedBillingEntityId = await matchBillingEntity(
+    orgId,
+    typeof fields.vendorName === "string" ? fields.vendorName : undefined,
+  );
+  if (matchedBillingEntityId) {
+    params.issuerBillingEntityId = matchedBillingEntityId;
+    console.log(`[INVOICE-INGEST] Auto-matched billing entity: ${matchedBillingEntityId}`);
+  }
+
+  // 6. Create the invoice record
   const invoice = await createInvoice(params);
 
   console.log(
@@ -212,6 +222,48 @@ function buildDescription(scan: ScanResult): string {
 function truncateOcrText(text: string): string {
   const MAX = 4000;
   return text.length <= MAX ? text : text.substring(0, MAX) + "…";
+}
+
+/**
+ * Try to match a vendor name to an existing billing entity.
+ * Uses case-insensitive substring matching.
+ * Falls back to the ORG-type billing entity if no vendor name match.
+ */
+async function matchBillingEntity(
+  orgId: string,
+  vendorName?: string,
+): Promise<string | undefined> {
+  const { default: prisma } = await import("./prismaClient");
+
+  // 1. If we have a vendor name, try to find a billing entity with a matching name
+  if (vendorName && vendorName.trim()) {
+    const normalised = vendorName.trim().toLowerCase();
+    const allEntities = await prisma.billingEntity.findMany({
+      where: { orgId },
+      select: { id: true, name: true, type: true },
+    });
+
+    // Exact match first
+    const exact = allEntities.find(
+      (e) => e.name.toLowerCase() === normalised,
+    );
+    if (exact) return exact.id;
+
+    // Substring match (vendor name contains entity name or vice versa)
+    const partial = allEntities.find(
+      (e) =>
+        normalised.includes(e.name.toLowerCase()) ||
+        e.name.toLowerCase().includes(normalised),
+    );
+    if (partial) return partial.id;
+  }
+
+  // 2. Fallback: use the ORG-type billing entity
+  const orgEntity = await prisma.billingEntity.findFirst({
+    where: { orgId, type: "ORG" },
+    select: { id: true },
+  });
+  return orgEntity?.id;
 }
 
 function parseDateField(raw: string): Date | undefined {

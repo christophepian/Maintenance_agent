@@ -162,7 +162,7 @@ describe("Capture Session Routes", () => {
       const res = await jsonRequest("GET", `/capture-sessions/${sessionId}`, managerAuth);
       expect(res.status).toBe(200);
       expect(res.data.data.id).toBe(sessionId);
-      expect(res.data.data.status).toBe("ACTIVE");
+      expect(res.data.data.status).toBe("CREATED");
     });
 
     it("returns 404 for non-existent session", async () => {

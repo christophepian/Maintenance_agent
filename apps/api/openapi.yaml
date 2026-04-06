@@ -2898,6 +2898,29 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/InvoiceDTO' }
         '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [Invoices]
+      summary: Update invoice fields (DRAFT only)
+      operationId: updateInvoice
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                issuerBillingEntityId: { type: string }
+                recipientName: { type: string }
+                description: { type: string }
+      responses:
+        '200':
+          description: Updated invoice
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/InvoiceDTO' }
+        '400': { description: Invoice is locked }
+        '404': { $ref: '#/components/responses/NotFound' }
 
   /invoices/{id}/issue:
     post:
@@ -7378,6 +7401,33 @@ paths:
                   token: { type: string }
                   mobileUrl: { type: string }
         '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /capture-sessions/resolve/{sessionId}:
+    get:
+      tags: [Capture Sessions]
+      summary: Resolve a session ID to its JWT token (public, rate-limited)
+      operationId: resolveCaptureSession
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Resolved token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      token: { type: string }
+        '410':
+          description: Session expired or completed
+        '429':
+          description: Too many requests
 
   /capture-sessions/{id}:
     get:

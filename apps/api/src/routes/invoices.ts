@@ -164,14 +164,40 @@ export function registerInvoiceRoutes(router: Router) {
     }
   });
 
+  // PATCH /invoices/:id — update invoice fields (DRAFT only)
+  router.patch("/invoices/:id", async ({ req, res, params, orgId }) => {
+    if (!requireAnyRole(req, res, ["MANAGER", "OWNER"])) return;
+    try {
+      const body = await readJson(req);
+      const { updateInvoice } = await import("../services/invoices");
+      const updated = await updateInvoice(params.id, {
+        ...(body.issuerBillingEntityId !== undefined ? { issuerBillingEntityId: body.issuerBillingEntityId } : {}),
+        ...(body.recipientName !== undefined ? { recipientName: body.recipientName } : {}),
+        ...(body.description !== undefined ? { description: body.description } : {}),
+      });
+      sendJson(res, 200, { data: updated });
+    } catch (e: any) {
+      const msg = String(e?.message || e);
+      if (msg === "INVOICE_NOT_FOUND") return sendError(res, 404, "NOT_FOUND", "Invoice not found");
+      if (msg === "INVOICE_LOCKED") return sendError(res, 400, "INVOICE_LOCKED", "Invoice is locked and cannot be edited");
+      sendError(res, 500, "DB_ERROR", "Failed to update invoice", String(e));
+    }
+  });
+
   // POST /invoices/:id/issue → delegates to issueInvoiceWorkflow
   router.post("/invoices/:id/issue", async ({ req, res, prisma, params, orgId }) => {
     if (!requireAnyRole(req, res, ["MANAGER", "OWNER"])) return;
     try {
       const actor = getAuthUser(req);
+      // Accept optional body params (issuerBillingEntityId for ingested invoices)
+      let body: any = {};
+      try { body = await readJson(req); } catch { /* empty body is fine */ }
       const result = await issueInvoiceWorkflow(
         { orgId, prisma, actorUserId: actor?.userId ?? null },
-        { invoiceId: params.id },
+        {
+          invoiceId: params.id,
+          issuerBillingEntityId: body?.issuerBillingEntityId,
+        },
       );
       sendJson(res, 200, { data: result.dto });
     } catch (e: any) {

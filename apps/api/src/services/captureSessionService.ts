@@ -109,9 +109,9 @@ export async function createSession(
   // Update session with the real token
   const updated = await updateCaptureSession(session.id, { token });
 
-  // Build mobile URL (frontend will use this for QR)
+  // Build mobile URL using session ID (short!) — phone resolves ID → JWT on load
   const baseUrl = process.env.FRONTEND_URL || "http://localhost:3000";
-  const mobileUrl = `${baseUrl}/capture/${token}`;
+  const mobileUrl = `${baseUrl}/capture/${session.id}`;
 
   return {
     session: mapSessionToDTO(updated),
@@ -217,6 +217,30 @@ export async function completeSession(
 }
 
 /**
+ * Resolve a session ID to its JWT token (public, for QR-code short-URL flow).
+ * Returns the token if the session is valid; throws if expired/completed.
+ */
+export async function resolveSessionToken(
+  sessionId: string,
+): Promise<{ token: string }> {
+  const session = await findCaptureSessionById(sessionId);
+  if (!session) {
+    throw new CaptureSessionError("SESSION_NOT_FOUND", "Capture session not found");
+  }
+  if (session.status === "COMPLETED") {
+    throw new CaptureSessionError("SESSION_COMPLETED", "This capture session has already been completed");
+  }
+  if (session.status === "EXPIRED" || session.status === "CANCELLED") {
+    throw new CaptureSessionError("SESSION_EXPIRED", "This capture session has expired");
+  }
+  if (session.expiresAt < new Date()) {
+    await updateCaptureSession(session.id, { status: "EXPIRED" });
+    throw new CaptureSessionError("SESSION_EXPIRED", "This capture session has expired");
+  }
+  return { token: session.token };
+}
+
+/**
  * Get a session by ID (for manager polling).
  */
 export async function getSessionById(
@@ -247,24 +271,28 @@ export { expireOldSessions };
 /**
  * Complete a session and trigger invoice ingestion for uploaded files (CQ-37 resolution).
  * Extracted from routes/captureSessions.ts to consolidate orchestration in the service layer.
+ *
+ * Important: ingestion runs BEFORE status is set to COMPLETED so that the
+ * desktop polling loop only sees COMPLETED once the invoice record exists.
  */
 export async function completeAndIngest(
   token: string,
 ): Promise<CaptureSessionDTO> {
-  const { orgId } = await validateSessionToken(token);
-  const completed = await completeSession(token);
+  const { sessionId, orgId, session } = await validateSessionToken(token);
 
-  if (completed.uploadedFileUrls.length > 0) {
+  let createdInvoiceId: string | null = null;
+
+  if (session.uploadedFileUrls.length > 0) {
     // Dynamic import to avoid circular dependency
     const { ingestInvoice } = await import("./invoiceIngestionService");
     const { storage } = await import("../storage/attachments");
 
     console.log(
-      `[CAPTURE-SESSION] Session ${completed.id} completed with ${completed.uploadedFileUrls.length} file(s). ` +
-      `Triggering ingestion...`,
+      `[CAPTURE-SESSION] Session ${sessionId} has ${session.uploadedFileUrls.length} file(s). ` +
+      `Running ingestion before marking complete...`,
     );
 
-    for (const fileUrl of completed.uploadedFileUrls) {
+    for (const fileUrl of session.uploadedFileUrls) {
       try {
         const fileBuffer = await storage.get(fileUrl);
         const fileName = fileUrl.split("/").pop() || "capture.jpg";
@@ -272,7 +300,7 @@ export async function completeAndIngest(
           : fileName.match(/\.png$/i) ? "image/png"
           : "image/jpeg";
 
-        await ingestInvoice({
+        const result = await ingestInvoice({
           buffer: fileBuffer,
           fileName,
           mimeType,
@@ -280,6 +308,11 @@ export async function completeAndIngest(
           sourceChannel: "MOBILE_CAPTURE",
           direction: "INCOMING",
         });
+
+        // Keep the first successfully created invoice ID
+        if (!createdInvoiceId && result.invoice?.id) {
+          createdInvoiceId = result.invoice.id;
+        }
       } catch (ingestErr: any) {
         console.error(`[CAPTURE-SESSION] Ingestion failed for ${fileUrl}:`, ingestErr.message);
         // Continue with other files — don't fail the entire completion
@@ -287,7 +320,18 @@ export async function completeAndIngest(
     }
   }
 
-  return completed;
+  // Mark COMPLETED only after ingestion finishes, and link the created invoice
+  const completed = await updateCaptureSession(sessionId, {
+    status: "COMPLETED",
+    ...(createdInvoiceId ? { createdInvoiceId } : {}),
+  });
+
+  console.log(
+    `[CAPTURE-SESSION] Session ${sessionId} marked COMPLETED. ` +
+    `createdInvoiceId=${createdInvoiceId ?? "none"}`,
+  );
+
+  return mapSessionToDTO(completed);
 }
 
 /* ──────────────────────────────────────────────────────────
