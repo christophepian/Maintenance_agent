@@ -65,6 +65,12 @@ export default function ApplyPage() {
   const [selectedUnitIds, setSelectedUnitIds] = useState([]);
   const [unitsLoading, setUnitsLoading] = useState(true);
 
+  // Listing filters (INT-009)
+  const [filterCity, setFilterCity] = useState("");
+  const [filterPostalCode, setFilterPostalCode] = useState("");
+  const [filterMinRooms, setFilterMinRooms] = useState("");
+  const [sortPrice, setSortPrice] = useState(""); // "" | "asc" | "desc"
+
   // Document uploads (held in memory before application draft creation)
   // { docType, file, fileName, scanResult, status: 'pending'|'scanning'|'scanned'|'error' }
   const [docUploads, setDocUploads] = useState([]);
@@ -454,18 +460,43 @@ export default function ApplyPage() {
   // When deep-linked via ?unitId=, only show that unit (hide others)
   const linkedUnitId = router.query.unitId || null;
 
-  const unitsByBuilding = useMemo(() => {
-    const source = linkedUnitId
+  // Derive unique cities and postal codes for filter dropdowns
+  const availableCities = useMemo(() => {
+    const set = new Set();
+    vacantUnits.forEach((u) => { if (u.building?.city) set.add(u.building.city); });
+    return Array.from(set).sort();
+  }, [vacantUnits]);
+
+  const availablePostalCodes = useMemo(() => {
+    const set = new Set();
+    vacantUnits.forEach((u) => { if (u.building?.postalCode) set.add(u.building.postalCode); });
+    return Array.from(set).sort();
+  }, [vacantUnits]);
+
+  // Filtered + sorted units
+  const filteredUnits = useMemo(() => {
+    let list = linkedUnitId
       ? vacantUnits.filter((u) => u.id === linkedUnitId)
-      : vacantUnits;
+      : [...vacantUnits];
+
+    if (filterCity) list = list.filter((u) => u.building?.city === filterCity);
+    if (filterPostalCode) list = list.filter((u) => u.building?.postalCode === filterPostalCode);
+    if (filterMinRooms) list = list.filter((u) => u.rooms != null && u.rooms >= parseFloat(filterMinRooms));
+    if (sortPrice === "asc") list.sort((a, b) => (a.monthlyRentChf ?? 0) - (b.monthlyRentChf ?? 0));
+    if (sortPrice === "desc") list.sort((a, b) => (b.monthlyRentChf ?? 0) - (a.monthlyRentChf ?? 0));
+
+    return list;
+  }, [vacantUnits, linkedUnitId, filterCity, filterPostalCode, filterMinRooms, sortPrice]);
+
+  const unitsByBuilding = useMemo(() => {
     const map = new Map();
-    source.forEach((u) => {
+    filteredUnits.forEach((u) => {
       const bName = u.building?.name || "Unknown building";
       if (!map.has(bName)) map.set(bName, []);
       map.get(bName).push(u);
     });
     return map;
-  }, [vacantUnits, linkedUnitId]);
+  }, [filteredUnits]);
 
   // Count extracted fields across all scans
   const extractedFieldCount = useMemo(() => {
@@ -521,6 +552,61 @@ export default function ApplyPage() {
                   You can apply to multiple units with a single dossier.
                 </p>
 
+                {/* Filters (INT-009) */}
+                {!linkedUnitId && vacantUnits.length > 0 && (
+                  <div className="mt-3 flex flex-wrap items-end gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3">
+                    {availableCities.length > 0 && (
+                      <label className="flex flex-col text-xs text-slate-600">
+                        City
+                        <select value={filterCity} onChange={(e) => setFilterCity(e.target.value)} className="mt-1 rounded border border-slate-200 px-2 py-1.5 text-sm">
+                          <option value="">All cities</option>
+                          {availableCities.map((c) => <option key={c} value={c}>{c}</option>)}
+                        </select>
+                      </label>
+                    )}
+                    {availablePostalCodes.length > 0 && (
+                      <label className="flex flex-col text-xs text-slate-600">
+                        Postal code
+                        <select value={filterPostalCode} onChange={(e) => setFilterPostalCode(e.target.value)} className="mt-1 rounded border border-slate-200 px-2 py-1.5 text-sm">
+                          <option value="">All codes</option>
+                          {availablePostalCodes.map((c) => <option key={c} value={c}>{c}</option>)}
+                        </select>
+                      </label>
+                    )}
+                    <label className="flex flex-col text-xs text-slate-600">
+                      Min. rooms
+                      <select value={filterMinRooms} onChange={(e) => setFilterMinRooms(e.target.value)} className="mt-1 rounded border border-slate-200 px-2 py-1.5 text-sm">
+                        <option value="">Any</option>
+                        <option value="1">1+</option>
+                        <option value="1.5">1.5+</option>
+                        <option value="2">2+</option>
+                        <option value="2.5">2.5+</option>
+                        <option value="3">3+</option>
+                        <option value="3.5">3.5+</option>
+                        <option value="4">4+</option>
+                        <option value="4.5">4.5+</option>
+                        <option value="5">5+</option>
+                      </select>
+                    </label>
+                    <label className="flex flex-col text-xs text-slate-600">
+                      Sort by price
+                      <select value={sortPrice} onChange={(e) => setSortPrice(e.target.value)} className="mt-1 rounded border border-slate-200 px-2 py-1.5 text-sm">
+                        <option value="">Default</option>
+                        <option value="asc">Low → High</option>
+                        <option value="desc">High → Low</option>
+                      </select>
+                    </label>
+                    {(filterCity || filterPostalCode || filterMinRooms || sortPrice) && (
+                      <button
+                        onClick={() => { setFilterCity(""); setFilterPostalCode(""); setFilterMinRooms(""); setSortPrice(""); }}
+                        className="text-xs text-indigo-600 hover:text-indigo-800 underline self-end pb-1.5"
+                      >
+                        Clear filters
+                      </button>
+                    )}
+                  </div>
+                )}
+
                 <div className="mt-4 space-y-3">
                   {unitsLoading && <p className="text-sm text-slate-500">Loading available units…</p>}
 
@@ -530,11 +616,19 @@ export default function ApplyPage() {
                     </div>
                   )}
 
+                  {!unitsLoading && vacantUnits.length > 0 && filteredUnits.length === 0 && (
+                    <div className="rounded-lg border border-slate-200 bg-white p-6 text-center text-slate-600">
+                      No units match the selected filters. Try adjusting your criteria.
+                    </div>
+                  )}
+
                   {!unitsLoading && Array.from(unitsByBuilding.entries()).map(([bName, units]) => (
                     <div key={bName} className="rounded-xl border border-slate-200 bg-white">
                       <div className="border-b border-slate-100 px-4 py-3">
                         <h3 className="text-sm font-semibold text-slate-900">{bName}</h3>
-                        <p className="text-xs text-slate-500">{units[0]?.building?.address}</p>
+                        <p className="text-xs text-slate-500">
+                          {[units[0]?.building?.address, units[0]?.building?.postalCode, units[0]?.building?.city].filter(Boolean).join(", ")}
+                        </p>
                       </div>
                       <div className="divide-y divide-slate-50">
                         {units.map((u) => (
@@ -553,6 +647,7 @@ export default function ApplyPage() {
                                 Unit {u.unitNumber}
                               </span>
                               {u.floor && <span className="text-xs text-slate-500 ml-2">Floor {u.floor}</span>}
+                              {u.rooms != null && <span className="text-xs text-slate-500 ml-2">{u.rooms} rooms</span>}
                             </div>
                             <div className="text-right text-xs text-slate-600">
                               {u.monthlyRentChf != null && <div>CHF {u.monthlyRentChf}/mo</div>}

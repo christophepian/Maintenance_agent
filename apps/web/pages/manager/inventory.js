@@ -39,6 +39,7 @@ const TAB_KEYS = ['buildings', 'assets', 'decisions', 'depreciation'];
 const RECOMMENDATION_STYLES = {
   REPAIR: { badge: "bg-green-100 text-green-700", label: "Repair" },
   MONITOR: { badge: "bg-amber-100 text-amber-700", label: "Monitor" },
+  PLAN_REPLACEMENT: { badge: "bg-orange-100 text-orange-700", label: "Plan Replacement" },
   REPLACE: { badge: "bg-red-100 text-red-700", label: "Replace" },
 };
 
@@ -274,9 +275,12 @@ export default function ManagerInventoryPage() {
                     <tr>
                       <th>Asset</th>
                       <th>Type</th>
-                      <th>Age</th>
+                      <th>Age / Life</th>
                       <th>Depreciation</th>
-                      <th>Repair Cost (CHF)</th>
+                      <th className="text-right">Repairs (CHF)</th>
+                      <th className="text-right">Replace est. (CHF)</th>
+                      <th className="text-right">Ratio</th>
+                      <th className="text-right">Break-even</th>
                       <th>Recommendation</th>
                     </tr>
                   </thead>
@@ -285,24 +289,67 @@ export default function ManagerInventoryPage() {
                       const style = RECOMMENDATION_STYLES[item.recommendation] || RECOMMENDATION_STYLES.REPAIR;
                       const ageYears = item.ageMonths != null ? (item.ageMonths / 12).toFixed(1) : "—";
                       const lifeYears = item.usefulLifeMonths != null ? (item.usefulLifeMonths / 12).toFixed(0) : null;
+                      const remainYears = item.remainingLifeMonths != null ? (item.remainingLifeMonths / 12).toFixed(1) : null;
+                      const ratioDisplay = item.repairToReplacementRatio != null
+                        ? `${Math.round(item.repairToReplacementRatio * 100)}%`
+                        : "—";
+                      const breakEvenDisplay = item.breakEvenMonths != null
+                        ? item.breakEvenMonths === 0
+                          ? "Exceeded"
+                          : item.breakEvenMonths < 12
+                            ? `${item.breakEvenMonths} mo`
+                            : `${(item.breakEvenMonths / 12).toFixed(1)} yr`
+                        : "—";
                       return (
-                        <tr key={item.assetId}>
+                        <tr key={item.assetId} title={item.recommendationReason}>
                           <td className="cell-bold">{item.assetName}</td>
-                          <td>{item.assetType}</td>
+                          <td className="text-xs text-slate-500">{item.topic}</td>
                           <td>
-                            {item.ageMonths != null ? `${ageYears} yr${lifeYears ? ` / ${lifeYears} yr` : ""}` : "—"}
-                          </td>
-                          <td>
-                            {item.depreciationPct != null ? (
-                              <span className={item.depreciationPct >= 100 ? "text-red-600 font-semibold" : item.depreciationPct >= 75 ? "text-amber-600 font-semibold" : "text-slate-700"}>
-                                {item.depreciationPct}%
+                            {item.ageMonths != null ? (
+                              <span>
+                                {ageYears} yr{lifeYears ? ` / ${lifeYears} yr` : ""}
+                                {remainYears && <span className="block text-xs text-slate-400">{remainYears} yr left</span>}
                               </span>
                             ) : "—"}
                           </td>
                           <td>
+                            {item.depreciationPct != null ? (
+                              <span className={item.depreciationPct >= 100 ? "text-red-600 font-semibold" : item.depreciationPct >= 85 ? "text-orange-600 font-semibold" : item.depreciationPct >= 65 ? "text-amber-600 font-semibold" : "text-slate-700"}>
+                                {item.depreciationPct}%
+                              </span>
+                            ) : "—"}
+                          </td>
+                          <td className="text-right">
                             {item.cumulativeRepairCostChf > 0
                               ? item.cumulativeRepairCostChf.toLocaleString("de-CH", { minimumFractionDigits: 0 })
                               : "—"}
+                            {item.annualRepairRate != null && item.annualRepairRate > 0 && (
+                              <span className="block text-xs text-slate-400">
+                                ~{item.annualRepairRate.toLocaleString("de-CH")}/yr
+                              </span>
+                            )}
+                          </td>
+                          <td className="text-right">
+                            {item.estimatedReplacementCostChf != null
+                              ? item.estimatedReplacementCostChf.toLocaleString("de-CH", { minimumFractionDigits: 0 })
+                              : "—"}
+                            {item.replacementCostConfidence != null && (
+                              <span className="block text-xs text-slate-400">
+                                {Math.round(item.replacementCostConfidence * 100)}% conf.
+                              </span>
+                            )}
+                          </td>
+                          <td className={`text-right font-medium ${
+                            item.repairToReplacementRatio != null
+                              ? item.repairToReplacementRatio >= 0.6 ? "text-red-600" : item.repairToReplacementRatio >= 0.4 ? "text-orange-600" : item.repairToReplacementRatio >= 0.25 ? "text-amber-600" : "text-slate-700"
+                              : "text-slate-400"
+                          }`}>
+                            {ratioDisplay}
+                          </td>
+                          <td className={`text-right ${
+                            item.breakEvenMonths != null && item.breakEvenMonths <= 12 ? "text-red-600 font-semibold" : item.breakEvenMonths != null && item.breakEvenMonths <= 36 ? "text-amber-600" : "text-slate-700"
+                          }`}>
+                            {breakEvenDisplay}
                           </td>
                           <td>
                             <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold ${style.badge}`}>
@@ -314,6 +361,13 @@ export default function ManagerInventoryPage() {
                     })}
                   </tbody>
                 </table>
+                {/* Legend */}
+                <div className="px-4 py-3 border-t border-slate-100 text-xs text-slate-500 space-y-1">
+                  <p><strong>Ratio</strong> = cumulative repair cost ÷ estimated replacement cost. Above 60% → Replace.</p>
+                  <p><strong>Break-even</strong> = at current repair rate, when total repairs will exceed replacement cost.</p>
+                  <p><strong>Warranty offset</strong>: new appliances typically carry {decisionsData[0]?.warrantyOffsetMonths || 24} months warranty coverage.</p>
+                  <p className="italic">Hover a row for the recommendation reason.</p>
+                </div>
               </div>
             ) : null}
           </div>

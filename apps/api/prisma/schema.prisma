@@ -326,6 +326,8 @@ model Building {
   orgId   String
   name    String
   address String
+  city       String?
+  postalCode String?
 
   // Rent estimation fields
   yearBuilt    Int?
@@ -529,6 +531,7 @@ model AssetModel {
   updatedAt    DateTime    @updatedAt
   isActive     Boolean     @default(true)
   appliances   Appliance[]
+  assets       Asset[]
   org          Org?        @relation(fields: [orgId], references: [id], onDelete: Cascade)
 
   @@unique([orgId, manufacturer, model])
@@ -1626,12 +1629,14 @@ model Asset {
 
   org               Org                  @relation(fields: [orgId], references: [id], onDelete: Cascade)
   unit              Unit                 @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  assetModel        AssetModel?          @relation(fields: [assetModelId], references: [id], onDelete: SetNull)
   interventions     AssetIntervention[]
   cashflowOverrides CashflowOverride[]
 
   @@index([orgId])
   @@index([unitId])
   @@index([type, topic])
+  @@index([assetModelId])
 }
 
 enum AssetInterventionType {

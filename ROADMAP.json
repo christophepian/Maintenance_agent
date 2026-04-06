@@ -29,7 +29,7 @@
         "title": "MT940 Bank Statement Import"
       }
     ],
-    "last_recommendations_at": "2026-04-04 21:36:59 UTC"
+    "last_recommendations_at": "2026-04-06 14:44:53 UTC"
   },
   "project": {
     "name": "Maintenance Agent",
@@ -1565,7 +1565,7 @@
       "id": "INT-009",
       "title": "Add advanced search/filters: by price, by location, etc",
       "raw_text": "- Add advanced search/filters: by price, by location, etc.",
-      "status": "clarify",
+      "status": "done",
       "source": "bulk_paste",
       "product_area": "search",
       "related_feature_ids": [],
@@ -1582,7 +1582,9 @@
       "proposed_split_plan": [],
       "note_type": "feature_request",
       "duplicate_of": null,
-      "anti_split_reasons": []
+      "anti_split_reasons": [],
+      "resolution_notes": "Listing filters: city, postal code (new Building fields + migration), rooms, price sort. Frontend filter bar on apply page.",
+      "resolved_date": "2026-04-06"
     },
     {
       "id": "INT-010",
@@ -1957,7 +1959,7 @@
       "id": "INT-025",
       "title": "Link assets inventory to appliances: appliances is the product catalog which shows all the models, with serial number…",
       "raw_text": "- Link assets inventory to appliances: appliances is the product catalog which shows all the models, with serial number etc, whereas assets inventory lists all the properties of a building/unit, whether they are appliances (e.g. dishwaser, oven, lights, etc.) or walls, floor, ceiling etc. It lists the useful life and show a list of maintenances (if they took place)",
-      "status": "clarify",
+      "status": "done",
       "source": "bulk_paste",
       "product_area": "inventory",
       "related_feature_ids": [],
@@ -1974,7 +1976,9 @@
       "proposed_split_plan": [],
       "note_type": "feature_request",
       "duplicate_of": null,
-      "anti_split_reasons": []
+      "anti_split_reasons": [],
+      "resolution_notes": "Wired Asset.assetModelId as proper @relation to AssetModel with FK constraint, reverse relation, and index.",
+      "resolved_date": "2026-04-06"
     },
     {
       "id": "INT-026",
@@ -5574,7 +5578,7 @@
       "goal": "Deliver \"Check all of the unit assets against their depreciation and present the landlord with maintenance decisions: cost of …\" in the inventory domain to fulfill the original request: - check all of the unit assets against their depreciation and present the landlord with maintenance decisions: cost of m (full-stack: API + UI).",
       "phase": "P1",
       "order": 1,
-      "status": "promoted",
+      "status": "done",
       "product_area": "inventory",
       "parent_feature_id": null,
       "depends_on": [],
@@ -5687,7 +5691,9 @@
       ],
       "refinement_status": "ready_candidate",
       "refinement_notes": [],
-      "refined_at": "2026-03-20T13:06:38.295Z"
+      "refined_at": "2026-03-20T13:06:38.295Z",
+      "resolution_notes": "Opportunity cost model: repair-to-replacement ratio, break-even analysis, warranty offset, enhanced 4-tier recommendation engine.",
+      "resolved_date": "2026-04-06"
     },
     {
       "id": "DT-023",

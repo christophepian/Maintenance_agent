@@ -763,6 +763,8 @@ export async function listVacantUnits(orgId: string) {
           id: true,
           name: true,
           address: true,
+          city: true,
+          postalCode: true,
         },
       },
       leases: {
@@ -780,6 +782,7 @@ export async function listVacantUnits(orgId: string) {
     id: u.id,
     unitNumber: u.unitNumber,
     floor: u.floor,
+    rooms: u.rooms,
     monthlyRentChf: u.monthlyRentChf,
     monthlyChargesChf: u.monthlyChargesChf,
     vacantSince: u.leases[0]?.endDate ?? u.leases[0]?.terminatedAt ?? null,
@@ -789,6 +792,8 @@ export async function listVacantUnits(orgId: string) {
           id: u.building.id,
           name: u.building.name,
           address: u.building.address,
+          city: u.building.city,
+          postalCode: u.building.postalCode,
         }
       : undefined,
   }));
