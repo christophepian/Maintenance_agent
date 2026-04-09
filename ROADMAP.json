@@ -9,9 +9,9 @@
         "title": "Configure SMTP env vars"
       },
       {
-        "id": "S-P0-002-01",
+        "id": "S-P0-002-02",
         "rank": 2,
-        "title": "Create legalVariableIngestion.ts — schedule-driven LegalVariable DB writes"
+        "title": "Wire LegalVariable values into DSL condition evaluation"
       },
       {
         "id": "F-P0-003",
@@ -29,7 +29,7 @@
         "title": "MT940 Bank Statement Import"
       }
     ],
-    "last_recommendations_at": "2026-04-06 14:44:53 UTC"
+    "last_recommendations_at": "2026-04-09 12:08:05 UTC"
   },
   "project": {
     "name": "Maintenance Agent",
@@ -226,7 +226,7 @@
           "id": "S-P0-002-01",
           "title": "Create legalVariableIngestion.ts — schedule-driven LegalVariable DB writes",
           "type": "wire",
-          "status": "planned",
+          "status": "done",
           "files_expected": [
             "apps/api/src/services/legalVariableIngestion.ts"
           ],
@@ -243,7 +243,24 @@
               "path": "apps/api/src/services/legalVariableIngestion.ts"
             }
           ],
-          "implementation_notes": "legalIngestion.ts already implements SNB and CPI fetchers (FetcherResult interface). This slice bridges fetched results into LegalVariable table. Canton scope: use LegalSourceScope from Prisma. Idempotency key: key + effectiveFrom + canton."
+          "implementation_notes": "legalIngestion.ts already implements SNB and CPI fetchers (FetcherResult interface). This slice bridges fetched results into LegalVariable table. Canton scope: use LegalSourceScope from Prisma. Idempotency key: key + effectiveFrom + canton.",
+          "completed_at": "2026-04-09",
+          "validation": {
+            "tsc_clean": true,
+            "tests_pass": true,
+            "tests_added": [
+              "apps/api/src/__tests__/legalVariableIngestion.test.ts"
+            ],
+            "test_count": 15,
+            "files_created": [
+              "apps/api/src/services/legalVariableIngestion.ts",
+              "apps/api/src/__tests__/legalVariableIngestion.test.ts"
+            ],
+            "files_modified": [
+              "apps/api/src/server.ts"
+            ],
+            "notes": "ingestLegalVariable (canton-aware idempotent upsert), ingestFetcherResults (batch bridge), flushLegalVariableIngestion (scheduled via BG-JOBS). 15 unit tests all pass."
+          }
         },
         {
           "id": "S-P0-002-02",

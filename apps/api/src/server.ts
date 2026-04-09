@@ -43,6 +43,7 @@ import { processSchedulingEscalations } from "./workflows/schedulingWorkflow";
 import { flushPendingEmails } from "./services/emailTransport";
 import { processRecurringBilling } from "./services/recurringBillingService";
 import { processOverdueInvoices } from "./services/overdueInvoiceService";
+import { flushLegalVariableIngestion } from "./services/legalVariableIngestion";
 
 /* ── F1: Production boot guard ─────────────────────────────── */
 const isProdEnv = process.env.NODE_ENV === "production";
@@ -220,6 +221,20 @@ async function runBackgroundJobs() {
     }
   } catch (e) {
     console.error("[BG-JOBS] Overdue invoice error:", e);
+  }
+
+  try {
+    const legalFlush = await flushLegalVariableIngestion();
+    if (legalFlush.variablesUpdated > 0 || legalFlush.errors.length > 0) {
+      console.log(
+        `[BG-JOBS] Legal variable ingestion: ${legalFlush.sourcesProcessed} source(s), ${legalFlush.variablesUpdated} updated`,
+      );
+      for (const err of legalFlush.errors) {
+        console.warn(`[BG-JOBS] Legal ingestion error: ${err}`);
+      }
+    }
+  } catch (e) {
+    console.error("[BG-JOBS] Legal variable ingestion error:", e);
   }
 }
 

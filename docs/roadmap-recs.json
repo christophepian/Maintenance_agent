@@ -30,9 +30,9 @@
       "blockedBy": []
     },
     {
-      "id": "S-P0-002-01",
+      "id": "S-P0-002-02",
       "rank": 2,
-      "title": "Create legalVariableIngestion.ts — schedule-driven LegalVariable DB writes",
+      "title": "Wire LegalVariable values into DSL condition evaluation",
       "phase": "P0",
       "type": "wire",
       "column": "ready",
@@ -44,16 +44,15 @@
         "P0 critical-path — highest priority phase",
         "all dependencies met — ready now",
         "concrete slice (1 file)",
-        "declared position: feature #2, slice #1",
-        "completing this unlocks 1 downstream item"
+        "declared position: feature #2, slice #2"
       ],
-      "unlocks": 1,
+      "unlocks": 0,
       "scopeFileCount": 1,
       "movement": 0,
       "movementLabel": "—",
       "hasCompleteTests": false,
       "files": [
-        "apps/api/src/services/legalVariableIngestion.ts"
+        "apps/api/src/services/legalDecisionEngine.ts"
       ],
       "blockedBy": []
     },
@@ -149,7 +148,7 @@
       "blockedBy": []
     }
   ],
-  "generated_at": "2026-04-06 14:50:18 UTC",
-  "total_in_queue": 30,
+  "generated_at": "2026-04-09 12:09:18 UTC",
+  "total_in_queue": 29,
   "next_id": "S-P0-001-02"
 }
