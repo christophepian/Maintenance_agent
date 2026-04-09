@@ -32,6 +32,7 @@ export default function LegalEvaluationsPage() {
   const [obligationFilter, setObligationFilter] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
   const [page, setPage] = useState(0);
+  const [viewMode, setViewMode] = useState("list"); // "list" or "grouped"
   const PAGE_SIZE = 20;
 
   const loadData = useCallback(async () => {
@@ -75,6 +76,26 @@ export default function LegalEvaluationsPage() {
     const set = new Set();
     for (const ev of evaluations) if (ev.category) set.add(ev.category);
     return [...set].sort();
+  }, [evaluations]);
+
+  // Grouped view: group evaluations by (category + legalTopic + obligation)
+  const groupedEvaluations = useMemo(() => {
+    const groups = {};
+    for (const ev of evaluations) {
+      const key = `${ev.category || "—"}::${ev.legalTopic || "—"}::${ev.obligation || "—"}`;
+      if (!groups[key]) {
+        groups[key] = {
+          category: ev.category,
+          legalTopic: ev.legalTopic,
+          obligation: ev.obligation,
+          confidence: ev.confidence,
+          reasons: ev.reasons,
+          items: [],
+        };
+      }
+      groups[key].items.push(ev);
+    }
+    return Object.values(groups).sort((a, b) => b.items.length - a.items.length);
   }, [evaluations]);
 
   const totalPages = Math.ceil(total / PAGE_SIZE);
@@ -121,7 +142,7 @@ export default function LegalEvaluationsPage() {
             </div>
           )}
 
-          {/* Filters */}
+          {/* Filters + View Toggle */}
           <div className="flex flex-wrap items-center gap-3">
             <select
               value={obligationFilter}
@@ -151,9 +172,24 @@ export default function LegalEvaluationsPage() {
                 Clear filters
               </button>
             )}
+            <div className="ml-auto flex items-center gap-1 rounded-lg border border-slate-200 bg-white p-0.5">
+              <button
+                onClick={() => setViewMode("list")}
+                className={`rounded-md px-3 py-1 text-xs font-medium transition ${viewMode === "list" ? "bg-slate-100 text-slate-900" : "text-slate-500 hover:text-slate-700"}`}
+              >
+                List
+              </button>
+              <button
+                onClick={() => setViewMode("grouped")}
+                className={`rounded-md px-3 py-1 text-xs font-medium transition ${viewMode === "grouped" ? "bg-slate-100 text-slate-900" : "text-slate-500 hover:text-slate-700"}`}
+              >
+                Grouped
+              </button>
+            </div>
           </div>
 
-          {/* Evaluation List */}
+          {/* Evaluation List View */}
+          {viewMode === "list" && (
           <Panel title={`Evaluations (${evaluations.length}${evaluations.length < total ? ` of ${total}` : ""})`}>
             {loading ? (
               <p className="text-sm text-slate-500">Loading…</p>
@@ -171,6 +207,22 @@ export default function LegalEvaluationsPage() {
               </div>
             )}
           </Panel>
+          )}
+
+          {/* Grouped View */}
+          {viewMode === "grouped" && (
+            <div className="space-y-4">
+              {loading ? (
+                <p className="text-sm text-slate-500">Loading…</p>
+              ) : groupedEvaluations.length === 0 ? (
+                <p className="empty-state-text">No evaluations match the current filters.</p>
+              ) : (
+                groupedEvaluations.map((group, gi) => (
+                  <GroupedEvaluationPanel key={gi} group={group} />
+                ))
+              )}
+            </div>
+          )}
 
           {/* Pagination */}
           {totalPages > 1 && (
@@ -197,6 +249,114 @@ export default function LegalEvaluationsPage() {
         </PageContent>
       </PageShell>
     </AppShell>
+  );
+}
+
+/** Grouped view: shows one panel per (category + topic + obligation) with the affected requests listed inside */
+function GroupedEvaluationPanel({ group }) {
+  const [expanded, setExpanded] = useState(false);
+  const cfg = OBLIGATION_CONFIG[group.obligation] || OBLIGATION_CONFIG.UNKNOWN;
+
+  return (
+    <div className="rounded-lg border border-slate-200 bg-white overflow-hidden">
+      {/* Group header */}
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="w-full flex items-center justify-between gap-4 px-4 py-3 text-left hover:bg-slate-50 transition"
+      >
+        <div className="flex flex-wrap items-center gap-2 min-w-0">
+          <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-semibold ${cfg.bg} ${cfg.text} ${cfg.border}`}>
+            <span className={`inline-block h-1.5 w-1.5 rounded-full ${cfg.dot}`} />
+            {cfg.label}
+          </span>
+          {group.category && (
+            <span className="rounded bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-600">
+              {group.category}
+            </span>
+          )}
+          {group.legalTopic && (
+            <span className="rounded bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">
+              {formatTopic(group.legalTopic)}
+            </span>
+          )}
+          <span className="text-xs text-slate-500">
+            Confidence: <strong className="text-slate-700">{(group.confidence * 100).toFixed(0)}%</strong>
+          </span>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-700">
+            {group.items.length} request{group.items.length !== 1 ? "s" : ""}
+          </span>
+          <span className="text-slate-400 text-xs">{expanded ? "▲" : "▼"}</span>
+        </div>
+      </button>
+
+      {/* Reasons (always visible) */}
+      {group.reasons?.length > 0 && (
+        <div className="px-4 pb-2 flex flex-wrap gap-1.5">
+          {group.reasons.map((r, i) => (
+            <span key={i} className="rounded bg-slate-50 px-2 py-0.5 text-xs text-slate-600">
+              {r}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* Expanded: list of individual requests */}
+      {expanded && (
+        <div className="border-t border-slate-100">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-slate-50 text-xs text-slate-500">
+                <th className="px-4 py-2 text-left font-medium">Request</th>
+                <th className="px-4 py-2 text-left font-medium">Building</th>
+                <th className="px-4 py-2 text-left font-medium">Unit</th>
+                <th className="px-4 py-2 text-left font-medium">Date</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {group.items.map((ev) => (
+                <tr key={ev.id} className="hover:bg-slate-50">
+                  <td className="px-4 py-2">
+                    {ev.requestId ? (
+                      <div>
+                        <a
+                          href={`/manager/requests/${ev.requestId}`}
+                          className="font-mono text-xs text-blue-600 hover:underline"
+                        >
+                          #{ev.requestNumber || ev.requestId.slice(0, 8)}
+                        </a>
+                        {ev.requestDescription && (
+                          <div className="text-xs text-slate-500 truncate max-w-[250px]" title={ev.requestDescription}>
+                            {ev.requestDescription}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-slate-400">—</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-2 text-xs">
+                    {ev.buildingName || <span className="text-slate-400">—</span>}
+                    {ev.buildingAddress && (
+                      <div className="text-xs text-slate-400 truncate max-w-[180px]" title={ev.buildingAddress}>
+                        {ev.buildingAddress}
+                      </div>
+                    )}
+                  </td>
+                  <td className="px-4 py-2 text-xs">
+                    {ev.unitNumber ? `Unit ${ev.unitNumber}` : <span className="text-slate-400">—</span>}
+                  </td>
+                  <td className="px-4 py-2 text-xs text-slate-500 whitespace-nowrap">
+                    {formatDate(ev.createdAt)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -232,17 +392,32 @@ function EvaluationCard({ evaluation }) {
             )}
           </div>
 
-          {/* Meta row */}
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
+          {/* Context row: building + unit + request */}
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-600">
+            {ev.buildingName && (
+              <span className="font-medium">{ev.buildingName}</span>
+            )}
+            {ev.unitNumber && (
+              <span className="text-slate-500">Unit {ev.unitNumber}</span>
+            )}
             {ev.requestId && (
               <a
                 href={`/manager/requests/${ev.requestId}`}
                 className="font-mono text-blue-600 hover:underline"
-                title="View request"
+                title={ev.requestDescription || "View request"}
               >
-                {ev.requestId.slice(0, 8)}…
+                Request #{ev.requestNumber || ev.requestId.slice(0, 8)}
               </a>
             )}
+            {ev.requestDescription && (
+              <span className="text-slate-400 truncate max-w-[250px]" title={ev.requestDescription}>
+                {ev.requestDescription}
+              </span>
+            )}
+          </div>
+
+          {/* Meta row */}
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
             <span>
               Confidence: <strong className="text-slate-700">{(ev.confidence * 100).toFixed(0)}%</strong>
             </span>

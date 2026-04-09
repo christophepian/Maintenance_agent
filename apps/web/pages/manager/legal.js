@@ -286,19 +286,37 @@ export default function ManagerLegalPage() {
                 <table className="inline-table">
                   <thead>
                     <tr>
+                      <th>Request</th>
+                      <th>Building / Unit</th>
                       <th>Category</th>
                       <th>Obligation</th>
                       <th>Confidence</th>
-                      <th>Actions</th>
+                      <th>Date</th>
                     </tr>
                   </thead>
                   <tbody>
                     {evaluations.map((ev) => (
                       <tr key={ev.id}>
+                        <td>
+                          {ev.requestId ? (
+                            <a href={`/manager/requests/${ev.requestId}`} className="text-blue-600 hover:underline text-xs font-mono">
+                              #{ev.requestNumber || ev.requestId.slice(0, 8)}
+                            </a>
+                          ) : "—"}
+                          {ev.requestDescription && (
+                            <div className="text-xs text-slate-500 truncate max-w-[200px]" title={ev.requestDescription}>
+                              {ev.requestDescription}
+                            </div>
+                          )}
+                        </td>
+                        <td>
+                          <div className="text-sm">{ev.buildingName || "—"}</div>
+                          {ev.unitNumber && <div className="text-xs text-slate-500">Unit {ev.unitNumber}</div>}
+                        </td>
                         <td className="cell-bold">{ev.category || "—"}</td>
                         <td>{ev.obligation || "—"}</td>
                         <td>{ev.confidence != null ? `${(ev.confidence * 100).toFixed(0)}%` : "—"}</td>
-                        <td>{ev.recommendedActions?.join(", ") || "—"}</td>
+                        <td className="text-xs text-slate-500 whitespace-nowrap">{ev.createdAt ? new Date(ev.createdAt).toLocaleDateString("de-CH") : "—"}</td>
                       </tr>
                     ))}
                   </tbody>

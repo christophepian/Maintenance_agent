@@ -253,15 +253,44 @@ export async function listEvaluations(params: ListEvaluationsParams) {
     prisma.legalEvaluationLog.count({ where }),
   ]);
 
+  // ── Resolve building names, unit numbers, request descriptions ──
+  const buildingIds = [...new Set(rows.map((r: any) => r.buildingId).filter(Boolean))] as string[];
+  const unitIds = [...new Set(rows.map((r: any) => r.unitId).filter(Boolean))] as string[];
+  const requestIds = [...new Set(rows.map((r: any) => r.requestId).filter(Boolean))] as string[];
+
+  const [buildings, units, requests] = await Promise.all([
+    buildingIds.length
+      ? prisma.building.findMany({ where: { id: { in: buildingIds } }, select: { id: true, name: true, address: true } })
+      : [],
+    unitIds.length
+      ? prisma.unit.findMany({ where: { id: { in: unitIds } }, select: { id: true, unitNumber: true } })
+      : [],
+    requestIds.length
+      ? prisma.request.findMany({ where: { id: { in: requestIds } }, select: { id: true, requestNumber: true, description: true, category: true } })
+      : [],
+  ]);
+
+  const buildingMap = new Map(buildings.map((b: any) => [b.id, b] as const));
+  const unitMap = new Map(units.map((u: any) => [u.id, u] as const));
+  const requestMap = new Map(requests.map((r: any) => [r.id, r] as const));
+
   const data = rows
     .map((row: any) => {
       const ctx = (row.contextJson ?? {}) as Record<string, any>;
       const result = (row.resultJson ?? {}) as Record<string, any>;
+      const building = row.buildingId ? buildingMap.get(row.buildingId) : null;
+      const unit = row.unitId ? unitMap.get(row.unitId) : null;
+      const request = row.requestId ? requestMap.get(row.requestId) : null;
       return {
         id: row.id,
         requestId: row.requestId,
+        requestNumber: request?.requestNumber ?? null,
+        requestDescription: request?.description ?? null,
         buildingId: row.buildingId,
+        buildingName: building?.name ?? null,
+        buildingAddress: building?.address ?? null,
         unitId: row.unitId,
+        unitNumber: unit?.unitNumber ?? null,
         createdAt: row.createdAt,
         category: ctx.category ?? null,
         canton: ctx.canton ?? null,
