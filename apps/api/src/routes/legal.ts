@@ -26,6 +26,7 @@ import {
   RfpNotFoundError,
 } from "../services/rfps";
 import { evaluateLegalRoutingWorkflow } from "../workflows/evaluateLegalRoutingWorkflow";
+import { analyseClaimWorkflow } from "../workflows/analyseClaimWorkflow";
 import { awardQuoteWorkflow, AwardQuoteError } from "../workflows";
 import { rfpReinviteWorkflow, RfpReinviteError } from "../workflows";
 import { rfpDirectAssignWorkflow, RfpDirectAssignError } from "../workflows";
@@ -137,6 +138,42 @@ export function registerLegalRoutes(router: Router) {
         }
         console.error("[GET /requests/:id/legal-decision]", e);
         sendError(res, 500, "INTERNAL_ERROR", "Legal evaluation failed");
+      }
+    },
+  );
+
+  // ════════════════════════════════════════════════════════════
+  // Claim Analysis Endpoint
+  // ════════════════════════════════════════════════════════════
+
+  /**
+   * GET /requests/:id/claim-analysis
+   *
+   * Produces a complete tenant claim analysis including defect
+   * classification, matched ASLOCA precedents, rent reduction
+   * calculation, tenant guidance, and temporal context.
+   */
+  router.get(
+    "/requests/:id/claim-analysis",
+    async ({ req, res, params, orgId }) => {
+      if (!requireOrgViewer(req, res)) return;
+
+      try {
+        const result = await analyseClaimWorkflow(
+          { orgId, prisma },
+          { requestId: params.id },
+        );
+
+        sendJson(res, 200, { data: result.analysis });
+      } catch (e: any) {
+        if (e instanceof RequestNotFoundError) {
+          return sendError(res, 404, "NOT_FOUND", e.message);
+        }
+        if (e.name === "OrgScopeMismatchError") {
+          return sendError(res, 403, "FORBIDDEN", e.message);
+        }
+        console.error("[GET /requests/:id/claim-analysis]", e);
+        sendError(res, 500, "INTERNAL_ERROR", "Claim analysis failed");
       }
     },
   );

@@ -216,6 +216,15 @@ export interface CashflowPlanApprovedPayload {
   planId: string;
 }
 
+export interface ClaimAnalysedPayload {
+  requestId: string;
+  legalObligation: string;
+  confidence: number;
+  matchedDefectCount: number;
+  totalReductionPercent: number | null;
+  totalReductionChf: number | null;
+}
+
 /* ── Event map: type → payload ──────────────────────────────── */
 
 export interface DomainEventMap {
@@ -252,6 +261,7 @@ export interface DomainEventMap {
   CASHFLOW_PLAN_CREATED: CashflowPlanCreatedPayload;
   CASHFLOW_PLAN_SUBMITTED: CashflowPlanSubmittedPayload;
   CASHFLOW_PLAN_APPROVED: CashflowPlanApprovedPayload;
+  CLAIM_ANALYSED: ClaimAnalysedPayload;
 }
 
 export type DomainEventType = keyof DomainEventMap;

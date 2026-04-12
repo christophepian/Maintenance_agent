@@ -32,6 +32,9 @@ export type { IssueInvoiceInput, IssueInvoiceResult } from "./issueInvoiceWorkfl
 export { evaluateLegalRoutingWorkflow } from "./evaluateLegalRoutingWorkflow";
 export type { EvaluateLegalRoutingInput, EvaluateLegalRoutingResult } from "./evaluateLegalRoutingWorkflow";
 
+export { analyseClaimWorkflow } from "./analyseClaimWorkflow";
+export type { AnalyseClaimInput, AnalyseClaimResult } from "./analyseClaimWorkflow";
+
 export { approveInvoiceWorkflow } from "./approveInvoiceWorkflow";
 export type { ApproveInvoiceInput, ApproveInvoiceResult } from "./approveInvoiceWorkflow";
 
