@@ -36,9 +36,20 @@ export interface LegalDecisionDTO {
   reasons: string[];
   citations: Citation[];
   depreciationSignal: DepreciationSignalDTO | null;
+  matchedReductions: RentReductionMatch[];
   recommendedActions: string[];
   rfpId: string | null;
   evaluationLogId: string;
+}
+
+export interface RentReductionMatch {
+  ruleKey: string;
+  defect: string;
+  category: string;
+  reductionPercent: number;
+  basis: string;
+  source: string;
+  relevanceScore: number; // 0–100 keyword match confidence
 }
 
 export interface Citation {
@@ -125,10 +136,17 @@ export async function evaluateRequestLegalDecision(
     );
   }
 
+  // 6b. Evaluate rent reduction case law (ASLOCA jurisprudence)
+  const matchedReductions = await evaluateRentReductionRules(
+    request,
+    legalTopic,
+    canton,
+  );
+
   // 7. Produce decision
   const obligation = determineObligation(ruleEvaluation, depreciationSignal);
-  const confidence = computeConfidence(ruleEvaluation, legalTopic, depreciationSignal);
-  const reasons = buildReasons(ruleEvaluation, depreciationSignal, obligation);
+  const confidence = computeConfidence(ruleEvaluation, legalTopic, depreciationSignal, matchedReductions);
+  const reasons = buildReasons(ruleEvaluation, depreciationSignal, obligation, matchedReductions);
   const citations = ruleEvaluation.citations;
   const recommendedActions = buildRecommendedActions(obligation, depreciationSignal);
 
@@ -172,6 +190,13 @@ export async function evaluateRequestLegalDecision(
             }
           : null,
         matchedRuleCount: ruleEvaluation.matchedVersionIds.length,
+        matchedReductions: matchedReductions.map((r) => ({
+          ruleKey: r.ruleKey,
+          defect: r.defect,
+          category: r.category,
+          reductionPercent: r.reductionPercent,
+          relevanceScore: r.relevanceScore,
+        })),
       },
       matchedRuleVersionIdsJson: ruleEvaluation.matchedVersionIds,
     },
@@ -185,6 +210,7 @@ export async function evaluateRequestLegalDecision(
     reasons,
     citations,
     depreciationSignal,
+    matchedReductions,
     recommendedActions,
     rfpId: null, // Set by the route handler after RFP creation
     evaluationLogId: evalLog.id,
@@ -361,9 +387,9 @@ async function evaluateStatutoryRules(
     // carry topic in dslJson — honour that for backwards compat.
     if (!rule.topic && dsl.topic && dsl.topic !== legalTopic) continue;
 
-    // DSL condition evaluation
+    // DSL condition evaluation (async — supports variable_compare DB lookups)
     if (dsl.conditions) {
-      const conditionsMet = evaluateDslConditions(dsl.conditions, request, legalTopic);
+      const conditionsMet = await evaluateDslConditions(dsl.conditions, request, legalTopic, canton);
       if (!conditionsMet) continue;
     }
 
@@ -408,6 +434,158 @@ async function evaluateStatutoryRules(
   return { federalObligation, cantonalObligation, matchedVersionIds, citations, highestPriority };
 }
 
+// ==========================================
+// Rent Reduction Case Law (ASLOCA Jurisprudence)
+// ==========================================
+
+/**
+ * Category mapping: request category keywords → ASLOCA DSL categories.
+ *
+ * The ASLOCA rules use French categories (Température, Humidité, etc.)
+ * while the request.category uses English terms. This map bridges them.
+ */
+const CATEGORY_KEYWORD_MAP: Record<string, string[]> = {
+  "Température": ["heating", "temperature", "cold", "thermostat", "radiator", "chauffage"],
+  "Humidité": ["humidity", "moisture", "mould", "mold", "damp", "condensation", "humidité", "moisissure"],
+  "Dégâts d'eau": ["water", "leak", "flood", "pipe", "plumbing", "roof", "infiltration", "dégât"],
+  "Rénovations": ["renovation", "construction", "work", "noise", "dust", "rénovation", "travaux"],
+  "Immissions": ["noise", "smell", "odour", "odor", "smoke", "vibration", "immission", "bruit"],
+  "Défauts": ["defect", "broken", "malfunction", "faulty", "damaged", "défaut", "panne"],
+  "Autres": [],
+};
+
+/**
+ * Evaluate rent reduction rules from ASLOCA/Lachat jurisprudence.
+ *
+ * Unlike statutory rules, rent reductions have no `topic` field.
+ * Matching is done via:
+ *   1. Keyword matching between request description/category and DSL defect/category
+ *   2. All matching rules returned, sorted by relevance then reduction %
+ *
+ * Returns RentReductionMatch[] ordered by relevanceScore desc, reductionPercent desc.
+ */
+async function evaluateRentReductionRules(
+  request: any,
+  legalTopic: string | null,
+  canton: string | null,
+): Promise<RentReductionMatch[]> {
+  const now = new Date();
+
+  // Load all active INDUSTRY_STANDARD rent reduction rules
+  const rules = await prisma.legalRule.findMany({
+    where: {
+      isActive: true,
+      authority: "INDUSTRY_STANDARD",
+      jurisdiction: "CH",
+      OR: [
+        { canton: null },
+        { canton: canton ?? undefined },
+      ],
+    },
+    include: {
+      versions: {
+        where: {
+          effectiveFrom: { lte: now },
+          OR: [
+            { effectiveTo: null },
+            { effectiveTo: { gte: now } },
+          ],
+        },
+        orderBy: { effectiveFrom: "desc" },
+        take: 1,
+      },
+    },
+  });
+
+  // Build search terms from request
+  const searchTerms = buildSearchTerms(request, legalTopic);
+
+  const matches: RentReductionMatch[] = [];
+
+  for (const rule of rules) {
+    const version = rule.versions[0];
+    if (!version) continue;
+
+    const dsl = version.dslJson as any;
+    if (!dsl || dsl.type !== "RENT_REDUCTION") continue;
+
+    const relevanceScore = computeRelevance(dsl, searchTerms);
+    if (relevanceScore === 0) continue;
+
+    matches.push({
+      ruleKey: rule.key,
+      defect: dsl.defect || "",
+      category: dsl.category || "",
+      reductionPercent: dsl.reductionPercent ?? 0,
+      basis: dsl.basis || "jurisprudence",
+      source: dsl.source || "ASLOCA/Lachat",
+      relevanceScore,
+    });
+  }
+
+  // Sort by relevance desc, then reduction % desc
+  matches.sort((a, b) =>
+    b.relevanceScore - a.relevanceScore || b.reductionPercent - a.reductionPercent
+  );
+
+  return matches;
+}
+
+/**
+ * Build normalized search terms from the request for keyword matching.
+ */
+function buildSearchTerms(request: any, legalTopic: string | null): string[] {
+  const terms: string[] = [];
+
+  if (request.description) {
+    terms.push(...request.description.toLowerCase().split(/\s+/));
+  }
+  if (request.category) {
+    terms.push(...request.category.toLowerCase().split(/[\s_-]+/));
+  }
+  if (legalTopic) {
+    terms.push(...legalTopic.toLowerCase().split(/[\s_-]+/));
+  }
+
+  return terms.filter((t) => t.length > 2); // Skip trivial words
+}
+
+/**
+ * Compute relevance score (0–100) between a rent reduction DSL and search terms.
+ *
+ * Scoring:
+ *   - ASLOCA category matches a request keyword → +40
+ *   - Defect text contains a request keyword   → +30 per match (max 60)
+ *   - Legal topic maps to the ASLOCA category  → +20
+ */
+function computeRelevance(
+  dsl: any,
+  searchTerms: string[],
+): number {
+  let score = 0;
+
+  const defectLower = (dsl.defect || "").toLowerCase();
+  const aslocaCategory = dsl.category || "";
+
+  // Check if any search terms match known keywords for this ASLOCA category
+  const categoryKeywords = CATEGORY_KEYWORD_MAP[aslocaCategory] || [];
+  const categoryMatch = searchTerms.some((term) =>
+    categoryKeywords.some((kw) => term.includes(kw) || kw.includes(term))
+  );
+  if (categoryMatch) score += 40;
+
+  // Check defect text for keyword overlap
+  let defectHits = 0;
+  for (const term of searchTerms) {
+    if (term.length >= 4 && defectLower.includes(term)) {
+      defectHits++;
+    }
+  }
+  score += Math.min(60, defectHits * 30);
+
+  return Math.min(100, score);
+}
+
 /**
  * DSL condition evaluator.
  *
@@ -417,30 +595,36 @@ async function evaluateStatutoryRules(
  *   { type: "always_false" }                      — unconditional fail
  *   { type: "AND", conditions: [...] }             — all sub-conditions must pass
  *   { type: "OR",  conditions: [...] }             — any sub-condition must pass
+ *   { type: "variable_compare",                    — compare a LegalVariable value
+ *           variableKey: "REFERENCE_INTEREST_RATE",
+ *           op: "gt" | "gte" | "lt" | "lte" | "eq" | "neq",
+ *           value: 1.75 }                           — against a threshold
  *
  * Legacy format (backwards compat):
  *   { field: "category", op: "eq", value: "stove" }
  *   { field: "estimatedCost", op: "gt", value: 500 }
  */
-function evaluateDslConditions(
+async function evaluateDslConditions(
   conditions: any[],
   request: any,
   resolvedTopic?: string | null,
-): boolean {
+  canton?: string | null,
+): Promise<boolean> {
   if (!Array.isArray(conditions)) return true;
 
   for (const cond of conditions) {
-    if (!evaluateSingleCondition(cond, request, resolvedTopic)) return false;
+    if (!(await evaluateSingleCondition(cond, request, resolvedTopic, canton))) return false;
   }
 
   return true;
 }
 
-function evaluateSingleCondition(
+async function evaluateSingleCondition(
   cond: any,
   request: any,
   resolvedTopic?: string | null,
-): boolean {
+  canton?: string | null,
+): Promise<boolean> {
   if (!cond || typeof cond !== "object") return true;
 
   // ── Typed condition nodes ──────────────────────────────────
@@ -454,14 +638,35 @@ function evaluateSingleCondition(
     return false;
   }
   if (cond.type === "AND" && Array.isArray(cond.conditions)) {
-    return cond.conditions.every((sub: any) =>
-      evaluateSingleCondition(sub, request, resolvedTopic),
-    );
+    for (const sub of cond.conditions) {
+      if (!(await evaluateSingleCondition(sub, request, resolvedTopic, canton))) return false;
+    }
+    return true;
   }
   if (cond.type === "OR" && Array.isArray(cond.conditions)) {
-    return cond.conditions.some((sub: any) =>
-      evaluateSingleCondition(sub, request, resolvedTopic),
-    );
+    for (const sub of cond.conditions) {
+      if (await evaluateSingleCondition(sub, request, resolvedTopic, canton)) return true;
+    }
+    return false;
+  }
+
+  // ── S-P0-002-02: variable_compare — resolve LegalVariable from DB ──
+  if (cond.type === "variable_compare" && cond.variableKey && cond.op) {
+    const resolved = await resolveLegalVariable(cond.variableKey, canton);
+    if (resolved === null) return true; // Permissive: skip if variable not found
+    const numValue = typeof resolved === "number" ? resolved : Number(resolved);
+    if (!Number.isFinite(numValue)) return true;
+    const threshold = Number(cond.value);
+    if (!Number.isFinite(threshold)) return true;
+    switch (cond.op) {
+      case "gt":  return numValue > threshold;
+      case "gte": return numValue >= threshold;
+      case "lt":  return numValue < threshold;
+      case "lte": return numValue <= threshold;
+      case "eq":  return numValue === threshold;
+      case "neq": return numValue !== threshold;
+      default:    return true;
+    }
   }
 
   // ── Legacy field/op/value format ───────────────────────────
@@ -563,6 +768,7 @@ function computeConfidence(
   ruleEval: RuleEvaluationResult,
   legalTopic: string | null,
   depreciation: DepreciationSignalDTO | null,
+  matchedReductions?: RentReductionMatch[],
 ): number {
   let confidence = 0;
 
@@ -578,6 +784,9 @@ function computeConfidence(
   // Multiple supporting rules
   if (ruleEval.matchedVersionIds.length > 1) confidence += 10;
 
+  // Rent reduction case law matched
+  if (matchedReductions && matchedReductions.length > 0) confidence += 10;
+
   return Math.min(100, confidence);
 }
 
@@ -585,6 +794,7 @@ function buildReasons(
   ruleEval: RuleEvaluationResult,
   depreciation: DepreciationSignalDTO | null,
   obligation: LegalObligation,
+  matchedReductions?: RentReductionMatch[],
 ): string[] {
   const reasons: string[] = [];
 
@@ -606,6 +816,14 @@ function buildReasons(
           `(${depreciation.ageMonths}/${depreciation.usefulLifeMonths} months)`,
       );
     }
+  }
+
+  if (matchedReductions && matchedReductions.length > 0) {
+    const top = matchedReductions[0];
+    reasons.push(
+      `${matchedReductions.length} rent reduction precedent(s) found — ` +
+        `highest: ${top.reductionPercent}% (${top.defect})`,
+    );
   }
 
   if (obligation === LegalObligation.OBLIGATED) {
@@ -643,6 +861,64 @@ function buildRecommendedActions(
   }
 
   return actions;
+}
+
+// ==========================================
+// LegalVariable Resolution (S-P0-002-02)
+// ==========================================
+
+/**
+ * Resolve the current effective value of a LegalVariable.
+ *
+ * Lookup priority:
+ *   1. Canton-specific variable (if canton is provided)
+ *   2. Federal / nationwide variable (canton = null)
+ *
+ * Returns the valueJson of the latest effective LegalVariableVersion,
+ * or null if not found.
+ */
+async function resolveLegalVariable(
+  key: string,
+  canton?: string | null,
+): Promise<any | null> {
+  const now = new Date();
+
+  // Try canton-specific first
+  if (canton) {
+    const cantonVar = await prisma.legalVariable.findFirst({
+      where: { key, jurisdiction: "CH", canton },
+      include: {
+        versions: {
+          where: {
+            effectiveFrom: { lte: now },
+            OR: [{ effectiveTo: null }, { effectiveTo: { gte: now } }],
+          },
+          orderBy: { effectiveFrom: "desc" },
+          take: 1,
+        },
+      },
+    });
+    if (cantonVar?.versions[0]?.valueJson != null) {
+      return cantonVar.versions[0].valueJson;
+    }
+  }
+
+  // Fall back to federal (canton = null)
+  const federalVar = await prisma.legalVariable.findFirst({
+    where: { key, jurisdiction: "CH", canton: null },
+    include: {
+      versions: {
+        where: {
+          effectiveFrom: { lte: now },
+          OR: [{ effectiveTo: null }, { effectiveTo: { gte: now } }],
+        },
+        orderBy: { effectiveFrom: "desc" },
+        take: 1,
+      },
+    },
+  });
+
+  return federalVar?.versions[0]?.valueJson ?? null;
 }
 
 // ==========================================

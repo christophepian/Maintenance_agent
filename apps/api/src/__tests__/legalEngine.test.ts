@@ -370,11 +370,24 @@ describe("Legal Engine Integration Tests", () => {
       expect(decision).toHaveProperty("confidence");
       expect(decision).toHaveProperty("reasons");
       expect(decision).toHaveProperty("citations");
+      expect(decision).toHaveProperty("matchedReductions");
       expect(decision).toHaveProperty("recommendedActions");
       expect(decision).toHaveProperty("evaluationLogId");
       expect(Array.isArray(decision.reasons)).toBe(true);
       expect(Array.isArray(decision.citations)).toBe(true);
+      expect(Array.isArray(decision.matchedReductions)).toBe(true);
       expect(typeof decision.confidence).toBe("number");
+
+      // Each rent reduction match should have the expected shape
+      for (const r of decision.matchedReductions) {
+        expect(r).toHaveProperty("ruleKey");
+        expect(r).toHaveProperty("defect");
+        expect(r).toHaveProperty("category");
+        expect(r).toHaveProperty("reductionPercent");
+        expect(typeof r.reductionPercent).toBe("number");
+        expect(r).toHaveProperty("relevanceScore");
+        expect(typeof r.relevanceScore).toBe("number");
+      }
     }, 15000);
 
     it("should return 404 for non-existent request", async () => {
