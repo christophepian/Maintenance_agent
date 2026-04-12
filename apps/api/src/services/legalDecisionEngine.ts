@@ -29,6 +29,13 @@ import {
   calculateRentReductionForUnit,
   type RentReductionResult,
 } from "./rentReductionCalculator";
+import {
+  getTranslation,
+  classifyRequestNature,
+  normaliseForMatch,
+  tokenizeAndStem,
+  type RequestNature,
+} from "./legalTranslations";
 
 // ==========================================
 // DTOs
@@ -166,7 +173,12 @@ export async function evaluateRequestLegalDecision(
     matches: [], bestMatch: null, totalConfidence: 0, unmatchedSignals: [],
   };
   if (defectSignals.keywords.length > 0 || defectSignals.inferredCategories.length > 0) {
-    defectMatchResult = await matchDefectsToRules(defectSignals, canton);
+    defectMatchResult = await matchDefectsToRules(
+      defectSignals,
+      canton,
+      request.description ?? null,
+      request.category ?? null,
+    );
   }
 
   // 6e. Phase B: Compute CHF rent reduction estimate if unit has an active lease
@@ -504,24 +516,58 @@ async function evaluateStatutoryRules(
  *
  * The ASLOCA rules use French categories (Température, Humidité, etc.)
  * while the request.category uses English terms. This map bridges them.
+ * Enriched with trilingual synonyms + appliance names for better recall.
  */
 const CATEGORY_KEYWORD_MAP: Record<string, string[]> = {
-  "Température": ["heating", "temperature", "cold", "thermostat", "radiator", "chauffage"],
-  "Humidité": ["humidity", "moisture", "mould", "mold", "damp", "condensation", "humidité", "moisissure"],
-  "Dégâts d'eau": ["water", "leak", "flood", "pipe", "plumbing", "roof", "infiltration", "dégât"],
-  "Rénovations": ["renovation", "construction", "work", "noise", "dust", "rénovation", "travaux"],
-  "Immissions": ["noise", "smell", "odour", "odor", "smoke", "vibration", "immission", "bruit"],
-  "Défauts": ["defect", "broken", "malfunction", "faulty", "damaged", "défaut", "panne"],
-  "Autres": [],
+  "Température": [
+    "heating", "temperature", "cold", "thermostat", "radiator", "chauffage",
+    "boiler", "chaudiere", "heizung", "kalt", "froid", "heat pump",
+    "warm water", "hot water", "eau chaude", "warmwasser", "freezing",
+    "degrees", "celsius",
+  ],
+  "Humidité": [
+    "humidity", "moisture", "mould", "mold", "damp", "condensation",
+    "humidite", "moisissure", "schimmel", "feucht", "mildew",
+    "wet", "fungus", "black spots", "rotting", "pourrissement",
+  ],
+  "Dégâts d'eau": [
+    "water", "leak", "flood", "pipe", "plumbing", "roof", "infiltration",
+    "degat", "wasserschaden", "leck", "fuite", "tuyau", "rohr",
+    "water damage", "ceiling drip", "wet ceiling", "burst pipe",
+  ],
+  "Rénovations": [
+    "renovation", "construction", "work", "dust", "renovation", "travaux",
+    "chantier", "baustelle", "scaffold", "echafaudage", "gerust",
+    "unfinished", "finishing", "plumbing work", "bathroom renovation",
+  ],
+  "Immissions": [
+    "noise", "smell", "odour", "odor", "smoke", "vibration", "immission",
+    "bruit", "larm", "geruch", "rauch", "fumee", "nuisance",
+    "loud", "music", "construction noise", "traffic",
+  ],
+  "Défauts": [
+    "defect", "broken", "malfunction", "faulty", "damaged", "defaut", "panne",
+    "kaputt", "casse", "dishwasher", "lave-vaisselle", "elevator", "ascenseur",
+    "intercom", "interphone", "washing machine", "machine a laver",
+    "fridge", "refrigerateur", "oven", "four", "stove", "cuisiniere",
+    "shower", "douche", "shutter", "volet", "lock", "serrure",
+    "window", "fenetre", "door", "porte", "not working",
+  ],
+  "Autres": [
+    "caretaker", "concierge", "hauswart", "janitor",
+    "parquet", "flooring", "paint", "peinture", "wallpaper",
+    "ceiling", "plafond", "wall", "mur", "entrance", "courtyard",
+    "poorly maintained", "dirty",
+  ],
 };
 
 /**
  * Evaluate rent reduction rules from ASLOCA/Lachat jurisprudence.
  *
  * Unlike statutory rules, rent reductions have no `topic` field.
- * Matching is done via:
- *   1. Keyword matching between request description/category and DSL defect/category
- *   2. All matching rules returned, sorted by relevance then reduction %
+ * Matching uses bilingual keyword matching via the translation dictionary
+ * (legalTranslations.ts) plus request-nature classification for
+ * applicability filtering.
  *
  * Returns RentReductionMatch[] ordered by relevanceScore desc, reductionPercent desc.
  */
@@ -558,8 +604,8 @@ async function evaluateRentReductionRules(
     },
   });
 
-  // Build search terms from request
-  const searchTerms = buildSearchTerms(request, legalTopic);
+  // Build enriched search context from request
+  const searchCtx = buildSearchContext(request, legalTopic);
 
   const matches: RentReductionMatch[] = [];
 
@@ -570,7 +616,7 @@ async function evaluateRentReductionRules(
     const dsl = version.dslJson as any;
     if (!dsl || dsl.type !== "RENT_REDUCTION") continue;
 
-    const relevanceScore = computeRelevance(dsl, searchTerms);
+    const relevanceScore = computeRelevance(dsl, searchCtx, rule.key);
     if (relevanceScore === 0) continue;
 
     matches.push({
@@ -592,57 +638,127 @@ async function evaluateRentReductionRules(
   return matches;
 }
 
-/**
- * Build normalized search terms from the request for keyword matching.
- */
-function buildSearchTerms(request: any, legalTopic: string | null): string[] {
-  const terms: string[] = [];
+// ==========================================
+// Search context (replaces old buildSearchTerms)
+// ==========================================
 
-  if (request.description) {
-    terms.push(...request.description.toLowerCase().split(/\s+/));
-  }
-  if (request.category) {
-    terms.push(...request.category.toLowerCase().split(/[\s_-]+/));
-  }
-  if (legalTopic) {
-    terms.push(...legalTopic.toLowerCase().split(/[\s_-]+/));
-  }
-
-  return terms.filter((t) => t.length > 2); // Skip trivial words
+interface SearchContext {
+  /** All normalized tokens from description + category + legalTopic */
+  tokens: string[];
+  /** Stemmed versions of those tokens */
+  stems: string[];
+  /** Classified request nature */
+  nature: RequestNature;
+  /** Legal topic (e.g. "PLUMBING") if resolved */
+  legalTopic: string | null;
 }
 
 /**
- * Compute relevance score (0–100) between a rent reduction DSL and search terms.
+ * Build a rich search context from the request for bilingual matching.
+ * Uses accent stripping + stemming for both request text and rule text.
+ */
+function buildSearchContext(request: any, legalTopic: string | null): SearchContext {
+  const parts: string[] = [];
+  if (request.description) parts.push(request.description);
+  if (request.category) parts.push(request.category.replace(/[_-]/g, " "));
+  if (legalTopic) parts.push(legalTopic.replace(/[_-]/g, " "));
+
+  const combinedText = parts.join(" ");
+  const { tokens, stems } = tokenizeAndStem(combinedText);
+  const nature = classifyRequestNature(request.description ?? "", request.category ?? null);
+
+  return { tokens, stems, nature, legalTopic };
+}
+
+/**
+ * Compute relevance score (0–100) between a rent reduction DSL rule and
+ * the search context.
  *
- * Scoring:
- *   - ASLOCA category matches a request keyword → +40
- *   - Defect text contains a request keyword   → +30 per match (max 60)
- *   - Legal topic maps to the ASLOCA category  → +20
+ * Scoring dimensions:
+ *   1. ASLOCA category match via enriched keyword map            → +25
+ *   2. French defect text overlap (accent-stripped + stemmed)     → +8 per hit (max 24)
+ *   3. English translation overlap (searchTermsEn from dict)     → +10 per hit (max 30)
+ *   4. Request nature ↔ rule nature alignment                    → +15
+ *   5. Legal topic maps to the ASLOCA category                   → +6
+ *
+ * Max theoretical score = 100.
  */
 function computeRelevance(
   dsl: any,
-  searchTerms: string[],
+  ctx: SearchContext,
+  ruleKey: string,
 ): number {
   let score = 0;
 
-  const defectLower = (dsl.defect || "").toLowerCase();
   const aslocaCategory = dsl.category || "";
+  const defectFr = normaliseForMatch(dsl.defect || "");
+  const translation = getTranslation(ruleKey);
 
-  // Check if any search terms match known keywords for this ASLOCA category
-  const categoryKeywords = CATEGORY_KEYWORD_MAP[aslocaCategory] || [];
-  const categoryMatch = searchTerms.some((term) =>
-    categoryKeywords.some((kw) => term.includes(kw) || kw.includes(term))
+  // ── 1. Category keyword match ─────────────────────────────────
+  const categoryKeywords = (CATEGORY_KEYWORD_MAP[aslocaCategory] || [])
+    .map(normaliseForMatch);
+
+  const categoryMatch = ctx.tokens.some((tok) =>
+    categoryKeywords.some((kw) => tok.includes(kw) || kw.includes(tok))
+  ) || ctx.stems.some((stem) =>
+    categoryKeywords.some((kw) => kw.startsWith(stem) || stem.startsWith(kw))
   );
-  if (categoryMatch) score += 40;
+  if (categoryMatch) score += 25;
 
-  // Check defect text for keyword overlap
-  let defectHits = 0;
-  for (const term of searchTerms) {
-    if (term.length >= 4 && defectLower.includes(term)) {
-      defectHits++;
+  // ── 2. French defect text overlap (accent-stripped + stemmed) ─
+  const defectFrTokens = defectFr.split(/[\s,;.!?()[\]{}'"–—/°+]+/).filter((t) => t.length >= 3);
+  let frHits = 0;
+  for (const tok of ctx.tokens) {
+    if (tok.length >= 3 && defectFrTokens.some((dt) => dt.includes(tok) || tok.includes(dt))) {
+      frHits++;
     }
   }
-  score += Math.min(60, defectHits * 30);
+  // Also try stemmed matching for French
+  for (const stem of ctx.stems) {
+    if (stem.length >= 3 && defectFrTokens.some((dt) => dt.startsWith(stem) || stem.startsWith(dt))) {
+      frHits++;
+    }
+  }
+  score += Math.min(24, frHits * 8);
+
+  // ── 3. English translation overlap ────────────────────────────
+  if (translation) {
+    const enTermsNorm = translation.searchTermsEn.map(normaliseForMatch);
+    const frTermsNorm = translation.searchTermsFr.map(normaliseForMatch);
+    const allTranslationTerms = [...enTermsNorm, ...frTermsNorm];
+
+    let translationHits = 0;
+    for (const tok of ctx.tokens) {
+      if (tok.length >= 3 && allTranslationTerms.some((t) => t.includes(tok) || tok.includes(t))) {
+        translationHits++;
+      }
+    }
+    // Stem-level matching against translation terms
+    for (const stem of ctx.stems) {
+      if (stem.length >= 3 && allTranslationTerms.some((t) => t.startsWith(stem) || stem.startsWith(t))) {
+        translationHits++;
+      }
+    }
+    score += Math.min(30, translationHits * 10);
+  }
+
+  // ── 4. Request nature alignment ───────────────────────────────
+  if (translation && ctx.nature !== "other" && translation.nature === ctx.nature) {
+    score += 15;
+  }
+
+  // ── 5. Legal topic → ASLOCA category mapping bonus ────────────
+  if (ctx.legalTopic) {
+    const topicLower = ctx.legalTopic.toLowerCase();
+    const topicMatch =
+      (aslocaCategory === "Température" && (topicLower.includes("heating") || topicLower.includes("hvac"))) ||
+      (aslocaCategory === "Humidité" && topicLower.includes("plumbing")) ||
+      (aslocaCategory === "Dégâts d'eau" && (topicLower.includes("plumbing") || topicLower.includes("water"))) ||
+      (aslocaCategory === "Rénovations" && topicLower.includes("renovation")) ||
+      (aslocaCategory === "Immissions" && topicLower.includes("noise")) ||
+      (aslocaCategory === "Défauts" && (topicLower.includes("appliance") || topicLower.includes("equipment")));
+    if (topicMatch) score += 6;
+  }
 
   return Math.min(100, score);
 }

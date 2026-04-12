@@ -9,6 +9,13 @@
 
 import prisma from "./prismaClient";
 import type { DefectSignals, DefectSeverity } from "./defectClassifier";
+import {
+  getTranslation,
+  classifyRequestNature,
+  normaliseForMatch,
+  basicStem,
+  type RequestNature,
+} from "./legalTranslations";
 
 // ==========================================
 // Public types
@@ -37,11 +44,10 @@ export interface MatchResult {
 // Scoring weights
 // ==========================================
 
-const SCORE_CATEGORY_MATCH = 30;
-const SCORE_KEYWORD_OVERLAP_PER_HIT = 15;
-const SCORE_KEYWORD_OVERLAP_MAX = 40;
-const SCORE_SEVERITY_ALIGNMENT = 15;
-const SCORE_AREA_MATCH = 15;
+// ==========================================
+// Scoring thresholds
+// ==========================================
+
 const MIN_CONFIDENCE_THRESHOLD = 20;
 const MAX_RESULTS = 5;
 
@@ -54,11 +60,15 @@ const MAX_RESULTS = 5;
  *
  * @param signals - Structured signals from extractDefectSignals()
  * @param canton - Optional canton for jurisdiction filtering
+ * @param description - Optional original description for nature classification
+ * @param category - Optional request category for nature classification
  * @returns MatchResult with ranked matches, best match, and unmatched signals
  */
 export async function matchDefectsToRules(
   signals: DefectSignals,
   canton?: string | null,
+  description?: string | null,
+  category?: string | null,
 ): Promise<MatchResult> {
   if (!signals.keywords.length && !signals.inferredCategories.length) {
     return {
@@ -72,12 +82,15 @@ export async function matchDefectsToRules(
   // 1. Load all active RENT_REDUCTION rules
   const rules = await loadRentReductionRules(canton);
 
+  // 1b. Classify request nature for applicability scoring
+  const requestNature = classifyRequestNature(description ?? "", category ?? null);
+
   // 2. Score each rule against signals
   const scored: DefectMatch[] = [];
   const matchedKeywords = new Set<string>();
 
   for (const rule of rules) {
-    const { confidence, reasons, keywordsUsed } = scoreRule(rule, signals);
+    const { confidence, reasons, keywordsUsed } = scoreRule(rule, signals, requestNature);
     if (confidence >= MIN_CONFIDENCE_THRESHOLD) {
       scored.push({
         ruleKey: rule.key,
@@ -203,55 +216,90 @@ interface ScoreResult {
  * Score a single rule against the signals.
  *
  * Scoring dimensions:
- *   1. Category match (signals.inferredCategories ∩ rule.category): +30
- *   2. Keyword overlap (signal keywords vs rule defect text): +15 per hit, max 40
- *   3. Severity alignment (signal severity vs rule's implied severity): +15
- *   4. Area match (rooms overlap with rule defect text): +15
+ *   1. Category match (signals.inferredCategories ∩ rule.category): +25
+ *   2. French keyword overlap (signal keywords vs rule defect text,
+ *      accent-stripped + stemmed):                                   +12 per hit, max 30
+ *   3. English translation overlap (signal keywords vs searchTermsEn
+ *      from translation dictionary):                                 +12 per hit, max 25
+ *   4. Severity alignment (signal severity vs rule's implied severity): +10
+ *   5. Area match (rooms overlap with rule defect text):              +10
+ *   6. Request nature alignment (via translation dictionary):         +10
  */
-function scoreRule(rule: ParsedRule, signals: DefectSignals): ScoreResult {
+function scoreRule(rule: ParsedRule, signals: DefectSignals, requestNature?: RequestNature): ScoreResult {
   let confidence = 0;
   const reasons: string[] = [];
   const keywordsUsed: string[] = [];
 
-  const defectLower = rule.defect.toLowerCase();
-  const defectNorm = stripAccents(defectLower);
+  const defectNorm = normaliseForMatch(rule.defect);
+  const defectTokens = defectNorm.split(/[\s,;.!?()[\]{}'"–—/°+]+/).filter((t) => t.length >= 3);
+  const defectStems = defectTokens.map(basicStem).filter((s) => s.length >= 3);
+  const translation = getTranslation(rule.key);
 
   // 1. Category match
   if (signals.inferredCategories.includes(rule.category)) {
-    confidence += SCORE_CATEGORY_MATCH;
+    confidence += 25;
     reasons.push(`Category match: ${rule.category}`);
   }
 
-  // 2. Keyword overlap with defect text
-  let keywordHits = 0;
+  // 2. French keyword overlap (accent-stripped + stemmed)
+  let frHits = 0;
   for (const kw of signals.keywords) {
-    const kwNorm = stripAccents(kw.term.toLowerCase());
-    if (kwNorm.length >= 3 && (defectNorm.includes(kwNorm) || kwNorm.includes(defectNorm.split(" ")[0]))) {
-      keywordHits++;
+    const kwNorm = normaliseForMatch(kw.term);
+    const kwStem = basicStem(kwNorm);
+    const directMatch = defectNorm.includes(kwNorm) || defectTokens.some((dt) => dt.includes(kwNorm) || kwNorm.includes(dt));
+    const stemMatch = kwStem.length >= 3 && defectStems.some((ds) => ds.startsWith(kwStem) || kwStem.startsWith(ds));
+    if (directMatch || stemMatch) {
+      frHits++;
       keywordsUsed.push(kw.term);
-      if (keywordHits <= 3) {
-        reasons.push(`Keyword "${kw.term}" found in defect: "${rule.defect}"`);
+      if (frHits <= 3) {
+        reasons.push(`Keyword "${kw.term}" matches defect: "${rule.defect}"`);
       }
     }
   }
-  confidence += Math.min(SCORE_KEYWORD_OVERLAP_MAX, keywordHits * SCORE_KEYWORD_OVERLAP_PER_HIT);
+  confidence += Math.min(30, frHits * 12);
 
-  // 3. Severity alignment
+  // 3. English translation overlap
+  if (translation) {
+    const enTermsNorm = translation.searchTermsEn.map(normaliseForMatch);
+    const frTermsNorm = translation.searchTermsFr.map(normaliseForMatch);
+    const allTerms = [...enTermsNorm, ...frTermsNorm];
+
+    let translationHits = 0;
+    for (const kw of signals.keywords) {
+      const kwNorm = normaliseForMatch(kw.term);
+      if (kwNorm.length >= 3 && allTerms.some((t) => t.includes(kwNorm) || kwNorm.includes(t))) {
+        translationHits++;
+        if (!keywordsUsed.includes(kw.term)) keywordsUsed.push(kw.term);
+        if (translationHits <= 2) {
+          reasons.push(`Keyword "${kw.term}" matches translation for: "${translation.defectEn}"`);
+        }
+      }
+    }
+    confidence += Math.min(25, translationHits * 12);
+  }
+
+  // 4. Severity alignment
   const impliedSeverity = inferSeverityFromReduction(rule.reductionPercent);
   if (severityAligns(signals.severity, impliedSeverity)) {
-    confidence += SCORE_SEVERITY_ALIGNMENT;
+    confidence += 10;
     reasons.push(`Severity alignment: ${signals.severity} ↔ ${impliedSeverity} (${rule.reductionPercent}%)`);
   }
 
-  // 4. Area match — rooms mentioned in signals that appear in defect text
+  // 5. Area match — rooms mentioned in signals that appear in defect text
   if (signals.affectedArea.rooms.length > 0) {
     const roomMatch = signals.affectedArea.rooms.some((room) =>
-      defectNorm.includes(stripAccents(room.toLowerCase()))
+      defectNorm.includes(normaliseForMatch(room))
     );
     if (roomMatch) {
-      confidence += SCORE_AREA_MATCH;
+      confidence += 10;
       reasons.push("Room name match in defect description");
     }
+  }
+
+  // 6. Request nature alignment
+  if (requestNature && translation && requestNature !== "other" && translation.nature === requestNature) {
+    confidence += 10;
+    reasons.push(`Nature alignment: ${requestNature}`);
   }
 
   return { confidence, reasons, keywordsUsed };
@@ -281,13 +329,6 @@ const SEVERITY_RANK: Record<DefectSeverity, number> = {
 
 function severityAligns(detected: DefectSeverity, implied: DefectSeverity): boolean {
   return Math.abs(SEVERITY_RANK[detected] - SEVERITY_RANK[implied]) <= 1;
-}
-
-/**
- * Strip diacritics for fuzzy matching.
- */
-function stripAccents(text: string): string {
-  return text.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 }
 
 /**

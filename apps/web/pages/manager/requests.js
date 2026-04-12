@@ -390,6 +390,111 @@ function LegalRecommendationPanel({ decision, loading: isLoading, error: loadErr
           )}
         </div>
       )}
+
+      {/* Defect matches (Phase B) */}
+      {decision.defectMatches?.length > 0 && (
+        <div className="mt-3">
+          <p className="text-xs font-semibold text-slate-600 mb-1.5">
+            Matched defect rules ({decision.defectMatches.length})
+          </p>
+          <div className="flex flex-col gap-1.5">
+            {decision.defectMatches.map((dm, i) => (
+              <div key={i} className="rounded-lg border border-slate-200 bg-white px-3 py-2">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium text-slate-800 truncate">{dm.defect}</p>
+                    <p className="text-[11px] text-slate-500 mt-0.5">
+                      {dm.category} &bull; {dm.reductionPercent}% reduction
+                    </p>
+                  </div>
+                  <span className="shrink-0 text-[11px] text-slate-400">
+                    {Math.round(dm.matchConfidence)}% match
+                  </span>
+                </div>
+                {dm.matchReasons?.length > 0 && (
+                  <p className="text-[11px] text-slate-400 mt-1 truncate">
+                    {dm.matchReasons.join(", ")}
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Rent reduction estimate (Phase B) */}
+      {decision.rentReductionEstimate && (
+        <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3">
+          <p className="text-xs font-semibold text-amber-800 mb-1">Estimated rent reduction</p>
+          <div className="flex items-baseline gap-3 flex-wrap">
+            <span className="text-lg font-bold text-amber-900">
+              CHF {decision.rentReductionEstimate.totalReductionChf?.toFixed(0) ?? "—"}
+            </span>
+            <span className="text-xs text-amber-700">
+              ({decision.rentReductionEstimate.totalReductionPercent?.toFixed(1) ?? "—"}% of net rent
+              {decision.rentReductionEstimate.netRentChf ? ` CHF ${decision.rentReductionEstimate.netRentChf}` : ""})
+            </span>
+          </div>
+          {decision.rentReductionEstimate.capApplied && (
+            <p className="text-[11px] text-amber-600 mt-1">Cap applied — reduction clamped to legal maximum.</p>
+          )}
+        </div>
+      )}
+
+      {/* Recommended actions (Phase C) */}
+      {decision.recommendedActions?.length > 0 && (
+        <div className="mt-3">
+          <p className="text-xs font-semibold text-slate-600 mb-1.5">Recommended actions</p>
+          <div className="flex flex-wrap gap-1.5">
+            {decision.recommendedActions.map((action, i) => (
+              <span
+                key={i}
+                className="inline-flex items-center rounded-full bg-blue-50 border border-blue-200 px-2.5 py-0.5 text-[11px] font-medium text-blue-700"
+              >
+                {action.replace(/_/g, " ")}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Defect signals summary */}
+      {decision.defectSignals && (decision.defectSignals.severity || decision.defectSignals.affectedArea) && (
+        <div className="mt-3 rounded-lg border border-slate-200 bg-white p-3">
+          <p className="text-xs font-semibold text-slate-600 mb-1">Defect signals</p>
+          <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-slate-500">
+            {decision.defectSignals.severity && (
+              <span>Severity: <span className="font-medium text-slate-700">{decision.defectSignals.severity}</span></span>
+            )}
+            {decision.defectSignals.affectedArea && (
+              <span>Area: <span className="font-medium text-slate-700">
+                {typeof decision.defectSignals.affectedArea === "string"
+                  ? decision.defectSignals.affectedArea
+                  : (decision.defectSignals.affectedArea.rooms || []).join(", ") || "—"}
+              </span></span>
+            )}
+            {decision.defectSignals.duration && (
+              <span>Duration: <span className="font-medium text-slate-700">
+                {typeof decision.defectSignals.duration === "string"
+                  ? decision.defectSignals.duration
+                  : [
+                      decision.defectSignals.duration.ongoing && "ongoing",
+                      decision.defectSignals.duration.seasonal && "seasonal",
+                    ].filter(Boolean).join(", ") || "one-time"}
+              </span></span>
+            )}
+          </div>
+          {decision.defectSignals.keywords?.length > 0 && (
+            <div className="flex flex-wrap gap-1 mt-1.5">
+              {decision.defectSignals.keywords.map((kw, i) => (
+                <span key={i} className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-500">
+                  {typeof kw === "string" ? kw : kw.term || JSON.stringify(kw)}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

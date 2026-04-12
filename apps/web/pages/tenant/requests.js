@@ -586,7 +586,7 @@ function TenantClaimAnalysisPanel({ requestId }) {
           {badge.label}
         </span>
         <span className="text-xs text-gray-500">
-          Confidence: {Math.round((a.confidence || 0) * 100)}%
+          Confidence: {Math.round(a.confidence || 0)}%
         </span>
         {a.legalTopic && (
           <span className="text-xs text-gray-400">• {a.legalTopic}</span>
@@ -676,7 +676,7 @@ function TenantClaimAnalysisPanel({ requestId }) {
                         </p>
                       </div>
                       <span className="text-xs text-gray-400 ml-2">
-                        {Math.round(d.matchConfidence * 100)}% match
+                        {Math.round(d.matchConfidence)}% match
                       </span>
                     </div>
                     {d.matchReasons?.length > 0 && (
