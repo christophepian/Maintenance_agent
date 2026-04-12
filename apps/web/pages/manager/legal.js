@@ -213,6 +213,11 @@ export default function ManagerLegalPage() {
             </div>
           )}
 
+          {/* Quick stats bar */}
+          {!loading && evaluations.length > 0 && (
+            <LegalStatsBar evaluations={evaluations} evalTotal={evalTotal} rules={rules} sources={sources} />
+          )}
+
           {/* Tab strip */}
           <div className="tab-strip">
             {LEGAL_TABS.map((tab, i) => (
@@ -647,6 +652,73 @@ function ScopeBadge({ scope }) {
 }
 
 // ── Scope filter bar ───────────────────────────────────────
+
+function LegalStatsBar({ evaluations, evalTotal, rules, sources }) {
+  // Compute obligation distribution
+  const oblCounts = {};
+  for (const ev of evaluations) {
+    const obl = ev.obligation || "UNKNOWN";
+    oblCounts[obl] = (oblCounts[obl] || 0) + 1;
+  }
+
+  // Average confidence
+  const confidenceVals = evaluations
+    .filter((ev) => ev.confidence != null)
+    .map((ev) => ev.confidence);
+  const avgConfidence =
+    confidenceVals.length > 0
+      ? confidenceVals.reduce((s, v) => s + v, 0) / confidenceVals.length
+      : null;
+
+  // Active sources
+  const activeSources = sources.filter((s) => s.status === "ACTIVE").length;
+
+  const oblColors = {
+    OBLIGATED: "bg-green-100 text-green-700",
+    DISCRETIONARY: "bg-yellow-100 text-yellow-700",
+    TENANT_RESPONSIBLE: "bg-red-100 text-red-700",
+    RECOMMENDED: "bg-blue-100 text-blue-700",
+    NOT_APPLICABLE: "bg-gray-100 text-gray-500",
+    UNKNOWN: "bg-gray-100 text-gray-500",
+  };
+
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+      <div className="rounded-lg border border-slate-200 bg-white p-3">
+        <p className="text-xs text-slate-500">Evaluations</p>
+        <p className="text-xl font-bold text-slate-900">{evalTotal}</p>
+      </div>
+      <div className="rounded-lg border border-slate-200 bg-white p-3">
+        <p className="text-xs text-slate-500">Rules · Sources</p>
+        <p className="text-xl font-bold text-slate-900">
+          {rules.length} · {activeSources}
+        </p>
+      </div>
+      <div className="rounded-lg border border-slate-200 bg-white p-3">
+        <p className="text-xs text-slate-500">Avg confidence</p>
+        <p className="text-xl font-bold text-slate-900">
+          {avgConfidence != null ? `${(avgConfidence * 100).toFixed(0)}%` : "—"}
+        </p>
+      </div>
+      <div className="rounded-lg border border-slate-200 bg-white p-3">
+        <p className="text-xs text-slate-500 mb-1">Obligation split</p>
+        <div className="flex flex-wrap gap-1">
+          {Object.entries(oblCounts)
+            .sort((a, b) => b[1] - a[1])
+            .map(([obl, count]) => (
+              <span
+                key={obl}
+                className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${oblColors[obl] || oblColors.UNKNOWN}`}
+                title={obl}
+              >
+                {obl.slice(0, 3)} {count}
+              </span>
+            ))}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function ScopeFilterBar({ sources, activeFilter, onFilter }) {
   // Build list of active scope values present in sources

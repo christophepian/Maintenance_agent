@@ -480,6 +480,277 @@ function TenantJobReviewPanel({ job, onRefresh }) {
 
 const CATEGORIES = ["stove", "oven", "dishwasher", "bathroom", "lighting"];
 
+// ---------------------------------------------------------------------------
+// Tenant Claim Analysis Panel (Phase D-4)
+// ---------------------------------------------------------------------------
+
+const OBLIGATION_BADGE = {
+  OBLIGATED: { bg: "bg-green-100 text-green-800", label: "Landlord obligated" },
+  DISCRETIONARY: { bg: "bg-yellow-100 text-yellow-800", label: "Discretionary" },
+  TENANT_RESPONSIBLE: { bg: "bg-red-100 text-red-800", label: "Tenant responsible" },
+  RECOMMENDED: { bg: "bg-blue-100 text-blue-800", label: "Recommended" },
+  NOT_APPLICABLE: { bg: "bg-gray-100 text-gray-600", label: "N/A" },
+  UNKNOWN: { bg: "bg-gray-100 text-gray-600", label: "Unknown" },
+};
+
+function TenantClaimAnalysisPanel({ requestId }) {
+  const [analysis, setAnalysis] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [expanded, setExpanded] = useState(false);
+
+  async function runAnalysis() {
+    setLoading(true);
+    setError("");
+    try {
+      const res = await tenantFetch(`/api/requests/${requestId}/claim-analysis`);
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body?.error?.message || `Analysis failed (${res.status})`);
+      }
+      const body = await res.json();
+      setAnalysis(body?.data || null);
+    } catch (err) {
+      setError(String(err?.message || err));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (!analysis && !loading && !error) {
+    return (
+      <div className="mt-3 rounded-lg border border-violet-100 bg-violet-50/50 p-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-sm font-semibold text-violet-900">⚖️ Legal Analysis</h3>
+            <p className="text-xs text-violet-700 mt-0.5">
+              Get a detailed analysis of your legal rights for this issue.
+            </p>
+          </div>
+          <button
+            onClick={runAnalysis}
+            className="flex-shrink-0 rounded-md bg-violet-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-violet-700"
+          >
+            Analyse my claim
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="mt-3 rounded-lg border border-violet-100 bg-violet-50/50 p-4">
+        <div className="flex items-center gap-2">
+          <div className="h-4 w-4 animate-spin rounded-full border-2 border-violet-400 border-t-transparent" />
+          <p className="text-xs text-violet-700">Analysing your claim…</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="mt-3 rounded-lg border border-red-100 bg-red-50/50 p-4">
+        <p className="text-xs text-red-700 mb-2">{error}</p>
+        <button
+          onClick={runAnalysis}
+          className="rounded-md border border-red-300 bg-white px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50"
+        >
+          Try again
+        </button>
+      </div>
+    );
+  }
+
+  const a = analysis;
+  const badge = OBLIGATION_BADGE[a.legalObligation] || OBLIGATION_BADGE.UNKNOWN;
+
+  return (
+    <div className="mt-3 rounded-lg border border-violet-100 bg-violet-50/30 p-4 space-y-3">
+      {/* Header */}
+      <div className="flex items-start justify-between">
+        <h3 className="text-sm font-semibold text-violet-900">⚖️ Legal Analysis</h3>
+        <button
+          onClick={runAnalysis}
+          disabled={loading}
+          className="text-xs text-violet-600 hover:text-violet-800 underline"
+        >
+          Re-analyse
+        </button>
+      </div>
+
+      {/* Obligation badge + confidence */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${badge.bg}`}>
+          {badge.label}
+        </span>
+        <span className="text-xs text-gray-500">
+          Confidence: {Math.round((a.confidence || 0) * 100)}%
+        </span>
+        {a.legalTopic && (
+          <span className="text-xs text-gray-400">• {a.legalTopic}</span>
+        )}
+      </div>
+
+      {/* Tenant Guidance — always visible */}
+      {a.tenantGuidance && (
+        <div className="rounded-lg bg-white border border-violet-100 p-3">
+          <p className="text-xs font-medium text-gray-800 mb-1">{a.tenantGuidance.summary}</p>
+          {a.tenantGuidance.nextSteps?.length > 0 && (
+            <div className="mt-2">
+              <p className="text-xs font-semibold text-gray-600 mb-1">Next steps:</p>
+              <ol className="list-decimal list-inside space-y-0.5">
+                {a.tenantGuidance.nextSteps.map((step, i) => (
+                  <li key={i} className="text-xs text-gray-700">{step}</li>
+                ))}
+              </ol>
+            </div>
+          )}
+          {a.tenantGuidance.deadlines?.length > 0 && (
+            <div className="mt-2">
+              <p className="text-xs font-semibold text-orange-700">
+                ⏰ {a.tenantGuidance.deadlines.join(" • ")}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Rent reduction estimate */}
+      {a.rentReduction && a.rentReduction.totalReductionChf > 0 && (
+        <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-3">
+          <p className="text-xs font-semibold text-emerald-900 mb-1">
+            💰 Estimated rent reduction
+          </p>
+          <div className="flex items-baseline gap-3">
+            <span className="text-lg font-bold text-emerald-800">
+              CHF {a.rentReduction.totalReductionChf.toFixed(0)}
+            </span>
+            <span className="text-xs text-emerald-700">
+              / month ({a.rentReduction.totalReductionPercent}% of CHF {a.rentReduction.netRentChf})
+            </span>
+          </div>
+          {a.rentReduction.capApplied && (
+            <p className="text-xs text-emerald-600 mt-1">Cap applied (max 70%)</p>
+          )}
+          {a.temporalContext?.backdatedReductionChf > 0 && (
+            <p className="text-xs text-emerald-600 mt-1">
+              Back-dated: ~CHF {a.temporalContext.backdatedReductionChf.toFixed(0)}
+              {a.temporalContext.durationMonths
+                ? ` (${a.temporalContext.durationMonths} months)`
+                : ""}
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Expand/collapse for detailed sections */}
+      <button
+        onClick={() => setExpanded((v) => !v)}
+        className="text-xs text-violet-600 hover:text-violet-800 font-medium"
+      >
+        {expanded ? "▾ Hide details" : "▸ Show detailed analysis"}
+      </button>
+
+      {expanded && (
+        <div className="space-y-3">
+          {/* Matched defects */}
+          {a.matchedDefects?.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold text-gray-700 mb-1">
+                Matched precedents ({a.matchedDefects.length})
+              </p>
+              <div className="space-y-1.5">
+                {a.matchedDefects.map((d, i) => (
+                  <div
+                    key={i}
+                    className="rounded-lg border border-gray-200 bg-white p-2.5"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <p className="text-xs font-medium text-gray-800">{d.defect}</p>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          {d.category} • {d.reductionPercent}% reduction
+                          {d.reductionMax ? ` (max ${d.reductionMax}%)` : ""}
+                        </p>
+                      </div>
+                      <span className="text-xs text-gray-400 ml-2">
+                        {Math.round(d.matchConfidence * 100)}% match
+                      </span>
+                    </div>
+                    {d.matchReasons?.length > 0 && (
+                      <p className="text-xs text-gray-400 mt-1">
+                        {d.matchReasons.join(", ")}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Legal basis */}
+          {a.legalBasis?.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold text-gray-700 mb-1">Legal basis</p>
+              <div className="space-y-1">
+                {a.legalBasis.map((b, i) => (
+                  <div key={i} className="text-xs text-gray-600">
+                    <span className="font-medium">{b.article}</span>
+                    {b.text && <span> — {b.text}</span>}
+                    <span className="text-gray-400 ml-1">({b.authority})</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Landlord obligations */}
+          {a.landlordObligations && (
+            <div className="rounded-lg bg-amber-50 border border-amber-200 p-3">
+              <p className="text-xs font-semibold text-amber-900 mb-1">
+                Landlord obligations
+              </p>
+              <p className="text-xs text-amber-800">{a.landlordObligations.summary}</p>
+              {a.landlordObligations.requiredActions?.length > 0 && (
+                <ul className="list-disc list-inside mt-1 space-y-0.5">
+                  {a.landlordObligations.requiredActions.map((act, i) => (
+                    <li key={i} className="text-xs text-amber-700">{act}</li>
+                  ))}
+                </ul>
+              )}
+              {a.landlordObligations.timeline && (
+                <p className="text-xs text-amber-600 mt-1">
+                  Timeline: {a.landlordObligations.timeline}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Temporal context */}
+          {a.temporalContext?.seasonalAdjustment && (
+            <div className="text-xs text-gray-500">
+              🌡️ Seasonal adjustment applied
+              {a.temporalContext.proRatedPercent != null
+                ? ` — pro-rated to ${a.temporalContext.proRatedPercent}%`
+                : ""}
+            </div>
+          )}
+
+          {/* Escalation */}
+          {a.tenantGuidance?.escalation && (
+            <div className="rounded-lg bg-red-50 border border-red-200 p-2.5">
+              <p className="text-xs font-semibold text-red-800">Escalation</p>
+              <p className="text-xs text-red-700">{a.tenantGuidance.escalation}</p>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function NewRequestModal({ onClose, onCreated }) {
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
@@ -787,6 +1058,9 @@ export default function TenantRequestsPage() {
                       {r.status !== "PENDING_REVIEW" && r.status !== "OWNER_REJECTED" && (
                         <TenantSchedulingPanel requestId={r.id} />
                       )}
+
+                      {/* Legal claim analysis */}
+                      <TenantClaimAnalysisPanel requestId={r.id} />
 
                       {/* Job completion review */}
                       {r.job && (

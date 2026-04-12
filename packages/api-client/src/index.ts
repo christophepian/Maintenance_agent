@@ -10,6 +10,9 @@
  *   const { data } = await api.requests.list({ limit: 10 });
  */
 
+/* Re-export legal domain types (Phase D) */
+export * from "./legal";
+
 /* ═══════════════════════════════════════════════════════════════
  * Enums
  * ═══════════════════════════════════════════════════════════════ */
@@ -2437,6 +2440,112 @@ function buildCaptureSessionsApi(opts: ClientOptions) {
   };
 }
 
+/* ═══════════════════════════════════════════════════════════════
+ * Legal Engine (Phase D)
+ * ═══════════════════════════════════════════════════════════════ */
+
+export interface LegalDecisionClientDTO {
+  requestId: string;
+  legalTopic: string | null;
+  legalObligation: string;
+  confidence: number;
+  reasons: string[];
+  citations: Array<{ article: string; text: string; authority: string }>;
+  depreciationSignal: unknown;
+  matchedReductions: unknown[];
+  defectSignals: unknown;
+  defectMatches: unknown[];
+  rentReductionEstimate: unknown;
+  recommendedActions: string[];
+  rfpId: string | null;
+  evaluationLogId: string;
+}
+
+export interface ClaimAnalysisClientDTO {
+  requestId: string;
+  requestDescription: string;
+  category: string | null;
+  buildingName: string | null;
+  unitNumber: string | null;
+  canton: string | null;
+  defectSignals: unknown;
+  legalObligation: string;
+  legalTopic: string | null;
+  confidence: number;
+  matchedDefects: Array<{
+    rank: number;
+    ruleKey: string;
+    defect: string;
+    category: string;
+    reductionPercent: number;
+    reductionMax?: number;
+    matchConfidence: number;
+    matchReasons: string[];
+  }>;
+  rentReduction: {
+    netRentChf: number;
+    totalReductionPercent: number;
+    totalReductionChf: number;
+    capApplied: boolean;
+  } | null;
+  legalBasis: Array<{ article: string; text: string; authority: string; relevance: string }>;
+  tenantGuidance: { summary: string; nextSteps: string[]; deadlines: string[]; escalation: string };
+  landlordObligations: { summary: string; requiredActions: string[]; timeline: string };
+  temporalContext: {
+    defectOngoingSince?: string;
+    durationMonths?: number;
+    seasonalAdjustment: boolean;
+    proRatedPercent?: number;
+    backdatedReductionChf?: number;
+  };
+  evaluationLogId: string;
+  analysedAt: string;
+}
+
+function buildLegalApi(opts: ClientOptions) {
+  return {
+    /** GET /requests/:id/legal-decision */
+    getDecision: (requestId: string) =>
+      request<{ data: LegalDecisionClientDTO }>(opts, "GET", `/requests/${requestId}/legal-decision`),
+
+    /** GET /requests/:id/claim-analysis */
+    getClaimAnalysis: (requestId: string) =>
+      request<{ data: ClaimAnalysisClientDTO }>(opts, "GET", `/requests/${requestId}/claim-analysis`),
+
+    /** GET /legal/sources */
+    listSources: () =>
+      request<{ data: unknown[] }>(opts, "GET", "/legal/sources"),
+
+    /** GET /legal/variables */
+    listVariables: () =>
+      request<{ data: unknown[] }>(opts, "GET", "/legal/variables"),
+
+    /** GET /legal/rules */
+    listRules: () =>
+      request<{ data: unknown[] }>(opts, "GET", "/legal/rules"),
+
+    /** GET /legal/category-mappings */
+    listCategoryMappings: () =>
+      request<{ data: unknown[] }>(opts, "GET", "/legal/category-mappings"),
+
+    /** GET /legal/category-mappings/coverage */
+    getMappingCoverage: () =>
+      request<unknown>(opts, "GET", "/legal/category-mappings/coverage"),
+
+    /** GET /legal/evaluations */
+    listEvaluations: (params?: PaginationParams & { obligation?: string; category?: string }) =>
+      request<{ data: unknown[]; total: number }>(opts, "GET", "/legal/evaluations", undefined, params as Record<string, string | number | boolean | undefined>),
+
+    /** GET /legal/depreciation-standards */
+    listDepreciationStandards: () =>
+      request<{ data: unknown[] }>(opts, "GET", "/legal/depreciation-standards"),
+
+    /** POST /legal/ingestion/trigger */
+    triggerIngestion: (sourceId?: string) =>
+      request<{ data: unknown[] }>(opts, "POST", "/legal/ingest", sourceId ? { sourceId } : {}),
+  };
+}
+
 function buildDevApi(opts: ClientOptions) {
   return {
     /** Trigger background job: process expired selection timeouts + attachment retention. */
@@ -2725,6 +2834,7 @@ export interface ApiClient {
   chargeReconciliations: ReturnType<typeof buildChargeReconciliationsApi>;
   rentAdjustments: ReturnType<typeof buildRentAdjustmentsApi>;
   contractorBilling: ReturnType<typeof buildContractorBillingApi>;
+  legal: ReturnType<typeof buildLegalApi>;
   dev: ReturnType<typeof buildDevApi>;
 }
 
@@ -2768,6 +2878,7 @@ export function createApiClient(
     chargeReconciliations: buildChargeReconciliationsApi(opts),
     rentAdjustments: buildRentAdjustmentsApi(opts),
     contractorBilling: buildContractorBillingApi(opts),
+    legal: buildLegalApi(opts),
     dev: buildDevApi(opts),
   };
 }
