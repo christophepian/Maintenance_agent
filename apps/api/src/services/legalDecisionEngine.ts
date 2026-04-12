@@ -23,6 +23,12 @@ import {
   cantonFromPostalCode,
   extractPostalCode,
 } from "./cantonMapping";
+import { extractDefectSignals, type DefectSignals } from "./defectClassifier";
+import { matchDefectsToRules, type MatchResult, type DefectMatch } from "./defectMatcher";
+import {
+  calculateRentReductionForUnit,
+  type RentReductionResult,
+} from "./rentReductionCalculator";
 
 // ==========================================
 // DTOs
@@ -37,6 +43,12 @@ export interface LegalDecisionDTO {
   citations: Citation[];
   depreciationSignal: DepreciationSignalDTO | null;
   matchedReductions: RentReductionMatch[];
+  /** Phase B: structured defect signals from complaint text */
+  defectSignals: DefectSignals | null;
+  /** Phase B: ranked defect matches with confidence scores */
+  defectMatches: DefectMatch[];
+  /** Phase B: CHF rent reduction estimate (null if no active lease) */
+  rentReductionEstimate: RentReductionResult | null;
   recommendedActions: string[];
   rfpId: string | null;
   evaluationLogId: string;
@@ -143,10 +155,34 @@ export async function evaluateRequestLegalDecision(
     canton,
   );
 
+  // 6c. Phase B: Extract structured defect signals from complaint text
+  const defectSignals = extractDefectSignals(
+    request.description ?? "",
+    request.category ?? null,
+  );
+
+  // 6d. Phase B: Match defect signals against ASLOCA rules (DB-backed scoring)
+  let defectMatchResult: MatchResult = {
+    matches: [], bestMatch: null, totalConfidence: 0, unmatchedSignals: [],
+  };
+  if (defectSignals.keywords.length > 0 || defectSignals.inferredCategories.length > 0) {
+    defectMatchResult = await matchDefectsToRules(defectSignals, canton);
+  }
+
+  // 6e. Phase B: Compute CHF rent reduction estimate if unit has an active lease
+  let rentReductionEstimate: RentReductionResult | null = null;
+  if (defectMatchResult.matches.length > 0 && request.unitId) {
+    rentReductionEstimate = await calculateRentReductionForUnit(
+      defectMatchResult.matches,
+      request.unitId,
+      defectSignals.duration,
+    );
+  }
+
   // 7. Produce decision
   const obligation = determineObligation(ruleEvaluation, depreciationSignal);
-  const confidence = computeConfidence(ruleEvaluation, legalTopic, depreciationSignal, matchedReductions);
-  const reasons = buildReasons(ruleEvaluation, depreciationSignal, obligation, matchedReductions);
+  const confidence = computeConfidence(ruleEvaluation, legalTopic, depreciationSignal, matchedReductions, defectMatchResult);
+  const reasons = buildReasons(ruleEvaluation, depreciationSignal, obligation, matchedReductions, defectMatchResult, rentReductionEstimate);
   const citations = ruleEvaluation.citations;
   const recommendedActions = buildRecommendedActions(obligation, depreciationSignal);
 
@@ -197,6 +233,28 @@ export async function evaluateRequestLegalDecision(
           reductionPercent: r.reductionPercent,
           relevanceScore: r.relevanceScore,
         })),
+        // Phase B structured analysis
+        defectSignals: defectSignals.keywords.length > 0 ? {
+          keywordCount: defectSignals.keywords.length,
+          severity: defectSignals.severity,
+          inferredCategories: defectSignals.inferredCategories,
+          rooms: defectSignals.affectedArea.rooms,
+          durationMonths: defectSignals.duration.months ?? null,
+          seasonal: defectSignals.duration.seasonal,
+        } : null,
+        defectMatches: defectMatchResult.matches.map((m) => ({
+          ruleKey: m.ruleKey,
+          defect: m.defect,
+          category: m.category,
+          reductionPercent: m.reductionPercent,
+          matchConfidence: m.matchConfidence,
+        })),
+        rentReductionEstimate: rentReductionEstimate ? {
+          netRentChf: rentReductionEstimate.netRentChf,
+          totalReductionPercent: rentReductionEstimate.totalReductionPercent,
+          totalReductionChf: rentReductionEstimate.totalReductionChf,
+          capApplied: rentReductionEstimate.capApplied,
+        } : null,
       },
       matchedRuleVersionIdsJson: ruleEvaluation.matchedVersionIds,
     },
@@ -211,6 +269,9 @@ export async function evaluateRequestLegalDecision(
     citations,
     depreciationSignal,
     matchedReductions,
+    defectSignals: defectSignals.keywords.length > 0 ? defectSignals : null,
+    defectMatches: defectMatchResult.matches,
+    rentReductionEstimate,
     recommendedActions,
     rfpId: null, // Set by the route handler after RFP creation
     evaluationLogId: evalLog.id,
@@ -769,6 +830,7 @@ function computeConfidence(
   legalTopic: string | null,
   depreciation: DepreciationSignalDTO | null,
   matchedReductions?: RentReductionMatch[],
+  defectMatchResult?: MatchResult,
 ): number {
   let confidence = 0;
 
@@ -784,8 +846,14 @@ function computeConfidence(
   // Multiple supporting rules
   if (ruleEval.matchedVersionIds.length > 1) confidence += 10;
 
-  // Rent reduction case law matched
-  if (matchedReductions && matchedReductions.length > 0) confidence += 10;
+  // Rent reduction case law matched (Phase A simple matching)
+  if (matchedReductions && matchedReductions.length > 0) confidence += 5;
+
+  // Phase B: high-confidence defect match with structured scoring
+  if (defectMatchResult && defectMatchResult.bestMatch) {
+    if (defectMatchResult.bestMatch.matchConfidence >= 60) confidence += 10;
+    else if (defectMatchResult.bestMatch.matchConfidence >= 30) confidence += 5;
+  }
 
   return Math.min(100, confidence);
 }
@@ -795,6 +863,8 @@ function buildReasons(
   depreciation: DepreciationSignalDTO | null,
   obligation: LegalObligation,
   matchedReductions?: RentReductionMatch[],
+  defectMatchResult?: MatchResult,
+  rentReductionEstimate?: RentReductionResult | null,
 ): string[] {
   const reasons: string[] = [];
 
@@ -824,6 +894,38 @@ function buildReasons(
       `${matchedReductions.length} rent reduction precedent(s) found — ` +
         `highest: ${top.reductionPercent}% (${top.defect})`,
     );
+  }
+
+  // Phase B: structured defect match analysis
+  if (defectMatchResult && defectMatchResult.bestMatch) {
+    const best = defectMatchResult.bestMatch;
+    reasons.push(
+      `Best defect match: "${best.defect}" (${best.matchConfidence}% confidence, ` +
+        `${best.reductionPercent}% reduction)`,
+    );
+    if (defectMatchResult.matches.length > 1) {
+      reasons.push(
+        `${defectMatchResult.matches.length} additional matching precedents identified`,
+      );
+    }
+  }
+
+  // Phase B: CHF rent reduction estimate
+  if (rentReductionEstimate) {
+    const est = rentReductionEstimate;
+    reasons.push(
+      `Estimated monthly rent reduction: CHF ${est.totalReductionChf} ` +
+        `(${est.totalReductionPercent}% of CHF ${est.netRentChf} net rent)`,
+    );
+    if (est.capApplied) {
+      reasons.push(`Aggregate reduction capped at 70% (Swiss judicial practice)`);
+    }
+    if (est.estimatedBackPayMonths) {
+      reasons.push(
+        `Potential back-pay: ~${est.estimatedBackPayMonths} months ` +
+          `(~CHF ${est.totalReductionChf * est.estimatedBackPayMonths})`,
+      );
+    }
   }
 
   if (obligation === LegalObligation.OBLIGATED) {

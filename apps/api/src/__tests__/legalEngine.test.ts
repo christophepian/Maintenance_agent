@@ -388,6 +388,34 @@ describe("Legal Engine Integration Tests", () => {
         expect(r).toHaveProperty("relevanceScore");
         expect(typeof r.relevanceScore).toBe("number");
       }
+
+      // Phase B: structured defect analysis fields
+      expect(decision).toHaveProperty("defectMatches");
+      expect(Array.isArray(decision.defectMatches)).toBe(true);
+      for (const dm of decision.defectMatches) {
+        expect(dm).toHaveProperty("ruleKey");
+        expect(dm).toHaveProperty("defect");
+        expect(dm).toHaveProperty("matchConfidence");
+        expect(typeof dm.matchConfidence).toBe("number");
+        expect(dm).toHaveProperty("reductionPercent");
+        expect(typeof dm.reductionPercent).toBe("number");
+      }
+
+      // defectSignals may be null if no keywords found, or present
+      if (decision.defectSignals) {
+        expect(decision.defectSignals).toHaveProperty("keywords");
+        expect(decision.defectSignals).toHaveProperty("severity");
+        expect(decision.defectSignals).toHaveProperty("inferredCategories");
+        expect(Array.isArray(decision.defectSignals.keywords)).toBe(true);
+      }
+
+      // rentReductionEstimate may be null if no active lease
+      if (decision.rentReductionEstimate) {
+        expect(decision.rentReductionEstimate).toHaveProperty("netRentChf");
+        expect(decision.rentReductionEstimate).toHaveProperty("totalReductionPercent");
+        expect(decision.rentReductionEstimate).toHaveProperty("totalReductionChf");
+        expect(typeof decision.rentReductionEstimate.totalReductionChf).toBe("number");
+      }
     }, 15000);
 
     it("should return 404 for non-existent request", async () => {
