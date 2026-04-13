@@ -124,12 +124,15 @@ export async function evaluateLegalRoutingWorkflow(
       });
       decision.rfpId = rfp.id;
 
-      // Transition request status — only if currently in PENDING_REVIEW
+      // Transition request status — legal obligation overrides cost-based routing
       const current = await prisma.request.findUnique({
         where: { id: requestId },
         select: { status: true },
       });
-      if (current?.status === RequestStatus.PENDING_REVIEW) {
+      if (
+        current?.status === RequestStatus.PENDING_REVIEW ||
+        current?.status === RequestStatus.PENDING_OWNER_APPROVAL
+      ) {
         assertRequestTransition(current.status, RequestStatus.RFP_PENDING);
         await updateRequestStatus(prisma, requestId, RequestStatus.RFP_PENDING, {
           approvalSource: ApprovalSource.LEGAL_OBLIGATION,

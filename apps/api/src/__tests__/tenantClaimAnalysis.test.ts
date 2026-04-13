@@ -14,6 +14,7 @@
 
 import type { DefectSignals, DefectSeverity } from "../services/defectClassifier";
 import type { DefectMatch, MatchResult } from "../services/defectMatcher";
+import type { RequestNature } from "../services/legalTranslations";
 import type { RentReductionResult, ReductionLine } from "../services/rentReductionCalculator";
 import type { LegalDecisionDTO, Citation } from "../services/legalDecisionEngine";
 import type { DepreciationSignalDTO } from "../services/depreciation";
@@ -37,7 +38,9 @@ function makeDefectMatch(overrides: Partial<DefectMatch> = {}): DefectMatch {
     ruleKey: "CH_RENT_RED_MOULD_LIGHT",
     ruleId: "rule-1",
     defect: "Moisissures légères",
+    defectEn: "Light mould",
     category: "Humidité",
+    categoryEn: "Humidity",
     reductionPercent: 10,
     matchConfidence: 60,
     matchReasons: ["Category match: Humidité"],
@@ -51,7 +54,7 @@ function makeMatchResult(overrides: Partial<MatchResult> = {}): MatchResult {
   return {
     matches: [match],
     bestMatch: match,
-    totalConfidence: 60,
+    requestNature: "other" as RequestNature,
     unmatchedSignals: [],
     ...overrides,
   };
@@ -145,7 +148,7 @@ describe("tenantClaimAnalysis — buildTemporalContext", () => {
       const matchResult: MatchResult = {
         matches: [match],
         bestMatch: match,
-        totalConfidence: 60,
+        requestNature: "heating" as RequestNature,
         unmatchedSignals: [],
       };
 
@@ -178,7 +181,7 @@ describe("tenantClaimAnalysis — buildTemporalContext", () => {
       const matchResult: MatchResult = {
         matches: [match],
         bestMatch: match,
-        totalConfidence: 60,
+        requestNature: "heating" as RequestNature,
         unmatchedSignals: [],
       };
 
@@ -213,7 +216,7 @@ describe("tenantClaimAnalysis — buildTemporalContext", () => {
       const matchResult: MatchResult = {
         matches: [match],
         bestMatch: match,
-        totalConfidence: 60,
+        requestNature: "heating" as RequestNature,
         unmatchedSignals: [],
       };
       const rentReduction = makeRentReduction({
@@ -253,7 +256,7 @@ describe("tenantClaimAnalysis — buildTemporalContext", () => {
       const matchResult: MatchResult = {
         matches: [m1, m2],
         bestMatch: m1,
-        totalConfidence: 50,
+        requestNature: "other" as RequestNature,
         unmatchedSignals: [],
       };
       const rentReduction = makeRentReduction({
@@ -319,7 +322,7 @@ describe("tenantClaimAnalysis — seasonal edge cases", () => {
     });
     const match = makeDefectMatch({ reductionPercent: 50, category: "Température" });
     const matchResult: MatchResult = {
-      matches: [match], bestMatch: match, totalConfidence: 70, unmatchedSignals: [],
+      matches: [match], bestMatch: match, requestNature: "heating" as RequestNature, unmatchedSignals: [],
     };
     const rentReduction = makeRentReduction({ totalReductionChf: 750 });
 
@@ -340,7 +343,7 @@ describe("tenantClaimAnalysis — seasonal edge cases", () => {
     });
     const match = makeDefectMatch({ category: "Humidité", reductionPercent: 10 });
     const matchResult: MatchResult = {
-      matches: [match], bestMatch: match, totalConfidence: 60, unmatchedSignals: [],
+      matches: [match], bestMatch: match, requestNature: "other" as RequestNature, unmatchedSignals: [],
     };
     const rentReduction = makeRentReduction({ totalReductionChf: 150 });
 
@@ -374,7 +377,7 @@ describe("tenantClaimAnalysis — severity selection", () => {
     const matchResult: MatchResult = {
       matches: [severeMatch, mildMatch], // sorted by confidence desc
       bestMatch: severeMatch,
-      totalConfidence: 75,
+      requestNature: "other" as RequestNature,
       unmatchedSignals: [],
     };
 

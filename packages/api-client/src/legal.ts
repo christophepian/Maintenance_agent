@@ -180,8 +180,10 @@ export interface DefectSignalsDTO {
 export interface DefectMatchDTO {
   ruleKey: string;
   ruleId: string;
-  defect: string;
-  category: string;
+  defect: string;        // French (audit)
+  defectEn: string;      // English display text
+  category: string;      // French ASLOCA category
+  categoryEn: string;    // English category
   reductionPercent: number;
   reductionMax?: number;
   matchConfidence: number;

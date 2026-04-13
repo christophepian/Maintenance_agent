@@ -391,20 +391,24 @@ function LegalRecommendationPanel({ decision, loading: isLoading, error: loadErr
         </div>
       )}
 
-      {/* Defect matches (Phase B) */}
+      {/* Defect matches (Phase B) — show best match prominently */}
       {decision.defectMatches?.length > 0 && (
         <div className="mt-3">
           <p className="text-xs font-semibold text-slate-600 mb-1.5">
-            Matched defect rules ({decision.defectMatches.length})
+            Best matching legal rule
           </p>
-          <div className="flex flex-col gap-1.5">
-            {decision.defectMatches.map((dm, i) => (
-              <div key={i} className="rounded-lg border border-slate-200 bg-white px-3 py-2">
+          {/* Primary match — always the first (highest-scored) */}
+          {(() => {
+            const dm = decision.defectMatches[0];
+            return (
+              <div className="rounded-lg border border-slate-200 bg-white px-3 py-2">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-slate-800 truncate">{dm.defect}</p>
+                    <p className="text-xs font-medium text-slate-800 truncate">
+                      {dm.defectEn || dm.defect}
+                    </p>
                     <p className="text-[11px] text-slate-500 mt-0.5">
-                      {dm.category} &bull; {dm.reductionPercent}% reduction
+                      {dm.categoryEn || dm.category} &bull; {dm.reductionPercent}% reduction
                     </p>
                   </div>
                   <span className="shrink-0 text-[11px] text-slate-400">
@@ -417,8 +421,14 @@ function LegalRecommendationPanel({ decision, loading: isLoading, error: loadErr
                   </p>
                 )}
               </div>
-            ))}
-          </div>
+            );
+          })()}
+          {/* Additional precedents collapsed — only show count */}
+          {decision.defectMatches.length > 1 && (
+            <p className="text-[11px] text-slate-400 mt-1.5">
+              + {decision.defectMatches.length - 1} additional precedent{decision.defectMatches.length > 2 ? "s" : ""} identified
+            </p>
+          )}
         </div>
       )}
 

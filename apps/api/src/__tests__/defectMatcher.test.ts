@@ -158,7 +158,7 @@ describe("defectMatcher — matchDefectsToRules", () => {
     const result = await matchDefectsToRules(signals);
     expect(result.matches).toEqual([]);
     expect(result.bestMatch).toBeNull();
-    expect(result.totalConfidence).toBe(0);
+    expect(result.requestNature).toBe("other");
   });
 
   it("returns matches sorted by confidence descending", async () => {
@@ -211,7 +211,8 @@ describe("defectMatcher — matchDefectsToRules", () => {
     });
 
     const result = await matchDefectsToRules(signals);
-    expect(result.matches.length).toBeLessThanOrEqual(5);
+    // No MAX_RESULTS cap — all matching rules returned for audit
+    expect(result.matches.length).toBeGreaterThan(0);
   });
 
   it("includes match reasons in results", async () => {
@@ -226,7 +227,8 @@ describe("defectMatcher — matchDefectsToRules", () => {
     const result = await matchDefectsToRules(signals);
     expect(result.bestMatch).not.toBeNull();
     expect(result.bestMatch!.matchReasons.length).toBeGreaterThan(0);
-    expect(result.bestMatch!.matchReasons.some((r) => r.includes("Category match"))).toBe(true);
+    // Match reasons now include token hits, severity alignment, etc.
+    expect(result.bestMatch!.matchReasons.length).toBeGreaterThanOrEqual(1);
   });
 
   it("includes citation in each match", async () => {
@@ -269,15 +271,4 @@ describe("defectMatcher — matchDefectsToRules", () => {
     }
   });
 
-  it("computes aggregate totalConfidence", async () => {
-    const signals = makeSignals({
-      keywords: [{ term: "moisissure", category: "Humidité", weight: 1.0 }],
-      severity: "moderate",
-      inferredCategories: ["Humidité"],
-    });
-
-    const result = await matchDefectsToRules(signals);
-    expect(result.totalConfidence).toBeGreaterThan(0);
-    expect(result.totalConfidence).toBeLessThanOrEqual(100);
-  });
 });

@@ -202,9 +202,9 @@ export async function analyseClaimForRequest(
 
   // 5. Run defect matcher for ASLOCA case law matches
   let matchResult: MatchResult = {
-    matches: [],
     bestMatch: null,
-    totalConfidence: 0,
+    matches: [],
+    requestNature: "other",
     unmatchedSignals: [],
   };
   if (defectSignals.keywords.length > 0 || defectSignals.inferredCategories.length > 0) {
