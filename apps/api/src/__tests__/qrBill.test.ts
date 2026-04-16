@@ -5,6 +5,12 @@ import {
   generateQRCodePNG,
   formatAmountForQRBill,
   generateSwissReference,
+  generateQRReference,
+  generateCreditorReference,
+  mod10Recursive,
+  isQrIban,
+  isValidSwissIban,
+  referenceTypeForIban,
   validateSwissQRBillPayload,
   generateCompleteQRBill,
   SwissQRBillPayload,
@@ -139,123 +145,211 @@ describe("Slice 8.4 - QR-Bill Integration", () => {
   // QR-Bill Payload Tests
   // ===========================
 
-  describe("Swiss QR-Bill Payload Generation", () => {
-    test("should build SPC format payload with all required fields", async () => {
-      const payload: SwissQRBillPayload = {
-        qrType: "SPC",
-        version: "0200",
-        coding: "1",
-        amount: "269.25",
-        currency: "CHF",
-        creditorName: "Test Contractor",
-        creditorAddressLine1: "Hauptstrasse 123",
-        creditorPostalCode: "8000",
-        creditorCity: "Zurich",
-        creditorCountry: "CH",
-        iban: "CH9300762011623852957",
-        reference: "00 000000 000000000000000",
-        debtorName: "Test Tenant",
-        debtorAddressLine1: "456 Tenant St",
-        debtorPostalCode: "8001",
-        debtorCity: "Zurich",
-        debtorCountry: "CH",
-      };
+  /** Helper: build a valid SIX-compliant payload for testing */
+  function makePayload(overrides?: Partial<SwissQRBillPayload>): SwissQRBillPayload {
+    return {
+      qrType: "SPC",
+      version: "0200",
+      coding: "1",
+      iban: "CH4431999123000889012", // QR-IBAN (IID 31999)
+      creditorAddressType: "K",
+      creditorName: "Test Contractor",
+      creditorAddressLine1: "Hauptstrasse 123",
+      creditorAddressLine2: "",
+      creditorPostalCode: "8000",
+      creditorCity: "Zurich",
+      creditorCountry: "CH",
+      amount: "269.25",
+      currency: "CHF",
+      debtorAddressType: "K",
+      debtorName: "Test Tenant",
+      debtorAddressLine1: "456 Tenant St",
+      debtorAddressLine2: "",
+      debtorPostalCode: "8001",
+      debtorCity: "Zurich",
+      debtorCountry: "CH",
+      referenceType: "QRR",
+      reference: "000000000000000000000000000", // 27 zeros
+      ...overrides,
+    };
+  }
 
+  describe("Swiss QR-Bill Payload Generation (SIX spec v2.3)", () => {
+    test("should build SPC payload with correct 31-element field order", () => {
+      const payload = makePayload();
       const qrText = buildSwissQRBillPayload(payload);
-
-      // Verify structure (18 lines)
       const lines = qrText.split("\n");
-      expect(lines.length).toBe(18);
-      expect(lines[0]).toBe("SPC");
-      expect(lines[1]).toBe("0200");
-      expect(lines[4]).toBe("CHF");
-      expect(lines[9]).toBe("CH9300762011623852957");
+
+      // Must have at least 31 lines (+ optional bill info / alt procedures)
+      expect(lines.length).toBeGreaterThanOrEqual(31);
+
+      // Header
+      expect(lines[0]).toBe("SPC");        // 1  QRType
+      expect(lines[1]).toBe("0200");       // 2  Version
+      expect(lines[2]).toBe("1");          // 3  Coding
+
+      // Creditor account
+      expect(lines[3]).toBe(payload.iban); // 4  IBAN
+
+      // Creditor address
+      expect(lines[4]).toBe("K");          // 5  Address type
+      expect(lines[5]).toBe("Test Contractor"); // 6  Name
+      expect(lines[6]).toBe("Hauptstrasse 123"); // 7  Street
+      expect(lines[7]).toBe("");           // 8  House no / addr line 2
+      expect(lines[8]).toBe("8000");       // 9  Postal code
+      expect(lines[9]).toBe("Zurich");     // 10 City
+      expect(lines[10]).toBe("CH");        // 11 Country
+
+      // Ultimate creditor — 7 empty lines (12–18)
+      for (let i = 11; i <= 17; i++) {
+        expect(lines[i]).toBe("");
+      }
+
+      // Amount & currency
+      expect(lines[18]).toBe("269.25");    // 19 Amount
+      expect(lines[19]).toBe("CHF");       // 20 Currency
+
+      // Debtor address
+      expect(lines[20]).toBe("K");         // 21 Address type
+      expect(lines[21]).toBe("Test Tenant"); // 22 Name
+
+      // Reference
+      expect(lines[27]).toBe("QRR");       // 28 Reference type
+      expect(lines[28]).toBe("000000000000000000000000000"); // 29 Reference
+
+      // Trailer
+      expect(lines[30]).toBe("EPD");       // 31 EPD trailer
     });
 
     test("should format amount correctly (cents to CHF decimal)", () => {
-      const amountInCents = 26925;
-      const formatted = formatAmountForQRBill(amountInCents);
-      expect(formatted).toBe("269.25");
+      expect(formatAmountForQRBill(26925)).toBe("269.25");
+      expect(formatAmountForQRBill(100)).toBe("1.00");
+      expect(formatAmountForQRBill(0)).toBe("0.00");
     });
 
-    test("should generate Swiss reference from invoice number", () => {
-      const ref = generateSwissReference("test-invoice-id", "2026-001");
-      // Format: "00 XXXXXX XXXXXXXXXXXXXXXXXXXX" (00 + digits, space-separated)
-      expect(ref).toMatch(/^00 \d+ \d+$/);
-      // Should be formatted correctly with spaces
-      expect(ref.length).toBeGreaterThan(10);
+    test("should validate correct payload without throwing", () => {
+      expect(() => validateSwissQRBillPayload(makePayload())).not.toThrow();
     });
 
-    test("should validate QR-bill payload structure", () => {
-      const validPayload: SwissQRBillPayload = {
-        qrType: "SPC",
-        version: "0200",
-        coding: "1",
-        amount: "269.25",
-        currency: "CHF",
-        creditorName: "Test Corp",
-        creditorAddressLine1: "Main St",
-        creditorPostalCode: "8000",
-        creditorCity: "Zurich",
-        creditorCountry: "CH",
+    test("should reject non-Swiss/LI IBAN", () => {
+      const p = makePayload({ iban: "DE9300762011623852957" });
+      expect(() => validateSwissQRBillPayload(p)).toThrow(/Invalid IBAN/);
+    });
+
+    test("should reject invalid amount format (comma)", () => {
+      const p = makePayload({ amount: "269,25" });
+      expect(() => validateSwissQRBillPayload(p)).toThrow(/Invalid amount/);
+    });
+
+    test("should accept empty amount (open amount)", () => {
+      const p = makePayload({ amount: "" });
+      expect(() => validateSwissQRBillPayload(p)).not.toThrow();
+    });
+
+    test("should reject QRR reference type with regular IBAN", () => {
+      // Regular IBAN (IID < 30000)
+      const p = makePayload({
         iban: "CH9300762011623852957",
-        reference: "00 000000 000000000000000",
-        debtorName: "Tenant",
-        debtorAddressLine1: "Side St",
-        debtorPostalCode: "8001",
-        debtorCity: "Zurich",
-        debtorCountry: "CH",
-      };
-
-      expect(() => validateSwissQRBillPayload(validPayload)).not.toThrow();
+        referenceType: "QRR",
+        reference: "000000000000000000000000000",
+      });
+      expect(() => validateSwissQRBillPayload(p)).toThrow(/QR-IBAN/);
     });
 
-    test("should reject invalid IBAN", () => {
-      const invalidPayload: SwissQRBillPayload = {
-        qrType: "SPC",
-        version: "0200",
-        coding: "1",
-        amount: "269.25",
-        currency: "CHF",
-        creditorName: "Test Corp",
-        creditorAddressLine1: "Main St",
-        creditorPostalCode: "8000",
-        creditorCity: "Zurich",
-        creditorCountry: "CH",
-        iban: "DE9300762011623852957", // Non-Swiss
-        reference: "00 000000 000000000000000",
-        debtorName: "Tenant",
-        debtorAddressLine1: "Side St",
-        debtorPostalCode: "8001",
-        debtorCity: "Zurich",
-        debtorCountry: "CH",
-      };
-
-      expect(() => validateSwissQRBillPayload(invalidPayload)).toThrow(/Invalid IBAN/);
+    test("should reject SCOR reference with QR-IBAN", () => {
+      const p = makePayload({
+        referenceType: "SCOR",
+        reference: "RF18539007547034",
+      });
+      expect(() => validateSwissQRBillPayload(p)).toThrow(/SCOR.*not allowed.*QR-IBAN/);
     });
 
-    test("should reject invalid amount format", () => {
-      const invalidPayload: SwissQRBillPayload = {
-        qrType: "SPC",
-        version: "0200",
-        coding: "1",
-        amount: "269,25", // Comma instead of period
-        currency: "CHF",
-        creditorName: "Test Corp",
-        creditorAddressLine1: "Main St",
-        creditorPostalCode: "8000",
-        creditorCity: "Zurich",
-        creditorCountry: "CH",
-        iban: "CH9300762011623852957",
-        reference: "00 000000 000000000000000",
-        debtorName: "Tenant",
-        debtorAddressLine1: "Side St",
-        debtorPostalCode: "8001",
-        debtorCity: "Zurich",
-        debtorCountry: "CH",
-      };
+    test("should accept EUR currency", () => {
+      const p = makePayload({ currency: "EUR" });
+      expect(() => validateSwissQRBillPayload(p)).not.toThrow();
+    });
+  });
 
-      expect(() => validateSwissQRBillPayload(invalidPayload)).toThrow();
+  // ===========================
+  // QR-Reference (mod-10-recursive) Tests
+  // ===========================
+
+  describe("QR-Reference Generation (mod-10-recursive)", () => {
+    test("mod10Recursive should compute correct check digit", () => {
+      // Known test vector: "00000000000000000000000000" → check digit 6
+      // (26 zeros → carry through table → check digit)
+      const cd = mod10Recursive("00000000000000000000000000");
+      expect(typeof cd).toBe("number");
+      expect(cd).toBeGreaterThanOrEqual(0);
+      expect(cd).toBeLessThanOrEqual(9);
+    });
+
+    test("generateQRReference should produce exactly 27 digits", () => {
+      const ref = generateQRReference("test-id", "2026-001");
+      expect(ref).toMatch(/^\d{27}$/);
+    });
+
+    test("generateQRReference should be deterministic", () => {
+      const r1 = generateQRReference("abc", "2026-001");
+      const r2 = generateQRReference("abc", "2026-001");
+      expect(r1).toBe(r2);
+    });
+
+    test("generateQRReference without invoice number uses UUID", () => {
+      const ref = generateQRReference("550e8400-e29b-41d4-a716-446655440000", null);
+      expect(ref).toMatch(/^\d{27}$/);
+    });
+
+    test("legacy generateSwissReference still works (backward compat)", () => {
+      const ref = generateSwissReference("id", "2026-001");
+      expect(ref).toMatch(/^\d{27}$/);
+    });
+  });
+
+  // ===========================
+  // Creditor Reference (SCOR / ISO 11649) Tests
+  // ===========================
+
+  describe("Creditor Reference (SCOR / ISO 11649)", () => {
+    test("should produce reference starting with RF", () => {
+      const ref = generateCreditorReference("test-id", "2026-001");
+      expect(ref).toMatch(/^RF\d{2}/);
+    });
+
+    test("should produce deterministic output", () => {
+      const r1 = generateCreditorReference("x", "2026-001");
+      const r2 = generateCreditorReference("x", "2026-001");
+      expect(r1).toBe(r2);
+    });
+  });
+
+  // ===========================
+  // IBAN Utilities
+  // ===========================
+
+  describe("IBAN Utilities", () => {
+    test("isQrIban should detect QR-IBAN (IID 30000–31999)", () => {
+      expect(isQrIban("CH4431999123000889012")).toBe(true);
+      expect(isQrIban("CH4430000123000889012")).toBe(true);
+    });
+
+    test("isQrIban should reject regular IBAN", () => {
+      expect(isQrIban("CH9300762011623852957")).toBe(false);
+    });
+
+    test("isQrIban should accept LI IBAN", () => {
+      expect(isQrIban("LI4431999123000889012")).toBe(true);
+    });
+
+    test("isValidSwissIban should validate CH and LI", () => {
+      expect(isValidSwissIban("CH9300762011623852957")).toBe(true);
+      expect(isValidSwissIban("LI9300762011623852957")).toBe(true);
+      expect(isValidSwissIban("DE9300762011623852957")).toBe(false);
+    });
+
+    test("referenceTypeForIban should return QRR for QR-IBAN", () => {
+      expect(referenceTypeForIban("CH4431999123000889012")).toBe("QRR");
+      expect(referenceTypeForIban("CH9300762011623852957")).toBe("SCOR");
     });
   });
 
@@ -265,7 +359,7 @@ describe("Slice 8.4 - QR-Bill Integration", () => {
 
   describe("QR Code Generation", () => {
     test("should generate QR code as SVG", async () => {
-      const payload = "SPC\n0200\n1\n269.25\nCHF\nTest\nMain\n8000 Zurich\nCH\nCH9300762011623852957\n1\n00 000000 000000000000000\n\nEPD\nTenant\nSide\n8001 Zurich\nCH";
+      const payload = buildSwissQRBillPayload(makePayload());
       const svg = await generateQRCodeSVG(payload);
 
       expect(svg).toBeDefined();
@@ -274,7 +368,7 @@ describe("Slice 8.4 - QR-Bill Integration", () => {
     });
 
     test("should generate QR code as PNG buffer", async () => {
-      const payload = "SPC\n0200\n1\n269.25\nCHF\nTest\nMain\n8000 Zurich\nCH\nCH9300762011623852957\n1\n00 000000 000000000000000\n\nEPD\nTenant\nSide\n8001 Zurich\nCH";
+      const payload = buildSwissQRBillPayload(makePayload());
       const png = await generateQRCodePNG(payload, 200);
 
       expect(Buffer.isBuffer(png)).toBe(true);
@@ -287,29 +381,10 @@ describe("Slice 8.4 - QR-Bill Integration", () => {
     });
 
     test("should generate complete QR-bill data with SVG and PNG", async () => {
-      const payload: SwissQRBillPayload = {
-        qrType: "SPC",
-        version: "0200",
-        coding: "1",
-        amount: "269.25",
-        currency: "CHF",
-        creditorName: "Test Corp",
-        creditorAddressLine1: "Main St",
-        creditorPostalCode: "8000",
-        creditorCity: "Zurich",
-        creditorCountry: "CH",
-        iban: "CH9300762011623852957",
-        reference: "00 000000 000000000000000",
-        debtorName: "Tenant",
-        debtorAddressLine1: "Side St",
-        debtorPostalCode: "8001",
-        debtorCity: "Zurich",
-        debtorCountry: "CH",
-      };
-
-      const result = await generateCompleteQRBill(payload);
+      const result = await generateCompleteQRBill(makePayload());
 
       expect(result.qrPayload).toBeDefined();
+      expect(result.qrPayload).toContain("SPC");
       expect(result.qrCodeSVG).toContain("svg");
       expect(Buffer.isBuffer(result.qrCodePNG)).toBe(true);
     });

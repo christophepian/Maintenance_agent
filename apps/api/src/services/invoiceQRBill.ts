@@ -1,9 +1,13 @@
 import prisma from './prismaClient';
 import {
   SwissQRBillPayload,
+  ReferenceType,
   formatAmountForQRBill,
-  generateSwissReference,
+  generateQRReference,
+  generateCreditorReference,
   generateCompleteQRBill,
+  isQrIban,
+  referenceTypeForIban,
 } from './qrBill';
 
 export interface InvoiceQRBillDTO {
@@ -15,6 +19,7 @@ export interface InvoiceQRBillDTO {
   creditorIban: string;
   creditorName: string;
   reference: string;
+  referenceType: ReferenceType;
 }
 
 /**
@@ -50,41 +55,51 @@ export async function generateInvoiceQRBill(invoiceId: string, orgId: string): P
   // Format amount for QR-bill (CHF decimal)
   const amountStr = formatAmountForQRBill(invoice.totalAmount);
 
-  // Generate Swiss reference
-  const reference = generateSwissReference(invoiceId, invoice.invoiceNumber);
+  // Determine reference type from IBAN (QR-IBAN → QRR, regular → SCOR)
+  const refType = referenceTypeForIban(invoice.iban);
+  const reference = refType === 'QRR'
+    ? generateQRReference(invoiceId, invoice.invoiceNumber)
+    : generateCreditorReference(invoiceId, invoice.invoiceNumber);
 
-  // Build QR-bill payload
+  // Build QR-bill payload per SIX spec v2.3
   const payload: SwissQRBillPayload = {
     qrType: 'SPC',
     version: '0200',
     coding: '1',
-    amount: amountStr,
-    currency: 'CHF',
 
-    // Creditor (issuer)
+    // Creditor account
+    iban: invoice.iban,
+
+    // Creditor address (combined format)
+    creditorAddressType: 'K',
     creditorName: invoice.issuer.name,
     creditorAddressLine1: invoice.issuer.addressLine1,
-    creditorAddressLine2: invoice.issuer.addressLine2,
+    creditorAddressLine2: invoice.issuer.addressLine2 || '',
     creditorPostalCode: invoice.issuer.postalCode,
     creditorCity: invoice.issuer.city,
     creditorCountry: invoice.issuer.country,
-    iban: invoice.iban,
+
+    // Amount
+    amount: amountStr,
+    currency: 'CHF',
+
+    // Debtor address (combined format)
+    debtorAddressType: 'K',
+    debtorName: invoice.recipientName,
+    debtorAddressLine1: invoice.recipientAddressLine1,
+    debtorAddressLine2: invoice.recipientAddressLine2 || '',
+    debtorPostalCode: invoice.recipientPostalCode,
+    debtorCity: invoice.recipientCity,
+    debtorCountry: invoice.recipientCountry,
 
     // Reference
+    referenceType: refType,
     reference,
 
     // Optional message
     unstructuredMessage: invoice.invoiceNumber
       ? `Invoice ${invoice.invoiceNumber}`
       : undefined,
-
-    // Debtor (tenant/recipient)
-    debtorName: invoice.recipientName,
-    debtorAddressLine1: invoice.recipientAddressLine1,
-    debtorAddressLine2: invoice.recipientAddressLine2,
-    debtorPostalCode: invoice.recipientPostalCode,
-    debtorCity: invoice.recipientCity,
-    debtorCountry: invoice.recipientCountry,
   };
 
   // Generate QR code
@@ -99,6 +114,7 @@ export async function generateInvoiceQRBill(invoiceId: string, orgId: string): P
     creditorIban: invoice.iban,
     creditorName: invoice.issuer.name,
     reference,
+    referenceType: refType,
   };
 }
 

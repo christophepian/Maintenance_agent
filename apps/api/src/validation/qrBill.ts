@@ -1,35 +1,51 @@
 import { z } from 'zod';
 
+/**
+ * Validation schema for Swiss QR-Bill payload — SIX spec v2.3
+ */
 export const SwissQRBillPayloadSchema = z.object({
-  qrType: z.literal('SPC').describe('Swiss Payment Code'),
-  version: z.literal('0200').describe('SPC version'),
-  coding: z.literal('1').describe('UTF-8 coding'),
-  amount: z
-    .string()
-    .regex(/^\d+\.\d{2}$/, 'Amount must be in format XXXX.XX (CHF)')
-    .describe('CHF amount in decimal format'),
-  currency: z.literal('CHF'),
-  creditorName: z.string().min(1).max(70),
-  creditorAddressLine1: z.string().min(1).max(70),
-  creditorAddressLine2: z.string().max(70).optional(),
-  creditorPostalCode: z.string().min(1).max(16),
-  creditorCity: z.string().min(1).max(35),
-  creditorCountry: z
-    .string()
-    .length(2)
-    .regex(/^[A-Z]{2}$/, 'ISO 3166-1 alpha-2 country code'),
+  qrType: z.literal('SPC'),
+  version: z.literal('0200'),
+  coding: z.literal('1'),
+
+  // Creditor account
   iban: z
     .string()
-    .regex(/^CH\d{21}$/, 'IBAN must be Swiss format (CHxxxxxxxxxxxxxxxxxx)'),
-  reference: z.string().max(27).describe('Structured reference (QRF/ISR)'),
-  unstructuredMessage: z.string().max(140).optional(),
-  trailerElement: z.string().optional().default('EPD'),
+    .regex(/^(CH|LI)\d{19}$/, 'IBAN must be Swiss or Liechtenstein format'),
+
+  // Creditor address
+  creditorAddressType: z.enum(['S', 'K']),
+  creditorName: z.string().min(1).max(70),
+  creditorAddressLine1: z.string().max(70),
+  creditorAddressLine2: z.string().max(70),
+  creditorPostalCode: z.string().max(16),
+  creditorCity: z.string().max(35),
+  creditorCountry: z.string().length(2).regex(/^[A-Z]{2}$/),
+
+  // Amount
+  amount: z
+    .string()
+    .regex(/^(\d+\.\d{2})?$/, 'Amount must be decimal format or empty (open amount)'),
+  currency: z.enum(['CHF', 'EUR']),
+
+  // Debtor address
+  debtorAddressType: z.enum(['S', 'K']),
   debtorName: z.string().min(1).max(70),
-  debtorAddressLine1: z.string().min(1).max(70),
-  debtorAddressLine2: z.string().max(70).optional(),
-  debtorPostalCode: z.string().min(1).max(16),
-  debtorCity: z.string().min(1).max(35),
+  debtorAddressLine1: z.string().max(70),
+  debtorAddressLine2: z.string().max(70),
+  debtorPostalCode: z.string().max(16),
+  debtorCity: z.string().max(35),
   debtorCountry: z.string().length(2).regex(/^[A-Z]{2}$/),
+
+  // Reference
+  referenceType: z.enum(['QRR', 'SCOR', 'NON']),
+  reference: z.string().max(27),
+
+  // Additional info
+  unstructuredMessage: z.string().max(140).optional(),
+  billInformation: z.string().max(140).optional(),
+  alternativeProcedure1: z.string().max(100).optional(),
+  alternativeProcedure2: z.string().max(100).optional(),
 });
 
 export type SwissQRBillPayloadInput = z.infer<typeof SwissQRBillPayloadSchema>;
