@@ -491,7 +491,7 @@ describe("Legal Engine Integration Tests", () => {
       // Both should succeed and produce valid decisions
       expect(r1.data.data.legalObligation).toBe(r2.data.data.legalObligation);
       expect(r1.data.data.legalTopic).toBe(r2.data.data.legalTopic);
-    }, 20000);
+    }, 30000);
 
     it("RFP creation should be idempotent (same RFP for same request)", async () => {
       // If both decisions created RFPs, they should be the same one

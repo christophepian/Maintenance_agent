@@ -606,18 +606,12 @@ PORT=3001
 * Azure Document Intelligence tier upgrade — current Free F0 tier allows 500
   pages/month. Upgrade to S0 (~$1.50/1000 pages) before production go-live.
   Resource: `maintenance-agent-docintel`, West Europe.
-* Lease Phase 3–5: DocuSign/Skribble integration, deposit payment tracking, archive workflow
+* Lease Phase 3–4: DocuSign/Skribble signing integration (requires external API credentials + product decision on provider). Phase 5 (deposit, archive) backend stubs exist — frontend wiring needed.
 * Role enforcement refinement (all routes protected; role granularity can be tightened further)
-* Email delivery provider integration (EmailOutbox + dev sink implemented; no SMTP/SendGrid wired yet)
 * Notifications push delivery (in-app notifications work; no push/email delivery)
 * `reports.js` — define reporting scope before building (product decision required)
 * Multi-org support (org scoping via M1; auth centralized via M2; DEFAULT_ORG_ID remains only in authz.ts dev/test fallback + orgConfig.ts bootstrap + tests; production returns null via SA-1 fix)
-* Legal DSL variable resolver — wire LegalVariable values into DSL condition evaluation so rules can condition on ingested data (e.g. reference interest rate > 1.5%). Prerequisite for full canton-scoped rule evaluation. Depends on: LegalSource Scope slice (done).
-* Consolidate DTO files — buildingDetail.ts was created as a standalone file; review whether it should be merged with other DTO definitions for consistency
-* G8 consistency — `migrate deploy` was used instead of `migrate dev` for the building owner migration. Confirm local dev workflow always uses `migrate dev` going forward. *(Shadow DB exception retired 2026-03-31.)*
-* Finance sub-pages (Payments, Expenses, Charges) — inline tab content shows plain text overflow with no link; implement full sub-pages when finance reporting scope is defined
-* Sources tab in legal.js — confirm inline or stub, close the finding in AUDIT.md
-* Hub tab content polish (low priority, on-demand): legal/rules, legal/evaluations, people/tenants, people/vendors, rfps tabs still use flat inline-table. Enrich when pages become high-traffic or users report friction
+* Hub tab content polish (low priority, on-demand): people/tenants, people/vendors, rfps tabs still use flat inline-table. Enrich when pages become high-traffic or users report friction
 * ASSET_TYPE_COLORS in legal/depreciation.js uses hardcoded Tailwind color strings (bg-violet-100 text-violet-700 etc.) — these bypass the token system; migrate to CSS variables when depreciation page is next touched
 * Dev auth token (`apps/web/pages/_app.js` `DEV_MANAGER_TOKEN`) expires 2027-03-15.
   Regenerate with: `cd apps/api && node -e "const jwt=require('jsonwebtoken'); console.log(jwt.sign({userId:'dev-user',orgId:'default-org',email:'dev@local',role:'MANAGER'},'dev-secret-key-12345',{expiresIn:'365d'}))"`
