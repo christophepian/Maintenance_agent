@@ -456,6 +456,51 @@ export function registerAuthRoutes(router: Router) {
     }
   });
 
+  // GET /tenant-portal/invoices/:id/qr-bill — tenant-scoped QR-bill
+  router.get("/tenant-portal/invoices/:id/qr-bill", async ({ req, res, params, orgId, prisma }) => {
+    const tenantId = requireTenantSession(req, res);
+    if (!tenantId) return;
+    try {
+      // Verify invoice belongs to this tenant (via lease or job→request)
+      const invoice = await prisma.invoice.findUnique({
+        where: { id: params.id },
+      });
+      if (!invoice) return sendError(res, 404, "NOT_FOUND", "Invoice not found");
+
+      // Check tenant ownership via lease→unit occupancy or job→request
+      let owned = false;
+      if (invoice.leaseId) {
+        const lease = await prisma.lease.findUnique({ where: { id: invoice.leaseId } });
+        if (lease) {
+          const occ = await prisma.occupancy.findFirst({
+            where: { tenantId, unitId: lease.unitId },
+          });
+          if (occ) owned = true;
+        }
+      }
+      if (!owned && invoice.jobId) {
+        const job = await prisma.job.findUnique({
+          where: { id: invoice.jobId },
+          include: { request: true },
+        });
+        if (job?.request?.tenantId === tenantId) owned = true;
+      }
+      if (!owned) {
+        return sendError(res, 403, "FORBIDDEN", "Invoice does not belong to this tenant");
+      }
+
+      const { generateInvoiceQRBill } = await import("../services/invoiceQRBill");
+      const qrBill = await generateInvoiceQRBill(params.id, orgId);
+      sendJson(res, 200, { data: qrBill });
+    } catch (e: any) {
+      const msg = String(e?.message || e);
+      if (msg.includes("not found")) return sendError(res, 404, "NOT_FOUND", "Invoice not found");
+      if (msg.includes("no IBAN")) return sendError(res, 422, "MISSING_IBAN", "Invoice has no IBAN configured");
+      if (msg.includes("no issuer")) return sendError(res, 422, "MISSING_ISSUER", "Invoice has no billing entity");
+      sendError(res, 500, "DB_ERROR", "Failed to generate QR-bill", String(e));
+    }
+  });
+
   // POST /triage — intentionally public (tenant-facing intake); rate-limited per SA-18
   router.post("/triage", async ({ req, res, prisma }) => {
     // SA-18: Rate limit — 10 calls per IP per minute

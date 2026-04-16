@@ -1,25 +1,13 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
+import Link from "next/link";
 import AppShell from "../../components/AppShell";
+import Badge from "../../components/ui/Badge";
+import { invoiceVariant } from "../../lib/statusVariants";
 import { formatDate, formatChf } from "../../lib/format";
 import { tenantFetch } from "../../lib/api";
 import TenantPicker from "../../components/TenantPicker";
-
-const STATUS_LABELS = {
-  DRAFT: "Draft",
-  ISSUED: "Issued",
-  APPROVED: "Approved",
-  PAID: "Paid",
-  DISPUTED: "Disputed",
-};
-
-const STATUS_COLORS = {
-  DRAFT: "bg-slate-100 text-slate-600",
-  ISSUED: "bg-blue-100 text-blue-700",
-  APPROVED: "bg-green-100 text-green-700",
-  PAID: "bg-green-100 text-green-700",
-  DISPUTED: "bg-red-100 text-red-700",
-};
+import { cn } from "../../lib/utils";
 
 export default function TenantInvoicesPage() {
   const router = useRouter();
@@ -130,9 +118,10 @@ export default function TenantInvoicesPage() {
         ) : (
           <div className="space-y-3">
             {invoices.map((inv) => (
-              <div
+              <Link
                 key={inv.id}
-                className="card p-4 border hover:shadow-md transition-shadow"
+                href={`/tenant/invoices/${inv.id}`}
+                className="card p-4 border hover:shadow-md transition-shadow block"
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1 min-w-0">
@@ -162,14 +151,9 @@ export default function TenantInvoicesPage() {
                     <p className="text-lg font-bold">
                       {formatChf(inv.totalAmountChf)}
                     </p>
-                    <span
-                      className={
-                        "inline-block px-2 py-0.5 rounded text-xs font-medium mt-1 " +
-                        (STATUS_COLORS[inv.status] || "bg-slate-100 text-slate-600")
-                      }
-                    >
-                      {STATUS_LABELS[inv.status] || inv.status}
-                    </span>
+                    <Badge variant={invoiceVariant(inv.status)} className="mt-1">
+                      {inv.status}
+                    </Badge>
                   </div>
                 </div>
 
@@ -181,7 +165,7 @@ export default function TenantInvoicesPage() {
                     {formatChf(inv.totalAmountChf)}
                   </div>
                 )}
-              </div>
+              </Link>
             ))}
           </div>
         )}
