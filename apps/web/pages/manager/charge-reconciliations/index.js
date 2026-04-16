@@ -6,12 +6,15 @@ import PageHeader from "../../../components/layout/PageHeader";
 import PageContent from "../../../components/layout/PageContent";
 import Panel from "../../../components/layout/Panel";
 import Link from "next/link";
+import Badge from "../../../components/ui/Badge";
+import { reconciliationVariant } from "../../../lib/statusVariants";
 import { authHeaders } from "../../../lib/api";
 
+import { cn } from "../../../lib/utils";
 const STATUS_COLORS = {
-  DRAFT: "bg-blue-100 text-blue-800",
-  FINALIZED: "bg-amber-100 text-amber-800",
-  SETTLED: "bg-emerald-100 text-emerald-800",
+  DRAFT: "bg-blue-100 text-blue-700",
+  FINALIZED: "bg-amber-100 text-amber-700",
+  SETTLED: "bg-green-100 text-green-700",
 };
 
 const TABS = [
@@ -68,11 +71,9 @@ export default function ChargeReconciliationsPage() {
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(i)}
-                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-                  i === activeTab
+                className={cn("px-4 py-2 text-sm font-medium border-b-2 transition-colors", i === activeTab
                     ? "border-blue-600 text-blue-600"
-                    : "border-transparent text-muted-foreground hover:text-foreground"
-                }`}
+                    : "border-transparent text-muted-foreground hover:text-foreground")}
               >
                 {tab.label}
               </button>
@@ -114,15 +115,13 @@ export default function ChargeReconciliationsPage() {
                         </td>
                         <td className="py-2 pr-4 tabular-nums">{r.fiscalYear}</td>
                         <td className="py-2 pr-4">
-                          <span className={`inline-block px-2 py-0.5 text-xs font-semibold rounded-full ${STATUS_COLORS[r.status] || "bg-gray-100"}`}>
+                          <Badge variant={reconciliationVariant(r.status)} size="sm">
                             {r.status}
-                          </span>
+                          </Badge>
                         </td>
                         <td className="py-2 pr-4 text-right tabular-nums">{fmt(r.totalAcomptePaidCents)}</td>
                         <td className="py-2 pr-4 text-right tabular-nums">{fmt(r.totalActualCostsCents)}</td>
-                        <td className={`py-2 pr-4 text-right tabular-nums ${
-                          r.balanceCents > 0 ? "text-red-600" : r.balanceCents < 0 ? "text-emerald-600" : ""
-                        }`}>
+                        <td className={cn("py-2 pr-4 text-right tabular-nums", r.balanceCents > 0 ? "text-red-600" : r.balanceCents < 0 ? "text-green-600" : "")}>
                           {r.balanceCents > 0 ? "+" : ""}{fmt(r.balanceCents)}
                         </td>
                         <td className="py-2 text-right">

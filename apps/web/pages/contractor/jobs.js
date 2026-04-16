@@ -7,23 +7,19 @@ import PageHeader from "../../components/layout/PageHeader";
 import PageContent from "../../components/layout/PageContent";
 import Panel from "../../components/layout/Panel.jsx";
 import ContractorPicker from "../../components/ContractorPicker";
+import ErrorBanner from "../../components/ui/ErrorBanner";
+import Badge from "../../components/ui/Badge";
+import { jobVariant } from "../../lib/statusVariants";
 import { formatDate, formatDateLong } from "../../lib/format";
 import { authHeaders } from "../../lib/api";
 
+import { cn } from "../../lib/utils";
 /* ── Tab config (F-UI1) ────────────────────────────────── */
 const TABS = [
   { key: "upcoming", label: "Upcoming" },
   { key: "history", label: "History" },
 ];
 const TAB_KEYS = TABS.map((t) => t.key);
-
-/* ── Status badge colours ──────────────────────────────── */
-const STATUS_COLOR = {
-  PENDING: "bg-gray-100 text-gray-700",
-  IN_PROGRESS: "bg-blue-100 text-blue-700",
-  COMPLETED: "bg-green-100 text-green-700",
-  INVOICED: "bg-purple-100 text-purple-700",
-};
 
 /* ── Helpers ────────────────────────────────────────────── */
 
@@ -202,17 +198,7 @@ export default function ContractorJobs() {
 
         <PageContent>
           {/* Error banner */}
-          {error && (
-            <div className="error-banner">
-              {error}
-              <button
-                onClick={() => setError("")}
-                className="ml-3 text-xs underline"
-              >
-                Dismiss
-              </button>
-            </div>
-          )}
+          <ErrorBanner error={error} onDismiss={() => setError("")} />
 
           <Panel bodyClassName="p-0">
             {/* Tab strip */}
@@ -336,14 +322,10 @@ function JobCard({
             <span>Job #{job.id.slice(0, 8)}</span>
           )}
         </span>
-        <span
-          className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-medium ${
-            STATUS_COLOR[job.status] || "bg-gray-100 text-gray-700"
-          }`}
-        >
+        <Badge variant={jobVariant(job.status)} size="sm">
           {job.status.replace("_", " ")}
-        </span>
-        <span className={`job-card-chevron${expanded ? " job-card-chevron-open" : ""}`}>
+        </Badge>
+        <span className={cn("job-card-chevron", expanded ? " job-card-chevron-open" : "")}>
           ▸
         </span>
       </div>
@@ -356,7 +338,7 @@ function JobCard({
             {req?.unit && (
               <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
                 <h4 className="text-xs font-semibold text-blue-900 mb-1">📍 Location</h4>
-                <p className="text-sm text-blue-800 font-medium">{req.unit.building.name}</p>
+                <p className="text-sm text-blue-700 font-medium">{req.unit.building.name}</p>
                 <p className="text-xs text-blue-700">{req.unit.building.address}</p>
                 <p className="text-xs text-blue-700 mt-0.5 font-medium">Unit {req.unit.unitNumber}</p>
               </div>
@@ -364,7 +346,7 @@ function JobCard({
             {!req?.unit && (job.buildingName || job.unitNumber) && (
               <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
                 <h4 className="text-xs font-semibold text-blue-900 mb-1">📍 Location</h4>
-                {job.buildingName && <p className="text-sm text-blue-800 font-medium">{job.buildingName}</p>}
+                {job.buildingName && <p className="text-sm text-blue-700 font-medium">{job.buildingName}</p>}
                 {job.unitNumber && <p className="text-xs text-blue-700 font-medium">Unit {job.unitNumber}</p>}
               </div>
             )}
@@ -373,7 +355,7 @@ function JobCard({
             {req?.tenant && (
               <div className="p-3 bg-green-50 rounded-lg border border-green-200">
                 <h4 className="text-xs font-semibold text-green-900 mb-1">👤 Tenant</h4>
-                {req.tenant.name && <p className="text-sm text-green-800 font-medium">{req.tenant.name}</p>}
+                {req.tenant.name && <p className="text-sm text-green-700 font-medium">{req.tenant.name}</p>}
                 <p className="text-xs text-green-700">📞 {req.tenant.phone}</p>
                 {req.tenant.email && <p className="text-xs text-green-700">✉️ {req.tenant.email}</p>}
               </div>
@@ -383,7 +365,7 @@ function JobCard({
             {slot && (
               <div className="p-3 bg-indigo-50 rounded-lg border border-indigo-200">
                 <h4 className="text-xs font-semibold text-indigo-900 mb-1">📅 Appointment</h4>
-                <p className="text-sm text-indigo-800 font-medium">
+                <p className="text-sm text-indigo-700 font-medium">
                   {fmtTime(slot.startTime)} – {fmtTime(slot.endTime)}
                 </p>
                 <p className="text-xs text-indigo-700">{formatDateLong(slot.startTime)}</p>
@@ -394,7 +376,7 @@ function JobCard({
             {req?.appliance && (
               <div className="p-3 bg-amber-50 rounded-lg border border-amber-200">
                 <h4 className="text-xs font-semibold text-amber-900 mb-1">🔧 Appliance</h4>
-                <p className="text-sm text-amber-800">
+                <p className="text-sm text-amber-700">
                   {req.appliance.category}
                   {req.appliance.serial && ` (S/N: ${req.appliance.serial})`}
                 </p>
@@ -404,9 +386,9 @@ function JobCard({
 
           {/* Scope of work */}
           {(req?.description || job.requestDescription) && (
-            <div className="mt-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
-              <h4 className="text-xs font-semibold text-gray-700 mb-1">📋 Scope</h4>
-              <p className="text-sm text-gray-800 whitespace-pre-wrap">
+            <div className="mt-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
+              <h4 className="text-xs font-semibold text-slate-700 mb-1">📋 Scope</h4>
+              <p className="text-sm text-slate-800 whitespace-pre-wrap">
                 {req?.description || job.requestDescription}
               </p>
             </div>
@@ -415,23 +397,17 @@ function JobCard({
           {/* Invoice addressee */}
           {job.invoiceAddressedTo && (
             <div
-              className={`mt-3 p-3 rounded-lg border ${
-                job.invoiceAddressedTo === "TENANT"
+              className={cn("mt-3 p-3 rounded-lg border", job.invoiceAddressedTo === "TENANT"
                   ? "bg-orange-50 border-orange-200"
-                  : "bg-indigo-50 border-indigo-200"
-              }`}
+                  : "bg-indigo-50 border-indigo-200")}
             >
               <span
-                className={`text-xs font-semibold ${
-                  job.invoiceAddressedTo === "TENANT" ? "text-orange-900" : "text-indigo-900"
-                }`}
+                className={cn("text-xs font-semibold", job.invoiceAddressedTo === "TENANT" ? "text-orange-900" : "text-indigo-900")}
               >
                 🧾 Invoice to:{" "}
               </span>
               <span
-                className={`text-sm font-medium ${
-                  job.invoiceAddressedTo === "TENANT" ? "text-orange-800" : "text-indigo-800"
-                }`}
+                className={cn("text-sm font-medium", job.invoiceAddressedTo === "TENANT" ? "text-orange-700" : "text-indigo-700")}
               >
                 {job.invoiceAddressedTo === "TENANT" ? "Tenant" : "Property Manager"}
               </span>
@@ -439,12 +415,12 @@ function JobCard({
           )}
 
           {/* Timestamps */}
-          <div className="mt-3 text-xs text-gray-500 flex flex-wrap gap-x-4 gap-y-1">
+          <div className="mt-3 text-xs text-slate-500 flex flex-wrap gap-x-4 gap-y-1">
             <span>Created: {formatDate(job.createdAt)}</span>
             {job.startedAt && <span>Started: {formatDate(job.startedAt)}</span>}
             {job.completedAt && <span>Completed: {formatDate(job.completedAt)}</span>}
             {job.actualCost != null && (
-              <span className="font-semibold text-gray-700">CHF {job.actualCost}</span>
+              <span className="font-semibold text-slate-700">CHF {job.actualCost}</span>
             )}
           </div>
 
@@ -461,7 +437,7 @@ function JobCard({
             )}
             {job.status === "PENDING" && actionJobId === job.id && (
               <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-700">Ready to start?</span>
+                <span className="text-sm text-slate-700">Ready to start?</span>
                 <button
                   onClick={() => onStartJob(job.id)}
                   className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700"
@@ -470,7 +446,7 @@ function JobCard({
                 </button>
                 <button
                   onClick={() => setActionJobId(null)}
-                  className="px-3 py-2 bg-gray-200 text-gray-700 text-sm rounded-lg hover:bg-gray-300"
+                  className="px-3 py-2 bg-slate-200 text-slate-700 text-sm rounded-lg hover:bg-slate-300"
                 >
                   Cancel
                 </button>
@@ -493,7 +469,7 @@ function JobCard({
                   placeholder="Actual cost (CHF)"
                   value={actualCost}
                   onChange={(e) => setActualCost(e.target.value)}
-                  className="w-40 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  className="w-40 px-3 py-2 border border-slate-300 rounded-lg text-sm"
                 />
                 <button
                   onClick={() => onCompleteJob(job.id)}
@@ -506,7 +482,7 @@ function JobCard({
                     setActionJobId(null);
                     setActualCost("");
                   }}
-                  className="px-3 py-2 bg-gray-200 text-gray-700 text-sm rounded-lg hover:bg-gray-300"
+                  className="px-3 py-2 bg-slate-200 text-slate-700 text-sm rounded-lg hover:bg-slate-300"
                 >
                   Cancel
                 </button>

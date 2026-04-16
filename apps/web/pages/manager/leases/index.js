@@ -10,13 +10,14 @@ import Section from "../../../components/layout/Section";
 import Link from "next/link";
 import { authHeaders } from "../../../lib/api";
 
+import { cn } from "../../../lib/utils";
 const STATUS_COLORS = {
-  DRAFT: "bg-yellow-100 text-yellow-800",
-  READY_TO_SIGN: "bg-blue-100 text-blue-800",
-  SIGNED: "bg-green-100 text-green-800",
-  ACTIVE: "bg-emerald-100 text-emerald-800",
+  DRAFT: "bg-yellow-100 text-yellow-700",
+  READY_TO_SIGN: "bg-blue-100 text-blue-700",
+  SIGNED: "bg-green-100 text-green-700",
+  ACTIVE: "bg-green-100 text-green-700",
   TERMINATED: "bg-slate-100 text-slate-700",
-  CANCELLED: "bg-red-100 text-red-800",
+  CANCELLED: "bg-red-100 text-red-700",
 };
 
 // Tabs: Active (ACTIVE+SIGNED), Draft (DRAFT), Submitted (READY_TO_SIGN), Archive (CANCELLED+TERMINATED)
@@ -91,7 +92,7 @@ function CountdownBadge({ sentForSignatureAt }) {
     return <span className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-700">Due today</span>;
   }
   return (
-    <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${remaining <= 1 ? "bg-orange-100 text-orange-700" : "bg-blue-50 text-blue-700"}`}>
+    <span className={cn("inline-block px-2 py-0.5 rounded text-xs font-medium", remaining <= 1 ? "bg-orange-100 text-orange-700" : "bg-blue-50 text-blue-700")}>
       {remaining} business day{remaining !== 1 ? "s" : ""} left
     </span>
   );
@@ -267,7 +268,7 @@ export default function LeasesPage() {
                     <select
                       value={selectedBuildingId}
                       onChange={e => { setSelectedBuildingId(e.target.value); setCreateForm(f => ({ ...f, unitId: "" })); }}
-                      className="w-full border rounded-md px-3 py-2 text-sm"
+                      className="w-full border rounded-lg px-3 py-2 text-sm"
                     >
                       <option value="">Select building...</option>
                       {buildings.map(b => <option key={b.id} value={b.id}>{b.name} — {b.address}</option>)}
@@ -278,7 +279,7 @@ export default function LeasesPage() {
                     <select
                       value={createForm.unitId}
                       onChange={e => setCreateForm(f => ({ ...f, unitId: e.target.value }))}
-                      className="w-full border rounded-md px-3 py-2 text-sm"
+                      className="w-full border rounded-lg px-3 py-2 text-sm"
                       disabled={!selectedBuildingId}
                     >
                       <option value="">Select unit...</option>
@@ -294,7 +295,7 @@ export default function LeasesPage() {
                       type="text"
                       value={createForm.tenantName}
                       onChange={e => setCreateForm(f => ({ ...f, tenantName: e.target.value }))}
-                      className="w-full border rounded-md px-3 py-2 text-sm"
+                      className="w-full border rounded-lg px-3 py-2 text-sm"
                       placeholder="Jean Dupont"
                     />
                   </div>
@@ -304,7 +305,7 @@ export default function LeasesPage() {
                       type="email"
                       value={createForm.tenantEmail}
                       onChange={e => setCreateForm(f => ({ ...f, tenantEmail: e.target.value }))}
-                      className="w-full border rounded-md px-3 py-2 text-sm"
+                      className="w-full border rounded-lg px-3 py-2 text-sm"
                       placeholder="jean@example.com"
                     />
                   </div>
@@ -317,7 +318,7 @@ export default function LeasesPage() {
                       type="date"
                       value={createForm.startDate}
                       onChange={e => setCreateForm(f => ({ ...f, startDate: e.target.value }))}
-                      className="w-full border rounded-md px-3 py-2 text-sm"
+                      className="w-full border rounded-lg px-3 py-2 text-sm"
                     />
                   </div>
                   <div>
@@ -326,7 +327,7 @@ export default function LeasesPage() {
                       type="number"
                       value={createForm.netRentChf}
                       onChange={e => setCreateForm(f => ({ ...f, netRentChf: e.target.value }))}
-                      className="w-full border rounded-md px-3 py-2 text-sm"
+                      className="w-full border rounded-lg px-3 py-2 text-sm"
                       placeholder="1500"
                     />
                   </div>
@@ -338,7 +339,7 @@ export default function LeasesPage() {
                     type="number"
                     value={createForm.depositChf}
                     onChange={e => setCreateForm(f => ({ ...f, depositChf: e.target.value }))}
-                    className="w-full border rounded-md px-3 py-2 text-sm max-w-xs"
+                    className="w-full border rounded-lg px-3 py-2 text-sm max-w-xs"
                     placeholder="4500"
                   />
                 </div>
@@ -392,7 +393,7 @@ export default function LeasesPage() {
                   </p>
                 </div>
               ) : (
-                <div style={{ overflowX: "auto" }}>
+                <div className="overflow-x-auto">
                   <table className="inline-table">
                     <thead>
                       <tr>
@@ -445,7 +446,7 @@ export default function LeasesPage() {
                         const expired = isExpired(lease.sentForSignatureAt);
                         const result = expiryResult[lease.id];
                         return (
-                          <tr key={lease.id} onClick={() => router.push(`/manager/leases/${lease.id}`)} className={`cursor-pointer hover:bg-slate-50 ${expired ? "bg-red-50" : ""}`}>
+                          <tr key={lease.id} onClick={() => router.push(`/manager/leases/${lease.id}`)} className={cn("cursor-pointer hover:bg-slate-50", expired ? "bg-red-50" : "")}>
                             <td className="cell-bold">{lease.tenantName}</td>
                             <td>{lease.unit?.unitNumber || "—"}</td>
                             <td>{lease.unit?.building?.name || "—"}</td>
@@ -456,7 +457,7 @@ export default function LeasesPage() {
                               <div className="flex items-center gap-2 flex-wrap">
                                 <button
                                   onClick={() => router.push(`/manager/leases/${lease.id}`)}
-                                  className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                                  className="text-blue-600 hover:text-blue-700 text-sm font-medium"
                                 >
                                   View →
                                 </button>
@@ -502,7 +503,7 @@ export default function LeasesPage() {
                       <p className="empty-state-text">Click &quot;+ New Lease&quot; to create your first rental contract.</p>
                     </div>
                   ) : (
-                    <div style={{ overflowX: "auto" }}>
+                    <div className="overflow-x-auto">
                       <table className="inline-table">
                         <thead>
                           <tr>
@@ -533,7 +534,7 @@ export default function LeasesPage() {
                               {tabIndex === 0 && <td className="font-semibold">CHF {totalMo}.-</td>}
                               <td>{formatDate(lease.startDate)}</td>
                               <td>
-                                <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${STATUS_COLORS[lease.status] || "bg-slate-100 text-slate-700"}`}>
+                                <span className={cn("inline-block px-2 py-0.5 rounded text-xs font-medium", STATUS_COLORS[lease.status] || "bg-slate-100 text-slate-700")}>
                                   {lease.status.replace(/_/g, " ")}
                                 </span>
                               </td>
@@ -541,7 +542,7 @@ export default function LeasesPage() {
                                 <td>
                                   {/* "Ready for review" tag for backup-candidate redrafts */}
                                   {lease.applicationId ? (
-                                    <span className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800">
+                                    <span className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-700">
                                       Ready for review
                                     </span>
                                   ) : null}
@@ -550,7 +551,7 @@ export default function LeasesPage() {
                               <td onClick={(e) => e.stopPropagation()}>
                                 <button
                                   onClick={() => router.push(`/manager/leases/${lease.id}`)}
-                                  className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                                  className="text-blue-600 hover:text-blue-700 text-sm font-medium"
                                 >
                                   Edit →
                                 </button>

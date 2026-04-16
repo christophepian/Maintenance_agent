@@ -3,29 +3,13 @@ import { useRouter } from "next/router";
 import Link from "next/link";
 import AppShell from "../../../components/AppShell";
 import ContractorPicker from "../../../components/ContractorPicker";
+import ErrorBanner from "../../../components/ui/ErrorBanner";
 import { formatDate } from "../../../lib/format";
 import { authHeaders } from "../../../lib/api";
+import Badge from "../../../components/ui/Badge";
+import { rfpVariant } from "../../../lib/statusVariants";
 
-const STATUS_COLORS = {
-  DRAFT: "bg-slate-50 text-slate-600 border-slate-200",
-  OPEN: "bg-blue-50 text-blue-700 border-blue-200",
-  AWARDED: "bg-green-50 text-green-700 border-green-200",
-  CLOSED: "bg-slate-50 text-slate-500 border-slate-200",
-  CANCELLED: "bg-red-50 text-red-600 border-red-200",
-};
-
-function StatusPill({ status, colorMap }) {
-  return (
-    <span
-      className={`inline-block rounded-full border px-2 py-0.5 text-xs font-medium ${
-        colorMap[status] || "bg-slate-50 text-slate-600 border-slate-200"
-      }`}
-    >
-      {status}
-    </span>
-  );
-}
-
+import { cn } from "../../../lib/utils";
 function formatCHF(cents) {
   if (cents == null) return "—";
   return `CHF ${(cents / 100).toFixed(2)}`;
@@ -123,14 +107,10 @@ function QuoteForm({ rfpId, onSubmitted }) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white border border-gray-200 rounded-lg p-6 mb-4">
+    <form onSubmit={handleSubmit} className="bg-white border border-slate-200 rounded-lg p-6 mb-4">
       <h2 className="text-base font-semibold text-slate-900 mb-4">Submit Your Quote</h2>
 
-      {error && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded text-sm text-red-800">
-          {error}
-        </div>
-      )}
+      <ErrorBanner error={error} className="mb-4 text-sm" />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 mb-4">
         <div>
@@ -145,7 +125,7 @@ function QuoteForm({ rfpId, onSubmitted }) {
             value={form.amountCents}
             onChange={handleChange}
             required
-            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
             placeholder="e.g. 1500.00"
           />
         </div>
@@ -171,7 +151,7 @@ function QuoteForm({ rfpId, onSubmitted }) {
             min="1"
             value={form.estimatedDurationDays}
             onChange={handleChange}
-            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
             placeholder="e.g. 5"
           />
         </div>
@@ -184,7 +164,7 @@ function QuoteForm({ rfpId, onSubmitted }) {
             name="earliestAvailability"
             value={form.earliestAvailability}
             onChange={handleChange}
-            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
           />
         </div>
         <div>
@@ -196,7 +176,7 @@ function QuoteForm({ rfpId, onSubmitted }) {
             name="validUntil"
             value={form.validUntil}
             onChange={handleChange}
-            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
           />
         </div>
       </div>
@@ -211,7 +191,7 @@ function QuoteForm({ rfpId, onSubmitted }) {
           onChange={handleChange}
           required
           rows={4}
-          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
           placeholder="Describe the proposed work plan, methods, and timeline…"
         />
       </div>
@@ -225,7 +205,7 @@ function QuoteForm({ rfpId, onSubmitted }) {
           value={form.assumptions}
           onChange={handleChange}
           rows={2}
-          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
           placeholder="Any assumptions, exclusions, or conditions…"
         />
       </div>
@@ -239,7 +219,7 @@ function QuoteForm({ rfpId, onSubmitted }) {
           value={form.notes}
           onChange={handleChange}
           rows={2}
-          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
           placeholder="Any other information for the manager…"
         />
       </div>
@@ -264,7 +244,7 @@ function QuoteForm({ rfpId, onSubmitted }) {
               type="text"
               value={item.description}
               onChange={(e) => updateLineItem(idx, "description", e.target.value)}
-              className="flex-1 rounded-md border border-slate-300 px-3 py-1.5 text-sm"
+              className="flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
               placeholder="Description"
             />
             <input
@@ -273,7 +253,7 @@ function QuoteForm({ rfpId, onSubmitted }) {
               min="0"
               value={item.amountCents}
               onChange={(e) => updateLineItem(idx, "amountCents", e.target.value)}
-              className="w-32 rounded-md border border-slate-300 px-3 py-1.5 text-sm"
+              className="w-32 rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
               placeholder="CHF"
             />
             <button
@@ -373,11 +353,7 @@ function SlotProposalForm({ jobId, onProposed }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      {error && (
-        <div className="p-3 bg-red-50 border border-red-200 rounded text-sm text-red-800">
-          {error}
-        </div>
-      )}
+      <ErrorBanner error={error} className="text-sm" />
 
       {slots.map((slot, idx) => (
         <div key={idx} className="flex items-end gap-2 flex-wrap">
@@ -388,7 +364,7 @@ function SlotProposalForm({ jobId, onProposed }) {
               value={slot.date}
               onChange={(e) => updateSlot(idx, "date", e.target.value)}
               required
-              className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+              className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
             />
           </div>
           <div>
@@ -398,7 +374,7 @@ function SlotProposalForm({ jobId, onProposed }) {
               value={slot.startTime}
               onChange={(e) => updateSlot(idx, "startTime", e.target.value)}
               required
-              className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+              className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
             />
           </div>
           <div>
@@ -408,7 +384,7 @@ function SlotProposalForm({ jobId, onProposed }) {
               value={slot.endTime}
               onChange={(e) => updateSlot(idx, "endTime", e.target.value)}
               required
-              className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+              className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
             />
           </div>
           {slots.length > 1 && (
@@ -450,9 +426,9 @@ function SlotProposalForm({ jobId, onProposed }) {
 /* ── Existing Slots Display ────────────────────────────────────── */
 
 const SLOT_STATUS_COLORS = {
-  PROPOSED: "bg-yellow-50 border-yellow-200 text-yellow-800",
-  ACCEPTED: "bg-green-50 border-green-200 text-green-800",
-  DECLINED: "bg-red-50 border-red-200 text-red-800",
+  PROPOSED: "bg-yellow-50 border-yellow-200 text-yellow-700",
+  ACCEPTED: "bg-green-50 border-green-200 text-green-700",
+  DECLINED: "bg-red-50 border-red-200 text-red-700",
 };
 
 function formatSlotTime(iso) {
@@ -482,7 +458,7 @@ function ExistingSlotsPanel({ slots }) {
               Appointment Confirmed
             </h3>
           </div>
-          <p className="text-sm text-green-800">
+          <p className="text-sm text-green-700">
             {formatSlotTime(accepted.startTime)} – {formatSlotTime(accepted.endTime)}
           </p>
         </div>
@@ -492,18 +468,16 @@ function ExistingSlotsPanel({ slots }) {
         {slots.map((slot) => (
           <div
             key={slot.id}
-            className={`flex items-center justify-between rounded-lg border p-3 ${
-              SLOT_STATUS_COLORS[slot.status] || "bg-slate-50 border-slate-200"
-            }`}
+            className={cn("flex items-center justify-between rounded-lg border p-3", SLOT_STATUS_COLORS[slot.status] || "bg-slate-50 border-slate-200")}
           >
             <div>
               <p className="text-sm font-medium">
                 {formatSlotTime(slot.startTime)} – {formatSlotTime(slot.endTime)}
               </p>
             </div>
-            <span className="text-xs font-medium px-2 py-0.5 rounded-full border bg-white/50">
+            <Badge variant="default" size="sm">
               {slot.status}
-            </span>
+            </Badge>
           </div>
         ))}
       </div>
@@ -548,7 +522,7 @@ function SchedulingSection({ jobId }) {
   const hasProposed = slots.some((s) => s.status === "PROPOSED");
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-6 mb-4">
+    <div className="bg-white border border-slate-200 rounded-lg p-6 mb-4">
       <h2 className="text-base font-semibold text-slate-900 mb-1">
         📅 Appointment Scheduling
       </h2>
@@ -557,11 +531,7 @@ function SchedulingSection({ jobId }) {
         The tenant has 72 hours to respond before the manager is notified.
       </p>
 
-      {error && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded text-sm text-red-800">
-          {error}
-        </div>
-      )}
+      <ErrorBanner error={error} className="mb-4 text-sm" />
 
       {loading ? (
         <p className="text-sm text-slate-400">Loading slots…</p>
@@ -624,76 +594,76 @@ function QuoteSummary({ quote }) {
   const cfg = QUOTE_STATUS_CONFIG[status] || QUOTE_STATUS_CONFIG.SUBMITTED;
 
   return (
-    <div className={`${cfg.bgClass} border ${cfg.borderClass} rounded-lg p-6 mb-4`}>
+    <div className={cn(cfg.bgClass, "border", cfg.borderClass, "rounded-lg p-6 mb-4")}>
       <div className="flex items-center gap-2 mb-4">
-        <span className={`${cfg.headingColor} text-lg`}>{cfg.icon}</span>
-        <h2 className={`text-base font-semibold ${cfg.headingColor}`}>{cfg.heading}</h2>
+        <span className={cn(cfg.headingColor, "text-lg")}>{cfg.icon}</span>
+        <h2 className={cn("text-base font-semibold", cfg.headingColor)}>{cfg.heading}</h2>
       </div>
       {status === "REJECTED" && (
-        <p className="text-sm text-amber-800 mb-4">
+        <p className="text-sm text-amber-700 mb-4">
           Thank you for your submission. Your quote details are shown below for your records.
         </p>
       )}
       <dl className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
         <div>
-          <dt className={`text-sm font-medium ${cfg.labelColor}`}>Amount</dt>
-          <dd className={`mt-1 text-sm font-semibold ${cfg.valueColor}`}>{formatCHF(quote.amountCents)}</dd>
+          <dt className={cn("text-sm font-medium", cfg.labelColor)}>Amount</dt>
+          <dd className={cn("mt-1 text-sm font-semibold", cfg.valueColor)}>{formatCHF(quote.amountCents)}</dd>
         </div>
         <div>
-          <dt className={`text-sm font-medium ${cfg.labelColor}`}>VAT</dt>
-          <dd className={`mt-1 text-sm ${cfg.valueColor}`}>{quote.vatIncluded ? "Included" : "Excluded"}</dd>
+          <dt className={cn("text-sm font-medium", cfg.labelColor)}>VAT</dt>
+          <dd className={cn("mt-1 text-sm", cfg.valueColor)}>{quote.vatIncluded ? "Included" : "Excluded"}</dd>
         </div>
         {quote.estimatedDurationDays && (
           <div>
-            <dt className={`text-sm font-medium ${cfg.labelColor}`}>Est. Duration</dt>
-            <dd className={`mt-1 text-sm ${cfg.valueColor}`}>{quote.estimatedDurationDays} day{quote.estimatedDurationDays !== 1 ? "s" : ""}</dd>
+            <dt className={cn("text-sm font-medium", cfg.labelColor)}>Est. Duration</dt>
+            <dd className={cn("mt-1 text-sm", cfg.valueColor)}>{quote.estimatedDurationDays} day{quote.estimatedDurationDays !== 1 ? "s" : ""}</dd>
           </div>
         )}
         {quote.earliestAvailability && (
           <div>
-            <dt className={`text-sm font-medium ${cfg.labelColor}`}>Earliest Available</dt>
-            <dd className={`mt-1 text-sm ${cfg.valueColor}`}>{formatDate(quote.earliestAvailability)}</dd>
+            <dt className={cn("text-sm font-medium", cfg.labelColor)}>Earliest Available</dt>
+            <dd className={cn("mt-1 text-sm", cfg.valueColor)}>{formatDate(quote.earliestAvailability)}</dd>
           </div>
         )}
         {quote.validUntil && (
           <div>
-            <dt className={`text-sm font-medium ${cfg.labelColor}`}>Valid Until</dt>
-            <dd className={`mt-1 text-sm ${cfg.valueColor}`}>{formatDate(quote.validUntil)}</dd>
+            <dt className={cn("text-sm font-medium", cfg.labelColor)}>Valid Until</dt>
+            <dd className={cn("mt-1 text-sm", cfg.valueColor)}>{formatDate(quote.validUntil)}</dd>
           </div>
         )}
         <div>
-          <dt className={`text-sm font-medium ${cfg.labelColor}`}>Submitted</dt>
-          <dd className={`mt-1 text-sm ${cfg.valueColor}`}>{formatDate(quote.submittedAt)}</dd>
+          <dt className={cn("text-sm font-medium", cfg.labelColor)}>Submitted</dt>
+          <dd className={cn("mt-1 text-sm", cfg.valueColor)}>{formatDate(quote.submittedAt)}</dd>
         </div>
       </dl>
       {quote.workPlan && (
         <div className="mt-3">
-          <dt className={`text-sm font-medium ${cfg.labelColor}`}>Work Plan</dt>
-          <dd className={`mt-1 text-sm ${cfg.valueColor} whitespace-pre-line`}>{quote.workPlan}</dd>
+          <dt className={cn("text-sm font-medium", cfg.labelColor)}>Work Plan</dt>
+          <dd className={cn("mt-1 text-sm", cfg.valueColor, "whitespace-pre-line")}>{quote.workPlan}</dd>
         </div>
       )}
       {quote.assumptions && (
         <div className="mt-3">
-          <dt className={`text-sm font-medium ${cfg.labelColor}`}>Assumptions</dt>
-          <dd className={`mt-1 text-sm ${cfg.valueColor} whitespace-pre-line`}>{quote.assumptions}</dd>
+          <dt className={cn("text-sm font-medium", cfg.labelColor)}>Assumptions</dt>
+          <dd className={cn("mt-1 text-sm", cfg.valueColor, "whitespace-pre-line")}>{quote.assumptions}</dd>
         </div>
       )}
       {quote.notes && (
         <div className="mt-3">
-          <dt className={`text-sm font-medium ${cfg.labelColor}`}>Notes</dt>
-          <dd className={`mt-1 text-sm ${cfg.valueColor} whitespace-pre-line`}>{quote.notes}</dd>
+          <dt className={cn("text-sm font-medium", cfg.labelColor)}>Notes</dt>
+          <dd className={cn("mt-1 text-sm", cfg.valueColor, "whitespace-pre-line")}>{quote.notes}</dd>
         </div>
       )}
       {quote.lineItems && quote.lineItems.length > 0 && (
         <div className="mt-3">
-          <dt className={`text-sm font-medium ${cfg.labelColor} mb-1`}>Line Items</dt>
+          <dt className={cn("text-sm font-medium", cfg.labelColor, "mb-1")}>Line Items</dt>
           <dd className="mt-1">
             <table className="w-full text-sm">
               <tbody>
                 {quote.lineItems.map((li, idx) => (
-                  <tr key={idx} className={`border-b ${cfg.rowBorder} last:border-0`}>
-                    <td className={`py-1 ${cfg.valueColor}`}>{li.description}</td>
-                    <td className={`py-1 text-right font-mono ${cfg.valueColor}`}>{formatCHF(li.amountCents)}</td>
+                  <tr key={idx} className={cn("border-b", cfg.rowBorder, "last:border-0")}>
+                    <td className={cn("py-1", cfg.valueColor)}>{li.description}</td>
+                    <td className={cn("py-1 text-right font-mono", cfg.valueColor)}>{formatCHF(li.amountCents)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -747,10 +717,10 @@ export default function ContractorRfpDetailPage() {
 
   return (
     <AppShell role="CONTRACTOR">
-      <div style={{ maxWidth: "900px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
+      <div className="max-w-[900px]">
+        <div className="flex justify-between items-start mb-6">
           <div>
-            <h1 style={{ marginTop: 0, marginBottom: 4 }}>{title}</h1>
+            <h1 className="mt-0 mb-1">{title}</h1>
             <p className="text-sm text-slate-500">
               {rfp ? `Category: ${rfp.category || "—"}` : "Loading…"}
             </p>
@@ -765,31 +735,24 @@ export default function ContractorRfpDetailPage() {
 
         <ContractorPicker onSelect={() => loadData()} />
 
-        {error && (
-          <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded text-red-800">
-            {error}
-            <button onClick={() => setError("")} style={{ marginLeft: 12, fontSize: "0.85em" }}>
-              Dismiss
-            </button>
-          </div>
-        )}
+        <ErrorBanner error={error} onDismiss={() => setError("")} className="mb-4" />
 
         {loading ? (
           <p className="text-sm text-slate-500">Loading…</p>
         ) : rfp ? (
           <>
             {/* RFP Metadata */}
-            <div className="bg-white border border-gray-200 rounded-lg p-6 mb-4">
+            <div className="bg-white border border-slate-200 rounded-lg p-6 mb-4">
               <h2 className="text-base font-semibold text-slate-900 mb-4">RFP Details</h2>
               <dl className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
                 <div>
                   <dt className="text-sm font-medium text-slate-500">Status</dt>
                   <dd className="mt-1">
-                    <StatusPill status={rfp.status} colorMap={STATUS_COLORS} />
+                    <Badge variant={rfpVariant(rfp.status)}>{rfp.status}</Badge>
                     {rfp.isInvited && (
-                      <span className="ml-2 inline-block rounded-full bg-indigo-50 border border-indigo-200 px-2 py-0.5 text-xs font-medium text-indigo-700">
+                      <Badge variant="brand" size="sm" className="ml-2">
                         You are invited
-                      </span>
+                      </Badge>
                     )}
                   </dd>
                 </div>
@@ -831,7 +794,7 @@ export default function ContractorRfpDetailPage() {
 
             {/* Linked Request — contractor-safe (no tenant identity, no full address) */}
             {rfp.request && (
-              <div className="bg-white border border-gray-200 rounded-lg p-6 mb-4">
+              <div className="bg-white border border-slate-200 rounded-lg p-6 mb-4">
                 <h2 className="text-base font-semibold text-slate-900 mb-4">Work Description</h2>
                 <dl className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
                   <div>
@@ -886,8 +849,8 @@ export default function ContractorRfpDetailPage() {
             )}
           </>
         ) : (
-          <div className="bg-gray-50 border border-gray-200 rounded p-8 text-center">
-            <p className="text-gray-600">RFP not found or not accessible.</p>
+          <div className="bg-slate-50 border border-slate-200 rounded p-8 text-center">
+            <p className="text-slate-600">RFP not found or not accessible.</p>
           </div>
         )}
       </div>

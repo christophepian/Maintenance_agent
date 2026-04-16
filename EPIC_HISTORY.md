@@ -2496,3 +2496,50 @@ Stale exception language was removed or annotated as resolved across all source-
 | Frontend LOC | ~39k | ~42k |
 | Test suites | 57 | 57 |
 | Tests | 802 | 823 |
+
+---
+
+## Strategy Engine Epic — 2026-04-16
+
+**Status:** ✅ COMPLETE (3 phases + UX refinements + capture session fixes)
+**Motivation:** Give property owners a behavioral-archetype-based investment strategy engine that scores cashflow plan items against their investment profile and integrates with the existing financial planning tools.
+**Scope doc:** `docs/STRATEGY_ENGINE_SCOPE.md`
+
+### Phase 1 — Core Profile Engine (31 tests)
+
+**New models:** `StrategyProfile` (orgId, ownerId, archetype, dimensionWeights JSON, answers JSON), `BuildingProfile` (orgId, buildingId, roleIntent, buildingType, conditionRating, approxUnits)
+**Backend:** `strategyProfileService.ts` (upsert profile, compute archetype from behavioral answers, dimension weight calculation), `strategyBuildingProfileService.ts` (CRUD for building profiles), `strategy.ts` routes (POST /strategy/profile, GET /strategy/profile, POST /strategy/building-profile, GET /strategy/building-profiles). 5 archetype definitions (Value Builder, Yield Optimizer, Heritage Steward, Balanced Pragmatist, Exit Planner) with 6 scoring dimensions each (Long-term value, Regulatory compliance, Lifecycle extension, Short-term cash saving, Tenant satisfaction, Resale positioning).
+**Frontend:** Owner strategy wizard (`pages/owner/strategy.js`) — 7-step flow: Q1 behavioral question (scenario-based archetype derivation), Q2–Q5 follow-up questions, review & confirm, building setup with inline building creation + multi-building support.
+**Tests:** 31 tests in `strategyScoring.test.ts`.
+
+### Phase 2 — Decision Scoring MVP (14 tests)
+
+**Backend:** `strategyDecisionScoringService.ts` (score individual maintenance recommendations against owner's strategy profile; per-dimension scoring with weighted aggregation; generate alignment tags: ✅ Aligned / ⚠ Review / ⏳ Low Priority), `decisionScoring.ts` routes (POST /strategy/score-decision, POST /strategy/score-batch).
+**Tests:** 14 tests in `decisionScoring.test.ts`.
+
+### Phase 3 — Financial Model Integration (11 tests)
+
+**Backend:** `strategyAlignmentService.ts` (score cashflow plan line items against owner strategy; trade-group classification via regex for plumbing/electrical/HVAC/roofing/structural/energy/mechanical; per-item `ItemAlignmentResult` with assetName, topDimensions, dimension-aware explanations). `cashflowPlans.ts` route extended: GET /cashflow-plans/:id now returns `strategyOverlay` with per-item alignment scores, tags, explanations, and summary counts.
+**Frontend:** `StrategyOverlayPanel` component in cashflow detail page (`pages/manager/cashflow/[id].js`) — expandable panel with per-item cards showing asset name, alignment score, explanation, and color-coded dimension pills with tooltips. Inline badges on cashflow table rows with hover explanations.
+**Tests:** 11 tests in `financialModel.test.ts`.
+
+### UX Refinements & Bug Fixes
+
+- **Q1 behavioral question:** Changed from direct archetype dropdown to scenario-based behavioral question for more natural profiling
+- **Step 6 building setup redesign:** Removed building dropdown, added inline building creation fields (name, address, role intent, building type, condition, units) with multi-building support via `buildingEntries` array
+- **POST /strategy/building-profile extended:** Accepts optional `building: { name, address }` for inline creation via `createBuilding()` from inventoryRepository
+- **Strategy overlay enhancements:** Trade group regex expanded (elevator/lift/transport → mechanical; masonry/wall/concrete → structural; heat pump/geothermal/photovoltaic → energy); dimension-aware explanations; `topDimensions` per item; `DIMENSION_LABELS` mapping
+- **Route conflict fix:** `[opportunityId].js` moved into `[opportunityId]/index.js` directory to resolve Next.js route conflict with `[opportunityId]/decision.js`
+
+### Capture Session Fixes
+
+- **Auth bypass bug:** `requireRole` and `requireAnyRole` dev bypass now sets `req.user = devUser` before returning, preventing subsequent `getAuthUser()` calls from returning null
+- **QR code LAN IP:** `captureSessionService.ts` mobileUrl changed from `http://localhost:3000` to `http://${getLocalNetworkIp()}:3000` using `os.networkInterfaces()` for phone access
+- **Proxy ECONNREFUSED detection:** Enhanced `proxy.js` to detect nested `cause.code`, `cause.message`, and `fetch failed` patterns for clearer "Backend API is not running" errors
+
+### Invoice Capture Improvements
+
+- **Azure Document Intelligence activated:** `DOCUMENT_SCAN_PROVIDER=azure` with `DOCUMENT_SCAN_FALLBACK_PROVIDER=local` configured in `.env`; Azure endpoint + key set; server confirms `[DOC-SCAN] Azure Document Intelligence scanner initialized`
+- **Source file serving:** New `GET /invoices/:id/source-file` endpoint serves original captured images/PDFs from storage; new proxy route `pages/api/invoices/[id]/source-file.js`
+- **Invoice detail page redesign:** Original captured image shown prominently in "Original Capture" panel (img tag for images, iframe for PDFs) with download link; generated PDF clearly labeled as "Generated PDF (from extracted data)"
+- **Invoice list timestamp:** "Created" column renamed to "Date" with time (HH:MM) appended in lighter font for same-day document differentiation

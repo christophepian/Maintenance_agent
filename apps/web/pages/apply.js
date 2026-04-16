@@ -1,7 +1,9 @@
 import { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import { useRouter } from "next/router";
 import Head from "next/head";
+import ErrorBanner from "../components/ui/ErrorBanner";
 
+import { cn } from "../lib/utils";
 /**
  * Public Rental Application Wizard
  *
@@ -525,9 +527,7 @@ export default function ApplyPage() {
               {Array.from({ length: TOTAL_STEPS }, (_, i) => i + 1).map((s) => (
                 <div
                   key={s}
-                  className={`h-1.5 flex-1 rounded-full ${
-                    s <= step ? "bg-indigo-600" : "bg-slate-200"
-                  }`}
+                  className={cn("h-1.5 flex-1 rounded-full", s <= step ? "bg-indigo-600" : "bg-slate-200")}
                 />
               ))}
             </div>
@@ -535,12 +535,7 @@ export default function ApplyPage() {
         </header>
 
         <main className="mx-auto max-w-3xl px-4 py-6 sm:px-6">
-          {error && (
-            <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              {error}
-              <button onClick={() => setError("")} className="ml-2 font-medium underline">Dismiss</button>
-            </div>
-          )}
+          <ErrorBanner error={error} onDismiss={() => setError("")} className="mb-4 text-sm" />
 
           {/* ── Step 1: Select Units + Upload Documents ──────── */}
           {step === 1 && (
@@ -558,7 +553,7 @@ export default function ApplyPage() {
                     {availableCities.length > 0 && (
                       <label className="flex flex-col text-xs text-slate-600">
                         City
-                        <select value={filterCity} onChange={(e) => setFilterCity(e.target.value)} className="mt-1 rounded border border-slate-200 px-2 py-1.5 text-sm">
+                        <select value={filterCity} onChange={(e) => setFilterCity(e.target.value)} className="filter-select mt-1">
                           <option value="">All cities</option>
                           {availableCities.map((c) => <option key={c} value={c}>{c}</option>)}
                         </select>
@@ -567,7 +562,7 @@ export default function ApplyPage() {
                     {availablePostalCodes.length > 0 && (
                       <label className="flex flex-col text-xs text-slate-600">
                         Postal code
-                        <select value={filterPostalCode} onChange={(e) => setFilterPostalCode(e.target.value)} className="mt-1 rounded border border-slate-200 px-2 py-1.5 text-sm">
+                        <select value={filterPostalCode} onChange={(e) => setFilterPostalCode(e.target.value)} className="filter-select mt-1">
                           <option value="">All codes</option>
                           {availablePostalCodes.map((c) => <option key={c} value={c}>{c}</option>)}
                         </select>
@@ -575,7 +570,7 @@ export default function ApplyPage() {
                     )}
                     <label className="flex flex-col text-xs text-slate-600">
                       Min. rooms
-                      <select value={filterMinRooms} onChange={(e) => setFilterMinRooms(e.target.value)} className="mt-1 rounded border border-slate-200 px-2 py-1.5 text-sm">
+                      <select value={filterMinRooms} onChange={(e) => setFilterMinRooms(e.target.value)} className="filter-select mt-1">
                         <option value="">Any</option>
                         <option value="1">1+</option>
                         <option value="1.5">1.5+</option>
@@ -590,7 +585,7 @@ export default function ApplyPage() {
                     </label>
                     <label className="flex flex-col text-xs text-slate-600">
                       Sort by price
-                      <select value={sortPrice} onChange={(e) => setSortPrice(e.target.value)} className="mt-1 rounded border border-slate-200 px-2 py-1.5 text-sm">
+                      <select value={sortPrice} onChange={(e) => setSortPrice(e.target.value)} className="filter-select mt-1">
                         <option value="">Default</option>
                         <option value="asc">Low → High</option>
                         <option value="desc">High → Low</option>
@@ -599,7 +594,7 @@ export default function ApplyPage() {
                     {(filterCity || filterPostalCode || filterMinRooms || sortPrice) && (
                       <button
                         onClick={() => { setFilterCity(""); setFilterPostalCode(""); setFilterMinRooms(""); setSortPrice(""); }}
-                        className="text-xs text-indigo-600 hover:text-indigo-800 underline self-end pb-1.5"
+                        className="text-xs text-indigo-600 hover:text-indigo-700 underline self-end pb-1.5"
                       >
                         Clear filters
                       </button>
@@ -634,7 +629,7 @@ export default function ApplyPage() {
                         {units.map((u) => (
                           <label
                             key={u.id}
-                            className={`flex cursor-pointer items-center gap-3 px-4 py-3 transition-colors ${selectedUnitIds.includes(u.id) ? "bg-indigo-50 ring-1 ring-inset ring-indigo-200" : "hover:bg-slate-50"}`}
+                            className={cn("flex cursor-pointer items-center gap-3 px-4 py-3 transition-colors", selectedUnitIds.includes(u.id) ? "bg-indigo-50 ring-1 ring-inset ring-blue-200" : "hover:bg-slate-50")}
                           >
                             <input
                               type="checkbox"
@@ -688,7 +683,7 @@ export default function ApplyPage() {
                         const u = vacantUnits.find((u) => u.id === id);
                         if (!u) return null;
                         return (
-                          <li key={id} className="text-xs text-indigo-800">
+                          <li key={id} className="text-xs text-indigo-700">
                             {u.building?.name} — Unit {u.unitNumber}
                             {u.monthlyRentChf != null && ` · CHF ${u.monthlyRentChf}/mo`}
                           </li>
@@ -739,7 +734,7 @@ export default function ApplyPage() {
                 {/* Extraction summary */}
                 {extractedFieldCount > 0 && (
                   <div className="mt-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3">
-                    <p className="text-sm font-medium text-green-800">
+                    <p className="text-sm font-medium text-green-700">
                       ✨ Extracted {extractedFieldCount} field{extractedFieldCount !== 1 ? "s" : ""} from your documents
                     </p>
                     <p className="text-xs text-green-600 mt-1">
@@ -884,7 +879,7 @@ export default function ApplyPage() {
                 <button onClick={() => setStep(1)} className="flex-1 rounded-lg border border-slate-200 bg-white py-3 text-sm font-medium text-slate-700 hover:bg-slate-50">
                   Back
                 </button>
-                <button onClick={goToStep3} disabled={loading} className="flex-1 rounded-lg bg-indigo-600 py-3 text-sm font-semibold text-white hover:bg-indigo-700 disabled:bg-slate-300">
+                <button onClick={goToStep3} disabled={loading} className="button-primary flex-1 py-3 text-sm font-semibold disabled:bg-slate-300">
                   {loading ? "Saving…" : "Continue to review"}
                 </button>
               </div>
@@ -1058,7 +1053,7 @@ function DropZone({ onFiles }) {
       onDragOver={handleDragOver}
       onDrop={handleDrop}
       onClick={() => inputRef.current?.click()}
-      className={`mt-4 flex flex-col items-center justify-center rounded-xl border-2 border-dashed cursor-pointer transition-all py-10 px-6 ${dragging ? "border-indigo-400 bg-indigo-50 scale-[1.01]" : "border-slate-300 bg-white hover:border-slate-400 hover:bg-slate-50"}`}
+      className={cn("mt-4 flex flex-col items-center justify-center rounded-xl border-2 border-dashed cursor-pointer transition-all py-10 px-6", dragging ? "border-indigo-400 bg-indigo-50 scale-[1.01]" : "border-slate-300 bg-white hover:border-slate-400 hover:bg-slate-50")}
     >
       <div className="text-4xl mb-3">{dragging ? "📥" : "📄"}</div>
       <p className="text-sm font-medium text-slate-700">
@@ -1091,7 +1086,7 @@ function DocTypeSlot({ docType, upload, onUpload, onRemove }) {
 
   return (
     <div
-      className={`flex items-center gap-3 rounded-lg border px-3 py-2.5 text-left transition-colors ${isUploaded ? "border-green-200 bg-green-50" : isScanning ? "border-amber-200 bg-amber-50" : "border-slate-200 bg-white hover:bg-slate-50"}`}
+      className={cn("flex items-center gap-3 rounded-lg border px-3 py-2.5 text-left transition-colors", isUploaded ? "border-green-200 bg-green-50" : isScanning ? "border-amber-200 bg-amber-50" : "border-slate-200 bg-white hover:bg-slate-50")}
     >
       <span className="text-lg flex-shrink-0">{docType.icon}</span>
       <div className="flex-1 min-w-0">
@@ -1114,10 +1109,10 @@ function DocTypeSlot({ docType, upload, onUpload, onRemove }) {
       </div>
       <div className="flex-shrink-0 flex items-center gap-1">
         {isUploaded && onRemove && (
-          <button onClick={onRemove} className="text-xs text-red-500 hover:text-red-700 px-1">✕</button>
+          <button onClick={onRemove} className="text-xs text-red-500 hover:text-red-700 px-1" aria-label="Remove document">✕</button>
         )}
         {!isScanning && (
-          <label className="cursor-pointer rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100">
+          <label className="cursor-pointer rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100">
             {isUploaded ? "Replace" : "Upload"}
             <input
               type="file"
@@ -1159,7 +1154,7 @@ function UploadedDocRow({ doc, onRemove }) {
 
   return (
     <div
-      className={`rounded-lg border text-sm ${doc.status === "scanning" ? "border-amber-200 bg-amber-50" : doc.status === "error" ? "border-red-200 bg-red-50" : "border-green-200 bg-green-50"}`}
+      className={cn("rounded-lg border text-sm", doc.status === "scanning" ? "border-amber-200 bg-amber-50" : doc.status === "error" ? "border-red-200 bg-red-50" : "border-green-200 bg-green-50")}
     >
       <div className="flex items-center gap-3 px-3 py-2">
         <div className="flex-shrink-0">
@@ -1288,13 +1283,11 @@ function AutoField({ label, type = "text", value, onChange, className = "", auto
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className={`w-full rounded-lg border px-3 py-2 text-sm ${
-          highlightMissing
+        className={cn("w-full rounded-lg border px-3 py-2 text-sm", highlightMissing
             ? "border-red-400 bg-red-50 ring-1 ring-red-300"
             : autoFilled && value
-              ? "border-green-300 bg-green-50 focus:border-indigo-500 focus:bg-white"
-              : "border-slate-200"
-        }`}
+              ? "border-green-300 bg-green-50 focus:border-blue-500 focus:bg-white"
+              : "border-slate-200")}
       />
       {highlightMissing && <p className="mt-0.5 text-xs text-red-500">This field is required</p>}
     </div>
@@ -1320,11 +1313,9 @@ function Field({ label, type = "text", value, onChange, className = "", showMiss
         type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className={`w-full rounded-lg border px-3 py-2 text-sm ${
-          highlightMissing
+        className={cn("w-full rounded-lg border px-3 py-2 text-sm", highlightMissing
             ? "border-red-400 bg-red-50 ring-1 ring-red-300"
-            : "border-slate-200"
-        }`}
+            : "border-slate-200")}
       />
       {highlightMissing && <p className="mt-0.5 text-xs text-red-500">This field is required</p>}
     </div>

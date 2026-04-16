@@ -7,6 +7,9 @@ import PageHeader from "../../components/layout/PageHeader";
 import PageContent from "../../components/layout/PageContent";
 import Panel from "../../components/layout/Panel.jsx";
 import ContractorPicker from "../../components/ContractorPicker";
+import ErrorBanner from "../../components/ui/ErrorBanner";
+import Badge from "../../components/ui/Badge";
+import { invoiceVariant, ingestionVariant } from "../../lib/statusVariants";
 import { formatDate } from "../../lib/format";
 import { authHeaders } from "../../lib/api";
 
@@ -18,14 +21,6 @@ const STATUS_TABS = [
   { key: "PAID", label: "Paid" },
   { key: "DISPUTED", label: "Disputed" },
 ];
-
-const STATUS_COLORS = {
-  DRAFT: "bg-gray-100 text-gray-700",
-  ISSUED: "bg-blue-100 text-blue-700",
-  APPROVED: "bg-green-100 text-green-700",
-  PAID: "bg-green-600 text-white",
-  DISPUTED: "bg-red-100 text-red-700",
-};
 
 /* ── Status tracking pipeline ────────────────────────────────── */
 const STATUS_PIPELINE = ["DRAFT", "ISSUED", "APPROVED", "PAID"];
@@ -41,12 +36,12 @@ function StatusPipeline({ status }) {
             <div
               className={
                 "h-2 w-2 rounded-full " +
-                (reached ? "bg-emerald-500" : "bg-slate-200")
+                (reached ? "bg-green-500" : "bg-slate-200")
               }
               title={step}
             />
             {i < STATUS_PIPELINE.length - 1 && (
-              <div className={"h-0.5 w-3 " + (reached && i < idx ? "bg-emerald-400" : "bg-slate-200")} />
+              <div className={"h-0.5 w-3 " + (reached && i < idx ? "bg-green-400" : "bg-slate-200")} />
             )}
           </div>
         );
@@ -65,19 +60,13 @@ const INGESTION_LABEL = {
   CONFIRMED: "Confirmed",
   REJECTED: "Rejected",
 };
-const INGESTION_CLS = {
-  PENDING_REVIEW: "bg-amber-100 text-amber-700",
-  AUTO_CONFIRMED: "bg-green-100 text-green-700",
-  CONFIRMED: "bg-green-100 text-green-700",
-  REJECTED: "bg-red-100 text-red-700",
-};
 
 function IngestionBadge({ ingestionStatus }) {
   if (!ingestionStatus) return null;
   return (
-    <span className={"inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ml-1.5 " + (INGESTION_CLS[ingestionStatus] || "bg-slate-100 text-slate-600")}>
+    <Badge variant={ingestionVariant(ingestionStatus)} size="sm" className="ml-1.5">
       {INGESTION_LABEL[ingestionStatus] || ingestionStatus}
-    </span>
+    </Badge>
   );
 }
 
@@ -298,10 +287,10 @@ export default function ContractorInvoices() {
         {showUpload && (
           <div className="mb-6 rounded-lg border-2 border-indigo-200 bg-white p-5">
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-900">📤 Upload Invoice</h3>
+              <h3 className="text-lg font-semibold text-slate-900">📤 Upload Invoice</h3>
               <button
                 onClick={() => { setShowUpload(false); setUploadFile(null); setUploadError(""); }}
-                className="text-sm text-gray-400 hover:text-gray-600"
+                className="text-sm text-slate-400 hover:text-slate-600"
               >
                 ✕ Close
               </button>
@@ -309,9 +298,7 @@ export default function ContractorInvoices() {
             <p className="mb-3 text-sm text-slate-600">
               Upload a scanned invoice or PDF. It will be processed with OCR and matched to jobs automatically.
             </p>
-            {uploadError && (
-              <div className="mb-3 rounded border border-red-200 bg-red-50 p-3 text-sm text-red-800">{uploadError}</div>
-            )}
+            <ErrorBanner error={uploadError} className="mb-3 text-sm" />
             <div className="flex items-center gap-3">
               <input
                 type="file"
@@ -336,32 +323,30 @@ export default function ContractorInvoices() {
         {showCreateForm && (
           <div className="mb-6 rounded-lg border-2 border-indigo-200 bg-white p-5">
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-900">Create Invoice</h3>
+              <h3 className="text-lg font-semibold text-slate-900">Create Invoice</h3>
               <button
                 onClick={() => { setShowCreateForm(false); setFormError(""); setFormSuccess(""); }}
-                className="text-sm text-gray-400 hover:text-gray-600"
+                className="text-sm text-slate-400 hover:text-slate-600"
               >
                 ✕ Close
               </button>
             </div>
-            {formError && (
-              <div className="mb-3 rounded border border-red-200 bg-red-50 p-3 text-sm text-red-800">{formError}</div>
-            )}
+            <ErrorBanner error={formError} className="mb-3 text-sm" />
             <form onSubmit={submitInvoice} className="space-y-4">
               <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">Job</label>
+                <label className="mb-1 block text-sm font-medium text-slate-700">Job</label>
                 {router.query.jobId ? (
                   <input
                     type="text"
                     value={formJobId}
                     readOnly
-                    className="w-full rounded-md border border-gray-300 bg-gray-100 px-3 py-2 text-sm cursor-not-allowed"
+                    className="w-full rounded-lg border border-slate-300 bg-slate-100 px-3 py-2 text-sm cursor-not-allowed"
                   />
                 ) : (
                   <select
                     value={formJobId}
                     onChange={(e) => setFormJobId(e.target.value)}
-                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     required
                   >
                     <option value="">
@@ -375,11 +360,11 @@ export default function ContractorInvoices() {
                   </select>
                 )}
                 {router.query.jobId && (
-                  <p className="mt-1 text-xs text-gray-500">Pre-filled from job detail page</p>
+                  <p className="mt-1 text-xs text-slate-500">Pre-filled from job detail page</p>
                 )}
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">Amount (CHF)</label>
+                <label className="mb-1 block text-sm font-medium text-slate-700">Amount (CHF)</label>
                 <input
                   type="number"
                   value={formAmount}
@@ -388,19 +373,19 @@ export default function ContractorInvoices() {
                   min="0"
                   max="100000"
                   step="0.01"
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 />
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">Description (optional)</label>
+                <label className="mb-1 block text-sm font-medium text-slate-700">Description (optional)</label>
                 <input
                   type="text"
                   value={formDescription}
                   onChange={(e) => setFormDescription(e.target.value)}
                   placeholder="Brief description of work performed"
                   maxLength={500}
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
               <button
@@ -415,17 +400,12 @@ export default function ContractorInvoices() {
         )}
 
         {formSuccess && (
-          <div className="mb-4 rounded border border-green-200 bg-green-50 p-3 text-sm text-green-800">
+          <div className="mb-4 rounded border border-green-200 bg-green-50 p-3 text-sm text-green-700">
             {formSuccess}
           </div>
         )}
 
-        {error && (
-          <div className="mb-4 rounded border border-red-200 bg-red-50 p-4 text-red-800">
-            {error}
-            <button onClick={() => setError("")} className="ml-3 text-xs text-red-500 hover:text-red-700">Dismiss</button>
-          </div>
-        )}
+        <ErrorBanner error={error} onDismiss={() => setError("")} className="mb-4" />
 
         <Panel bodyClassName="p-0">
           {/* Status Tabs */}
@@ -454,33 +434,33 @@ export default function ContractorInvoices() {
               <p className="text-sm">No invoices match this filter</p>
             </div>
           ) : (
-            <div className="divide-y divide-gray-100">
+            <div className="divide-y divide-slate-100">
             {filteredInvoices.map((invoice) => (
               <div
                 key={invoice.id}
-                className="flex items-center justify-between px-5 py-3.5 hover:bg-gray-50 cursor-pointer transition-colors"
+                className="flex items-center justify-between px-5 py-3.5 hover:bg-slate-50 cursor-pointer transition-colors"
                 onClick={() => router.push(`/manager/finance/invoices/${invoice.id}`)}
               >
                 {/* Left side */}
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <p className="text-sm font-semibold text-gray-900 truncate">
+                    <p className="text-sm font-semibold text-slate-900 truncate">
                       {invoice.invoiceNumber ? `#${invoice.invoiceNumber}` : `#${invoice.id.slice(0, 8)}`}
                     </p>
-                    <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_COLORS[invoice.status] || "bg-gray-100 text-gray-700"}`}>
+                    <Badge variant={invoiceVariant(invoice.status)} size="sm">
                       {invoice.status}
-                    </span>
+                    </Badge>
                     <SourceChannelIcon channel={invoice.sourceChannel} />
                     <IngestionBadge ingestionStatus={invoice.ingestionStatus} />
                   </div>
                   <div className="mt-1 flex items-center gap-3">
                     <StatusPipeline status={invoice.status} />
-                    <span className="text-xs text-gray-400">·</span>
-                    <span className="text-xs text-gray-500">{formatDate(invoice.createdAt)}</span>
+                    <span className="text-xs text-slate-400">·</span>
+                    <span className="text-xs text-slate-500">{formatDate(invoice.createdAt)}</span>
                     {invoice.jobId && (
                       <>
-                        <span className="text-xs text-gray-400">·</span>
-                        <span className="text-xs text-gray-500">
+                        <span className="text-xs text-slate-400">·</span>
+                        <span className="text-xs text-slate-500">
                           Job {invoice.jobId.slice(0, 8)}
                         </span>
                       </>
@@ -490,7 +470,7 @@ export default function ContractorInvoices() {
 
                 {/* Right side */}
                 <div className="flex items-center gap-3 flex-shrink-0">
-                  <p className="text-base font-bold text-gray-900">
+                  <p className="text-base font-bold text-slate-900">
                     {formatCurrency(getInvoiceTotal(invoice))}
                   </p>
                   <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
@@ -498,12 +478,12 @@ export default function ContractorInvoices() {
                       href={`/api/invoices/${invoice.id}/pdf`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="rounded border border-gray-200 bg-white px-2 py-1 text-xs text-gray-600 hover:bg-gray-50"
+                      className="rounded border border-slate-200 bg-white px-2 py-1 text-xs text-slate-600 hover:bg-slate-50"
                     >
                       📄
                     </a>
                   </div>
-                  <svg className="h-4 w-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className="h-4 w-4 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
                 </div>

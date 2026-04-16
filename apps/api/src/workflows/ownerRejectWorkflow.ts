@@ -1,14 +1,17 @@
 /**
- * ownerRejectWorkflow
+ * rejectRequestWorkflow (formerly ownerRejectWorkflow)
  *
- * Canonical entry point for owner rejection of a maintenance request.
- * Transitions PENDING_OWNER_APPROVAL → OWNER_REJECTED.
+ * Canonical entry point for rejecting a maintenance request.
+ * Supports both manager rejection (from PENDING_REVIEW) and
+ * owner rejection (from PENDING_OWNER_APPROVAL).
+ *
+ * After rejection the tenant may choose to self-pay (tenantSelfPayWorkflow).
  *
  * Orchestrates:
  *   1. Fetch current request + validate existence
- *   2. Assert state transition is valid (PENDING_OWNER_APPROVAL → OWNER_REJECTED)
+ *   2. Assert state transition is valid
  *   3. Persist status change with approvalSource + rejectionReason
- *   4. Emit OWNER_REJECTED domain event
+ *   4. Emit REQUEST_REJECTED domain event
  *   5. Notify tenant (in-app notification with self-pay offer)
  *   6. Canonical reload + DTO return
  */
@@ -24,21 +27,33 @@ import { resolveTenantUserId } from "../services/tenantIdentity";
 
 // ─── Input / Output ────────────────────────────────────────────
 
-export interface OwnerRejectInput {
+export interface RejectRequestInput {
   requestId: string;
   reason?: string | null;
 }
 
-export interface OwnerRejectResult {
+export interface RejectRequestResult {
   dto: MaintenanceRequestDTO;
 }
 
+/** @deprecated Use RejectRequestInput instead */
+export type OwnerRejectInput = RejectRequestInput;
+/** @deprecated Use RejectRequestResult instead */
+export type OwnerRejectResult = RejectRequestResult;
+
+// ─── Rejectable statuses ───────────────────────────────────────
+
+const REJECTABLE_STATUSES: RequestStatus[] = [
+  RequestStatus.PENDING_REVIEW,           // manager rejects
+  RequestStatus.PENDING_OWNER_APPROVAL,   // owner rejects
+];
+
 // ─── Workflow ──────────────────────────────────────────────────
 
-export async function ownerRejectWorkflow(
+export async function rejectRequestWorkflow(
   ctx: WorkflowContext,
-  input: OwnerRejectInput,
-): Promise<OwnerRejectResult> {
+  input: RejectRequestInput,
+): Promise<RejectRequestResult> {
   const { orgId, prisma } = ctx;
   const { requestId, reason } = input;
 
@@ -49,21 +64,27 @@ export async function ownerRejectWorkflow(
   }
 
   // ── 2. Assert transition is valid ──────────────────────────
-  assertRequestTransition(current.status, RequestStatus.OWNER_REJECTED);
+  if (!REJECTABLE_STATUSES.includes(current.status)) {
+    throw Object.assign(
+      new Error(`Cannot reject request in status ${current.status}`),
+      { code: "INVALID_TRANSITION" },
+    );
+  }
+  assertRequestTransition(current.status, RequestStatus.REJECTED);
 
   // ── 3. Persist status + approval source + rejection reason ─
-  await updateRequestStatus(prisma, requestId, RequestStatus.OWNER_REJECTED, {
-    approvalSource: ApprovalSource.OWNER_REJECTED,
+  await updateRequestStatus(prisma, requestId, RequestStatus.REJECTED, {
+    approvalSource: ApprovalSource.REJECTED,
     rejectionReason: reason ?? null,
   });
 
   // ── 4. Emit domain event ───────────────────────────────────
   emit({
-    type: "OWNER_REJECTED",
+    type: "REQUEST_REJECTED",
     orgId,
     actorUserId: ctx.actorUserId,
     payload: { requestId, reason: reason || null },
-  }).catch((err) => console.error("[EVENT] Failed to emit OWNER_REJECTED", err));
+  }).catch((err) => console.error("[EVENT] Failed to emit REQUEST_REJECTED", err));
 
   // ── 5. Notify tenant ───────────────────────────────────────
   if (current.tenantId) {
@@ -74,7 +95,7 @@ export async function ownerRejectWorkflow(
         : undefined;
       await notifyTenantOwnerRejected(requestId, orgId, tenantUserId, reason, buildingId);
     } catch (err) {
-      console.error("[ownerRejectWorkflow] Failed to notify tenant", err);
+      console.error("[rejectRequestWorkflow] Failed to notify tenant", err);
     }
   }
 
@@ -82,3 +103,6 @@ export async function ownerRejectWorkflow(
   const reloaded = await findRequestById(prisma, requestId);
   return { dto: toDTO(reloaded!) };
 }
+
+/** @deprecated Use rejectRequestWorkflow instead */
+export const ownerRejectWorkflow = rejectRequestWorkflow;

@@ -6,7 +6,10 @@ import PageShell from "../../components/layout/PageShell";
 import PageHeader from "../../components/layout/PageHeader";
 import PageContent from "../../components/layout/PageContent";
 import Panel from "../../components/layout/Panel";
+import ErrorBanner from "../../components/ui/ErrorBanner";
 import { ownerAuthHeaders } from "../../lib/api";
+import Badge from "../../components/ui/Badge";
+import { invoiceVariant, ingestionVariant } from "../../lib/statusVariants";
 
 /* ── Formatting helpers ──────────────────────────────────────── */
 
@@ -34,14 +37,6 @@ function getInvoiceTotal(invoice) {
 
 /* ── Status badges ───────────────────────────────────────────── */
 
-const STATUS_COLORS = {
-  DRAFT: "bg-slate-100 text-slate-600",
-  ISSUED: "bg-blue-100 text-blue-700",
-  APPROVED: "bg-green-100 text-green-700",
-  PAID: "bg-emerald-100 text-emerald-700",
-  DISPUTED: "bg-rose-100 text-rose-700",
-};
-
 const STATUS_TABS = [
   { key: "ALL", label: "All" },
   { key: "ISSUED", label: "Issued" },
@@ -58,19 +53,12 @@ const INGESTION_LABEL = {
   CONFIRMED: "Confirmed",
   REJECTED: "Rejected",
 };
-const INGESTION_CLS = {
-  PENDING_REVIEW: "bg-amber-100 text-amber-700",
-  AUTO_CONFIRMED: "bg-green-100 text-green-700",
-  CONFIRMED: "bg-green-100 text-green-700",
-  REJECTED: "bg-red-100 text-red-700",
-};
-
 function IngestionBadge({ ingestionStatus }) {
   if (!ingestionStatus) return null;
   return (
-    <span className={"inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ml-1.5 " + (INGESTION_CLS[ingestionStatus] || "bg-slate-100 text-slate-600")}>
+    <Badge variant={ingestionVariant(ingestionStatus)} size="sm" className="ml-1.5">
       {INGESTION_LABEL[ingestionStatus] || ingestionStatus}
-    </span>
+    </Badge>
   );
 }
 
@@ -157,6 +145,21 @@ export default function OwnerInvoices() {
 
   useEffect(() => { fetchInvoices(); }, []);
 
+  // Deep-link: auto-scroll to invoice from ?invoiceId= query param
+  const highlightedId = router.isReady ? router.query.invoiceId : null;
+  useEffect(() => {
+    if (!highlightedId || loading) return;
+    const el = document.getElementById(`invoice-${highlightedId}`);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      el.classList.add("ring-2", "ring-indigo-400", "bg-indigo-50");
+      const timer = setTimeout(() => {
+        el.classList.remove("ring-2", "ring-indigo-400", "bg-indigo-50");
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [highlightedId, loading]);
+
   const fetchInvoices = async () => {
     setLoading(true);
     setError("");
@@ -233,19 +236,14 @@ export default function OwnerInvoices() {
         />
 
         <PageContent>
-          {error && (
-            <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              {error}
-              <button onClick={() => setError("")} className="ml-3 text-xs text-red-500 hover:text-red-700">Dismiss</button>
-            </div>
-          )}
+          <ErrorBanner error={error} onDismiss={() => setError("")} className="mb-4 text-sm" />
 
           {/* Approval queue banner */}
           {approvalCount > 0 && direction === "incoming" && (
             <div className="mb-4 flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
               <span className="text-lg">⚡</span>
               <div className="flex-1">
-                <p className="text-sm font-semibold text-amber-800">{approvalCount} invoice{approvalCount !== 1 ? "s" : ""} awaiting your approval</p>
+                <p className="text-sm font-semibold text-amber-700">{approvalCount} invoice{approvalCount !== 1 ? "s" : ""} awaiting your approval</p>
                 <p className="text-xs text-amber-600">Review issued invoices and approve or dispute them</p>
               </div>
               <button
@@ -264,7 +262,7 @@ export default function OwnerInvoices() {
                 key={tab.key}
                 onClick={() => { setDirection(tab.key); setActiveTab("ALL"); }}
                 className={
-                  "rounded-md px-4 py-2 text-sm font-medium transition-colors " +
+                  "rounded-lg px-4 py-2 text-sm font-medium transition-colors " +
                   (direction === tab.key
                     ? "bg-white text-slate-900 shadow-sm"
                     : "text-slate-500 hover:text-slate-700")
@@ -280,7 +278,7 @@ export default function OwnerInvoices() {
             <div className="flex flex-col items-center justify-end gap-1">
               <label className="text-xs font-medium text-slate-500">Status</label>
               <select value={activeTab} onChange={(e) => setActiveTab(e.target.value)}
-                className="min-h-[36px] appearance-none rounded-lg border border-slate-200 bg-white px-3 py-2 leading-tight text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                className="min-h-[36px] appearance-none rounded-lg border border-slate-200 bg-white px-3 py-2 leading-tight text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-400">
                 {STATUS_TABS.map((t) => (
                   <option key={t.key} value={t.key}>{t.label}</option>
                 ))}
@@ -289,12 +287,12 @@ export default function OwnerInvoices() {
             <div className="flex flex-col justify-end gap-1">
               <label className="text-xs font-medium text-slate-500">From</label>
               <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)}
-                className="h-9 appearance-none rounded-lg border border-slate-200 bg-white px-3 py-2 leading-tight text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+                className="h-9 appearance-none rounded-lg border border-slate-200 bg-white px-3 py-2 leading-tight text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-400" />
             </div>
             <div className="flex flex-col justify-end gap-1">
               <label className="text-xs font-medium text-slate-500">To</label>
               <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)}
-                className="h-9 appearance-none rounded-lg border border-slate-200 bg-white px-3 py-2 leading-tight text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+                className="h-9 appearance-none rounded-lg border border-slate-200 bg-white px-3 py-2 leading-tight text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-400" />
             </div>
             {(activeTab !== "ALL" || dateFrom || dateTo) && (
               <div className="flex flex-col justify-end gap-1">
@@ -320,8 +318,9 @@ export default function OwnerInvoices() {
                 {filteredInvoices.map((invoice) => (
                   <div
                     key={invoice.id}
+                    id={`invoice-${invoice.id}`}
                     className="flex items-center justify-between px-4 py-3 hover:bg-slate-50 cursor-pointer transition-colors"
-                    onClick={() => router.push(`/manager/finance/invoices/${invoice.id}`)}
+                    onClick={() => router.push(`/manager/finance/invoices?invoiceId=${invoice.id}`)}
                   >
                     {/* Left: info */}
                     <div className="flex items-center gap-4 min-w-0">
@@ -345,9 +344,9 @@ export default function OwnerInvoices() {
                       <p className="text-base font-bold text-slate-800">
                         {formatCurrency(getInvoiceTotal(invoice))}
                       </p>
-                      <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap ${STATUS_COLORS[invoice.status] || "bg-slate-100 text-slate-600"}`}>
+                      <Badge variant={invoiceVariant(invoice.status)} size="sm" className="whitespace-nowrap">
                         {invoice.status}
-                      </span>
+                      </Badge>
 
                       {/* Actions dropdown for incoming invoices */}
                       {!isOutgoing && (
@@ -356,12 +355,12 @@ export default function OwnerInvoices() {
                             ...(invoice.status === "ISSUED" || invoice.status === "DRAFT" ? [{
                               label: "✓ Approve",
                               onClick: () => actionRequest(invoice.id, "approve"),
-                              className: "text-emerald-700 font-semibold",
+                              className: "text-green-700 font-semibold",
                             }] : []),
                             ...(invoice.status === "APPROVED" ? [{
                               label: "💰 Mark as Paid",
                               onClick: () => actionRequest(invoice.id, "mark-paid"),
-                              className: "text-emerald-700 font-semibold",
+                              className: "text-green-700 font-semibold",
                             }] : []),
                             {
                               label: "📄 Download PDF",

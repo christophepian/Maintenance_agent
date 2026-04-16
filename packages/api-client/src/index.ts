@@ -13,6 +13,12 @@
 /* Re-export legal domain types (Phase D) */
 export * from "./legal";
 
+/* Re-export strategy engine types (Phase 1) */
+export * from "./strategy";
+
+/* Re-export recommendation types (Phase 2) */
+export * from "./recommendations";
+
 /* ═══════════════════════════════════════════════════════════════
  * Enums
  * ═══════════════════════════════════════════════════════════════ */
@@ -26,7 +32,7 @@ export type RequestStatus =
   | "RFP_PENDING"
   | "IN_PROGRESS"
   | "COMPLETED"
-  | "OWNER_REJECTED";
+  | "REJECTED";
 
 export type PayingParty = "LANDLORD" | "TENANT";
 
@@ -63,7 +69,7 @@ export type RequestEventType =
   | "PARTS_ORDERED"
   | "COMPLETED"
   | "OWNER_APPROVED"
-  | "OWNER_REJECTED"
+  | "REJECTED"
   | "NOTE"
   | "OTHER";
 

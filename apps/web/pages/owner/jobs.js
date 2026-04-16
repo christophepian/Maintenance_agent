@@ -4,28 +4,18 @@ import PageShell from "../../components/layout/PageShell";
 import PageHeader from "../../components/layout/PageHeader";
 import PageContent from "../../components/layout/PageContent";
 import Panel from "../../components/layout/Panel";
+import ErrorBanner from "../../components/ui/ErrorBanner";
 import { formatDate } from "../../lib/format";
+import Badge from "../../components/ui/Badge";
+import { urgencyVariant, jobVariant } from "../../lib/statusVariants";
 
-const STATUS_COLORS = {
-  PENDING: "bg-gray-100 text-gray-700",
-  IN_PROGRESS: "bg-blue-100 text-blue-700",
-  COMPLETED: "bg-green-100 text-green-700",
-  INVOICED: "bg-purple-100 text-purple-700",
-};
-
-const URGENCY_COLORS = {
-  LOW:       "bg-slate-100 text-slate-600",
-  MEDIUM:    "bg-blue-100 text-blue-700",
-  HIGH:      "bg-amber-100 text-amber-800",
-  EMERGENCY: "bg-red-100 text-red-700",
-};
-
+import { cn } from "../../lib/utils";
 function UrgencyPill({ urgency }) {
   if (!urgency) return null;
   return (
-    <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${URGENCY_COLORS[urgency] || URGENCY_COLORS.MEDIUM}`}>
+    <Badge variant={urgencyVariant(urgency)} size="sm">
       {urgency.charAt(0) + urgency.slice(1).toLowerCase()}
-    </span>
+    </Badge>
   );
 }
 
@@ -87,18 +77,14 @@ export default function OwnerJobs() {
         <PageHeader title="Jobs Overview" />
 
         <PageContent>
-          {error && (
-            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              {error}
-            </div>
-          )}
+          <ErrorBanner error={error} className="text-sm" />
 
           {/* Filter bar */}
           <div className="mb-4 flex flex-wrap items-start gap-3">
             <div className="flex flex-col items-center justify-end gap-1">
               <label className="text-xs font-medium text-slate-500">Status</label>
               <select value={filter} onChange={(e) => setFilter(e.target.value)}
-                className="min-h-[36px] appearance-none rounded-lg border border-slate-200 bg-white px-3 py-2 leading-tight text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                className="min-h-[36px] appearance-none rounded-lg border border-slate-200 bg-white px-3 py-2 leading-tight text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-400">
                 <option value="ALL">All statuses</option>
                 <option value="PENDING">Pending</option>
                 <option value="IN_PROGRESS">In Progress</option>
@@ -109,17 +95,17 @@ export default function OwnerJobs() {
             <div className="flex flex-col justify-end gap-1">
               <label className="text-xs font-medium text-slate-500">From</label>
               <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)}
-                className="h-9 appearance-none rounded-lg border border-slate-200 bg-white px-3 py-2 leading-tight text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+                className="h-9 appearance-none rounded-lg border border-slate-200 bg-white px-3 py-2 leading-tight text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-400" />
             </div>
             <div className="flex flex-col justify-end gap-1">
               <label className="text-xs font-medium text-slate-500">To</label>
               <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)}
-                className="h-9 appearance-none rounded-lg border border-slate-200 bg-white px-3 py-2 leading-tight text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+                className="h-9 appearance-none rounded-lg border border-slate-200 bg-white px-3 py-2 leading-tight text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-400" />
             </div>
             <div className="flex flex-col items-center justify-end gap-1">
               <label className="text-xs font-medium text-slate-500">Building</label>
               <select value={buildingFilter} onChange={(e) => { setBuildingFilter(e.target.value); setUnitFilter(""); }}
-                className="min-h-[36px] appearance-none rounded-lg border border-slate-200 bg-white px-3 py-2 leading-tight text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                className="min-h-[36px] appearance-none rounded-lg border border-slate-200 bg-white px-3 py-2 leading-tight text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-400">
                 <option value="">All buildings</option>
                 {buildings.map((b) => <option key={b} value={b}>{b}</option>)}
               </select>
@@ -127,7 +113,7 @@ export default function OwnerJobs() {
             <div className="flex flex-col items-center justify-end gap-1">
               <label className="text-xs font-medium text-slate-500">Unit</label>
               <select value={unitFilter} onChange={(e) => setUnitFilter(e.target.value)}
-                className="min-h-[36px] appearance-none rounded-lg border border-slate-200 bg-white px-3 py-2 leading-tight text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                className="min-h-[36px] appearance-none rounded-lg border border-slate-200 bg-white px-3 py-2 leading-tight text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-400">
                 <option value="">All units</option>
                 {units.map((u) => <option key={u} value={u}>{u}</option>)}
               </select>
@@ -135,7 +121,7 @@ export default function OwnerJobs() {
             <div className="flex flex-col items-center justify-end gap-1">
               <label className="text-xs font-medium text-slate-500">Urgency</label>
               <select value={urgencyFilter} onChange={(e) => setUrgencyFilter(e.target.value)}
-                className="min-h-[36px] appearance-none rounded-lg border border-slate-200 bg-white px-3 py-2 leading-tight text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                className="min-h-[36px] appearance-none rounded-lg border border-slate-200 bg-white px-3 py-2 leading-tight text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-400">
                 <option value="">All</option>
                 <option value="LOW">Low</option>
                 <option value="MEDIUM">Medium</option>
@@ -176,9 +162,9 @@ export default function OwnerJobs() {
                           <p className="text-sm font-semibold text-slate-900">
                             {job.request?.category || `Job #${job.id.slice(0, 8)}`}
                           </p>
-                          <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_COLORS[job.status] || "bg-gray-100 text-gray-700"}`}>
+                          <Badge variant={jobVariant(job.status)} size="sm">
                             {job.status.replace("_", " ")}
-                          </span>
+                          </Badge>
                         </div>
                         <div className="flex items-center gap-3">
                           <UrgencyPill urgency={job.request?.urgency} />
@@ -187,7 +173,7 @@ export default function OwnerJobs() {
                           )}
                           <span className="text-xs text-slate-400">{formatDate(job.createdAt)}</span>
                           <svg
-                            className={`h-4 w-4 text-slate-400 transition-transform ${isExpanded ? "rotate-90" : ""}`}
+                            className={cn("h-4 w-4 text-slate-400 transition-transform", isExpanded ? "rotate-90" : "")}
                             fill="none" viewBox="0 0 24 24" stroke="currentColor"
                           >
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -212,7 +198,7 @@ export default function OwnerJobs() {
                             {job.request?.unit && (
                               <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
                                 <p className="text-xs font-semibold text-blue-900 mb-1">Location</p>
-                                <p className="text-xs font-medium text-blue-800">{job.request.unit.building.name}</p>
+                                <p className="text-xs font-medium text-blue-700">{job.request.unit.building.name}</p>
                                 <p className="text-xs text-blue-700">{job.request.unit.building.address}</p>
                                 <p className="text-xs font-medium text-blue-700 mt-0.5">Unit {job.request.unit.unitNumber}</p>
                               </div>
@@ -220,7 +206,7 @@ export default function OwnerJobs() {
                             {job.request?.tenant && (
                               <div className="rounded-lg border border-green-200 bg-green-50 p-3">
                                 <p className="text-xs font-semibold text-green-900 mb-1">Tenant</p>
-                                {job.request.tenant.name && <p className="text-xs font-medium text-green-800">{job.request.tenant.name}</p>}
+                                {job.request.tenant.name && <p className="text-xs font-medium text-green-700">{job.request.tenant.name}</p>}
                                 <p className="text-xs text-green-700">{job.request.tenant.phone}</p>
                                 {job.request.tenant.email && <p className="text-xs text-green-700">{job.request.tenant.email}</p>}
                               </div>
@@ -228,7 +214,7 @@ export default function OwnerJobs() {
                             {job.contractor && (
                               <div className="rounded-lg border border-purple-200 bg-purple-50 p-3">
                                 <p className="text-xs font-semibold text-purple-900 mb-1">Contractor</p>
-                                <p className="text-xs font-medium text-purple-800">{job.contractor.name}</p>
+                                <p className="text-xs font-medium text-purple-700">{job.contractor.name}</p>
                                 <p className="text-xs text-purple-700">{job.contractor.phone}</p>
                                 <p className="text-xs text-purple-700">{job.contractor.email}</p>
                               </div>
@@ -238,7 +224,7 @@ export default function OwnerJobs() {
                           {job.request?.appliance && (
                             <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 p-3">
                               <p className="text-xs font-semibold text-amber-900 mb-1">Appliance</p>
-                              <p className="text-sm text-amber-800">
+                              <p className="text-sm text-amber-700">
                                 {job.request.appliance.category}
                                 {job.request.appliance.serial && ` (Serial: ${job.request.appliance.serial})`}
                               </p>

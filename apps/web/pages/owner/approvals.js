@@ -1,20 +1,18 @@
 import { useState, useEffect } from "react";
+import { useRouter } from "next/router";
 import Link from "next/link";
 import AppShell from "../../components/AppShell";
 import PageShell from "../../components/layout/PageShell";
 import PageHeader from "../../components/layout/PageHeader";
 import PageContent from "../../components/layout/PageContent";
 import Panel from "../../components/layout/Panel.jsx";
+import ErrorBanner from "../../components/ui/ErrorBanner";
 import { ownerAuthHeaders } from "../../lib/api";
+import Badge from "../../components/ui/Badge";
+import { urgencyVariant, rfpVariant } from "../../lib/statusVariants";
 
+import { cn } from "../../lib/utils";
 // ─── Shared ────────────────────────────────────────────────────
-
-const URGENCY_COLORS = {
-  LOW:       "bg-slate-100 text-slate-600",
-  MEDIUM:    "bg-blue-100 text-blue-700",
-  HIGH:      "bg-amber-100 text-amber-800",
-  EMERGENCY: "bg-red-100 text-red-700",
-};
 
 /** RAG left-border: green=LOW, neutral=MEDIUM, amber=HIGH, red=EMERGENCY */
 const URGENCY_BORDER = {
@@ -27,14 +25,14 @@ const URGENCY_BORDER = {
 function UrgencyPill({ urgency }) {
   if (!urgency) return null;
   return (
-    <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${URGENCY_COLORS[urgency] || URGENCY_COLORS.MEDIUM}`}>
+    <Badge variant={urgencyVariant(urgency)} size="sm">
       {urgency.charAt(0) + urgency.slice(1).toLowerCase()}
-    </span>
+    </Badge>
   );
 }
 
-const INPUT_CTRL  = "h-9 appearance-none rounded-lg border border-slate-200 bg-white px-3 py-2 leading-tight text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-400";
-const SELECT_CTRL = "min-h-[36px] appearance-none rounded-lg border border-slate-200 bg-white px-3 py-2 leading-tight text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-400";
+const INPUT_CTRL  = "h-9 appearance-none rounded-lg border border-slate-200 bg-white px-3 py-2 leading-tight text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-400";
+const SELECT_CTRL = "min-h-[36px] appearance-none rounded-lg border border-slate-200 bg-white px-3 py-2 leading-tight text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-400";
 
 function formatDateTime(dateStr) {
   const d = new Date(dateStr);
@@ -62,20 +60,11 @@ function formatCost(cost) {
 
 // ─── RFP pills ─────────────────────────────────────────────────
 
-const RFP_STATUS_COLORS = {
-  DRAFT:                  "bg-slate-50 text-slate-600 border-slate-200",
-  OPEN:                   "bg-blue-50 text-blue-700 border-blue-200",
-  AWARDED:                "bg-green-50 text-green-700 border-green-200",
-  PENDING_OWNER_APPROVAL: "bg-amber-50 text-amber-700 border-amber-200",
-  CLOSED:                 "bg-slate-50 text-slate-500 border-slate-200",
-  CANCELLED:              "bg-red-50 text-red-600 border-red-200",
-};
-
 function RfpStatusPill({ status }) {
   return (
-    <span className={`inline-block rounded-full border px-2 py-0.5 text-xs font-medium ${RFP_STATUS_COLORS[status] || "bg-slate-50 text-slate-600 border-slate-200"}`}>
+    <Badge variant={rfpVariant(status)} size="sm">
       {status?.replace(/_/g, " ") || "—"}
-    </span>
+    </Badge>
   );
 }
 
@@ -92,7 +81,7 @@ export default function OwnerApprovalsPage() {
         <PageHeader title="Approvals" />
         <PageContent>
           {/* Tab bar */}
-          <div className="mb-6 flex border-b border-slate-200">
+          <div className="tab-strip">
             {[
               { key: "requests", label: "Requests" },
               { key: "rfps",     label: "RFPs" },
@@ -100,12 +89,7 @@ export default function OwnerApprovalsPage() {
               <button
                 key={key}
                 onClick={() => setTab(key)}
-                className={[
-                  "px-5 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors",
-                  tab === key
-                    ? "border-indigo-600 text-indigo-600"
-                    : "border-transparent text-slate-500 hover:text-slate-700",
-                ].join(" ")}
+                className={tab === key ? "tab-btn-active" : "tab-btn"}
               >
                 {label}
               </button>
@@ -125,18 +109,15 @@ export default function OwnerApprovalsPage() {
 // ══════════════════════════════════════════════════════════════
 
 function RequestsTab() {
+  const router = useRouter();
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [actionInProgress, setActionInProgress] = useState(null);
-  const [expandedId, setExpandedId] = useState(null);
 
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [buildingFilter, setBuildingFilter] = useState("");
   const [unitFilter, setUnitFilter] = useState("");
   const [urgencyFilter, setUrgencyFilter] = useState("");
-
-  function toggleAccordion(id) { setExpandedId((prev) => (prev === id ? null : id)); }
 
   useEffect(() => { loadPendingApprovals(); }, []);
 
@@ -150,53 +131,6 @@ function RequestsTab() {
       console.error("Failed to load pending approvals:", err);
     } finally {
       setLoading(false);
-    }
-  }
-
-  async function handleApprove(requestId) {
-    if (!confirm("Approve this maintenance request?")) return;
-    setActionInProgress(requestId);
-    try {
-      const res = await fetch(`/api/owner/approvals?id=${requestId}&action=approve`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...ownerAuthHeaders() },
-        body: JSON.stringify({ comment: "Approved by owner" }),
-      });
-      if (res.ok) {
-        await loadPendingApprovals();
-      } else {
-        const json = await res.json();
-        alert(`Failed to approve: ${json.error || "Unknown error"}`);
-      }
-    } catch (err) {
-      console.error("Approve failed:", err);
-      alert("Failed to approve request");
-    } finally {
-      setActionInProgress(null);
-    }
-  }
-
-  async function handleReject(requestId) {
-    const reason = prompt("Reason for rejection (optional):");
-    if (reason === null) return;
-    setActionInProgress(requestId);
-    try {
-      const res = await fetch(`/api/owner/approvals?id=${requestId}&action=reject`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...ownerAuthHeaders() },
-        body: JSON.stringify({ reason }),
-      });
-      if (res.ok) {
-        await loadPendingApprovals();
-      } else {
-        const json = await res.json();
-        alert(`Failed to reject: ${json.error || "Unknown error"}`);
-      }
-    } catch (err) {
-      console.error("Reject failed:", err);
-      alert("Failed to reject request");
-    } finally {
-      setActionInProgress(null);
     }
   }
 
@@ -280,86 +214,37 @@ function RequestsTab() {
         ) : (
           <div className="space-y-2 p-4">
             {filtered.map((req) => {
-              const isExpanded = expandedId === req.id;
               const borderColor = URGENCY_BORDER[req.urgency] || "border-l-slate-200";
               return (
-                <div key={req.id} className={`rounded-lg border border-slate-200 border-l-4 ${borderColor} bg-white shadow-sm`}>
-                  <div
-                    className="flex cursor-pointer items-center justify-between px-5 py-3.5 hover:bg-slate-50"
-                    onClick={() => toggleAccordion(req.id)}
-                  >
-                    <div>
+                <div
+                  key={req.id}
+                  className={cn("rounded-lg border border-slate-200 border-l-4", borderColor, "bg-white shadow-sm cursor-pointer hover:bg-slate-50 transition-colors")}
+                  onClick={() => router.push(`/owner/requests/${req.id}`)}
+                >
+                  <div className="flex items-center justify-between px-5 py-3.5">
+                    <div className="min-w-0 flex-1">
                       <p className="text-sm font-semibold text-slate-900">
                         {req.requestNumber ? `#${req.requestNumber} — ` : ""}
                         {req.category || "General Maintenance"}
                       </p>
-                      <p className="text-xs text-slate-500">Submitted {formatDateTime(req.createdAt)}</p>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        {req.unit?.building?.name || ""}{req.unit?.unitNumber ? ` · Unit ${req.unit.unitNumber}` : ""}
+                        {" · "}Submitted {formatDateTime(req.createdAt)}
+                      </p>
+                      {req.description && (
+                        <p className="text-xs text-slate-400 mt-1 truncate max-w-lg">{req.description}</p>
+                      )}
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 shrink-0 ml-4">
+                      {req.estimatedCost > 0 && (
+                        <span className="text-xs font-medium text-slate-600">{formatCost(req.estimatedCost)}</span>
+                      )}
                       <UrgencyPill urgency={req.urgency} />
-                      <svg
-                        className={`h-4 w-4 text-slate-400 transition-transform ${isExpanded ? "rotate-90" : ""}`}
-                        fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                      >
+                      <svg className="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                       </svg>
                     </div>
                   </div>
-
-                  {isExpanded && (
-                    <div className="border-t border-slate-100 px-5 py-4">
-                      <div className="mb-4 space-y-2">
-                        <div>
-                          <span className="text-sm font-medium text-slate-700">Description:</span>
-                          <p className="text-sm text-slate-600">{req.description}</p>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4 text-sm">
-                          <div>
-                            <span className="font-medium text-slate-700">Estimated Cost:</span>{" "}
-                            <span className="text-slate-900">{formatCost(req.estimatedCost)}</span>
-                          </div>
-                          <div>
-                            <span className="font-medium text-slate-700">Building:</span>{" "}
-                            <span className="text-slate-900">{req.unit?.building?.name || "—"}</span>
-                          </div>
-                          <div>
-                            <span className="font-medium text-slate-700">Unit:</span>{" "}
-                            <span className="text-slate-900">{req.unit?.unitNumber || "—"}</span>
-                          </div>
-                          <div>
-                            <span className="font-medium text-slate-700">Tenant:</span>{" "}
-                            <span className="text-slate-900">{req.tenant?.name || "—"}</span>
-                          </div>
-                        </div>
-                        {req.appliance && (
-                          <div className="text-sm">
-                            <span className="font-medium text-slate-700">Appliance:</span>{" "}
-                            <span className="text-slate-900">
-                              {req.appliance.assetModel
-                                ? `${req.appliance.assetModel.manufacturer} ${req.appliance.assetModel.model} (${req.appliance.assetModel.category})`
-                                : req.appliance.name || "—"}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex gap-3" onClick={(e) => e.stopPropagation()}>
-                        <button
-                          onClick={() => handleApprove(req.id)}
-                          disabled={actionInProgress === req.id}
-                          className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-green-700 disabled:bg-slate-300 disabled:text-slate-500"
-                        >
-                          {actionInProgress === req.id ? "Processing..." : "Approve"}
-                        </button>
-                        <button
-                          onClick={() => handleReject(req.id)}
-                          disabled={actionInProgress === req.id}
-                          className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:bg-slate-100 disabled:text-slate-400"
-                        >
-                          {actionInProgress === req.id ? "Processing..." : "Reject"}
-                        </button>
-                      </div>
-                    </div>
-                  )}
                 </div>
               );
             })}
@@ -418,11 +303,7 @@ function RfpsTab() {
 
   return (
     <>
-      {error && (
-        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {error}
-        </div>
-      )}
+      <ErrorBanner error={error} className="mb-4 text-sm" />
 
       {/* Filter bar */}
       <div className="mb-4 flex flex-wrap items-start gap-3">

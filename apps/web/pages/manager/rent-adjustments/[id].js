@@ -7,11 +7,12 @@ import PageContent from "../../../components/layout/PageContent";
 import Panel from "../../../components/layout/Panel";
 import { fetchWithAuth, postWithAuth } from "../../../lib/api";
 
+import { cn } from "../../../lib/utils";
 const STATUS_COLORS = {
-  DRAFT: "bg-yellow-100 text-yellow-800",
-  APPROVED: "bg-blue-100 text-blue-800",
-  APPLIED: "bg-green-100 text-green-800",
-  REJECTED: "bg-red-100 text-red-800",
+  DRAFT: "bg-yellow-100 text-yellow-700",
+  APPROVED: "bg-blue-100 text-blue-700",
+  APPLIED: "bg-green-100 text-green-700",
+  REJECTED: "bg-red-100 text-red-700",
 };
 
 const TYPE_LABELS = {
@@ -91,7 +92,7 @@ export default function RentAdjustmentDetail() {
     return (
       <AppShell>
         <PageShell>
-          <PageContent><p className="text-gray-500 py-8">Loading…</p></PageContent>
+          <PageContent><p className="text-slate-500 py-8">Loading…</p></PageContent>
         </PageShell>
       </AppShell>
     );
@@ -123,21 +124,21 @@ export default function RentAdjustmentDetail() {
           <Panel title="Summary">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
               <div>
-                <span className="text-gray-500 block">Status</span>
-                <span className={`inline-block px-2 py-0.5 rounded text-xs font-semibold mt-1 ${STATUS_COLORS[adj.status]}`}>
+                <span className="text-slate-500 block">Status</span>
+                <span className={cn("inline-block px-2 py-0.5 rounded text-xs font-semibold mt-1", STATUS_COLORS[adj.status])}>
                   {adj.status}
                 </span>
               </div>
               <div>
-                <span className="text-gray-500 block">Type</span>
+                <span className="text-slate-500 block">Type</span>
                 <span className="font-medium">{TYPE_LABELS[adj.adjustmentType]}</span>
               </div>
               <div>
-                <span className="text-gray-500 block">Effective Date</span>
+                <span className="text-slate-500 block">Effective Date</span>
                 <span className="font-medium">{new Date(adj.effectiveDate).toLocaleDateString("de-CH")}</span>
               </div>
               <div>
-                <span className="text-gray-500 block">Lease</span>
+                <span className="text-slate-500 block">Lease</span>
                 <a href={`/manager/leases/${adj.leaseId}`} className="text-indigo-600 hover:underline font-medium">
                   {adj.lease?.tenantName}
                 </a>
@@ -149,21 +150,21 @@ export default function RentAdjustmentDetail() {
           <Panel title="Rent Change" className="mt-4">
             <div className="grid grid-cols-3 gap-6 text-center">
               <div>
-                <span className="text-gray-500 text-sm block">Previous Rent</span>
+                <span className="text-slate-500 text-sm block">Previous Rent</span>
                 <span className="text-xl font-semibold">{fmt(adj.previousRentCents)}</span>
-                <span className="text-xs text-gray-400 block">/month</span>
+                <span className="text-xs text-slate-400 block">/month</span>
               </div>
               <div>
-                <span className="text-gray-500 text-sm block">→ New Rent</span>
+                <span className="text-slate-500 text-sm block">→ New Rent</span>
                 <span className="text-xl font-bold text-indigo-700">{fmt(adj.newRentCents)}</span>
-                <span className="text-xs text-gray-400 block">/month</span>
+                <span className="text-xs text-slate-400 block">/month</span>
               </div>
               <div>
-                <span className="text-gray-500 text-sm block">Change</span>
-                <span className={`text-xl font-semibold ${adj.adjustmentCents > 0 ? "text-red-600" : adj.adjustmentCents < 0 ? "text-green-600" : ""}`}>
+                <span className="text-slate-500 text-sm block">Change</span>
+                <span className={cn("text-xl font-semibold", adj.adjustmentCents > 0 ? "text-red-600" : adj.adjustmentCents < 0 ? "text-green-600" : "")}>
                   {adj.adjustmentCents > 0 ? "+" : ""}{fmt(adj.adjustmentCents)}
                 </span>
-                <span className="text-xs text-gray-400 block">({changePct}%)</span>
+                <span className="text-xs text-slate-400 block">({changePct}%)</span>
               </div>
             </div>
           </Panel>
@@ -173,22 +174,22 @@ export default function RentAdjustmentDetail() {
             <Panel title="Indexation Details" className="mt-4">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                 <div>
-                  <span className="text-gray-500 block">CPI Base</span>
+                  <span className="text-slate-500 block">CPI Base</span>
                   <span className="font-medium">{adj.cpiOldIndex ?? "—"}</span>
                 </div>
                 <div>
-                  <span className="text-gray-500 block">CPI Current</span>
+                  <span className="text-slate-500 block">CPI Current</span>
                   <span className="font-medium">{adj.cpiNewIndex ?? "—"}</span>
                 </div>
                 {adj.cpiOldIndex && adj.cpiNewIndex && (
                   <div>
-                    <span className="text-gray-500 block">CPI Ratio</span>
+                    <span className="text-slate-500 block">CPI Ratio</span>
                     <span className="font-medium">{(adj.cpiNewIndex / adj.cpiOldIndex).toFixed(4)}</span>
                   </div>
                 )}
                 {adj.referenceRateOld && (
                   <div>
-                    <span className="text-gray-500 block">Ref Rate (old → new)</span>
+                    <span className="text-slate-500 block">Ref Rate (old → new)</span>
                     <span className="font-medium">
                       {adj.referenceRateOld}% → {adj.referenceRateNew || adj.referenceRateOld}%
                     </span>
@@ -197,8 +198,8 @@ export default function RentAdjustmentDetail() {
               </div>
               {adj.calculationDetails && (
                 <details className="mt-3">
-                  <summary className="text-xs text-gray-400 cursor-pointer">Calculation breakdown</summary>
-                  <pre className="mt-1 text-xs bg-gray-50 rounded p-2 overflow-x-auto">
+                  <summary className="text-xs text-slate-400 cursor-pointer">Calculation breakdown</summary>
+                  <pre className="mt-1 text-xs bg-slate-50 rounded p-2 overflow-x-auto">
                     {JSON.stringify(adj.calculationDetails, null, 2)}
                   </pre>
                 </details>
@@ -231,19 +232,19 @@ export default function RentAdjustmentDetail() {
             <Panel title="Lease Index Settings" className="mt-4">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                 <div>
-                  <span className="text-gray-500 block">Index Clause</span>
+                  <span className="text-slate-500 block">Index Clause</span>
                   <span className="font-medium">{adj.lease.indexClauseType || "NONE"}</span>
                 </div>
                 <div>
-                  <span className="text-gray-500 block">CPI Base Index</span>
+                  <span className="text-slate-500 block">CPI Base Index</span>
                   <span className="font-medium">{adj.lease.cpiBaseIndex ?? "—"}</span>
                 </div>
                 <div>
-                  <span className="text-gray-500 block">Initial Rent</span>
+                  <span className="text-slate-500 block">Initial Rent</span>
                   <span className="font-medium">{adj.lease.initialNetRentChf ? fmt(adj.lease.initialNetRentChf * 100) : "—"}</span>
                 </div>
                 <div>
-                  <span className="text-gray-500 block">Last Indexation</span>
+                  <span className="text-slate-500 block">Last Indexation</span>
                   <span className="font-medium">
                     {adj.lease.lastIndexationDate
                       ? new Date(adj.lease.lastIndexationDate).toLocaleDateString("de-CH")
@@ -275,7 +276,7 @@ export default function RentAdjustmentDetail() {
                 <button
                   onClick={handleDelete}
                   disabled={actionLoading}
-                  className="px-4 py-2 bg-gray-100 text-gray-600 rounded hover:bg-gray-200 disabled:opacity-50"
+                  className="px-4 py-2 bg-slate-100 text-slate-600 rounded hover:bg-slate-200 disabled:opacity-50"
                 >
                   🗑 Delete
                 </button>
@@ -292,7 +293,7 @@ export default function RentAdjustmentDetail() {
             )}
             <button
               onClick={() => router.push("/manager/rent-adjustments")}
-              className="px-4 py-2 bg-gray-100 text-gray-600 rounded hover:bg-gray-200"
+              className="px-4 py-2 bg-slate-100 text-slate-600 rounded hover:bg-slate-200"
             >
               ← Back to List
             </button>
@@ -301,7 +302,7 @@ export default function RentAdjustmentDetail() {
           {/* Reject modal */}
           {showReject && (
             <div className="mt-4 p-4 border border-red-200 rounded bg-red-50">
-              <label className="block text-sm font-medium text-red-800 mb-1">
+              <label className="block text-sm font-medium text-red-700 mb-1">
                 Rejection reason (optional)
               </label>
               <textarea
@@ -321,7 +322,7 @@ export default function RentAdjustmentDetail() {
                 </button>
                 <button
                   onClick={() => setShowReject(false)}
-                  className="px-3 py-1 bg-gray-200 text-gray-600 rounded text-sm"
+                  className="px-3 py-1 bg-slate-200 text-slate-600 rounded text-sm"
                 >
                   Cancel
                 </button>

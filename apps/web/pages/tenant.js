@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useRouter } from "next/router";
 import AppShell from "../components/AppShell";
 
+import { cn } from "../lib/utils";
 export default function TenantPhone() {
   const router = useRouter();
   const [phone, setPhone] = useState("");
@@ -59,7 +60,7 @@ export default function TenantPhone() {
       <div className="subtle">Enter your phone number to continue.</div>
 
       {notice ? (
-        <div className={`notice ${notice.type === "ok" ? "notice-ok" : "notice-err"}`}>
+        <div className={cn("notice", notice.type === "ok" ? "notice-ok" : "notice-err")}>
           {notice.msg}
         </div>
       ) : null}

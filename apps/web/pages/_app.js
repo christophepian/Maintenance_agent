@@ -1,5 +1,6 @@
 import '../styles/globals.css';
 import { useEffect } from 'react';
+import ErrorBoundary from '../components/ErrorBoundary';
 
 // DEV-ONLY: Bootstrap role-specific auth tokens so all portal sections
 // (manager, owner, vendor) work without a login flow. Never runs in production.
@@ -49,5 +50,9 @@ export default function MyApp({ Component, pageProps }) {
     if (needsRefresh('contractorToken')) localStorage.setItem('contractorToken', DEV_TOKENS.contractor);
   }, []);
 
-  return <Component {...pageProps} />;
+  return (
+    <ErrorBoundary>
+      <Component {...pageProps} />
+    </ErrorBoundary>
+  );
 }

@@ -38,7 +38,7 @@ describe("Event bus basics", () => {
 
   test("listener does NOT receive non-matching events", async () => {
     const received: any[] = [];
-    on("OWNER_REJECTED", async (e) => {
+    on("REQUEST_REJECTED", async (e) => {
       received.push(e);
     });
 
@@ -156,7 +156,7 @@ describe("Utility functions", () => {
 
     expect(listenerCount("OWNER_APPROVED")).toBe(2);
     expect(listenerCount("INVOICE_PAID")).toBe(1);
-    expect(listenerCount("OWNER_REJECTED")).toBe(0);
+    expect(listenerCount("REQUEST_REJECTED")).toBe(0);
   });
 
   test("emit auto-fills timestamp", async () => {

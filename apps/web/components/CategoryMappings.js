@@ -1,8 +1,10 @@
 import { useEffect, useState, useCallback } from "react";
 import Panel from "./layout/Panel";
+import ErrorBanner from "./ui/ErrorBanner";
 import Link from "next/link";
 import { authHeaders } from "../lib/api";
 
+import { cn } from "../lib/utils";
 // ── Plain-language labels ─────────────────────────────────────
 
 const CATEGORY_META = {
@@ -133,12 +135,7 @@ export default function CategoryMappings() {
 
   return (
     <>
-      {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {error}
-          <button className="ml-2 underline" onClick={() => setError("")}>dismiss</button>
-        </div>
-      )}
+      <ErrorBanner error={error} onDismiss={() => setError("")} className="text-sm" />
 
       {summary && !loading && (
         <StatusBanner allMapped={allMapped} mappedCount={mappedCount} totalCount={totalCount} />
@@ -200,7 +197,7 @@ function StatusBanner({ allMapped, mappedCount, totalCount }) {
       <div className="flex items-start gap-3 rounded-xl border border-green-200 bg-green-50 p-4">
         <span className="mt-0.5 text-xl">&#x2705;</span>
         <div>
-          <p className="text-sm font-semibold text-green-800">All {totalCount} categories are connected to Swiss law</p>
+          <p className="text-sm font-semibold text-green-700">All {totalCount} categories are connected to Swiss law</p>
           <p className="mt-0.5 text-xs text-green-700">
             When a tenant submits a maintenance request, the legal engine will automatically look up
             depreciation standards and rent reduction rules for every category.
@@ -214,7 +211,7 @@ function StatusBanner({ allMapped, mappedCount, totalCount }) {
     <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4">
       <span className="mt-0.5 text-xl">&#x26A0;&#xFE0F;</span>
       <div>
-        <p className="text-sm font-semibold text-amber-800">
+        <p className="text-sm font-semibold text-amber-700">
           {unmapped} of {totalCount} {unmapped === 1 ? "category isn\u2019t" : "categories aren\u2019t"} connected to Swiss law yet
         </p>
         <p className="mt-0.5 text-xs text-amber-700">
@@ -293,7 +290,7 @@ function CategoryCard({
   const isDisabled = c.isActive === false;
 
   return (
-    <div className={`rounded-xl border bg-white shadow-sm transition-all hover:shadow-md ${isDisabled ? "border-slate-200 opacity-60" : "border-slate-200"}`}>
+    <div className={cn("rounded-xl border bg-white shadow-sm transition-all hover:shadow-md", isDisabled ? "border-slate-200 opacity-60" : "border-slate-200")}>
       <div className="flex items-start justify-between p-5 pb-0">
         <div className="flex items-center gap-3">
           <span className="text-2xl">{icon}</span>
@@ -324,7 +321,7 @@ function CategoryCard({
           <button onClick={onStartEdit} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600" title="Change the legal topic for this category"><PencilIcon /></button>
           <button
             onClick={onToggle}
-            className={`rounded-lg p-1.5 transition-colors ${c.isActive ? "text-green-500 hover:bg-green-50 hover:text-green-700" : "text-slate-300 hover:bg-slate-100 hover:text-slate-500"}`}
+            className={cn("rounded-lg p-1.5 transition-colors", c.isActive ? "text-green-500 hover:bg-green-50 hover:text-green-700" : "text-slate-300 hover:bg-slate-100 hover:text-slate-500")}
             title={c.isActive ? "Active \u2014 the engine uses this mapping. Click to disable." : "Disabled \u2014 the engine skips this mapping. Click to re-enable."}
           >
             <ToggleIcon active={c.isActive} />
@@ -334,14 +331,14 @@ function CategoryCard({
 
       {isEditing && (
         <div className="mx-5 mt-3 rounded-lg border border-blue-200 bg-blue-50/50 p-3">
-          <p className="mb-2 text-xs font-medium text-blue-800">
+          <p className="mb-2 text-xs font-medium text-blue-700">
             Change what the engine searches when a tenant reports a &ldquo;{label.toLowerCase()}&rdquo; issue:
           </p>
           <div className="flex gap-2">
-            <select className="flex-1 rounded-lg border border-blue-300 bg-white px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" value={editTopic} onChange={(e) => onChangeTopic(e.target.value)}>
+            <select className="filter-select flex-1 py-1.5" value={editTopic} onChange={(e) => onChangeTopic(e.target.value)}>
               {CURATED_TOPICS.map(t => (<option key={t.value} value={t.value}>{t.label}</option>))}
             </select>
-            <button onClick={onSaveEdit} disabled={saving} className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50">{saving ? "Saving\u2026" : "Save"}</button>
+            <button onClick={onSaveEdit} disabled={saving} className="button-primary text-xs px-3 py-1.5 disabled:opacity-50">{saving ? "Saving\u2026" : "Save"}</button>
             <button onClick={onCancelEdit} className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-500 hover:bg-slate-50">Cancel</button>
           </div>
         </div>
@@ -370,22 +367,22 @@ function CategoryCard({
 
 function DepreciationBox({ c, hasDepreciation }) {
   return (
-    <div className={`rounded-lg border p-3 ${hasDepreciation ? "border-emerald-100 bg-emerald-50/50" : "border-slate-100 bg-slate-50/50"}`}>
+    <div className={cn("rounded-lg border p-3", hasDepreciation ? "border-green-100 bg-green-50/50" : "border-slate-100 bg-slate-50/50")}>
       <div className="flex items-center gap-2">
         <span className="text-sm">&#x1F4CA;</span>
-        <span className={`text-xs font-semibold ${hasDepreciation ? "text-emerald-800" : "text-slate-500"}`}>Depreciation</span>
-        <span className={`ml-auto rounded-full px-2 py-0.5 text-[10px] font-bold ${hasDepreciation ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-400"}`}>
+        <span className={cn("text-xs font-semibold", hasDepreciation ? "text-green-700" : "text-slate-500")}>Depreciation</span>
+        <span className={cn("ml-auto rounded-full px-2 py-0.5 text-[10px] font-bold", hasDepreciation ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-400")}>
           {c.depreciationCount} {c.depreciationCount === 1 ? "item" : "items"}
         </span>
       </div>
       {hasDepreciation ? (
         <div className="mt-2">
-          <p className="text-[11px] leading-relaxed text-emerald-700">
+          <p className="text-[11px] leading-relaxed text-green-700">
             Covers items like <strong>{c.readableAssets?.slice(0, 3).join(", ")}</strong>
             {c.readableAssets?.length > 3 && <span> and {c.readableAssets.length - 3} more</span>}.
             {c.lifespanRange && (<> Expected lifespans: <strong>{c.lifespanRange}</strong>.</>)}
           </p>
-          <p className="mt-1 text-[10px] text-emerald-600">&rarr; Determines who pays: landlord (if past lifespan) or shared cost</p>
+          <p className="mt-1 text-[10px] text-green-600">&rarr; Determines who pays: landlord (if past lifespan) or shared cost</p>
         </div>
       ) : (
         <p className="mt-2 text-[11px] text-slate-400">No depreciation data for this topic. Cost-sharing can&apos;t be calculated automatically.</p>
@@ -396,11 +393,11 @@ function DepreciationBox({ c, hasDepreciation }) {
 
 function RentReductionBox({ c, hasRules }) {
   return (
-    <div className={`rounded-lg border p-3 ${hasRules ? "border-blue-100 bg-blue-50/50" : "border-slate-100 bg-slate-50/50"}`}>
+    <div className={cn("rounded-lg border p-3", hasRules ? "border-blue-100 bg-blue-50/50" : "border-slate-100 bg-slate-50/50")}>
       <div className="flex items-center gap-2">
         <span className="text-sm">&#x2696;&#xFE0F;</span>
-        <span className={`text-xs font-semibold ${hasRules ? "text-blue-800" : "text-slate-500"}`}>Rent Reduction</span>
-        <span className={`ml-auto rounded-full px-2 py-0.5 text-[10px] font-bold ${hasRules ? "bg-blue-100 text-blue-700" : "bg-slate-100 text-slate-400"}`}>
+        <span className={cn("text-xs font-semibold", hasRules ? "text-blue-700" : "text-slate-500")}>Rent Reduction</span>
+        <span className={cn("ml-auto rounded-full px-2 py-0.5 text-[10px] font-bold", hasRules ? "bg-blue-100 text-blue-700" : "bg-slate-100 text-slate-400")}>
           {c.ruleCount} {c.ruleCount === 1 ? "rule" : "rules"}
         </span>
       </div>
@@ -488,7 +485,7 @@ function AddCategorySection({ unmapped, showForm, onToggleForm, onCreate, onErro
         <div className="flex items-center gap-3">
           <span className="text-lg">&#x1F517;</span>
           <div>
-            <p className="text-sm font-semibold text-amber-800">
+            <p className="text-sm font-semibold text-amber-700">
               {unmapped.length} {unmapped.length === 1 ? "category needs" : "categories need"} a mapping
             </p>
             <p className="text-xs text-amber-700">
@@ -505,19 +502,19 @@ function AddCategorySection({ unmapped, showForm, onToggleForm, onCreate, onErro
         <form onSubmit={handleCreate} className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end">
           <label className="flex-1">
             <span className="text-xs font-medium text-slate-600">Category</span>
-            <select className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-200" value={selectedCat} onChange={e => setSelectedCat(e.target.value)} required>
+            <select className="filter-select mt-1 block" value={selectedCat} onChange={e => setSelectedCat(e.target.value)} required>
               <option value="">Select&hellip;</option>
               {unmapped.map(u => (<option key={u.category} value={u.category}>{meta(u.category).icon} {meta(u.category).label}</option>))}
             </select>
           </label>
           <label className="flex-1">
             <span className="text-xs font-medium text-slate-600">Connect to legal topic</span>
-            <select className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-200" value={selectedTopic} onChange={e => setSelectedTopic(e.target.value)} required>
+            <select className="filter-select mt-1 block" value={selectedTopic} onChange={e => setSelectedTopic(e.target.value)} required>
               <option value="">Select&hellip;</option>
               {CURATED_TOPICS.map(t => (<option key={t.value} value={t.value}>{t.label}</option>))}
             </select>
           </label>
-          <button type="submit" disabled={saving || !selectedCat || !selectedTopic} className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">
+          <button type="submit" disabled={saving || !selectedCat || !selectedTopic} className="button-primary text-sm disabled:opacity-50">
             {saving ? "Creating\u2026" : "Create mapping"}
           </button>
         </form>

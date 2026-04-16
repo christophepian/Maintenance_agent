@@ -9,6 +9,10 @@ import PageContent from "../../../../components/layout/PageContent";
 import Panel from "../../../../components/layout/Panel";
 import DocumentsPanel from "../../../../components/DocumentsPanel";
 import { authHeaders } from "../../../../lib/api";
+import Badge from "../../../../components/ui/Badge";
+import ErrorBanner from "../../../../components/ui/ErrorBanner";
+import { cn } from "../../../../lib/utils";
+import { leaseVariant, invoiceVariant } from "../../../../lib/statusVariants";
 
 export default function TenantDetailPage() {
   const router = useRouter();
@@ -182,33 +186,20 @@ export default function TenantDetailPage() {
         />
         <PageContent>
           {message ? (
-            <Panel>
-              <div className="text-sm text-slate-700">{message}</div>
-            </Panel>
+            <div className="notice notice-ok">{message}</div>
           ) : null}
-          {error ? (
-            <Panel>
-              <div className="text-sm text-red-600">{error}</div>
-            </Panel>
-          ) : null}
+          <ErrorBanner error={error} onDismiss={() => setError("")} />
 
           {loading ? (
-            <Panel>
-              <p className="text-sm text-slate-600">Loading tenant...</p>
-            </Panel>
+            <p className="loading-text">Loading tenant…</p>
           ) : tenant ? (
             <div className="grid gap-4">
-              <div className="flex flex-wrap gap-2">
+              <div className="pill-tab-row">
                 {["Personal information", "Unit", "Documents", "Contracts", "Invoices"].map((tab) => (
                   <button
                     key={tab}
                     type="button"
-                    className={
-                      "rounded-full border px-3 py-1.5 text-xs font-semibold transition " +
-                      (activeTab === tab
-                        ? "border-slate-900 bg-slate-900 text-white"
-                        : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-900")
-                    }
+                    className={cn(activeTab === tab ? "pill-tab-active" : "pill-tab")}
                     onClick={() => setActiveTab(tab)}
                   >
                     {tab}
@@ -220,7 +211,7 @@ export default function TenantDetailPage() {
                 <Panel title="Personal information">
                   <div className="grid gap-4 sm:grid-cols-2">
                     <label className="grid gap-2">
-                      <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Name</span>
+                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Name</span>
                       {isEditing ? (
                         <input
                           className="input text-sm text-slate-700"
@@ -234,7 +225,7 @@ export default function TenantDetailPage() {
                       )}
                     </label>
                     <label className="grid gap-2">
-                      <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Phone</span>
+                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Phone</span>
                       {isEditing ? (
                         <input
                           className="input text-sm text-slate-700"
@@ -248,7 +239,7 @@ export default function TenantDetailPage() {
                       )}
                     </label>
                     <label className="grid gap-2 sm:col-span-2">
-                      <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Email</span>
+                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Email</span>
                       {isEditing ? (
                         <input
                           className="input text-sm text-slate-700"
@@ -265,21 +256,21 @@ export default function TenantDetailPage() {
 
                   <div className="mt-6 grid gap-4 sm:grid-cols-2">
                     <div>
-                      <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Tenant ID</div>
+                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Tenant ID</div>
                       <div className="text-sm text-slate-700 mt-1">{tenant?.id}</div>
                     </div>
                     <div>
-                      <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Org ID</div>
+                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Org ID</div>
                       <div className="text-sm text-slate-700 mt-1">{tenant?.orgId || "—"}</div>
                     </div>
                     <div>
-                      <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Created</div>
+                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Created</div>
                       <div className="text-sm text-slate-700 mt-1">
                         {tenant?.createdAt ? formatDateTime(tenant.createdAt) : "—"}
                       </div>
                     </div>
                     <div>
-                      <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Updated</div>
+                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Updated</div>
                       <div className="text-sm text-slate-700 mt-1">
                         {tenant?.updatedAt ? formatDateTime(tenant.updatedAt) : "—"}
                       </div>
@@ -292,11 +283,11 @@ export default function TenantDetailPage() {
                 <Panel title="Professional">
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div>
-                      <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Unit</div>
+                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Unit</div>
                       <div className="text-sm text-slate-700 mt-1">{unitLabel}</div>
                     </div>
                     <div>
-                      <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Building ID</div>
+                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Building ID</div>
                       <div className="text-sm text-slate-700 mt-1">
                         {tenant?.unit?.buildingId ? (
                           <Link href={`/manager/buildings/${tenant.unit.buildingId}/financials`} className="text-indigo-600 hover:underline">
@@ -306,7 +297,7 @@ export default function TenantDetailPage() {
                       </div>
                     </div>
                     <div>
-                      <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Unit ID</div>
+                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Unit ID</div>
                       <div className="text-sm text-slate-700 mt-1">
                         {(tenant?.unit?.id || tenant?.unitId) ? (
                           <Link href={`/admin-inventory/units/${tenant?.unit?.id || tenant?.unitId}`} className="text-indigo-600 hover:underline">
@@ -316,7 +307,7 @@ export default function TenantDetailPage() {
                       </div>
                     </div>
                     <div>
-                      <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Floor</div>
+                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Floor</div>
                       <div className="text-sm text-slate-700 mt-1">{tenant?.unit?.floor || "—"}</div>
                     </div>
                   </div>
@@ -365,9 +356,9 @@ export default function TenantDetailPage() {
                               <td>{l.startDate ? new Date(l.startDate).toLocaleDateString("de-CH") : "—"}</td>
                               <td>{l.endDate ? new Date(l.endDate).toLocaleDateString("de-CH") : "—"}</td>
                               <td>
-                                <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600">
+                                <Badge variant={leaseVariant(l.status)} size="sm">
                                   {l.status}
-                                </span>
+                                </Badge>
                               </td>
                               <td className="text-right">
                                 {l.netRentChf != null ? `CHF ${l.netRentChf}.-` : "—"}
@@ -407,9 +398,9 @@ export default function TenantDetailPage() {
                               </td>
                               <td>{inv.dueDate ? new Date(inv.dueDate).toLocaleDateString("de-CH") : "—"}</td>
                               <td>
-                                <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600">
+                                <Badge variant={invoiceVariant(inv.status)} size="sm">
                                   {inv.status}
-                                </span>
+                                </Badge>
                               </td>
                             </tr>
                           ))}

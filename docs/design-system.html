@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Maintenance Agent — Design System</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
+  :root {
+    --bg:#0a0c10; --surface:#111318; --surface2:#181c24;
+    --border:#1e2433; --border2:#2a3045;
+    --text:#c8d0e0; --text-dim:#5a6580; --text-bright:#eef0f5;
+    --accent-blue:#3d7eff; --accent-cyan:#00d4c8; --accent-amber:#f5a623;
+    --accent-green:#2ecc8a; --accent-purple:#9b6dff; --accent-red:#ff5a5a;
+    --line:rgba(255,255,255,0.06);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-serif;font-size:13px;line-height:1.5;min-height:100vh}
+  body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0}
+  .page{position:relative;z-index:1;max-width:1400px;margin:0 auto;padding:40px 32px 80px}
+  .header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:36px;padding-bottom:20px;border-bottom:1px solid var(--border2)}
+  .doc-label{font-family:'IBM Plex Mono',mono;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--accent-blue);margin-bottom:8px}
+  .doc-title{font-size:26px;font-weight:600;color:var(--text-bright);letter-spacing:-.02em}
+  .doc-subtitle{font-size:13px;color:var(--text-dim);margin-top:4px}
+  .header-meta{text-align:right;font-family:'IBM Plex Mono',mono;font-size:11px;color:var(--text-dim);line-height:1.8}
+  .meta-val{color:var(--text)}
+  .live-badge{display:inline-flex;align-items:center;gap:5px;background:rgba(245,166,35,.1);border:1px solid rgba(245,166,35,.3);border-radius:3px;padding:2px 8px;font-size:10px;color:#f5c060;font-family:'IBM Plex Mono',mono;margin-bottom:6px}
+  .stat-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:6px;overflow:hidden;margin-bottom:24px}
+  .stat-cell{background:var(--surface);padding:14px;text-align:center}
+  .stat-num{font-family:'IBM Plex Mono',mono;font-size:22px;font-weight:600;color:var(--text-bright);display:block;line-height:1;margin-bottom:4px}
+  .stat-num.amber{color:var(--accent-amber)}.stat-num.green{color:var(--accent-green)}.stat-num.blue{color:var(--accent-blue)}
+  .stat-label{font-size:10px;color:var(--text-dim);letter-spacing:.08em;text-transform:uppercase}
+  .tab-nav{display:flex;gap:2px;margin-bottom:20px;border-bottom:1px solid var(--border2);position:sticky;top:0;background:var(--bg);z-index:10;padding-top:8px}
+  .tab-btn{padding:7px 14px;font-size:11px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--text-dim);cursor:pointer;border:none;background:none;border-bottom:2px solid transparent;margin-bottom:-1px;font-family:'IBM Plex Mono',mono;transition:all .1s}
+  .tab-btn:hover{color:var(--text)}.tab-btn.active{color:var(--accent-blue);border-bottom-color:var(--accent-blue)}
+  .tab-pane{display:none}.tab-pane.active{display:block}
+  .section{margin-bottom:40px}
+  .section-header{display:flex;align-items:center;gap:10px;margin-bottom:18px}
+  .section-num{font-family:'IBM Plex Mono',mono;font-size:10px;color:var(--accent-blue);letter-spacing:.15em}
+  .section-title{font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--text-bright)}
+  .section-line{flex:1;height:1px;background:var(--border2)}
+  .preview{background:#ffffff;border-radius:6px;padding:20px;margin-top:12px;color:#0f172a}
+  .conflict-box{background:rgba(245,166,35,.06);border:1px solid rgba(245,166,35,.25);border-radius:6px;padding:16px;margin-bottom:16px}
+  .conflict-box-header{display:flex;align-items:center;gap:8px;margin-bottom:12px;font-family:'IBM Plex Mono',mono;font-size:12px;font-weight:600;color:#f5c060}
+  .conflict-box-header .num{background:rgba(245,166,35,.15);border-radius:3px;padding:2px 6px;font-size:10px}
+  .conflict-box-rec{margin-top:10px;padding:8px 10px;background:rgba(245,166,35,.08);border-radius:4px;font-family:'IBM Plex Mono',mono;font-size:11px;color:#c8a050}
+  .decided-box{background:rgba(46,204,138,.06);border:1px solid rgba(46,204,138,.25);border-radius:6px;padding:16px;margin-bottom:16px}
+  .decided-box-header{display:flex;align-items:center;gap:8px;margin-bottom:12px;font-family:'IBM Plex Mono',mono;font-size:12px;font-weight:600;color:#5ed9a0}
+  .decided-box-header .num{background:rgba(46,204,138,.15);border-radius:3px;padding:2px 6px;font-size:10px}
+  .decided-box-rec{margin-top:10px;padding:8px 10px;background:rgba(46,204,138,.08);border-radius:4px;font-family:'IBM Plex Mono',mono;font-size:11px;color:#70c8a0}
+  .ref-box{background:rgba(46,204,138,.05);border:1px solid rgba(46,204,138,.2);border-radius:6px;padding:16px;margin-bottom:16px}
+  .ref-box-header{display:flex;align-items:center;gap:8px;margin-bottom:12px;font-family:'IBM Plex Mono',mono;font-size:12px;font-weight:600;color:#5ed9a0}
+  .variant-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .variant-grid.three{grid-template-columns:1fr 1fr 1fr}
+  .variant-grid.four{grid-template-columns:1fr 1fr 1fr 1fr}
+  .variant-label{font-family:'IBM Plex Mono',mono;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-dim);margin-bottom:8px}
+  .code{background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:8px 10px;font-family:'IBM Plex Mono',mono;font-size:11px;color:var(--text);line-height:1.6;margin-top:6px;overflow-x:auto;white-space:pre-wrap;word-break:break-all}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div>
+      <div class="live-badge" style="background:rgba(46,204,138,.1);border-color:rgba(46,204,138,.3);color:#60d0a0">&#10003; 12 DECIDED</div>
+      <div class="doc-label">Design System &#183; Component Reference</div>
+      <div class="doc-title">Maintenance Agent &#8212; Design System</div>
+      <div class="doc-subtitle">Audited patterns from apps/web &#8212; Tailwind @apply single source of truth &#183; globals.css component aliases &#183; lucide-react icons</div>
+    </div>
+    <div class="header-meta">
+      <div>Source <span class="meta-val">design-system-audit.md</span></div>
+      <div>Date <span class="meta-val">2026-04-14</span></div>
+      <div>Components <span class="meta-val">~274 pages</span></div>
+      <div>Decided <span class="meta-val" style="color:#60d0a0">11</span> &#183; Open <span class="meta-val" style="color:#f5c060">1</span></div>
+    </div>
+  </div>
+
+  <!-- STAT STRIP -->
+  <div class="stat-grid">
+    <div class="stat-cell"><span class="stat-num green">12</span><span class="stat-label">Conflicts Decided</span></div>
+    <div class="stat-cell"><span class="stat-num green">0</span><span class="stat-label">Open</span></div>
+    <div class="stat-cell"><span class="stat-num blue">23</span><span class="stat-label">Semantic Tokens</span></div>
+    <div class="stat-cell"><span class="stat-num green">10</span><span class="stat-label">UI Primitives</span></div>
+    <div class="stat-cell"><span class="stat-num blue">78</span><span class="stat-label">@apply Classes</span></div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tab-nav">
+    <button class="tab-btn active" onclick="switchTab('atoms',this)">Atoms</button>
+    <button class="tab-btn" onclick="switchTab('molecules',this)">Molecules</button>
+    <button class="tab-btn" onclick="switchTab('organisms',this)">Organisms</button>
+  </div>
+
+  <!-- ====== ATOMS ====== -->
+  <div class="tab-pane active" id="tab-atoms">
+
+    <!-- COLOR PALETTE -->
+    <div class="section">
+      <div class="section-header"><span class="section-num">A01</span><span class="section-title">Color Palette</span><div class="section-line"></div></div>
+
+      <!-- CONFLICT #1 -->
+      <div class="decided-box">
+        <div class="decided-box-header"><span class="num">#1</span> &#10003; DECIDED &#8212; gray-* vs slate-*</div>
+        <div>
+            <div class="variant-label">Standard &#8212; slate-*</div>
+            <div class="preview">
+              <div class="flex gap-2 flex-wrap">
+                <div class="flex flex-col items-center"><div class="w-12 h-12 rounded bg-slate-50 border border-slate-200"></div><div class="text-[9px] text-slate-500 mt-1">slate-50</div></div>
+                <div class="flex flex-col items-center"><div class="w-12 h-12 rounded bg-slate-100 border border-slate-200"></div><div class="text-[9px] text-slate-500 mt-1">slate-100</div></div>
+                <div class="flex flex-col items-center"><div class="w-12 h-12 rounded bg-slate-200 border border-slate-200"></div><div class="text-[9px] text-slate-500 mt-1">slate-200</div></div>
+                <div class="flex flex-col items-center"><div class="w-12 h-12 rounded bg-slate-300"></div><div class="text-[9px] text-slate-500 mt-1">slate-300</div></div>
+                <div class="flex flex-col items-center"><div class="w-12 h-12 rounded bg-slate-500"></div><div class="text-[9px] text-slate-500 mt-1">slate-500</div></div>
+                <div class="flex flex-col items-center"><div class="w-12 h-12 rounded bg-slate-600"></div><div class="text-[9px] text-slate-500 mt-1">slate-600</div></div>
+                <div class="flex flex-col items-center"><div class="w-12 h-12 rounded bg-slate-900"></div><div class="text-[9px] text-slate-500 mt-1">slate-900</div></div>
+              </div>
+            </div>
+        </div>
+        <div class="decided-box-rec">&#10003; <strong>slate-*</strong> &#8212; 1 633 hits / 55 files vs gray-* 375 / 25 (4.4&#215;). Migrate 25 files.</div>
+      </div>
+
+      <!-- Reference: accent scales -->
+      <div class="ref-box">
+        <div class="ref-box-header">&#10003; REFERENCE &#8212; Accent Color Scales</div>
+        <div class="preview">
+          <div class="grid grid-cols-6 gap-3 text-[10px]">
+            <div><div class="font-semibold text-slate-700 mb-2">Indigo</div><div class="space-y-1"><div class="flex items-center gap-2"><div class="w-8 h-5 rounded bg-indigo-100"></div> 100</div><div class="flex items-center gap-2"><div class="w-8 h-5 rounded bg-indigo-400"></div> 400</div><div class="flex items-center gap-2"><div class="w-8 h-5 rounded bg-indigo-600"></div> 600</div></div></div>
+            <div><div class="font-semibold text-slate-700 mb-2">Blue</div><div class="space-y-1"><div class="flex items-center gap-2"><div class="w-8 h-5 rounded bg-blue-100"></div> 100</div><div class="flex items-center gap-2"><div class="w-8 h-5 rounded bg-blue-400"></div> 400</div><div class="flex items-center gap-2"><div class="w-8 h-5 rounded bg-blue-600"></div> 600</div></div></div>
+            <div><div class="font-semibold text-slate-700 mb-2">Green / Emerald</div><div class="space-y-1"><div class="flex items-center gap-2"><div class="w-8 h-5 rounded bg-green-100"></div> green-100</div><div class="flex items-center gap-2"><div class="w-8 h-5 rounded bg-emerald-100"></div> emerald-100</div><div class="flex items-center gap-2"><div class="w-8 h-5 rounded bg-green-700"></div> green-700</div><div class="flex items-center gap-2"><div class="w-8 h-5 rounded bg-emerald-700"></div> emerald-700</div></div></div>
+            <div><div class="font-semibold text-slate-700 mb-2">Red</div><div class="space-y-1"><div class="flex items-center gap-2"><div class="w-8 h-5 rounded bg-red-100"></div> 100</div><div class="flex items-center gap-2"><div class="w-8 h-5 rounded bg-red-500"></div> 500</div><div class="flex items-center gap-2"><div class="w-8 h-5 rounded bg-red-700"></div> 700</div></div></div>
+            <div><div class="font-semibold text-slate-700 mb-2">Amber / Orange</div><div class="space-y-1"><div class="flex items-center gap-2"><div class="w-8 h-5 rounded bg-amber-100"></div> amber-100</div><div class="flex items-center gap-2"><div class="w-8 h-5 rounded bg-amber-500"></div> amber-500</div><div class="flex items-center gap-2"><div class="w-8 h-5 rounded bg-orange-100"></div> orange-100</div><div class="flex items-center gap-2"><div class="w-8 h-5 rounded bg-orange-700"></div> orange-700</div></div></div>
+            <div><div class="font-semibold text-slate-700 mb-2">Purple / Teal</div><div class="space-y-1"><div class="flex items-center gap-2"><div class="w-8 h-5 rounded bg-purple-100"></div> purple-100</div><div class="flex items-center gap-2"><div class="w-8 h-5 rounded bg-purple-700"></div> purple-700</div><div class="flex items-center gap-2"><div class="w-8 h-5 rounded bg-teal-100"></div> teal-100</div><div class="flex items-center gap-2"><div class="w-8 h-5 rounded bg-teal-700"></div> teal-700</div></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Reference: hardcoded hex -->
+      <div class="ref-box">
+        <div class="ref-box-header">&#10003; REFERENCE &#8212; Hardcoded Hex Values (migrate to Tailwind)</div>
+        <div class="preview">
+          <div class="grid grid-cols-4 gap-3 text-[10px]">
+            <div><div class="font-semibold text-slate-700 mb-2">AppShell.js</div><div class="flex items-center gap-2 mb-1"><div class="w-8 h-5 rounded border" style="background:#f7f7f8"></div> #f7f7f8 (page bg)</div><div class="flex items-center gap-2 mb-1"><div class="w-8 h-5 rounded" style="background:#111"></div> #111 (text)</div><div class="flex items-center gap-2"><div class="w-8 h-5 rounded border" style="background:#e5e5e5"></div> #e5e5e5 (border)</div></div>
+            <div><div class="font-semibold text-slate-700 mb-2">TenantPicker.js</div><div class="flex items-center gap-2 mb-1"><div class="w-8 h-5 rounded" style="background:#fff8e1"></div> #fff8e1 (yellow bg)</div><div class="flex items-center gap-2"><div class="w-8 h-5 rounded" style="background:#e8f5e9"></div> #e8f5e9 (green bg)</div></div>
+            <div><div class="font-semibold text-slate-700 mb-2">ContractorPicker.js</div><div class="flex items-center gap-2"><div class="w-8 h-5 rounded" style="background:#e3f2fd"></div> #e3f2fd (blue bg)</div></div>
+            <div><div class="font-semibold text-slate-700 mb-2">NotificationBell.js</div><div class="flex items-center gap-2"><div class="w-8 h-5 rounded" style="background:#dc2626"></div> #dc2626 (red badge)</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TYPOGRAPHY -->
+    <div class="section">
+      <div class="section-header"><span class="section-num">A02</span><span class="section-title">Typography</span><div class="section-line"></div></div>
+      <div class="ref-box">
+        <div class="ref-box-header">&#10003; REFERENCE &#8212; Type Scale</div>
+        <div class="preview">
+          <div class="space-y-4">
+            <div class="flex items-baseline gap-4 border-b border-slate-100 pb-3"><span class="text-[10px] font-mono text-slate-400 w-28 shrink-0">Page title</span><span class="text-xl font-bold text-slate-900">Page Heading</span><code class="text-[10px] text-slate-400 ml-auto">text-xl font-bold text-slate-900</code></div>
+            <div class="flex items-baseline gap-4 border-b border-slate-100 pb-3"><span class="text-[10px] font-mono text-slate-400 w-28 shrink-0">Panel heading</span><span class="text-sm font-semibold text-slate-900">Card Header</span><code class="text-[10px] text-slate-400 ml-auto">text-sm font-semibold text-slate-900</code></div>
+            <div class="flex items-baseline gap-4 border-b border-slate-100 pb-3"><span class="text-[10px] font-mono text-slate-400 w-28 shrink-0">Subsection</span><span class="text-sm font-semibold text-slate-800">Section Label</span><code class="text-[10px] text-slate-400 ml-auto">text-sm font-semibold text-slate-800</code></div>
+            <div class="flex items-baseline gap-4 border-b border-slate-100 pb-3"><span class="text-[10px] font-mono text-slate-400 w-28 shrink-0">Column header</span><span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Column Header</span><code class="text-[10px] text-slate-400 ml-auto">text-xs font-semibold uppercase tracking-wider</code></div>
+            <div class="flex items-baseline gap-4 border-b border-slate-100 pb-3"><span class="text-[10px] font-mono text-slate-400 w-28 shrink-0">Body text</span><span class="text-sm text-slate-600">Standard content paragraph text</span><code class="text-[10px] text-slate-400 ml-auto">text-sm text-slate-600</code></div>
+            <div class="flex items-baseline gap-4 border-b border-slate-100 pb-3"><span class="text-[10px] font-mono text-slate-400 w-28 shrink-0">Secondary</span><span class="text-xs text-slate-500">Metadata or secondary info</span><code class="text-[10px] text-slate-400 ml-auto">text-xs text-slate-500</code></div>
+            <div class="flex items-baseline gap-4 border-b border-slate-100 pb-3"><span class="text-[10px] font-mono text-slate-400 w-28 shrink-0">Micro text</span><span class="text-[11px] text-slate-400">Table subtext or tiny labels</span><code class="text-[10px] text-slate-400 ml-auto">text-[11px] text-slate-400</code></div>
+            <div class="flex items-baseline gap-4 border-b border-slate-100 pb-3"><span class="text-[10px] font-mono text-slate-400 w-28 shrink-0">Monospace</span><span class="font-mono text-xs text-slate-700">CH44 3199 9123 0008 8901 2</span><code class="text-[10px] text-slate-400 ml-auto">font-mono text-xs</code></div>
+            <div class="flex items-baseline gap-4 border-b border-slate-100 pb-3"><span class="text-[10px] font-mono text-slate-400 w-28 shrink-0">Form label</span><span class="text-xs font-medium text-slate-600">Input Label</span><code class="text-[10px] text-slate-400 ml-auto">text-xs font-medium text-slate-600 mb-1</code></div>
+            <div class="flex items-baseline gap-4"><span class="text-[10px] font-mono text-slate-400 w-28 shrink-0">Table header</span><span class="text-[11px] font-medium uppercase tracking-wider text-slate-400">TH CELLS</span><code class="text-[10px] text-slate-400 ml-auto">text-[11px] font-medium uppercase tracking-wider text-slate-400</code></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BUTTONS -->
+    <div class="section">
+      <div class="section-header"><span class="section-num">A03</span><span class="section-title">Buttons</span><div class="section-line"></div></div>
+
+      <!-- CONFLICT #2 -->
+      <div class="decided-box">
+        <div class="decided-box-header"><span class="num">#2</span> &#10003; DECIDED &#8212; Button border-radius</div>
+        <div><div class="variant-label">Standard &#8212; rounded-lg</div><div class="preview"><button class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium">Action</button></div></div>
+        <div class="decided-box-rec">&#10003; <strong>rounded-lg</strong> &#8212; 423 hits / 51 files vs rounded-md 84 / 15 (5&#215;)</div>
+      </div>
+
+      <!-- CONFLICT #3 -->
+      <div class="decided-box">
+        <div class="decided-box-header"><span class="num">#3</span> &#10003; DECIDED &#8212; Primary button color</div>
+        <div><div class="variant-label">Standard &#8212; bg-blue-600</div><div class="preview"><button class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition">Primary Action</button></div><div class="code">bg-blue-600 text-white hover:bg-blue-700</div></div>
+        <div class="decided-box-rec">&#10003; <strong>bg-blue-600</strong> &#8212; 43 hits / 25 files vs bg-slate-900 12 / 8. bg-gray-900 already gone (0 hits).</div>
+      </div>
+
+      <!-- CONFLICT #4 -->
+      <div class="decided-box">
+        <div class="decided-box-header"><span class="num">#4</span> &#10003; DECIDED &#8212; Button padding sizes</div>
+        <div class="variant-grid three">
+          <div><div class="variant-label">sm &#8212; px-3 py-1.5 text-xs</div><div class="preview"><button class="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-blue-700 transition">Small</button></div></div>
+          <div><div class="variant-label">md &#8212; px-4 py-2 text-sm</div><div class="preview"><button class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition">Medium</button></div></div>
+          <div><div class="variant-label">lg &#8212; px-5 py-2.5 text-sm</div><div class="preview"><button class="bg-blue-600 text-white px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 transition">Large</button></div></div>
+        </div>
+        <div class="decided-box-rec">&#10003; <strong>3 sizes</strong>: sm (px-3 py-1.5 &#183; 50 hits) &#183; md (px-4 py-2 &#183; 128 hits) &#183; lg (px-5 py-2.5). Drop px-2.5 py-1 (13 hits).</div>
+      </div>
+
+      <!-- Reference: button variants — all types at consistent height per size -->
+      <div class="ref-box">
+        <div class="ref-box-header">&#10003; REFERENCE &#8212; Button Variants (consistent height per size)</div>
+        <div class="preview">
+          <!-- md (default) -->
+          <div class="mb-1"><span class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">md &#8212; px-4 py-2 text-sm &#183; h-[36px]</span></div>
+          <div class="flex flex-wrap items-center gap-3 mb-5">
+            <div class="text-center"><button class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition">Primary</button><div class="text-[9px] text-slate-400 mt-1">Primary</div></div>
+            <div class="text-center"><button class="border border-slate-200 bg-white text-slate-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-50 transition">Secondary</button><div class="text-[9px] text-slate-400 mt-1">Secondary</div></div>
+            <div class="text-center"><button class="text-slate-600 hover:text-slate-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-100 transition">Ghost</button><div class="text-[9px] text-slate-400 mt-1">Ghost</div></div>
+            <div class="text-center"><button class="border border-red-200 bg-white text-red-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-50 transition">Danger</button><div class="text-[9px] text-slate-400 mt-1">Danger</div></div>
+            <div class="text-center"><button class="text-slate-400 hover:text-slate-600 p-2 rounded-lg hover:bg-slate-100 transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/></svg></button><div class="text-[9px] text-slate-400 mt-1">Icon</div></div>
+            <div class="text-center"><button class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium opacity-50 cursor-not-allowed" disabled>Disabled</button><div class="text-[9px] text-slate-400 mt-1">Disabled</div></div>
+          </div>
+          <!-- sm -->
+          <div class="mb-1"><span class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">sm &#8212; px-3 py-1.5 text-xs &#183; h-[28px]</span></div>
+          <div class="flex flex-wrap items-center gap-3">
+            <div class="text-center"><button class="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-blue-700 transition">Primary</button><div class="text-[9px] text-slate-400 mt-1">Primary</div></div>
+            <div class="text-center"><button class="border border-slate-200 bg-white text-slate-600 px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-slate-50 transition">Secondary</button><div class="text-[9px] text-slate-400 mt-1">Secondary</div></div>
+            <div class="text-center"><button class="text-slate-600 hover:text-slate-700 px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-slate-100 transition">Ghost</button><div class="text-[9px] text-slate-400 mt-1">Ghost</div></div>
+            <div class="text-center"><button class="border border-red-200 bg-white text-red-600 px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-red-50 transition">Danger</button><div class="text-[9px] text-slate-400 mt-1">Danger</div></div>
+            <div class="text-center"><button class="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 transition"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/></svg></button><div class="text-[9px] text-slate-400 mt-1">Icon</div></div>
+            <div class="text-center"><button class="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium opacity-50 cursor-not-allowed" disabled>Disabled</button><div class="text-[9px] text-slate-400 mt-1">Disabled</div></div>
+          </div>
+        </div>
+        <div class="code">/* ── Sizing (all variants use the same tier) ──────────────── */
+/* md (default) */  px-4 py-2  text-sm  font-medium  rounded-lg    /* ~36 px h */
+/* sm */            px-3 py-1.5 text-xs font-medium  rounded-lg    /* ~28 px h */
+/* lg */            px-5 py-2.5 text-sm font-medium  rounded-lg    /* ~40 px h */
+/* icon md */       p-2  w-5 h-5                                   /* 36 px h  */
+/* icon sm */       p-1.5 w-4 h-4                                  /* 28 px h  */
+
+/* ── Color by type (same at every size) ───────────────────── */
+/* Primary */    bg-blue-600 text-white hover:bg-blue-700
+/* Secondary */  border border-slate-200 bg-white text-slate-600 hover:bg-slate-50
+/* Ghost */      text-slate-600 hover:text-slate-700 hover:bg-slate-100
+/* Danger */     border border-red-200 bg-white text-red-600 hover:bg-red-50
+/* Icon */       text-slate-400 hover:text-slate-600 hover:bg-slate-100
+/* Disabled */   any variant + opacity-50 cursor-not-allowed</div>
+      </div>
+    </div>
+
+    <!-- BADGES / STATUS PILLS -->
+    <div class="section">
+      <div class="section-header"><span class="section-num">A04</span><span class="section-title">Badges / Status Pills</span><div class="section-line"></div></div>
+
+      <!-- CONFLICT #5 -->
+      <div class="decided-box">
+        <div class="decided-box-header"><span class="num">#5</span> &#10003; DECIDED &#8212; Badge border-radius</div>
+        <div><div class="variant-label">Standard &#8212; rounded-full</div><div class="preview"><div class="flex gap-2"><span class="rounded-full px-2 py-0.5 text-xs font-semibold bg-blue-100 text-blue-700">APPROVED</span><span class="rounded-full px-2 py-0.5 text-xs font-semibold bg-green-100 text-green-700">COMPLETED</span><span class="rounded-full px-2 py-0.5 text-xs font-semibold bg-red-100 text-red-700">REJECTED</span></div></div></div>
+        <div class="decided-box-rec">&#10003; <strong>rounded-full</strong> &#8212; 151 hits / 46 files vs rounded border 39 / 12 (3.9&#215;)</div>
+      </div>
+
+      <!-- CONFLICT #6 -->
+      <div class="decided-box">
+        <div class="decided-box-header"><span class="num">#6</span> &#10003; DECIDED &#8212; Badge border</div>
+        <div class="variant-grid">
+          <div><div class="variant-label">Standard status &#8212; no border</div><div class="preview"><div class="flex gap-2"><span class="rounded-full px-2 py-0.5 text-xs font-semibold bg-amber-100 text-amber-800">PENDING</span><span class="rounded-full px-2 py-0.5 text-xs font-semibold bg-blue-100 text-blue-700">ASSIGNED</span><span class="rounded-full px-2 py-0.5 text-xs font-semibold bg-green-100 text-green-700">PAID</span></div></div></div>
+          <div><div class="variant-label">Emphasis (urgency, RFP) &#8212; with border</div><div class="preview"><div class="flex gap-2"><span class="rounded-full border border-blue-200 px-2 py-0.5 text-xs font-medium bg-blue-50 text-blue-700">OPEN</span><span class="rounded-full border border-green-200 px-2 py-0.5 text-xs font-medium bg-green-50 text-green-700">AWARDED</span><span class="rounded-full border border-red-200 px-2 py-0.5 text-xs font-medium bg-red-50 text-red-600">EMERGENCY</span></div></div></div>
+        </div>
+        <div class="decided-box-rec">&#10003; <strong>Bordered for emphasis</strong> (urgency, RFP) &#183; <strong>borderless for standard</strong> status. 332 bordered hits in 49 files.</div>
+      </div>
+
+      <!-- Reference: all status colors -->
+      <div class="ref-box">
+        <div class="ref-box-header">&#10003; REFERENCE &#8212; Status Color Mappings</div>
+        <div class="preview">
+
+          <!-- ── Semantic Palette ── -->
+          <div class="mb-6">
+            <div class="text-xs font-semibold text-slate-700 mb-3 uppercase tracking-wider">Semantic Palette &#8212; 5 bands, 2 tiers</div>
+            <table class="w-full text-xs mb-3">
+              <thead><tr class="border-b border-slate-100"><th class="text-left text-[10px] font-medium uppercase tracking-wider text-slate-400 px-3 py-2">Band</th><th class="text-left text-[10px] font-medium uppercase tracking-wider text-slate-400 px-3 py-2">Standard (no border)</th><th class="text-left text-[10px] font-medium uppercase tracking-wider text-slate-400 px-3 py-2">Emphasis (bordered)</th><th class="text-left text-[10px] font-medium uppercase tracking-wider text-slate-400 px-3 py-2">Meaning</th></tr></thead>
+              <tbody>
+                <tr class="border-b border-slate-50"><td class="px-3 py-2 font-medium text-slate-600">Neutral</td><td class="px-3 py-2"><span class="rounded-full px-2 py-0.5 text-xs font-semibold bg-slate-100 text-slate-600">LABEL</span></td><td class="px-3 py-2"><span class="rounded-full border border-slate-200 px-2 py-0.5 text-xs font-medium bg-slate-50 text-slate-600">LABEL</span></td><td class="px-3 py-2 text-slate-500">Draft, new, low, inactive</td></tr>
+                <tr class="border-b border-slate-50"><td class="px-3 py-2 font-medium text-amber-700">Warning</td><td class="px-3 py-2"><span class="rounded-full px-2 py-0.5 text-xs font-semibold bg-amber-100 text-amber-700">LABEL</span></td><td class="px-3 py-2"><span class="rounded-full border border-amber-200 px-2 py-0.5 text-xs font-medium bg-amber-50 text-amber-700">LABEL</span></td><td class="px-3 py-2 text-slate-500">Pending, awaiting action</td></tr>
+                <tr class="border-b border-slate-50"><td class="px-3 py-2 font-medium text-blue-700">Info</td><td class="px-3 py-2"><span class="rounded-full px-2 py-0.5 text-xs font-semibold bg-blue-100 text-blue-700">LABEL</span></td><td class="px-3 py-2"><span class="rounded-full border border-blue-200 px-2 py-0.5 text-xs font-medium bg-blue-50 text-blue-700">LABEL</span></td><td class="px-3 py-2 text-slate-500">Active, in progress, open, issued</td></tr>
+                <tr class="border-b border-slate-50"><td class="px-3 py-2 font-medium text-green-700">Success</td><td class="px-3 py-2"><span class="rounded-full px-2 py-0.5 text-xs font-semibold bg-green-100 text-green-700">LABEL</span></td><td class="px-3 py-2"><span class="rounded-full border border-green-200 px-2 py-0.5 text-xs font-medium bg-green-50 text-green-700">LABEL</span></td><td class="px-3 py-2 text-slate-500">Completed, approved, paid, signed</td></tr>
+                <tr class="border-b border-slate-50"><td class="px-3 py-2 font-medium text-red-700">Danger</td><td class="px-3 py-2"><span class="rounded-full px-2 py-0.5 text-xs font-semibold bg-red-100 text-red-700">LABEL</span></td><td class="px-3 py-2"><span class="rounded-full border border-red-200 px-2 py-0.5 text-xs font-medium bg-red-50 text-red-700">LABEL</span></td><td class="px-3 py-2 text-slate-500">Rejected, cancelled, emergency</td></tr>
+                <tr><td class="px-3 py-2 font-medium text-orange-700">High</td><td class="px-3 py-2"><span class="rounded-full px-2 py-0.5 text-xs font-semibold bg-orange-100 text-orange-700">LABEL</span></td><td class="px-3 py-2"><span class="rounded-full border border-orange-200 px-2 py-0.5 text-xs font-medium bg-orange-50 text-orange-700">LABEL</span></td><td class="px-3 py-2 text-slate-500">High urgency only</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- ── Domain Mappings ── -->
+          <div class="mb-4">
+            <div class="text-xs font-semibold text-slate-700 mb-2 uppercase tracking-wider">Request Status</div>
+            <div class="flex flex-wrap gap-2">
+              <span class="rounded-full px-2 py-0.5 text-xs font-semibold bg-slate-100 text-slate-600">PENDING_REVIEW</span>
+              <span class="rounded-full px-2 py-0.5 text-xs font-semibold bg-amber-100 text-amber-700">PENDING_OWNER_APPROVAL</span>
+              <span class="rounded-full px-2 py-0.5 text-xs font-semibold bg-blue-100 text-blue-700">RFP_PENDING</span>
+              <span class="rounded-full px-2 py-0.5 text-xs font-semibold bg-green-100 text-green-700">AUTO_APPROVED</span>
+              <span class="rounded-full px-2 py-0.5 text-xs font-semibold bg-blue-100 text-blue-700">IN_PROGRESS</span>
+              <span class="rounded-full px-2 py-0.5 text-xs font-semibold bg-green-100 text-green-700">COMPLETED</span>
+              <span class="rounded-full px-2 py-0.5 text-xs font-semibold bg-red-100 text-red-700">REJECTED</span>
+            </div>
+          </div>
+          <div class="mb-4">
+            <div class="text-xs font-semibold text-slate-700 mb-2 uppercase tracking-wider">Invoice Status</div>
+            <div class="flex flex-wrap gap-2">
+              <span class="rounded-full px-2 py-0.5 text-xs font-semibold bg-slate-100 text-slate-600">DRAFT</span>
+              <span class="rounded-full px-2 py-0.5 text-xs font-semibold bg-blue-100 text-blue-700">ISSUED</span>
+              <span class="rounded-full px-2 py-0.5 text-xs font-semibold bg-green-100 text-green-700">APPROVED</span>
+              <span class="rounded-full px-2 py-0.5 text-xs font-semibold bg-green-100 text-green-700">PAID</span>
+              <span class="rounded-full px-2 py-0.5 text-xs font-semibold bg-red-100 text-red-700">DISPUTED</span>
+            </div>
+          </div>
+          <div class="mb-4">
+            <div class="text-xs font-semibold text-slate-700 mb-2 uppercase tracking-wider">Urgency (bordered emphasis)</div>
+            <div class="flex flex-wrap gap-2">
+              <span class="rounded-full border border-red-200 px-2 py-0.5 text-xs font-medium bg-red-50 text-red-700">EMERGENCY</span>
+              <span class="rounded-full border border-orange-200 px-2 py-0.5 text-xs font-medium bg-orange-50 text-orange-700">HIGH</span>
+              <span class="rounded-full px-2 py-0.5 text-xs font-semibold bg-blue-100 text-blue-700">MEDIUM</span>
+              <span class="rounded-full px-2 py-0.5 text-xs font-semibold bg-slate-100 text-slate-600">LOW</span>
+            </div>
+          </div>
+          <div class="mb-4">
+            <div class="text-xs font-semibold text-slate-700 mb-2 uppercase tracking-wider">RFP Status (bordered emphasis)</div>
+            <div class="flex flex-wrap gap-2">
+              <span class="rounded-full border border-slate-200 px-2 py-0.5 text-xs font-medium bg-slate-50 text-slate-600">DRAFT</span>
+              <span class="rounded-full border border-blue-200 px-2 py-0.5 text-xs font-medium bg-blue-50 text-blue-700">OPEN</span>
+              <span class="rounded-full border border-green-200 px-2 py-0.5 text-xs font-medium bg-green-50 text-green-700">AWARDED</span>
+              <span class="rounded-full border border-amber-200 px-2 py-0.5 text-xs font-medium bg-amber-50 text-amber-700">PENDING_OWNER_APPROVAL</span>
+              <span class="rounded-full border border-slate-200 px-2 py-0.5 text-xs font-medium bg-slate-50 text-slate-600">CLOSED</span>
+              <span class="rounded-full border border-red-200 px-2 py-0.5 text-xs font-medium bg-red-50 text-red-700">CANCELLED</span>
+            </div>
+          </div>
+          <div class="mb-4">
+            <div class="text-xs font-semibold text-slate-700 mb-2 uppercase tracking-wider">Lease Status</div>
+            <div class="flex flex-wrap gap-2">
+              <span class="rounded-full px-2 py-0.5 text-xs font-semibold bg-slate-100 text-slate-600">DRAFT</span>
+              <span class="rounded-full px-2 py-0.5 text-xs font-semibold bg-blue-100 text-blue-700">READY_TO_SIGN</span>
+              <span class="rounded-full px-2 py-0.5 text-xs font-semibold bg-green-100 text-green-700">SIGNED</span>
+            </div>
+          </div>
+          <div>
+            <div class="text-xs font-semibold text-slate-700 mb-2 uppercase tracking-wider">Ingestion Status</div>
+            <div class="flex flex-wrap gap-2">
+              <span class="rounded-full px-2 py-0.5 text-xs font-semibold bg-amber-100 text-amber-700">PENDING_REVIEW</span>
+              <span class="rounded-full px-2 py-0.5 text-xs font-semibold bg-green-100 text-green-700">AUTO_CONFIRMED</span>
+              <span class="rounded-full px-2 py-0.5 text-xs font-semibold bg-green-100 text-green-700">CONFIRMED</span>
+              <span class="rounded-full px-2 py-0.5 text-xs font-semibold bg-red-100 text-red-700">REJECTED</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="code">/* ── Semantic Palette (always pick from these 6 bands) ──────── */
+/* Standard (no border):  bg-{color}-100  text-{color}-700  font-semibold       */
+/* Emphasis (bordered):   bg-{color}-50   border-{color}-200  text-{color}-700  font-medium */
+/* Exception:             Neutral text uses -600 (slate-600 is more readable)    */
+
+/*  Band     │  Bg-100      │  Text-700      │  Use for                         */
+/*  Neutral  │  slate-100   │  slate-600     │  draft, new, low, inactive       */
+/*  Warning  │  amber-100   │  amber-700     │  pending, awaiting action        */
+/*  Info     │  blue-100    │  blue-700      │  active, in progress, open       */
+/*  Success  │  green-100   │  green-700     │  completed, approved, paid       */
+/*  Danger   │  red-100     │  red-700       │  rejected, cancelled, emergency  */
+/*  High     │  orange-100  │  orange-700    │  high urgency only               */
+
+/* ⛔ Deprecated: emerald-100/700 → use green-100/700                           */
+/* ⛔ Deprecated: amber-800, green-800, red-600 → use -700 for all text         */</div>
+      </div>
+    </div>
+
+    <!-- FORM CONTROLS -->
+    <div class="section">
+      <div class="section-header"><span class="section-num">A05</span><span class="section-title">Form Controls</span><div class="section-line"></div></div>
+
+      <!-- CONFLICT #7 -->
+      <div class="decided-box">
+        <div class="decided-box-header"><span class="num">#7</span> &#10003; DECIDED &#8212; Input border color</div>
+        <div><div class="variant-label">Standard &#8212; border-slate-200</div><div class="preview"><label class="block text-xs font-medium text-slate-600 mb-1">Label</label><input type="text" placeholder="Standard input" class="border border-slate-200 rounded-lg px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-indigo-500"></div></div>
+        <div class="decided-box-rec">&#10003; <strong>border-slate-200</strong> &#8212; 249 hits / 43 files vs border-slate-300 77 / 19 (3.2&#215;). border-gray-300 negligible (15). Unify on slate-200.</div>
+      </div>
+
+      <!-- CONFLICT #8 -->
+      <div class="decided-box">
+        <div class="decided-box-header"><span class="num">#8</span> &#10003; DECIDED &#8212; Input border-radius</div>
+        <div><div class="variant-label">Standard &#8212; rounded-lg</div><div class="preview"><input type="text" placeholder="rounded-lg" class="border border-slate-200 rounded-lg px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-indigo-500"></div></div>
+        <div class="decided-box-rec">&#10003; <strong>rounded-lg</strong> &#8212; 423 / 51 vs rounded-md 84 / 15 (same as #2)</div>
+      </div>
+
+      <!-- CONFLICT #9 -->
+      <div class="decided-box">
+        <div class="decided-box-header"><span class="num">#9</span> &#10003; DECIDED &#8212; Focus ring color</div>
+        <div><div class="variant-label">Standard &#8212; focus:ring-2 focus:ring-indigo-500</div><div class="preview"><input type="text" placeholder="Click to focus" class="border border-slate-200 rounded-lg px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-indigo-500"></div></div>
+        <div class="decided-box-rec">&#10003; <strong>focus:ring-2 focus:ring-indigo-500</strong> &#8212; ring-indigo-400 leads (23 hits) but consolidate on 500. ring-blue-400 already gone.</div>
+      </div>
+
+      <!-- Reference: form controls -->
+      <div class="ref-box">
+        <div class="ref-box-header">&#10003; REFERENCE &#8212; Form Control Variants</div>
+        <div class="preview">
+          <div class="grid grid-cols-2 gap-6">
+            <div><div class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-2">Text Input</div><label class="block text-xs font-medium text-slate-600 mb-1">Full name</label><input type="text" placeholder="Enter value" class="border border-slate-200 rounded-lg px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-indigo-500"></div>
+            <div><div class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-2">Select</div><label class="block text-xs font-medium text-slate-600 mb-1">Category</label><select class="border border-slate-200 rounded-lg px-3 py-2 bg-white text-sm w-full focus:outline-none focus:ring-2 focus:ring-indigo-500"><option>Plumbing</option><option>Electrical</option><option>HVAC</option></select></div>
+            <div><div class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-2">Search Input</div><div class="relative"><svg class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg><input type="text" placeholder="Search requests..." class="w-full rounded-lg border border-slate-200 py-2 pl-10 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"></div></div>
+            <div><div class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-2">Date Input</div><label class="block text-xs font-medium text-slate-600 mb-1">Start date</label><input type="date" class="h-9 appearance-none rounded-lg border border-slate-200 bg-white px-3 py-2 leading-tight text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 w-full"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ICONS & SHADOWS -->
+    <div class="section">
+      <div class="section-header"><span class="section-num">A06</span><span class="section-title">Icons &amp; Shadow Scale</span><div class="section-line"></div></div>
+
+      <!-- Icon Library -->
+      <div class="ref-box">
+        <div class="ref-box-header">&#10003; REFERENCE &#8212; Icon Library (lucide-react)</div>
+        <div class="preview">
+          <!-- Size scale -->
+          <div class="mb-5">
+            <div class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-3">Size Scale</div>
+            <div class="flex items-end gap-6">
+              <div class="flex flex-col items-center gap-1"><svg class="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6l4 2"/><circle cx="12" cy="12" r="10"/></svg><span class="text-[9px] text-slate-400">16px inline</span></div>
+              <div class="flex flex-col items-center gap-1"><svg class="w-[18px] h-[18px] text-slate-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6l4 2"/><circle cx="12" cy="12" r="10"/></svg><span class="text-[9px] text-slate-400">18px nav</span></div>
+              <div class="flex flex-col items-center gap-1"><svg class="w-5 h-5 text-slate-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6l4 2"/><circle cx="12" cy="12" r="10"/></svg><span class="text-[9px] text-slate-400">20px action</span></div>
+              <div class="flex flex-col items-center gap-1"><svg class="w-6 h-6 text-slate-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6l4 2"/><circle cx="12" cy="12" r="10"/></svg><span class="text-[9px] text-slate-400">24px display</span></div>
+            </div>
+          </div>
+
+          <!-- Navigation icons (sidebar) -->
+          <div class="mb-5">
+            <div class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-3">Navigation &#8212; Sidebar (18px)</div>
+            <div class="flex flex-wrap gap-5">
+              <div class="flex flex-col items-center gap-1.5"><svg class="w-[18px] h-[18px] text-slate-600 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg><span class="text-[9px] text-slate-400">LayoutDashboard</span></div>
+              <div class="flex flex-col items-center gap-1.5"><svg class="w-[18px] h-[18px] text-slate-600 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg><span class="text-[9px] text-slate-400">Wrench</span></div>
+              <div class="flex flex-col items-center gap-1.5"><svg class="w-[18px] h-[18px] text-slate-600 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 22V4a2 2 0 012-2h8a2 2 0 012 2v18M6 12H4a2 2 0 00-2 2v6a2 2 0 002 2h2M18 9h2a2 2 0 012 2v9a2 2 0 01-2 2h-2"/></svg><span class="text-[9px] text-slate-400">Building2</span></div>
+              <div class="flex flex-col items-center gap-1.5"><svg class="w-[18px] h-[18px] text-slate-600 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a2.25 2.25 0 00-2.25-2.25H15a3 3 0 01-3-3V5.25A2.25 2.25 0 009.75 3H7.5A2.25 2.25 0 005.25 5.25v13.5A2.25 2.25 0 007.5 21h9a2.25 2.25 0 002.25-2.25V15a3 3 0 013-3z"/></svg><span class="text-[9px] text-slate-400">Wallet</span></div>
+              <div class="flex flex-col items-center gap-1.5"><svg class="w-[18px] h-[18px] text-slate-600 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg><span class="text-[9px] text-slate-400">TrendingUp</span></div>
+              <div class="flex flex-col items-center gap-1.5"><svg class="w-[18px] h-[18px] text-slate-600 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg><span class="text-[9px] text-slate-400">Users</span></div>
+              <div class="flex flex-col items-center gap-1.5"><svg class="w-[18px] h-[18px] text-slate-600 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg><span class="text-[9px] text-slate-400">Inbox</span></div>
+              <div class="flex flex-col items-center gap-1.5"><svg class="w-[18px] h-[18px] text-slate-600 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12.1" cy="12.1" r="1"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg><span class="text-[9px] text-slate-400">Settings</span></div>
+            </div>
+          </div>
+
+          <!-- Action / UI icons -->
+          <div class="mb-5">
+            <div class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-3">Actions &amp; UI (16&#8211;20px)</div>
+            <div class="flex flex-wrap gap-5">
+              <div class="flex flex-col items-center gap-1.5"><svg class="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg><span class="text-[9px] text-slate-400">Search</span></div>
+              <div class="flex flex-col items-center gap-1.5"><svg class="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14m-7-7h14"/></svg><span class="text-[9px] text-slate-400">Plus</span></div>
+              <div class="flex flex-col items-center gap-1.5"><svg class="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg><span class="text-[9px] text-slate-400">X (close)</span></div>
+              <div class="flex flex-col items-center gap-1.5"><svg class="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M12 5l7 7-7 7"/></svg><span class="text-[9px] text-slate-400">ArrowRight</span></div>
+              <div class="flex flex-col items-center gap-1.5"><svg class="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 12H5M12 19l-7-7 7-7"/></svg><span class="text-[9px] text-slate-400">ArrowLeft</span></div>
+              <div class="flex flex-col items-center gap-1.5"><svg class="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6"/></svg><span class="text-[9px] text-slate-400">ChevronDown</span></div>
+              <div class="flex flex-col items-center gap-1.5"><svg class="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/></svg><span class="text-[9px] text-slate-400">MoreVertical</span></div>
+              <div class="flex flex-col items-center gap-1.5"><svg class="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg><span class="text-[9px] text-slate-400">Edit</span></div>
+              <div class="flex flex-col items-center gap-1.5"><svg class="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg><span class="text-[9px] text-slate-400">Trash</span></div>
+              <div class="flex flex-col items-center gap-1.5"><svg class="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg><span class="text-[9px] text-slate-400">Download</span></div>
+              <div class="flex flex-col items-center gap-1.5"><svg class="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12"/></svg><span class="text-[9px] text-slate-400">SortAsc</span></div>
+              <div class="flex flex-col items-center gap-1.5"><svg class="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg><span class="text-[9px] text-slate-400">Filter</span></div>
+              <div class="flex flex-col items-center gap-1.5"><svg class="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg><span class="text-[9px] text-slate-400">Check</span></div>
+              <div class="flex flex-col items-center gap-1.5"><svg class="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01M10.29 3.86l-8.4 14.31A1.73 1.73 0 003.4 20h17.2a1.73 1.73 0 001.51-2.83l-8.4-14.31a1.73 1.73 0 00-3.02 0z"/></svg><span class="text-[9px] text-slate-400">AlertTriangle</span></div>
+            </div>
+          </div>
+
+          <!-- Status / domain icons -->
+          <div class="mb-5">
+            <div class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-3">Domain &amp; Status</div>
+            <div class="flex flex-wrap gap-5">
+              <div class="flex flex-col items-center gap-1.5"><svg class="w-[18px] h-[18px] text-slate-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg><span class="text-[9px] text-slate-400">KeyRound</span></div>
+              <div class="flex flex-col items-center gap-1.5"><svg class="w-[18px] h-[18px] text-slate-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg><span class="text-[9px] text-slate-400">FileText</span></div>
+              <div class="flex flex-col items-center gap-1.5"><svg class="w-[18px] h-[18px] text-slate-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/><path stroke-linecap="round" stroke-linejoin="round" d="M9 14l2 2 4-4"/></svg><span class="text-[9px] text-slate-400">ClipboardCheck</span></div>
+              <div class="flex flex-col items-center gap-1.5"><svg class="w-[18px] h-[18px] text-slate-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg><span class="text-[9px] text-slate-400">BarChart2</span></div>
+              <div class="flex flex-col items-center gap-1.5"><svg class="w-[18px] h-[18px] text-slate-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 13v-2a4 4 0 00-4-4H7a4 4 0 00-4 4v2"/><path stroke-linecap="round" stroke-linejoin="round" d="M7 21l5-5 5 5"/><rect x="7" y="3" width="10" height="4" rx="1"/></svg><span class="text-[9px] text-slate-400">Receipt</span></div>
+              <div class="flex flex-col items-center gap-1.5"><svg class="w-[18px] h-[18px] text-slate-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35"/><path stroke-linecap="round" stroke-linejoin="round" d="M11 8v6m-3-3h6"/></svg><span class="text-[9px] text-slate-400">FileSearch</span></div>
+              <div class="flex flex-col items-center gap-1.5"><svg class="w-[18px] h-[18px] text-slate-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span class="text-[9px] text-slate-400">Home</span></div>
+              <div class="flex flex-col items-center gap-1.5"><svg class="w-5 h-5 text-slate-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg><span class="text-[9px] text-slate-400">Bell</span></div>
+            </div>
+          </div>
+
+          <!-- Emoji / Unicode -->
+          <div>
+            <div class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-3">Emoji &amp; Unicode</div>
+            <div class="flex flex-wrap gap-4 text-base">
+              <div class="flex flex-col items-center gap-1"><span>&#128196;</span><span class="text-[9px] text-slate-400">Doc type</span></div>
+              <div class="flex flex-col items-center gap-1"><span>&#9888;&#65039;</span><span class="text-[9px] text-slate-400">Warning</span></div>
+              <div class="flex flex-col items-center gap-1"><span>&#10003;</span><span class="text-[9px] text-slate-400">Check</span></div>
+              <div class="flex flex-col items-center gap-1"><span>&#9660;</span><span class="text-[9px] text-slate-400">Sort &#9660;</span></div>
+              <div class="flex flex-col items-center gap-1"><span>&#9650;</span><span class="text-[9px] text-slate-400">Sort &#9650;</span></div>
+              <div class="flex flex-col items-center gap-1"><span>&#8942;</span><span class="text-[9px] text-slate-400">Drag handle</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="code">/* Sizes */
+/* Inline (table actions, badges) */  w-4 h-4    /* 16px */
+/* Navigation (sidebar items) */      w-[18px] h-[18px] shrink-0  /* 18px */
+/* Action buttons */                  w-5 h-5    /* 20px */
+/* Display (empty state, hero) */     w-6 h-6    /* 24px */
+
+/* Colors */
+/* Default */    text-slate-600
+/* Muted */      text-slate-400
+/* Active */     text-slate-900 (sidebar active)
+/* Hover */      hover:text-slate-600 (on text-slate-400 base)
+
+/* Stroke width */  stroke-width="2" (lucide default)</div>
+      </div>
+
+      <!-- Shadow Scale -->
+      <div class="ref-box">
+        <div class="ref-box-header">&#10003; REFERENCE &#8212; Shadow Scale</div>
+        <div class="preview">
+          <div class="flex flex-wrap items-end gap-5">
+            <div class="flex flex-col items-center gap-2"><div class="w-20 h-12 bg-white rounded-lg shadow-sm border border-slate-100"></div><span class="text-[9px] text-slate-400">shadow-sm</span><span class="text-[9px] text-slate-400">(panel)</span></div>
+            <div class="flex flex-col items-center gap-2"><div class="w-20 h-12 bg-white rounded-lg shadow-md border border-slate-100"></div><span class="text-[9px] text-slate-400">shadow-md</span><span class="text-[9px] text-slate-400">(hover)</span></div>
+            <div class="flex flex-col items-center gap-2"><div class="w-20 h-12 bg-white rounded-lg shadow-lg border border-slate-100"></div><span class="text-[9px] text-slate-400">shadow-lg</span><span class="text-[9px] text-slate-400">(dropdown)</span></div>
+            <div class="flex flex-col items-center gap-2"><div class="w-20 h-12 bg-white rounded-lg shadow-xl border border-slate-100"></div><span class="text-[9px] text-slate-400">shadow-xl</span><span class="text-[9px] text-slate-400">(modal)</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /tab-atoms -->
+
+
+  <!-- ====== MOLECULES ====== -->
+  <div class="tab-pane" id="tab-molecules">
+
+    <!-- TABLES -->
+    <div class="section">
+      <div class="section-header"><span class="section-num">M01</span><span class="section-title">Tables</span><div class="section-line"></div></div>
+
+      <!-- CONFLICT #10 — DECIDED: Variant B (bg-slate-50) -->
+      <div class="conflict-box" style="border-color: #22c55e; background: #0a1a10">
+        <div class="conflict-box-header" style="color: #4ade80"><span class="num">#10</span> &#10003; DECIDED &#8212; Table header style &#8594; Variant B</div>
+        <div class="variant-grid">
+          <div>
+            <div class="variant-label" style="color: #4ade80">&#10003; WINNER &#8212; Variant B (bg-slate-50 band)</div>
+            <div class="preview">
+              <table class="w-full text-sm"><thead><tr class="bg-slate-50"><th class="text-left text-xs font-medium uppercase tracking-wide text-slate-500 px-3 py-2.5">Name</th><th class="text-left text-xs font-medium uppercase tracking-wide text-slate-500 px-3 py-2.5">Status</th><th class="text-left text-xs font-medium uppercase tracking-wide text-slate-500 px-3 py-2.5">Date</th></tr></thead><tbody><tr class="border-b border-slate-50 hover:bg-slate-50/80"><td class="px-3 py-2.5 text-slate-700">Window seal &#8212; Unit 1B</td><td class="px-3 py-2.5"><span class="rounded-full px-2 py-0.5 text-xs font-semibold bg-amber-100 text-amber-700">PENDING</span></td><td class="px-3 py-2.5 text-slate-500">2026-04-11</td></tr><tr class="border-b border-slate-50 hover:bg-slate-50/80"><td class="px-3 py-2.5 text-slate-700">Lock repair</td><td class="px-3 py-2.5"><span class="rounded-full px-2 py-0.5 text-xs font-semibold bg-slate-100 text-slate-600">DRAFT</span></td><td class="px-3 py-2.5 text-slate-500">2026-04-09</td></tr></tbody></table>
+            </div>
+            <div class="code">/* thead */ bg-slate-50
+/* th cell */ text-left text-xs font-medium uppercase tracking-wide text-slate-500 px-3 py-2.5
+/* Grep: bg-slate-50 167 hits / 40 files · text-slate-500 57 headers · text-xs 40 headers */</div>
+          </div>
+        </div>
+        <div class="conflict-box-rec" style="border-color: #166534; background: #052e16; color: #86efac">&#10003; <strong>DECIDED 2026-04-14</strong> &#8212; Variant B wins: bg-slate-50 (167 hits / 40 files) vs Variant A text-[11px] (29 / 5). bg-slate-50 is 6&#215; more prevalent. Variant A removed.</div>
+      </div>
+
+      <div class="ref-box">
+        <div class="ref-box-header">&#10003; REFERENCE &#8212; Table Body Row (consistent)</div>
+        <div class="code">/* Container */ overflow-x-auto; table w-full text-sm
+/* Body row */  border-b border-slate-50 hover:bg-slate-50/80 transition-colors
+/* Body cell */ px-4 py-3
+/* Density: Comfortable */ px-3 py-2.5
+/* Density: Compact */     px-2 py-1.5 text-xs</div>
+      </div>
+    </div>
+
+    <!-- CARDS / PANELS -->
+    <div class="section">
+      <div class="section-header"><span class="section-num">M02</span><span class="section-title">Cards / Panels</span><div class="section-line"></div></div>
+      <div class="ref-box">
+        <div class="ref-box-header">&#10003; REFERENCE &#8212; Panel Variants</div>
+        <div class="preview">
+          <div class="grid grid-cols-2 gap-4">
+            <div><div class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-2">Standard Panel</div><div class="rounded-xl border border-slate-200 bg-white shadow-sm"><div class="flex items-center justify-between border-b border-slate-100 px-4 py-3"><h2 class="text-sm font-semibold text-slate-900">Panel Title</h2><button class="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/></svg></button></div><div class="px-4 py-4 text-sm text-slate-600">Panel content with px-4 py-4 body padding.</div></div></div>
+            <div><div class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-2">Dashed Empty Card</div><div class="rounded-xl border-2 border-dashed border-slate-200 bg-slate-50/50 p-5 text-center text-sm text-slate-500">No items mapped to this category yet.</div></div>
+            <div><div class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-2">Success Banner</div><div class="rounded-xl border border-green-200 bg-green-50 p-4"><div class="text-sm font-semibold text-green-800">All checks passed</div><div class="text-xs text-green-700 mt-0.5">Invoice approved and ledger entry posted.</div></div></div>
+            <div><div class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-2">Warning Banner</div><div class="rounded-xl border border-amber-200 bg-amber-50 p-4"><div class="text-sm font-semibold text-amber-800">Owner approval required</div><div class="text-xs text-amber-700 mt-0.5">Cost exceeds building threshold of CHF 5,000.</div></div></div>
+          </div>
+        </div>
+        <div class="code">/* Standard panel */   rounded-xl border border-slate-200 bg-white shadow-sm
+/* Panel header */     flex items-center justify-between border-b border-slate-100 px-4 py-3
+/* Panel heading */    text-sm font-semibold text-slate-900
+/* Panel body */       px-4 py-4
+/* Dashed empty */     rounded-xl border-2 border-dashed border-slate-200 bg-slate-50/50 p-5
+/* Success banner */   rounded-xl border border-green-200 bg-green-50 p-4
+/* Warning banner */   rounded-xl border border-amber-200 bg-amber-50 p-4</div>
+      </div>
+    </div>
+
+    <!-- EMPTY STATES -->
+    <div class="section">
+      <div class="section-header"><span class="section-num">M03</span><span class="section-title">Empty States</span><div class="section-line"></div></div>
+
+      <!-- CONFLICT #12 -->
+      <div class="decided-box">
+        <div class="decided-box-header"><span class="num">#12</span> &#10003; DECIDED &#8212; Empty state approach</div>
+        <div><div class="variant-label">Standard &#8212; Tailwind inline</div><div class="preview"><div class="rounded-lg border border-slate-200 bg-slate-50 p-6 text-center text-slate-600 text-sm">No maintenance requests found.</div></div><div class="code">rounded-lg border border-slate-200 bg-slate-50 p-6 text-center text-slate-600</div></div>
+        <div class="decided-box-rec">&#10003; <strong>Tailwind only</strong> &#8212; CSS class 78 hits / 26 files &#8776; Tailwind 76 / 31 files. Migrate to Tailwind inline.</div>
+      </div>
+    </div>
+
+    <!-- LOADING STATES -->
+    <div class="section">
+      <div class="section-header"><span class="section-num">M04</span><span class="section-title">Loading States</span><div class="section-line"></div></div>
+      <div class="ref-box">
+        <div class="ref-box-header">&#10003; REFERENCE &#8212; Spinner</div>
+        <div class="preview">
+          <div class="flex items-center justify-center py-6">
+            <div class="h-6 w-6 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent"></div>
+            <span class="ml-3 text-sm text-slate-500">Loading...</span>
+          </div>
+        </div>
+        <div class="code">/* Container */ flex items-center justify-center py-12
+/* Spinner */  h-6 w-6 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent
+/* Label */    ml-3 text-sm text-slate-500
+Note: Some components use border-blue-600; standardise on indigo-600.</div>
+      </div>
+    </div>
+
+    <!-- PROGRESS BARS -->
+    <div class="section">
+      <div class="section-header"><span class="section-num">M05</span><span class="section-title">Progress Bars</span><div class="section-line"></div></div>
+      <div class="ref-box">
+        <div class="ref-box-header">&#10003; REFERENCE &#8212; Progress Bar Variants</div>
+        <div class="preview">
+          <div class="space-y-4">
+            <div><div class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-2">Depreciation Bar</div><div class="space-y-2"><div class="flex items-center gap-3"><span class="text-xs text-slate-500 w-16">&gt;60%</span><div class="h-2.5 bg-gray-200 rounded-full overflow-hidden flex-1"><div class="h-full rounded-full bg-emerald-500" style="width:75%"></div></div></div><div class="flex items-center gap-3"><span class="text-xs text-slate-500 w-16">30-60%</span><div class="h-2.5 bg-gray-200 rounded-full overflow-hidden flex-1"><div class="h-full rounded-full bg-amber-500" style="width:45%"></div></div></div><div class="flex items-center gap-3"><span class="text-xs text-slate-500 w-16">&lt;30%</span><div class="h-2.5 bg-gray-200 rounded-full overflow-hidden flex-1"><div class="h-full rounded-full bg-red-500" style="width:15%"></div></div></div></div></div>
+            <div><div class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-2">Lifespan Bar</div><div class="space-y-2"><div class="flex items-center gap-3"><span class="text-xs text-slate-500 w-16">10yr</span><div class="h-2 w-24 rounded-full bg-slate-100"><div class="h-full rounded-full bg-red-400" style="width:30%"></div></div></div><div class="flex items-center gap-3"><span class="text-xs text-slate-500 w-16">11-20yr</span><div class="h-2 w-24 rounded-full bg-slate-100"><div class="h-full rounded-full bg-amber-400" style="width:50%"></div></div></div><div class="flex items-center gap-3"><span class="text-xs text-slate-500 w-16">21-30yr</span><div class="h-2 w-24 rounded-full bg-slate-100"><div class="h-full rounded-full bg-blue-400" style="width:70%"></div></div></div><div class="flex items-center gap-3"><span class="text-xs text-slate-500 w-16">&gt;30yr</span><div class="h-2 w-24 rounded-full bg-slate-100"><div class="h-full rounded-full bg-emerald-400" style="width:90%"></div></div></div></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ACTION DROPDOWN -->
+    <div class="section">
+      <div class="section-header"><span class="section-num">M06</span><span class="section-title">Action Dropdown</span><div class="section-line"></div></div>
+      <div class="ref-box">
+        <div class="ref-box-header">&#10003; REFERENCE &#8212; Action Dropdown</div>
+        <div class="preview">
+          <div class="relative inline-block">
+            <button class="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition">Actions &#9660;</button>
+            <div class="absolute left-0 z-20 mt-1 w-48 origin-top-left rounded-lg border border-slate-200 bg-white shadow-lg ring-1 ring-black/5">
+              <button class="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 transition">Approve</button>
+              <button class="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 transition">Issue Invoice</button>
+              <button class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition">Reject</button>
+              <button class="w-full text-left px-4 py-2 text-sm text-slate-400 cursor-not-allowed opacity-40" disabled>Archive</button>
+            </div>
+          </div>
+        </div>
+        <div class="code">/* Trigger */ rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50
+/* Menu */    absolute right-0 z-20 mt-1 w-48 origin-top-right rounded-lg border border-slate-200 bg-white shadow-lg ring-1 ring-black/5
+/* Item */    w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 transition disabled:opacity-40</div>
+      </div>
+    </div>
+
+    <!-- NOTIFICATION BELL -->
+    <div class="section">
+      <div class="section-header"><span class="section-num">M07</span><span class="section-title">Notification Bell</span><div class="section-line"></div></div>
+      <div class="ref-box">
+        <div class="ref-box-header">&#10003; REFERENCE &#8212; Notification Bell</div>
+        <div class="preview">
+          <div class="flex items-center gap-6">
+            <div class="relative inline-block">
+              <button class="relative p-2 text-slate-500 hover:text-slate-700 transition">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+                <span class="absolute top-0.5 right-0.5 min-w-[18px] h-[18px] px-1 text-[11px] font-bold text-white bg-red-600 rounded-full flex items-center justify-center">3</span>
+              </button>
+              <span class="text-xs text-slate-400 ml-2">Unread badge</span>
+            </div>
+          </div>
+        </div>
+        <div class="code">/* Badge */ absolute top-0.5 right-0.5 min-w-[18px] h-[18px] px-1 text-[11px] font-bold text-white bg-red-600 rounded-full
+/* Dropdown */ absolute right-0 mt-2 w-96 bg-white rounded-lg shadow-xl border border-slate-200 z-50
+/* Unread row */ bg-blue-50</div>
+      </div>
+    </div>
+
+  </div><!-- /tab-molecules -->
+
+
+  <!-- ====== ORGANISMS ====== -->
+  <div class="tab-pane" id="tab-organisms">
+
+    <!-- MODAL / DIALOG -->
+    <div class="section">
+      <div class="section-header"><span class="section-num">O01</span><span class="section-title">Modal / Dialog</span><div class="section-line"></div></div>
+
+      <!-- CONFLICT #11 -->
+      <div class="decided-box">
+        <div class="decided-box-header"><span class="num">#11</span> &#10003; DECIDED &#8212; Modal max-width</div>
+        <div class="variant-grid">
+          <div>
+            <div class="variant-label">sm &#8212; max-w-lg (forms, confirmations)</div>
+            <div class="preview" style="min-height:180px">
+              <div class="relative bg-white rounded-xl shadow-xl w-full max-w-lg border border-slate-200">
+                <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200"><span class="text-lg font-semibold text-slate-900">Confirm Action</span><button class="text-slate-400 hover:text-slate-600 text-xl">&#215;</button></div>
+                <div class="px-6 py-5 text-sm text-slate-600">Standard modal for confirmations, forms, and simple content.</div>
+                <div class="flex justify-end gap-3 px-6 py-4 border-t border-slate-100"><button class="border border-slate-200 bg-white text-slate-600 px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-slate-50">Cancel</button><button class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700">Confirm</button></div>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div class="variant-label">lg &#8212; max-w-4xl (documents, tables)</div>
+            <div class="preview" style="min-height:180px">
+              <div class="relative bg-white rounded-xl shadow-xl w-full max-w-4xl border border-slate-200">
+                <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200"><span class="text-lg font-semibold text-slate-900">Document Viewer</span><button class="text-slate-400 hover:text-slate-600 text-xl">&#215;</button></div>
+                <div class="px-6 py-5 text-sm text-slate-600">Wide modal for documents, tables, or complex forms.</div>
+                <div class="flex justify-end gap-3 px-6 py-4 border-t border-slate-100"><button class="border border-slate-200 bg-white text-slate-600 px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-slate-50">Close</button></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="decided-box-rec">&#10003; <strong>2 sizes</strong>: sm (max-w-lg &#183; 3 hits) &#183; lg (max-w-4xl &#183; 1 hit). max-w-2xl (5 hits) to consolidate.</div>
+      </div>
+
+      <div class="ref-box">
+        <div class="ref-box-header">&#10003; REFERENCE &#8212; Modal Anatomy</div>
+        <div class="code">/* Backdrop */   fixed inset-0 z-50 flex items-center justify-center bg-black/40
+/* Container */  relative bg-white rounded-xl shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto border border-slate-200
+/* Header */     flex items-center justify-between px-6 py-4 border-b border-slate-200
+/* Title */      text-lg font-semibold text-slate-900
+/* Close btn */  text-slate-400 hover:text-slate-600 text-xl
+/* Body */       px-6 py-5 space-y-4
+/* Footer */     flex justify-end gap-3 pt-2 border-t border-slate-100</div>
+      </div>
+    </div>
+
+    <!-- NAVIGATION -->
+    <div class="section">
+      <div class="section-header"><span class="section-num">O02</span><span class="section-title">Navigation</span><div class="section-line"></div></div>
+
+      <div class="ref-box">
+        <div class="ref-box-header">&#10003; REFERENCE &#8212; Sidebar Navigation</div>
+        <div class="preview">
+          <div class="w-60 bg-white border border-slate-200 rounded-xl p-3 space-y-1">
+            <div class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-semibold bg-slate-100 text-slate-900"><svg class="w-[18px] h-[18px] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>Requests</div>
+            <div class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors cursor-pointer"><svg class="w-[18px] h-[18px] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>Buildings</div>
+            <div class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors cursor-pointer"><svg class="w-[18px] h-[18px] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>Invoices</div>
+          </div>
+        </div>
+        <div class="code">/* Nav item base */ flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors
+/* Active */        bg-slate-100 text-slate-900 font-semibold
+/* Inactive */      text-slate-600 hover:bg-slate-100 hover:text-slate-900
+/* Icons */         lucide-react, size={18} className="shrink-0"</div>
+      </div>
+
+      <div class="ref-box">
+        <div class="ref-box-header">&#10003; REFERENCE &#8212; Tab Strip (in-page)</div>
+        <div class="preview">
+          <div class="mb-2 flex border-b border-slate-200">
+            <button class="px-5 py-2.5 text-sm font-medium border-b-2 -mb-px border-indigo-600 text-indigo-600">Overview</button>
+            <button class="px-5 py-2.5 text-sm font-medium border-b-2 -mb-px border-transparent text-slate-500 hover:text-slate-700">Details</button>
+            <button class="px-5 py-2.5 text-sm font-medium border-b-2 -mb-px border-transparent text-slate-500 hover:text-slate-700">History</button>
+            <button class="px-5 py-2.5 text-sm font-medium border-b-2 -mb-px border-transparent text-slate-500 hover:text-slate-700">Documents</button>
+          </div>
+        </div>
+        <div class="code">/* Container */  mb-6 flex border-b border-slate-200
+/* Tab button */ px-5 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors
+/* Active */     border-indigo-600 text-indigo-600
+/* Inactive */   border-transparent text-slate-500 hover:text-slate-700</div>
+      </div>
+
+      <div class="ref-box">
+        <div class="ref-box-header">&#10003; REFERENCE &#8212; AppShell Layout (migrate inline styles to Tailwind)</div>
+        <div class="code">/* Current (inline styles) */
+display: grid; gridTemplateColumns: "260px 1fr"
+Sidebar: 260px, borderRight: "1px solid #e5e5e5", background: "#ffffff", padding: "20px 16px"
+Main:    background: "#f7f7f8", padding: "24px"
+
+/* Proposed Tailwind migration */
+Container: grid grid-cols-[260px_1fr]
+Sidebar:   w-[260px] border-r border-slate-200 bg-white px-4 py-5
+Main:      bg-slate-50 p-6</div>
+      </div>
+    </div>
+
+    <!-- ASSET TYPE BADGE CONFLICTS -->
+    <div class="section">
+      <div class="section-header"><span class="section-num">O03</span><span class="section-title">Asset Type Badge Conflicts</span><div class="section-line"></div></div>
+      <div class="ref-box">
+        <div class="ref-box-header">&#10003; REFERENCE &#8212; Asset Type Colors (unresolved overlaps)</div>
+        <div class="preview">
+          <table class="w-full text-sm">
+            <thead><tr class="border-b border-slate-100"><th class="text-left text-[11px] font-medium uppercase tracking-wider text-slate-400 px-4 py-3">Type</th><th class="text-left text-[11px] font-medium uppercase tracking-wider text-slate-400 px-4 py-3">Variant A</th><th class="text-left text-[11px] font-medium uppercase tracking-wider text-slate-400 px-4 py-3">Variant B</th></tr></thead>
+            <tbody>
+              <tr class="border-b border-slate-50"><td class="px-4 py-3 font-mono text-xs">APPLIANCE</td><td class="px-4 py-3"><span class="rounded-full px-2 py-0.5 text-xs font-semibold bg-blue-100 text-blue-700">blue</span></td><td class="px-4 py-3"><span class="rounded-full px-2 py-0.5 text-xs font-semibold bg-violet-100 text-violet-700">violet</span></td></tr>
+              <tr class="border-b border-slate-50"><td class="px-4 py-3 font-mono text-xs">FIXTURE</td><td class="px-4 py-3"><span class="rounded-full px-2 py-0.5 text-xs font-semibold bg-purple-100 text-purple-700">purple</span></td><td class="px-4 py-3"><span class="rounded-full px-2 py-0.5 text-xs font-semibold bg-blue-100 text-blue-700">blue</span></td></tr>
+              <tr class="border-b border-slate-50"><td class="px-4 py-3 font-mono text-xs">FINISH</td><td class="px-4 py-3" colspan="2"><span class="rounded-full px-2 py-0.5 text-xs font-semibold bg-amber-100 text-amber-700">amber (consistent)</span></td></tr>
+              <tr class="border-b border-slate-50"><td class="px-4 py-3 font-mono text-xs">STRUCTURAL</td><td class="px-4 py-3"><span class="rounded-full px-2 py-0.5 text-xs font-semibold bg-red-100 text-red-700">red</span></td><td class="px-4 py-3"><span class="rounded-full px-2 py-0.5 text-xs font-semibold bg-emerald-100 text-emerald-700">emerald</span></td></tr>
+              <tr class="border-b border-slate-50"><td class="px-4 py-3 font-mono text-xs">SYSTEM</td><td class="px-4 py-3"><span class="rounded-full px-2 py-0.5 text-xs font-semibold bg-teal-100 text-teal-700">teal</span></td><td class="px-4 py-3"><span class="rounded-full px-2 py-0.5 text-xs font-semibold bg-rose-100 text-rose-700">rose</span></td></tr>
+              <tr><td class="px-4 py-3 font-mono text-xs">OTHER</td><td class="px-4 py-3"><span class="rounded-full px-2 py-0.5 text-xs font-semibold bg-gray-100 text-gray-600">gray</span></td><td class="px-4 py-3"><span class="rounded-full px-2 py-0.5 text-xs font-semibold bg-slate-100 text-slate-600">slate</span></td></tr>
+            </tbody>
+          </table>
+          <div class="mt-3 text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">Asset type color conflicts exist between AssetInventoryPanel and other views. Needs unified mapping.</div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /tab-organisms -->
+
+
+  <!-- ARCHITECTURE EVOLUTION (updated 2026-04-20) -->
+  <div style="margin-top:40px;padding:20px;background:var(--surface);border:1px solid var(--border2);border-radius:6px">
+    <div class="section-header" style="margin-bottom:14px">
+      <span class="section-num">ARCH</span>
+      <span class="section-title">CSS Architecture &mdash; Current State</span>
+      <span class="section-line"></span>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;font-size:12px;line-height:1.7">
+      <div>
+        <div style="font-weight:600;color:var(--text-bright);margin-bottom:6px">Stack</div>
+        <div><span style="color:var(--accent-cyan)">Tailwind CSS v4.1</span> + <span style="color:var(--accent-cyan)">@tailwindcss/postcss</span></div>
+        <div><span style="color:var(--accent-cyan)">class-variance-authority</span> (CVA) 0.7 for variant-based components</div>
+        <div><span style="color:var(--accent-cyan)">clsx</span> + <span style="color:var(--accent-cyan)">tailwind-merge</span> via <code style="background:var(--surface2);padding:1px 5px;border-radius:3px;font-size:11px">cn()</code></div>
+        <div style="margin-top:8px;font-weight:600;color:var(--text-bright);margin-bottom:6px">Token Layer</div>
+        <div><span style="color:var(--accent-blue)">23 semantic tokens</span> in <code style="background:var(--surface2);padding:1px 5px;border-radius:3px;font-size:11px">@theme {}</code> block (globals.css)</div>
+        <div>brand (indigo), destructive (red), success (green), muted (slate), surface</div>
+        <div>Each with DEFAULT / light / dark / ring / text variants</div>
+      </div>
+      <div>
+        <div style="font-weight:600;color:var(--text-bright);margin-bottom:6px">Metrics (before &rarr; after)</div>
+        <div>Inline <code style="background:var(--surface2);padding:1px 5px;border-radius:3px;font-size:11px">style={{}}</code>: <span style="color:var(--accent-red)">166</span> &rarr; <span style="color:var(--accent-green)">12</span> (dynamic-only residual)</div>
+        <div>Hardcoded rgb(): <span style="color:var(--accent-red)">50+</span> &rarr; <span style="color:var(--accent-green)">13</span> (SVG chart only)</div>
+        <div>Error banner CSS class usage: <span style="color:var(--accent-green)">48 files</span></div>
+        <div>@apply-backed classes: <span style="color:var(--accent-green)">78</span></div>
+        <div style="margin-top:8px;font-weight:600;color:var(--text-bright);margin-bottom:6px">Primitives (components/ui/)</div>
+        <div><span style="color:var(--accent-blue)">10 CVA-backed components</span>: Button, Badge, Card, DataTable, Input, Select, ErrorBanner, EmptyState, StatusPill, KpiCard</div>
+        <div>All accept <code style="background:var(--surface2);padding:1px 5px;border-radius:3px;font-size:11px">className</code> override via <code style="background:var(--surface2);padding:1px 5px;border-radius:3px;font-size:11px">cn()</code></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div style="margin-top:40px;padding-top:16px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;font-family:'IBM Plex Mono',mono;font-size:10px;color:var(--text-dim)">
+    <div>Maintenance Agent &#183; Design System &#183; 2026-04-20 &#183; Source: design-system-audit.md + globals.css</div>
+    <div style="display:flex;gap:14px">
+      <span style="color:#5ed9a0">&#10003; Decided / Reference</span>
+      <span style="color:#3d7eff">&#9670; Architecture</span>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function switchTab(id, btn) {
+  document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+  document.querySelectorAll('.tab-pane').forEach(function(p) { p.classList.remove('active'); });
+  document.getElementById('tab-' + id).classList.add('active');
+  btn.classList.add('active');
+}
+</script>
+</body>
+</html>

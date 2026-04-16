@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import AppShell from "../components/AppShell";
 
+import { cn } from "../lib/utils";
 export default function TenantChat() {
   const router = useRouter();
   const [session, setSession] = useState(null);
@@ -145,13 +146,13 @@ export default function TenantChat() {
       <div className="subtle">{contextLabel}</div>
 
       {notice ? (
-        <div className={`notice ${notice.type === "ok" ? "notice-ok" : "notice-err"}`}>
+        <div className={cn("notice", notice.type === "ok" ? "notice-ok" : "notice-err")}>
           {notice.msg}
         </div>
       ) : null}
 
       <div className="card">
-        <div style={{ display: "grid", gap: 8 }}>
+        <div className="grid gap-2">
           {messages.map((m, idx) => (
             <div key={idx} className="help">
               <strong>{m.role === "user" ? "You" : "Assistant"}:</strong> {m.text}
@@ -162,10 +163,10 @@ export default function TenantChat() {
 
       {suggestions.length > 0 ? (
         <div className="card">
-          <h3 style={{ marginTop: 0 }}>Quick fixes</h3>
+          <h3 className="mt-0">Quick fixes</h3>
           {suggestions.map((s, idx) => (
-            <div key={idx} style={{ marginBottom: 12 }}>
-              <div style={{ fontWeight: 600 }}>{s.title}</div>
+            <div key={idx} className="mb-3">
+              <div className="font-semibold">{s.title}</div>
               <ul>
                 {s.steps.map((step, stepIndex) => (
                   <li key={stepIndex} className="help">

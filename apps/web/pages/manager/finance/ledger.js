@@ -4,8 +4,11 @@ import PageShell from "../../../components/layout/PageShell";
 import PageHeader from "../../../components/layout/PageHeader";
 import PageContent from "../../../components/layout/PageContent";
 import Panel from "../../../components/layout/Panel";
+import Badge from "../../../components/ui/Badge";
+import { accountTypeVariant } from "../../../lib/statusVariants";
 import { authHeaders } from "../../../lib/api";
 
+import { cn } from "../../../lib/utils";
 /* ── Constants ─────────────────────────────────────────────── */
 
 const SOURCE_TYPE_LABELS = {
@@ -58,11 +61,10 @@ function formatDate(iso) {
 }
 
 function AccountTypeBadge({ type }) {
-  const cls = ACCOUNT_TYPE_CLASSES[type] || "bg-slate-100 text-slate-500";
   return (
-    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${cls}`}>
+    <Badge variant={accountTypeVariant(type)} size="sm">
       {ACCOUNT_TYPE_LABELS[type] || type}
-    </span>
+    </Badge>
   );
 }
 
@@ -231,7 +233,7 @@ export default function LedgerPage() {
             <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 px-5 py-4">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="text-sm font-semibold text-amber-800">Chart of Accounts not set up</p>
+                  <p className="text-sm font-semibold text-amber-700">Chart of Accounts not set up</p>
                   <p className="text-xs text-amber-700 mt-1">
                     The ledger requires a Chart of Accounts to post entries. Click the button to seed the
                     Swiss Kontenplan and post historical invoice entries in one step.
@@ -256,11 +258,11 @@ export default function LedgerPage() {
             const hasEntries = backfillResult.invoicesIssued > 0 || backfillResult.ledgerIssuedPosted > 0 || backfillResult.ledgerPaidPosted > 0;
             const allSkipped = backfillResult.invoicesIssuedErrors > 0 && backfillResult.invoicesIssued === 0 && backfillResult.ledgerIssuedPosted === 0;
             return (
-              <div className={`mb-6 rounded-lg border px-5 py-4 ${allSkipped ? "border-amber-200 bg-amber-50" : "border-emerald-200 bg-emerald-50"}`}>
-                <p className={`text-sm font-semibold ${allSkipped ? "text-amber-800" : "text-emerald-800"}`}>
+              <div className={cn("mb-6 rounded-lg border px-5 py-4", allSkipped ? "border-amber-200 bg-amber-50" : "border-green-200 bg-green-50")}>
+                <p className={cn("text-sm font-semibold", allSkipped ? "text-amber-700" : "text-green-700")}>
                   {allSkipped ? "Billing entities required" : "Setup complete"}
                 </p>
-                <p className={`text-xs mt-1 ${allSkipped ? "text-amber-700" : "text-emerald-700"}`}>
+                <p className={cn("text-xs mt-1", allSkipped ? "text-amber-700" : "text-green-700")}>
                   {backfillResult.coaSeeded && `Chart of Accounts seeded (${backfillResult.coaAccounts} accounts). `}
                   {backfillResult.invoicesIssued > 0 && `${backfillResult.invoicesIssued} invoice(s) issued. `}
                   {backfillResult.ledgerIssuedPosted > 0 && `${backfillResult.ledgerIssuedPosted} INVOICE_ISSUED entr${backfillResult.ledgerIssuedPosted === 1 ? "y" : "ies"} posted. `}
@@ -271,7 +273,7 @@ export default function LedgerPage() {
                 {allSkipped && (
                   <a
                     href="/manager/finance/billing-entities"
-                    className="inline-block mt-2 text-xs font-medium text-amber-800 underline underline-offset-2"
+                    className="inline-block mt-2 text-xs font-medium text-amber-700 underline underline-offset-2"
                   >
                     Set up billing entities →
                   </a>
@@ -281,7 +283,7 @@ export default function LedgerPage() {
           })()}
 
           {/* ── Tab bar ─────────────────────────────────────── */}
-          <div className="flex gap-1 mb-6 border-b border-gray-200">
+          <div className="flex gap-1 mb-6 border-b border-slate-200">
             {[
               { key: "journal",       label: "Journal" },
               { key: "trial-balance", label: "Trial Balance" },
@@ -289,11 +291,9 @@ export default function LedgerPage() {
               <button
                 key={t.key}
                 onClick={() => setTab(t.key)}
-                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-                  tab === t.key
+                className={cn("px-4 py-2 text-sm font-medium border-b-2 transition-colors", tab === t.key
                     ? "border-blue-600 text-blue-700"
-                    : "border-transparent text-gray-500 hover:text-gray-700"
-                }`}
+                    : "border-transparent text-slate-500 hover:text-slate-700")}
               >
                 {t.label}
               </button>
@@ -304,7 +304,7 @@ export default function LedgerPage() {
           <Panel className="mb-4">
             <div className="flex flex-wrap gap-3 items-end">
               <div>
-                <label className="block text-xs text-gray-500 mb-1">From</label>
+                <label className="block text-xs text-slate-500 mb-1">From</label>
                 <input
                   type="date"
                   className="input input-sm"
@@ -313,7 +313,7 @@ export default function LedgerPage() {
                 />
               </div>
               <div>
-                <label className="block text-xs text-gray-500 mb-1">To</label>
+                <label className="block text-xs text-slate-500 mb-1">To</label>
                 <input
                   type="date"
                   className="input input-sm"
@@ -325,7 +325,7 @@ export default function LedgerPage() {
               {tab === "journal" && (
                 <>
                   <div>
-                    <label className="block text-xs text-gray-500 mb-1">Building</label>
+                    <label className="block text-xs text-slate-500 mb-1">Building</label>
                     <select
                       className="input input-sm"
                       value={buildingId}
@@ -338,12 +338,12 @@ export default function LedgerPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-500 mb-1">Account</label>
+                    <label className="block text-xs text-slate-500 mb-1">Account</label>
                     <select
                       className="input input-sm"
                       value={accountId}
                       onChange={(e) => setAccountId(e.target.value)}
-                      style={{ minWidth: 200 }}
+                      className="min-w-[200px]"
                     >
                       <option value="">All accounts</option>
                       {ACCOUNT_TYPE_ORDER.map((type) => {
@@ -362,7 +362,7 @@ export default function LedgerPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-500 mb-1">Event type</label>
+                    <label className="block text-xs text-slate-500 mb-1">Event type</label>
                     <select
                       className="input input-sm"
                       value={sourceType}
@@ -387,7 +387,7 @@ export default function LedgerPage() {
                 Reset
               </button>
             </div>
-            <p className="text-xs text-gray-400 mt-2">
+            <p className="text-xs text-slate-400 mt-2">
               Showing entries for {from || "all time"}{to ? ` – ${to}` : ""}
             </p>
           </Panel>
@@ -397,11 +397,11 @@ export default function LedgerPage() {
             <Panel>
               {error && <p className="text-red-600 text-sm mb-3">{error}</p>}
               {loading ? (
-                <p className="text-gray-400 text-sm">Loading…</p>
+                <p className="text-slate-400 text-sm">Loading…</p>
               ) : entries.length === 0 ? (
                 <div className="py-12 text-center">
-                  <p className="text-gray-500 font-medium text-sm">No journal entries found</p>
-                  <p className="text-gray-400 text-xs mt-2 max-w-md mx-auto">
+                  <p className="text-slate-500 font-medium text-sm">No journal entries found</p>
+                  <p className="text-slate-400 text-xs mt-2 max-w-md mx-auto">
                     Ledger entries are posted automatically when invoices are issued or paid.
                     {from && " Try widening the date range."}
                   </p>
@@ -423,7 +423,7 @@ export default function LedgerPage() {
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead>
-                        <tr className="border-b border-gray-200 text-left text-xs text-gray-500">
+                        <tr className="border-b border-slate-200 text-left text-xs text-slate-500">
                           <th className="pb-2 pr-3">Date</th>
                           <th className="pb-2 pr-3">Account</th>
                           <th className="pb-2 pr-3">Event</th>
@@ -435,22 +435,22 @@ export default function LedgerPage() {
                       </thead>
                       <tbody>
                         {entries.map((e) => (
-                          <tr key={e.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                            <td className="py-2 pr-3 whitespace-nowrap text-gray-600">{formatDate(e.date)}</td>
+                          <tr key={e.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                            <td className="py-2 pr-3 whitespace-nowrap text-slate-600">{formatDate(e.date)}</td>
                             <td className="py-2 pr-3">
-                              <span className="font-mono text-xs text-gray-400 mr-1">{e.accountCode}</span>
-                              <span className="text-gray-800">{e.accountName}</span>
+                              <span className="font-mono text-xs text-slate-400 mr-1">{e.accountCode}</span>
+                              <span className="text-slate-800">{e.accountName}</span>
                             </td>
-                            <td className="py-2 pr-3 text-xs text-gray-500 whitespace-nowrap">
+                            <td className="py-2 pr-3 text-xs text-slate-500 whitespace-nowrap">
                               {SOURCE_TYPE_LABELS[e.sourceType] || e.sourceType || "—"}
                             </td>
-                            <td className="py-2 pr-3 text-gray-700 max-w-xs truncate">{e.description}</td>
-                            <td className="py-2 pr-3 font-mono text-xs text-gray-400">{e.reference || "—"}</td>
+                            <td className="py-2 pr-3 text-slate-700 max-w-xs truncate">{e.description}</td>
+                            <td className="py-2 pr-3 font-mono text-xs text-slate-400">{e.reference || "—"}</td>
                             <td className="py-2 pr-3 text-right font-mono">
-                              {e.debitCents > 0 ? <span className="text-gray-900">{formatCHF(e.debitCents)}</span> : <span className="text-gray-200">—</span>}
+                              {e.debitCents > 0 ? <span className="text-slate-900">{formatCHF(e.debitCents)}</span> : <span className="text-slate-200">—</span>}
                             </td>
                             <td className="py-2 text-right font-mono">
-                              {e.creditCents > 0 ? <span className="text-gray-900">{formatCHF(e.creditCents)}</span> : <span className="text-gray-200">—</span>}
+                              {e.creditCents > 0 ? <span className="text-slate-900">{formatCHF(e.creditCents)}</span> : <span className="text-slate-200">—</span>}
                             </td>
                           </tr>
                         ))}
@@ -459,7 +459,7 @@ export default function LedgerPage() {
                   </div>
 
                   {/* Pagination */}
-                  <div className="flex items-center justify-between mt-4 text-sm text-gray-500">
+                  <div className="flex items-center justify-between mt-4 text-sm text-slate-500">
                     <span>{offset + 1}–{Math.min(offset + PAGE_SIZE, total)} of {total} entries</span>
                     <div className="flex gap-2">
                       <button
@@ -488,16 +488,16 @@ export default function LedgerPage() {
             <Panel>
               {tbError && <p className="text-red-600 text-sm mb-3">{tbError}</p>}
               {tbLoading ? (
-                <p className="text-gray-400 text-sm">Loading…</p>
+                <p className="text-slate-400 text-sm">Loading…</p>
               ) : balances.length === 0 ? (
                 <div className="py-12 text-center">
-                  <p className="text-gray-500 font-medium text-sm">No entries for this period</p>
-                  <p className="text-gray-400 text-xs mt-1">Adjust the date range and apply filters above.</p>
+                  <p className="text-slate-500 font-medium text-sm">No entries for this period</p>
+                  <p className="text-slate-400 text-xs mt-1">Adjust the date range and apply filters above.</p>
                 </div>
               ) : (
                 <>
                   {/* Balanced status banner */}
-                  <div className={`mb-4 px-4 py-2 rounded text-sm font-medium ${tbBalanced ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-red-50 text-red-700 border border-red-200"}`}>
+                  <div className={cn("mb-4 px-4 py-2 rounded text-sm font-medium", tbBalanced ? "bg-green-50 text-green-700 border border-green-200" : "bg-red-50 text-red-700 border border-red-200")}>
                     {tbBalanced
                       ? "✓ Ledger is balanced — total debits equal total credits"
                       : `⚠ Ledger is out of balance — difference: CHF ${formatCHF(Math.abs(tbTotals.debit - tbTotals.credit))}`}
@@ -511,14 +511,14 @@ export default function LedgerPage() {
                     const typeCredit = rows.reduce((s, b) => s + b.creditCents, 0);
                     return (
                       <div key={type} className="mb-6">
-                        <div className={`flex items-center justify-between px-3 py-1.5 rounded-t text-xs font-semibold uppercase tracking-wide ${ACCOUNT_TYPE_CLASSES[type]}`}>
+                        <div className={cn("flex items-center justify-between px-3 py-1.5 rounded-t text-xs font-semibold uppercase tracking-wide", ACCOUNT_TYPE_CLASSES[type])}>
                           <span>{ACCOUNT_TYPE_LABELS[type] || type}</span>
                           <span className="font-mono">{rows.length} account{rows.length !== 1 ? "s" : ""}</span>
                         </div>
-                        <div className="overflow-x-auto border border-gray-200 rounded-b">
+                        <div className="overflow-x-auto border border-slate-200 rounded-b">
                           <table className="w-full text-sm">
                             <thead>
-                              <tr className="border-b border-gray-200 text-left text-xs text-gray-500 bg-gray-50">
+                              <tr className="border-b border-slate-200 text-left text-xs text-slate-500 bg-slate-50">
                                 <th className="px-3 py-2">Code</th>
                                 <th className="px-3 py-2">Account</th>
                                 <th className="px-3 py-2 text-right">Debit CHF</th>
@@ -530,12 +530,12 @@ export default function LedgerPage() {
                               {rows.map((b) => {
                                 const isDebitBal = b.balanceCents >= 0;
                                 return (
-                                  <tr key={b.accountId} className="border-b border-gray-100 hover:bg-gray-50">
-                                    <td className="px-3 py-2 font-mono text-xs text-gray-400">{b.accountCode || "—"}</td>
-                                    <td className="px-3 py-2 text-gray-800">{b.accountName}</td>
-                                    <td className="px-3 py-2 text-right font-mono text-gray-700">{formatCHF(b.debitCents)}</td>
-                                    <td className="px-3 py-2 text-right font-mono text-gray-700">{formatCHF(b.creditCents)}</td>
-                                    <td className={`px-3 py-2 text-right font-mono font-semibold ${isDebitBal ? "text-gray-900" : "text-blue-700"}`}>
+                                  <tr key={b.accountId} className="border-b border-slate-100 hover:bg-slate-50">
+                                    <td className="px-3 py-2 font-mono text-xs text-slate-400">{b.accountCode || "—"}</td>
+                                    <td className="px-3 py-2 text-slate-800">{b.accountName}</td>
+                                    <td className="px-3 py-2 text-right font-mono text-slate-700">{formatCHF(b.debitCents)}</td>
+                                    <td className="px-3 py-2 text-right font-mono text-slate-700">{formatCHF(b.creditCents)}</td>
+                                    <td className={cn("px-3 py-2 text-right font-mono font-semibold", isDebitBal ? "text-slate-900" : "text-blue-700")}>
                                       {isDebitBal ? "" : "("}
                                       {formatCHF(Math.abs(b.balanceCents))}
                                       {isDebitBal ? "" : ")"}
@@ -545,8 +545,8 @@ export default function LedgerPage() {
                               })}
                             </tbody>
                             <tfoot>
-                              <tr className="border-t border-gray-300 bg-gray-50 text-xs font-semibold">
-                                <td colSpan={2} className="px-3 py-1.5 text-gray-600">Subtotal</td>
+                              <tr className="border-t border-slate-300 bg-slate-50 text-xs font-semibold">
+                                <td colSpan={2} className="px-3 py-1.5 text-slate-600">Subtotal</td>
                                 <td className="px-3 py-1.5 text-right font-mono">{formatCHF(typeDebit)}</td>
                                 <td className="px-3 py-1.5 text-right font-mono">{formatCHF(typeCredit)}</td>
                                 <td />
@@ -559,10 +559,10 @@ export default function LedgerPage() {
                   })}
 
                   {/* Grand total */}
-                  <div className="flex justify-end gap-8 text-sm font-semibold border-t-2 border-gray-300 pt-3 mt-2">
+                  <div className="flex justify-end gap-8 text-sm font-semibold border-t-2 border-slate-300 pt-3 mt-2">
                     <span>Grand Total Debit: <span className="font-mono">{formatCHF(tbTotals.debit)}</span></span>
                     <span>Grand Total Credit: <span className="font-mono">{formatCHF(tbTotals.credit)}</span></span>
-                    <span className={tbBalanced ? "text-emerald-700" : "text-red-600"}>
+                    <span className={tbBalanced ? "text-green-700" : "text-red-600"}>
                       {tbBalanced ? "Balanced ✓" : `Off by CHF ${formatCHF(Math.abs(tbTotals.debit - tbTotals.credit))}`}
                     </span>
                   </div>

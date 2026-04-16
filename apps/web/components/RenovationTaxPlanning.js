@@ -13,7 +13,10 @@ import Panel from "./layout/Panel";
 import Section from "./layout/Section";
 import SortableHeader from "./SortableHeader";
 import { authHeaders } from "../lib/api";
+import Badge from "./ui/Badge";
+import { taxVariant } from "../lib/statusVariants";
 
+import { cn } from "../lib/utils";
 // ─── Constants ──────────────────────────────────────────────────
 
 const TAX_CATEGORY_STYLES = {
@@ -37,18 +40,6 @@ const TIMING_LABELS = {
 };
 
 const TIMING_GUIDANCE = {
-  HIGH: "Usually more relevant to schedule in a higher-income year — the full amount is typically deductible immediately.",
-  MODERATE: "Timing may matter for the deductible portion — consider income levels when scheduling.",
-  LOW: "Timing is often less tax-sensitive because the work is usually capitalized or the deductible portion is small.",
-};
-
-const TIMING_BADGE = {
-  HIGH: "bg-violet-100 text-violet-700",
-  MODERATE: "bg-slate-100 text-slate-600",
-  LOW: "bg-gray-50 text-gray-400",
-};
-
-const SYSTEM_LABELS = {
   FACADE: "Facade",
   WINDOWS: "Windows",
   ROOF: "Roof / Terrace",
@@ -62,6 +53,9 @@ const SYSTEM_LABELS = {
   LAUNDRY: "Laundry",
 };
 
+/** Maps building-system enum keys to human-readable labels (used in catalog filter + group headings). */
+const SYSTEM_LABELS = TIMING_GUIDANCE;
+
 const SUB_TABS = [
   { key: "catalog", label: "Classification Guide" },
   { key: "capex", label: "CapEx Forecast" },
@@ -73,33 +67,37 @@ const SUB_TABS = [
 function TaxBadge({ category }) {
   const style = TAX_CATEGORY_STYLES[category] || TAX_CATEGORY_STYLES.MIXED;
   return (
-    <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold ${style.badge}`}>
+    <Badge variant={taxVariant(category)} size="sm">
       {style.label}
-    </span>
+    </Badge>
   );
 }
 
+const TIMING_VARIANT = {
+  HIGH: "warning",
+  MODERATE: "default",
+  LOW: "muted",
+};
 function TimingBadge({ sensitivity }) {
-  const cls = TIMING_BADGE[sensitivity] || TIMING_BADGE.LOW;
   const label = TIMING_LABELS[sensitivity] || sensitivity;
   return (
-    <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${cls}`}>
+    <Badge variant={TIMING_VARIANT[sensitivity] || "muted"} size="sm">
       {label}
-    </span>
+    </Badge>
   );
 }
 
 function StatCard({ label, value, sub, accent }) {
-  const cls = accent === "green" ? "text-emerald-700"
+  const cls = accent === "green" ? "text-green-700"
     : accent === "red" ? "text-red-600"
     : accent === "blue" ? "text-blue-700"
     : accent === "amber" ? "text-amber-700"
-    : "text-gray-900";
+    : "text-slate-900";
   return (
     <div className="card p-4 flex flex-col gap-1">
-      <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">{label}</span>
-      <span className={`text-xl font-bold ${cls}`}>{value}</span>
-      {sub && <span className="text-xs text-gray-400">{sub}</span>}
+      <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">{label}</span>
+      <span className={cn("text-xl font-bold", cls)}>{value}</span>
+      {sub && <span className="text-xs text-slate-400">{sub}</span>}
     </div>
   );
 }
@@ -221,7 +219,7 @@ export default function RenovationTaxPlanning() {
           <Panel>
             <div className="flex flex-wrap items-end gap-3">
               <div className="flex flex-col gap-1">
-                <label className="text-xs font-medium text-gray-600">Building System</label>
+                <label className="text-xs font-medium text-slate-600">Building System</label>
                 <select
                   value={catalogFilter.system}
                   onChange={(e) => setCatalogFilter((f) => ({ ...f, system: e.target.value }))}
@@ -234,7 +232,7 @@ export default function RenovationTaxPlanning() {
                 </select>
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-xs font-medium text-gray-600">Tax Category</label>
+                <label className="text-xs font-medium text-slate-600">Tax Category</label>
                 <select
                   value={catalogFilter.taxCategory}
                   onChange={(e) => setCatalogFilter((f) => ({ ...f, taxCategory: e.target.value }))}
@@ -247,7 +245,7 @@ export default function RenovationTaxPlanning() {
                 </select>
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-xs font-medium text-gray-600">Search</label>
+                <label className="text-xs font-medium text-slate-600">Search</label>
                 <input
                   type="text"
                   value={catalogFilter.search}
@@ -324,7 +322,7 @@ function CatalogSystemGroup({ system, entries }) {
             onClick={() => setExpanded((e) => !e)}
           >
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"
-              className={`w-4 h-4 transition-transform duration-200 ${expanded ? "rotate-180" : ""}`}>
+              className={cn("w-4 h-4 transition-transform duration-200", expanded ? "rotate-180" : "")}>
               <path fillRule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
             </svg>
             {expanded ? "Show less" : `Show all ${entries.length} jobs`}
@@ -358,7 +356,7 @@ function CatalogEntryRow({ entry }) {
           <TaxBadge category={entry.taxCategory} />
           <TimingBadge sensitivity={entry.timingSensitivity} />
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"
-            className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${open ? "rotate-180" : ""}`}>
+            className={cn("w-4 h-4 text-slate-400 transition-transform duration-200", open ? "rotate-180" : "")}>
             <path fillRule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
           </svg>
         </div>
@@ -386,9 +384,9 @@ function CatalogEntryRow({ entry }) {
             </div>
             {entry.assetLinkable && (
               <div className="col-span-full">
-                <span className="inline-block rounded-full px-2 py-0.5 text-xs bg-indigo-50 text-indigo-600">
+                <Badge variant="brand" size="sm">
                   Can be linked to inventory assets
-                </span>
+                </Badge>
               </div>
             )}
           </div>
@@ -480,15 +478,15 @@ function CapExForecastPanel({ capex, loading }) {
                       {adv.savingsBreakdown?.length > 0 && (
                         <div className="flex flex-wrap gap-2 mt-2">
                           {adv.savingsBreakdown.map((s, j) => (
-                            <span key={j} className="inline-block rounded-full px-2 py-0.5 text-xs bg-emerald-50 text-emerald-700">
+                            <Badge key={j} variant="success" size="sm">
                               {s.category} ~{s.estimatedPct}%
-                            </span>
+                            </Badge>
                           ))}
                         </div>
                       )}
                     </div>
                     <div className="text-right shrink-0">
-                      <div className="text-sm font-bold text-emerald-700">~{fmtChf(adv.estimatedSavingsChf)}</div>
+                      <div className="text-sm font-bold text-green-700">~{fmtChf(adv.estimatedSavingsChf)}</div>
                       <div className="text-xs text-slate-400">~{adv.savingsEstimatePct}% savings</div>
                     </div>
                   </div>
@@ -542,7 +540,7 @@ function BuildingBreakdownTable({ buildings, expandedBuilding, setExpandedBuildi
   return (
     <Section title="Per-Building Breakdown">
       <Panel bodyClassName="p-0">
-        <div style={{ overflowX: "auto" }}>
+        <div className="overflow-x-auto">
           <table className="inline-table">
             <thead>
               <tr>
@@ -573,7 +571,7 @@ function BuildingBreakdownTable({ buildings, expandedBuilding, setExpandedBuildi
             onClick={() => setShowAll((s) => !s)}
           >
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"
-              className={`w-4 h-4 transition-transform duration-200 ${showAll ? "rotate-180" : ""}`}>
+              className={cn("w-4 h-4 transition-transform duration-200", showAll ? "rotate-180" : "")}>
               <path fillRule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
             </svg>
             {showAll ? "Show less" : `Show all ${sorted.length} buildings`}
@@ -594,12 +592,12 @@ function BuildingCapexRow({ building, expanded, onToggle }) {
         <td className="cell-bold">{b.buildingName || "Unnamed"}</td>
         <td>{b.canton || "—"}</td>
         <td className="text-right font-mono">{fmtChf(b.totalProjectedChf)}</td>
-        <td className="text-right font-mono text-emerald-700">{fmtChf(b.totalDeductibleChf)}</td>
+        <td className="text-right font-mono text-green-700">{fmtChf(b.totalDeductibleChf)}</td>
         <td className="text-right">{b.projectedAssetCount}</td>
         <td className="text-right">{b.bundlingAdvice?.length || 0}</td>
         <td className="text-right">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"
-            className={`w-4 h-4 text-slate-400 transition-transform duration-200 inline ${expanded ? "rotate-180" : ""}`}>
+            className={cn("w-4 h-4 text-slate-400 transition-transform duration-200 inline", expanded ? "rotate-180" : "")}>
             <path fillRule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
           </svg>
         </td>
@@ -611,11 +609,11 @@ function BuildingCapexRow({ building, expanded, onToggle }) {
               <div className="text-xs font-medium text-slate-600 mb-1">{bucket.year} — {bucket.assetCount} asset{bucket.assetCount !== 1 ? "s" : ""} · {fmtChf(bucket.totalChf)}</div>
               <div className="flex flex-wrap gap-1.5">
                 {bucket.items.map((item) => (
-                  <span key={item.assetId} className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs bg-white border border-slate-200">
+                  <Badge key={item.assetId} variant="default" size="sm" className="gap-1">
                     <span className="text-slate-700">{item.assetName}</span>
                     <span className="text-slate-400">{fmtChf(item.estimatedCostChf)}</span>
                     <TaxBadge category={item.taxClassification || "MIXED"} />
-                  </span>
+                  </Badge>
                 ))}
               </div>
             </td>
@@ -738,10 +736,10 @@ function TimingRecRow({ rec, expanded, onToggle }) {
         <div className="flex items-center gap-2 shrink-0">
           <TimingBadge sensitivity={sensitivity} />
           {saving > 0 && (
-            <span className="text-sm font-bold text-emerald-700">+{fmtChf(saving)}</span>
+            <span className="text-sm font-bold text-green-700">+{fmtChf(saving)}</span>
           )}
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"
-            className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${expanded ? "rotate-180" : ""}`}>
+            className={cn("w-4 h-4 text-slate-400 transition-transform duration-200", expanded ? "rotate-180" : "")}>
             <path fillRule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
           </svg>
         </div>
@@ -775,27 +773,27 @@ function TimingRecRow({ rec, expanded, onToggle }) {
                 )}
               </div>
             </div>
-            <div className="rounded-lg border border-emerald-200 bg-emerald-50/30 p-3">
-              <h5 className="text-xs font-semibold text-emerald-600 mb-2">
+            <div className="rounded-lg border border-green-200 bg-green-50/30 p-3">
+              <h5 className="text-xs font-semibold text-green-600 mb-2">
                 Recommended Year ({rec.recommendedYear}) ✓
               </h5>
               <div className="space-y-1 text-xs">
                 {rec.recommendedYearIncomeChf != null && (
                   <div className="flex justify-between">
                     <span className="text-slate-500">Projected income</span>
-                    <span className="font-mono text-emerald-700">{fmtChf(rec.recommendedYearIncomeChf)}</span>
+                    <span className="font-mono text-green-700">{fmtChf(rec.recommendedYearIncomeChf)}</span>
                   </div>
                 )}
                 {rec.recommendedYearMarginalPct != null && (
                   <div className="flex justify-between">
                     <span className="text-slate-500">Marginal rate</span>
-                    <span className="font-mono text-emerald-700">{rec.recommendedYearMarginalPct.toFixed(1)}%</span>
+                    <span className="font-mono text-green-700">{rec.recommendedYearMarginalPct.toFixed(1)}%</span>
                   </div>
                 )}
                 {rec.taxSavingRecommendedChf != null && (
                   <div className="flex justify-between">
                     <span className="text-slate-500">Tax saving</span>
-                    <span className="font-mono font-bold text-emerald-700">{fmtChf(rec.taxSavingRecommendedChf)}</span>
+                    <span className="font-mono font-bold text-green-700">{fmtChf(rec.taxSavingRecommendedChf)}</span>
                   </div>
                 )}
               </div>
@@ -822,8 +820,8 @@ function TimingRecRow({ rec, expanded, onToggle }) {
 
           {/* Rationale */}
           {additional > 0 && (
-            <div className="rounded-lg bg-emerald-50 border border-emerald-100 px-3 py-2">
-              <p className="text-xs text-emerald-700">
+            <div className="rounded-lg bg-green-50 border border-green-100 px-3 py-2">
+              <p className="text-xs text-green-700">
                 <strong>Why this saves money:</strong> {rec.rationale}
               </p>
             </div>

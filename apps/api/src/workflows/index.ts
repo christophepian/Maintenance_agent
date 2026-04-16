@@ -20,8 +20,8 @@ export type { AssignContractorInput, AssignContractorResult } from "./assignCont
 export { unassignContractorWorkflow } from "./unassignContractorWorkflow";
 export type { UnassignContractorInput, UnassignContractorResult } from "./unassignContractorWorkflow";
 
-export { ownerRejectWorkflow } from "./ownerRejectWorkflow";
-export type { OwnerRejectInput, OwnerRejectResult } from "./ownerRejectWorkflow";
+export { rejectRequestWorkflow, ownerRejectWorkflow } from "./ownerRejectWorkflow";
+export type { RejectRequestInput, RejectRequestResult, OwnerRejectInput, OwnerRejectResult } from "./ownerRejectWorkflow";
 
 export { completeJobWorkflow } from "./completeJobWorkflow";
 export type { CompleteJobInput, CompleteJobResult } from "./completeJobWorkflow";
@@ -116,3 +116,6 @@ export {
   canTransitionRfp,
   canTransitionRfpQuote,
 } from "./transitions";
+
+export { createOwnerProfileWorkflow, updateOwnerProfileWorkflow, createBuildingProfileWorkflow } from "./strategyProfileWorkflow";
+export type { CreateOwnerProfileInput, CreateOwnerProfileResult, CreateBuildingProfileInput, CreateBuildingProfileResult } from "./strategyProfileWorkflow";

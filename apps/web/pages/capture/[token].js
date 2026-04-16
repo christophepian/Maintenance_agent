@@ -298,7 +298,7 @@ export default function MobileCapturePage() {
                 <button
                   type="button"
                   onClick={handleSubmit}
-                  className="w-full rounded-xl bg-emerald-600 px-4 py-4 text-base font-semibold text-white hover:bg-emerald-700 transition shadow-md"
+                  className="w-full rounded-xl bg-green-600 px-4 py-4 text-base font-semibold text-white hover:bg-green-700 transition shadow-md"
                 >
                   Submit {photos.length} {photos.length === 1 ? "Photo" : "Photos"}
                 </button>
@@ -309,7 +309,7 @@ export default function MobileCapturePage() {
           {/* ─── UPLOADING ───── */}
           {state === "UPLOADING" && (
             <div className="w-full max-w-xs text-center">
-              <div className="w-10 h-10 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin mx-auto mb-4" />
+              <div className="w-10 h-10 border-4 border-green-200 border-t-green-600 rounded-full animate-spin mx-auto mb-4" />
               <h2 className="text-base font-semibold text-slate-800 mt-0 mb-2">Uploading…</h2>
               <p className="text-sm text-slate-500 mb-3">
                 {uploadProgress} of {photos.length} {photos.length === 1 ? "photo" : "photos"}
@@ -317,7 +317,7 @@ export default function MobileCapturePage() {
               {/* Progress bar */}
               <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
                 <div
-                  className="bg-emerald-500 h-2 rounded-full transition-all duration-300"
+                  className="bg-green-500 h-2 rounded-full transition-all duration-300"
                   style={{ width: `${photos.length > 0 ? (uploadProgress / photos.length) * 100 : 0}%` }}
                 />
               </div>
@@ -328,7 +328,7 @@ export default function MobileCapturePage() {
           {state === "SUCCESS" && (
             <div className="text-center max-w-xs">
               <div className="text-5xl mb-3">✅</div>
-              <h2 className="text-lg font-semibold text-emerald-700 mt-0 mb-2">Photos submitted!</h2>
+              <h2 className="text-lg font-semibold text-green-700 mt-0 mb-2">Photos submitted!</h2>
               <p className="text-sm text-slate-500 m-0">
                 Your invoice is being processed. You can close this page now.
               </p>

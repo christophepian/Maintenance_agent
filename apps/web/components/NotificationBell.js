@@ -3,6 +3,7 @@ import { useRouter } from "next/router";
 import { formatDateTime } from "../lib/format";
 import { getNotificationLink as resolveLink } from "../lib/notificationLinks";
 
+import { cn } from "../lib/utils";
 export default function NotificationBell({ role }) {
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifications, setNotifications] = useState([]);
@@ -165,24 +166,24 @@ export default function NotificationBell({ role }) {
 
   const getTypeColor = (type) => {
     switch (type) {
-      case "REQUEST_APPROVED": return "bg-green-100 text-green-800";
-      case "INVOICE_PAID": return "bg-blue-100 text-blue-800";
-      case "JOB_COMPLETED": return "bg-purple-100 text-purple-800";
-      case "LEASE_SIGNED": return "bg-emerald-100 text-emerald-800";
-      case "LEASE_READY_TO_SIGN": return "bg-sky-100 text-sky-800";
-      case "TENANT_SELECTED": return "bg-indigo-100 text-indigo-800";
-      case "APPLICATION_SUBMITTED": return "bg-amber-100 text-amber-800";
-      case "QUOTE_SUBMITTED": return "bg-orange-100 text-orange-800";
-      case "QUOTE_AWARDED": return "bg-green-100 text-green-800";
-      case "QUOTE_REJECTED": return "bg-red-100 text-red-800";
-      case "SLOT_PROPOSED": return "bg-cyan-100 text-cyan-800";
-      case "SLOT_ACCEPTED": return "bg-green-100 text-green-800";
-      case "SLOT_DECLINED": return "bg-red-100 text-red-800";
-      case "SCHEDULING_ESCALATED": return "bg-yellow-100 text-yellow-800";
-      case "RATING_SUBMITTED": return "bg-violet-100 text-violet-800";
-      case "JOB_CONFIRMED": return "bg-teal-100 text-teal-800";
-      case "INVOICE_OVERDUE": return "bg-red-100 text-red-800";
-      default: return "bg-gray-100 text-gray-800";
+      case "REQUEST_APPROVED": return "bg-green-100 text-green-700";
+      case "INVOICE_PAID": return "bg-blue-100 text-blue-700";
+      case "JOB_COMPLETED": return "bg-purple-100 text-purple-700";
+      case "LEASE_SIGNED": return "bg-green-100 text-green-700";
+      case "LEASE_READY_TO_SIGN": return "bg-sky-100 text-sky-700";
+      case "TENANT_SELECTED": return "bg-indigo-100 text-indigo-700";
+      case "APPLICATION_SUBMITTED": return "bg-amber-100 text-amber-700";
+      case "QUOTE_SUBMITTED": return "bg-orange-100 text-orange-700";
+      case "QUOTE_AWARDED": return "bg-green-100 text-green-700";
+      case "QUOTE_REJECTED": return "bg-red-100 text-red-700";
+      case "SLOT_PROPOSED": return "bg-cyan-100 text-cyan-700";
+      case "SLOT_ACCEPTED": return "bg-green-100 text-green-700";
+      case "SLOT_DECLINED": return "bg-red-100 text-red-700";
+      case "SCHEDULING_ESCALATED": return "bg-yellow-100 text-yellow-700";
+      case "RATING_SUBMITTED": return "bg-violet-100 text-violet-700";
+      case "JOB_CONFIRMED": return "bg-teal-100 text-teal-700";
+      case "INVOICE_OVERDUE": return "bg-red-100 text-red-700";
+      default: return "bg-slate-100 text-slate-600";
     }
   };
 
@@ -209,9 +210,8 @@ export default function NotificationBell({ role }) {
       {/* Bell Icon Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 text-gray-600 hover:text-gray-900 focus:outline-none rounded-full"
+        className="relative p-2 text-slate-600 hover:text-slate-900 focus:outline-none rounded-full"
         aria-label="Notifications"
-        style={{ position: "relative" }}
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -230,23 +230,7 @@ export default function NotificationBell({ role }) {
         
         {/* Unread Badge */}
         {unreadCount > 0 && (
-          <span style={{
-            position: "absolute",
-            top: 2,
-            right: 2,
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
-            minWidth: 18,
-            height: 18,
-            padding: "0 5px",
-            fontSize: 11,
-            fontWeight: 700,
-            lineHeight: 1,
-            color: "#fff",
-            backgroundColor: "#dc2626",
-            borderRadius: 9999,
-          }}>
+          <span className="absolute top-0.5 right-0.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[11px] font-bold leading-none text-white bg-red-600 rounded-full">
             {unreadCount}
           </span>
         )}
@@ -254,14 +238,15 @@ export default function NotificationBell({ role }) {
 
       {/* Dropdown Panel */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-96 bg-white rounded-lg shadow-xl border border-gray-200 z-50">
+        <div className="absolute right-0 mt-2 w-96 bg-white rounded-lg shadow-xl border border-slate-200 z-50">
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900">Notifications</h3>
+          <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200">
+            <h3 className="text-lg font-semibold text-slate-900">Notifications</h3>
             {notifications.length > 0 && (
               <button
                 onClick={markAllAsRead}
-                className="text-sm text-blue-600 hover:text-blue-800"
+                className="text-sm text-blue-600 hover:text-blue-700"
+                aria-label="Mark all notifications as read"
               >
                 Mark all read
               </button>
@@ -271,11 +256,11 @@ export default function NotificationBell({ role }) {
           {/* Notifications List */}
           <div className="max-h-96 overflow-y-auto">
             {loading ? (
-              <div className="px-4 py-8 text-center text-gray-500">
+              <div className="px-4 py-8 text-center text-slate-500">
                 Loading...
               </div>
             ) : notifications.length === 0 ? (
-              <div className="px-4 py-8 text-center text-gray-500">
+              <div className="px-4 py-8 text-center text-slate-500">
                 No notifications
               </div>
             ) : (
@@ -283,24 +268,25 @@ export default function NotificationBell({ role }) {
                 <div
                   key={notif.id}
                   onClick={() => handleNotificationClick(notif)}
-                  className={`px-4 py-3 border-b border-gray-100 hover:bg-gray-50 ${
-                    !isNotifRead(notif) ? "bg-blue-50" : ""
-                  } ${getNotificationLink(notif) ? "cursor-pointer" : ""}`}
+                  className={cn("px-4 py-3 border-b border-slate-100 hover:bg-slate-50", !isNotifRead(notif) ? "bg-blue-50" : "", getNotificationLink(notif) ? "cursor-pointer" : "")}
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className={`text-xs px-2 py-0.5 rounded ${getTypeColor(notif.eventType)}`}>
+                        <span className={cn("text-xs px-2 py-0.5 rounded", getTypeColor(notif.eventType))}>
                           {(notif.eventType || notif.type || "").replace(/_/g, " ")}
                         </span>
                         {!isNotifRead(notif) && (
-                          <span className="w-2 h-2 bg-blue-600 rounded-full"></span>
+                          <>
+                            <span className="w-2 h-2 bg-blue-600 rounded-full" aria-hidden="true"></span>
+                            <span className="sr-only">Unread</span>
+                          </>
                         )}
                       </div>
-                      <p className="text-sm text-gray-700 mb-1">
+                      <p className="text-sm text-slate-700 mb-1">
                         {notif.message}
                       </p>
-                      <p className="text-xs text-gray-400">
+                      <p className="text-xs text-slate-400">
                         {formatDateTime(notif.createdAt)}
                       </p>
                     </div>
@@ -308,16 +294,18 @@ export default function NotificationBell({ role }) {
                       {!isNotifRead(notif) && (
                         <button
                           onClick={(e) => { e.stopPropagation(); markAsRead(notif.id); }}
-                          className="text-xs text-blue-600 hover:text-blue-800"
+                          className="text-xs text-blue-600 hover:text-blue-700"
                           title="Mark as read"
+                          aria-label="Mark as read"
                         >
                           ✓
                         </button>
                       )}
                       <button
                         onClick={(e) => { e.stopPropagation(); deleteNotification(notif.id); }}
-                        className="text-xs text-red-600 hover:text-red-800"
+                        className="text-xs text-red-600 hover:text-red-700"
                         title="Delete"
+                        aria-label="Delete notification"
                       >
                         ✕
                       </button>

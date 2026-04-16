@@ -1,9 +1,9 @@
 /**
  * Workflow Layer Integration Tests
  *
- * Verifies that the refactored workflow layer preserves all existing behavior:
- *   - Request creation + auto-approval + legal auto-routing
- *   - Manager / owner approval flows
+ * Verifies the workflow layer:
+ *   - Request creation → PENDING_REVIEW (or RFP_PENDING if OBLIGATED)
+ *   - Manager approval (PENDING_REVIEW → RFP_PENDING) / owner approval flows
  *   - Contractor assignment + auto-job creation
  *   - Job completion → invoice auto-creation
  *   - Invoice issuance
@@ -103,15 +103,14 @@ describe("Workflow Layer — Integration", () => {
       });
       expect(status).toBe(201);
       expect(data.data).toHaveProperty("id");
-      // After legal routing, status depends on category mapping
+      // All requests start as PENDING_REVIEW; only OBLIGATED legal routing → RFP_PENDING
       expect([
         "PENDING_REVIEW",
-        "PENDING_OWNER_APPROVAL",
         "RFP_PENDING",
       ]).toContain(data.data.status);
     });
 
-    it("auto-approves when estimatedCost below threshold", async () => {
+    it("creates request with estimatedCost (no auto-approval at creation)", async () => {
       const { status, data } = await POST("/requests", {
         description: "Light bulb replacement in hallway fixture",
         category: "lighting",
@@ -119,8 +118,8 @@ describe("Workflow Layer — Integration", () => {
         unitId,
       });
       expect(status).toBe(201);
-      // May be AUTO_APPROVED, RFP_PENDING, or PENDING_OWNER_APPROVAL depending on legal routing
-      expect(["AUTO_APPROVED", "RFP_PENDING", "PENDING_OWNER_APPROVAL"]).toContain(data.data.status);
+      // All requests start as PENDING_REVIEW; only OBLIGATED legal routing → RFP_PENDING
+      expect(["PENDING_REVIEW", "RFP_PENDING"]).toContain(data.data.status);
     });
 
     it("returns validation error for missing description", async () => {
@@ -165,19 +164,18 @@ describe("Workflow Layer — Integration", () => {
       initialStatus = res.data.data.status;
     });
 
-    it("approves a PENDING_OWNER_APPROVAL request → RFP_PENDING", async () => {
-      // If not in PENDING_OWNER_APPROVAL, it may already be RFP_PENDING (legal-routed)
-      if (initialStatus === "PENDING_OWNER_APPROVAL") {
+    it("manager-approves a PENDING_REVIEW request → RFP_PENDING", async () => {
+      if (initialStatus === "PENDING_REVIEW") {
         const { status, data } = await POST(
           `/requests/${pendingRequestId}/owner-approve`,
           {},
           auth,
         );
         expect(status).toBe(200);
-        expect(["RFP_PENDING", "APPROVED"]).toContain(data.data.status);
+        expect(data.data.status).toBe("RFP_PENDING");
       } else {
-        // Already routed — just verify it's in a valid state
-        expect(["PENDING_REVIEW", "PENDING_OWNER_APPROVAL", "RFP_PENDING"]).toContain(initialStatus);
+        // Already legal-routed to RFP_PENDING at creation
+        expect(initialStatus).toBe("RFP_PENDING");
       }
     });
 
@@ -224,8 +222,8 @@ describe("Workflow Layer — Integration", () => {
       });
       approvedRequestId = rData.data.id;
 
-      // Drive it to APPROVED via owner-approve if in PENDING_OWNER_APPROVAL
-      if (rData.data.status === "PENDING_OWNER_APPROVAL") {
+      // Drive to RFP_PENDING via manager-approve if in PENDING_REVIEW
+      if (rData.data.status === "PENDING_REVIEW") {
         await POST(
           `/requests/${approvedRequestId}/owner-approve`,
           {},

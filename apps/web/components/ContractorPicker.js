@@ -52,28 +52,20 @@ export default function ContractorPicker({ onSelect }) {
   if (loading) return null;
   if (contractors.length === 0) {
     return (
-      <div style={{
-        padding: "8px 16px", marginBottom: 16, backgroundColor: "#fff8e1",
-        border: "1px solid #ffe082", borderRadius: 6, fontSize: "0.85em", color: "#7a4a00",
-      }}>
+      <div className="px-4 py-2 mb-4 bg-amber-50 border border-amber-300 rounded-lg text-sm text-amber-700">
         ⚠️ No contractors found. Assign a contractor to a request first on the{" "}
-        <a href="/manager/requests" style={{ color: "#0b3a75" }}>Manager Requests</a> page.
+        <a href="/manager/requests" className="text-blue-800">Manager Requests</a> page.
       </div>
     );
   }
 
   return (
-    <div style={{
-      display: "flex", alignItems: "center", gap: 10,
-      padding: "8px 16px", marginBottom: 16,
-      backgroundColor: "#e3f2fd", border: "1px solid #90caf9",
-      borderRadius: 6, fontSize: "0.85em",
-    }}>
-      <span style={{ fontWeight: 600, color: "#0b3a75" }}>🧑‍🔧 Viewing as contractor:</span>
+    <div className="flex items-center gap-2.5 px-4 py-2 mb-4 bg-blue-50 border border-blue-300 rounded-lg text-sm">
+      <span className="font-semibold text-blue-800">🧑‍🔧 Viewing as contractor:</span>
       <select
         value={selected}
         onChange={handleChange}
-        style={{ padding: "4px 8px", borderRadius: 4, border: "1px solid #90caf9", fontSize: "0.95em", minWidth: 220 }}
+        className="px-2 py-1 rounded-lg border border-blue-300 text-sm min-w-[220px]"
       >
         <option value="">— All (no filter) —</option>
         {contractors.map((c) => (
@@ -83,7 +75,7 @@ export default function ContractorPicker({ onSelect }) {
         ))}
       </select>
       {selected && (
-        <span style={{ color: "#666", fontSize: "0.8em" }}>
+        <span className="text-slate-500 text-xs">
           ID: {selected.slice(0, 8)}…
         </span>
       )}

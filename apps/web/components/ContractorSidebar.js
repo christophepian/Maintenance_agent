@@ -28,7 +28,7 @@ export default function ContractorSidebar() {
   }, [pathname]);
 
   return (
-    <nav className="flex flex-col gap-1 py-2">
+    <nav aria-label="Contractor navigation" className="flex flex-col gap-1 py-2">
       {CONTRACTOR_NAV.map((item, index) => {
         const Icon = item.icon;
         const isActive = index === activeIndex;

@@ -1,3 +1,4 @@
+import { cn } from "../lib/utils";
 /**
  * SortableHeader — shared clickable column header with ▲/▼ indicators.
  *
@@ -16,14 +17,14 @@ export default function SortableHeader({ label, field, sortField, sortDir, onSor
   const active = sortField === field;
   return (
     <th
-      className={`cursor-pointer select-none hover:text-slate-600 transition-colors ${className}`}
+      className={cn("cursor-pointer select-none hover:text-slate-600 transition-colors", className)}
       onClick={() => onSort(field)}
     >
       <span className="inline-flex items-center gap-1">
         {label}
         <span className="inline-flex flex-col leading-none -space-y-0.5">
-          <span className={`text-[8px] ${active && sortDir === "asc" ? "text-indigo-600" : "text-slate-300"}`}>▲</span>
-          <span className={`text-[8px] ${active && sortDir === "desc" ? "text-indigo-600" : "text-slate-300"}`}>▼</span>
+          <span className={cn("text-[8px]", active && sortDir === "asc" ? "text-indigo-600" : "text-slate-300")}>▲</span>
+          <span className={cn("text-[8px]", active && sortDir === "desc" ? "text-indigo-600" : "text-slate-300")}>▼</span>
         </span>
       </span>
     </th>

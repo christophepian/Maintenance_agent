@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import AppShell from "../../../components/AppShell";
@@ -6,14 +6,15 @@ import PageShell from "../../../components/layout/PageShell";
 import PageHeader from "../../../components/layout/PageHeader";
 import PageContent from "../../../components/layout/PageContent";
 import Panel from "../../../components/layout/Panel";
-import SortableHeader from "../../../components/SortableHeader";
+import ConfigurableTable from "../../../components/ConfigurableTable";
 import { authHeaders, apiFetch } from "../../../lib/api";
 import { formatDate } from "../../../lib/format";
 
+import { cn } from "../../../lib/utils";
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 const STATUS_BADGE = {
-  DRAFT: "bg-gray-100 text-gray-600",
+  DRAFT: "bg-slate-100 text-slate-600",
   SUBMITTED: "bg-blue-100 text-blue-700",
   APPROVED: "bg-green-100 text-green-700",
 };
@@ -130,7 +131,7 @@ function CreatePlanModal({ buildings, onClose, onCreate }) {
       <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-lg">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-base font-semibold text-slate-800">New cashflow plan</h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-lg leading-none">×</button>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-lg leading-none" aria-label="Close">×</button>
         </div>
 
         {error && <div className="notice notice-err mb-3">{error}</div>}
@@ -268,6 +269,79 @@ export default function CashflowPlansPage() {
   const buildingMap = {};
   buildings.forEach((b) => { buildingMap[b.id] = b.name; });
 
+  const planColumns = useMemo(() => [
+    {
+      id: "name",
+      label: "Name",
+      sortable: true,
+      alwaysVisible: true,
+      render: (p) => <span className="font-medium text-slate-900">{p.name}</span>,
+    },
+    {
+      id: "status",
+      label: "Status",
+      sortable: true,
+      defaultVisible: true,
+      render: (p) => (
+        <span className={cn("status-pill", STATUS_BADGE[p.status] || "bg-slate-100 text-slate-600")}>
+          {p.status}
+        </span>
+      ),
+    },
+    {
+      id: "scope",
+      label: "Scope",
+      sortable: true,
+      defaultVisible: true,
+      render: (p) => <span className="text-slate-600">{p.buildingId ? (buildingMap[p.buildingId] || "Building") : "Portfolio"}</span>,
+    },
+    {
+      id: "horizon",
+      label: "Horizon",
+      sortable: true,
+      defaultVisible: true,
+      render: (p) => <span className="text-slate-600">{p.horizonMonths} mo</span>,
+    },
+    {
+      id: "growth",
+      label: "Growth",
+      sortable: true,
+      defaultVisible: true,
+      render: (p) => <span className="text-slate-600">{p.incomeGrowthRatePct ?? 0}%</span>,
+    },
+    {
+      id: "computed",
+      label: "Last computed",
+      sortable: true,
+      defaultVisible: true,
+      render: (p) => {
+        const stale = isPlanStale(p);
+        return p.lastComputedAt ? (
+          <span className={stale ? "text-amber-600 font-medium" : "text-slate-600"}>
+            {formatDate(p.lastComputedAt)}
+            {stale && " (stale)"}
+          </span>
+        ) : (
+          <span className="text-slate-400">\u2014</span>
+        );
+      },
+    },
+    {
+      id: "created",
+      label: "Created",
+      sortable: true,
+      defaultVisible: true,
+      render: (p) => <span className="text-slate-500 text-xs">{formatDate(p.createdAt)}</span>,
+    },
+    {
+      id: "openingBalance",
+      label: "Opening Balance",
+      sortable: false,
+      defaultVisible: false,
+      render: (p) => <span className="text-slate-600">{typeof p.openingBalanceChf === "number" ? `CHF ${p.openingBalanceChf.toLocaleString()}` : "\u2014"}</span>,
+    },
+  ], [buildingMap]);
+
   return (
     <AppShell role="MANAGER">
       <PageShell>
@@ -296,54 +370,17 @@ export default function CashflowPlansPage() {
             </Panel>
           ) : (
             <Panel>
-              <div className="overflow-x-auto">
-                <table className="inline-table">
-                  <thead>
-                    <tr>
-                      <SortableHeader label="Name" field="name" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
-                      <SortableHeader label="Status" field="status" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
-                      <SortableHeader label="Scope" field="scope" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
-                      <SortableHeader label="Horizon" field="horizon" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
-                      <SortableHeader label="Growth" field="growth" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
-                      <SortableHeader label="Last computed" field="computed" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
-                      <SortableHeader label="Created" field="created" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {sorted.map((plan) => {
-                      const stale = isPlanStale(plan);
-                      return (
-                        <tr
-                          key={plan.id}
-                          className="cursor-pointer"
-                          onClick={() => router.push(`/manager/cashflow/${plan.id}`)}
-                        >
-                          <td className="cell-bold">{plan.name}</td>
-                          <td>
-                            <span className={`status-pill ${STATUS_BADGE[plan.status] || "bg-gray-100 text-gray-600"}`}>
-                              {plan.status}
-                            </span>
-                          </td>
-                          <td>{plan.buildingId ? (buildingMap[plan.buildingId] || "Building") : "Portfolio"}</td>
-                          <td>{plan.horizonMonths} mo</td>
-                          <td>{plan.incomeGrowthRatePct ?? 0}%</td>
-                          <td>
-                            {plan.lastComputedAt ? (
-                              <span className={stale ? "text-amber-600 font-medium" : ""}>
-                                {formatDate(plan.lastComputedAt)}
-                                {stale && " (stale)"}
-                              </span>
-                            ) : (
-                              <span className="text-slate-400">—</span>
-                            )}
-                          </td>
-                          <td>{formatDate(plan.createdAt)}</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+              <ConfigurableTable
+                tableId="cashflow-plans"
+                columns={planColumns}
+                data={sorted}
+                rowKey="id"
+                sortField={sortField}
+                sortDir={sortDir}
+                onSort={handleSort}
+                onRowClick={(plan) => router.push(`/manager/cashflow/${plan.id}`)}
+                emptyState="No plans match your criteria."
+              />
               <div className="px-3 py-2 text-xs text-slate-400 border-t border-slate-100">
                 {plans.length} plan{plans.length !== 1 ? "s" : ""}
                 {submittedPlans.length > 0 && ` · ${submittedPlans.length} pending approval`}

@@ -8,19 +8,11 @@ import Panel from "../../components/layout/Panel.jsx";
 import { formatDateTime } from "../../lib/format";
 import { tenantFetch, tenantHeaders } from "../../lib/api";
 import TenantPicker from "../../components/TenantPicker";
+import ErrorBanner from "../../components/ui/ErrorBanner";
+import Badge from "../../components/ui/Badge";
+import { requestVariant } from "../../lib/statusVariants";
 
-const STATUS_COLORS = {
-  PENDING_REVIEW: "bg-yellow-100 text-yellow-800",
-  PENDING_OWNER_APPROVAL: "bg-purple-100 text-purple-800",
-  AUTO_APPROVED: "bg-green-100 text-green-800",
-  APPROVED: "bg-green-100 text-green-800",
-  RFP_PENDING: "bg-blue-100 text-blue-800",
-  ASSIGNED: "bg-blue-100 text-blue-800",
-  IN_PROGRESS: "bg-blue-200 text-blue-900",
-  COMPLETED: "bg-gray-100 text-gray-800",
-  OWNER_REJECTED: "bg-red-100 text-red-800",
-};
-
+import { cn } from "../../lib/utils";
 // ---------------------------------------------------------------------------
 // Scheduling Slots Panel (Tenant — accept / decline)
 // ---------------------------------------------------------------------------
@@ -96,7 +88,7 @@ function TenantSchedulingPanel({ requestId }) {
     }
   }
 
-  if (loading) return <p className="text-xs text-gray-400 mt-2">Checking appointments…</p>;
+  if (loading) return <p className="text-xs text-slate-400 mt-2">Checking appointments…</p>;
   if (slots.length === 0) return null;
 
   const accepted = slots.find((s) => s.status === "ACCEPTED");
@@ -109,11 +101,7 @@ function TenantSchedulingPanel({ requestId }) {
         📅 Appointment Scheduling
       </h3>
 
-      {error && (
-        <div className="mb-2 p-2 bg-red-50 border border-red-200 rounded text-xs text-red-800">
-          {error}
-        </div>
-      )}
+      <ErrorBanner error={error} className="mb-2 text-xs" />
 
       {accepted ? (
         <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
@@ -123,7 +111,7 @@ function TenantSchedulingPanel({ requestId }) {
               Appointment Confirmed
             </span>
           </div>
-          <p className="text-sm text-green-800">
+          <p className="text-sm text-green-700">
             {formatSlotTime(accepted.startTime)} – {formatSlotTime(accepted.endTime)}
           </p>
         </div>
@@ -142,9 +130,7 @@ function TenantSchedulingPanel({ requestId }) {
             {proposed.map((slot) => (
               <div
                 key={slot.id}
-                className={`flex items-center justify-between rounded-lg border p-3 ${
-                  SLOT_STATUS_COLORS[slot.status] || "bg-white border-gray-200"
-                }`}
+                className={cn("flex items-center justify-between rounded-lg border p-3", SLOT_STATUS_COLORS[slot.status] || "bg-white border-slate-200")}
               >
                 <p className="text-sm font-medium text-slate-900">
                   {formatSlotTime(slot.startTime)} – {formatSlotTime(slot.endTime)}
@@ -153,14 +139,14 @@ function TenantSchedulingPanel({ requestId }) {
                   <button
                     onClick={() => handleAction(slot.id, "accept")}
                     disabled={!!actionLoading}
-                    className="rounded-md bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-50"
+                    className="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-50"
                   >
                     {actionLoading === slot.id ? "…" : "Accept"}
                   </button>
                   <button
                     onClick={() => handleAction(slot.id, "decline")}
                     disabled={!!actionLoading}
-                    className="rounded-md border border-red-300 bg-white px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
+                    className="rounded-lg border border-red-300 bg-white px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
                   >
                     Decline
                   </button>
@@ -251,7 +237,7 @@ function TenantPhotosPanel({ requestId }) {
     return `/api/tenant-portal/maintenance-attachments/${a.id}/download`;
   }
 
-  if (loading) return <p className="text-xs text-gray-400 mt-2">Loading photos…</p>;
+  if (loading) return <p className="text-xs text-slate-400 mt-2">Loading photos…</p>;
 
   const images = attachments.filter((a) => isImage(a.filename));
   const fileList = attachments.filter((a) => !isImage(a.filename));
@@ -259,9 +245,9 @@ function TenantPhotosPanel({ requestId }) {
   return (
     <div className="mt-3">
       {attachments.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-200 bg-gray-50 px-4 py-4 text-center">
-          <p className="text-xs text-gray-400 mb-2">No photos yet</p>
-          <label className="cursor-pointer rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700">
+        <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-slate-200 bg-slate-50 px-4 py-4 text-center">
+          <p className="text-xs text-slate-400 mb-2">No photos yet</p>
+          <label className="cursor-pointer rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700">
             Upload photo
             <input type="file" multiple accept="image/*,.pdf" className="hidden" onChange={handleUpload} />
           </label>
@@ -271,7 +257,7 @@ function TenantPhotosPanel({ requestId }) {
           {images.length > 0 && (
             <div className="grid grid-cols-4 gap-2">
               {images.map((a, i) => (
-                <button key={i} onClick={() => setPreviewUrl(downloadUrl(a))} className="group relative aspect-square overflow-hidden rounded-lg border border-gray-200 bg-gray-50">
+                <button key={i} onClick={() => setPreviewUrl(downloadUrl(a))} className="group relative aspect-square overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
                   <img src={downloadUrl(a)} alt={a.filename} className="h-full w-full object-cover transition-transform group-hover:scale-105" />
                 </button>
               ))}
@@ -281,15 +267,15 @@ function TenantPhotosPanel({ requestId }) {
           {fileList.length > 0 && (
             <div className="mt-2 flex flex-col gap-1.5">
               {fileList.map((a, i) => (
-                <a key={i} href={downloadUrl(a)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs hover:bg-gray-50">
-                  <span className="font-medium text-gray-700">{a.filename}</span>
-                  {a.size && <span className="text-gray-400">{formatSize(a.size)}</span>}
+                <a key={i} href={downloadUrl(a)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs hover:bg-slate-50">
+                  <span className="font-medium text-slate-700">{a.filename}</span>
+                  {a.size && <span className="text-slate-400">{formatSize(a.size)}</span>}
                 </a>
               ))}
             </div>
           )}
 
-          <label className="mt-2 inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50">
+          <label className="mt-2 inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50">
             + Upload more
             <input type="file" multiple accept="image/*,.pdf" className="hidden" onChange={handleUpload} />
           </label>
@@ -300,7 +286,7 @@ function TenantPhotosPanel({ requestId }) {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80" onClick={() => setPreviewUrl(null)}>
           <div className="relative max-h-[90vh] max-w-[90vw]" onClick={(e) => e.stopPropagation()}>
             <img src={previewUrl} alt="Preview" className="max-h-[85vh] max-w-[85vw] rounded-lg object-contain" />
-            <button onClick={() => setPreviewUrl(null)} className="absolute -top-3 -right-3 flex h-8 w-8 items-center justify-center rounded-full bg-white text-gray-700 shadow-lg hover:bg-gray-100">
+            <button onClick={() => setPreviewUrl(null)} className="absolute -top-3 -right-3 flex h-8 w-8 items-center justify-center rounded-full bg-white text-slate-700 shadow-lg hover:bg-slate-100">
               &times;
             </button>
           </div>
@@ -329,9 +315,8 @@ function StarRow({ value, onChange, disabled }) {
           type="button"
           disabled={disabled}
           onClick={() => onChange(n)}
-          className={`text-xl leading-none focus:outline-none disabled:cursor-default ${
-            n <= (value || 0) ? "text-yellow-400" : "text-gray-300"
-          }`}
+          aria-label={`Rate ${n} of 5`}
+          className={cn("text-xl leading-none focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 rounded disabled:cursor-default", n <= (value || 0) ? "text-yellow-400" : "text-slate-300")}
         >
           ★
         </button>
@@ -398,20 +383,18 @@ function TenantJobReviewPanel({ job, onRefresh }) {
     <div className="mt-3 rounded-lg border border-green-100 bg-green-50/50 p-4">
       <h3 className="text-sm font-semibold text-green-900 mb-2">✅ Job Completed</h3>
 
-      {error && (
-        <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{error}</p>
-      )}
+      <ErrorBanner error={error} className="mb-2 text-xs" />
 
       {/* Step 1: confirm */}
       {!job.confirmedAt && (
         <div className="flex items-center justify-between">
-          <p className="text-xs text-green-800">
+          <p className="text-xs text-green-700">
             The contractor has marked this job as done. Please confirm you are satisfied.
           </p>
           <button
             onClick={handleConfirm}
             disabled={confirming}
-            className="ml-3 flex-shrink-0 rounded-md bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-50"
+            className="ml-3 flex-shrink-0 rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-50"
           >
             {confirming ? "…" : "Confirm completion"}
           </button>
@@ -421,10 +404,10 @@ function TenantJobReviewPanel({ job, onRefresh }) {
       {/* Step 2: rate */}
       {job.confirmedAt && !job.tenantRated && !showRating && (
         <div className="flex items-center justify-between">
-          <p className="text-xs text-green-800">Completion confirmed. How was the service?</p>
+          <p className="text-xs text-green-700">Completion confirmed. How was the service?</p>
           <button
             onClick={() => setShowRating(true)}
-            className="ml-3 flex-shrink-0 rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-700"
+            className="ml-3 flex-shrink-0 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-700"
           >
             Rate the service
           </button>
@@ -435,7 +418,7 @@ function TenantJobReviewPanel({ job, onRefresh }) {
         <form onSubmit={handleRate} className="mt-2 space-y-3">
           {CRITERIA.map((c) => (
             <div key={c.key} className="flex items-center justify-between">
-              <span className="text-xs text-gray-700 w-40">{c.label}</span>
+              <span className="text-xs text-slate-700 w-40">{c.label}</span>
               <StarRow
                 value={scores[c.key]}
                 onChange={(v) => setScores((prev) => ({ ...prev, [c.key]: v }))}
@@ -449,14 +432,14 @@ function TenantJobReviewPanel({ job, onRefresh }) {
               onChange={(e) => setComment(e.target.value)}
               placeholder="Comment (optional)"
               rows={2}
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-xs placeholder-gray-400 focus:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-400"
+              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs placeholder-slate-400 focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400"
             />
           </div>
           <div className="flex justify-end gap-2">
             <button
               type="button"
               onClick={() => setShowRating(false)}
-              className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50"
+              className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
             >
               Cancel
             </button>
@@ -485,12 +468,12 @@ const CATEGORIES = ["stove", "oven", "dishwasher", "bathroom", "lighting"];
 // ---------------------------------------------------------------------------
 
 const OBLIGATION_BADGE = {
-  OBLIGATED: { bg: "bg-green-100 text-green-800", label: "Landlord obligated" },
-  DISCRETIONARY: { bg: "bg-yellow-100 text-yellow-800", label: "Discretionary" },
-  TENANT_RESPONSIBLE: { bg: "bg-red-100 text-red-800", label: "Tenant responsible" },
-  RECOMMENDED: { bg: "bg-blue-100 text-blue-800", label: "Recommended" },
-  NOT_APPLICABLE: { bg: "bg-gray-100 text-gray-600", label: "N/A" },
-  UNKNOWN: { bg: "bg-gray-100 text-gray-600", label: "Unknown" },
+  OBLIGATED: { variant: "success", label: "Landlord obligated" },
+  DISCRETIONARY: { variant: "warning", label: "Discretionary" },
+  TENANT_RESPONSIBLE: { variant: "destructive", label: "Tenant responsible" },
+  RECOMMENDED: { variant: "info", label: "Recommended" },
+  NOT_APPLICABLE: { variant: "muted", label: "N/A" },
+  UNKNOWN: { variant: "muted", label: "Unknown" },
 };
 
 function TenantClaimAnalysisPanel({ requestId }) {
@@ -529,7 +512,7 @@ function TenantClaimAnalysisPanel({ requestId }) {
           </div>
           <button
             onClick={runAnalysis}
-            className="flex-shrink-0 rounded-md bg-violet-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-violet-700"
+            className="flex-shrink-0 rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-violet-700"
           >
             Analyse my claim
           </button>
@@ -555,7 +538,7 @@ function TenantClaimAnalysisPanel({ requestId }) {
         <p className="text-xs text-red-700 mb-2">{error}</p>
         <button
           onClick={runAnalysis}
-          className="rounded-md border border-red-300 bg-white px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50"
+          className="rounded-lg border border-red-300 bg-white px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50"
         >
           Try again
         </button>
@@ -574,7 +557,7 @@ function TenantClaimAnalysisPanel({ requestId }) {
         <button
           onClick={runAnalysis}
           disabled={loading}
-          className="text-xs text-violet-600 hover:text-violet-800 underline"
+          className="text-xs text-violet-600 hover:text-violet-700 underline"
         >
           Re-analyse
         </button>
@@ -582,27 +565,27 @@ function TenantClaimAnalysisPanel({ requestId }) {
 
       {/* Obligation badge + confidence */}
       <div className="flex items-center gap-2 flex-wrap">
-        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${badge.bg}`}>
+        <Badge variant={badge.variant} size="sm">
           {badge.label}
-        </span>
-        <span className="text-xs text-gray-500">
+        </Badge>
+        <span className="text-xs text-slate-500">
           Confidence: {Math.round(a.confidence || 0)}%
         </span>
         {a.legalTopic && (
-          <span className="text-xs text-gray-400">• {a.legalTopic}</span>
+          <span className="text-xs text-slate-400">• {a.legalTopic}</span>
         )}
       </div>
 
       {/* Tenant Guidance — always visible */}
       {a.tenantGuidance && (
         <div className="rounded-lg bg-white border border-violet-100 p-3">
-          <p className="text-xs font-medium text-gray-800 mb-1">{a.tenantGuidance.summary}</p>
+          <p className="text-xs font-medium text-slate-800 mb-1">{a.tenantGuidance.summary}</p>
           {a.tenantGuidance.nextSteps?.length > 0 && (
             <div className="mt-2">
-              <p className="text-xs font-semibold text-gray-600 mb-1">Next steps:</p>
+              <p className="text-xs font-semibold text-slate-600 mb-1">Next steps:</p>
               <ol className="list-decimal list-inside space-y-0.5">
                 {a.tenantGuidance.nextSteps.map((step, i) => (
-                  <li key={i} className="text-xs text-gray-700">{step}</li>
+                  <li key={i} className="text-xs text-slate-700">{step}</li>
                 ))}
               </ol>
             </div>
@@ -619,23 +602,23 @@ function TenantClaimAnalysisPanel({ requestId }) {
 
       {/* Rent reduction estimate */}
       {a.rentReduction && a.rentReduction.totalReductionChf > 0 && (
-        <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-3">
-          <p className="text-xs font-semibold text-emerald-900 mb-1">
+        <div className="rounded-lg bg-green-50 border border-green-200 p-3">
+          <p className="text-xs font-semibold text-green-900 mb-1">
             💰 Estimated rent reduction
           </p>
           <div className="flex items-baseline gap-3">
-            <span className="text-lg font-bold text-emerald-800">
+            <span className="text-lg font-bold text-green-700">
               CHF {a.rentReduction.totalReductionChf.toFixed(0)}
             </span>
-            <span className="text-xs text-emerald-700">
+            <span className="text-xs text-green-700">
               / month ({a.rentReduction.totalReductionPercent}% of CHF {a.rentReduction.netRentChf})
             </span>
           </div>
           {a.rentReduction.capApplied && (
-            <p className="text-xs text-emerald-600 mt-1">Cap applied (max 70%)</p>
+            <p className="text-xs text-green-600 mt-1">Cap applied (max 70%)</p>
           )}
           {a.temporalContext?.backdatedReductionChf > 0 && (
-            <p className="text-xs text-emerald-600 mt-1">
+            <p className="text-xs text-green-600 mt-1">
               Back-dated: ~CHF {a.temporalContext.backdatedReductionChf.toFixed(0)}
               {a.temporalContext.durationMonths
                 ? ` (${a.temporalContext.durationMonths} months)`
@@ -648,7 +631,7 @@ function TenantClaimAnalysisPanel({ requestId }) {
       {/* Expand/collapse for detailed sections */}
       <button
         onClick={() => setExpanded((v) => !v)}
-        className="text-xs text-violet-600 hover:text-violet-800 font-medium"
+        className="text-xs text-violet-600 hover:text-violet-700 font-medium"
       >
         {expanded ? "▾ Hide details" : "▸ Show detailed analysis"}
       </button>
@@ -658,29 +641,29 @@ function TenantClaimAnalysisPanel({ requestId }) {
           {/* Matched defects */}
           {a.matchedDefects?.length > 0 && (
             <div>
-              <p className="text-xs font-semibold text-gray-700 mb-1">
+              <p className="text-xs font-semibold text-slate-700 mb-1">
                 Matched precedents ({a.matchedDefects.length})
               </p>
               <div className="space-y-1.5">
                 {a.matchedDefects.map((d, i) => (
                   <div
                     key={i}
-                    className="rounded-lg border border-gray-200 bg-white p-2.5"
+                    className="rounded-lg border border-slate-200 bg-white p-2.5"
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
-                        <p className="text-xs font-medium text-gray-800">{d.defect}</p>
-                        <p className="text-xs text-gray-500 mt-0.5">
+                        <p className="text-xs font-medium text-slate-800">{d.defect}</p>
+                        <p className="text-xs text-slate-500 mt-0.5">
                           {d.category} • {d.reductionPercent}% reduction
                           {d.reductionMax ? ` (max ${d.reductionMax}%)` : ""}
                         </p>
                       </div>
-                      <span className="text-xs text-gray-400 ml-2">
+                      <span className="text-xs text-slate-400 ml-2">
                         {Math.round(d.matchConfidence)}% match
                       </span>
                     </div>
                     {d.matchReasons?.length > 0 && (
-                      <p className="text-xs text-gray-400 mt-1">
+                      <p className="text-xs text-slate-400 mt-1">
                         {d.matchReasons.join(", ")}
                       </p>
                     )}
@@ -693,13 +676,13 @@ function TenantClaimAnalysisPanel({ requestId }) {
           {/* Legal basis */}
           {a.legalBasis?.length > 0 && (
             <div>
-              <p className="text-xs font-semibold text-gray-700 mb-1">Legal basis</p>
+              <p className="text-xs font-semibold text-slate-700 mb-1">Legal basis</p>
               <div className="space-y-1">
                 {a.legalBasis.map((b, i) => (
-                  <div key={i} className="text-xs text-gray-600">
+                  <div key={i} className="text-xs text-slate-600">
                     <span className="font-medium">{b.article}</span>
                     {b.text && <span> — {b.text}</span>}
-                    <span className="text-gray-400 ml-1">({b.authority})</span>
+                    <span className="text-slate-400 ml-1">({b.authority})</span>
                   </div>
                 ))}
               </div>
@@ -712,7 +695,7 @@ function TenantClaimAnalysisPanel({ requestId }) {
               <p className="text-xs font-semibold text-amber-900 mb-1">
                 Landlord obligations
               </p>
-              <p className="text-xs text-amber-800">{a.landlordObligations.summary}</p>
+              <p className="text-xs text-amber-700">{a.landlordObligations.summary}</p>
               {a.landlordObligations.requiredActions?.length > 0 && (
                 <ul className="list-disc list-inside mt-1 space-y-0.5">
                   {a.landlordObligations.requiredActions.map((act, i) => (
@@ -730,7 +713,7 @@ function TenantClaimAnalysisPanel({ requestId }) {
 
           {/* Temporal context */}
           {a.temporalContext?.seasonalAdjustment && (
-            <div className="text-xs text-gray-500">
+            <div className="text-xs text-slate-500">
               🌡️ Seasonal adjustment applied
               {a.temporalContext.proRatedPercent != null
                 ? ` — pro-rated to ${a.temporalContext.proRatedPercent}%`
@@ -741,7 +724,7 @@ function TenantClaimAnalysisPanel({ requestId }) {
           {/* Escalation */}
           {a.tenantGuidance?.escalation && (
             <div className="rounded-lg bg-red-50 border border-red-200 p-2.5">
-              <p className="text-xs font-semibold text-red-800">Escalation</p>
+              <p className="text-xs font-semibold text-red-700">Escalation</p>
               <p className="text-xs text-red-700">{a.tenantGuidance.escalation}</p>
             </div>
           )}
@@ -788,9 +771,9 @@ function NewRequestModal({ onClose, onCreated }) {
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-4">
       <div className="w-full max-w-lg rounded-2xl bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
-          <h2 className="text-base font-semibold text-gray-900">New Maintenance Request</h2>
-          <button onClick={onClose} className="rounded-full p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600">
+        <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
+          <h2 className="text-base font-semibold text-slate-900">New Maintenance Request</h2>
+          <button onClick={onClose} className="rounded-full p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600">
             <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
             </svg>
@@ -798,10 +781,10 @@ function NewRequestModal({ onClose, onCreated }) {
         </div>
 
         <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
-          {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
+          <ErrorBanner error={error} className="text-sm" />
 
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-gray-700">
+            <label className="mb-1.5 block text-sm font-medium text-slate-700">
               Description <span className="text-red-500">*</span>
             </label>
             <textarea
@@ -810,17 +793,17 @@ function NewRequestModal({ onClose, onCreated }) {
               placeholder="Describe the issue in detail (e.g. the kitchen faucet is dripping)"
               rows={4}
               required
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm placeholder-gray-400 focus:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-400"
+              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm placeholder-slate-400 focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400"
             />
-            <p className="mt-1 text-xs text-gray-400">{description.trim().length}/2000 — min 10 characters</p>
+            <p className="mt-1 text-xs text-slate-400">{description.trim().length}/2000 — min 10 characters</p>
           </div>
 
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-gray-700">Category</label>
+            <label className="mb-1.5 block text-sm font-medium text-slate-700">Category</label>
             <select
               value={category}
               onChange={(e) => setCategory(e.target.value)}
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 focus:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-400"
+              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400"
             >
               <option value="">— Select a category (optional) —</option>
               {CATEGORIES.map((c) => (
@@ -830,13 +813,13 @@ function NewRequestModal({ onClose, onCreated }) {
           </div>
 
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-gray-700">Contact phone</label>
+            <label className="mb-1.5 block text-sm font-medium text-slate-700">Contact phone</label>
             <input
               type="tel"
               value={contactPhone}
               onChange={(e) => setContactPhone(e.target.value)}
               placeholder="+41 79 123 45 67"
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm placeholder-gray-400 focus:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-400"
+              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm placeholder-slate-400 focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400"
             />
           </div>
 
@@ -844,7 +827,7 @@ function NewRequestModal({ onClose, onCreated }) {
             <button
               type="button"
               onClick={onClose}
-              className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50"
+              className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
             >
               Cancel
             </button>
@@ -935,7 +918,7 @@ export default function TenantRequestsPage() {
                 <p className="empty-state-text">Please sign in to view your requests.</p>
                 <button
                   onClick={() => router.push("/tenant")}
-                  className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700"
+                  className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700"
                 >
                   Sign in
                 </button>
@@ -1000,25 +983,25 @@ export default function TenantRequestsPage() {
                 <div key={r.id} className="card border overflow-hidden">
                   {/* Clickable header */}
                   <div
-                    className="flex cursor-pointer items-start justify-between p-4 hover:bg-gray-50"
+                    className="flex cursor-pointer items-start justify-between p-4 hover:bg-slate-50"
                     onClick={() => toggleAccordion(r.id)}
                   >
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">
-                        {r.requestNumber ? <span className="text-gray-500 font-mono">#{r.requestNumber}</span> : null}
+                      <p className="text-sm font-medium text-slate-900 truncate">
+                        {r.requestNumber ? <span className="text-slate-500 font-mono">#{r.requestNumber}</span> : null}
                         {r.requestNumber ? " " : ""}{r.description}
                       </p>
                       <div className="flex items-center gap-2 mt-1">
-                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLORS[r.status] || "bg-gray-100 text-gray-600"}`}>
+                        <Badge variant={requestVariant(r.status)} size="sm">
                           {r.status.replace(/_/g, " ")}
-                        </span>
+                        </Badge>
                         {r.payingParty === "TENANT" && (
-                          <span className="text-xs px-2 py-0.5 rounded-full bg-orange-100 text-orange-800 font-medium">
+                          <Badge variant="warning" size="sm">
                             Self-pay
-                          </span>
+                          </Badge>
                         )}
                       </div>
-                      <div className="flex gap-3 mt-1 text-xs text-gray-400">
+                      <div className="flex gap-3 mt-1 text-xs text-slate-400">
                         {r.buildingName && <span>{r.buildingName}</span>}
                         {r.unitNumber && <span>Unit {r.unitNumber}</span>}
                         {r.category && <span>{r.category}</span>}
@@ -1036,7 +1019,7 @@ export default function TenantRequestsPage() {
                         </button>
                       )}
                       <svg
-                        className={`h-4 w-4 text-gray-400 transition-transform ${isExpanded ? "rotate-90" : ""}`}
+                        className={cn("h-4 w-4 text-slate-400 transition-transform", isExpanded ? "rotate-90" : "")}
                         fill="none" viewBox="0 0 24 24" stroke="currentColor"
                       >
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -1046,7 +1029,7 @@ export default function TenantRequestsPage() {
 
                   {/* Expanded detail */}
                   {isExpanded && (
-                    <div className="border-t border-gray-100 px-4 pb-4 pt-3">
+                    <div className="border-t border-slate-100 px-4 pb-4 pt-3">
                       {r.rejectionReason && r.status === "OWNER_REJECTED" && (
                         <p className="mb-2 text-xs text-red-600">Reason: {r.rejectionReason}</p>
                       )}

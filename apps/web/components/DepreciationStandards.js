@@ -1,7 +1,10 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import Panel from "./layout/Panel";
+import ErrorBanner from "./ui/ErrorBanner";
 import { authHeaders } from "../lib/api";
+import Badge from "./ui/Badge";
 
+import { cn } from "../lib/utils";
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -28,16 +31,6 @@ const ASSET_TYPE_LABELS = {
   STRUCTURAL: "Structural",
   SYSTEM: "System / Installation",
   OTHER: "Other",
-};
-
-/** Colours for asset type pills */
-const ASSET_TYPE_COLORS = {
-  APPLIANCE: "bg-violet-100 text-violet-700",
-  FIXTURE: "bg-blue-100 text-blue-700",
-  FINISH: "bg-amber-100 text-amber-700",
-  STRUCTURAL: "bg-emerald-100 text-emerald-700",
-  SYSTEM: "bg-rose-100 text-rose-700",
-  OTHER: "bg-slate-100 text-slate-600",
 };
 
 /** Category display order (mirrors ASLOCA PDF sections 1–14) */
@@ -79,13 +72,20 @@ const MAX_LIFE_YEARS = 50;
 // Sub-components
 // ---------------------------------------------------------------------------
 
+const ASSET_TYPE_VARIANT = {
+  APPLIANCE: "brand",
+  FIXTURE: "info",
+  FINISH: "warning",
+  STRUCTURAL: "success",
+  SYSTEM: "destructive",
+  OTHER: "muted",
+};
 function AssetTypePill({ type }) {
-  const colors = ASSET_TYPE_COLORS[type] || ASSET_TYPE_COLORS.OTHER;
   const label = ASSET_TYPE_LABELS[type] || type;
   return (
-    <span className={`inline-block rounded-full px-2 py-0.5 text-[11px] font-medium ${colors}`}>
+    <Badge variant={ASSET_TYPE_VARIANT[type] || "muted"} size="sm">
       {label}
-    </span>
+    </Badge>
   );
 }
 
@@ -96,11 +96,11 @@ function LifespanBar({ months }) {
     years <= 10 ? "bg-red-400"
       : years <= 20 ? "bg-amber-400"
         : years <= 30 ? "bg-blue-400"
-          : "bg-emerald-400";
+          : "bg-green-400";
   return (
     <div className="flex items-center gap-2">
       <div className="h-2 w-24 rounded-full bg-slate-100 sm:w-32">
-        <div className={`h-2 rounded-full ${color}`} style={{ width: `${pct}%` }} />
+        <div className={cn("h-2 rounded-full", color)} style={{ width: `${pct}%` }} />
       </div>
       <span className="whitespace-nowrap text-xs font-semibold text-slate-700">
         {Number.isInteger(years) ? years : years.toFixed(1)} yr
@@ -142,7 +142,7 @@ function CategorySection({ category, items, collapsed, onToggle }) {
             {items.length} items
           </span>
           <svg
-            className={`h-4 w-4 text-slate-400 transition-transform ${collapsed ? "" : "rotate-180"}`}
+            className={cn("h-4 w-4 text-slate-400 transition-transform", collapsed ? "" : "rotate-180")}
             fill="none" viewBox="0 0 24 24" stroke="currentColor"
           >
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -231,14 +231,14 @@ function CreateStandardForm({ onCreated, onError }) {
         </label>
         <label className="block">
           <span className="text-xs font-medium text-slate-600">Topic Key</span>
-          <input className="mt-1 block w-full rounded border border-slate-300 px-3 py-2 text-sm" value={form.topic} onChange={(e) => setForm({ ...form, topic: e.target.value })} placeholder="e.g. DISHWASHER, PARQUET_MOSAIC" required />
+          <input className="filter-input mt-1 block" value={form.topic} onChange={(e) => setForm({ ...form, topic: e.target.value })} placeholder="e.g. DISHWASHER, PARQUET_MOSAIC" required />
         </label>
         <label className="block">
           <span className="text-xs font-medium text-slate-600">Useful Life (months)</span>
-          <input type="number" className="mt-1 block w-full rounded border border-slate-300 px-3 py-2 text-sm" value={form.usefulLifeMonths} onChange={(e) => setForm({ ...form, usefulLifeMonths: e.target.value })} min={1} required />
+          <input type="number" className="filter-input mt-1 block" value={form.usefulLifeMonths} onChange={(e) => setForm({ ...form, usefulLifeMonths: e.target.value })} min={1} required />
         </label>
         <div className="flex items-end">
-          <button type="submit" disabled={saving} className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">
+          <button type="submit" disabled={saving} className="button-primary text-sm disabled:opacity-50">
             {saving ? "Creating…" : "Create Standard"}
           </button>
         </div>
@@ -346,9 +346,7 @@ export default function DepreciationStandards() {
 
   return (
     <div className="space-y-4">
-      {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
-      )}
+      <ErrorBanner error={error} className="text-sm" />
 
       {/* ── Stats cards ── */}
       {!loading && standards.length > 0 && (
@@ -403,8 +401,8 @@ export default function DepreciationStandards() {
               ))}
             </select>
             <div className="flex gap-1">
-              <button onClick={expandAll} className="rounded-md border border-slate-200 px-2.5 py-1.5 text-xs text-slate-600 hover:bg-slate-50">Expand All</button>
-              <button onClick={collapseAll} className="rounded-md border border-slate-200 px-2.5 py-1.5 text-xs text-slate-600 hover:bg-slate-50">Collapse All</button>
+              <button onClick={expandAll} className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs text-slate-600 hover:bg-slate-50">Expand All</button>
+              <button onClick={collapseAll} className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs text-slate-600 hover:bg-slate-50">Collapse All</button>
             </div>
             {(search || typeFilter !== "ALL") && (
               <span className="text-xs text-slate-400">Showing {filtered.length} of {enriched.length}</span>
@@ -420,7 +418,7 @@ export default function DepreciationStandards() {
         <Panel>
           <p className="empty-state-text">
             No depreciation standards yet. Click <strong>"Sync Sources"</strong> on the{" "}
-            <a href="/manager/legal" className="text-blue-600 underline">Legal Engine hub</a> to import the ASLOCA/FRI table.
+            <a href="/manager/settings?tab=legal" className="text-blue-600 underline">Legal Sources settings tab</a> to import the ASLOCA/FRI table.
           </p>
         </Panel>
       ) : filtered.length === 0 ? (
@@ -447,7 +445,7 @@ export default function DepreciationStandards() {
             <span className="flex items-center gap-1"><span className="inline-block h-2 w-4 rounded-full bg-red-400" /> ≤ 10 years</span>
             <span className="flex items-center gap-1"><span className="inline-block h-2 w-4 rounded-full bg-amber-400" /> 11–20 years</span>
             <span className="flex items-center gap-1"><span className="inline-block h-2 w-4 rounded-full bg-blue-400" /> 21–30 years</span>
-            <span className="flex items-center gap-1"><span className="inline-block h-2 w-4 rounded-full bg-emerald-400" /> &gt; 30 years</span>
+            <span className="flex items-center gap-1"><span className="inline-block h-2 w-4 rounded-full bg-green-400" /> &gt; 30 years</span>
           </div>
           <p className="mt-2 text-[11px] text-slate-400">
             Source: <em>Tableau paritaire des amortissements</em> — ASLOCA Fédération romande &amp; FRI, effective 1 March 2007.

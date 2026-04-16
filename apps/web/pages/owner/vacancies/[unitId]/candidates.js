@@ -9,23 +9,31 @@ import PageContent from "../../../../components/layout/PageContent";
 import Panel from "../../../../components/layout/Panel";
 import DocumentsPanel from "../../../../components/DocumentsPanel";
 import { formatDisqualificationReasons } from "../../../../lib/formatDisqualificationReasons";
+import ErrorBanner from "../../../../components/ui/ErrorBanner";
+import Badge from "../../../../components/ui/Badge";
 import { ownerAuthHeaders } from "../../../../lib/api";
+import { cn } from "../../../../lib/utils";
 function scoreColor(score) {
   if (score >= 700) return "text-green-700 bg-green-50";
   if (score >= 400) return "text-amber-700 bg-amber-50";
   return "text-red-700 bg-red-50";
 }
+function scoreVariant(score) {
+  if (score >= 700) return "success";
+  if (score >= 400) return "warning";
+  return "destructive";
+}
 
 function confidenceBadge(confidence) {
-  if (confidence >= 80) return { label: "High", cls: "bg-green-100 text-green-700" };
-  if (confidence >= 50) return { label: "Medium", cls: "bg-amber-100 text-amber-700" };
-  return { label: "Low", cls: "bg-red-100 text-red-700" };
+  if (confidence >= 80) return { label: "High", variant: "success" };
+  if (confidence >= 50) return { label: "Medium", variant: "warning" };
+  return { label: "Low", variant: "destructive" };
 }
 
 const ROLES = [
-  { key: "primary", label: "Primary", color: "bg-indigo-600" },
-  { key: "backup1", label: "Backup 1", color: "bg-amber-600" },
-  { key: "backup2", label: "Backup 2", color: "bg-slate-500" },
+  { key: "primary", label: "Primary", color: "bg-indigo-600", variant: "brand" },
+  { key: "backup1", label: "Backup 1", color: "bg-amber-600", variant: "warning" },
+  { key: "backup2", label: "Backup 2", color: "bg-slate-500", variant: "muted" },
 ];
 
 export default function OwnerCandidatesPage() {
@@ -215,9 +223,7 @@ export default function OwnerCandidatesPage() {
         />
 
         <PageContent>
-          {error && (
-            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
-          )}
+          <ErrorBanner error={error} className="text-sm" />
           {success && (
             <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
               <p className="font-semibold">Candidates selected successfully!</p>
@@ -226,7 +232,7 @@ export default function OwnerCandidatesPage() {
                 You can track progress on the vacancies page.
               </p>
               <div className="mt-3 flex items-center gap-4">
-                <Link href="/owner/vacancies" className="font-semibold text-green-800 hover:underline">
+                <Link href="/owner/vacancies" className="font-semibold text-green-700 hover:underline">
                   View awaiting signatures →
                 </Link>
               </div>
@@ -240,17 +246,13 @@ export default function OwnerCandidatesPage() {
                 {selectionSummary.map((s) => (
                   <div
                     key={s.key}
-                    className={`rounded-lg border-2 p-4 text-center ${
-                      s.candidate
+                    className={cn("rounded-lg border-2 p-4 text-center", s.candidate
                         ? "border-indigo-200 bg-indigo-50"
-                        : "border-dashed border-slate-200 bg-slate-50"
-                    }`}
+                        : "border-dashed border-slate-200 bg-slate-50")}
                   >
-                    <span
-                      className={`inline-block rounded-full px-3 py-1 text-xs font-bold text-white ${s.color}`}
-                    >
+                    <Badge variant={s.variant} size="lg">
                       {s.label}
-                    </span>
+                    </Badge>
                     {s.candidate ? (
                       <div className="mt-3">
                         <p className="text-sm font-semibold text-slate-900">{s.candidate.name}</p>
@@ -305,9 +307,9 @@ export default function OwnerCandidatesPage() {
                     .filter((s) => s.candidate)
                     .map((s) => (
                       <li key={s.key} className="flex items-center gap-2 text-sm">
-                        <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-bold text-white ${s.color}`}>
+                        <Badge variant={s.variant} size="sm">
                           {s.label}
-                        </span>
+                        </Badge>
                         <span className="font-medium text-slate-900">{s.candidate.name}</span>
                         <span className="text-slate-400">Score: {s.candidate.score}</span>
                       </li>
@@ -344,7 +346,7 @@ export default function OwnerCandidatesPage() {
               {!loading && rows.length > 0 && (
                 <div className="overflow-x-auto">
                   <table className="min-w-full divide-y divide-slate-200 text-sm">
-                    <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    <thead className="bg-slate-50 text-left text-xs font-medium uppercase tracking-wide text-slate-400">
                       <tr>
                         <th className="px-4 py-3">Rank</th>
                         <th className="px-4 py-3">Applicant</th>
@@ -369,20 +371,16 @@ export default function OwnerCandidatesPage() {
                         return (
                           <React.Fragment key={row.applicationUnitId || row.id}>
                           <tr
-                            className={`${
-                              row.disqualified ? "bg-red-50/40" : ""
-                            } ${currentRole ? "ring-2 ring-indigo-200 ring-inset" : ""}`}
+                            className={cn(row.disqualified ? "bg-red-50/40" : "", currentRole ? "ring-2 ring-blue-200 ring-inset" : "")}
                           >
                             <td className="px-4 py-3 text-slate-600 font-mono">{idx + 1}</td>
                             <td className="px-4 py-3">
                               <div className="flex items-center flex-wrap gap-x-2">
                                 <button
                                   onClick={() => setExpandedDocApp(isDocExpanded ? null : row.id)}
-                                  className={`font-medium underline decoration-dotted underline-offset-2 transition-colors ${
-                                    isDocExpanded
+                                  className={cn("font-medium underline decoration-dotted underline-offset-2 transition-colors", isDocExpanded
                                       ? "text-indigo-700"
-                                      : "text-slate-900 hover:text-indigo-600"
-                                  }`}
+                                      : "text-slate-900 hover:text-indigo-600")}
                                   title="Click to view corroborative documents"
                                 >
                                   {row.name}
@@ -399,7 +397,7 @@ export default function OwnerCandidatesPage() {
                                 )}
                                 {roleInfo && (
                                   <span
-                                    className={`rounded px-1.5 py-0.5 text-xs font-bold text-white ${roleInfo.color}`}
+                                    className={cn("rounded px-1.5 py-0.5 text-xs font-bold text-white", roleInfo.color)}
                                   >
                                     {roleInfo.label}
                                   </span>
@@ -413,16 +411,14 @@ export default function OwnerCandidatesPage() {
                               {row.income != null ? formatNumber(row.income) : "—"}
                             </td>
                             <td className="px-4 py-3">
-                              <span
-                                className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${scoreColor(row.score || 0)}`}
-                              >
+                              <Badge variant={scoreVariant(row.score || 0)} size="sm">
                                 {row.score ?? "—"}
-                              </span>
+                              </Badge>
                             </td>
                             <td className="px-4 py-3">
-                              <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${conf.cls}`}>
+                              <Badge variant={conf.variant} size="sm">
                                 {row.confidence ?? 0}% {conf.label}
-                              </span>
+                              </Badge>
                             </td>
 
                             <td className="px-4 py-3 text-right">
@@ -432,7 +428,7 @@ export default function OwnerCandidatesPage() {
                                     setOverrideTarget({ applicationUnitId: row.applicationUnitId, name: row.name });
                                     setOverrideReason("");
                                   }}
-                                  className="rounded px-2.5 py-1 text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 hover:bg-amber-100 transition-colors"
+                                  className="rounded px-3 py-1.5 text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 hover:bg-amber-100 transition-colors"
                                   title="Override disqualification and make this candidate eligible"
                                 >
                                   ⚠ Override
@@ -446,11 +442,9 @@ export default function OwnerCandidatesPage() {
                                         key={r.key}
                                         onClick={() => toggleSelection(r.key, row.applicationUnitId)}
                                         title={`Set as ${r.label}`}
-                                        className={`rounded px-2 py-1 text-xs font-semibold transition-colors ${
-                                          isThis
+                                        className={cn("rounded px-2 py-1 text-xs font-semibold transition-colors", isThis
                                             ? `${r.color} text-white`
-                                            : "border border-slate-200 text-slate-500 hover:bg-slate-100"
-                                        }`}
+                                            : "border border-slate-200 text-slate-500 hover:bg-slate-100")}
                                       >
                                         {r.label.charAt(0)}
                                         {r.key !== "primary" ? r.key.slice(-1) : ""}
@@ -468,7 +462,7 @@ export default function OwnerCandidatesPage() {
                                   {/* Disqualification reasons (human-friendly) */}
                                   {row.disqualified && reasons.length > 0 && (
                                     <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3">
-                                      <h4 className="text-sm font-semibold text-red-800 mb-2">Disqualification Reasons</h4>
+                                      <h4 className="text-sm font-semibold text-red-700 mb-2">Disqualification Reasons</h4>
                                       <ul className="list-disc ml-5 space-y-1.5">
                                         {formatDisqualificationReasons(reasons).map((text, i) => (
                                           <li key={i} className="text-sm text-red-700 leading-relaxed">{text}</li>
@@ -502,11 +496,11 @@ export default function OwnerCandidatesPage() {
                   This candidate will become eligible for selection.
                 </p>
                 <div className="mt-4">
-                  <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1.5">
+                  <label className="block text-xs font-medium uppercase tracking-wide text-slate-400 mb-1.5">
                     Reason for override *
                   </label>
                   <textarea
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                     rows={3}
                     placeholder="e.g. Verified income directly with employer; debt enforcement extract is clear…"
                     value={overrideReason}

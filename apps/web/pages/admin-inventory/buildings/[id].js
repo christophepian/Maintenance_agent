@@ -7,9 +7,11 @@ import PageHeader from "../../../components/layout/PageHeader";
 import PageContent from "../../../components/layout/PageContent";
 import Panel from "../../../components/layout/Panel";
 import UndoToast, { useUndoToast } from "../../../components/ui/UndoToast";
+import Badge from "../../../components/ui/Badge";
 import AssetInventoryPanel from "../../../components/AssetInventoryPanel";
 import { authHeaders } from "../../../lib/api";
 
+import { cn } from "../../../lib/utils";
 function displayDate(iso) {
   if (!iso) return "—";
   const d = new Date(iso);
@@ -25,38 +27,7 @@ export default function BuildingDetail() {
   const backHref = from || "/admin-inventory";
   const [activeTab, setActiveTab] = useState("Building information");
 
-  const ui = {
-    page: { maxWidth: "1100px", margin: "40px auto", padding: "24px", fontFamily: "system-ui" },
-    headerRow: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "24px" },
-    h1: { fontSize: "2.2rem", fontWeight: 700, margin: 0 },
-    h2: { fontSize: "1.5rem", fontWeight: 600, margin: "0 0 16px 0" },
-    subtle: { color: "#888", fontSize: "0.95rem" },
-    code: { background: "#f5f5f5", padding: "2px 6px", borderRadius: "4px", fontSize: "0.95em", fontFamily: "monospace" },
-    codeSmall: { background: "#f5f5f5", padding: "2px 4px", borderRadius: "3px", fontSize: "0.85em", fontFamily: "monospace" },
-    card: { background: "#fff", border: "1px solid #e5e5e5", borderRadius: "8px", padding: "20px", marginBottom: "20px" },
-    label: { display: "block", fontWeight: 600, marginBottom: "6px", fontSize: "0.95rem" },
-    input: { padding: "10px 12px", borderRadius: "6px", border: "1px solid #ddd", width: "100%", maxWidth: "380px", fontSize: "0.95rem", boxSizing: "border-box" },
-    primaryBtn: { padding: "10px 20px", borderRadius: "6px", border: "none", background: "#111", color: "#fff", cursor: "pointer", fontWeight: 600, fontSize: "0.95rem" },
-    secondaryBtn: { padding: "10px 20px", borderRadius: "6px", border: "1px solid #ddd", background: "#fafafa", color: "#111", cursor: "pointer", fontWeight: 500, fontSize: "0.95rem" },
-    dangerBtn: { padding: "10px 20px", borderRadius: "6px", border: "none", background: "#dc3545", color: "#fff", cursor: "pointer", fontWeight: 600, fontSize: "0.95rem" },
-    formRow: { display: "flex", gap: "16px", alignItems: "flex-end", marginBottom: "20px" },
-    grid2: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", marginBottom: "20px" },
-    list: { display: "flex", flexDirection: "column", gap: "12px" },
-    listRow: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px", border: "1px solid #e5e5e5", borderRadius: "6px", background: "#fafafa" },
-    rowTitle: { fontWeight: 600, fontSize: "1rem", marginBottom: "4px" },
-    help: { fontSize: "0.85rem", color: "#666", marginTop: "4px" },
-    empty: { padding: "20px", textAlign: "center", color: "#888", fontStyle: "italic" },
-    notice: { padding: "12px 16px", borderRadius: "6px", marginBottom: "16px", fontSize: "0.95rem" },
-    noticeOk: { background: "#e8f5e9", border: "1px solid #81c784", color: "#2e7d32" },
-    noticeErr: { background: "#ffebee", border: "1px solid #ef5350", color: "#c62828" },
-    pill: { display: "inline-block", background: "#e0e0e0", color: "#333", padding: "2px 8px", borderRadius: "12px", fontSize: "0.8rem", marginLeft: "6px" },
-    actionPanel: { background: "#fafafa", border: "1px solid #e5e5e5", borderRadius: "6px", padding: "14px", display: "flex", flexDirection: "column", gap: "16px" },
-    actionHeader: { display: "flex", alignItems: "center", justifyContent: "space-between" },
-    actionOptions: { display: "grid", gap: "10px" },
-    actionOptionBtn: { padding: "10px 14px", borderRadius: "6px", border: "1px solid #ddd", background: "#fafafa", textAlign: "left", cursor: "pointer", fontWeight: 600 },
-    actionHint: { color: "#666", fontSize: "0.85rem", marginTop: "4px" },
-    backLink: { color: "#0066cc", textDecoration: "none", fontWeight: 500, marginBottom: "20px", display: "inline-block" },
-  };
+  // ui object removed — all styles now use Tailwind className
 
   const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3001";
 
@@ -517,24 +488,19 @@ export default function BuildingDetail() {
         <PageContent>
           {notice && (
             <Panel>
-              <div className={`text-sm ${notice.type === "ok" ? "text-green-600" : "text-red-600"}`}>
+              <div className={cn("text-sm", notice.type === "ok" ? "text-green-600" : "text-red-600")}>
                 {notice.message}
               </div>
             </Panel>
           )}
 
           {/* Tabs Navigation */}
-          <div className="mb-6 flex border-b border-slate-200 overflow-x-auto">
+          <div className="tab-strip overflow-x-auto">
             {["Building information", "Units", "Tenants", "Assets", "Documents", "Policies", "Financials"].map((tab) => (
               <button
                 key={tab}
                 type="button"
-                className={[
-                  "whitespace-nowrap px-5 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors",
-                  activeTab === tab
-                    ? "border-indigo-600 text-indigo-600"
-                    : "border-transparent text-slate-500 hover:text-slate-700",
-                ].join(" ")}
+                className={activeTab === tab ? "tab-btn-active" : "tab-btn"}
                 onClick={() => setActiveTab(tab)}
               >
                 {tab}
@@ -549,7 +515,7 @@ export default function BuildingDetail() {
                 <form onSubmit={onUpdateBuilding}>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <label className="grid gap-2">
-                      <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Name</span>
+                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Name</span>
                       <input
                         className="input text-sm text-slate-700"
                         type="text"
@@ -559,7 +525,7 @@ export default function BuildingDetail() {
                       />
                     </label>
                     <label className="grid gap-2">
-                      <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Address</span>
+                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Address</span>
                       <input
                         className="input text-sm text-slate-700"
                         type="text"
@@ -569,7 +535,7 @@ export default function BuildingDetail() {
                       />
                     </label>
                     <label className="grid gap-2">
-                      <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Year Built</span>
+                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Year Built</span>
                       <input
                         className="input text-sm text-slate-700"
                         type="number"
@@ -581,7 +547,7 @@ export default function BuildingDetail() {
                       />
                     </label>
                     <label className="grid gap-2">
-                      <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Managed Since</span>
+                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Managed Since</span>
                       <input
                         className="input text-sm text-slate-700"
                         type="date"
@@ -645,22 +611,22 @@ export default function BuildingDetail() {
                 <>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div>
-                      <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Name</div>
+                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Name</div>
                       <div className="text-sm text-slate-700 mt-1">{building?.name}</div>
                     </div>
                     <div>
-                      <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Address</div>
+                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Address</div>
                       <div className="text-sm text-slate-700 mt-1">{building?.address || "—"}</div>
                     </div>
                     <div>
-                      <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Year Built</div>
+                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Year Built</div>
                       <div className="text-sm text-slate-700 mt-1">{building?.yearBuilt ?? "—"}</div>
                     </div>
                     <div>
-                      <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Amenities</div>
+                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Amenities</div>
                       <div className="text-sm text-slate-700 mt-1 flex gap-3">
-                        {building?.hasElevator && <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">Elevator</span>}
-                        {building?.hasConcierge && <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">Concierge</span>}
+                        {building?.hasElevator && <Badge variant="info" size="sm">Elevator</Badge>}
+                        {building?.hasConcierge && <Badge variant="info" size="sm">Concierge</Badge>}
                         {!building?.hasElevator && !building?.hasConcierge && "—"}
                       </div>
                     </div>
@@ -677,7 +643,7 @@ export default function BuildingDetail() {
                     {/* Managed Since — inline date input when editing */}
                     <div className="grid gap-4 sm:grid-cols-2 mb-3">
                       <div>
-                        <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Managed Since</div>
+                        <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Managed Since</div>
                         {editMode ? (
                           <div className="flex items-center gap-2 mt-1">
                             <input
@@ -688,7 +654,7 @@ export default function BuildingDetail() {
                             />
                             <button
                               type="button"
-                              className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                              className="text-xs text-blue-600 hover:text-blue-700 font-medium"
                               disabled={loading}
                               onClick={async () => {
                                 try {
@@ -722,7 +688,7 @@ export default function BuildingDetail() {
                     {/* Owners list */}
                     {building?.owners && building.owners.length > 0 ? (
                       <div>
-                        <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">Owners</div>
+                        <div className="text-xs font-medium uppercase tracking-wide text-slate-400 mb-2">Owners</div>
                         <div className="grid gap-2 sm:grid-cols-2">
                           {building.owners.map((owner) => (
                             <div key={owner.id} className="border border-slate-200 rounded-lg p-3 bg-slate-50 flex items-center justify-between">
@@ -752,7 +718,7 @@ export default function BuildingDetail() {
                     {editMode && (
                       <div className="mt-3 flex items-end gap-2">
                         <div className="flex-1">
-                          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">Add Owner</div>
+                          <div className="text-xs font-medium uppercase tracking-wide text-slate-400 mb-1">Add Owner</div>
                           <select
                             className="input text-sm text-slate-700 w-full"
                             value={selectedCandidateId}
@@ -811,7 +777,7 @@ export default function BuildingDetail() {
                 <form onSubmit={onCreateUnit} className="bg-slate-50 border border-slate-200 rounded-lg p-4 mb-4">
                   <div className="grid gap-4 sm:grid-cols-2 mb-4">
                     <label className="grid gap-2">
-                      <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Unit number/label</span>
+                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Unit number/label</span>
                       <input
                         className="input text-sm text-slate-700"
                         value={createUnitName}
@@ -820,7 +786,7 @@ export default function BuildingDetail() {
                       />
                     </label>
                     <label className="grid gap-2">
-                      <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Type</span>
+                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Type</span>
                       <select
                         className="input text-sm text-slate-700"
                         value={createUnitType}
@@ -855,11 +821,9 @@ export default function BuildingDetail() {
                       <button
                         key={tab.key}
                         onClick={() => setUnitFilter(tab.key)}
-                        className={`px-3 py-1 text-xs font-medium rounded-full border transition ${
-                          unitFilter === tab.key
+                        className={cn("px-3 py-1 text-xs font-medium rounded-full border transition", unitFilter === tab.key
                             ? "bg-slate-900 text-white border-slate-900"
-                            : "bg-white text-slate-600 border-slate-300 hover:bg-slate-50"
-                        }`}
+                            : "bg-white text-slate-600 border-slate-300 hover:bg-slate-50")}
                       >
                         {tab.label}
                       </button>
@@ -883,13 +847,13 @@ export default function BuildingDetail() {
                               {u.livingAreaSqm != null && <span className="text-xs text-slate-400">{u.livingAreaSqm} m²</span>}
                               {/* ─── Occupancy badge ─── */}
                               {u.occupancyStatus === "OCCUPIED" && (
-                                <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-green-50 text-green-700 border border-green-200">Occupied</span>
+                                <Badge variant="success" size="sm">Occupied</Badge>
                               )}
                               {u.occupancyStatus === "VACANT" && (
-                                <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-red-50 text-red-700 border border-red-200">Vacant</span>
+                                <Badge variant="destructive" size="sm">Vacant</Badge>
                               )}
                               {u.occupancyStatus === "LISTED" && (
-                                <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-yellow-50 text-yellow-700 border border-yellow-200">Listed</span>
+                                <Badge variant="warning" size="sm">Listed</Badge>
                               )}
                             </div>
                             {/* ─── Tenant info for occupied units ─── */}
@@ -939,13 +903,13 @@ export default function BuildingDetail() {
                               {u.livingAreaSqm != null && <span className="text-xs text-slate-400">{u.livingAreaSqm} m²</span>}
                               {/* ─── Occupancy badge ─── */}
                               {u.occupancyStatus === "OCCUPIED" && (
-                                <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-green-50 text-green-700 border border-green-200">Occupied</span>
+                                <Badge variant="success" size="sm">Occupied</Badge>
                               )}
                               {u.occupancyStatus === "VACANT" && (
-                                <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-red-50 text-red-700 border border-red-200">Vacant</span>
+                                <Badge variant="destructive" size="sm">Vacant</Badge>
                               )}
                               {u.occupancyStatus === "LISTED" && (
-                                <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-yellow-50 text-yellow-700 border border-yellow-200">Listed</span>
+                                <Badge variant="warning" size="sm">Listed</Badge>
                               )}
                             </div>
                           </div>
@@ -979,12 +943,12 @@ export default function BuildingDetail() {
                     </thead>
                     <tbody>
                       {building.tenants.map((t, idx) => {
-                        const badgeColor =
+                        const badgeVariant =
                           t.source === "BOTH"
-                            ? "bg-emerald-50 text-emerald-700"
+                            ? "success"
                             : t.source === "LEASE"
-                            ? "bg-blue-50 text-blue-700"
-                            : "bg-slate-100 text-slate-600";
+                            ? "info"
+                            : "muted";
                         return (
                           <tr key={t.tenantId || idx} className="border-b border-slate-100">
                             <td className="py-2 text-slate-900 font-medium">{t.name}</td>
@@ -993,9 +957,9 @@ export default function BuildingDetail() {
                             <td className="py-2 text-slate-700">{t.email || "—"}</td>
                             <td className="py-2 text-slate-700">{t.moveInDate ? displayDate(t.moveInDate) : "—"}</td>
                             <td className="py-2">
-                              <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${badgeColor}`}>
+                              <Badge variant={badgeVariant} size="sm">
                                 {t.source === "BOTH" ? "Both" : t.source === "LEASE" ? "Lease" : "Directory"}
-                              </span>
+                              </Badge>
                             </td>
                           </tr>
                         );
@@ -1040,7 +1004,7 @@ export default function BuildingDetail() {
                       <div className="flex justify-between items-center">
                         <Link href={`/manager/leases/${tpl.id}`} className="flex-1 min-w-0">
                           <span className="font-semibold text-slate-900">{tpl.templateName || "Lease Template"}</span>
-                          <span className="ml-2 inline-block px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-700">TEMPLATE</span>
+                          <Badge variant="brand" size="sm" className="ml-2">TEMPLATE</Badge>
                           {tpl.landlordName && (
                             <p className="text-xs text-slate-500 mt-1">Landlord: {tpl.landlordName}</p>
                           )}
@@ -1076,7 +1040,7 @@ export default function BuildingDetail() {
                 </div>
               ) : (
                 <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
-                  <p className="text-sm text-amber-800 font-medium mb-1">No lease template found for this building</p>
+                  <p className="text-sm text-amber-700 font-medium mb-1">No lease template found for this building</p>
                   <p className="text-xs text-amber-600 mb-3">
                     A lease template defines the default contract terms (landlord info, notice rules, payment details, deposit) 
                     that are automatically applied when a new tenant is selected. Without a template, leases must be created manually.
@@ -1101,7 +1065,7 @@ export default function BuildingDetail() {
                   <form onSubmit={onSaveBuildingConfig} className="mt-4">
                     <div className="grid gap-4 sm:grid-cols-2">
                       <label className="grid gap-2">
-                        <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Auto-approve limit (CHF)</span>
+                        <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Auto-approve limit (CHF)</span>
                         <input
                           type="number"
                           className="input text-sm text-slate-700"
@@ -1112,7 +1076,7 @@ export default function BuildingDetail() {
                         <span className="text-xs text-slate-500">(blank = use org default)</span>
                       </label>
                       <label className="grid gap-2">
-                        <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Owner threshold (CHF)</span>
+                        <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Owner threshold (CHF)</span>
                         <input
                           type="number"
                           className="input text-sm text-slate-700"
@@ -1145,19 +1109,19 @@ export default function BuildingDetail() {
                   <>
                     <div className="grid gap-4 sm:grid-cols-2 mt-4">
                       <div>
-                        <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Auto-approve limit</div>
+                        <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Auto-approve limit</div>
                         <div className="text-sm text-slate-700 mt-1">
                           {buildingConfig?.autoApproveLimit != null ? `${buildingConfig.autoApproveLimit} CHF` : "(using org default)"}
                         </div>
                       </div>
                       <div>
-                        <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Owner threshold</div>
+                        <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Owner threshold</div>
                         <div className="text-sm text-slate-700 mt-1">
                           {buildingConfig?.requireOwnerApprovalAbove != null ? `${buildingConfig.requireOwnerApprovalAbove} CHF` : "(using org default)"}
                         </div>
                       </div>
                       <div>
-                        <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Emergency auto-dispatch</div>
+                        <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Emergency auto-dispatch</div>
                         <div className="text-sm text-slate-700 mt-1">
                           {buildingConfig?.emergencyAutoDispatch ? "Enabled" : "Disabled"}
                         </div>
@@ -1311,8 +1275,8 @@ export default function BuildingDetail() {
                             <div className="flex-1">
                               <div className="font-semibold text-slate-900">
                                 {rule.name}
-                                {!rule.isActive && <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded-full ml-2">Inactive</span>}
-                                <span className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full ml-2">Priority: {rule.priority}</span>
+                                {!rule.isActive && <Badge variant="warning" size="sm" className="ml-2">Inactive</Badge>}
+                                <Badge variant="info" size="sm" className="ml-2">Priority: {rule.priority}</Badge>
                               </div>
                               <div className="text-xs text-slate-600 mt-1">
                                 {rule.conditions.map((c, i) => (

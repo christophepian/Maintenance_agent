@@ -202,12 +202,12 @@ export default function DocumentsPanel({ applicationId, title, compact }) {
                 </button>
               </div>
             </div>
-            <div className="overflow-auto" style={{ maxHeight: "calc(90vh - 56px)" }}>
+            <div className="overflow-auto max-h-[calc(90vh-56px)]">
               {previewMime?.includes("pdf") ? (
                 <iframe
                   src={previewUrl}
                   className="w-full border-0"
-                  style={{ height: "80vh" }}
+                  className="h-[80vh]"
                   title="Document preview"
                 />
               ) : previewMime?.includes("image") ? (

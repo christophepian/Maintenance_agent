@@ -18,7 +18,7 @@ import { payInvoiceWorkflow } from "../workflows/payInvoiceWorkflow";
 import { disputeInvoiceWorkflow } from "../workflows/disputeInvoiceWorkflow";
 import { InvalidTransitionError } from "../workflows/transitions";
 import { ingestInvoice } from "../services/invoiceIngestionService";
-import { readRawBody, parseMultipart, MAX_FILE_SIZE } from "../storage/attachments";
+import { readRawBody, parseMultipart, MAX_FILE_SIZE, storage } from "../storage/attachments";
 import { InvoiceSourceChannel, InvoiceDirection } from "@prisma/client";
 
 export function registerInvoiceRoutes(router: Router) {
@@ -322,6 +322,37 @@ export function registerInvoiceRoutes(router: Router) {
     },
     "GET /invoices/:id/qr-code.png",
   );
+
+  // GET /invoices/:id/source-file — serve original uploaded file (image/pdf)
+  router.get("/invoices/:id/source-file", async ({ req, res, params, orgId }) => {
+    if (!requireOrgViewer(req, res)) return;
+    try {
+      const invoice = await getInvoice(params.id);
+      if (!invoice) return sendError(res, 404, "NOT_FOUND", "Invoice not found");
+      const fileKey = (invoice as any).sourceFileUrl;
+      if (!fileKey) return sendError(res, 404, "NOT_FOUND", "No source file for this invoice");
+
+      const exists = await storage.exists(fileKey);
+      if (!exists) return sendError(res, 404, "NOT_FOUND", "Source file not found on disk");
+
+      const buffer = await storage.get(fileKey);
+      const ext = fileKey.split(".").pop()?.toLowerCase() || "";
+      const mimeMap: Record<string, string> = { jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", pdf: "application/pdf", webp: "image/webp" };
+      const mime = mimeMap[ext] || "application/octet-stream";
+      const fileName = fileKey.split("/").pop() || "source-file";
+
+      res.writeHead(200, {
+        "Content-Type": mime,
+        "Content-Length": buffer.length.toString(),
+        "Content-Disposition": `inline; filename="${encodeURIComponent(fileName)}"`,
+        "Cache-Control": "private, max-age=3600",
+      });
+      res.end(buffer);
+    } catch (e: any) {
+      console.error("[INVOICE] source-file error:", e);
+      sendError(res, 500, "INTERNAL_ERROR", "Failed to serve source file", e.message);
+    }
+  });
 
   // GET /invoices/:id/pdf
   router.get("/invoices/:id/pdf", async ({ req, res, params, query, orgId }) => {

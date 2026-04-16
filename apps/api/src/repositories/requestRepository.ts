@@ -64,6 +64,12 @@ export const REQUEST_FULL_INCLUDE = {
       },
     },
   },
+  // Most-recent RFP for this request (used on approval screens)
+  rfps: {
+    select: { id: true, status: true },
+    orderBy: { createdAt: "desc" as const },
+    take: 1,
+  },
 } as const;
 
 /** Lighter include for summary/list views. */
@@ -224,4 +230,21 @@ export async function updateRequestContractor(
  */
 export async function findRequestRaw(prisma: PrismaClient, id: string) {
   return prisma.request.findUnique({ where: { id } });
+}
+
+/**
+ * Resolve a route parameter that may be either a UUID or a numeric requestNumber.
+ * Returns the UUID primary key, or null if not found.
+ */
+export async function resolveRequestId(prisma: PrismaClient, idOrNumber: string): Promise<string | null> {
+  // If the param looks like a positive integer, treat it as requestNumber
+  if (/^\d+$/.test(idOrNumber)) {
+    const row = await prisma.request.findUnique({
+      where: { requestNumber: Number(idOrNumber) },
+      select: { id: true },
+    });
+    return row?.id ?? null;
+  }
+  // Otherwise assume it's already a UUID
+  return idOrNumber;
 }

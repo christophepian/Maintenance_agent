@@ -9,6 +9,14 @@
 > "when to choose alternative" explanation field (§11), short/long-term impact labels
 > per option (§11, §15.2), performance SLAs (§19), and success metrics (§24).
 >
+> **Amended 2026-04-16 (v3).** UX/integration reconciliation: added archetype → plain-language
+> decision contract (§3.5) with canonical dishwasher reference case; extended §4.3 with
+> "what this means in practice" bullets and "what we'll deprioritize" sentences per archetype;
+> added auto-trigger rule and option auto-generation logic (§10.1/§10.2); replaced standalone
+> `recommendations.js` page with contextual embedding in request detail + cashflow plan overlay
+> (§13.5, §15.1, §15.4, §17 Phase 3); questionnaire made optional with persistent nudge and
+> Settings CTA; `totalValueCreationScore` added to `DecisionOption` (§3.1 bug fix).
+>
 > See §22 (Roadmap Alignment) and §23 (Implementation Prerequisites) — read those first
 > if you're deciding whether/when to start.
 
@@ -129,14 +137,24 @@ export interface OwnerProfile {
 
 Effective strategy at building level. Links to the existing `Building` model.
 
+> **Note on `orgId`:** All new Prisma models must include `orgId` (F7 guardrail). It is
+> omitted from the TypeScript interfaces below for brevity but must be present on every
+> Prisma model definition and repository query.
+
 ```ts
 export interface BuildingStrategyProfile {
   id: string;
+  orgId: string;            // required — F7 guardrail
   buildingId: string;       // FK → Building.id
-  ownerProfileId: string;   // FK → OwnerProfile.id
+  ownerProfileId: string;   // FK → OwnerStrategyProfile.id
+  // User-set fields (§3.4) — collected during building setup flow
   roleIntent: 'sell' | 'income' | 'long_term_quality' | 'reposition' | 'stable_hold' | 'unspecified';
-  buildingDimensions: Partial<StrategyDimensions>;
-  effectiveDimensions: StrategyDimensions;
+  buildingType?: 'residential' | 'mixed' | 'commercial';
+  approxUnits?: number;
+  conditionRating?: 'poor' | 'fair' | 'good' | 'very_good';
+  // Computed fields
+  buildingDimensions: Partial<StrategyDimensions>; // derived from roleIntent via roleIntentToDimensions()
+  effectiveDimensions: StrategyDimensions;          // result of combineDimensions()
   archetypeScores: ArchetypeScores;
   primaryArchetype: StrategyArchetype;
   secondaryArchetype?: StrategyArchetype;
@@ -252,6 +270,7 @@ export interface DecisionOption {
   opexReductionScore: number; // 0-100
   lifecycleExtensionScore: number; // 0-100
   modernizationImpactScore: number; // 0-100
+  totalValueCreationScore: number; // 0-100 — composite of lifecycle + modernization + rent uplift signals; used by explanationService for longTermImpact labels (§11)
   uncertaintyScore: number; // 0-100
   taxProfile: DecisionTaxProfile;
   financialProjection: FinancialProjection;
@@ -305,19 +324,25 @@ export interface FinancialProjection {
 
 #### RecommendationResult
 
-New persisted model. Stores the outcome of an evaluation run for auditability.
-`userDecision` is set after the user acts on the recommendation — it enables the
-recommendation acceptance rate metric (§24).
+New persisted Prisma model. `rankedOptions` and `explanation` are stored as **JSON columns**
+(consistent with existing project patterns — `serviceCategories` on `Contractor`,
+`dslJson` on `LegalRuleVersion`). Do not normalise them into related tables in v1.
+
+`userDecision` defaults to `'pending'` at creation time — it is not optional at the DB level.
+Only `userDecidedAt` and `userFeedback` are optional (set when the user acts).
 
 ```ts
 export interface RecommendationResult {
+  id: string;
+  orgId: string;             // required — F7 guardrail
   opportunityId: string;     // = Request.id
+  buildingProfileId: string; // FK → BuildingStrategyProfile.id (for auditability)
   evaluatedAt: string;
-  selectedOptionId: string;  // FK → DecisionOption.id
-  rankedOptions: RankedDecisionOption[];
-  explanation: RecommendationExplanation;
-  // Set by user after receiving the recommendation
-  userDecision?: 'accepted' | 'rejected' | 'deferred' | 'pending';
+  selectedOptionId: string;  // FK → MaintenanceDecisionOption.id
+  rankedOptions: RankedDecisionOption[];  // stored as JSON column
+  explanation: RecommendationExplanation; // stored as JSON column
+  // User decision tracking — required for §24 acceptance rate metric
+  userDecision: 'accepted' | 'rejected' | 'deferred' | 'pending'; // default 'pending'
   userDecidedAt?: string;
   userFeedback?: string;     // optional free-text from trust feedback prompt
 }
@@ -419,11 +444,47 @@ intent transparent and overridable without re-running the questionnaire.
 
 ---
 
+### 3.5 Archetype → Plain-Language Decision Contract
+
+> This table is the canonical contract between owner-facing strategy labels and the engine's
+> operational behaviour. It drives: (1) the "what this means in practice" bullets on the
+> strategy display screen (§4.3), (2) the `profileAlignment` bullets in `RecommendationExplanation`,
+> and (3) the strategy alignment tags in the cashflow plan overlay (§17 Phase 3).
+>
+> The DECISION_WEIGHTS matrix (§9.2) is the mathematical expression of this table.
+> When adding a new archetype or modifying weights, update this table in the same PR.
+
+| Archetype | Repair/replace default | Maintenance priority | Cashflow posture | What we deprioritize |
+|---|---|---|---|---|
+| **Prepare for sale** (`exit_optimizer`) | Repair unless item affects buyer appeal or compliance; prefer quick, visible fixes | Presentation, compliance, and risk reduction; deprioritize long-payback upgrades | Minimise capex; protect short-term cash; prefer low-outflow options | Long-term upgrades with payback beyond expected sale horizon; major renovations |
+| **Maximize income** (`yield_maximizer`) | Repair if cost-effective; replace only when repair cost exceeds ~40% of replacement cost | Protect cash flow; fix what threatens occupancy or rent collection first | Stable, predictable spend; avoid large surprises; income continuity over asset quality | Modernisation projects that disrupt tenants without near-term income uplift |
+| **Improve long-term value** (`value_builder`) | Replace when past 60% of useful life; prefer full replacement over repeated patching | Compliance first; then durable upgrades that extend asset life and improve quality | Willing to invest now for future benefit; higher capex tolerance | Short-payback cosmetic fixes in favour of durable investments |
+| **Keep things stable** (`capital_preserver`) | Repair unless risk is demonstrably high; defer non-urgent items | Risk reduction and compliance only; avoid large or uncertain projects | Conservative; minimise disruption and uncertainty; predictable outflows | Any project that introduces cost uncertainty or tenant disruption, even with real long-term upside |
+| **Upgrade and reposition** (`opportunistic_repositioner`) | Replace with upgrade where feasible; proactively modernise before failure | Prioritise modernisation, energy efficiency, and value-adding upgrades | High capex tolerance; long payback acceptable if value creation is strong | Low-impact repairs when a meaningful upgrade option exists |
+
+#### Dishwasher example (canonical reference case)
+
+A dishwasher is at end of life. A repair costs CHF 350; replacement costs CHF 900.
+`ReplacementBenchmark` and `DepreciationStandard` feed the financial projection.
+The archetype determines the recommendation:
+
+| Archetype | Recommendation | Rationale |
+|---|---|---|
+| exit_optimizer | Repair | Sale within 12 months; CHF 550 saving outweighs marginal buyer appeal of a new appliance |
+| yield_maximizer | Repair | Repair cost is well below 40% of replacement; low tenant disruption risk |
+| value_builder | Replace | Asset is past useful life; replacement avoids repeat failure within 2–3 years |
+| capital_preserver | Repair | Minimal risk; defer capex unless failure is imminent |
+| opportunistic_repositioner | Replace (with upgrade) | Opportunity to install a higher-spec model that supports a rent uplift narrative |
+
+This example is used in developer onboarding and must appear as a scenario test in §16.3.
+
+---
+
 ## 4. Questionnaire design
 
 ### 4.1 v1 onboarding flow
 
-Use 5 screens maximum. This is a **strategy-specific onboarding flow** — distinct from the
+The full onboarding flow is **7 screens**: 5 question screens + 1 strategy display screen (§4.3) + 1 building setup screen (§3.4). The "5 screens" constraint applies only to the questionnaire questions — do not add more question screens. This is a **strategy-specific onboarding flow** — distinct from the
 general operational onboarding wizard planned in F-P2-001 (add building, add unit, create lease).
 Both can coexist; a user completing F-P2-001 should be offered the strategy questionnaire as
 an optional next step.
@@ -514,6 +575,40 @@ terms. It sets the user's mental model for all subsequent recommendations.
 | yield_maximizer | "You want steady, reliable income. We'll favour options that protect cash flow and avoid costly surprises over major upgrade projects." |
 | capital_preserver | "Stability matters most to you. We'll recommend low-risk, predictable options that avoid large disruptions or uncertain outcomes." |
 | opportunistic_repositioner | "You're ready to invest significantly to reposition this property. We'll favour upgrades with strong long-term upside, even if the upfront cost is higher." |
+
+#### "What this means in practice" bullets (per archetype)
+
+Three bullets shown on the strategy display screen immediately below the explanation
+paragraph. They translate the archetype into concrete operational implications the user
+will actually encounter. Do not expose dimension scores or internal model terms.
+
+| Archetype | Bullet 1 | Bullet 2 | Bullet 3 |
+|---|---|---|---|
+| value_builder | "When an asset fails, we'll lean toward replacement if it's past 60% of its useful life rather than patching it" | "In cashflow planning, we'll flag which investments are worth making now vs. which can wait" | "Compliance and energy efficiency upgrades will rank higher in our recommendations" |
+| exit_optimizer | "We'll prioritise fixes that improve presentation and reduce buyer risk" | "For repair vs. replace decisions, we'll favour lower upfront cost unless the item directly affects sale readiness" | "We'll highlight compliance issues that could affect a sale transaction" |
+| yield_maximizer | "We'll favour reliable, low-disruption maintenance over ambitious upgrades" | "Recommendations will protect your rental income first — we'll flag anything that risks tenant satisfaction or occupancy" | "For cashflow planning, we'll lean toward predictable spend and flag surprise-risk items" |
+| capital_preserver | "We'll recommend the lowest-risk, most predictable option — repairs over replacements where the risk is manageable" | "We'll flag any option that introduces cost uncertainty or significant tenant disruption" | "Large renovation projects will be flagged as low-priority unless compliance requires them" |
+| opportunistic_repositioner | "We'll look for upgrade opportunities, not just like-for-like replacements" | "Higher upfront cost is acceptable when the long-term value or rental uplift case is strong" | "We'll flag modernisation opportunities — energy efficiency, spec upgrades — that align with repositioning" |
+
+#### "What we'll deprioritize" sentence (per archetype)
+
+One sentence shown as a secondary note on the strategy display screen in a muted style
+(not a warning). Its purpose is to make the profile feel like a conscious choice — the
+user reads it and either confirms the profile or decides to change their answers.
+
+| Archetype | Deprioritization note |
+|---|---|
+| value_builder | "We'll deprioritize short-payback cosmetic fixes in favour of durable investments." |
+| exit_optimizer | "We'll deprioritize long-term upgrades with payback beyond your expected sale horizon." |
+| yield_maximizer | "We'll deprioritize modernisation projects that disrupt tenants without near-term income impact." |
+| capital_preserver | "We'll deprioritize any project that introduces cost uncertainty or tenant disruption, even when the long-term upside is real." |
+| opportunistic_repositioner | "We'll deprioritize low-impact repairs when a meaningful upgrade option exists." |
+
+> **Implementation note:** These bullets and sentences are the source of truth for UI copy.
+> The `explanationService` draws `profileAlignment` bullets from the same lookup table
+> (keyed by `primaryArchetype`) rather than generating them ad hoc. This ensures the
+> language on the onboarding screen and in in-context recommendations is consistent.
+> Store this table as a constant in `services/strategy/archetypes.ts`.
 
 ---
 
@@ -732,6 +827,39 @@ export function deriveContradictionScore(d: StrategyDimensions): number {
 
 Portfolio or owner profile should act as prior. Building role should adjust it.
 
+#### Step 1 — Translate `roleIntent` to `buildingDimensions`
+
+`combineDimensions()` requires a `Partial<StrategyDimensions>`. The user-set `roleIntent`
+must be translated into dimension nudges via `roleIntentToDimensions()` before combining.
+Only the dimensions most directly affected by the role are set; the rest are left undefined
+so the owner profile carries them unmodified.
+
+```ts
+export function roleIntentToDimensions(
+  roleIntent: BuildingStrategyProfile['roleIntent'],
+): Partial<StrategyDimensions> {
+  switch (roleIntent) {
+    case 'sell':
+      return { saleReadiness: 100, horizon: 0, stabilityPreference: 30 };
+    case 'income':
+      return { incomePriority: 100, stabilityPreference: 80, saleReadiness: 10 };
+    case 'long_term_quality':
+      return { horizon: 100, appreciationPriority: 80, capexTolerance: 70 };
+    case 'reposition':
+      return { modernizationPreference: 100, capexTolerance: 90, disruptionTolerance: 80 };
+    case 'stable_hold':
+      return { stabilityPreference: 100, liquiditySensitivity: 80, capexTolerance: 20 };
+    case 'unspecified':
+    default:
+      return {};
+  }
+}
+```
+
+These values are admin-configurable (§12.1) — treat them as defaults, not hardcoded facts.
+
+#### Step 2 — Blend owner and building dimensions
+
 ```ts
 export function combineDimensions(
   owner: StrategyDimensions,
@@ -749,18 +877,60 @@ export function combineDimensions(
 }
 ```
 
+Typical call site in `strategyProfileWorkflow.ts`:
+```ts
+const buildingDims = roleIntentToDimensions(roleIntent);
+const effectiveDimensions = combineDimensions(ownerProfile.dimensions, buildingDims);
+```
+```
+
 ### 7.2 Feasibility modifiers
 
-Actual building facts can adjust recommendation scoring, but should not fully overwrite strategy classification.
+Actual building facts can adjust recommendation scoring but should not fully overwrite strategy classification.
 
-Possible modifiers:
+| Modifier | Source | Derivation rule |
+|---|---|---|
+| Poor physical condition | `BuildingStrategyProfile.conditionRating` | If `poor`: add 20pts to `riskReductionScore` for all options; penalise `defer` by 30pts |
+| Legal compliance issue | `Request.status = RFP_PENDING` or `LegalEvaluationLog` for the building | If active: `complianceNeed = 100`, `defer` option ineligible (hard constraint §9.5) |
+| Tenant sensitivity | Active `Occupancy` count > 0 for units in the building | If any occupied units: boost `disruptionPenalty` weight by 0.2 |
+| Energy inefficiency | Any `Unit.energyLabel` in (E, F, G) for units in the building | Boost `modernizationBenefit` weight by 0.15 |
+| Constrained budget | `BuildingStrategyOverrides.capexBudgetConstraint` | If option `estimatedCost` > constraint: mark as infeasible |
+| Planned sale date | `BuildingStrategyOverrides` | If within 12 months: boost `saleAttractiveness` weight by 0.3, penalise long-payback (§9.5) |
 
-* poor physical condition (derived from `AssetIntervention` recency)
-* legal compliance issue (derived from `Request.status = RFP_PENDING` or `LegalEvaluationLog`)
-* tenant sensitivity (derived from active `Occupancy` count on the building)
-* energy inefficiency (derived from `Unit.energyLabel`)
-* constrained annual budget (from `BuildingStrategyOverrides.capexBudgetConstraint`)
-* planned sale date (from `BuildingStrategyOverrides`)
+### 7.3 `conditionState` derivation algorithm
+
+The `conditionState` field on `MaintenanceOpportunity` is computed as follows for asset-linked opportunities (where `assetId` is set). For non-asset requests, default to `'fair'`.
+
+```ts
+export function deriveConditionState(
+  asset: { installedAt?: string | null; assetModelId?: string | null },
+  interventions: Array<{ interventionDate: string; type: 'REPAIR' | 'REPLACEMENT' }>,
+  usefulLifeYears: number,  // from DepreciationStandard
+): 'good' | 'fair' | 'poor' | 'failed' {
+  const now = new Date();
+  const lastReplacement = interventions
+    .filter(i => i.type === 'REPLACEMENT')
+    .sort((a, b) => b.interventionDate.localeCompare(a.interventionDate))[0];
+  const origin = lastReplacement
+    ? new Date(lastReplacement.interventionDate)
+    : asset.installedAt ? new Date(asset.installedAt) : null;
+
+  if (!origin) return 'fair'; // no install date → unknown → assume fair
+
+  const ageYears = (now.getTime() - origin.getTime()) / (1000 * 60 * 60 * 24 * 365.25);
+  const agePct = ageYears / usefulLifeYears;
+
+  if (agePct < 0.4) return 'good';
+  if (agePct < 0.7) return 'fair';
+  if (agePct < 1.0) return 'poor';
+  return 'failed'; // past useful life
+}
+```
+
+Note: `tenantImpact` on `MaintenanceOpportunity` is derived from whether any occupied
+`Unit` records exist for the building. If `Occupancy` rows are active: impact is at least
+`'low'`. If the opportunity category is `hvac`, `plumbing`, or `electrical` and the building
+is occupied: impact is `'high'`. All other occupied cases: `'medium'`. Unoccupied: `'none'`.
 
 ---
 
@@ -769,6 +939,11 @@ Possible modifiers:
 ### 8.1 Principle
 
 The financial engine must produce objective outputs independent of user profile.
+
+**Default discount rate for NPV:** `5.0%` real (pre-tax, nominal). This is the default
+for Swiss residential property in the absence of owner-specific WACC data. It is
+admin-configurable via `config/hardConstraints.ts` — do not hardcode it in service logic.
+Store it as `NPV_DISCOUNT_RATE_DEFAULT = 0.05`.
 
 ### 8.2 Required financial outputs per option
 
@@ -820,26 +995,67 @@ Do not vary by profile:
 
 ### 9.1 Feature extraction
 
-Convert each decision option into normalized evaluation features.
+Convert each decision option into normalized evaluation features. All `DecisionFeatures`
+values are **0–100**. They are derived from `DecisionOption` score fields and
+`FinancialProjection` via `extractDecisionFeatures()`.
 
 ```ts
 export interface DecisionFeatures {
-  complianceNeed: number;
-  riskReduction: number;
-  shortTermCashflow: number;
-  mediumTermCashflow: number;
-  totalValueCreation: number;
-  taxTimingBenefit: number;
-  taxTotalBenefit: number;
-  paybackFit: number;
-  lifecycleExtension: number;
-  modernizationBenefit: number;
-  saleAttractiveness: number;
-  incomeUplift: number;
-  stabilitySupport: number;
-  upfrontCostPenalty: number;
-  disruptionPenalty: number;
-  uncertaintyPenalty: number;
+  // All values 0–100
+  complianceNeed: number;      // = option.complianceCoverageScore
+  riskReduction: number;       // = option.riskReductionScore
+  shortTermCashflow: number;   // derived from projection.cashflowYear1 (see below)
+  mediumTermCashflow: number;  // derived from projection.cashflowYears1to3
+  totalValueCreation: number;  // = clamp(projection.totalValueCreation / maxBenchmarkCost * 100)
+  taxTimingBenefit: number;    // = option.taxProfile.taxShieldTimingScore
+  taxTotalBenefit: number;     // = clamp(option.taxProfile.totalTaxShield / option.estimatedCost * 100)
+  paybackFit: number;          // derived from projection.paybackYears vs horizon (see below)
+  lifecycleExtension: number;  // = option.lifecycleExtensionScore
+  modernizationBenefit: number;// = option.modernizationImpactScore
+  saleAttractiveness: number;  // = option.saleAttractivenessScore
+  incomeUplift: number;        // = option.rentUpliftScore
+  stabilitySupport: number;    // = reverseScore(option.riskReductionScore) — lower risk = more stability
+  upfrontCostPenalty: number;  // = clamp(option.estimatedCost / maxOptionCost * 100)
+  disruptionPenalty: number;   // = option.tenantDisruptionScore
+  uncertaintyPenalty: number;  // = option.uncertaintyScore
+}
+```
+
+**Derivation details for computed fields:**
+
+```ts
+// shortTermCashflow: higher = better short-term cash position (i.e. low outflow, high opex saving)
+// Normalize against the worst (most expensive) option in the set
+shortTermCashflow = clampScore(
+  reverseScore(clampScore(option.estimatedCost / maxCostInSet * 100))
+  * 0.6 + option.opexReductionScore * 0.4
+);
+
+// mediumTermCashflow: cashflowYears1to3 normalized against benchmark
+// If projection.cashflowYears1to3 >= 0: score = clamp(cashflowYears1to3 / maxPositiveCashflow * 100)
+// If negative: score = 0
+
+// paybackFit: higher = payback period fits the owner's planning horizon
+// horizon is OwnerProfile.dimensions.horizon (0–100, maps to 0–15+ years)
+// paybackFit = 100 if payback <= planningHorizonYears; scales down linearly to 0 at 2x horizon
+paybackFit = projection.paybackYears == null
+  ? 50  // unknown payback → neutral
+  : clampScore((1 - (projection.paybackYears / (planningHorizonYears * 2))) * 100);
+
+// upfrontCostPenalty: normalized against the most expensive option in this evaluation set
+upfrontCostPenalty = clampScore(option.estimatedCost / maxCostInSet * 100);
+```
+
+```ts
+export function extractDecisionFeatures(
+  option: DecisionOption,
+  projection: FinancialProjection,
+  context: {
+    maxCostInSet: number;          // max estimatedCost across all options being evaluated
+    planningHorizonYears: number;  // from BuildingStrategyProfile or OwnerProfile.dimensions.horizon
+  },
+): DecisionFeatures {
+  // implementation per derivation rules above
 }
 ```
 
@@ -987,30 +1203,75 @@ export function deriveEffectiveWeights(
 
 ### 9.4 Option scoring
 
+The weighted sum is normalized by the theoretical maximum positive score for the active
+archetype before clamping, so the output is genuinely in 0–100 regardless of weight
+magnitudes. Without this step the raw sum can reach ~960 for archetypes whose positive
+weights sum to 9.6, pinning all reasonable options at 100 and making ranking meaningless.
+
 ```ts
+/** Names of the 13 positive-contribution features (higher = better). */
+const POSITIVE_FEATURE_KEYS: ReadonlyArray<keyof DecisionFeatures> = [
+  'complianceNeed',
+  'riskReduction',
+  'shortTermCashflow',
+  'mediumTermCashflow',
+  'totalValueCreation',
+  'taxTimingBenefit',
+  'taxTotalBenefit',
+  'paybackFit',
+  'lifecycleExtension',
+  'modernizationBenefit',
+  'saleAttractiveness',
+  'incomeUplift',
+  'stabilitySupport',
+];
+
+/** Names of the 3 negative-contribution features (higher = worse). */
+const PENALTY_FEATURE_KEYS: ReadonlyArray<keyof DecisionFeatures> = [
+  'upfrontCostPenalty',
+  'disruptionPenalty',
+  'uncertaintyPenalty',
+];
+
 export function scoreDecisionOption(
   features: DecisionFeatures,
   weights: DecisionWeightVector,
 ): number {
-  return clampScore(
-    features.complianceNeed * weights.complianceNeed +
-    features.riskReduction * weights.riskReduction +
-    features.shortTermCashflow * weights.shortTermCashflow +
-    features.mediumTermCashflow * weights.mediumTermCashflow +
-    features.totalValueCreation * weights.totalValueCreation +
-    features.taxTimingBenefit * weights.taxTimingBenefit +
-    features.taxTotalBenefit * weights.taxTotalBenefit +
-    features.paybackFit * weights.paybackFit +
-    features.lifecycleExtension * weights.lifecycleExtension +
-    features.modernizationBenefit * weights.modernizationBenefit +
-    features.saleAttractiveness * weights.saleAttractiveness +
-    features.incomeUplift * weights.incomeUplift +
-    features.stabilitySupport * weights.stabilitySupport -
-    features.upfrontCostPenalty * weights.upfrontCostPenalty -
-    features.disruptionPenalty * weights.disruptionPenalty -
-    features.uncertaintyPenalty * weights.uncertaintyPenalty
-  );
+  // Sum positive contributions.
+  let positiveSum = 0;
+  let maxPositiveSum = 0;
+  for (const key of POSITIVE_FEATURE_KEYS) {
+    const w = weights[key as keyof DecisionWeightVector] as number;
+    positiveSum += features[key] * w;
+    maxPositiveSum += 100 * w;          // theoretical max (feature = 100)
+  }
+
+  // Sum penalty contributions.
+  let penaltySum = 0;
+  let maxPenaltySum = 0;
+  for (const key of PENALTY_FEATURE_KEYS) {
+    const w = weights[key as keyof DecisionWeightVector] as number;
+    penaltySum += features[key] * w;
+    maxPenaltySum += 100 * w;           // theoretical max (feature = 100)
+  }
+
+  // Normalize each half independently to [0, 100], then combine.
+  // Result range: −100 (all positive=0, all penalties=100) to +100 (all positive=100, all penalties=0).
+  // Shift by +100 and halve to map onto [0, 100].
+  const normalizedPositive = maxPositiveSum > 0 ? (positiveSum / maxPositiveSum) * 100 : 0;
+  const normalizedPenalty  = maxPenaltySum  > 0 ? (penaltySum  / maxPenaltySum)  * 100 : 0;
+
+  return clampScore((normalizedPositive - normalizedPenalty + 100) / 2);
 }
+```
+
+**Why this formula:**
+- `normalizedPositive` ∈ [0, 100]: how well the option serves the archetype's priorities.
+- `normalizedPenalty` ∈ [0, 100]: how much the option costs/disrupts (after normalization).
+- Net = positive − penalty ∈ [−100, +100]; shift and halve → [0, 100].
+- An option that is perfect on every positive dimension and zero on every penalty scores 100.
+- An option that is zero on every positive dimension and maximal on every penalty scores 0.
+- Options with mixed profiles land in the middle, and relative order is preserved.
 ```
 
 ### 9.5 Hard constraints before scoring
@@ -1046,6 +1307,42 @@ export interface RecommendationContext {
 6. Rank options
 7. Generate explanation
 8. Persist result
+
+### 10.1 Auto-trigger rule
+
+The `recommendationWorkflow` is triggered automatically when a `Request` transitions to
+`APPROVED` or `ASSIGNED`, subject to the following conditions:
+
+1. A `BuildingStrategyProfile` exists for the building associated with the request (via
+   `Request → Unit → Building`). If no profile exists, the trigger is **silent** — no
+   recommendation is generated and no error is surfaced to the user.
+2. At least one `MaintenanceDecisionOption` can be auto-generated for the request (§10.2).
+   If option generation fails (e.g. no `ReplacementBenchmark` match and no fallback),
+   the trigger is silent.
+3. A `RecommendationResult` does not already exist for this request (idempotency guard).
+
+**Trigger location:** `approveRequestWorkflow.ts` and `assignContractorWorkflow.ts`, as a
+best-effort post-transition step. Failures must not roll back the status transition —
+wrap in try/catch and emit a domain event for observability. Never throw to the caller.
+
+### 10.2 Auto-generation of decision options
+
+When the auto-trigger fires, the system generates a standard option set before scoring.
+Default option types and their seeds:
+
+| Option type | Generated when | Cost seed | Lifecycle seed |
+|---|---|---|---|
+| `defer` | Always (unless hard constraint disqualifies — §9.5) | CHF 0 outflow | No change to useful life |
+| `repair` | Always | 25% of `ReplacementBenchmark.medianChf` (fallback: CHF 500) | `usefulLifeYears × 0.3` added |
+| `replace_like_for_like` | Always | `ReplacementBenchmark.medianChf` (fallback: CHF 2 000) | `DepreciationStandard.usefulLifeMonths / 12` |
+| `upgrade` | When `primaryArchetype = opportunistic_repositioner`, or a higher-spec benchmark exists for the asset type | `ReplacementBenchmark.highChf` | `usefulLifeYears × 1.2` |
+
+Every generated option includes a `description` field that names the data source used
+(e.g. `"Cost seeded from ReplacementBenchmark for boiler / heating system — median CHF 4 200"`).
+If no benchmark match exists, the fallback value is used and the description reads:
+`"Cost estimate: no benchmark available for this asset type — review before acting."`.
+The generating workflow records which benchmarks and standards were consumed inside
+the `RecommendationResult` JSON column for auditability.
 
 ---
 
@@ -1117,16 +1414,78 @@ export function buildExplanation(params: {
 
 ### Short/long-term label generation (per ranked option)
 
+Labels are plain English — no raw financial figures are exposed to the user.
+
+**shortTermImpact** is determined by `projection.cashflowYear1` (CHF) and `option.tenantDisruptionScore` (0–100):
+
+| cashflowYear1 | tenantDisruptionScore | shortTermImpact label |
+|---|---|---|
+| ≥ 0 | < 30 | "Positive cash flow, minimal disruption" |
+| ≥ 0 | 30–69 | "Positive cash flow, moderate tenant disruption" |
+| ≥ 0 | ≥ 70 | "Positive cash flow, significant tenant disruption" |
+| < 0, > −5 000 | < 30 | "Small short-term cost, minimal disruption" |
+| < 0, > −5 000 | 30–69 | "Small short-term cost, moderate disruption" |
+| < 0, > −5 000 | ≥ 70 | "Small short-term cost, significant disruption" |
+| ≤ −5 000 | < 30 | "Significant upfront cost, minimal disruption" |
+| ≤ −5 000 | 30–69 | "Significant upfront cost, moderate disruption" |
+| ≤ −5 000 | ≥ 70 | "Significant upfront cost, high disruption risk" |
+
+**longTermImpact** is determined by `option.lifecycleExtensionScore` (0–100) and `option.totalValueCreationScore` (0–100). Use the dominant axis (whichever score is higher) to pick the primary label, fall back to the other for nuance:
+
+| lifecycleExtensionScore | totalValueCreationScore | longTermImpact label |
+|---|---|---|
+| ≥ 70 | ≥ 70 | "Strong asset life extension and value creation" |
+| ≥ 70 | < 70 | "Extends asset life significantly" |
+| < 70 | ≥ 70 | "Good long-term value creation potential" |
+| 30–69 | 30–69 | "Moderate long-term benefit" |
+| < 30 | ≥ 70 | "Limited life extension, but value-positive" |
+| ≥ 70 | < 30 | "Asset life extended, limited value uplift" |
+| < 30 | < 30 | "Minimal long-term asset impact" |
+
 ```ts
 export function buildOptionImpactLabels(
   option: DecisionOption,
   projection: FinancialProjection,
 ): { shortTermImpact: string; longTermImpact: string } {
-  // shortTermImpact: driven by cashflowYear1 and tenantDisruptionScore
-  // longTermImpact: driven by lifecycleExtensionScore and totalValueCreation
-  // Labels are plain English — no raw numbers exposed to the user
+  const cashflow = projection.cashflowYear1;
+  const disruption = option.tenantDisruptionScore;
+  const lifecycle = option.lifecycleExtensionScore;
+  const valueCreation = option.totalValueCreationScore;
+
+  let shortTermImpact: string;
+  if (cashflow >= 0) {
+    if (disruption < 30) shortTermImpact = 'Positive cash flow, minimal disruption';
+    else if (disruption < 70) shortTermImpact = 'Positive cash flow, moderate tenant disruption';
+    else shortTermImpact = 'Positive cash flow, significant tenant disruption';
+  } else if (cashflow > -5000) {
+    if (disruption < 30) shortTermImpact = 'Small short-term cost, minimal disruption';
+    else if (disruption < 70) shortTermImpact = 'Small short-term cost, moderate disruption';
+    else shortTermImpact = 'Small short-term cost, significant disruption';
+  } else {
+    if (disruption < 30) shortTermImpact = 'Significant upfront cost, minimal disruption';
+    else if (disruption < 70) shortTermImpact = 'Significant upfront cost, moderate disruption';
+    else shortTermImpact = 'Significant upfront cost, high disruption risk';
+  }
+
+  let longTermImpact: string;
+  if (lifecycle >= 70 && valueCreation >= 70) {
+    longTermImpact = 'Strong asset life extension and value creation';
+  } else if (lifecycle >= 70) {
+    longTermImpact = 'Extends asset life significantly';
+  } else if (valueCreation >= 70) {
+    longTermImpact = 'Good long-term value creation potential';
+  } else if (lifecycle >= 30 && valueCreation >= 30) {
+    longTermImpact = 'Moderate long-term benefit';
+  } else if (valueCreation >= 70) {
+    longTermImpact = 'Limited life extension, but value-positive';
+  } else if (lifecycle >= 70) {
+    longTermImpact = 'Asset life extended, limited value uplift';
+  } else {
+    longTermImpact = 'Minimal long-term asset impact';
+  }
+
+  return { shortTermImpact, longTermImpact };
 }
-```
 ```
 
 ---
@@ -1190,8 +1549,9 @@ routes → workflows → services → repositories → Prisma → PostgreSQL
 
 | Route module | Endpoints |
 |---|---|
-| `apps/api/src/routes/strategy.ts` | POST /strategy/owner-profile, POST /strategy/building-profile, GET /strategy/owner-profile/:ownerId |
-| `apps/api/src/routes/recommendations.ts` | POST /recommendations/evaluate, GET /recommendations/:opportunityId |
+| `apps/api/src/routes/strategy.ts` | POST /strategy/owner-profile, GET /strategy/owner-profile/:ownerId, POST /strategy/building-profile, GET /strategy/building-profile/:buildingId |
+| `apps/api/src/routes/decisionOptions.ts` | POST /decision-options |
+| `apps/api/src/routes/recommendations.ts` | POST /recommendations/evaluate, GET /recommendations/:opportunityId, PATCH /recommendations/:resultId/decision |
 
 ### 13.4 New workflows
 
@@ -1231,9 +1591,14 @@ apps/api/src/
     hardConstraints.ts   (new)
 apps/web/pages/
   owner/
-    strategy.js          (new — questionnaire + goal display)
+    strategy.js          (new — questionnaire flow: questions → strategy display → building setup)
+    settings/
+      strategy.js        (new — "My Strategy" settings view with "Change my strategy" CTA)
   manager/
-    recommendations.js   (new — recommendation cards per request)
+    requests/
+      [id].js            (existing — add RecommendationPanel component when BuildingStrategyProfile exists; see §15.4)
+    cashflow/
+      [id].js            (existing — add strategy overlay panel + per-item tags in Phase 3; see §17)
 packages/api-client/src/
   strategy.ts            (new DTO types)
   recommendations.ts     (new DTO types)
@@ -1361,7 +1726,51 @@ Response:
 }
 ```
 
-### 14.4 Record user decision on recommendation
+### 14.4 Create decision options for an opportunity
+
+Before calling `POST /recommendations/evaluate`, the caller must create
+`MaintenanceDecisionOption` records for the opportunity being evaluated. The evaluate
+endpoint receives their IDs; it does not accept inline option data.
+
+```http
+POST /api/decision-options
+```
+
+Request:
+
+```json
+{
+  "opportunityId": "opp_456",
+  "type": "replace",
+  "label": "Full boiler replacement",
+  "estimatedCost": 18000,
+  "riskReductionScore": 90,
+  "tenantDisruptionScore": 60,
+  "lifecycleExtensionScore": 95,
+  "totalValueCreationScore": 75,
+  "taxClassification": "WERTVERMEHREND",
+  "paybackYears": 12,
+  "financialProjection": {
+    "npv": 4200,
+    "irr": 0.07,
+    "paybackYears": 12,
+    "cashflowYear1": -18000,
+    "cashflowYear5": 1800
+  }
+}
+```
+
+Response: `201 Created` with the created `MaintenanceDecisionOption` including its `id`.
+
+**Auth:** `requireRole('MANAGER')`. The `orgId` is resolved from the authenticated session,
+not from the request body.
+
+**Route module:** `apps/api/src/routes/decisionOptions.ts`
+
+> This endpoint is in scope for Phase 2 (Decision scoring MVP). Until it exists, the
+> evaluate endpoint cannot be called — these two must ship together.
+
+### 14.5 Record user decision on recommendation
 
 ```http
 PATCH /api/recommendations/:resultId/decision
@@ -1384,6 +1793,27 @@ Response: `200 OK` with updated `RecommendationResult`.
 
 ### 15.1 Onboarding
 
+#### Entry points
+
+* **First-login banner**: on an owner's first session after account creation, a dismissable
+  banner appears at the top of their portal: *"Set your property strategy to get tailored
+  recommendations on maintenance, cashflow, and repair decisions. Takes under 2 minutes."*
+  CTA: "Set my strategy" → launches the questionnaire flow. Secondary action: "Remind me later."
+* **Persistent nudge**: if dismissed, the banner reappears on each subsequent login until
+  the questionnaire is completed. It does not block access to any existing functionality —
+  all operational views remain fully usable without a strategy profile.
+* **Settings**: once completed, the strategy profile is accessible at Owner Settings →
+  "My Strategy". This view shows the current archetype label, the "what we'll deprioritize"
+  sentence (§4.3), and a "Change my strategy" CTA that re-launches the questionnaire flow.
+* **Onboarding wizard (F-P2-001)**: if the owner completes the operational onboarding
+  wizard first, the final screen offers the strategy questionnaire as an optional next step
+  with the same banner copy.
+
+#### Questionnaire behaviour
+
+* Completion is **optional**. The tool functions without a strategy profile; recommendations
+  are simply not generated until one exists (silent auto-trigger — §10.1). No features are
+  gated.
 * max 5 question screens + 1 strategy display screen (§4.3) + 1 building setup screen (§3.4)
 * radio-button answers only on question screens
 * one optional "advanced preferences" link
@@ -1422,6 +1852,13 @@ Must show:
 * CTA: "Save and continue"
 
 ### 15.4 Recommendation card
+
+**Placement:** The recommendation card is a panel embedded in the request detail page,
+below the request status section and above the job/invoice section. It is not a standalone
+page. The panel appears only when a `RecommendationResult` exists for the request
+(auto-generated per §10.1). If no result exists — because no `BuildingStrategyProfile`
+is set, or option auto-generation was silent — the panel is absent entirely. No empty
+state or placeholder is shown.
 
 Must show:
 
@@ -1513,7 +1950,7 @@ Update `contracts.test.ts` in the same PR as any DTO change (G10). Add contract 
 * normalization + dimension scoring (pure functions, unit tested)
 * archetype scoring + persistence
 * `BuildingStrategyProfile` model + combination logic
-* `POST /strategy/owner-profile` and `POST /strategy/building-profile` routes
+* `POST /strategy/owner-profile`, `GET /strategy/owner-profile/:ownerId`, `POST /strategy/building-profile`, `GET /strategy/building-profile/:buildingId` routes
 * Owner portal: questionnaire UI
 
 ### Phase 2 — Decision scoring MVP
@@ -1535,10 +1972,50 @@ Update `contracts.test.ts` in the same PR as any DTO change (G10). Add contract 
 
 ### Phase 3 — Finance integration
 
+#### 3a — Financial model service
+
 * `financialModelService.ts` reading `TaxRuleVersion`, `DepreciationStandard`, `ReplacementBenchmark`
 * NPV / payback / tax shield computation
 * `FinancialProjection` population per option
-* Integration with `CashflowPlan` for horizon scenarios (requires F-P1-003 to be done)
+* Integration with `CashflowPlan` for horizon scenarios (requires F-P1-003 to be complete)
+
+#### 3b — Cashflow plan strategy overlay
+
+Once a `BuildingStrategyProfile` exists for a building, the cashflow plan detail page gains
+a strategy layer. The existing plan list order is **not modified** — the engine annotates,
+it does not reorder. This prevents the disorientation of silent reordering while still
+surfacing strategy context at both item and plan level.
+
+**Per-item strategy alignment tag** — one of three values shown as a badge on each
+budget line:
+
+| Tag | Meaning | Condition |
+|---|---|---|
+| **Aligned** | This item serves your strategy | Item scores > 60 against the archetype's top 3 weighted dimensions (§9.2) |
+| **Review** | Worth reconsidering in the context of your strategy | Item scores 40–60, or conflicts with one primary dimension |
+| **Low priority** | This item ranks low against your current strategy | Item scores < 40 against the archetype's top 3 weighted dimensions |
+
+Clicking any tag opens a one-sentence inline explanation drawn from §3.5:
+* Aligned: *"This capex item extends asset life — aligned with your long-term value goal."*
+* Review: *"This project has a long payback horizon relative to your sale timeline."*
+* Low priority: *"A like-for-like repair may serve your stability goal better than this upgrade."*
+
+**Strategy summary panel** — collapsible, at the top of the cashflow plan page:
+
+* Heading: *"Strategy view — [user-facing archetype label]"*
+* Counts: *"X items aligned · Y flagged for review · Z low priority"*
+* One-sentence reminder of the active archetype's deprioritization note (from §4.3)
+* CTA: *"Update my strategy"* → links to Owner Settings → My Strategy
+
+**Implementation notes:**
+* Tag computation is a lightweight call to `decisionScoringService` using
+  `effectiveDimensions` and `DECISION_WEIGHTS[primaryArchetype]`. It does not require
+  a full `RecommendationResult` — it scores the plan line item's option type against the
+  weight vector with estimated feature values derived from the item's category and cost.
+* Tags are computed at page load and cached in-process per request cycle. Not persisted to DB.
+* If no `BuildingStrategyProfile` exists for the building: the strategy panel is absent and
+  no tags are shown. Existing cashflow plan UX is completely unchanged.
+* Phase 3 UI target: `apps/web/pages/manager/cashflow/[id].js` — strategy panel + item tags.
 
 ### Phase 4 — Building overrides and admin config
 
@@ -1626,7 +2103,7 @@ Step 3 — Repository + Service + Route:
 - strategyProfileRepository.ts with canonical include constants
 - strategyProfileService.ts calling pure scoring functions and persisting via repository
 - strategyProfileWorkflow.ts orchestrating service calls
-- routes/strategy.ts: POST /strategy/owner-profile, POST /strategy/building-profile
+- routes/strategy.ts: POST /strategy/owner-profile, GET /strategy/owner-profile/:ownerId, POST /strategy/building-profile, GET /strategy/building-profile/:buildingId
 
 Step 4 — Update packages/api-client with new DTO types.
 Step 5 — Update contracts.test.ts with assertions for the two new endpoints.
@@ -1637,6 +2114,44 @@ Step 5 — Update contracts.test.ts with assertions for the two new endpoints.
 ## 21. Final product rule
 
 The product should feel simple to the user and sophisticated in the engine. If a design choice increases user configurability but reduces explainability or consistency, prefer the simpler UI and keep complexity in code/config.
+
+---
+
+## 24. Success metrics
+
+> **Source: BRD §6.** These are the measurable indicators that v1 is delivering value.
+> They require the `userDecision` and `userDecidedAt` fields on `RecommendationResult` (§3.1)
+> to be tracked from the start — add them in Phase 2, not as a later retrofit.
+
+### User metrics
+
+| Metric | Definition | Target (indicative) |
+|---|---|---|
+| Onboarding completion rate | % of users who reach the strategy display screen after starting the questionnaire | > 80% |
+| Time to first decision | Time from first login to first `RecommendationResult` created | Median < 10 minutes |
+| Repeat usage | Average decisions evaluated per active user per month | ≥ 2 |
+
+### Product metrics
+
+| Metric | Definition | How to measure |
+|---|---|---|
+| Recommendation acceptance rate | % of `RecommendationResult` where `userDecision = accepted` | `RecommendationResult.userDecision` |
+| Rejection with alternative | % of rejections where user subsequently evaluates an alternative option | Cross-reference result records |
+| Trust signal | % of users leaving optional `userFeedback` text (any value) | `RecommendationResult.userFeedback IS NOT NULL` |
+| Decision time reduction | Avg time between opportunity created and user decision recorded | `Request.createdAt` → `RecommendationResult.userDecidedAt` |
+
+### Instrumentation requirements
+
+To compute these metrics the following must be queryable from the database:
+
+* `RecommendationResult.evaluatedAt` — already specified
+* `RecommendationResult.userDecision` — already specified
+* `RecommendationResult.userDecidedAt` — already specified
+* `RecommendationResult.userFeedback` — already specified
+* `OwnerStrategyProfile.createdAt` vs. first `RecommendationResult.evaluatedAt` per owner — time to first decision
+
+No external analytics tool is required for v1. These metrics can be computed via direct
+SQL queries on the production DB. A reporting endpoint can be added in Phase 4.
 
 ---
 

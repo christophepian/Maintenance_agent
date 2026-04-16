@@ -5,42 +5,25 @@ import PageShell from "../../../components/layout/PageShell";
 import PageHeader from "../../../components/layout/PageHeader";
 import PageContent from "../../../components/layout/PageContent";
 import Panel from "../../../components/layout/Panel";
+import ErrorBanner from "../../../components/ui/ErrorBanner";
 import { ownerAuthHeaders } from "../../../lib/api";
-
-const URGENCY_COLORS = {
-  LOW:       "bg-slate-100 text-slate-600",
-  MEDIUM:    "bg-blue-100 text-blue-700",
-  HIGH:      "bg-amber-100 text-amber-800",
-  EMERGENCY: "bg-red-100 text-red-700",
-};
+import Badge from "../../../components/ui/Badge";
+import { urgencyVariant, rfpVariant } from "../../../lib/statusVariants";
 
 function UrgencyPill({ urgency }) {
   if (!urgency) return null;
   return (
-    <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${URGENCY_COLORS[urgency] || URGENCY_COLORS.MEDIUM}`}>
+    <Badge variant={urgencyVariant(urgency)} size="sm">
       {urgency.charAt(0) + urgency.slice(1).toLowerCase()}
-    </span>
+    </Badge>
   );
 }
 
-const STATUS_COLORS = {
-  DRAFT: "bg-slate-50 text-slate-600 border-slate-200",
-  OPEN: "bg-blue-50 text-blue-700 border-blue-200",
-  AWARDED: "bg-green-50 text-green-700 border-green-200",
-  PENDING_OWNER_APPROVAL: "bg-amber-50 text-amber-700 border-amber-200",
-  CLOSED: "bg-slate-50 text-slate-500 border-slate-200",
-  CANCELLED: "bg-red-50 text-red-600 border-red-200",
-};
-
 function StatusPill({ status }) {
   return (
-    <span
-      className={`inline-block rounded-full border px-2 py-0.5 text-xs font-medium ${
-        STATUS_COLORS[status] || "bg-slate-50 text-slate-600 border-slate-200"
-      }`}
-    >
+    <Badge variant={rfpVariant(status)} size="sm">
       {status?.replace(/_/g, " ") || "—"}
-    </span>
+    </Badge>
   );
 }
 
@@ -102,28 +85,24 @@ export default function OwnerRfpsPage() {
           subtitle="Request for Proposals overview"
         />
         <PageContent>
-          {error && (
-            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              {error}
-            </div>
-          )}
+          <ErrorBanner error={error} className="text-sm" />
 
           {/* Filter bar */}
           <div className="mb-4 flex flex-wrap items-start gap-3">
             <div className="flex flex-col justify-end gap-1">
               <label className="text-xs font-medium text-slate-500">From</label>
               <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)}
-                className="h-9 appearance-none rounded-lg border border-slate-200 bg-white px-3 py-2 leading-tight text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+                className="h-9 appearance-none rounded-lg border border-slate-200 bg-white px-3 py-2 leading-tight text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-400" />
             </div>
             <div className="flex flex-col justify-end gap-1">
               <label className="text-xs font-medium text-slate-500">To</label>
               <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)}
-                className="h-9 appearance-none rounded-lg border border-slate-200 bg-white px-3 py-2 leading-tight text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+                className="h-9 appearance-none rounded-lg border border-slate-200 bg-white px-3 py-2 leading-tight text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-400" />
             </div>
             <div className="flex flex-col items-center justify-end gap-1">
               <label className="text-xs font-medium text-slate-500">Building</label>
               <select value={buildingFilter} onChange={(e) => setBuildingFilter(e.target.value)}
-                className="min-h-[36px] appearance-none rounded-lg border border-slate-200 bg-white px-3 py-2 leading-tight text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                className="min-h-[36px] appearance-none rounded-lg border border-slate-200 bg-white px-3 py-2 leading-tight text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-400">
                 <option value="">All buildings</option>
                 {buildings.map((b) => <option key={b} value={b}>{b}</option>)}
               </select>
@@ -131,7 +110,7 @@ export default function OwnerRfpsPage() {
             <div className="flex flex-col items-center justify-end gap-1">
               <label className="text-xs font-medium text-slate-500">Urgency</label>
               <select value={urgencyFilter} onChange={(e) => setUrgencyFilter(e.target.value)}
-                className="min-h-[36px] appearance-none rounded-lg border border-slate-200 bg-white px-3 py-2 leading-tight text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                className="min-h-[36px] appearance-none rounded-lg border border-slate-200 bg-white px-3 py-2 leading-tight text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-400">
                 <option value="">All</option>
                 <option value="LOW">Low</option>
                 <option value="MEDIUM">Medium</option>

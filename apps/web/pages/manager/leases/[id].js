@@ -9,13 +9,14 @@ import PageContent from "../../../components/layout/PageContent";
 import Panel from "../../../components/layout/Panel";
 import { authHeaders } from "../../../lib/api";
 
+import { cn } from "../../../lib/utils";
 const STATUS_COLORS = {
-  DRAFT: "bg-yellow-100 text-yellow-800",
-  READY_TO_SIGN: "bg-blue-100 text-blue-800",
-  SIGNED: "bg-green-100 text-green-800",
-  ACTIVE: "bg-emerald-100 text-emerald-800",
-  TERMINATED: "bg-orange-100 text-orange-800",
-  CANCELLED: "bg-red-100 text-red-800",
+  DRAFT: "bg-yellow-100 text-yellow-700",
+  READY_TO_SIGN: "bg-blue-100 text-blue-700",
+  SIGNED: "bg-green-100 text-green-700",
+  ACTIVE: "bg-green-100 text-green-700",
+  TERMINATED: "bg-orange-100 text-orange-700",
+  CANCELLED: "bg-red-100 text-red-700",
 };
 
 function Field({ label, children, span }) {
@@ -35,7 +36,7 @@ function Input({ value, onChange, type = "text", placeholder, disabled }) {
       onChange={e => onChange(type === "number" ? (e.target.value === "" ? "" : Number(e.target.value)) : e.target.value)}
       placeholder={placeholder}
       disabled={disabled}
-      className="w-full border rounded-md px-3 py-1.5 text-sm disabled:bg-slate-100 disabled:text-slate-500"
+      className="w-full border rounded-lg px-3 py-1.5 text-sm disabled:bg-slate-100 disabled:text-slate-500"
     />
   );
 }
@@ -508,7 +509,7 @@ export default function LeaseEditorPage() {
                 <span className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-700">TEMPLATE</span>
               )}
               {!isTemplate && (
-                <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${STATUS_COLORS[lease.status] || "bg-slate-100"}`}>
+                <span className={cn("inline-block px-2 py-0.5 rounded text-xs font-medium", STATUS_COLORS[lease.status] || "bg-slate-100")}>
                   {lease.status.replace(/_/g, " ")}
                 </span>
               )}
@@ -559,7 +560,7 @@ export default function LeaseEditorPage() {
               )}
               {isSigned && !isTemplate && (
                 <button onClick={handleActivate} disabled={!!actionLoading}
-                  className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 disabled:opacity-50">
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50">
                   {actionLoading === "activate" ? "Activating..." : "⚡ Activate"}
                 </button>
               )}
@@ -626,7 +627,7 @@ export default function LeaseEditorPage() {
             <div className="grid grid-cols-2 gap-3">
               <Field label="Type d'objet">
                 <select value={lease.objectType || "APPARTEMENT"} onChange={e => updateField("objectType", e.target.value)} disabled={!editMode}
-                  className="w-full border rounded-md px-3 py-1.5 text-sm disabled:bg-slate-100">
+                  className="w-full border rounded-lg px-3 py-1.5 text-sm disabled:bg-slate-100">
                   <option value="APPARTEMENT">Appartement</option>
                   <option value="MAISON">Maison</option>
                   <option value="CHAMBRE_MEUBLEE">Chambre meublée</option>
@@ -646,7 +647,7 @@ export default function LeaseEditorPage() {
               <Field label="Début du bail *"><Input type="date" value={lease.startDate?.split("T")[0]} onChange={v => updateField("startDate", v)} disabled={!editMode} /></Field>
               <Field label="Durée déterminée">
                 <select value={lease.isFixedTerm ? "true" : "false"} onChange={e => updateField("isFixedTerm", e.target.value === "true")} disabled={!editMode}
-                  className="w-full border rounded-md px-3 py-1.5 text-sm disabled:bg-slate-100">
+                  className="w-full border rounded-lg px-3 py-1.5 text-sm disabled:bg-slate-100">
                   <option value="false">Indéterminée</option>
                   <option value="true">Déterminée</option>
                 </select>
@@ -657,7 +658,7 @@ export default function LeaseEditorPage() {
               <Field label="Premier terme de résiliation"><Input type="date" value={lease.firstTerminationDate?.split("T")[0]} onChange={v => updateField("firstTerminationDate", v)} disabled={!editMode} /></Field>
               <Field label="Délai de résiliation">
                 <select value={lease.noticeRule || "3_MONTHS"} onChange={e => updateField("noticeRule", e.target.value)} disabled={!editMode}
-                  className="w-full border rounded-md px-3 py-1.5 text-sm disabled:bg-slate-100">
+                  className="w-full border rounded-lg px-3 py-1.5 text-sm disabled:bg-slate-100">
                   <option value="3_MONTHS">3 mois</option>
                   <option value="EXTENDED">Prolongé</option>
                   <option value="2_WEEKS">2 semaines</option>
@@ -665,7 +666,7 @@ export default function LeaseEditorPage() {
               </Field>
               <Field label="Termes de résiliation">
                 <select value={lease.terminationDatesRule || "END_OF_MONTH_EXCEPT_31_12"} onChange={e => updateField("terminationDatesRule", e.target.value)} disabled={!editMode}
-                  className="w-full border rounded-md px-3 py-1.5 text-sm disabled:bg-slate-100">
+                  className="w-full border rounded-lg px-3 py-1.5 text-sm disabled:bg-slate-100">
                   <option value="END_OF_MONTH_EXCEPT_31_12">Fin de mois, sauf 31.12</option>
                   <option value="CUSTOM">Dates locales</option>
                 </select>
@@ -681,7 +682,7 @@ export default function LeaseEditorPage() {
               <Field label="Autres prestations (CHF/mois)"><Input type="number" value={lease.otherServiceRentChf} onChange={v => updateField("otherServiceRentChf", v)} disabled={!editMode} /></Field>
               <Field label="Total charges (CHF/mois)"><Input type="number" value={lease.chargesTotalChf} onChange={v => updateField("chargesTotalChf", v)} disabled={!editMode} /></Field>
             </div>
-            <div className="mt-3 p-3 bg-slate-50 rounded-md">
+            <div className="mt-3 p-3 bg-slate-50 rounded-lg">
               <p className="text-sm font-medium text-slate-700">
                 Loyer total : <span className="text-lg font-bold">CHF {lease.rentTotalChf ?? "—"}.-/mois</span>
               </p>
@@ -706,7 +707,7 @@ export default function LeaseEditorPage() {
               <Field label="Montant de la garantie (CHF)"><Input type="number" value={lease.depositChf} onChange={v => updateField("depositChf", v)} disabled={!editMode} /></Field>
               <Field label="Exigibilité">
                 <select value={lease.depositDueRule || "AT_SIGNATURE"} onChange={e => updateField("depositDueRule", e.target.value)} disabled={!editMode}
-                  className="w-full border rounded-md px-3 py-1.5 text-sm disabled:bg-slate-100">
+                  className="w-full border rounded-lg px-3 py-1.5 text-sm disabled:bg-slate-100">
                   <option value="AT_SIGNATURE">À la signature</option>
                   <option value="BY_START">Au début du bail</option>
                   <option value="BY_DATE">À une date précise</option>
@@ -734,7 +735,7 @@ export default function LeaseEditorPage() {
                   onChange={e => updateField("otherStipulations", e.target.value)}
                   disabled={!editMode}
                   rows={4}
-                  className="w-full border rounded-md px-3 py-1.5 text-sm disabled:bg-slate-100"
+                  className="w-full border rounded-lg px-3 py-1.5 text-sm disabled:bg-slate-100"
                 />
               </Field>
             </div>
@@ -762,11 +763,9 @@ export default function LeaseEditorPage() {
                         <td>{sr.provider}</td>
                         <td>{sr.level}</td>
                         <td>
-                          <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
-                            sr.status === "SIGNED" ? "bg-green-100 text-green-800" :
-                            sr.status === "SENT" ? "bg-blue-100 text-blue-800" :
-                            "bg-slate-100 text-slate-700"
-                          }`}>{sr.status}</span>
+                          <span className={cn("inline-block px-2 py-0.5 rounded text-xs font-medium", sr.status === "SIGNED" ? "bg-green-100 text-green-700" :
+                            sr.status === "SENT" ? "bg-blue-100 text-blue-700" :
+                            "bg-slate-100 text-slate-700")}>{sr.status}</span>
                         </td>
                         <td>{sr.signers?.map(s => s.name).join(", ") || "—"}</td>
                         <td>{sr.sentAt ? fmtD(sr.sentAt) : "—"}</td>
@@ -835,7 +834,7 @@ export default function LeaseEditorPage() {
                   </div>
                   {lease.depositPaidAt ? (
                     <div className="text-right">
-                      <span className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">✅ PAID</span>
+                      <span className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700">✅ PAID</span>
                       <p className="text-xs text-slate-400 mt-1">{fmtD(lease.depositPaidAt)}</p>
                       {lease.depositConfirmedBy && <p className="text-xs text-slate-400">By: {lease.depositConfirmedBy}</p>}
                       {lease.depositBankRef && <p className="text-xs text-slate-400">Ref: {lease.depositBankRef}</p>}
@@ -855,7 +854,7 @@ export default function LeaseEditorPage() {
             <Panel title="📋 Lifecycle">
               <div className="space-y-2">
                 {lease.activatedAt && (
-                  <p className="text-sm"><span className="text-emerald-600 font-medium">⚡ Activated:</span> {fmtD(lease.activatedAt)}</p>
+                  <p className="text-sm"><span className="text-green-600 font-medium">⚡ Activated:</span> {fmtD(lease.activatedAt)}</p>
                 )}
                 {lease.terminatedAt && (
                   <div>
@@ -882,11 +881,9 @@ export default function LeaseEditorPage() {
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
-                        billingSchedule.status === "ACTIVE" ? "bg-emerald-100 text-emerald-800" :
-                        billingSchedule.status === "PAUSED" ? "bg-yellow-100 text-yellow-800" :
-                        "bg-slate-100 text-slate-700"
-                      }`}>{billingSchedule.status}</span>
+                      <span className={cn("inline-block px-2 py-0.5 rounded text-xs font-medium", billingSchedule.status === "ACTIVE" ? "bg-green-100 text-green-700" :
+                        billingSchedule.status === "PAUSED" ? "bg-yellow-100 text-yellow-700" :
+                        "bg-slate-100 text-slate-700")}>{billingSchedule.status}</span>
                       <span className="text-sm text-slate-600">Anchor day: {billingSchedule.anchorDay}</span>
                     </div>
                     <div className="flex gap-2">
@@ -898,7 +895,7 @@ export default function LeaseEditorPage() {
                       )}
                       {billingSchedule.status === "PAUSED" && (
                         <button onClick={() => handleBillingAction("resume")} disabled={!!billingAction}
-                          className="px-3 py-1 text-xs font-medium rounded border border-emerald-300 text-emerald-700 hover:bg-emerald-50 disabled:opacity-50">
+                          className="px-3 py-1 text-xs font-medium rounded border border-green-300 text-green-700 hover:bg-green-50 disabled:opacity-50">
                           {billingAction === "resume" ? "…" : "Resume"}
                         </button>
                       )}
@@ -958,17 +955,13 @@ export default function LeaseEditorPage() {
                             <tr key={r.id} className="border-b last:border-0">
                               <td className="py-2 pr-4 font-medium">{r.fiscalYear}</td>
                               <td className="py-2 pr-4">
-                                <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${
-                                  r.status === "DRAFT" ? "bg-blue-100 text-blue-800" :
-                                  r.status === "FINALIZED" ? "bg-amber-100 text-amber-800" :
-                                  "bg-emerald-100 text-emerald-800"
-                                }`}>{r.status}</span>
+                                <span className={cn("px-2 py-0.5 text-xs font-semibold rounded-full", r.status === "DRAFT" ? "bg-blue-100 text-blue-700" :
+                                  r.status === "FINALIZED" ? "bg-amber-100 text-amber-700" :
+                                  "bg-green-100 text-green-700")}>{r.status}</span>
                               </td>
                               <td className="py-2 pr-4 text-right tabular-nums">{(r.totalAcomptePaidCents / 100).toFixed(2)}</td>
                               <td className="py-2 pr-4 text-right tabular-nums">{(r.totalActualCostsCents / 100).toFixed(2)}</td>
-                              <td className={`py-2 pr-4 text-right tabular-nums ${
-                                r.balanceCents > 0 ? "text-red-600" : r.balanceCents < 0 ? "text-emerald-600" : ""
-                              }`}>{r.balanceCents > 0 ? "+" : ""}{(r.balanceCents / 100).toFixed(2)}</td>
+                              <td className={cn("py-2 pr-4 text-right tabular-nums", r.balanceCents > 0 ? "text-red-600" : r.balanceCents < 0 ? "text-green-600" : "")}>{r.balanceCents > 0 ? "+" : ""}{(r.balanceCents / 100).toFixed(2)}</td>
                               <td className="py-2 text-right">
                                 <a href={`/manager/charge-reconciliations/${r.id}`}
                                   className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700">
@@ -1000,7 +993,7 @@ export default function LeaseEditorPage() {
                       >{reconCreating ? "Creating…" : "Create"}</button>
                       <button
                         onClick={() => setShowCreateRecon(false)}
-                        className="px-3 py-1 text-sm border rounded hover:bg-gray-50"
+                        className="px-3 py-1 text-sm border rounded hover:bg-slate-50"
                       >Cancel</button>
                     </div>
                   ) : (
@@ -1020,33 +1013,33 @@ export default function LeaseEditorPage() {
               <div className="space-y-3">
                 {rentAdjustments.length > 0 && (
                   <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200 text-sm">
-                      <thead className="bg-gray-50">
+                    <table className="min-w-full divide-y divide-slate-200 text-sm">
+                      <thead className="bg-slate-50">
                         <tr>
-                          <th className="px-3 py-2 text-left font-medium text-gray-500">Type</th>
-                          <th className="px-3 py-2 text-left font-medium text-gray-500">Effective</th>
-                          <th className="px-3 py-2 text-left font-medium text-gray-500">Status</th>
-                          <th className="px-3 py-2 text-right font-medium text-gray-500">Old</th>
-                          <th className="px-3 py-2 text-right font-medium text-gray-500">New</th>
-                          <th className="px-3 py-2 text-right font-medium text-gray-500">Change</th>
-                          <th className="px-3 py-2 text-left font-medium text-gray-500"></th>
+                          <th className="px-3 py-2 text-left font-medium text-slate-500">Type</th>
+                          <th className="px-3 py-2 text-left font-medium text-slate-500">Effective</th>
+                          <th className="px-3 py-2 text-left font-medium text-slate-500">Status</th>
+                          <th className="px-3 py-2 text-right font-medium text-slate-500">Old</th>
+                          <th className="px-3 py-2 text-right font-medium text-slate-500">New</th>
+                          <th className="px-3 py-2 text-right font-medium text-slate-500">Change</th>
+                          <th className="px-3 py-2 text-left font-medium text-slate-500"></th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-100">
+                      <tbody className="divide-y divide-slate-100">
                         {rentAdjustments.map((a) => {
                           const fmtC = (c) => (c / 100).toLocaleString("de-CH", { style: "currency", currency: "CHF" });
                           return (
-                            <tr key={a.id} className="hover:bg-gray-50">
+                            <tr key={a.id} className="hover:bg-slate-50">
                               <td className="px-3 py-2">{a.adjustmentType === "CPI_INDEXATION" ? "CPI" : a.adjustmentType === "MANUAL" ? "Manual" : a.adjustmentType}</td>
                               <td className="px-3 py-2">{new Date(a.effectiveDate).toLocaleDateString("de-CH")}</td>
                               <td className="px-3 py-2">
-                                <span className={`px-2 py-0.5 rounded text-xs font-semibold ${a.status === "DRAFT" ? "bg-yellow-100 text-yellow-800" : a.status === "APPROVED" ? "bg-blue-100 text-blue-800" : a.status === "APPLIED" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
+                                <span className={cn("px-2 py-0.5 rounded text-xs font-semibold", a.status === "DRAFT" ? "bg-yellow-100 text-yellow-700" : a.status === "APPROVED" ? "bg-blue-100 text-blue-700" : a.status === "APPLIED" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700")}>
                                   {a.status}
                                 </span>
                               </td>
                               <td className="px-3 py-2 text-right">{fmtC(a.previousRentCents)}</td>
                               <td className="px-3 py-2 text-right font-semibold">{fmtC(a.newRentCents)}</td>
-                              <td className={`px-3 py-2 text-right ${a.adjustmentCents > 0 ? "text-red-600" : a.adjustmentCents < 0 ? "text-green-600" : ""}`}>
+                              <td className={cn("px-3 py-2 text-right", a.adjustmentCents > 0 ? "text-red-600" : a.adjustmentCents < 0 ? "text-green-600" : "")}>
                                 {a.adjustmentCents > 0 ? "+" : ""}{fmtC(a.adjustmentCents)}
                               </td>
                               <td className="px-3 py-2">
@@ -1071,7 +1064,7 @@ export default function LeaseEditorPage() {
                   showComputeAdj ? (
                     <div className="flex gap-2 items-end flex-wrap">
                       <div>
-                        <label className="text-xs text-gray-500 block">Current CPI</label>
+                        <label className="text-xs text-slate-500 block">Current CPI</label>
                         <input
                           type="number"
                           step="0.1"
@@ -1082,7 +1075,7 @@ export default function LeaseEditorPage() {
                         />
                       </div>
                       <div>
-                        <label className="text-xs text-gray-500 block">Effective Date</label>
+                        <label className="text-xs text-slate-500 block">Effective Date</label>
                         <input
                           type="date"
                           value={adjEffective}
@@ -1099,7 +1092,7 @@ export default function LeaseEditorPage() {
                       </button>
                       <button
                         onClick={() => setShowComputeAdj(false)}
-                        className="px-3 py-1 text-sm bg-gray-200 text-gray-600 rounded"
+                        className="px-3 py-1 text-sm bg-slate-200 text-slate-600 rounded"
                       >Cancel</button>
                     </div>
                   ) : (
@@ -1142,11 +1135,9 @@ export default function LeaseEditorPage() {
                           </td>
                           <td className="cell-bold">CHF {inv.totalAmountChf?.toFixed(2) || "—"}</td>
                           <td>
-                            <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
-                              inv.status === "PAID" ? "bg-green-100 text-green-800" :
-                              inv.status === "APPROVED" ? "bg-blue-100 text-blue-800" :
-                              "bg-slate-100 text-slate-700"
-                            }`}>{inv.status}</span>
+                            <span className={cn("inline-block px-2 py-0.5 rounded text-xs font-medium", inv.status === "PAID" ? "bg-green-100 text-green-700" :
+                              inv.status === "APPROVED" ? "bg-blue-100 text-blue-700" :
+                              "bg-slate-100 text-slate-700")}>{inv.status}</span>
                           </td>
                           <td>{fmtD(inv.createdAt)}</td>
                         </tr>
@@ -1170,7 +1161,7 @@ export default function LeaseEditorPage() {
               <div className="mb-4">
                 <label className="block text-sm font-medium text-slate-700 mb-1">Signature Level</label>
                 <select value={signLevel} onChange={e => setSignLevel(e.target.value)}
-                  className="w-full border rounded-md px-3 py-2 text-sm">
+                  className="w-full border rounded-lg px-3 py-2 text-sm">
                   <option value="SES">SES — Simple Electronic Signature</option>
                   <option value="AES">AES — Advanced Electronic Signature</option>
                   <option value="QES">QES — Qualified Electronic Signature</option>
@@ -1201,7 +1192,7 @@ export default function LeaseEditorPage() {
               <div className="mb-4">
                 <label className="block text-sm font-medium text-slate-700 mb-1">Reason</label>
                 <select value={terminateReason} onChange={e => setTerminateReason(e.target.value)}
-                  className="w-full border rounded-md px-3 py-2 text-sm">
+                  className="w-full border rounded-lg px-3 py-2 text-sm">
                   <option value="MUTUAL">Mutual agreement</option>
                   <option value="TENANT_NOTICE">Tenant notice</option>
                   <option value="LANDLORD_NOTICE">Landlord notice</option>
@@ -1214,7 +1205,7 @@ export default function LeaseEditorPage() {
                 <label className="block text-sm font-medium text-slate-700 mb-1">Notice period / notes (optional)</label>
                 <textarea value={terminateNotice} onChange={e => setTerminateNotice(e.target.value)}
                   rows={3} placeholder="e.g. 3 months notice from 01.04.2026"
-                  className="w-full border rounded-md px-3 py-2 text-sm" />
+                  className="w-full border rounded-lg px-3 py-2 text-sm" />
               </div>
               <div className="flex justify-end gap-2">
                 <button onClick={() => setShowTerminateModal(false)}
@@ -1238,7 +1229,7 @@ export default function LeaseEditorPage() {
               <div className="mb-4">
                 <label className="block text-sm font-medium text-slate-700 mb-1">Invoice Type</label>
                 <select value={invoiceType} onChange={e => setInvoiceType(e.target.value)}
-                  className="w-full border rounded-md px-3 py-2 text-sm">
+                  className="w-full border rounded-lg px-3 py-2 text-sm">
                   <option value="DEPOSIT">Deposit</option>
                   <option value="RENT">Rent</option>
                   <option value="CHARGES">Charges</option>
@@ -1250,13 +1241,13 @@ export default function LeaseEditorPage() {
                 <label className="block text-sm font-medium text-slate-700 mb-1">Amount (CHF) *</label>
                 <input type="number" value={invoiceAmount} onChange={e => setInvoiceAmount(e.target.value)}
                   min="0.01" step="0.01" placeholder="0.00"
-                  className="w-full border rounded-md px-3 py-2 text-sm" />
+                  className="w-full border rounded-lg px-3 py-2 text-sm" />
               </div>
               <div className="mb-4">
                 <label className="block text-sm font-medium text-slate-700 mb-1">Description (optional)</label>
                 <input type="text" value={invoiceDesc} onChange={e => setInvoiceDesc(e.target.value)}
                   placeholder="e.g. Deposit for lease starting 01.04.2026"
-                  className="w-full border rounded-md px-3 py-2 text-sm" />
+                  className="w-full border rounded-lg px-3 py-2 text-sm" />
               </div>
               <div className="flex justify-end gap-2">
                 <button onClick={() => setShowInvoiceModal(false)}

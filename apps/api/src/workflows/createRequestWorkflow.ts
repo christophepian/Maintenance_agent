@@ -5,24 +5,25 @@
  * Orchestrates the full story:
  *   1. Validate + normalize input (already done by route via Zod)
  *   2. Resolve tenant from phone if needed
- *   3. Determine initial status (rules engine → threshold → pending)
- *   4. Owner-direct mode: bump to PENDING_OWNER_APPROVAL if above limit
- *   5. Persist the request
- *   6. Emit REQUEST_CREATED event
- *   7. Legal auto-routing (if enabled + category mapped + OBLIGATED)
- *   8. Contractor auto-match (only when legal routing did NOT consume)
- *   9. Canonical reload + DTO return
+ *   3. Initial status is always PENDING_REVIEW
+ *   4. Persist the request
+ *   5. Emit REQUEST_CREATED event
+ *   6. Legal auto-routing: if OBLIGATED → create RFP + transition to RFP_PENDING
+ *      Otherwise → stays at PENDING_REVIEW (manager inbox)
+ *   7. Canonical reload + DTO return
+ *
+ * Cost-based approval now happens at quote award time (awardQuoteWorkflow),
+ * not at request creation.
  */
 
-import { RequestStatus, PrismaClient } from "@prisma/client";
+import { RequestStatus, ApprovalSource, LegalObligation, PrismaClient } from "@prisma/client";
 import { WorkflowContext } from "./context";
+import { assertRequestTransition } from "./transitions";
 import { emit } from "../events/bus";
-import { findRequestById, createRequest as repoCreateRequest } from "../repositories/requestRepository";
+import { findRequestById, createRequest as repoCreateRequest, updateRequestStatus } from "../repositories/requestRepository";
 import { getTenantByPhone } from "../services/tenants";
 import { getOrgConfig } from "../services/orgConfig";
-import { computeEffectiveConfig } from "../services/buildingConfig";
-import { decideRequestStatusWithRules } from "../services/autoApproval";
-import { findMatchingContractor, assignContractor } from "../services/requestAssignment";
+import { createRfpForRequest } from "../services/rfps";
 import { evaluateLegalRoutingWorkflow } from "./evaluateLegalRoutingWorkflow";
 import { toDTO, type MaintenanceRequestDTO } from "../services/maintenanceRequests";
 import { normalizePhoneToE164 } from "../utils/phoneNormalization";
@@ -80,44 +81,11 @@ export async function createRequestWorkflow(
     }
   }
 
-  // ── 2. Determine initial status ────────────────────────────
-  let status: RequestStatus = RequestStatus.PENDING_REVIEW;
+  // ── 2. Initial status is always PENDING_REVIEW ─────────────
+  // Cost-based approval decisions happen later at quote award time.
+  const status: RequestStatus = RequestStatus.PENDING_REVIEW;
 
-  if (hasEstimatedCost || category) {
-    let unitType: string | null = null;
-    let unitNumber: string | null = null;
-    let buildingId: string | null = null;
-
-    if (unitId) {
-      const unit = await prisma.unit.findUnique({
-        where: { id: unitId },
-        select: { type: true, unitNumber: true, buildingId: true },
-      });
-      unitType = unit?.type ?? null;
-      unitNumber = unit?.unitNumber ?? null;
-      buildingId = unit?.buildingId ?? null;
-    }
-
-    const effective = await computeEffectiveConfig(prisma, orgId, buildingId ?? undefined);
-    const approvalResult = await decideRequestStatusWithRules(
-      prisma, orgId,
-      { category, estimatedCost, unitType, unitNumber, buildingId, unitId },
-      effective.effectiveAutoApproveLimit,
-      unitId ?? undefined,
-    );
-    status = approvalResult.status;
-
-    // ── 3. Owner-direct mode override ────────────────────────
-    if (
-      effective.org.mode === "OWNER_DIRECT" &&
-      estimatedCost !== null &&
-      estimatedCost > effective.effectiveRequireOwnerApprovalAbove
-    ) {
-      status = RequestStatus.PENDING_OWNER_APPROVAL;
-    }
-  }
-
-  // ── 3b. Validate: unitId is required ─────────────────────
+  // ── 3. Validate: unitId is required ────────────────────────
   if (!unitId) {
     throw Object.assign(
       new Error("unitId is required — requests cannot be created without a unit"),
@@ -146,7 +114,9 @@ export async function createRequestWorkflow(
     payload: { requestId: created.id, category: created.category, description: created.description },
   }).catch((err) => console.error("[EVENT] Failed to emit REQUEST_CREATED", err));
 
-  // ── 6. Legal auto-routing (graceful degradation) ───────────
+  // ── 6. Legal auto-routing (OBLIGATED → RFP_PENDING) ────────
+  // Only 100% certain legal obligations go directly to RFP.
+  // Everything else stays at PENDING_REVIEW for manager triage.
   let legalAutoRouted = false;
   if (category) {
     try {
@@ -162,28 +132,51 @@ export async function createRequestWorkflow(
         });
 
         if (mapping) {
+          // Read-only legal evaluation
           const { decision } = await evaluateLegalRoutingWorkflow(ctx, { requestId: created.id });
-          legalAutoRouted = decision.legalObligation === "OBLIGATED";
 
-          if (legalAutoRouted) {
-            console.log(`[LEGAL] Auto-routed request ${created.id} → RFP (OBLIGATED)`);
+          if (decision.legalObligation === LegalObligation.OBLIGATED) {
+            // Create RFP and transition to RFP_PENDING
+            try {
+              const rfp = await createRfpForRequest(orgId, created.id, {
+                legalObligation: decision.legalObligation,
+                legalTopic: decision.legalTopic,
+              });
+
+              assertRequestTransition(RequestStatus.PENDING_REVIEW, RequestStatus.RFP_PENDING);
+              await updateRequestStatus(prisma, created.id, RequestStatus.RFP_PENDING, {
+                approvalSource: ApprovalSource.LEGAL_OBLIGATION,
+              });
+
+              emit({
+                type: "LEGAL_AUTO_ROUTED",
+                orgId,
+                actorUserId: ctx.actorUserId,
+                payload: {
+                  requestId: created.id,
+                  obligation: decision.legalObligation,
+                  rfpId: rfp.id,
+                  previousStatus: "PENDING_REVIEW",
+                  newStatus: "RFP_PENDING",
+                },
+              }).catch((err) => console.error("[EVENT] Failed to emit LEGAL_AUTO_ROUTED", err));
+
+              legalAutoRouted = true;
+              console.log(`[LEGAL] Auto-routed request ${created.id} → RFP (OBLIGATED)`);
+            } catch (rfpErr: any) {
+              console.warn(`[LEGAL] RFP creation failed for ${created.id}, keeping as PENDING_REVIEW:`, rfpErr.message);
+            }
           } else {
-            console.log(`[LEGAL] Request ${created.id}: ${decision.legalObligation} — routed via workflow`);
+            console.log(`[LEGAL] Request ${created.id}: ${decision.legalObligation} → stays PENDING_REVIEW`);
           }
         }
       }
     } catch (err) {
-      console.warn(`[LEGAL] Auto-routing failed for request ${created.id}, keeping as ${created.status}:`, err);
+      console.warn(`[LEGAL] Auto-routing failed for request ${created.id}, keeping as PENDING_REVIEW:`, err);
     }
   }
 
-  // ── 7. Contractor auto-match (skipped when legal-routed) ───
-  if (category && !legalAutoRouted) {
-    const matchingContractor = await findMatchingContractor(prisma, orgId, category);
-    if (matchingContractor) await assignContractor(prisma, created.id, matchingContractor.id);
-  }
-
-  // ── 8. Canonical reload + DTO ──────────────────────────────
+  // ── 7. Canonical reload + DTO ──────────────────────────────
   const reloaded = await findRequestById(prisma, created.id);
   const dto = reloaded ? toDTO(reloaded) : toDTO(created);
 

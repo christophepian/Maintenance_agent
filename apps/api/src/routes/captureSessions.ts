@@ -43,14 +43,9 @@ function checkCaptureRateLimit(ip: string): boolean {
 export function registerCaptureSessionRoutes(router: Router) {
   // POST /capture-sessions — create a new capture session (MANAGER only)
   router.post("/capture-sessions", async ({ req, res, orgId }) => {
-    if (!requireAnyRole(req, res, ["MANAGER"])) return;
+    const user = requireAnyRole(req, res, ["MANAGER"]);
+    if (!user) return;
     try {
-      const user = getAuthUser(req);
-      if (!user) {
-        sendError(res, 401, "UNAUTHORIZED", "Authentication required");
-        return;
-      }
-
       const result = await createSession(orgId, user.userId);
 
       sendJson(res, 201, {

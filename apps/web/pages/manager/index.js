@@ -1,14 +1,15 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
-import { useRouter } from "next/router";
 import Link from "next/link";
 import AppShell from "../../components/AppShell";
 import PageShell from "../../components/layout/PageShell";
 import PageHeader from "../../components/layout/PageHeader";
 import PageContent from "../../components/layout/PageContent";
-import Panel from "../../components/layout/Panel";
+import Badge from "../../components/ui/Badge";
 import Section from "../../components/layout/Section";
+import ErrorBanner from "../../components/ui/ErrorBanner";
 import { formatChf as formatCurrency, formatChfCents, formatPercent, formatDate } from "../../lib/format";
 import { authHeaders } from "../../lib/api";
+import { cn } from "../../lib/utils";
 
 /* ─── YTD date range ─── */
 function ytdRange() {
@@ -21,48 +22,219 @@ function ytdRange() {
 
 /* ─── Health traffic-light dot ─── */
 const HEALTH_DOT = {
-  green: { bg: "bg-emerald-500", ring: "ring-emerald-200" },
+  green: { bg: "bg-green-500", ring: "ring-green-200" },
   amber: { bg: "bg-amber-500", ring: "ring-amber-200" },
   red:   { bg: "bg-red-500",   ring: "ring-red-200" },
 };
 function HealthDot({ health }) {
   const c = HEALTH_DOT[health] || HEALTH_DOT.amber;
-  return <span className={`inline-block w-2.5 h-2.5 rounded-full ${c.bg} ring-2 ${c.ring}`} />;
+  return (
+    <span className={cn("inline-block w-2.5 h-2.5 rounded-full", c.bg, "ring-2", c.ring)}>
+      <span className="sr-only">{health}</span>
+    </span>
+  );
 }
 
-/* ─── Collapsible section with chevron ─── */
-function CollapsibleSection({ title, badge, defaultOpen = false, children }) {
-  const [open, setOpen] = useState(defaultOpen);
+/* ─── Action Items tabs ─── */
+const ACTION_TABS = ["Pending review", "Owner approval", "Disputed invoices", "Stale jobs", "RFP routed"];
+
+function ActionItemsTabs({
+  pendingReviewRequests,
+  pendingOwnerApprovalRequests,
+  disputedInvoices,
+  staleJobs,
+  rfpPendingRequests,
+}) {
+  const [active, setActive] = useState(0);
+
+  const badges = [
+    pendingReviewRequests.length || null,
+    pendingOwnerApprovalRequests.length || null,
+    disputedInvoices.length || null,
+    staleJobs.length || null,
+    rfpPendingRequests.length || null,
+  ];
+
+  const totalActions = pendingReviewRequests.length + pendingOwnerApprovalRequests.length +
+    disputedInvoices.length + staleJobs.length + rfpPendingRequests.length;
+
   return (
     <div className="mb-5">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-2 w-full text-left group"
-      >
-        <svg
-          className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${open ? "rotate-90" : ""}`}
-          viewBox="0 0 20 20"
-          fill="currentColor"
-        >
-          <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
-        </svg>
-        <span className="text-sm font-semibold uppercase tracking-wide text-slate-600 group-hover:text-slate-900 transition-colors">
-          {title}
-        </span>
-        {badge != null && (
-          <span className="ml-1 inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
-            {badge}
-          </span>
+      <h2 className="text-lg font-semibold text-slate-900 mb-4">Action Items</h2>
+
+      {/* Tab strip */}
+      <div className="tab-strip">
+        {ACTION_TABS.map((label, i) => (
+          <button
+            key={label}
+            onClick={() => setActive(i)}
+            className={active === i ? "tab-btn-active" : "tab-btn"}
+          >
+            {label}
+            {badges[i] != null && (
+              <span className={cn(
+                "ml-1.5 inline-flex items-center justify-center rounded-full px-1.5 py-0.5 text-xs font-semibold leading-none",
+                active === i ? "bg-indigo-100 text-indigo-700" : "bg-slate-100 text-slate-600",
+              )}>
+                {badges[i]}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* Tab 0 — Pending review */}
+      <div className={active === 0 ? "tab-panel-active" : "tab-panel"}>
+        {pendingReviewRequests.length === 0 ? (
+          <p className="text-sm text-slate-500">No requests pending review.</p>
+        ) : (
+          <div className="space-y-2">
+            {pendingReviewRequests.slice(0, 5).map((req) => (
+              <Link key={req.id} href={`/manager/requests/${req.id}`} className="link-card">
+                <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-4 py-3 hover:bg-slate-50 transition-colors">
+                  <div className="min-w-0">
+                    <div className="text-sm font-semibold text-slate-900 truncate">{req.description || "Untitled request"}</div>
+                    <div className="mt-0.5 text-xs text-slate-500">
+                      {req.unit?.building?.name || "—"} · Unit {req.unit?.unitNumber || "—"}
+                    </div>
+                  </div>
+                  <div className="ml-6 shrink-0">
+                    <Badge variant="warning" size="sm">Pending review</Badge>
+                  </div>
+                </div>
+              </Link>
+            ))}
+            <Link href="/manager/requests?tab=pending" className="block text-xs font-medium text-indigo-600 hover:text-indigo-700 pt-1">
+              View all pending requests →
+            </Link>
+          </div>
         )}
-      </button>
-      {open && <div className="mt-3">{children}</div>}
+      </div>
+
+      {/* Tab 1 — Owner approval */}
+      <div className={active === 1 ? "tab-panel-active" : "tab-panel"}>
+        {pendingOwnerApprovalRequests.length === 0 ? (
+          <p className="text-sm text-slate-500">No requests awaiting owner approval.</p>
+        ) : (
+          <div className="space-y-2">
+            {pendingOwnerApprovalRequests.slice(0, 5).map((req) => (
+              <Link key={req.id} href={`/manager/requests/${req.id}`} className="link-card">
+                <div className="flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 hover:bg-amber-100 transition-colors">
+                  <div className="min-w-0">
+                    <div className="text-sm font-semibold text-slate-900 truncate">{req.description || "Untitled request"}</div>
+                    <div className="mt-0.5 text-xs text-slate-500">
+                      {req.unit?.building?.name || "—"} · Unit {req.unit?.unitNumber || "—"}
+                    </div>
+                  </div>
+                  <div className="ml-6 shrink-0">
+                    <Badge variant="destructive" size="sm">Owner approval</Badge>
+                  </div>
+                </div>
+              </Link>
+            ))}
+            <Link href="/manager/requests?tab=owner_approval" className="block text-xs font-medium text-indigo-600 hover:text-indigo-700 pt-1">
+              View all →
+            </Link>
+          </div>
+        )}
+      </div>
+
+      {/* Tab 2 — Disputed invoices */}
+      <div className={active === 2 ? "tab-panel-active" : "tab-panel"}>
+        {disputedInvoices.length === 0 ? (
+          <p className="text-sm text-slate-500">No disputed invoices.</p>
+        ) : (
+          <div className="space-y-2">
+            {disputedInvoices.slice(0, 5).map((inv) => (
+              <Link key={inv.id} href={`/manager/finance/invoices?invoiceId=${inv.id}`} className="link-card">
+                <div className="flex items-center justify-between rounded-lg border border-red-200 bg-red-50 px-4 py-3 hover:bg-red-100 transition-colors">
+                  <div className="min-w-0">
+                    <div className="text-sm font-semibold text-slate-900 truncate">
+                      {inv.invoiceNumber || "Invoice"}
+                    </div>
+                    <div className="mt-0.5 text-xs text-slate-500">
+                      {inv.contractor?.name || "—"}
+                    </div>
+                  </div>
+                  <div className="ml-6 shrink-0">
+                    <Badge variant="destructive" size="sm">Disputed</Badge>
+                  </div>
+                </div>
+              </Link>
+            ))}
+            <Link href="/manager/finance/invoices" className="block text-xs font-medium text-indigo-600 hover:text-indigo-700 pt-1">
+              View all disputed →
+            </Link>
+          </div>
+        )}
+      </div>
+
+      {/* Tab 3 — Stale jobs */}
+      <div className={active === 3 ? "tab-panel-active" : "tab-panel"}>
+        {staleJobs.length === 0 ? (
+          <p className="text-sm text-slate-500">No stale jobs.</p>
+        ) : (
+          <div className="space-y-2">
+            {staleJobs.slice(0, 5).map((job) => (
+              <Link key={job.id} href={job.requestId ? `/manager/requests/${job.requestId}` : "/manager/requests?tab=active"} className="link-card">
+                <div className="flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 hover:bg-amber-100 transition-colors">
+                  <div className="min-w-0">
+                    <div className="text-sm font-semibold text-slate-900 truncate">
+                      {job.requestDescription || `Job #${job.id?.slice(0, 8)}`}
+                    </div>
+                    <div className="mt-0.5 text-xs text-slate-500">
+                      {job.buildingName || "—"}{job.unitNumber ? ` · Unit ${job.unitNumber}` : ""} · In progress &gt; 7 days
+                    </div>
+                  </div>
+                  <div className="ml-6 shrink-0">
+                    <Badge variant="warning" size="sm">Stale</Badge>
+                  </div>
+                </div>
+              </Link>
+            ))}
+            <Link href="/manager/requests?tab=active" className="block text-xs font-medium text-indigo-600 hover:text-indigo-700 pt-1">
+              View all stale jobs →
+            </Link>
+          </div>
+        )}
+      </div>
+
+      {/* Tab 4 — RFP routed */}
+      <div className={active === 4 ? "tab-panel-active" : "tab-panel"}>
+        {rfpPendingRequests.length === 0 ? (
+          <p className="text-sm text-slate-500">No auto-routed RFPs.</p>
+        ) : (
+          <div className="space-y-2">
+            {rfpPendingRequests.slice(0, 5).map((req) => (
+              <Link key={req.id} href={`/manager/requests/${req.id}`} className="link-card">
+                <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-4 py-3 hover:bg-slate-50 transition-colors">
+                  <div className="min-w-0">
+                    <div className="text-sm font-semibold text-slate-900 truncate">{req.description || "RFP request"}</div>
+                    <div className="mt-0.5 text-xs text-slate-500">
+                      {req.unit?.building?.name || "—"} · Unit {req.unit?.unitNumber || "—"}
+                    </div>
+                  </div>
+                  <div className="ml-6 shrink-0">
+                    <Badge variant="info" size="sm">RFP created</Badge>
+                  </div>
+                </div>
+              </Link>
+            ))}
+            <Link href="/manager/requests?tab=rfp_open" className="block text-xs font-medium text-indigo-600 hover:text-indigo-700 pt-1">
+              View all RFPs →
+            </Link>
+          </div>
+        )}
+      </div>
+
+      {totalActions === 0 && (
+        <p className="text-sm text-green-700 mt-3">✓ No items require immediate action</p>
+      )}
     </div>
   );
 }
 
 export default function ManagerDashboard() {
-  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -188,9 +360,9 @@ export default function ManagerDashboard() {
     return (
       <AppShell role="MANAGER">
         <PageShell>
-          <PageHeader title="Manager Dashboard" />
+          <PageHeader title="Manager Dashboard" subtitle="Portfolio overview and action-required items" />
           <PageContent>
-            <p>Loading dashboard...</p>
+            <p className="loading-text">Loading dashboard…</p>
           </PageContent>
         </PageShell>
       </AppShell>
@@ -200,259 +372,167 @@ export default function ManagerDashboard() {
   return (
     <AppShell role="MANAGER">
       <PageShell>
-        <PageHeader title="Manager Dashboard" />
+        <PageHeader
+          title="Manager Dashboard"
+          subtitle="Portfolio overview and action-required items"
+          actions={
+            <div className="flex gap-2">
+              <button
+                onClick={() => { loadDashboardData(); loadPortfolio(); }}
+                className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              >
+                Refresh
+              </button>
+            </div>
+          }
+        />
+
         <PageContent>
-          {/* Quick Links Section */}
-          <Section title="Quick Links">
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12 }}>
-              <button className="button-primary" onClick={() => router.push("/manager/requests")}>
-                📋 All Requests
-              </button>
-              <button className="button-primary" onClick={() => router.push("/manager/finance/invoices")}>
-                💰 Invoices
-              </button>
-              <button className="button-primary" onClick={() => router.push("/manager/leases")}>
-                📄 Leases
-              </button>
-              <button className="button-primary" onClick={() => router.push("/admin-inventory")}>
-                🏢 Inventory
-              </button>
+          <ErrorBanner error={error} className="text-sm" />
+
+          {/* ─── KPIs ─── */}
+          <Section title="KPIs">
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Open Requests</div>
+                <div className={cn("mt-3 text-2xl font-semibold tracking-tight", openRequestsCount > 20 ? "text-amber-700" : "text-slate-900")}>
+                  {openRequestsCount}
+                </div>
+                <div className="text-sm text-slate-600">
+                  Pending, approved, assigned
+                </div>
+              </div>
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Open Jobs</div>
+                <div className={cn("mt-3 text-2xl font-semibold tracking-tight", openJobsCount > 15 ? "text-amber-700" : "text-slate-900")}>
+                  {openJobsCount}
+                </div>
+                <div className="text-sm text-slate-600">
+                  Pending + in progress
+                </div>
+              </div>
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Spend This Month</div>
+                <div className="mt-3 text-2xl font-semibold tracking-tight text-slate-900">
+                  {formatCurrency(spendThisMonth)}
+                </div>
+                <div className="text-sm text-slate-600">
+                  Paid invoices
+                </div>
+              </div>
+              {portfolio && (
+                <>
+                  <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                    <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Portfolio NOI</div>
+                    <div className={cn("mt-3 text-2xl font-semibold tracking-tight", portfolio.totalNetIncomeCents >= 0 ? "text-green-700" : "text-red-700")}>
+                      {formatChfCents(portfolio.totalNetIncomeCents)}
+                    </div>
+                    <div className="text-sm text-slate-600">
+                      {formatPercent(portfolio.avgCollectionRate)} avg collection
+                    </div>
+                  </div>
+                  <Link
+                    href="/manager/finance"
+                    className="rounded-2xl border border-slate-200 bg-slate-50 p-5 shadow-sm flex flex-col justify-between hover:bg-slate-100 transition-colors no-underline"
+                  >
+                    <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Buildings in Red</div>
+                    <div className={cn("mt-2 text-2xl font-semibold tracking-tight", portfolio.buildingsInRed > 0 ? "text-red-700" : "text-green-700")}>
+                      {portfolio.buildingsInRed} / {portfolio.buildingCount}
+                    </div>
+                    <div className="mt-1 text-sm font-medium text-indigo-600">View finance →</div>
+                  </Link>
+                </>
+              )}
+              {!portfolio && !portfolioLoading && (
+                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm col-span-2">
+                  <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Portfolio</div>
+                  <div className="mt-3 text-sm text-slate-500">No portfolio data available</div>
+                </div>
+              )}
+              {portfolioLoading && !portfolio && (
+                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm col-span-2">
+                  <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Portfolio</div>
+                  <div className="mt-3 text-sm text-slate-500">Loading…</div>
+                </div>
+              )}
             </div>
           </Section>
 
-          {error && (
-            <Panel style={{ backgroundColor: "#fff0f0", borderColor: "#ffb3b3" }}>
-              <strong className="text-err-text">Error:</strong> {error}
-            </Panel>
+          <ErrorBanner error={portfolioError} className="text-sm" />
+
+          {/* ─── Quick Links ─── */}
+          <Section title="Quick Links">
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <Link href="/manager/requests" className="rounded-xl border border-slate-200 bg-white px-4 py-3 hover:bg-slate-50 transition-colors no-underline">
+                <div className="text-sm font-semibold text-slate-900">All Requests</div>
+                <div className="mt-0.5 text-xs text-slate-500">Review and manage work requests</div>
+              </Link>
+              <Link href="/manager/finance/invoices" className="rounded-xl border border-slate-200 bg-white px-4 py-3 hover:bg-slate-50 transition-colors no-underline">
+                <div className="text-sm font-semibold text-slate-900">Invoices</div>
+                <div className="mt-0.5 text-xs text-slate-500">Approve, dispute, and track payments</div>
+              </Link>
+              <Link href="/manager/leases" className="rounded-xl border border-slate-200 bg-white px-4 py-3 hover:bg-slate-50 transition-colors no-underline">
+                <div className="text-sm font-semibold text-slate-900">Leases</div>
+                <div className="mt-0.5 text-xs text-slate-500">Active and pending lease contracts</div>
+              </Link>
+              <Link href="/admin-inventory" className="rounded-xl border border-slate-200 bg-white px-4 py-3 hover:bg-slate-50 transition-colors no-underline">
+                <div className="text-sm font-semibold text-slate-900">Inventory</div>
+                <div className="mt-0.5 text-xs text-slate-500">Buildings, units, and appliances</div>
+              </Link>
+            </div>
+          </Section>
+
+          {/* ─── Action Items (tabbed) ─── */}
+          {!loading && (
+            <ActionItemsTabs
+              pendingReviewRequests={pendingReviewRequests}
+              pendingOwnerApprovalRequests={pendingOwnerApprovalRequests}
+              disputedInvoices={disputedInvoices}
+              staleJobs={staleJobs}
+              rfpPendingRequests={rfpPendingRequests}
+            />
           )}
 
-          {/* Action Required Section */}
-          <CollapsibleSection title="Action Required" badge={pendingReviewRequests.length + pendingOwnerApprovalRequests.length + disputedInvoices.length + staleJobs.length + rfpPendingRequests.length || null}>
-            <div className="grid gap-3">
-              <Panel>
-                <Link href="/manager/requests?filter=PENDING_REVIEW" style={{ textDecoration: "none", color: "inherit", display: "block" }}>
-                  <div className="flex justify-between items-baseline">
-                    <div>
-                      <strong className="m-0">Requests Pending Review</strong>
-                      <div className="text-subtle">Manager approval required</div>
-                    </div>
-                    <div style={{ fontSize: "2em", fontWeight: 700, color: pendingReviewRequests.length > 0 ? "#7a4a00" : "#999" }}>
-                      {pendingReviewRequests.length}
-                    </div>
-                  </div>
-                </Link>
-              </Panel>
-
-              {pendingOwnerApprovalRequests.length > 0 && (
-                <Panel>
-                  <Link href="/manager/requests?filter=PENDING_OWNER_APPROVAL" style={{ textDecoration: "none", color: "inherit" }}>
-                    <div className="flex justify-between items-baseline">
-                      <div>
-                        <strong className="m-0">Owner Approval Pending</strong>
-                        <div className="text-subtle">High-value requests</div>
-                      </div>
-                      <div style={{ fontSize: "2em", fontWeight: 700, color: "#7a1f1f" }}>
-                        {pendingOwnerApprovalRequests.length}
-                      </div>
-                    </div>
-                  </Link>
-                </Panel>
-              )}
-
-              {disputedInvoices.length > 0 && (
-                <Panel>
-                  <Link href="/manager/finance/invoices?status=DISPUTED" style={{ textDecoration: "none", color: "inherit", display: "block" }}>
-                    <div className="flex justify-between items-baseline">
-                      <div>
-                        <strong className="m-0">Disputed Invoices</strong>
-                        <div className="text-subtle">Require resolution</div>
-                      </div>
-                      <div style={{ fontSize: "2em", fontWeight: 700, color: "#b30000" }}>
-                        {disputedInvoices.length}
-                      </div>
-                    </div>
-                  </Link>
-                </Panel>
-              )}
-
-              {staleJobs.length > 0 && (
-                <Panel>
-                  <Link href="/manager/requests?stale=true" style={{ textDecoration: "none", color: "inherit" }}>
-                    <div className="flex justify-between items-baseline">
-                      <div>
-                        <strong className="m-0">Stale Jobs</strong>
-                        <div className="text-subtle">In progress &gt; 7 days</div>
-                      </div>
-                      <div style={{ fontSize: "2em", fontWeight: 700, color: "#7a4a00" }}>
-                        {staleJobs.length}
-                      </div>
-                    </div>
-                  </Link>
-                </Panel>
-              )}
-
-              {rfpPendingRequests.length > 0 && (
-                <Panel>
-                  <Link href="/manager/rfps" style={{ textDecoration: "none", color: "inherit", display: "block" }}>
-                    <div className="flex justify-between items-baseline">
-                      <div>
-                        <strong className="m-0">Auto-routed to RFP</strong>
-                        <div className="text-subtle">Legal engine created RFPs</div>
-                      </div>
-                      <div style={{ fontSize: "2em", fontWeight: 700, color: "#4338ca" }}>
-                        {rfpPendingRequests.length}
-                      </div>
-                    </div>
-                  </Link>
-                </Panel>
-              )}
-
-              {pendingReviewRequests.length === 0 && 
-               pendingOwnerApprovalRequests.length === 0 && 
-               disputedInvoices.length === 0 && 
-               staleJobs.length === 0 &&
-               rfpPendingRequests.length === 0 && (
-                <Panel>
-                  <p className="text-ok-text m-0">✓ No items require immediate action</p>
-                </Panel>
-              )}
-            </div>
-          </CollapsibleSection>
-
-          {/* Operational KPIs Section */}
-          <CollapsibleSection title="Operational Health">
-            <div className="grid gap-3">
-              <Panel>
-                <Link href="/manager/requests" style={{ textDecoration: "none", color: "inherit" }}>
-                  <div className="flex justify-between items-baseline">
-                    <div>
-                      <strong className="m-0">Open Requests</strong>
-                      <div className="text-subtle">Pending, approved, assigned</div>
-                    </div>
-                    <div style={{ fontSize: "2em", fontWeight: 700, color: openRequestsCount > 20 ? "#7a4a00" : "#0b3a75" }}>
-                      {openRequestsCount}
-                    </div>
-                  </div>
-                </Link>
-              </Panel>
-
-              <Panel>
-                <Link href="/manager/jobs" style={{ textDecoration: "none", color: "inherit", display: "block" }}>
-                  <div className="flex justify-between items-baseline">
-                    <div>
-                      <strong className="m-0">Open Jobs</strong>
-                      <div className="text-subtle">Pending + in progress</div>
-                    </div>
-                    <div style={{ fontSize: "2em", fontWeight: 700, color: openJobsCount > 15 ? "#7a4a00" : "#0b3a75" }}>
-                      {openJobsCount}
-                    </div>
-                  </div>
-                </Link>
-              </Panel>
-
-              <Panel>
-                <Link href="/manager/finance/invoices" style={{ textDecoration: "none", color: "inherit" }}>
-                  <div className="flex justify-between items-baseline">
-                    <div>
-                      <strong className="m-0">Spend This Month</strong>
-                      <div className="text-subtle">Paid invoices</div>
-                    </div>
-                    <div style={{ fontSize: "1.6em", fontWeight: 700, color: "#116b2b" }}>
-                      {formatCurrency(spendThisMonth)}
-                    </div>
-                  </div>
-                </Link>
-              </Panel>
-            </div>
-          </CollapsibleSection>
-
-          {/* ─── Building Financial Performance ─── */}
-          <CollapsibleSection title="Building Performance (YTD)" badge={portfolio ? portfolio.buildingCount : null}>
-            {portfolioError && (
-              <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                {portfolioError}
+          {/* ─── Building Performance (YTD) ─── */}
+          {portfolio && portfolio.buildings.length > 0 && (
+            <Section title="Building Performance (YTD)">
+              <div className="rounded-lg border border-slate-200 bg-white overflow-hidden">
+                <table className="inline-table">
+                  <thead>
+                    <tr>
+                      <th>Building</th>
+                      <th className="text-center">Health</th>
+                      <th className="text-right">Net Income</th>
+                      <th className="text-right">Collection</th>
+                      <th className="text-right hidden sm:table-cell">Units</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {portfolio.buildings.map((b) => (
+                      <tr key={b.buildingId}>
+                        <td className="cell-bold">{b.buildingName}</td>
+                        <td className="text-center"><HealthDot health={b.health} /></td>
+                        <td className={cn("text-right font-mono text-sm", b.netIncomeCents >= 0 ? "text-green-700" : "text-red-700")}>
+                          {formatChfCents(b.netIncomeCents)}
+                        </td>
+                        <td className="text-right">{formatPercent(b.collectionRate)}</td>
+                        <td className="text-right hidden sm:table-cell">{b.activeUnitsCount}</td>
+                        <td className="text-right">
+                          <Link
+                            href={`/admin-inventory/buildings/${b.buildingId}`}
+                            className="text-xs font-medium text-indigo-600 hover:text-indigo-700"
+                          >
+                            Details
+                          </Link>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-            )}
-
-            {portfolioLoading && !portfolio && (
-              <p className="text-sm text-slate-500">Loading portfolio data…</p>
-            )}
-
-            {portfolio && (
-              <>
-                {/* Aggregate KPIs */}
-                <div className="grid gap-3 grid-cols-2 md:grid-cols-4 mb-4">
-                  <div className="rounded-lg border border-slate-200 bg-white p-4">
-                    <div className="text-xs font-semibold uppercase text-slate-500">Portfolio NOI</div>
-                    <div className={`mt-1 text-xl font-bold ${portfolio.totalNetIncomeCents >= 0 ? "text-emerald-700" : "text-red-700"}`}>
-                      {formatChfCents(portfolio.totalNetIncomeCents)}
-                    </div>
-                  </div>
-                  <div className="rounded-lg border border-slate-200 bg-white p-4">
-                    <div className="text-xs font-semibold uppercase text-slate-500">Avg Collection</div>
-                    <div className="mt-1 text-xl font-bold text-slate-900">
-                      {formatPercent(portfolio.avgCollectionRate)}
-                    </div>
-                  </div>
-                  <div className="rounded-lg border border-slate-200 bg-white p-4">
-                    <div className="text-xs font-semibold uppercase text-slate-500">Active Units</div>
-                    <div className="mt-1 text-xl font-bold text-slate-900">
-                      {portfolio.totalActiveUnits}
-                    </div>
-                  </div>
-                  <div className="rounded-lg border border-slate-200 bg-white p-4">
-                    <div className="text-xs font-semibold uppercase text-slate-500">Buildings in Red</div>
-                    <div className={`mt-1 text-xl font-bold ${portfolio.buildingsInRed > 0 ? "text-red-700" : "text-emerald-700"}`}>
-                      {portfolio.buildingsInRed} / {portfolio.buildingCount}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Per-building compact table */}
-                {portfolio.buildings.length > 0 && (
-                  <div className="rounded-lg border border-slate-200 bg-white overflow-hidden">
-                    <table className="inline-table">
-                      <thead>
-                        <tr>
-                          <th>Building</th>
-                          <th className="text-center">Health</th>
-                          <th className="text-right">Net Income</th>
-                          <th className="text-right">Collection</th>
-                          <th className="text-right hidden sm:table-cell">Units</th>
-                          <th></th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {portfolio.buildings.map((b) => (
-                          <tr key={b.buildingId}>
-                            <td className="cell-bold">{b.buildingName}</td>
-                            <td className="text-center"><HealthDot health={b.health} /></td>
-                            <td className={`text-right font-mono text-sm ${b.netIncomeCents >= 0 ? "text-emerald-700" : "text-red-700"}`}>
-                              {formatChfCents(b.netIncomeCents)}
-                            </td>
-                            <td className="text-right">{formatPercent(b.collectionRate)}</td>
-                            <td className="text-right hidden sm:table-cell">{b.activeUnitsCount}</td>
-                            <td className="text-right">
-                              <Link
-                                href={`/admin-inventory/buildings/${b.buildingId}`}
-                                className="text-xs font-medium text-indigo-600 hover:text-indigo-700"
-                              >
-                                Details
-                              </Link>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-
-                {portfolio.buildings.length === 0 && (
-                  <p className="text-sm text-slate-500">No buildings with financial data found.</p>
-                )}
-              </>
-            )}
-          </CollapsibleSection>
+            </Section>
+          )}
 
         </PageContent>
       </PageShell>

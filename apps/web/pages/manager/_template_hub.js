@@ -10,6 +10,7 @@ import PageHeader from "../../components/layout/PageHeader";
 import PageContent from "../../components/layout/PageContent";
 import Panel from "../../components/layout/Panel";
 import Link from "next/link";
+import ErrorBanner from "../../components/ui/ErrorBanner";
 import { authHeaders } from "../../lib/api";
 
 // REPLACE: Tab definitions — one object per tab with a key and label.
@@ -74,7 +75,7 @@ export default function TemplateHubPage() {
           subtitle="A starter hub page — copy and rename this file."
           // REPLACE: Page-level actions (buttons, links) — rendered right-aligned.
           actions={
-            <button className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
+            <button className="button-primary text-sm">
               + Action
             </button>
           }
@@ -88,7 +89,7 @@ export default function TemplateHubPage() {
         <PageContent>
           {/* ── Error banner — sits at the top of PageContent, outside both
                the tab strip and the Panel. */}
-          {error && <div className="error-banner">{error}</div>}
+          <ErrorBanner error={error} />
 
           {/* ── Tab strip — direct child of PageContent, BEFORE the Panel.
                Uses CSS classes from globals.css @layer components. */}

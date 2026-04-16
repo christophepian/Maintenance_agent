@@ -152,6 +152,14 @@ export async function awardQuoteWorkflow(
       awardedQuoteId: quoteId,
     });
 
+    // ── 5b. Transition request to PENDING_OWNER_APPROVAL ───
+    if (rfp.requestId) {
+      const request = await prisma.request.findUnique({ where: { id: rfp.requestId }, select: { status: true } });
+      if (request && canTransitionRequest(request.status as RequestStatus, RequestStatus.PENDING_OWNER_APPROVAL)) {
+        await updateRequestStatus(prisma, rfp.requestId, RequestStatus.PENDING_OWNER_APPROVAL);
+      }
+    }
+
     // ── 6. Emit event ─────────────────────────────────────
     await emit({
       type: "QUOTE_AWARDED",
@@ -217,10 +225,36 @@ export async function awardQuoteWorkflow(
     // Assign contractor FK on the request
     await assignContractor(prisma, rfp.requestId, quote.contractorId);
 
-    // Transition request → ASSIGNED (guard: only if the transition is valid)
+    // Transition request through the proper approval chain:
+    // - If owner completed award: PENDING_OWNER_APPROVAL → APPROVED → ASSIGNED
+    // - If manager direct award (under threshold): RFP_PENDING → AUTO_APPROVED → ASSIGNED
     const request = await prisma.request.findUnique({ where: { id: rfp.requestId }, select: { status: true } });
-    if (request && canTransitionRequest(request.status as RequestStatus, RequestStatus.ASSIGNED)) {
-      await updateRequestStatus(prisma, rfp.requestId, RequestStatus.ASSIGNED);
+    if (request) {
+      const reqStatus = request.status as RequestStatus;
+      if (reqStatus === RequestStatus.PENDING_OWNER_APPROVAL) {
+        // Owner is completing the award — transition through APPROVED
+        if (canTransitionRequest(reqStatus, RequestStatus.APPROVED)) {
+          await updateRequestStatus(prisma, rfp.requestId, RequestStatus.APPROVED, {
+            approvalSource: "OWNER_APPROVED" as any,
+          });
+        }
+        if (canTransitionRequest(RequestStatus.APPROVED, RequestStatus.ASSIGNED)) {
+          await updateRequestStatus(prisma, rfp.requestId, RequestStatus.ASSIGNED);
+        }
+      } else if (reqStatus === RequestStatus.RFP_PENDING) {
+        // Manager direct award (under threshold) — transition through AUTO_APPROVED
+        if (canTransitionRequest(reqStatus, RequestStatus.AUTO_APPROVED)) {
+          await updateRequestStatus(prisma, rfp.requestId, RequestStatus.AUTO_APPROVED, {
+            approvalSource: "SYSTEM_AUTO" as any,
+          });
+        }
+        if (canTransitionRequest(RequestStatus.AUTO_APPROVED, RequestStatus.ASSIGNED)) {
+          await updateRequestStatus(prisma, rfp.requestId, RequestStatus.ASSIGNED);
+        }
+      } else if (canTransitionRequest(reqStatus, RequestStatus.ASSIGNED)) {
+        // Fallback: direct to ASSIGNED if transition is valid
+        await updateRequestStatus(prisma, rfp.requestId, RequestStatus.ASSIGNED);
+      }
     }
   }
 

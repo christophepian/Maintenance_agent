@@ -7,20 +7,24 @@ import PageHeader from "../../../../components/layout/PageHeader";
 import PageContent from "../../../../components/layout/PageContent";
 import Panel from "../../../../components/layout/Panel";
 import Section from "../../../../components/layout/Section";
+import ErrorBanner from "../../../../components/ui/ErrorBanner";
+import Badge from "../../../../components/ui/Badge";
+import { billingEntityVariant } from "../../../../lib/statusVariants";
 import { authHeaders } from "../../../../lib/api";
 
+import { cn } from "../../../../lib/utils";
 const TYPE_LABEL = { ORG: "Organization", CONTRACTOR: "Contractor", OWNER: "Owner" };
 const TYPE_CLS = {
   ORG: "bg-blue-100 text-blue-700",
   CONTRACTOR: "bg-amber-100 text-amber-700",
-  OWNER: "bg-emerald-100 text-emerald-700",
+  OWNER: "bg-green-100 text-green-700",
 };
 
 function DetailRow({ label, value, mono }) {
   return (
     <div className="flex flex-col sm:flex-row sm:items-baseline gap-1 py-2.5 border-b border-slate-100 last:border-0">
       <span className="text-sm font-medium text-slate-500 sm:w-44 shrink-0">{label}</span>
-      <span className={`text-sm text-slate-900 ${mono ? "font-mono" : ""}`}>{value || "—"}</span>
+      <span className={cn("text-sm text-slate-900", mono ? "font-mono" : "")}>{value || "—"}</span>
     </div>
   );
 }
@@ -179,7 +183,7 @@ export default function BillingEntityDetailPage() {
                   <button
                     onClick={handleSave}
                     disabled={saving}
-                    className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-50"
+                    className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
                   >
                     {saving ? "Saving…" : "Save changes"}
                   </button>
@@ -190,16 +194,11 @@ export default function BillingEntityDetailPage() {
         />
 
         <PageContent>
-          {error && (
-            <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              {error}
-              <button onClick={() => setError("")} className="ml-3 opacity-60 hover:opacity-100">✕</button>
-            </div>
-          )}
+          <ErrorBanner error={error} onDismiss={() => setError("")} className="mb-4 text-sm" />
           {message && (
-            <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+            <div className="mb-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
               {message}
-              <button onClick={() => setMessage("")} className="ml-3 opacity-60 hover:opacity-100">✕</button>
+              <button onClick={() => setMessage("")} className="ml-3 opacity-60 hover:opacity-100" aria-label="Dismiss message">✕</button>
             </div>
           )}
 
@@ -294,9 +293,9 @@ export default function BillingEntityDetailPage() {
               <Panel>
                 <Section title="General">
                   <DetailRow label="Type" value={
-                    <span className={"inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold " + (TYPE_CLS[entity.type] || "bg-slate-100 text-slate-600")}>
+                    <Badge variant={billingEntityVariant(entity.type)} size="sm">
                       {TYPE_LABEL[entity.type] || entity.type}
-                    </span>
+                    </Badge>
                   } />
                   <DetailRow label="Name" value={entity.name} />
                   {entity.contractorId && (

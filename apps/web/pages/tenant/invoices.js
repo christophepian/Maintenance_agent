@@ -14,11 +14,11 @@ const STATUS_LABELS = {
 };
 
 const STATUS_COLORS = {
-  DRAFT: "bg-gray-100 text-gray-600",
-  ISSUED: "bg-blue-100 text-blue-800",
-  APPROVED: "bg-green-100 text-green-800",
-  PAID: "bg-emerald-100 text-emerald-800",
-  DISPUTED: "bg-red-100 text-red-800",
+  DRAFT: "bg-slate-100 text-slate-600",
+  ISSUED: "bg-blue-100 text-blue-700",
+  APPROVED: "bg-green-100 text-green-700",
+  PAID: "bg-green-100 text-green-700",
+  DISPUTED: "bg-red-100 text-red-700",
 };
 
 export default function TenantInvoicesPage() {
@@ -91,7 +91,7 @@ export default function TenantInvoicesPage() {
         <TenantPicker onSelect={handleTenantSwitch} />
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold">My Invoices</h1>
-          <span className="text-sm text-gray-500">
+          <span className="text-sm text-slate-500">
             Unit {session.unit?.unitNumber}
             {session.building ? ` \u00b7 ${session.building.address}` : ""}
           </span>
@@ -103,27 +103,27 @@ export default function TenantInvoicesPage() {
         {invoices.length > 0 && (
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
             <div className="card p-4 text-center">
-              <p className="text-xs text-gray-500 uppercase tracking-wide">Total Invoices</p>
+              <p className="text-xs text-slate-500 uppercase tracking-wide">Total Invoices</p>
               <p className="text-2xl font-bold mt-1">{invoices.length}</p>
             </div>
             <div className="card p-4 text-center">
-              <p className="text-xs text-gray-500 uppercase tracking-wide">Outstanding</p>
+              <p className="text-xs text-slate-500 uppercase tracking-wide">Outstanding</p>
               <p className="text-2xl font-bold mt-1 text-blue-700">{formatChf(totalDue)}</p>
             </div>
             <div className="card p-4 text-center">
-              <p className="text-xs text-gray-500 uppercase tracking-wide">Paid</p>
-              <p className="text-2xl font-bold mt-1 text-emerald-700">{formatChf(totalPaid)}</p>
+              <p className="text-xs text-slate-500 uppercase tracking-wide">Paid</p>
+              <p className="text-2xl font-bold mt-1 text-green-700">{formatChf(totalPaid)}</p>
             </div>
           </div>
         )}
 
         {loading ? (
-          <div className="text-center py-8 text-gray-500">Loading invoices…</div>
+          <div className="text-center py-8 text-slate-500">Loading invoices…</div>
         ) : invoices.length === 0 ? (
           <div className="card p-8 text-center">
-            <p className="text-gray-400 text-lg mb-2">🧾</p>
-            <p className="text-gray-500">No invoices yet</p>
-            <p className="text-gray-400 text-sm mt-1">
+            <p className="text-slate-400 text-lg mb-2">🧾</p>
+            <p className="text-slate-500">No invoices yet</p>
+            <p className="text-slate-400 text-sm mt-1">
               Invoices for rent and other charges will appear here once your lease is active.
             </p>
           </div>
@@ -136,14 +136,14 @@ export default function TenantInvoicesPage() {
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-gray-900 truncate">
+                    <p className="font-semibold text-slate-900 truncate">
                       {inv.description}
                     </p>
-                    <p className="text-sm text-gray-500 mt-1">
+                    <p className="text-sm text-slate-500 mt-1">
                       {inv.unit?.building?.name || "Property"}
                       {inv.unit?.unitNumber ? ` — Unit ${inv.unit.unitNumber}` : ""}
                     </p>
-                    <div className="flex items-center gap-3 mt-2 text-xs text-gray-400">
+                    <div className="flex items-center gap-3 mt-2 text-xs text-slate-400">
                       {inv.invoiceNumber && (
                         <span>#{inv.invoiceNumber}</span>
                       )}
@@ -152,7 +152,7 @@ export default function TenantInvoicesPage() {
                         <span>Due {formatDate(inv.dueDate)}</span>
                       )}
                       {inv.paidAt && (
-                        <span className="text-emerald-600">
+                        <span className="text-green-600">
                           Paid {formatDate(inv.paidAt)}
                         </span>
                       )}
@@ -165,7 +165,7 @@ export default function TenantInvoicesPage() {
                     <span
                       className={
                         "inline-block px-2 py-0.5 rounded text-xs font-medium mt-1 " +
-                        (STATUS_COLORS[inv.status] || "bg-gray-100 text-gray-600")
+                        (STATUS_COLORS[inv.status] || "bg-slate-100 text-slate-600")
                       }
                     >
                       {STATUS_LABELS[inv.status] || inv.status}
@@ -175,7 +175,7 @@ export default function TenantInvoicesPage() {
 
                 {/* Due/action banner for outstanding invoices */}
                 {(inv.status === "ISSUED" || inv.status === "APPROVED") && (
-                  <div className="mt-3 pt-3 border-t border-blue-100 bg-blue-50 -mx-4 -mb-4 px-4 py-3 rounded-b text-sm text-blue-800">
+                  <div className="mt-3 pt-3 border-t border-blue-100 bg-blue-50 -mx-4 -mb-4 px-4 py-3 rounded-b text-sm text-blue-700">
                     💳 Payment due
                     {inv.dueDate ? ` by ${formatDate(inv.dueDate)}` : ""} —{" "}
                     {formatChf(inv.totalAmountChf)}

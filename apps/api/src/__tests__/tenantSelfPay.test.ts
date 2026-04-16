@@ -3,7 +3,7 @@
  *
  * Covers:
  *   - POST /tenant-portal/requests/:id/self-pay → 200 (happy path)
- *   - 409 when request is not in OWNER_REJECTED status
+ *   - 409 when request is not in REJECTED status
  *   - 403 when tenant does not own the request
  *   - GET /tenant-portal/requests → lists tenant's requests
  *   - Notification creation on owner rejection
@@ -110,10 +110,10 @@ describe("Tenant Self-Pay API", () => {
     expect(tRes.status).toBe(200);
     tenantId = tRes.data.data.id;
 
-    // 3. Create request with high estimatedCost → triggers PENDING_OWNER_APPROVAL
+    // 3. Create request WITHOUT category so legal routing does not trigger.
+    // The self-pay flow requires PENDING_REVIEW → REJECTED first.
     const rRes = await apiRequest("POST", "/requests", {
-      description: "Leaking tap for self-pay test",
-      category: "bathroom",
+      description: "Leaking tap for self-pay test — needs plumber attention",
       unitId,
       tenantId,
       estimatedCost: 5000,
@@ -121,19 +121,20 @@ describe("Tenant Self-Pay API", () => {
     expect(rRes.status).toBe(201);
     requestId = rRes.data.data.id;
 
-    // Legal routing may move it; accept either PENDING_OWNER_APPROVAL or PENDING_REVIEW
+    // New flow: all requests start as PENDING_REVIEW.
+    // Cost-based approval happens at quote award time.
     const initialStatus = rRes.data.data.status;
-    expect(["PENDING_OWNER_APPROVAL", "PENDING_REVIEW"]).toContain(initialStatus);
+    expect(initialStatus).toBe("PENDING_REVIEW");
 
-    // If still PENDING_REVIEW (e.g. legal routing moved it elsewhere), force via owner-approve would fail.
-    // With OWNER_DIRECT + high cost, it should be PENDING_OWNER_APPROVAL.
-    expect(initialStatus).toBe("PENDING_OWNER_APPROVAL");
+    // To test the self-pay flow, we need to get to REJECTED.
+    // First transition to PENDING_OWNER_APPROVAL (simulate manager sending to owner),
+    // then reject. For simplicity, use the manager-reject route directly from PENDING_REVIEW.
   }, 25000);
 
   afterAll(() => stopTestServer(proc));
 
-  it("should reject self-pay when request is not OWNER_REJECTED (409)", async () => {
-    // Request is still PENDING_OWNER_APPROVAL
+  it("should reject self-pay when request is not REJECTED (409)", async () => {
+    // Request is still PENDING_REVIEW — self-pay should fail
     const tenantToken = createTenantPortalToken(tenantId);
     const tenantAuth = getAuthHeaders(tenantToken);
 
@@ -146,15 +147,16 @@ describe("Tenant Self-Pay API", () => {
     expect(res.status).toBe(409);
   });
 
-  it("owner reject → request moves to OWNER_REJECTED", async () => {
+  it("manager reject → request moves to REJECTED", async () => {
+    // Use the manager-reject endpoint (PENDING_REVIEW → REJECTED)
     const res = await apiRequest(
       "POST",
-      `/requests/${requestId}/owner-reject`,
+      `/requests/${requestId}/manager-reject`,
       { reason: "Too expensive" },
-      ownerAuth,
+      managerAuth,
     );
     expect(res.status).toBe(200);
-    expect(res.data.data.status).toBe("OWNER_REJECTED");
+    expect(res.data.data.status).toBe("REJECTED");
     expect(res.data.data.rejectionReason).toBe("Too expensive");
   });
 

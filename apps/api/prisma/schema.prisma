@@ -207,6 +207,7 @@ model User {
   ownedBuildings BuildingOwner[]
   billingEntity  BillingEntity?
   marginalTaxRate Float?         /// User's marginal income tax rate (0–1) for CapEx tax impact
+  strategyProfile OwnerStrategyProfile?
 
   @@unique([orgId, email], name: "user_org_email_unique")
   @@index([orgId])
@@ -273,6 +274,8 @@ model Request {
   events               RequestEvent[]
   attachments          MaintenanceAttachment[]
   rfps                 Rfp[]
+  decisionOptions      MaintenanceDecisionOption[]
+  recommendations      RecommendationResult[]
 
   @@index([orgId])
 }
@@ -356,6 +359,7 @@ model Building {
   ledgerEntries      LedgerEntry[]
   cashflowPlans      CashflowPlan[]
   contractorBillingSchedules ContractorBillingSchedule[]
+  strategyProfile    BuildingStrategyProfile?
 
   @@index([orgId])
 }
@@ -772,7 +776,7 @@ enum RequestEventType {
   NOTE
   OTHER
   OWNER_APPROVED
-  OWNER_REJECTED
+  REJECTED
   TENANT_SELECTED // Orphan: added during tenant-selection epic but never emitted in request event logs — kept for DB compatibility
 }
 
@@ -850,13 +854,13 @@ enum RequestStatus {
   COMPLETED
   ASSIGNED
   PENDING_OWNER_APPROVAL
-  OWNER_REJECTED
+  REJECTED
 }
 
 enum ApprovalSource {
   SYSTEM_AUTO
   OWNER_APPROVED
-  OWNER_REJECTED
+  REJECTED
   LEGAL_OBLIGATION
 }
 
@@ -907,7 +911,7 @@ enum NotificationEventType {
   INVOICE_APPROVED
   INVOICE_PAID
   INVOICE_DISPUTED
-  OWNER_REJECTED
+  REJECTED
   TENANT_SELF_PAY_ACCEPTED
   TENANT_SELECTED
   LEASE_READY_TO_SIGN
@@ -2221,4 +2225,178 @@ model ContractorBillingSchedule {
   @@index([orgId])
   @@index([contractorId])
   @@index([status, nextPeriodStart])
+}
+
+// ── Strategy Engine enums ──────────────────────────────────────
+
+enum StrategyArchetype {
+  exit_optimizer
+  yield_maximizer
+  value_builder
+  capital_preserver
+  opportunistic_repositioner
+}
+
+enum StrategySource {
+  questionnaire
+  advisor_set
+  imported
+  default_source
+}
+
+enum RoleIntent {
+  sell
+  income
+  long_term_quality
+  reposition
+  stable_hold
+  unspecified
+}
+
+enum BuildingConditionRating {
+  poor
+  fair
+  good
+  very_good
+}
+
+enum UserDecisionStatus {
+  accepted
+  rejected
+  deferred
+  pending
+}
+
+enum DecisionOptionType {
+  defer
+  repair
+  replace_like_for_like
+  upgrade
+  transform
+}
+
+// ── Strategy Engine models ─────────────────────────────────────
+
+model OwnerStrategyProfile {
+  id                   String            @id @default(uuid())
+  orgId                String
+  ownerId              String
+  onboardingVersion    String            @default("1")
+  source               StrategySource    @default(questionnaire)
+  userFacingGoalLabel  String
+  dimensionsJson       String            /// JSON-serialized StrategyDimensions
+  archetypeScoresJson  String            /// JSON-serialized ArchetypeScores
+  primaryArchetype     StrategyArchetype
+  secondaryArchetype   StrategyArchetype?
+  confidence           String            @default("medium") /// low | medium | high
+  contradictionScore   Float             @default(0)
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+
+  owner                User              @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  buildingProfiles     BuildingStrategyProfile[]
+  questionnaireAnswers StrategyQuestionnaireAnswer[]
+
+  @@unique([ownerId])
+  @@index([orgId])
+}
+
+model BuildingStrategyProfile {
+  id                     String                  @id @default(uuid())
+  orgId                  String
+  buildingId             String
+  ownerProfileId         String
+  roleIntent             RoleIntent              @default(unspecified)
+  buildingType           String?                 /// residential | mixed | commercial
+  approxUnits            Int?
+  conditionRating        BuildingConditionRating?
+  buildingDimensionsJson String?                 /// JSON-serialized Partial<StrategyDimensions>
+  effectiveDimensionsJson String                 /// JSON-serialized StrategyDimensions
+  archetypeScoresJson    String                  /// JSON-serialized ArchetypeScores
+  primaryArchetype       StrategyArchetype
+  secondaryArchetype     StrategyArchetype?
+  confidence             String                  @default("medium")
+  overridesJson          String?                 /// JSON-serialized BuildingStrategyOverrides
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+
+  building               Building                @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+  ownerProfile           OwnerStrategyProfile    @relation(fields: [ownerProfileId], references: [id], onDelete: Cascade)
+  recommendations        RecommendationResult[]
+
+  @@unique([buildingId])
+  @@index([orgId])
+  @@index([ownerProfileId])
+}
+
+model StrategyQuestionnaireAnswer {
+  id              String               @id @default(uuid())
+  orgId           String
+  ownerProfileId  String
+  answersJson     String               /// JSON-serialized StrategyQuestionnaireAnswers
+  version         String               @default("1")
+  createdAt       DateTime             @default(now())
+
+  ownerProfile    OwnerStrategyProfile @relation(fields: [ownerProfileId], references: [id], onDelete: Cascade)
+
+  @@index([orgId])
+  @@index([ownerProfileId])
+}
+
+// ─── Phase 2: Decision Scoring ────────────────────────────────────
+
+model MaintenanceDecisionOption {
+  id                        String             @id @default(uuid())
+  orgId                     String
+  opportunityId             String             /// = Request.id
+  optionType                DecisionOptionType
+  title                     String
+  description               String?
+  estimatedCost             Float              @default(0)
+  estimatedUsefulLifeYears  Float              @default(0)
+  implementationMonths      Float              @default(0)
+  tenantDisruptionScore     Float              @default(0)
+  riskReductionScore        Float              @default(0)
+  complianceCoverageScore   Float              @default(0)
+  saleAttractivenessScore   Float              @default(0)
+  rentUpliftScore           Float              @default(0)
+  opexReductionScore        Float              @default(0)
+  lifecycleExtensionScore   Float              @default(0)
+  modernizationImpactScore  Float              @default(0)
+  totalValueCreationScore   Float              @default(0)
+  uncertaintyScore          Float              @default(0)
+  taxProfileJson            String?            /// JSON-serialized DecisionTaxProfile
+  financialProjectionJson   String?            /// JSON-serialized FinancialProjection
+  createdAt                 DateTime           @default(now())
+  updatedAt                 DateTime           @updatedAt
+
+  request                   Request            @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  selectedByResults         RecommendationResult[] @relation("SelectedOption")
+
+  @@index([orgId])
+  @@index([opportunityId])
+}
+
+model RecommendationResult {
+  id                  String              @id @default(uuid())
+  orgId               String
+  opportunityId       String              /// = Request.id
+  buildingProfileId   String              /// FK → BuildingStrategyProfile.id
+  evaluatedAt         DateTime            @default(now())
+  selectedOptionId    String              /// FK → MaintenanceDecisionOption.id
+  rankedOptionsJson   String              /// JSON-serialized RankedDecisionOption[]
+  explanationJson     String              /// JSON-serialized RecommendationExplanation
+  userDecision        UserDecisionStatus  @default(pending)
+  userDecidedAt       DateTime?
+  userFeedback        String?
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+
+  request             Request             @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  selectedOption      MaintenanceDecisionOption @relation("SelectedOption", fields: [selectedOptionId], references: [id])
+  buildingProfile     BuildingStrategyProfile   @relation(fields: [buildingProfileId], references: [id])
+
+  @@index([orgId])
+  @@index([opportunityId])
+  @@index([buildingProfileId])
 }

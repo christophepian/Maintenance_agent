@@ -6,6 +6,8 @@ import PageShell from "../../../../components/layout/PageShell";
 import PageHeader from "../../../../components/layout/PageHeader";
 import PageContent from "../../../../components/layout/PageContent";
 import Panel from "../../../../components/layout/Panel";
+import Badge from "../../../../components/ui/Badge";
+import { invoiceVariant, ingestionVariant } from "../../../../lib/statusVariants";
 import { authHeaders } from "../../../../lib/api";
 
 /* ─── Helpers ─────────────────────────────────────────────── */
@@ -25,28 +27,14 @@ function formatChf(amount) {
 
 /* ─── Badge components ────────────────────────────────────── */
 
-const STATUS_CLS = {
-  DRAFT: "bg-slate-100 text-slate-600",
-  ISSUED: "bg-blue-100 text-blue-700",
-  APPROVED: "bg-emerald-100 text-emerald-700",
-  PAID: "bg-green-100 text-green-800",
-  DISPUTED: "bg-red-100 text-red-700",
-};
-
 function StatusBadge({ status }) {
   return (
-    <span className={"inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold " + (STATUS_CLS[status] || "bg-slate-100 text-slate-600")}>
+    <Badge variant={invoiceVariant(status)} size="sm">
       {status}
-    </span>
+    </Badge>
   );
 }
 
-const INGESTION_CLS = {
-  PENDING_REVIEW: "bg-amber-100 text-amber-700",
-  AUTO_CONFIRMED: "bg-green-100 text-green-700",
-  CONFIRMED: "bg-emerald-100 text-emerald-700",
-  REJECTED: "bg-red-100 text-red-700",
-};
 const INGESTION_LABEL = {
   PENDING_REVIEW: "Needs review",
   AUTO_CONFIRMED: "Auto-confirmed",
@@ -57,9 +45,9 @@ const INGESTION_LABEL = {
 function IngestionBadge({ ingestionStatus }) {
   if (!ingestionStatus) return null;
   return (
-    <span className={"inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ml-2 " + (INGESTION_CLS[ingestionStatus] || "bg-slate-100 text-slate-600")}>
+    <Badge variant={ingestionVariant(ingestionStatus)} size="sm" className="ml-2">
       {INGESTION_LABEL[ingestionStatus] || ingestionStatus}
-    </span>
+    </Badge>
   );
 }
 
@@ -292,7 +280,7 @@ export default function InvoiceDetailPage() {
                         <button
                           onClick={() => invoiceAction("approve")}
                           disabled={actionLoading}
-                          className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 transition disabled:opacity-50"
+                          className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 transition disabled:opacity-50"
                         >
                           ✓ Approve
                         </button>
@@ -329,7 +317,7 @@ export default function InvoiceDetailPage() {
                 {/* Pending review notice */}
                 {isPendingReview && (
                   <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
-                    <p className="text-sm font-medium text-amber-800 mt-0 mb-1">⚠ This invoice needs review</p>
+                    <p className="text-sm font-medium text-amber-700 mt-0 mb-1">⚠ This invoice needs review</p>
                     <p className="text-xs text-amber-700 m-0">
                       This invoice was ingested via {SOURCE_LABEL[inv.sourceChannel]?.text || "scanner"} with
                       {typeof inv.ocrConfidence === "number" ? ` ${inv.ocrConfidence}% confidence` : " unknown confidence"}.
@@ -426,27 +414,27 @@ export default function InvoiceDetailPage() {
                           <div className="grid grid-cols-2 gap-3">
                             <div>
                               <label className="block text-xs text-slate-500 mb-0.5">Name *</label>
-                              <input value={beForm.name} onChange={(e) => setBeForm((f) => ({ ...f, name: e.target.value }))} className="w-full rounded border border-slate-300 px-2 py-1.5 text-sm" placeholder="Company name" />
+                              <input value={beForm.name} onChange={(e) => setBeForm((f) => ({ ...f, name: e.target.value }))} className="filter-input" placeholder="Company name" />
                             </div>
                             <div>
                               <label className="block text-xs text-slate-500 mb-0.5">Address *</label>
-                              <input value={beForm.addressLine1} onChange={(e) => setBeForm((f) => ({ ...f, addressLine1: e.target.value }))} className="w-full rounded border border-slate-300 px-2 py-1.5 text-sm" placeholder="Street & number" />
+                              <input value={beForm.addressLine1} onChange={(e) => setBeForm((f) => ({ ...f, addressLine1: e.target.value }))} className="filter-input" placeholder="Street & number" />
                             </div>
                             <div>
                               <label className="block text-xs text-slate-500 mb-0.5">Postal Code *</label>
-                              <input value={beForm.postalCode} onChange={(e) => setBeForm((f) => ({ ...f, postalCode: e.target.value }))} className="w-full rounded border border-slate-300 px-2 py-1.5 text-sm" placeholder="1000" />
+                              <input value={beForm.postalCode} onChange={(e) => setBeForm((f) => ({ ...f, postalCode: e.target.value }))} className="filter-input" placeholder="1000" />
                             </div>
                             <div>
                               <label className="block text-xs text-slate-500 mb-0.5">City *</label>
-                              <input value={beForm.city} onChange={(e) => setBeForm((f) => ({ ...f, city: e.target.value }))} className="w-full rounded border border-slate-300 px-2 py-1.5 text-sm" placeholder="Lausanne" />
+                              <input value={beForm.city} onChange={(e) => setBeForm((f) => ({ ...f, city: e.target.value }))} className="filter-input" placeholder="Lausanne" />
                             </div>
                             <div>
                               <label className="block text-xs text-slate-500 mb-0.5">IBAN *</label>
-                              <input value={beForm.iban} onChange={(e) => setBeForm((f) => ({ ...f, iban: e.target.value }))} className="w-full rounded border border-slate-300 px-2 py-1.5 text-sm" placeholder="CH..." />
+                              <input value={beForm.iban} onChange={(e) => setBeForm((f) => ({ ...f, iban: e.target.value }))} className="filter-input" placeholder="CH..." />
                             </div>
                             <div>
                               <label className="block text-xs text-slate-500 mb-0.5">VAT Number</label>
-                              <input value={beForm.vatNumber} onChange={(e) => setBeForm((f) => ({ ...f, vatNumber: e.target.value }))} className="w-full rounded border border-slate-300 px-2 py-1.5 text-sm" placeholder="CHE-..." />
+                              <input value={beForm.vatNumber} onChange={(e) => setBeForm((f) => ({ ...f, vatNumber: e.target.value }))} className="filter-input" placeholder="CHE-..." />
                             </div>
                           </div>
                           <div className="flex gap-2 pt-1">
@@ -510,7 +498,7 @@ export default function InvoiceDetailPage() {
                           value={
                             inv.requestId ? (
                               <Link
-                                href={`/manager/requests?requestId=${inv.requestId}`}
+                                href={`/manager/requests/${inv.requestId}`}
                                 className="text-blue-600 hover:text-blue-700 text-sm font-medium"
                               >
                                 View linked request →
@@ -551,32 +539,46 @@ export default function InvoiceDetailPage() {
                 )}
               </div>
 
-              {/* Right column: PDF preview + source file */}
+              {/* Right column: original capture + PDF preview */}
               <div className="space-y-6">
-                {/* PDF preview */}
-                <Panel title="PDF Preview">
+                {/* Original captured image (for ingested invoices) */}
+                {inv.sourceFileUrl && inv.sourceChannel !== "MANUAL" && (
+                  <Panel title="Original Capture">
+                    <div className="space-y-3">
+                      {inv.sourceFileUrl.match(/\.(jpg|jpeg|png|webp)$/i) ? (
+                        <img
+                          src={`/api/invoices/${id}/source-file`}
+                          alt="Original captured document"
+                          className="w-full rounded-lg border border-slate-200"
+                        />
+                      ) : (
+                        <iframe
+                          src={`/api/invoices/${id}/source-file`}
+                          title="Original document"
+                          className="w-full rounded-lg border-0 h-[500px]"
+                        />
+                      )}
+                      <a
+                        href={`/api/invoices/${id}/source-file`}
+                        download
+                        className="inline-flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-700"
+                      >
+                        ↓ Download original
+                      </a>
+                    </div>
+                  </Panel>
+                )}
+
+                {/* Generated PDF preview */}
+                <Panel title={inv.sourceFileUrl && inv.sourceChannel !== "MANUAL" ? "Generated PDF (from extracted data)" : "PDF Preview"}>
                   {pdfUrl ? (
-                    <iframe src={pdfUrl} title="Invoice PDF" className="w-full rounded-lg border-0" style={{ height: 500 }} />
+                    <iframe src={pdfUrl} title="Invoice PDF" className="w-full rounded-lg border-0 h-[500px]" />
                   ) : (
                     <div className="flex items-center justify-center py-12">
                       <p className="text-sm text-slate-400">PDF not available</p>
                     </div>
                   )}
                 </Panel>
-
-                {/* Source file (if ingested) */}
-                {inv.sourceFileUrl && (
-                  <Panel title="Source File">
-                    <a
-                      href={inv.sourceFileUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm text-blue-600 hover:text-blue-700 break-all"
-                    >
-                      View original upload →
-                    </a>
-                  </Panel>
-                )}
 
                 {/* Timeline */}
                 <Panel title="Timeline">

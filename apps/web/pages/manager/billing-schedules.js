@@ -9,9 +9,10 @@ import Link from "next/link";
 import { authHeaders } from "../../lib/api";
 import { formatDate } from "../../lib/format";
 
+import { cn } from "../../lib/utils";
 const STATUS_COLORS = {
-  ACTIVE: "bg-emerald-100 text-emerald-800",
-  PAUSED: "bg-yellow-100 text-yellow-800",
+  ACTIVE: "bg-green-100 text-green-700",
+  PAUSED: "bg-yellow-100 text-yellow-700",
   COMPLETED: "bg-slate-100 text-slate-700",
 };
 
@@ -87,7 +88,7 @@ export default function BillingSchedulesPage() {
         <PageContent>
           {error && (
             <div className="notice notice-err mt-3">
-              <strong className="text-err-text">Error:</strong> {error}
+              <strong className="text-red-700">Error:</strong> {error}
             </div>
           )}
 
@@ -118,7 +119,7 @@ export default function BillingSchedulesPage() {
                 </p>
               </div>
             ) : (
-              <div style={{ overflowX: "auto" }}>
+              <div className="overflow-x-auto">
                 <table className="inline-table">
                   <thead>
                     <tr>
@@ -149,7 +150,7 @@ export default function BillingSchedulesPage() {
                             )}
                           </td>
                           <td>
-                            <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${STATUS_COLORS[s.status] || "bg-slate-100 text-slate-700"}`}>
+                            <span className={cn("inline-block px-2 py-0.5 rounded text-xs font-medium", STATUS_COLORS[s.status] || "bg-slate-100 text-slate-700")}>
                               {s.status}
                             </span>
                           </td>
@@ -172,7 +173,7 @@ export default function BillingSchedulesPage() {
                               <button
                                 onClick={() => handleAction(s.id, "resume")}
                                 disabled={actionLoading === s.id}
-                                className="px-2 py-1 text-xs font-medium rounded border border-emerald-300 text-emerald-700 hover:bg-emerald-50 disabled:opacity-50"
+                                className="px-2 py-1 text-xs font-medium rounded border border-green-300 text-green-700 hover:bg-green-50 disabled:opacity-50"
                               >
                                 {actionLoading === s.id ? "…" : "Resume"}
                               </button>

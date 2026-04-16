@@ -14,6 +14,7 @@ import { getAuthUser, maybeRequireManager, requireRole, requireAnyRole, requireA
 import { withAuthRequired } from "../http/routeProtection";
 import { requireOwnerAccess, logEvent } from "./helpers";
 import { resolveRequestOrg, assertOrgScope } from "../governance/orgScope";
+import { resolveRequestId } from "../repositories/requestRepository";
 import { UpdateRequestStatusSchema } from "../validation/requestStatus";
 import { AssignContractorSchema } from "../validation/requestAssignment";
 import { CreateRequestSchema } from "../validation/requests";
@@ -34,7 +35,7 @@ import { createRequestWorkflow } from "../workflows/createRequestWorkflow";
 import { approveRequestWorkflow } from "../workflows/approveRequestWorkflow";
 import { assignContractorWorkflow } from "../workflows/assignContractorWorkflow";
 import { unassignContractorWorkflow } from "../workflows/unassignContractorWorkflow";
-import { ownerRejectWorkflow } from "../workflows/ownerRejectWorkflow";
+import { rejectRequestWorkflow } from "../workflows/ownerRejectWorkflow";
 import { InvalidTransitionError } from "../workflows/transitions";
 
 /* ── Helper: build WorkflowContext from HandlerContext ────────── */
@@ -55,17 +56,21 @@ export function registerRequestRoutes(router: Router) {
   /* ── Request events (unchanged — thin already) ─────────────── */
 
   router.get("/requests/:id/events", withAuthRequired(async ({ res, prisma, params, orgId }) => {
-    const resolution = await resolveRequestOrg(prisma, params.id);
+    const requestId = await resolveRequestId(prisma, params.id);
+    if (!requestId) return sendError(res, 404, "NOT_FOUND", "Request not found");
+    const resolution = await resolveRequestOrg(prisma, requestId);
     try { assertOrgScope(orgId, resolution); } catch {
       return sendError(res, 404, "NOT_FOUND", "Request not found");
     }
-    const events = await listRequestEvents(prisma, params.id);
+    const events = await listRequestEvents(prisma, requestId);
     sendJson(res, 200, { data: events });
   }));
 
   router.post("/requests/:id/events", async ({ req, res, prisma, params, orgId }) => {
     if (!requireAnyRole(req, res, ["CONTRACTOR", "MANAGER"])) return;
-    const resolution = await resolveRequestOrg(prisma, params.id);
+    const requestId = await resolveRequestId(prisma, params.id);
+    if (!requestId) return sendError(res, 404, "NOT_FOUND", "Request not found");
+    const resolution = await resolveRequestOrg(prisma, requestId);
     try { assertOrgScope(orgId, resolution); } catch {
       return sendError(res, 404, "NOT_FOUND", "Request not found");
     }
@@ -76,7 +81,7 @@ export function registerRequestRoutes(router: Router) {
     }
     try {
       const event = await createRequestEvent(prisma, {
-        requestId: params.id,
+        requestId: requestId,
         contractorId,
         type,
         message,
@@ -103,8 +108,11 @@ export function registerRequestRoutes(router: Router) {
     const { req, res, prisma, params, orgId } = ctx;
     if (!requireOwnerAccess(req, res)) return;
 
+    const requestId = await resolveRequestId(prisma, params.id);
+    if (!requestId) return sendError(res, 404, "NOT_FOUND", "Request not found");
+
     // Org scope check
-    const resolution = await resolveRequestOrg(prisma, params.id);
+    const resolution = await resolveRequestOrg(prisma, requestId);
     try { assertOrgScope(orgId, resolution); } catch {
       return sendError(res, 404, "NOT_FOUND", "Request not found");
     }
@@ -113,7 +121,7 @@ export function registerRequestRoutes(router: Router) {
 
     try {
       const result = await approveRequestWorkflow(wfCtx(ctx), {
-        requestId: params.id,
+        requestId: requestId,
         comment: raw?.comment || null,
         approvalType: "owner",
       });
@@ -127,12 +135,13 @@ export function registerRequestRoutes(router: Router) {
     }
   });
 
-  /* ── Owner reject → delegates to ownerRejectWorkflow ─────── */
+  /* ── Owner reject → delegates to rejectRequestWorkflow ────── */
 
   router.post("/requests/:id/owner-reject", async (ctx) => {
     const { req, res, prisma, params, orgId } = ctx;
     if (!requireOwnerAccess(req, res)) return;
-    const requestId = params.id;
+    const requestId = await resolveRequestId(prisma, params.id);
+    if (!requestId) return sendError(res, 404, "NOT_FOUND", "Request not found");
     const resolution = await resolveRequestOrg(prisma, requestId);
     try { assertOrgScope(orgId, resolution); } catch {
       return sendError(res, 404, "NOT_FOUND", "Request not found");
@@ -140,13 +149,41 @@ export function registerRequestRoutes(router: Router) {
     const raw = await readJson(req);
 
     try {
-      const result = await ownerRejectWorkflow(wfCtx(ctx), {
+      const result = await rejectRequestWorkflow(wfCtx(ctx), {
         requestId,
         reason: raw?.reason || null,
       });
       sendJson(res, 200, { data: result.dto });
     } catch (e: any) {
-      if (e instanceof InvalidTransitionError) {
+      if (e instanceof InvalidTransitionError || e.code === "INVALID_TRANSITION") {
+        return sendError(res, 409, "INVALID_TRANSITION", e.message);
+      }
+      if (e.code === "NOT_FOUND") return sendError(res, 404, "NOT_FOUND", e.message);
+      throw e;
+    }
+  });
+
+  /* ── Manager reject → delegates to rejectRequestWorkflow ─── */
+
+  router.post("/requests/:id/manager-reject", async (ctx) => {
+    const { req, res, prisma, params, orgId } = ctx;
+    if (!requireRole(req, res, "MANAGER")) return;
+    const requestId = await resolveRequestId(prisma, params.id);
+    if (!requestId) return sendError(res, 404, "NOT_FOUND", "Request not found");
+    const resolution = await resolveRequestOrg(prisma, requestId);
+    try { assertOrgScope(orgId, resolution); } catch {
+      return sendError(res, 404, "NOT_FOUND", "Request not found");
+    }
+    const raw = await readJson(req);
+
+    try {
+      const result = await rejectRequestWorkflow(wfCtx(ctx), {
+        requestId,
+        reason: raw?.reason || null,
+      });
+      sendJson(res, 200, { data: result.dto });
+    } catch (e: any) {
+      if (e instanceof InvalidTransitionError || e.code === "INVALID_TRANSITION") {
         return sendError(res, 409, "INVALID_TRANSITION", e.message);
       }
       if (e.code === "NOT_FOUND") return sendError(res, 404, "NOT_FOUND", e.message);
@@ -159,7 +196,10 @@ export function registerRequestRoutes(router: Router) {
   router.patch("/requests/:id/status", async (ctx) => {
     const { req, res, prisma, query, params, orgId } = ctx;
 
-    const resolution = await resolveRequestOrg(prisma, params.id);
+    const requestId = await resolveRequestId(prisma, params.id);
+    if (!requestId) return sendError(res, 404, "NOT_FOUND", "Request not found");
+
+    const resolution = await resolveRequestOrg(prisma, requestId);
     try { assertOrgScope(orgId, resolution); } catch {
       return sendError(res, 404, "NOT_FOUND", "Request not found");
     }
@@ -175,7 +215,7 @@ export function registerRequestRoutes(router: Router) {
     if (contractorId) {
       if (!requireRole(req, res, "CONTRACTOR")) return;
       const result = await updateContractorRequestStatus(
-        prisma, params.id, contractorId,
+        prisma, requestId, contractorId,
         RequestStatus[input.status as keyof typeof RequestStatus],
       );
       if (!result.success) return sendError(res, 400, "UPDATE_FAILED", result.message);
@@ -187,7 +227,7 @@ export function registerRequestRoutes(router: Router) {
 
     try {
       const result = await approveRequestWorkflow(wfCtx(ctx), {
-        requestId: params.id,
+        requestId: requestId,
         approvalType: "manager",
       });
       sendJson(res, 200, { data: result.dto });
@@ -206,7 +246,10 @@ export function registerRequestRoutes(router: Router) {
     const { req, res, prisma, params, orgId } = ctx;
     if (!requireRole(req, res, "MANAGER")) return;
 
-    const resolution = await resolveRequestOrg(prisma, params.id);
+    const requestId = await resolveRequestId(prisma, params.id);
+    if (!requestId) return sendError(res, 404, "NOT_FOUND", "Request not found");
+
+    const resolution = await resolveRequestOrg(prisma, requestId);
     try { assertOrgScope(orgId, resolution); } catch {
       return sendError(res, 404, "NOT_FOUND", "Request not found");
     }
@@ -218,7 +261,7 @@ export function registerRequestRoutes(router: Router) {
     }
 
     const updated = await prisma.request.update({
-      where: { id: params.id },
+      where: { id: requestId },
       data: { urgency: urgency as RequestUrgency },
       include: { assignedContractor: { select: { id: true, name: true, phone: true, email: true, hourlyRate: true } }, tenant: { select: { id: true, name: true, phone: true, email: true } }, unit: { select: { id: true, unitNumber: true, floor: true, building: { select: { id: true, name: true, address: true } } } }, appliance: { select: { id: true, name: true, serial: true, installDate: true, notes: true, assetModel: { select: { id: true, manufacturer: true, model: true, category: true } } } } },
     });
@@ -241,7 +284,10 @@ export function registerRequestRoutes(router: Router) {
     const { req, res, prisma, params, orgId } = ctx;
     if (!requireRole(req, res, "MANAGER")) return;
 
-    const resolution = await resolveRequestOrg(prisma, params.id);
+    const requestId = await resolveRequestId(prisma, params.id);
+    if (!requestId) return sendError(res, 404, "NOT_FOUND", "Request not found");
+
+    const resolution = await resolveRequestOrg(prisma, requestId);
     try { assertOrgScope(orgId, resolution); } catch {
       return sendError(res, 404, "NOT_FOUND", "Request not found");
     }
@@ -252,7 +298,7 @@ export function registerRequestRoutes(router: Router) {
 
     try {
       const result = await assignContractorWorkflow(wfCtx(ctx), {
-        requestId: params.id,
+        requestId: requestId,
         contractorId: parsed.data.contractorId,
       });
       sendJson(res, 200, { data: result.dto, message: result.message });
@@ -269,14 +315,17 @@ export function registerRequestRoutes(router: Router) {
     const { req, res, prisma, params, orgId } = ctx;
     if (!requireRole(req, res, "MANAGER")) return;
 
-    const resolution = await resolveRequestOrg(prisma, params.id);
+    const requestId = await resolveRequestId(prisma, params.id);
+    if (!requestId) return sendError(res, 404, "NOT_FOUND", "Request not found");
+
+    const resolution = await resolveRequestOrg(prisma, requestId);
     try { assertOrgScope(orgId, resolution); } catch {
       return sendError(res, 404, "NOT_FOUND", "Request not found");
     }
 
     try {
       const result = await unassignContractorWorkflow(wfCtx(ctx), {
-        requestId: params.id,
+        requestId: requestId,
       });
       sendJson(res, 200, { data: result.dto, message: result.message });
     } catch (e: any) {
@@ -291,11 +340,13 @@ export function registerRequestRoutes(router: Router) {
   router.get("/requests/:id/suggest-contractor", async ({ req, res, prisma, params, orgId }) => {
     // SA-13: Auth required for contractor suggestion
     if (!maybeRequireManager(req, res)) return;
-    const resolution = await resolveRequestOrg(prisma, params.id);
+    const requestId = await resolveRequestId(prisma, params.id);
+    if (!requestId) return sendError(res, 404, "NOT_FOUND", "Request not found");
+    const resolution = await resolveRequestOrg(prisma, requestId);
     try { assertOrgScope(orgId, resolution); } catch {
       return sendError(res, 404, "NOT_FOUND", "Request not found");
     }
-    const reqRow = await prisma.request.findUnique({ where: { id: params.id } });
+    const reqRow = await prisma.request.findUnique({ where: { id: requestId } });
     if (!reqRow) return sendError(res, 404, "NOT_FOUND", "Request not found");
     if (!reqRow.category) return sendJson(res, 200, { data: null });
     const contractor = await findMatchingContractor(prisma, orgId, reqRow.category);
@@ -314,12 +365,14 @@ export function registerRequestRoutes(router: Router) {
   /* ── Single request (thin — pure query) ────────────────────── */
 
   router.get("/requests/:id", withAuthRequired(async ({ res, prisma, params, orgId }) => {
-    const resolution = await resolveRequestOrg(prisma, params.id);
+    const requestId = await resolveRequestId(prisma, params.id);
+    if (!requestId) return sendError(res, 404, "NOT_FOUND", "Request not found");
+    const resolution = await resolveRequestOrg(prisma, requestId);
     try { assertOrgScope(orgId, resolution); } catch {
       return sendError(res, 404, "NOT_FOUND", "Request not found");
     }
-    const found = await getMaintenanceRequestById(prisma, params.id);
-    if (!found) return sendError(res, 404, "NOT_FOUND", "Request not found");
+    const found = await getMaintenanceRequestById(prisma, requestId);
+    if (!found) return sendError(res, 404, "NOT_FOUND", "Not found");
     sendJson(res, 200, { data: found });
   }));
 
@@ -346,7 +399,7 @@ export function registerRequestRoutes(router: Router) {
   /* ── List requests (thin — pure query) ─────────────────────── */
 
   router.get("/requests", withAuthRequired(async ({ res, prisma, query, orgId }) => {
-    const limit = getIntParam(query, "limit", { defaultValue: 50, min: 1, max: 200 });
+    const limit = getIntParam(query, "limit", { defaultValue: 50, min: 1, max: 2000 });
     const offset = getIntParam(query, "offset", { defaultValue: 0, min: 0, max: 1_000_000 });
     const order = getEnumParam(query, "order", ["asc", "desc"] as const, "asc");
     const view = first(query, "view") as "summary" | "full" | undefined;
@@ -357,7 +410,7 @@ export function registerRequestRoutes(router: Router) {
   /* ── Work requests (aliases — thin) ────────────────────────── */
 
   router.get("/work-requests", withAuthRequired(async ({ res, prisma, query, orgId }) => {
-    const limit = getIntParam(query, "limit", { defaultValue: 50, min: 1, max: 200 });
+    const limit = getIntParam(query, "limit", { defaultValue: 50, min: 1, max: 2000 });
     const offset = getIntParam(query, "offset", { defaultValue: 0, min: 0, max: 1_000_000 });
     const order = getEnumParam(query, "order", ["asc", "desc"] as const, "asc");
     const result = await listMaintenanceRequests(prisma, orgId, { limit, offset, order, view: "full" });
@@ -366,11 +419,13 @@ export function registerRequestRoutes(router: Router) {
   }));
 
   router.get("/work-requests/:id", withAuthRequired(async ({ res, prisma, params, orgId }) => {
-    const resolution = await resolveRequestOrg(prisma, params.id);
+    const requestId = await resolveRequestId(prisma, params.id);
+    if (!requestId) return sendError(res, 404, "NOT_FOUND", "Work request not found");
+    const resolution = await resolveRequestOrg(prisma, requestId);
     try { assertOrgScope(orgId, resolution); } catch {
       return sendError(res, 404, "NOT_FOUND", "Work request not found");
     }
-    const request = await getMaintenanceRequestById(prisma, params.id);
+    const request = await getMaintenanceRequestById(prisma, requestId);
     if (!request) return sendError(res, 404, "NOT_FOUND", "Work request not found");
     sendJson(res, 200, { data: workRequestFromRequest(request) });
   }));

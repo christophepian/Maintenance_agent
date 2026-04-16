@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useRouter } from "next/router";
 
+import { cn } from "../lib/utils";
 const ROLE_HOME = {
   MANAGER: "/manager",
   CONTRACTOR: "/contractor",
@@ -65,7 +66,7 @@ export default function LoginPage() {
         Use your manager or contractor credentials.
       </div>
 
-      <div className="row" style={{ marginBottom: 16 }}>
+      <div className="row" className="mb-4">
         <button
           className={mode === "login" ? "button-primary" : "button-secondary"}
           type="button"
@@ -83,7 +84,7 @@ export default function LoginPage() {
       </div>
 
       {notice ? (
-        <div className={`notice ${notice.type === "ok" ? "notice-ok" : "notice-err"}`}>
+        <div className={cn("notice", notice.type === "ok" ? "notice-ok" : "notice-err")}>
           {notice.msg}
         </div>
       ) : null}

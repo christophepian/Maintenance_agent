@@ -32,7 +32,7 @@ export default function OwnerSidebar() {
   }, [pathname]);
 
   return (
-    <nav className="flex flex-col gap-1 py-2">
+    <nav aria-label="Owner navigation" className="flex flex-col gap-1 py-2">
       {OWNER_NAV.map((item, index) => {
         const Icon = item.icon;
         const isActive = index === activeIndex;

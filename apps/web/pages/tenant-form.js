@@ -3,6 +3,7 @@ import Link from "next/link";
 import AppShell from "../components/AppShell";
 import { ALLOWED_CATEGORIES } from "../lib/categories";
 
+import { cn } from "../lib/utils";
 /**
  * Tenant Form (Slice 4)
  * - Phone-based tenant identity
@@ -177,7 +178,7 @@ export default function TenantForm() {
         <>
           Request {reqId ? <strong>#{reqId}</strong> : ""} created with status: <strong>{created?.status || "OK"}</strong>.
           {" "}
-          <Link href="/tenant" style={{ color: "inherit", fontWeight: 600 }}>View your requests →</Link>
+          <Link href="/tenant" className="text-inherit font-semibold">View your requests →</Link>
         </>
       );
       setDescription("");
@@ -199,7 +200,7 @@ export default function TenantForm() {
         Backend: <code className="code">{apiBase || "\u2026"}</code>
       </div>
       {notice ? (
-        <div className={`notice ${notice.type === "ok" ? "notice-ok" : "notice-err"}`}>
+        <div className={cn("notice", notice.type === "ok" ? "notice-ok" : "notice-err")}>
           {notice.msg}
         </div>
       ) : null}

@@ -140,7 +140,10 @@ export default function AppShell({ role: roleProp, children }) {
       },
       {
         section: "Work Requests",
-        items: [{ label: "Work Requests", href: "/manager/work-requests" }],
+        items: [
+          { label: "Work Requests", href: "/manager/work-requests" },
+          { label: "RFPs", href: "/manager/rfps" },
+        ],
       },
       {
         section: "Finance",
@@ -156,17 +159,6 @@ export default function AppShell({ role: roleProp, children }) {
         items: [
           { label: "Leases", href: "/manager/leases" },
           { label: "Lease Templates", href: "/manager/leases/templates" },
-        ],
-      },
-      {
-        section: "Legal Engine",
-        items: [
-          { label: "Legal Overview", href: "/manager/legal" },
-          { label: "Rules", href: "/manager/legal/rules" },
-          { label: "Category Mappings", href: "/manager/legal/mappings" },
-          { label: "Depreciation", href: "/manager/legal/depreciation" },
-          { label: "Evaluations", href: "/manager/legal/evaluations" },
-          { label: "RFPs", href: "/manager/rfps" },
         ],
       },
       {
@@ -328,43 +320,29 @@ export default function AppShell({ role: roleProp, children }) {
 
   return (
     <div
-      style={{
-        minHeight: "100vh",
-        display: "grid",
-        gridTemplateColumns: "260px 1fr",
-        background: "#f7f7f8",
-        color: "#111",
-        fontFamily: "system-ui",
-      }}
+      className="min-h-screen grid grid-cols-[260px_1fr] bg-slate-50 text-slate-900 font-sans overflow-hidden"
     >
-      <aside
-        style={{
-          borderRight: "1px solid #e5e5e5",
-          padding: "20px 16px",
-          background: "#ffffff",
-        }}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded focus:bg-white focus:px-4 focus:py-2 focus:shadow-lg focus:ring-2 focus:ring-blue-500"
       >
-        <div style={{ fontWeight: 700, fontSize: "1.1rem", marginBottom: "20px" }}>
+        Skip to main content
+      </a>
+      <aside className="border-r border-slate-200 px-4 py-5 bg-white" aria-label="Sidebar navigation">
+        <div className="font-bold text-lg mb-5">
           Maintenance Agent
         </div>
 
         {showSwitcher ? (
-          <div style={{ marginBottom: "20px" }}>
-            <div style={{ fontSize: "0.85rem", color: "#666", marginBottom: "8px" }}>
+          <div className="mb-5">
+            <div className="text-sm text-slate-500 mb-2">
               Role
             </div>
             <select
               value={role || "MANAGER"}
               onChange={(e) => setRoleAndRoute(e.target.value)}
-              style={{
-                width: "100%",
-                padding: "8px 10px",
-                borderRadius: "6px",
-                border: "1px solid #ddd",
-                background: "#fafafa",
-                color: "#111",
-                cursor: "pointer",
-              }}
+              aria-label="Switch role"
+              className="w-full px-2.5 py-2 rounded-lg border border-slate-300 bg-slate-50 text-slate-900 cursor-pointer"
             >
               <option value="MANAGER">Manager</option>
               <option value="OWNER">Owner</option>
@@ -384,11 +362,11 @@ export default function AppShell({ role: roleProp, children }) {
           <TenantSidebar />
         ) : (
           nav.map((group) => (
-            <div key={group.section} style={{ marginBottom: "16px" }}>
-              <div style={{ fontSize: "0.8rem", textTransform: "uppercase", color: "#888", marginBottom: "6px" }}>
+            <div key={group.section} className="mb-4">
+              <div className="text-xs uppercase text-slate-400 mb-1.5">
                 {group.section}
               </div>
-              <div style={{ display: "grid", gap: "6px" }}>
+              <div className="grid gap-1.5">
                 {group.items.map((item) => (
                   <Link key={item.href} href={item.href} className={navLinkClass(isActive(item.href))}>
                     {item.label}
@@ -400,15 +378,10 @@ export default function AppShell({ role: roleProp, children }) {
         )}
       </aside>
 
-      <main style={{ padding: "24px" }}>
+      <main id="main-content" className="min-w-0 overflow-x-hidden p-6">
         {/* Header with notification bell */}
         {(role === "MANAGER" || role === "OWNER" || role === "TENANT" || role === "CONTRACTOR") && (
-          <div style={{ 
-            display: "flex", 
-            justifyContent: "flex-end", 
-            marginBottom: "16px",
-            paddingRight: "8px"
-          }}>
+          <div className="flex justify-end mb-4 pr-2">
             <NotificationBell role={role} />
           </div>
         )}

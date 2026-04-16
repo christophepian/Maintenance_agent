@@ -7,7 +7,10 @@ import PageHeader from "../../../components/layout/PageHeader";
 import PageContent from "../../../components/layout/PageContent";
 import Panel from "../../../components/layout/Panel";
 import { formatDate } from "../../../lib/format";
+import ErrorBanner from "../../../components/ui/ErrorBanner";
 import { authHeaders } from "../../../lib/api";
+import Badge from "../../../components/ui/Badge";
+import { selectionVariant, leaseVariant } from "../../../lib/statusVariants";
 /**
  * Reusable action dropdown button — renders a "⋯" pill that opens
  * a positioned dropdown with a list of actions.
@@ -55,34 +58,28 @@ function ActionDropdown({ actions }) {
     </div>
   );
 }
+const SELECTION_LABELS = {
+  AWAITING_SIGNATURE: "Awaiting Signature",
+  FALLBACK_1: "Fallback 1 Active",
+  FALLBACK_2: "Fallback 2 Active",
+  EXHAUSTED: "No Remaining Candidates",
+};
 function selectionStatusBadge(status) {
-  const map = {
-    AWAITING_SIGNATURE: { label: "Awaiting Signature", cls: "bg-amber-100 text-amber-700" },
-    FALLBACK_1: { label: "Fallback 1 Active", cls: "bg-orange-100 text-orange-700" },
-    FALLBACK_2: { label: "Fallback 2 Active", cls: "bg-red-100 text-red-700" },
-    EXHAUSTED: { label: "No Remaining Candidates", cls: "bg-slate-100 text-slate-600" },
-  };
-  const info = map[status] || { label: status, cls: "bg-slate-100 text-slate-600" };
   return (
-    <span className={"inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold " + info.cls}>
-      {info.label}
-    </span>
+    <Badge variant={selectionVariant(status)} size="sm">
+      {SELECTION_LABELS[status] || status}
+    </Badge>
   );
 }
 
 function leaseBadge(lease, hasLeaseTemplate) {
   if (!lease && hasLeaseTemplate) return <span className="text-xs text-amber-600 font-medium">No lease — template ready</span>;
   if (!lease) return <span className="text-xs text-red-500 font-medium">No lease template — create one first</span>;
-  const map = {
-    DRAFT: { label: "Draft", cls: "bg-slate-100 text-slate-600" },
-    READY_TO_SIGN: { label: "Ready to Sign", cls: "bg-blue-100 text-blue-700" },
-    SIGNED: { label: "Signed", cls: "bg-green-100 text-green-700" },
-  };
-  const info = map[lease.status] || { label: lease.status, cls: "bg-slate-100 text-slate-600" };
+  const LEASE_LABELS = { DRAFT: "Draft", READY_TO_SIGN: "Ready to Sign", SIGNED: "Signed" };
   return (
-    <span className={"inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold " + info.cls}>
-      {info.label}
-    </span>
+    <Badge variant={leaseVariant(lease.status)} size="sm">
+      {LEASE_LABELS[lease.status] || lease.status}
+    </Badge>
   );
 }
 
@@ -194,9 +191,7 @@ export default function ManagerVacanciesPage() {
         />
 
         <PageContent>
-          {error && (
-            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
-          )}
+          <ErrorBanner error={error} className="text-sm" />
 
           {/* Inventory tab strip — mirrors /manager/inventory */}
           <div className="tab-strip">

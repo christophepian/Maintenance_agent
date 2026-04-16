@@ -5,18 +5,20 @@ import PageHeader from "../../components/layout/PageHeader";
 import PageContent from "../../components/layout/PageContent";
 import { formatDateTime } from "../../lib/format";
 import Panel from "../../components/layout/Panel";
+import ErrorBanner from "../../components/ui/ErrorBanner";
+import Badge from "../../components/ui/Badge";
 import { authHeaders } from "../../lib/api";
+import { cn } from "../../lib/utils";
+const EMAIL_VARIANT = {
+  PENDING: "warning",
+  SENT: "success",
+  FAILED: "destructive",
+};
 function statusBadge(status) {
-  switch (status) {
-    case "PENDING":
-      return { cls: "bg-amber-100 text-amber-700", label: "Pending" };
-    case "SENT":
-      return { cls: "bg-green-100 text-green-700", label: "Sent" };
-    case "FAILED":
-      return { cls: "bg-red-100 text-red-700", label: "Failed" };
-    default:
-      return { cls: "bg-slate-100 text-slate-700", label: status || "—" };
-  }
+  const labels = { PENDING: "Pending", SENT: "Sent", FAILED: "Failed" };
+  const label = labels[status] || status || "—";
+  const variant = EMAIL_VARIANT[status] || "default";
+  return { variant, label };
 }
 
 function formatDate(isoStr) {
@@ -90,9 +92,7 @@ export default function DevEmailsPage() {
         />
 
         <PageContent>
-          {error && (
-            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
-          )}
+          <ErrorBanner error={error} className="text-sm" />
 
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
             {/* Email list */}
@@ -113,15 +113,13 @@ export default function DevEmailsPage() {
                         <button
                           key={email.id}
                           onClick={() => loadEmailDetail(email.id)}
-                          className={`w-full text-left px-4 py-3 hover:bg-slate-50 transition-colors ${
-                            isActive ? "bg-indigo-50 border-l-2 border-indigo-500" : ""
-                          }`}
+                          className={cn("w-full text-left px-4 py-3 hover:bg-slate-50 transition-colors", isActive ? "bg-indigo-50 border-l-2 border-indigo-500" : "")}
                         >
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
-                              <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${badge.cls}`}>
+                              <Badge variant={badge.variant} size="sm">
                                 {badge.label}
-                              </span>
+                              </Badge>
                               <span className="text-xs font-mono text-slate-400">
                                 {(email.template || "").replace(/_/g, " ")}
                               </span>
@@ -154,9 +152,9 @@ export default function DevEmailsPage() {
                     <div>
                       <label className="text-xs font-semibold uppercase text-slate-400">Status</label>
                       <p>
-                        <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${statusBadge(selectedEmail.status).cls}`}>
+                        <Badge variant={statusBadge(selectedEmail.status).variant} size="sm">
                           {statusBadge(selectedEmail.status).label}
-                        </span>
+                        </Badge>
                       </p>
                     </div>
 

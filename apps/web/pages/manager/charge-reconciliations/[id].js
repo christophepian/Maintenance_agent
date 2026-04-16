@@ -7,11 +7,19 @@ import PageContent from "../../../components/layout/PageContent";
 import Panel from "../../../components/layout/Panel";
 import Link from "next/link";
 import { authHeaders } from "../../../lib/api";
+import Badge from "../../../components/ui/Badge";
 
+import { cn } from "../../../lib/utils";
 const STATUS_COLORS = {
-  DRAFT: "bg-blue-100 text-blue-800",
-  FINALIZED: "bg-amber-100 text-amber-800",
-  SETTLED: "bg-emerald-100 text-emerald-800",
+  DRAFT: "bg-blue-100 text-blue-700",
+  FINALIZED: "bg-amber-100 text-amber-700",
+  SETTLED: "bg-green-100 text-green-700",
+};
+
+const STATUS_VARIANT = {
+  DRAFT: "info",
+  FINALIZED: "warning",
+  SETTLED: "success",
 };
 
 export default function ChargeReconciliationDetailPage() {
@@ -165,13 +173,13 @@ export default function ChargeReconciliationDetailPage() {
               </div>
               <div>
                 <span className="text-muted-foreground block">Status</span>
-                <span className={`inline-block px-2 py-0.5 text-xs font-semibold rounded-full ${STATUS_COLORS[recon.status] || "bg-gray-100"}`}>
+                <Badge variant={STATUS_VARIANT[recon.status] || "muted"} size="sm">
                   {recon.status}
-                </span>
+                </Badge>
               </div>
               <div>
                 <span className="text-muted-foreground block">Balance</span>
-                <span className={`font-medium ${recon.balanceCents > 0 ? "text-red-600" : recon.balanceCents < 0 ? "text-emerald-600" : ""}`}>
+                <span className={cn("font-medium", recon.balanceCents > 0 ? "text-red-600" : recon.balanceCents < 0 ? "text-green-600" : "")}>
                   {recon.balanceCents > 0 ? "+" : ""}{fmt(recon.balanceCents)} CHF
                 </span>
                 {recon.balanceCents !== 0 && (
@@ -217,11 +225,9 @@ export default function ChargeReconciliationDetailPage() {
                     <tr key={line.id} className="border-b last:border-0">
                       <td className="py-2 pr-4 font-medium">{line.description}</td>
                       <td className="py-2 pr-4">
-                        <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${
-                          line.chargeMode === "ACOMPTE" ? "bg-blue-50 text-blue-700" : "bg-gray-100 text-gray-600"
-                        }`}>
+                        <Badge variant={line.chargeMode === "ACOMPTE" ? "info" : "muted"} size="sm">
                           {line.chargeMode}
-                        </span>
+                        </Badge>
                       </td>
                       <td className="py-2 pr-4 text-right tabular-nums">{fmt(line.acomptePaidCents)}</td>
                       <td className="py-2 pr-4 text-right">
@@ -241,9 +247,7 @@ export default function ChargeReconciliationDetailPage() {
                           <span className="tabular-nums">{fmt(line.actualCostCents)}</span>
                         )}
                       </td>
-                      <td className={`py-2 pr-4 text-right tabular-nums ${
-                        line.balanceCents > 0 ? "text-red-600" : line.balanceCents < 0 ? "text-emerald-600" : ""
-                      }`}>
+                      <td className={cn("py-2 pr-4 text-right tabular-nums", line.balanceCents > 0 ? "text-red-600" : line.balanceCents < 0 ? "text-green-600" : "")}>
                         {line.chargeMode === "ACOMPTE" ? (
                           <>{line.balanceCents > 0 ? "+" : ""}{fmt(line.balanceCents)}</>
                         ) : (
@@ -321,14 +325,14 @@ export default function ChargeReconciliationDetailPage() {
                 <button
                   onClick={() => handleAction("settle")}
                   disabled={!!actionLoading}
-                  className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 text-sm font-medium"
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 text-sm font-medium"
                 >
                   {actionLoading === "settle" ? "Generating…" : "💰 Generate Settlement Invoice"}
                 </button>
                 <button
                   onClick={() => handleAction("reopen")}
                   disabled={!!actionLoading}
-                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 text-sm font-medium"
+                  className="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 disabled:opacity-50 text-sm font-medium"
                 >
                   {actionLoading === "reopen" ? "Reopening…" : "↩ Reopen for Editing"}
                 </button>

@@ -13,6 +13,7 @@
  */
 
 import * as jwt from "jsonwebtoken";
+import * as os from "os";
 import {
   createCaptureSession,
   findCaptureSessionByToken,
@@ -23,6 +24,20 @@ import {
 } from "../repositories/captureSessionRepository";
 import type { CaptureSessionWithInclude } from "../repositories/captureSessionRepository";
 import { CaptureSessionStatus } from "@prisma/client";
+
+/* ──────────────────────────────────────────────────────────
+   Helpers
+   ────────────────────────────────────────────────────────── */
+
+function getLocalNetworkIp(): string {
+  const interfaces = os.networkInterfaces();
+  for (const nets of Object.values(interfaces)) {
+    for (const net of nets || []) {
+      if (net.family === "IPv4" && !net.internal) return net.address;
+    }
+  }
+  return "localhost";
+}
 
 /* ──────────────────────────────────────────────────────────
    Constants
@@ -110,7 +125,8 @@ export async function createSession(
   const updated = await updateCaptureSession(session.id, { token });
 
   // Build mobile URL using session ID (short!) — phone resolves ID → JWT on load
-  const baseUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+  // Use LAN IP so phones on the same network can reach the dev server
+  const baseUrl = process.env.FRONTEND_URL || `http://${getLocalNetworkIp()}:3000`;
   const mobileUrl = `${baseUrl}/capture/${session.id}`;
 
   return {

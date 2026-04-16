@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/router";
 import AppShell from "../components/AppShell";
 import { ALLOWED_CATEGORIES } from "../lib/categories";
 import PageShell from "../components/layout/PageShell";
 import PageHeader from "../components/layout/PageHeader";
 import PageContent from "../components/layout/PageContent";
 
+import { cn } from "../lib/utils";
 /**
  * Inventory Admin (Slice 4)
  * - No CSS modules (fixes missing ../styles/Form.module.css)
@@ -24,7 +24,6 @@ import PageContent from "../components/layout/PageContent";
  */
 
 export default function InventoryAdmin() {
-  const router = useRouter();
   const API_BASE =
     process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3001";
 
@@ -436,7 +435,7 @@ export default function InventoryAdmin() {
         />
         <PageContent>
           {notice ? (
-            <div className={`notice ${notice.type === "ok" ? "notice-ok" : "notice-err"}`}>
+            <div className={cn("notice", notice.type === "ok" ? "notice-ok" : "notice-err")}>
               {notice.message}
             </div>
           ) : null}
@@ -538,8 +537,8 @@ export default function InventoryAdmin() {
                         >
                           {label}
                           <span className="inline-flex flex-col leading-none -space-y-0.5">
-                            <span className={`text-[8px] ${buildingSortKey === key && buildingSortDir === "asc" ? "text-indigo-600" : "text-slate-300"}`}>▲</span>
-                            <span className={`text-[8px] ${buildingSortKey === key && buildingSortDir === "desc" ? "text-indigo-600" : "text-slate-300"}`}>▼</span>
+                            <span className={cn("text-[8px]", buildingSortKey === key && buildingSortDir === "asc" ? "text-indigo-600" : "text-slate-300")}>▲</span>
+                            <span className={cn("text-[8px]", buildingSortKey === key && buildingSortDir === "desc" ? "text-indigo-600" : "text-slate-300")}>▼</span>
                           </span>
                         </button>
                       </th>
@@ -565,7 +564,7 @@ export default function InventoryAdmin() {
                         <div className="relative inline-block text-left" data-building-menu>
                           <button
                             type="button"
-                            className="rounded-md border border-slate-200 px-2 py-1 text-slate-600 hover:bg-slate-50"
+                            className="rounded-lg border border-slate-200 px-2 py-1 text-slate-600 hover:bg-slate-50"
                             onClick={() =>
                               setBuildingMenuOpenId((prev) => (prev === b.id ? null : b.id))
                             }
@@ -573,7 +572,7 @@ export default function InventoryAdmin() {
                             ⋮
                           </button>
                           {buildingMenuOpenId === b.id ? (
-                            <div className="absolute right-0 z-10 mt-2 w-36 origin-top-right rounded-md border border-slate-200 bg-white shadow-lg">
+                            <div className="absolute right-0 z-10 mt-2 w-36 origin-top-right rounded-lg border border-slate-200 bg-white shadow-lg">
                               <button
                                 type="button"
                                 className="block w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
@@ -608,7 +607,7 @@ export default function InventoryAdmin() {
                     xmlns="http://www.w3.org/2000/svg"
                     viewBox="0 0 20 20"
                     fill="currentColor"
-                    className={`w-4 h-4 transition-transform duration-200 ${buildingsTableExpanded ? "rotate-180" : ""}`}
+                    className={cn("w-4 h-4 transition-transform duration-200", buildingsTableExpanded ? "rotate-180" : "")}
                   >
                     <path fillRule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
                   </svg>
@@ -634,10 +633,6 @@ export default function InventoryAdmin() {
     </PageShell>
   );
 
-  if (router.pathname === "/admin-inventory") {
-    return <AppShell role="MANAGER">{content}</AppShell>;
-  }
-
-  return content;
+  return <AppShell role="MANAGER">{content}</AppShell>;
 }
 

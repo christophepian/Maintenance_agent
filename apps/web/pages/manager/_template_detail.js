@@ -9,6 +9,7 @@ import PageShell from "../../components/layout/PageShell";
 import PageHeader from "../../components/layout/PageHeader";
 import PageContent from "../../components/layout/PageContent";
 import Panel from "../../components/layout/Panel";
+import ErrorBanner from "../../components/ui/ErrorBanner";
 import { authHeaders } from "../../lib/api";
 
 export default function TemplateDetailPage() {
@@ -53,7 +54,7 @@ export default function TemplateDetailPage() {
           subtitle={`ID: ${id ?? "—"}`}
           // REPLACE: Entity-level actions
           actions={
-            <button className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
+            <button className="button-primary text-sm">
               Edit
             </button>
           }
@@ -65,7 +66,7 @@ export default function TemplateDetailPage() {
              Default padding for key-value fields, bodyClassName="p-0" for tables. */}
         <PageContent>
           {/* ── Error banner ── */}
-          {error && <div className="error-banner">{error}</div>}
+          <ErrorBanner error={error} />
 
           {loading ? (
             <p className="loading-text">Loading…</p>

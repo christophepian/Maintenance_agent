@@ -12,18 +12,17 @@ import { RequestStatus, JobStatus, InvoiceStatus, LeaseStatus, RfpStatus, RfpQuo
 
 const VALID_REQUEST_TRANSITIONS: Record<string, RequestStatus[]> = {
   [RequestStatus.PENDING_REVIEW]: [
-    RequestStatus.RFP_PENDING,               // legal obligation → RFP
-    RequestStatus.PENDING_OWNER_APPROVAL,    // no/unknown obligation → owner
+    RequestStatus.RFP_PENDING,               // manager approves → create RFP
+    RequestStatus.REJECTED,                  // manager or owner rejects
   ],
   [RequestStatus.RFP_PENDING]: [
-    RequestStatus.AUTO_APPROVED,             // avg quotes ≤ threshold
-    RequestStatus.PENDING_OWNER_APPROVAL,    // avg quotes > threshold
-    RequestStatus.ASSIGNED,                  // quote awarded → contractor assigned
+    RequestStatus.AUTO_APPROVED,             // awarded quote ≤ threshold
+    RequestStatus.PENDING_OWNER_APPROVAL,    // awarded quote > threshold
+    RequestStatus.ASSIGNED,                  // direct assignment fallback
   ],
   [RequestStatus.PENDING_OWNER_APPROVAL]: [
-    RequestStatus.APPROVED,                  // owner approves (post-RFP cost approval)
-    RequestStatus.RFP_PENDING,               // owner approves → RFP created
-    RequestStatus.OWNER_REJECTED,            // owner rejects (terminal)
+    RequestStatus.APPROVED,                  // owner approves (post-quote cost approval)
+    RequestStatus.REJECTED,                  // owner rejects
   ],
   [RequestStatus.AUTO_APPROVED]: [
     RequestStatus.ASSIGNED,                  // contractor assigned after auto-approval
@@ -42,7 +41,7 @@ const VALID_REQUEST_TRANSITIONS: Record<string, RequestStatus[]> = {
     RequestStatus.COMPLETED,
   ],
   [RequestStatus.COMPLETED]: [],
-  [RequestStatus.OWNER_REJECTED]: [
+  [RequestStatus.REJECTED]: [
     RequestStatus.RFP_PENDING,               // tenant self-pay → create RFP
   ],
 };

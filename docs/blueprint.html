@@ -112,18 +112,18 @@
   <!-- HEADER -->
   <div class="header">
     <div>
-      <div class="live-badge"><span class="live-dot"></span> LIVE — generated 2026-04-06 18:21:08 UTC</div>
+      <div class="live-badge"><span class="live-dot"></span> LIVE — generated 2026-04-14 13:26:20 UTC</div>
       <div class="doc-label">Architecture Blueprint · Tech Lead Reference</div>
       <div class="doc-title">Maintenance Agent</div>
       <div class="doc-subtitle">Full-stack property maintenance platform — Swiss market</div>
     </div>
     <div class="header-meta">
       <div>Branch <span class="meta-val">main</span></div>
-      <div>Commit <span class="meta-val">321730f</span></div>
-      <div>Last commit <span class="meta-val">2026-04-06</span></div>
-      <div>Doc verified <span class="meta-val">2026-04-03 (Recurring Invoices epic complete — 6 slices, 5 new models, 6 new enums, 4 new migrations)</span></div>
-      <div>Backend <span class="meta-val">62,924 LOC</span></div>
-      <div>Frontend <span class="meta-val">42,112 LOC</span></div>
+      <div>Commit <span class="meta-val">17a6d5a</span></div>
+      <div>Last commit <span class="meta-val">2026-04-13</span></div>
+      <div>Doc verified <span class="meta-val">2026-04-14 (Workflow state-machine redesign — OWNER_REJECTED→REJECTED rename, read-only legal eval, manager-reject route)</span></div>
+      <div>Backend <span class="meta-val">68,419 LOC</span></div>
+      <div>Frontend <span class="meta-val">43,685 LOC</span></div>
     </div>
   </div>
 
@@ -132,8 +132,8 @@
     <div class="stat-cell"><span class="stat-num blue">64</span><span class="stat-label">Models</span></div>
     <div class="stat-cell"><span class="stat-num cyan">55</span><span class="stat-label">Enums</span></div>
     <div class="stat-cell"><span class="stat-num green">225</span><span class="stat-label">API Routes</span></div>
-    <div class="stat-cell"><span class="stat-num amber">276</span><span class="stat-label">FE Pages</span></div>
-    <div class="stat-cell"><span class="stat-num purple">25</span><span class="stat-label">Workflows</span></div>
+    <div class="stat-cell"><span class="stat-num amber">274</span><span class="stat-label">FE Pages</span></div>
+    <div class="stat-cell"><span class="stat-num purple">26</span><span class="stat-label">Workflows</span></div>
     <div class="stat-cell"><span class="stat-num ">23</span><span class="stat-label">Repositories</span></div>
     <div class="stat-cell"><span class="stat-num ">823</span><span class="stat-label">Tests</span></div>
     <div class="stat-cell"><span class="stat-num ">57</span><span class="stat-label">Suites</span></div>
@@ -167,8 +167,8 @@
         </div>
         <div class="layer-connector">↓ thin HTTP handlers only</div>
         <div class="layer">
-          <div class="layer-label">workflows (25)</div>
-          <div class="layer-content"><div class="box accent-cyan">activateLeaseWorkflow</div><div class="box accent-cyan">approveInvoiceWorkflow</div><div class="box accent-cyan">approveRequestWorkflow</div><div class="box accent-cyan">assignContractorWorkflow</div><div class="box accent-cyan">awardQuoteWorkflow</div><div class="box accent-cyan">cashflowPlanWorkflow</div><div class="box accent-cyan">completeJobWorkflow</div><div class="box accent-cyan">completionRatingWorkflow</div><div class="box accent-cyan">createRequestWorkflow</div><div class="box accent-cyan">disputeInvoiceWorkflow</div><div class="box accent-cyan">evaluateLegalRoutingWorkflow</div><div class="box accent-cyan">issueInvoiceWorkflow</div><div class="box accent-cyan">markLeaseReadyWorkflow</div><div class="box accent-cyan">ownerRejectWorkflow</div><div class="box accent-cyan">payInvoiceWorkflow</div><div class="box accent-cyan">rfpDirectAssignWorkflow</div><div class="box accent-cyan">rfpReinviteWorkflow</div><div class="box accent-cyan">schedulingWorkflow</div><div class="box accent-cyan">submitQuoteWorkflow</div><div class="box accent-cyan">submitRentalApplicationWorkflow</div><div class="box accent-cyan">tenantSelfPayWorkflow</div><div class="box accent-cyan">terminateLeaseWorkflow</div><div class="box accent-cyan">unassignContractorWorkflow</div><div class="box accent-cyan">updateJobWorkflow</div><div class="box accent-cyan">uploadMaintenanceAttachmentWorkflow</div></div>
+          <div class="layer-label">workflows (26)</div>
+          <div class="layer-content"><div class="box accent-cyan">activateLeaseWorkflow</div><div class="box accent-cyan">analyseClaimWorkflow</div><div class="box accent-cyan">approveInvoiceWorkflow</div><div class="box accent-cyan">approveRequestWorkflow</div><div class="box accent-cyan">assignContractorWorkflow</div><div class="box accent-cyan">awardQuoteWorkflow</div><div class="box accent-cyan">cashflowPlanWorkflow</div><div class="box accent-cyan">completeJobWorkflow</div><div class="box accent-cyan">completionRatingWorkflow</div><div class="box accent-cyan">createRequestWorkflow</div><div class="box accent-cyan">disputeInvoiceWorkflow</div><div class="box accent-cyan">evaluateLegalRoutingWorkflow</div><div class="box accent-cyan">issueInvoiceWorkflow</div><div class="box accent-cyan">markLeaseReadyWorkflow</div><div class="box accent-cyan">ownerRejectWorkflow</div><div class="box accent-cyan">payInvoiceWorkflow</div><div class="box accent-cyan">rfpDirectAssignWorkflow</div><div class="box accent-cyan">rfpReinviteWorkflow</div><div class="box accent-cyan">schedulingWorkflow</div><div class="box accent-cyan">submitQuoteWorkflow</div><div class="box accent-cyan">submitRentalApplicationWorkflow</div><div class="box accent-cyan">tenantSelfPayWorkflow</div><div class="box accent-cyan">terminateLeaseWorkflow</div><div class="box accent-cyan">unassignContractorWorkflow</div><div class="box accent-cyan">updateJobWorkflow</div><div class="box accent-cyan">uploadMaintenanceAttachmentWorkflow</div></div>
         </div>
         <div class="layer-connector">↓ orchestration — delegates to services</div>
         <div class="layer">
@@ -184,7 +184,7 @@
         <div class="layer">
           <div class="layer-label">data / events</div>
           <div class="layer-content">
-            <div class="box accent-purple">Prisma ORM + PostgreSQL 16<small>64 models · 55 enums · 71 migrations</small></div>
+            <div class="box accent-purple">Prisma ORM + PostgreSQL 16<small>64 models · 55 enums · 72 migrations</small></div>
             <div class="box accent-purple">Domain Event Bus<small>15 event types</small></div>
           </div>
         </div>
@@ -199,7 +199,7 @@
           <div class="panel-head"><div class="panel-head-dot" style="background:var(--accent-blue)"></div><div class="panel-head-title">Request</div></div>
           <div class="panel-body">
             <div class="sm-flow">
-              <div class="sm-state initial">PENDING_REVIEW</div><div class="sm-arrow">→</div><div class="sm-state mid">RFP_PENDING</div><div class="sm-arrow">→</div><div class="sm-state mid">PENDING_OWNER_APPROVAL</div><div class="sm-arrow">→</div><div class="sm-state mid">AUTO_APPROVED</div><div class="sm-arrow">→</div><div class="sm-state mid">ASSIGNED</div><div class="sm-arrow">→</div><div class="sm-state mid">APPROVED</div><div class="sm-arrow">→</div><div class="sm-state mid">OWNER_REJECTED</div><div class="sm-arrow">→</div><div class="sm-state mid">IN_PROGRESS</div><div class="sm-arrow">→</div><div class="sm-state terminal">COMPLETED</div>
+              <div class="sm-state initial">PENDING_REVIEW</div><div class="sm-arrow">→</div><div class="sm-state mid">RFP_PENDING</div><div class="sm-arrow">→</div><div class="sm-state mid">REJECTED</div><div class="sm-arrow">→</div><div class="sm-state mid">AUTO_APPROVED</div><div class="sm-arrow">→</div><div class="sm-state mid">PENDING_OWNER_APPROVAL</div><div class="sm-arrow">→</div><div class="sm-state mid">ASSIGNED</div><div class="sm-arrow">→</div><div class="sm-state mid">APPROVED</div><div class="sm-arrow">→</div><div class="sm-state mid">IN_PROGRESS</div><div class="sm-arrow">→</div><div class="sm-state terminal">COMPLETED</div>
             </div>
           </div>
         </div>
@@ -230,7 +230,7 @@
       <div class="layer-diagram">
         <div class="layer">
           <div class="layer-label">browser</div>
-          <div class="layer-content"><div class="box accent-blue">Next.js Pages Router<small>~276 pages (UI + API proxies) · AppShell role-scoped sidebar</small></div></div>
+          <div class="layer-content"><div class="box accent-blue">Next.js Pages Router<small>~274 pages (UI + API proxies) · AppShell role-scoped sidebar</small></div></div>
         </div>
         <div class="layer-connector">↓ pages/api/* — 103/106 use proxyToBackend()</div>
         <div class="layer">
@@ -432,8 +432,8 @@
       <div class="panel"><div class="panel-body mono">
         <span class="dim">Maintenance_Agent/</span><br>
         &nbsp;&nbsp;<span class="hi-blue">apps/api/src/</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="dim">routes/ · workflows/ · services/ · repositories/ · events/ · governance/</span><br>
-        &nbsp;&nbsp;<span class="hi-blue">apps/api/prisma/</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="dim">schema.prisma · migrations/ (71 dirs)</span><br>
-        &nbsp;&nbsp;<span class="hi-cyan">apps/web/pages/</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="dim">~276 pages (UI + API proxies)</span><br>
+        &nbsp;&nbsp;<span class="hi-blue">apps/api/prisma/</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="dim">schema.prisma · migrations/ (72 dirs)</span><br>
+        &nbsp;&nbsp;<span class="hi-cyan">apps/web/pages/</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="dim">~274 pages (UI + API proxies)</span><br>
         &nbsp;&nbsp;<span class="hi-cyan">apps/web/components/</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="dim">AppShell · layout primitives · shared UI</span><br>
         &nbsp;&nbsp;<span class="hi-cyan">apps/web/styles/</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="dim">managerStyles.js (locked — F8)</span><br>
         &nbsp;&nbsp;<span class="hi-green">packages/api-client/</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="dim">typed DTO types + fetch methods</span><br>
@@ -567,7 +567,7 @@
 
   <!-- FOOTER -->
   <div style="margin-top:40px;padding-top:16px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;font-family:'IBM Plex Mono',mono;font-size:10px;color:var(--text-dim)">
-    <div>Maintenance Agent · Architecture Blueprint · 2026-04-06 18:21:08 UTC · branch: main @ 321730f</div>
+    <div>Maintenance Agent · Architecture Blueprint · 2026-04-14 13:26:20 UTC · branch: main @ 17a6d5a</div>
     <div style="display:flex;gap:14px">
       <span style="color:#5ed9a0">● Implemented</span>
       <span style="color:#f5c060">● Partial / Exception</span>

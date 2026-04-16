@@ -110,7 +110,10 @@ export async function proxyToBackend(req, res, path, options = {}) {
     // Detect connection-refused errors and return a clear message
     const isConnRefused = error.code === 'ECONNREFUSED' ||
       (error.cause && error.cause.code === 'ECONNREFUSED') ||
-      (error.message && error.message.includes('ECONNREFUSED'));
+      (error.cause?.cause?.code === 'ECONNREFUSED') ||
+      (error.message && error.message.includes('ECONNREFUSED')) ||
+      (error.cause?.message?.includes('ECONNREFUSED')) ||
+      (error.message && error.message.includes('fetch failed') && !error.message.includes('status'));
 
     if (isConnRefused) {
       res.status(503).json({

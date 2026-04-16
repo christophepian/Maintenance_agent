@@ -3,34 +3,35 @@ import Link from "next/link";
 import AppShell from "../../components/AppShell";
 import { ALLOWED_CATEGORIES } from "../../lib/categories";
 
+import { cn } from "../../lib/utils";
 export default function AssetModelsAdmin() {
-  const ui = {
-    page: { maxWidth: "1100px", margin: "40px auto", padding: "24px", fontFamily: "system-ui" },
-    headerRow: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "24px" },
-    h1: { fontSize: "2.2rem", fontWeight: 700, margin: 0 },
-    h2: { fontSize: "1.5rem", fontWeight: 600, margin: "0 0 16px 0" },
-    subtle: { color: "#888", fontSize: "0.95rem" },
-    code: { background: "#f5f5f5", padding: "2px 6px", borderRadius: "4px", fontSize: "0.95em", fontFamily: "monospace" },
-    codeSmall: { background: "#f5f5f5", padding: "2px 4px", borderRadius: "3px", fontSize: "0.85em", fontFamily: "monospace" },
-    card: { background: "#fff", border: "1px solid #e5e5e5", borderRadius: "8px", padding: "20px", marginBottom: "20px" },
-    label: { display: "block", fontWeight: 600, marginBottom: "6px", fontSize: "0.95rem" },
-    input: { padding: "10px 12px", borderRadius: "6px", border: "1px solid #ddd", width: "100%", maxWidth: "380px", fontSize: "0.95rem", boxSizing: "border-box" },
-    primaryBtn: { padding: "10px 20px", borderRadius: "6px", border: "none", background: "#111", color: "#fff", cursor: "pointer", fontWeight: 600, fontSize: "0.95rem" },
-    secondaryBtn: { padding: "10px 20px", borderRadius: "6px", border: "1px solid #ddd", background: "#fafafa", color: "#111", cursor: "pointer", fontWeight: 500, fontSize: "0.95rem" },
-    dangerBtn: { padding: "10px 20px", borderRadius: "6px", border: "none", background: "#dc3545", color: "#fff", cursor: "pointer", fontWeight: 600, fontSize: "0.95rem" },
-    formRow: { display: "flex", gap: "16px", alignItems: "flex-end", marginBottom: "20px" },
-    grid2: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", marginBottom: "20px" },
-    list: { display: "flex", flexDirection: "column", gap: "12px" },
-    listRow: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px", border: "1px solid #e5e5e5", borderRadius: "6px", background: "#fafafa" },
-    rowTitle: { fontWeight: 600, fontSize: "1rem", marginBottom: "4px" },
-    help: { fontSize: "0.85rem", color: "#666", marginTop: "4px" },
-    empty: { padding: "20px", textAlign: "center", color: "#888", fontStyle: "italic" },
-    notice: { padding: "12px 16px", borderRadius: "6px", marginBottom: "16px", fontSize: "0.95rem" },
-    noticeOk: { background: "#e8f5e9", border: "1px solid #81c784", color: "#2e7d32" },
-    noticeErr: { background: "#ffebee", border: "1px solid #ef5350", color: "#c62828" },
-    pill: { display: "inline-block", background: "#e0e0e0", color: "#333", padding: "2px 8px", borderRadius: "12px", fontSize: "0.8rem", marginLeft: "6px" },
-    badge: { display: "inline-block", background: "#f0f0f0", padding: "4px 8px", borderRadius: "4px", fontSize: "0.8rem", color: "#666", marginLeft: "8px" },
-    backLink: { color: "#0066cc", textDecoration: "none", fontWeight: 500, marginBottom: "20px", display: "inline-block" },
+    const ui = {
+    page: "max-w-[1100px] mx-auto p-6 font-sans",
+    headerRow: "flex items-center justify-between mb-6",
+    h1: "text-4xl font-bold",
+    h2: "text-2xl font-semibold mb-4",
+    subtle: "text-slate-400 text-[0.95rem]",
+    code: "bg-slate-100 px-1.5 py-0.5 rounded text-[0.95em] font-mono",
+    codeSmall: "bg-slate-100 px-1 py-0.5 rounded text-sm font-mono",
+    card: "bg-white border border-slate-200 rounded-lg p-5 mb-5",
+    label: "block font-semibold mb-1.5 text-[0.95rem]",
+    input: "px-3 py-2.5 rounded-lg border border-slate-300 w-full text-[0.95rem] box-border",
+    primaryBtn: "px-5 py-2.5 rounded-lg border-none bg-blue-600 text-white cursor-pointer font-semibold text-[0.95rem] hover:bg-blue-700",
+    secondaryBtn: "px-5 py-2.5 rounded-lg border border-slate-300 bg-slate-50 text-slate-900 cursor-pointer font-medium text-[0.95rem]",
+    dangerBtn: "px-5 py-2.5 rounded-lg border-none bg-red-600 text-white cursor-pointer font-semibold text-[0.95rem]",
+    formRow: "flex gap-4 items-end mb-5",
+    grid2: "grid grid-cols-2 gap-5 mb-5",
+    list: "flex flex-col gap-3",
+    listRow: "flex justify-between items-center p-3.5 border border-slate-200 rounded-lg bg-slate-50",
+    rowTitle: "font-semibold text-base mb-1",
+    help: "text-sm text-slate-500 mt-1",
+    empty: "p-5 text-center text-slate-400 italic",
+    notice: "px-4 py-3 rounded-lg mb-4 text-[0.95rem]",
+    noticeOk: "bg-green-50 border border-green-400 text-green-700",
+    noticeErr: "bg-red-50 border border-red-500 text-red-800",
+    pill: "inline-block bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full text-xs ml-1.5",
+    backLink: "text-blue-600 no-underline font-medium mb-5 inline-block",
+    badge: "inline-block bg-slate-100 px-2 py-1 rounded text-xs text-slate-500 ml-2",
   };
 
   const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3001";
@@ -129,45 +130,45 @@ export default function AssetModelsAdmin() {
   }
 
   if (loading) {
-    return <div style={ui.page}>Loading...</div>;
+    return <div className={ui.page}>Loading...</div>;
   }
 
   return (
     <AppShell role="MANAGER">
-      <div style={ui.page}>
-        <Link href="/admin-inventory" style={ui.backLink}>
+      <div className={ui.page}>
+        <Link href="/admin-inventory" className={ui.backLink}>
           ← Back to Inventory
         </Link>
 
-        <div style={ui.headerRow}>
-          <h1 style={ui.h1}>Asset Models Library</h1>
+        <div className={ui.headerRow}>
+          <h1 className={ui.h1}>Asset Models Library</h1>
         </div>
 
       {notice && (
-        <div style={{ ...ui.notice, ...(notice.type === "ok" ? ui.noticeOk : ui.noticeErr) }}>
+        <div className={cn(ui.notice, notice.type === "ok" ? ui.noticeOk : ui.noticeErr)}>
           {notice.message}
         </div>
       )}
 
       {/* Create org-private model */}
-      <div style={ui.card}>
-        <h2 style={ui.h2}>Create New Model (Org-Private)</h2>
+      <div className={ui.card}>
+        <h2 className={ui.h2}>Create New Model (Org-Private)</h2>
 
         <form onSubmit={onCreate}>
-          <div style={ui.grid2}>
+          <div className={ui.grid2}>
             <div>
-              <label style={ui.label}>Name</label>
+              <label className={ui.label}>Name</label>
               <input
-                style={ui.input}
+                className={ui.input}
                 value={createName}
                 onChange={(e) => setCreateName(e.target.value)}
                 placeholder="e.g. Bosch Serie 6"
               />
             </div>
             <div>
-              <label style={ui.label}>Category</label>
+              <label className={ui.label}>Category</label>
               <select
-                style={ui.input}
+                className={ui.input}
                 value={createCategory}
                 onChange={(e) => setCreateCategory(e.target.value)}
               >
@@ -179,25 +180,25 @@ export default function AssetModelsAdmin() {
               </select>
             </div>
             <div>
-              <label style={ui.label}>Manufacturer (optional)</label>
+              <label className={ui.label}>Manufacturer (optional)</label>
               <input
-                style={ui.input}
+                className={ui.input}
                 value={createManufacturer}
                 onChange={(e) => setCreateManufacturer(e.target.value)}
                 placeholder="e.g. Bosch"
               />
             </div>
             <div>
-              <label style={ui.label}>Model (optional)</label>
+              <label className={ui.label}>Model (optional)</label>
               <input
-                style={ui.input}
+                className={ui.input}
                 value={createModel}
                 onChange={(e) => setCreateModel(e.target.value)}
                 placeholder="e.g. SME88TD00Z"
               />
             </div>
           </div>
-          <button type="submit" style={ui.primaryBtn} disabled={loading}>
+          <button type="submit" className={ui.primaryBtn} disabled={loading}>
             Create model
           </button>
         </form>
@@ -205,21 +206,21 @@ export default function AssetModelsAdmin() {
 
       {/* Global models (read-only) */}
       {globalModels.length > 0 && (
-        <div style={ui.card}>
-          <h2 style={ui.h2}>
-            Global Models <span style={ui.badge}>Read-only</span>
+        <div className={ui.card}>
+          <h2 className={ui.h2}>
+            Global Models <span className={ui.badge}>Read-only</span>
           </h2>
-          <div style={ui.list}>
+          <div className={ui.list}>
             {globalModels.map((m) => (
-              <div key={m.id} style={ui.listRow}>
+              <div key={m.id} className={ui.listRow}>
                 <div>
-                  <div style={ui.rowTitle}>
-                    {m.name} {m.category && <span style={ui.pill}>{m.category}</span>}
+                  <div className={ui.rowTitle}>
+                    {m.name} {m.category && <span className={ui.pill}>{m.category}</span>}
                   </div>
-                  <div style={ui.help}>
+                  <div className={ui.help}>
                     {m.manufacturer && <>Mfg: {m.manufacturer} • </>}
                     {m.model && <>Model: {m.model} • </>}
-                    <code style={ui.codeSmall}>{m.id}</code>
+                    <code className={ui.codeSmall}>{m.id}</code>
                   </div>
                 </div>
               </div>
@@ -230,24 +231,24 @@ export default function AssetModelsAdmin() {
 
       {/* Org-private models (editable) */}
       {orgModels.length > 0 && (
-        <div style={ui.card}>
-          <h2 style={ui.h2}>Your Organization Models</h2>
-          <div style={ui.list}>
+        <div className={ui.card}>
+          <h2 className={ui.h2}>Your Organization Models</h2>
+          <div className={ui.list}>
             {orgModels.map((m) => (
-              <div key={m.id} style={ui.listRow}>
+              <div key={m.id} className={ui.listRow}>
                 <div>
-                  <div style={ui.rowTitle}>
-                    {m.name} {m.category && <span style={ui.pill}>{m.category}</span>}
+                  <div className={ui.rowTitle}>
+                    {m.name} {m.category && <span className={ui.pill}>{m.category}</span>}
                   </div>
-                  <div style={ui.help}>
+                  <div className={ui.help}>
                     {m.manufacturer && <>Mfg: {m.manufacturer} • </>}
                     {m.model && <>Model: {m.model} • </>}
-                    <code style={ui.codeSmall}>{m.id}</code>
+                    <code className={ui.codeSmall}>{m.id}</code>
                   </div>
                 </div>
                 <button
                   type="button"
-                  style={ui.dangerBtn}
+                  className={ui.dangerBtn}
                   onClick={() => onDeactivate(m.id)}
                   disabled={loading}
                 >
@@ -260,8 +261,8 @@ export default function AssetModelsAdmin() {
       )}
 
       {globalModels.length === 0 && orgModels.length === 0 && (
-        <div style={ui.card}>
-          <div style={ui.empty}>No asset models yet.</div>
+        <div className={ui.card}>
+          <div className={ui.empty}>No asset models yet.</div>
         </div>
       )}
       </div>

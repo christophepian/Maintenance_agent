@@ -6,7 +6,7 @@
  *   - terminateLeaseWorkflow: ACTIVE → TERMINATED
  *   - issueInvoiceWorkflow: DRAFT → ISSUED
  *   - unassignContractorWorkflow: ASSIGNED → APPROVED
- *   - ownerRejectWorkflow: PENDING_OWNER_APPROVAL → OWNER_REJECTED
+ *   - rejectRequestWorkflow: PENDING_OWNER_APPROVAL → REJECTED, PENDING_REVIEW → REJECTED
  *   - submitRentalApplicationWorkflow: DRAFT → SUBMITTED
  *
  * Pattern: Direct DB + workflow calls, no server spawn.
@@ -384,7 +384,7 @@ describe("ownerRejectWorkflow", () => {
     await prisma.$disconnect();
   });
 
-  it("ownerRejectWorkflow: PENDING_OWNER_APPROVAL → OWNER_REJECTED", async () => {
+  it("rejectRequestWorkflow: PENDING_OWNER_APPROVAL → REJECTED", async () => {
     const request = await prisma.request.create({
       data: {
         description: "Owner reject test request",
@@ -402,13 +402,13 @@ describe("ownerRejectWorkflow", () => {
     });
 
     expect(result.dto).toBeDefined();
-    expect(result.dto.status).toBe(RequestStatus.OWNER_REJECTED);
+    expect(result.dto.status).toBe(RequestStatus.REJECTED);
   });
 
-  it("rejects non-PENDING_OWNER_APPROVAL requests", async () => {
+  it("rejectRequestWorkflow: PENDING_REVIEW → REJECTED (manager reject)", async () => {
     const request = await prisma.request.create({
       data: {
-        description: "Owner reject invalid test",
+        description: "Manager reject test",
         category: "carpentry",
         estimatedCost: 300,
         status: RequestStatus.PENDING_REVIEW,
@@ -417,11 +417,12 @@ describe("ownerRejectWorkflow", () => {
       },
     });
 
-    await expect(
-      ownerRejectWorkflow(ctx, {
-        requestId: request.id,
-        reason: "Should fail",
-      })
-    ).rejects.toThrow(InvalidTransitionError);
+    const result = await ownerRejectWorkflow(ctx, {
+      requestId: request.id,
+      reason: "Not needed",
+    });
+
+    expect(result.dto).toBeDefined();
+    expect(result.dto.status).toBe(RequestStatus.REJECTED);
   });
 });

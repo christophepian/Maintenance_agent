@@ -30,7 +30,7 @@ export default function TenantSidebar() {
   }, [pathname]);
 
   return (
-    <nav className="flex flex-col gap-1 py-2">
+    <nav aria-label="Tenant navigation" className="flex flex-col gap-1 py-2">
       {TENANT_NAV.map((item, index) => {
         const Icon = item.icon;
         const isActive = index === activeIndex;

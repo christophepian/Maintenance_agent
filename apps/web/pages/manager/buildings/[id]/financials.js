@@ -10,6 +10,7 @@ import Section from "../../../../components/layout/Section";
 import { authHeaders } from "../../../../lib/api";
 import { formatChfCents, formatPercent } from "../../../../lib/format";
 
+import { cn } from "../../../../lib/utils";
 /* ─── Helpers ─── */
 
 function defaultRange() {
@@ -27,12 +28,12 @@ function displayDate(iso) {
 /* ─── RAG health bullet ─── */
 
 function HealthBullet({ icon, text, color }) {
-  const bg = { green: "bg-emerald-50", amber: "bg-amber-50", red: "bg-red-50" }[color] || "bg-gray-50";
-  const border = { green: "border-emerald-200", amber: "border-amber-200", red: "border-red-200" }[color] || "border-gray-200";
+  const bg = { green: "bg-green-50", amber: "bg-amber-50", red: "bg-red-50" }[color] || "bg-slate-50";
+  const border = { green: "border-green-200", amber: "border-amber-200", red: "border-red-200" }[color] || "border-slate-200";
   return (
-    <div className={`flex items-start gap-2.5 px-4 py-3 rounded-lg border ${bg} ${border}`}>
+    <div className={cn("flex items-start gap-2.5 px-4 py-3 rounded-lg border", bg, border)}>
       <span className="text-lg leading-none mt-0.5">{icon}</span>
-      <span className="text-sm text-gray-800">{text}</span>
+      <span className="text-sm text-slate-800">{text}</span>
     </div>
   );
 }
@@ -53,15 +54,15 @@ const CATEGORY_LABELS = {
 /* ─── KPI card ─── */
 
 function KpiCard({ label, value, sub, accent }) {
-  const cls = accent === "green" ? "text-emerald-700"
+  const cls = accent === "green" ? "text-green-700"
     : accent === "red" ? "text-red-600"
     : accent === "amber" ? "text-amber-700"
-    : "text-gray-900";
+    : "text-slate-900";
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-4 flex flex-col gap-1">
-      <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">{label}</span>
-      <span className={`text-xl font-bold ${cls}`}>{value}</span>
-      {sub && <span className="text-xs text-gray-400">{sub}</span>}
+    <div className="bg-white rounded-lg border border-slate-200 p-4 flex flex-col gap-1">
+      <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">{label}</span>
+      <span className={cn("text-xl font-bold", cls)}>{value}</span>
+      {sub && <span className="text-xs text-slate-400">{sub}</span>}
     </div>
   );
 }
@@ -69,17 +70,17 @@ function KpiCard({ label, value, sub, accent }) {
 /* ─── Simple stat row ─── */
 
 function StatRow({ label, value, sub, accent }) {
-  const cls = accent === "green" ? "text-emerald-700"
+  const cls = accent === "green" ? "text-green-700"
     : accent === "red" ? "text-red-600"
     : accent === "amber" ? "text-amber-700"
-    : "text-gray-900";
+    : "text-slate-900";
   return (
-    <div className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
+    <div className="flex items-center justify-between py-2 border-b border-slate-100 last:border-0">
       <div>
-        <span className="text-sm text-gray-700">{label}</span>
-        {sub && <span className="text-xs text-gray-400 ml-2">{sub}</span>}
+        <span className="text-sm text-slate-700">{label}</span>
+        {sub && <span className="text-xs text-slate-400 ml-2">{sub}</span>}
       </div>
-      <span className={`text-sm font-semibold font-mono ${cls}`}>{value}</span>
+      <span className={cn("text-sm font-semibold font-mono", cls)}>{value}</span>
     </div>
   );
 }
@@ -190,7 +191,7 @@ export default function BuildingFinancialsPage() {
         <PageHeader title={d ? `${d.buildingName} — Financials` : "Building Financials"} />
         <PageContent>
 
-          <Link href="/manager/finance" className="text-sm text-blue-600 hover:text-blue-800 mb-4 inline-block">
+          <Link href="/manager/finance" className="text-sm text-blue-600 hover:text-blue-700 mb-4 inline-block">
             ← Back to Finance Dashboard
           </Link>
 
@@ -198,21 +199,21 @@ export default function BuildingFinancialsPage() {
           <Panel>
             <div className="flex flex-wrap items-end gap-4">
               <div className="flex flex-col gap-1">
-                <label className="text-xs font-medium text-gray-600">From</label>
+                <label className="text-xs font-medium text-slate-600">From</label>
                 <input
                   type="date"
                   value={rangeInput.from}
                   onChange={(e) => setRangeInput((r) => ({ ...r, from: e.target.value }))}
-                  className="border border-gray-300 rounded px-2 py-1 text-sm"
+                  className="border border-slate-300 rounded px-2 py-1 text-sm"
                 />
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-xs font-medium text-gray-600">To</label>
+                <label className="text-xs font-medium text-slate-600">To</label>
                 <input
                   type="date"
                   value={rangeInput.to}
                   onChange={(e) => setRangeInput((r) => ({ ...r, to: e.target.value }))}
-                  className="border border-gray-300 rounded px-2 py-1 text-sm"
+                  className="border border-slate-300 rounded px-2 py-1 text-sm"
                 />
               </div>
               <button
@@ -223,13 +224,13 @@ export default function BuildingFinancialsPage() {
               </button>
               <button
                 onClick={() => fetchFinancials(true)}
-                className="bg-gray-100 text-gray-700 text-sm font-medium px-4 py-1.5 rounded border border-gray-300 hover:bg-gray-200 transition-colors"
+                className="bg-slate-100 text-slate-700 text-sm font-medium px-4 py-1.5 rounded border border-slate-300 hover:bg-slate-200 transition-colors"
                 title="Re-compute snapshots from source data"
               >
                 ↻ Refresh
               </button>
               {d && (
-                <span className="text-xs text-gray-400 self-end pb-0.5">
+                <span className="text-xs text-slate-400 self-end pb-0.5">
                   {displayDate(d.from)} – {displayDate(d.to)} · {d.activeUnitsCount} unit{d.activeUnitsCount !== 1 ? "s" : ""}
                 </span>
               )}
@@ -362,8 +363,8 @@ export default function BuildingFinancialsPage() {
                         value={formatChfCents(d.projectedIncomeCents)}
                         sub="Expected from active leases, prorated"
                       />
-                      <div className="mt-3 mb-1 pt-3 border-t border-gray-200">
-                        <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Projected breakdown</span>
+                      <div className="mt-3 mb-1 pt-3 border-t border-slate-200">
+                        <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Projected breakdown</span>
                       </div>
                       <StatRow
                         label="Rental Income"
@@ -375,8 +376,8 @@ export default function BuildingFinancialsPage() {
                         value={formatChfCents(d.serviceChargeIncomeCents)}
                         sub="Ancillary charges (utilities, etc.)"
                       />
-                      <div className="mt-3 mb-1 pt-3 border-t border-gray-200">
-                        <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Performance</span>
+                      <div className="mt-3 mb-1 pt-3 border-t border-slate-200">
+                        <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Performance</span>
                       </div>
                       <StatRow
                         label="Collection Rate"
@@ -427,7 +428,7 @@ export default function BuildingFinancialsPage() {
                             ))}
                           </tbody>
                           <tfoot>
-                            <tr className="border-t-2 border-gray-300 font-semibold">
+                            <tr className="border-t-2 border-slate-300 font-semibold">
                               <td>Total</td>
                               <td className="text-right font-mono">{formatChfCents(d.expensesTotalCents)}</td>
                             </tr>
@@ -451,7 +452,7 @@ export default function BuildingFinancialsPage() {
                           <tbody>
                             {d.expensesByAccount.map((row) => (
                               <tr key={row.accountId}>
-                                <td className="font-mono text-xs text-gray-500">{row.accountCode || "—"}</td>
+                                <td className="font-mono text-xs text-slate-500">{row.accountCode || "—"}</td>
                                 <td className="cell-bold">{row.accountName}</td>
                                 <td className="text-right font-mono">{formatChfCents(row.totalCents)}</td>
                               </tr>
@@ -490,7 +491,7 @@ export default function BuildingFinancialsPage() {
               {/* ═══ Receivables & Payables tab ═══ */}
               {activeTab === "balances" && (
                 <Section title="Outstanding Balances">
-                  <p className="text-xs text-gray-500 mb-3">
+                  <p className="text-xs text-slate-500 mb-3">
                     Point-in-time snapshot — shows invoices currently awaiting payment, regardless of the date range above.
                   </p>
                   <Panel>
@@ -510,7 +511,7 @@ export default function BuildingFinancialsPage() {
                     </div>
                   </Panel>
                   {d.receivablesCents === 0 && d.payablesCents === 0 && (
-                    <p className="text-sm text-emerald-700 font-medium mt-3">All invoices settled — no outstanding balances.</p>
+                    <p className="text-sm text-green-700 font-medium mt-3">All invoices settled — no outstanding balances.</p>
                   )}
                 </Section>
               )}
@@ -518,7 +519,7 @@ export default function BuildingFinancialsPage() {
               {/* ═══ Advanced tab ═══ */}
               {activeTab === "advanced" && (
                 <Section title="Advanced Accounting">
-                  <p className="text-xs text-gray-500 mb-4">
+                  <p className="text-xs text-slate-500 mb-4">
                     The following tools show the raw double-entry ledger. Useful for auditing, but not required for day-to-day management.
                   </p>
                   <div className="flex flex-wrap gap-3">

@@ -9,13 +9,21 @@ import Panel from "../../../components/layout/Panel";
 import Section from "../../../components/layout/Section";
 import { authHeaders } from "../../../lib/api";
 import { formatChfCents, formatDate, formatChf } from "../../../lib/format";
+import Badge from "../../../components/ui/Badge";
 
+import { cn } from "../../../lib/utils";
+
+// ─── Strategy alignment helpers ──────────────────────────────────────────────
+
+const ALIGNMENT_TAG_VARIANT = { aligned: "success", review: "warning", low_priority: "secondary" };
+const ALIGNMENT_TAG_LABEL = { aligned: "Aligned", review: "Review", low_priority: "Low priority" };
+const ALIGNMENT_TAG_ICON = { aligned: "✓", review: "~", low_priority: "↓" };
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
 const STATUS_BADGE = {
-  DRAFT: "bg-gray-100 text-gray-600",
+  DRAFT: "bg-slate-100 text-slate-600",
   SUBMITTED: "bg-blue-100 text-blue-700",
   APPROVED: "bg-green-100 text-green-700",
 };
@@ -94,26 +102,26 @@ function CashflowChart({ buckets, hasOpeningBalance }) {
 
   return (
     <div className="relative">
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: 260 }}>
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-[260px]">
         {/* Y-axis gridlines */}
         {[0.25, 0.5, 0.75, 1].map((frac) => (
           <g key={frac}>
-            <line x1={ML} y1={midY - (ch / 2 - 6) * frac} x2={W - MR} y2={midY - (ch / 2 - 6) * frac} stroke="#f1f5f9" strokeWidth="1" />
-            <line x1={ML} y1={midY + (ch / 2 - 6) * frac} x2={W - MR} y2={midY + (ch / 2 - 6) * frac} stroke="#f1f5f9" strokeWidth="1" />
+            <line x1={ML} y1={midY - (ch / 2 - 6) * frac} x2={W - MR} y2={midY - (ch / 2 - 6) * frac} stroke="rgb(241 245 249)" strokeWidth="1" />
+            <line x1={ML} y1={midY + (ch / 2 - 6) * frac} x2={W - MR} y2={midY + (ch / 2 - 6) * frac} stroke="rgb(241 245 249)" strokeWidth="1" />
           </g>
         ))}
-        <text x={ML - 4} y={MT + 12} textAnchor="end" fontSize="9" fill="#94a3b8">{formatChfCents(maxVal)}</text>
-        <text x={ML - 4} y={H - MB - 4} textAnchor="end" fontSize="9" fill="#94a3b8">{formatChfCents(-maxVal)}</text>
+        <text x={ML - 4} y={MT + 12} textAnchor="end" fontSize="9" fill="rgb(148 163 184)">{formatChfCents(maxVal)}</text>
+        <text x={ML - 4} y={H - MB - 4} textAnchor="end" fontSize="9" fill="rgb(148 163 184)">{formatChfCents(-maxVal)}</text>
 
         {/* Zero line */}
-        <line x1={ML} y1={midY} x2={W - MR} y2={midY} stroke="#e2e8f0" strokeWidth="1" />
+        <line x1={ML} y1={midY} x2={W - MR} y2={midY} stroke="rgb(226 232 240)" strokeWidth="1" />
 
         {/* Historical / projected divider */}
         {lastActualIdx >= 0 && lastActualIdx < buckets.length - 1 && (
           <line
             x1={xSlot(lastActualIdx + 1)} y1={MT}
             x2={xSlot(lastActualIdx + 1)} y2={H - MB}
-            stroke="#94a3b8" strokeWidth="1" strokeDasharray="4,2"
+            stroke="rgb(148 163 184)" strokeWidth="1" strokeDasharray="4,2"
           />
         )}
 
@@ -125,25 +133,25 @@ function CashflowChart({ buckets, hasOpeningBalance }) {
           const cH = Math.max(0, toH(b.scheduledCapexCents));
           return (
             <g key={i} onMouseEnter={() => setHovered(i)} onMouseLeave={() => setHovered(null)}>
-              {hovered === i && <rect x={xSlot(i)} y={MT} width={slotW} height={ch} fill="#f8fafc" />}
-              {iH > 0 && <rect x={x} y={midY - iH} width={barW} height={iH} fill={b.isActual ? "#16a34a" : "#86efac"} />}
-              {oH > 0 && <rect x={x} y={midY} width={barW} height={oH} fill={b.isActual ? "#dc2626" : "#fca5a5"} />}
-              {cH > 0 && <rect x={x} y={midY + oH} width={barW} height={cH} fill="#f59e0b" />}
+              {hovered === i && <rect x={xSlot(i)} y={MT} width={slotW} height={ch} fill="rgb(248 250 252)" />}
+              {iH > 0 && <rect x={x} y={midY - iH} width={barW} height={iH} fill={b.isActual ? "rgb(22 163 74)" : "rgb(134 239 172)"} />}
+              {oH > 0 && <rect x={x} y={midY} width={barW} height={oH} fill={b.isActual ? "rgb(220 38 38)" : "rgb(252 165 165)"} />}
+              {cH > 0 && <rect x={x} y={midY + oH} width={barW} height={cH} fill="rgb(245 158 11)" />}
             </g>
           );
         })}
 
         {/* Balance line */}
         {balancePoints && (
-          <polyline points={balancePoints} fill="none" stroke="#3b82f6" strokeWidth="1.5" strokeLinejoin="round" />
+          <polyline points={balancePoints} fill="none" stroke="rgb(59 130 246)" strokeWidth="1.5" strokeLinejoin="round" />
         )}
 
         {/* X-axis */}
-        <line x1={ML} y1={H - MB} x2={W - MR} y2={H - MB} stroke="#e2e8f0" strokeWidth="1" />
+        <line x1={ML} y1={H - MB} x2={W - MR} y2={H - MB} stroke="rgb(226 232 240)" strokeWidth="1" />
         {buckets.map((b, i) => {
           if (i % labelEvery !== 0) return null;
           return (
-            <text key={i} x={xSlot(i) + slotW / 2} y={H - MB + 14} textAnchor="middle" fontSize="9" fill="#94a3b8">
+            <text key={i} x={xSlot(i) + slotW / 2} y={H - MB + 14} textAnchor="middle" fontSize="9" fill="rgb(148 163 184)">
               {MONTHS[b.month - 1]} {b.year}
             </text>
           );
@@ -157,7 +165,7 @@ function CashflowChart({ buckets, hasOpeningBalance }) {
             {fmtMonth(hovB.year, hovB.month)}
             <span className="ml-2 font-normal text-slate-400">{hovB.isActual ? "Actual" : "Projected"}</span>
           </div>
-          <div className="flex justify-between gap-4 text-emerald-700">
+          <div className="flex justify-between gap-4 text-green-700">
             <span>Income</span><span className="font-mono">{formatChfCents(hovB.projectedIncomeCents)}</span>
           </div>
           <div className="flex justify-between gap-4 text-red-600">
@@ -169,8 +177,8 @@ function CashflowChart({ buckets, hasOpeningBalance }) {
             </div>
           )}
           <div className="border-t border-slate-100 mt-1.5 pt-1.5 flex justify-between gap-4 font-semibold">
-            <span className={hovB.netCents >= 0 ? "text-emerald-700" : "text-red-600"}>Net</span>
-            <span className={`font-mono ${hovB.netCents >= 0 ? "text-emerald-700" : "text-red-600"}`}>
+            <span className={hovB.netCents >= 0 ? "text-green-700" : "text-red-600"}>Net</span>
+            <span className={cn("font-mono", hovB.netCents >= 0 ? "text-green-700" : "text-red-600")}>
               {formatChfCents(hovB.netCents)}
             </span>
           </div>
@@ -178,7 +186,7 @@ function CashflowChart({ buckets, hasOpeningBalance }) {
             <div className="mt-1.5 pt-1.5 border-t border-slate-100 space-y-0.5">
               {hovB.capexItems.slice(0, 4).map((ci, j) => (
                 <div key={j} className="flex justify-between gap-4 text-amber-700">
-                  <span className="truncate" style={{ maxWidth: 96 }}>{ci.assetName}</span>
+                  <span className="truncate" className="max-w-[96px]">{ci.assetName}</span>
                   <span className="font-mono">{formatChfCents(ci.costCents)}</span>
                 </div>
               ))}
@@ -190,8 +198,8 @@ function CashflowChart({ buckets, hasOpeningBalance }) {
 
       {/* Legend */}
       <div className="flex flex-wrap gap-4 mt-3 text-xs text-slate-500">
-        <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded-sm bg-emerald-600" />Income (actual)</span>
-        <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded-sm bg-emerald-300" />Income (projected)</span>
+        <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded-sm bg-green-600" />Income (actual)</span>
+        <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded-sm bg-green-300" />Income (projected)</span>
         <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded-sm bg-red-500" />OpEx (actual)</span>
         <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded-sm bg-red-300" />OpEx (projected)</span>
         <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded-sm bg-amber-400" />CapEx</span>
@@ -202,9 +210,104 @@ function CashflowChart({ buckets, hasOpeningBalance }) {
   );
 }
 
+// ─── Strategy Overlay Panel ───────────────────────────────────────────────────
+
+function StrategyOverlayPanel({ overlay }) {
+  const [expanded, setExpanded] = useState(false);
+  const items = overlay.items || [];
+  const sorted = [...items].sort((a, b) => b.score - a.score);
+
+  return (
+    <Panel>
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-sm font-semibold text-slate-800 m-0">
+            Strategy alignment — {overlay.archetypeLabel}
+          </h3>
+          <p className="text-xs text-slate-500 m-0 mt-0.5">
+            {overlay.alignedCount} aligned · {overlay.reviewCount} to review · {overlay.lowPriorityCount} low priority
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setExpanded(!expanded)}
+            className="text-xs text-indigo-600 hover:text-indigo-800 font-medium transition-colors"
+            aria-label={expanded ? "Collapse strategy details" : "Expand strategy details"}
+          >
+            {expanded ? "Hide details ▴" : "Show details ▾"}
+          </button>
+          <Link href="/owner/strategy" className="text-xs text-indigo-600 hover:underline">
+            Update strategy →
+          </Link>
+        </div>
+      </div>
+
+      {overlay.deprioritizationNote && (
+        <p className="text-xs text-amber-600 m-0 mt-2 bg-amber-50 rounded px-2 py-1">
+          💡 {overlay.deprioritizationNote}
+        </p>
+      )}
+
+      {expanded && (
+        <div className="mt-4 space-y-2">
+          {sorted.map((item) => {
+            const dims = item.topDimensions || [];
+            return (
+              <div
+                key={item.assetId}
+                className={cn(
+                  "rounded-lg border px-3 py-2.5",
+                  item.tag === "aligned" ? "border-emerald-200 bg-emerald-50/50" :
+                  item.tag === "review" ? "border-amber-200 bg-amber-50/50" :
+                  "border-slate-200 bg-slate-50/50"
+                )}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Badge variant={ALIGNMENT_TAG_VARIANT[item.tag]} className="text-[10px] px-1.5 py-0">
+                      {ALIGNMENT_TAG_LABEL[item.tag]}
+                    </Badge>
+                    <span className="text-sm font-medium text-slate-900">
+                      {item.assetName || item.assetId}
+                    </span>
+                    <span className="text-xs text-slate-400">
+                      Score: {Math.round(item.score)}
+                    </span>
+                  </div>
+                </div>
+                <p className="text-xs text-slate-600 mt-1.5 leading-relaxed">
+                  {item.explanation}
+                </p>
+                {dims.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {dims.map((d) => (
+                      <span
+                        key={d.name}
+                        className={cn(
+                          "inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full font-medium",
+                          d.itemScore >= 60 ? "bg-emerald-100 text-emerald-700" :
+                          d.itemScore >= 40 ? "bg-amber-100 text-amber-700" :
+                          "bg-red-100 text-red-700"
+                        )}
+                        title={`${d.label}: item scores ${d.itemScore}/100 (weight: ${Math.round(d.weight * 100)}%)`}
+                      >
+                        {d.itemScore >= 60 ? "✓" : d.itemScore >= 40 ? "~" : "✗"} {d.label}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </Panel>
+  );
+}
+
 // ─── CapEx Event Table (interactive for DRAFT) ────────────────────────────────
 
-function CapexEventTable({ buckets, overrides, timingRecommendations, planId, isDraft, onRefresh }) {
+function CapexEventTable({ buckets, overrides, timingRecommendations, planId, isDraft, onRefresh, alignmentMap }) {
   // Build override lookup: assetId → override record
   const overrideByAsset = {};
   for (const ov of (overrides || [])) {
@@ -238,7 +341,7 @@ function CapexEventTable({ buckets, overrides, timingRecommendations, planId, is
   }
 
   return (
-    <div style={{ overflowX: "auto" }}>
+    <div className="overflow-x-auto">
       <table className="inline-table">
         <thead>
           <tr>
@@ -263,6 +366,7 @@ function CapexEventTable({ buckets, overrides, timingRecommendations, planId, is
                 planId={planId}
                 isDraft={isDraft}
                 onRefresh={onRefresh}
+                alignmentMap={alignmentMap}
               />
             );
           })}
@@ -272,7 +376,7 @@ function CapexEventTable({ buckets, overrides, timingRecommendations, planId, is
   );
 }
 
-function CapexEventRow({ ev, ov, rec, planId, isDraft, onRefresh }) {
+function CapexEventRow({ ev, ov, rec, planId, isDraft, onRefresh, alignmentMap }) {
   const currentYear = new Date().getFullYear();
   const [shifting, setShifting] = useState(false);
   const [removing, setRemoving] = useState(false);
@@ -339,6 +443,13 @@ function CapexEventRow({ ev, ov, rec, planId, isDraft, onRefresh }) {
           <span className="mr-1 text-amber-500 text-xs" title="Year overridden">⟳</span>
         )}
         {ev.assetName}
+        {alignmentMap?.[ev.assetId] && (
+          <span title={alignmentMap[ev.assetId].explanation} className="cursor-help">
+            <Badge variant={ALIGNMENT_TAG_VARIANT[alignmentMap[ev.assetId].tag]} className="ml-1 text-[10px] px-1 py-0">
+              {ALIGNMENT_TAG_LABEL[alignmentMap[ev.assetId].tag]}
+            </Badge>
+          </span>
+        )}
       </td>
       <td>
         {fmtMonth(ev.year, ev.month)}
@@ -518,13 +629,13 @@ function OpeningBalanceBanner({ planId, onUpdated }) {
       {!editing ? (
         <button
           onClick={() => setEditing(true)}
-          className="text-sm font-medium text-amber-800 underline underline-offset-2 whitespace-nowrap"
+          className="text-sm font-medium text-amber-700 underline underline-offset-2 whitespace-nowrap"
         >
           Add opening balance
         </button>
       ) : (
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-sm font-medium text-amber-800">CHF</span>
+          <span className="text-sm font-medium text-amber-700">CHF</span>
           <input
             type="number" min="0" step="100" placeholder="e.g. 50000"
             value={value} onChange={(e) => setValue(e.target.value)}
@@ -757,7 +868,7 @@ export default function CashflowPlanDetailPage() {
           title={plan.name}
           subtitle={
             <div className="flex flex-wrap items-center gap-3">
-              <span className={`status-pill ${STATUS_BADGE[plan.status] || "bg-gray-100 text-gray-600"}`}>
+              <span className={cn("status-pill", STATUS_BADGE[plan.status] || "bg-slate-100 text-slate-600")}>
                 {plan.status}
               </span>
               <span className="text-slate-400 text-xs">
@@ -795,7 +906,7 @@ export default function CashflowPlanDetailPage() {
               <button
                 onClick={loadPlan}
                 disabled={loading}
-                className="text-sm font-medium text-amber-800 underline underline-offset-2 whitespace-nowrap ml-4"
+                className="text-sm font-medium text-amber-700 underline underline-offset-2 whitespace-nowrap ml-4"
               >
                 Reload
               </button>
@@ -809,6 +920,11 @@ export default function CashflowPlanDetailPage() {
             </div>
           )}
 
+          {/* Strategy overlay panel */}
+          {plan.strategyOverlay && (
+            <StrategyOverlayPanel overlay={plan.strategyOverlay} />
+          )}
+
           {/* Read-only notice for submitted/approved */}
           {isReadOnly && (
             <div className="notice notice-info mb-4 text-sm">
@@ -820,37 +936,37 @@ export default function CashflowPlanDetailPage() {
           <Section title="Summary">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <div className="card p-4 flex flex-col gap-1">
-                <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">12-mo projected income</span>
-                <span className="text-xl font-bold text-emerald-700">{formatChfCents(stats.totalIncome)}</span>
-                <span className="text-xs text-gray-400">Next 12 projected months</span>
+                <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">12-mo projected income</span>
+                <span className="text-xl font-bold text-green-700">{formatChfCents(stats.totalIncome)}</span>
+                <span className="text-xs text-slate-400">Next 12 projected months</span>
               </div>
               <div className="card p-4 flex flex-col gap-1">
-                <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Total projected CapEx</span>
+                <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Total projected CapEx</span>
                 <span className="text-xl font-bold text-amber-700">{formatChfCents(stats.totalCapex)}</span>
-                <span className="text-xs text-gray-400">Over {plan.horizonMonths}-month horizon</span>
+                <span className="text-xs text-slate-400">Over {plan.horizonMonths}-month horizon</span>
               </div>
               <div className="card p-4 flex flex-col gap-1">
-                <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Peak monthly CapEx</span>
+                <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Peak monthly CapEx</span>
                 <span className="text-xl font-bold text-amber-700">{formatChfCents(stats.peakCapex?.v)}</span>
-                <span className="text-xs text-gray-400">
+                <span className="text-xs text-slate-400">
                   {stats.peakCapex?.b ? fmtMonth(stats.peakCapex.b.year, stats.peakCapex.b.month) : "—"}
                 </span>
               </div>
               <div className="card p-4 flex flex-col gap-1">
-                <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Lowest cumulative balance</span>
+                <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Lowest cumulative balance</span>
                 {hasOpeningBalance ? (
                   <>
-                    <span className={`text-xl font-bold ${(stats.lowestBal?.v ?? 0) < 0 ? "text-red-600" : "text-slate-800"}`}>
+                    <span className={cn("text-xl font-bold", (stats.lowestBal?.v ?? 0) < 0 ? "text-red-600" : "text-slate-800")}>
                       {formatChfCents(stats.lowestBal?.v)}
                     </span>
-                    <span className="text-xs text-gray-400">
+                    <span className="text-xs text-slate-400">
                       {stats.lowestBal?.b ? fmtMonth(stats.lowestBal.b.year, stats.lowestBal.b.month) : "—"}
                     </span>
                   </>
                 ) : (
                   <>
                     <span className="text-xl font-bold text-slate-300">—</span>
-                    <span className="text-xs text-gray-400">Set opening balance to see</span>
+                    <span className="text-xs text-slate-400">Set opening balance to see</span>
                   </>
                 )}
               </div>
@@ -881,6 +997,7 @@ export default function CashflowPlanDetailPage() {
               planId={plan.id}
               isDraft={isDraft}
               onRefresh={loadPlan}
+              alignmentMap={plan.strategyOverlay?.items?.reduce((m, it) => { m[it.assetId] = it; return m; }, {}) || {}}
             />
           </Panel>
 

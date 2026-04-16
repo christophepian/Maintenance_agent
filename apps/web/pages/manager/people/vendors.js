@@ -6,11 +6,11 @@ import PageShell from "../../../components/layout/PageShell";
 import PageHeader from "../../../components/layout/PageHeader";
 import PageContent from "../../../components/layout/PageContent";
 import Panel from "../../../components/layout/Panel";
-import SortableHeader from "../../../components/SortableHeader";
+import ConfigurableTable from "../../../components/ConfigurableTable";
 import { useTableSort, clientSort } from "../../../lib/tableUtils";
 import { authHeaders } from "../../../lib/api";
 
-const VENDOR_SORT_FIELDS = ["name", "phone", "email", "hourlyRate"];
+const VENDOR_SORT_FIELDS = ["name", "phone", "email", "hourlyRate", "companyName", "specialty"];
 
 function vendorFieldExtractor(c, field) {
   switch (field) {
@@ -18,9 +18,67 @@ function vendorFieldExtractor(c, field) {
     case "phone": return c.phone || "";
     case "email": return (c.email || "").toLowerCase();
     case "hourlyRate": return c.hourlyRate ?? -1;
+    case "companyName": return (c.companyName || "").toLowerCase();
+    case "specialty": return (c.specialty || "").toLowerCase();
     default: return "";
   }
 }
+
+const VENDOR_COLUMNS = [
+  {
+    id: "name",
+    label: "Name",
+    sortable: true,
+    alwaysVisible: true,
+    render: (c) => <span className="font-medium text-slate-900">{c.name || "\u2014"}</span>,
+  },
+  {
+    id: "phone",
+    label: "Phone",
+    sortable: true,
+    defaultVisible: true,
+    render: (c) => <span className="text-slate-600">{c.phone || "\u2014"}</span>,
+  },
+  {
+    id: "email",
+    label: "Email",
+    sortable: true,
+    defaultVisible: true,
+    render: (c) => <span className="text-slate-600">{c.email || "\u2014"}</span>,
+  },
+  {
+    id: "hourlyRate",
+    label: "Rate",
+    sortable: true,
+    defaultVisible: true,
+    render: (c) => <span className="text-slate-600">{c.hourlyRate != null ? `CHF ${c.hourlyRate}/h` : "\u2014"}</span>,
+  },
+  {
+    id: "companyName",
+    label: "Company",
+    sortable: true,
+    defaultVisible: false,
+    render: (c) => <span className="text-slate-600">{c.companyName || "\u2014"}</span>,
+  },
+  {
+    id: "specialty",
+    label: "Specialty",
+    sortable: true,
+    defaultVisible: false,
+    render: (c) => <span className="text-slate-600">{c.specialty || "\u2014"}</span>,
+  },
+  {
+    id: "actions",
+    label: "",
+    alwaysVisible: true,
+    className: "text-right",
+    render: (c) => (
+      <Link href={`/manager/people/vendors/${c.id}`} className="text-blue-600 hover:text-blue-700 text-xs font-medium" onClick={(e) => e.stopPropagation()}>
+        View \u2192
+      </Link>
+    ),
+  },
+];
 export default function PeopleVendorsPage() {
   const router = useRouter();
   const [contractors, setContractors] = useState([]);
@@ -89,37 +147,17 @@ export default function PeopleVendorsPage() {
             )}
 
             {!loading && filtered.length > 0 && (
-              <table className="inline-table">
-                  <thead>
-                    <tr>
-                      <SortableHeader label="Name" field="name" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
-                      <SortableHeader label="Phone" field="phone" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
-                      <SortableHeader label="Email" field="email" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
-                      <SortableHeader label="Rate" field="hourlyRate" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
-                      <th></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {sortedVendors.map((c) => (
-                      <tr key={c.id}>
-                        <td className="cell-bold">{c.name || "—"}</td>
-                        <td>{c.phone || "—"}</td>
-                        <td>{c.email || "—"}</td>
-                        <td>
-                          {c.hourlyRate != null ? `CHF ${c.hourlyRate}/h` : "—"}
-                        </td>
-                        <td className="text-right">
-                          <Link
-                            href={`/manager/people/vendors/${c.id}`}
-                            className="text-blue-600 hover:text-blue-800 text-xs font-medium"
-                          >
-                            View →
-                          </Link>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <ConfigurableTable
+                tableId="manager-vendors"
+                columns={VENDOR_COLUMNS}
+                data={sortedVendors}
+                rowKey={(c) => c.id}
+                sortField={sortField}
+                sortDir={sortDir}
+                onSort={handleSort}
+                onRowClick={(c) => router.push(`/manager/people/vendors/${c.id}`)}
+                emptyState={<p className="text-sm text-slate-500">No contractors found.</p>}
+              />
             )}
           </Panel>
         </PageContent>

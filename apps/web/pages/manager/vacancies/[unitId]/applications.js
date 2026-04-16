@@ -9,8 +9,11 @@ import { formatNumber } from "../../../../lib/format";
 import PageContent from "../../../../components/layout/PageContent";
 import Panel from "../../../../components/layout/Panel";
 import DocumentsPanel from "../../../../components/DocumentsPanel";
+import ErrorBanner from "../../../../components/ui/ErrorBanner";
 import { formatDisqualificationReasons } from "../../../../lib/formatDisqualificationReasons";
 import { authHeaders } from "../../../../lib/api";
+import Badge from "../../../../components/ui/Badge";
+import { cn } from "../../../../lib/utils";
 function scoreColor(score) {
   if (score >= 700) return "text-green-700 bg-green-50";
   if (score >= 400) return "text-amber-700 bg-amber-50";
@@ -18,9 +21,9 @@ function scoreColor(score) {
 }
 
 function confidenceBadge(confidence) {
-  if (confidence >= 80) return { label: "High", cls: "bg-green-100 text-green-700" };
-  if (confidence >= 50) return { label: "Medium", cls: "bg-amber-100 text-amber-700" };
-  return { label: "Low", cls: "bg-red-100 text-red-700" };
+  if (confidence >= 80) return { label: "High", variant: "success" };
+  if (confidence >= 50) return { label: "Medium", variant: "warning" };
+  return { label: "Low", variant: "destructive" };
 }
 
 export default function UnitApplicationsPage() {
@@ -177,7 +180,7 @@ export default function UnitApplicationsPage() {
     <AppShell role="MANAGER">
       <PageShell>
         <div className="px-4 pt-4">
-          <Link href="/manager/vacancies" className="text-sm text-blue-600 hover:text-blue-800">← Vacancies</Link>
+          <Link href="/manager/vacancies" className="text-sm text-blue-600 hover:text-blue-700">← Vacancies</Link>
         </div>
         <PageHeader
           title="Rental Applications"
@@ -203,9 +206,7 @@ export default function UnitApplicationsPage() {
         />
 
         <PageContent>
-          {error && (
-            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
-          )}
+          <ErrorBanner error={error} className="text-sm" />
 
           <Panel title={`${sorted.length} Application${sorted.length !== 1 ? "s" : ""}`}>
             {loading && <p className="text-sm text-slate-500">Loading…</p>}
@@ -244,11 +245,9 @@ export default function UnitApplicationsPage() {
                             <div className="flex items-center flex-wrap gap-x-2">
                               <button
                                 onClick={() => setExpandedDocApp(isDocExpanded ? null : row.id)}
-                                className={`font-medium underline decoration-dotted underline-offset-2 transition-colors ${
-                                  isDocExpanded
+                                className={cn("font-medium underline decoration-dotted underline-offset-2 transition-colors", isDocExpanded
                                     ? "text-indigo-700"
-                                    : "text-slate-900 hover:text-indigo-600"
-                                }`}
+                                    : "text-slate-900 hover:text-indigo-600")}
                                 title="Click to view corroborative documents"
                               >
                                 {row.name}
@@ -272,14 +271,14 @@ export default function UnitApplicationsPage() {
                             {row.income != null ? formatNumber(row.income) : "—"}
                           </td>
                           <td>
-                            <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${scoreColor(row.score || 0)}`}>
+                            <span className={cn("inline-flex rounded-full px-2 py-0.5 text-xs font-semibold", scoreColor(row.score || 0))}>
                               {row.score ?? "—"}
                             </span>
                           </td>
                           <td>
-                            <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${conf.cls}`}>
+                            <Badge variant={conf.variant} size="sm">
                               {row.confidence ?? 0}% {conf.label}
-                            </span>
+                            </Badge>
                           </td>
                           <td>
                             {(row.status || "").replace(/_/g, " ")}
@@ -319,7 +318,7 @@ export default function UnitApplicationsPage() {
                                 {/* Disqualification reasons (human-friendly) */}
                                 {row.disqualified && reasons.length > 0 && (
                                   <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3">
-                                    <h4 className="text-sm font-semibold text-red-800 mb-2">Disqualification Reasons</h4>
+                                    <h4 className="text-sm font-semibold text-red-700 mb-2">Disqualification Reasons</h4>
                                     <ul className="list-disc ml-5 space-y-1.5">
                                       {formatDisqualificationReasons(reasons).map((text, i) => (
                                         <li key={i} className="text-sm text-red-700 leading-relaxed">{text}</li>
@@ -352,11 +351,11 @@ export default function UnitApplicationsPage() {
                 This candidate will become eligible for selection.
               </p>
               <div className="mt-4">
-                <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1.5">
+                <label className="block text-xs font-medium uppercase tracking-wide text-slate-400 mb-1.5">
                   Reason for override *
                 </label>
                 <textarea
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                   rows={3}
                   placeholder="e.g. Verified income directly with employer; debt enforcement extract is clear…"
                   value={overrideReason}

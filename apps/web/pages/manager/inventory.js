@@ -5,12 +5,14 @@ import PageShell from "../../components/layout/PageShell";
 import PageHeader from "../../components/layout/PageHeader";
 import PageContent from "../../components/layout/PageContent";
 import Panel from "../../components/layout/Panel";
-import SortableHeader from "../../components/SortableHeader";
+import ConfigurableTable from "../../components/ConfigurableTable";
 import { useTableSort, clientSort } from "../../lib/tableUtils";
 import DepreciationStandards from "../../components/DepreciationStandards";
 import Link from "next/link";
+import ErrorBanner from "../../components/ui/ErrorBanner";
 import { authHeaders } from "../../lib/api";
 
+import { cn } from "../../lib/utils";
 const INVENTORY_SORT_FIELDS = ["name", "address", "canton", "unitCount", "category", "manufacturer", "scope"];
 
 function inventoryFieldExtractor(row, field) {
@@ -25,6 +27,80 @@ function inventoryFieldExtractor(row, field) {
     default: return "";
   }
 }
+
+const BUILDING_COLUMNS = [
+  {
+    id: "name",
+    label: "Name",
+    sortable: true,
+    alwaysVisible: true,
+    render: (b) => <span className="font-medium text-slate-900">{b.name || "Unnamed"}</span>,
+  },
+  {
+    id: "address",
+    label: "Address",
+    sortable: true,
+    defaultVisible: true,
+    render: (b) => <span className="text-slate-600">{b.address || "\u2014"}</span>,
+  },
+  {
+    id: "canton",
+    label: "Canton",
+    sortable: true,
+    defaultVisible: true,
+    render: (b) => <span className="text-slate-600">{b.canton || "\u2014"}</span>,
+  },
+  {
+    id: "unitCount",
+    label: "Units",
+    sortable: true,
+    defaultVisible: false,
+    render: (b) => <span className="text-slate-600">{b._count?.units ?? b.unitCount ?? "\u2014"}</span>,
+  },
+];
+
+const ASSET_MODEL_COLUMNS = [
+  {
+    id: "name",
+    label: "Name",
+    sortable: true,
+    alwaysVisible: true,
+    render: (m) => <span className="font-medium text-slate-900">{m.name}</span>,
+  },
+  {
+    id: "category",
+    label: "Category",
+    sortable: true,
+    defaultVisible: true,
+    render: (m) => <span className="text-slate-600">{m.category || "\u2014"}</span>,
+  },
+  {
+    id: "manufacturer",
+    label: "Manufacturer",
+    sortable: true,
+    defaultVisible: true,
+    render: (m) => <span className="text-slate-600">{m.manufacturer || "\u2014"}</span>,
+  },
+  {
+    id: "scope",
+    label: "Scope",
+    sortable: true,
+    defaultVisible: true,
+    render: (m) => <span className="text-slate-600">{m.orgId ? "Org" : "Global"}</span>,
+  },
+  {
+    id: "usefulLifeMonths",
+    label: "Useful Life",
+    defaultVisible: false,
+    render: (m) => <span className="text-slate-600">{m.usefulLifeMonths ? `${Math.round(m.usefulLifeMonths / 12)}y` : "\u2014"}</span>,
+  },
+  {
+    id: "replacementCostChf",
+    label: "Replace Cost",
+    defaultVisible: false,
+    render: (m) => <span className="text-slate-600">{typeof m.replacementCostChf === "number" ? `CHF ${m.replacementCostChf.toLocaleString()}` : "\u2014"}</span>,
+  },
+];
 
 const INVENTORY_TABS = [
   { key: "BUILDINGS", label: "Buildings" },
@@ -126,7 +202,7 @@ export default function ManagerInventoryPage() {
       <PageShell>
         <PageHeader title="Inventory" subtitle="Buildings, units, assets and depreciation schedules." />
         <PageContent>
-          {error && <div className="error-banner">{error}</div>}
+          <ErrorBanner error={error} />
 
           {/* Tab strip */}
           <div className="tab-strip">
@@ -176,30 +252,17 @@ export default function ManagerInventoryPage() {
                 <p className="empty-state-text">No buildings found.</p>
               </div>
             ) : (
-              <div style={{ overflowX: "auto" }}>
-                <table className="inline-table">
-                  <thead>
-                    <tr>
-                      <SortableHeader label="Name" field="name" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
-                      <SortableHeader label="Address" field="address" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
-                      <SortableHeader label="Canton" field="canton" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {sortedBuildings.map((b) => (
-                      <tr
-                        key={b.id}
-                        className="cursor-pointer hover:bg-slate-50"
-                        onClick={() => router.push(`/admin-inventory/buildings/${b.id}?from=/manager/inventory`)}
-                      >
-                        <td className="cell-bold">{b.name || "Unnamed"}</td>
-                        <td>{b.address || "—"}</td>
-                        <td>{b.canton || "—"}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <ConfigurableTable
+                tableId="inventory-buildings"
+                columns={BUILDING_COLUMNS}
+                data={sortedBuildings}
+                rowKey={(b) => b.id}
+                sortField={sortField}
+                sortDir={sortDir}
+                onSort={handleSort}
+                onRowClick={(b) => router.push(`/admin-inventory/buildings/${b.id}?from=/manager/inventory`)}
+                emptyState={<p className="text-sm text-slate-500">No buildings found.</p>}
+              />
             )}
           </div>
 
@@ -212,28 +275,16 @@ export default function ManagerInventoryPage() {
                 <p className="empty-state-text">No asset models configured yet.</p>
               </div>
             ) : (
-              <div style={{ overflowX: "auto" }}>
-                <table className="inline-table">
-                  <thead>
-                    <tr>
-                      <SortableHeader label="Name" field="name" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
-                      <SortableHeader label="Category" field="category" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
-                      <SortableHeader label="Manufacturer" field="manufacturer" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
-                      <SortableHeader label="Scope" field="scope" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {sortedAssets.map((m) => (
-                      <tr key={m.id}>
-                        <td className="cell-bold">{m.name}</td>
-                        <td>{m.category || "—"}</td>
-                        <td>{m.manufacturer || "—"}</td>
-                        <td>{m.orgId ? "Org" : "Global"}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <ConfigurableTable
+                tableId="inventory-assets"
+                columns={ASSET_MODEL_COLUMNS}
+                data={sortedAssets}
+                rowKey={(m) => m.id}
+                sortField={sortField}
+                sortDir={sortDir}
+                onSort={handleSort}
+                emptyState={<p className="text-sm text-slate-500">No asset models configured yet.</p>}
+              />
             )}
           </div>
           {/* Decisions tab */}
@@ -269,7 +320,7 @@ export default function ManagerInventoryPage() {
                 <p className="empty-state-text">No assets recorded for this unit yet.</p>
               </div>
             ) : decisionsData ? (
-              <div style={{ overflowX: "auto" }}>
+              <div className="overflow-x-auto">
                 <table className="inline-table">
                   <thead>
                     <tr>
@@ -339,20 +390,16 @@ export default function ManagerInventoryPage() {
                               </span>
                             )}
                           </td>
-                          <td className={`text-right font-medium ${
-                            item.repairToReplacementRatio != null
+                          <td className={cn("text-right font-medium", item.repairToReplacementRatio != null
                               ? item.repairToReplacementRatio >= 0.6 ? "text-red-600" : item.repairToReplacementRatio >= 0.4 ? "text-orange-600" : item.repairToReplacementRatio >= 0.25 ? "text-amber-600" : "text-slate-700"
-                              : "text-slate-400"
-                          }`}>
+                              : "text-slate-400")}>
                             {ratioDisplay}
                           </td>
-                          <td className={`text-right ${
-                            item.breakEvenMonths != null && item.breakEvenMonths <= 12 ? "text-red-600 font-semibold" : item.breakEvenMonths != null && item.breakEvenMonths <= 36 ? "text-amber-600" : "text-slate-700"
-                          }`}>
+                          <td className={cn("text-right", item.breakEvenMonths != null && item.breakEvenMonths <= 12 ? "text-red-600 font-semibold" : item.breakEvenMonths != null && item.breakEvenMonths <= 36 ? "text-amber-600" : "text-slate-700")}>
                             {breakEvenDisplay}
                           </td>
                           <td>
-                            <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold ${style.badge}`}>
+                            <span className={cn("inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold", style.badge)}>
                               {style.label}
                             </span>
                           </td>

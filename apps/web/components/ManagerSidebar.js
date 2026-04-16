@@ -9,7 +9,6 @@ import {
   TrendingUp,
   Users,
   Building2,
-  Scale,
   Settings,
 } from "lucide-react";
 
@@ -25,7 +24,6 @@ const MANAGER_NAV = [
   { label: "Finances",  icon: Wallet,      href: "/manager/finance" },
   { label: "Cashflow",  icon: TrendingUp,  href: "/manager/cashflow" },
   { label: "People",    icon: Users,       href: "/manager/people" },
-  { label: "Legal",     icon: Scale,     href: "/manager/legal" },
   { label: "Settings",  icon: Settings,  href: "/manager/settings" },
 ];
 
@@ -43,7 +41,7 @@ export default function ManagerSidebar() {
   }, [pathname]);
 
   return (
-    <nav className="flex flex-col gap-1 py-2">
+    <nav aria-label="Manager navigation" className="flex flex-col gap-1 py-2">
       {MANAGER_NAV.map((item, index) => {
         const Icon = item.icon;
         const isActive = index === activeIndex;

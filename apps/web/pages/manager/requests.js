@@ -1,15 +1,17 @@
-import { useEffect, useState, useMemo, useCallback, Fragment } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import AppShell from "../../components/AppShell";
 import PageShell from "../../components/layout/PageShell";
 import PageHeader from "../../components/layout/PageHeader";
 import PageContent from "../../components/layout/PageContent";
-import Panel from "../../components/layout/Panel";
-import SortableHeader from "../../components/SortableHeader";
+import ConfigurableTable from "../../components/ConfigurableTable";
 import PaginationControls from "../../components/PaginationControls";
 import { useTableSort, useTablePagination, clientSort } from "../../lib/tableUtils";
 import { authHeaders } from "../../lib/api";
+import Badge from "../../components/ui/Badge";
+import { requestVariant } from "../../lib/statusVariants";
+import { cn } from "../../lib/utils";
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
@@ -21,7 +23,7 @@ const STATUS_TABS = [
   { key: "RFP_OPEN",         label: "RFP Open",         statuses: ["RFP_PENDING"] },
   { key: "AUTO_APPROVED",    label: "Auto-Approved",    statuses: ["AUTO_APPROVED"] },
   { key: "ACTIVE",           label: "Active",           statuses: ["APPROVED", "ASSIGNED", "IN_PROGRESS"] },
-  { key: "DONE",             label: "Completed",        statuses: ["COMPLETED", "OWNER_REJECTED"] },
+  { key: "DONE",             label: "Completed",        statuses: ["COMPLETED", "REJECTED"] },
   { key: "RFPS",             label: "RFPs",             statuses: null, href: "/manager/rfps" },
 ];
 
@@ -51,8 +53,6 @@ function formatCurrency(chf) {
   return `CHF\u00A0${formatted}`;
 }
 
-const REQUEST_SORT_FIELDS = ["requestNumber", "status", "building", "category", "estimatedCost", "contractor", "createdAt", "requestor", "nextApprover"];
-
 function nextApproverLabel(status) {
   switch (status) {
     case "PENDING_REVIEW":         return "Manager";
@@ -61,8 +61,239 @@ function nextApproverLabel(status) {
     case "APPROVED":
     case "ASSIGNED":
     case "IN_PROGRESS":            return "Contractor";
-    default:                       return "—";
+    default:                       return "\u2014";
   }
+}
+
+const REQUEST_SORT_FIELDS = ["requestNumber", "status", "building", "category", "urgency", "createdAt", "estimatedCost", "contractor", "nextApprover", "payingParty", "approvalSource"];
+
+// Column definitions for ConfigurableTable — render closures capture outer scope via page component
+function buildRequestColumns({ assigningId, setAssigningId, selectedContractorId, setSelectedContractorId, contractors, actionLoading, approveRequest, rejectRequest, doAssignContractor, doUnassignContractor, getAvailableCTAs }) {
+  return [
+    {
+      id: "requestNumber",
+      label: "#",
+      sortable: true,
+      alwaysVisible: true,
+      className: "w-16",
+      render: (r) => (
+        <span className="font-mono text-slate-500">
+          {r.requestNumber ? `#${r.requestNumber}` : "\u2014"}
+        </span>
+      ),
+    },
+    {
+      id: "status",
+      label: "Status",
+      sortable: true,
+      defaultVisible: true,
+      render: (r) => (
+        <>
+          <StatusBadge status={r.status} />
+          {r.payingParty === "TENANT" && (
+            <span className="ml-1.5 inline-block rounded-full border border-orange-200 bg-orange-50 px-2 py-0.5 text-[10px] font-semibold text-orange-700">
+              Tenant-funded
+            </span>
+          )}
+        </>
+      ),
+    },
+    {
+      id: "building",
+      label: "Building / Unit",
+      sortable: true,
+      defaultVisible: true,
+      render: (r) => (
+        <span className="text-slate-700">
+          {r.buildingId ? (
+            <Link href={`/manager/buildings/${r.buildingId}/financials`} className="text-indigo-600 hover:underline" onClick={(e) => e.stopPropagation()}>
+              {r.buildingName || "\u2014"}
+            </Link>
+          ) : (r.buildingName || "\u2014")}
+          {r.unitNumber ? (
+            r.unitId ? (
+              <span className="text-slate-400"> / <Link href={`/admin-inventory/units/${r.unitId}`} className="text-indigo-600 hover:underline" onClick={(e) => e.stopPropagation()}>{r.unitNumber}</Link></span>
+            ) : (
+              <span className="text-slate-400"> / {r.unitNumber}</span>
+            )
+          ) : ""}
+        </span>
+      ),
+    },
+    {
+      id: "category",
+      label: "Category",
+      sortable: true,
+      defaultVisible: true,
+      render: (r) => (
+        <span className="inline-block rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">
+          {r.category || "\u2014"}
+        </span>
+      ),
+    },
+    {
+      id: "description",
+      label: "Description",
+      defaultVisible: true,
+      className: "max-w-[260px]",
+      render: (r) => (
+        <span className="block truncate text-slate-600">{r.description || "\u2014"}</span>
+      ),
+    },
+    {
+      id: "urgency",
+      label: "Emergency",
+      sortable: true,
+      defaultVisible: true,
+      className: "w-24 text-center",
+      render: (r) => (
+        (r.urgency === "EMERGENCY" || r.urgency === "HIGH") ? (
+          <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold", r.urgency === "EMERGENCY"
+              ? "bg-red-100 text-red-700 border border-red-200"
+              : "bg-orange-100 text-orange-700 border border-orange-200")}>
+            <span className="text-xs">{r.urgency === "EMERGENCY" ? "\u{1F6A8}" : "\u26A0"}</span>
+            {r.urgency === "EMERGENCY" ? "Emergency" : "High"}
+          </span>
+        ) : (
+          <span className="text-slate-300">\u2014</span>
+        )
+      ),
+    },
+    {
+      id: "contractor",
+      label: "Contractor",
+      sortable: true,
+      defaultVisible: false,
+      render: (r) => (
+        <span className="text-slate-600 text-xs">
+          {r.assignedContractorName || <span className="text-slate-300">\u2014</span>}
+        </span>
+      ),
+    },
+    {
+      id: "estimatedCost",
+      label: "Est. Cost",
+      sortable: true,
+      defaultVisible: false,
+      className: "text-right",
+      render: (r) => (
+        <span className="font-mono text-xs text-slate-600">{formatCurrency(r.estimatedCost)}</span>
+      ),
+    },
+    {
+      id: "nextApprover",
+      label: "Next Approver",
+      sortable: true,
+      defaultVisible: false,
+      render: (r) => (
+        <span className="text-xs text-slate-600">{nextApproverLabel(r.status)}</span>
+      ),
+    },
+    {
+      id: "payingParty",
+      label: "Paying Party",
+      sortable: true,
+      defaultVisible: false,
+      render: (r) => (
+        <span className={cn("inline-block rounded-full px-2 py-0.5 text-[11px] font-medium", r.payingParty === "TENANT"
+            ? "bg-orange-50 text-orange-700 border border-orange-200"
+            : "bg-slate-50 text-slate-600 border border-slate-200")}>
+          {r.payingParty === "TENANT" ? "Tenant" : "Landlord"}
+        </span>
+      ),
+    },
+    {
+      id: "approvalSource",
+      label: "Approval Source",
+      sortable: true,
+      defaultVisible: false,
+      render: (r) => (
+        <span className="text-xs text-slate-500">
+          {r.approvalSource ? r.approvalSource.replace("_", " ").toLowerCase().replace(/\b\w/g, c => c.toUpperCase()) : <span className="text-slate-300">\u2014</span>}
+        </span>
+      ),
+    },
+    {
+      id: "createdAt",
+      label: "Created",
+      sortable: true,
+      defaultVisible: true,
+      className: "hidden sm:table-cell",
+      render: (r) => (
+        <span className="text-slate-400 text-xs">{formatDate(r.createdAt)}</span>
+      ),
+    },
+    {
+      id: "actions",
+      label: "Actions",
+      alwaysVisible: true,
+      render: (r) => {
+        const ctaList = getAvailableCTAs(r, assigningId);
+        return (
+          <div className="flex items-center gap-1.5 flex-wrap" onClick={(e) => e.stopPropagation()}>
+            {ctaList.map((cta) => {
+              switch (cta) {
+                case 'approve':
+                  return (
+                    <button key="approve" onClick={() => approveRequest(r.id)} disabled={actionLoading === r.id}
+                      className="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-50">
+                      {actionLoading === r.id ? "\u2026" : "Approve"}
+                    </button>
+                  );
+                case 'reject':
+                  return (
+                    <button key="reject" onClick={() => rejectRequest(r.id)} disabled={actionLoading === r.id}
+                      className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50">
+                      {actionLoading === r.id ? "\u2026" : "Reject"}
+                    </button>
+                  );
+                case 'view_rfp':
+                  return (
+                    <a key="view_rfp" href="/manager/rfps" className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-700">
+                      View RFP
+                    </a>
+                  );
+                case 'assign':
+                  return assigningId === r.id ? (
+                    <div key="assign-modal" className="flex items-center gap-1.5">
+                      <select value={selectedContractorId} onChange={(e) => setSelectedContractorId(e.target.value)}
+                        className="rounded border border-slate-300 px-2 py-1 text-xs">
+                        <option value="">Select&hellip;</option>
+                        {contractors.map((c) => (
+                          <option key={c.id} value={c.id}>{c.name || c.companyName || c.id.slice(0, 8)}</option>
+                        ))}
+                      </select>
+                      <button onClick={() => doAssignContractor(r.id)} disabled={!selectedContractorId || actionLoading === r.id}
+                        className="rounded-lg bg-blue-600 px-2 py-1 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50">
+                        {actionLoading === r.id ? "\u2026" : "OK"}
+                      </button>
+                      <button onClick={() => { setAssigningId(null); setSelectedContractorId(""); }}
+                        className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-500 hover:bg-slate-50">
+                        &times;
+                      </button>
+                    </div>
+                  ) : (
+                    <button key="assign" onClick={() => setAssigningId(r.id)}
+                      className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700">
+                      Assign
+                    </button>
+                  );
+                case 'unassign':
+                  return (
+                    <button key="unassign" onClick={() => doUnassignContractor(r.id)} disabled={actionLoading === r.id}
+                      className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700 disabled:opacity-50">
+                      {actionLoading === r.id ? "\u2026" : "Unassign"}
+                    </button>
+                  );
+                default:
+                  return null;
+              }
+            })}
+          </div>
+        );
+      },
+    },
+  ];
 }
 
 function requestFieldExtractor(r, field) {
@@ -71,11 +302,16 @@ function requestFieldExtractor(r, field) {
     case "status": return r.status ?? "";
     case "building": return (r.buildingName || "").toLowerCase();
     case "category": return (r.category || "").toLowerCase();
+    case "urgency": {
+      const order = { EMERGENCY: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
+      return order[r.urgency] ?? 2;
+    }
+    case "createdAt": return r.createdAt || "";
     case "estimatedCost": return r.estimatedCost ?? -1;
     case "contractor": return (r.assignedContractorName || "").toLowerCase();
-    case "createdAt": return r.createdAt || "";
-    case "requestor": return r.tenant?.name ? r.tenant.name.toLowerCase() : "manager";
     case "nextApprover": return nextApproverLabel(r.status).toLowerCase();
+    case "payingParty": return (r.payingParty || "").toLowerCase();
+    case "approvalSource": return (r.approvalSource || "").toLowerCase();
     default: return "";
   }
 }
@@ -84,24 +320,11 @@ function requestFieldExtractor(r, field) {
 // Badge sub-components (Tailwind)
 // ---------------------------------------------------------------------------
 
-const STATUS_CLASSES = {
-  PENDING_REVIEW:          "bg-amber-50 text-amber-700 border-amber-200",
-  PENDING_OWNER_APPROVAL:  "bg-rose-50 text-rose-700 border-rose-200",
-  RFP_PENDING:             "bg-indigo-50 text-indigo-700 border-indigo-200",
-  APPROVED:                "bg-emerald-50 text-emerald-700 border-emerald-200",
-  AUTO_APPROVED:           "bg-emerald-50 text-emerald-700 border-emerald-200",
-  ASSIGNED:                "bg-blue-50 text-blue-700 border-blue-200",
-  IN_PROGRESS:             "bg-blue-50 text-blue-700 border-blue-200",
-  COMPLETED:               "bg-violet-50 text-violet-700 border-violet-200",
-  OWNER_REJECTED:           "bg-red-50 text-red-700 border-red-200",
-};
-
 function StatusBadge({ status }) {
-  const cls = STATUS_CLASSES[status] || "bg-slate-50 text-slate-600 border-slate-200";
   return (
-    <span className={`inline-block rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${cls}`}>
-      {status.replace(/_/g, " ")}
-    </span>
+    <Badge variant={requestVariant(status)} size="sm">
+      {(status || "").replace(/_/g, " ")}
+    </Badge>
   );
 }
 
@@ -111,17 +334,17 @@ function StatusBadge({ status }) {
 
 const OBLIGATION_META = {
   OBLIGATED: {
-    cls: "bg-emerald-50 text-emerald-800 border-emerald-200",
+    cls: "bg-green-50 text-green-700 border-green-200",
     heading: "Landlord is legally obligated to repair",
     description: "Swiss law requires the landlord to fix this. Approve the repair and assign a contractor.",
   },
   DISCRETIONARY: {
-    cls: "bg-amber-50 text-amber-800 border-amber-200",
+    cls: "bg-amber-50 text-amber-700 border-amber-200",
     heading: "Repair is at the landlord\u2019s discretion",
     description: "This isn\u2019t strictly required by law, but is common practice. Consider the tenant relationship and cost.",
   },
   NOT_OBLIGATED: {
-    cls: "bg-red-50 text-red-800 border-red-200",
+    cls: "bg-red-50 text-red-700 border-red-200",
     heading: "Landlord is not obligated",
     description: "Based on Swiss law and the asset\u2019s condition, this repair falls on the tenant. You may still choose to cover it.",
   },
@@ -149,12 +372,12 @@ function getAvailableCTAs(r, assigningId) {
     PENDING_REVIEW:           [],                         // auto-routed by legal engine
     RFP_PENDING:              ['view_rfp'],
     AUTO_APPROVED:            ['view_rfp'],
-    PENDING_OWNER_APPROVAL:   ['approve', 'reject'],      // no RFP yet — owner decides first
+    PENDING_OWNER_APPROVAL:   [],                         // owner-only — manager cannot approve/reject on behalf
     APPROVED:                 ['assign'],
     ASSIGNED:                 ['unassign'],
     IN_PROGRESS:              ['view_rfp'],               // read-only link
     COMPLETED:                [],
-    OWNER_REJECTED:           [],
+    REJECTED:                  [],
   };
 
   const base = ctaMap[r.status] || [];
@@ -227,8 +450,8 @@ function getNextStep(r, legalDecision) {
         };
       }
       return {
-        label: 'Awaiting owner decision',
-        description: 'The owner must approve or reject before an RFP is created.',
+        label: 'Awaiting owner approval',
+        description: 'The selected quote exceeds the building\u2019s auto-approval threshold. The owner must approve before work can begin.',
         variant: 'warn',
       };
 
@@ -246,10 +469,10 @@ function getNextStep(r, legalDecision) {
         variant: 'info',
       };
 
-    case 'OWNER_REJECTED':
+    case 'REJECTED':
       return {
-        label: 'Rejected by owner',
-        description: 'The owner declined this request.',
+        label: 'Rejected',
+        description: 'This request was rejected. The tenant may choose to self-pay.',
         variant: 'error',
       };
 
@@ -272,7 +495,7 @@ function getNextStep(r, legalDecision) {
 function Chevron({ expanded, className = "" }) {
   return (
     <svg
-      className={`h-4 w-4 text-slate-400 transition-transform ${expanded ? "rotate-90" : ""} ${className}`}
+      className={cn("h-4 w-4 text-slate-400 transition-transform", expanded ? "rotate-90" : "", className)}
       fill="none" viewBox="0 0 24 24" stroke="currentColor"
     >
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -289,19 +512,19 @@ function DepreciationBar({ signal }) {
   const pct = signal.remainingLifePct;
   const ageYears = Math.round(signal.ageMonths / 12 * 10) / 10;
   const lifespanYears = Math.round(signal.usefulLifeMonths / 12);
-  const barColor = pct > 50 ? "bg-emerald-400" : pct > 20 ? "bg-amber-400" : "bg-red-400";
+  const barColor = pct > 50 ? "bg-green-400" : pct > 20 ? "bg-amber-400" : "bg-red-400";
   const usedPct = Math.max(2, 100 - pct);
 
   return (
     <div className="mt-2">
       <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
         <span>Age: {ageYears} yrs of {lifespanYears}-yr lifespan</span>
-        <span className={`font-semibold ${signal.fullyDepreciated ? "text-red-600" : "text-slate-700"}`}>
+        <span className={cn("font-semibold", signal.fullyDepreciated ? "text-red-600" : "text-slate-700")}>
           {signal.fullyDepreciated ? "Fully depreciated" : `${pct}% remaining life`}
         </span>
       </div>
       <div className="h-2 w-full rounded-full bg-slate-100">
-        <div className={`h-2 rounded-full ${barColor} transition-all duration-500`} style={{ width: `${usedPct}%` }} />
+        <div className={cn("h-2 rounded-full", barColor, "transition-all duration-500")} style={{ width: `${usedPct}%` }} />
       </div>
       {signal.notes && (
         <p className="mt-1 text-[11px] text-slate-400">Source: {signal.notes}</p>
@@ -314,7 +537,7 @@ function DepreciationBar({ signal }) {
 // Legal Recommendation Panel (single column, reordered, hand-holding UX)
 // ---------------------------------------------------------------------------
 
-function LegalRecommendationPanel({ decision, loading: isLoading, error: loadError }) {
+function LegalRecommendationPanel({ decision, loading: isLoading, error: loadError, requestStatus }) {
   if (isLoading) {
     return (
       <div className="flex items-center gap-3 border-t border-slate-100 bg-slate-50 px-6 py-4">
@@ -347,7 +570,7 @@ function LegalRecommendationPanel({ decision, loading: isLoading, error: loadErr
     <div className="px-6 py-4">
 
       {/* Hero verdict card */}
-      <div className={`rounded-lg border p-4 ${ob.cls}`}>
+      <div className={cn("rounded-lg border p-4", ob.cls)}>
         <div className="flex items-start justify-between gap-4">
           <div>
             <h4 className="text-sm font-bold">{ob.heading}</h4>
@@ -384,7 +607,7 @@ function LegalRecommendationPanel({ decision, loading: isLoading, error: loadErr
           <p className="text-xs font-semibold text-slate-600 mb-1">Asset depreciation</p>
           <DepreciationBar signal={decision.depreciationSignal} />
           {decision.depreciationSignal.fullyDepreciated && (
-            <div className="mt-2 rounded-md bg-red-50 border border-red-200 px-3 py-1.5 text-xs text-red-700 font-medium">
+            <div className="mt-2 rounded-lg bg-red-50 border border-red-200 px-3 py-1.5 text-xs text-red-700 font-medium">
               Asset has exceeded its useful life &mdash; landlord typically bears full replacement cost.
             </div>
           )}
@@ -435,7 +658,7 @@ function LegalRecommendationPanel({ decision, loading: isLoading, error: loadErr
       {/* Rent reduction estimate (Phase B) */}
       {decision.rentReductionEstimate && (
         <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3">
-          <p className="text-xs font-semibold text-amber-800 mb-1">Estimated rent reduction</p>
+          <p className="text-xs font-semibold text-amber-700 mb-1">Estimated rent reduction</p>
           <div className="flex items-baseline gap-3 flex-wrap">
             <span className="text-lg font-bold text-amber-900">
               CHF {decision.rentReductionEstimate.totalReductionChf?.toFixed(0) ?? "—"}
@@ -451,22 +674,50 @@ function LegalRecommendationPanel({ decision, loading: isLoading, error: loadErr
         </div>
       )}
 
-      {/* Recommended actions (Phase C) */}
-      {decision.recommendedActions?.length > 0 && (
-        <div className="mt-3">
-          <p className="text-xs font-semibold text-slate-600 mb-1.5">Recommended actions</p>
-          <div className="flex flex-wrap gap-1.5">
-            {decision.recommendedActions.map((action, i) => (
-              <span
-                key={i}
-                className="inline-flex items-center rounded-full bg-blue-50 border border-blue-200 px-2.5 py-0.5 text-[11px] font-medium text-blue-700"
-              >
-                {action.replace(/_/g, " ")}
-              </span>
-            ))}
+      {/* Recommended actions (Phase C) — context-aware based on request status */}
+      {decision.recommendedActions?.length > 0 && (() => {
+        // Statuses that mean we're past the initial review stage
+        const pastReview = ['RFP_PENDING', 'AUTO_APPROVED', 'PENDING_OWNER_APPROVAL', 'APPROVED', 'ASSIGNED', 'IN_PROGRESS', 'COMPLETED', 'REJECTED'];
+        const pastOwnerApproval = ['APPROVED', 'ASSIGNED', 'IN_PROGRESS', 'COMPLETED'];
+        const isPastReview = pastReview.includes(requestStatus);
+        const isPastOwnerApproval = pastOwnerApproval.includes(requestStatus);
+
+        const contextActions = decision.recommendedActions.map((action) => {
+          // Mark actions as completed if the request has already progressed past them
+          if (action === 'CREATE_RFP' && isPastReview) {
+            return { label: '\u2713 RFP created', done: true };
+          }
+          if (action === 'NOTIFY_MANAGER' && isPastReview) {
+            return { label: '\u2713 Manager notified', done: true };
+          }
+          if (action === 'ROUTE_TO_OWNER' && requestStatus === 'PENDING_OWNER_APPROVAL') {
+            return { label: '\u2713 Routed to owner \u2014 awaiting decision', done: false };
+          }
+          if (action === 'ROUTE_TO_OWNER' && isPastOwnerApproval) {
+            return { label: '\u2713 Owner decision received', done: true };
+          }
+          // Default: show the raw action as a pending recommendation
+          return { label: action.replace(/_/g, ' '), done: false };
+        });
+
+        return (
+          <div className="mt-3">
+            <p className="text-xs font-semibold text-slate-600 mb-1.5">Recommended actions</p>
+            <div className="flex flex-wrap gap-1.5">
+              {contextActions.map((a, i) => (
+                <span
+                  key={i}
+                  className={cn("inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-medium", a.done
+                      ? 'bg-green-50 border-green-200 text-green-700'
+                      : 'bg-blue-50 border-blue-200 text-blue-700')}
+                >
+                  {a.label}
+                </span>
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Defect signals summary */}
       {decision.defectSignals && (decision.defectSignals.severity || decision.defectSignals.affectedArea) && (
@@ -505,6 +756,144 @@ function LegalRecommendationPanel({ decision, loading: isLoading, error: loadErr
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Repair vs Replace Arbitrage Panel
+// ---------------------------------------------------------------------------
+
+const RECOMMENDATION_STYLES = {
+  REPAIR:           { badge: "bg-green-100 text-green-700 border-green-200", label: "Repair" },
+  MONITOR:          { badge: "bg-amber-100 text-amber-700 border-amber-200", label: "Monitor" },
+  PLAN_REPLACEMENT: { badge: "bg-orange-100 text-orange-700 border-orange-200", label: "Plan Replacement" },
+  REPLACE:          { badge: "bg-red-100 text-red-700 border-red-200", label: "Replace" },
+};
+
+function RepairReplacePanel({ state, requestCategory }) {
+  if (!state) return null;
+
+  if (state.loading) {
+    return (
+      <div className="flex items-center gap-3 border-t border-slate-100 bg-slate-50 px-6 py-4">
+        <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
+        <span className="text-sm text-slate-500">Analysing repair vs replace&hellip;</span>
+      </div>
+    );
+  }
+
+  if (state.error) {
+    return (
+      <div className="border-t border-red-100 bg-red-50 px-6 py-3">
+        <p className="text-sm text-red-600">\u26A0 Could not load repair/replace analysis: {state.error}</p>
+      </div>
+    );
+  }
+
+  const items = state.data;
+  if (!items || items.length === 0) return null;
+
+  // Sort: items matching the request category first, then by recommendation severity
+  const severity = { REPLACE: 0, PLAN_REPLACEMENT: 1, MONITOR: 2, REPAIR: 3 };
+  const sorted = [...items].sort((a, b) => {
+    const aCat = requestCategory && (a.topic || "").toLowerCase().includes(requestCategory.toLowerCase()) ? 0 : 1;
+    const bCat = requestCategory && (b.topic || "").toLowerCase().includes(requestCategory.toLowerCase()) ? 0 : 1;
+    if (aCat !== bCat) return aCat - bCat;
+    return (severity[a.recommendation] ?? 9) - (severity[b.recommendation] ?? 9);
+  });
+
+  return (
+    <div className="px-6 py-4">
+      <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">Repair vs Replace Analysis</p>
+
+      <div className="space-y-2">
+        {sorted.map((item) => {
+          const style = RECOMMENDATION_STYLES[item.recommendation] || RECOMMENDATION_STYLES.REPAIR;
+          const ageYears = item.ageMonths != null ? (item.ageMonths / 12).toFixed(1) : null;
+          const lifeYears = item.usefulLifeMonths != null ? Math.round(item.usefulLifeMonths / 12) : null;
+          const depPct = item.depreciationPct;
+          const ratioDisplay = item.repairToReplacementRatio != null
+            ? `${Math.round(item.repairToReplacementRatio * 100)}%`
+            : null;
+          const breakEvenDisplay = item.breakEvenMonths != null
+            ? item.breakEvenMonths === 0
+              ? "Exceeded"
+              : item.breakEvenMonths < 12
+                ? `${item.breakEvenMonths} mo`
+                : `${(item.breakEvenMonths / 12).toFixed(1)} yr`
+            : null;
+          const isRelevant = requestCategory && (item.topic || "").toLowerCase().includes(requestCategory.toLowerCase());
+
+          return (
+            <div
+              key={item.assetId}
+              className={cn("rounded-lg border p-3", isRelevant
+                  ? "border-indigo-200 bg-indigo-50/40"
+                  : "border-slate-200 bg-white")}
+              title={item.recommendationReason}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-medium text-slate-800 truncate">{item.assetName}</p>
+                    {isRelevant && (
+                      <span className="shrink-0 rounded-full bg-indigo-100 border border-indigo-200 px-2 py-0.5 text-[10px] font-semibold text-indigo-700">
+                        Related
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    {item.topic || "\u2014"}
+                    {ageYears && lifeYears ? ` \u00B7 ${ageYears} yr of ${lifeYears}-yr life` : ""}
+                  </p>
+                </div>
+                <span className={cn("shrink-0 inline-block rounded-full border px-2.5 py-0.5 text-[11px] font-semibold", style.badge)}>
+                  {style.label}
+                </span>
+              </div>
+
+              {/* Metrics row */}
+              <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-[11px] text-slate-500">
+                {depPct != null && (
+                  <span>
+                    Depreciation:{" "}
+                    <span className={cn("font-semibold", depPct >= 100 ? "text-red-600" : depPct >= 85 ? "text-orange-600" : depPct >= 65 ? "text-amber-600" : "text-slate-700")}>
+                      {depPct}%
+                    </span>
+                  </span>
+                )}
+                {item.cumulativeRepairCostChf > 0 && (
+                  <span>Repairs: <span className="font-medium text-slate-700">CHF {item.cumulativeRepairCostChf.toLocaleString("de-CH")}</span></span>
+                )}
+                {item.estimatedReplacementCostChf != null && (
+                  <span>Replace est.: <span className="font-medium text-slate-700">CHF {item.estimatedReplacementCostChf.toLocaleString("de-CH")}</span></span>
+                )}
+                {ratioDisplay && (
+                  <span>
+                    Ratio:{" "}
+                    <span className={cn("font-semibold", item.repairToReplacementRatio >= 0.6 ? "text-red-600" : item.repairToReplacementRatio >= 0.4 ? "text-orange-600" : "text-slate-700")}>
+                      {ratioDisplay}
+                    </span>
+                  </span>
+                )}
+                {breakEvenDisplay && (
+                  <span>
+                    Break-even:{" "}
+                    <span className={cn("font-semibold", item.breakEvenMonths <= 12 ? "text-red-600" : item.breakEvenMonths <= 36 ? "text-amber-600" : "text-slate-700")}>
+                      {breakEvenDisplay}
+                    </span>
+                  </span>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <p className="mt-2 text-[11px] text-slate-400">
+        Ratio = cumulative repair cost \u00F7 replacement est. Hover a card for the recommendation reason.
+      </p>
     </div>
   );
 }
@@ -609,7 +998,7 @@ function RequestPhotosPanel({ requestId }) {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
           </svg>
           <p className="text-sm text-slate-500">No photos yet. Upload to document the issue.</p>
-          <label className="mt-3 cursor-pointer rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700">
+          <label className="mt-3 cursor-pointer rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700">
             Upload photo
             <input type="file" multiple accept="image/*,.pdf" className="hidden" onChange={handleUpload} />
           </label>
@@ -643,7 +1032,7 @@ function RequestPhotosPanel({ requestId }) {
           )}
 
           {/* Upload more */}
-          <label className="mt-2 inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50">
+          <label className="mt-2 inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50">
             <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
@@ -702,47 +1091,14 @@ export default function ManagerRequestsPage() {
   const [assigningId, setAssigningId] = useState(null);
   const [selectedContractorId, setSelectedContractorId] = useState("");
 
-  // Accordion state — auto-expand if ?requestId= is present
-  const initialRequestId = router.isReady ? (router.query.requestId || null) : null;
-  const [expandedId, setExpandedId] = useState(null);
-  const [legalDecisions, setLegalDecisions] = useState({});
-  const [requestDetails, setRequestDetails] = useState({});
-  const [didAutoExpand, setDidAutoExpand] = useState(false);
 
-  // Auto-expand from ?requestId= deep-link after data loads
-  useEffect(() => {
-    if (didAutoExpand || !initialRequestId || loading || !requests.length) return;
-    const match = requests.find((r) => r.id === initialRequestId);
-    if (match) {
-      setExpandedId(initialRequestId);
-      setDidAutoExpand(true);
-      // Lazy-fetch detail for the auto-expanded request
-      if (!requestDetails[initialRequestId]) {
-        setRequestDetails((prev) => ({ ...prev, [initialRequestId]: { loading: true, data: null } }));
-        fetch(`/api/requests/${initialRequestId}`, { headers: authHeaders() })
-          .then(async (res) => {
-            const body = await res.json();
-            if (!res.ok) throw new Error("Failed to load detail");
-            setRequestDetails((prev) => ({ ...prev, [initialRequestId]: { loading: false, data: body.data } }));
-          })
-          .catch(() => {
-            setRequestDetails((prev) => ({ ...prev, [initialRequestId]: { loading: false, data: null } }));
-          });
-      }
-      // Scroll to the row after a short delay for render
-      setTimeout(() => {
-        const el = document.getElementById(`request-row-${initialRequestId}`);
-        if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
-      }, 200);
-    }
-  }, [initialRequestId, loading, requests, didAutoExpand]);
 
   const loadData = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
       const [reqRes, conRes] = await Promise.all([
-        fetch("/api/requests?view=summary&order=desc&limit=200", { headers: authHeaders() }),
+        fetch("/api/requests?view=summary&order=desc&limit=2000", { headers: authHeaders() }),
         fetch("/api/contractors", { headers: authHeaders() }),
       ]);
       const reqData = await reqRes.json();
@@ -760,6 +1116,15 @@ export default function ManagerRequestsPage() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
+  // Redirect old ?requestId= deep-links to the new detail page
+  useEffect(() => {
+    if (!router.isReady) return;
+    const requestId = router.query.requestId;
+    if (requestId) {
+      router.replace(`/manager/requests/${requestId}`);
+    }
+  }, [router.isReady, router.query.requestId]);
+
   const filteredRequests = useMemo(() => {
     const tab = STATUS_TABS[activeTab];
     if (!tab || !tab.statuses) return requests;
@@ -776,42 +1141,7 @@ export default function ManagerRequestsPage() {
     [sortedRequests, pager.pageSlice]
   );
 
-  // Toggle accordion + lazy-fetch
-  function toggleAccordion(requestId) {
-    if (expandedId === requestId) { setExpandedId(null); return; }
-    setExpandedId(requestId);
-    // Lazy-fetch full request detail (for tenant info, full description, etc.)
-    if (!requestDetails[requestId]) {
-      setRequestDetails((prev) => ({ ...prev, [requestId]: { loading: true, data: null } }));
-      fetch(`/api/requests/${requestId}`, { headers: authHeaders() })
-        .then(async (res) => {
-          const body = await res.json();
-          if (!res.ok) throw new Error("Failed to load detail");
-          setRequestDetails((prev) => ({ ...prev, [requestId]: { loading: false, data: body.data } }));
-        })
-        .catch(() => {
-          setRequestDetails((prev) => ({ ...prev, [requestId]: { loading: false, data: null } }));
-        });
-    }
-    if (!legalDecisions[requestId]) {
-      setLegalDecisions((prev) => ({ ...prev, [requestId]: { loading: true, error: null, data: null } }));
-      fetch(`/api/requests/${requestId}/legal-decision`, { headers: authHeaders() })
-        .then(async (res) => {
-          const body = await res.json();
-          if (!res.ok) throw new Error(body?.error?.message || "Evaluation failed");
-          setLegalDecisions((prev) => ({
-            ...prev,
-            [requestId]: { loading: false, error: null, data: body.data },
-          }));
-        })
-        .catch((e) => {
-          setLegalDecisions((prev) => ({
-            ...prev,
-            [requestId]: { loading: false, error: String(e?.message || e), data: null },
-          }));
-        });
-    }
-  }
+
 
   // Actions
   async function approveRequest(id) {
@@ -886,23 +1216,22 @@ export default function ManagerRequestsPage() {
     finally { setActionLoading(null); }
   }
 
-  const canExpand = (r) =>
-    r.status === "PENDING_REVIEW" ||
-    r.status === "PENDING_OWNER_APPROVAL" ||
-    r.status === "RFP_PENDING" ||
-    r.status === "AUTO_APPROVED" ||
-    r.status === "APPROVED" ||
-    r.status === "ASSIGNED" ||
-    r.status === "IN_PROGRESS" ||
-    r.status === "COMPLETED" ||
-    r.status === "OWNER_REJECTED";
+  const requestColumns = useMemo(
+    () => buildRequestColumns({
+      assigningId, setAssigningId, selectedContractorId, setSelectedContractorId,
+      contractors, actionLoading,
+      approveRequest, rejectRequest, doAssignContractor, doUnassignContractor,
+      getAvailableCTAs,
+    }),
+    [assigningId, selectedContractorId, contractors, actionLoading]
+  );
 
   return (
     <AppShell role="MANAGER">
       <PageShell>
         <PageHeader
           title="Requests Inbox"
-          subtitle="Review incoming maintenance requests. Click a pending row to see the legal recommendation."
+          subtitle="Review incoming maintenance requests. Click a row to see full details."
         />
         <PageContent>
 
@@ -942,331 +1271,22 @@ export default function ManagerRequestsPage() {
 
           {/* Content */}
           {loading ? (
-            <Panel><p className="text-sm text-slate-500">Loading requests&hellip;</p></Panel>
+            <div className="px-4"><p className="text-sm text-slate-500">Loading requests&hellip;</p></div>
           ) : filteredRequests.length === 0 ? (
-            <Panel><p className="empty-state-text">No requests match this filter.</p></Panel>
+            <div className="px-4"><p className="empty-state-text">No requests match this filter.</p></div>
           ) : (
-            <Panel bodyClassName="p-0">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-slate-100 text-left text-[11px] font-medium uppercase tracking-wider text-slate-400">
-                      <th className="py-2.5 pl-3 pr-1 w-8"></th>
-                      <SortableHeader label="#" field="requestNumber" sortField={sortField} sortDir={sortDir} onSort={handleSort} className="w-16" />
-                      <SortableHeader label="Status" field="status" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
-                      <SortableHeader label="Requestor" field="requestor" sortField={sortField} sortDir={sortDir} onSort={handleSort} className="hidden md:table-cell" />
-                      <SortableHeader label="Next Approver" field="nextApprover" sortField={sortField} sortDir={sortDir} onSort={handleSort} className="hidden lg:table-cell" />
-                      <SortableHeader label="Building / Unit" field="building" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
-                      <SortableHeader label="Category" field="category" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
-                      <th className="px-3 py-2.5">Description</th>
-                      <SortableHeader label="Est. Cost" field="estimatedCost" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
-                      <SortableHeader label="Contractor" field="contractor" sortField={sortField} sortDir={sortDir} onSort={handleSort} className="hidden lg:table-cell" />
-                      <SortableHeader label="Created" field="createdAt" sortField={sortField} sortDir={sortDir} onSort={handleSort} className="hidden sm:table-cell" />
-                      <th className="px-3 py-2.5">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {paginatedRequests.map((r) => {
-                      const expandable = canExpand(r);
-                      const isExpanded = expandedId === r.id;
-                      const legalState = legalDecisions[r.id];
-
-                      return (
-                        <Fragment key={r.id}>
-                          <tr
-                            id={`request-row-${r.id}`}
-                            onClick={expandable ? () => toggleAccordion(r.id) : undefined}
-                            className={[
-                              "border-b border-slate-50 transition-colors",
-                              expandable ? "cursor-pointer hover:bg-slate-50/80" : "",
-                              isExpanded ? "bg-slate-50" : "",
-                            ].join(" ")}
-                          >
-                            {/* Chevron */}
-                            <td className="py-2.5 pl-3 pr-1">
-                              {expandable && <Chevron expanded={isExpanded} />}
-                            </td>
-
-                            <td className="px-3 py-2.5 text-sm font-mono text-slate-500">
-                              {r.requestNumber ? `#${r.requestNumber}` : "\u2014"}
-                            </td>
-
-                            <td className="px-3 py-2.5">
-                              <StatusBadge status={r.status} />
-                              {r.payingParty === "TENANT" && (
-                                <span className="ml-1.5 inline-block rounded-full border border-orange-200 bg-orange-50 px-2 py-0.5 text-[10px] font-semibold text-orange-700">
-                                  Tenant-funded
-                                </span>
-                              )}
-                            </td>
-
-                            <td className="px-3 py-2.5 hidden md:table-cell" onClick={(e) => e.stopPropagation()}>
-                              {r.tenant?.id ? (
-                                <Link href={`/manager/people/tenants/${r.tenant.id}`} className="text-sm text-blue-600 hover:underline" onClick={(e) => e.stopPropagation()}>
-                                  {r.tenant.name || "Tenant"}
-                                </Link>
-                              ) : (
-                                <span className="text-sm text-slate-400">Manager</span>
-                              )}
-                            </td>
-
-                            <td className="px-3 py-2.5 hidden lg:table-cell text-sm text-slate-500">
-                              {nextApproverLabel(r.status)}
-                            </td>
-
-                            <td className="px-3 py-2.5 text-slate-700">
-                              {r.buildingId ? (
-                                <Link href={`/manager/buildings/${r.buildingId}/financials`} className="text-indigo-600 hover:underline" onClick={(e) => e.stopPropagation()}>
-                                  {r.buildingName || "\u2014"}
-                                </Link>
-                              ) : (r.buildingName || "\u2014")}
-                              {r.unitNumber ? (
-                                r.unitId ? (
-                                  <span className="text-slate-400"> / <Link href={`/admin-inventory/units/${r.unitId}`} className="text-indigo-600 hover:underline" onClick={(e) => e.stopPropagation()}>{r.unitNumber}</Link></span>
-                                ) : (
-                                  <span className="text-slate-400"> / {r.unitNumber}</span>
-                                )
-                              ) : ""}
-                            </td>
-
-                            <td className="px-3 py-2.5">
-                              <span className="inline-block rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">
-                                {r.category || "\u2014"}
-                              </span>
-                            </td>
-
-                            <td className="px-3 py-2.5 max-w-[260px] truncate text-slate-600">
-                              {r.description || "\u2014"}
-                            </td>
-
-                            <td className="px-3 py-2.5 font-medium text-slate-700">
-                              {typeof r.estimatedCost === "number" ? formatCurrency(r.estimatedCost) : "\u2014"}
-                            </td>
-
-                            <td className="px-3 py-2.5 hidden lg:table-cell text-slate-500">
-                              {r.assignedContractorName || "\u2014"}
-                            </td>
-
-                            <td className="px-3 py-2.5 hidden sm:table-cell text-slate-400 text-xs">
-                              {formatDate(r.createdAt)}
-                            </td>
-
-                            {/* Actions */}
-                            <td className="px-3 py-2.5" onClick={(e) => e.stopPropagation()}>
-                              <div className="flex items-center gap-1.5 flex-wrap">
-                                {getAvailableCTAs(r, assigningId).map((cta) => {
-                                  switch (cta) {
-                                    case 'approve':
-                                      return (
-                                        <button key="approve"
-                                          onClick={() => approveRequest(r.id)}
-                                          disabled={actionLoading === r.id}
-                                          className="rounded-md bg-emerald-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
-                                        >
-                                          {actionLoading === r.id ? "\u2026" : "Approve"}
-                                        </button>
-                                      );
-                                    case 'reject':
-                                      return (
-                                        <button key="reject"
-                                          onClick={() => rejectRequest(r.id)}
-                                          disabled={actionLoading === r.id}
-                                          className="rounded-md border border-slate-300 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-                                        >
-                                          {actionLoading === r.id ? "\u2026" : "Reject"}
-                                        </button>
-                                      );
-                                    case 'view_rfp':
-                                      return (
-                                        <a key="view_rfp" href="/manager/rfps"
-                                          className="rounded-md bg-indigo-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-indigo-700"
-                                        >
-                                          View RFP
-                                        </a>
-                                      );
-                                    case 'assign':
-                                      return assigningId === r.id ? (
-                                        <div key="assign-modal" className="flex items-center gap-1.5">
-                                          <select value={selectedContractorId} onChange={(e) => setSelectedContractorId(e.target.value)}
-                                            className="rounded border border-slate-300 px-2 py-1 text-xs">
-                                            <option value="">Select&hellip;</option>
-                                            {contractors.map((c) => (
-                                              <option key={c.id} value={c.id}>{c.name || c.companyName || c.id.slice(0, 8)}</option>
-                                            ))}
-                                          </select>
-                                          <button onClick={() => doAssignContractor(r.id)} disabled={!selectedContractorId || actionLoading === r.id}
-                                            className="rounded-md bg-blue-600 px-2 py-1 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50">
-                                            {actionLoading === r.id ? "\u2026" : "OK"}
-                                          </button>
-                                          <button onClick={() => { setAssigningId(null); setSelectedContractorId(""); }}
-                                            className="rounded-md border border-slate-200 bg-white px-2 py-1 text-xs text-slate-500 hover:bg-slate-50">
-                                            &times;
-                                          </button>
-                                        </div>
-                                      ) : (
-                                        <button key="assign" onClick={() => setAssigningId(r.id)}
-                                          className="rounded-md bg-blue-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-blue-700">
-                                          Assign
-                                        </button>
-                                      );
-                                    case 'unassign':
-                                      return (
-                                        <button key="unassign"
-                                          onClick={() => doUnassignContractor(r.id)}
-                                          disabled={actionLoading === r.id}
-                                          className="rounded-md bg-red-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-red-700 disabled:opacity-50"
-                                        >
-                                          {actionLoading === r.id ? "\u2026" : "Unassign"}
-                                        </button>
-                                      );
-                                    default:
-                                      return null;
-                                  }
-                                })}
-                              </div>
-                            </td>
-                          </tr>
-
-                          {/* Accordion row */}
-                          {isExpanded && (
-                            <tr>
-                              <td colSpan={10} className="p-0">
-                                {(() => {
-                                  const detail = requestDetails[r.id];
-                                  const d = detail?.data;
-                                  const tenant = d?.tenant;
-                                  const rfpId = legalState?.data?.rfpId || d?.rfpId || null;
-
-                                  return (
-                                    <div className="divide-y divide-slate-100">
-
-                                      {/* Section 1 — Tenant info */}
-                                      <div className="px-6 py-4">
-                                        <SectionLabel>Tenant</SectionLabel>
-                                        {detail?.loading ? (
-                                          <p className="mt-1 text-xs text-slate-400">Loading&hellip;</p>
-                                        ) : tenant ? (
-                                          <div className="mt-2 grid grid-cols-3 gap-4">
-                                            <div>
-                                              <p className="text-[11px] uppercase tracking-wider text-slate-400">Name</p>
-                                              {d?.tenantId ? (
-                                                <Link href={`/manager/people/tenants/${d.tenantId}`} className="text-sm text-blue-600 hover:underline" onClick={(e) => e.stopPropagation()}>
-                                                  {tenant.name || "\u2014"}
-                                                </Link>
-                                              ) : (
-                                                <p className="text-sm text-slate-700">{tenant.name || "\u2014"}</p>
-                                              )}
-                                            </div>
-                                            <div>
-                                              <p className="text-[11px] uppercase tracking-wider text-slate-400">Phone</p>
-                                              <p className="text-sm text-slate-700">{tenant.phone || "\u2014"}</p>
-                                            </div>
-                                            <div>
-                                              <p className="text-[11px] uppercase tracking-wider text-slate-400">Email</p>
-                                              <p className="text-sm text-slate-700">{tenant.email || "\u2014"}</p>
-                                            </div>
-                                          </div>
-                                        ) : (
-                                          <p className="mt-1 text-sm text-slate-400">\u2014</p>
-                                        )}
-                                      </div>
-
-                                      {/* Section 2 — Tenant self-pay banner */}
-                                      {d?.payingParty === "TENANT" && (
-                                        <div className="px-6 py-3 bg-orange-50 border-b border-orange-100">
-                                          <div className="flex items-start gap-2">
-                                            <span className="text-orange-500 text-base leading-none mt-0.5">⚠</span>
-                                            <div>
-                                              <p className="text-sm font-semibold text-orange-800">Tenant-funded request</p>
-                                              <p className="text-xs text-orange-700 mt-0.5">
-                                                The owner rejected this request{d.rejectionReason ? ` ("${d.rejectionReason}")` : ""}. The tenant chose to proceed at their own expense.
-                                              </p>
-                                            </div>
-                                          </div>
-                                        </div>
-                                      )}
-
-                                      {/* Section 3 — Full description */}
-                                      <div className="px-6 py-4">
-                                        <SectionLabel>Description</SectionLabel>
-                                        <p className="mt-1 text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">
-                                          {r.description || <span className="text-slate-400">\u2014</span>}
-                                        </p>
-                                      </div>
-
-                                      {/* Section 3 — Photos / attachments */}
-                                      <div className="border-t border-slate-100">
-                                        <RequestPhotosPanel requestId={r.id} />
-                                      </div>
-
-                                      {/* Section 4 — Legal basis (CO articles + depreciation) */}
-                                      <div className="border-t border-slate-100">
-                                        <LegalRecommendationPanel
-                                          decision={legalState?.data}
-                                          loading={legalState?.loading}
-                                          error={legalState?.error}
-                                        />
-                                      </div>
-
-                                      {/* Section 5 — Next-step banner */}
-                                      {(() => {
-                                        const step = getNextStep(r, legalState?.data);
-                                        if (!step) return null;
-                                        const variantStyles = {
-                                          info:    'border-blue-200 bg-blue-50 text-blue-800',
-                                          warn:    'border-amber-200 bg-amber-50 text-amber-800',
-                                          success: 'border-emerald-200 bg-emerald-50 text-emerald-800',
-                                          error:   'border-red-200 bg-red-50 text-red-800',
-                                        };
-                                        return (
-                                          <div className="px-6 py-4 border-t border-slate-100">
-                                            <div className={`rounded-lg border px-4 py-3 text-sm ${variantStyles[step.variant] || variantStyles.info}`}>
-                                              <p className="font-semibold">{step.label}</p>
-                                              <p className="mt-0.5 text-xs opacity-80">{step.description}</p>
-                                            </div>
-                                          </div>
-                                        );
-                                      })()}
-
-                                      {/* Section 6 — Urgency */}
-                                      <div className="flex items-center justify-between px-6 py-3 border-t border-slate-100">
-                                        <div>
-                                          <span className="text-sm font-medium text-slate-700">Urgency</span>
-                                          <p className="text-xs text-slate-400 mt-0.5">Drives contractor dispatch priority</p>
-                                        </div>
-                                        <select
-                                          value={d?.urgency || r.urgency || "MEDIUM"}
-                                          onChange={(e) => setUrgency(r.id, e.target.value)}
-                                          className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                        >
-                                          <option value="LOW">Low</option>
-                                          <option value="MEDIUM">Medium</option>
-                                          <option value="HIGH">High</option>
-                                          <option value="EMERGENCY">Emergency</option>
-                                        </select>
-                                      </div>
-
-                                      {/* Section 7 — RFP link (conditional) */}
-                                      {rfpId && (
-                                        <div className="flex items-center justify-between px-6 py-3 border-t border-slate-100">
-                                          <span className="text-sm text-slate-500">Request for Proposal</span>
-                                          <a href={`/manager/rfps/${rfpId}`} className="text-sm font-medium text-blue-600 hover:underline">
-                                            View RFP &rarr;
-                                          </a>
-                                        </div>
-                                      )}
-                                    </div>
-                                  );
-                                })()}
-                              </td>
-                            </tr>
-                          )}
-                        </Fragment>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+            <div>
+              <ConfigurableTable
+                tableId="manager-requests"
+                columns={requestColumns}
+                data={paginatedRequests}
+                rowKey={(r) => r.id}
+                sortField={sortField}
+                sortDir={sortDir}
+                onSort={handleSort}
+                onRowClick={(r) => router.push(`/manager/requests/${r.id}`)}
+                emptyState={<p className="text-sm text-slate-500">No requests match this filter.</p>}
+              />
 
               <PaginationControls
                 currentPage={pager.currentPage}
@@ -1275,10 +1295,25 @@ export default function ManagerRequestsPage() {
                 pageSize={pager.pageSize}
                 onPageChange={pager.setPage}
               />
-            </Panel>
+            </div>
           )}
         </PageContent>
       </PageShell>
     </AppShell>
   );
 }
+
+// Named exports for the request detail page
+export {
+  StatusBadge as RequestStatusBadge,
+  LegalRecommendationPanel,
+  RepairReplacePanel,
+  RequestPhotosPanel,
+  SectionLabel,
+  getNextStep,
+  getAvailableCTAs,
+  OBLIGATION_META,
+  requestVariant as REQUEST_STATUS_VARIANT,
+  formatDate as requestFormatDate,
+  formatCurrency,
+};

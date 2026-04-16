@@ -5,12 +5,13 @@ import PageShell from "../../components/layout/PageShell";
 import PageHeader from "../../components/layout/PageHeader";
 import PageContent from "../../components/layout/PageContent";
 import Panel from "../../components/layout/Panel";
-import SortableHeader from "../../components/SortableHeader";
+import ConfigurableTable from "../../components/ConfigurableTable";
 import VacanciesPanel from "../../components/VacanciesPanel";
+import ErrorBanner from "../../components/ui/ErrorBanner";
 import { useTableSort, clientSort } from "../../lib/tableUtils";
 import { ownerAuthHeaders } from "../../lib/api";
 
-const BUILDINGS_SORT_FIELDS = ["name", "address", "unitCount", "status"];
+const BUILDINGS_SORT_FIELDS = ["name", "address", "unitCount", "status", "canton"];
 
 function buildingFieldExtractor(row, field) {
   switch (field) {
@@ -18,9 +19,57 @@ function buildingFieldExtractor(row, field) {
     case "address": return (row.address || "").toLowerCase();
     case "unitCount": return row.unitCount ?? row._count?.units ?? 0;
     case "status": return row.isActive === false ? 0 : 1;
+    case "canton": return (row.canton || "").toLowerCase();
     default: return "";
   }
 }
+
+const OWNER_BUILDING_COLUMNS = [
+  {
+    id: "name",
+    label: "Building",
+    sortable: true,
+    alwaysVisible: true,
+    render: (b) => <span className="font-medium text-slate-900">{b.name}</span>,
+  },
+  {
+    id: "address",
+    label: "Address",
+    sortable: true,
+    defaultVisible: true,
+    render: (b) => <span className="text-slate-500">{b.address || "\u2014"}</span>,
+  },
+  {
+    id: "unitCount",
+    label: "Units",
+    sortable: true,
+    defaultVisible: true,
+    render: (b) => <span>{b.unitCount ?? b._count?.units ?? "\u2014"}</span>,
+  },
+  {
+    id: "status",
+    label: "Status",
+    sortable: true,
+    defaultVisible: true,
+    render: (b) => (
+      <span className={
+        "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold " +
+        (b.isActive === false
+          ? "bg-slate-100 text-slate-500"
+          : "bg-green-100 text-green-700")
+      }>
+        {b.isActive === false ? "Inactive" : "Active"}
+      </span>
+    ),
+  },
+  {
+    id: "canton",
+    label: "Canton",
+    sortable: true,
+    defaultVisible: false,
+    render: (b) => <span className="text-slate-600">{b.canton || "\u2014"}</span>,
+  },
+];
 
 export default function OwnerPropertiesPage() {
   const [tab, setTab] = useState("buildings");
@@ -43,7 +92,7 @@ export default function OwnerPropertiesPage() {
         />
         <PageContent>
           {/* Tab bar */}
-          <div className="mb-6 flex border-b border-slate-200">
+          <div className="tab-strip">
             {[
               { key: "buildings", label: "Buildings" },
               { key: "vacancies", label: "Vacancies" },
@@ -51,12 +100,7 @@ export default function OwnerPropertiesPage() {
               <button
                 key={key}
                 onClick={() => setTab(key)}
-                className={[
-                  "px-5 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors",
-                  tab === key
-                    ? "border-indigo-600 text-indigo-600"
-                    : "border-transparent text-slate-500 hover:text-slate-700",
-                ].join(" ")}
+                className={tab === key ? "tab-btn-active" : "tab-btn"}
               >
                 {label}
               </button>
@@ -94,11 +138,7 @@ function BuildingsTab({ refreshKey }) {
   const sortedBuildings = useMemo(() => clientSort(buildings, sortField, sortDir, buildingFieldExtractor), [buildings, sortField, sortDir]);
 
   if (error) {
-    return (
-      <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-        {error}
-      </div>
-    );
+    return <ErrorBanner error={error} className="text-sm" />;
   }
 
   return (
@@ -110,41 +150,17 @@ function BuildingsTab({ refreshKey }) {
           <p className="empty-state-text">No properties found.</p>
         </div>
       ) : (
-        <div style={{ overflowX: "auto" }}>
-          <table className="inline-table">
-            <thead>
-              <tr>
-                <SortableHeader label="Building" field="name" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
-                <SortableHeader label="Address" field="address" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
-                <SortableHeader label="Units" field="unitCount" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
-                <SortableHeader label="Status" field="status" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
-              </tr>
-            </thead>
-            <tbody>
-              {sortedBuildings.map((b) => (
-                <tr
-                  key={b.id}
-                  className="cursor-pointer hover:bg-slate-50"
-                  onClick={() => router.push(`/admin-inventory/buildings/${b.id}?from=/owner/properties`)}
-                >
-                  <td className="cell-bold">{b.name}</td>
-                  <td className="text-slate-500">{b.address || "—"}</td>
-                  <td>{b.unitCount ?? b._count?.units ?? "—"}</td>
-                  <td>
-                    <span className={
-                      "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold " +
-                      (b.isActive === false
-                        ? "bg-slate-100 text-slate-500"
-                        : "bg-green-100 text-green-700")
-                    }>
-                      {b.isActive === false ? "Inactive" : "Active"}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <ConfigurableTable
+          tableId="owner-buildings"
+          columns={OWNER_BUILDING_COLUMNS}
+          data={sortedBuildings}
+          rowKey={(b) => b.id}
+          sortField={sortField}
+          sortDir={sortDir}
+          onSort={handleSort}
+          onRowClick={(b) => router.push(`/admin-inventory/buildings/${b.id}?from=/owner/properties`)}
+          emptyState={<p className="text-sm text-slate-500">No properties found.</p>}
+        />
       )}
     </Panel>
   );

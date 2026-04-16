@@ -5,6 +5,7 @@ import { sendError, sendJson } from "./http/json";
 import { parseQuery } from "./http/query";
 import { getOrgIdForRequest, AuthedRequest } from "./authz";
 import { ensureDefaultOrgConfig } from "./services/orgConfig";
+import { bootstrapLegalEngine } from "./services/bootstrapLegalEngine";
 import prisma from "./services/prismaClient";
 import { Router } from "./http/router";
 
@@ -34,6 +35,8 @@ import { registerBillingScheduleRoutes } from "./routes/billingSchedules";
 import { registerChargeReconciliationRoutes } from "./routes/chargeReconciliations";
 import { registerRentAdjustmentRoutes } from "./routes/rentAdjustments";
 import { registerContractorBillingRoutes } from "./routes/contractorBillingSchedules";
+import { registerStrategyRoutes } from "./routes/strategy";
+import { registerRecommendationRoutes } from "./routes/recommendations";
 import { registerEventHandlers } from "./events";
 import {
   processSelectionTimeouts,
@@ -99,6 +102,8 @@ registerBillingScheduleRoutes(router);
 registerChargeReconciliationRoutes(router);
 registerRentAdjustmentRoutes(router);
 registerContractorBillingRoutes(router);
+registerStrategyRoutes(router);
+registerRecommendationRoutes(router);
 
 /* ── Dev-only: background job trigger route ─────────────────── */
 router.post("/__dev/rental/run-jobs", async ({ res }) => {
@@ -241,6 +246,7 @@ async function runBackgroundJobs() {
 async function start() {
   try {
     await ensureDefaultOrgConfig(prisma);
+    await bootstrapLegalEngine(prisma);
     registerEventHandlers(prisma);
     server.listen(port, () => {
       console.log(`API running on http://localhost:${port}`);

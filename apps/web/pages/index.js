@@ -65,117 +65,37 @@ export default function Home() {
     []
   );
 
-  const ui = {
-    page: {
-      maxWidth: 900,
-      margin: "40px auto",
-      padding: 16,
-      fontFamily: "system-ui",
-    },
-    header: { marginBottom: 24 },
-    h1: { marginBottom: 6 },
-    subtle: { color: "#555", fontSize: 13, marginBottom: 16 },
-    code: {
-      padding: "2px 6px",
-      borderRadius: 6,
-      background: "#f3f4f6",
-      border: "1px solid #e5e7eb",
-      fontFamily: "monospace",
-    },
-    grid: {
-      display: "grid",
-      gap: 18,
-      gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
-      marginBottom: 32,
-    },
-    card: {
-      border: "1px solid #ddd",
-      borderRadius: 12,
-      padding: 18,
-      background: "#fff",
-      display: "flex",
-      flexDirection: "column",
-      gap: 10,
-      minHeight: 120,
-    },
-    cardTop: { display: "flex", alignItems: "center", gap: 12 },
-    cardTitle: { fontWeight: 600, fontSize: 18 },
-    path: {
-      fontFamily: "monospace",
-      fontSize: 13,
-      color: "#888",
-      background: "#f6f6f6",
-      borderRadius: 6,
-      padding: "2px 6px",
-      marginLeft: 8,
-    },
-    cardDesc: { color: "#555", fontSize: 14 },
-    row: { display: "flex", gap: 10, alignItems: "center", marginTop: 4 },
-    primaryBtn: {
-      padding: "8px 16px",
-      borderRadius: 8,
-      border: "1px solid #111",
-      background: "#111",
-      color: "#fff",
-      cursor: "pointer",
-      fontWeight: 600,
-      textDecoration: "none",
-    },
-    secondaryBtn: {
-      padding: "8px 16px",
-      borderRadius: 8,
-      border: "1px solid #ddd",
-      background: "#fff",
-      color: "#111",
-      cursor: "pointer",
-      fontWeight: 600,
-      textDecoration: "none",
-    },
-    footer: { marginTop: 40, color: "#888", fontSize: 13 },
-    footerTitle: { fontWeight: 600, marginBottom: 6 },
-    footerText: { marginBottom: 0 },
-    codeSmall: {
-      fontFamily: "monospace",
-      fontSize: 12,
-      color: "#888",
-      background: "#f6f6f6",
-      borderRadius: 6,
-      padding: "1px 6px",
-      marginLeft: 4,
-    },
-  };
-
   return (
-    <div style={ui.page}>
-      <header style={ui.header}>
-        <h1 style={ui.h1}>Maintenance Agent – UI Launcher</h1>
-        <div style={ui.subtle}>
-          Frontend: <code style={ui.code}>http://localhost:3000</code> • Backend:{" "}
-          <code style={ui.code}>{API_BASE}</code>
+    <div className="max-w-4xl mx-auto p-4 font-sans">
+      <header className="mb-6">
+        <h1 className="mb-1">Maintenance Agent &ndash; UI Launcher</h1>
+        <div className="text-slate-500 text-sm mb-4">
+          Frontend: <code className="px-1.5 py-0.5 rounded-md bg-slate-100 border border-slate-200 font-mono text-xs">http://localhost:3000</code> &bull; Backend:{" "}
+          <code className="px-1.5 py-0.5 rounded-md bg-slate-100 border border-slate-200 font-mono text-xs">{API_BASE}</code>
         </div>
       </header>
 
-      <div className="mb-6 rounded-lg border border-red-300 bg-red-100 px-4 py-3 text-red-800 shadow-sm">
+      <div className="mb-6 rounded-lg border border-red-300 bg-red-100 px-4 py-3 text-red-700 shadow-sm">
         Tailwind check: this box should be red, padded, and rounded.
       </div>
 
-      <div style={ui.grid}>
+      <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(320px,1fr))] mb-8">
         {flows.map((f) => (
-          <div key={f.path} style={ui.card}>
-            <div style={ui.cardTop}>
-              <div style={ui.cardTitle}>{f.title}</div>
-              <code style={ui.path}>{f.path}</code>
+          <div key={f.path} className="border border-slate-300 rounded-xl p-4 bg-white flex flex-col gap-2.5 min-h-[120px]">
+            <div className="flex items-center gap-3">
+              <div className="font-semibold text-lg">{f.title}</div>
+              <code className="font-mono text-xs text-slate-400 bg-slate-50 rounded-md px-1.5 py-0.5 ml-2">{f.path}</code>
             </div>
 
-            <div style={ui.cardDesc}>{f.desc}</div>
+            <div className="text-slate-500 text-sm">{f.desc}</div>
 
-            <div style={ui.row}>
-              <Link href={f.path} style={ui.primaryBtn}>
+            <div className="flex gap-2.5 items-center mt-1">
+              <Link href={f.path} className="px-4 py-2 rounded-lg border border-slate-900 bg-slate-900 text-white cursor-pointer font-semibold no-underline">
                 Open
               </Link>
               <a
                 href={f.path}
-                style={ui.secondaryBtn}
+                className="px-4 py-2 rounded-lg border border-slate-300 bg-white text-slate-900 cursor-pointer font-semibold no-underline"
                 target="_blank"
                 rel="noopener noreferrer"
               >
@@ -186,10 +106,10 @@ export default function Home() {
         ))}
       </div>
 
-      <footer style={ui.footer}>
-        <div style={ui.footerTitle}>If a link shows “Not found”</div>
-        <div style={ui.footerText}>
-          Make sure the page exists in <code style={ui.codeSmall}>apps/web/pages</code> or change the <code style={ui.codeSmall}>path</code> in <code style={ui.codeSmall}>pages/index.js</code>.
+      <footer className="mt-10 text-slate-400 text-sm">
+        <div className="font-semibold mb-1">If a link shows &quot;Not found&quot;</div>
+        <div>
+          Make sure the page exists in <code className="font-mono text-xs text-slate-400 bg-slate-50 rounded-md px-1.5 py-0.5 ml-1">apps/web/pages</code> or change the <code className="font-mono text-xs text-slate-400 bg-slate-50 rounded-md px-1.5 py-0.5 ml-1">path</code> in <code className="font-mono text-xs text-slate-400 bg-slate-50 rounded-md px-1.5 py-0.5 ml-1">pages/index.js</code>.
         </div>
       </footer>
     </div>

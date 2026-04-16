@@ -7,10 +7,11 @@ import PageContent from "../../../components/layout/PageContent";
 import Panel from "../../../components/layout/Panel";
 import { fetchWithAuth, postWithAuth } from "../../../lib/api";
 
+import { cn } from "../../../lib/utils";
 const STATUS_COLORS = {
-  ACTIVE: "bg-green-100 text-green-800",
-  PAUSED: "bg-yellow-100 text-yellow-800",
-  COMPLETED: "bg-gray-100 text-gray-800",
+  ACTIVE: "bg-green-100 text-green-700",
+  PAUSED: "bg-yellow-100 text-yellow-700",
+  COMPLETED: "bg-slate-100 text-slate-800",
 };
 
 const FREQUENCY_LABELS = {
@@ -110,7 +111,7 @@ export default function ContractorBillingScheduleDetail() {
       <AppShell>
         <PageShell>
           <PageContent>
-            <p className="text-gray-500 py-8">Loading…</p>
+            <p className="text-slate-500 py-8">Loading…</p>
           </PageContent>
         </PageShell>
       </AppShell>
@@ -142,51 +143,49 @@ export default function ContractorBillingScheduleDetail() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Schedule Info */}
             <Panel>
-              <h3 className="font-semibold text-gray-800 mb-3">Schedule Details</h3>
+              <h3 className="font-semibold text-slate-800 mb-3">Schedule Details</h3>
               <dl className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <dt className="text-gray-500">Status</dt>
+                  <dt className="text-slate-500">Status</dt>
                   <dd>
                     <span
-                      className={`px-2 py-0.5 rounded text-xs font-semibold ${
-                        STATUS_COLORS[schedule.status] || "bg-gray-100"
-                      }`}
+                      className={cn("px-2 py-0.5 rounded text-xs font-semibold", STATUS_COLORS[schedule.status] || "bg-slate-100")}
                     >
                       {schedule.status}
                     </span>
                   </dd>
                 </div>
                 <div className="flex justify-between">
-                  <dt className="text-gray-500">Frequency</dt>
+                  <dt className="text-slate-500">Frequency</dt>
                   <dd>{FREQUENCY_LABELS[schedule.frequency] || schedule.frequency}</dd>
                 </div>
                 <div className="flex justify-between">
-                  <dt className="text-gray-500">Anchor Day</dt>
+                  <dt className="text-slate-500">Anchor Day</dt>
                   <dd>{schedule.anchorDay}</dd>
                 </div>
                 <div className="flex justify-between">
-                  <dt className="text-gray-500">Amount</dt>
+                  <dt className="text-slate-500">Amount</dt>
                   <dd className="font-semibold">{fmt(schedule.amountCents)}</dd>
                 </div>
                 <div className="flex justify-between">
-                  <dt className="text-gray-500">VAT Rate</dt>
+                  <dt className="text-slate-500">VAT Rate</dt>
                   <dd>{schedule.vatRate}%</dd>
                 </div>
                 <div className="flex justify-between">
-                  <dt className="text-gray-500">Amount incl. VAT</dt>
+                  <dt className="text-slate-500">Amount incl. VAT</dt>
                   <dd className="font-semibold">
                     {fmt(Math.round(schedule.amountCents * (1 + schedule.vatRate / 100)))}
                   </dd>
                 </div>
                 <div className="flex justify-between">
-                  <dt className="text-gray-500">Next Period Start</dt>
+                  <dt className="text-slate-500">Next Period Start</dt>
                   <dd>
                     {new Date(schedule.nextPeriodStart).toLocaleDateString("de-CH")}
                   </dd>
                 </div>
                 {schedule.lastGeneratedPeriod && (
                   <div className="flex justify-between">
-                    <dt className="text-gray-500">Last Generated</dt>
+                    <dt className="text-slate-500">Last Generated</dt>
                     <dd>
                       {new Date(schedule.lastGeneratedPeriod).toLocaleDateString("de-CH")}
                     </dd>
@@ -194,28 +193,28 @@ export default function ContractorBillingScheduleDetail() {
                 )}
                 {schedule.building && (
                   <div className="flex justify-between">
-                    <dt className="text-gray-500">Building</dt>
+                    <dt className="text-slate-500">Building</dt>
                     <dd>{schedule.building.name}</dd>
                   </div>
                 )}
                 {schedule.completedAt && (
                   <>
                     <div className="flex justify-between">
-                      <dt className="text-gray-500">Completed At</dt>
+                      <dt className="text-slate-500">Completed At</dt>
                       <dd>
                         {new Date(schedule.completedAt).toLocaleDateString("de-CH")}
                       </dd>
                     </div>
                     {schedule.completionReason && (
                       <div className="flex justify-between">
-                        <dt className="text-gray-500">Reason</dt>
+                        <dt className="text-slate-500">Reason</dt>
                         <dd>{schedule.completionReason}</dd>
                       </div>
                     )}
                   </>
                 )}
                 <div className="flex justify-between">
-                  <dt className="text-gray-500">Created</dt>
+                  <dt className="text-slate-500">Created</dt>
                   <dd>{new Date(schedule.createdAt).toLocaleDateString("de-CH")}</dd>
                 </div>
               </dl>
@@ -223,42 +222,40 @@ export default function ContractorBillingScheduleDetail() {
 
             {/* Contractor Info */}
             <Panel>
-              <h3 className="font-semibold text-gray-800 mb-3">Contractor</h3>
+              <h3 className="font-semibold text-slate-800 mb-3">Contractor</h3>
               {schedule.contractor ? (
                 <dl className="space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <dt className="text-gray-500">Name</dt>
+                    <dt className="text-slate-500">Name</dt>
                     <dd>{schedule.contractor.name}</dd>
                   </div>
                   <div className="flex justify-between">
-                    <dt className="text-gray-500">Email</dt>
+                    <dt className="text-slate-500">Email</dt>
                     <dd>{schedule.contractor.email}</dd>
                   </div>
                   <div className="flex justify-between">
-                    <dt className="text-gray-500">Phone</dt>
+                    <dt className="text-slate-500">Phone</dt>
                     <dd>{schedule.contractor.phone}</dd>
                   </div>
                   {schedule.contractor.iban && (
                     <div className="flex justify-between">
-                      <dt className="text-gray-500">IBAN</dt>
+                      <dt className="text-slate-500">IBAN</dt>
                       <dd className="font-mono text-xs">{schedule.contractor.iban}</dd>
                     </div>
                   )}
                   {schedule.contractor.vatNumber && (
                     <div className="flex justify-between">
-                      <dt className="text-gray-500">VAT Number</dt>
+                      <dt className="text-slate-500">VAT Number</dt>
                       <dd>{schedule.contractor.vatNumber}</dd>
                     </div>
                   )}
                   <div className="flex justify-between">
-                    <dt className="text-gray-500">Active</dt>
+                    <dt className="text-slate-500">Active</dt>
                     <dd>
                       <span
-                        className={`px-2 py-0.5 rounded text-xs font-semibold ${
-                          schedule.contractor.isActive
-                            ? "bg-green-100 text-green-800"
-                            : "bg-red-100 text-red-800"
-                        }`}
+                        className={cn("px-2 py-0.5 rounded text-xs font-semibold", schedule.contractor.isActive
+                            ? "bg-green-100 text-green-700"
+                            : "bg-red-100 text-red-700")}
                       >
                         {schedule.contractor.isActive ? "Yes" : "No"}
                       </span>
@@ -266,7 +263,7 @@ export default function ContractorBillingScheduleDetail() {
                   </div>
                 </dl>
               ) : (
-                <p className="text-gray-500 text-sm">Contractor data unavailable</p>
+                <p className="text-slate-500 text-sm">Contractor data unavailable</p>
               )}
             </Panel>
           </div>
@@ -274,7 +271,7 @@ export default function ContractorBillingScheduleDetail() {
           {/* Actions */}
           {schedule.status !== "COMPLETED" && (
             <Panel className="mt-6">
-              <h3 className="font-semibold text-gray-800 mb-3">Actions</h3>
+              <h3 className="font-semibold text-slate-800 mb-3">Actions</h3>
               <div className="flex flex-wrap gap-3">
                 {schedule.status === "ACTIVE" && (
                   <>
@@ -324,7 +321,7 @@ export default function ContractorBillingScheduleDetail() {
               {showStopForm && (
                 <form onSubmit={handleStop} className="mt-4 flex gap-3 items-end">
                   <div className="flex-1">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
                       Reason (optional)
                     </label>
                     <input
@@ -345,7 +342,7 @@ export default function ContractorBillingScheduleDetail() {
                   <button
                     type="button"
                     onClick={() => setShowStopForm(false)}
-                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 text-sm"
+                    className="px-4 py-2 bg-slate-200 text-slate-700 rounded hover:bg-slate-300 text-sm"
                   >
                     Cancel
                   </button>

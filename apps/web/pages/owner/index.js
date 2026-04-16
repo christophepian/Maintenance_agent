@@ -5,7 +5,10 @@ import PageShell from "../../components/layout/PageShell";
 import PageHeader from "../../components/layout/PageHeader";
 import PageContent from "../../components/layout/PageContent";
 import Section from "../../components/layout/Section";
+import ErrorBanner from "../../components/ui/ErrorBanner";
+import Badge from "../../components/ui/Badge";
 import { ownerAuthHeaders } from "../../lib/api";
+import StrategyProfileBanner from "../../components/StrategyProfileBanner";
 
 
 function formatCurrency(value) {
@@ -65,7 +68,7 @@ function ActionItemsTabs({
 
   return (
     <div className="mb-5">
-      <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-600 mb-4">
+      <h2 className="text-lg font-semibold text-slate-900 mb-4">
         Action Items
       </h2>
 
@@ -82,7 +85,7 @@ function ActionItemsTabs({
               <span className={[
                 "ml-1.5 inline-flex items-center justify-center rounded-full px-1.5 py-0.5 text-xs font-semibold leading-none",
                 active === i
-                  ? "bg-slate-900 text-white"
+                  ? "bg-indigo-100 text-indigo-700"
                   : "bg-slate-100 text-slate-600",
               ].join(" ")}>
                 {badges[i]}
@@ -99,7 +102,7 @@ function ActionItemsTabs({
         ) : (
           <div className="space-y-2">
             {recentApprovals.map((req) => (
-              <Link key={req.id} href="/owner/approvals" className="block" style={{ textDecoration: "none", color: "inherit" }}>
+              <Link key={req.id} href={`/owner/requests/${req.id}`} className="link-card">
                 <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-4 py-3 hover:bg-slate-50 transition-colors">
                   <div className="min-w-0">
                     <div className="text-sm font-semibold text-slate-900 truncate">{req.description}</div>
@@ -128,36 +131,40 @@ function ActionItemsTabs({
         ) : (
           <div className="space-y-2">
             {draftInvoices.map((invoice) => (
-              <div key={invoice.id} className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-4 py-3">
-                <div className="min-w-0">
-                  <div className="text-sm font-semibold text-slate-900 truncate">
-                    {invoice.invoiceNumber || "Draft invoice"}
+              <Link key={invoice.id} href={`/owner/invoices?invoiceId=${invoice.id}`} className="link-card">
+                <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-4 py-3 hover:bg-slate-50 transition-colors">
+                  <div className="min-w-0">
+                    <div className="text-sm font-semibold text-slate-900 truncate">
+                      {invoice.invoiceNumber || "Draft invoice"}
+                    </div>
+                    <div className="mt-0.5 text-xs text-slate-500">
+                      {invoice.contractor?.name || invoice.jobId || "—"}
+                    </div>
                   </div>
-                  <div className="mt-0.5 text-xs text-slate-500">
-                    {invoice.contractor?.name || invoice.jobId || "—"}
+                  <div className="ml-6 shrink-0 text-right">
+                    <div className="text-sm font-semibold text-slate-900">{formatCurrency(getInvoiceTotal(invoice))}</div>
+                    <div className="mt-0.5 text-xs font-medium text-amber-600">Draft</div>
                   </div>
                 </div>
-                <div className="ml-6 shrink-0 text-right">
-                  <div className="text-sm font-semibold text-slate-900">{formatCurrency(getInvoiceTotal(invoice))}</div>
-                  <div className="mt-0.5 text-xs font-medium text-amber-600">Draft</div>
-                </div>
-              </div>
+              </Link>
             ))}
             {approvedInvoices.map((invoice) => (
-              <div key={invoice.id} className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-4 py-3">
-                <div className="min-w-0">
-                  <div className="text-sm font-semibold text-slate-900 truncate">
-                    {invoice.invoiceNumber || "Invoice"}
+              <Link key={invoice.id} href={`/owner/invoices?invoiceId=${invoice.id}`} className="link-card">
+                <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-4 py-3 hover:bg-slate-50 transition-colors">
+                  <div className="min-w-0">
+                    <div className="text-sm font-semibold text-slate-900 truncate">
+                      {invoice.invoiceNumber || "Invoice"}
+                    </div>
+                    <div className="mt-0.5 text-xs text-slate-500">
+                      {invoice.contractor?.name || invoice.jobId || "—"}
+                    </div>
                   </div>
-                  <div className="mt-0.5 text-xs text-slate-500">
-                    {invoice.contractor?.name || invoice.jobId || "—"}
+                  <div className="ml-6 shrink-0 text-right">
+                    <div className="text-sm font-semibold text-slate-900">{formatCurrency(getInvoiceTotal(invoice))}</div>
+                    <div className="mt-0.5 text-xs font-medium text-green-600">Approved · due</div>
                   </div>
                 </div>
-                <div className="ml-6 shrink-0 text-right">
-                  <div className="text-sm font-semibold text-slate-900">{formatCurrency(getInvoiceTotal(invoice))}</div>
-                  <div className="mt-0.5 text-xs font-medium text-emerald-600">Approved · due</div>
-                </div>
-              </div>
+              </Link>
             ))}
             <Link href="/owner/invoices" className="block text-xs font-medium text-indigo-600 hover:text-indigo-700 pt-1">
               View all invoices →
@@ -173,7 +180,7 @@ function ActionItemsTabs({
         ) : (
           <div className="space-y-2">
             {topVacancies.map((unit) => (
-              <Link key={unit.id} href="/owner/vacancies" className="block" style={{ textDecoration: "none", color: "inherit" }}>
+              <Link key={unit.id} href={`/admin-inventory/units/${unit.id}`} className="link-card">
                 <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-4 py-3 hover:bg-slate-50 transition-colors">
                   <div className="min-w-0">
                     <div className="text-sm font-semibold text-slate-900">
@@ -184,9 +191,9 @@ function ActionItemsTabs({
                     </div>
                   </div>
                   <div className="ml-6 shrink-0">
-                    <span className="inline-flex items-center rounded-full bg-red-50 border border-red-200 px-2.5 py-0.5 text-xs font-medium text-red-700">
+                    <Badge variant="destructive" size="sm">
                       Vacant
-                    </span>
+                    </Badge>
                   </div>
                 </div>
               </Link>
@@ -205,7 +212,7 @@ function ActionItemsTabs({
         ) : (
           <div className="space-y-2">
             {rfpsPendingApproval.map((rfp) => (
-              <Link key={rfp.id} href={`/owner/rfps/${rfp.id}`} className="block" style={{ textDecoration: "none", color: "inherit" }}>
+              <Link key={rfp.id} href={`/owner/rfps/${rfp.id}`} className="link-card">
                 <div className="flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 hover:bg-amber-100 transition-colors">
                   <div className="min-w-0">
                     <div className="text-sm font-semibold text-slate-900 truncate">{rfp.category || "RFP"}</div>
@@ -214,15 +221,15 @@ function ActionItemsTabs({
                     </div>
                   </div>
                   <div className="ml-6 shrink-0">
-                    <span className="inline-flex items-center rounded-full bg-amber-100 border border-amber-300 px-2.5 py-0.5 text-xs font-medium text-amber-800">
+                    <Badge variant="warning" size="sm">
                       Awaiting approval
-                    </span>
+                    </Badge>
                   </div>
                 </div>
               </Link>
             ))}
             {rfpsOpen.map((rfp) => (
-              <Link key={rfp.id} href={`/owner/rfps/${rfp.id}`} className="block" style={{ textDecoration: "none", color: "inherit" }}>
+              <Link key={rfp.id} href={`/owner/rfps/${rfp.id}`} className="link-card">
                 <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-4 py-3 hover:bg-slate-50 transition-colors">
                   <div className="min-w-0">
                     <div className="text-sm font-semibold text-slate-900 truncate">{rfp.category || "RFP"}</div>
@@ -231,9 +238,9 @@ function ActionItemsTabs({
                     </div>
                   </div>
                   <div className="ml-6 shrink-0">
-                    <span className="inline-flex items-center rounded-full bg-blue-50 border border-blue-200 px-2.5 py-0.5 text-xs font-medium text-blue-700">
+                    <Badge variant="info" size="sm">
                       Open
-                    </span>
+                    </Badge>
                   </div>
                 </div>
               </Link>
@@ -256,6 +263,7 @@ export default function OwnerDashboard() {
   const [rfps, setRfps] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [hasStrategyProfile, setHasStrategyProfile] = useState(true);
 
   useEffect(() => {
     loadDashboard();
@@ -286,6 +294,22 @@ export default function OwnerDashboard() {
       setLeases(leasesRes.data || []);
       setUnits(unitsRes.data || []);
       setRfps(rfpsRes.data || []);
+
+      // Check if owner has a strategy profile
+      try {
+        const token = typeof window !== "undefined" ? localStorage.getItem("ownerToken") : null;
+        if (token) {
+          const payload = JSON.parse(atob(token.split(".")[1]));
+          const userId = payload.sub || payload.userId;
+          if (userId) {
+            const profileRes = await fetchJson(`/api/strategy/owner-profile/${userId}`);
+            setHasStrategyProfile(!!profileRes.profile);
+          }
+        }
+      } catch {
+        // Non-critical — keep banner visible
+        setHasStrategyProfile(false);
+      }
     } catch (err) {
       setError(err?.message || "Failed to load owner dashboard");
     } finally {
@@ -387,50 +411,47 @@ export default function OwnerDashboard() {
         />
 
         <PageContent>
-          {error && (
-            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              {error}
-            </div>
-          )}
+          {!hasStrategyProfile && <StrategyProfileBanner />}
+          <ErrorBanner error={error} className="text-sm" />
 
           <Section title="KPIs">
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-              <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-                <div className="text-xs font-semibold uppercase text-slate-500">Vacant units</div>
-                <div className="mt-2 text-2xl font-semibold text-slate-900">
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Vacant units</div>
+                <div className="mt-3 text-2xl font-semibold tracking-tight text-slate-900">
                   {vacantUnits.length}
                 </div>
                 <div className="text-sm text-slate-600">
                   {formatPercent(vacancyRate)} vacancy · {residentialUnits.length} residential
                 </div>
               </div>
-              <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-                <div className="text-xs font-semibold uppercase text-slate-500">
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="text-xs font-medium uppercase tracking-wide text-slate-400">
                   Expected monthly rent
                 </div>
-                <div className="mt-2 text-2xl font-semibold text-slate-900">
+                <div className="mt-3 text-2xl font-semibold tracking-tight text-slate-900">
                   {formatCurrency(expectedMonthlyRentChf)}
                 </div>
                 <div className="text-sm text-slate-600">
                   From {activeLeases.length} active lease{activeLeases.length !== 1 ? "s" : ""}
                 </div>
               </div>
-              <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-                <div className="text-xs font-semibold uppercase text-slate-500">
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="text-xs font-medium uppercase tracking-wide text-slate-400">
                   Outstanding liabilities
                 </div>
-                <div className="mt-2 text-2xl font-semibold text-slate-900">
+                <div className="mt-3 text-2xl font-semibold tracking-tight text-slate-900">
                   {formatCurrency(outstandingLiabilitiesChf)}
                 </div>
                 <div className="text-sm text-slate-600">
                   Drafts: {formatCurrency(draftInvoicesChf)}
                 </div>
               </div>
-              <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-                <div className="text-xs font-semibold uppercase text-slate-500">
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="text-xs font-medium uppercase tracking-wide text-slate-400">
                   Pending approval exposure
                 </div>
-                <div className="mt-2 text-2xl font-semibold text-slate-900">
+                <div className="mt-3 text-2xl font-semibold tracking-tight text-slate-900">
                   {formatCurrency(pendingApprovalExposureChf)}
                 </div>
                 <div className="text-sm text-slate-600">
@@ -439,9 +460,9 @@ export default function OwnerDashboard() {
               </div>
               <Link
                 href="/owner/reporting"
-                className="rounded-xl border border-slate-200 bg-slate-50 p-4 shadow-sm flex flex-col justify-between hover:bg-slate-100 transition-colors no-underline"
+                className="rounded-2xl border border-slate-200 bg-slate-50 p-5 shadow-sm flex flex-col justify-between hover:bg-slate-100 transition-colors no-underline"
               >
-                <div className="text-xs font-semibold uppercase text-slate-500">Performance report</div>
+                <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Performance report</div>
                 <div className="mt-2 text-sm font-medium text-slate-700">Monthly income, expenses, and building breakdown.</div>
                 <div className="mt-3 text-sm font-semibold text-indigo-600">View report →</div>
               </Link>

@@ -1,37 +1,34 @@
 /**
  * evaluateLegalRoutingWorkflow
  *
- * Canonical entry point for evaluating legal obligations for a
- * maintenance request and optionally auto-creating an RFP.
+ * READ-ONLY evaluation of legal obligations for a maintenance request.
+ * Returns the legal decision DTO without any side effects.
+ *
+ * All routing mutations (RFP creation, status transitions) happen in
+ * createRequestWorkflow (at creation) or approveRequestWorkflow (on
+ * manager approval), not here.
  *
  * Used by:
- *   - GET /requests/:id/legal-decision
- *   - Inline during createRequestWorkflow (via direct service call)
+ *   - GET /requests/:id/legal-decision  (read-only endpoint)
+ *   - createRequestWorkflow             (reads decision, then writes if OBLIGATED)
  *
  * Orchestrates:
  *   0. Derive canton from request's building
  *   1. Ingest sources scoped to canton (FEDERAL + canton)
  *   2. Call legalDecisionEngine.evaluateRequestLegalDecision
- *   3. If OBLIGATED → auto-create RFP (idempotent)
- *   4. Return the decision DTO
+ *   3. Return the decision DTO
  */
 
-import { LegalObligation, RequestStatus, ApprovalSource } from "@prisma/client";
 import { WorkflowContext } from "./context";
-import { assertRequestTransition } from "./transitions";
 import {
   evaluateRequestLegalDecision,
   type LegalDecisionDTO,
 } from "../services/legalDecisionEngine";
-import { createRfpForRequest } from "../services/rfps";
-import { updateRequestStatus } from "../repositories/requestRepository";
 import { ingestAllSources } from "../services/legalIngestion";
 import {
   cantonFromPostalCode,
   extractPostalCode,
 } from "../services/cantonMapping";
-import { REQUEST_LEGAL_DECISION_INCLUDE } from "../services/legalIncludes";
-import { emit } from "../events/bus";
 
 // ─── Input / Output ────────────────────────────────────────────
 
@@ -112,66 +109,8 @@ export async function evaluateLegalRoutingWorkflow(
     console.warn("[legal-routing] Ingestion failed (non-blocking):", ingestionErr.message);
   }
 
-  // ── 2. Evaluate legal decision ─────────────────────────────
+  // ── 2. Evaluate legal decision (read-only) ─────────────────
   const decision = await evaluateRequestLegalDecision(orgId, requestId);
-
-  // ── 3. Auto-create RFP if OBLIGATED and transition to RFP_PENDING ──
-  if (decision.legalObligation === LegalObligation.OBLIGATED) {
-    try {
-      const rfp = await createRfpForRequest(orgId, requestId, {
-        legalObligation: decision.legalObligation,
-        legalTopic: decision.legalTopic,
-      });
-      decision.rfpId = rfp.id;
-
-      // Transition request status — legal obligation overrides cost-based routing
-      const current = await prisma.request.findUnique({
-        where: { id: requestId },
-        select: { status: true },
-      });
-      if (
-        current?.status === RequestStatus.PENDING_REVIEW ||
-        current?.status === RequestStatus.PENDING_OWNER_APPROVAL
-      ) {
-        assertRequestTransition(current.status, RequestStatus.RFP_PENDING);
-        await updateRequestStatus(prisma, requestId, RequestStatus.RFP_PENDING, {
-          approvalSource: ApprovalSource.LEGAL_OBLIGATION,
-        });
-
-        emit({
-          type: "LEGAL_AUTO_ROUTED",
-          orgId,
-          actorUserId: ctx.actorUserId,
-          payload: {
-            requestId,
-            obligation: decision.legalObligation,
-            rfpId: rfp.id,
-            previousStatus: String(current.status),
-            newStatus: "RFP_PENDING",
-          },
-        }).catch((err) => console.error("[EVENT] Failed to emit LEGAL_AUTO_ROUTED", err));
-      }
-    } catch (rfpErr: any) {
-      console.warn("[legal-routing] RFP creation or status update failed:", rfpErr.message);
-    }
-  }
-
-  // ── 4. Route non-obligated requests to owner ───────────────────────
-  if (decision.legalObligation !== LegalObligation.OBLIGATED) {
-    try {
-      const current = await prisma.request.findUnique({
-        where: { id: requestId },
-        select: { status: true },
-      });
-      if (current?.status === RequestStatus.PENDING_REVIEW) {
-        assertRequestTransition(current.status, RequestStatus.PENDING_OWNER_APPROVAL);
-        await updateRequestStatus(prisma, requestId, RequestStatus.PENDING_OWNER_APPROVAL);
-        console.log(`[legal-routing] Request ${requestId}: ${decision.legalObligation} → PENDING_OWNER_APPROVAL`);
-      }
-    } catch (routeErr: any) {
-      console.warn("[legal-routing] Owner routing failed:", routeErr.message);
-    }
-  }
 
   return { decision };
 }

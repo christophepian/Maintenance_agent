@@ -2,6 +2,9 @@ import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import AppShell from "../../components/AppShell";
 import ContractorPicker from "../../components/ContractorPicker";
+import ErrorBanner from "../../components/ui/ErrorBanner";
+import Badge from "../../components/ui/Badge";
+import { rfpVariant, quoteVariant } from "../../lib/statusVariants";
 import { formatDate } from "../../lib/format";
 import { authHeaders } from "../../lib/api";
 
@@ -11,20 +14,6 @@ const STATUS_TABS = [
   { key: "AWARDED", label: "Awarded" },
   { key: "CANCELLED", label: "Cancelled" },
 ];
-
-const STATUS_COLORS = {
-  DRAFT: "bg-slate-50 text-slate-600 border-slate-200",
-  OPEN: "bg-blue-50 text-blue-700 border-blue-200",
-  AWARDED: "bg-green-50 text-green-700 border-green-200",
-  CLOSED: "bg-slate-50 text-slate-500 border-slate-200",
-  CANCELLED: "bg-red-50 text-red-600 border-red-200",
-};
-
-const QUOTE_STATUS_COLORS = {
-  SUBMITTED: "bg-blue-50 text-blue-700 border-blue-200",
-  AWARDED: "bg-green-50 text-green-700 border-green-200",
-  REJECTED: "bg-amber-50 text-amber-700 border-amber-200",
-};
 
 export default function ContractorRfpsPage() {
   const [rfps, setRfps] = useState([]);
@@ -69,22 +58,15 @@ export default function ContractorRfpsPage() {
 
   return (
     <AppShell role="CONTRACTOR">
-      <div style={{ maxWidth: "1200px" }}>
-        <h1 style={{ marginTop: 0, marginBottom: "24px" }}>Available RFPs</h1>
+      <div className="max-w-[1200px]">
+        <h1 className="mt-0 mb-6">Available RFPs</h1>
 
         <ContractorPicker onSelect={() => loadData()} />
 
-        {error && (
-          <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded text-red-800">
-            {error}
-            <button onClick={() => setError("")} style={{ marginLeft: 12, fontSize: "0.85em" }}>
-              Dismiss
-            </button>
-          </div>
-        )}
+        <ErrorBanner error={error} onDismiss={() => setError("")} className="mb-4" />
 
         {/* Status tabs */}
-        <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 16 }}>
+        <div className="pill-tab-row">
           {STATUS_TABS.map((tab) => {
             const count =
               tab.key === "ALL" ? rfps.length : rfps.filter((r) => r.status === tab.key).length;
@@ -93,16 +75,7 @@ export default function ContractorRfpsPage() {
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
-                style={{
-                  padding: "6px 14px",
-                  borderRadius: 6,
-                  fontSize: "0.85em",
-                  fontWeight: active ? 700 : 400,
-                  border: active ? "2px solid #0b3a75" : "1px solid #ccc",
-                  backgroundColor: active ? "#e3f2fd" : "#fff",
-                  color: active ? "#0b3a75" : "#333",
-                  cursor: "pointer",
-                }}
+                className={active ? "pill-tab pill-tab-active" : "pill-tab"}
               >
                 {tab.label} ({count})
               </button>
@@ -111,18 +84,18 @@ export default function ContractorRfpsPage() {
         </div>
 
         {loading ? (
-          <p className="text-gray-600">Loading RFPs...</p>
+          <p className="text-slate-600">Loading RFPs...</p>
         ) : rfps.length === 0 ? (
-          <div className="bg-gray-50 border border-gray-200 rounded p-8 text-center">
-            <p className="text-gray-600">
+          <div className="bg-slate-50 border border-slate-200 rounded p-8 text-center">
+            <p className="text-slate-600">
               No RFPs available{activeTab !== "ALL" ? ` with status ${activeTab}` : ""}.
             </p>
-            <p className="text-gray-400 text-sm mt-2">
+            <p className="text-slate-400 text-sm mt-2">
               RFPs matching your service categories will appear here.
             </p>
           </div>
         ) : (
-          <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+          <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
             <table className="inline-table">
               <thead>
                 <tr>
@@ -165,32 +138,24 @@ export default function ContractorRfpsPage() {
                       )}
                     </td>
                     <td>
-                      <span
-                        className={`inline-block rounded-full border px-2 py-0.5 text-xs font-medium ${
-                          STATUS_COLORS[rfp.status] || STATUS_COLORS.OPEN
-                        }`}
-                      >
+                      <Badge variant={rfpVariant(rfp.status)} size="sm">
                         {rfp.status}
-                      </span>
+                      </Badge>
                       {rfp.isInvited && (
-                        <span className="ml-1 inline-block rounded-full bg-indigo-50 border border-indigo-200 px-2 py-0.5 text-xs font-medium text-indigo-700">
+                        <Badge variant="brand" size="sm" className="ml-1">
                           Invited
-                        </span>
+                        </Badge>
                       )}
                     </td>
                     <td>
                       {rfp.myQuote ? (
-                        <span
-                          className={`inline-block rounded-full border px-2 py-0.5 text-xs font-medium ${
-                            QUOTE_STATUS_COLORS[rfp.myQuote.status] || QUOTE_STATUS_COLORS.SUBMITTED
-                          }`}
-                        >
+                        <Badge variant={quoteVariant(rfp.myQuote.status)} size="sm">
                           {rfp.myQuote.status === "AWARDED"
                             ? "Won"
                             : rfp.myQuote.status === "REJECTED"
                             ? "Not selected"
                             : "Submitted"}
-                        </span>
+                        </Badge>
                       ) : (
                         <span className="text-xs text-slate-400">—</span>
                       )}
@@ -217,7 +182,7 @@ export default function ContractorRfpsPage() {
           </div>
         )}
 
-        <p className="text-xs text-gray-400 mt-4">Showing {rfps.length} of {total} RFPs</p>
+        <p className="text-xs text-slate-400 mt-4">Showing {rfps.length} of {total} RFPs</p>
       </div>
     </AppShell>
   );

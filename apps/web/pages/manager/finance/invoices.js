@@ -7,14 +7,17 @@ import PageShell from "../../../components/layout/PageShell";
 import PageHeader from "../../../components/layout/PageHeader";
 import PageContent from "../../../components/layout/PageContent";
 import Panel from "../../../components/layout/Panel";
-import SortableHeader from "../../../components/SortableHeader";
+import ConfigurableTable from "../../../components/ConfigurableTable";
 import PaginationControls from "../../../components/PaginationControls";
 import { useTableSort, useTablePagination, clientSort } from "../../../lib/tableUtils";
 import { authHeaders } from "../../../lib/api";
+import Badge from "../../../components/ui/Badge";
+import { invoiceVariant, ingestionVariant } from "../../../lib/statusVariants";
 
+import { cn } from "../../../lib/utils";
 /* ─── Helpers ─────────────────────────────────────────────── */
 
-const INVOICE_SORT_FIELDS = ["status", "invoiceNumber", "amount", "createdAt", "issuer", "recipient", "building"];
+const INVOICE_SORT_FIELDS = ["status", "invoiceNumber", "amount", "createdAt", "issuer", "recipient", "building", "recurring", "category"];
 
 function invoiceFieldExtractor(inv, field) {
   switch (field) {
@@ -25,6 +28,8 @@ function invoiceFieldExtractor(inv, field) {
     case "issuer": return (inv.issuerName || "").toLowerCase();
     case "recipient": return (inv.recipientName || "").toLowerCase();
     case "building": return ((inv.buildingName || "") + (inv.unitNumber || "")).toLowerCase();
+    case "recurring": return (inv.billingScheduleId || inv.contractorBillingScheduleId) ? "1" : "0";
+    case "category": return (inv.expenseCategory || "").toLowerCase();
     default: return "";
   }
 }
@@ -60,32 +65,18 @@ function formatChf(amount) {
   return `CHF ${intPart.replace(/\B(?=(\d{3})+(?!\d))/g, "'")}.${decPart}`;
 }
 
-/* ─── StatusBadge (Tailwind) ──────────────────────────────── */
-
-const STATUS_CLS = {
-  DRAFT: "bg-slate-100 text-slate-600",
-  ISSUED: "bg-blue-100 text-blue-700",
-  APPROVED: "bg-emerald-100 text-emerald-700",
-  PAID: "bg-green-100 text-green-800",
-  DISPUTED: "bg-red-100 text-red-700",
-};
+/* ─── StatusBadge (shared Badge) ────────────────────────────── */
 
 function StatusBadge({ status }) {
   return (
-    <span className={"inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold " + (STATUS_CLS[status] || "bg-slate-100 text-slate-600")}>
+    <Badge variant={invoiceVariant(status)} size="sm">
       {status}
-    </span>
+    </Badge>
   );
 }
 
 /* ─── Ingestion badges & source icons ─────────────────────── */
 
-const INGESTION_CLS = {
-  PENDING_REVIEW: "bg-amber-100 text-amber-700",
-  AUTO_CONFIRMED: "bg-green-100 text-green-700",
-  CONFIRMED: "bg-emerald-100 text-emerald-700",
-  REJECTED: "bg-red-100 text-red-700",
-};
 const INGESTION_LABEL = {
   PENDING_REVIEW: "Needs review",
   AUTO_CONFIRMED: "Auto-confirmed",
@@ -96,9 +87,9 @@ const INGESTION_LABEL = {
 function IngestionBadge({ ingestionStatus }) {
   if (!ingestionStatus) return null;
   return (
-    <span className={"inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ml-1.5 " + (INGESTION_CLS[ingestionStatus] || "bg-slate-100 text-slate-600")}>
+    <Badge variant={ingestionVariant(ingestionStatus)} size="sm" className="ml-1.5">
       {INGESTION_LABEL[ingestionStatus] || ingestionStatus}
-    </span>
+    </Badge>
   );
 }
 
@@ -212,7 +203,7 @@ function InvoiceOverlay({ invoiceId, onClose }) {
       <div
         className="relative flex flex-col bg-white rounded-xl shadow-2xl w-full max-w-4xl mx-4"
         onClick={(e) => e.stopPropagation()}
-        style={{ height: "85vh" }}
+        className="h-[85vh]"
       >
         {/* Header bar */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
@@ -394,7 +385,7 @@ function UploadInvoiceModal({ onClose, onSuccess }) {
         )}
         <div className="flex justify-end gap-2 mt-4">
           <button type="button" onClick={onClose} className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition">Cancel</button>
-          <button type="submit" disabled={!file || uploading} className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition disabled:opacity-50">
+          <button type="submit" disabled={!file || uploading} className="button-primary text-sm disabled:opacity-50">
             {uploading ? "Scanning…" : "Upload & Scan"}
           </button>
         </div>
@@ -483,9 +474,9 @@ function CaptureSessionModal({ onClose, onComplete }) {
         ) : completed ? (
           <div className="text-center py-4">
             <p className="text-2xl mb-2">✅</p>
-            <p className="text-sm font-medium text-emerald-700 mb-1">Photos received!</p>
+            <p className="text-sm font-medium text-green-700 mb-1">Photos received!</p>
             <p className="text-xs text-slate-500 mb-4">The invoice is being processed.</p>
-            <button onClick={onClose} className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 transition">Done</button>
+            <button onClick={onClose} className="button-primary text-sm">Done</button>
           </div>
         ) : (
           <div>
@@ -550,6 +541,15 @@ export function InvoicesContent() {
   }, []);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  // Deep-link: auto-open invoice overlay from ?invoiceId= query param
+  useEffect(() => {
+    if (!router.isReady) return;
+    const qId = router.query.invoiceId;
+    if (qId && !overlayInvoiceId) {
+      setOverlayInvoiceId(qId);
+    }
+  }, [router.isReady, router.query.invoiceId]);
 
   const isOutgoing = direction === "outgoing";
   const isPending = direction === "pending";
@@ -661,7 +661,7 @@ export function InvoicesContent() {
     if (inv.status === "ISSUED") {
       actions.push({
         label: "✓ Approve",
-        className: "text-emerald-700 font-medium",
+        className: "text-green-700 font-medium",
         disabled: actionLoading === inv.id,
         onClick: () => invoiceAction(inv.id, "approve"),
       });
@@ -671,7 +671,7 @@ export function InvoicesContent() {
     if (inv.status === "APPROVED") {
       actions.push({
         label: "✓ Mark Paid",
-        className: "text-emerald-700 font-medium",
+        className: "text-green-700 font-medium",
         disabled: actionLoading === inv.id,
         onClick: () => invoiceAction(inv.id, "mark-paid"),
       });
@@ -689,6 +689,104 @@ export function InvoicesContent() {
 
     return actions;
   }
+
+  const invoiceColumns = useMemo(() => [
+    {
+      id: "status",
+      label: "Status",
+      sortable: true,
+      defaultVisible: true,
+      render: (inv) => (
+        <div className="flex items-center flex-wrap gap-1">
+          {!isOutgoing && <SourceChannelIcon channel={inv.sourceChannel} />}
+          <StatusBadge status={inv.status} />
+          <IngestionBadge ingestionStatus={inv.ingestionStatus} />
+        </div>
+      ),
+    },
+    {
+      id: "invoiceNumber",
+      label: "Invoice #",
+      sortable: true,
+      defaultVisible: true,
+      className: "cell-bold",
+      render: (inv) => inv.invoiceNumber || inv.id.slice(0, 8),
+    },
+    {
+      id: "issuerOrRecipient",
+      label: isOutgoing ? "Tenant" : "Issuer",
+      sortable: true,
+      sortField: isOutgoing ? "recipient" : "issuer",
+      defaultVisible: true,
+      render: (inv) => isOutgoing ? (inv.recipientName || "\u2014") : (inv.issuerName || "\u2014"),
+    },
+    {
+      id: "building",
+      label: "Building \u00b7 Unit",
+      sortable: true,
+      defaultVisible: true,
+      render: (inv) =>
+        inv.buildingName || inv.unitNumber
+          ? <span>{inv.buildingName || "\u2014"}{inv.unitNumber ? <span className="text-slate-400"> \u00b7 {inv.unitNumber}</span> : null}</span>
+          : "\u2014",
+    },
+    {
+      id: "amount",
+      label: "Amount",
+      sortable: true,
+      defaultVisible: true,
+      render: (inv) => getAmount(inv),
+    },
+    {
+      id: "createdAt",
+      label: "Date",
+      sortable: true,
+      defaultVisible: true,
+      render: (inv) => {
+        if (!inv.createdAt) return "—";
+        const d = new Date(inv.createdAt);
+        if (isNaN(d.getTime())) return inv.createdAt;
+        const date = `${String(d.getDate()).padStart(2, "0")}.${String(d.getMonth() + 1).padStart(2, "0")}.${d.getFullYear()}`;
+        const time = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+        return (
+          <span>
+            {date} <span className="text-slate-400 text-[10px]">{time}</span>
+          </span>
+        );
+      },
+    },
+    {
+      id: "recurring",
+      label: "Recurring",
+      sortable: true,
+      defaultVisible: true,
+      render: (inv) => {
+        const isRecurring = !!(inv.billingScheduleId || inv.contractorBillingScheduleId);
+        return isRecurring
+          ? <span className="inline-flex items-center rounded-full bg-indigo-50 text-indigo-700 px-2 py-0.5 text-[10px] font-semibold">Recurring</span>
+          : <span className="text-slate-300 text-xs">\u2014</span>;
+      },
+    },
+    {
+      id: "category",
+      label: "Category",
+      sortable: true,
+      defaultVisible: true,
+      render: (inv) =>
+        inv.expenseCategory
+          ? <span className="text-xs text-slate-600">{inv.expenseCategory.charAt(0) + inv.expenseCategory.slice(1).toLowerCase()}</span>
+          : <span className="text-slate-300 text-xs">\u2014</span>,
+    },
+    {
+      id: "actions",
+      label: "Actions",
+      sortable: false,
+      alwaysVisible: true,
+      className: "text-right",
+      headerClassName: "text-right",
+      render: (inv) => <ActionDropdown actions={buildActions(inv)} />,
+    },
+  ], [isOutgoing, actionLoading]);
 
   return (
     <>
@@ -712,10 +810,10 @@ export function InvoicesContent() {
               key={key}
               onClick={() => { setDirection(key); setTableExpanded(false); }}
               className={[
-                "rounded-md px-4 py-1.5 text-sm font-medium transition-colors",
+                "rounded-lg px-4 py-1.5 text-sm font-medium transition-colors",
                 direction === key
                   ? key === "pending"
-                    ? "bg-amber-50 text-amber-800 shadow-sm"
+                    ? "bg-amber-50 text-amber-700 shadow-sm"
                     : "bg-white text-slate-900 shadow-sm"
                   : "text-slate-500 hover:text-slate-700",
               ].join(" ")}
@@ -762,7 +860,7 @@ export function InvoicesContent() {
               key={key}
               onClick={() => { setStatusFilter(key); setTableExpanded(false); }}
               className={[
-                "rounded-md px-3 py-1 text-xs font-medium transition-colors",
+                "rounded-lg px-3 py-1 text-xs font-medium transition-colors",
                 statusFilter === key
                   ? "bg-white text-slate-900 shadow-sm"
                   : "text-slate-500 hover:text-slate-700",
@@ -776,7 +874,7 @@ export function InvoicesContent() {
           <select
             value={categoryFilter}
             onChange={(e) => { setCategoryFilter(e.target.value); setTableExpanded(false); }}
-            className="rounded-md border border-slate-200 px-3 py-1.5 text-xs text-slate-700 bg-white"
+            className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-700 bg-white"
           >
             <option value="">All categories</option>
             {availableCategories.map((cat) => (
@@ -793,63 +891,17 @@ export function InvoicesContent() {
         <div className="empty-state"><p className="empty-state-text">No invoices match this filter.</p></div>
       ) : (
         <Panel bodyClassName="p-0">
-          <table className="inline-table">
-            <thead>
-              <tr>
-                <SortableHeader label="Status" field="status" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
-                <SortableHeader label="Invoice #" field="invoiceNumber" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
-                <SortableHeader label={isOutgoing ? "Tenant" : "Issuer"} field={isOutgoing ? "recipient" : "issuer"} sortField={sortField} sortDir={sortDir} onSort={handleSort} />
-                <SortableHeader label="Building · Unit" field="building" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
-                <SortableHeader label="Amount" field="amount" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
-                <SortableHeader label="Created" field="createdAt" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
-                <th>Recurring</th>
-                <th>Category</th>
-                <th className="text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {visibleInvoices.map((inv) => {
-                const isRecurring = !!(inv.billingScheduleId || inv.contractorBillingScheduleId);
-                return (
-                <tr
-                  key={inv.id}
-                  onClick={() => router.push(`/manager/finance/invoices/${inv.id}`)}
-                  className="cursor-pointer"
-                >
-                  <td>
-                    <div className="flex items-center flex-wrap gap-1">
-                      {!isOutgoing && <SourceChannelIcon channel={inv.sourceChannel} />}
-                      <StatusBadge status={inv.status} />
-                      <IngestionBadge ingestionStatus={inv.ingestionStatus} />
-                    </div>
-                  </td>
-                  <td className="cell-bold">{inv.invoiceNumber || inv.id.slice(0, 8)}</td>
-                  <td>{isOutgoing ? (inv.recipientName || "—") : (inv.issuerName || "—")}</td>
-                  <td>
-                    {inv.buildingName || inv.unitNumber
-                      ? <span>{inv.buildingName || "—"}{inv.unitNumber ? <span className="text-slate-400"> · {inv.unitNumber}</span> : null}</span>
-                      : "—"}
-                  </td>
-                  <td>{getAmount(inv)}</td>
-                  <td>{formatDate(inv.createdAt)}</td>
-                  <td>
-                    {isRecurring
-                      ? <span className="inline-flex items-center rounded-full bg-indigo-50 text-indigo-700 px-2 py-0.5 text-[10px] font-semibold">Recurring</span>
-                      : <span className="text-slate-300 text-xs">—</span>}
-                  </td>
-                  <td>
-                    {inv.expenseCategory
-                      ? <span className="text-xs text-slate-600">{inv.expenseCategory.charAt(0) + inv.expenseCategory.slice(1).toLowerCase()}</span>
-                      : <span className="text-slate-300 text-xs">—</span>}
-                  </td>
-                  <td className="text-right">
-                    <ActionDropdown actions={buildActions(inv)} />
-                  </td>
-                </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          <ConfigurableTable
+            tableId="manager-invoices"
+            columns={invoiceColumns}
+            data={visibleInvoices}
+            rowKey="id"
+            sortField={sortField}
+            sortDir={sortDir}
+            onSort={handleSort}
+            onRowClick={(inv) => router.push(`/manager/finance/invoices/${inv.id}`)}
+            emptyState="No invoices match this filter."
+          />
           {/* Expand / collapse row */}
           <div
             className="flex items-center justify-center gap-1.5 px-4 py-2.5 border-t border-slate-100 cursor-pointer hover:bg-slate-50 transition-colors text-sm text-slate-500 select-none"
@@ -859,7 +911,7 @@ export function InvoicesContent() {
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 20 20"
               fill="currentColor"
-              className={`w-4 h-4 transition-transform duration-200 ${tableExpanded ? "rotate-180" : ""}`}
+              className={cn("w-4 h-4 transition-transform duration-200", tableExpanded ? "rotate-180" : "")}
             >
               <path fillRule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
             </svg>

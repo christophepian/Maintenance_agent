@@ -1,7 +1,9 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import AppShell from "../../components/AppShell";
+import Badge from "../../components/ui/Badge";
 import { authHeaders } from "../../lib/api";
 
+import { cn } from "../../lib/utils";
 /* ─── Constants ──────────────────────────────────────────────── */
 
 const PREVIEW = 3; // rows shown before expand
@@ -45,7 +47,7 @@ function delta(curr, prev, format) {
   if (!Number.isFinite(curr) || !Number.isFinite(prev) || prev === 0) return null;
   const pct = ((curr - prev) / Math.abs(prev)) * 100;
   const sign = pct >= 0 ? "+" : "";
-  const tone = pct >= 0 ? "text-emerald-600" : "text-red-500";
+  const tone = pct >= 0 ? "text-green-600" : "text-red-500";
   return { label: `${sign}${pct.toFixed(1)}% vs prev month`, tone };
 }
 
@@ -125,7 +127,7 @@ function TimelineHeader({ year, month, mode, onSelect, onYearNav, onModeToggle }
           <div
             ref={scrollRef}
             className="flex gap-1.5 overflow-x-auto no-scrollbar flex-1"
-            style={{ scrollbarWidth: "none" }}
+            className="scrollbar-none"
           >
             {mode === "month"
               ? MONTHS_SHORT.map((m, i) => {
@@ -190,7 +192,7 @@ function KpiCard({ label, value, delta, isLoading }) {
         <div className="mt-3 text-2xl font-semibold tracking-tight text-slate-900">{value}</div>
       )}
       {!isLoading && delta && (
-        <div className={`mt-1.5 text-xs ${delta.tone}`}>{delta.label}</div>
+        <div className={cn("mt-1.5 text-xs", delta.tone)}>{delta.label}</div>
       )}
     </div>
   );
@@ -229,7 +231,7 @@ function BuildingRow({ name, earned, expenses, net, collectionRate }) {
         </div>
         <div>
           <div className="text-xs text-slate-400">Net</div>
-          <div className={`text-sm font-semibold ${netPositive ? "text-emerald-700" : "text-red-600"}`}>
+          <div className={cn("text-sm font-semibold", netPositive ? "text-green-700" : "text-red-600")}>
             {fmtChf(net)}
           </div>
         </div>
@@ -248,7 +250,7 @@ function OccupancyEvent({ type, tenantName, unitLabel, buildingName, date }) {
     <div className="flex items-start gap-3 py-3 border-b border-slate-100 last:border-0">
       <div className={[
         "mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold",
-        isMoveIn ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500",
+        isMoveIn ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-500",
       ].join(" ")}>
         {isMoveIn ? "↓" : "↑"}
       </div>
@@ -516,12 +518,12 @@ export default function OwnerReportingPage() {
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
 
         {/* ── HERO ─────────────────────────────────────────────── */}
-        <header className="mb-6 rounded-3xl border border-slate-200 bg-gradient-to-br from-violet-50 via-sky-50 to-emerald-50 p-6 shadow-sm">
+        <header className="mb-6 rounded-3xl border border-slate-200 bg-gradient-to-br from-violet-50 via-sky-50 to-green-50 p-6 shadow-sm">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-2xl">
-              <div className="mb-3 inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1 text-xs text-slate-500">
+              <Badge variant="default" size="lg" className="mb-3">
                 {periodLabel} · Monthly Owner Report
-              </div>
+              </Badge>
               <h1 className="text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">
                 {loading ? "Loading your report…" : netIncome > 0
                   ? `Your portfolio had a ${currData?.buildingsInRed === 0 ? "strong" : "mixed"} month.`
@@ -549,7 +551,7 @@ export default function OwnerReportingPage() {
                   ? <div className="mt-2 h-7 w-20 animate-pulse rounded bg-slate-100" />
                   : <div className="mt-2 text-2xl font-semibold text-slate-900">{fmtChf(netIncome)}</div>}
                 {!loading && netDelta && (
-                  <div className={`mt-1 text-xs ${netDelta.tone}`}>{netDelta.label}</div>
+                  <div className={cn("mt-1 text-xs", netDelta.tone)}>{netDelta.label}</div>
                 )}
               </div>
               <div className="rounded-2xl border border-slate-200 bg-white p-4">
@@ -576,7 +578,7 @@ export default function OwnerReportingPage() {
         {/* ── HIGHLIGHT ────────────────────────────────────────── */}
         {!loading && highlight && (
           <section className="mb-8">
-            <div className="rounded-3xl border border-slate-200 bg-gradient-to-r from-emerald-50 via-white to-transparent p-6">
+            <div className="rounded-3xl border border-slate-200 bg-gradient-to-r from-green-50 via-white to-transparent p-6">
               <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Highlight</div>
               <div className="mt-2 text-xl font-semibold text-slate-900">{highlight.title}</div>
               <p className="mt-2 max-w-2xl text-sm text-slate-600">{highlight.body}</p>
@@ -649,7 +651,7 @@ export default function OwnerReportingPage() {
               {/* Move-ins */}
               <div className="rounded-2xl border border-slate-200 bg-white p-4">
                 <div className="mb-3 flex items-center gap-2">
-                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-100 text-xs font-semibold text-emerald-700">↓</span>
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-green-100 text-xs font-semibold text-green-700">↓</span>
                   <span className="text-sm font-semibold text-slate-800">
                     Move-ins <span className="ml-1 text-slate-400 font-normal">({moveIns.length})</span>
                   </span>
@@ -749,7 +751,7 @@ export default function OwnerReportingPage() {
               </a>
               <a
                 href="/manager/finance/ledger"
-                className="rounded-2xl bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 transition-colors no-underline"
+                className="rounded-2xl bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors no-underline"
               >
                 Open ledger
               </a>

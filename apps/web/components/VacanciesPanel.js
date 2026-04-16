@@ -1,35 +1,32 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import Panel from "./layout/Panel";
+import ErrorBanner from "./ui/ErrorBanner";
 import { formatDate } from "../lib/format";
 import { authHeaders } from "../lib/api";
+import Badge from "./ui/Badge";
+import { selectionVariant, leaseVariant } from "../lib/statusVariants";
 
+const SELECTION_LABELS = {
+  AWAITING_SIGNATURE: "Awaiting Signature",
+  FALLBACK_1: "Fallback 1 Active",
+  FALLBACK_2: "Fallback 2 Active",
+};
 function statusBadge(status) {
-  const map = {
-    AWAITING_SIGNATURE: { label: "Awaiting Signature", cls: "bg-amber-100 text-amber-700" },
-    FALLBACK_1: { label: "Fallback 1 Active", cls: "bg-orange-100 text-orange-700" },
-    FALLBACK_2: { label: "Fallback 2 Active", cls: "bg-red-100 text-red-700" },
-  };
-  const info = map[status] || { label: status, cls: "bg-slate-100 text-slate-600" };
   return (
-    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${info.cls}`}>
-      {info.label}
-    </span>
+    <Badge variant={selectionVariant(status)} size="sm">
+      {SELECTION_LABELS[status] || status}
+    </Badge>
   );
 }
 
 function leaseBadge(lease) {
   if (!lease) return <span className="text-xs text-slate-400">No lease yet</span>;
-  const map = {
-    DRAFT: { label: "Draft", cls: "bg-slate-100 text-slate-600" },
-    READY_TO_SIGN: { label: "Ready to Sign", cls: "bg-blue-100 text-blue-700" },
-    SIGNED: { label: "Signed", cls: "bg-green-100 text-green-700" },
-  };
-  const info = map[lease.status] || { label: lease.status, cls: "bg-slate-100 text-slate-600" };
+  const LEASE_LABELS = { DRAFT: "Draft", READY_TO_SIGN: "Ready to Sign", SIGNED: "Signed" };
   return (
-    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${info.cls}`}>
-      {info.label}
-    </span>
+    <Badge variant={leaseVariant(lease.status)} size="sm">
+      {LEASE_LABELS[lease.status] || lease.status}
+    </Badge>
   );
 }
 
@@ -122,11 +119,7 @@ export default function VacanciesPanel({ role = "OWNER", refreshKey = 0 }) {
 
   return (
     <>
-      {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {error}
-        </div>
-      )}
+      <ErrorBanner error={error} className="text-sm" />
 
       <Panel>
         {loading && <div className="text-sm text-slate-600">Loading vacancies...</div>}
@@ -173,9 +166,9 @@ export default function VacanciesPanel({ role = "OWNER", refreshKey = 0 }) {
                     </td>
                     <td className="px-4 py-3">
                       {unit.candidateCount > 0 ? (
-                        <span className="inline-flex items-center rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-semibold text-indigo-700">
+                        <Badge variant="brand" size="sm">
                           {unit.candidateCount}
-                        </span>
+                        </Badge>
                       ) : (
                         <span className="text-slate-400 text-xs">None yet</span>
                       )}

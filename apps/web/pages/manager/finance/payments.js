@@ -79,21 +79,21 @@ export default function ManagerPaymentsPage() {
         <PageHeader title="Payments" />
         <PageContent>
           {error && (
-            <Panel style={{ backgroundColor: "#fff0f0", borderColor: "#ffb3b3" }}>
-              <strong className="text-err-text">Error:</strong> {error}
-              <button onClick={() => setError("")} style={{ marginLeft: 12, fontSize: "0.85em" }}>Dismiss</button>
+            <Panel className="bg-red-50 border-red-200">
+              <strong className="text-red-700">Error:</strong> {error}
+              <button onClick={() => setError("")} className="action-btn-dismiss">Dismiss</button>
             </Panel>
           )}
 
           {/* Filters */}
           <Panel>
-            <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-end" }}>
+            <div className="filter-row">
               <div>
-                <label style={{ display: "block", fontSize: "0.8em", fontWeight: 600, marginBottom: 4 }}>Building</label>
+                <label className="filter-label">Building</label>
                 <select
                   value={buildingId}
                   onChange={(e) => setBuildingId(e.target.value)}
-                  style={{ padding: "6px 10px", borderRadius: 4, border: "1px solid #ccc", fontSize: "0.9em", minWidth: 180 }}
+                  className="filter-select"
                 >
                   <option value="">All buildings</option>
                   {buildings.map((b) => (
@@ -102,30 +102,27 @@ export default function ManagerPaymentsPage() {
                 </select>
               </div>
               <div>
-                <label style={{ display: "block", fontSize: "0.8em", fontWeight: 600, marginBottom: 4 }}>Paid after</label>
+                <label className="filter-label">Paid after</label>
                 <input
                   type="date"
                   value={paidAfter}
                   onChange={(e) => setPaidAfter(e.target.value)}
-                  style={{ padding: "6px 10px", borderRadius: 4, border: "1px solid #ccc", fontSize: "0.9em" }}
+                  className="filter-input"
                 />
               </div>
               <div>
-                <label style={{ display: "block", fontSize: "0.8em", fontWeight: 600, marginBottom: 4 }}>Paid before</label>
+                <label className="filter-label">Paid before</label>
                 <input
                   type="date"
                   value={paidBefore}
                   onChange={(e) => setPaidBefore(e.target.value)}
-                  style={{ padding: "6px 10px", borderRadius: 4, border: "1px solid #ccc", fontSize: "0.9em" }}
+                  className="filter-input"
                 />
               </div>
               {hasFilters && (
                 <button
                   onClick={clearFilters}
-                  style={{
-                    padding: "6px 14px", borderRadius: 4, fontSize: "0.85em",
-                    border: "1px solid #ccc", backgroundColor: "#f5f5f5", cursor: "pointer",
-                  }}
+                  className="action-btn"
                 >
                   Clear filters
                 </button>
@@ -163,11 +160,7 @@ export default function ManagerPaymentsPage() {
                       <td>
                         <a
                           href="/manager/finance/invoices"
-                          style={{
-                            padding: "4px 10px", borderRadius: 4, fontSize: "0.8em",
-                            backgroundColor: "#e3f2fd", color: "#0b3a75", border: "1px solid #90caf9",
-                            textDecoration: "none", display: "inline-block",
-                          }}
+                          className="action-btn-brand no-underline inline-block"
                         >
                           View Invoice
                         </a>

@@ -19,6 +19,7 @@ Swiss property management platform. Monorepo: Node.js + TypeScript backend (raw 
 | Audit / open issues | [docs/AUDIT.md](docs/AUDIT.md) | 94 findings, 91 resolved, 3 remaining |
 | Full current-state reference | [PROJECT_STATE.md](PROJECT_STATE.md) | Guardrail details, backlog, state integrity |
 | Epic history / past work | [EPIC_HISTORY.md](EPIC_HISTORY.md) | Completed slice narratives |
+| Design system visual spec | [docs/design-system.html](docs/design-system.html) | Token reference, component gallery, decided conflicts |
 | Frontend page inventory | [docs/FRONTEND_INVENTORY.md](docs/FRONTEND_INVENTORY.md) | 247 pages, archetypes, conformance |
 | Dev commands | [docs/DEV_COMMANDS.md](docs/DEV_COMMANDS.md) | Start/stop/clean/seed recipes |
 
@@ -42,11 +43,11 @@ routes → workflows → services → repositories → Prisma → PostgreSQL
 
 - Next.js Pages Router. `apps/web/pages/api/` proxies to backend via `proxyToBackend()` (127/127 conforming).
 - Layout: `AppShell` → `PageShell` → `PageHeader` → `PageContent` → `Panel`.
-- Styling: Tailwind classes + `@layer components` in `globals.css`. No inline styles, no JS style objects.
+- Styling: Tailwind v4.1 + semantic tokens (`@theme {}`) + CVA components + `@apply` classes in `globals.css`. No inline styles, no JS style objects.
 
 ### Database
 
-- PostgreSQL 16 via Docker. Prisma ORM. 64 models · 55 enums · 69 migrations.
+- PostgreSQL 16 via Docker. Prisma ORM. 64 models · 55 enums · 72 migrations.
 - Dev DB: `maint_agent` | Test DB: `maint_agent_test` (isolated).
 
 ---
@@ -105,7 +106,20 @@ Production server refuses to boot if:
 
 ### Frontend Styling (F-UI4/F8)
 
-All styles from Tailwind utility classes or `@layer components` in `globals.css`. Never: `style={}`, hardcoded hex, new `.css` files, JS style objects. See [PROJECT_STATE.md](PROJECT_STATE.md) §F-UI1–F-UI7 for full hub/detail page rules.
+Three-layer CSS architecture on **Tailwind v4.1**:
+
+1. **Semantic tokens** — 23 CSS custom properties in `globals.css @theme {}` (brand, destructive, success, muted, surface + variants)
+2. **@apply classes** — 78 utility-backed CSS classes in `globals.css @layer components` (buttons, notices, tables, tabs, filters, forms)
+3. **CVA primitives** — 10 variant-based components in `components/ui/` (Button, Badge, Card, DataTable, Input, Select, ErrorBanner, EmptyState, StatusPill, KpiCard)
+
+- **`cn()`** = `twMerge(clsx())` in `lib/utils.js` — **mandatory** for all dynamic className composition (replaces template-literal interpolation)
+- **`statusVariants.js`** — 14 status→Badge variant mappers. All status indicators use `<Badge variant={mapper(status)}>`. Never define per-file color constants.
+- **Inline Tailwind utilities** (e.g. `className="rounded-2xl border ..."`) — fine for one-off styling
+- **Never:** static `style={{}}`, hardcoded hex/rgb, new `.css` files, `tailwind.config.js` theme extensions (TW v4 uses `@theme {}` in CSS), `className={\`...${x}\`}` template literals, per-file `STATUS_COLORS` objects
+- **Design reference:** [docs/design-system.html](docs/design-system.html) — visual spec with architecture summary
+- **Accessibility baseline:** skip-to-content link in AppShell, `<nav aria-label>` on all sidebars, `aria-label` on icon-only buttons, `sr-only` for visual-only indicators, `role="alert"` on error banners, `focus-visible:ring` on interactive elements
+
+See [PROJECT_STATE.md](PROJECT_STATE.md) §F-UI1–F-UI7 for full hub/detail page rules.
 
 ---
 
@@ -209,18 +223,23 @@ npx prisma migrate diff \
 - Call Prisma directly from routes or services — use repositories
 - Define inline `include: { ... }` — use canonical constants
 - Use `prisma db push` — ever, under any circumstances
-- Add inline styles to manager pages — use Tailwind or `globals.css`
+- Add inline `style={{}}` — use Tailwind classes, `@apply` classes, or CVA components from `components/ui/`
 - Change `maybeRequireManager` to allow writes — use `requireRole('MANAGER')`
 - Accept `tenantId` as a query param on tenant-portal routes — use `requireTenantSession()`
 - Add non-English labels, seed data, or UI text — English only (F-UI7)
 - Skip contract test updates when changing DTOs
 - Run `docker-compose down -v` or `prisma migrate reset` without explicit approval
+- Define per-file `STATUS_COLORS` / `URGENCY_COLORS` / color-map objects — use `statusVariants.js` mappers with `<Badge>`
+- Use template-literal className interpolation (`className={\`... ${x}\`}`) — use `cn()` from `lib/utils.js`
+- Create icon-only `<button>` without `aria-label`
+- Add `<input>` / `<select>` without an associated `<label>`, `aria-label`, or `placeholder`
+- Introduce horizontal scroll on any page — viewport width is the hard max. `html, body` enforce `overflow-x: hidden` globally; use `min-w-0`, `truncate`, or responsive grids for wide content
 
 ---
 
 ## Current System Snapshot
 
-57 suites · 0 TS errors · 91/94 audit findings resolved. Recurring Invoices epic complete (6 slices, 5 new models, 4 new migration files).
+57 suites · 0 TS errors · 91/94 audit findings resolved. Strategy Engine & Capture Hardening epic complete (3-phase strategy engine with 56 tests, Azure OCR activation, invoice source-file serving).
 
 For full counts, state integrity verification, and Document Integrity table, see [PROJECT_STATE.md](PROJECT_STATE.md).
 

@@ -8,6 +8,8 @@ import PageHeader from "../../../components/layout/PageHeader";
 import PageContent from "../../../components/layout/PageContent";
 import Panel from "../../../components/layout/Panel";
 import Section from "../../../components/layout/Section";
+import ErrorBanner from "../../../components/ui/ErrorBanner";
+import Badge from "../../../components/ui/Badge";
 import { authHeaders } from "../../../lib/api";
 export default function ApplicationDetailPage() {
   const router = useRouter();
@@ -54,7 +56,7 @@ export default function ApplicationDetailPage() {
       <AppShell role="MANAGER">
         <PageShell>
           <PageContent>
-            {error && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
+            <ErrorBanner error={error} className="text-sm" />
             <p className="text-sm text-slate-500">Application not found.</p>
           </PageContent>
         </PageShell>
@@ -79,7 +81,7 @@ export default function ApplicationDetailPage() {
         />
 
         <PageContent>
-          {error && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
+          <ErrorBanner error={error} className="text-sm" />
 
           {/* Applicants */}
           <Panel title="Applicants">
@@ -90,9 +92,9 @@ export default function ApplicationDetailPage() {
                     <h4 className="text-sm font-semibold text-slate-900">
                       {a.firstName} {a.lastName}
                     </h4>
-                    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${a.role === "PRIMARY" ? "bg-indigo-100 text-indigo-700" : "bg-slate-100 text-slate-600"}`}>
+                    <Badge variant={a.role === "PRIMARY" ? "brand" : "muted"} size="sm">
                       {a.role === "PRIMARY" ? "Primary" : "Co-applicant"}
-                    </span>
+                    </Badge>
                   </div>
                   <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-slate-600 sm:grid-cols-3">
                     <Detail label="Email" value={a.email} />
@@ -151,9 +153,9 @@ export default function ApplicationDetailPage() {
                             </Link>
                           ) : (au.unit?.unitNumber || "—")}
                         </span>
-                        <span className={`ml-2 rounded-full px-2 py-0.5 text-xs font-medium ${au.disqualified ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"}`}>
+                        <Badge variant={au.disqualified ? "destructive" : "success"} size="sm" className="ml-2">
                           {au.disqualified ? "Disqualified" : "Qualified"}
-                        </span>
+                        </Badge>
                       </div>
                       <div className="text-right">
                         <div className="text-lg font-bold text-slate-900">{au.scoreTotal ?? "—"}</div>

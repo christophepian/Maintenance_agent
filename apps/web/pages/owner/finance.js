@@ -5,8 +5,12 @@ import PageShell from "../../components/layout/PageShell";
 import PageHeader from "../../components/layout/PageHeader";
 import PageContent from "../../components/layout/PageContent";
 import Panel from "../../components/layout/Panel";
+import ErrorBanner from "../../components/ui/ErrorBanner";
 import { ownerAuthHeaders } from "../../lib/api";
+import Badge from "../../components/ui/Badge";
+import { invoiceVariant } from "../../lib/statusVariants";
 
+import { cn } from "../../lib/utils";
 function formatCurrency(value) {
   const safeValue = Number.isFinite(value) ? value : 0;
   const formatted = safeValue.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, "'");
@@ -28,14 +32,6 @@ function getInvoiceTotal(invoice) {
   if (typeof invoice.amount === "number") return invoice.amount;
   return 0;
 }
-
-const STATUS_COLORS = {
-  DRAFT:    "bg-slate-100 text-slate-600",
-  ISSUED:   "bg-blue-100 text-blue-700",
-  APPROVED: "bg-green-100 text-green-700",
-  PAID:     "bg-emerald-100 text-emerald-700",
-  DISPUTED: "bg-rose-100 text-rose-700",
-};
 
 export default function OwnerFinance() {
   const [invoices, setInvoices] = useState([]);
@@ -104,18 +100,14 @@ export default function OwnerFinance() {
         />
 
         <PageContent>
-          {error && (
-            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              {error}
-            </div>
-          )}
+          <ErrorBanner error={error} className="text-sm" />
 
           {/* Filter bar */}
           <div className="mb-4 flex flex-wrap items-start gap-3">
             <div className="flex flex-col items-center justify-end gap-1">
               <label className="text-xs font-medium text-slate-500">Status</label>
               <select value={filter} onChange={(e) => setFilter(e.target.value)}
-                className="min-h-[36px] appearance-none rounded-lg border border-slate-200 bg-white px-3 py-2 leading-tight text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                className="min-h-[36px] appearance-none rounded-lg border border-slate-200 bg-white px-3 py-2 leading-tight text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-400">
                 <option value="ALL">All statuses</option>
                 <option value="DRAFT">Draft</option>
                 <option value="ISSUED">Issued</option>
@@ -127,12 +119,12 @@ export default function OwnerFinance() {
             <div className="flex flex-col justify-end gap-1">
               <label className="text-xs font-medium text-slate-500">From</label>
               <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)}
-                className="h-9 appearance-none rounded-lg border border-slate-200 bg-white px-3 py-2 leading-tight text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+                className="h-9 appearance-none rounded-lg border border-slate-200 bg-white px-3 py-2 leading-tight text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-400" />
             </div>
             <div className="flex flex-col justify-end gap-1">
               <label className="text-xs font-medium text-slate-500">To</label>
               <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)}
-                className="h-9 appearance-none rounded-lg border border-slate-200 bg-white px-3 py-2 leading-tight text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+                className="h-9 appearance-none rounded-lg border border-slate-200 bg-white px-3 py-2 leading-tight text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-400" />
             </div>
             {(filter !== "ALL" || dateFrom || dateTo) && (
               <div className="flex flex-col justify-end gap-1">
@@ -174,11 +166,11 @@ export default function OwnerFinance() {
                           </p>
                         </div>
                         <div className="flex items-center gap-3">
-                          <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${STATUS_COLORS[invoice.status] || "bg-slate-100 text-slate-600"}`}>
+                          <Badge variant={invoiceVariant(invoice.status)} size="sm">
                             {invoice.status}
-                          </span>
+                          </Badge>
                           <svg
-                            className={`h-4 w-4 text-slate-400 transition-transform ${isExpanded ? "rotate-90" : ""}`}
+                            className={cn("h-4 w-4 text-slate-400 transition-transform", isExpanded ? "rotate-90" : "")}
                             fill="none" viewBox="0 0 24 24" stroke="currentColor"
                           >
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -210,7 +202,7 @@ export default function OwnerFinance() {
                             {invoice.status === "DRAFT" && (
                               <button
                                 onClick={() => actionRequest(invoice.id, "approve")}
-                                className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-700"
+                                className="rounded-lg bg-green-600 px-3 py-2 text-xs font-semibold text-white hover:bg-green-700"
                               >
                                 Approve
                               </button>
@@ -218,7 +210,7 @@ export default function OwnerFinance() {
                             {invoice.status === "APPROVED" && (
                               <button
                                 onClick={() => actionRequest(invoice.id, "mark-paid")}
-                                className="rounded-lg bg-emerald-700 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-800"
+                                className="rounded-lg bg-green-700 px-3 py-2 text-xs font-semibold text-white hover:bg-green-800"
                               >
                                 Mark paid
                               </button>

@@ -9,6 +9,7 @@ import { formatDateTime } from "../../lib/format";
 import { tenantFetch } from "../../lib/api";
 import { getNotificationLink } from "../../lib/notificationLinks";
 import TenantPicker from "../../components/TenantPicker";
+import Badge from "../../components/ui/Badge";
 
 const EVENT_ICONS = {
   LEASE_READY_TO_SIGN: "📝",
@@ -180,7 +181,7 @@ export default function TenantInboxPage() {
                 <p className="empty-state-text">Please sign in to view your notifications.</p>
                 <button
                   onClick={() => router.push("/tenant")}
-                  className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700"
+                  className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700"
                 >
                   Sign in
                 </button>
@@ -208,9 +209,9 @@ export default function TenantInboxPage() {
             <span className="flex items-center gap-2">
               Inbox
               {unreadCount > 0 && (
-                <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                <Badge variant="destructive" size="sm">
                   {unreadCount}
-                </span>
+                </Badge>
               )}
             </span>
           }
@@ -241,7 +242,7 @@ export default function TenantInboxPage() {
                 className={
                   "card p-4 flex items-start gap-3 cursor-pointer transition-colors border " +
                   (n.readAt
-                    ? "bg-white hover:bg-gray-50"
+                    ? "bg-white hover:bg-slate-50"
                     : "bg-blue-50 border-blue-200 hover:bg-blue-100")
                 }
               >
@@ -252,12 +253,12 @@ export default function TenantInboxPage() {
                   <p
                     className={
                       "text-sm " +
-                      (n.readAt ? "text-gray-600" : "text-gray-900 font-medium")
+                      (n.readAt ? "text-slate-600" : "text-slate-900 font-medium")
                     }
                   >
                     {n.message || n.eventType.replace(/_/g, " ").toLowerCase()}
                   </p>
-                  <p className="text-xs text-gray-400 mt-1">
+                  <p className="text-xs text-slate-400 mt-1">
                     {formatDateTime(n.createdAt)}
                   </p>
                   {n.eventType === "OWNER_REJECTED" && (
@@ -279,7 +280,7 @@ export default function TenantInboxPage() {
                       e.stopPropagation();
                       dismissNotification(n.id);
                     }}
-                    className="text-gray-300 hover:text-gray-500 ml-1"
+                    className="text-slate-300 hover:text-slate-500 ml-1"
                     title="Dismiss"
                   >
                     ✕

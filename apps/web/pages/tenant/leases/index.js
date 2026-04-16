@@ -3,6 +3,7 @@ import { useRouter } from "next/router";
 import AppShell from "../../../components/AppShell";
 import { tenantFetch } from "../../../lib/api";
 
+import { cn } from "../../../lib/utils";
 const STATUS_LABELS = {
   DRAFT: "Draft",
   READY_TO_SIGN: "Ready to Sign",
@@ -13,10 +14,10 @@ const STATUS_LABELS = {
 };
 
 const STATUS_COLORS = {
-  READY_TO_SIGN: "bg-yellow-100 text-yellow-800",
-  SIGNED: "bg-green-100 text-green-800",
-  ACTIVE: "bg-emerald-100 text-emerald-800",
-  TERMINATED: "bg-orange-100 text-orange-800",
+  READY_TO_SIGN: "bg-yellow-100 text-yellow-700",
+  SIGNED: "bg-green-100 text-green-700",
+  ACTIVE: "bg-green-100 text-green-700",
+  TERMINATED: "bg-orange-100 text-orange-700",
 };
 
 export default function TenantLeasesPage() {
@@ -109,7 +110,7 @@ export default function TenantLeasesPage() {
       <div className="main-container">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold">My Leases</h1>
-          <span className="text-sm text-gray-500">
+          <span className="text-sm text-slate-500">
             Unit {session.unit?.unitNumber}
             {session.building ? ` · ${session.building.address}` : ""}
           </span>
@@ -120,11 +121,11 @@ export default function TenantLeasesPage() {
         )}
 
         {loading ? (
-          <div className="text-center py-8 text-gray-500">Loading leases…</div>
+          <div className="text-center py-8 text-slate-500">Loading leases…</div>
         ) : leases.length === 0 ? (
           <div className="card p-8 text-center">
-            <p className="text-gray-500 text-lg mb-2">No leases found</p>
-            <p className="text-gray-400 text-sm">
+            <p className="text-slate-500 text-lg mb-2">No leases found</p>
+            <p className="text-slate-400 text-sm">
               Your property manager has not yet assigned any leases to your unit.
             </p>
           </div>
@@ -142,7 +143,7 @@ export default function TenantLeasesPage() {
                       {lease.unit?.building?.name || "Property"} — Unit{" "}
                       {lease.unit?.unitNumber || "?"}
                     </div>
-                    <div className="text-sm text-gray-500 mt-1">
+                    <div className="text-sm text-slate-500 mt-1">
                       {lease.objectType === "APPARTEMENT"
                         ? "Apartment"
                         : lease.objectType === "MAISON"
@@ -150,28 +151,26 @@ export default function TenantLeasesPage() {
                         : lease.objectType}
                       {lease.roomsCount ? ` · ${lease.roomsCount} rooms` : ""}
                     </div>
-                    <div className="text-sm text-gray-500">
+                    <div className="text-sm text-slate-500">
                       From {formatDate(lease.startDate)}
                       {lease.endDate ? ` to ${formatDate(lease.endDate)}` : " (indefinite)"}
                     </div>
                   </div>
                   <div className="text-right">
                     <span
-                      className={`inline-block px-2 py-1 rounded text-xs font-medium ${
-                        STATUS_COLORS[lease.status] || "bg-gray-100 text-gray-600"
-                      }`}
+                      className={cn("inline-block px-2 py-1 rounded text-xs font-medium", STATUS_COLORS[lease.status] || "bg-slate-100 text-slate-600")}
                     >
                       {STATUS_LABELS[lease.status] || lease.status}
                     </span>
                     <div className="text-sm font-medium mt-2">
-                      {formatChf(lease.rentTotalChf)}<span className="text-gray-400">/mo</span>
+                      {formatChf(lease.rentTotalChf)}<span className="text-slate-400">/mo</span>
                     </div>
                   </div>
                 </div>
 
                 {lease.status === "READY_TO_SIGN" && (
                   <div className="mt-3 pt-3 border-t border-yellow-200 bg-yellow-50 -mx-4 -mb-4 px-4 py-3 rounded-b">
-                    <span className="text-yellow-800 text-sm font-medium">
+                    <span className="text-yellow-700 text-sm font-medium">
                       ⚡ Action required — Please review and sign this lease
                     </span>
                   </div>

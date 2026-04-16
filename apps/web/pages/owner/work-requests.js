@@ -6,8 +6,12 @@ import PageShell from "../../components/layout/PageShell";
 import PageHeader from "../../components/layout/PageHeader";
 import PageContent from "../../components/layout/PageContent";
 import Panel from "../../components/layout/Panel";
+import ErrorBanner from "../../components/ui/ErrorBanner";
 import { ownerAuthHeaders } from "../../lib/api";
+import Badge from "../../components/ui/Badge";
+import { requestVariant } from "../../lib/statusVariants";
 
+import { cn } from "../../lib/utils";
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
@@ -47,24 +51,11 @@ function formatCurrency(chf) {
 // Status badge
 // ---------------------------------------------------------------------------
 
-const STATUS_CLASSES = {
-  PENDING_REVIEW:          "bg-amber-50 text-amber-700 border-amber-200",
-  PENDING_OWNER_APPROVAL:  "bg-rose-50 text-rose-700 border-rose-200",
-  RFP_PENDING:             "bg-indigo-50 text-indigo-700 border-indigo-200",
-  APPROVED:                "bg-emerald-50 text-emerald-700 border-emerald-200",
-  AUTO_APPROVED:           "bg-emerald-50 text-emerald-700 border-emerald-200",
-  ASSIGNED:                "bg-blue-50 text-blue-700 border-blue-200",
-  IN_PROGRESS:             "bg-blue-50 text-blue-700 border-blue-200",
-  COMPLETED:               "bg-violet-50 text-violet-700 border-violet-200",
-  OWNER_REJECTED:          "bg-red-50 text-red-700 border-red-200",
-};
-
 function StatusBadge({ status }) {
-  const cls = STATUS_CLASSES[status] || "bg-slate-50 text-slate-600 border-slate-200";
   return (
-    <span className={`inline-block rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${cls}`}>
+    <Badge variant={requestVariant(status)} size="sm">
       {(status || "").replace(/_/g, " ")}
-    </span>
+    </Badge>
   );
 }
 
@@ -141,14 +132,14 @@ export default function OwnerWorkRequestsPage() {
         />
         <PageContent>
           {/* ── Tab strip (F-UI1) ── */}
-          <div className="flex gap-1 border-b border-slate-200 mb-4">
+          <div className="tab-strip">
             {STATUS_TABS.map((tab) => {
               if (tab.href) {
                 return (
                   <Link
                     key={tab.key}
                     href={tab.href}
-                    className="px-3 py-2 text-sm font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300 transition-colors -mb-px"
+                    className="tab-btn"
                   >
                     {tab.label}
                   </Link>
@@ -160,18 +151,11 @@ export default function OwnerWorkRequestsPage() {
                 <button
                   key={tab.key}
                   onClick={() => setTab(tab.key)}
-                  className={[
-                    "px-3 py-2 text-sm font-medium border-b-2 transition-colors -mb-px",
-                    isActive
-                      ? "border-indigo-600 text-indigo-700"
-                      : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300",
-                  ].join(" ")}
+                  className={isActive ? "tab-btn-active" : "tab-btn"}
                 >
                   {tab.label}
                   {count > 0 && (
-                    <span className={`ml-1.5 inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
-                      isActive ? "bg-indigo-100 text-indigo-700" : "bg-slate-100 text-slate-600"
-                    }`}>
+                    <span className={cn("ml-1.5 inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold", isActive ? "bg-indigo-100 text-indigo-700" : "bg-slate-100 text-slate-600")}>
                       {count}
                     </span>
                   )}
@@ -181,11 +165,7 @@ export default function OwnerWorkRequestsPage() {
           </div>
 
           {/* ── Error ── */}
-          {error && (
-            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 mb-4">
-              {error}
-            </div>
-          )}
+          <ErrorBanner error={error} className="mb-4 text-sm" />
 
           {/* ── Loading ── */}
           {loading && (

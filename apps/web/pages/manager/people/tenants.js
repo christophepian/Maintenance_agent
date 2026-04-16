@@ -6,11 +6,11 @@ import PageShell from "../../../components/layout/PageShell";
 import PageHeader from "../../../components/layout/PageHeader";
 import PageContent from "../../../components/layout/PageContent";
 import Panel from "../../../components/layout/Panel";
-import SortableHeader from "../../../components/SortableHeader";
+import ConfigurableTable from "../../../components/ConfigurableTable";
 import { useTableSort, clientSort } from "../../../lib/tableUtils";
 import { authHeaders } from "../../../lib/api";
 
-const TENANT_SORT_FIELDS = ["name", "phone", "email", "unit"];
+const TENANT_SORT_FIELDS = ["name", "phone", "email", "unit", "building", "floor"];
 
 function tenantFieldExtractor(t, field) {
   switch (field) {
@@ -18,9 +18,71 @@ function tenantFieldExtractor(t, field) {
     case "phone": return t.phone || "";
     case "email": return (t.email || "").toLowerCase();
     case "unit": return (t.unit?.unitNumber || "").toLowerCase();
+    case "building": return (t.unit?.building?.name || "").toLowerCase();
+    case "floor": return t.unit?.floor ?? "";
     default: return "";
   }
 }
+
+const TENANT_COLUMNS = [
+  {
+    id: "name",
+    label: "Name",
+    sortable: true,
+    alwaysVisible: true,
+    render: (t) => <span className="font-medium text-slate-900">{t.name || "\u2014"}</span>,
+  },
+  {
+    id: "phone",
+    label: "Phone",
+    sortable: true,
+    defaultVisible: true,
+    render: (t) => <span className="text-slate-600">{t.phone || "\u2014"}</span>,
+  },
+  {
+    id: "email",
+    label: "Email",
+    sortable: true,
+    defaultVisible: true,
+    render: (t) => <span className="text-slate-600">{t.email || "\u2014"}</span>,
+  },
+  {
+    id: "unit",
+    label: "Unit",
+    sortable: true,
+    defaultVisible: true,
+    render: (t) => (
+      <span className="text-slate-600">
+        {t.unit ? `${t.unit.unitNumber}${t.unit.floor ? ` (Floor ${t.unit.floor})` : ""}` : "\u2014"}
+      </span>
+    ),
+  },
+  {
+    id: "building",
+    label: "Building",
+    sortable: true,
+    defaultVisible: false,
+    render: (t) => <span className="text-slate-600">{t.unit?.building?.name || "\u2014"}</span>,
+  },
+  {
+    id: "floor",
+    label: "Floor",
+    sortable: true,
+    defaultVisible: false,
+    render: (t) => <span className="text-slate-600">{t.unit?.floor ?? "\u2014"}</span>,
+  },
+  {
+    id: "actions",
+    label: "",
+    alwaysVisible: true,
+    className: "text-right",
+    render: (t) => (
+      <Link href={`/manager/people/tenants/${t.id}`} className="text-blue-600 hover:text-blue-700 text-xs font-medium" onClick={(e) => e.stopPropagation()}>
+        View \u2192
+      </Link>
+    ),
+  },
+];
 export default function PeopleTenantsPage() {
   const router = useRouter();
   const [tenants, setTenants] = useState([]);
@@ -90,37 +152,17 @@ export default function PeopleTenantsPage() {
             )}
 
             {!loading && filtered.length > 0 && (
-              <table className="inline-table">
-                  <thead>
-                    <tr>
-                      <SortableHeader label="Name" field="name" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
-                      <SortableHeader label="Phone" field="phone" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
-                      <SortableHeader label="Email" field="email" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
-                      <SortableHeader label="Unit" field="unit" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
-                      <th></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {sortedTenants.map((t) => (
-                      <tr key={t.id}>
-                        <td className="cell-bold">{t.name || "—"}</td>
-                        <td>{t.phone || "—"}</td>
-                        <td>{t.email || "—"}</td>
-                        <td>
-                          {t.unit ? `${t.unit.unitNumber}${t.unit.floor ? ` (Floor ${t.unit.floor})` : ""}` : "—"}
-                        </td>
-                        <td className="text-right">
-                          <Link
-                            href={`/manager/people/tenants/${t.id}`}
-                            className="text-blue-600 hover:text-blue-800 text-xs font-medium"
-                          >
-                            View →
-                          </Link>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <ConfigurableTable
+                tableId="manager-tenants"
+                columns={TENANT_COLUMNS}
+                data={sortedTenants}
+                rowKey={(t) => t.id}
+                sortField={sortField}
+                sortDir={sortDir}
+                onSort={handleSort}
+                onRowClick={(t) => router.push(`/manager/people/tenants/${t.id}`)}
+                emptyState={<p className="text-sm text-slate-500">No tenants found.</p>}
+              />
             )}
           </Panel>
         </PageContent>

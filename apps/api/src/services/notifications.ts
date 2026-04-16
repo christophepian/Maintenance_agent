@@ -248,7 +248,7 @@ export async function notifyOwnerRejected(
     buildingId,
     entityType: 'REQUEST',
     entityId: requestId,
-    eventType: 'OWNER_REJECTED',
+    eventType: 'REJECTED',
     message: 'A maintenance request has been rejected by the owner.',
   });
 }
@@ -273,7 +273,7 @@ export async function notifyTenantOwnerRejected(
     buildingId,
     entityType: 'REQUEST',
     entityId: requestId,
-    eventType: 'OWNER_REJECTED',
+    eventType: 'REJECTED',
     message: msg,
   });
 }

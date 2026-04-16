@@ -6,7 +6,9 @@ import PageHeader from "../../../../components/layout/PageHeader";
 import PageContent from "../../../../components/layout/PageContent";
 import Panel from "../../../../components/layout/Panel";
 import Section from "../../../../components/layout/Section";
+import ErrorBanner from "../../../../components/ui/ErrorBanner";
 import { ownerAuthHeaders } from "../../../../lib/api";
+import { cn } from "../../../../lib/utils";
 function todayIso() {
   return new Date().toISOString().slice(0, 10);
 }
@@ -191,13 +193,9 @@ export default function FillVacancyWizard() {
         />
 
         <PageContent>
-          {error && (
-            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              {error}
-            </div>
-          )}
+          <ErrorBanner error={error} className="text-sm" />
           {success && (
-            <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+            <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
               {success}
             </div>
           )}
@@ -224,11 +222,9 @@ export default function FillVacancyWizard() {
                         <button
                           key={tenant.id}
                           onClick={() => setSelectedTenant(tenant)}
-                          className={`w-full rounded-lg border px-3 py-2 text-left text-sm ${
-                            selectedTenant?.id === tenant.id
+                          className={cn("w-full rounded-lg border px-3 py-2 text-left text-sm", selectedTenant?.id === tenant.id
                               ? "border-indigo-500 bg-indigo-50"
-                              : "border-slate-200 hover:bg-slate-50"
-                          }`}
+                              : "border-slate-200 hover:bg-slate-50")}
                         >
                           <div className="font-medium text-slate-900">
                             {tenant.name || "Unnamed tenant"}
@@ -280,7 +276,7 @@ export default function FillVacancyWizard() {
                   <button
                     onClick={handleAssignOccupancy}
                     disabled={actionLoading || occupancyAssigned}
-                    className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:bg-slate-300"
+                    className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:bg-slate-300"
                   >
                     {occupancyAssigned ? "Assigned" : "Assign occupancy"}
                   </button>
@@ -329,7 +325,7 @@ export default function FillVacancyWizard() {
                       <button
                         onClick={() => handleLeaseAction("activate")}
                         disabled={actionLoading}
-                        className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-100"
+                        className="rounded-lg border border-green-200 bg-green-50 px-4 py-2 text-sm font-semibold text-green-700 hover:bg-green-100"
                       >
                         Activate lease
                       </button>

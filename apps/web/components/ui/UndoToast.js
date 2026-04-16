@@ -72,55 +72,18 @@ export default function UndoToast({ visible, message, undo, dismiss }) {
 
   return (
     <div
-      style={{
-        position: "fixed",
-        bottom: "24px",
-        left: "50%",
-        transform: "translateX(-50%)",
-        zIndex: 9999,
-        display: "flex",
-        alignItems: "center",
-        gap: "16px",
-        background: "#1f2937",
-        color: "#fff",
-        padding: "12px 20px",
-        borderRadius: "8px",
-        boxShadow: "0 4px 20px rgba(0,0,0,0.25)",
-        fontSize: "14px",
-        fontWeight: 500,
-        animation: "undoToastSlideUp 0.25s ease-out",
-      }}
+      className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[9999] flex items-center gap-4 bg-slate-800 text-white px-5 py-3 rounded-lg shadow-xl text-sm font-medium animate-[undoToastSlideUp_0.25s_ease-out]"
     >
       <span>{message}</span>
       <button
         onClick={undo}
-        style={{
-          background: "none",
-          border: "1px solid rgba(255,255,255,0.4)",
-          color: "#60a5fa",
-          padding: "4px 12px",
-          borderRadius: "4px",
-          cursor: "pointer",
-          fontWeight: 600,
-          fontSize: "13px",
-          whiteSpace: "nowrap",
-        }}
-        onMouseEnter={(e) => (e.target.style.background = "rgba(255,255,255,0.1)")}
-        onMouseLeave={(e) => (e.target.style.background = "none")}
+        className="border border-white/40 text-blue-400 px-3 py-1 rounded cursor-pointer font-semibold text-[13px] whitespace-nowrap hover:bg-white/10"
       >
         Undo
       </button>
       <button
         onClick={dismiss}
-        style={{
-          background: "none",
-          border: "none",
-          color: "rgba(255,255,255,0.5)",
-          cursor: "pointer",
-          fontSize: "16px",
-          lineHeight: 1,
-          padding: "2px 4px",
-        }}
+        className="border-none text-white/50 cursor-pointer text-base leading-none px-1 py-0.5 bg-transparent hover:text-white/80"
         title="Dismiss"
       >
         ✕

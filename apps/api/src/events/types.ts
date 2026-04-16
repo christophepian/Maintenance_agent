@@ -233,7 +233,7 @@ export interface DomainEventMap {
   REQUEST_STATUS_CHANGED: RequestStatusChangedPayload;
   LEGAL_AUTO_ROUTED: LegalAutoRoutedPayload;
   OWNER_APPROVED: RequestApprovedPayload;
-  OWNER_REJECTED: RequestRejectedPayload;
+  REQUEST_REJECTED: RequestRejectedPayload;
   CONTRACTOR_ASSIGNED: ContractorAssignedPayload;
   CONTRACTOR_UNASSIGNED: ContractorUnassignedPayload;
   JOB_CREATED: JobCreatedPayload;
@@ -262,6 +262,29 @@ export interface DomainEventMap {
   CASHFLOW_PLAN_SUBMITTED: CashflowPlanSubmittedPayload;
   CASHFLOW_PLAN_APPROVED: CashflowPlanApprovedPayload;
   CLAIM_ANALYSED: ClaimAnalysedPayload;
+  STRATEGY_PROFILE_CREATED: StrategyProfilePayload;
+  STRATEGY_PROFILE_UPDATED: StrategyProfilePayload;
+  RECOMMENDATION_EVALUATED: RecommendationEvaluatedPayload;
+  RECOMMENDATION_DECISION_RECORDED: RecommendationDecisionPayload;
+}
+
+export interface StrategyProfilePayload {
+  profileId: string;
+  ownerId: string;
+  primaryArchetype: string;
+}
+
+export interface RecommendationEvaluatedPayload {
+  recommendationId: string;
+  opportunityId: string;
+  selectedOptionId: string;
+  orgId: string;
+}
+
+export interface RecommendationDecisionPayload {
+  recommendationId: string;
+  userDecision: string;
+  orgId: string;
 }
 
 export type DomainEventType = keyof DomainEventMap;

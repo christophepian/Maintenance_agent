@@ -6,35 +6,12 @@ import PageShell from "../../../components/layout/PageShell";
 import PageHeader from "../../../components/layout/PageHeader";
 import PageContent from "../../../components/layout/PageContent";
 import Panel from "../../../components/layout/Panel";
+import ErrorBanner from "../../../components/ui/ErrorBanner";
 import { ownerAuthHeaders } from "../../../lib/api";
+import Badge from "../../../components/ui/Badge";
+import { rfpVariant, quoteVariant } from "../../../lib/statusVariants";
 
-const STATUS_COLORS = {
-  DRAFT: "bg-slate-50 text-slate-600 border-slate-200",
-  OPEN: "bg-blue-50 text-blue-700 border-blue-200",
-  AWARDED: "bg-green-50 text-green-700 border-green-200",
-  PENDING_OWNER_APPROVAL: "bg-amber-50 text-amber-700 border-amber-200",
-  CLOSED: "bg-slate-50 text-slate-500 border-slate-200",
-  CANCELLED: "bg-red-50 text-red-600 border-red-200",
-};
-
-const QUOTE_STATUS_COLORS = {
-  SUBMITTED: "bg-blue-50 text-blue-700 border-blue-200",
-  AWARDED: "bg-green-50 text-green-700 border-green-200",
-  REJECTED: "bg-red-50 text-red-600 border-red-200",
-};
-
-function StatusPill({ status, colorMap }) {
-  return (
-    <span
-      className={`inline-block rounded-full border px-2 py-0.5 text-xs font-medium ${
-        (colorMap || STATUS_COLORS)[status] || "bg-slate-50 text-slate-600 border-slate-200"
-      }`}
-    >
-      {status?.replace(/_/g, " ") || "—"}
-    </span>
-  );
-}
-
+import { cn } from "../../../lib/utils";
 function formatDate(iso) {
   if (!iso) return "—";
   const d = new Date(iso);
@@ -124,11 +101,7 @@ export default function OwnerRfpDetailPage() {
           }
         />
         <PageContent>
-          {error && (
-            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              {error}
-            </div>
-          )}
+          <ErrorBanner error={error} className="text-sm" />
 
           {loading ? (
             <p className="text-sm text-slate-500">Loading…</p>
@@ -151,7 +124,7 @@ export default function OwnerRfpDetailPage() {
                   <div>
                     <dt className="text-sm font-medium text-slate-500">Status</dt>
                     <dd className="mt-1">
-                      <StatusPill status={rfp.status} colorMap={STATUS_COLORS} />
+                      <Badge variant={rfpVariant(rfp.status)}>{rfp.status?.replace(/_/g, " ") || "—"}</Badge>
                     </dd>
                   </div>
                   <div>
@@ -199,27 +172,21 @@ export default function OwnerRfpDetailPage() {
                 title={`Quotes (${rfp.quotes?.length || 0})`}
                 bodyClassName="p-0"
               >
-                {awardError && (
-                  <div className="mx-4 mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                    {awardError}
-                  </div>
-                )}
+                <ErrorBanner error={awardError} className="mx-4 mt-4 text-sm" />
                 {rfp.quotes?.length > 0 ? (
-                  <div className="divide-y divide-gray-100">
+                  <div className="divide-y divide-slate-100">
                     {rfp.quotes.map((q) => (
                       <div
                         key={q.id}
-                        className={`p-4 ${
-                          q.status === "AWARDED" ? "bg-green-50/40" :
-                          q.status === "REJECTED" ? "bg-slate-50/60 opacity-75" : ""
-                        }`}
+                        className={cn("p-4", q.status === "AWARDED" ? "bg-green-50/40" :
+                          q.status === "REJECTED" ? "bg-slate-50/60 opacity-75" : "")}
                       >
                         <div className="flex items-center justify-between mb-3">
                           <div className="flex items-center gap-2">
                             <span className="text-sm font-semibold text-slate-800">
                               {q.contractor?.name || q.contractorId?.slice(0, 8)}
                             </span>
-                            <StatusPill status={q.status || "SUBMITTED"} colorMap={QUOTE_STATUS_COLORS} />
+                            <Badge variant={quoteVariant(q.status || "SUBMITTED")}>{(q.status || "SUBMITTED").replace(/_/g, " ")}</Badge>
                           </div>
                           <div className="flex items-center gap-3">
                             <span className="text-base font-semibold text-slate-900 font-mono">

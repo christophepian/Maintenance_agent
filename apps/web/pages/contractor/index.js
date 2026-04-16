@@ -4,11 +4,11 @@ import AppShell from "../../components/AppShell";
 import PageShell from "../../components/layout/PageShell";
 import PageHeader from "../../components/layout/PageHeader";
 import PageContent from "../../components/layout/PageContent";
-import Panel from "../../components/layout/Panel";
 import Section from "../../components/layout/Section";
 import ContractorPicker from "../../components/ContractorPicker";
 import { formatChf as formatCurrency, formatDate } from "../../lib/format";
 import { authHeaders } from "../../lib/api";
+import { cn } from "../../lib/utils";
 export default function ContractorDashboard() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -129,7 +129,7 @@ export default function ContractorDashboard() {
 
           {/* Quick Links Section */}
           <Section title="Quick Links">
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12 }}>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <button className="button-primary" onClick={() => router.push("/contractor/jobs")}>
                 🔧 All Jobs
               </button>
@@ -146,119 +146,89 @@ export default function ContractorDashboard() {
           </Section>
 
           {error && (
-            <Panel style={{ backgroundColor: "#fff0f0", borderColor: "#ffb3b3" }}>
-              <strong style={{ color: "crimson" }}>Error:</strong> {error}
+            <Panel className="bg-red-50 border-red-200">
+              <strong className="text-destructive">Error:</strong> {error}
             </Panel>
           )}
 
           {/* Action Required Section */}
           <Section title="Today / Action Required">
-            <div style={{ display: "grid", gap: 12 }}>
-              <Panel>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-                  <div>
-                    <strong style={{ margin: 0 }}>Pending Jobs</strong>
-                    <div style={{ color: "#444", fontSize: "0.9em" }}>Need acceptance/start</div>
-                  </div>
-                  <div style={{ fontSize: "2em", fontWeight: 700, color: pendingJobs.length > 0 ? "#7a4a00" : "#999" }}>
-                    {pendingJobs.length}
-                  </div>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Pending Jobs</div>
+                <div className={cn("mt-3 text-2xl font-semibold tracking-tight", pendingJobs.length > 0 ? "text-amber-700" : "text-slate-400")}>
+                  {pendingJobs.length}
                 </div>
+                <div className="text-sm text-slate-600">Need acceptance/start</div>
                 {pendingJobs.length > 0 && (
-                  <div style={{ marginTop: 12 }}>
-                    <button onClick={() => router.push("/contractor/jobs?status=PENDING")}>
-                      View Pending Jobs →
-                    </button>
-                  </div>
+                  <button className="mt-3 text-sm font-medium text-indigo-600 hover:text-indigo-700" onClick={() => router.push("/contractor/jobs?status=PENDING")}>
+                    View Pending Jobs →
+                  </button>
                 )}
-              </Panel>
+              </div>
 
               {staleInProgressJobs.length > 0 && (
-                <Panel>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-                    <div>
-                      <strong style={{ margin: 0 }}>Stale In-Progress Jobs</strong>
-                      <div style={{ color: "#444", fontSize: "0.9em" }}>Active &gt; 7 days</div>
-                    </div>
-                    <div style={{ fontSize: "2em", fontWeight: 700, color: "#7a4a00" }}>
-                      {staleInProgressJobs.length}
-                    </div>
+                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                  <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Stale In-Progress Jobs</div>
+                  <div className="mt-3 text-2xl font-semibold tracking-tight text-amber-700">
+                    {staleInProgressJobs.length}
                   </div>
-                  <div style={{ marginTop: 12 }}>
-                    <button onClick={() => router.push("/contractor/jobs?status=IN_PROGRESS")}>
-                      Review Jobs →
-                    </button>
-                  </div>
-                </Panel>
+                  <div className="text-sm text-slate-600">Active &gt; 7 days</div>
+                  <button className="mt-3 text-sm font-medium text-indigo-600 hover:text-indigo-700" onClick={() => router.push("/contractor/jobs?status=IN_PROGRESS")}>
+                    Review Jobs →
+                  </button>
+                </div>
               )}
 
               {completedNotInvoiced.length > 0 && (
-                <Panel>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-                    <div>
-                      <strong style={{ margin: 0 }}>Completed - Not Invoiced</strong>
-                      <div style={{ color: "#444", fontSize: "0.9em" }}>Ready for billing</div>
-                    </div>
-                    <div style={{ fontSize: "2em", fontWeight: 700, color: "#0b3a75" }}>
-                      {completedNotInvoiced.length}
-                    </div>
+                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                  <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Completed - Not Invoiced</div>
+                  <div className="mt-3 text-2xl font-semibold tracking-tight text-blue-700">
+                    {completedNotInvoiced.length}
                   </div>
-                  <div style={{ marginTop: 12 }}>
-                    <button onClick={() => router.push("/contractor/jobs?status=COMPLETED")}>
-                      Create Invoices →
-                    </button>
-                  </div>
-                </Panel>
+                  <div className="text-sm text-slate-600">Ready for billing</div>
+                  <button className="mt-3 text-sm font-medium text-indigo-600 hover:text-indigo-700" onClick={() => router.push("/contractor/jobs?status=COMPLETED")}>
+                    Create Invoices →
+                  </button>
+                </div>
               )}
 
               {pendingJobs.length === 0 && 
                staleInProgressJobs.length === 0 && 
                completedNotInvoiced.length === 0 && (
-                <Panel>
-                  <p style={{ color: "#116b2b", margin: 0 }}>✓ No items require immediate action</p>
-                </Panel>
+                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                  <p className="text-green-700 m-0">✓ No items require immediate action</p>
+                </div>
               )}
             </div>
           </Section>
 
           {/* Pipeline KPIs Section */}
           <Section title="Pipeline Overview">
-            <div style={{ display: "grid", gap: 12 }}>
-              <Panel>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-                  <div>
-                    <strong style={{ margin: 0 }}>Open Jobs</strong>
-                    <div style={{ color: "#444", fontSize: "0.9em" }}>Pending + in progress</div>
-                  </div>
-                  <div style={{ fontSize: "2em", fontWeight: 700, color: openJobsCount > 0 ? "#0b3a75" : "#999" }}>
-                    {openJobsCount}
-                  </div>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Open Jobs</div>
+                <div className={cn("mt-3 text-2xl font-semibold tracking-tight", openJobsCount > 0 ? "text-blue-700" : "text-slate-400")}>
+                  {openJobsCount}
                 </div>
-              </Panel>
+                <div className="text-sm text-slate-600">Pending + in progress</div>
+              </div>
 
-              <Panel>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-                  <div>
-                    <strong style={{ margin: 0 }}>Completed This Month</strong>
-                    <div style={{ color: "#444", fontSize: "0.9em" }}>Jobs finished</div>
-                  </div>
-                  <div style={{ fontSize: "2em", fontWeight: 700, color: "#116b2b" }}>
-                    {completedThisMonth}
-                  </div>
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Completed This Month</div>
+                <div className="mt-3 text-2xl font-semibold tracking-tight text-green-700">
+                  {completedThisMonth}
                 </div>
-              </Panel>
+                <div className="text-sm text-slate-600">Jobs finished</div>
+              </div>
 
-              <Panel>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-                  <div>
-                    <strong style={{ margin: 0 }}>Invoiced This Month</strong>
-                    <div style={{ color: "#444", fontSize: "0.9em" }}>Total billed</div>
-                  </div>
-                  <div style={{ fontSize: "1.6em", fontWeight: 700, color: "#116b2b" }}>
-                    {formatCurrency(invoicedThisMonth)}
-                  </div>
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Invoiced This Month</div>
+                <div className="mt-3 text-2xl font-semibold tracking-tight text-green-700">
+                  {formatCurrency(invoicedThisMonth)}
                 </div>
-              </Panel>
+                <div className="text-sm text-slate-600">Total billed</div>
+              </div>
             </div>
           </Section>
 

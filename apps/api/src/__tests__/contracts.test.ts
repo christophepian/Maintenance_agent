@@ -663,4 +663,49 @@ describe('G10: API Contract Tests', () => {
       expect(res.status).toBe(404);
     });
   });
+
+  // ── Strategy Engine ──
+  describe('POST /strategy/owner-profile', () => {
+    it('returns profile with expected shape when given valid answers', async () => {
+      const res = await fetch(`${API_BASE}/strategy/owner-profile`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'x-dev-role': 'OWNER' },
+        body: JSON.stringify({
+          answers: {
+            mainGoal: 3,
+            holdPeriod: 4,
+            renovationAppetite: 4,
+            cashSensitivity: 2,
+            disruptionTolerance: 3,
+          },
+        }),
+      });
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.profile).toBeDefined();
+      expectKeys(body.profile, [
+        'primaryArchetype', 'confidence', 'dimensions', 'archetypeScores',
+      ], 'OwnerProfile');
+      // Dimensions must have all 10 keys
+      expectKeys(body.profile.dimensions, [
+        'horizon', 'incomePriority', 'appreciationPriority', 'capexTolerance',
+        'volatilityTolerance', 'liquiditySensitivity', 'saleReadiness',
+        'stabilityPreference', 'modernizationPreference', 'disruptionTolerance',
+      ], 'StrategyDimensions');
+      // Archetype scores must have all 5 keys
+      expectKeys(body.profile.archetypeScores, [
+        'exit_optimizer', 'yield_maximizer', 'value_builder',
+        'capital_preserver', 'opportunistic_repositioner',
+      ], 'ArchetypeScores');
+    });
+  });
+
+  describe('GET /strategy/owner-profile/:ownerId', () => {
+    it('returns null profile for non-existent owner', async () => {
+      const res = await fetchWithRole('/strategy/owner-profile/00000000-0000-0000-0000-000000000099', 'MANAGER');
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.profile).toBeNull();
+    });
+  });
 });

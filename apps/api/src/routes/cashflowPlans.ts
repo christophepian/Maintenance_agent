@@ -42,6 +42,8 @@ import {
   computeMonthlyCashflow,
   computeRfpCandidates,
 } from "../services/cashflowPlanningService";
+import { computeStrategyOverlay } from "../services/strategyAlignmentService";
+import { getBuildingProfileByBuildingId } from "../repositories/strategyProfileRepository";
 import {
   findRfpByCashflowGroup,
   createRfpWithInvites,
@@ -110,10 +112,42 @@ export function registerCashflowPlanRoutes(router: Router) {
       // Stamp lastComputedAt
       await updateCashflowPlan(prisma, plan.id, orgId, { lastComputedAt: new Date() });
 
+      // Strategy overlay: if building has a strategy profile, compute alignment tags
+      let strategyOverlay = null;
+      if (plan.buildingId) {
+        const profile = await getBuildingProfileByBuildingId(prisma, plan.buildingId, orgId);
+        if (profile) {
+          // Collect all unique capex items across all buckets
+          const allCapexItems = new Map<string, { assetId: string; assetName: string; estimatedCostCents: number; tradeGroup: string }>();
+          for (const bucket of cashflow.buckets) {
+            for (const item of bucket.capexItems) {
+              if (!allCapexItems.has(item.assetId)) {
+                allCapexItems.set(item.assetId, {
+                  assetId: item.assetId,
+                  assetName: item.assetName,
+                  estimatedCostCents: item.estimatedCostCents,
+                  tradeGroup: item.tradeGroup,
+                });
+              }
+            }
+          }
+          if (allCapexItems.size > 0) {
+            strategyOverlay = computeStrategyOverlay(
+              Array.from(allCapexItems.values()),
+              {
+                primaryArchetype: profile.primaryArchetype,
+                secondaryArchetype: profile.secondaryArchetype,
+              },
+            );
+          }
+        }
+      }
+
       sendJson(res, 200, {
         data: {
           ...serializePlan(plan),
           cashflow,
+          strategyOverlay,
         },
       });
     } catch (e) {

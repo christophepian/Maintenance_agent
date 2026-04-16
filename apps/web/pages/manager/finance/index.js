@@ -13,6 +13,7 @@ import { InvoicesContent } from "./invoices";
 import BillingEntityManager from "../../../components/BillingEntityManager";
 import RenovationTaxPlanning from "../../../components/RenovationTaxPlanning";
 
+import { cn } from "../../../lib/utils";
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 function defaultRange() {
@@ -32,41 +33,34 @@ function formatDate(iso) {
 
 function SummaryCard({ label, value, sub, accent }) {
   const accentClass = accent === "green"
-    ? "text-emerald-700"
+    ? "text-green-700"
     : accent === "red"
     ? "text-red-600"
     : accent === "amber"
     ? "text-amber-700"
-    : "text-gray-900";
+    : "text-slate-900";
   return (
     <div className="card p-4 flex flex-col gap-1">
-      <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">{label}</span>
-      <span className={`text-xl font-bold ${accentClass}`}>{value}</span>
-      {sub && <span className="text-xs text-gray-400">{sub}</span>}
+      <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">{label}</span>
+      <span className={cn("text-xl font-bold", accentClass)}>{value}</span>
+      {sub && <span className="text-xs text-slate-400">{sub}</span>}
     </div>
   );
 }
 
 // ─── Health dot ─────────────────────────────────────────────────────────────
 
-const HEALTH_COLOR = {
-  green: "#16a34a",
-  amber: "#d97706",
-  red: "#dc2626",
+const HEALTH_DOT_CLASS = {
+  green: "bg-green-600",
+  amber: "bg-amber-600",
+  red: "bg-red-600",
 };
 
 function HealthDot({ health }) {
   return (
     <span
       title={health}
-      style={{
-        display: "inline-block",
-        width: 10,
-        height: 10,
-        borderRadius: "50%",
-        backgroundColor: HEALTH_COLOR[health] || "#9ca3af",
-        flexShrink: 0,
-      }}
+      className={cn("inline-block w-2.5 h-2.5 rounded-full shrink-0", HEALTH_DOT_CLASS[health] || "bg-slate-400")}
     />
   );
 }
@@ -160,21 +154,21 @@ export default function ManagerFinanceHome() {
               <Panel>
                 <div className="flex flex-wrap items-end gap-3">
                   <div className="flex flex-col gap-1">
-                    <label className="text-xs font-medium text-gray-600">From</label>
+                    <label className="text-xs font-medium text-slate-600">From</label>
                     <input
                       type="date"
                       value={rangeInput.from}
                       onChange={(e) => setRangeInput((r) => ({ ...r, from: e.target.value }))}
-                      className="border border-gray-300 rounded px-2 py-1 text-sm"
+                      className="border border-slate-300 rounded px-2 py-1 text-sm"
                     />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <label className="text-xs font-medium text-gray-600">To</label>
+                    <label className="text-xs font-medium text-slate-600">To</label>
                     <input
                       type="date"
                       value={rangeInput.to}
                       onChange={(e) => setRangeInput((r) => ({ ...r, to: e.target.value }))}
-                      className="border border-gray-300 rounded px-2 py-1 text-sm"
+                      className="border border-slate-300 rounded px-2 py-1 text-sm"
                     />
                   </div>
                   <button
@@ -184,7 +178,7 @@ export default function ManagerFinanceHome() {
                     Apply
                   </button>
                   {p && (
-                    <span className="text-xs text-gray-400 self-end pb-0.5">
+                    <span className="text-xs text-slate-400 self-end pb-0.5">
                       {p.buildingCount} building{p.buildingCount !== 1 ? "s" : ""} · {p.totalActiveUnits} unit{p.totalActiveUnits !== 1 ? "s" : ""}
                     </span>
                   )}
@@ -220,7 +214,7 @@ export default function ManagerFinanceHome() {
                       sub="Unpaid supplier invoices"
                     />
                   </div>
-                  <div className="flex gap-4 mt-2 text-xs text-gray-500">
+                  <div className="flex gap-4 mt-2 text-xs text-slate-500">
                     <span>Avg collection rate: <strong>{formatPercent(p.avgCollectionRate)}</strong></span>
                     {p.buildingsInRed > 0 && (
                       <span className="text-red-600 font-medium">{p.buildingsInRed} building{p.buildingsInRed !== 1 ? "s" : ""} need attention</span>
@@ -233,7 +227,7 @@ export default function ManagerFinanceHome() {
               {p && p.buildings.length > 0 && (
                 <Section title="Buildings">
                   <Panel bodyClassName="p-0">
-                    <div style={{ overflowX: "auto" }}>
+                    <div className="overflow-x-auto">
                       <table className="inline-table">
                         <thead>
                           <tr>
@@ -257,14 +251,14 @@ export default function ManagerFinanceHome() {
                               </td>
                               <td className="text-right font-mono">{formatChfCents(b.earnedIncomeCents)}</td>
                               <td className="text-right font-mono">{formatChfCents(b.expensesTotalCents)}</td>
-                              <td className={`text-right font-mono font-semibold ${b.netIncomeCents >= 0 ? "text-emerald-700" : "text-red-600"}`}>
+                              <td className={cn("text-right font-mono font-semibold", b.netIncomeCents >= 0 ? "text-green-700" : "text-red-600")}>
                                 {formatChfCents(b.netIncomeCents)}
                               </td>
                               <td className="text-right">{formatPercent(b.collectionRate)}</td>
                               <td className="text-right font-mono">
                                 {b.receivablesCents > 0
                                   ? <span className="text-amber-700">{formatChfCents(b.receivablesCents)}</span>
-                                  : <span className="text-gray-400">—</span>}
+                                  : <span className="text-slate-400">—</span>}
                               </td>
                               <td className="text-right">
                                 <Link href={`/manager/buildings/${b.buildingId}/financials`} className="text-blue-600 hover:underline text-sm">
@@ -285,7 +279,7 @@ export default function ManagerFinanceHome() {
                           xmlns="http://www.w3.org/2000/svg"
                           viewBox="0 0 20 20"
                           fill="currentColor"
-                          className={`w-4 h-4 transition-transform duration-200 ${buildingsExpanded ? "rotate-180" : ""}`}
+                          className={cn("w-4 h-4 transition-transform duration-200", buildingsExpanded ? "rotate-180" : "")}
                         >
                           <path fillRule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
                         </svg>
@@ -316,7 +310,7 @@ export default function ManagerFinanceHome() {
           {activeTab === 3 && (
             <Panel>
               <div className="flex flex-col gap-4">
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-slate-600">
                   Double-entry ledger and account structure for your portfolio.
                 </p>
                 <div className="flex flex-wrap gap-3">
@@ -342,10 +336,10 @@ export default function ManagerFinanceHome() {
           {activeTab === 5 && (
             <Panel>
               <div className="flex flex-col gap-2">
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-slate-600">
                   Finance configuration options will appear here as they become available.
                 </p>
-                <p className="text-xs text-gray-400">
+                <p className="text-xs text-slate-400">
                   Coming soon: default payment terms, VAT presets, currency settings, and invoice templates.
                 </p>
               </div>

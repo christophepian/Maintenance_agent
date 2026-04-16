@@ -6,6 +6,7 @@ import PageHeader from "../../../components/layout/PageHeader";
 import PageContent from "../../../components/layout/PageContent";
 import Panel from "../../../components/layout/Panel";
 import { authHeaders } from "../../../lib/api";
+import { ErrorBanner } from "../../../components/ui";
 
 export default function BuildingsListPage() {
   const [loading, setLoading] = useState(true);
@@ -46,21 +47,16 @@ export default function BuildingsListPage() {
       <PageShell>
         <PageHeader title="Buildings" />
         <PageContent>
-          {error && (
-            <Panel style={{ backgroundColor: "#fff0f0", borderColor: "#ffb3b3" }}>
-              <strong className="text-err-text">Error:</strong> {error}
-              <button onClick={() => setError("")} style={{ marginLeft: 12, fontSize: "0.85em" }}>Dismiss</button>
-            </Panel>
-          )}
+          <ErrorBanner error={error} onDismiss={() => setError("")} />
 
           {/* Search */}
-          <div style={{ marginBottom: 16 }}>
+          <div className="mb-4">
             <input
               type="text"
               placeholder="Search buildings…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              style={{ padding: "6px 12px", borderRadius: 4, border: "1px solid #ccc", fontSize: "0.9em", width: 300 }}
+              className="px-3 py-1.5 rounded-lg border border-slate-300 text-sm w-[300px]"
             />
           </div>
 
@@ -71,34 +67,30 @@ export default function BuildingsListPage() {
               <p className="m-0">No buildings found.</p>
             </Panel>
           ) : (
-            <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.9em" }}>
+            <div className="overflow-x-auto">
+              <table className="inline-table">
                 <thead>
-                  <tr style={{ borderBottom: "2px solid #ddd", textAlign: "left" }}>
-                    <th style={{ padding: "8px 6px" }}>Name</th>
-                    <th style={{ padding: "8px 6px" }}>Address</th>
-                    <th style={{ padding: "8px 6px" }}>Canton</th>
-                    <th style={{ padding: "8px 6px" }}>Actions</th>
+                  <tr>
+                    <th>Name</th>
+                    <th>Address</th>
+                    <th>Canton</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filtered.map((b) => (
-                    <tr key={b.id} style={{ borderBottom: "1px solid #eee" }}>
-                      <td style={{ padding: "8px 6px", fontWeight: 600 }}>
-                        <Link href={`/admin-inventory/buildings/${b.id}`} style={{ color: "#0b3a75", textDecoration: "none" }}>
+                    <tr key={b.id}>
+                      <td className="cell-bold">
+                        <Link href={`/admin-inventory/buildings/${b.id}`} className="text-brand-dark hover:underline">
                           {b.name || "Unnamed"}
                         </Link>
                       </td>
-                      <td style={{ padding: "8px 6px" }}>{b.address || "—"}</td>
-                      <td style={{ padding: "8px 6px" }}>{b.canton || "—"}</td>
-                      <td style={{ padding: "8px 6px" }}>
+                      <td>{b.address || "—"}</td>
+                      <td>{b.canton || "—"}</td>
+                      <td>
                         <Link
                           href={`/admin-inventory/buildings/${b.id}`}
-                          style={{
-                            padding: "4px 10px", borderRadius: 4, fontSize: "0.8em",
-                            backgroundColor: "#e3f2fd", color: "#0b3a75", border: "1px solid #90caf9",
-                            textDecoration: "none", display: "inline-block",
-                          }}
+                          className="px-2.5 py-1 rounded text-xs bg-blue-50 text-blue-800 border border-blue-300 no-underline inline-block"
                         >
                           View
                         </Link>

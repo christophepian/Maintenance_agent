@@ -6,7 +6,7 @@
  *
  *   1. Fetch current request + validate existence
  *   2. Verify the tenant owns the request
- *   3. Assert status transition OWNER_REJECTED → RFP_PENDING
+ *   3. Assert status transition REJECTED → RFP_PENDING
  *   4. Update payingParty to TENANT and transition to RFP_PENDING
  *   5. Create an RFP for the request (re-uses existing RFP service)
  *   6. Notify tenant of confirmation
@@ -59,8 +59,8 @@ export async function tenantSelfPayWorkflow(
     );
   }
 
-  // ── 3. Must be in OWNER_REJECTED — self-pay only applies after rejection ─
-  if (current.status !== RequestStatus.OWNER_REJECTED) {
+  // ── 3. Must be in REJECTED — self-pay only applies after rejection ─
+  if (current.status !== RequestStatus.REJECTED) {
     throw new InvalidTransitionError("Request", current.status, "RFP_PENDING");
   }
   assertRequestTransition(current.status, RequestStatus.RFP_PENDING);

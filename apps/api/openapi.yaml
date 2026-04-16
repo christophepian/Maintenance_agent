@@ -104,7 +104,7 @@ components:
         - RFP_PENDING
         - IN_PROGRESS
         - COMPLETED
-        - OWNER_REJECTED
+        - REJECTED
 
     PayingParty:
       type: string
@@ -128,7 +128,7 @@ components:
 
     RequestEventType:
       type: string
-      enum: [ARRIVED, PARTS_ORDERED, COMPLETED, OWNER_APPROVED, OWNER_REJECTED, NOTE, OTHER]
+      enum: [ARRIVED, PARTS_ORDERED, COMPLETED, OWNER_APPROVED, REJECTED, NOTE, OTHER]
 
     RuleAction:
       type: string
@@ -1992,7 +1992,7 @@ paths:
                   data: { $ref: '#/components/schemas/MaintenanceRequestDTO' }
                   rfpId: { type: string, format: uuid }
         '403': { description: Tenant does not own the request }
-        '409': { description: Request is not in OWNER_REJECTED status }
+        '409': { description: Request is not in REJECTED status }
 
   /tenant-portal/maintenance-attachments/{requestId}:
     get:

@@ -27,6 +27,7 @@ import {
 } from "../services/rfps";
 import { evaluateLegalRoutingWorkflow } from "../workflows/evaluateLegalRoutingWorkflow";
 import { analyseClaimWorkflow } from "../workflows/analyseClaimWorkflow";
+import { resolveRequestId } from "../repositories/requestRepository";
 import { awardQuoteWorkflow, AwardQuoteError } from "../workflows";
 import { rfpReinviteWorkflow, RfpReinviteError } from "../workflows";
 import { rfpDirectAssignWorkflow, RfpDirectAssignError } from "../workflows";
@@ -114,8 +115,8 @@ export function registerLegalRoutes(router: Router) {
   /**
    * GET /requests/:id/legal-decision
    *
-   * Evaluates legal obligations for a maintenance request.
-   * If obligation = OBLIGATED, auto-creates an RFP (idempotent).
+   * Evaluates legal obligations for a maintenance request (read-only).
+   * Returns the legal decision without any side effects.
    */
   router.get(
     "/requests/:id/legal-decision",
@@ -123,9 +124,12 @@ export function registerLegalRoutes(router: Router) {
       if (!requireOrgViewer(req, res)) return;
 
       try {
+        const requestId = await resolveRequestId(prisma, params.id);
+        if (!requestId) return sendError(res, 404, "NOT_FOUND", "Request not found");
+
         const result = await evaluateLegalRoutingWorkflow(
           { orgId, prisma },
-          { requestId: params.id },
+          { requestId },
         );
 
         sendJson(res, 200, { data: result.decision });
@@ -159,9 +163,12 @@ export function registerLegalRoutes(router: Router) {
       if (!requireOrgViewer(req, res)) return;
 
       try {
+        const requestId = await resolveRequestId(prisma, params.id);
+        if (!requestId) return sendError(res, 404, "NOT_FOUND", "Request not found");
+
         const result = await analyseClaimWorkflow(
           { orgId, prisma },
-          { requestId: params.id },
+          { requestId },
         );
 
         sendJson(res, 200, { data: result.analysis });

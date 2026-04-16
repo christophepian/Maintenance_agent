@@ -24,7 +24,7 @@ Full-stack Swiss property management platform. Monorepo with Node.js + TypeScrip
 |-|-|
 | Backend | Raw `http.createServer()` — no Express/NestJS. Port 3001. |
 | Frontend | Next.js Pages Router. Port 3000. |
-| Database | PostgreSQL 16 via Docker. Prisma ORM. 64 models · 55 enums · 69 migrations. |
+| Database | PostgreSQL 16 via Docker. Prisma ORM. 64 models · 55 enums · 72 migrations. |
 | Auth | JWT-based. Role enum: MANAGER, CONTRACTOR, TENANT, OWNER. |
 | Personas | Manager · Contractor · Tenant · Owner |
 
@@ -131,10 +131,14 @@ Maintenance_Agent/
 │   └── governance/      # Org scoping + authz
 ├── apps/api/prisma/
 │   ├── schema.prisma    # 64 models · 55 enums
-│   └── migrations/      # 69 dirs — never edit past migrations
+│   └── migrations/      # 72 dirs — never edit past migrations
 ├── apps/web/pages/      # 275 pages (92 UI + 182 API proxies)
+├── apps/web/components/ui/  # 10 CVA-backed primitives (Button, Badge, Card, etc.)
+├── apps/web/lib/
+│   ├── utils.js           # cn() = twMerge(clsx()) — ALL dynamic classNames must use this
+│   └── statusVariants.js  # 14 status→Badge variant mappers — canonical status color source
 ├── apps/web/styles/
-│   └── globals.css       # Tailwind + CSS variables + @layer components (F8)
+│   └── globals.css       # @theme tokens + @apply classes — single CSS source of truth (F8)
 ├── packages/api-client/ # Typed DTOs + fetch methods
 ├── infra/               # Docker — PostgreSQL 16
 ├── docs/
@@ -170,9 +174,60 @@ Maintenance_Agent/
 - Do not call Prisma directly from routes or services — use repositories
 - Do not define inline include trees — use canonical constants
 - Do not use `prisma db push` under any circumstances
-- Do not add inline styles to manager pages — use Tailwind classes or `@layer components` in globals.css
+- Do not add inline `style={{}}` — use Tailwind classes, `@apply` classes from globals.css, or CVA components from `components/ui/`
+- Do not use hardcoded hex/rgb — use Tailwind tokens or semantic tokens from `@theme {}` in globals.css
+- Do not add custom theme extensions to `tailwind.config.js` — Tailwind v4 uses `@theme {}` in CSS, not config file
+- Do not create new `.css` files — all shared styles go in `globals.css @layer components` via `@apply`
+- Do not define component variants without CVA — use `components/ui/` primitives (Button, Badge, StatusPill, etc.)
 - Do not change `maybeRequireManager` to allow writes — use `requireRole('MANAGER')` for mutations
 - Do not accept `tenantId` as a query param on tenant-portal routes — use `requireTenantSession()`
 - Do not add non-English labels, seed data, or UI text — English only until i18n epic lands (F-UI7)
 - Do not skip contract test updates when changing DTOs
 - Do not run `docker-compose down -v` or `prisma migrate reset` without explicit approval
+- Do not define per-file `STATUS_COLORS` / `URGENCY_COLORS` / color-map objects — use `statusVariants.js` mappers with `<Badge>`
+- Do not use template-literal className interpolation (`className={\`... ${x}\`}`) — use `cn()` from `lib/utils.js`
+- Do not create icon-only `<button>` elements without `aria-label`
+- Do not add `<input>` / `<select>` without an associated `<label>`, `aria-label`, or `placeholder`
+- Do not introduce horizontal scroll — no page may exceed viewport width. `html, body` have `overflow-x: hidden` globally; `<main>` in `AppShell.js` uses `min-w-0 overflow-x-hidden`. Use `min-w-0`, `overflow-hidden`, `truncate`, or responsive grids to contain wide content.
+
+---
+
+## Frontend UI Patterns (Mandatory)
+
+### Status Badges
+
+All status indicators must use the `<Badge>` component + a mapper from `lib/statusVariants.js`:
+
+```jsx
+import Badge from "../../components/ui/Badge";
+import { requestVariant } from "../../lib/statusVariants";
+
+<Badge variant={requestVariant(status)}>{status}</Badge>
+```
+
+Available mappers: `invoiceVariant`, `jobVariant`, `requestVariant`, `rfpVariant`, `quoteVariant`, `urgencyVariant`, `ingestionVariant`, `leaseVariant`, `selectionVariant`, `accountTypeVariant`, `legalVariant`, `taxVariant`, `billingEntityVariant`, `reconciliationVariant`.
+
+To add a new status domain: add a mapper function to `statusVariants.js`, never define inline color maps.
+
+### Dynamic Class Names — Always Use `cn()`
+
+```jsx
+import { cn } from "../../lib/utils";
+
+// ✅ Correct
+className={cn("base-classes", condition && "conditional-class")}
+className={cn("base", active ? "bg-blue-100" : "bg-white")}
+
+// ❌ Wrong — template literal interpolation
+className={`base-classes ${condition ? "a" : "b"}`}
+```
+
+### Accessibility Baseline
+
+- **Skip-to-content link** — present in `AppShell.js` (links to `#main-content`)
+- **`<nav aria-label="...">` on all sidebars** — Manager/Owner/Contractor/Tenant
+- **`<aside aria-label="Sidebar navigation">`** — in `AppShell.js`
+- **`aria-label` on icon-only buttons** — e.g. close ✕, delete 🗑, dismiss
+- **`sr-only` for visual-only indicators** — e.g. unread dots, color-coded pills
+- **`role="alert"` on error banners** — `ErrorBanner` component handles this
+- **`focus-visible:ring`** on all interactive elements

@@ -9,6 +9,10 @@ import PageContent from "../../../../components/layout/PageContent";
 import Panel from "../../../../components/layout/Panel";
 import { ALLOWED_CATEGORIES } from "../../../../lib/categories";
 import { authHeaders } from "../../../../lib/api";
+import Badge from "../../../../components/ui/Badge";
+import ErrorBanner from "../../../../components/ui/ErrorBanner";
+import { cn } from "../../../../lib/utils";
+import { jobVariant, invoiceVariant } from "../../../../lib/statusVariants";
 
 export default function ContractorDetailPage() {
   const router = useRouter();
@@ -236,33 +240,20 @@ export default function ContractorDetailPage() {
         />
         <PageContent>
           {message ? (
-            <Panel>
-              <div className="text-sm text-slate-700">{message}</div>
-            </Panel>
+            <div className="notice notice-ok">{message}</div>
           ) : null}
-          {error ? (
-            <Panel>
-              <div className="text-sm text-red-600">{error}</div>
-            </Panel>
-          ) : null}
+          <ErrorBanner error={error} onDismiss={() => setError("")} />
 
           {loading ? (
-            <Panel>
-              <p className="text-sm text-slate-600">Loading contractor...</p>
-            </Panel>
+            <p className="loading-text">Loading contractor…</p>
           ) : contractor ? (
             <div className="grid gap-4">
-              <div className="flex flex-wrap gap-2">
+              <div className="pill-tab-row">
                 {["Personal information", "Service details", "Contracts", "Invoices"].map((tab) => (
                   <button
                     key={tab}
                     type="button"
-                    className={
-                      "rounded-full border px-3 py-1.5 text-xs font-semibold transition " +
-                      (activeTab === tab
-                        ? "border-slate-900 bg-slate-900 text-white"
-                        : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-900")
-                    }
+                    className={cn(activeTab === tab ? "pill-tab-active" : "pill-tab")}
                     onClick={() => setActiveTab(tab)}
                   >
                     {tab}
@@ -274,7 +265,7 @@ export default function ContractorDetailPage() {
                 <Panel title="Personal information">
                   <div className="grid gap-4 sm:grid-cols-2">
                     <label className="grid gap-2">
-                      <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Name</span>
+                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Name</span>
                       {isEditing ? (
                         <input
                           className="input text-sm text-slate-700"
@@ -288,7 +279,7 @@ export default function ContractorDetailPage() {
                       )}
                     </label>
                     <label className="grid gap-2">
-                      <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Phone</span>
+                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Phone</span>
                       {isEditing ? (
                         <input
                           className="input text-sm text-slate-700"
@@ -302,7 +293,7 @@ export default function ContractorDetailPage() {
                       )}
                     </label>
                     <label className="grid gap-2 sm:col-span-2">
-                      <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Email</span>
+                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Email</span>
                       {isEditing ? (
                         <input
                           className="input text-sm text-slate-700"
@@ -316,7 +307,7 @@ export default function ContractorDetailPage() {
                       )}
                     </label>
                     <label className="grid gap-2 sm:col-span-2">
-                      <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Address line 1</span>
+                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Address line 1</span>
                       {isEditing ? (
                         <input
                           className="input text-sm text-slate-700"
@@ -330,7 +321,7 @@ export default function ContractorDetailPage() {
                       )}
                     </label>
                     <label className="grid gap-2 sm:col-span-2">
-                      <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Address line 2</span>
+                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Address line 2</span>
                       {isEditing ? (
                         <input
                           className="input text-sm text-slate-700"
@@ -344,7 +335,7 @@ export default function ContractorDetailPage() {
                       )}
                     </label>
                     <label className="grid gap-2">
-                      <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Postal code</span>
+                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Postal code</span>
                       {isEditing ? (
                         <input
                           className="input text-sm text-slate-700"
@@ -357,7 +348,7 @@ export default function ContractorDetailPage() {
                       )}
                     </label>
                     <label className="grid gap-2">
-                      <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">City</span>
+                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">City</span>
                       {isEditing ? (
                         <input
                           className="input text-sm text-slate-700"
@@ -370,7 +361,7 @@ export default function ContractorDetailPage() {
                       )}
                     </label>
                     <label className="grid gap-2">
-                      <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Country</span>
+                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Country</span>
                       {isEditing ? (
                         <input
                           className="input text-sm text-slate-700"
@@ -383,7 +374,7 @@ export default function ContractorDetailPage() {
                       )}
                     </label>
                     <label className="grid gap-2 sm:col-span-2">
-                      <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">IBAN</span>
+                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">IBAN</span>
                       {isEditing ? (
                         <input
                           className="input text-sm text-slate-700"
@@ -397,7 +388,7 @@ export default function ContractorDetailPage() {
                       )}
                     </label>
                     <label className="grid gap-2">
-                      <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">VAT number</span>
+                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">VAT number</span>
                       {isEditing ? (
                         <input
                           className="input text-sm text-slate-700"
@@ -411,7 +402,7 @@ export default function ContractorDetailPage() {
                       )}
                     </label>
                     <label className="grid gap-2">
-                      <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Default VAT rate (%)</span>
+                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Default VAT rate (%)</span>
                       {isEditing ? (
                         <input
                           className="input text-sm text-slate-700"
@@ -428,21 +419,21 @@ export default function ContractorDetailPage() {
 
                   <div className="mt-6 grid gap-4 sm:grid-cols-2">
                     <div>
-                      <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Contractor ID</div>
+                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Contractor ID</div>
                       <div className="text-sm text-slate-700 mt-1">{contractor?.id}</div>
                     </div>
                     <div>
-                      <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Org ID</div>
+                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Org ID</div>
                       <div className="text-sm text-slate-700 mt-1">{contractor?.orgId || "—"}</div>
                     </div>
                     <div>
-                      <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Created</div>
+                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Created</div>
                       <div className="text-sm text-slate-700 mt-1">
                         {contractor?.createdAt ? formatDateTime(contractor.createdAt) : "—"}
                       </div>
                     </div>
                     <div>
-                      <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Updated</div>
+                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Updated</div>
                       <div className="text-sm text-slate-700 mt-1">
                         {contractor?.updatedAt ? formatDateTime(contractor.updatedAt) : "—"}
                       </div>
@@ -455,7 +446,7 @@ export default function ContractorDetailPage() {
                 <Panel title="Service details">
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div>
-                      <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Hourly rate</div>
+                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Hourly rate</div>
                       {isEditing ? (
                         <input
                           className="input text-sm text-slate-700 mt-2"
@@ -475,11 +466,11 @@ export default function ContractorDetailPage() {
                       )}
                     </div>
                     <div>
-                      <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Status</div>
+                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Status</div>
                       <div className="text-sm text-slate-700 mt-1">{statusLabel}</div>
                     </div>
                     <div className="sm:col-span-2">
-                      <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Service categories</div>
+                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Service categories</div>
                       {isEditing ? (
                         <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
                           {ALLOWED_CATEGORIES.map((cat) => (
@@ -533,9 +524,9 @@ export default function ContractorDetailPage() {
                               <td>{job.request?.description?.slice(0, 60) || "—"}{job.request?.description?.length > 60 ? "…" : ""}</td>
                               <td>{job.request?.unit?.building?.name || "—"}</td>
                               <td>
-                                <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600">
+                                <Badge variant={jobVariant(job.status)} size="sm">
                                   {job.status}
-                                </span>
+                                </Badge>
                               </td>
                               <td>{job.createdAt ? new Date(job.createdAt).toLocaleDateString("de-CH") : "—"}</td>
                             </tr>
@@ -576,9 +567,9 @@ export default function ContractorDetailPage() {
                                 {inv.totalAmount != null ? `CHF ${inv.totalAmount.toFixed(2)}` : "—"}
                               </td>
                               <td>
-                                <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600">
+                                <Badge variant={invoiceVariant(inv.status)} size="sm">
                                   {inv.status}
-                                </span>
+                                </Badge>
                               </td>
                               <td>{inv.submittedAt ? new Date(inv.submittedAt).toLocaleDateString("de-CH") : "—"}</td>
                             </tr>

@@ -6,8 +6,11 @@ import PageHeader from "../../../components/layout/PageHeader";
 import PageContent from "../../../components/layout/PageContent";
 import Panel from "../../../components/layout/Panel";
 import Link from "next/link";
+import ErrorBanner from "../../../components/ui/ErrorBanner";
+import Badge from "../../../components/ui/Badge";
 import { authHeaders } from "../../../lib/api";
 
+import { cn } from "../../../lib/utils";
 /* ─── Owner create form ──────────────────────────────────── */
 
 const OWNER_FORM_DEFAULT = { name: "", email: "", password: "" };
@@ -96,9 +99,9 @@ function OwnersTab({ showAddForm, onAddFormClose }) {
   return (
     <div>
       {(error || notice) && (
-        <div className={`mb-3 rounded-lg border px-4 py-2.5 text-sm ${error ? "border-red-200 bg-red-50 text-red-700" : "border-emerald-200 bg-emerald-50 text-emerald-700"}`}>
+        <div className={cn("mb-3 rounded-lg border px-4 py-2.5 text-sm", error ? "border-red-200 bg-red-50 text-red-700" : "border-green-200 bg-green-50 text-green-700")}>
           {error || notice}
-          <button onClick={() => { setError(""); setNotice(""); }} className="ml-3 opacity-60 hover:opacity-100">✕</button>
+          <button onClick={() => { setError(""); setNotice(""); }} className="ml-3 opacity-60 hover:opacity-100" aria-label="Dismiss">✕</button>
         </div>
       )}
 
@@ -135,7 +138,7 @@ function OwnersTab({ showAddForm, onAddFormClose }) {
               />
             </div>
             <button type="submit" disabled={ownerSubmitting}
-              className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-50">
+              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">
               {ownerSubmitting ? "Creating…" : "Create"}
             </button>
             <button type="button" onClick={onAddFormClose}
@@ -171,13 +174,13 @@ function OwnersTab({ showAddForm, onAddFormClose }) {
                     <td className="text-slate-500">{owner.email || "—"}</td>
                     <td>
                       {owner.billingEntity ? (
-                        <span className="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
+                        <Badge variant="success" size="md">
                           ✓ {owner.billingEntity.name}
-                        </span>
+                        </Badge>
                       ) : (
-                        <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-500">
+                        <Badge variant="muted" size="md">
                           Not set
-                        </span>
+                        </Badge>
                       )}
                     </td>
                     <td className="text-right">
@@ -227,7 +230,7 @@ function OwnersTab({ showAddForm, onAddFormClose }) {
                               className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-36" placeholder="CHE-123.456.789" />
                           </div>
                           <button type="submit" disabled={billingSubmitting}
-                            className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-50">
+                            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">
                             {billingSubmitting ? "Saving…" : "Save billing entity"}
                           </button>
                         </form>
@@ -302,14 +305,14 @@ export default function ManagerPeoplePage() {
           actions={activeTab === 2 ? (
             <button
               onClick={() => setShowAddOwner((v) => !v)}
-              className="rounded-lg bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-700"
+              className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700"
             >
               + Add owner
             </button>
           ) : null}
         />
         <PageContent>
-          {error && <div className="error-banner">{error}</div>}
+          <ErrorBanner error={error} />
 
           {/* Tab strip */}
           <div className="tab-strip">
@@ -342,7 +345,7 @@ export default function ManagerPeoplePage() {
                 <p className="empty-state-text">No tenants found.</p>
               </div>
             ) : (
-              <div style={{ overflowX: "auto" }}>
+              <div className="overflow-x-auto">
                 <table className="inline-table">
                   <thead>
                     <tr>
@@ -382,7 +385,7 @@ export default function ManagerPeoplePage() {
                 <p className="empty-state-text">No contractors found.</p>
               </div>
             ) : (
-              <div style={{ overflowX: "auto" }}>
+              <div className="overflow-x-auto">
                 <table className="inline-table">
                   <thead>
                     <tr>

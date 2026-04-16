@@ -84,10 +84,7 @@ export default function TenantPicker({ onSelect }) {
   if (loading) return null;
   if (tenants.length === 0) {
     return (
-      <div style={{
-        padding: "8px 16px", marginBottom: 16, backgroundColor: "#fff8e1",
-        border: "1px solid #ffe082", borderRadius: 6, fontSize: "0.85em", color: "#7a4a00",
-      }}>
+      <div className="px-4 py-2 mb-4 bg-amber-50 border border-amber-300 rounded-lg text-sm text-amber-700">
         ⚠️ No tenants found in this org.
       </div>
     );
@@ -96,18 +93,13 @@ export default function TenantPicker({ onSelect }) {
   const current = tenants.find((t) => t.id === selected);
 
   return (
-    <div style={{
-      display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap",
-      padding: "8px 16px", marginBottom: 16,
-      backgroundColor: "#e8f5e9", border: "1px solid #a5d6a7",
-      borderRadius: 6, fontSize: "0.85em",
-    }}>
-      <span style={{ fontWeight: 600, color: "#1b5e20" }}>🏠 Viewing as tenant:</span>
+    <div className="flex items-center gap-2.5 flex-wrap px-4 py-2 mb-4 bg-green-50 border border-green-300 rounded-lg text-sm">
+      <span className="font-semibold text-green-900">🏠 Viewing as tenant:</span>
       <select
         value={selected}
         onChange={handleChange}
         disabled={switching}
-        style={{ padding: "4px 8px", borderRadius: 4, border: "1px solid #a5d6a7", fontSize: "0.95em", minWidth: 240 }}
+        className="px-2 py-1 rounded-lg border border-green-300 text-sm min-w-[240px]"
       >
         <option value="">— Select a tenant —</option>
         {tenants.map((t) => (
@@ -116,9 +108,9 @@ export default function TenantPicker({ onSelect }) {
           </option>
         ))}
       </select>
-      {switching && <span style={{ color: "#388e3c", fontSize: "0.9em" }}>Switching…</span>}
+      {switching && <span className="text-green-700 text-sm">Switching…</span>}
       {current && !switching && (
-        <span style={{ color: "#555", fontSize: "0.8em" }}>
+        <span className="text-slate-600 text-xs">
           ID: {current.id.slice(0, 8)}…
         </span>
       )}

@@ -22,7 +22,7 @@ export default function PaginationControls({ currentPage, totalPages, totalItems
         <button
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage === 0}
-          className="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+          className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
         >
           ← Previous
         </button>
@@ -32,7 +32,7 @@ export default function PaginationControls({ currentPage, totalPages, totalItems
         <button
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage >= totalPages - 1}
-          className="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+          className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
         >
           Next →
         </button>

@@ -41,6 +41,9 @@ export type MaintenanceRequestDTO = {
     hourlyRate: number;
   };
 
+  /** ID of the most-recent RFP linked to this request, if any. */
+  rfpId?: string | null;
+
   // optional enrichments
   tenant?: null | {
     id: string;
@@ -152,6 +155,11 @@ const requestInclude = {
       },
     },
   },
+  rfps: {
+    select: { id: true, status: true },
+    orderBy: { createdAt: "desc" as const },
+    take: 1,
+  },
 } as const;
 
   const requestSummaryInclude = {
@@ -213,6 +221,7 @@ export function toDTO(r: RequestWithFullInclude): MaintenanceRequestDTO {
 
     unit: r.unit ?? null,
     appliance: r.appliance ?? null,
+    rfpId: r.rfps?.[0]?.id ?? null,
 
     createdAt: r.createdAt instanceof Date ? r.createdAt.toISOString() : String(r.createdAt),
   };

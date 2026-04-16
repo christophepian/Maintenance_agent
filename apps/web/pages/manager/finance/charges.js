@@ -151,22 +151,22 @@ export default function ManagerChargesPage() {
         <PageHeader title="Charges" />
         <PageContent>
           {error && (
-            <Panel style={{ backgroundColor: "#fff0f0", borderColor: "#ffb3b3" }}>
-              <strong className="text-err-text">Error:</strong> {error}
-              <button onClick={() => setError("")} style={{ marginLeft: 12, fontSize: "0.85em" }}>Dismiss</button>
+            <Panel className="bg-red-50 border-red-200">
+              <strong className="text-red-700">Error:</strong> {error}
+              <button onClick={() => setError("")} className="action-btn-dismiss">Dismiss</button>
             </Panel>
           )}
 
           {/* Filters — COA expense type (feature-flagged) */}
           {expenseTypes.length > 0 && (
             <Panel>
-              <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-end" }}>
+              <div className="filter-row">
                 <div>
-                  <label style={{ display: "block", fontSize: "0.8em", fontWeight: 600, marginBottom: 4 }}>Expense Type</label>
+                  <label className="filter-label">Expense Type</label>
                   <select
                     value={expenseTypeId}
                     onChange={(e) => setExpenseTypeId(e.target.value)}
-                    style={{ padding: "6px 10px", borderRadius: 4, border: "1px solid #ccc", fontSize: "0.9em", minWidth: 180 }}
+                    className="filter-select"
                   >
                     <option value="">All expense types</option>
                     {expenseTypes.map((et) => (
@@ -177,10 +177,7 @@ export default function ManagerChargesPage() {
                 {expenseTypeId && (
                   <button
                     onClick={() => setExpenseTypeId("")}
-                    style={{
-                      padding: "6px 14px", borderRadius: 4, fontSize: "0.85em",
-                      border: "1px solid #ccc", backgroundColor: "#f5f5f5", cursor: "pointer",
-                    }}
+                    className="action-btn"
                   >
                     Clear filter
                   </button>
@@ -190,19 +187,14 @@ export default function ManagerChargesPage() {
           )}
 
           {/* View Tabs */}
-          <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 16 }}>
+          <div className="pill-tab-row">
             {VIEW_TABS.map((tab) => {
               const active = activeTab === tab.key;
               return (
                 <button
                   key={tab.key}
                   onClick={() => setActiveTab(tab.key)}
-                  style={{
-                    padding: "6px 14px", borderRadius: 6, fontSize: "0.85em", fontWeight: active ? 700 : 400,
-                    border: active ? "2px solid #0b3a75" : "1px solid #ccc",
-                    backgroundColor: active ? "#e3f2fd" : "#fff",
-                    color: active ? "#0b3a75" : "#333", cursor: "pointer",
-                  }}
+                  className={active ? "pill-tab pill-tab-active" : "pill-tab"}
                 >
                   {tab.label}
                 </button>
@@ -212,24 +204,24 @@ export default function ManagerChargesPage() {
 
           {/* Edit Modal (inline panel) */}
           {editingLeaseId && (
-            <Panel style={{ border: "2px solid #0b3a75", marginBottom: 16 }}>
-              <h3 style={{ margin: "0 0 12px 0", fontSize: "1em" }}>Edit Charges</h3>
+            <Panel className="edit-panel">
+              <h3 className="mb-3 text-base font-semibold m-0">Edit Charges</h3>
 
-              <div style={{ marginBottom: 12 }}>
-                <label style={{ display: "block", fontSize: "0.8em", fontWeight: 600, marginBottom: 4 }}>Charge Items</label>
+              <div className="mb-3">
+                <label className="filter-label">Charge Items</label>
                 {editForm.chargesItems.map((item, idx) => (
-                  <div key={idx} style={{ display: "flex", gap: 8, marginBottom: 6, alignItems: "center" }}>
+                  <div key={idx} className="edit-row">
                     <input
                       type="text"
                       placeholder="Item name"
                       value={item.label}
                       onChange={(e) => updateChargeItem(idx, "label", e.target.value)}
-                      style={{ padding: "4px 8px", borderRadius: 4, border: "1px solid #ccc", fontSize: "0.85em", flex: 1 }}
+                      className="edit-input flex-1"
                     />
                     <select
                       value={item.mode}
                       onChange={(e) => updateChargeItem(idx, "mode", e.target.value)}
-                      style={{ padding: "4px 8px", borderRadius: 4, border: "1px solid #ccc", fontSize: "0.85em" }}
+                      className="edit-input"
                     >
                       <option value="ACOMPTE">Acompte</option>
                       <option value="FORFAIT">Forfait</option>
@@ -239,11 +231,11 @@ export default function ManagerChargesPage() {
                       placeholder="CHF"
                       value={item.amountChf}
                       onChange={(e) => updateChargeItem(idx, "amountChf", e.target.value)}
-                      style={{ padding: "4px 8px", borderRadius: 4, border: "1px solid #ccc", fontSize: "0.85em", width: 80 }}
+                      className="edit-input w-20"
                     />
                     <button
                       onClick={() => removeChargeItem(idx)}
-                      style={{ padding: "4px 8px", borderRadius: 4, fontSize: "0.8em", border: "1px solid #ccc", cursor: "pointer" }}
+                      className="action-btn"
                     >
                       ✕
                     </button>
@@ -251,54 +243,45 @@ export default function ManagerChargesPage() {
                 ))}
                 <button
                   onClick={addChargeItem}
-                  style={{
-                    padding: "4px 12px", borderRadius: 4, fontSize: "0.8em",
-                    border: "1px solid #90caf9", backgroundColor: "#e3f2fd", color: "#0b3a75", cursor: "pointer",
-                  }}
+                  className="action-btn-brand"
                 >
                   + Add item
                 </button>
               </div>
 
-              <div style={{ display: "flex", gap: 12, marginBottom: 12 }}>
+              <div className="flex gap-3 mb-3">
                 <div>
-                  <label style={{ display: "block", fontSize: "0.8em", fontWeight: 600, marginBottom: 4 }}>Total charges (CHF)</label>
+                  <label className="filter-label">Total charges (CHF)</label>
                   <input
                     type="number"
                     value={editForm.chargesTotalChf}
                     onChange={(e) => setEditForm((prev) => ({ ...prev, chargesTotalChf: e.target.value }))}
-                    style={{ padding: "4px 8px", borderRadius: 4, border: "1px solid #ccc", fontSize: "0.85em", width: 100 }}
+                    className="edit-input w-[100px]"
                   />
                 </div>
                 <div>
-                  <label style={{ display: "block", fontSize: "0.8em", fontWeight: 600, marginBottom: 4 }}>Settlement date</label>
+                  <label className="filter-label">Settlement date</label>
                   <input
                     type="text"
                     placeholder="e.g., 30.06.2027"
                     value={editForm.chargesSettlementDate}
                     onChange={(e) => setEditForm((prev) => ({ ...prev, chargesSettlementDate: e.target.value }))}
-                    style={{ padding: "4px 8px", borderRadius: 4, border: "1px solid #ccc", fontSize: "0.85em", width: 150 }}
+                    className="edit-input w-[150px]"
                   />
                 </div>
               </div>
 
-              <div style={{ display: "flex", gap: 8 }}>
+              <div className="flex gap-2">
                 <button
                   onClick={saveCharges}
                   disabled={saving}
-                  style={{
-                    padding: "6px 16px", borderRadius: 4, fontSize: "0.85em",
-                    backgroundColor: "#1b5e20", color: "#fff", border: "none", cursor: "pointer",
-                  }}
+                  className="action-btn-success"
                 >
                   {saving ? "Saving…" : "Save"}
                 </button>
                 <button
                   onClick={cancelEdit}
-                  style={{
-                    padding: "6px 16px", borderRadius: 4, fontSize: "0.85em",
-                    border: "1px solid #ccc", backgroundColor: "#f5f5f5", cursor: "pointer",
-                  }}
+                  className="action-btn"
                 >
                   Cancel
                 </button>
@@ -337,11 +320,7 @@ export default function ManagerChargesPage() {
                       <td>
                         <button
                           onClick={() => startEdit(l)}
-                          style={{
-                            padding: "4px 10px", borderRadius: 4, fontSize: "0.8em",
-                            backgroundColor: "#e3f2fd", color: "#0b3a75", border: "1px solid #90caf9",
-                            cursor: "pointer",
-                          }}
+                          className="action-btn-brand"
                         >
                           Edit charges
                         </button>
@@ -377,13 +356,10 @@ export default function ManagerChargesPage() {
                         <td>{row.unitNumber}</td>
                         <td>{row.label}</td>
                         <td>
-                          <span style={{
-                            display: "inline-block", padding: "2px 8px", borderRadius: 10,
-                            fontSize: "0.8em", fontWeight: 600,
-                            backgroundColor: row.mode === "FORFAIT" ? "#fff3e0" : "#e3f2fd",
-                            color: row.mode === "FORFAIT" ? "#e65100" : "#0b3a75",
-                            border: `1px solid ${row.mode === "FORFAIT" ? "#ffb74d" : "#90caf9"}`,
-                          }}>
+                          <span className={row.mode === "FORFAIT"
+                            ? "inline-block px-2 py-0.5 rounded-xl text-xs font-semibold bg-amber-50 text-orange-700 border border-amber-300"
+                            : "inline-block px-2 py-0.5 rounded-xl text-xs font-semibold bg-blue-50 text-blue-800 border border-blue-300"
+                          }>
                             {row.mode}
                           </span>
                         </td>
@@ -394,11 +370,7 @@ export default function ManagerChargesPage() {
                               const lease = leases.find((l) => l.id === row.leaseId);
                               if (lease) startEdit(lease);
                             }}
-                            style={{
-                              padding: "4px 10px", borderRadius: 4, fontSize: "0.8em",
-                              backgroundColor: "#e3f2fd", color: "#0b3a75", border: "1px solid #90caf9",
-                              cursor: "pointer",
-                            }}
+                            className="action-btn action-btn-brand text-xs"
                           >
                             Edit charges
                           </button>

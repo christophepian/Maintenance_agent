@@ -5,6 +5,9 @@ import PageShell from "../../../components/layout/PageShell";
 import PageHeader from "../../../components/layout/PageHeader";
 import PageContent from "../../../components/layout/PageContent";
 import Panel from "../../../components/layout/Panel";
+import ErrorBanner from "../../../components/ui/ErrorBanner";
+import Badge from "../../../components/ui/Badge";
+import { accountTypeVariant } from "../../../lib/statusVariants";
 import { authHeaders } from "../../../lib/api";
 
 /* ─── Tabs ─────────────────────────────────────────────── */
@@ -19,28 +22,18 @@ const TAB_KEYS = ["expense_types", "accounts", "mappings"];
 /* ─── Helpers ──────────────────────────────────────────── */
 
 function StatusBadge({ active }) {
-  const cls = active
-    ? "bg-green-100 text-green-700 border-green-300"
-    : "bg-red-50 text-red-700 border-red-200";
   return (
-    <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${cls}`}>
+    <Badge variant={active ? "success" : "muted"} size="sm">
       {active ? "Active" : "Inactive"}
-    </span>
+    </Badge>
   );
 }
 
 function AccountTypeBadge({ type }) {
-  const map = {
-    EXPENSE: "bg-amber-100 text-amber-700",
-    REVENUE: "bg-blue-100 text-blue-700",
-    ASSET: "bg-slate-100 text-slate-600",
-    LIABILITY: "bg-red-100 text-red-700",
-  };
-  const cls = map[type] || "bg-slate-100 text-slate-600";
   return (
-    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${cls}`}>
+    <Badge variant={accountTypeVariant(type)} size="sm">
       {type}
-    </span>
+    </Badge>
   );
 }
 
@@ -240,20 +233,10 @@ export default function ChartOfAccountsPage() {
           actions={seedButton}
         />
         <PageContent>
-          {error && (
-            <div className="error-banner">
-              {error}
-              <button
-                onClick={() => setError("")}
-                className="ml-3 font-bold text-red-700 hover:text-red-900"
-              >
-                &#10005;
-              </button>
-            </div>
-          )}
+          <ErrorBanner error={error} onDismiss={() => setError("")} />
 
           {seedResult && (
-            <div className="mb-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
+            <div className="mb-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
               &#10003; Seeded: {seedResult.expenseTypes} expense types, {seedResult.accounts} accounts, {seedResult.mappings} mappings
             </div>
           )}
@@ -465,7 +448,7 @@ export default function ChartOfAccountsPage() {
                               <button
                                 onClick={() => handleDeleteMapping(m.id)}
                                 disabled={actionLoading}
-                                className="rounded border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-600 hover:bg-red-100 disabled:opacity-50"
+                                className="rounded border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-100 disabled:opacity-50"
                               >
                                 Remove
                               </button>

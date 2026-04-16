@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { useRouter } from "next/router";
 import Panel from "./layout/Panel";
+import Badge from "./ui/Badge";
+import { billingEntityVariant } from "../lib/statusVariants";
 import { authHeaders as getAuthHeaders } from "../lib/api";
 
+import { cn } from "../lib/utils";
 const DEFAULT_FORM = {
   type: "ORG",
   contractorId: "",
@@ -21,7 +24,7 @@ const TYPE_LABEL = { ORG: "Organization", CONTRACTOR: "Contractor", OWNER: "Owne
 const TYPE_CLS = {
   ORG: "bg-blue-100 text-blue-700",
   CONTRACTOR: "bg-amber-100 text-amber-700",
-  OWNER: "bg-emerald-100 text-emerald-700",
+  OWNER: "bg-green-100 text-green-700",
 };
 
 /* ─── Modal ──────────────────────────────────────────────── */
@@ -111,7 +114,7 @@ function BillingEntityModal({ isOpen, onClose, editEntity, contractors, onSaved 
           <h2 className="text-lg font-semibold text-slate-900">
             {isEditing ? "Edit billing entity" : "New billing entity"}
           </h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-xl leading-none">&times;</button>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-xl leading-none" aria-label="Close">&times;</button>
         </div>
 
         {error && (
@@ -233,7 +236,7 @@ function BillingEntityModal({ isOpen, onClose, editEntity, contractors, onSaved 
               Cancel
             </button>
             <button type="submit" disabled={submitting}
-              className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-50">
+              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">
               {submitting ? "Saving…" : isEditing ? "Save changes" : "Create"}
             </button>
           </div>
@@ -325,16 +328,16 @@ export default function BillingEntityManager() {
         </span>
         <button
           onClick={openCreate}
-          className="rounded-lg bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-700"
+          className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700"
         >
           + New entry
         </button>
       </div>
 
       {(error || notice) && (
-        <div className={`mb-3 rounded-lg border px-4 py-2.5 text-sm ${error ? "border-red-200 bg-red-50 text-red-700" : "border-emerald-200 bg-emerald-50 text-emerald-700"}`}>
+        <div className={cn("mb-3 rounded-lg border px-4 py-2.5 text-sm", error ? "border-red-200 bg-red-50 text-red-700" : "border-green-200 bg-green-50 text-green-700")}>
           {error || notice}
-          <button onClick={() => { setError(""); setNotice(""); }} className="ml-3 opacity-60 hover:opacity-100">✕</button>
+          <button onClick={() => { setError(""); setNotice(""); }} className="ml-3 opacity-60 hover:opacity-100" aria-label="Dismiss">✕</button>
         </div>
       )}
 
@@ -346,7 +349,7 @@ export default function BillingEntityManager() {
             <p className="empty-state-text">No billing entities yet. Use the "+ New entry" button to create one.</p>
           </div>
         ) : (
-          <div style={{ overflowX: "auto" }}>
+          <div className="overflow-x-auto">
             <table className="inline-table">
               <thead>
                 <tr>
@@ -367,9 +370,9 @@ export default function BillingEntityManager() {
                   >
                     <td className="cell-bold">{entity.name}</td>
                     <td>
-                      <span className={"inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold " + (TYPE_CLS[entity.type] || "bg-slate-100 text-slate-600")}>
+                      <Badge variant={billingEntityVariant(entity.type)} size="sm">
                         {TYPE_LABEL[entity.type] || entity.type}
-                      </span>
+                      </Badge>
                     </td>
                     <td className="text-slate-500">{entity.city ? `${entity.postalCode} ${entity.city}` : "—"}</td>
                     <td className="text-slate-500 font-mono text-xs">{entity.iban || "—"}</td>
