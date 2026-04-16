@@ -9,7 +9,7 @@
 
 import { Router, HandlerContext } from "../http/router";
 import { sendError, sendJson } from "../http/json";
-import { getAuthUser, requireAuth, requireTenantSession } from "../authz";
+import { getAuthUser, requireAuth, requireAnyRole, requireTenantSession } from "../authz";
 import { resolveRequestOrg, assertOrgScope } from "../governance/orgScope";
 import { readRawBody, parseMultipart, MAX_FILE_SIZE, storage } from "../storage/attachments";
 import { maintenanceAttachmentRepo } from "../repositories";
@@ -36,7 +36,7 @@ export function registerMaintenanceAttachmentRoutes(router: Router) {
    */
   router.get("/maintenance-attachments/:requestId", async (ctx) => {
     const { req, res, prisma, params, orgId } = ctx;
-    if (!requireAuth(req, res)) return;
+    if (!requireAnyRole(req, res, ["MANAGER", "CONTRACTOR"])) return;
 
     const resolution = await resolveRequestOrg(prisma, params.requestId);
     if (!resolution.resolved) {
@@ -62,7 +62,7 @@ export function registerMaintenanceAttachmentRoutes(router: Router) {
    */
   router.post("/maintenance-attachments/:requestId", async (ctx) => {
     const { req, res, params } = ctx;
-    if (!requireAuth(req, res)) return;
+    if (!requireAnyRole(req, res, ["MANAGER", "CONTRACTOR"])) return;
 
     try {
       const contentType = req.headers["content-type"] || "";
@@ -119,7 +119,7 @@ export function registerMaintenanceAttachmentRoutes(router: Router) {
    */
   router.get("/maintenance-attachments/:id/download", async (ctx) => {
     const { req, res, prisma, params, orgId } = ctx;
-    if (!requireAuth(req, res)) return;
+    if (!requireAnyRole(req, res, ["MANAGER", "CONTRACTOR"])) return;
 
     try {
       const attachment = await maintenanceAttachmentRepo.findAttachmentById(
