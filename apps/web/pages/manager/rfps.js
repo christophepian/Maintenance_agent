@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
+import { useRouter } from "next/router";
 import Link from "next/link";
 import AppShell from "../../components/AppShell";
 import PageShell from "../../components/layout/PageShell";
@@ -28,6 +29,7 @@ function formatDate(iso) {
 }
 
 export default function ManagerRfpsPage() {
+  const router = useRouter();
   const [rfps, setRfps] = useState([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -101,7 +103,11 @@ export default function ManagerRfpsPage() {
                 </thead>
                 <tbody>
                   {rfps.map((rfp) => (
-                    <tr key={rfp.id}>
+                    <tr
+                      key={rfp.id}
+                      className="cursor-pointer hover:bg-slate-50/80"
+                      onClick={() => router.push(`/manager/rfps/${rfp.id}`)}
+                    >
                       <td>
                         {rfp.request ? (
                           <span className="text-sm">
@@ -138,12 +144,18 @@ export default function ManagerRfpsPage() {
                       </td>
                       <td className="text-sm text-slate-500">{formatDate(rfp.createdAt)}</td>
                       <td>
-                        <Link
-                          href={`/manager/rfps/${rfp.id}`}
-                          className="text-xs text-indigo-600 hover:underline font-medium"
+                        <button
+                          aria-label="View RFP"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            router.push(`/manager/rfps/${rfp.id}`);
+                          }}
+                          className="inline-flex items-center justify-center rounded p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
                         >
-                          View
-                        </Link>
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                          </svg>
+                        </button>
                       </td>
                     </tr>
                   ))}

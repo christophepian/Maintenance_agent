@@ -13,6 +13,7 @@ import { getAuthUser, requireAuth, requireAnyRole, requireTenantSession } from "
 import { resolveRequestOrg, assertOrgScope } from "../governance/orgScope";
 import { readRawBody, parseMultipart, MAX_FILE_SIZE, storage } from "../storage/attachments";
 import { maintenanceAttachmentRepo } from "../repositories";
+import { findRequestTenantId } from "../repositories/requestRepository";
 import { uploadMaintenanceAttachmentWorkflow } from "../workflows/uploadMaintenanceAttachmentWorkflow";
 
 /* ── Helper: build WorkflowContext from HandlerContext ────────── */
@@ -169,10 +170,7 @@ export function registerMaintenanceAttachmentRoutes(router: Router) {
     if (!tenantId) return;
 
     // Verify request exists and belongs to this tenant
-    const request = await prisma.request.findUnique({
-      where: { id: params.requestId },
-      select: { tenantId: true },
-    });
+    const request = await findRequestTenantId(prisma, params.requestId);
     if (!request) {
       return sendError(res, 404, "NOT_FOUND", "Request not found");
     }
@@ -272,10 +270,7 @@ export function registerMaintenanceAttachmentRoutes(router: Router) {
       }
 
       // Verify the parent request belongs to this tenant
-      const request = await prisma.request.findUnique({
-        where: { id: attachment.requestId },
-        select: { tenantId: true },
-      });
+      const request = await findRequestTenantId(prisma, attachment.requestId);
       if (!request || request.tenantId !== tenantId) {
         return sendError(res, 403, "FORBIDDEN", "Not authorised for this attachment");
       }

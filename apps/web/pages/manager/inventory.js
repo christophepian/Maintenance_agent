@@ -119,6 +119,25 @@ const RECOMMENDATION_STYLES = {
   REPLACE: { badge: "bg-red-100 text-red-700", label: "Replace" },
 };
 
+// Thresholds mirror apps/api/src/services/assetInventory.ts — keep in sync
+const REPLACE_RATIO = 0.6;
+const PLAN_REPLACEMENT_RATIO = 0.4;
+const MONITOR_RATIO = 0.25;
+const REPLACE_DEPRECIATION = 100;
+const PLAN_DEPRECIATION = 85;
+const MONITOR_DEPRECIATION = 65;
+
+function clientSideVerdict(item, hypotheticalCostChf) {
+  if (item.estimatedReplacementCostChf == null || item.estimatedReplacementCostChf === 0) return null;
+  const projected = (item.cumulativeRepairCostChf || 0) + hypotheticalCostChf;
+  const ratio = projected / item.estimatedReplacementCostChf;
+  const dep = item.depreciationPct ?? 0;
+  if (dep >= REPLACE_DEPRECIATION || ratio >= REPLACE_RATIO) return "REPLACE";
+  if (dep >= PLAN_DEPRECIATION || ratio >= PLAN_REPLACEMENT_RATIO) return "PLAN_REPLACEMENT";
+  if (dep >= MONITOR_DEPRECIATION || ratio >= MONITOR_RATIO) return "MONITOR";
+  return "REPAIR";
+}
+
 export default function ManagerInventoryPage() {
   const router = useRouter();
   const activeTab = router.isReady ? (Math.max(0, TAB_KEYS.indexOf(router.query.tab)) || 0) : 0;
@@ -140,6 +159,7 @@ export default function ManagerInventoryPage() {
   const [decisionsData, setDecisionsData] = useState(null);
   const [decisionsLoading, setDecisionsLoading] = useState(false);
   const [decisionsError, setDecisionsError] = useState("");
+  const [sensitivityInputs, setSensitivityInputs] = useState({});
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -293,7 +313,7 @@ export default function ManagerInventoryPage() {
               <label className="text-xs font-medium text-slate-600 mr-2">Unit</label>
               <select
                 value={decisionsUnitId}
-                onChange={(e) => setDecisionsUnitId(e.target.value)}
+                onChange={(e) => { setDecisionsUnitId(e.target.value); setSensitivityInputs({}); }}
                 className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
               >
                 <option value="">— Select a unit —</option>
@@ -379,6 +399,23 @@ export default function ManagerInventoryPage() {
                                 ~{item.annualRepairRate.toLocaleString("de-CH")}/yr
                               </span>
                             )}
+                            {item.estimatedReplacementCostChf != null ? (
+                              <div className="mt-1">
+                                <input
+                                  type="number"
+                                  min="0"
+                                  step="100"
+                                  placeholder="0"
+                                  aria-label="Hypothetical next repair cost in CHF"
+                                  value={sensitivityInputs[item.assetId] ?? ""}
+                                  onChange={(e) => setSensitivityInputs((prev) => ({ ...prev, [item.assetId]: e.target.value }))}
+                                  className="w-24 rounded border border-slate-200 px-2 py-1 text-xs text-right focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                                />
+                                <span className="block text-xs text-slate-400 mt-0.5">If next repair CHF</span>
+                              </div>
+                            ) : (
+                              <span className="block text-xs text-slate-400 mt-1">Sensitivity unavailable</span>
+                            )}
                           </td>
                           <td className="text-right">
                             {item.estimatedReplacementCostChf != null
@@ -402,6 +439,19 @@ export default function ManagerInventoryPage() {
                             <span className={cn("inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold", style.badge)}>
                               {style.label}
                             </span>
+                            {(() => {
+                              const raw = sensitivityInputs[item.assetId];
+                              const hyp = raw != null && raw !== "" ? Number(raw) : null;
+                              if (hyp == null || hyp <= 0) return null;
+                              const projected = clientSideVerdict(item, hyp);
+                              if (!projected || projected === item.recommendation) return null;
+                              const ps = RECOMMENDATION_STYLES[projected] || RECOMMENDATION_STYLES.REPAIR;
+                              return (
+                                <span className={cn("ml-1 inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold", ps.badge)}>
+                                  → {ps.label}
+                                </span>
+                              );
+                            })()}
                           </td>
                         </tr>
                       );

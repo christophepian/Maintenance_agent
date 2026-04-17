@@ -738,6 +738,7 @@ function NewRequestModal({ onClose, onCreated }) {
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
   const [contactPhone, setContactPhone] = useState("");
+  const [pendingFiles, setPendingFiles] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
@@ -761,6 +762,31 @@ function NewRequestModal({ onClose, onCreated }) {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error?.message || "Failed to submit request");
+
+      // Upload pending files sequentially
+      if (pendingFiles.length > 0 && data?.data?.id) {
+        let uploadFailed = false;
+        for (const file of pendingFiles) {
+          try {
+            const fd = new FormData();
+            fd.append("file", file);
+            const uploadRes = await tenantFetch(
+              `/api/tenant-portal/maintenance-attachments/${data.data.id}`,
+              { method: "POST", body: fd }
+            );
+            if (!uploadRes.ok) uploadFailed = true;
+          } catch {
+            uploadFailed = true;
+          }
+        }
+        if (uploadFailed) {
+          // Non-blocking: request was created, but some uploads failed
+          setError("Request created, but some photos failed to upload. You can retry from the request detail.");
+          setTimeout(() => onCreated(), 2000);
+          return;
+        }
+      }
+
       onCreated();
     } catch (err) {
       setError(err.message || "Something went wrong");
@@ -823,6 +849,58 @@ function NewRequestModal({ onClose, onCreated }) {
             />
           </div>
 
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-slate-700">Photos / attachments</label>
+            <input
+              type="file"
+              multiple
+              accept="image/*,.pdf"
+              aria-label="Attach photos or documents"
+              onChange={(e) => {
+                const files = Array.from(e.target.files || []);
+                const valid = [];
+                for (const f of files) {
+                  if (f.size > 10 * 1024 * 1024) {
+                    setError(`File "${f.name}" exceeds 10 MB limit.`);
+                    e.target.value = "";
+                    return;
+                  }
+                  valid.push(f);
+                }
+                if (pendingFiles.length + valid.length > 3) {
+                  setError("Maximum 3 files per request.");
+                  e.target.value = "";
+                  return;
+                }
+                setError("");
+                setPendingFiles((prev) => [...prev, ...valid]);
+                e.target.value = "";
+              }}
+              className="w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-100 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-slate-700 hover:file:bg-slate-200"
+            />
+            <p className="mt-1 text-xs text-slate-400">Up to 3 files, max 10 MB each. Images or PDF.</p>
+            {pendingFiles.length > 0 && (
+              <ul className="mt-2 space-y-1">
+                {pendingFiles.map((f, i) => (
+                  <li key={i} className="flex items-center justify-between rounded bg-slate-50 px-2 py-1 text-xs text-slate-600">
+                    <span className="truncate max-w-[240px]">{f.name}</span>
+                    <span className="ml-2 flex-shrink-0 flex items-center gap-2">
+                      <span className="text-slate-400">{(f.size / 1024).toFixed(0)} KB</span>
+                      <button
+                        type="button"
+                        aria-label={`Remove ${f.name}`}
+                        onClick={() => setPendingFiles((prev) => prev.filter((_, idx) => idx !== i))}
+                        className="text-slate-400 hover:text-red-500"
+                      >
+                        ✕
+                      </button>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
           <div className="flex justify-end gap-3 pt-1">
             <button
               type="button"
@@ -836,7 +914,7 @@ function NewRequestModal({ onClose, onCreated }) {
               disabled={submitting}
               className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
             >
-              {submitting ? "Submitting…" : "Submit request"}
+              {submitting ? (pendingFiles.length > 0 ? "Uploading…" : "Submitting…") : "Submit request"}
             </button>
           </div>
         </form>

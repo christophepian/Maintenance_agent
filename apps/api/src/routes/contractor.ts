@@ -10,6 +10,7 @@ import { SubmitQuoteSchema } from "../validation/quoteSchema";
 import { parseBody } from "../http/body";
 import { submitQuoteWorkflow, QuoteSubmissionError } from "../workflows";
 import * as contractorRepo from "../repositories/contractorRepository";
+import { findJobRaw } from "../repositories/jobRepository";
 import { ContractorCompleteSchema, SubmitRatingSchema } from "../validation/completionSchemas";
 import {
   contractorCompleteJobWorkflow,
@@ -169,9 +170,7 @@ export function registerContractorRoutes(router: Router) {
       }
 
       // H1: Verify invoice is for a job assigned to this contractor
-      const job = await prisma.job.findUnique({
-        where: { id: invoice.jobId },
-      });
+      const job = await findJobRaw(prisma, invoice.jobId);
 
       if (!job || job.contractorId !== contractorId) {
         return sendError(res, 403, "FORBIDDEN", "You do not have access to this invoice");

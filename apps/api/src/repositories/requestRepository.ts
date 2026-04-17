@@ -10,7 +10,7 @@
  * G9: canonical include constants live here.
  */
 
-import { PrismaClient, Prisma, RequestStatus, ApprovalSource, PayingParty } from "@prisma/client";
+import { PrismaClient, Prisma, RequestStatus, RequestUrgency, ApprovalSource, PayingParty } from "@prisma/client";
 
 // ─── Canonical Includes ────────────────────────────────────────
 
@@ -247,4 +247,33 @@ export async function resolveRequestId(prisma: PrismaClient, idOrNumber: string)
   }
   // Otherwise assume it's already a UUID
   return idOrNumber;
+}
+
+/**
+ * Fetch only the tenantId for a request — used for tenant ownership checks.
+ */
+export async function findRequestTenantId(prisma: PrismaClient, id: string) {
+  return prisma.request.findUnique({ where: { id }, select: { tenantId: true } });
+}
+
+/**
+ * Update a request's urgency and return the full request with canonical includes.
+ */
+export async function updateRequestUrgency(
+  prisma: PrismaClient,
+  id: string,
+  urgency: RequestUrgency
+) {
+  return prisma.request.update({
+    where: { id },
+    data: { urgency },
+    include: REQUEST_FULL_INCLUDE,
+  });
+}
+
+/**
+ * Delete all requests — dev-only bulk wipe.
+ */
+export async function deleteAllRequests(prisma: PrismaClient) {
+  return prisma.request.deleteMany({});
 }

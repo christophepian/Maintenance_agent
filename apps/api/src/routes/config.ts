@@ -12,6 +12,8 @@ import { UnitConfigSchema } from "../validation/unitConfig";
 import { computeEffectiveConfig, getBuildingConfig, upsertBuildingConfig } from "../services/buildingConfig";
 import { getUnitConfig, upsertUnitConfig, deleteUnitConfig, computeEffectiveUnitConfig } from "../services/unitConfig";
 import { CreateApprovalRuleSchema, UpdateApprovalRuleSchema } from "../validation/approvalRules";
+import { findBuildingByIdAndOrg } from "../repositories/buildingRepository";
+import { findUnitByIdAndOrg } from "../repositories/unitRepository";
 import { listApprovalRules, createApprovalRule, getApprovalRule, updateApprovalRule, deleteApprovalRule } from "../services/approvalRules";
 import { createBillingEntity, deleteBillingEntity, getBillingEntity, listBillingEntities, updateBillingEntity } from "../services/billingEntities";
 import { CreateBillingEntitySchema, UpdateBillingEntitySchema } from "../validation/billingEntities";
@@ -63,7 +65,7 @@ export function registerConfigRoutes(router: Router) {
   router.get("/buildings/:id/config", withAuthRequired(async ({ req, res, prisma, params, orgId }) => {
     if (!requireOrgViewer(req, res)) return;
     try {
-      const building = await prisma.building.findFirst({ where: { id: params.id, orgId } });
+      const building = await findBuildingByIdAndOrg(prisma, params.id, orgId);
       if (!building) return sendError(res, 404, "NOT_FOUND", "Building not found");
       const config = await getBuildingConfig(prisma, orgId, params.id);
       sendJson(res, 200, { data: config });
@@ -97,7 +99,7 @@ export function registerConfigRoutes(router: Router) {
   router.get("/units/:id/config", withAuthRequired(async ({ req, res, prisma, params, orgId }) => {
     if (!requireOrgViewer(req, res)) return;
     try {
-      const unit = await prisma.unit.findFirst({ where: { id: params.id, orgId } });
+      const unit = await findUnitByIdAndOrg(prisma, params.id, orgId);
       if (!unit) return sendError(res, 404, "NOT_FOUND", "Unit not found");
       const effectiveConfig = await computeEffectiveUnitConfig(prisma, orgId, params.id);
       sendJson(res, 200, { data: effectiveConfig });

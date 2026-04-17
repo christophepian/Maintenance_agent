@@ -14,6 +14,16 @@ import { TenantSessionSchema } from "../validation/tenantSession";
 import { TriageSchema } from "../validation/triage";
 import { LoginSchema, RegisterSchema } from "../validation/auth";
 import { LEASE_FULL_INCLUDE } from "../repositories/leaseRepository";
+import {
+  findTenantRequests,
+  findTenantUnitId,
+  findTenantUnitIds,
+  findLeasesByUnitIds,
+  findInvoicesByLeaseIds,
+  findJobInvoicesByTenant,
+  verifyTenantInvoiceOwnership,
+  createContractorUser,
+} from "../repositories/tenantPortalRepository";
 import { tenantSelfPayWorkflow } from "../workflows/tenantSelfPayWorkflow";
 import { InvalidTransitionError } from "../workflows/transitions";
 import { resolveTenantUserId } from "../services/tenantIdentity";
@@ -209,25 +219,7 @@ export function registerAuthRoutes(router: Router) {
     const tenantId = requireTenantSession(req, res);
     if (!tenantId) return;
     try {
-      const rows = await prisma.request.findMany({
-        where: { tenantId },
-        orderBy: { createdAt: "desc" },
-        include: {
-          unit: { select: { unitNumber: true, building: { select: { name: true } } } },
-          assignedContractor: { select: { name: true } },
-          job: {
-            select: {
-              id: true,
-              status: true,
-              confirmedAt: true,
-              completedAt: true,
-              ratings: {
-                select: { raterRole: true, score: true },
-              },
-            },
-          },
-        },
-      });
+      const rows = await findTenantRequests(prisma, tenantId);
       const data = rows.map((r: any) => {
         const job = r.job ?? null;
         return {
@@ -270,11 +262,7 @@ export function registerAuthRoutes(router: Router) {
       // the tenant's active occupancy (Tenant has no direct unitId field).
       let unitId: string | null = input.unitId ?? null;
       if (!unitId) {
-        const occupancy = await prisma.occupancy.findFirst({
-          where: { tenantId },
-          select: { unitId: true },
-        });
-        unitId = occupancy?.unitId ?? null;
+        unitId = await findTenantUnitId(prisma, tenantId);
       }
 
       if (!unitId) {
@@ -361,50 +349,23 @@ export function registerAuthRoutes(router: Router) {
     if (!tenantId) return;
     try {
       // ── 1. Lease-based invoices (rent, charges linked to a lease) ──
-      const occupancies = await prisma.occupancy.findMany({
-        where: { tenantId },
-        select: { unitId: true },
-      });
-      const unitIds = occupancies.map((o: any) => o.unitId);
+      const unitIds = await findTenantUnitIds(prisma, tenantId);
 
       let leaseInvoices: any[] = [];
       const leaseMap = new Map<string, any>();
 
       if (unitIds.length > 0) {
-        const leases = await prisma.lease.findMany({
-          where: { orgId, unitId: { in: unitIds } },
-          include: LEASE_FULL_INCLUDE,
-        });
+        const leases = await findLeasesByUnitIds(prisma, orgId, unitIds);
         for (const l of leases) leaseMap.set(l.id, l);
         const leaseIds = leases.map((l: any) => l.id);
 
         if (leaseIds.length > 0) {
-          leaseInvoices = await prisma.invoice.findMany({
-            where: { orgId, leaseId: { in: leaseIds } },
-            orderBy: { createdAt: 'desc' },
-          });
+          leaseInvoices = await findInvoicesByLeaseIds(prisma, orgId, leaseIds);
         }
       }
 
       // ── 2. Job-based invoices (maintenance repairs for this tenant) ──
-      const jobInvoices = await prisma.invoice.findMany({
-        where: {
-          orgId,
-          job: { request: { tenantId } },
-        },
-        include: {
-          job: {
-            include: {
-              request: {
-                include: {
-                  unit: { include: { building: true } },
-                },
-              },
-            },
-          },
-        },
-        orderBy: { createdAt: 'desc' },
-      });
+      const jobInvoices = await findJobInvoicesByTenant(prisma, orgId, tenantId);
 
       // ── 3. Merge + deduplicate ──
       const seen = new Set<string>();
@@ -462,29 +423,9 @@ export function registerAuthRoutes(router: Router) {
     if (!tenantId) return;
     try {
       // Verify invoice belongs to this tenant (via lease or job→request)
-      const invoice = await prisma.invoice.findUnique({
-        where: { id: params.id },
-      });
+      const { invoice, owned } = await verifyTenantInvoiceOwnership(prisma, params.id, tenantId);
       if (!invoice) return sendError(res, 404, "NOT_FOUND", "Invoice not found");
 
-      // Check tenant ownership via lease→unit occupancy or job→request
-      let owned = false;
-      if (invoice.leaseId) {
-        const lease = await prisma.lease.findUnique({ where: { id: invoice.leaseId } });
-        if (lease) {
-          const occ = await prisma.occupancy.findFirst({
-            where: { tenantId, unitId: lease.unitId },
-          });
-          if (occ) owned = true;
-        }
-      }
-      if (!owned && invoice.jobId) {
-        const job = await prisma.job.findUnique({
-          where: { id: invoice.jobId },
-          include: { request: true },
-        });
-        if (job?.request?.tenantId === tenantId) owned = true;
-      }
       if (!owned) {
         return sendError(res, 403, "FORBIDDEN", "Invoice does not belong to this tenant");
       }
@@ -571,19 +512,8 @@ export function registerAuthRoutes(router: Router) {
       const { email, password, name, phone } = raw;
       if (!email || !password || !name || !phone) return sendError(res, 400, "VALIDATION_ERROR", "Missing fields");
       const passwordHash = await bcrypt.hash(password, 10);
-      const user = await prisma.user.create({
-        data: { orgId, email, name, passwordHash, role: "CONTRACTOR" },
-      });
-      const contractor = await prisma.contractor.create({
-        data: {
-          orgId: String(orgId),
-          name: String(name),
-          phone: String(phone),
-          email: String(email),
-          serviceCategories: JSON.stringify(["general"]),
-        },
-      });
-      sendJson(res, 201, { userId: user.id, contractorId: contractor.id });
+      const result = await createContractorUser(prisma, orgId, { email, name, passwordHash, phone });
+      sendJson(res, 201, result);
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to create contractor user", String(e));
     }

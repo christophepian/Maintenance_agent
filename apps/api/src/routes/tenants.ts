@@ -7,6 +7,7 @@ import { withAuthRequired } from "../http/routeProtection";
 import { normalizePhoneToE164 } from "../utils/phoneNormalization";
 import { getTenantByPhone, createOrGetTenant, updateTenant, deactivateTenant, listTenants, getTenantById } from "../services/tenants";
 import { listContractors, createContractor, getContractorById, updateContractor, deactivateContractor } from "../services/contractorRequests";
+import { findContractorOrgId } from "../repositories/contractorRepository";
 
 export function registerTenantRoutes(router: Router) {
   // GET /tenants
@@ -114,8 +115,7 @@ export function registerTenantRoutes(router: Router) {
     try {
       const contractor = await getContractorById(prisma, params.id);
       if (!contractor) return sendError(res, 404, "NOT_FOUND", "Contractor not found");
-      // Verify org ownership via raw lookup (DTO omits orgId)
-      const raw = await prisma.contractor.findUnique({ where: { id: params.id }, select: { orgId: true } });
+      const raw = await findContractorOrgId(prisma, params.id);
       if (raw?.orgId !== orgId) return sendError(res, 404, "NOT_FOUND", "Contractor not found");
       sendJson(res, 200, { data: contractor });
     } catch (e) {
@@ -128,7 +128,7 @@ export function registerTenantRoutes(router: Router) {
     if (!requireRole(req, res, "MANAGER")) return;
     try {
       // Verify org ownership before updating
-      const raw = await prisma.contractor.findUnique({ where: { id: params.id }, select: { orgId: true } });
+      const raw = await findContractorOrgId(prisma, params.id);
       if (!raw || raw.orgId !== orgId) return sendError(res, 404, "NOT_FOUND", "Contractor not found");
       const body = await readJson(req);
       const contractor = await updateContractor(prisma, params.id, body);
@@ -144,7 +144,7 @@ export function registerTenantRoutes(router: Router) {
     if (!requireRole(req, res, "MANAGER")) return;
     try {
       // Verify org ownership before deactivating
-      const raw = await prisma.contractor.findUnique({ where: { id: params.id }, select: { orgId: true } });
+      const raw = await findContractorOrgId(prisma, params.id);
       if (!raw || raw.orgId !== orgId) return sendError(res, 404, "NOT_FOUND", "Contractor not found");
       const success = await deactivateContractor(prisma, params.id);
       if (!success) return sendError(res, 404, "NOT_FOUND", "Contractor not found");

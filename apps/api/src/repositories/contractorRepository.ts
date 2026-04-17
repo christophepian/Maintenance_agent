@@ -99,3 +99,10 @@ export async function findActiveByOrg(
     select: { id: true, serviceCategories: true },
   });
 }
+
+/**
+ * Fetch only the orgId for a contractor — used for lightweight org-scope checks.
+ */
+export async function findContractorOrgId(prisma: PrismaClient, id: string) {
+  return prisma.contractor.findUnique({ where: { id }, select: { orgId: true } });
+}

@@ -14,7 +14,8 @@ import { getAuthUser, maybeRequireManager, requireRole, requireAnyRole, requireA
 import { withAuthRequired } from "../http/routeProtection";
 import { requireOwnerAccess, logEvent } from "./helpers";
 import { resolveRequestOrg, assertOrgScope } from "../governance/orgScope";
-import { resolveRequestId } from "../repositories/requestRepository";
+import { resolveRequestId, findRequestRaw, updateRequestUrgency, deleteAllRequests } from "../repositories/requestRepository";
+import { findContractorOrgId } from "../repositories/contractorRepository";
 import { UpdateRequestStatusSchema } from "../validation/requestStatus";
 import { AssignContractorSchema } from "../validation/requestAssignment";
 import { CreateRequestSchema } from "../validation/requests";
@@ -260,11 +261,7 @@ export function registerRequestRoutes(router: Router) {
       return sendError(res, 400, "VALIDATION_ERROR", `urgency must be one of: ${Object.values(RequestUrgency).join(", ")}`);
     }
 
-    const updated = await prisma.request.update({
-      where: { id: requestId },
-      data: { urgency: urgency as RequestUrgency },
-      include: { assignedContractor: { select: { id: true, name: true, phone: true, email: true, hourlyRate: true } }, tenant: { select: { id: true, name: true, phone: true, email: true } }, unit: { select: { id: true, unitNumber: true, floor: true, building: { select: { id: true, name: true, address: true } } } }, appliance: { select: { id: true, name: true, serial: true, installDate: true, notes: true, assetModel: { select: { id: true, manufacturer: true, model: true, category: true } } } } },
-    });
+    const updated = await updateRequestUrgency(prisma, requestId, urgency as RequestUrgency);
     sendJson(res, 200, { data: updated });
   });
 
@@ -274,7 +271,7 @@ export function registerRequestRoutes(router: Router) {
     if (process.env.NODE_ENV === "production") return sendError(res, 403, "FORBIDDEN", "Not allowed in production");
     // SA-14: Even in dev/staging, require MANAGER auth
     if (!requireRole(req, res, "MANAGER")) return;
-    const result = await prisma.request.deleteMany({});
+    const result = await deleteAllRequests(prisma);
     sendJson(res, 200, { data: { deleted: result.count } });
   });
 
@@ -346,7 +343,7 @@ export function registerRequestRoutes(router: Router) {
     try { assertOrgScope(orgId, resolution); } catch {
       return sendError(res, 404, "NOT_FOUND", "Request not found");
     }
-    const reqRow = await prisma.request.findUnique({ where: { id: requestId } });
+    const reqRow = await findRequestRaw(prisma, requestId);
     if (!reqRow) return sendError(res, 404, "NOT_FOUND", "Request not found");
     if (!reqRow.category) return sendJson(res, 200, { data: null });
     const contractor = await findMatchingContractor(prisma, orgId, reqRow.category);
@@ -380,7 +377,7 @@ export function registerRequestRoutes(router: Router) {
 
   router.get("/requests/contractor/:contractorId", async ({ req, res, prisma, params, orgId }) => {
     if (!requireRole(req, res, "CONTRACTOR")) return;
-    const c = await prisma.contractor.findUnique({ where: { id: params.contractorId }, select: { orgId: true } });
+    const c = await findContractorOrgId(prisma, params.contractorId);
     if (!c || c.orgId !== orgId) return sendError(res, 404, "NOT_FOUND", "Contractor not found");
     const requests = await getContractorAssignedRequests(prisma, params.contractorId);
     sendJson(res, 200, { data: requests });
@@ -390,7 +387,7 @@ export function registerRequestRoutes(router: Router) {
     if (!requireRole(req, res, "CONTRACTOR")) return;
     const cid = first(query, "contractorId");
     if (!cid) return sendError(res, 400, "VALIDATION_ERROR", "Missing contractorId");
-    const c = await prisma.contractor.findUnique({ where: { id: cid }, select: { orgId: true } });
+    const c = await findContractorOrgId(prisma, cid);
     if (!c || c.orgId !== orgId) return sendError(res, 404, "NOT_FOUND", "Contractor not found");
     const requests = await getContractorAssignedRequests(prisma, cid);
     sendJson(res, 200, { data: requests });
