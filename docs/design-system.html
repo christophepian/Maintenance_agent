@@ -812,8 +812,12 @@ Main:      bg-slate-50 p-6</div>
         <div>Error banner CSS class usage: <span style="color:var(--accent-green)">48 files</span></div>
         <div>@apply-backed classes: <span style="color:var(--accent-green)">78</span></div>
         <div style="margin-top:8px;font-weight:600;color:var(--text-bright);margin-bottom:6px">Primitives (components/ui/)</div>
-        <div><span style="color:var(--accent-blue)">10 CVA-backed components</span>: Button, Badge, Card, DataTable, Input, Select, ErrorBanner, EmptyState, StatusPill, KpiCard</div>
+        <div><span style="color:var(--accent-blue)">10 CVA-backed components</span>: Button (10 variants), Badge, Card, DataTable, Input, Select, ErrorBanner, EmptyState, StatusPill, KpiCard</div>
+        <div><span style="color:var(--accent-blue)">7 presentational components</span>: DetailGrid/DetailItem, DetailList/DetailRow, Modal/ModalFooter, ActionBar, ResourceShell</div>
         <div>All accept <code style="background:var(--surface2);padding:1px 5px;border-radius:3px;font-size:11px">className</code> override via <code style="background:var(--surface2);padding:1px 5px;border-radius:3px;font-size:11px">cn()</code></div>
+        <div style="margin-top:8px;font-weight:600;color:var(--text-bright);margin-bottom:6px">Shared Hooks (lib/hooks/)</div>
+        <div><code style="background:var(--surface2);padding:1px 5px;border-radius:3px;font-size:11px">useDetailResource(url)</code> &mdash; replaces fetch boilerplate for detail pages</div>
+        <div><code style="background:var(--surface2);padding:1px 5px;border-radius:3px;font-size:11px">useAction()</code> &mdash; wraps mutation pending state (keyed or boolean)</div>
       </div>
     </div>
   </div>

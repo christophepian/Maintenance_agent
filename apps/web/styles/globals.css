@@ -37,6 +37,13 @@
   --color-muted-ring:  #cbd5e1;   /* slate-300 */
   --color-muted-text:  #475569;   /* slate-600 */
 
+  /* ── Warning (amber) ── */
+  --color-warning:       #d97706;   /* amber-600 */
+  --color-warning-light: #fffbeb;   /* amber-50  */
+  --color-warning-dark:  #92400e;   /* amber-800 */
+  --color-warning-ring:  #fcd34d;   /* amber-300 */
+  --color-warning-text:  #b45309;   /* amber-700 */
+
   /* ── Surface (white / slate) ── */
   --color-surface:        #ffffff;   /* white     */
   --color-surface-raised: #f8fafc;   /* slate-50  */
