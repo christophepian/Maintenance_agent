@@ -169,7 +169,7 @@ function OwnersTab({ showAddForm, onAddFormClose }) {
             <tbody>
               {owners.map((owner) => (
                 <>
-                  <tr key={owner.id}>
+                  <tr key={owner.id} className="cursor-pointer hover:bg-slate-50/80" onClick={() => window.location.href = `/manager/people/owners`}>
                     <td className="cell-bold">{owner.name}</td>
                     <td className="text-slate-500">{owner.email || "—"}</td>
                     <td>
@@ -358,7 +358,7 @@ export default function ManagerPeoplePage() {
                   </thead>
                   <tbody>
                     {tenants.slice(0, 200).map((t) => (
-                      <tr key={t.id}>
+                      <tr key={t.id} className="cursor-pointer hover:bg-slate-50/80" onClick={() => router.push(`/manager/people/tenants/${t.id}`)}>
                         <td className="cell-bold">{t.name || "—"}</td>
                         <td>{t.phone || "—"}</td>
                         <td>{t.email || "—"}</td>
@@ -366,7 +366,15 @@ export default function ManagerPeoplePage() {
                           {t.unit ? `${t.unit.unitNumber}${t.unit.floor ? ` (Floor ${t.unit.floor})` : ""}` : "—"}
                         </td>
                         <td>
-                          <Link href={`/manager/people/tenants/${t.id}`} className="full-page-link">View →</Link>
+                          <button
+                            aria-label="View tenant"
+                            onClick={(e) => { e.stopPropagation(); router.push(`/manager/people/tenants/${t.id}`); }}
+                            className="inline-flex items-center justify-center rounded p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                              <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                            </svg>
+                          </button>
                         </td>
                       </tr>
                     ))}
@@ -398,13 +406,21 @@ export default function ManagerPeoplePage() {
                   </thead>
                   <tbody>
                     {contractors.slice(0, 200).map((c) => (
-                      <tr key={c.id}>
+                      <tr key={c.id} className="cursor-pointer hover:bg-slate-50/80" onClick={() => router.push(`/manager/people/vendors/${c.id}`)}>
                         <td className="cell-bold">{c.name || "—"}</td>
                         <td>{c.phone || "—"}</td>
                         <td>{c.email || "—"}</td>
                         <td>{c.hourlyRate != null ? `CHF ${c.hourlyRate}/h` : "—"}</td>
                         <td>
-                          <Link href={`/manager/people/vendors/${c.id}`} className="full-page-link">View →</Link>
+                          <button
+                            aria-label="View vendor"
+                            onClick={(e) => { e.stopPropagation(); router.push(`/manager/people/vendors/${c.id}`); }}
+                            className="inline-flex items-center justify-center rounded p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                              <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                            </svg>
+                          </button>
                         </td>
                       </tr>
                     ))}

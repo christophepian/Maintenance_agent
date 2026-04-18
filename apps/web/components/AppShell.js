@@ -162,10 +162,6 @@ export default function AppShell({ role: roleProp, children }) {
         ],
       },
       {
-        section: "Reports",
-        items: [{ label: "Reports", href: "/manager/reports" }],
-      },
-      {
         section: "Settings",
         items: [{ label: "Settings", href: "/manager/settings" }],
       },

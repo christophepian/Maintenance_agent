@@ -209,7 +209,7 @@ export async function listAllUnitsForOrg(
 ) {
   return prisma.unit.findMany({
     where: {
-      building: { orgId },
+      building: { orgId, ...(includeInactive ? {} : { isActive: true }) },
       ...(includeInactive ? {} : { isActive: true }),
     },
     include: { building: true },

@@ -194,12 +194,12 @@ export default function TenantDetailPage() {
             <p className="loading-text">Loading tenant…</p>
           ) : tenant ? (
             <div className="grid gap-4">
-              <div className="pill-tab-row">
+              <div className="tab-strip">
                 {["Personal information", "Unit", "Documents", "Contracts", "Invoices"].map((tab) => (
                   <button
                     key={tab}
                     type="button"
-                    className={cn(activeTab === tab ? "pill-tab-active" : "pill-tab")}
+                    className={activeTab === tab ? "tab-btn-active" : "tab-btn"}
                     onClick={() => setActiveTab(tab)}
                   >
                     {tab}

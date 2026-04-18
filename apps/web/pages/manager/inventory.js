@@ -431,7 +431,6 @@ export default function ManagerInventoryPage() {
                   </thead>
                   <tbody>
                     {decisionsData.map((item) => {
-                      const style = RECOMMENDATION_STYLES[item.recommendation] || RECOMMENDATION_STYLES.REPAIR;
                       const ageYears = item.ageMonths != null ? (item.ageMonths / 12).toFixed(1) : "—";
                       const lifeYears = item.usefulLifeMonths != null ? (item.usefulLifeMonths / 12).toFixed(0) : null;
                       const remainYears = item.remainingLifeMonths != null ? (item.remainingLifeMonths / 12).toFixed(1) : null;
@@ -510,20 +509,39 @@ export default function ManagerInventoryPage() {
                             {breakEvenDisplay}
                           </td>
                           <td>
-                            <span className={cn("inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold", style.badge)}>
-                              {style.label}
-                            </span>
                             {(() => {
+                              // If user entered a sensitivity value, show only the projected verdict
                               const raw = sensitivityInputs[item.assetId];
                               const hyp = raw != null && raw !== "" ? Number(raw) : null;
-                              if (hyp == null || hyp <= 0) return null;
-                              const projected = clientSideVerdict(item, hyp);
-                              if (!projected || projected === item.recommendation) return null;
-                              const ps = RECOMMENDATION_STYLES[projected] || RECOMMENDATION_STYLES.REPAIR;
+                              const projected = hyp != null && hyp > 0 ? clientSideVerdict(item, hyp) : null;
+                              const effectiveRec = projected || item.recommendation;
+                              const effectiveStyle = RECOMMENDATION_STYLES[effectiveRec] || RECOMMENDATION_STYLES.REPAIR;
+                              const changed = projected && projected !== item.recommendation;
                               return (
-                                <span className={cn("ml-1 inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold", ps.badge)}>
-                                  → {ps.label}
-                                </span>
+                                <div>
+                                  <span className={cn("inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold", effectiveStyle.badge)}>
+                                    {effectiveStyle.label}
+                                  </span>
+                                  {changed && (
+                                    <span className="block text-[10px] text-slate-400 mt-0.5">
+                                      was: {(RECOMMENDATION_STYLES[item.recommendation] || RECOMMENDATION_STYLES.REPAIR).label}
+                                    </span>
+                                  )}
+                                  {/* Transparent analysis: show why */}
+                                  <div className="mt-1 text-[10px] text-slate-400 leading-snug max-w-[160px]">
+                                    {item.repairToReplacementRatio != null && (
+                                      <span className="block">
+                                        Ratio {Math.round((hyp != null && hyp > 0 ? ((item.cumulativeRepairCostChf || 0) + hyp) / item.estimatedReplacementCostChf : item.repairToReplacementRatio) * 100)}%
+                                        {" "}(≥60%→Replace)
+                                      </span>
+                                    )}
+                                    {item.depreciationPct != null && (
+                                      <span className="block">
+                                        Depr. {item.depreciationPct}% (≥100%→Replace)
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
                               );
                             })()}
                           </td>

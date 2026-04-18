@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/router";
 import AppShell from "../../components/AppShell";
 import PageShell from "../../components/layout/PageShell";
@@ -13,6 +13,7 @@ import Badge from "../../components/ui/Badge";
 import { requestVariant } from "../../lib/statusVariants";
 
 import { cn } from "../../lib/utils";
+import { QRCodeSVG } from "qrcode.react";
 // ---------------------------------------------------------------------------
 // Scheduling Slots Panel (Tenant — accept / decline)
 // ---------------------------------------------------------------------------
@@ -183,10 +184,137 @@ function TenantSchedulingPanel({ requestId }) {
 // Tenant Photos / Attachments Panel
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Capture Session Modal (QR-based phone photo upload — ISO with invoices)
+// ---------------------------------------------------------------------------
+
+function TenantCaptureSessionModal({ requestId, onClose, onComplete }) {
+  const [session, setSession] = useState(null);
+  const [creating, setCreating] = useState(true);
+  const [createError, setCreateError] = useState("");
+  const [completed, setCompleted] = useState(false);
+  const pollRef = useRef(null);
+
+  useEffect(() => {
+    function onKey(e) { if (e.key === "Escape") onClose(); }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  // Create capture session on mount
+  useEffect(() => {
+    let cancelled = false;
+    async function create() {
+      try {
+        const res = await tenantFetch("/api/tenant-portal/capture-sessions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ requestId }),
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data?.error?.message || "Failed to create session");
+        }
+        const data = await res.json();
+        if (!cancelled) {
+          setSession({ ...data.data, mobileUrl: data.mobileUrl });
+          setCreating(false);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setCreateError(err.message || "Failed to create session");
+          setCreating(false);
+        }
+      }
+    }
+    create();
+    return () => { cancelled = true; };
+  }, [requestId]);
+
+  // Poll for session completion
+  useEffect(() => {
+    if (!session?.id || completed) return;
+    pollRef.current = setInterval(async () => {
+      try {
+        const res = await tenantFetch(`/api/tenant-portal/capture-sessions/${session.id}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.data?.status === "COMPLETED") {
+            setCompleted(true);
+            clearInterval(pollRef.current);
+            onComplete();
+          }
+        }
+      } catch { /* ignore poll errors */ }
+    }, 3000);
+    return () => clearInterval(pollRef.current);
+  }, [session?.id, completed, onComplete]);
+
+  const mobileUrl = session?.mobileUrl || "";
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={onClose}>
+      <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-xl shadow-2xl w-full max-w-sm mx-4 p-6">
+        <h3 className="text-lg font-semibold text-slate-900 mt-0 mb-1">📷 Capture with Phone</h3>
+        {creating ? (
+          <p className="text-sm text-slate-500">Creating capture session…</p>
+        ) : createError ? (
+          <div>
+            <p className="text-sm text-red-600 mb-3">{createError}</p>
+            <button onClick={onClose} className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition">Close</button>
+          </div>
+        ) : completed ? (
+          <div className="text-center py-4">
+            <p className="text-2xl mb-2">✅</p>
+            <p className="text-sm font-medium text-green-700 mb-1">Photos received!</p>
+            <p className="text-xs text-slate-500 mb-4">Your photos have been attached to the request.</p>
+            <button onClick={onClose} className="button-primary text-sm">Done</button>
+          </div>
+        ) : (
+          <div>
+            <p className="text-sm text-slate-500 mt-0 mb-4">
+              Scan this QR code with your phone to capture photos for your maintenance request.
+            </p>
+            <div className="flex justify-center mb-4">
+              <QRCodeSVG value={mobileUrl} size={300} level="L" />
+            </div>
+            <div className="bg-slate-50 rounded-lg p-2 mb-3">
+              <p className="text-[10px] text-slate-400 uppercase tracking-wide mb-0.5">Mobile link</p>
+              <p className="text-xs text-slate-600 break-all font-mono select-all m-0">{mobileUrl}</p>
+            </div>
+            <p className="text-[10px] text-slate-400 text-center mb-3">
+              Session expires in 15 minutes. Waiting for photos…
+            </p>
+            <div className="flex justify-end">
+              <button onClick={onClose} className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition">Cancel</button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Tenant Photos Panel (view + upload attachments)
+// ---------------------------------------------------------------------------
+
 function TenantPhotosPanel({ requestId }) {
   const [attachments, setAttachments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [previewUrl, setPreviewUrl] = useState(null);
+  const [showCapture, setShowCapture] = useState(false);
+  const [blobUrls, setBlobUrls] = useState({}); // id → blob URL for authenticated image loading
+
+  const reload = useCallback(() => {
+    tenantFetch(`/api/tenant-portal/maintenance-attachments/${requestId}`)
+      .then(async (res) => {
+        if (!res.ok) throw new Error("Not available");
+        const body = await res.json();
+        setAttachments(body?.data || []);
+      })
+      .catch(() => setAttachments([]));
+  }, [requestId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -201,6 +329,36 @@ function TenantPhotosPanel({ requestId }) {
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [requestId]);
+
+  // Fetch images as blobs for authenticated display (img src can't send Bearer tokens)
+  useEffect(() => {
+    let cancelled = false;
+    const imageAttachments = attachments.filter((a) => isImage(a.filename));
+    const newBlobUrls = {};
+
+    Promise.all(
+      imageAttachments.map(async (a) => {
+        if (blobUrls[a.id]) { newBlobUrls[a.id] = blobUrls[a.id]; return; }
+        try {
+          const res = await tenantFetch(`/api/tenant-portal/maintenance-attachments/${a.id}/download`);
+          if (!res.ok) return;
+          const blob = await res.blob();
+          newBlobUrls[a.id] = URL.createObjectURL(blob);
+        } catch { /* skip */ }
+      })
+    ).then(() => {
+      if (!cancelled) setBlobUrls((prev) => ({ ...prev, ...newBlobUrls }));
+    });
+
+    return () => {
+      cancelled = true;
+      // Revoke old blob URLs that are no longer in use
+      Object.values(newBlobUrls).forEach((url) => {
+        if (!Object.values(blobUrls).includes(url)) URL.revokeObjectURL(url);
+      });
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [attachments]);
 
   function handleUpload(e) {
     const files = e.target.files;
@@ -237,6 +395,11 @@ function TenantPhotosPanel({ requestId }) {
     return `/api/tenant-portal/maintenance-attachments/${a.id}/download`;
   }
 
+  // Use blob URL for authenticated image display, fall back to direct URL
+  function imageUrl(a) {
+    return blobUrls[a.id] || downloadUrl(a);
+  }
+
   if (loading) return <p className="text-xs text-slate-400 mt-2">Loading photos…</p>;
 
   const images = attachments.filter((a) => isImage(a.filename));
@@ -247,18 +410,23 @@ function TenantPhotosPanel({ requestId }) {
       {attachments.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-slate-200 bg-slate-50 px-4 py-4 text-center">
           <p className="text-xs text-slate-400 mb-2">No photos yet</p>
-          <label className="cursor-pointer rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700">
-            Upload photo
-            <input type="file" multiple accept="image/*,.pdf" className="hidden" onChange={handleUpload} />
-          </label>
+          <div className="flex gap-2">
+            <label className="cursor-pointer rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700">
+              Upload photo
+              <input type="file" multiple accept="image/*,.pdf" className="hidden" onChange={handleUpload} />
+            </label>
+            <button onClick={() => setShowCapture(true)} className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50" aria-label="Capture with phone">
+              📷 Capture with phone
+            </button>
+          </div>
         </div>
       ) : (
         <>
           {images.length > 0 && (
             <div className="grid grid-cols-4 gap-2">
               {images.map((a, i) => (
-                <button key={i} onClick={() => setPreviewUrl(downloadUrl(a))} className="group relative aspect-square overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
-                  <img src={downloadUrl(a)} alt={a.filename} className="h-full w-full object-cover transition-transform group-hover:scale-105" />
+                <button key={i} onClick={() => setPreviewUrl(imageUrl(a))} className="group relative aspect-square overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
+                  <img src={imageUrl(a)} alt={a.filename} className="h-full w-full object-cover transition-transform group-hover:scale-105" />
                 </button>
               ))}
             </div>
@@ -275,11 +443,24 @@ function TenantPhotosPanel({ requestId }) {
             </div>
           )}
 
-          <label className="mt-2 inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50">
-            + Upload more
-            <input type="file" multiple accept="image/*,.pdf" className="hidden" onChange={handleUpload} />
-          </label>
+          <div className="mt-2 flex gap-2">
+            <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50">
+              + Upload more
+              <input type="file" multiple accept="image/*,.pdf" className="hidden" onChange={handleUpload} />
+            </label>
+            <button onClick={() => setShowCapture(true)} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50" aria-label="Capture with phone">
+              📷 Phone
+            </button>
+          </div>
         </>
+      )}
+
+      {showCapture && (
+        <TenantCaptureSessionModal
+          requestId={requestId}
+          onClose={() => setShowCapture(false)}
+          onComplete={() => { setShowCapture(false); setTimeout(reload, 1500); }}
+        />
       )}
 
       {previewUrl && (
@@ -741,12 +922,16 @@ function NewRequestModal({ onClose, onCreated }) {
   const [pendingFiles, setPendingFiles] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [createdRequestId, setCreatedRequestId] = useState(null);
+  const [showCapture, setShowCapture] = useState(false);
+  const [captureCount, setCaptureCount] = useState(0);
 
-  async function handleSubmit(e) {
-    e.preventDefault();
+  // Create the request if not already created (shared by submit + capture)
+  async function ensureRequestCreated() {
+    if (createdRequestId) return createdRequestId;
     if (description.trim().length < 10) {
       setError("Description must be at least 10 characters.");
-      return;
+      return null;
     }
     setSubmitting(true);
     setError("");
@@ -762,36 +947,53 @@ function NewRequestModal({ onClose, onCreated }) {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error?.message || "Failed to submit request");
-
-      // Upload pending files sequentially
-      if (pendingFiles.length > 0 && data?.data?.id) {
-        let uploadFailed = false;
-        for (const file of pendingFiles) {
-          try {
-            const fd = new FormData();
-            fd.append("file", file);
-            const uploadRes = await tenantFetch(
-              `/api/tenant-portal/maintenance-attachments/${data.data.id}`,
-              { method: "POST", body: fd }
-            );
-            if (!uploadRes.ok) uploadFailed = true;
-          } catch {
-            uploadFailed = true;
-          }
-        }
-        if (uploadFailed) {
-          // Non-blocking: request was created, but some uploads failed
-          setError("Request created, but some photos failed to upload. You can retry from the request detail.");
-          setTimeout(() => onCreated(), 2000);
-          return;
-        }
-      }
-
-      onCreated();
+      const id = data?.data?.id;
+      if (!id) throw new Error("No request ID returned");
+      setCreatedRequestId(id);
+      return id;
     } catch (err) {
       setError(err.message || "Something went wrong");
+      return null;
+    } finally {
       setSubmitting(false);
     }
+  }
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    const reqId = await ensureRequestCreated();
+    if (!reqId) return;
+
+    // Upload pending files sequentially
+    if (pendingFiles.length > 0) {
+      setSubmitting(true);
+      let uploadFailed = false;
+      for (const file of pendingFiles) {
+        try {
+          const fd = new FormData();
+          fd.append("file", file);
+          const uploadRes = await tenantFetch(
+            `/api/tenant-portal/maintenance-attachments/${reqId}`,
+            { method: "POST", body: fd }
+          );
+          if (!uploadRes.ok) uploadFailed = true;
+        } catch {
+          uploadFailed = true;
+        }
+      }
+      setSubmitting(false);
+      if (uploadFailed) {
+        setError("Request created, but some photos failed to upload. You can retry from the request detail.");
+      }
+    }
+
+    onCreated();
+  }
+
+  async function handleCaptureClick() {
+    const reqId = await ensureRequestCreated();
+    if (!reqId) return;
+    setShowCapture(true);
   }
 
   return (
@@ -809,6 +1011,12 @@ function NewRequestModal({ onClose, onCreated }) {
         <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
           <ErrorBanner error={error} className="text-sm" />
 
+          {createdRequestId && (
+            <div className="rounded-lg bg-green-50 border border-green-200 px-3 py-2 text-xs text-green-700">
+              ✅ Request created — add photos below or click Submit to finish.
+            </div>
+          )}
+
           <div>
             <label className="mb-1.5 block text-sm font-medium text-slate-700">
               Description <span className="text-red-500">*</span>
@@ -816,10 +1024,11 @@ function NewRequestModal({ onClose, onCreated }) {
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
+              disabled={!!createdRequestId}
               placeholder="Describe the issue in detail (e.g. the kitchen faucet is dripping)"
               rows={4}
               required
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm placeholder-slate-400 focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400"
+              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm placeholder-slate-400 focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400 disabled:bg-slate-50 disabled:text-slate-500"
             />
             <p className="mt-1 text-xs text-slate-400">{description.trim().length}/2000 — min 10 characters</p>
           </div>
@@ -829,7 +1038,8 @@ function NewRequestModal({ onClose, onCreated }) {
             <select
               value={category}
               onChange={(e) => setCategory(e.target.value)}
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400"
+              disabled={!!createdRequestId}
+              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400 disabled:bg-slate-50 disabled:text-slate-500"
             >
               <option value="">— Select a category (optional) —</option>
               {CATEGORIES.map((c) => (
@@ -844,8 +1054,9 @@ function NewRequestModal({ onClose, onCreated }) {
               type="tel"
               value={contactPhone}
               onChange={(e) => setContactPhone(e.target.value)}
+              disabled={!!createdRequestId}
               placeholder="+41 79 123 45 67"
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm placeholder-slate-400 focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400"
+              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm placeholder-slate-400 focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400 disabled:bg-slate-50 disabled:text-slate-500"
             />
           </div>
 
@@ -867,8 +1078,8 @@ function NewRequestModal({ onClose, onCreated }) {
                   }
                   valid.push(f);
                 }
-                if (pendingFiles.length + valid.length > 3) {
-                  setError("Maximum 3 files per request.");
+                if (pendingFiles.length + valid.length > 5) {
+                  setError("Maximum 5 files per request.");
                   e.target.value = "";
                   return;
                 }
@@ -878,7 +1089,7 @@ function NewRequestModal({ onClose, onCreated }) {
               }}
               className="w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-100 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-slate-700 hover:file:bg-slate-200"
             />
-            <p className="mt-1 text-xs text-slate-400">Up to 3 files, max 10 MB each. Images or PDF.</p>
+            <p className="mt-1 text-xs text-slate-400">Up to 5 files, max 10 MB each. Images or PDF.</p>
             {pendingFiles.length > 0 && (
               <ul className="mt-2 space-y-1">
                 {pendingFiles.map((f, i) => (
@@ -899,24 +1110,44 @@ function NewRequestModal({ onClose, onCreated }) {
                 ))}
               </ul>
             )}
+            <button
+              type="button"
+              onClick={handleCaptureClick}
+              disabled={submitting}
+              className="mt-2 inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+              aria-label="Capture photos with phone via QR code"
+            >
+              📷 Capture with phone
+            </button>
+            {captureCount > 0 && (
+              <p className="mt-1 text-xs text-green-600">✅ {captureCount} photo(s) captured from phone</p>
+            )}
           </div>
 
           <div className="flex justify-end gap-3 pt-1">
             <button
               type="button"
-              onClick={onClose}
+              onClick={createdRequestId ? onCreated : onClose}
               className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
             >
-              Cancel
+              {createdRequestId ? "Done" : "Cancel"}
             </button>
             <button
               type="submit"
               disabled={submitting}
               className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
             >
-              {submitting ? (pendingFiles.length > 0 ? "Uploading…" : "Submitting…") : "Submit request"}
+              {submitting ? (pendingFiles.length > 0 ? "Uploading…" : "Submitting…") : createdRequestId ? "Submit files & close" : "Submit request"}
             </button>
           </div>
+
+          {showCapture && createdRequestId && (
+            <TenantCaptureSessionModal
+              requestId={createdRequestId}
+              onClose={() => setShowCapture(false)}
+              onComplete={(count) => { setShowCapture(false); setCaptureCount((c) => c + (count || 1)); }}
+            />
+          )}
         </form>
       </div>
     </div>

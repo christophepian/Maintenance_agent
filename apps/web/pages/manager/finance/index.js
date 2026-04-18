@@ -231,7 +231,7 @@ export default function ManagerFinanceHome() {
                         </thead>
                         <tbody>
                           {(buildingsExpanded ? p.buildings : p.buildings.slice(0, 5)).map((b) => (
-                            <tr key={b.buildingId}>
+                            <tr key={b.buildingId} className="cursor-pointer hover:bg-slate-50/80" onClick={() => router.push(`/manager/buildings/${b.buildingId}/financials`)}>
                               <td>
                                 <span className="flex items-center gap-2">
                                   <HealthDot health={b.health} />
@@ -250,9 +250,15 @@ export default function ManagerFinanceHome() {
                                   : <span className="text-slate-400">—</span>}
                               </td>
                               <td className="text-right">
-                                <Link href={`/manager/buildings/${b.buildingId}/financials`} className="text-blue-600 hover:underline text-sm">
-                                  Details →
-                                </Link>
+                                <button
+                                  aria-label="View building financials"
+                                  onClick={(e) => { e.stopPropagation(); router.push(`/manager/buildings/${b.buildingId}/financials`); }}
+                                  className="inline-flex items-center justify-center rounded p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                                >
+                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                                  </svg>
+                                </button>
                               </td>
                             </tr>
                           ))}

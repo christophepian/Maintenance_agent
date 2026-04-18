@@ -54,7 +54,8 @@ const MAX_UPLOADS_PER_SESSION = 20;
 interface CaptureTokenPayload {
   sessionId: string;
   orgId: string;
-  purpose: "invoice-capture";
+  purpose: "invoice-capture" | "maintenance-capture";
+  requestId?: string;
 }
 
 /* ──────────────────────────────────────────────────────────
@@ -98,7 +99,9 @@ export function mapSessionToDTO(s: CaptureSessionWithInclude): CaptureSessionDTO
 export async function createSession(
   orgId: string,
   userId: string,
+  options?: { targetType?: string; requestId?: string },
 ): Promise<{ session: CaptureSessionDTO; token: string; mobileUrl: string }> {
+  const targetType = options?.targetType || "INVOICE";
   const expiresAt = new Date(Date.now() + SESSION_TTL_MINUTES * 60 * 1000);
 
   // Create session record first to get the ID
@@ -108,14 +111,16 @@ export async function createSession(
     token: "placeholder", // will be updated with signed JWT
     expiresAt,
     sourceChannel: "MOBILE_CAPTURE",
-    targetType: "INVOICE",
+    targetType,
   });
 
   // Generate signed token with session ID embedded
+  const purpose = targetType === "MAINTENANCE_REQUEST" ? "maintenance-capture" as const : "invoice-capture" as const;
   const tokenPayload: CaptureTokenPayload = {
     sessionId: session.id,
     orgId,
-    purpose: "invoice-capture",
+    purpose,
+    ...(options?.requestId ? { requestId: options.requestId } : {}),
   };
   const token = jwt.sign(tokenPayload, AUTH_SECRET, {
     expiresIn: SESSION_TTL_MINUTES * 60,
@@ -151,8 +156,8 @@ export async function validateSessionToken(
     throw new CaptureSessionError("TOKEN_EXPIRED", "Session token is expired or invalid");
   }
 
-  if (payload.purpose !== "invoice-capture") {
-    throw new CaptureSessionError("INVALID_TOKEN", "Token is not for invoice capture");
+  if (payload.purpose !== "invoice-capture" && payload.purpose !== "maintenance-capture") {
+    throw new CaptureSessionError("INVALID_TOKEN", "Token is not for a valid capture purpose");
   }
 
   // 2. Load session from DB
@@ -296,6 +301,55 @@ export async function completeAndIngest(
 ): Promise<CaptureSessionDTO> {
   const { sessionId, orgId, session } = await validateSessionToken(token);
 
+  // Decode token to check purpose / requestId
+  let payload: CaptureTokenPayload;
+  try {
+    payload = jwt.verify(token, AUTH_SECRET) as CaptureTokenPayload;
+  } catch {
+    payload = { sessionId, orgId, purpose: "invoice-capture" };
+  }
+
+  // ── Maintenance-request flow: attach files to the request ────────
+  if (payload.purpose === "maintenance-capture" && payload.requestId) {
+    if (session.uploadedFileUrls.length > 0) {
+      const { storage } = await import("../storage/attachments");
+      const prismaModule = await import("./prismaClient");
+      const prisma = prismaModule.default;
+
+      console.log(
+        `[CAPTURE-SESSION] Maintenance session ${sessionId}: attaching ` +
+        `${session.uploadedFileUrls.length} file(s) to request ${payload.requestId}`,
+      );
+
+      for (const fileUrl of session.uploadedFileUrls) {
+        try {
+          const fileName = fileUrl.split("/").pop() || "capture.jpg";
+          const fileBuffer = await storage.get(fileUrl);
+          const mimeType = fileName.match(/\.pdf$/i) ? "application/pdf"
+            : fileName.match(/\.png$/i) ? "image/png"
+            : "image/jpeg";
+
+          await prisma.maintenanceAttachment.create({
+            data: {
+              requestId: payload.requestId,
+              fileName,
+              mimeType,
+              sizeBytes: fileBuffer.length,
+              storageKey: fileUrl,
+            },
+          });
+        } catch (attachErr: any) {
+          console.error(`[CAPTURE-SESSION] Attach failed for ${fileUrl}:`, attachErr.message);
+        }
+      }
+    }
+
+    const completed = await updateCaptureSession(sessionId, { status: "COMPLETED" });
+    console.log(`[CAPTURE-SESSION] Maintenance session ${sessionId} marked COMPLETED.`);
+    return mapSessionToDTO(completed);
+  }
+
+  // ── Invoice flow (original) ─────────────────────────────────────
   let createdInvoiceId: string | null = null;
 
   if (session.uploadedFileUrls.length > 0) {

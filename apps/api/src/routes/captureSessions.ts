@@ -22,6 +22,7 @@ import {
   getSessionById,
   CaptureSessionError,
 } from "../services/captureSessionService";
+import { requireTenantSession } from "../authz";
 import * as crypto from "crypto";
 
 // SA-21: In-memory rate limiter for public capture session endpoints (20 calls/IP/minute)
@@ -220,5 +221,66 @@ export function registerCaptureSessionRoutes(router: Router) {
       }
     },
     "POST /capture-sessions/:token/complete",
+  );
+
+  // ────────────── Tenant Portal Routes ────────────────────────
+
+  /**
+   * POST /tenant-portal/capture-sessions
+   * Create a capture session for a tenant's maintenance request photos.
+   */
+  router.post("/tenant-portal/capture-sessions", async ({ req, res, orgId }) => {
+    const tenantId = requireTenantSession(req, res);
+    if (!tenantId) return;
+    try {
+      // Parse body to get requestId
+      const chunks: Buffer[] = [];
+      for await (const chunk of req) chunks.push(chunk as Buffer);
+      const body = JSON.parse(Buffer.concat(chunks).toString("utf-8") || "{}");
+
+      if (!body.requestId) {
+        return sendError(res, 400, "BAD_REQUEST", "requestId is required");
+      }
+
+      const result = await createSession(orgId, tenantId, {
+        targetType: "MAINTENANCE_REQUEST",
+        requestId: body.requestId,
+      });
+
+      sendJson(res, 201, {
+        data: result.session,
+        token: result.token,
+        mobileUrl: result.mobileUrl,
+      });
+    } catch (e: any) {
+      console.error("[CAPTURE-SESSION] tenant create error:", e);
+      sendError(res, 500, "INTERNAL_ERROR", "Failed to create capture session", e.message);
+    }
+  });
+
+  /**
+   * GET /tenant-portal/capture-sessions/:id
+   * Poll a tenant's capture session status.
+   */
+  router.addCustom(
+    "GET",
+    /^\/tenant-portal\/capture-sessions\/([a-zA-Z0-9_-]+)$/i,
+    ["id"],
+    async ({ req, res, params, orgId }) => {
+      const tenantId = requireTenantSession(req, res);
+      if (!tenantId) return;
+      try {
+        const session = await getSessionById(params.id, orgId);
+        if (!session) {
+          sendError(res, 404, "NOT_FOUND", "Capture session not found");
+          return;
+        }
+        sendJson(res, 200, { data: session });
+      } catch (e: any) {
+        console.error("[CAPTURE-SESSION] tenant get error:", e);
+        sendError(res, 500, "INTERNAL_ERROR", "Failed to get capture session", e.message);
+      }
+    },
+    "GET /tenant-portal/capture-sessions/:id",
   );
 }

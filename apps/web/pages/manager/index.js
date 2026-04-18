@@ -356,6 +356,20 @@ export default function ManagerDashboard() {
       .reduce((sum, inv) => sum + (inv.totalAmount || inv.amount || 0), 0);
   }, [invoices]);
 
+  const pendingInvoicesCount = useMemo(
+    () => invoices.filter((i) => i.status === "ISSUED").length,
+    [invoices]
+  );
+
+  const avgDaysToComplete = useMemo(() => {
+    const completed = jobs.filter((j) => j.status === "COMPLETED" && j.completedAt && j.createdAt);
+    if (completed.length === 0) return null;
+    const totalDays = completed.reduce((sum, j) => {
+      return sum + (new Date(j.completedAt) - new Date(j.createdAt)) / (1000 * 60 * 60 * 24);
+    }, 0);
+    return Math.round(totalDays / completed.length);
+  }, [jobs]);
+
   if (loading) {
     return (
       <AppShell role="MANAGER">
@@ -392,7 +406,7 @@ export default function ManagerDashboard() {
 
           {/* ─── KPIs ─── */}
           <Section title="KPIs">
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                 <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Open Requests</div>
                 <div className={cn("mt-3 text-2xl font-semibold tracking-tight", openRequestsCount > 20 ? "text-amber-700" : "text-slate-900")}>
@@ -418,6 +432,24 @@ export default function ManagerDashboard() {
                 </div>
                 <div className="text-sm text-slate-600">
                   Paid invoices
+                </div>
+              </div>
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Pending Invoices</div>
+                <div className={cn("mt-3 text-2xl font-semibold tracking-tight", pendingInvoicesCount > 0 ? "text-amber-700" : "text-slate-900")}>
+                  {pendingInvoicesCount}
+                </div>
+                <div className="text-sm text-slate-600">
+                  Awaiting payment
+                </div>
+              </div>
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Avg. Days to Complete</div>
+                <div className="mt-3 text-2xl font-semibold tracking-tight text-slate-900">
+                  {avgDaysToComplete ?? "—"}
+                </div>
+                <div className="text-sm text-slate-600">
+                  Completed jobs
                 </div>
               </div>
               {portfolio && (

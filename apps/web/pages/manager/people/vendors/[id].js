@@ -248,12 +248,12 @@ export default function ContractorDetailPage() {
             <p className="loading-text">Loading contractor…</p>
           ) : contractor ? (
             <div className="grid gap-4">
-              <div className="pill-tab-row">
+              <div className="tab-strip">
                 {["Personal information", "Service details", "Contracts", "Invoices"].map((tab) => (
                   <button
                     key={tab}
                     type="button"
-                    className={cn(activeTab === tab ? "pill-tab-active" : "pill-tab")}
+                    className={activeTab === tab ? "tab-btn-active" : "tab-btn"}
                     onClick={() => setActiveTab(tab)}
                   >
                     {tab}
