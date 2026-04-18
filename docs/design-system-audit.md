@@ -415,13 +415,41 @@ Inactive: text-slate-600 hover:bg-slate-100 hover:text-slate-900
 Icons: lucide-react, size={18} className="shrink-0"
 ```
 
-### Tab strip (in-page)
+### Tab patterns — three variants, each with a distinct purpose
+
+**Rule:** choose the variant based on what the tabs control, not visual preference.
+
+| Variant | When to use | Component |
+|---------|-------------|-----------|
+| **Underline tabs** | Page-level navigation between distinct data domains on a hub page (e.g. Invoices / Billing Entities / Overview). Each tab is a different data set. | `<Tabs>` + `<TabsList>` + `<TabsTrigger>` (default, no `unstyled`) |
+| **Segmented control** | Switching the *view* of the same data set (e.g. filter by pipeline stage, switch chart period). The data source is the same; only the presentation or filter changes. | `<Tabs>` + `<TabsList>` + `<TabsTrigger unstyled>` with `data-[state=active]:bg-blue-600 data-[state=active]:text-white` classes inside a `rounded-lg border border-slate-200 bg-white p-1` list |
+| **Pill tabs** | Sub-navigation within a detail page between entity sections (e.g. unit detail: Tenants / Appliances / Assets). Scoped to a single record, not a page hub. | `<Tabs>` + `<TabsList className="pill-tab-row">` + `<TabsTrigger unstyled className="pill-tab ...">` |
+
+#### Underline tabs (hub pages)
 ```
-Container: mb-6 flex border-b border-slate-200
-Button: px-5 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors
-Active: border-indigo-600 text-indigo-600
-Inactive: border-transparent text-slate-500 hover:text-slate-700
+TabsList: flex border-b border-slate-200 mb-5
+TabsTrigger: px-5 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors
+Active:   text-brand border-brand
+Inactive: text-slate-500 border-transparent hover:text-slate-700
 ```
+
+#### Segmented control (filter/view switch)
+```
+TabsList: flex gap-1 rounded-lg border border-slate-200 bg-white p-1
+TabsTrigger: rounded-lg px-3 py-1.5 text-sm font-medium transition-colors
+Active:   bg-blue-600 text-white
+Inactive: text-slate-600 hover:bg-slate-100
+```
+
+#### Pill tabs (detail page sections)
+```
+TabsList: flex gap-1 flex-wrap mb-4 (pill-tab-row)
+TabsTrigger: px-3.5 py-1.5 rounded-md text-sm cursor-pointer border (pill-tab)
+Active:   font-bold border-2 border-brand bg-brand-light text-brand-dark
+Inactive: border-surface-border bg-surface text-muted-dark
+```
+
+> **Implementation note:** All three variants use the same `<Tabs>`, `<TabsList>`, `<TabsTrigger>`, `<TabsContent>` components from `components/ui/Tabs.jsx`. The underline style is the default. Segmented and pill styles pass `unstyled` to both `TabsList` and `TabsTrigger` to suppress the default `tab-strip` base class. Active styles for pill tabs are defined in `globals.css` as `.pill-tab[data-state="active"]` to ensure CSS specificity over the base `.pill-tab` class.
 
 ### AppShell layout
 ```

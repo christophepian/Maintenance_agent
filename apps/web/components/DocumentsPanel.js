@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import Panel from "./layout/Panel";
+import { Dialog, DialogContent } from "./ui/Dialog";
 
 /**
  * Reusable panel for displaying corroborative documents from a rental application.
@@ -177,59 +178,53 @@ export default function DocumentsPanel({ applicationId, title, compact }) {
         })}
       </Panel>
 
-      {/* Inline preview modal */}
-      {previewUrl && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={closePreview}>
-          <div
-            className="relative w-full max-w-4xl max-h-[90vh] bg-white rounded-2xl shadow-2xl overflow-hidden m-4"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between px-4 py-3 border-b bg-slate-50">
-              <div className="text-sm font-medium text-slate-800 truncate">{previewName}</div>
-              <div className="flex items-center gap-2">
-                <a
-                  href={previewUrl}
-                  download={previewName}
-                  className="rounded px-3 py-1.5 text-xs font-medium text-slate-600 bg-slate-100 hover:bg-slate-200"
-                >
-                  ⬇ Download
-                </a>
-                <button
-                  onClick={closePreview}
-                  className="rounded px-3 py-1.5 text-xs font-medium text-slate-600 bg-slate-100 hover:bg-slate-200"
-                >
-                  ✕ Close
-                </button>
-              </div>
-            </div>
-            <div className="overflow-auto max-h-[calc(90vh-56px)]">
-              {previewMime?.includes("pdf") ? (
-                <iframe
-                  src={previewUrl}
-                  className="w-full border-0"
-                  className="h-[80vh]"
-                  title="Document preview"
-                />
-              ) : previewMime?.includes("image") ? (
-                <div className="flex items-center justify-center p-4 bg-slate-100">
-                  <img
-                    src={previewUrl}
-                    alt={previewName}
-                    className="max-w-full max-h-[80vh] object-contain rounded"
-                  />
-                </div>
-              ) : (
-                <div className="p-8 text-center text-slate-500">
-                  <p>Preview not available for this file type.</p>
-                  <a href={previewUrl} download={previewName} className="text-indigo-600 hover:underline mt-2 inline-block">
-                    Download instead
-                  </a>
-                </div>
-              )}
+      {/* Document preview dialog */}
+      <Dialog open={!!previewUrl} onOpenChange={(open) => { if (!open) closePreview(); }}>
+        <DialogContent maxWidth="max-w-4xl" className="rounded-2xl overflow-hidden p-0">
+          <div className="flex items-center justify-between px-4 py-3 border-b bg-slate-50">
+            <div className="text-sm font-medium text-slate-800 truncate">{previewName}</div>
+            <div className="flex items-center gap-2">
+              <a
+                href={previewUrl}
+                download={previewName}
+                className="rounded px-3 py-1.5 text-xs font-medium text-slate-600 bg-slate-100 hover:bg-slate-200"
+              >
+                ⬇ Download
+              </a>
+              <button
+                onClick={closePreview}
+                className="rounded px-3 py-1.5 text-xs font-medium text-slate-600 bg-slate-100 hover:bg-slate-200"
+              >
+                ✕ Close
+              </button>
             </div>
           </div>
-        </div>
-      )}
+          <div className="overflow-auto max-h-[calc(90vh-56px)]">
+            {previewMime?.includes("pdf") ? (
+              <iframe
+                src={previewUrl}
+                className="w-full h-[80vh] border-0"
+                title="Document preview"
+              />
+            ) : previewMime?.includes("image") ? (
+              <div className="flex items-center justify-center p-4 bg-slate-100">
+                <img
+                  src={previewUrl}
+                  alt={previewName}
+                  className="max-w-full max-h-[80vh] object-contain rounded"
+                />
+              </div>
+            ) : (
+              <div className="p-8 text-center text-slate-500">
+                <p>Preview not available for this file type.</p>
+                <a href={previewUrl} download={previewName} className="text-indigo-600 hover:underline mt-2 inline-block">
+                  Download instead
+                </a>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

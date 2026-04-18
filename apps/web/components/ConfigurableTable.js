@@ -11,9 +11,10 @@
  *   - Persistence via useTablePreferences hook
  */
 
-import { useState, useRef, useEffect, useCallback, Fragment } from "react";
+import { useState, useRef, Fragment } from "react";
 import SortableHeader from "./SortableHeader";
 import useTablePreferences from "../lib/useTablePreferences";
+import { Popover, PopoverTrigger, PopoverContent } from "./ui/Popover";
 
 import { cn } from "../lib/utils";
 // ---------------------------------------------------------------------------
@@ -27,19 +28,9 @@ const DENSITY = {
 // ---------------------------------------------------------------------------
 // Gear Popover
 // ---------------------------------------------------------------------------
-function ColumnConfigPopover({ orderedColumns, visibility, density, onToggle, onReorder, onDensityChange, onReset, onClose }) {
-  const ref = useRef(null);
+function ColumnConfigPopover({ orderedColumns, visibility, density, onToggle, onReorder, onDensityChange, onReset }) {
   const dragItem = useRef(null);
   const dragOver = useRef(null);
-
-  // Close on outside click
-  useEffect(() => {
-    function handleClick(e) {
-      if (ref.current && !ref.current.contains(e.target)) onClose();
-    }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, [onClose]);
 
   // Filter to only configurable columns (not alwaysVisible)
   const configurable = orderedColumns.filter((c) => !c.alwaysVisible);
@@ -68,14 +59,10 @@ function ColumnConfigPopover({ orderedColumns, visibility, density, onToggle, on
   }
 
   return (
-    <div
-      ref={ref}
-      className="absolute right-0 top-full mt-1 z-50 w-64 rounded-lg border border-slate-200 bg-white shadow-lg"
-    >
+    <div>
       {/* Header */}
       <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2">
         <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Columns</span>
-        <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-sm leading-none" aria-label="Close column picker">&times;</button>
       </div>
 
       {/* Column list — draggable */}
@@ -200,28 +187,30 @@ export default function ConfigurableTable({
   const ds = DENSITY[density] || DENSITY.comfortable;
   const colSpan = visibleColumns.length + (leadingHeader ? 1 : 0) + (trailingHeader ? 1 : 0);
 
-  const togglePopover = useCallback(() => setPopoverOpen((v) => !v), []);
-  const closePopover = useCallback(() => setPopoverOpen(false), []);
 
   return (
     <div>
       {/* Toolbar row — gear button */}
       <div className="flex items-center justify-end px-4 py-1.5">
-        <div className="relative">
-          <button
-            onClick={togglePopover}
-            className={cn("inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors", popoverOpen
-                ? "text-blue-700 bg-blue-50"
-                : "text-slate-400 hover:text-blue-600 hover:bg-blue-50/50")}
-            title="Configure columns"
-          >
-            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-            Columns
-          </button>
-          {popoverOpen && (
+        <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+          <PopoverTrigger asChild>
+            <button
+              className={cn("inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors", popoverOpen
+                  ? "text-blue-700 bg-blue-50"
+                  : "text-slate-400 hover:text-blue-600 hover:bg-blue-50/50")}
+              title="Configure columns"
+              aria-label="Configure columns"
+              aria-expanded={popoverOpen}
+              aria-haspopup="dialog"
+            >
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              Columns
+            </button>
+          </PopoverTrigger>
+          <PopoverContent className="w-64">
             <ColumnConfigPopover
               orderedColumns={orderedColumns}
               visibility={visibility}
@@ -230,10 +219,9 @@ export default function ConfigurableTable({
               onReorder={reorderColumns}
               onDensityChange={setDensity}
               onReset={reset}
-              onClose={closePopover}
             />
-          )}
-        </div>
+          </PopoverContent>
+        </Popover>
       </div>
 
       {/* Table */}

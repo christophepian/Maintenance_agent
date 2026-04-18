@@ -1,7 +1,8 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 import { formatDateTime } from "../lib/format";
 import { getNotificationLink as resolveLink } from "../lib/notificationLinks";
+import { Popover, PopoverTrigger, PopoverContent } from "./ui/Popover";
 
 import { cn } from "../lib/utils";
 export default function NotificationBell({ role }) {
@@ -9,7 +10,6 @@ export default function NotificationBell({ role }) {
   const [notifications, setNotifications] = useState([]);
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const panelRef = useRef(null);
 
   const isTenant = role === "TENANT";
 
@@ -148,21 +148,6 @@ export default function NotificationBell({ role }) {
     }
   }, [isOpen, fetchNotifications, fetchUnreadCount]);
 
-  // Close panel when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (panelRef.current && !panelRef.current.contains(event.target)) {
-        setIsOpen(false);
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-      return () => {
-        document.removeEventListener("mousedown", handleClickOutside);
-      };
-    }
-  }, [isOpen]);
 
   const getTypeColor = (type) => {
     switch (type) {
@@ -206,117 +191,105 @@ export default function NotificationBell({ role }) {
   };
 
   return (
-    <div className="relative" ref={panelRef}>
-      {/* Bell Icon Button */}
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 text-slate-600 hover:text-slate-900 focus:outline-none rounded-full"
-        aria-label="Notifications"
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          className="h-6 w-6"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
+    <Popover open={isOpen} onOpenChange={setIsOpen}>
+      <PopoverTrigger asChild>
+        <button
+          className="relative p-2 text-slate-600 hover:text-slate-900 focus:outline-none rounded-full"
+          aria-label="Notifications"
+          aria-expanded={isOpen}
+          aria-haspopup="dialog"
         >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
-          />
-        </svg>
-        
-        {/* Unread Badge */}
-        {unreadCount > 0 && (
-          <span className="absolute top-0.5 right-0.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[11px] font-bold leading-none text-white bg-red-600 rounded-full">
-            {unreadCount}
-          </span>
-        )}
-      </button>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-6 w-6"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
+            />
+          </svg>
+          {unreadCount > 0 && (
+            <span className="absolute top-0.5 right-0.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[11px] font-bold leading-none text-white bg-red-600 rounded-full">
+              {unreadCount}
+            </span>
+          )}
+        </button>
+      </PopoverTrigger>
 
-      {/* Dropdown Panel */}
-      {isOpen && (
-        <div className="absolute right-0 mt-2 w-96 bg-white rounded-lg shadow-xl border border-slate-200 z-50">
-          {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200">
-            <h3 className="text-lg font-semibold text-slate-900">Notifications</h3>
-            {notifications.length > 0 && (
-              <button
-                onClick={markAllAsRead}
-                className="text-sm text-blue-600 hover:text-blue-700"
-                aria-label="Mark all notifications as read"
+      <PopoverContent className="w-96 p-0" sideOffset={8}>
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200">
+          <h3 className="text-lg font-semibold text-slate-900">Notifications</h3>
+          {notifications.length > 0 && (
+            <button
+              onClick={markAllAsRead}
+              className="text-sm text-blue-600 hover:text-blue-700"
+              aria-label="Mark all notifications as read"
+            >
+              Mark all read
+            </button>
+          )}
+        </div>
+
+        {/* Notifications List */}
+        <div className="max-h-96 overflow-y-auto" role="list" aria-label="Notifications">
+          {loading ? (
+            <div className="px-4 py-8 text-center text-slate-500">Loading...</div>
+          ) : notifications.length === 0 ? (
+            <div className="px-4 py-8 text-center text-slate-500">No notifications</div>
+          ) : (
+            notifications.map((notif) => (
+              <div
+                key={notif.id}
+                role="listitem"
+                onClick={() => handleNotificationClick(notif)}
+                className={cn("px-4 py-3 border-b border-slate-100 hover:bg-slate-50", !isNotifRead(notif) ? "bg-blue-50" : "", getNotificationLink(notif) ? "cursor-pointer" : "")}
               >
-                Mark all read
-              </button>
-            )}
-          </div>
-
-          {/* Notifications List */}
-          <div className="max-h-96 overflow-y-auto">
-            {loading ? (
-              <div className="px-4 py-8 text-center text-slate-500">
-                Loading...
-              </div>
-            ) : notifications.length === 0 ? (
-              <div className="px-4 py-8 text-center text-slate-500">
-                No notifications
-              </div>
-            ) : (
-              notifications.map((notif) => (
-                <div
-                  key={notif.id}
-                  onClick={() => handleNotificationClick(notif)}
-                  className={cn("px-4 py-3 border-b border-slate-100 hover:bg-slate-50", !isNotifRead(notif) ? "bg-blue-50" : "", getNotificationLink(notif) ? "cursor-pointer" : "")}
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className={cn("text-xs px-2 py-0.5 rounded", getTypeColor(notif.eventType))}>
-                          {(notif.eventType || notif.type || "").replace(/_/g, " ")}
-                        </span>
-                        {!isNotifRead(notif) && (
-                          <>
-                            <span className="w-2 h-2 bg-blue-600 rounded-full" aria-hidden="true"></span>
-                            <span className="sr-only">Unread</span>
-                          </>
-                        )}
-                      </div>
-                      <p className="text-sm text-slate-700 mb-1">
-                        {notif.message}
-                      </p>
-                      <p className="text-xs text-slate-400">
-                        {formatDateTime(notif.createdAt)}
-                      </p>
-                    </div>
-                    <div className="flex flex-col gap-1 ml-2">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className={cn("text-xs px-2 py-0.5 rounded", getTypeColor(notif.eventType))}>
+                        {(notif.eventType || notif.type || "").replace(/_/g, " ")}
+                      </span>
                       {!isNotifRead(notif) && (
-                        <button
-                          onClick={(e) => { e.stopPropagation(); markAsRead(notif.id); }}
-                          className="text-xs text-blue-600 hover:text-blue-700"
-                          title="Mark as read"
-                          aria-label="Mark as read"
-                        >
-                          ✓
-                        </button>
+                        <>
+                          <span className="w-2 h-2 bg-blue-600 rounded-full" aria-hidden="true"></span>
+                          <span className="sr-only">Unread</span>
+                        </>
                       )}
-                      <button
-                        onClick={(e) => { e.stopPropagation(); deleteNotification(notif.id); }}
-                        className="text-xs text-red-600 hover:text-red-700"
-                        title="Delete"
-                        aria-label="Delete notification"
-                      >
-                        ✕
-                      </button>
                     </div>
+                    <p className="text-sm text-slate-700 mb-1">{notif.message}</p>
+                    <p className="text-xs text-slate-400">{formatDateTime(notif.createdAt)}</p>
+                  </div>
+                  <div className="flex flex-col gap-1 ml-2">
+                    {!isNotifRead(notif) && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); markAsRead(notif.id); }}
+                        className="text-xs text-blue-600 hover:text-blue-700"
+                        aria-label="Mark as read"
+                      >
+                        ✓
+                      </button>
+                    )}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); deleteNotification(notif.id); }}
+                      className="text-xs text-red-600 hover:text-red-700"
+                      aria-label="Delete notification"
+                    >
+                      ✕
+                    </button>
                   </div>
                 </div>
-              ))
-            )}
-          </div>
+              </div>
+            ))
+          )}
         </div>
-      )}
-    </div>
+      </PopoverContent>
+    </Popover>
   );
 }

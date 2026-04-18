@@ -39,7 +39,7 @@ export default function UnitDetail() {
   const [createApplianceSerial, setCreateApplianceSerial] = useState("");
   const [createApplianceModel, setCreateApplianceModel] = useState("");
   const [creatingApplianceModelId, setCreatingApplianceModelId] = useState(null);
-  const [activeTab, setActiveTab] = useState("Tenants");
+  const [activeTab, setActiveTab] = useState("Details");
   const [tenantAction, setTenantAction] = useState(null);
   const [applianceAction, setApplianceAction] = useState(null);
   const [applicationIds, setApplicationIds] = useState([]);
@@ -447,6 +447,17 @@ export default function UnitDetail() {
             </div>
           )}
 
+          <div className="tab-strip overflow-x-auto">
+            {["Details", "Tenants", "Appliances", "Assets", "Rent Estimate", "Documents", "Invoices", "Contracts"].map((tab) => (
+              <button key={tab} type="button"
+                className={activeTab === tab ? "tab-btn-active" : "tab-btn"}
+                onClick={() => setActiveTab(tab)}>
+                {tab}
+              </button>
+            ))}
+          </div>
+
+          {activeTab === "Details" && (
           <Panel title="Unit Details" actions={<Badge variant={isBusy ? "info" : "muted"} size="sm">{occupancyLabel}</Badge>}>
             {editMode ? (
               <div className="mb-4">
@@ -606,21 +617,9 @@ export default function UnitDetail() {
           Deactivate unit
         </button>
       </Panel>
+          )}
 
-      <div className="pill-tab-row">
-        {["Tenants", "Appliances", "Assets", "Rent Estimate", "Documents", "Invoices", "Contracts"].map((tab) => (
-          <button
-            key={tab}
-            type="button"
-            className={cn(activeTab === tab ? "pill-tab-active" : "pill-tab")}
-            onClick={() => setActiveTab(tab)}
-          >
-            {tab}
-          </button>
-        ))}
-      </div>
-
-      {activeTab === "Appliances" && (
+          {activeTab === "Appliances" && (
         <Panel title="Appliances">
           <div className="flex flex-col gap-3">
             {appliances.length === 0 ? (
@@ -789,9 +788,9 @@ export default function UnitDetail() {
             )}
           </div>
         </Panel>
-      )}
+          )}
 
-      {activeTab === "Assets" && (
+          {activeTab === "Assets" && (
         <Panel title="Asset Inventory & Depreciation">
           {assetInventoryLoading ? (
             <p className="text-center text-slate-400">Loading assets…</p>
@@ -805,9 +804,9 @@ export default function UnitDetail() {
             />
           )}
         </Panel>
-      )}
+          )}
 
-      {activeTab === "Tenants" && (
+          {activeTab === "Tenants" && (
         <Panel title="Tenants">
           <div className="flex flex-col gap-3">
             {tenants.length === 0 ? (
@@ -940,9 +939,9 @@ export default function UnitDetail() {
             )}
           </div>
         </Panel>
-      )}
+          )}
 
-      {activeTab === "Rent Estimate" && (
+          {activeTab === "Rent Estimate" && (
         <Panel title="Rent Estimate">
           {!unit?.livingAreaSqm ? (
             <div className={cn("notice", "notice-err")}>
@@ -1039,9 +1038,9 @@ export default function UnitDetail() {
             </>
           )}
         </Panel>
-      )}
+          )}
 
-      {activeTab === "Documents" && (
+          {activeTab === "Documents" && (
         <Panel title="Corroborative Documents">
           {applicationIds.length === 0 ? (
             <div className="empty-state-text py-6 text-center italic">No rental application linked to this unit.</div>
@@ -1053,19 +1052,19 @@ export default function UnitDetail() {
             ))
           )}
         </Panel>
-      )}
+          )}
 
-      {activeTab === "Invoices" && (
+          {activeTab === "Invoices" && (
         <Panel title="Invoices">
           <div className={cn("empty-state-text py-6 text-center italic", "p-8")}>Empty for now.</div>
         </Panel>
-      )}
+          )}
 
-      {activeTab === "Contracts" && (
+          {activeTab === "Contracts" && (
         <Panel title="Contracts">
           <div className={cn("empty-state-text py-6 text-center italic", "p-8")}>Empty for now.</div>
         </Panel>
-      )}
+          )}
       </PageContent>
     </PageShell>
     </AppShell>

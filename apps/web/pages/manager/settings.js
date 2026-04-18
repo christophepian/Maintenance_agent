@@ -10,15 +10,18 @@ import { authHeaders } from "../../lib/api";
 import Badge from "../../components/ui/Badge";
 import { legalVariant } from "../../lib/statusVariants";
 import { cn } from "../../lib/utils";
+import DepreciationStandards from "../../components/DepreciationStandards";
+
 const SETTINGS_TABS = [
   { key: "ORG", label: "Organisation" },
   { key: "BUILDINGS", label: "Buildings" },
   { key: "NOTIFICATIONS", label: "Notifications" },
   { key: "INTEGRATIONS", label: "Integrations" },
   { key: "LEGAL", label: "Legal Sources" },
+  { key: "DEPRECIATION", label: "Depreciation" },
 ];
 
-const TAB_KEYS = ['organisation', 'buildings', 'notifications', 'integrations', 'legal'];
+const TAB_KEYS = ['organisation', 'buildings', 'notifications', 'integrations', 'legal', 'depreciation'];
 
 export default function ManagerSettingsPage() {
   const [loading, setLoading] = useState(true);
@@ -381,6 +384,7 @@ export default function ManagerSettingsPage() {
           </span>
           {activeTab === 1 && <Link href="/admin-inventory/buildings" className="full-page-link">Manage buildings →</Link>}
 
+          {activeTab !== 5 && (
           <Panel bodyClassName="p-0">
 
           {/* Organisation tab */}
@@ -685,6 +689,11 @@ export default function ManagerSettingsPage() {
           </div>
 
           </Panel>
+          )}
+
+          {/* Depreciation tab — renders its own Panels internally */}
+          {activeTab === 5 && <DepreciationStandards />}
+
         </PageContent>
       </PageShell>
     </AppShell>

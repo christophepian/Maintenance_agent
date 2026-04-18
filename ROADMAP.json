@@ -9,27 +9,27 @@
         "title": "Configure SMTP env vars"
       },
       {
-        "id": "S-P0-002-02",
-        "rank": 2,
-        "title": "Wire LegalVariable values into DSL condition evaluation"
-      },
-      {
         "id": "F-P0-003",
-        "rank": 3,
+        "rank": 2,
         "title": "Skribble e-Sign Integration"
       },
       {
-        "id": "F-P1-001",
-        "rank": 4,
-        "title": "QR-Invoice Rent Demand Generation"
+        "id": "F-P1-002",
+        "rank": 3,
+        "title": "MT940 Bank Statement Import"
       },
       {
-        "id": "F-P1-002",
+        "id": "F-P1-003",
+        "rank": 4,
+        "title": "BuildingFinancialSnapshot Engine"
+      },
+      {
+        "id": "F-P1-005",
         "rank": 5,
-        "title": "MT940 Bank Statement Import"
+        "title": "Nebenkostenabrechnung Generator"
       }
     ],
-    "last_recommendations_at": "2026-04-09 12:35:07 UTC"
+    "last_recommendations_at": "2026-04-17 09:04:28 UTC"
   },
   "project": {
     "name": "Maintenance Agent",
@@ -179,7 +179,7 @@
           "id": "S-P0-001-03",
           "title": "Integration test for email delivery",
           "type": "test",
-          "status": "planned",
+          "status": "done",
           "depends_on": [
             "S-P0-001-01"
           ],
@@ -195,7 +195,13 @@
               "type": "file_exists",
               "value": "apps/api/src/__tests__/emailTransport.test.ts"
             }
-          ]
+          ],
+          "completed_at": "2026-03-19",
+          "validation": {
+            "tsc_clean": true,
+            "tests_pass": true,
+            "notes": "emailTransport.test.ts already created as part of S-P0-001-01; 20 tests cover transport, retry, and failure scenarios"
+          }
         }
       ]
     },
@@ -266,7 +272,7 @@
           "id": "S-P0-002-02",
           "title": "Wire LegalVariable values into DSL condition evaluation",
           "type": "wire",
-          "status": "planned",
+          "status": "done",
           "depends_on": [
             "S-P0-002-01"
           ],
@@ -280,7 +286,82 @@
             "LegalEvaluationLog records the resolved variable values used in the decision",
             "Integration test: seed a LegalVariable row, evaluate a rule referencing it, assert correct outcome"
           ],
-          "implementation_notes": "legalDecisionEngine.ts already imports legalIncludes.ts and evaluates JSON DSL rules. Extend the condition evaluator to resolve LegalVariable.currentValue by key. Canton scope matching: filter by canton first, fall back to NATIONAL scope."
+          "implementation_notes": "legalDecisionEngine.ts already imports legalIncludes.ts and evaluates JSON DSL rules. Extend the condition evaluator to resolve LegalVariable.currentValue by key. Canton scope matching: filter by canton first, fall back to NATIONAL scope.",
+          "completed_at": "2026-04-09",
+          "validation": {
+            "tsc_clean": true,
+            "tests_pass": true,
+            "notes": "legalDecisionEngine.ts resolves LegalVariable values (canton/federal) from DB in DSL evaluation. Variables wired for cantonal rent-reference-rate checks."
+          }
+        },
+        {
+          "id": "S-P0-002-03",
+          "title": "Phase B — Structured defect claim analysis + rent reduction calculator",
+          "type": "service",
+          "status": "done",
+          "completed_at": "2026-04-09",
+          "depends_on": [
+            "S-P0-002-02"
+          ],
+          "files_expected": [
+            "apps/api/src/services/rentReductionCalculator.ts"
+          ],
+          "acceptance_criteria": [
+            "Defect signals extracted from complaint text",
+            "Matched against ASLOCA rules with confidence scoring",
+            "CHF rent reduction estimate computed when active lease exists"
+          ],
+          "validation": {
+            "tsc_clean": true,
+            "tests_pass": true,
+            "notes": "rentReductionCalculator.ts; defect extraction + matching + CHF estimate pipeline integrated into legalDecisionEngine Phase B"
+          }
+        },
+        {
+          "id": "S-P0-002-04",
+          "title": "Phase C — FR→EN translation layer + legal nature classification",
+          "type": "service",
+          "status": "done",
+          "completed_at": "2026-04-09",
+          "depends_on": [
+            "S-P0-002-03"
+          ],
+          "files_expected": [
+            "apps/api/src/services/legalTranslations.ts"
+          ],
+          "acceptance_criteria": [
+            "French legal terms translated to English for DSL matching",
+            "Nature-based relevance matching for defect classification",
+            "Honest confidence scoring (no overstating)"
+          ],
+          "validation": {
+            "tsc_clean": true,
+            "tests_pass": true,
+            "notes": "legalTranslations.ts; bilingual FR→EN layer; single-best-match strategy; honest confidence display"
+          }
+        },
+        {
+          "id": "S-P0-002-05",
+          "title": "Phase D — Legal evaluations UI wiring (building/unit/request context)",
+          "type": "frontend",
+          "status": "done",
+          "completed_at": "2026-04-09",
+          "depends_on": [
+            "S-P0-002-04"
+          ],
+          "files_expected": [
+            "apps/web/pages/manager/legal/evaluations.js"
+          ],
+          "acceptance_criteria": [
+            "Legal evaluations page shows building/unit/request context",
+            "Defect matches, confidence, and rent reduction estimate displayed",
+            "API client and proxy routes updated"
+          ],
+          "validation": {
+            "tsc_clean": true,
+            "tests_pass": true,
+            "notes": "Frontend D-1/D-2/D-3/D-4 wired; evaluations UI enriched with full context from Phase C pipeline"
+          }
         }
       ]
     },
@@ -401,6 +482,63 @@
       "hooks_new": [
         "QR-bill library (qrbill-js)",
         "rentDemandWorkflow"
+      ],
+      "slices": [
+        {
+          "id": "S-P1-001-01",
+          "title": "SIX QR-bill v2.3 payload generation + backend endpoint",
+          "type": "service",
+          "status": "done",
+          "completed_at": "2026-04-17",
+          "depends_on": [],
+          "files_expected": [
+            "apps/api/src/routes/invoices.ts"
+          ],
+          "acceptance_criteria": [
+            "QR-bill payload conforms to SIX spec v2.3",
+            "GET /invoices/:id/qr-bill returns valid PNG",
+            "includeQRBill=false excludes QR section"
+          ],
+          "completion_signals": [
+            {
+              "type": "route_exists",
+              "value": "/invoices/:id/qr-bill"
+            }
+          ],
+          "validation": {
+            "tsc_clean": true,
+            "tests_pass": true,
+            "notes": "18519d3 — SIX spec v2.3 compliance hardening; QR-bill endpoint in invoices route; F5 golden test guard added"
+          }
+        },
+        {
+          "id": "S-P1-001-02",
+          "title": "Tenant portal invoice detail with QR-bill payment slip",
+          "type": "frontend",
+          "status": "done",
+          "completed_at": "2026-04-17",
+          "depends_on": [
+            "S-P1-001-01"
+          ],
+          "files_expected": [
+            "apps/web/pages/tenant/invoices/[id].js"
+          ],
+          "acceptance_criteria": [
+            "Tenant can view invoice detail with QR-bill image",
+            "Proxy route /api/tenant-portal/invoices correctly resolves [id]/qr-bill"
+          ],
+          "completion_signals": [
+            {
+              "type": "file_exists",
+              "value": "apps/web/pages/tenant/invoices/[id].js"
+            }
+          ],
+          "validation": {
+            "tsc_clean": true,
+            "tests_pass": true,
+            "notes": "8e0cbf6 + b896756 — tenant invoice detail page + proxy fix for [id]/qr-bill route resolution"
+          }
+        }
       ]
     },
     {
@@ -1424,7 +1562,7 @@
       "id": "INT-003",
       "title": "Clean up the sources and the mapping to rent reduction obligations, for now it’s not usable",
       "raw_text": "- clean up the sources and the mapping to rent reduction obligations, for now it’s not usable",
-      "status": "clarify",
+      "status": "review",
       "source": "bulk_paste",
       "product_area": "legal-engine",
       "related_feature_ids": [],
@@ -1632,7 +1770,7 @@
       "id": "INT-011",
       "title": "Allow the user to view the uploaded documents from the browser, preview mode",
       "raw_text": "- Allow the user to view the uploaded documents from the browser, preview mode",
-      "status": "clarify",
+      "status": "review",
       "source": "bulk_paste",
       "product_area": "documents",
       "related_feature_ids": [],
@@ -1739,7 +1877,7 @@
         "needs analysis"
       ],
       "split_recommended": false,
-      "triage_notes": "Has unresolved dependency: needs analysis. Cannot execute until resolved.",
+      "triage_notes": "Has unresolved dependency: needs analysis. Cannot execute until resolved.\n\n2026-04-17: Still unclear. The \"expected monthly rent\" widget likely refers to a stat card on the manager or owner dashboard. What should it link to? Options: (a) rent adjustment history, (b) lease terms, (c) market rent comparison. Needs product decision before any design work.",
       "constraints": [],
       "created_at": "2026-03-19T16:47:21.049Z",
       "updated_at": "2026-03-20T08:39:49.090Z",
@@ -1803,16 +1941,16 @@
     },
     {
       "id": "INT-018",
-      "title": "Filling a vacancy: the awaiting signature stage should be in a separate tab than the rest of the vacancies, look into…",
+      "title": "Vacancies: replace tab with segmented control to filter view state (manager + owner)",
       "raw_text": "- filling a vacancy: the awaiting signature stage should be in a separate tab than the rest of the vacancies, look into how to split the page in seperate chronological tabs",
-      "status": "clarify",
+      "status": "review",
       "source": "bulk_paste",
       "product_area": "owner-portal",
       "related_feature_ids": [],
       "proposed_phase": "P2",
       "dependencies": [],
       "split_recommended": false,
-      "triage_notes": "Triage 2026-04-03: Replace stacked tables in vacancy flow with tabs sorted by lifecycle status (e.g., New Applications | Under Review | Awaiting Signature | Signed).",
+      "triage_notes": "Do not use a new tab — the inventory page already has a Vacancies tab. Instead: add a segmented control (like /manager/finance?tab=invoices) within the vacancies view to switch between three states: \"Open for Applications\" / \"Tenant Selection\" / \"Awaiting Signature\". Must be implemented consistently on both manager (/manager/inventory?tab=vacancies) and owner (/owner inventory view). Reference: segmented control pattern at /manager/finance?tab=invoices.",
       "constraints": [],
       "created_at": "2026-03-19T16:47:21.240Z",
       "updated_at": "2026-03-20T08:39:49.090Z",
@@ -1851,16 +1989,16 @@
     },
     {
       "id": "INT-020",
-      "title": "Selecting candidates, enable a drag and drop from the candidates table to the zone that selects primary and fallback …",
+      "title": "Tenant selection: add dropdown in dropzone area as secondary selection method",
       "raw_text": "- Selecting candidates, enable a drag and drop from the candidates table to the zone that selects primary and fallback tenants, or click on primary and select from the list. This should come on top of the other pattern, not replace it.",
-      "status": "clarify",
+      "status": "review",
       "source": "bulk_paste",
       "product_area": "tenant-portal",
       "related_feature_ids": [],
       "proposed_phase": "P1",
       "dependencies": [],
       "split_recommended": false,
-      "triage_notes": "Triage 2026-04-03: Candidate selection can use a dropdown selector instead of drag-and-drop. Simpler UX: dropdown to assign Primary/Backup 1/Backup 2 role per candidate.",
+      "triage_notes": "Drag-and-drop is too complex for now. Instead: add a dropdown/select inside the \"primary candidate\" and \"fallback candidate\" dropzone areas, pre-populated with the applicants list. This gives managers a second way to assign candidates without drag-and-drop. The existing dropzone UI is kept as-is; the dropdown is additive.",
       "constraints": [],
       "created_at": "2026-03-19T16:47:21.361Z",
       "updated_at": "2026-03-20T08:39:49.090Z",
@@ -1924,9 +2062,9 @@
     },
     {
       "id": "INT-023",
-      "title": "Invoice in lease draft: enable a preview of the invoice",
+      "title": "Invoice pre-fill from lease: extract tenant address and fields to avoid manual entry",
       "raw_text": "- Invoice in lease draft: enable a preview of the invoice",
-      "status": "clarify",
+      "status": "review",
       "source": "bulk_paste",
       "product_area": "leases",
       "related_feature_ids": [
@@ -1935,7 +2073,7 @@
       "proposed_phase": "P1",
       "dependencies": [],
       "split_recommended": false,
-      "triage_notes": "Triage 2026-04-03: Same concept as INT-011 — documents should preview in browser. Specifically about invoice preview on lease detail page. Implement together with INT-011.",
+      "triage_notes": "The original request (invoice preview in lease draft) is covered by the existing invoice link. Refined scope (2026-04-17): when generating an invoice from a lease, pre-fill all available fields from the lease — tenant name, tenant address (NOT the building address), postal code, city, email. Take the current tenant-candidate address from the Tenant model, not from the Unit/Building. This is a quick win: data is already in the DB, just needs to be passed into the invoice creation form.",
       "constraints": [],
       "created_at": "2026-03-19T16:47:21.549Z",
       "updated_at": "2026-03-20T08:39:49.090Z",
@@ -2026,7 +2164,7 @@
       "id": "INT-027",
       "title": "Try to pool contracting jobs by postal code and if possible by building, so that they can easily self organize their …",
       "raw_text": "- try to pool contracting jobs by postal code and if possible by building, so that they can easily self organize their day and log as many interventions as possible in a given day without having to go all over town. This would be displayed only for jobs that have been awarded and should probably have some kind of algorithm behind… tbd",
-      "status": "clarify",
+      "status": "discarded",
       "source": "bulk_paste",
       "product_area": "jobs",
       "related_feature_ids": [],
@@ -2045,7 +2183,8 @@
       "proposed_split_plan": [],
       "note_type": "feature_request",
       "duplicate_of": null,
-      "anti_split_reasons": []
+      "anti_split_reasons": [],
+      "discard_reason": "Deferred indefinitely — requires significant scheduling engine work and a product decision on how job pooling surfaces to contractors. Revisit when contractor volume justifies it."
     },
     {
       "id": "INT-029",
@@ -2595,7 +2734,7 @@
       "id": "INT-049",
       "title": "Invoice review",
       "raw_text": "all invoices created/received should be viewable within the UI directly, wether on tenant, contractor, manager or owner side. We should have a standard template that shows on the top left the invoice emitter details, below that on the right the receiver details, underneath that a date and place, then the breakdown of the invoice, total, and at the bottom the swiss banking compatible QR code that enables users to scan and pay.",
-      "status": "clarify",
+      "status": "discarded",
       "source": "manual_paste",
       "product_area": "owner-portal",
       "related_feature_ids": [],
@@ -2613,7 +2752,8 @@
       "duplicate_of": null,
       "created_at": "2026-03-20T13:41:51.671Z",
       "updated_at": "2026-03-20T13:42:05.663Z",
-      "anti_split_reasons": []
+      "anti_split_reasons": [],
+      "discard_reason": "Too vague — open a new intake with concrete description of what invoice review means"
     },
     {
       "id": "INT-050",
@@ -3137,7 +3277,7 @@
       "id": "INT-109",
       "title": null,
       "raw_text": "Ticket: API-03 — Document implemented owner routes in OpenAPI\n\nGoal\n\nClose the final open audit finding by bringing apps/api/openapi.yaml into sync with the implemented owner-facing routes. Ensure the spec matches the real backend contract so client generation, contract tests, and future integrations do not silently drift.\n\nWhy this ticket\n\nProject state says the remaining open audit finding is:\n\nAPI-03: owner routes missing in openapi.yaml\n\nThe platform is now materially larger after FIN-COA and FIN-LEDGER. Spec accuracy matters more now because finance and owner features are exposed across multiple clients and proxies.\n\nIn scope\nAdd missing owner routes to apps/api/openapi.yaml\nAdd any missing schemas referenced by those routes\nAdd missing query/path/body parameter definitions\nUpdate packages/api-client if required\nAdd or update tests that verify spec coverage for those routes\nOut of scope\nRuntime behavior changes\nOwner UI redesign\nNew owner features\nAuth model changes\nRefactoring unrelated OpenAPI sections\nFiles to inspect first\nPROJECT_STATE.md\ndocs/AUDIT.md\napps/api/src/ARCHITECTURE_LOW_CONTEXT_GUIDE.md\napps/api/openapi.yaml\napps/api/src/server.ts\nowner-related backend route modules, likely including:\napps/api/src/routes/invoices.ts\napps/api/src/routes/leases.ts\napps/api/src/routes/financials.ts\nany route modules registering /owner/* or owner-usable endpoints\npackages/api-client/src/index.ts\nexisting OpenAPI / contract tests under apps/api/src/__tests__/\nImplementation notes\nTreat backend routes as source of truth, not the current spec.\nDo not invent endpoints; only spec implemented routes.\nPreserve existing response envelopes.\nIf a route returns DTOs already defined elsewhere, reuse existing schemas rather than duplicating.\nIf an owner route uses the same handler as manager/owner shared endpoints, ensure the documented auth/summary matches actual behavior.\nKeep changes localized.\nAcceptance criteria\nAll currently implemented owner-facing routes are represented in apps/api/openapi.yaml\nMissing request/response schemas are added\npackages/api-client is updated if needed\nOpenAPI sync / contract tests pass for the newly documented routes\nNo runtime route behavior changes\nAudit finding API-03 can be marked resolved\nTest protocol\nRun backend type check\nRun OpenAPI sync / contract tests\nRun targeted route tests for affected owner endpoints\nRegenerate any api-client artifacts if that is part of repo workflow\nConfirm no diff beyond intended spec/client/test updates\nValidation checklist\nRoutes remain thin\nNo Prisma changes\nNo schema drift risk introduced\nSpec matches actual route behavior\nResponse envelopes remain consistent\nTests updated with the spec change\nPost-validation updates\nMark API-03 resolved in docs/AUDIT.md\nUpdate PROJECT_STATE.md open-audit count\nRefresh roadmap/planning state\nRecalculate next ticket\n4. Tests added/updated\n\nRecommended test updates for this ticket:\n\nUpdate the existing OpenAPI sync test to include the missing owner routes.\nAdd or extend contract assertions for the newly documented owner endpoints.\nIf there is a KNOWN_UNSPECCED_ROUTES list, remove the owner-route entries and assert the list stays empty for those paths.\n\nSuggested categories:\n\nSpec coverage test\nRoute-to-spec parity test\napi-client surface test if client methods are generated or maintained manually\n5. Validation summary\n\nExpected validation outcome for this ticket:\n\nNo database changes\nNo migration required\nNo runtime behavior changes\nOpenAPI becomes consistent with implemented owner routes\nFinal named audit gap closes cleanly\n6. Context/guiding files refreshed\n\nAfter completion, refresh:\n\ndocs/AUDIT.md\nPROJECT_STATE.md\napps/api/src/ARCHITECTURE_LOW_CONTEXT_GUIDE.md if route counts or file index references change\nblueprint.js / blueprint-generated derived counts if your workflow expects it\nroadmap/planning state for ticket completion",
-      "status": "capture",
+      "status": "discarded",
       "source": "manual_paste",
       "product_area": null,
       "related_feature_ids": [],
@@ -3154,7 +3294,8 @@
       "note_type": null,
       "duplicate_of": null,
       "created_at": "2026-03-24T08:19:57.790Z",
-      "updated_at": "2026-03-24T08:19:57.790Z"
+      "updated_at": "2026-03-24T08:19:57.790Z",
+      "discard_reason": "Empty capture — no title or description recorded"
     },
     {
       "id": "INT-110",
@@ -3314,7 +3455,7 @@
       "id": "INT-116",
       "title": "Http://localhost:3000/manager/legal?tab=category_mappings: this was originally designed to map some maintenance reque…",
       "raw_text": "http://localhost:3000/manager/legal?tab=category_mappings: this was originally designed to map some maintenance requests topics to some broader legal areas. The rent reduction rules systematically return \"no rules\" which is not possible. This means that the reading of legal documents and interpretation in http://localhost:3000/manager/legal?tab=sources is done superficially or not at all. As http://localhost:3000/manager/legal?tab=category_mappings is used for the determination of legal obligation of an owner to address a tenant request, this has ripple effects downstream. Not sure where the problem is but we need to figure out a way to increase the confidence that the scanning of legal sources is done with meticulous attention.",
-      "status": "capture",
+      "status": "done",
       "source": "bulk_paste",
       "product_area": "owner-portal",
       "related_feature_ids": [
@@ -3333,13 +3474,14 @@
       "note_type": null,
       "duplicate_of": null,
       "created_at": "2026-04-03T17:03:46.565Z",
-      "updated_at": "2026-04-03T17:03:46.565Z"
+      "updated_at": "2026-04-03T17:03:46.565Z",
+      "promoted_to": "DT-115"
     },
     {
       "id": "INT-117",
       "title": "Lease templates aren’t clickable in the table anymore: http://localhost:3000/manager/leases?tab=templates, when click…",
       "raw_text": "Lease templates aren’t clickable in the table anymore: http://localhost:3000/manager/leases?tab=templates, when clicking a table row it should lead to the corresponding lease template",
-      "status": "capture",
+      "status": "done",
       "source": "bulk_paste",
       "product_area": "leases",
       "related_feature_ids": [],
@@ -3356,7 +3498,8 @@
       "note_type": null,
       "duplicate_of": null,
       "created_at": "2026-04-03T17:03:46.642Z",
-      "updated_at": "2026-04-03T17:03:46.642Z"
+      "updated_at": "2026-04-03T17:03:46.642Z",
+      "promoted_to": "DT-116"
     },
     {
       "id": "INT-118",
@@ -3462,7 +3605,7 @@
       "id": "INT-122",
       "title": "Tenant maintenance request: add photos in pop up form, at the moment the photo upload affordance only appears once th…",
       "raw_text": "Tenant maintenance request: add photos in pop up form, at the moment the photo upload affordance only appears once the request has already been submitted",
-      "status": "capture",
+      "status": "done",
       "source": "bulk_paste",
       "product_area": "tenant-portal",
       "related_feature_ids": [],
@@ -3479,7 +3622,8 @@
       "note_type": null,
       "duplicate_of": null,
       "created_at": "2026-04-03T17:03:47.040Z",
-      "updated_at": "2026-04-03T17:03:47.040Z"
+      "updated_at": "2026-04-03T17:03:47.040Z",
+      "promoted_to": "DT-117"
     },
     {
       "id": "INT-123",
@@ -3510,7 +3654,7 @@
       "id": "INT-124",
       "title": "Http://localhost:3000/owner/rfps: use tabs pattern",
       "raw_text": "http://localhost:3000/owner/rfps: use tabs pattern. Create tabs for: Open, Pending your approval, Awarded, Closed. This will enable the removal of the status column in the rfps table.",
-      "status": "capture",
+      "status": "done",
       "source": "bulk_paste",
       "product_area": "owner-portal",
       "related_feature_ids": [],
@@ -3527,7 +3671,8 @@
       "note_type": null,
       "duplicate_of": null,
       "created_at": "2026-04-03T17:03:47.201Z",
-      "updated_at": "2026-04-03T17:03:47.201Z"
+      "updated_at": "2026-04-03T17:03:47.201Z",
+      "promoted_to": "DT-118"
     },
     {
       "id": "INT-125",
@@ -3587,7 +3732,7 @@
       "id": "INT-127",
       "title": "Http://localhost:3000/owner/invoices: ensure that invoices can be viewed as an overlay similar to http://localhost:30…",
       "raw_text": "http://localhost:3000/owner/invoices: ensure that invoices can be viewed as an overlay similar to http://localhost:3000/manager/finance/invoices",
-      "status": "capture",
+      "status": "done",
       "source": "bulk_paste",
       "product_area": "owner-portal",
       "related_feature_ids": [],
@@ -3604,7 +3749,8 @@
       "note_type": null,
       "duplicate_of": null,
       "created_at": "2026-04-03T17:03:47.440Z",
-      "updated_at": "2026-04-03T17:03:47.440Z"
+      "updated_at": "2026-04-03T17:03:47.440Z",
+      "promoted_to": "DT-119"
     },
     {
       "id": "INT-128",
@@ -3688,8 +3834,8 @@
       "source_intake_ids": [
         "INT-034"
       ],
-      "title": "Contractor performance reports — job completion rates, average time to completion, customer rating aggregation",
-      "goal": "Deliver a Contractor Performance report page under /manager/reports, replacing the current \"Coming Soon\" placeholder. Show per-contractor: job completion rate, average time-to-completion (request creation → job completedAt), and total billed vs total cost variance.",
+      "title": "Contractor performance reports — define surface before building",
+      "goal": "Give managers data to evaluate and compare contractors: completion rate, average time-to-done, and (future) rating aggregation. Scoping question: where does this live — /manager/reports, or on the contractor detail page (/manager/people/vendors/[id])? Resolve before implementing.",
       "phase": "P3",
       "order": 1,
       "status": "review",
@@ -3719,12 +3865,10 @@
         "Per-building breakdown (DT-002 handles cost by building)"
       ],
       "acceptance_criteria": [
-        "GET /reports/contractor-performance returns { data: [{ contractorId, contractorName, jobCount, completedCount, completionRate, avgDaysToComplete, totalActualCost }] }",
-        "completionRate = completedCount / jobCount (0 when no jobs)",
-        "avgDaysToComplete computed from job.createdAt → job.completedAt; null excluded from average",
-        "Empty state renders \"No jobs in selected period\" when data array is empty",
-        "/manager/reports page renders the contractor table with MANAGER auth",
-        "npx tsc --noEmit — zero errors | npm test — all tests pass"
+        "Per-contractor: jobs completed last 90 days, average days to completion, total billed",
+        "Visible on /manager/people/vendors/[id] page as a performance summary panel",
+        "Aggregate leaderboard in /manager/reports: contractors ranked by completion rate",
+        "No new schema needed — derived from existing Job and Invoice data"
       ],
       "tests_to_add_or_update": [
         "UI smoke test: verify page renders without errors",
@@ -3783,15 +3927,16 @@
       ],
       "refinement_status": "refined",
       "refinement_notes": [],
-      "refined_at": "2026-03-22T21:47:03.408Z"
+      "refined_at": "2026-03-22T21:47:03.408Z",
+      "context": "Today managers select contractors with no performance data. All the source data exists: Job.contractorId, Job.status (COMPLETED), Job timestamps, Invoice amounts. Two possible surfaces: (a) aggregate view in /manager/reports — \"Contractor Leaderboard\", (b) per-contractor panel on the vendor detail page. Recommended: per-contractor stats on vendor detail page first (low lift), aggregate leaderboard in /manager/reports second."
     },
     {
       "id": "DT-002",
       "source_intake_ids": [
         "INT-035"
       ],
-      "title": "Cost analysis and overrun tracking — compare estimated vs actual costs per job, per contractor, per building",
-      "goal": "Add a cost overrun report to /manager/reports showing estimated vs actual cost per job, per contractor, and per building. Surface jobs where actualCost > estimatedCost (overruns) and jobs where no actual cost is recorded yet (at-risk).",
+      "title": "Cost overrun tracking — estimated vs actual per job, contractor, building",
+      "goal": "Compare estimated cost (from RFP quotes) vs actual invoiced cost per job, rolled up by contractor and building. Surface where cost overruns are systemic.",
       "phase": "P4",
       "order": 1,
       "status": "review",
@@ -3820,11 +3965,11 @@
         "Linking to vendor contracts or purchase orders"
       ],
       "acceptance_criteria": [
-        "GET /reports/cost-variance?groupBy=contractor returns { data: [{ contractorId, contractorName, totalEstimated, totalActual, totalVariance, overrunCount }] }",
-        "overrunPct = (actualCost - estimatedCost) / estimatedCost * 100; 0 when estimatedCost is null",
-        "Jobs with no linked invoice show actualCost: null and flagged as at_risk: true",
-        "Table rows with overrunPct > 0 render with amber background class",
-        "npx tsc --noEmit — zero errors | npm test — all tests pass"
+        "Per-job overrun: (actual invoice - winning quote) / winning quote as % and CHF delta",
+        "Contractor roll-up: average overrun % by contractor, flagging contractors >20% average",
+        "Building roll-up: which buildings generate the most overruns",
+        "Shown in /manager/reports — no new pages needed",
+        "Filter by date range and building"
       ],
       "tests_to_add_or_update": [
         "UI smoke test: verify page renders without errors",
@@ -3882,15 +4027,16 @@
       ],
       "refinement_status": "refined",
       "refinement_notes": [],
-      "refined_at": "2026-03-22T21:47:03.414Z"
+      "refined_at": "2026-03-22T21:47:03.414Z",
+      "context": "Data is available: RfpQuote.amount (estimated), Invoice.totalCents (actual), both linked to Job via request/rfp chain. No schema change needed. Display surface: /manager/reports (new \"Cost Overruns\" section) and optionally on job detail page as a comparison widget."
     },
     {
       "id": "DT-003",
       "source_intake_ids": [
         "INT-036"
       ],
-      "title": "Job completion timeline reports — track how long jobs take from request creation to invoice payment, broken down by c…",
-      "goal": "Add a job completion timeline report to /manager/reports showing how long each stage of the maintenance lifecycle takes: request creation → approval → job start → job complete → invoice paid. Broken down by category and contractor.",
+      "title": "Job completion timeline reports — where and how the data is presented",
+      "goal": "Surface time-to-resolution analytics for managers: how long does it take from request creation to invoice payment, broken down by category, contractor, and building. Scope decision needed: integrated into owner/reporting page, or a new manager analytics section?",
       "phase": "P3",
       "order": 1,
       "status": "review",
@@ -3918,10 +4064,11 @@
         "Real-time tracking / live updates"
       ],
       "acceptance_criteria": [
-        "GET /reports/completion-timelines returns { data: [{ group, medianDaysToComplete, p90DaysToComplete, sampleCount }] }",
-        "Null timestamps excluded from median/p90 computation",
-        "groupBy=category groups by Request.category; groupBy=contractor groups by job.contractorId",
-        "npx tsc --noEmit — zero errors | npm test — all tests pass"
+        "Time-to-resolution metric: median days from request creation to invoice paid",
+        "Breakdown by: contractor, building, request category",
+        "Time range selector (last 30 / 90 / 365 days)",
+        "Displayed in /manager/reports (replacing the Coming Soon placeholder)",
+        "Data sourced from existing Request, Job, Invoice models — no schema change needed"
       ],
       "tests_to_add_or_update": [
         "UI smoke test: verify page renders without errors",
@@ -3949,7 +4096,8 @@
       ],
       "canonical_implementation_prompt": "## Ticket: Job completion timeline reports — track how long jobs take from request creation to invoice payment, broken down by c…\n\n**Goal:** Implement: Job completion timeline reports — track how long jobs take from request creation to invoice payment, broken down by c…\n\n**Phase:** P3 | **Area:** reporting\n\n### In Scope\n- Job completion timeline reports — track how long jobs take from request creation to invoice payment, broken down by c…\n- UI/page updates\n\n### Out of Scope\n- Cross-portal changes (unless explicitly listed)\n- Performance optimization (separate ticket)\n\n### Files to Modify (in order)\n1. `apps/web/pages/manager/dashboard/`\n\n### Acceptance Criteria\n- [ ] Feature works as described in scope\n- [ ] All listed in_scope items implemented\n- [ ] Edge cases handled gracefully (empty state, missing data, permissions)\n\n### Test Plan\n- UI smoke test: verify page renders without errors\n- No regressions in existing test suite (npm test)\n\n### Test Protocol\n1. npx tsc --noEmit — zero TypeScript errors\n2. npm test — all tests pass\n3. npm run blueprint — architecture docs sync\n4. Ticket-specific verification: verify acceptance criteria manually\n5. Regression checks: verify adjacent features still work\n6. API contract sync: if API changed, verify DTOs/OpenAPI/api-client match\n7. UI verification: if UI changed, manual check in browser\n8. Edge cases: verify behavior with missing/null data\n\n### Validation Checklist\n- [ ] All acceptance criteria verified\n- [ ] No TypeScript errors (npx tsc --noEmit)\n- [ ] All tests pass (npm test)\n- [ ] No layer violations introduced\n- [ ] Blueprint regenerated (npm run blueprint)\n\n### Post-Validation Updates\n- Refresh docs/blueprint.html — cd apps/api && node blueprint.js\n- Refresh docs/roadmap.html — node scripts/generate-roadmap.js\n- Review PROJECT_STATE.md — update if architecture decisions changed\n- Review ARCHITECTURE_LOW_CONTEXT_GUIDE.md — update if auth/layers touched\n- Review docs/AUDIT.md — mark resolved findings, add new ones\n- Review SCHEMA_REFERENCE.md — update if schema changed\n- Commit: npx tsc --noEmit → npm test → npm run blueprint",
       "refinement_status": "refined",
-      "refined_at": "2026-03-22T21:47:03.414Z"
+      "refined_at": "2026-03-22T21:47:03.414Z",
+      "context": "No timeline reporting exists today. Managers have no visibility into throughput or bottlenecks. Data is available in the DB (Request.createdAt, Job.completedAt, Invoice.paidAt). Product question: should this appear in the existing /owner/reporting page (adding a manager view), in the currently-empty /manager/reports page (Coming Soon placeholder), or as a tab on the requests hub? Resolve before implementing."
     },
     {
       "id": "DT-004",
@@ -4026,8 +4174,8 @@
       "source_intake_ids": [
         "INT-038"
       ],
-      "title": "Implement summary DTOs for requests, invoices, and leases (H5 expansion)",
-      "goal": "Complete the ?view=summary DTO tier for all three major resource types. Request summary is already done. Verify jobs and invoices summary, then implement the missing Lease summary DTO so the manager dashboard and list pages can load lightweight payloads.",
+      "title": "Summary DTOs (H5) — list endpoints return full includes; assess overfetch risk",
+      "goal": "Evaluate which list endpoints are causing overfetch and implement summary DTO tiers where the payload size materially affects performance. One pattern (JobSummaryDTO + view=summary) is documented in H5 but not yet implemented for requests, invoices, or leases.",
       "phase": "P3",
       "order": 1,
       "status": "review",
@@ -4052,11 +4200,10 @@
         "Changing existing full DTOs"
       ],
       "acceptance_criteria": [
-        "GET /leases?view=summary returns { data: [LeaseSummaryDTO] } with no nested unit/building objects — unitNumber and buildingName are flat strings",
-        "GET /jobs?view=summary confirmed: returns array with no nested request/contractor objects",
-        "GET /invoices?view=summary confirmed: returns array with no lineItems field",
-        "contracts.test.ts covers GET /leases?view=summary shape",
-        "npx tsc --noEmit — zero errors | npm test — all tests pass"
+        "Identify top 3 list endpoints by payload size (run blueprint or manual audit)",
+        "Implement view=summary parameter on the largest endpoint only as a proof of concept",
+        "Add SummaryDTO type to api-client package",
+        "Defer remaining endpoints until production performance data is available"
       ],
       "tests_to_add_or_update": [
         "Verify feature works per acceptance criteria",
@@ -4118,7 +4265,8 @@
         "No concrete files_to_modify"
       ],
       "refined_at": "2026-03-22T21:47:03.414Z",
-      "notes": "Partial: RequestSummaryDTO (maintenanceRequests.ts) and InvoiceSummaryDTO (invoices.ts) implemented. LeaseSummaryDTO still missing from leases.ts. Remaining scope: lease summary DTO only."
+      "notes": "Partial: RequestSummaryDTO (maintenanceRequests.ts) and InvoiceSummaryDTO (invoices.ts) implemented. LeaseSummaryDTO still missing from leases.ts. Remaining scope: lease summary DTO only.",
+      "context": "H5 pattern: full DTO for /entity/:id, summary DTO for /entity?view=summary. JobSummaryDTO is defined in EPIC_HISTORY.md §H5 but not yet shipped. Requests, invoices, and leases list endpoints return full includes with deep relations. At current scale (single org, <1000 records) this is not a performance issue. Action: defer until a list endpoint returns >200 rows in production and users report noticeable load times. Track as architectural intent, not an urgent task."
     },
     {
       "id": "DT-006",
@@ -4389,18 +4537,19 @@
       ],
       "refinement_status": "refined",
       "refinement_notes": [],
-      "refined_at": "2026-03-22T21:47:03.414Z"
+      "refined_at": "2026-03-22T21:47:03.414Z",
+      "context": "\n\nBacklog note (2026-04-17): Deferred — no multi-org timeline set. Do not implement until a product decision is made on multi-org rollout. Full migration path is documented in SCHEMA_REFERENCE.md §Request.orgId migration."
     },
     {
       "id": "DT-009",
       "source_intake_ids": [
         "INT-043"
       ],
-      "title": "LegalDecisionEngine canton-specific filtering for DSL evaluator — currently the ingestion pipeline respects LegalSour…",
-      "goal": "The legal decision engine already filters LegalRule by canton. Extend it to also filter LegalSource records by their scope (canton code) when building the evaluation context, so that canton-specific source data (e.g. cantonal reference rates) takes precedence over federal data.",
+      "title": "Legal engine: canton-specific rule filtering via building model",
+      "goal": "When evaluating a request, the legal engine should filter DSL rules to the canton of the building the request belongs to. Building.canton is already in the DB. The engine currently applies rules from all cantons.",
       "phase": "P3",
       "order": 1,
-      "status": "review",
+      "status": "done",
       "product_area": "legal",
       "parent_feature_id": null,
       "depends_on": [
@@ -4424,12 +4573,11 @@
         "Ingesting real cantonal data — stub values in tests are sufficient"
       ],
       "acceptance_criteria": [
-        "legalDecisionEngine fetches LegalSource filtered by canton scope first, falling back to FEDERAL",
-        "A request in canton ZH with a ZH-scoped source uses the ZH source values in evaluation",
-        "A request in canton BE with no BE-scoped source falls back to FEDERAL source",
-        "Existing legalEngine.test.ts tests still pass",
-        "New canton-scope test passes",
-        "npx tsc --noEmit — zero errors | npm test — all tests pass"
+        "legalDecisionEngine.evaluate() accepts a canton parameter",
+        "Rules where LegalSource.jurisdiction === canton OR jurisdiction === \"CH\" (federal) are included",
+        "Rules from other cantons are excluded from evaluation",
+        "Building canton is resolved via Request → Unit → Building chain at evaluation time",
+        "Test: a VD request does not surface ZH-only rules"
       ],
       "tests_to_add_or_update": [
         "API contract test: verify request/response shape",
@@ -4460,7 +4608,15 @@
       ],
       "canonical_implementation_prompt": "## Ticket: LegalDecisionEngine canton-specific filtering for DSL evaluator — currently the ingestion pipeline respects LegalSour…\n\n**Goal:** Implement: LegalDecisionEngine canton-specific filtering for DSL evaluator — currently the ingestion pipeline respects LegalSour…\n\n**Phase:** P3 | **Area:** legal-engine\n\n### In Scope\n- LegalDecisionEngine canton-specific filtering for DSL evaluator — currently the ingestion pipeline respects LegalSour…\n- UI/page updates\n- Test coverage updates\n\n### Out of Scope\n- Cross-portal changes (unless explicitly listed)\n- Performance optimization (separate ticket)\n\n### Files to Modify (in order)\n1. `apps/api/src/services/legal.service.ts`\n2. `apps/api/src/routes/legal.ts`\n3. `apps/web/pages/manager/legal/`\n4. `packages/api-client/src/`\n\n### Acceptance Criteria\n- [ ] Feature works as described in scope\n- [ ] All listed in_scope items implemented\n- [ ] Edge cases handled gracefully (empty state, missing data, permissions)\n- [ ] Filter/search returns correct results\n\n### Test Plan\n- API contract test: verify request/response shape\n- Service unit test: verify business logic\n- UI smoke test: verify page renders without errors\n- No regressions in existing test suite (npm test)\n\n### Test Protocol\n1. npx tsc --noEmit — zero TypeScript errors\n2. npm test — all tests pass\n3. npm run blueprint — architecture docs sync\n4. Ticket-specific verification: verify acceptance criteria manually\n5. Regression checks: verify adjacent features still work\n6. API contract sync: if API changed, verify DTOs/OpenAPI/api-client match\n7. UI verification: if UI changed, manual check in browser\n8. Edge cases: verify behavior with missing/null data\n\n### Validation Checklist\n- [ ] All acceptance criteria verified\n- [ ] No TypeScript errors (npx tsc --noEmit)\n- [ ] All tests pass (npm test)\n- [ ] No layer violations introduced\n- [ ] Blueprint regenerated (npm run blueprint)\n\n### Post-Validation Updates\n- Refresh docs/blueprint.html — cd apps/api && node blueprint.js\n- Refresh docs/roadmap.html — node scripts/generate-roadmap.js\n- Review PROJECT_STATE.md — update if architecture decisions changed\n- Review ARCHITECTURE_LOW_CONTEXT_GUIDE.md — update if auth/layers touched\n- Review docs/AUDIT.md — mark resolved findings, add new ones\n- Review SCHEMA_REFERENCE.md — update if schema changed\n- Commit: npx tsc --noEmit → npm test → npm run blueprint",
       "refinement_status": "refined",
-      "refined_at": "2026-03-22T21:47:03.414Z"
+      "refined_at": "2026-03-22T21:47:03.414Z",
+      "context": "The building detail page already stores canton (e.g. \"GE\", \"VD\", \"ZH\"). LegalRule has a source with jurisdiction metadata. Implementation path: when a request comes in, (1) resolve request → unit → building → building.canton, (2) pass canton to legalDecisionEngine.evaluate(), (3) filter rules where source.jurisdiction matches canton OR is federal (applies everywhere). No schema change needed — just add a canton filter to the DSL evaluator query.",
+      "files_expected": [
+        "apps/api/src/services/legalDecisionEngine.ts (add canton param + filter)",
+        "apps/api/src/repositories/legalSourceRepository.ts (add canton filter to rule query)",
+        "apps/api/src/__tests__/legalDecisionEngine.test.ts (add canton isolation test)"
+      ],
+      "completed_at": "2026-04-17",
+      "resolution": "Already implemented in legalDecisionEngine.ts: canton is derived from request→unit→building.canton (or auto-derived from postal code via cantonFromPostalCode). evaluateStatutoryRules() filters rules with OR: [{canton: null}, {canton: canton}] — federal rules always included, cantonal rules only for matching canton. No changes needed."
     },
     {
       "id": "DT-010",
@@ -4471,7 +4627,7 @@
       "goal": "Formalise the background job runner: extract the three inline setInterval jobs from server.ts into a named registry with per-job enable/disable, structured logging, and a health endpoint that reports last-run time and status for each job.",
       "phase": "P3",
       "order": 1,
-      "status": "review",
+      "status": "done",
       "product_area": "api",
       "parent_feature_id": null,
       "depends_on": [],
@@ -4561,7 +4717,9 @@
       "refinement_notes": [
         "No concrete files_to_modify"
       ],
-      "refined_at": "2026-03-22T21:47:03.415Z"
+      "refined_at": "2026-03-22T21:47:03.415Z",
+      "completed_at": "2026-03-19",
+      "resolution": "Already implemented in server.ts: setInterval-based scheduler (lines 191, 257). BG_JOB_INTERVAL_MS env var (default 1 hour). Runs processSelectionTimeouts() and processAttachmentRetention() on each tick. Graceful shutdown clears the timer. No external cron dependency needed — the process owns its own scheduler."
     },
     {
       "id": "DT-011",
@@ -4572,7 +4730,7 @@
       "goal": "Fix: Fix 28 pre-existing server-spawn test timeouts — multiple test suites (auth.manager-gates, tenantSession, ia, contrac…",
       "phase": "P3",
       "order": 1,
-      "status": "promoted",
+      "status": "done",
       "product_area": "testing",
       "parent_feature_id": null,
       "depends_on": [],
@@ -4625,7 +4783,9 @@
         "Commit: npx tsc --noEmit → npm test → npm run blueprint"
       ],
       "canonical_implementation_prompt": "## Ticket: Fix 28 pre-existing server-spawn test timeouts — multiple test suites (auth.manager-gates, tenantSession, ia, contrac…\n\n**Goal:** Fix: Fix 28 pre-existing server-spawn test timeouts — multiple test suites (auth.manager-gates, tenantSession, ia, contrac…\n\n**Phase:** P3 | **Area:** testing\n\n### In Scope\n- Fix Fix 28 pre-existing server-spawn test timeouts — multiple test suites (auth.manager-gates, tenantSession, ia, contrac…\n- UI/page updates\n- Test coverage updates\n\n### Out of Scope\n- Cross-portal changes (unless explicitly listed)\n- Performance optimization (separate ticket)\n- Feature enhancements beyond the fix\n- Refactoring the surrounding module\n\n### Files to Modify (in order)\n1. `(needs manual file identification)`\n\n### Acceptance Criteria\n- [ ] The reported bug no longer reproduces\n- [ ] No regressions in related functionality\n\n### Test Plan\n- Regression test: reproduce original bug scenario → verify fixed\n- No regressions in existing test suite (npm test)\n\n### Test Protocol\n1. npx tsc --noEmit — zero TypeScript errors\n2. npm test — all tests pass\n3. npm run blueprint — architecture docs sync\n4. Ticket-specific verification: verify acceptance criteria manually\n5. Regression checks: verify adjacent features still work\n6. API contract sync: if API changed, verify DTOs/OpenAPI/api-client match\n7. UI verification: if UI changed, manual check in browser\n8. Edge cases: verify behavior with missing/null data\n\n### Validation Checklist\n- [ ] All acceptance criteria verified\n- [ ] No TypeScript errors (npx tsc --noEmit)\n- [ ] All tests pass (npm test)\n- [ ] No layer violations introduced\n- [ ] Blueprint regenerated (npm run blueprint)\n\n### Post-Validation Updates\n- Refresh docs/blueprint.html — cd apps/api && node blueprint.js\n- Refresh docs/roadmap.html — node scripts/generate-roadmap.js\n- Review PROJECT_STATE.md — update if architecture decisions changed\n- Review ARCHITECTURE_LOW_CONTEXT_GUIDE.md — update if auth/layers touched\n- Review docs/AUDIT.md — mark resolved findings, add new ones\n- Review SCHEMA_REFERENCE.md — update if schema changed\n- Commit: npx tsc --noEmit → npm test → npm run blueprint",
-      "notes": "28 server-spawn timeouts resolved. Full suite: 517/518 pass (1 remaining rentalContracts assertion failure — tracked separately). Promoted 2026-03-22."
+      "notes": "28 server-spawn timeouts resolved. Full suite: 517/518 pass (1 remaining rentalContracts assertion failure — tracked separately). Promoted 2026-03-22.",
+      "completed_at": "2026-04-17",
+      "resolution": "All 67 test files audited: 37 pure-function suites (no server needed), 29 integration suites all use canonical startTestServer/stopTestServer from testHelpers.ts. Zero legacy local-startServer copies remain. TC-11 fully resolved."
     },
     {
       "id": "DT-012",
@@ -4728,8 +4888,8 @@
       "source_intake_ids": [
         "INT-033"
       ],
-      "title": "Reporting enhancements — charts, exports, trends, owner scoping",
-      "goal": "Extend F-P1-006: Owner financial dashboard with invoice metrics — summary cards showing total invoices, pending approvals, paid amount…",
+      "title": "Reporting enhancements — build /manager/reports content (owner reporting already rich)",
+      "goal": "Populate /manager/reports (currently \"Coming Soon\" placeholder) with actionable analytics. Owner reporting (/owner/reporting) already has: KPI cards, per-building P&L, month-over-month expense drivers, highlights, and rent collection rate. Manager reporting is completely empty.",
       "phase": "P3",
       "order": 1,
       "status": "promoted",
@@ -4751,9 +4911,11 @@
         "Performance optimization (separate ticket)"
       ],
       "acceptance_criteria": [
-        "Feature works as described in scope",
-        "All listed in_scope items implemented",
-        "Edge cases handled gracefully (empty state, missing data, permissions)"
+        "/manager/reports page has a tabs structure: Overview | Contractors | Cost Analysis | Timelines",
+        "Overview tab: portfolio KPI cards (total jobs, avg completion time, open requests, pending invoices)",
+        "Remaining tabs are stubs (\"coming soon\") until DT-001/002/003 are implemented",
+        "Page uses hub layout (F-UI1) with URL-based tab persistence",
+        "No backend work — data for overview tab derived from existing /jobs and /requests endpoints"
       ],
       "tests_to_add_or_update": [
         "API contract test: verify request/response shape",
@@ -4789,7 +4951,8 @@
       "canonical_implementation_prompt": "## Ticket: Owner financial dashboard with invoice metrics — summary cards showing total invoices, pending approvals, paid amount…\n\n**Goal:** Extend F-P1-006: Owner financial dashboard with invoice metrics — summary cards showing total invoices, pending approvals, paid amount…\n\n**Phase:** P3 | **Area:** owner-portal\n**Parent Feature:** F-P1-006\n\n### In Scope\n- Owner financial dashboard with invoice metrics — summary cards showing total invoices, pending approvals, paid amount…\n- UI/page updates\n- Test coverage updates\n\n### Out of Scope\n- Cross-portal changes (unless explicitly listed)\n- Performance optimization (separate ticket)\n\n### Files to Modify (in order)\n1. `apps/api/src/routes/owner-portal.ts`\n2. `apps/web/pages/owner/`\n3. `packages/api-client/src/`\n\n### Acceptance Criteria\n- [ ] Feature works as described in scope\n- [ ] All listed in_scope items implemented\n- [ ] Edge cases handled gracefully (empty state, missing data, permissions)\n\n### Test Plan\n- API contract test: verify request/response shape\n- UI smoke test: verify page renders without errors\n- No regressions in existing test suite (npm test)\n\n### Test Protocol\n1. npx tsc --noEmit — zero TypeScript errors\n2. npm test — all tests pass\n3. npm run blueprint — architecture docs sync\n4. Ticket-specific verification: verify acceptance criteria manually\n5. Regression checks: verify adjacent features still work\n6. API contract sync: if API changed, verify DTOs/OpenAPI/api-client match\n7. UI verification: if UI changed, manual check in browser\n8. Edge cases: verify behavior with missing/null data\n\n### Validation Checklist\n- [ ] All acceptance criteria verified\n- [ ] No TypeScript errors (npx tsc --noEmit)\n- [ ] All tests pass (npm test)\n- [ ] No layer violations introduced\n- [ ] Blueprint regenerated (npm run blueprint)\n\n### Post-Validation Updates\n- Refresh docs/blueprint.html — cd apps/api && node blueprint.js\n- Refresh docs/roadmap.html — node scripts/generate-roadmap.js\n- Review PROJECT_STATE.md — update if architecture decisions changed\n- Review ARCHITECTURE_LOW_CONTEXT_GUIDE.md — update if auth/layers touched\n- Review docs/AUDIT.md — mark resolved findings, add new ones\n- Review SCHEMA_REFERENCE.md — update if schema changed\n- Commit: npx tsc --noEmit → npm test → npm run blueprint",
       "notes": "Owner dashboard /owner/index.js has portfolio performance (YTD), invoice metrics (pending/paid totals), approvals, leases, RFPs, vacancies. Promoted 2026-03-22.",
       "triage_notes": "Triage 2026-04-04: Reframed as reporting territory. Current state: strong financial aggregation (ledger-based, building + portfolio endpoints, snapshot caching), two substantial pages (owner monthly report 764 lines, building financials 542 lines), Finance Hub overview tab. Gaps to address: (1) No charts/graphs — all tabular, zero charting libraries. (2) No data export (CSV/PDF). (3) No multi-month trend views — only single-month with vs-previous delta. (4) Manager /reports page is placeholder. (5) No rent arrears aging (30/60/90 days). (6) No owner-scoped portfolio filter. (7) No date presets (YTD, This quarter, Last 12 months). Needs decomposition into reporting sub-tickets.",
-      "scope_size": "epic"
+      "scope_size": "epic",
+      "context": "Owner reporting page is complete: KPI row (rent collected, net income, expenses, collection rate), narrative highlight section, per-building breakdown table, MoM expense driver cards, month/year selector, ledger drill-down link. Manager reporting (/manager/reports): renders a \"Coming Soon\" placeholder — no content. DT-001 (contractor performance), DT-002 (cost overruns), DT-003 (completion timelines) all target this page. This ticket covers the page scaffold and shared infrastructure so those tickets have somewhere to land."
     },
     {
       "id": "DT-014",
@@ -5445,8 +5608,8 @@
       "source_intake_ids": [
         "INT-005"
       ],
-      "title": "Repair vs replace analysis for unit assets: useful life, repair history cost, and replacement cost decision surface",
-      "goal": "For a given unit, compute a repair-vs-replace recommendation for each asset by combining: (1) remaining useful life from the DepreciationStandard linked to the AssetModel, (2) cumulative repair cost from Job+Invoice history linked to the asset, and (3) estimated replacement cost from the depreciation standard. Present the analysis as a manager-facing page/panel so the landlord can make informed maintenance decisions.",
+      "title": "Repair vs replace decision surface — specify recommendation beyond depreciation display",
+      "goal": "Add a side-by-side decision view comparing \"continue repairing\" vs \"replace now\". Currently the inventory page shows asset age and remaining useful life (DT-022, done). What is missing: a concrete recommendation that factors in repair history cost, remaining lifespan value, and replacement cost — outputting a clear verdict and sensitivity range.",
       "phase": "P3",
       "order": 1,
       "status": "promoted",
@@ -5485,18 +5648,11 @@
         "Email/notification of analysis results"
       ],
       "acceptance_criteria": [
-        "GET /inventory/units/:unitId/repair-replace-analysis returns 200 with array of per-asset analysis objects",
-        "Each object has: assetId, assetName, category, installationYear, usefulLifeYears, remainingLifeYears, cumulativeRepairCostChf, estimatedReplacementCostChf, recommendation (REPAIR/REPLACE/MONITOR)",
-        "remainingLifeYears = usefulLifeYears - (currentYear - installationYear); clamped to 0 minimum",
-        "cumulativeRepairCostChf = sum of paid invoices for jobs linked to this asset",
-        "estimatedReplacementCostChf sourced from DepreciationStandard.replacementCostChf (or falls back to null if not set)",
-        "Recommendation logic applied correctly per the scope rules",
-        "Manager UI shows the analysis table with colour-coded recommendation badges (green=REPAIR, amber=MONITOR, red=REPLACE)",
-        "Empty state when no assets in the unit",
-        "Auth guard: MANAGER role required (requireRole)",
-        "G9: uses canonical includes (APPLIANCE_INCLUDE or new REPAIR_REPLACE_INCLUDE constant)",
-        "G2: new endpoint added to openapi.yaml and api-client",
-        "npx tsc --noEmit — zero errors | npm test — all tests pass"
+        "Asset detail or inventory view shows cumulative repair cost for each asset",
+        "Side-by-side card: Repair path (cumulative cost + expected future cost) vs Replace path (replacement cost - salvage)",
+        "Clear recommendation label: REPAIR / BORDERLINE / REPLACE based on configurable threshold",
+        "Sensitivity input: \"What if next repair costs CHF X?\" recalculates verdict live",
+        "Data sources: AssetIntervention.cost (repair history), DepreciationStandard.usefulLifeMonths, replacement cost field on Appliance/AssetModel"
       ],
       "tests_to_add_or_update": [
         "New test: GET /inventory/units/:unitId/repair-replace-analysis — 200 response shape with all required fields",
@@ -5584,7 +5740,13 @@
       ],
       "refinement_status": "ready_candidate",
       "refinement_notes": [],
-      "refined_at": "2026-03-20T15:18:40.441Z"
+      "refined_at": "2026-03-20T15:18:40.441Z",
+      "context": "DT-022 is complete: assets are checked against depreciation, opportunity cost model is computed, and maintenance decisions are surfaced. What DT-021 adds on top: (1) Total repair spend to date on the asset. (2) CHF value of remaining lifespan (replacement cost × remaining/total lifespan). (3) A threshold comparison: if repair spend > X% of replacement cost → replace recommendation. (4) Sensitivity slider or input: \"if next repair costs CHF Y, the verdict becomes Z\". This is also what DT-023 (sensitivity analysis) calls for — both should be implemented together.",
+      "files_expected": [
+        "apps/web/pages/manager/inventory.js or apps/web/pages/manager/assets.js (add panel)",
+        "apps/api/src/services/assetDecisionService.ts (or extend existing depreciation service)",
+        "apps/web/pages/api/assets/[id]/decision.js (new proxy)"
+      ]
     },
     {
       "id": "DT-022",
@@ -5721,7 +5883,7 @@
       "goal": "Add a \"Cost of Repair vs Replace\" sensitivity panel to the unit asset detail view in /manager/inventory. For each asset, show the break-even point: at what repair cost does replacing the asset become cheaper than repairing it, given depreciated value and remaining useful life.",
       "phase": "P1",
       "order": 2,
-      "status": "review",
+      "status": "discarded",
       "product_area": "inventory",
       "parent_feature_id": null,
       "depends_on": [],
@@ -5832,7 +5994,8 @@
       ],
       "refinement_status": "refined",
       "refinement_notes": [],
-      "refined_at": "2026-03-22T21:47:03.415Z"
+      "refined_at": "2026-03-22T21:47:03.415Z",
+      "resolution": "Merged into DT-021. The cost sensitivity analysis (\"what if next repair costs CHF X?\") is now specified as part of the repair-vs-replace decision surface acceptance criteria. Implement both together in DT-021."
     },
     {
       "id": "DT-024",
@@ -6497,7 +6660,7 @@
       "goal": "Extract the copy-pasted startServer/stopServer pattern from 22 test suites into shared helpers in apps/api/src/test/testHelpers.ts, reducing duplication and making the test lifecycle consistent.",
       "phase": "P3",
       "order": 1,
-      "status": "promoted",
+      "status": "done",
       "product_area": "testing",
       "parent_feature_id": null,
       "depends_on": [],
@@ -6541,7 +6704,9 @@
         "Commit: npx tsc --noEmit → npm test → npm run blueprint"
       ],
       "canonical_implementation_prompt": "## DT-110 — Extend testHelpers.ts with server lifecycle utilities\n\n**Goal:** Extract copy-pasted startServer/stopServer from 22 test suites into shared helpers.\n\n### Context\n- 22 of 39 test suites have identical spawn-based startServer blocks\n- apps/api/src/test/testHelpers.ts already exists but only has auth token helpers\n\n### In Scope\n- Add startTestServer(port?: number) and stopTestServer() to testHelpers.ts\n- Replace copy-pasted logic in 22 suites\n\n### Acceptance Criteria\n- [ ] testHelpers.ts exports startTestServer / stopTestServer\n- [ ] 22 suites migrated\n- [ ] npm test passes",
-      "notes": "Part of THCG-001 epic. Already done — background assessment confirmed 0 suites with inline server boot, all migrated to shared helpers. 6 suites import testHelpers. Promoted 2026-03-22."
+      "notes": "Part of THCG-001 epic. Already done — background assessment confirmed 0 suites with inline server boot, all migrated to shared helpers. 6 suites import testHelpers. Promoted 2026-03-22.",
+      "completed_at": "2026-03-22",
+      "resolution": "Completed in THCG-001 test harness epic: testHelpers.ts canonical server lifecycle utilities, port deconfliction (3201-3219), contracts.test.ts expanded, CONTRIBUTING.md written. 29 suites now use shared helpers."
     },
     {
       "id": "DT-111",
@@ -6550,7 +6715,7 @@
       "goal": "Resolve two confirmed port collisions: PORT 3208 used by both legalEngine.test.ts and tenantSession.test.ts; PORT 3209 used by both assetInventory.test.ts and rentEstimation.test.ts.",
       "phase": "P3",
       "order": 2,
-      "status": "promoted",
+      "status": "done",
       "product_area": "testing",
       "parent_feature_id": null,
       "depends_on": [
@@ -6596,7 +6761,9 @@
       ],
       "canonical_implementation_prompt": "## DT-111 — Fix PORT conflicts in test suites\n\n**Goal:** Resolve two confirmed port collisions.\n\n### Confirmed Conflicts\n- PORT 3208: legalEngine.test.ts + tenantSession.test.ts\n- PORT 3209: assetInventory.test.ts + rentEstimation.test.ts\n\n### Fix\nAssign unique ports (e.g. 3210, 3211, 3212, 3213) to eliminate collisions.\n\n### Acceptance Criteria\n- [ ] No shared ports\n- [ ] npm test passes\n- [ ] Parallel runs produce no EADDRINUSE",
       "notes": "Part of THCG-001 epic. PORT 3208: legalEngine + tenantSession. PORT 3209: assetInventory + rentEstimation. Suite currently passes 518/518 but parallel runs may hit EADDRINUSE. Still worth fixing proactively. 2026-03-22.",
-      "promoted_at": "2026-03-22T20:35:20.374Z"
+      "promoted_at": "2026-03-22T20:35:20.374Z",
+      "completed_at": "2026-03-22",
+      "resolution": "Completed in THCG-001 test harness epic: testHelpers.ts canonical server lifecycle utilities, port deconfliction (3201-3219), contracts.test.ts expanded, CONTRIBUTING.md written. 29 suites now use shared helpers."
     },
     {
       "id": "DT-112",
@@ -6605,7 +6772,7 @@
       "goal": "contracts.test.ts already exists and covers 4 originally required endpoints. Extend it to cover RFP, contractor jobs, owner approvals, and tenant inbox as guard rails against accidental breaking changes.",
       "phase": "P3",
       "order": 3,
-      "status": "promoted",
+      "status": "done",
       "product_area": "testing",
       "parent_feature_id": null,
       "depends_on": [
@@ -6650,7 +6817,9 @@
       ],
       "canonical_implementation_prompt": "## DT-112 — Extend contracts.test.ts\n\n**Goal:** Extend existing contracts.test.ts with additional endpoint coverage.\n\n### Context\n- contracts.test.ts already exists — extend only, do NOT recreate\n\n### New Coverage\n- RFP endpoints\n- Contractor job endpoints\n- Owner approval endpoints\n- Tenant inbox endpoints\n\n### Acceptance Criteria\n- [ ] 4 new endpoint groups covered\n- [ ] npm test passes",
       "notes": "Part of THCG-001 epic. rentalContracts.test.ts already has 9 passing contract tests. Extend with RFP, contractor jobs, owner approvals coverage. Bug fixed: GET /vacant-units was returning 500 due to _count.rentalApplications (field does not exist on Unit) — corrected to rentalApplicationUnits. 2026-03-22.",
-      "promoted_at": "2026-03-22T20:35:20.375Z"
+      "promoted_at": "2026-03-22T20:35:20.375Z",
+      "completed_at": "2026-03-22",
+      "resolution": "Completed in THCG-001 test harness epic: testHelpers.ts canonical server lifecycle utilities, port deconfliction (3201-3219), contracts.test.ts expanded, CONTRIBUTING.md written. 29 suites now use shared helpers."
     },
     {
       "id": "DT-113",
@@ -6659,7 +6828,7 @@
       "goal": "Create CONTRIBUTING.md Testing section documenting the canonical patterns established by DT-110/DT-111/DT-112: lifecycle helpers, port assignment convention, and the contracts.test.ts guard-rail pattern.",
       "phase": "P3",
       "order": 4,
-      "status": "promoted",
+      "status": "done",
       "product_area": "testing",
       "parent_feature_id": null,
       "depends_on": [
@@ -6702,7 +6871,9 @@
       ],
       "canonical_implementation_prompt": "## DT-113 — Document test patterns in CONTRIBUTING.md\n\n**Goal:** Write the Testing section of CONTRIBUTING.md.\n\n### Must Cover\n1. startTestServer / stopTestServer usage\n2. Port assignment convention (3210-3230)\n3. contracts.test.ts guard-rail pattern\n4. Pre-commit checks (npx tsc --noEmit, npm test)\n\n### Depends On\nDT-110 (helpers must exist), DT-111 (ports settled), DT-112 (contracts pattern finalised)",
       "notes": "Part of THCG-001 epic. Slice 5 — zero prior documentation for test patterns. Depends on DT-110, DT-111, DT-112. 2026-03-22.",
-      "promoted_at": "2026-03-22T20:35:20.375Z"
+      "promoted_at": "2026-03-22T20:35:20.375Z",
+      "completed_at": "2026-03-22",
+      "resolution": "Completed in THCG-001 test harness epic: testHelpers.ts canonical server lifecycle utilities, port deconfliction (3201-3219), contracts.test.ts expanded, CONTRIBUTING.md written. 29 suites now use shared helpers."
     },
     {
       "id": "DT-114",
@@ -6744,6 +6915,102 @@
       "refinement_status": "unrefined",
       "refinement_notes": [],
       "refined_at": null
+    },
+    {
+      "id": "DT-115",
+      "title": "Wire CategoryMappings component into manager UI — component exists but is not mounted",
+      "status": "review",
+      "source_intake": "INT-116",
+      "priority": "high",
+      "goal": "Mount the existing CategoryMappings.js component (apps/web/components/CategoryMappings.js) into the manager UI. The component is fully built with coverage indicator, per-category cards, toggle/edit/reset, and an \"add mapping\" form — but it is imported nowhere and therefore invisible to users.",
+      "context": "CategoryMappings.js was built as a shared component but never wired into a page. The original INT-116 referenced /manager/legal?tab=category_mappings which does not exist. The component should be surfaced in the manager settings Legal Sources tab or as a dedicated section in a new /manager/legal page. No backend work needed — all API calls are already in the component.",
+      "acceptance_criteria": [
+        "CategoryMappings component is reachable from the manager navigation",
+        "Coverage indicator shows mapped vs unmapped categories",
+        "Manager can toggle, edit topic, and reset individual mappings",
+        "Manager can add a mapping for an unmapped category",
+        "Preferred location: manager Settings → Legal Sources tab (below sources/variables tables)"
+      ],
+      "files_expected": [
+        "apps/web/pages/manager/settings.js (add CategoryMappings tab panel)",
+        "apps/web/components/CategoryMappings.js (no changes needed — component is complete)"
+      ]
+    },
+    {
+      "id": "DT-116",
+      "title": "Regression: lease templates not clickable in /manager/leases?tab=templates",
+      "status": "done",
+      "source_intake": "INT-117",
+      "priority": "high",
+      "goal": "Restore click-to-open behavior on lease template rows. Clicking a template row should navigate to the template detail page.",
+      "context": "INT-117: Lease templates are no longer clickable in the table at /manager/leases?tab=templates. This is a regression — clicking used to navigate to the template. Relates to DT-017 (clickable rows pattern).",
+      "acceptance_criteria": [
+        "Clicking anywhere on a lease template row navigates to /manager/leases/templates/[id]",
+        "Action buttons within the row use stopPropagation to prevent navigation",
+        "Follows DT-017 clickable row pattern"
+      ],
+      "files_expected": [
+        "apps/web/pages/manager/leases.js (templates tab)"
+      ],
+      "completed_at": "2026-04-17",
+      "resolution": "Fixed — ConfigurableTable already supports onRowClick (line 280 of ConfigurableTable.js, cursor-pointer + hover applied automatically). templates.js passes onRowClick={(t) => router.push(`/manager/leases/${t.id}`)} at line 584. Verified the full row is clickable and navigates to the lease/template detail."
+    },
+    {
+      "id": "DT-117",
+      "title": "Tenant maintenance request form: move photo upload to inline form (not post-submission)",
+      "status": "promoted",
+      "source_intake": "INT-122",
+      "priority": "medium",
+      "goal": "Allow tenants to attach photos directly within the maintenance request form popup, before submitting. Currently, photo upload only appears after the request is already submitted.",
+      "context": "INT-122: Photo upload affordance is currently shown post-submission. Tenants expect to attach photos as part of creating the request — evidence is lost if they do not return to the request after submitting.",
+      "acceptance_criteria": [
+        "Photo attachment field appears in the maintenance request creation form",
+        "Files are uploaded alongside the request (or immediately after creation before form closes)",
+        "Upload progress indicator shown",
+        "Maximum file size and type validation (PNG/JPG, <10MB)"
+      ],
+      "files_expected": [
+        "apps/web/pages/tenant/requests.js (or request creation component)",
+        "apps/web/pages/api/tenant-portal/requests/ (proxy for attachment upload)"
+      ]
+    },
+    {
+      "id": "DT-118",
+      "title": "Owner RFPs: verify /owner/rfps/index.js has tabs and is consistent with /owner/approvals",
+      "status": "review",
+      "source_intake": "INT-124",
+      "priority": "low",
+      "goal": "/owner/approvals already has a tabs pattern (Requests tab + RFPs tab). Verify that /owner/rfps/index.js (separate route) also uses consistent tabs or is redirected to /owner/approvals. If both exist independently, consolidate or redirect to avoid two disconnected surfaces for the same data.",
+      "context": "INT-124 asked for tabs on owner/rfps. The approvals page already has the pattern. This ticket is now about consistency — ensuring users are not confused by two separate routes showing similar RFP data with different layouts.",
+      "acceptance_criteria": [
+        "Either /owner/rfps redirects to /owner/approvals?tab=rfps, or both pages have equivalent tab patterns",
+        "Sidebar nav links to the right location",
+        "No duplicate entry points showing the same data in inconsistent formats"
+      ],
+      "files_expected": [
+        "apps/web/pages/owner/rfps/index.js",
+        "apps/web/components/OwnerSidebar.js (nav link target)"
+      ]
+    },
+    {
+      "id": "DT-119",
+      "title": "Owner invoices: overlay detail view + deeplink from dashboard (bypass list overhead)",
+      "status": "review",
+      "source_intake": "INT-127",
+      "priority": "medium",
+      "goal": "Two related wins: (1) Clicking an invoice row in /owner/invoices opens a detail overlay consistent with the manager invoice experience. (2) Owner dashboard widgets that surface specific invoices must deeplink directly to that invoice (e.g. /owner/invoices?open=<id>) rather than navigating to the invoices list and losing context.",
+      "context": "Currently: clicking an invoice row does nothing. Dashboard items link to /owner/invoices (list). Deeplink gap means the owner must remember which invoice they wanted after landing on the list — increases cognitive load and is avoidable with a simple ?open= query param that triggers the overlay.",
+      "acceptance_criteria": [
+        "Clicking an invoice row opens a detail overlay with line items, total, status, and QR bill (if applicable)",
+        "Overlay uses the same pattern as manager invoice view",
+        "URL updates to /owner/invoices?open=<invoiceId> when overlay is open (deep-linkable)",
+        "Dashboard invoice widgets link to /owner/invoices?open=<invoiceId> — overlay opens immediately on load",
+        "Owner org-scoped (only sees their buildings invoices)"
+      ],
+      "files_expected": [
+        "apps/web/pages/owner/invoices.js",
+        "apps/web/pages/api/owner/invoices/ (proxy routes)"
+      ]
     }
   ]
 }

@@ -7,7 +7,7 @@ import PageContent from "../../components/layout/PageContent";
 import Panel from "../../components/layout/Panel";
 import ConfigurableTable from "../../components/ConfigurableTable";
 import { useTableSort, clientSort } from "../../lib/tableUtils";
-import DepreciationStandards from "../../components/DepreciationStandards";
+import AssetCatalogue from "../../components/AssetCatalogue";
 import Link from "next/link";
 import ErrorBanner from "../../components/ui/ErrorBanner";
 import { authHeaders } from "../../lib/api";
@@ -49,6 +49,12 @@ const BUILDING_COLUMNS = [
     sortable: true,
     defaultVisible: true,
     render: (b) => <span className="text-slate-600">{b.canton || "\u2014"}</span>,
+  },
+  {
+    id: "id",
+    label: "Building ID",
+    defaultVisible: true,
+    render: (b) => <code className="code-small">{b.id}</code>,
   },
   {
     id: "unitCount",
@@ -107,10 +113,9 @@ const INVENTORY_TABS = [
   { key: "VACANCIES", label: "Vacancies", href: "/manager/vacancies" },
   { key: "ASSETS", label: "Assets" },
   { key: "DECISIONS", label: "Maintenance Decisions" },
-  { key: "DEPRECIATION", label: "Depreciation" },
 ];
 
-const TAB_KEYS = ['buildings', 'assets', 'decisions', 'depreciation'];
+const TAB_KEYS = ['buildings', 'assets', 'decisions'];
 
 const RECOMMENDATION_STYLES = {
   REPAIR: { badge: "bg-green-100 text-green-700", label: "Repair" },
@@ -213,9 +218,58 @@ export default function ManagerInventoryPage() {
     if (activeTab === 2) loadDecisions(decisionsUnitId);
   }, [activeTab, decisionsUnitId, loadDecisions]);
 
+  const [buildingSearch, setBuildingSearch] = useState("");
+  const [buildingFormVisible, setBuildingFormVisible] = useState(false);
+  const [buildingAddress, setBuildingAddress] = useState("");
+  const [buildingCityCode, setBuildingCityCode] = useState("");
+  const [buildingCity, setBuildingCity] = useState("");
+  const [buildingCountry, setBuildingCountry] = useState("");
+
+  async function onCreateBuilding(e) {
+    e.preventDefault();
+    const addressLine = buildingAddress.trim();
+    const cityCode = buildingCityCode.trim();
+    const city = buildingCity.trim();
+    const country = buildingCountry.trim();
+    if (!addressLine) return setError("Address is required.");
+    if (!cityCode) return setError("City code is required.");
+    if (!city) return setError("City is required.");
+    if (!country) return setError("Country is required.");
+    const name = addressLine;
+    const address = `${addressLine}, ${cityCode} ${city}, ${country}`;
+    try {
+      setLoading(true);
+      const res = await fetch("/api/buildings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({ name, address }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error?.message || "Failed to create building");
+      setBuildingAddress("");
+      setBuildingCityCode("");
+      setBuildingCity("");
+      setBuildingCountry("");
+      setBuildingFormVisible(false);
+      await loadData();
+    } catch (e) {
+      setError(String(e?.message || e));
+    } finally {
+      setLoading(false);
+    }
+  }
+
   const { sortField, sortDir, handleSort } = useTableSort(router, INVENTORY_SORT_FIELDS, { defaultField: "name", defaultDir: "asc" });
-  const sortedBuildings = useMemo(() => clientSort(buildings, sortField, sortDir, inventoryFieldExtractor), [buildings, sortField, sortDir]);
-  const sortedAssets = useMemo(() => clientSort(assetModels, sortField, sortDir, inventoryFieldExtractor), [assetModels, sortField, sortDir]);
+  const sortedBuildings = useMemo(() => {
+    const sorted = clientSort(buildings, sortField, sortDir, inventoryFieldExtractor);
+    if (!buildingSearch.trim()) return sorted;
+    const q = buildingSearch.trim().toLowerCase();
+    return sorted.filter((b) =>
+      (b.name || "").toLowerCase().includes(q) ||
+      (b.address || "").toLowerCase().includes(q) ||
+      (b.canton || "").toLowerCase().includes(q)
+    );
+  }, [buildings, sortField, sortDir, buildingSearch]);
 
   return (
     <AppShell role="MANAGER">
@@ -252,19 +306,56 @@ export default function ManagerInventoryPage() {
 
           {/* Count + full-view link — outside the Panel card */}
           <span className="tab-panel-count">
-            {activeTab === 0 ? `${buildings.length} building${buildings.length !== 1 ? "s" : ""}` : null}
+            {activeTab === 0 ? `${sortedBuildings.length} building${sortedBuildings.length !== 1 ? "s" : ""}${buildingSearch.trim() ? ` matching "${buildingSearch.trim()}"` : ""}` : null}
             {activeTab === 1 ? `${assetModels.length} asset model${assetModels.length !== 1 ? "s" : ""}` : null}
             {activeTab === 2 ? "Maintenance decisions — select a unit to see repair vs replace analysis" : null}
-            {activeTab === 3 ? "Depreciation standards" : null}
           </span>
-          {activeTab === 0 && <Link href="/admin-inventory/buildings" className="full-page-link">Full view →</Link>}
-          {activeTab === 1 && <Link href="/admin-inventory/asset-models" className="full-page-link">Full view →</Link>}
 
-          {/* Tabs 0,1,2 in Panel; tab 3 (Depreciation) renders its own Panels */}
-          {activeTab !== 3 && (
           <Panel bodyClassName="p-0">
           {/* Buildings tab */}
           <div className={activeTab === 0 ? "tab-panel-active" : "tab-panel"}>
+            <div className="px-4 pt-3 pb-2 flex items-center gap-3">
+              <input
+                type="search"
+                placeholder="Search buildings…"
+                value={buildingSearch}
+                onChange={(e) => setBuildingSearch(e.target.value)}
+                className="filter-input w-full max-w-sm mb-0"
+              />
+              <button
+                type="button"
+                className="button-primary shrink-0"
+                onClick={() => setBuildingFormVisible((v) => !v)}
+              >
+                {buildingFormVisible ? "Cancel" : "Add"}
+              </button>
+            </div>
+            {buildingFormVisible && (
+              <form onSubmit={onCreateBuilding} className="mx-4 mb-3 rounded-xl border border-brand bg-brand-light/30 p-4 grid gap-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="col-span-full">
+                    <label className="filter-label">Address</label>
+                    <input className="filter-input w-full" value={buildingAddress} onChange={(e) => setBuildingAddress(e.target.value)} placeholder="e.g. Bahnhofstrasse 12" />
+                  </div>
+                  <div>
+                    <label className="filter-label">City code</label>
+                    <input className="filter-input w-full" value={buildingCityCode} onChange={(e) => setBuildingCityCode(e.target.value)} placeholder="e.g. 8001" />
+                  </div>
+                  <div>
+                    <label className="filter-label">City</label>
+                    <input className="filter-input w-full" value={buildingCity} onChange={(e) => setBuildingCity(e.target.value)} placeholder="e.g. Zürich" />
+                  </div>
+                  <div className="col-span-full">
+                    <label className="filter-label">Country</label>
+                    <input className="filter-input w-full" value={buildingCountry} onChange={(e) => setBuildingCountry(e.target.value)} placeholder="e.g. Switzerland" />
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2">
+                  <button type="button" className="button-secondary" onClick={() => setBuildingFormVisible(false)}>Cancel</button>
+                  <button type="submit" className="button-primary" disabled={loading}>Save building</button>
+                </div>
+              </form>
+            )}
             {loading ? (
               <p className="loading-text">Loading buildings…</p>
             ) : buildings.length === 0 ? (
@@ -287,25 +378,8 @@ export default function ManagerInventoryPage() {
           </div>
 
           {/* Assets tab */}
-          <div className={activeTab === 1 ? "tab-panel-active" : "tab-panel"}>
-            {loading ? (
-              <p className="loading-text">Loading asset models…</p>
-            ) : assetModels.length === 0 ? (
-              <div className="empty-state">
-                <p className="empty-state-text">No asset models configured yet.</p>
-              </div>
-            ) : (
-              <ConfigurableTable
-                tableId="inventory-assets"
-                columns={ASSET_MODEL_COLUMNS}
-                data={sortedAssets}
-                rowKey={(m) => m.id}
-                sortField={sortField}
-                sortDir={sortDir}
-                onSort={handleSort}
-                emptyState={<p className="text-sm text-slate-500">No asset models configured yet.</p>}
-              />
-            )}
+          <div className={activeTab === 1 ? "tab-panel-active p-4" : "tab-panel"}>
+            <AssetCatalogue models={assetModels} loading={loading} onRefresh={loadData} />
           </div>
           {/* Decisions tab */}
           <div className={activeTab === 2 ? "tab-panel-active" : "tab-panel"}>
@@ -469,10 +543,6 @@ export default function ManagerInventoryPage() {
             ) : null}
           </div>
           </Panel>
-          )}
-
-          {/* Depreciation tab — rendered outside Panel, uses shared component */}
-          {activeTab === 3 && <DepreciationStandards />}
         </PageContent>
       </PageShell>
     </AppShell>

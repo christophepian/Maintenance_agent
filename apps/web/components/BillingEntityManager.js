@@ -4,6 +4,7 @@ import Panel from "./layout/Panel";
 import Badge from "./ui/Badge";
 import { billingEntityVariant } from "../lib/statusVariants";
 import { authHeaders as getAuthHeaders } from "../lib/api";
+import { Dialog, DialogContent, DialogHeader } from "./ui/Dialog";
 
 import { cn } from "../lib/utils";
 const DEFAULT_FORM = {
@@ -61,8 +62,6 @@ function BillingEntityModal({ isOpen, onClose, editEntity, contractors, onSaved 
     setError("");
   }, [editEntity, isOpen]);
 
-  if (!isOpen) return null;
-
   function setField(key, value) {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
@@ -107,15 +106,9 @@ function BillingEntityModal({ isOpen, onClose, editEntity, contractors, onSaved 
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="fixed inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative bg-white rounded-xl shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
-          <h2 className="text-lg font-semibold text-slate-900">
-            {isEditing ? "Edit billing entity" : "New billing entity"}
-          </h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-xl leading-none" aria-label="Close">&times;</button>
-        </div>
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent>
+        <DialogHeader title={isEditing ? "Edit billing entity" : "New billing entity"} />
 
         {error && (
           <div className="mx-6 mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-700">
@@ -241,8 +234,8 @@ function BillingEntityModal({ isOpen, onClose, editEntity, contractors, onSaved 
             </button>
           </div>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 

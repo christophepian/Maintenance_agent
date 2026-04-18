@@ -30,35 +30,8 @@
       "blockedBy": []
     },
     {
-      "id": "S-P0-002-02",
-      "rank": 2,
-      "title": "Wire LegalVariable values into DSL condition evaluation",
-      "phase": "P0",
-      "type": "wire",
-      "column": "ready",
-      "isSlice": true,
-      "isCustom": false,
-      "parentId": "F-P0-002",
-      "parentTitle": "Legal DSL Variable Resolver",
-      "reasons": [
-        "P0 critical-path — highest priority phase",
-        "all dependencies met — ready now",
-        "concrete slice (1 file)",
-        "declared position: feature #2, slice #2"
-      ],
-      "unlocks": 0,
-      "scopeFileCount": 1,
-      "movement": 0,
-      "movementLabel": "—",
-      "hasCompleteTests": false,
-      "files": [
-        "apps/api/src/services/legalDecisionEngine.ts"
-      ],
-      "blockedBy": []
-    },
-    {
       "id": "F-P0-003",
-      "rank": 3,
+      "rank": 2,
       "title": "Skribble e-Sign Integration",
       "phase": "P0",
       "type": "wire",
@@ -86,39 +59,8 @@
       "blockedBy": []
     },
     {
-      "id": "F-P1-001",
-      "rank": 4,
-      "title": "QR-Invoice Rent Demand Generation",
-      "phase": "P1",
-      "type": "build",
-      "column": "ready",
-      "isSlice": false,
-      "isCustom": false,
-      "parentId": null,
-      "parentTitle": null,
-      "reasons": [
-        "P1 — phase position 2/6",
-        "all dependencies met — ready now",
-        "feature-level (5 hooks)",
-        "declared position: feature #5"
-      ],
-      "unlocks": 0,
-      "scopeFileCount": 5,
-      "movement": 0,
-      "movementLabel": "—",
-      "hasCompleteTests": false,
-      "files": [
-        "QR-bill library (qrbill-js)",
-        "rentDemandWorkflow",
-        "Lease model",
-        "invoiceService",
-        "pdfGenerator"
-      ],
-      "blockedBy": []
-    },
-    {
       "id": "F-P1-002",
-      "rank": 5,
+      "rank": 3,
       "title": "MT940 Bank Statement Import",
       "phase": "P1",
       "type": "build",
@@ -146,9 +88,71 @@
         "invoiceRepository"
       ],
       "blockedBy": []
+    },
+    {
+      "id": "F-P1-003",
+      "rank": 4,
+      "title": "BuildingFinancialSnapshot Engine",
+      "phase": "P1",
+      "type": "extend",
+      "column": "ready",
+      "isSlice": false,
+      "isCustom": false,
+      "parentId": null,
+      "parentTitle": null,
+      "reasons": [
+        "P1 — phase position 2/6",
+        "all dependencies met — ready now",
+        "feature-level (4 hooks)",
+        "declared position: feature #7",
+        "completing this unlocks 4 downstream items"
+      ],
+      "unlocks": 4,
+      "scopeFileCount": 4,
+      "movement": 0,
+      "movementLabel": "—",
+      "hasCompleteTests": false,
+      "files": [
+        "snapshotService (scheduled)",
+        "vacancyLossCalc",
+        "BuildingFinancialSnapshot model",
+        "financial route"
+      ],
+      "blockedBy": []
+    },
+    {
+      "id": "F-P1-005",
+      "rank": 5,
+      "title": "Nebenkostenabrechnung Generator",
+      "phase": "P1",
+      "type": "build",
+      "column": "ready",
+      "isSlice": false,
+      "isCustom": false,
+      "parentId": null,
+      "parentTitle": null,
+      "reasons": [
+        "P1 — phase position 2/6",
+        "all dependencies met — ready now",
+        "feature-level (5 hooks)",
+        "declared position: feature #9"
+      ],
+      "unlocks": 0,
+      "scopeFileCount": 5,
+      "movement": 0,
+      "movementLabel": "—",
+      "hasCompleteTests": false,
+      "files": [
+        "NebenkostenCategory enum",
+        "chargeAllocationService",
+        "Invoice + InvoiceLineItem",
+        "pdfGenerator",
+        "Unit + BuildingOwner"
+      ],
+      "blockedBy": []
     }
   ],
-  "generated_at": "2026-04-09 12:35:19 UTC",
-  "total_in_queue": 29,
+  "generated_at": "2026-04-17 09:04:28 UTC",
+  "total_in_queue": 27,
   "next_id": "S-P0-001-02"
 }

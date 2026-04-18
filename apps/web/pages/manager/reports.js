@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/router";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "../../components/ui/Tabs";
 import AppShell from "../../components/AppShell";
 import PageShell from "../../components/layout/PageShell";
 import PageHeader from "../../components/layout/PageHeader";
@@ -23,13 +24,11 @@ const ACTIVE_JOB_STATUSES = ["PENDING", "IN_PROGRESS"];
 
 export default function ReportsPage() {
   const router = useRouter();
-  const activeTab = router.isReady
-    ? Math.max(0, TAB_KEYS.indexOf(router.query.tab)) || 0
-    : 0;
+  const activeTab = router.isReady && TAB_KEYS.includes(router.query.tab) ? router.query.tab : "overview";
   const setActiveTab = useCallback(
-    (index) => {
+    (key) => {
       router.push(
-        { pathname: router.pathname, query: { ...router.query, tab: TAB_KEYS[index] } },
+        { pathname: router.pathname, query: { ...router.query, tab: key } },
         undefined,
         { shallow: true }
       );
@@ -42,7 +41,7 @@ export default function ReportsPage() {
   const [kpis, setKpis] = useState({ openRequests: 0, activeJobs: 0, pendingInvoices: 0, avgDays: null });
 
   useEffect(() => {
-    if (activeTab !== 0) return;
+    if (activeTab !== "overview") return;
     let cancelled = false;
     async function load() {
       setLoading(true);
@@ -93,72 +92,60 @@ export default function ReportsPage() {
         <PageContent>
           <ErrorBanner error={error} className="text-sm" />
 
-          {/* Tab strip */}
-          <div className="flex gap-1 rounded-lg border border-slate-200 bg-white p-1">
-            {TABS.map((tab, i) => (
-              <button
-                key={tab.key}
-                onClick={() => setActiveTab(i)}
-                className={cn(
-                  "rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
-                  activeTab === i
-                    ? "bg-blue-600 text-white"
-                    : "text-slate-600 hover:bg-slate-100"
-                )}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList>
+              {TABS.map((tab) => (
+                <TabsTrigger key={tab.key} value={tab.key}>
+                  {tab.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
 
-          <Panel bodyClassName="p-0">
-            {/* Overview tab */}
-            <div className={activeTab === 0 ? "tab-panel-active" : "tab-panel"}>
-              <div className="px-4 py-4">
-                {loading ? (
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                    {[1, 2, 3, 4].map((k) => (
-                      <div key={k} className="animate-pulse rounded-xl border border-slate-100 bg-slate-50 p-5 h-24" />
-                    ))}
+            <Panel bodyClassName="p-0">
+              <TabsContent value="overview">
+                <div className="px-4 py-4">
+                  {loading ? (
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                      {[1, 2, 3, 4].map((k) => (
+                        <div key={k} className="animate-pulse rounded-xl border border-slate-100 bg-slate-50 p-5 h-24" />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                      <KpiCard label="Open Requests" value={kpis.openRequests} accent="brand" />
+                      <KpiCard label="Active Jobs" value={kpis.activeJobs} accent="warning" />
+                      <KpiCard label="Pending Invoices" value={kpis.pendingInvoices} accent="destructive" />
+                      <KpiCard label="Avg. Days to Complete" value={kpis.avgDays ?? "—"} accent="success" />
+                    </div>
+                  )}
+                </div>
+              </TabsContent>
+
+              <TabsContent value="contractors">
+                <div className="px-4 py-4">
+                  <div className="empty-state">
+                    <p className="empty-state-text">Contractor performance metrics — coming in a future update.</p>
                   </div>
-                ) : (
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                    <KpiCard label="Open Requests" value={kpis.openRequests} accent="brand" />
-                    <KpiCard label="Active Jobs" value={kpis.activeJobs} accent="warning" />
-                    <KpiCard label="Pending Invoices" value={kpis.pendingInvoices} accent="destructive" />
-                    <KpiCard label="Avg. Days to Complete" value={kpis.avgDays ?? "—"} accent="success" />
+                </div>
+              </TabsContent>
+
+              <TabsContent value="cost-analysis">
+                <div className="px-4 py-4">
+                  <div className="empty-state">
+                    <p className="empty-state-text">Cost breakdowns and trends — coming in a future update.</p>
                   </div>
-                )}
-              </div>
-            </div>
-
-            {/* Contractors tab — stub */}
-            <div className={activeTab === 1 ? "tab-panel-active" : "tab-panel"}>
-              <div className="px-4 py-4">
-                <div className="empty-state">
-                  <p className="empty-state-text">Contractor performance metrics — coming in a future update.</p>
                 </div>
-              </div>
-            </div>
+              </TabsContent>
 
-            {/* Cost Analysis tab — stub */}
-            <div className={activeTab === 2 ? "tab-panel-active" : "tab-panel"}>
-              <div className="px-4 py-4">
-                <div className="empty-state">
-                  <p className="empty-state-text">Cost breakdowns and trends — coming in a future update.</p>
+              <TabsContent value="timelines">
+                <div className="px-4 py-4">
+                  <div className="empty-state">
+                    <p className="empty-state-text">Resolution timeline analytics — coming in a future update.</p>
+                  </div>
                 </div>
-              </div>
-            </div>
-
-            {/* Timelines tab — stub */}
-            <div className={activeTab === 3 ? "tab-panel-active" : "tab-panel"}>
-              <div className="px-4 py-4">
-                <div className="empty-state">
-                  <p className="empty-state-text">Resolution timeline analytics — coming in a future update.</p>
-                </div>
-              </div>
-            </div>
-          </Panel>
+              </TabsContent>
+            </Panel>
+          </Tabs>
         </PageContent>
       </PageShell>
     </AppShell>

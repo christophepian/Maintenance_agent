@@ -24,7 +24,7 @@ function displayDate(iso) {
 export default function BuildingDetail() {
   const router = useRouter();
   const { id, from } = router.query;
-  const backHref = from || "/admin-inventory";
+  const backHref = from || "/manager/inventory?tab=buildings";
   const [activeTab, setActiveTab] = useState("Building information");
 
   // ui object removed — all styles now use Tailwind className
@@ -300,7 +300,7 @@ export default function BuildingDetail() {
       setLoading(true);
       await fetchJSON(`/buildings/${id}`, { method: "DELETE" });
       setOk("Building deactivated. Redirecting...");
-      setTimeout(() => router.push("/admin-inventory"), 1500);
+      setTimeout(() => router.push("/manager/inventory?tab=buildings"), 1500);
     } catch (e) {
       setErr(`Deactivate failed: ${e.message}`);
       setLoading(false);

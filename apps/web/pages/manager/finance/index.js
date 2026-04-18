@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "../../../components/ui/Tabs";
 import Link from "next/link";
 import AppShell from "../../../components/AppShell";
 import PageShell from "../../../components/layout/PageShell";
@@ -83,9 +84,9 @@ export default function ManagerFinanceHome() {
 
   // Tab state — top-level finance tabs
   const tabKeys = FINANCE_TABS.map((t) => t.key);
-  const activeTab = router.isReady ? (Math.max(0, tabKeys.indexOf(router.query.tab)) || 0) : 0;
-  const setActiveTab = useCallback((i) => {
-    router.push({ pathname: router.pathname, query: { ...router.query, tab: tabKeys[i] } }, undefined, { shallow: true });
+  const activeTabKey = router.isReady && tabKeys.includes(router.query.tab) ? router.query.tab : "overview";
+  const setActiveTabKey = useCallback((key) => {
+    router.push({ pathname: router.pathname, query: { ...router.query, tab: key } }, undefined, { shallow: true });
   }, [router]);
 
   // Date range for portfolio summary
@@ -132,25 +133,15 @@ export default function ManagerFinanceHome() {
         <PageHeader title="Finances" />
         <PageContent>
 
-          {/* ── Top-level finance tab strip ── */}
-          <div className="tab-strip">
-            {FINANCE_TABS.map((tab, i) => (
-              <button
-                key={tab.key}
-                onClick={() => setActiveTab(i)}
-                className={activeTab === i ? "tab-btn-active" : "tab-btn"}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
+          <Tabs value={activeTabKey} onValueChange={setActiveTabKey}>
+            <TabsList>
+              {FINANCE_TABS.map((tab) => (
+                <TabsTrigger key={tab.key} value={tab.key}>{tab.label}</TabsTrigger>
+              ))}
+            </TabsList>
 
-          {/* ══════════════════════════════════════════════════════
-              Tab 0 — Overview
-             ══════════════════════════════════════════════════════ */}
-          {activeTab === 0 && (
-            <>
-              {/* Date range controls */}
+            {/* ── Overview ── */}
+            <TabsContent value="overview">
               <Panel>
                 <div className="flex flex-wrap items-end gap-3">
                   <div className="flex flex-col gap-1">
@@ -187,7 +178,6 @@ export default function ManagerFinanceHome() {
 
               {portfolioError && <div className="notice notice-err mb-4">{portfolioError}</div>}
 
-              {/* Portfolio summary cards */}
               {portfolioLoading && !p ? (
                 <p className="loading-text">Loading portfolio summary…</p>
               ) : p && (
@@ -223,7 +213,6 @@ export default function ManagerFinanceHome() {
                 </Section>
               )}
 
-              {/* Per-building table */}
               {p && p.buildings.length > 0 && (
                 <Section title="Buildings">
                   <Panel bodyClassName="p-0">
@@ -275,76 +264,67 @@ export default function ManagerFinanceHome() {
                         className="flex items-center justify-center gap-1.5 px-4 py-2.5 border-t border-slate-100 cursor-pointer hover:bg-slate-50 transition-colors text-sm text-slate-500 select-none"
                         onClick={() => setBuildingsExpanded((e) => !e)}
                       >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          viewBox="0 0 20 20"
-                          fill="currentColor"
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"
                           className={cn("w-4 h-4 transition-transform duration-200", buildingsExpanded ? "rotate-180" : "")}
                         >
                           <path fillRule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
                         </svg>
-                        {buildingsExpanded
-                          ? "Show less"
-                          : `Show all ${p.buildings.length} buildings`}
+                        {buildingsExpanded ? "Show less" : `Show all ${p.buildings.length} buildings`}
                       </div>
                     )}
                   </Panel>
                 </Section>
               )}
-            </>
-          )}
+            </TabsContent>
 
-          {/* ══════════════════════════════════════════════════════
-              Tab 1 — Invoices
-             ══════════════════════════════════════════════════════ */}
-          {activeTab === 1 && <InvoicesContent />}
+            {/* ── Invoices ── */}
+            <TabsContent value="invoices">
+              <InvoicesContent />
+            </TabsContent>
 
-          {/* ══════════════════════════════════════════════════════
-              Tab 2 — Billing Entities
-             ══════════════════════════════════════════════════════ */}
-          {activeTab === 2 && <BillingEntityManager />}
+            {/* ── Billing Entities ── */}
+            <TabsContent value="billing-entities">
+              <BillingEntityManager />
+            </TabsContent>
 
-          {/* ══════════════════════════════════════════════════════
-              Tab 3 — Accounting
-             ══════════════════════════════════════════════════════ */}
-          {activeTab === 3 && (
-            <Panel>
-              <div className="flex flex-col gap-4">
-                <p className="text-sm text-slate-600">
-                  Double-entry ledger and account structure for your portfolio.
-                </p>
-                <div className="flex flex-wrap gap-3">
-                  <Link href="/manager/finance/ledger" className="button-secondary text-sm">
-                    General Ledger
-                  </Link>
-                  <Link href="/manager/finance/chart-of-accounts" className="button-secondary text-sm">
-                    Chart of Accounts
-                  </Link>
+            {/* ── Accounting ── */}
+            <TabsContent value="accounting">
+              <Panel>
+                <div className="flex flex-col gap-4">
+                  <p className="text-sm text-slate-600">
+                    Double-entry ledger and account structure for your portfolio.
+                  </p>
+                  <div className="flex flex-wrap gap-3">
+                    <Link href="/manager/finance/ledger" className="button-secondary text-sm">
+                      General Ledger
+                    </Link>
+                    <Link href="/manager/finance/chart-of-accounts" className="button-secondary text-sm">
+                      Chart of Accounts
+                    </Link>
+                  </div>
                 </div>
-              </div>
-            </Panel>
-          )}
+              </Panel>
+            </TabsContent>
 
-          {/* ══════════════════════════════════════════════════════
-              Tab 4 — Renovation & Tax
-             ══════════════════════════════════════════════════════ */}
-          {activeTab === 4 && <RenovationTaxPlanning />}
+            {/* ── Renovation & Tax ── */}
+            <TabsContent value="renovation-tax">
+              <RenovationTaxPlanning />
+            </TabsContent>
 
-          {/* ══════════════════════════════════════════════════════
-              Tab 5 — Setup
-             ══════════════════════════════════════════════════════ */}
-          {activeTab === 5 && (
-            <Panel>
-              <div className="flex flex-col gap-2">
-                <p className="text-sm text-slate-600">
-                  Finance configuration options will appear here as they become available.
-                </p>
-                <p className="text-xs text-slate-400">
-                  Coming soon: default payment terms, VAT presets, currency settings, and invoice templates.
-                </p>
-              </div>
-            </Panel>
-          )}
+            {/* ── Setup ── */}
+            <TabsContent value="setup">
+              <Panel>
+                <div className="flex flex-col gap-2">
+                  <p className="text-sm text-slate-600">
+                    Finance configuration options will appear here as they become available.
+                  </p>
+                  <p className="text-xs text-slate-400">
+                    Coming soon: default payment terms, VAT presets, currency settings, and invoice templates.
+                  </p>
+                </div>
+              </Panel>
+            </TabsContent>
+          </Tabs>
 
         </PageContent>
       </PageShell>

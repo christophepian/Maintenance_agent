@@ -1,6 +1,7 @@
 import '../styles/globals.css';
 import { useEffect } from 'react';
 import ErrorBoundary from '../components/ErrorBoundary';
+import { ToastProvider } from '../components/ui/UndoToast';
 
 // DEV-ONLY: Bootstrap role-specific auth tokens so all portal sections
 // (manager, owner, vendor) work without a login flow. Never runs in production.
@@ -52,7 +53,9 @@ export default function MyApp({ Component, pageProps }) {
 
   return (
     <ErrorBoundary>
-      <Component {...pageProps} />
+      <ToastProvider>
+        <Component {...pageProps} />
+      </ToastProvider>
     </ErrorBoundary>
   );
 }

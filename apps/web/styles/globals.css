@@ -1,4 +1,6 @@
 @import "tailwindcss";
+@source "../pages/**/*.{js,jsx,ts,tsx}";
+@source "../components/**/*.{js,jsx,ts,tsx}";
 
 /* ═══════════════════════════════════════════════════════════════════
    Semantic Design Tokens — Tailwind v4 @theme
@@ -285,6 +287,15 @@ h1, h2 {
     @apply px-3.5 py-1.5 rounded-md text-sm cursor-pointer;
     @apply border border-surface-border bg-surface text-muted-dark;
   }
+  /* Radix Tabs active state — uses CSS vars directly to avoid Tailwind scan dependency */
+  .pill-tab[data-state="active"] {
+    font-weight: 700;
+    border-width: 2px;
+    border-color: var(--color-brand);
+    background-color: var(--color-brand-light);
+    color: var(--color-brand-dark);
+  }
+
   .pill-tab-active {
     @apply px-3.5 py-1.5 rounded-md text-sm font-bold cursor-pointer;
     @apply border-2 border-brand bg-brand-light text-brand-dark;
@@ -305,4 +316,9 @@ h1, h2 {
   .link-card {
     @apply block no-underline text-inherit;
   }
+}
+
+@keyframes undoToastSlideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
 }

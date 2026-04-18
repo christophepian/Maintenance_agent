@@ -368,7 +368,7 @@ export function registerInvoiceRoutes(router: Router) {
       res.writeHead(200, {
         "Content-Type": "application/pdf",
         "Content-Length": pdfBuffer.length,
-        "Content-Disposition": `attachment; filename="${fileName}"`,
+        "Content-Disposition": `inline; filename="${fileName}"`,
       });
       res.end(pdfBuffer);
       console.log(`[PDF] PDF sent successfully`);
