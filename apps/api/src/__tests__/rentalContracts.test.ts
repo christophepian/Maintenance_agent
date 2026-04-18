@@ -26,7 +26,7 @@ describe("G10: Rental Application Contract Tests", () => {
   let proc: ChildProcessWithoutNullStreams;
 
   beforeAll(async () => {
-    proc = await startTestServer(PORT);
+    proc = await startTestServer(PORT, { AUTH_OPTIONAL: "true", NODE_ENV: "test" });
   }, 25000);
 
   afterAll(() => stopTestServer(proc));

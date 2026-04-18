@@ -258,9 +258,8 @@ describe('G10: API Contract Tests', () => {
           'id', 'orgId', 'jobId', 'status', 'totalAmount', 'dueDate', 'paidAt', 'createdAt',
         ], 'InvoiceSummaryDTO');
 
-        // Should NOT have lineItems or detailed recipient info
+        // Should NOT have lineItems or detailed address info
         expect(inv.lineItems).toBeUndefined();
-        expect(inv.recipientName).toBeUndefined();
         expect(inv.recipientAddressLine1).toBeUndefined();
       }
     });

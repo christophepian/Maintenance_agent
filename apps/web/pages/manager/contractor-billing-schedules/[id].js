@@ -211,6 +211,7 @@ export default function ContractorBillingScheduleDetail() {
                   </>
                 )}
               </ActionBar>
+              {showStopForm && (
                 <form onSubmit={handleStop} className="mt-4 flex gap-3 items-end">
                   <div className="flex-1">
                     <label className="block text-sm font-medium text-slate-700 mb-1">
