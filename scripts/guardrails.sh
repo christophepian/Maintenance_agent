@@ -13,9 +13,20 @@ red()    { printf "\033[31m%s\033[0m\n" "$*"; }
 yellow() { printf "\033[33m%s\033[0m\n" "$*"; }
 green()  { printf "\033[32m%s\033[0m\n" "$*"; }
 
-fail() { red "  ❌ $*"; ERRORS=$((ERRORS + 1)); }
-warn() { yellow "  ⚠️  $*"; WARNINGS=$((WARNINGS + 1)); }
+fail() { red "  ❌ ERROR: $*"; ERRORS=$((ERRORS + 1)); }
+warn() { yellow "  ⚠️  WARNING: $*"; WARNINGS=$((WARNINGS + 1)); }
 pass() { green "  ✅ $*"; }
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Known false positives — add entries here with a one-line justification.
+# Each entry is a basename checked with `[[ ... == ... ]]` in the relevant
+# rule section below.  Keep sorted alphabetically within each rule.
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# G3: Route files that call mapXToDTO but legitimately have no _INCLUDE import
+#   completion.ts — mapper uses typed RatingWithJob, which is Prisma.GetPayload<{ include: typeof RATING_INCLUDE }> from ratingRepository
+#   legal.ts     — mapLegalSourceToDTO maps flat LegalSource model (no relations)
+G3_WHITELIST="helpers.ts completion.ts legal.ts"
 
 # ─── G8: Ban `prisma db push` ────────────────────────────────────────────
 echo ""
@@ -109,11 +120,8 @@ G3_HITS=""
 for f in "$ROOT"/apps/api/src/routes/*.ts; do
   [ -f "$f" ] || continue
   basename=$(basename "$f")
-  [ "$basename" = "helpers.ts" ] && continue
-  # False positives: completion.ts mapper uses typed RatingWithJob (includes via repo type);
-  # legal.ts mapLegalSourceToDTO maps flat model (no relations needed)
-  [ "$basename" = "completion.ts" ] && continue
-  [ "$basename" = "legal.ts" ] && continue
+  # Skip known false positives (see G3_WHITELIST at top of file)
+  case " $G3_WHITELIST " in *" $basename "*) continue ;; esac
   # Check if file calls a mapXToDTO function
   if grep -q 'map[A-Z].*ToDTO\|map[A-Z].*toDTO' "$f" 2>/dev/null; then
     # Check if it also has an _INCLUDE import or definition
