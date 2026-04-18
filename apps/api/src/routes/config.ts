@@ -12,11 +12,18 @@ import { UnitConfigSchema } from "../validation/unitConfig";
 import { computeEffectiveConfig, getBuildingConfig, upsertBuildingConfig } from "../services/buildingConfig";
 import { getUnitConfig, upsertUnitConfig, deleteUnitConfig, computeEffectiveUnitConfig } from "../services/unitConfig";
 import { CreateApprovalRuleSchema, UpdateApprovalRuleSchema } from "../validation/approvalRules";
-import { findBuildingByIdAndOrg } from "../repositories/buildingRepository";
-import { findUnitByIdAndOrg } from "../repositories/unitRepository";
+import type { PrismaClient } from "@prisma/client";
 import { listApprovalRules, createApprovalRule, getApprovalRule, updateApprovalRule, deleteApprovalRule } from "../services/approvalRules";
 import { createBillingEntity, deleteBillingEntity, getBillingEntity, listBillingEntities, updateBillingEntity } from "../services/billingEntities";
 import { CreateBillingEntitySchema, UpdateBillingEntitySchema } from "../validation/billingEntities";
+
+// Inlined from buildingRepository/unitRepository — single-use org-scoped lookups (no include, no DTO)
+function findBuildingByIdAndOrg(prisma: PrismaClient, id: string, orgId: string) {
+  return prisma.building.findFirst({ where: { id, orgId } });
+}
+function findUnitByIdAndOrg(prisma: PrismaClient, id: string, orgId: string) {
+  return prisma.unit.findFirst({ where: { id, orgId } });
+}
 
 export function registerConfigRoutes(router: Router) {
   // GET /org-config
