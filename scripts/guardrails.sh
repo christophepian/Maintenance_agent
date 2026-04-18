@@ -110,6 +110,10 @@ for f in "$ROOT"/apps/api/src/routes/*.ts; do
   [ -f "$f" ] || continue
   basename=$(basename "$f")
   [ "$basename" = "helpers.ts" ] && continue
+  # False positives: completion.ts mapper uses typed RatingWithJob (includes via repo type);
+  # legal.ts mapLegalSourceToDTO maps flat model (no relations needed)
+  [ "$basename" = "completion.ts" ] && continue
+  [ "$basename" = "legal.ts" ] && continue
   # Check if file calls a mapXToDTO function
   if grep -q 'map[A-Z].*ToDTO\|map[A-Z].*toDTO' "$f" 2>/dev/null; then
     # Check if it also has an _INCLUDE import or definition

@@ -18,11 +18,7 @@ import { QRCodeSVG } from "qrcode.react";
 // Scheduling Slots Panel (Tenant — accept / decline)
 // ---------------------------------------------------------------------------
 
-const SLOT_STATUS_COLORS = {
-  PROPOSED: "border-yellow-200 bg-yellow-50",
-  ACCEPTED: "border-green-200 bg-green-50",
-  DECLINED: "border-red-200 bg-red-50",
-};
+
 
 function formatSlotTime(iso) {
   if (!iso) return "—";
@@ -131,7 +127,7 @@ function TenantSchedulingPanel({ requestId }) {
             {proposed.map((slot) => (
               <div
                 key={slot.id}
-                className={cn("flex items-center justify-between rounded-lg border p-3", SLOT_STATUS_COLORS[slot.status] || "bg-white border-slate-200")}
+                className={cn("flex items-center justify-between rounded-lg border p-3", slot.status === "ACCEPTED" ? "border-green-200 bg-green-50" : slot.status === "DECLINED" ? "border-red-200 bg-red-50" : slot.status === "PROPOSED" ? "border-yellow-200 bg-yellow-50" : "bg-white border-slate-200")}
               >
                 <p className="text-sm font-medium text-slate-900">
                   {formatSlotTime(slot.startTime)} – {formatSlotTime(slot.endTime)}

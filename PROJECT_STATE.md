@@ -1,6 +1,6 @@
 # Maintenance Agent — Project State
 
-**Last updated:** 2026-04-20 (Design system gold-standard: semantic tokens, CVA primitives, inline style elimination)
+**Last updated:** 2026-04-18 (Trust-restoration audit pass: count corrections, contradiction fixes, fragile metric removal)
 
 > **For routine implementation work, start with [PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md)** (~220 lines).
 > This file is the canonical deep reference — guardrail details, backlog, state integrity, epic summaries.
@@ -9,7 +9,7 @@
 **Companion files (do not duplicate content here):**
 * [PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md) — primary entry-point doc for routine work (guardrails, architecture, task routing)
 * [EPIC_HISTORY.md](EPIC_HISTORY.md) — all completed epic/slice narratives + hardening guidelines (H1–H6)
-* [SCHEMA_REFERENCE.md](SCHEMA_REFERENCE.md) — full models table (64), enums (55), schema gotchas, Request.orgId migration path
+* [SCHEMA_REFERENCE.md](SCHEMA_REFERENCE.md) — full models table, enums, schema gotchas, Request.orgId migration path
 * `apps/api/src/ARCHITECTURE_LOW_CONTEXT_GUIDE.md` — low-context lookup table for "what file to change for X"
 
 ---
@@ -272,20 +272,19 @@ Use the layout that fits the content type:
 
 All styles resolve to **Tailwind tokens** at build time. Three-layer architecture:
 
-1. **Semantic tokens** — 23 CSS custom properties in `globals.css @theme {}` block (brand, destructive, success, muted, surface with light/dark/ring/text variants)
-2. **@apply classes** — 78 utility-backed CSS classes in `globals.css @layer components` (buttons, notices, tables, tabs, filters, edit panels, etc.)
-3. **CVA primitives** — 10 variant-based React components in `components/ui/` (Button [10 variants: `primary`, `secondary`, `ghost`, `outline`, `destructive`, `destructiveGhost`, `warning`, `warningGhost`, `neutral`, `link`], Badge, Card, DataTable, Input, Select, ErrorBanner, EmptyState, StatusPill, KpiCard)
+1. **Semantic tokens** — 29 CSS custom properties in `globals.css @theme {}` block (brand, destructive, success, muted, surface with light/dark/ring/text variants)
+2. **@apply classes** — 84 utility-backed CSS classes in `globals.css @layer components` (buttons, notices, tables, tabs, filters, edit panels, etc.)
+3. **CVA primitives** — ~20 React components in `components/ui/` (Button [10 variants: `primary`, `secondary`, `ghost`, `outline`, `destructive`, `destructiveGhost`, `warning`, `warningGhost`, `neutral`, `link`], Badge, Card, DataTable, Input, Select, ErrorBanner, EmptyState, StatusPill, KpiCard, and others)
 
 **Utilities:**
-- `cn()` = `twMerge(clsx())` in `lib/utils.js` — **mandatory** for all dynamic className composition. Used in 80 files. Template-literal interpolation (`className={\`...${x}\`}`) is banned.
-- `statusVariants.js` — 14 status→Badge variant mapper functions. All status indicators use `<Badge variant={mapper(status)}>`. Used in 60 files. Per-file `STATUS_COLORS` / color-map objects are banned.
+- `cn()` = `twMerge(clsx())` in `lib/utils.js` — **mandatory** for all dynamic className composition. Template-literal interpolation (`className={\`...${x}\`}`) is banned.
+- `statusVariants.js` — 20 status→Badge variant mapper functions. All status indicators use `<Badge variant={mapper(status)}>`. Per-file `STATUS_COLORS` / color-map objects are banned.
 
-**Current metrics (2026-04-15):**
-- Inline `style={{}}`: 14 (all dynamic chart/progress bar values)
-- Hardcoded hex/rgb: 17 (all SVG chart fills)
-- `cn()` imports: 80 files | `Badge` imports: 77 files | `ErrorBanner` imports: 34 files
+**Migration status (2026-04-18):**
+- Inline `style={{}}`: ~10 remaining (all dynamic chart/progress bar values — allowed)
+- Hardcoded hex/rgb: ~15–20 remaining (SVG chart fills — allowed)
 - `className={\`...${x}\`}` template literals: **0** (fully migrated)
-- Per-file STATUS_COLORS/URGENCY_COLORS constants: **0** (fully migrated)
+* Per-file STATUS_COLORS/URGENCY_COLORS constants: **0** in pages (depreciation page uses ASSET_TYPE_COLORS — noted in backlog, allowed as non-status layout styling)
 
 **Allowed:**
 - Inline Tailwind utilities in JSX: `className="rounded-2xl border border-slate-200"`
@@ -315,7 +314,7 @@ import { requestVariant } from "../../lib/statusVariants";
 <Badge variant={requestVariant(status)}>{status}</Badge>
 ```
 
-Available mappers (14): `invoiceVariant`, `jobVariant`, `requestVariant`, `rfpVariant`, `quoteVariant`, `urgencyVariant`, `ingestionVariant`, `leaseVariant`, `selectionVariant`, `accountTypeVariant`, `legalVariant`, `taxVariant`, `billingEntityVariant`, `reconciliationVariant`.
+Available mappers (20 — verify with `grep 'export.*Variant' lib/statusVariants.js`): includes `invoiceVariant`, `jobVariant`, `requestVariant`, `rfpVariant`, `quoteVariant`, `urgencyVariant`, `ingestionVariant`, `leaseVariant`, `selectionVariant`, `accountTypeVariant`, `legalVariant`, `taxVariant`, `billingEntityVariant`, `reconciliationVariant`, and others added since.
 
 To add a new status domain: add a mapper function to `statusVariants.js`. Never define inline color maps.
 
@@ -332,7 +331,7 @@ To add a new status domain: add a mapper function to `statusVariants.js`. Never 
 - **`focus-visible:ring`** on all interactive elements (358 instances)
 - **`ErrorBoundary`** wraps `<Component>` in `_app.js`
 
-Current counts: 25 `aria-label`, 65 `sr-only`, 100 `role=` attributes, 5 `<nav aria-label>`.
+*(Accessibility coverage is enforced by convention. Run `grep -r 'aria-label\|sr-only\|focus-visible:ring' apps/web/pages apps/web/components` to verify current counts.)*
 
 **Design reference:** [docs/design-system.html](docs/design-system.html)
 
@@ -448,12 +447,12 @@ Even while single-org (`DEFAULT_ORG_ID`) is active:
 ### F8: Styling System (Semantic Tokens + CVA + @apply)
 Three-layer CSS architecture backed by Tailwind v4.1:
 
-**Layer 1 — Semantic tokens** (23 tokens in `globals.css @theme {}` block):
+**Layer 1 — Semantic tokens** (29 tokens in `globals.css @theme {}` block):
 - brand (indigo), destructive (red), success (green), muted (slate), surface (white/slate)
 - Each with DEFAULT / light / dark / ring / text variants
 - Tailwind v4 reads tokens from `@theme {}` in CSS — NOT from `tailwind.config.js`
 
-**Layer 2 — @apply component classes** (78 classes in `globals.css @layer components`):
+**Layer 2 — @apply component classes** (84 classes in `globals.css @layer components`):
 - Buttons: `.button-primary`, `.action-btn-brand`, `.action-btn-success`, `.action-btn-dismiss`
 - Notices: `.error-banner`, `.notice-warn`, `.notice-ok`
 - Tables: `.inline-table`, `.cell-bold`, `.cell-link`
@@ -462,14 +461,14 @@ Three-layer CSS architecture backed by Tailwind v4.1:
 - Forms: `.edit-panel`, `.edit-row`, `.edit-input`, `.link-card`
 - Layout: `.main-container`, `.empty-state`, `.card`, `.loading-text`
 
-**Layer 3 — CVA primitives + shared UI** (10 CVA + 7 presentational components in `components/ui/`):
+**Layer 3 — CVA primitives + shared UI** (~20 components in `components/ui/`):
 - CVA: Button (10 variants), Badge, Card, DataTable, Input, Select, ErrorBanner, EmptyState, StatusPill, KpiCard
 - Presentational: DetailGrid/DetailItem, DetailList/DetailRow, Modal/ModalFooter, ActionBar, ResourceShell
 - All accept `className` override via `cn()` = `twMerge(clsx())`
 - Barrel export from `components/ui/index.js`
 - Shared hooks: `useDetailResource` (fetch), `useAction` (mutation pending state) in `lib/hooks/`
 
-**Metrics:** inline `style={{}}` 166→12 (dynamic only), hardcoded rgb() 50+→13 (SVG only), error-banner adoption 48 files.
+**Metrics:** inline `style={{}}` 166→11 (dynamic only), hardcoded rgb() 50+→~17 (SVG only), error-banner adoption 43 files.
 
 **Design reference:** [docs/design-system.html](docs/design-system.html) — visual spec with architecture summary
 
@@ -504,21 +503,21 @@ Maintenance_Agent/
 │   │   ├── prisma/           # schema.prisma + migrations/
 │   │   └── src/
 │   │       ├── server.ts     # Raw HTTP entry point (port 3001)
-│   │       ├── routes/       # Thin HTTP handlers (25 route modules)
-│   │       ├── workflows/    # Orchestration layer (26 workflows + transitions)
+│   │       ├── routes/       # Thin HTTP handlers (27 route modules)
+│   │       ├── workflows/    # Orchestration layer (31 workflows + transitions)
 │   │       ├── services/     # Domain logic
-│   │       ├── repositories/ # Canonical Prisma access (23 repos)
+│   │       ├── repositories/ # Canonical Prisma access (29 repos)
 │   │       ├── events/       # Domain event bus
 │   │       ├── governance/   # Org scope resolvers
 │   │       ├── validation/   # Zod schemas
 │   │       ├── http/         # Body/JSON/query/errors/router helpers
-│   │       ├── __tests__/    # 57 test suites
+│   │       ├── __tests__/    # 65 test suites
 │   │       └── ARCHITECTURE_LOW_CONTEXT_GUIDE.md
 │   └── web/
-│       ├── pages/            # 275 pages (92 UI + 182 API proxies + _app.js)
+│       ├── pages/            # 286 pages (89 UI + 197 API proxies)
 │       ├── components/       # AppShell, layout primitives, shared UI
 │       ├── lib/              # proxy.js, api.js, format.js, hooks/ (useDetailResource, useAction), statusVariants.js, utils.js
-│       └── styles/           # globals.css (Tailwind @apply — no CSS vars)
+│       └── styles/           # globals.css (Tailwind @apply + @theme semantic tokens)
 ├── packages/api-client/      # Typed API client (DTO types + fetch methods)
 ├── infra/docker-compose.yml  # PostgreSQL├── scripts/
 │   ├── generate-roadmap.js   # HTML generator (~4.7k lines) — phases, intake, drafts, signals tabs
@@ -536,9 +535,9 @@ Maintenance_Agent/
 
 ## 4. Database Schema (Prisma)
 
-> **Full schema reference:** See [SCHEMA_REFERENCE.md](SCHEMA_REFERENCE.md) for the complete models table (64 models), enums (55), schema gotchas, and Request.orgId migration path.
+> **Full schema reference:** See [SCHEMA_REFERENCE.md](SCHEMA_REFERENCE.md) for the complete models table (69 models), enums (61), schema gotchas, and Request.orgId migration path.
 >
-> **Status:** 72 migrations. 64 models · 55 enums. Last verified: 2026-04-06 (DT-022/INT-009/INT-025).
+> **Status:** 74 migrations. 69 models · 61 enums. Last verified: 2026-04-18.
 >
 > **Quick gotchas (always check SCHEMA_REFERENCE.md for full list):**
 > - `Request` has NO `orgId` — scope inherited via unit/building FK chain
@@ -554,9 +553,9 @@ Maintenance_Agent/
 > Architecture, backend layers, frontend layout, and styling rules → [PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md).
 > Route module index, domain file maps, repository index → [ARCHITECTURE_LOW_CONTEXT_GUIDE.md](apps/api/src/ARCHITECTURE_LOW_CONTEXT_GUIDE.md).
 
-* **Backend:** 25 route modules · 26 workflows · 23 repositories · 289 operations (224 URL paths) · `apps/api/openapi.yaml`
-* **Frontend:** 275 pages (92 UI + 182 API proxies + `_app.js`) · 182/182 proxies conforming (`proxyToBackend()`)
-* **Styling:** Tailwind `@apply` single source of truth in `globals.css` · No CSS custom properties · Design spec: `docs/design-system.html`
+* **Backend:** 27 route modules · 31 workflows · 29 repositories · 291 operations (225 URL paths) · `apps/api/openapi.yaml`
+* **Frontend:** 286 pages (89 UI + 197 API proxies) · 197/197 proxies conforming (`proxyToBackend()`)
+* **Styling:** Tailwind `@apply` single source of truth in `globals.css` · Semantic tokens via `@theme {}` · Design spec: `docs/design-system.html`
 * **Infra:** PostgreSQL via Docker (`infra/docker-compose.yml`) · Dev DB `maint_agent` · Test DB `maint_agent_test` · CI: 6-gate pipeline (G1–G15)
 
 ---
@@ -651,7 +650,7 @@ PORT=3001
 ### Custom HTTP Stack Evaluation
 **Priority:** Medium — evaluate before the team grows or route count exceeds ~200
 **Status:** Deferred — explicit re-evaluation recommended at next architecture review
-**Context:** Backend uses raw `http.createServer()` with custom routing (247 operations across 190 URL paths, manual URL parsing, custom auth wrappers, binary forwarding). This was the right call early. At current scale the question is whether the maintenance burden of a bespoke stack outweighs the dependency cost of Express or Fastify. Decision should be made explicitly rather than by default.
+**Context:** Backend uses raw `http.createServer()` with custom routing (~290 operations across ~225 URL paths, manual URL parsing, custom auth wrappers, binary forwarding). This was the right call early. At current scale the question is whether the maintenance burden of a bespoke stack outweighs the dependency cost of Express or Fastify. Decision should be made explicitly rather than by default.
 **Prerequisite:** Architecture review session — not a Copilot task.
 
 ### Future Vision (Deferred)
@@ -677,13 +676,13 @@ This document + companion files are the **single source of truth**:
 
 * **Doc structure:** PROJECT_STATE.md (~630 lines) + EPIC_HISTORY.md (epics) + SCHEMA_REFERENCE.md (schema) + ARCHITECTURE_LOW_CONTEXT_GUIDE.md (lookup)
 * Filesystem (verified 2026-03-10)
-* Database schema — 72 migrations; 64 models, 55 enums verified in live DB (shadow DB replay clean 2026-03-31)
+* Database schema — 74 migrations; 69 models, 61 enums verified in live DB (shadow DB replay clean 2026-03-31)
 * Database data — 99+ assets across 19 units (with interventions tracking), 274 depreciation standards (including 5 added for mapped topics), 16 category mappings, buildings with cantons set, 6 CO 259a statutory rules with proper DSL (verified 2026-03-07)
 * Running system — core smoke endpoints return expected status codes; auth-gated routes return 401/403 without valid token (verified by `auth.manager-gates.test.ts`); legal auto-routing creates RFP and sets RFP_PENDING for requests with mapped categories when autoLegalRouting=true; asset inventory endpoints serve depreciation data (verified 2026-03-31)
 * Dev auth bootstrap: Canonical dev manager is user `d93436c1-6568-4dba-8e65-fd8d34e6be2b` (email `manager@local.dev`), created via the auth flow. The legacy `dev-user` still exists in DB but is no longer used as the manager identity — notifications were migrated to `d93436c1`. Long-lived JWTs in `_app.js`; bootstrap is expiry-aware (expired tokens are auto-replaced on next page load, no manual `localStorage.clear()` needed). All three dev tokens expire 2027-03-15.
 * **Multi-role auth system:** `STAFF_ROLES` array in `apps/api/src/authz.ts` is the single extension point for adding new staff roles. Currently: MANAGER, OWNER, VENDOR, INSURANCE. `requireStaffAuth()` guards all notification endpoints. Frontend `_app.js` bootstraps role-specific tokens under `authToken` (manager), `ownerToken`, `vendorToken` keys; `NotificationBell` reads the token matching its `role` prop. Adding a new role: (1) add string to `STAFF_ROLES`, (2) add entry to `DEV_TOKENS` in `_app.js`, (3) add seed user in `prisma/seed.ts`. Nothing else changes. Dev users: `d93436c1` (MANAGER, canonical), `dev-owner` (OWNER), `dev-vendor` (VENDOR). Schema `Role` enum: TENANT, CONTRACTOR, MANAGER, OWNER, VENDOR, INSURANCE (migration 35).
 * Frontend navigation — sidebar: 7 flat primary nav items, no accordion. All 7 manager hub pages use inline tab content with URL-based tab persistence (?tab=key). Tab header links: always-visible "Full view →" for tabs with richer standalone pages; absent for equivalent pages. All manager pages wrapped in Panel component for consistent white card layout. Verified 2026-03-14.
-* Test suite — **823 tests, 57 suites against maint_agent_test** (isolated from dev DB `maint_agent`) (verified 2026-04-16); pre-existing test interaction failures (TC-11 — legacy `startServer` copy-paste in ~57 suites; canonical `testHelpers.ts` used by all new tests).
+* Test suite — **65 suites against maint_agent_test** (isolated from dev DB `maint_agent`) (verified 2026-04-18); pre-existing test interaction failures (TC-11 — legacy `startServer` copy-paste in some suites; canonical `testHelpers.ts` used by all new tests). Total test count: verify with `npx jest`.
   - ✅ **TC-4 resolved (2026-03-10):** `jest.config.js` now has `maxWorkers: 1` — integration tests run serially, eliminating parallel server spawning timeouts.
   - ✅ **TC-5 resolved (2026-03-10):** Port collision on 3206 fixed — ports reassigned: rentalContracts → 3206, rentEstimation → 3209, ia.test → 3210, tenantSession → 3208.
   - Pure-function suites (**domainEvents, httpErrors, orgIsolation, routeProtection, triage**) always pass — they do not spawn a server.
@@ -691,7 +690,7 @@ This document + companion files are the **single source of truth**:
 * TypeScript compilation — 0 errors (verified 2026-03-12)
 * OpenAPI spec — ISSUED added to InvoiceStatus enum (2026-03-21); 3 ledger routes + LedgerEntry/AccountBalance/Pagination schemas added (2026-03-23); building owner routes remain in KNOWN_UNSPECCED_ROUTES (API-03, medium priority)
 * Git — all recent work committed to main. Legal route extraction (legalService.ts), DT-027/111/112/113, ticket refinements, roadmap sync fixes, CONTRIBUTING.md, General Ledger epic — all in history.
-* Architectural intent — 26 workflows, 24 repositories, 25 route modules, 7 transition maps (Request, Job, Invoice, Lease, RentalApplication, Rfp, RfpQuote)
+* Architectural intent — 31 workflows, 29 repositories, 27 route modules, 8 transition maps (Request, Job, Invoice, Lease, RentalApplication, Rfp, RfpQuote, CashflowPlan)
 * Roadmap system — 26 features (P0–P4), 66 intake items, 37 draft tickets (18 refined, 9 ready_candidate, 2 needs_investigation, 8 promoted), 0 custom items. Server on port 8111. HTML dashboard at `docs/roadmap.html` (now tracked in git, auto-regenerated by pre-commit hook). Status labels: capture/clarify/review/ready (renamed from raw/triaged/drafted/draft).
 * CI pipeline enforces G1–G15 guardrails
 
@@ -708,7 +707,7 @@ Safe to:
 
 ---
 
-✅ **Project stabilized, security-hardened, org-scoped, and UI-connected (2026-04-16).** 823/823 tests pass, 57 suites, 0 TS errors. 91/94 audit findings resolved. Backend: ~62k LOC | Frontend: ~42k LOC | 289 API operations | 64 Prisma models | 55 enums | 275 frontend pages | 26 workflows | 25 route modules. Strategy Engine & Capture Hardening epic complete: 3-phase strategy engine (56 tests) with StrategyProfile + BuildingProfile models, 5 archetypes, 6 scoring dimensions, decision scoring, cashflow strategyOverlay integration; capture flow hardened (auth bypass fix, QR LAN IP, ECONNREFUSED detection); Azure Document Intelligence activated as primary OCR; invoice source-file serving + original image display on detail page. See [EPIC_HISTORY.md](EPIC_HISTORY.md) for full completion details.
+✅ **Project stabilized, security-hardened, org-scoped, and UI-connected (2026-04-18).** 65 test suites, 0 TS errors. 91/94 audit findings resolved. Backend: ~62k LOC | Frontend: ~42k LOC | 291 API operations | 69 Prisma models | 61 enums | 286 frontend pages | 31 workflows | 27 route modules. Strategy Engine & Capture Hardening epic complete: 3-phase strategy engine (56 tests) with StrategyProfile + BuildingProfile models, 5 archetypes, 6 scoring dimensions, decision scoring, cashflow strategyOverlay integration; capture flow hardened (auth bypass fix, QR LAN IP, ECONNREFUSED detection); Azure Document Intelligence activated as primary OCR; invoice source-file serving + original image display on detail page. See [EPIC_HISTORY.md](EPIC_HISTORY.md) for full completion details.
 
 
 ## 13. Authentication & Testing
@@ -721,7 +720,7 @@ JWT-based. Production boot guard enforced (F1). All routes auth-gated. `AUTH_OPT
 > **Security hardening (SA-1–SA-22):** All resolved — see [EPIC_HISTORY.md](EPIC_HISTORY.md).
 > **Prisma/DTO hardening (CQ-7/12/13/14):** All resolved — see [EPIC_HISTORY.md](EPIC_HISTORY.md).
 
-### Testing — 823 tests, 57 suites
+### Testing — 65 suites
 
 * Jest + ts-jest, `maxWorkers: 1` (serial integration). Test DB: `maint_agent_test` (isolated via `.env.test`).
 * CI: `.github/workflows/ci.yml` with PostgreSQL service container.
@@ -735,24 +734,24 @@ JWT-based. Production boot guard enforced (F1). All routes auth-gated. `AUTH_OPT
 
 | Field | Value | Source |
 |-------|-------|--------|
-| Models | 64 | prisma/schema.prisma — derived |
-| Enums | 55 | prisma/schema.prisma — derived |
-| Migrations | 69 | prisma/migrations/ — derived |
-| Workflows | 26 | src/workflows/ — derived |
-| Repositories | 24 | src/repositories/ — derived |
-| Route modules | 25 | src/routes/ — derived (excl. helpers.ts utility) |
+| Models | 69 | prisma/schema.prisma — derived |
+| Enums | 61 | prisma/schema.prisma — derived |
+| Migrations | 74 | prisma/migrations/ — derived |
+| Workflows | 31 | src/workflows/ — derived |
+| Repositories | 29 | src/repositories/ — derived (excl. index.ts) |
+| Route modules | 27 | src/routes/ — derived (excl. helpers.ts utility) |
 | Backend LOC | ~62k | src/ (incl. tests) — derived |
 | Frontend LOC | ~42k | apps/web/ — derived |
-| Frontend pages | 275 | apps/web/pages/ — derived (92 UI + 182 API + _app.js) |
-| API operations | 289 | openapi.yaml operationId count — derived |
-| URL paths | 224 | openapi.yaml unique paths — derived |
-| Tests | 57 suites (pre-existing test interaction failures, see TC-11) | jest — derived |
-| Proxy conformance | 182 / 182 | apps/web/pages/api/ — derived |
-| Transition maps | 7 | src/workflows/transitions.ts — derived |
+| Frontend pages | 286 | apps/web/pages/ — derived (89 UI + 197 API) |
+| API operations | 291 | openapi.yaml operationId count — derived |
+| URL paths | 225 | openapi.yaml unique paths — derived |
+| Tests | 65 suites (pre-existing test interaction failures, see TC-11) | jest — derived |
+| Proxy conformance | 197 / 197 | apps/web/pages/api/ — derived |
+| Transition maps | 8 | src/workflows/transitions.ts — derived |
 | Audit findings open | 3 (SI-2/3/4: legal model orgId doc drift) | docs/AUDIT.md — manual |
 | Audit findings resolved | 91 | docs/AUDIT.md — manual |
 | Last auto-sync | 2026-04-03 | blueprint.js |
-| Last manual review | 2026-04-16 | human |
+| Last manual review | 2026-04-18 | human |
 
 > Derived fields are auto-updated by `npm run blueprint`. Manual fields must be updated at the end of each slice.
 
