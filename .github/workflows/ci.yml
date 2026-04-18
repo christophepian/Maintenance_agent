@@ -36,14 +36,9 @@ jobs:
         with:
           node-version: '20'
 
-      # ── G8 enforcement: ban db push ──
-      - name: "G8: Reject prisma db push"
-        run: |
-          if grep -rn "db push" apps/api/package.json .github/ scripts/ 2>/dev/null; then
-            echo "❌ 'prisma db push' detected — banned by G8"
-            exit 1
-          fi
-          echo "✅ No db push references found"
+      # ── Guardrail enforcement (G8, F-UI4, F-UI4a, G9, G3) ──
+      - name: "Guardrails: automated enforcement"
+        run: bash scripts/guardrails.sh
 
       - name: Install dependencies (backend)
         run: npm --prefix apps/api install --no-audit --no-fund

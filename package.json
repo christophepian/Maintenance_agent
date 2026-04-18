@@ -18,7 +18,9 @@
     "roadmap": "node scripts/generate-roadmap.js",
     "roadmap:serve": "npx nodemon --watch scripts/roadmap-server.js --watch scripts/generate-roadmap.js --exec 'node scripts/roadmap-server.js'",
     "roadmap:watch": "npx nodemon --watch ROADMAP.json --watch apps/api/prisma/schema.prisma --watch apps/api/src/workflows --ext ts,json,prisma --exec 'node scripts/generate-roadmap.js'",
-    "roadmap:ticket": "node scripts/roadmap-ticket.js"
+    "roadmap:ticket": "node scripts/roadmap-ticket.js",
+    "guardrails": "bash scripts/guardrails.sh",
+    "guardrails:install-hook": "cp scripts/pre-commit .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit"
   },
   "dependencies": {
     "tailwindcss": "^4.1.18"
