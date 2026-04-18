@@ -6,6 +6,7 @@ import PageHeader from "../../../../components/layout/PageHeader";
 import PageContent from "../../../../components/layout/PageContent";
 import Panel from "../../../../components/layout/Panel";
 import { authHeaders } from "../../../../lib/api";
+import { formatChf } from "../../../../lib/format";
 
 /* ─── Helpers ─────────────────────────────────────────────── */
 
@@ -378,15 +379,15 @@ export default function NewInvoicePage() {
                   <div className="w-64 space-y-1 text-sm">
                     <div className="flex justify-between">
                       <span className="text-slate-500">Subtotal</span>
-                      <span className="font-medium text-slate-900">CHF {computedTotal.toFixed(2)}</span>
+                      <span className="font-medium text-slate-900">{formatChf(computedTotal)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-slate-500">VAT ({vatRate || 0}%)</span>
-                      <span className="font-medium text-slate-900">CHF {computedVat.toFixed(2)}</span>
+                      <span className="font-medium text-slate-900">{formatChf(computedVat)}</span>
                     </div>
                     <div className="flex justify-between border-t border-slate-200 pt-1">
                       <span className="font-semibold text-slate-900">Total</span>
-                      <span className="font-bold text-slate-900">CHF {(computedTotal + computedVat).toFixed(2)}</span>
+                      <span className="font-bold text-slate-900">{formatChf(computedTotal + computedVat)}</span>
                     </div>
                   </div>
                 </div>

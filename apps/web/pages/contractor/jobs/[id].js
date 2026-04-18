@@ -8,16 +8,14 @@ import PageContent from "../../../components/layout/PageContent";
 import Panel from "../../../components/layout/Panel";
 import ContractorPicker from "../../../components/ContractorPicker";
 import ErrorBanner from "../../../components/ui/ErrorBanner";
+import ResourceShell from "../../../components/ui/ResourceShell";
 import { authHeaders } from "../../../lib/api";
+import { useDetailResource } from "../../../lib/hooks/useDetailResource";
 import { formatDate, formatDateLong } from "../../../lib/format";
 
 import { cn } from "../../../lib/utils";
-const STATUS_COLORS = {
-  PENDING: "bg-slate-100 text-slate-800",
-  IN_PROGRESS: "bg-blue-100 text-blue-700",
-  COMPLETED: "bg-green-100 text-green-700",
-  INVOICED: "bg-purple-100 text-purple-700",
-};
+import Badge from "../../../components/ui/Badge";
+import { jobVariant, slotVariant } from "../../../lib/statusVariants";
 
 function fmtTime(iso) {
   const d = new Date(iso);
@@ -189,11 +187,7 @@ function SlotPanel({ jobId, contractorId, jobStatus, onRefresh }) {
     }
   }
 
-  const SLOT_COLORS = {
-    PROPOSED: "border-yellow-200 bg-yellow-50 text-yellow-700",
-    ACCEPTED: "border-green-200 bg-green-50 text-green-700",
-    DECLINED: "border-red-100 bg-red-50 text-red-700 opacity-60",
-  };
+
 
   const canPropose = jobStatus === "PENDING" || jobStatus === "IN_PROGRESS";
   const hasAccepted = slots.some((s) => s.status === "ACCEPTED");
@@ -203,13 +197,13 @@ function SlotPanel({ jobId, contractorId, jobStatus, onRefresh }) {
       {slots.length > 0 && (
         <div className="space-y-2 mb-3">
           {slots.map((s) => (
-            <div key={s.id} className={cn("flex items-center justify-between rounded-lg border px-3 py-2 text-sm", SLOT_COLORS[s.status] || "bg-slate-50 border-slate-200")}>
+            <div key={s.id} className="flex items-center justify-between rounded-lg border px-3 py-2 text-sm">
               <span className="font-medium">
                 {new Date(s.startTime).toLocaleDateString("en-CH", { weekday: "short", day: "numeric", month: "short" })}
                 {" · "}
                 {fmtTime(s.startTime)}–{fmtTime(s.endTime)}
               </span>
-              <span className="text-xs font-semibold capitalize">{s.status.toLowerCase()}</span>
+              <Badge variant={slotVariant(s.status)} size="sm">{s.status}</Badge>
             </div>
           ))}
         </div>
@@ -263,7 +257,7 @@ function SlotPanel({ jobId, contractorId, jobStatus, onRefresh }) {
                 </div>
               ))}
               {rows.length < 5 && (
-                <button type="button" onClick={addRow} className="text-xs text-indigo-600 hover:underline">+ Add another slot</button>
+                <button type="button" onClick={addRow} className="cell-link text-xs">+ Add another slot</button>
               )}
               <div className="flex gap-2 pt-1">
                 <button type="button" onClick={() => setShowForm(false)} className="rounded border border-slate-200 px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-50">Cancel</button>
@@ -284,9 +278,9 @@ function SlotPanel({ jobId, contractorId, jobStatus, onRefresh }) {
 export default function ContractorJobDetail() {
   const router = useRouter();
   const { id } = router.query;
-  const [job, setJob] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const { data: job, loading, error, refresh: loadJob } = useDetailResource(
+    id ? `/api/jobs/${id}` : null
+  );
   const [contractorId, setContractorId] = useState(null);
   const [completing, setCompleting] = useState(false);
   const [showRating, setShowRating] = useState(false);
@@ -297,27 +291,6 @@ export default function ContractorJobDetail() {
       setContractorId(localStorage.getItem("contractorId"));
     }
   }, []);
-
-  const loadJob = useCallback(async () => {
-    if (!id) return;
-    setLoading(true);
-    setError("");
-    try {
-      const res = await fetch(`/api/jobs/${id}`, { headers: authHeaders() });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body.message || `Failed to load job (${res.status})`);
-      }
-      const data = await res.json();
-      setJob(data.data || data);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }, [id]);
-
-  useEffect(() => { loadJob(); }, [loadJob]);
 
   async function handleMarkComplete() {
     if (!contractorId) { setActionError("Select your contractor profile first."); return; }
@@ -340,45 +313,23 @@ export default function ContractorJobDetail() {
     }
   }
 
-  if (loading) {
-    return (
-      <AppShell role="CONTRACTOR">
-        <PageShell>
-          <p className="loading-text">Loading job…</p>
-        </PageShell>
-      </AppShell>
-    );
-  }
-
-  if (error || !job) {
-    return (
-      <AppShell role="CONTRACTOR">
-        <PageShell>
-          <Link href="/contractor/jobs" className="text-indigo-600 hover:underline text-sm">← My Jobs</Link>
-          <ErrorBanner error={error || "Job not found"} className="mt-4" />
-        </PageShell>
-      </AppShell>
-    );
-  }
-
-  const req = job.request;
-  const acceptedSlot = (job.appointmentSlots || []).find((s) => s.status === "ACCEPTED");
-  const isActive = job.status === "PENDING" || job.status === "IN_PROGRESS";
+  const req = job?.request;
+  const acceptedSlot = (job?.appointmentSlots || []).find((s) => s.status === "ACCEPTED");
+  const isActive = job?.status === "PENDING" || job?.status === "IN_PROGRESS";
   const contractorRated = job?.ratings?.some((r) => r.raterRole === "CONTRACTOR");
 
   return (
     <AppShell role="CONTRACTOR">
       <PageShell>
         <div className="mb-2">
-          <Link href="/contractor/jobs" className="text-indigo-600 hover:underline text-sm">← My Jobs</Link>
+          <Link href="/contractor/jobs" className="cell-link text-sm">← My Jobs</Link>
         </div>
-
+        <ResourceShell loading={loading} error={error} hasData={!!job} loadingText="Loading job…" emptyMessage="Job not found.">
+        {job && (<>
         <PageHeader
           title={`Job #${job.id.slice(0, 8)}`}
           actions={
-            <span className={cn("inline-block px-3 py-1 rounded-full text-sm font-medium", STATUS_COLORS[job.status] || "bg-slate-100 text-slate-800")}>
-              {job.status.replace("_", " ")}
-            </span>
+            <Badge variant={jobVariant(job.status)}>{job.status.replace("_", " ")}</Badge>
           }
         />
 
@@ -514,6 +465,8 @@ export default function ContractorJobDetail() {
             onDone={() => { setShowRating(false); loadJob(); }}
           />
         )}
+        </>)}
+        </ResourceShell>
       </PageShell>
     </AppShell>
   );

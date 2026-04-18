@@ -629,7 +629,7 @@ export default function RequestDetailPage() {
                     {building && (
                       <div>
                         <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">Building</span>
-                        <Link href={`/manager/buildings/${building.id}/financials`} className="text-sm font-medium text-indigo-600 hover:underline">
+                        <Link href={`/manager/buildings/${building.id}/financials`} className="cell-link text-sm font-medium">
                           {building.name}
                         </Link>
                         {building.address && <p className="text-xs text-slate-400 mt-0.5 m-0">{building.address}</p>}
@@ -646,7 +646,7 @@ export default function RequestDetailPage() {
                       <div>
                         <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">Tenant</span>
                         {r.tenantId ? (
-                          <Link href={`/manager/people/tenants/${r.tenantId}`} className="text-sm font-medium text-indigo-600 hover:underline">
+                          <Link href={`/manager/people/tenants/${r.tenantId}`} className="cell-link text-sm font-medium">
                             {tenant.name}
                           </Link>
                         ) : <span className="text-sm font-medium text-slate-900">{tenant.name}</span>}
@@ -706,7 +706,7 @@ export default function RequestDetailPage() {
                       <h4 className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-3">Contractor</h4>
                       <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3">
                         <Field label="Name">
-                          <Link href={`/manager/people/vendors/${r.assignedContractor.id}`} className="text-indigo-600 hover:underline font-medium text-sm">
+                          <Link href={`/manager/people/vendors/${r.assignedContractor.id}`} className="cell-link font-medium text-sm">
                             {r.assignedContractor.name || r.assignedContractor.companyName || "\u2014"}
                           </Link>
                         </Field>
@@ -732,7 +732,7 @@ export default function RequestDetailPage() {
                   {/* RFP link */}
                   {rfpId && (
                     <div className="border-t border-slate-100 pt-4 mt-4">
-                      <Link href={`/manager/rfps/${rfpId}`} className="text-sm font-medium text-indigo-600 hover:underline">
+                      <Link href={`/manager/rfps/${rfpId}`} className="cell-link text-sm font-medium">
                         View Request for Proposals &rarr;
                       </Link>
                     </div>

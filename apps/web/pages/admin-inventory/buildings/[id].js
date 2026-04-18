@@ -12,6 +12,7 @@ import Badge from "../../../components/ui/Badge";
 import AssetInventoryPanel from "../../../components/AssetInventoryPanel";
 import { authHeaders } from "../../../lib/api";
 
+import { formatDate } from "../../../lib/format";
 import { cn } from "../../../lib/utils";
 function displayDate(iso) {
   if (!iso) return "—";
@@ -854,7 +855,7 @@ export default function BuildingDetail() {
                                 <span className="text-slate-700">{u.tenantName}</span>
                                 {u.moveInDate && (
                                   <span className="ml-2 text-slate-400">
-                                    Since {new Date(u.moveInDate).toLocaleDateString("de-CH")}
+                                    Since {formatDate(u.moveInDate)}
                                   </span>
                                 )}
                               </div>
@@ -922,9 +923,9 @@ export default function BuildingDetail() {
             <Panel title="Tenants">
               {building?.tenants && building.tenants.length > 0 ? (
                 <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
+                  <table className="inline-table">
                     <thead>
-                      <tr className="border-b border-slate-200 text-left">
+                      <tr>
                         <th className="py-2 font-medium text-slate-600">Name</th>
                         <th className="py-2 font-medium text-slate-600">Unit</th>
                         <th className="py-2 font-medium text-slate-600">Phone</th>

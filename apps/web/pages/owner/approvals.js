@@ -12,6 +12,7 @@ import Badge from "../../components/ui/Badge";
 import { urgencyVariant, rfpVariant } from "../../lib/statusVariants";
 
 import { cn } from "../../lib/utils";
+import { formatDate, formatDateTime } from "../../lib/format";
 // ─── Shared ────────────────────────────────────────────────────
 
 /** RAG left-border: green=LOW, neutral=MEDIUM, amber=HIGH, red=EMERGENCY */
@@ -33,24 +34,6 @@ function UrgencyPill({ urgency }) {
 
 const INPUT_CTRL  = "h-9 appearance-none rounded-lg border border-slate-200 bg-white px-3 py-2 leading-tight text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-400";
 const SELECT_CTRL = "min-h-[36px] appearance-none rounded-lg border border-slate-200 bg-white px-3 py-2 leading-tight text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-400";
-
-function formatDateTime(dateStr) {
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return "—";
-  const dd = String(d.getDate()).padStart(2, "0");
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const yyyy = d.getFullYear();
-  const hh = String(d.getHours()).padStart(2, "0");
-  const min = String(d.getMinutes()).padStart(2, "0");
-  return `${dd}.${mm}.${yyyy} ${hh}:${min}`;
-}
-
-function formatDate(iso) {
-  if (!iso) return "—";
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString("de-CH");
-}
 
 function formatCost(cost) {
   if (!cost) return "—";
@@ -375,7 +358,7 @@ function RfpsTab() {
                       <td><RfpStatusPill status={r.status} /></td>
                       <td>{formatDate(r.createdAt)}</td>
                       <td>
-                        <Link href={`/owner/rfps/${r.id}`} className="text-sm font-medium text-indigo-600 hover:underline">
+                        <Link href={`/owner/rfps/${r.id}`} className="cell-link text-sm font-medium">
                           Review →
                         </Link>
                       </td>
@@ -412,7 +395,7 @@ function RfpsTab() {
                       <td><RfpStatusPill status={r.status} /></td>
                       <td>{formatDate(r.createdAt)}</td>
                       <td>
-                        <Link href={`/owner/rfps/${r.id}`} className="text-sm font-medium text-indigo-600 hover:underline">
+                        <Link href={`/owner/rfps/${r.id}`} className="cell-link text-sm font-medium">
                           View →
                         </Link>
                       </td>

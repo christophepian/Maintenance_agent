@@ -42,8 +42,58 @@ routes → workflows → services → repositories → Prisma → PostgreSQL
 ### Frontend
 
 - Next.js Pages Router. `apps/web/pages/api/` proxies to backend via `proxyToBackend()` (127/127 conforming).
-- Layout: `AppShell` → `PageShell` → `PageHeader` → `PageContent` → `Panel`.
 - Styling: Tailwind v4.1 + semantic tokens (`@theme {}`) + CVA components + `@apply` classes in `globals.css`. No inline styles, no JS style objects.
+
+#### Layout Primitives (mandatory nesting order)
+
+```
+AppShell [role="CONTRACTOR"|"TENANT"|"OWNER"]  — sidebar + main area
+  PageShell                                      — max-width + padding
+    PageHeader [title, subtitle, backLink, actions, breadcrumbs]
+      PageContent                                — content column
+        Panel [title, bodyClassName]             — white card section
+```
+
+#### Shared UI Components (`components/ui/`)
+
+| Component | Purpose |
+|-----------|--------|
+| `Button` | 10 variants: `primary`, `secondary`, `ghost`, `outline`, `destructive`, `destructiveGhost`, `warning`, `warningGhost`, `neutral`, `link` |
+| `Badge` + `statusVariants.js` | Status indicators — always use a mapper, never inline color maps |
+| `DetailGrid` / `DetailItem` | Key-value grid for record metadata |
+| `DetailList` / `DetailRow` | Vertical key-value list |
+| `ActionBar` | Bottom-anchored action button strip |
+| `Modal` / `ModalFooter` | Overlay dialog with standardized footer layout |
+| `ResourceShell` | Wraps loading / error / not-found / ready states — replaces early-return guards |
+| `ErrorBanner` | `role="alert"` error display — renders nothing when error is falsy |
+| `EmptyState` | Centered empty/no-data placeholder |
+| `Card`, `DataTable`, `Input`, `Select`, `StatusPill`, `KpiCard` | Other CVA primitives |
+
+Barrel export: `import { Button, Badge, ResourceShell, ... } from "../../components/ui";`
+
+#### Shared Hooks (`lib/hooks/`)
+
+| Hook | Purpose |
+|------|--------|
+| `useDetailResource(url, fetchFn?)` | Replaces useState+useCallback+useEffect fetch boilerplate. Returns `{ data, setData, loading, error, refresh }`. Skips fetch when URL is falsy. Unwraps `json.data` if present. |
+| `useAction()` | Wraps mutation pending state. Returns `{ pending, run }`. Use `run(key, asyncFn)` for keyed or `run(asyncFn)` for boolean pending. |
+
+#### Format Helpers (`lib/format.js`)
+
+`formatChf`, `formatChfCents`, `formatDate`, `formatDateLong`, `formatDateTime`, `formatPercent`, `formatNumber` — SSR-safe, deterministic. Never define inline format functions.
+
+#### Migrating Old Pages
+
+When touching an older detail page, check for these patterns and migrate:
+1. **useState+useCallback+useEffect fetch triple** → replace with `useDetailResource`
+2. **Early-return loading/error/not-found guards** → wrap content with `ResourceShell`
+3. **try/finally pending-state wrappers** → replace with `useAction().run()`
+4. **Inline `fmt()` / `formatDate()` / `formatChf()`** → import from `lib/format.js`
+5. **Per-file `STATUS_COLORS` / color maps** → use `statusVariants.js` + `Badge`
+6. **Custom modal markup** → use `Modal` / `ModalFooter`
+7. **Repeated metadata grids** → use `DetailGrid` / `DetailItem`
+
+> Full rules and canonical table: [PROJECT_STATE.md](PROJECT_STATE.md) §F-UI8.
 
 ### Database
 
@@ -119,7 +169,7 @@ Three-layer CSS architecture on **Tailwind v4.1**:
 - **Design reference:** [docs/design-system.html](docs/design-system.html) — visual spec with architecture summary
 - **Accessibility baseline:** skip-to-content link in AppShell, `<nav aria-label>` on all sidebars, `aria-label` on icon-only buttons, `sr-only` for visual-only indicators, `role="alert"` on error banners, `focus-visible:ring` on interactive elements
 
-See [PROJECT_STATE.md](PROJECT_STATE.md) §F-UI1–F-UI7 for full hub/detail page rules.
+See [PROJECT_STATE.md](PROJECT_STATE.md) §F-UI1–F-UI8 for full hub/detail page rules.
 
 ---
 
@@ -163,9 +213,10 @@ if (!tenantId) return;
 4. Add Next.js proxy in `apps/web/pages/api/` if frontend needs it
 
 ### Frontend UI change
-1. Read [PROJECT_STATE.md](PROJECT_STATE.md) §F-UI1–F-UI7 for layout rules
+1. Read [PROJECT_STATE.md](PROJECT_STATE.md) §F-UI1–F-UI8 for layout rules
 2. Hub pages → copy `_template_hub.js`. Detail pages → copy `_template_detail.js`
-3. Styles in `globals.css` only. Reusable UI → extract to `apps/web/components/`
+3. Use shared primitives first: `ResourceShell`, `useDetailResource`, `useAction`, `DetailGrid`, `ActionBar`, `Modal`
+4. Styles in `globals.css` only. Reusable UI → extract to `apps/web/components/`
 
 ### Schema change
 1. Read [SCHEMA_REFERENCE.md](SCHEMA_REFERENCE.md) for the full model
@@ -231,6 +282,11 @@ npx prisma migrate diff \
 - Run `docker-compose down -v` or `prisma migrate reset` without explicit approval
 - Define per-file `STATUS_COLORS` / `URGENCY_COLORS` / color-map objects — use `statusVariants.js` mappers with `<Badge>`
 - Use template-literal className interpolation (`className={\`... ${x}\`}`) — use `cn()` from `lib/utils.js`
+- Duplicate detail-page fetch boilerplate (useState+useCallback+useEffect) — use `useDetailResource`
+- Duplicate loading/error/not-found early-return guards — use `ResourceShell`
+- Duplicate try/finally pending-state wrappers — use `useAction`
+- Write one-off action button class stacks — use `Button` variants (`warning`, `destructiveGhost`, `neutral`, etc.)
+- Define inline format functions (`fmt`, `formatDate`, `formatChf`) — import from `lib/format.js`
 - Create icon-only `<button>` without `aria-label`
 - Add `<input>` / `<select>` without an associated `<label>`, `aria-label`, or `placeholder`
 - Introduce horizontal scroll on any page — viewport width is the hard max. `html, body` enforce `overflow-x: hidden` globally; use `min-w-0`, `truncate`, or responsive grids for wide content

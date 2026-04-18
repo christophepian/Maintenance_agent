@@ -4,7 +4,7 @@ import Link from "next/link";
 import AppShell from "../../../../components/AppShell";
 import PageShell from "../../../../components/layout/PageShell";
 import PageHeader from "../../../../components/layout/PageHeader";
-import { formatDateTime } from "../../../../lib/format";
+import { formatDateTime, formatDate, formatChf } from "../../../../lib/format";
 import PageContent from "../../../../components/layout/PageContent";
 import Panel from "../../../../components/layout/Panel";
 import { ALLOWED_CATEGORIES } from "../../../../lib/categories";
@@ -517,7 +517,7 @@ export default function ContractorDetailPage() {
                           {jobs.map((job) => (
                             <tr key={job.id}>
                               <td>
-                                <Link href="/manager/requests" className="text-indigo-600 hover:underline">
+                                <Link href="/manager/requests" className="cell-link">
                                   {job.id?.slice(0, 8)}
                                 </Link>
                               </td>
@@ -528,7 +528,7 @@ export default function ContractorDetailPage() {
                                   {job.status}
                                 </Badge>
                               </td>
-                              <td>{job.createdAt ? new Date(job.createdAt).toLocaleDateString("de-CH") : "—"}</td>
+                              <td>{formatDate(job.createdAt)}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -559,19 +559,19 @@ export default function ContractorDetailPage() {
                             <tr key={inv.id}>
                               <td>{inv.invoiceNumber || inv.id?.slice(0, 8) || "—"}</td>
                               <td>
-                                <Link href="/manager/requests" className="text-indigo-600 hover:underline">
+                                <Link href="/manager/requests" className="cell-link">
                                   {inv.jobId?.slice(0, 8) || "—"}
                                 </Link>
                               </td>
                               <td className="text-right">
-                                {inv.totalAmount != null ? `CHF ${inv.totalAmount.toFixed(2)}` : "—"}
+                                {inv.totalAmount != null ? formatChf(inv.totalAmount) : "—"}
                               </td>
                               <td>
                                 <Badge variant={invoiceVariant(inv.status)} size="sm">
                                   {inv.status}
                                 </Badge>
                               </td>
-                              <td>{inv.submittedAt ? new Date(inv.submittedAt).toLocaleDateString("de-CH") : "—"}</td>
+                              <td>{formatDate(inv.submittedAt)}</td>
                             </tr>
                           ))}
                         </tbody>

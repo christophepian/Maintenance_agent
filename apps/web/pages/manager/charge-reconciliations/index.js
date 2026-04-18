@@ -9,13 +9,8 @@ import Link from "next/link";
 import Badge from "../../../components/ui/Badge";
 import { reconciliationVariant } from "../../../lib/statusVariants";
 import { authHeaders } from "../../../lib/api";
-
+import { formatChfCents } from "../../../lib/format";
 import { cn } from "../../../lib/utils";
-const STATUS_COLORS = {
-  DRAFT: "bg-blue-100 text-blue-700",
-  FINALIZED: "bg-amber-100 text-amber-700",
-  SETTLED: "bg-green-100 text-green-700",
-};
 
 const TABS = [
   { key: "DRAFT",     label: "Draft" },
@@ -58,85 +53,79 @@ export default function ChargeReconciliationsPage() {
 
   useEffect(() => { if (router.isReady) fetchItems(); }, [fetchItems, router.isReady]);
 
-  const fmt = (cents) => (cents / 100).toFixed(2);
-
   return (
     <AppShell>
       <PageShell>
         <PageHeader title="Charge Reconciliations" />
         <PageContent>
+          {error && <p className="error-banner">{error}</p>}
           {/* Tab strip */}
-          <div className="flex gap-1 mb-4 border-b">
+          <div className="tab-strip">
             {TABS.map((tab, i) => (
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(i)}
-                className={cn("px-4 py-2 text-sm font-medium border-b-2 transition-colors", i === activeTab
-                    ? "border-blue-600 text-blue-600"
-                    : "border-transparent text-muted-foreground hover:text-foreground")}
+                className={i === activeTab ? "pill-tab-active" : "pill-tab"}
               >
                 {tab.label}
               </button>
             ))}
           </div>
 
-          <Panel>
-            {loading && <p className="text-sm text-muted-foreground py-4">Loading…</p>}
-            {error && <p className="text-sm text-destructive py-4">{error}</p>}
+          <Panel bodyClassName="p-0">
+            {loading && <p className="loading-text">Loading…</p>}
             {!loading && !error && items.length === 0 && (
-              <p className="text-sm text-muted-foreground py-4">
-                No reconciliations found. Create one from a lease detail page.
-              </p>
+              <div className="empty-state">
+                <p className="empty-state-text">No reconciliations found. Create one from a lease detail page.</p>
+              </div>
             )}
             {!loading && !error && items.length > 0 && (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="text-left text-xs text-muted-foreground uppercase border-b">
-                    <tr>
-                      <th className="py-2 pr-4">Tenant</th>
-                      <th className="py-2 pr-4">Year</th>
-                      <th className="py-2 pr-4">Status</th>
-                      <th className="py-2 pr-4 text-right">ACOMPTE Paid</th>
-                      <th className="py-2 pr-4 text-right">Actual Costs</th>
-                      <th className="py-2 pr-4 text-right">Balance</th>
-                      <th className="py-2 text-right">Action</th>
+              <table className="inline-table">
+                <thead>
+                  <tr>
+                    <th>Tenant</th>
+                    <th>Year</th>
+                    <th>Status</th>
+                    <th className="text-right">Acompte Paid</th>
+                    <th className="text-right">Actual Costs</th>
+                    <th className="text-right">Balance</th>
+                    <th className="text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.map((r) => (
+                    <tr key={r.id}>
+                      <td>
+                        <Link
+                          href={`/manager/charge-reconciliations/${r.id}`}
+                          className="cell-link"
+                        >
+                          {r.lease?.tenantName || "—"}
+                        </Link>
+                      </td>
+                      <td className="tabular-nums">{r.fiscalYear}</td>
+                      <td>
+                        <Badge variant={reconciliationVariant(r.status)} size="sm">
+                          {r.status}
+                        </Badge>
+                      </td>
+                      <td className="text-right tabular-nums">{formatChfCents(r.totalAcomptePaidCents)}</td>
+                      <td className="text-right tabular-nums">{formatChfCents(r.totalActualCostsCents)}</td>
+                      <td className={cn("text-right tabular-nums", r.balanceCents > 0 ? "text-red-600" : r.balanceCents < 0 ? "text-green-600" : "")}>
+                        {r.balanceCents > 0 ? "+" : ""}{formatChfCents(r.balanceCents)}
+                      </td>
+                      <td className="text-right">
+                        <Link
+                          href={`/manager/charge-reconciliations/${r.id}`}
+                          className="cell-link"
+                        >
+                          {r.status === "DRAFT" ? "Edit" : "View"}
+                        </Link>
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {items.map((r) => (
-                      <tr key={r.id} className="border-b last:border-0 hover:bg-muted/30">
-                        <td className="py-2 pr-4">
-                          <Link
-                            href={`/manager/charge-reconciliations/${r.id}`}
-                            className="text-blue-600 hover:underline font-medium"
-                          >
-                            {r.lease?.tenantName || "—"}
-                          </Link>
-                        </td>
-                        <td className="py-2 pr-4 tabular-nums">{r.fiscalYear}</td>
-                        <td className="py-2 pr-4">
-                          <Badge variant={reconciliationVariant(r.status)} size="sm">
-                            {r.status}
-                          </Badge>
-                        </td>
-                        <td className="py-2 pr-4 text-right tabular-nums">{fmt(r.totalAcomptePaidCents)}</td>
-                        <td className="py-2 pr-4 text-right tabular-nums">{fmt(r.totalActualCostsCents)}</td>
-                        <td className={cn("py-2 pr-4 text-right tabular-nums", r.balanceCents > 0 ? "text-red-600" : r.balanceCents < 0 ? "text-green-600" : "")}>
-                          {r.balanceCents > 0 ? "+" : ""}{fmt(r.balanceCents)}
-                        </td>
-                        <td className="py-2 text-right">
-                          <Link
-                            href={`/manager/charge-reconciliations/${r.id}`}
-                            className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
-                          >
-                            {r.status === "DRAFT" ? "Edit" : "View"}
-                          </Link>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                  ))}
+                </tbody>
+              </table>
             )}
           </Panel>
         </PageContent>

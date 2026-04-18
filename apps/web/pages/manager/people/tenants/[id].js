@@ -4,7 +4,7 @@ import Link from "next/link";
 import AppShell from "../../../../components/AppShell";
 import PageShell from "../../../../components/layout/PageShell";
 import PageHeader from "../../../../components/layout/PageHeader";
-import { formatDateTime } from "../../../../lib/format";
+import { formatDateTime, formatDate, formatChf } from "../../../../lib/format";
 import PageContent from "../../../../components/layout/PageContent";
 import Panel from "../../../../components/layout/Panel";
 import DocumentsPanel from "../../../../components/DocumentsPanel";
@@ -290,7 +290,7 @@ export default function TenantDetailPage() {
                       <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Building ID</div>
                       <div className="text-sm text-slate-700 mt-1">
                         {tenant?.unit?.buildingId ? (
-                          <Link href={`/manager/buildings/${tenant.unit.buildingId}/financials`} className="text-indigo-600 hover:underline">
+                          <Link href={`/manager/buildings/${tenant.unit.buildingId}/financials`} className="cell-link">
                             {tenant.unit.buildingId}
                           </Link>
                         ) : "—"}
@@ -300,7 +300,7 @@ export default function TenantDetailPage() {
                       <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Unit ID</div>
                       <div className="text-sm text-slate-700 mt-1">
                         {(tenant?.unit?.id || tenant?.unitId) ? (
-                          <Link href={`/admin-inventory/units/${tenant?.unit?.id || tenant?.unitId}`} className="text-indigo-600 hover:underline">
+                          <Link href={`/admin-inventory/units/${tenant?.unit?.id || tenant?.unitId}`} className="cell-link">
                             {tenant?.unit?.id || tenant?.unitId}
                           </Link>
                         ) : "—"}
@@ -348,13 +348,13 @@ export default function TenantDetailPage() {
                           {leases.map((l) => (
                             <tr key={l.id}>
                               <td>
-                                <Link href={`/manager/leases/${l.id}`} className="text-indigo-600 hover:underline">
+                                <Link href={`/manager/leases/${l.id}`} className="cell-link">
                                   {l.unit?.unitNumber || l.unitId?.slice(0, 8) || "—"}
                                 </Link>
                               </td>
                               <td>{l.unit?.building?.name || "—"}</td>
-                              <td>{l.startDate ? new Date(l.startDate).toLocaleDateString("de-CH") : "—"}</td>
-                              <td>{l.endDate ? new Date(l.endDate).toLocaleDateString("de-CH") : "—"}</td>
+                              <td>{formatDate(l.startDate)}</td>
+                              <td>{formatDate(l.endDate)}</td>
                               <td>
                                 <Badge variant={leaseVariant(l.status)} size="sm">
                                   {l.status}
@@ -394,9 +394,9 @@ export default function TenantDetailPage() {
                               <td>{inv.invoiceNumber || inv.id?.slice(0, 8) || "—"}</td>
                               <td>{inv.description || "—"}</td>
                               <td className="text-right">
-                                {inv.totalAmount != null ? `CHF ${inv.totalAmount.toFixed(2)}` : "—"}
+                                {inv.totalAmount != null ? formatChf(inv.totalAmount) : "—"}
                               </td>
-                              <td>{inv.dueDate ? new Date(inv.dueDate).toLocaleDateString("de-CH") : "—"}</td>
+                              <td>{formatDate(inv.dueDate)}</td>
                               <td>
                                 <Badge variant={invoiceVariant(inv.status)} size="sm">
                                   {inv.status}

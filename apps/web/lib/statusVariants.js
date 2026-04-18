@@ -200,3 +200,54 @@ const RECONCILIATION_MAP = {
 export function reconciliationVariant(status) {
   return RECONCILIATION_MAP[status] || "default";
 }
+
+/* ── Appointment slot status ─────────────────────────────────── */
+const SLOT_MAP = {
+  PROPOSED: "warning",
+  ACCEPTED: "success",
+  DECLINED: "destructive",
+};
+export function slotVariant(status) {
+  return SLOT_MAP[status] || "default";
+}
+
+/* ── Rent adjustment status ──────────────────────────────────── */
+const RENT_ADJUSTMENT_MAP = {
+  DRAFT: "warning",
+  APPROVED: "info",
+  APPLIED: "success",
+  REJECTED: "destructive",
+};
+export function rentAdjustmentVariant(status) {
+  return RENT_ADJUSTMENT_MAP[status] || "default";
+}
+
+/* ── Signature request status ────────────────────────────────── */
+const SIGNER_MAP = {
+  DRAFT: "muted",
+  SENT: "info",
+  SIGNED: "success",
+};
+export function signerVariant(status) {
+  return SIGNER_MAP[status] || "default";
+}
+
+/* ── Rent review / reconciliation inline status ──────────────── */
+const RENT_REVIEW_MAP = {
+  DRAFT: "info",
+  FINALIZED: "warning",
+  SETTLED: "success",
+};
+export function rentReviewVariant(status) {
+  return RENT_REVIEW_MAP[status] || "default";
+}
+
+/* ── Billing schedule status ─────────────────────────────────── */
+const BILLING_SCHEDULE_MAP = {
+  ACTIVE: "success",
+  PAUSED: "warning",
+  COMPLETED: "muted",
+};
+export function billingScheduleVariant(status) {
+  return BILLING_SCHEDULE_MAP[status] || "default";
+}

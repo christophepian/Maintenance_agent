@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 import AppShell from "../../../components/AppShell";
 import { tenantFetch } from "../../../lib/api";
+import Badge from "../../../components/ui/Badge";
+import { leaseVariant } from "../../../lib/statusVariants";
 
 import { cn } from "../../../lib/utils";
 const STATUS_LABELS = {
@@ -11,13 +13,6 @@ const STATUS_LABELS = {
   ACTIVE: "Active",
   TERMINATED: "Terminated",
   CANCELLED: "Cancelled",
-};
-
-const STATUS_COLORS = {
-  READY_TO_SIGN: "bg-yellow-100 text-yellow-700",
-  SIGNED: "bg-green-100 text-green-700",
-  ACTIVE: "bg-green-100 text-green-700",
-  TERMINATED: "bg-orange-100 text-orange-700",
 };
 
 export default function TenantLeasesPage() {
@@ -157,11 +152,9 @@ export default function TenantLeasesPage() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <span
-                      className={cn("inline-block px-2 py-1 rounded text-xs font-medium", STATUS_COLORS[lease.status] || "bg-slate-100 text-slate-600")}
-                    >
+                    <Badge variant={leaseVariant(lease.status)}>
                       {STATUS_LABELS[lease.status] || lease.status}
-                    </span>
+                    </Badge>
                     <div className="text-sm font-medium mt-2">
                       {formatChf(lease.rentTotalChf)}<span className="text-slate-400">/mo</span>
                     </div>

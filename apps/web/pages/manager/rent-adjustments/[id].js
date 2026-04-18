@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import AppShell from "../../../components/AppShell";
 import PageShell from "../../../components/layout/PageShell";
@@ -6,14 +6,17 @@ import PageHeader from "../../../components/layout/PageHeader";
 import PageContent from "../../../components/layout/PageContent";
 import Panel from "../../../components/layout/Panel";
 import { fetchWithAuth, postWithAuth } from "../../../lib/api";
+import { useDetailResource } from "../../../lib/hooks/useDetailResource";
+import { useAction } from "../../../lib/hooks/useAction";
+import { formatChfCents, formatDate } from "../../../lib/format";
 
 import { cn } from "../../../lib/utils";
-const STATUS_COLORS = {
-  DRAFT: "bg-yellow-100 text-yellow-700",
-  APPROVED: "bg-blue-100 text-blue-700",
-  APPLIED: "bg-green-100 text-green-700",
-  REJECTED: "bg-red-100 text-red-700",
-};
+import Badge from "../../../components/ui/Badge";
+import Button from "../../../components/ui/Button";
+import { DetailGrid, DetailItem } from "../../../components/ui/DetailGrid";
+import ActionBar from "../../../components/ui/ActionBar";
+import ResourceShell from "../../../components/ui/ResourceShell";
+import { rentAdjustmentVariant } from "../../../lib/statusVariants";
 
 const TYPE_LABELS = {
   CPI_INDEXATION: "CPI Indexation",
@@ -24,35 +27,15 @@ const TYPE_LABELS = {
 export default function RentAdjustmentDetail() {
   const router = useRouter();
   const { id } = router.query;
-  const [adj, setAdj] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [actionLoading, setActionLoading] = useState(false);
+  const { data: adj, setData: setAdj, loading, error } = useDetailResource(
+    id ? `/api/rent-adjustments/${id}` : null
+  );
+  const { pending: actionLoading, run: runAction } = useAction();
   const [rejectReason, setRejectReason] = useState("");
   const [showReject, setShowReject] = useState(false);
 
-  const fetchData = useCallback(async () => {
-    if (!id) return;
-    setLoading(true);
-    try {
-      const res = await fetchWithAuth(`/api/rent-adjustments/${id}`);
-      if (res.ok) {
-        const json = await res.json();
-        setAdj(json.data || json);
-      }
-    } catch (e) {
-      console.error("Failed to load rent adjustment:", e);
-    } finally {
-      setLoading(false);
-    }
-  }, [id]);
-
-  useEffect(() => { fetchData(); }, [fetchData]);
-
-  const fmt = (cents) => (cents / 100).toLocaleString("de-CH", { style: "currency", currency: "CHF" });
-
-  const handleAction = async (action) => {
-    setActionLoading(true);
-    try {
+  const handleAction = (action) => {
+    runAction(async () => {
       const body = action === "reject" ? { reason: rejectReason } : {};
       const res = await postWithAuth(`/api/rent-adjustments/${id}/${action}`, body);
       if (res.ok) {
@@ -63,17 +46,12 @@ export default function RentAdjustmentDetail() {
         const err = await res.json();
         alert(err.error?.message || "Action failed");
       }
-    } catch (e) {
-      alert("Action failed: " + e.message);
-    } finally {
-      setActionLoading(false);
-    }
+    }).catch(e => alert("Action failed: " + e.message));
   };
 
-  const handleDelete = async () => {
+  const handleDelete = () => {
     if (!confirm("Delete this rent adjustment?")) return;
-    setActionLoading(true);
-    try {
+    runAction(async () => {
       const res = await fetchWithAuth(`/api/rent-adjustments/${id}`, { method: "DELETE" });
       if (res.ok || res.status === 204) {
         router.push("/manager/rent-adjustments");
@@ -81,69 +59,37 @@ export default function RentAdjustmentDetail() {
         const err = await res.json();
         alert(err.error?.message || "Delete failed");
       }
-    } catch (e) {
-      alert("Delete failed: " + e.message);
-    } finally {
-      setActionLoading(false);
-    }
+    }).catch(e => alert("Delete failed: " + e.message));
   };
 
-  if (loading) {
-    return (
-      <AppShell>
-        <PageShell>
-          <PageContent><p className="text-slate-500 py-8">Loading…</p></PageContent>
-        </PageShell>
-      </AppShell>
-    );
-  }
-
-  if (!adj) {
-    return (
-      <AppShell>
-        <PageShell>
-          <PageContent><p className="text-red-600 py-8">Rent adjustment not found.</p></PageContent>
-        </PageShell>
-      </AppShell>
-    );
-  }
-
-  const changePct = adj.previousRentCents
+  const changePct = adj?.previousRentCents
     ? ((adj.adjustmentCents / adj.previousRentCents) * 100).toFixed(2)
     : "—";
 
   return (
     <AppShell>
       <PageShell>
+        <ResourceShell loading={loading} error={error} hasData={!!adj} emptyMessage="Rent adjustment not found.">
+        {adj && (<>
         <PageHeader
           title={`Rent Adjustment — ${adj.lease?.tenantName || "Unknown"}`}
-          subtitle={`${TYPE_LABELS[adj.adjustmentType] || adj.adjustmentType} · Effective ${new Date(adj.effectiveDate).toLocaleDateString("de-CH")}`}
+          subtitle={`${TYPE_LABELS[adj.adjustmentType] || adj.adjustmentType} · Effective ${formatDate(adj.effectiveDate)}`}
         />
         <PageContent>
           {/* Summary Panel */}
           <Panel title="Summary">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-              <div>
-                <span className="text-slate-500 block">Status</span>
-                <span className={cn("inline-block px-2 py-0.5 rounded text-xs font-semibold mt-1", STATUS_COLORS[adj.status])}>
-                  {adj.status}
-                </span>
-              </div>
-              <div>
-                <span className="text-slate-500 block">Type</span>
-                <span className="font-medium">{TYPE_LABELS[adj.adjustmentType]}</span>
-              </div>
-              <div>
-                <span className="text-slate-500 block">Effective Date</span>
-                <span className="font-medium">{new Date(adj.effectiveDate).toLocaleDateString("de-CH")}</span>
-              </div>
-              <div>
-                <span className="text-slate-500 block">Lease</span>
-                <a href={`/manager/leases/${adj.leaseId}`} className="text-indigo-600 hover:underline font-medium">
+            <DetailGrid>
+              <DetailItem label="Status">
+                <Badge variant={rentAdjustmentVariant(adj.status)} size="sm">{adj.status}</Badge>
+              </DetailItem>
+              <DetailItem label="Type">{TYPE_LABELS[adj.adjustmentType]}</DetailItem>
+              <DetailItem label="Effective Date">{formatDate(adj.effectiveDate)}</DetailItem>
+              <DetailItem label="Lease">
+                <a href={`/manager/leases/${adj.leaseId}`} className="cell-link font-medium">
                   {adj.lease?.tenantName}
                 </a>
-              </div>
-            </div>
+              </DetailItem>
+            </DetailGrid>
           </Panel>
 
           {/* Rent Change Panel */}
@@ -151,18 +97,18 @@ export default function RentAdjustmentDetail() {
             <div className="grid grid-cols-3 gap-6 text-center">
               <div>
                 <span className="text-slate-500 text-sm block">Previous Rent</span>
-                <span className="text-xl font-semibold">{fmt(adj.previousRentCents)}</span>
+                <span className="text-xl font-semibold">{formatChfCents(adj.previousRentCents)}</span>
                 <span className="text-xs text-slate-400 block">/month</span>
               </div>
               <div>
                 <span className="text-slate-500 text-sm block">→ New Rent</span>
-                <span className="text-xl font-bold text-indigo-700">{fmt(adj.newRentCents)}</span>
+                <span className="text-xl font-bold text-indigo-700">{formatChfCents(adj.newRentCents)}</span>
                 <span className="text-xs text-slate-400 block">/month</span>
               </div>
               <div>
                 <span className="text-slate-500 text-sm block">Change</span>
                 <span className={cn("text-xl font-semibold", adj.adjustmentCents > 0 ? "text-red-600" : adj.adjustmentCents < 0 ? "text-green-600" : "")}>
-                  {adj.adjustmentCents > 0 ? "+" : ""}{fmt(adj.adjustmentCents)}
+                  {adj.adjustmentCents > 0 ? "+" : ""}{formatChfCents(adj.adjustmentCents)}
                 </span>
                 <span className="text-xs text-slate-400 block">({changePct}%)</span>
               </div>
@@ -172,30 +118,18 @@ export default function RentAdjustmentDetail() {
           {/* CPI / Calculation Details */}
           {(adj.cpiOldIndex || adj.cpiNewIndex) && (
             <Panel title="Indexation Details" className="mt-4">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                <div>
-                  <span className="text-slate-500 block">CPI Base</span>
-                  <span className="font-medium">{adj.cpiOldIndex ?? "—"}</span>
-                </div>
-                <div>
-                  <span className="text-slate-500 block">CPI Current</span>
-                  <span className="font-medium">{adj.cpiNewIndex ?? "—"}</span>
-                </div>
+              <DetailGrid>
+                <DetailItem label="CPI Base">{adj.cpiOldIndex ?? "—"}</DetailItem>
+                <DetailItem label="CPI Current">{adj.cpiNewIndex ?? "—"}</DetailItem>
                 {adj.cpiOldIndex && adj.cpiNewIndex && (
-                  <div>
-                    <span className="text-slate-500 block">CPI Ratio</span>
-                    <span className="font-medium">{(adj.cpiNewIndex / adj.cpiOldIndex).toFixed(4)}</span>
-                  </div>
+                  <DetailItem label="CPI Ratio">{(adj.cpiNewIndex / adj.cpiOldIndex).toFixed(4)}</DetailItem>
                 )}
                 {adj.referenceRateOld && (
-                  <div>
-                    <span className="text-slate-500 block">Ref Rate (old → new)</span>
-                    <span className="font-medium">
-                      {adj.referenceRateOld}% → {adj.referenceRateNew || adj.referenceRateOld}%
-                    </span>
-                  </div>
+                  <DetailItem label="Ref Rate (old → new)">
+                    {adj.referenceRateOld}% → {adj.referenceRateNew || adj.referenceRateOld}%
+                  </DetailItem>
                 )}
-              </div>
+              </DetailGrid>
               {adj.calculationDetails && (
                 <details className="mt-3">
                   <summary className="text-xs text-slate-400 cursor-pointer">Calculation breakdown</summary>
@@ -211,7 +145,7 @@ export default function RentAdjustmentDetail() {
           {adj.status === "REJECTED" && (
             <Panel title="Rejection" className="mt-4">
               <p className="text-red-600 text-sm">
-                Rejected on {adj.rejectedAt ? new Date(adj.rejectedAt).toLocaleDateString("de-CH") : "—"}
+                Rejected on {formatDate(adj.rejectedAt)}
                 {adj.rejectionReason && <> — {adj.rejectionReason}</>}
               </p>
             </Panel>
@@ -221,8 +155,8 @@ export default function RentAdjustmentDetail() {
           {adj.status === "APPLIED" && (
             <Panel title="Application" className="mt-4">
               <p className="text-green-700 text-sm">
-                ✅ Applied on {adj.appliedAt ? new Date(adj.appliedAt).toLocaleDateString("de-CH") : "—"}.
-                Lease rent updated to {fmt(adj.newRentCents)}/month.
+                ✅ Applied on {formatDate(adj.appliedAt)}.
+                Lease rent updated to {formatChfCents(adj.newRentCents)}/month.
               </p>
             </Panel>
           )}
@@ -230,76 +164,62 @@ export default function RentAdjustmentDetail() {
           {/* Lease Index Settings */}
           {adj.lease && (
             <Panel title="Lease Index Settings" className="mt-4">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                <div>
-                  <span className="text-slate-500 block">Index Clause</span>
-                  <span className="font-medium">{adj.lease.indexClauseType || "NONE"}</span>
-                </div>
-                <div>
-                  <span className="text-slate-500 block">CPI Base Index</span>
-                  <span className="font-medium">{adj.lease.cpiBaseIndex ?? "—"}</span>
-                </div>
-                <div>
-                  <span className="text-slate-500 block">Initial Rent</span>
-                  <span className="font-medium">{adj.lease.initialNetRentChf ? fmt(adj.lease.initialNetRentChf * 100) : "—"}</span>
-                </div>
-                <div>
-                  <span className="text-slate-500 block">Last Indexation</span>
-                  <span className="font-medium">
-                    {adj.lease.lastIndexationDate
-                      ? new Date(adj.lease.lastIndexationDate).toLocaleDateString("de-CH")
-                      : "Never"}
-                  </span>
-                </div>
-              </div>
+              <DetailGrid>
+                <DetailItem label="Index Clause">{adj.lease.indexClauseType || "NONE"}</DetailItem>
+                <DetailItem label="CPI Base Index">{adj.lease.cpiBaseIndex ?? "—"}</DetailItem>
+                <DetailItem label="Initial Rent">{adj.lease.initialNetRentChf ? fmt(adj.lease.initialNetRentChf * 100) : "—"}</DetailItem>
+                <DetailItem label="Last Indexation">
+                  {adj.lease.lastIndexationDate
+                    ? formatDate(adj.lease.lastIndexationDate)
+                    : "Never"}
+                </DetailItem>
+              </DetailGrid>
             </Panel>
           )}
 
           {/* Actions */}
-          <div className="mt-6 flex gap-3 flex-wrap">
+          <ActionBar>
             {adj.status === "DRAFT" && (
               <>
-                <button
+                <Button
+                  variant="primary" size="sm"
                   onClick={() => handleAction("approve")}
                   disabled={actionLoading}
-                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
                 >
                   ✓ Approve
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="destructiveGhost" size="sm"
                   onClick={() => setShowReject(true)}
                   disabled={actionLoading}
-                  className="px-4 py-2 bg-red-100 text-red-700 rounded hover:bg-red-200 disabled:opacity-50"
                 >
                   ✗ Reject
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="secondary" size="sm"
                   onClick={handleDelete}
                   disabled={actionLoading}
-                  className="px-4 py-2 bg-slate-100 text-slate-600 rounded hover:bg-slate-200 disabled:opacity-50"
                 >
                   🗑 Delete
-                </button>
+                </Button>
               </>
             )}
             {adj.status === "APPROVED" && (
-              <button
+              <Button
+                variant="success" size="sm"
                 onClick={() => handleAction("apply")}
                 disabled={actionLoading}
-                className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
               >
                 ▶ Apply to Lease
-              </button>
+              </Button>
             )}
-            <button
+            <Button
+              variant="secondary" size="sm"
               onClick={() => router.push("/manager/rent-adjustments")}
-              className="px-4 py-2 bg-slate-100 text-slate-600 rounded hover:bg-slate-200"
             >
               ← Back to List
-            </button>
-          </div>
-
-          {/* Reject modal */}
+            </Button>
+          </ActionBar>
           {showReject && (
             <div className="mt-4 p-4 border border-red-200 rounded bg-red-50">
               <label className="block text-sm font-medium text-red-700 mb-1">
@@ -313,23 +233,25 @@ export default function RentAdjustmentDetail() {
                 placeholder="Enter reason…"
               />
               <div className="mt-2 flex gap-2">
-                <button
+                <Button
+                  variant="destructive" size="xs"
                   onClick={() => handleAction("reject")}
                   disabled={actionLoading}
-                  className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700"
                 >
                   Confirm Reject
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="secondary" size="xs"
                   onClick={() => setShowReject(false)}
-                  className="px-3 py-1 bg-slate-200 text-slate-600 rounded text-sm"
                 >
                   Cancel
-                </button>
+                </Button>
               </div>
             </div>
           )}
         </PageContent>
+        </>)}
+        </ResourceShell>
       </PageShell>
     </AppShell>
   );

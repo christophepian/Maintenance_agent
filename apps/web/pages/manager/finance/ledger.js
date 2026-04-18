@@ -7,6 +7,7 @@ import Panel from "../../../components/layout/Panel";
 import Badge from "../../../components/ui/Badge";
 import { accountTypeVariant } from "../../../lib/statusVariants";
 import { authHeaders } from "../../../lib/api";
+import { formatChfCents, formatDate } from "../../../lib/format";
 
 import { cn } from "../../../lib/utils";
 /* ── Constants ─────────────────────────────────────────────── */
@@ -46,18 +47,6 @@ function last30Days() {
     from: from.toISOString().slice(0, 10),
     to: to.toISOString().slice(0, 10),
   };
-}
-
-function formatCHF(cents) {
-  if (!cents && cents !== 0) return "—";
-  return (cents / 100).toLocaleString("de-CH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
-
-function formatDate(iso) {
-  if (!iso) return "—";
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString("de-CH", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
 function AccountTypeBadge({ type }) {
@@ -283,7 +272,7 @@ export default function LedgerPage() {
           })()}
 
           {/* ── Tab bar ─────────────────────────────────────── */}
-          <div className="flex gap-1 mb-6 border-b border-slate-200">
+          <div className="tab-strip">
             {[
               { key: "journal",       label: "Journal" },
               { key: "trial-balance", label: "Trial Balance" },
@@ -291,9 +280,7 @@ export default function LedgerPage() {
               <button
                 key={t.key}
                 onClick={() => setTab(t.key)}
-                className={cn("px-4 py-2 text-sm font-medium border-b-2 transition-colors", tab === t.key
-                    ? "border-blue-600 text-blue-700"
-                    : "border-transparent text-slate-500 hover:text-slate-700")}
+                className={tab === t.key ? "tab-btn-active" : "tab-btn"}
               >
                 {t.label}
               </button>
@@ -447,10 +434,10 @@ export default function LedgerPage() {
                             <td className="py-2 pr-3 text-slate-700 max-w-xs truncate">{e.description}</td>
                             <td className="py-2 pr-3 font-mono text-xs text-slate-400">{e.reference || "—"}</td>
                             <td className="py-2 pr-3 text-right font-mono">
-                              {e.debitCents > 0 ? <span className="text-slate-900">{formatCHF(e.debitCents)}</span> : <span className="text-slate-200">—</span>}
+                              {e.debitCents > 0 ? <span className="text-slate-900">{formatChfCents(e.debitCents)}</span> : <span className="text-slate-200">—</span>}
                             </td>
                             <td className="py-2 text-right font-mono">
-                              {e.creditCents > 0 ? <span className="text-slate-900">{formatCHF(e.creditCents)}</span> : <span className="text-slate-200">—</span>}
+                              {e.creditCents > 0 ? <span className="text-slate-900">{formatChfCents(e.creditCents)}</span> : <span className="text-slate-200">—</span>}
                             </td>
                           </tr>
                         ))}
@@ -500,7 +487,7 @@ export default function LedgerPage() {
                   <div className={cn("mb-4 px-4 py-2 rounded text-sm font-medium", tbBalanced ? "bg-green-50 text-green-700 border border-green-200" : "bg-red-50 text-red-700 border border-red-200")}>
                     {tbBalanced
                       ? "✓ Ledger is balanced — total debits equal total credits"
-                      : `⚠ Ledger is out of balance — difference: CHF ${formatCHF(Math.abs(tbTotals.debit - tbTotals.credit))}`}
+                      : `⚠ Ledger is out of balance — difference: CHF ${formatChfCents(Math.abs(tbTotals.debit - tbTotals.credit))}`}
                   </div>
 
                   {/* Grouped by account type */}
@@ -533,11 +520,11 @@ export default function LedgerPage() {
                                   <tr key={b.accountId} className="border-b border-slate-100 hover:bg-slate-50">
                                     <td className="px-3 py-2 font-mono text-xs text-slate-400">{b.accountCode || "—"}</td>
                                     <td className="px-3 py-2 text-slate-800">{b.accountName}</td>
-                                    <td className="px-3 py-2 text-right font-mono text-slate-700">{formatCHF(b.debitCents)}</td>
-                                    <td className="px-3 py-2 text-right font-mono text-slate-700">{formatCHF(b.creditCents)}</td>
+                                    <td className="px-3 py-2 text-right font-mono text-slate-700">{formatChfCents(b.debitCents)}</td>
+                                    <td className="px-3 py-2 text-right font-mono text-slate-700">{formatChfCents(b.creditCents)}</td>
                                     <td className={cn("px-3 py-2 text-right font-mono font-semibold", isDebitBal ? "text-slate-900" : "text-blue-700")}>
                                       {isDebitBal ? "" : "("}
-                                      {formatCHF(Math.abs(b.balanceCents))}
+                                      {formatChfCents(Math.abs(b.balanceCents))}
                                       {isDebitBal ? "" : ")"}
                                     </td>
                                   </tr>
@@ -547,8 +534,8 @@ export default function LedgerPage() {
                             <tfoot>
                               <tr className="border-t border-slate-300 bg-slate-50 text-xs font-semibold">
                                 <td colSpan={2} className="px-3 py-1.5 text-slate-600">Subtotal</td>
-                                <td className="px-3 py-1.5 text-right font-mono">{formatCHF(typeDebit)}</td>
-                                <td className="px-3 py-1.5 text-right font-mono">{formatCHF(typeCredit)}</td>
+                                <td className="px-3 py-1.5 text-right font-mono">{formatChfCents(typeDebit)}</td>
+                                <td className="px-3 py-1.5 text-right font-mono">{formatChfCents(typeCredit)}</td>
                                 <td />
                               </tr>
                             </tfoot>
@@ -560,10 +547,10 @@ export default function LedgerPage() {
 
                   {/* Grand total */}
                   <div className="flex justify-end gap-8 text-sm font-semibold border-t-2 border-slate-300 pt-3 mt-2">
-                    <span>Grand Total Debit: <span className="font-mono">{formatCHF(tbTotals.debit)}</span></span>
-                    <span>Grand Total Credit: <span className="font-mono">{formatCHF(tbTotals.credit)}</span></span>
+                    <span>Grand Total Debit: <span className="font-mono">{formatChfCents(tbTotals.debit)}</span></span>
+                    <span>Grand Total Credit: <span className="font-mono">{formatChfCents(tbTotals.credit)}</span></span>
                     <span className={tbBalanced ? "text-green-700" : "text-red-600"}>
-                      {tbBalanced ? "Balanced ✓" : `Off by CHF ${formatCHF(Math.abs(tbTotals.debit - tbTotals.credit))}`}
+                      {tbBalanced ? "Balanced ✓" : `Off by CHF ${formatChfCents(Math.abs(tbTotals.debit - tbTotals.credit))}`}
                     </span>
                   </div>
                 </>

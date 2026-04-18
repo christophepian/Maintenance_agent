@@ -12,17 +12,7 @@ import Badge from "../../../components/ui/Badge";
 import { rfpVariant, quoteVariant } from "../../../lib/statusVariants";
 
 import { cn } from "../../../lib/utils";
-function formatDate(iso) {
-  if (!iso) return "—";
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString("de-CH");
-}
-
-function formatCHF(cents) {
-  if (cents == null) return "—";
-  return `CHF ${(cents / 100).toFixed(2)}`;
-}
+import { formatDate, formatChfCents } from "../../../lib/format";
 
 export default function OwnerRfpDetailPage() {
   const router = useRouter();
@@ -190,7 +180,7 @@ export default function OwnerRfpDetailPage() {
                           </div>
                           <div className="flex items-center gap-3">
                             <span className="text-base font-semibold text-slate-900 font-mono">
-                              {formatCHF(q.amountCents)}
+                              {formatChfCents(q.amountCents)}
                               {q.vatIncluded === false && (
                                 <span className="text-xs text-slate-400 ml-1">excl. VAT</span>
                               )}

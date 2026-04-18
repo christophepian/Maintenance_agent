@@ -5,16 +5,12 @@ import PageShell from "../../components/layout/PageShell";
 import PageHeader from "../../components/layout/PageHeader";
 import PageContent from "../../components/layout/PageContent";
 import Panel from "../../components/layout/Panel";
+import Badge from "../../components/ui/Badge";
+import Button from "../../components/ui/Button";
 import Link from "next/link";
 import { authHeaders } from "../../lib/api";
-import { formatDate } from "../../lib/format";
-
-import { cn } from "../../lib/utils";
-const STATUS_COLORS = {
-  ACTIVE: "bg-green-100 text-green-700",
-  PAUSED: "bg-yellow-100 text-yellow-700",
-  COMPLETED: "bg-slate-100 text-slate-700",
-};
+import { formatChfCents, formatDate } from "../../lib/format";
+import { billingScheduleVariant } from "../../lib/statusVariants";
 
 const TABS = [
   { key: "ACTIVE",    label: "Active" },
@@ -98,7 +94,7 @@ export default function BillingSchedulesPage() {
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(i)}
-                className={activeTab === i ? "tab-btn-active" : "tab-btn"}
+                className={activeTab === i ? "pill-tab-active" : "pill-tab"}
               >
                 {tab.label}
               </button>
@@ -135,14 +131,11 @@ export default function BillingSchedulesPage() {
                   </thead>
                   <tbody>
                     {schedules.map((s) => {
-                      const rentChf = s.baseRentCents / 100;
-                      const chargesChf = s.totalChargesCents / 100;
-                      const totalChf = rentChf + chargesChf;
                       return (
                         <tr key={s.id}>
                           <td className="cell-bold">
                             {s.lease ? (
-                              <Link href={`/manager/leases/${s.leaseId}`} className="text-indigo-600 hover:underline">
+                              <Link href={`/manager/leases/${s.leaseId}`} className="cell-link">
                                 {s.lease.tenantName || "—"}
                               </Link>
                             ) : (
@@ -150,33 +143,35 @@ export default function BillingSchedulesPage() {
                             )}
                           </td>
                           <td>
-                            <span className={cn("inline-block px-2 py-0.5 rounded text-xs font-medium", STATUS_COLORS[s.status] || "bg-slate-100 text-slate-700")}>
+                            <Badge variant={billingScheduleVariant(s.status)}>
                               {s.status}
-                            </span>
+                            </Badge>
                           </td>
-                          <td>CHF {rentChf.toFixed(2)}</td>
-                          <td>CHF {chargesChf.toFixed(2)}</td>
-                          <td className="cell-bold">CHF {totalChf.toFixed(2)}</td>
-                          <td>{s.nextPeriodStart ? new Date(s.nextPeriodStart).toLocaleDateString("de-CH") : "—"}</td>
+                          <td>{formatChfCents(s.baseRentCents)}</td>
+                          <td>{formatChfCents(s.totalChargesCents)}</td>
+                          <td className="cell-bold">{formatChfCents(s.baseRentCents + s.totalChargesCents)}</td>
+                          <td>{s.nextPeriodStart ? formatDate(s.nextPeriodStart) : "—"}</td>
                           <td>{s.anchorDay}</td>
                           <td>
                             {s.status === "ACTIVE" && (
-                              <button
+                              <Button
+                                variant="warning"
+                                size="sm"
                                 onClick={() => handleAction(s.id, "pause")}
                                 disabled={actionLoading === s.id}
-                                className="px-2 py-1 text-xs font-medium rounded border border-yellow-300 text-yellow-700 hover:bg-yellow-50 disabled:opacity-50"
                               >
                                 {actionLoading === s.id ? "…" : "Pause"}
-                              </button>
+                              </Button>
                             )}
                             {s.status === "PAUSED" && (
-                              <button
+                              <Button
+                                variant="outline"
+                                size="sm"
                                 onClick={() => handleAction(s.id, "resume")}
                                 disabled={actionLoading === s.id}
-                                className="px-2 py-1 text-xs font-medium rounded border border-green-300 text-green-700 hover:bg-green-50 disabled:opacity-50"
                               >
                                 {actionLoading === s.id ? "…" : "Resume"}
-                              </button>
+                              </Button>
                             )}
                             {s.status === "COMPLETED" && (
                               <span className="text-xs text-slate-400">

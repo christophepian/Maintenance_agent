@@ -11,15 +11,9 @@ import { authHeaders } from "../../../lib/api";
 import UndoToast, { useUndoToast } from "../../../components/ui/UndoToast";
 import ConfigurableTable from "../../../components/ConfigurableTable";
 import { clientSort } from "../../../lib/tableUtils";
+import Badge from "../../../components/ui/Badge";
+import { leaseVariant } from "../../../lib/statusVariants";
 import { cn } from "../../../lib/utils";
-const STATUS_COLORS = {
-  DRAFT: "bg-yellow-100 text-yellow-700",
-  READY_TO_SIGN: "bg-blue-100 text-blue-700",
-  SIGNED: "bg-green-100 text-green-700",
-  ACTIVE: "bg-green-100 text-green-700",
-  TERMINATED: "bg-slate-100 text-slate-700",
-  CANCELLED: "bg-red-100 text-red-700",
-};
 
 // Tabs: Active (ACTIVE+SIGNED), Draft (DRAFT), Submitted (READY_TO_SIGN), Archive (CANCELLED+TERMINATED)
 const LEASE_TABS = [
@@ -849,9 +843,9 @@ export default function LeasesPage() {
                               {tabIndex === 0 && <td className="font-semibold">CHF {totalMo}.-</td>}
                               <td>{formatDate(lease.startDate)}</td>
                               <td>
-                                <span className={cn("inline-block px-2 py-0.5 rounded text-xs font-medium", STATUS_COLORS[lease.status] || "bg-slate-100 text-slate-700")}>
+                                <Badge variant={leaseVariant(lease.status)}>
                                   {lease.status.replace(/_/g, " ")}
-                                </span>
+                                </Badge>
                               </td>
                               {tabIndex === 1 && (
                                 <td>

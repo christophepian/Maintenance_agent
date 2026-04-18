@@ -9,6 +9,7 @@ import ErrorBanner from "../../../components/ui/ErrorBanner";
 import { ownerAuthHeaders } from "../../../lib/api";
 import Badge from "../../../components/ui/Badge";
 import { urgencyVariant, rfpVariant } from "../../../lib/statusVariants";
+import { formatDate } from "../../../lib/format";
 
 function UrgencyPill({ urgency }) {
   if (!urgency) return null;
@@ -25,13 +26,6 @@ function StatusPill({ status }) {
       {status?.replace(/_/g, " ") || "—"}
     </Badge>
   );
-}
-
-function formatDate(iso) {
-  if (!iso) return "—";
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString("de-CH");
 }
 
 export default function OwnerRfpsPage() {
@@ -161,7 +155,7 @@ export default function OwnerRfpsPage() {
                           <td>
                             <Link
                               href={`/owner/rfps/${r.id}`}
-                              className="text-sm font-medium text-indigo-600 hover:underline"
+                              className="cell-link text-sm font-medium"
                             >
                               Review →
                             </Link>
@@ -201,7 +195,7 @@ export default function OwnerRfpsPage() {
                           <td>
                             <Link
                               href={`/owner/rfps/${r.id}`}
-                              className="text-sm font-medium text-indigo-600 hover:underline"
+                              className="cell-link text-sm font-medium"
                             >
                               View →
                             </Link>

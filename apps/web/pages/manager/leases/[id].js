@@ -3,21 +3,17 @@ import { useRouter } from "next/router";
 import Link from "next/link";
 import AppShell from "../../../components/AppShell";
 import PageShell from "../../../components/layout/PageShell";
-import { formatDate as fmtD } from "../../../lib/format";
+import { formatDate as fmtD, formatChfCents, formatChf } from "../../../lib/format";
 import PageHeader from "../../../components/layout/PageHeader";
 import PageContent from "../../../components/layout/PageContent";
 import Panel from "../../../components/layout/Panel";
 import { authHeaders } from "../../../lib/api";
 
 import { cn } from "../../../lib/utils";
-const STATUS_COLORS = {
-  DRAFT: "bg-yellow-100 text-yellow-700",
-  READY_TO_SIGN: "bg-blue-100 text-blue-700",
-  SIGNED: "bg-green-100 text-green-700",
-  ACTIVE: "bg-green-100 text-green-700",
-  TERMINATED: "bg-orange-100 text-orange-700",
-  CANCELLED: "bg-red-100 text-red-700",
-};
+import Badge from "../../../components/ui/Badge";
+import Button from "../../../components/ui/Button";
+import { Modal, ModalFooter } from "../../../components/ui/Modal";
+import { leaseVariant, invoiceVariant, signerVariant, reconciliationVariant, rentAdjustmentVariant, billingScheduleVariant } from "../../../lib/statusVariants";
 
 function Field({ label, children, span }) {
   return (
@@ -509,9 +505,7 @@ export default function LeaseEditorPage() {
                 <span className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-700">TEMPLATE</span>
               )}
               {!isTemplate && (
-                <span className={cn("inline-block px-2 py-0.5 rounded text-xs font-medium", STATUS_COLORS[lease.status] || "bg-slate-100")}>
-                  {lease.status.replace(/_/g, " ")}
-                </span>
+                <Badge variant={leaseVariant(lease.status)} size="sm">{lease.status.replace(/_/g, " ")}</Badge>
               )}
               {lease.unit && (
                 <>
@@ -524,69 +518,58 @@ export default function LeaseEditorPage() {
           actions={
             <div className="flex items-center gap-2 flex-wrap">
               {(isDraft || isTemplate) && !editMode && (
-                <button onClick={() => setEditMode(true)}
-                  className="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50">
+                <Button variant="secondary" size="sm" onClick={() => setEditMode(true)}>
                   ✏️ Edit
-                </button>
+                </Button>
               )}
               {(isDraft || isTemplate) && editMode && (
                 <>
-                  <button onClick={() => { handleSave(); setEditMode(false); }} disabled={saving}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50">
+                  <Button variant="primary" size="sm" onClick={() => { handleSave(); setEditMode(false); }} disabled={saving}>
                     {saving ? "Saving..." : "Save"}
-                  </button>
-                  <button onClick={() => { setEditMode(false); fetchLease(); }}
-                    className="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50">
+                  </Button>
+                  <Button variant="secondary" size="sm" onClick={() => { setEditMode(false); fetchLease(); }}>
                     Cancel
-                  </button>
+                  </Button>
                 </>
               )}
-              <button onClick={handleGeneratePDF} disabled={pdfGenerating}
-                className="px-4 py-2 bg-slate-600 text-white rounded-lg text-sm font-medium hover:bg-slate-700 disabled:opacity-50">
+              <Button variant="neutral" size="sm" onClick={handleGeneratePDF} disabled={pdfGenerating}>
                 {pdfGenerating ? "Generating..." : "📄 Generate PDF"}
-              </button>
+              </Button>
               {isDraft && !isTemplate && (
-                <button onClick={() => setShowSignModal(true)}
-                  className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700">
+                <Button variant="success" size="sm" onClick={() => setShowSignModal(true)}>
                   ✍️ Send for Signature
-                </button>
+                </Button>
               )}
               {needsResend && (
-                <button onClick={handleResendForSignature} disabled={resendingForSignature}
-                  className="px-4 py-2 bg-amber-600 text-white rounded-lg text-sm font-medium hover:bg-amber-700 disabled:opacity-50"
+                <Button variant="warning" size="sm" onClick={handleResendForSignature} disabled={resendingForSignature}
                   title="This submitted lease has no sent signature request. Click to create and send one now.">
                   {resendingForSignature ? "Sending…" : "↩️ Re-send for Signature"}
-                </button>
+                </Button>
               )}
               {isSigned && !isTemplate && (
-                <button onClick={handleActivate} disabled={!!actionLoading}
-                  className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50">
+                <Button variant="success" size="sm" onClick={handleActivate} disabled={!!actionLoading}>
                   {actionLoading === "activate" ? "Activating..." : "⚡ Activate"}
-                </button>
+                </Button>
               )}
               {isActive && !isTemplate && (
-                <button onClick={() => setShowTerminateModal(true)}
-                  className="px-4 py-2 bg-orange-600 text-white rounded-lg text-sm font-medium hover:bg-orange-700">
+                <Button variant="warning" size="sm" onClick={() => setShowTerminateModal(true)}>
                   📋 Terminate
-                </button>
+                </Button>
               )}
               {!isTemplate && !lease.archivedAt && ["SIGNED", "ACTIVE", "TERMINATED", "CANCELLED"].includes(lease.status) && (
-                <button onClick={handleArchive} disabled={!!actionLoading}
-                  className="px-3 py-2 bg-slate-100 text-slate-600 rounded-lg text-sm font-medium hover:bg-slate-200 disabled:opacity-50">
+                <Button variant="secondary" size="sm" onClick={handleArchive} disabled={!!actionLoading}>
                   📦 Archive
-                </button>
+                </Button>
               )}
               {!isTemplate && (
-                <button onClick={() => setShowInvoiceModal(true)}
-                  className="px-3 py-2 bg-indigo-50 text-indigo-600 rounded-lg text-sm font-medium hover:bg-indigo-100">
+                <Button variant="ghost" size="sm" className="text-brand hover:bg-brand-light" onClick={() => setShowInvoiceModal(true)}>
                   💰 Invoice
-                </button>
+                </Button>
               )}
               {!isTemplate && lease.status !== "SIGNED" && lease.status !== "ACTIVE" && lease.status !== "TERMINATED" && lease.status !== "CANCELLED" && (
-                <button onClick={handleCancel}
-                  className="px-3 py-2 bg-red-50 text-red-600 rounded-lg text-sm font-medium hover:bg-red-100">
+                <Button variant="destructiveGhost" size="sm" onClick={handleCancel}>
                   Cancel
-                </button>
+                </Button>
               )}
             </div>
           }
@@ -763,9 +746,7 @@ export default function LeaseEditorPage() {
                         <td>{sr.provider}</td>
                         <td>{sr.level}</td>
                         <td>
-                          <span className={cn("inline-block px-2 py-0.5 rounded text-xs font-medium", sr.status === "SIGNED" ? "bg-green-100 text-green-700" :
-                            sr.status === "SENT" ? "bg-blue-100 text-blue-700" :
-                            "bg-slate-100 text-slate-700")}>{sr.status}</span>
+                          <Badge variant={signerVariant(sr.status)} size="sm">{sr.status}</Badge>
                         </td>
                         <td>{sr.signers?.map(s => s.name).join(", ") || "—"}</td>
                         <td>{sr.sentAt ? fmtD(sr.sentAt) : "—"}</td>
@@ -799,7 +780,7 @@ export default function LeaseEditorPage() {
                       href={`/api/leases/${id}/generate-pdf`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-xs text-indigo-600 hover:underline"
+                      className="cell-link text-xs"
                     >
                       Download draft PDF
                     </a>
@@ -813,7 +794,7 @@ export default function LeaseEditorPage() {
                       href={`/api/leases/${id}/generate-pdf`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-xs text-indigo-600 hover:underline"
+                      className="cell-link text-xs"
                     >
                       Download signed PDF
                     </a>
@@ -834,16 +815,15 @@ export default function LeaseEditorPage() {
                   </div>
                   {lease.depositPaidAt ? (
                     <div className="text-right">
-                      <span className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700">✅ PAID</span>
+                      <Badge variant="success" size="sm">✅ PAID</Badge>
                       <p className="text-xs text-slate-400 mt-1">{fmtD(lease.depositPaidAt)}</p>
                       {lease.depositConfirmedBy && <p className="text-xs text-slate-400">By: {lease.depositConfirmedBy}</p>}
                       {lease.depositBankRef && <p className="text-xs text-slate-400">Ref: {lease.depositBankRef}</p>}
                     </div>
                   ) : (
-                    <button onClick={handleConfirmDeposit} disabled={!!actionLoading}
-                      className="px-3 py-1.5 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50">
+                    <Button variant="success" size="xs" onClick={handleConfirmDeposit} disabled={!!actionLoading}>
                       {actionLoading === "confirm-deposit" ? "..." : "Confirm Payment"}
-                    </button>
+                    </Button>
                   )}
                 </div>
             </Panel>
@@ -881,42 +861,38 @@ export default function LeaseEditorPage() {
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <span className={cn("inline-block px-2 py-0.5 rounded text-xs font-medium", billingSchedule.status === "ACTIVE" ? "bg-green-100 text-green-700" :
-                        billingSchedule.status === "PAUSED" ? "bg-yellow-100 text-yellow-700" :
-                        "bg-slate-100 text-slate-700")}>{billingSchedule.status}</span>
+                      <Badge variant={billingScheduleVariant(billingSchedule.status)} size="sm">{billingSchedule.status}</Badge>
                       <span className="text-sm text-slate-600">Anchor day: {billingSchedule.anchorDay}</span>
                     </div>
                     <div className="flex gap-2">
                       {billingSchedule.status === "ACTIVE" && (
-                        <button onClick={() => handleBillingAction("pause")} disabled={!!billingAction}
-                          className="px-3 py-1 text-xs font-medium rounded border border-yellow-300 text-yellow-700 hover:bg-yellow-50 disabled:opacity-50">
+                        <Button variant="warningGhost" size="xs" onClick={() => handleBillingAction("pause")} disabled={!!billingAction}>
                           {billingAction === "pause" ? "…" : "Pause"}
-                        </button>
+                        </Button>
                       )}
                       {billingSchedule.status === "PAUSED" && (
-                        <button onClick={() => handleBillingAction("resume")} disabled={!!billingAction}
-                          className="px-3 py-1 text-xs font-medium rounded border border-green-300 text-green-700 hover:bg-green-50 disabled:opacity-50">
+                        <Button variant="success" size="xs" onClick={() => handleBillingAction("resume")} disabled={!!billingAction}>
                           {billingAction === "resume" ? "…" : "Resume"}
-                        </button>
+                        </Button>
                       )}
                     </div>
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
                     <div>
                       <p className="text-xs text-slate-500">Base rent</p>
-                      <p className="font-medium">CHF {(billingSchedule.baseRentCents / 100).toFixed(2)}</p>
+                      <p className="font-medium">{formatChfCents(billingSchedule.baseRentCents)}</p>
                     </div>
                     <div>
                       <p className="text-xs text-slate-500">Charges</p>
-                      <p className="font-medium">CHF {(billingSchedule.totalChargesCents / 100).toFixed(2)}</p>
+                      <p className="font-medium">{formatChfCents(billingSchedule.totalChargesCents)}</p>
                     </div>
                     <div>
                       <p className="text-xs text-slate-500">Next period</p>
-                      <p className="font-medium">{billingSchedule.nextPeriodStart ? new Date(billingSchedule.nextPeriodStart).toLocaleDateString("de-CH") : "—"}</p>
+                      <p className="font-medium">{fmtD(billingSchedule.nextPeriodStart)}</p>
                     </div>
                     <div>
                       <p className="text-xs text-slate-500">Last generated</p>
-                      <p className="font-medium">{billingSchedule.lastGeneratedPeriod ? new Date(billingSchedule.lastGeneratedPeriod).toLocaleDateString("de-CH") : "—"}</p>
+                      <p className="font-medium">{fmtD(billingSchedule.lastGeneratedPeriod)}</p>
                     </div>
                   </div>
                   {billingSchedule.completedAt && (
@@ -939,8 +915,8 @@ export default function LeaseEditorPage() {
                 <div>
                   {reconciliations.length > 0 && (
                     <div className="overflow-x-auto mb-4">
-                      <table className="w-full text-sm">
-                        <thead className="text-left text-xs text-muted-foreground uppercase border-b">
+                      <table className="inline-table">
+                        <thead>
                           <tr>
                             <th className="py-2 pr-4">Year</th>
                             <th className="py-2 pr-4">Status</th>
@@ -955,16 +931,14 @@ export default function LeaseEditorPage() {
                             <tr key={r.id} className="border-b last:border-0">
                               <td className="py-2 pr-4 font-medium">{r.fiscalYear}</td>
                               <td className="py-2 pr-4">
-                                <span className={cn("px-2 py-0.5 text-xs font-semibold rounded-full", r.status === "DRAFT" ? "bg-blue-100 text-blue-700" :
-                                  r.status === "FINALIZED" ? "bg-amber-100 text-amber-700" :
-                                  "bg-green-100 text-green-700")}>{r.status}</span>
+                                <Badge variant={reconciliationVariant(r.status)} size="sm">{r.status}</Badge>
                               </td>
                               <td className="py-2 pr-4 text-right tabular-nums">{(r.totalAcomptePaidCents / 100).toFixed(2)}</td>
                               <td className="py-2 pr-4 text-right tabular-nums">{(r.totalActualCostsCents / 100).toFixed(2)}</td>
                               <td className={cn("py-2 pr-4 text-right tabular-nums", r.balanceCents > 0 ? "text-red-600" : r.balanceCents < 0 ? "text-green-600" : "")}>{r.balanceCents > 0 ? "+" : ""}{(r.balanceCents / 100).toFixed(2)}</td>
                               <td className="py-2 text-right">
                                 <a href={`/manager/charge-reconciliations/${r.id}`}
-                                  className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700">
+                                  className="px-3 py-1 text-xs bg-brand text-white rounded hover:bg-brand-dark">
                                   {r.status === "DRAFT" ? "Edit" : "View"}
                                 </a>
                               </td>
@@ -986,21 +960,21 @@ export default function LeaseEditorPage() {
                         value={reconYear}
                         onChange={(e) => setReconYear(parseInt(e.target.value, 10) || new Date().getFullYear() - 1)}
                       />
-                      <button
+                      <Button
+                        variant="primary" size="xs"
                         onClick={handleCreateRecon}
                         disabled={reconCreating}
-                        className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
-                      >{reconCreating ? "Creating…" : "Create"}</button>
-                      <button
+                      >{reconCreating ? "Creating…" : "Create"}</Button>
+                      <Button
+                        variant="secondary" size="xs"
                         onClick={() => setShowCreateRecon(false)}
-                        className="px-3 py-1 text-sm border rounded hover:bg-slate-50"
-                      >Cancel</button>
+                      >Cancel</Button>
                     </div>
                   ) : (
-                    <button
+                    <Button
+                      variant="primary" size="xs"
                       onClick={() => setShowCreateRecon(true)}
-                      className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
-                    >+ New Reconciliation</button>
+                    >+ New Reconciliation</Button>
                   )}
                 </div>
               )}
@@ -1013,8 +987,8 @@ export default function LeaseEditorPage() {
               <div className="space-y-3">
                 {rentAdjustments.length > 0 && (
                   <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-slate-200 text-sm">
-                      <thead className="bg-slate-50">
+                    <table className="inline-table">
+                      <thead>
                         <tr>
                           <th className="px-3 py-2 text-left font-medium text-slate-500">Type</th>
                           <th className="px-3 py-2 text-left font-medium text-slate-500">Effective</th>
@@ -1027,23 +1001,20 @@ export default function LeaseEditorPage() {
                       </thead>
                       <tbody className="divide-y divide-slate-100">
                         {rentAdjustments.map((a) => {
-                          const fmtC = (c) => (c / 100).toLocaleString("de-CH", { style: "currency", currency: "CHF" });
                           return (
                             <tr key={a.id} className="hover:bg-slate-50">
                               <td className="px-3 py-2">{a.adjustmentType === "CPI_INDEXATION" ? "CPI" : a.adjustmentType === "MANUAL" ? "Manual" : a.adjustmentType}</td>
-                              <td className="px-3 py-2">{new Date(a.effectiveDate).toLocaleDateString("de-CH")}</td>
+                              <td className="px-3 py-2">{fmtD(a.effectiveDate)}</td>
                               <td className="px-3 py-2">
-                                <span className={cn("px-2 py-0.5 rounded text-xs font-semibold", a.status === "DRAFT" ? "bg-yellow-100 text-yellow-700" : a.status === "APPROVED" ? "bg-blue-100 text-blue-700" : a.status === "APPLIED" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700")}>
-                                  {a.status}
-                                </span>
+                                <Badge variant={rentAdjustmentVariant(a.status)} size="sm">{a.status}</Badge>
                               </td>
-                              <td className="px-3 py-2 text-right">{fmtC(a.previousRentCents)}</td>
-                              <td className="px-3 py-2 text-right font-semibold">{fmtC(a.newRentCents)}</td>
+                              <td className="px-3 py-2 text-right">{formatChfCents(a.previousRentCents)}</td>
+                              <td className="px-3 py-2 text-right font-semibold">{formatChfCents(a.newRentCents)}</td>
                               <td className={cn("px-3 py-2 text-right", a.adjustmentCents > 0 ? "text-red-600" : a.adjustmentCents < 0 ? "text-green-600" : "")}>
-                                {a.adjustmentCents > 0 ? "+" : ""}{fmtC(a.adjustmentCents)}
+                                {a.adjustmentCents > 0 ? "+" : ""}{formatChfCents(a.adjustmentCents)}
                               </td>
                               <td className="px-3 py-2">
-                                <a href={`/manager/rent-adjustments/${a.id}`} className="text-indigo-600 hover:underline text-sm">
+                                <a href={`/manager/rent-adjustments/${a.id}`} className="cell-link text-sm">
                                   {a.status === "DRAFT" ? "Edit" : "View"}
                                 </a>
                               </td>
@@ -1083,23 +1054,23 @@ export default function LeaseEditorPage() {
                           className="border rounded px-2 py-1 text-sm"
                         />
                       </div>
-                      <button
+                      <Button
+                        variant="primary" size="xs"
                         onClick={handleComputeIndexation}
                         disabled={adjComputing || !adjCpiNew || !adjEffective}
-                        className="px-3 py-1 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:opacity-50"
                       >
                         {adjComputing ? "Computing…" : "Compute Indexation"}
-                      </button>
-                      <button
+                      </Button>
+                      <Button
+                        variant="secondary" size="xs"
                         onClick={() => setShowComputeAdj(false)}
-                        className="px-3 py-1 text-sm bg-slate-200 text-slate-600 rounded"
-                      >Cancel</button>
+                      >Cancel</Button>
                     </div>
                   ) : (
-                    <button
+                    <Button
+                      variant="primary" size="xs"
                       onClick={() => setShowComputeAdj(true)}
-                      className="px-3 py-1 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700"
-                    >+ Compute CPI Indexation</button>
+                    >+ Compute CPI Indexation</Button>
                   )
                 ) : (
                   <p className="text-xs text-slate-400">
@@ -1129,15 +1100,13 @@ export default function LeaseEditorPage() {
                       {invoices.map(inv => (
                         <tr key={inv.id}>
                           <td>
-                            <Link href={`/manager/finance/invoices/${inv.id}`} className="text-indigo-600 hover:underline">
+                            <Link href={`/manager/finance/invoices/${inv.id}`} className="cell-link">
                               {inv.description || "—"}
                             </Link>
                           </td>
-                          <td className="cell-bold">CHF {inv.totalAmountChf?.toFixed(2) || "—"}</td>
+                          <td className="cell-bold">{inv.totalAmountChf != null ? formatChf(inv.totalAmountChf) : "—"}</td>
                           <td>
-                            <span className={cn("inline-block px-2 py-0.5 rounded text-xs font-medium", inv.status === "PAID" ? "bg-green-100 text-green-700" :
-                              inv.status === "APPROVED" ? "bg-blue-100 text-blue-700" :
-                              "bg-slate-100 text-slate-700")}>{inv.status}</span>
+                            <Badge variant={invoiceVariant(inv.status)} size="sm">{inv.status}</Badge>
                           </td>
                           <td>{fmtD(inv.createdAt)}</td>
                         </tr>
@@ -1151,13 +1120,7 @@ export default function LeaseEditorPage() {
 
         {/* Ready to Sign Modal */}
         {showSignModal && (
-          <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
-            <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md mx-4">
-              <h3 className="text-lg font-semibold mb-4">Send for Signature</h3>
-              <p className="text-sm text-slate-600 mb-4">
-                This will send the lease for signature and create a signature request.
-                The lease will no longer be editable.
-              </p>
+          <Modal title="Send for Signature" description="This will send the lease for signature and create a signature request. The lease will no longer be editable." onClose={() => setShowSignModal(false)}>
               <div className="mb-4">
                 <label className="block text-sm font-medium text-slate-700 mb-1">Signature Level</label>
                 <select value={signLevel} onChange={e => setSignLevel(e.target.value)}
@@ -1167,28 +1130,20 @@ export default function LeaseEditorPage() {
                   <option value="QES">QES — Qualified Electronic Signature</option>
                 </select>
               </div>
-              <div className="flex justify-end gap-2">
-                <button onClick={() => setShowSignModal(false)}
-                  className="px-4 py-2 border rounded-lg text-sm text-slate-600 hover:bg-slate-50">
+              <ModalFooter>
+                <Button variant="secondary" size="sm" onClick={() => setShowSignModal(false)}>
                   Cancel
-                </button>
-                <button onClick={handleReadyToSign}
-                  className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700">
+                </Button>
+                <Button variant="success" size="sm" onClick={handleReadyToSign}>
                   Confirm
-                </button>
-              </div>
-            </div>
-          </div>
+                </Button>
+              </ModalFooter>
+          </Modal>
         )}
 
         {/* Terminate Lease Modal */}
         {showTerminateModal && (
-          <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
-            <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md mx-4">
-              <h3 className="text-lg font-semibold mb-4">Terminate Lease</h3>
-              <p className="text-sm text-slate-600 mb-4">
-                This will terminate the active lease. Please provide a reason.
-              </p>
+          <Modal title="Terminate Lease" description="This will terminate the active lease. Please provide a reason." onClose={() => setShowTerminateModal(false)}>
               <div className="mb-4">
                 <label className="block text-sm font-medium text-slate-700 mb-1">Reason</label>
                 <select value={terminateReason} onChange={e => setTerminateReason(e.target.value)}
@@ -1207,25 +1162,20 @@ export default function LeaseEditorPage() {
                   rows={3} placeholder="e.g. 3 months notice from 01.04.2026"
                   className="w-full border rounded-lg px-3 py-2 text-sm" />
               </div>
-              <div className="flex justify-end gap-2">
-                <button onClick={() => setShowTerminateModal(false)}
-                  className="px-4 py-2 border rounded-lg text-sm text-slate-600 hover:bg-slate-50">
+              <ModalFooter>
+                <Button variant="secondary" size="sm" onClick={() => setShowTerminateModal(false)}>
                   Cancel
-                </button>
-                <button onClick={handleTerminate} disabled={!!actionLoading}
-                  className="px-4 py-2 bg-orange-600 text-white rounded-lg text-sm font-medium hover:bg-orange-700 disabled:opacity-50">
+                </Button>
+                <Button variant="warning" size="sm" onClick={handleTerminate} disabled={!!actionLoading}>
                   {actionLoading === "terminate" ? "Terminating..." : "Confirm Termination"}
-                </button>
-              </div>
-            </div>
-          </div>
+                </Button>
+              </ModalFooter>
+          </Modal>
         )}
 
         {/* Create Invoice Modal */}
         {showInvoiceModal && (
-          <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
-            <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md mx-4">
-              <h3 className="text-lg font-semibold mb-4">Create Lease Invoice</h3>
+          <Modal title="Create Lease Invoice" onClose={() => setShowInvoiceModal(false)}>
               <div className="mb-4">
                 <label className="block text-sm font-medium text-slate-700 mb-1">Invoice Type</label>
                 <select value={invoiceType} onChange={e => setInvoiceType(e.target.value)}
@@ -1249,18 +1199,15 @@ export default function LeaseEditorPage() {
                   placeholder="e.g. Deposit for lease starting 01.04.2026"
                   className="w-full border rounded-lg px-3 py-2 text-sm" />
               </div>
-              <div className="flex justify-end gap-2">
-                <button onClick={() => setShowInvoiceModal(false)}
-                  className="px-4 py-2 border rounded-lg text-sm text-slate-600 hover:bg-slate-50">
+              <ModalFooter>
+                <Button variant="secondary" size="sm" onClick={() => setShowInvoiceModal(false)}>
                   Cancel
-                </button>
-                <button onClick={handleCreateInvoice} disabled={!!actionLoading}
-                  className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50">
+                </Button>
+                <Button variant="primary" size="sm" onClick={handleCreateInvoice} disabled={!!actionLoading}>
                   {actionLoading === "invoices" ? "Creating..." : "Create Invoice"}
-                </button>
-              </div>
-            </div>
-          </div>
+                </Button>
+              </ModalFooter>
+          </Modal>
         )}
       </PageShell>
     </AppShell>

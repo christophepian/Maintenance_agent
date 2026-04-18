@@ -215,7 +215,7 @@ This converts the stash into a proper branch that won't be silently garbage-coll
 
 ---
 
-### 🎨 FRONTEND UI GUARDRAILS (F-UI1–F-UI6)
+### 🎨 FRONTEND UI GUARDRAILS (F-UI1–F-UI8)
 
 > These rules prevent the layout drift that required a full session to fix in March 2026.
 > Every new manager page must follow them exactly.
@@ -274,7 +274,7 @@ All styles resolve to **Tailwind tokens** at build time. Three-layer architectur
 
 1. **Semantic tokens** — 23 CSS custom properties in `globals.css @theme {}` block (brand, destructive, success, muted, surface with light/dark/ring/text variants)
 2. **@apply classes** — 78 utility-backed CSS classes in `globals.css @layer components` (buttons, notices, tables, tabs, filters, edit panels, etc.)
-3. **CVA primitives** — 10 variant-based React components in `components/ui/` (Button, Badge, Card, DataTable, Input, Select, ErrorBanner, EmptyState, StatusPill, KpiCard)
+3. **CVA primitives** — 10 variant-based React components in `components/ui/` (Button [10 variants: `primary`, `secondary`, `ghost`, `outline`, `destructive`, `destructiveGhost`, `warning`, `warningGhost`, `neutral`, `link`], Badge, Card, DataTable, Input, Select, ErrorBanner, EmptyState, StatusPill, KpiCard)
 
 **Utilities:**
 - `cn()` = `twMerge(clsx())` in `lib/utils.js` — **mandatory** for all dynamic className composition. Used in 80 files. Template-literal interpolation (`className={\`...${x}\`}`) is banned.
@@ -359,6 +359,28 @@ All user-visible text — UI labels, button text, status names, seed data (expen
 - Do not add German, French, or any other language strings anywhere in the codebase or seed data.
 - Multilingual / i18n translation support will be implemented as a dedicated future epic. Until then, English is the single source language.
 
+#### F-UI8: Shared Hooks & Presentational Components — Use Before Writing Custom Code
+
+The following shared abstractions are canonical. Use them before writing custom equivalents:
+
+| Abstraction | Replaces | Location |
+|------------|----------|----------|
+| `useDetailResource(url)` | useState+useCallback+useEffect fetch boilerplate | `lib/hooks/useDetailResource.js` |
+| `useAction()` | try/finally pending-state wrappers with `setLoading`/`setActing` | `lib/hooks/useAction.js` |
+| `ResourceShell` | Early-return loading/error/not-found guards | `components/ui/ResourceShell.jsx` |
+| `DetailGrid` / `DetailItem` | Ad-hoc key-value metadata grids | `components/ui/DetailGrid.jsx` |
+| `DetailList` / `DetailRow` | Ad-hoc vertical key-value lists | `components/ui/DetailList.jsx` |
+| `Modal` / `ModalFooter` | Custom overlay markup | `components/ui/Modal.jsx` |
+| `ActionBar` | Bottom-anchored action strips | `components/ui/ActionBar.jsx` |
+| `formatChf`, `formatChfCents`, `formatDate`, ... | Inline format functions | `lib/format.js` |
+
+**Rules:**
+- Do not duplicate fetch boilerplate when `useDetailResource` fits the page's data flow.
+- Do not write early-return loading/error/not-found guards when `ResourceShell` handles it.
+- Do not write try/finally pending-state wrappers when `useAction` handles it.
+- Do not define inline `fmt()` / `formatDate()` / `formatChf()` — import from `lib/format.js`.
+- When touching an older page, migrate it to these patterns opportunistically.
+
 ---
 
 ### 🔮 FUTURE RISK GUARDRAILS (F1–F8)
@@ -440,10 +462,12 @@ Three-layer CSS architecture backed by Tailwind v4.1:
 - Forms: `.edit-panel`, `.edit-row`, `.edit-input`, `.link-card`
 - Layout: `.main-container`, `.empty-state`, `.card`, `.loading-text`
 
-**Layer 3 — CVA primitives** (10 components in `components/ui/`):
-- Button, Badge, Card, DataTable, Input, Select, ErrorBanner, EmptyState, StatusPill, KpiCard
+**Layer 3 — CVA primitives + shared UI** (10 CVA + 7 presentational components in `components/ui/`):
+- CVA: Button (10 variants), Badge, Card, DataTable, Input, Select, ErrorBanner, EmptyState, StatusPill, KpiCard
+- Presentational: DetailGrid/DetailItem, DetailList/DetailRow, Modal/ModalFooter, ActionBar, ResourceShell
 - All accept `className` override via `cn()` = `twMerge(clsx())`
 - Barrel export from `components/ui/index.js`
+- Shared hooks: `useDetailResource` (fetch), `useAction` (mutation pending state) in `lib/hooks/`
 
 **Metrics:** inline `style={{}}` 166→12 (dynamic only), hardcoded rgb() 50+→13 (SVG only), error-banner adoption 48 files.
 
@@ -493,7 +517,7 @@ Maintenance_Agent/
 │   └── web/
 │       ├── pages/            # 275 pages (92 UI + 182 API proxies + _app.js)
 │       ├── components/       # AppShell, layout primitives, shared UI
-│       ├── lib/              # proxy.js, api.js, formatDisqualificationReasons.js
+│       ├── lib/              # proxy.js, api.js, format.js, hooks/ (useDetailResource, useAction), statusVariants.js, utils.js
 │       └── styles/           # globals.css (Tailwind @apply — no CSS vars)
 ├── packages/api-client/      # Typed API client (DTO types + fetch methods)
 ├── infra/docker-compose.yml  # PostgreSQL├── scripts/

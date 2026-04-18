@@ -142,13 +142,13 @@ export default function ApplicationDetailPage() {
                       <div>
                         <span className="text-sm font-medium text-slate-900">
                           {au.unit?.building?.id ? (
-                            <Link href={`/manager/buildings/${au.unit.building.id}/financials`} className="text-indigo-600 hover:underline">
+                            <Link href={`/manager/buildings/${au.unit.building.id}/financials`} className="cell-link">
                               {au.unit.building.name || "—"}
                             </Link>
                           ) : (au.unit?.building?.name || "—")}
                           {" "}— Unit{" "}
                           {au.unit?.id ? (
-                            <Link href={`/admin-inventory/units/${au.unit.id}`} className="text-indigo-600 hover:underline">
+                            <Link href={`/admin-inventory/units/${au.unit.id}`} className="cell-link">
                               {au.unit.unitNumber || "—"}
                             </Link>
                           ) : (au.unit?.unitNumber || "—")}

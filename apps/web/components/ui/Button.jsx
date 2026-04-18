@@ -12,8 +12,16 @@ const button = cva(
           "bg-surface text-muted-dark border border-surface-border hover:bg-surface-hover focus:ring-muted-ring",
         destructive:
           "bg-destructive text-white border border-destructive hover:bg-destructive-dark focus:ring-destructive-ring",
+        destructiveGhost:
+          "bg-destructive-light text-destructive-text border border-destructive-light hover:bg-destructive-light/80 focus:ring-destructive-ring",
         success:
           "bg-success-dark text-white border-0 hover:bg-success focus:ring-success-ring",
+        warning:
+          "bg-warning text-white border border-warning hover:bg-warning-dark focus:ring-warning-ring",
+        warningGhost:
+          "bg-warning-light text-warning-text border border-warning-ring hover:bg-warning-light/80 focus:ring-warning-ring",
+        neutral:
+          "bg-muted-dark text-white border border-muted-dark hover:bg-muted focus:ring-muted-ring",
         ghost:
           "bg-transparent text-muted-dark border-0 hover:bg-surface-hover focus:ring-muted-ring",
         link:

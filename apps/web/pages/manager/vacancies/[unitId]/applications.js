@@ -286,7 +286,7 @@ export default function UnitApplicationsPage() {
                           <td className="text-right space-x-2">
                             <button
                               onClick={() => router.push(`/manager/rental-applications/${row.id}`)}
-                              className="text-xs text-indigo-600 hover:underline"
+                              className="cell-link text-xs"
                             >
                               View
                             </button>

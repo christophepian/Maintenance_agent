@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import AppShell from "../../../components/AppShell";
 import PageShell from "../../../components/layout/PageShell";
@@ -7,61 +7,43 @@ import PageContent from "../../../components/layout/PageContent";
 import Panel from "../../../components/layout/Panel";
 import Link from "next/link";
 import { authHeaders } from "../../../lib/api";
+import { useDetailResource } from "../../../lib/hooks/useDetailResource";
+import { useAction } from "../../../lib/hooks/useAction";
 import Badge from "../../../components/ui/Badge";
-
+import Button from "../../../components/ui/Button";
+import { DetailGrid, DetailItem } from "../../../components/ui/DetailGrid";
+import ActionBar from "../../../components/ui/ActionBar";
+import ResourceShell from "../../../components/ui/ResourceShell";
 import { cn } from "../../../lib/utils";
-const STATUS_COLORS = {
-  DRAFT: "bg-blue-100 text-blue-700",
-  FINALIZED: "bg-amber-100 text-amber-700",
-  SETTLED: "bg-green-100 text-green-700",
-};
-
-const STATUS_VARIANT = {
-  DRAFT: "info",
-  FINALIZED: "warning",
-  SETTLED: "success",
-};
+import { reconciliationVariant } from "../../../lib/statusVariants";
+import { formatChfCents } from "../../../lib/format";
 
 export default function ChargeReconciliationDetailPage() {
   const router = useRouter();
   const { id } = router.query;
-  const [recon, setRecon] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [saving, setSaving] = useState(null); // lineId being saved
-  const [actionLoading, setActionLoading] = useState(null);
+  const { data: recon, setData: setRecon, loading, error, refresh } = useDetailResource(
+    id ? `/api/charge-reconciliations/${id}` : null
+  );
+  const { pending: saving, run: runSave } = useAction();
+  const { pending: actionLoading, run: runAction } = useAction();
   // Local edits for actual costs (lineId → cents string)
   const [editValues, setEditValues] = useState({});
 
-  const fetchRecon = useCallback(async () => {
-    if (!id) return;
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/charge-reconciliations/${id}`, { headers: authHeaders() });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error?.message || "Failed to load");
-      setRecon(json);
-      // Init edit values from existing data
-      const initEdits = {};
-      for (const line of json.lineItems || []) {
-        initEdits[line.id] = String(line.actualCostCents / 100);
-      }
-      setEditValues(initEdits);
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setLoading(false);
+  // Initialize edit values when recon loads
+  useEffect(() => {
+    if (!recon?.lineItems) return;
+    const initEdits = {};
+    for (const line of recon.lineItems) {
+      initEdits[line.id] = String(line.actualCostCents / 100);
     }
-  }, [id]);
+    setEditValues(initEdits);
+  }, [recon]);
 
-  useEffect(() => { fetchRecon(); }, [fetchRecon]);
-
-  const saveLine = async (lineId) => {
+  const saveLine = (lineId) => {
     const val = parseFloat(editValues[lineId] || "0");
     if (isNaN(val) || val < 0) return;
     const cents = Math.round(val * 100);
-    setSaving(lineId);
-    try {
+    runSave(lineId, async () => {
       const res = await fetch(`/api/charge-reconciliations/${id}/lines/${lineId}`, {
         method: "PUT",
         headers: { ...authHeaders(), "Content-Type": "application/json" },
@@ -70,16 +52,11 @@ export default function ChargeReconciliationDetailPage() {
       const json = await res.json();
       if (!res.ok) throw new Error(json.error?.message || "Failed to save");
       setRecon(json);
-    } catch (e) {
-      alert(e.message);
-    } finally {
-      setSaving(null);
-    }
+    }).catch(e => alert(e.message));
   };
 
-  const handleAction = async (action) => {
-    setActionLoading(action);
-    try {
+  const handleAction = (action) => {
+    runAction(action, async () => {
       const res = await fetch(`/api/charge-reconciliations/${id}/${action}`, {
         method: "POST",
         headers: { ...authHeaders(), "Content-Type": "application/json" },
@@ -88,23 +65,17 @@ export default function ChargeReconciliationDetailPage() {
       const json = await res.json();
       if (!res.ok) throw new Error(json.error?.message || `Failed to ${action}`);
       setRecon(json);
-      // Refresh edit values after status change
       const initEdits = {};
       for (const line of json.lineItems || []) {
         initEdits[line.id] = String(line.actualCostCents / 100);
       }
       setEditValues(initEdits);
-    } catch (e) {
-      alert(e.message);
-    } finally {
-      setActionLoading(null);
-    }
+    }).catch(e => alert(e.message));
   };
 
-  const handleDelete = async () => {
+  const handleDelete = () => {
     if (!confirm("Delete this reconciliation?")) return;
-    setActionLoading("delete");
-    try {
+    runAction("delete", async () => {
       const res = await fetch(`/api/charge-reconciliations/${id}`, {
         method: "DELETE",
         headers: authHeaders(),
@@ -114,42 +85,18 @@ export default function ChargeReconciliationDetailPage() {
         throw new Error(json.error?.message || "Failed to delete");
       }
       router.push("/manager/charge-reconciliations");
-    } catch (e) {
-      alert(e.message);
-    } finally {
-      setActionLoading(null);
-    }
+    }).catch(e => alert(e.message));
   };
 
-  const fmt = (cents) => (cents / 100).toFixed(2);
-
-  if (!router.isReady || loading) {
-    return (
-      <AppShell>
-        <PageShell>
-          <PageContent><p className="text-sm text-muted-foreground">Loading…</p></PageContent>
-        </PageShell>
-      </AppShell>
-    );
-  }
-  if (error) {
-    return (
-      <AppShell>
-        <PageShell>
-          <PageContent><p className="text-sm text-destructive">{error}</p></PageContent>
-        </PageShell>
-      </AppShell>
-    );
-  }
-  if (!recon) return null;
-
-  const isDraft = recon.status === "DRAFT";
-  const isFinalized = recon.status === "FINALIZED";
-  const isSettled = recon.status === "SETTLED";
+  const isDraft = recon?.status === "DRAFT";
+  const isFinalized = recon?.status === "FINALIZED";
+  const isSettled = recon?.status === "SETTLED";
 
   return (
     <AppShell>
       <PageShell>
+        <ResourceShell loading={loading} error={error} hasData={!!recon} emptyMessage="Reconciliation not found.">
+        {recon && (<>
         <PageHeader
           title={`Charge Reconciliation — ${recon.fiscalYear}`}
           breadcrumbs={[
@@ -160,57 +107,40 @@ export default function ChargeReconciliationDetailPage() {
         <PageContent>
           {/* Summary */}
           <Panel title="Summary">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-              <div>
-                <span className="text-muted-foreground block">Tenant</span>
+            <DetailGrid>
+              <DetailItem label="Tenant">
                 <Link href={`/manager/leases/${recon.leaseId}`} className="text-blue-600 hover:underline font-medium">
                   {recon.lease?.tenantName || "—"}
                 </Link>
-              </div>
-              <div>
-                <span className="text-muted-foreground block">Fiscal Year</span>
-                <span className="font-medium">{recon.fiscalYear}</span>
-              </div>
-              <div>
-                <span className="text-muted-foreground block">Status</span>
-                <Badge variant={STATUS_VARIANT[recon.status] || "muted"} size="sm">
+              </DetailItem>
+              <DetailItem label="Fiscal Year">{recon.fiscalYear}</DetailItem>
+              <DetailItem label="Status">
+                <Badge variant={reconciliationVariant(recon.status)} size="sm">
                   {recon.status}
                 </Badge>
-              </div>
-              <div>
-                <span className="text-muted-foreground block">Balance</span>
-                <span className={cn("font-medium", recon.balanceCents > 0 ? "text-red-600" : recon.balanceCents < 0 ? "text-green-600" : "")}>
-                  {recon.balanceCents > 0 ? "+" : ""}{fmt(recon.balanceCents)} CHF
-                </span>
+              </DetailItem>
+              <DetailItem label="Balance" valueClassName={cn(recon.balanceCents > 0 ? "text-red-600" : recon.balanceCents < 0 ? "text-green-600" : "")}>
+                {recon.balanceCents > 0 ? "+" : ""}{formatChfCents(recon.balanceCents)}
                 {recon.balanceCents !== 0 && (
                   <span className="text-xs text-muted-foreground block">
                     {recon.balanceCents > 0 ? "Tenant owes more" : "Credit to tenant"}
                   </span>
                 )}
-              </div>
-            </div>
+              </DetailItem>
+            </DetailGrid>
             {/* Totals */}
-            <div className="grid grid-cols-3 gap-4 mt-4 pt-4 border-t text-sm">
-              <div>
-                <span className="text-muted-foreground block">Total ACOMPTE Paid</span>
-                <span className="font-medium">{fmt(recon.totalAcomptePaidCents)} CHF</span>
-              </div>
-              <div>
-                <span className="text-muted-foreground block">Total Actual Costs</span>
-                <span className="font-medium">{fmt(recon.totalActualCostsCents)} CHF</span>
-              </div>
-              <div>
-                <span className="text-muted-foreground block">Difference</span>
-                <span className="font-medium">{recon.balanceCents > 0 ? "+" : ""}{fmt(recon.balanceCents)} CHF</span>
-              </div>
-            </div>
+            <DetailGrid cols="grid-cols-3" className="mt-4 pt-4 border-t">
+              <DetailItem label="Total ACOMPTE Paid">{formatChfCents(recon.totalAcomptePaidCents)}</DetailItem>
+              <DetailItem label="Total Actual Costs">{formatChfCents(recon.totalActualCostsCents)}</DetailItem>
+              <DetailItem label="Difference">{recon.balanceCents > 0 ? "+" : ""}{formatChfCents(recon.balanceCents)}</DetailItem>
+            </DetailGrid>
           </Panel>
 
           {/* Line Items */}
           <Panel title="Expense Lines" className="mt-6">
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="text-left text-xs text-muted-foreground uppercase border-b">
+              <table className="inline-table">
+                <thead>
                   <tr>
                     <th className="py-2 pr-4">Expense</th>
                     <th className="py-2 pr-4">Mode</th>
@@ -229,7 +159,7 @@ export default function ChargeReconciliationDetailPage() {
                           {line.chargeMode}
                         </Badge>
                       </td>
-                      <td className="py-2 pr-4 text-right tabular-nums">{fmt(line.acomptePaidCents)}</td>
+                      <td className="py-2 pr-4 text-right tabular-nums">{formatChfCents(line.acomptePaidCents)}</td>
                       <td className="py-2 pr-4 text-right">
                         {isDraft && line.chargeMode === "ACOMPTE" ? (
                           <input
@@ -244,12 +174,12 @@ export default function ChargeReconciliationDetailPage() {
                             }}
                           />
                         ) : (
-                          <span className="tabular-nums">{fmt(line.actualCostCents)}</span>
+                          <span className="tabular-nums">{formatChfCents(line.actualCostCents)}</span>
                         )}
                       </td>
                       <td className={cn("py-2 pr-4 text-right tabular-nums", line.balanceCents > 0 ? "text-red-600" : line.balanceCents < 0 ? "text-green-600" : "")}>
                         {line.chargeMode === "ACOMPTE" ? (
-                          <>{line.balanceCents > 0 ? "+" : ""}{fmt(line.balanceCents)}</>
+                          <>{line.balanceCents > 0 ? "+" : ""}{formatChfCents(line.balanceCents)}</>
                         ) : (
                           <span className="text-muted-foreground">—</span>
                         )}
@@ -257,13 +187,13 @@ export default function ChargeReconciliationDetailPage() {
                       {isDraft && (
                         <td className="py-2 text-right">
                           {line.chargeMode === "ACOMPTE" && (
-                            <button
+                            <Button
+                              variant="primary" size="xs"
                               onClick={() => saveLine(line.id)}
                               disabled={saving === line.id}
-                              className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
                             >
                               {saving === line.id ? "Saving…" : "Save"}
-                            </button>
+                            </Button>
                           )}
                         </td>
                       )}
@@ -290,7 +220,7 @@ export default function ChargeReconciliationDetailPage() {
                 </div>
                 <div className="flex gap-4">
                   <span className="text-muted-foreground">Amount:</span>
-                  <span className="font-medium">{(recon.settlementInvoice.totalAmount / 100).toFixed(2)} CHF</span>
+                  <span className="font-medium">{formatChfCents(recon.settlementInvoice.totalAmount)}</span>
                 </div>
                 <div className="flex gap-4">
                   <span className="text-muted-foreground">Description:</span>
@@ -301,45 +231,47 @@ export default function ChargeReconciliationDetailPage() {
           )}
 
           {/* Actions */}
-          <div className="flex gap-3 mt-6">
+          <ActionBar>
             {isDraft && (
               <>
-                <button
+                <Button
+                  variant="warning" size="sm"
                   onClick={() => handleAction("finalize")}
                   disabled={!!actionLoading}
-                  className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 disabled:opacity-50 text-sm font-medium"
                 >
                   {actionLoading === "finalize" ? "Finalizing…" : "✓ Finalize"}
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="destructive" size="sm"
                   onClick={handleDelete}
                   disabled={!!actionLoading}
-                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 text-sm font-medium"
                 >
                   {actionLoading === "delete" ? "Deleting…" : "🗑 Delete"}
-                </button>
+                </Button>
               </>
             )}
             {isFinalized && (
               <>
-                <button
+                <Button
+                  variant="success" size="sm"
                   onClick={() => handleAction("settle")}
                   disabled={!!actionLoading}
-                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 text-sm font-medium"
                 >
                   {actionLoading === "settle" ? "Generating…" : "💰 Generate Settlement Invoice"}
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="secondary" size="sm"
                   onClick={() => handleAction("reopen")}
                   disabled={!!actionLoading}
-                  className="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 disabled:opacity-50 text-sm font-medium"
                 >
                   {actionLoading === "reopen" ? "Reopening…" : "↩ Reopen for Editing"}
-                </button>
+                </Button>
               </>
             )}
-          </div>
+          </ActionBar>
         </PageContent>
+        </>)}
+        </ResourceShell>
       </PageShell>
     </AppShell>
   );

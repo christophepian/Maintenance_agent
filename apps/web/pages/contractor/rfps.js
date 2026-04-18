@@ -170,7 +170,7 @@ export default function ContractorRfpsPage() {
                     <td>
                       <Link
                         href={`/contractor/rfps/${rfp.id}`}
-                        className="text-xs text-indigo-600 hover:underline font-medium"
+                        className="cell-link text-xs font-medium"
                       >
                         View
                       </Link>

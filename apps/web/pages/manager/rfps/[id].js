@@ -12,17 +12,7 @@ import Badge from "../../../components/ui/Badge";
 import { rfpVariant, quoteVariant, inviteVariant } from "../../../lib/statusVariants";
 
 import { cn } from "../../../lib/utils";
-function formatDate(iso) {
-  if (!iso) return "—";
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString("de-CH");
-}
-
-function formatCHF(cents) {
-  if (cents == null) return "—";
-  return `CHF ${(cents / 100).toFixed(2)}`;
-}
+import { formatDate, formatChfCents } from "../../../lib/format";
 
 export default function RfpDetailPage() {
   const router = useRouter();
@@ -246,7 +236,7 @@ export default function RfpDetailPage() {
                       <dd className="mt-1 text-sm">
                         <Link
                           href={`/manager/requests?highlight=${rfp.request.id}`}
-                          className="text-indigo-600 hover:underline font-medium"
+                          className="cell-link font-medium"
                         >
                           #{rfp.request.requestNumber}
                         </Link>
@@ -305,7 +295,7 @@ export default function RfpDetailPage() {
                             {inv.contractor ? (
                               <Link
                                 href={`/manager/people/vendors/${inv.contractorId}`}
-                                className="text-indigo-600 hover:underline"
+                                className="cell-link"
                               >
                                 {inv.contractor.name}
                               </Link>
@@ -354,7 +344,7 @@ export default function RfpDetailPage() {
                             {q.contractor ? (
                               <Link
                                 href={`/manager/people/vendors/${q.contractorId}`}
-                                className="text-sm font-semibold text-indigo-600 hover:underline"
+                                className="cell-link text-sm font-semibold"
                               >
                                 {q.contractor.name}
                               </Link>
@@ -365,7 +355,7 @@ export default function RfpDetailPage() {
                           </div>
                           <div className="flex items-center gap-3">
                             <span className="text-base font-semibold text-slate-900 font-mono">
-                              {formatCHF(q.amountCents)}
+                              {formatChfCents(q.amountCents)}
                               {q.vatIncluded === false && (
                                 <span className="text-xs text-slate-400 ml-1">excl. VAT</span>
                               )}
@@ -428,12 +418,12 @@ export default function RfpDetailPage() {
                           <div className="mt-2">
                             <dt className="text-xs font-medium text-slate-500 mb-1">Line Items</dt>
                             <dd>
-                              <table className="w-full text-sm">
+                              <table className="inline-table">
                                 <tbody>
                                   {q.lineItems.map((li, idx) => (
                                     <tr key={idx} className="border-b border-slate-100 last:border-0">
                                       <td className="py-1 text-slate-700">{li.description}</td>
-                                      <td className="py-1 text-right font-mono text-slate-700">{formatCHF(li.amountCents)}</td>
+                                      <td className="py-1 text-right font-mono text-slate-700">{formatChfCents(li.amountCents)}</td>
                                     </tr>
                                   ))}
                                 </tbody>

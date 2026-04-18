@@ -106,13 +106,13 @@ function buildRequestColumns({ assigningId, setAssigningId, selectedContractorId
       render: (r) => (
         <span className="text-slate-700">
           {r.buildingId ? (
-            <Link href={`/manager/buildings/${r.buildingId}/financials`} className="text-indigo-600 hover:underline" onClick={(e) => e.stopPropagation()}>
+            <Link href={`/manager/buildings/${r.buildingId}/financials`} className="cell-link" onClick={(e) => e.stopPropagation()}>
               {r.buildingName || "\u2014"}
             </Link>
           ) : (r.buildingName || "\u2014")}
           {r.unitNumber ? (
             r.unitId ? (
-              <span className="text-slate-400"> / <Link href={`/admin-inventory/units/${r.unitId}`} className="text-indigo-600 hover:underline" onClick={(e) => e.stopPropagation()}>{r.unitNumber}</Link></span>
+              <span className="text-slate-400"> / <Link href={`/admin-inventory/units/${r.unitId}`} className="cell-link" onClick={(e) => e.stopPropagation()}>{r.unitNumber}</Link></span>
             ) : (
               <span className="text-slate-400"> / {r.unitNumber}</span>
             )

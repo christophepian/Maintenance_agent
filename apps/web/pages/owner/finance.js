@@ -182,7 +182,7 @@ export default function OwnerFinance() {
                         <div className="border-t border-slate-100 px-4 py-3">
                           <p className="mb-3 text-xs text-slate-500">
                             Job{" "}
-                            <Link href="/owner/jobs" className="text-indigo-600 hover:underline" onClick={(e) => e.stopPropagation()}>
+                            <Link href="/owner/jobs" className="cell-link" onClick={(e) => e.stopPropagation()}>
                               {invoice.jobId?.slice(0, 8)}
                             </Link>
                           </p>

@@ -156,3 +156,26 @@ name and the contract test fails, update the test — do not delete it.
 
 Full guardrail list: `PROJECT_OVERVIEW.md`
 File-routing map: `apps/api/src/ARCHITECTURE_LOW_CONTEXT_GUIDE.md`
+
+---
+
+### Frontend UI checklist
+
+Before submitting UI changes, verify:
+
+- [ ] **Layout:** Page uses `AppShell > PageShell > PageHeader > PageContent > Panel` nesting
+- [ ] **Status badges:** Uses `Badge` + mapper from `statusVariants.js` — no inline color maps
+- [ ] **Buttons:** Uses `Button` component variants — no one-off class stacks
+- [ ] **Loading/error/not-found:** Uses `ResourceShell` where applicable — no duplicated early-return guards
+- [ ] **Data fetching:** Uses `useDetailResource` for single-resource pages — no useState+useCallback+useEffect triples
+- [ ] **Mutations:** Uses `useAction` for pending state — no duplicated try/finally wrappers
+- [ ] **Formatting:** Imports from `lib/format.js` — no inline `fmt()` / `formatDate()` / `formatChf()`
+- [ ] **Detail metadata:** Uses `DetailGrid`/`DetailItem` or `DetailList`/`DetailRow` — no ad-hoc grids
+- [ ] **Modals:** Uses `Modal`/`ModalFooter` — no custom overlay markup
+- [ ] **Dynamic classes:** Uses `cn()` — no template-literal interpolation
+- [ ] **Accessibility:** `aria-label` on icon-only buttons, labels on inputs, no horizontal scroll
+
+**When to extract a new shared component:**
+- A stateful UI block appears (or will appear) on 2+ pages
+- A visual pattern with its own data flow is copy-pasted between files
+- Extract to `components/` (stateful) or `components/ui/` (presentational)

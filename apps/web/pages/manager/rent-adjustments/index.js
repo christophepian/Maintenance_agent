@@ -1,19 +1,16 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
+import Link from "next/link";
 import AppShell from "../../../components/AppShell";
 import PageShell from "../../../components/layout/PageShell";
 import PageHeader from "../../../components/layout/PageHeader";
 import PageContent from "../../../components/layout/PageContent";
 import Panel from "../../../components/layout/Panel";
+import Badge from "../../../components/ui/Badge";
 import { fetchWithAuth } from "../../../lib/api";
-
+import { formatChfCents, formatDate } from "../../../lib/format";
+import { rentAdjustmentVariant } from "../../../lib/statusVariants";
 import { cn } from "../../../lib/utils";
-const STATUS_COLORS = {
-  DRAFT: "bg-yellow-100 text-yellow-700",
-  APPROVED: "bg-blue-100 text-blue-700",
-  APPLIED: "bg-green-100 text-green-700",
-  REJECTED: "bg-red-100 text-red-700",
-};
 
 const TYPE_LABELS = {
   CPI_INDEXATION: "CPI Indexation",
@@ -21,18 +18,39 @@ const TYPE_LABELS = {
   MANUAL: "Manual",
 };
 
+const TABS = [
+  { key: "ALL", label: "All" },
+  { key: "DRAFT", label: "Draft" },
+  { key: "APPROVED", label: "Approved" },
+  { key: "APPLIED", label: "Applied" },
+  { key: "REJECTED", label: "Rejected" },
+];
+const TAB_KEYS = TABS.map((t) => t.key.toLowerCase());
+
 export default function RentAdjustmentsList() {
   const router = useRouter();
+  const activeTab = router.isReady
+    ? Math.max(0, TAB_KEYS.indexOf(router.query.tab)) || 0
+    : 0;
+  const setActiveTab = useCallback(
+    (index) => {
+      router.push(
+        { pathname: router.pathname, query: { ...router.query, tab: TAB_KEYS[index] } },
+        undefined,
+        { shallow: true },
+      );
+    },
+    [router],
+  );
+
   const [adjustments, setAdjustments] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState("All");
-  const tabs = ["All", "Draft", "Approved", "Applied", "Rejected"];
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
-      if (tab !== "All") params.set("status", tab.toUpperCase());
+      if (TABS[activeTab].key !== "ALL") params.set("status", TABS[activeTab].key);
       const res = await fetchWithAuth(`/api/rent-adjustments?${params}`);
       if (res.ok) {
         const json = await res.json();
@@ -43,11 +61,11 @@ export default function RentAdjustmentsList() {
     } finally {
       setLoading(false);
     }
-  }, [tab]);
+  }, [activeTab]);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
-
-  const fmt = (cents) => (cents / 100).toLocaleString("de-CH", { style: "currency", currency: "CHF" });
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   return (
     <AppShell>
@@ -57,80 +75,86 @@ export default function RentAdjustmentsList() {
           subtitle="CPI-indexed and manual rent adjustments"
         />
         <PageContent>
-          {/* Tabs */}
-          <div className="flex gap-2 mb-4">
-            {tabs.map((t) => (
+          <div className="tab-strip">
+            {TABS.map((t, i) => (
               <button
-                key={t}
-                onClick={() => setTab(t)}
-                className={cn("px-3 py-1 rounded text-sm font-medium", tab === t
-                    ? "bg-indigo-600 text-white"
-                    : "bg-slate-100 text-slate-600 hover:bg-slate-200")}
+                key={t.key}
+                onClick={() => setActiveTab(i)}
+                className={activeTab === i ? "pill-tab-active" : "pill-tab"}
               >
-                {t}
+                {t.label}
               </button>
             ))}
           </div>
 
-          <Panel>
+          <Panel bodyClassName="p-0">
             {loading ? (
-              <p className="text-slate-500 py-4">Loading…</p>
+              <p className="loading-text p-4">Loading…</p>
             ) : adjustments.length === 0 ? (
-              <p className="text-slate-500 py-4">
-                No rent adjustments found.{" "}
-                <span className="text-sm">
-                  Use the lease detail page to create adjustments.
-                </span>
-              </p>
+              <div className="empty-state">
+                <p className="empty-state-text">
+                  No rent adjustments found. Use the lease detail page to create adjustments.
+                </p>
+              </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-slate-200 text-sm">
-                  <thead className="bg-slate-50">
+                <table className="inline-table">
+                  <thead>
                     <tr>
-                      <th className="px-3 py-2 text-left font-medium text-slate-500">Tenant</th>
-                      <th className="px-3 py-2 text-left font-medium text-slate-500">Type</th>
-                      <th className="px-3 py-2 text-left font-medium text-slate-500">Effective</th>
-                      <th className="px-3 py-2 text-left font-medium text-slate-500">Status</th>
-                      <th className="px-3 py-2 text-right font-medium text-slate-500">Old Rent</th>
-                      <th className="px-3 py-2 text-right font-medium text-slate-500">New Rent</th>
-                      <th className="px-3 py-2 text-right font-medium text-slate-500">Change</th>
-                      <th className="px-3 py-2 text-left font-medium text-slate-500">Action</th>
+                      <th>Tenant</th>
+                      <th>Type</th>
+                      <th>Effective</th>
+                      <th>Status</th>
+                      <th className="text-right">Old Rent</th>
+                      <th className="text-right">New Rent</th>
+                      <th className="text-right">Change</th>
+                      <th>Action</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100">
+                  <tbody>
                     {adjustments.map((adj) => {
                       const changePct = adj.previousRentCents
                         ? ((adj.adjustmentCents / adj.previousRentCents) * 100).toFixed(1)
                         : "—";
                       return (
-                        <tr key={adj.id} className="hover:bg-slate-50">
-                          <td className="px-3 py-2">
-                            <a
+                        <tr key={adj.id}>
+                          <td className="cell-bold">
+                            <Link
                               href={`/manager/rent-adjustments/${adj.id}`}
-                              className="text-indigo-600 hover:underline"
+                              className="cell-link"
                             >
                               {adj.lease?.tenantName || "—"}
-                            </a>
+                            </Link>
                           </td>
-                          <td className="px-3 py-2">{TYPE_LABELS[adj.adjustmentType] || adj.adjustmentType}</td>
-                          <td className="px-3 py-2">{new Date(adj.effectiveDate).toLocaleDateString("de-CH")}</td>
-                          <td className="px-3 py-2">
-                            <span className={cn("px-2 py-0.5 rounded text-xs font-semibold", STATUS_COLORS[adj.status] || "bg-slate-100")}>
+                          <td>{TYPE_LABELS[adj.adjustmentType] || adj.adjustmentType}</td>
+                          <td>{formatDate(adj.effectiveDate)}</td>
+                          <td>
+                            <Badge variant={rentAdjustmentVariant(adj.status)}>
                               {adj.status}
-                            </span>
+                            </Badge>
                           </td>
-                          <td className="px-3 py-2 text-right">{fmt(adj.previousRentCents)}</td>
-                          <td className="px-3 py-2 text-right font-semibold">{fmt(adj.newRentCents)}</td>
-                          <td className={cn("px-3 py-2 text-right", adj.adjustmentCents > 0 ? "text-red-600" : adj.adjustmentCents < 0 ? "text-green-600" : "")}>
-                            {adj.adjustmentCents > 0 ? "+" : ""}{fmt(adj.adjustmentCents)} ({changePct}%)
+                          <td className="text-right">{formatChfCents(adj.previousRentCents)}</td>
+                          <td className="text-right cell-bold">{formatChfCents(adj.newRentCents)}</td>
+                          <td
+                            className={cn(
+                              "text-right",
+                              adj.adjustmentCents > 0
+                                ? "text-red-600"
+                                : adj.adjustmentCents < 0
+                                  ? "text-green-600"
+                                  : "",
+                            )}
+                          >
+                            {adj.adjustmentCents > 0 ? "+" : ""}
+                            {formatChfCents(adj.adjustmentCents)} ({changePct}%)
                           </td>
-                          <td className="px-3 py-2">
-                            <button
-                              onClick={() => router.push(`/manager/rent-adjustments/${adj.id}`)}
-                              className="text-indigo-600 hover:underline text-sm"
+                          <td>
+                            <Link
+                              href={`/manager/rent-adjustments/${adj.id}`}
+                              className="cell-link"
                             >
                               {adj.status === "DRAFT" ? "Edit" : "View"}
-                            </button>
+                            </Link>
                           </td>
                         </tr>
                       );

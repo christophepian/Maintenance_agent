@@ -1,18 +1,16 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
+import Link from "next/link";
 import AppShell from "../../../components/AppShell";
 import PageShell from "../../../components/layout/PageShell";
 import PageHeader from "../../../components/layout/PageHeader";
 import PageContent from "../../../components/layout/PageContent";
 import Panel from "../../../components/layout/Panel";
+import Badge from "../../../components/ui/Badge";
+import Button from "../../../components/ui/Button";
 import { fetchWithAuth, postWithAuth } from "../../../lib/api";
-
-import { cn } from "../../../lib/utils";
-const STATUS_COLORS = {
-  ACTIVE: "bg-green-100 text-green-700",
-  PAUSED: "bg-yellow-100 text-yellow-700",
-  COMPLETED: "bg-slate-100 text-slate-800",
-};
+import { formatChfCents, formatDate } from "../../../lib/format";
+import { billingScheduleVariant } from "../../../lib/statusVariants";
 
 const FREQUENCY_LABELS = {
   MONTHLY: "Monthly",
@@ -21,13 +19,33 @@ const FREQUENCY_LABELS = {
   ANNUAL: "Annual",
 };
 
+const TABS = [
+  { key: "ALL", label: "All" },
+  { key: "ACTIVE", label: "Active" },
+  { key: "PAUSED", label: "Paused" },
+  { key: "COMPLETED", label: "Completed" },
+];
+const TAB_KEYS = TABS.map((t) => t.key.toLowerCase());
+
 export default function ContractorBillingSchedulesList() {
   const router = useRouter();
+  const activeTab = router.isReady
+    ? Math.max(0, TAB_KEYS.indexOf(router.query.tab)) || 0
+    : 0;
+  const setActiveTab = useCallback(
+    (index) => {
+      router.push(
+        { pathname: router.pathname, query: { ...router.query, tab: TAB_KEYS[index] } },
+        undefined,
+        { shallow: true },
+      );
+    },
+    [router],
+  );
+
   const [schedules, setSchedules] = useState([]);
   const [contractors, setContractors] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState("All");
-  const tabs = ["All", "Active", "Paused", "Completed"];
 
   // Create form
   const [showCreate, setShowCreate] = useState(false);
@@ -47,7 +65,7 @@ export default function ContractorBillingSchedulesList() {
     setLoading(true);
     try {
       const params = new URLSearchParams();
-      if (tab !== "All") params.set("status", tab.toUpperCase());
+      if (TABS[activeTab].key !== "ALL") params.set("status", TABS[activeTab].key);
       const res = await fetchWithAuth(`/api/contractor-billing-schedules?${params}`);
       if (res.ok) {
         const json = await res.json();
@@ -58,7 +76,7 @@ export default function ContractorBillingSchedulesList() {
     } finally {
       setLoading(false);
     }
-  }, [tab]);
+  }, [activeTab]);
 
   useEffect(() => {
     fetchData();
@@ -70,9 +88,6 @@ export default function ContractorBillingSchedulesList() {
       .then((json) => setContractors(json.data || []))
       .catch(() => {});
   }, []);
-
-  const fmt = (cents) =>
-    (cents / 100).toLocaleString("de-CH", { style: "currency", currency: "CHF" });
 
   const handleCreate = async (e) => {
     e.preventDefault();
@@ -120,12 +135,13 @@ export default function ContractorBillingSchedulesList() {
           title="Contractor Billing"
           subtitle="Recurring billing schedules for contractor services"
           action={
-            <button
+            <Button
+              variant={showCreate ? "ghost" : "primary"}
+              size="sm"
               onClick={() => setShowCreate(!showCreate)}
-              className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 text-sm"
             >
               {showCreate ? "Cancel" : "+ New Schedule"}
-            </button>
+            </Button>
           }
         />
         <PageContent>
@@ -221,89 +237,77 @@ export default function ContractorBillingSchedulesList() {
                   />
                 </div>
                 <div className="flex items-end">
-                  <button
-                    type="submit"
-                    disabled={saving}
-                    className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 text-sm disabled:opacity-50"
-                  >
+                  <Button type="submit" disabled={saving} size="sm">
                     {saving ? "Creating…" : "Create Schedule"}
-                  </button>
+                  </Button>
                 </div>
               </form>
             </Panel>
           )}
 
           {/* Tabs */}
-          <div className="flex gap-2 mb-4">
-            {tabs.map((t) => (
+          <div className="tab-strip">
+            {TABS.map((t, i) => (
               <button
-                key={t}
-                onClick={() => setTab(t)}
-                className={cn("px-3 py-1 rounded text-sm font-medium", tab === t
-                    ? "bg-indigo-600 text-white"
-                    : "bg-slate-100 text-slate-600 hover:bg-slate-200")}
+                key={t.key}
+                onClick={() => setActiveTab(i)}
+                className={activeTab === i ? "pill-tab-active" : "pill-tab"}
               >
-                {t}
+                {t.label}
               </button>
             ))}
           </div>
 
-          <Panel>
+          <Panel bodyClassName="p-0">
             {loading ? (
-              <p className="text-slate-500 py-4">Loading…</p>
+              <p className="loading-text p-4">Loading…</p>
             ) : schedules.length === 0 ? (
-              <p className="text-slate-500 py-4">
-                No contractor billing schedules found.
-              </p>
+              <div className="empty-state">
+                <p className="empty-state-text">No contractor billing schedules found.</p>
+              </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-slate-200 text-sm">
-                  <thead className="bg-slate-50">
+                <table className="inline-table">
+                  <thead>
                     <tr>
-                      <th className="px-3 py-2 text-left font-medium text-slate-500">Contractor</th>
-                      <th className="px-3 py-2 text-left font-medium text-slate-500">Description</th>
-                      <th className="px-3 py-2 text-left font-medium text-slate-500">Frequency</th>
-                      <th className="px-3 py-2 text-right font-medium text-slate-500">Amount</th>
-                      <th className="px-3 py-2 text-left font-medium text-slate-500">Status</th>
-                      <th className="px-3 py-2 text-left font-medium text-slate-500">Next Period</th>
-                      <th className="px-3 py-2 text-left font-medium text-slate-500">Building</th>
-                      <th className="px-3 py-2 text-left font-medium text-slate-500">Action</th>
+                      <th>Contractor</th>
+                      <th>Description</th>
+                      <th>Frequency</th>
+                      <th className="text-right">Amount</th>
+                      <th>Status</th>
+                      <th>Next Period</th>
+                      <th>Building</th>
+                      <th>Action</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100">
+                  <tbody>
                     {schedules.map((s) => (
-                      <tr key={s.id} className="hover:bg-slate-50">
-                        <td className="px-3 py-2">
-                          <a
+                      <tr key={s.id}>
+                        <td className="cell-bold">
+                          <Link
                             href={`/manager/contractor-billing-schedules/${s.id}`}
-                            className="text-indigo-600 hover:underline"
+                            className="cell-link"
                           >
                             {s.contractor?.name || "—"}
-                          </a>
+                          </Link>
                         </td>
-                        <td className="px-3 py-2">{s.description}</td>
-                        <td className="px-3 py-2">{FREQUENCY_LABELS[s.frequency] || s.frequency}</td>
-                        <td className="px-3 py-2 text-right font-semibold">{fmt(s.amountCents)}</td>
-                        <td className="px-3 py-2">
-                          <span
-                            className={cn("px-2 py-0.5 rounded text-xs font-semibold", STATUS_COLORS[s.status] || "bg-slate-100")}
-                          >
+                        <td>{s.description}</td>
+                        <td>{FREQUENCY_LABELS[s.frequency] || s.frequency}</td>
+                        <td className="text-right cell-bold">{formatChfCents(s.amountCents)}</td>
+                        <td>
+                          <Badge variant={billingScheduleVariant(s.status)}>
                             {s.status}
-                          </span>
+                          </Badge>
                         </td>
-                        <td className="px-3 py-2">
-                          {new Date(s.nextPeriodStart).toLocaleDateString("de-CH")}
-                        </td>
-                        <td className="px-3 py-2">{s.building?.name || "—"}</td>
-                        <td className="px-3 py-2">
-                          <button
-                            onClick={() =>
-                              router.push(`/manager/contractor-billing-schedules/${s.id}`)
-                            }
-                            className="text-indigo-600 hover:underline text-sm"
+                        <td>{formatDate(s.nextPeriodStart)}</td>
+                        <td>{s.building?.name || "—"}</td>
+                        <td>
+                          <Link
+                            href={`/manager/contractor-billing-schedules/${s.id}`}
+                            className="cell-link"
                           >
                             View
-                          </button>
+                          </Link>
                         </td>
                       </tr>
                     ))}

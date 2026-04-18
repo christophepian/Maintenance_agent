@@ -563,7 +563,7 @@ export default function OwnerRequestDetailPage() {
                       {rfpId && (
                         <div className="flex items-end">
                           <Link href={`/owner/rfps/${rfpId}`}
-                            className="text-xs font-medium text-indigo-600 hover:underline no-underline">
+                            className="cell-link text-xs font-medium">
                             View full tender &rarr;
                           </Link>
                         </div>
@@ -756,7 +756,7 @@ export default function OwnerRequestDetailPage() {
                   {/* RFP */}
                   {rfpId && (
                     <Panel title="Request for Proposals">
-                      <Link href={`/owner/rfps/${rfpId}`} className="text-sm font-medium text-indigo-600 hover:underline">
+                      <Link href={`/owner/rfps/${rfpId}`} className="cell-link text-sm font-medium">
                         View RFP &rarr;
                       </Link>
                     </Panel>

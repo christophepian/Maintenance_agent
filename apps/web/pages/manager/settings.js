@@ -10,6 +10,7 @@ import { authHeaders } from "../../lib/api";
 import Badge from "../../components/ui/Badge";
 import { legalVariant } from "../../lib/statusVariants";
 import { cn } from "../../lib/utils";
+import { formatDate } from "../../lib/format";
 import DepreciationStandards from "../../components/DepreciationStandards";
 
 const SETTINGS_TABS = [
@@ -733,7 +734,7 @@ function formatLegalDate(iso) {
   if (!iso) return "—";
   const d = new Date(iso);
   if (isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString("de-CH");
+  return formatDate(iso);
 }
 
 function LegalStatusPill({ status }) {

@@ -4,16 +4,13 @@ import Link from "next/link";
 import AppShell from "../../../components/AppShell";
 import ContractorPicker from "../../../components/ContractorPicker";
 import ErrorBanner from "../../../components/ui/ErrorBanner";
-import { formatDate } from "../../../lib/format";
+import { formatDate, formatChfCents } from "../../../lib/format";
 import { authHeaders } from "../../../lib/api";
+import { useDetailResource } from "../../../lib/hooks/useDetailResource";
 import Badge from "../../../components/ui/Badge";
-import { rfpVariant } from "../../../lib/statusVariants";
+import { rfpVariant, slotVariant } from "../../../lib/statusVariants";
 
 import { cn } from "../../../lib/utils";
-function formatCHF(cents) {
-  if (cents == null) return "—";
-  return `CHF ${(cents / 100).toFixed(2)}`;
-}
 
 /* ── Quote Submission Form ─────────────────────────────────────── */
 
@@ -233,7 +230,7 @@ function QuoteForm({ rfpId, onSubmitted }) {
           <button
             type="button"
             onClick={addLineItem}
-            className="text-xs text-indigo-600 hover:underline"
+            className="cell-link text-xs"
           >
             + Add line item
           </button>
@@ -404,7 +401,7 @@ function SlotProposalForm({ jobId, onProposed }) {
           <button
             type="button"
             onClick={addSlot}
-            className="text-xs text-indigo-600 hover:underline"
+            className="cell-link text-xs"
           >
             + Add another time slot
           </button>
@@ -425,11 +422,7 @@ function SlotProposalForm({ jobId, onProposed }) {
 
 /* ── Existing Slots Display ────────────────────────────────────── */
 
-const SLOT_STATUS_COLORS = {
-  PROPOSED: "bg-yellow-50 border-yellow-200 text-yellow-700",
-  ACCEPTED: "bg-green-50 border-green-200 text-green-700",
-  DECLINED: "bg-red-50 border-red-200 text-red-700",
-};
+
 
 function formatSlotTime(iso) {
   if (!iso) return "—";
@@ -468,14 +461,14 @@ function ExistingSlotsPanel({ slots }) {
         {slots.map((slot) => (
           <div
             key={slot.id}
-            className={cn("flex items-center justify-between rounded-lg border p-3", SLOT_STATUS_COLORS[slot.status] || "bg-slate-50 border-slate-200")}
+            className="flex items-center justify-between rounded-lg border p-3"
           >
             <div>
               <p className="text-sm font-medium">
                 {formatSlotTime(slot.startTime)} – {formatSlotTime(slot.endTime)}
               </p>
             </div>
-            <Badge variant="default" size="sm">
+            <Badge variant={slotVariant(slot.status)} size="sm">
               {slot.status}
             </Badge>
           </div>
@@ -607,7 +600,7 @@ function QuoteSummary({ quote }) {
       <dl className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
         <div>
           <dt className={cn("text-sm font-medium", cfg.labelColor)}>Amount</dt>
-          <dd className={cn("mt-1 text-sm font-semibold", cfg.valueColor)}>{formatCHF(quote.amountCents)}</dd>
+          <dd className={cn("mt-1 text-sm font-semibold", cfg.valueColor)}>{formatChfCents(quote.amountCents)}</dd>
         </div>
         <div>
           <dt className={cn("text-sm font-medium", cfg.labelColor)}>VAT</dt>
@@ -658,12 +651,12 @@ function QuoteSummary({ quote }) {
         <div className="mt-3">
           <dt className={cn("text-sm font-medium", cfg.labelColor, "mb-1")}>Line Items</dt>
           <dd className="mt-1">
-            <table className="w-full text-sm">
+            <table className="inline-table">
               <tbody>
                 {quote.lineItems.map((li, idx) => (
                   <tr key={idx} className={cn("border-b", cfg.rowBorder, "last:border-0")}>
                     <td className={cn("py-1", cfg.valueColor)}>{li.description}</td>
-                    <td className={cn("py-1 text-right font-mono", cfg.valueColor)}>{formatCHF(li.amountCents)}</td>
+                    <td className={cn("py-1 text-right font-mono", cfg.valueColor)}>{formatChfCents(li.amountCents)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -679,39 +672,18 @@ export default function ContractorRfpDetailPage() {
   const router = useRouter();
   const { id } = router.query;
 
-  const [rfp, setRfp] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-
-  const loadData = useCallback(async () => {
-    if (!id) return;
-    const contractorId =
-      typeof window !== "undefined" ? localStorage.getItem("contractorId") : null;
-    if (!contractorId) {
-      setError("No contractor selected. Please select a contractor first.");
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
-    setError("");
-    try {
-      const res = await fetch(`/api/contractor/rfps/${id}?contractorId=${contractorId}`, {
-        headers: authHeaders(),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error?.message || data?.message || "Failed to load RFP");
-      setRfp(data?.data);
-    } catch (e) {
-      setError(String(e?.message || e));
-    } finally {
-      setLoading(false);
-    }
-  }, [id]);
-
+  const [contractorId, setContractorId] = useState(null);
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    if (typeof window !== "undefined") {
+      setContractorId(localStorage.getItem("contractorId"));
+    }
+  }, []);
+
+  const { data: rfp, loading, error, refresh: loadData } = useDetailResource(
+    id && contractorId ? `/api/contractor/rfps/${id}?contractorId=${contractorId}` : null
+  );
+
+  const noContractor = !contractorId && typeof window !== "undefined";
 
   const title = rfp ? `RFP #${rfp.id?.slice(0, 8)}` : "RFP Detail";
 
@@ -733,9 +705,9 @@ export default function ContractorRfpDetailPage() {
           </Link>
         </div>
 
-        <ContractorPicker onSelect={() => loadData()} />
+        <ContractorPicker onSelect={() => setContractorId(localStorage.getItem("contractorId"))} />
 
-        <ErrorBanner error={error} onDismiss={() => setError("")} className="mb-4" />
+        <ErrorBanner error={noContractor ? "No contractor selected. Please select a contractor first." : error} className="mb-4" />
 
         {loading ? (
           <p className="text-sm text-slate-500">Loading…</p>

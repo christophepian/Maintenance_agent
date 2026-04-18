@@ -243,7 +243,7 @@ export default function ManagerVacanciesPage() {
                           {sel.lease ? (
                             <Link
                               href={"/manager/leases/" + sel.lease.id}
-                              className="inline-flex items-center gap-1.5 text-indigo-600 hover:underline"
+                              className="cell-link inline-flex items-center gap-1.5"
                             >
                               {leaseBadge(sel.lease)}
                             </Link>
@@ -306,7 +306,7 @@ export default function ManagerVacanciesPage() {
                             {u.unitNumber || "—"}
                             <div className="text-xs text-slate-400 font-normal mt-0.5">
                               Empty since: {u.vacantSince
-                                ? new Date(u.vacantSince).toLocaleDateString("de-CH")
+                                ? formatDate(u.vacantSince)
                                 : "unknown"}
                             </div>
                           </td>

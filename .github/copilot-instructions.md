@@ -133,10 +133,12 @@ Maintenance_Agent/
 │   ├── schema.prisma    # 64 models · 55 enums
 │   └── migrations/      # 72 dirs — never edit past migrations
 ├── apps/web/pages/      # 275 pages (92 UI + 182 API proxies)
-├── apps/web/components/ui/  # 10 CVA-backed primitives (Button, Badge, Card, etc.)
+├── apps/web/components/ui/  # 10 CVA + 7 presentational components (Button, Badge, ResourceShell, DetailGrid, Modal, etc.)
 ├── apps/web/lib/
 │   ├── utils.js           # cn() = twMerge(clsx()) — ALL dynamic classNames must use this
-│   └── statusVariants.js  # 14 status→Badge variant mappers — canonical status color source
+│   ├── statusVariants.js  # 14 status→Badge variant mappers — canonical status color source
+│   ├── format.js          # formatChf, formatDate, formatDateTime, etc. — never define inline
+│   └── hooks/             # useDetailResource (fetch), useAction (mutation pending state)
 ├── apps/web/styles/
 │   └── globals.css       # @theme tokens + @apply classes — single CSS source of truth (F8)
 ├── packages/api-client/ # Typed DTOs + fetch methods
@@ -182,10 +184,16 @@ Maintenance_Agent/
 - Do not change `maybeRequireManager` to allow writes — use `requireRole('MANAGER')` for mutations
 - Do not accept `tenantId` as a query param on tenant-portal routes — use `requireTenantSession()`
 - Do not add non-English labels, seed data, or UI text — English only until i18n epic lands (F-UI7)
+- See `PROJECT_STATE.md` §F-UI8 for shared hooks & presentational components (useDetailResource, useAction, ResourceShell, DetailGrid, Modal, ActionBar, lib/format.js)
 - Do not skip contract test updates when changing DTOs
 - Do not run `docker-compose down -v` or `prisma migrate reset` without explicit approval
 - Do not define per-file `STATUS_COLORS` / `URGENCY_COLORS` / color-map objects — use `statusVariants.js` mappers with `<Badge>`
 - Do not use template-literal className interpolation (`className={\`... ${x}\`}`) — use `cn()` from `lib/utils.js`
+- Do not duplicate detail-page fetch boilerplate (useState+useCallback+useEffect) — use `useDetailResource`
+- Do not duplicate loading/error/not-found early-return guards — use `ResourceShell`
+- Do not duplicate try/finally pending-state wrappers — use `useAction`
+- Do not write one-off action button class stacks — use `Button` variants (`warning`, `destructiveGhost`, `neutral`, etc.)
+- Do not define inline format functions (`fmt`, `formatDate`, `formatChf`) — import from `lib/format.js`
 - Do not create icon-only `<button>` elements without `aria-label`
 - Do not add `<input>` / `<select>` without an associated `<label>`, `aria-label`, or `placeholder`
 - Do not introduce horizontal scroll — no page may exceed viewport width. `html, body` have `overflow-x: hidden` globally; `<main>` in `AppShell.js` uses `min-w-0 overflow-x-hidden`. Use `min-w-0`, `overflow-hidden`, `truncate`, or responsive grids to contain wide content.
@@ -221,6 +229,32 @@ className={cn("base", active ? "bg-blue-100" : "bg-white")}
 // ❌ Wrong — template literal interpolation
 className={`base-classes ${condition ? "a" : "b"}`}
 ```
+
+### Format Helpers — Never Define Inline
+
+All formatting functions live in `lib/format.js`:
+
+`formatChf`, `formatChfCents`, `formatNumber`, `formatDate`, `formatDateTime`, `formatDateLong`, `formatPercent` — SSR-safe, deterministic.
+
+```jsx
+import { formatChf, formatDate } from "../../lib/format";
+```
+
+### Shared Hooks & Presentational Components
+
+| Abstraction | Purpose |
+|------------|--------|
+| `useDetailResource(url)` | Replaces useState+useCallback+useEffect fetch boilerplate |
+| `useAction()` | Wraps mutation pending state (`{ pending, run }`) |
+| `ResourceShell` | Wraps loading/error/not-found/ready states |
+| `DetailGrid` / `DetailItem` | Key-value metadata grid |
+| `DetailList` / `DetailRow` | Vertical key-value list |
+| `Modal` / `ModalFooter` | Overlay dialog |
+| `ActionBar` | Bottom-anchored action strip |
+
+Button has 10 variants: `primary`, `secondary`, `ghost`, `outline`, `destructive`, `destructiveGhost`, `warning`, `warningGhost`, `neutral`, `link`.
+
+See `PROJECT_STATE.md` §F-UI8 for full rules and migration guidance.
 
 ### Accessibility Baseline
 

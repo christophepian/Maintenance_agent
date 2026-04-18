@@ -2,8 +2,11 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 import AppShell from "../../../components/AppShell";
 import { tenantFetch } from "../../../lib/api";
+import { formatDate, formatChf } from "../../../lib/format";
 
 import { cn } from "../../../lib/utils";
+import Badge from "../../../components/ui/Badge";
+import { leaseVariant, signerVariant } from "../../../lib/statusVariants";
 const STATUS_LABELS = {
   DRAFT: "Draft",
   READY_TO_SIGN: "Ready to Sign",
@@ -99,21 +102,6 @@ export default function TenantLeaseDetailPage() {
     }
   }
 
-  function formatDate(iso) {
-    if (!iso) return "—";
-    const d = new Date(iso);
-    if (isNaN(d.getTime())) return "—";
-    const dd = String(d.getDate()).padStart(2, "0");
-    const mm = String(d.getMonth() + 1).padStart(2, "0");
-    const yyyy = d.getFullYear();
-    return `${dd}.${mm}.${yyyy}`;
-  }
-
-  function formatChf(amount) {
-    if (amount == null) return "—";
-    const str = Number(amount).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, "'");
-    return `CHF ${str}`;
-  }
 
   if (!session) {
     return (
@@ -174,21 +162,9 @@ export default function TenantLeaseDetailPage() {
                   {lease.unit?.building?.name} — Unit {lease.unit?.unitNumber}
                 </p>
               </div>
-              <span
-                className={cn("px-3 py-1 rounded-full text-sm font-medium", lease.status === "ACTIVE"
-                    ? "bg-green-100 text-green-700"
-                    : lease.status === "SIGNED"
-                    ? "bg-green-100 text-green-700"
-                    : lease.status === "READY_TO_SIGN"
-                    ? "bg-yellow-100 text-yellow-700"
-                    : lease.status === "TERMINATED"
-                    ? "bg-orange-100 text-orange-700"
-                    : lease.status === "CANCELLED"
-                    ? "bg-red-100 text-red-700"
-                    : "bg-slate-100 text-slate-600")}
-              >
+              <Badge variant={leaseVariant(lease.status)} size="lg">
                 {STATUS_LABELS[lease.status] || lease.status}
-              </span>
+              </Badge>
             </div>
 
             {/* Accept Banner */}
@@ -364,16 +340,9 @@ export default function TenantLeaseDetailPage() {
               <section className="card p-5 mb-4">
                 <h2 className="text-lg font-semibold mb-3 border-b pb-2">Signature Status</h2>
                 <div className="flex items-center gap-2">
-                  <span
-                    className={cn("w-3 h-3 rounded-full", lease.signatureStatus === "SIGNED"
-                        ? "bg-green-500"
-                        : lease.signatureStatus === "SENT"
-                        ? "bg-blue-500"
-                        : "bg-slate-400")}
-                  />
-                  <span className="capitalize">
+                  <Badge variant={signerVariant(lease.signatureStatus)} size="sm">
                     {lease.signatureStatus.toLowerCase().replace(/_/g, " ")}
-                  </span>
+                  </Badge>
                   {lease.tenantAcceptedAt && (
                     <span className="text-sm text-slate-500 ml-2">
                       · Signed on {formatDate(lease.tenantAcceptedAt)}

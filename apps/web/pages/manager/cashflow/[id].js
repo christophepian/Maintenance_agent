@@ -236,7 +236,7 @@ function StrategyOverlayPanel({ overlay }) {
           >
             {expanded ? "Hide details ▴" : "Show details ▾"}
           </button>
-          <Link href="/owner/strategy" className="text-xs text-indigo-600 hover:underline">
+          <Link href="/owner/strategy" className="cell-link text-xs">
             Update strategy →
           </Link>
         </div>

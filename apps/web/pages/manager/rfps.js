@@ -10,6 +10,7 @@ import ErrorBanner from "../../components/ui/ErrorBanner";
 import Badge from "../../components/ui/Badge";
 import { rfpVariant } from "../../lib/statusVariants";
 import { authHeaders } from "../../lib/api";
+import { formatDate } from "../../lib/format";
 
 const STATUS_TABS = [
   { key: "ALL", label: "All" },
@@ -19,13 +20,6 @@ const STATUS_TABS = [
   { key: "AWARDED", label: "Awarded" },
   { key: "CANCELLED", label: "Cancelled" },
 ];
-
-function formatDate(iso) {
-  if (!iso) return "—";
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString("de-CH");
-}
 
 export default function ManagerRfpsPage() {
   const router = useRouter();
