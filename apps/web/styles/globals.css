@@ -312,6 +312,19 @@ h1, h2 {
     @apply px-2 py-1 rounded border border-surface-border text-sm;
   }
 
+  /* ── Icon button (small, borderless, circular hover) ── */
+  .icon-btn {
+    @apply inline-flex items-center justify-center rounded p-1;
+    @apply text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer;
+  }
+
+  /* ── Expand / collapse footer row ── */
+  .expand-footer {
+    @apply flex items-center justify-center gap-1.5 px-4 py-2.5;
+    @apply border-t border-slate-100 cursor-pointer select-none;
+    @apply hover:bg-slate-50 transition-colors text-sm text-slate-500;
+  }
+
   /* ── Dashboard link card (clickable panel) ── */
   .link-card {
     @apply block no-underline text-inherit;

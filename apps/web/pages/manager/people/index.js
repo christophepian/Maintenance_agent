@@ -302,14 +302,6 @@ export default function ManagerPeoplePage() {
         <PageHeader
           title="People"
           subtitle="Contacts across tenants, vendors and owners."
-          actions={activeTab === 2 ? (
-            <button
-              onClick={() => setShowAddOwner((v) => !v)}
-              className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700"
-            >
-              + Add owner
-            </button>
-          ) : null}
         />
         <PageContent>
           <ErrorBanner error={error} />
@@ -327,13 +319,25 @@ export default function ManagerPeoplePage() {
             ))}
           </div>
 
-          {/* Count + full-view link — outside the Panel card */}
-          <span className="tab-panel-count">
-            {activeTab === 0 ? `${tenantsTotal} tenant${tenantsTotal !== 1 ? "s" : ""}` : null}
-            {activeTab === 1 ? `${contractorsTotal} contractor${contractorsTotal !== 1 ? "s" : ""}` : null}
-            {activeTab === 2 ? "Owners" : null}
-          </span>
-          {activeTab === 2 && <Link href="/manager/people/owners" className="full-page-link">Open full page →</Link>}
+          {/* Count + CTA row — below tab strip, above table */}
+          <div className="flex items-center justify-between">
+            <span className="tab-panel-count">
+              {activeTab === 0 && `${tenantsTotal} tenant${tenantsTotal !== 1 ? "s" : ""}`}
+              {activeTab === 1 && `${contractorsTotal} contractor${contractorsTotal !== 1 ? "s" : ""}`}
+              {activeTab === 2 && "Owners"}
+            </span>
+            {activeTab === 2 && (
+              <div className="flex items-center gap-3">
+                <Link href="/manager/people/owners" className="full-page-link">Open full page →</Link>
+                <button
+                  onClick={() => setShowAddOwner((v) => !v)}
+                  className="button-primary text-sm"
+                >
+                  {showAddOwner ? "Cancel" : "+ Add owner"}
+                </button>
+              </div>
+            )}
+          </div>
 
           <Panel bodyClassName="p-0">
           {/* Tenants tab */}

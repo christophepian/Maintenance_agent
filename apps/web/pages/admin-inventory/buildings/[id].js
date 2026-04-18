@@ -1,6 +1,7 @@
 import { useRouter } from "next/router";
 import { useEffect, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
+import { ChevronLeft } from "lucide-react";
 import AppShell from "../../../components/AppShell";
 import PageShell from "../../../components/layout/PageShell";
 import PageHeader from "../../../components/layout/PageHeader";
@@ -462,28 +463,18 @@ export default function BuildingDetail() {
   return (
     <AppShell role="MANAGER">
       <PageShell variant="embedded">
-        <div className="mb-3">
-          <Link href={backHref} className="text-sm font-medium text-slate-600 hover:text-slate-900">
-            ← Back to Inventory
-          </Link>
-        </div>
         <PageHeader
           title={building?.name || "Building"}
           subtitle={building?.address || "Building details and configuration."}
-          actions={(
-            <div className="flex items-center gap-2">
-              {activeTab === "Building information" && !editMode && (
-                <button
-                  type="button"
-                  className="button-primary"
-                  onClick={() => { setEditMode(true); loadOwnerCandidates(); }}
-                  disabled={loading}
-                >
-                  Edit
-                </button>
-              )}
-            </div>
-          )}
+          backButton={
+            <button
+              onClick={() => router.push(backHref)}
+              className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-900 hover:bg-slate-100"
+              aria-label="Back to Inventory"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+          }
         />
         <PageContent>
           {notice && (
@@ -510,7 +501,19 @@ export default function BuildingDetail() {
 
           {/* Building information tab */}
           {activeTab === "Building information" && (
-            <Panel title="Building information">
+            <Panel
+              title="Building information"
+              actions={!editMode && (
+                <button
+                  type="button"
+                  className="button-primary text-sm"
+                  onClick={() => { setEditMode(true); loadOwnerCandidates(); }}
+                  disabled={loading}
+                >
+                  Edit
+                </button>
+              )}
+            >
               {editMode ? (
                 <form onSubmit={onUpdateBuilding}>
                   <div className="grid gap-4 sm:grid-cols-2">
@@ -750,29 +753,18 @@ export default function BuildingDetail() {
 
           {/* Units tab */}
           {activeTab === "Units" && (
-            <Panel title="Units">
-              <div className="mb-4">
-                {!unitAction ? (
-                  <button
-                    type="button"
-                    className="button-primary"
-                    onClick={() => setUnitAction("create")}
-                  >
-                    Add unit
-                  </button>
-                ) : (
-                  <>
-                    <button
-                      type="button"
-                      className="button-secondary"
-                      onClick={() => setUnitAction(null)}
-                    >
-                      Cancel
-                    </button>
-                  </>
-                )}
-              </div>
-
+            <Panel
+              title="Units"
+              actions={(
+                <button
+                  type="button"
+                  className="button-primary text-sm"
+                  onClick={() => setUnitAction(unitAction ? null : "create")}
+                >
+                  {unitAction ? "Cancel" : "Add unit"}
+                </button>
+              )}
+            >
               {unitAction === "create" && (
                 <form onSubmit={onCreateUnit} className="bg-slate-50 border border-slate-200 rounded-lg p-4 mb-4">
                   <div className="grid gap-4 sm:grid-cols-2 mb-4">
