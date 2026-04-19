@@ -250,6 +250,21 @@ export async function resolveRequestId(prisma: PrismaClient, idOrNumber: string)
 }
 
 /**
+ * Resolve a request by UUID or requestNumber and verify it belongs to orgId in one query.
+ * Returns { id } if found and in-scope, null otherwise.
+ * Replaces the three-step resolveRequestId → resolveRequestOrg → assertOrgScope pattern.
+ */
+export async function resolveAndScopeRequest(
+  prisma: PrismaClient,
+  idOrNumber: string,
+  orgId: string,
+): Promise<{ id: string } | null> {
+  const id = await resolveRequestId(prisma, idOrNumber);
+  if (!id) return null;
+  return prisma.request.findFirst({ where: { id, orgId }, select: { id: true } });
+}
+
+/**
  * Fetch only the tenantId for a request — used for tenant ownership checks.
  */
 export async function findRequestTenantId(prisma: PrismaClient, id: string) {
