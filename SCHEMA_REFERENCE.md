@@ -136,99 +136,27 @@
 - `BillingFrequency`: MONTHLY, QUARTERLY, SEMI_ANNUAL, ANNUAL
 
 ### ⚠️ Schema Gotchas (fields that DON'T exist where you'd expect)
-- **`Request` has NO `orgId`** — requests are not directly org-scoped (they inherit scope through unit/building)
 - **`Job` has NO `description`** — use `Request.description` via the relation
 - **`Appliance` has NO `category`** — category lives on `AssetModel`, accessed via `appliance.assetModel.category`
 - **`Job.contractorId` is REQUIRED** — every Job must reference an active Contractor
 
 ---
 
-## Request.orgId Migration Path (H6 Reference)
+## Request.orgId — Completed (H6 Reference)
 
-**Context:** The `Request` model currently has **no `orgId` field**. Org scope is resolved dynamically via FK traversal using `resolveRequestOrg()` in `governance/orgScope.ts`, which walks:
-- `unit → building → org` (if `unitId` present)
-- `tenant → org` (if `tenantId` present)
-- `appliance → org` (if `applianceId` present)
-- `contractor → org` (if `assignedContractorId` present)
+**Status: ✅ Done — 2026-04-19 (migrations 75–76)**
 
-This works but adds query complexity and prevents direct org filtering on `Request` queries.
+`Request.orgId` is now a required, FK-backed column pointing to `Org`.
 
-**Migration Steps (when needed):**
+- All 332 rows backfilled (238 orphaned rows set to `'default-org'` directly; remaining via unit/tenant/contractor FK chain).
+- FK constraint `Request_orgId_fkey` added (migration 75).
+- `@default("")` placeholder dropped (migration 76).
+- Schema drift: clean (`-- This is an empty migration.`).
 
-1. **Schema Change** — Add nullable `orgId` to Request:
-   ```prisma
-   model Request {
-     // ... existing fields
-     orgId     String?  // Nullable initially for backfill
-     org       Org?     @relation(fields: [orgId], references: [id])
-   }
-   ```
-   Run: `npx prisma migrate dev --name add_request_orgid`
+**How scope checks work now:**
 
-2. **Backfill Data** — Populate `orgId` from FK chain:
-   ```sql
-   -- Via unit
-   UPDATE "Request"
-   SET "orgId" = (
-     SELECT "Building"."orgId"
-     FROM "Unit"
-     JOIN "Building" ON "Unit"."buildingId" = "Building"."id"
-     WHERE "Unit"."id" = "Request"."unitId"
-   )
-   WHERE "unitId" IS NOT NULL AND "orgId" IS NULL;
+All route-level checks use `resolveAndScopeRequest(prisma, idOrNumber, orgId)` from `requestRepository.ts`, which does a single query: `prisma.request.findFirst({ where: { id, orgId } })`. Service-level checks use `request.orgId !== callerOrgId` directly after `findUnique`.
 
-   -- Via tenant
-   UPDATE "Request"
-   SET "orgId" = (SELECT "orgId" FROM "Tenant" WHERE "id" = "Request"."tenantId")
-   WHERE "tenantId" IS NOT NULL AND "orgId" IS NULL;
+`resolveRequestOrg()` in `governance/orgScope.ts` is **no longer called** from routes, workflows, or services. It remains in the codebase for the `orgIsolation.test.ts` test suite only.
 
-   -- Via contractor
-   UPDATE "Request"
-   SET "orgId" = (SELECT "orgId" FROM "Contractor" WHERE "id" = "Request"."assignedContractorId")
-   WHERE "assignedContractorId" IS NOT NULL AND "orgId" IS NULL;
-   ```
-   Test: `SELECT COUNT(*) FROM "Request" WHERE "orgId" IS NULL;` → should be 0
-
-3. **Make Required** — Change schema to non-nullable:
-   ```prisma
-   orgId     String   @default("default-org")  // or remove default after backfill
-   ```
-   Run: `npx prisma migrate dev --name require_request_orgid`
-
-4. **Update Queries** — Change all `listMaintenanceRequests()` / `listOwnerPendingApprovals()` to filter directly:
-   ```typescript
-   const requests = await prisma.request.findMany({
-     where: { orgId },  // Direct filter, no FK traversal
-     // ...
-   });
-   ```
-
-5. **Keep Resolvers for Validation** — `resolveRequestOrg()` remains useful for assertions:
-   ```typescript
-   const resolvedOrgId = await resolveRequestOrg(prisma, requestId);
-   assertOrgScope(orgId, resolvedOrgId, "Request");  // Cross-check
-   ```
-
-6. **Drift Check** — Verify zero drift after migration:
-   ```bash
-   npx prisma migrate diff \
-     --from-schema-datasource ./prisma/schema.prisma \
-     --to-schema-datamodel ./prisma/schema.prisma \
-     --script
-   ```
-   Expected: `-- This is an empty migration.`
-
-7. **Update DTOs & Tests** (per H4):
-   - Add `orgId` to `MaintenanceRequestDTO` interface
-   - Update `mapRequestToDTO()` mapper
-   - Update OpenAPI spec + typed client
-   - Update contract tests
-
-**When to execute:**
-- Multi-org feature lands (multiple real tenants in production)
-- Query performance becomes measurably slow (profile first)
-- **NOT before** — avoid premature schema churn
-
-**Estimated effort:** 2–3 hours (schema + backfill + query updates + tests)
-
-<!-- reviewed 2026-03-10 -->
+<!-- completed 2026-04-19 -->

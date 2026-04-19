@@ -19,6 +19,7 @@ import {
   OrgScopeMismatchError,
   OrgResolution,
 } from "../governance/orgScope";
+import { resolveAndScopeRequest } from "../repositories/requestRepository";
 
 // ────────────── Helpers ──────────────────────────────────────
 
@@ -47,6 +48,74 @@ function mockPrisma(overrides: Record<string, any> = {}): any {
     },
   };
 }
+
+// ────────────── resolveAndScopeRequest (direct FK path) ──────
+
+describe("resolveAndScopeRequest", () => {
+  it("returns { id } when request is in scope", async () => {
+    const prisma: any = {
+      request: {
+        findFirst: jest.fn().mockResolvedValue({ id: "req-uuid-1" }),
+        findUnique: jest.fn().mockResolvedValue(null), // not a numeric param
+      },
+    };
+    const result = await resolveAndScopeRequest(prisma, "req-uuid-1", ORG_A);
+    expect(result).toEqual({ id: "req-uuid-1" });
+    expect(prisma.request.findFirst).toHaveBeenCalledWith({
+      where: { id: "req-uuid-1", orgId: ORG_A },
+      select: { id: true },
+    });
+  });
+
+  it("returns null when request belongs to a different org (cross-org block)", async () => {
+    const prisma: any = {
+      request: {
+        findFirst: jest.fn().mockResolvedValue(null), // orgId mismatch → no row
+        findUnique: jest.fn().mockResolvedValue(null),
+      },
+    };
+    const result = await resolveAndScopeRequest(prisma, "req-uuid-2", ORG_B);
+    expect(result).toBeNull();
+  });
+
+  it("returns null when request does not exist", async () => {
+    const prisma: any = {
+      request: {
+        findFirst: jest.fn().mockResolvedValue(null),
+        findUnique: jest.fn().mockResolvedValue(null),
+      },
+    };
+    const result = await resolveAndScopeRequest(prisma, "nonexistent-id", ORG_A);
+    expect(result).toBeNull();
+  });
+
+  it("resolves by requestNumber (numeric param) then scopes by orgId", async () => {
+    const prisma: any = {
+      request: {
+        findUnique: jest.fn().mockResolvedValue({ id: "req-uuid-3" }), // numeric lookup
+        findFirst: jest.fn().mockResolvedValue({ id: "req-uuid-3" }),
+      },
+    };
+    const result = await resolveAndScopeRequest(prisma, "42", ORG_A);
+    expect(result).toEqual({ id: "req-uuid-3" });
+    expect(prisma.request.findUnique).toHaveBeenCalledWith({
+      where: { requestNumber: 42 },
+      select: { id: true },
+    });
+  });
+
+  it("returns null when requestNumber not found", async () => {
+    const prisma: any = {
+      request: {
+        findUnique: jest.fn().mockResolvedValue(null), // requestNumber not found
+        findFirst: jest.fn(),
+      },
+    };
+    const result = await resolveAndScopeRequest(prisma, "999", ORG_A);
+    expect(result).toBeNull();
+    expect(prisma.request.findFirst).not.toHaveBeenCalled();
+  });
+});
 
 // ────────────── resolveRequestOrg ────────────────────────────
 
