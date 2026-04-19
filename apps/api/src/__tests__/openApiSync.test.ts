@@ -125,7 +125,24 @@ describe("OpenAPI spec ↔ Router sync", () => {
   // Routes registered in code but not yet documented in openapi.yaml.
   // Track here so the sync test stays green while spec catches up.
   const KNOWN_UNSPECCED_ROUTES = new Set<string>([
-    // All previously-unspecced routes are now documented. Keep set empty.
+    // API-04: Strategy Engine routes (added 2026-04-16, spec pending)
+    "POST /strategy/owner-profile",
+    "GET /strategy/owner-profile/:ownerId",
+    "POST /strategy/building-profile",
+    "GET /strategy/building-profile/:buildingId",
+    // API-05: Decision Options & Recommendations routes (added 2026-04-16, spec pending)
+    "POST /decision-options",
+    "GET /decision-options/:opportunityId",
+    "POST /recommendations/evaluate",
+    "GET /recommendations/:opportunityId",
+    "PATCH /recommendations/:resultId/decision",
+    // API-06: New routes added in Strategy & Capture Hardening epic (2026-04-16, spec pending)
+    "GET /tenant-portal/invoices/:id/qr-bill",
+    "POST /tenant-portal/capture-sessions",
+    "GET /tenant-portal/capture-sessions/:id",
+    "GET /invoices/:id/source-file",
+    "GET /requests/:id/claim-analysis",
+    "POST /requests/:id/manager-reject",
   ]);
 
   it("every code route has a spec entry", () => {

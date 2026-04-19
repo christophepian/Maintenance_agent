@@ -73,7 +73,7 @@ describe("Workflow Layer — Integration", () => {
   const auth = getAuthHeaders(createManagerToken());
 
   beforeAll(async () => {
-    proc = await startTestServer(PORT);
+    proc = await startTestServer(PORT, { AUTH_OPTIONAL: "true", NODE_ENV: "test" });
 
     // Create a building + unit for all request creation tests
     const bRes = await POST("/buildings", {

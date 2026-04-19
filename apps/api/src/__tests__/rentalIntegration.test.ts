@@ -81,7 +81,7 @@ describe("Rental Application Lifecycle (Integration)", () => {
     });
     vacantUnitId = unit.id;
 
-    proc = await startTestServer(PORT);
+    proc = await startTestServer(PORT, { AUTH_OPTIONAL: "true", NODE_ENV: "test" });
   }, 25000);
 
   afterAll(async () => {

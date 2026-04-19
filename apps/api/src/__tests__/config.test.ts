@@ -57,11 +57,11 @@ describe("Config routes", () => {
   let unitId: string;
 
   beforeAll(async () => {
-    // Ensure org exists
+    // Ensure org exists and is in MANAGED mode (tests use MANAGER token — OWNER_DIRECT blocks it)
     await prisma.org.upsert({
       where: { id: orgId },
-      create: { id: orgId, name: "Config Test Org" },
-      update: {},
+      create: { id: orgId, name: "Config Test Org", mode: "MANAGED" },
+      update: { mode: "MANAGED" },
     });
 
     // Create building + unit for config tests
@@ -131,7 +131,8 @@ describe("Config routes", () => {
         autoApproveLimit: 200,
       }, managerToken);
       expect(res.status).toBe(200);
-      expect(res.data.data).toHaveProperty("autoApproveLimit", 200);
+      // Response is an effectiveConfig object with nested unit/building/org layers
+      expect(res.data.data.unit).toHaveProperty("autoApproveLimit", 200);
     }, 10000);
   });
 

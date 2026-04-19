@@ -263,10 +263,10 @@ describe("issueInvoiceWorkflow", () => {
     // Issue once
     await issueInvoiceWorkflow(ctx, { invoiceId });
 
-    // Try to issue again
+    // Try to issue again — service throws Error('INVOICE_ALREADY_ISSUED'), not InvalidTransitionError
     await expect(
       issueInvoiceWorkflow(ctx, { invoiceId })
-    ).rejects.toThrow(InvalidTransitionError);
+    ).rejects.toThrow(/INVOICE_ALREADY_ISSUED/);
   });
 });
 

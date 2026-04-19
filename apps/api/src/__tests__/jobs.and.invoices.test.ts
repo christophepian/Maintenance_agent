@@ -297,8 +297,8 @@ describe("Slice 8.3 — Invoice Model Upgrade", () => {
       
       expect(invoice.totalAmount).toBeCloseTo(expectedTotalCHF, 1);
       expect(invoice.lineItems.length).toBe(1);
-      // lineTotal is in cents
-      expect(invoice.lineItems[0].lineTotal).toBeCloseTo(10770, 0);
+      // lineTotal is in CHF (DTO converts from cents)
+      expect(invoice.lineItems[0].lineTotal).toBeCloseTo(107.7, 1);
     });
 
     it("should calculate VAT correctly with custom rate", async () => {

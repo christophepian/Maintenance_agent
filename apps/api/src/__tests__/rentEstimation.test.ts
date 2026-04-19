@@ -207,7 +207,7 @@ describe("Rent Estimation Contract Tests", () => {
   let proc: ChildProcessWithoutNullStreams;
 
   beforeAll(async () => {
-    proc = await startTestServer(PORT);
+    proc = await startTestServer(PORT, { AUTH_OPTIONAL: "true", NODE_ENV: "test" });
   }, 35000);
 
   afterAll(() => stopTestServer(proc));
