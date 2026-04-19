@@ -29,7 +29,7 @@ export function getAuthUser(req: AuthedRequest): TokenPayload | null {
     if (typeof role === "string" && role.trim()) {
       const user = {
         userId: (req.headers["x-dev-user-id"] as string) || "dev-user",
-        orgId: (req.headers["x-dev-org-id"] as string) || DEFAULT_ORG_ID,
+        orgId: (req.headers["x-dev-org-id"] as string) || process.env.DEV_ORG_ID || DEFAULT_ORG_ID,
         email: (req.headers["x-dev-email"] as string) || "dev@local",
         role: role.toUpperCase(),
       } as TokenPayload;
@@ -63,7 +63,7 @@ export function requireAuth(
   res: http.ServerResponse
 ): TokenPayload | null {
   const user = getAuthUser(req);
-  if (isAuthOptional()) return user || ({ userId: "dev-user", orgId: DEFAULT_ORG_ID, email: "dev@local", role: "MANAGER" } as TokenPayload);
+  if (isAuthOptional()) return user || ({ userId: "dev-user", orgId: process.env.DEV_ORG_ID || DEFAULT_ORG_ID, email: "dev@local", role: "MANAGER" } as TokenPayload);
   if (!user) {
     sendAuthError(res, 401, "UNAUTHORIZED");
     return null;
@@ -80,7 +80,7 @@ export function requireRole(
   if (!user) {
     if (isAuthOptional()) {
       console.warn(`[AUTH_OPTIONAL] requireRole(${role}): no auth — dev bypass`);
-      const devUser = { userId: "dev-user", orgId: DEFAULT_ORG_ID, email: "dev@local", role } as TokenPayload;
+      const devUser = { userId: "dev-user", orgId: process.env.DEV_ORG_ID || DEFAULT_ORG_ID, email: "dev@local", role } as TokenPayload;
       req.user = devUser;
       return devUser;
     }
@@ -103,7 +103,7 @@ export function requireAnyRole(
   if (!user) {
     if (isAuthOptional()) {
       console.warn(`[AUTH_OPTIONAL] requireAnyRole(${roles.join(",")}): no auth — dev bypass`);
-      const devUser = { userId: "dev-user", orgId: DEFAULT_ORG_ID, email: "dev@local", role: roles[0] } as TokenPayload;
+      const devUser = { userId: "dev-user", orgId: process.env.DEV_ORG_ID || DEFAULT_ORG_ID, email: "dev@local", role: roles[0] } as TokenPayload;
       req.user = devUser;
       return devUser;
     }
@@ -155,7 +155,7 @@ export function requireStaffAuth(
   const user = getAuthUser(req);
   if (!user) {
     if (isAuthOptional()) {
-      return { userId: 'dev-user', orgId: DEFAULT_ORG_ID, email: 'dev@local', role: 'MANAGER' } as TokenPayload;
+      return { userId: 'dev-user', orgId: process.env.DEV_ORG_ID || DEFAULT_ORG_ID, email: 'dev@local', role: 'MANAGER' } as TokenPayload;
     }
     sendAuthError(res, 401, 'UNAUTHORIZED');
     return null;
