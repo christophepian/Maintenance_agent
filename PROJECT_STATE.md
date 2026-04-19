@@ -537,10 +537,10 @@ Maintenance_Agent/
 
 > **Full schema reference:** See [SCHEMA_REFERENCE.md](SCHEMA_REFERENCE.md) for the complete models table (69 models), enums (61), schema gotchas, and Request.orgId migration path.
 >
-> **Status:** 75 migrations. 69 models · 61 enums. Last verified: 2026-04-19.
+> **Status:** 76 migrations. 69 models · 61 enums. Last verified: 2026-04-19.
 >
 > **Quick gotchas (always check SCHEMA_REFERENCE.md for full list):**
-> - `Request` has NO `orgId` — scope inherited via unit/building FK chain
+> - `Request.orgId` FK to `Org` is now enforced — direct column filter replaces FK-chain traversal
 > - `Job` has NO `description` — use `Request.description` via the relation
 > - `Appliance` has NO `category` — lives on `AssetModel`
 > - `Job.contractorId` is REQUIRED
@@ -676,7 +676,7 @@ This document + companion files are the **single source of truth**:
 
 * **Doc structure:** PROJECT_STATE.md (~630 lines) + EPIC_HISTORY.md (epics) + SCHEMA_REFERENCE.md (schema) + ARCHITECTURE_LOW_CONTEXT_GUIDE.md (lookup)
 * Filesystem (verified 2026-03-10)
-* Database schema — 75 migrations; 69 models, 61 enums verified in live DB (shadow DB replay clean 2026-03-31)
+* Database schema — 76 migrations; 69 models, 61 enums verified in live DB (shadow DB replay clean 2026-03-31)
 * Database data — 99+ assets across 19 units (with interventions tracking), 274 depreciation standards (including 5 added for mapped topics), 16 category mappings, buildings with cantons set, 6 CO 259a statutory rules with proper DSL (verified 2026-03-07)
 * Running system — core smoke endpoints return expected status codes; auth-gated routes return 401/403 without valid token (verified by `auth.manager-gates.test.ts`); legal auto-routing creates RFP and sets RFP_PENDING for requests with mapped categories when autoLegalRouting=true; asset inventory endpoints serve depreciation data (verified 2026-03-31)
 * Dev auth bootstrap: Canonical dev manager is user `d93436c1-6568-4dba-8e65-fd8d34e6be2b` (email `manager@local.dev`), created via the auth flow. The legacy `dev-user` still exists in DB but is no longer used as the manager identity — notifications were migrated to `d93436c1`. Long-lived JWTs in `_app.js`; bootstrap is expiry-aware (expired tokens are auto-replaced on next page load, no manual `localStorage.clear()` needed). All three dev tokens expire 2027-03-15.

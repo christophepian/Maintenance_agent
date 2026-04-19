@@ -149,6 +149,7 @@ model Org {
   emailOutbox           EmailOutbox[]
   rentEstimationConfigs RentEstimationConfig[]
   financialSnapshots    BuildingFinancialSnapshot[]
+  requests              Request[]
   // Legal engine relations
   legalEvaluationLogs   LegalEvaluationLog[]
   legalCategoryMappings LegalCategoryMapping[]
@@ -246,7 +247,7 @@ model Contractor {
 
 model Request {
   id                   String         @id @default(uuid())
-  orgId                String         @default("")
+  orgId                String
   requestNumber        Int            @default(autoincrement()) @unique
   description          String
   category             String?
@@ -266,6 +267,7 @@ model Request {
   rejectionReason      String?
   payingParty          PayingParty     @default(LANDLORD)
   urgency              RequestUrgency  @default(MEDIUM)
+  org                  Org            @relation(fields: [orgId], references: [id])
   job                  Job?
   appliance            Appliance?     @relation(fields: [applianceId], references: [id])
   assignedContractor   Contractor?    @relation(fields: [assignedContractorId], references: [id])
