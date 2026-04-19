@@ -36,7 +36,7 @@ import {
   calculateRentReductionForUnit,
   type RentReductionResult,
 } from "./rentReductionCalculator";
-import { resolveRequestOrg, assertOrgScope } from "../governance/orgScope";
+import { OrgScopeMismatchError } from "../governance/orgScope";
 import { type DepreciationSignalDTO } from "./depreciation";
 import {
   cantonFromPostalCode,
@@ -167,11 +167,7 @@ export async function analyseClaimForRequest(
   orgId: string,
   requestId: string,
 ): Promise<TenantClaimAnalysisDTO> {
-  // 1. Resolve org scope
-  const orgRes = await resolveRequestOrg(prisma, requestId);
-  assertOrgScope(orgId, orgRes);
-
-  // 2. Load request with full context
+  // 1. Load request and verify org scope in one query
   const request = await prisma.request.findUnique({
     where: { id: requestId },
     include: REQUEST_LEGAL_DECISION_INCLUDE,
@@ -179,6 +175,9 @@ export async function analyseClaimForRequest(
 
   if (!request) {
     throw new RequestNotFoundError(requestId);
+  }
+  if (request.orgId !== orgId) {
+    throw new OrgScopeMismatchError(orgId, request.orgId, "direct");
   }
 
   // Derive canton

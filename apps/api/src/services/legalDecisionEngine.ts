@@ -14,10 +14,7 @@ import { LegalObligation, LegalAuthority, AssetType, LegalRuleScope } from "@pri
 import * as crypto from "crypto";
 import prisma from "./prismaClient";
 import { REQUEST_LEGAL_DECISION_INCLUDE } from "./legalIncludes";
-import {
-  resolveRequestOrg,
-  assertOrgScope,
-} from "../governance/orgScope";
+import { OrgScopeMismatchError } from "../governance/orgScope";
 import { computeDepreciationSignal, DepreciationSignalDTO } from "./depreciation";
 import {
   cantonFromPostalCode,
@@ -111,11 +108,7 @@ export async function evaluateRequestLegalDecision(
   callerOrgId: string,
   requestId: string,
 ): Promise<LegalDecisionDTO> {
-  // 1. Resolve org scope
-  const orgRes = await resolveRequestOrg(prisma, requestId);
-  assertOrgScope(callerOrgId, orgRes);
-
-  // 2. Load request with canonical include
+  // 1. Load request and verify org scope in one query
   const request = await prisma.request.findUnique({
     where: { id: requestId },
     include: REQUEST_LEGAL_DECISION_INCLUDE,
@@ -123,6 +116,9 @@ export async function evaluateRequestLegalDecision(
 
   if (!request) {
     throw new RequestNotFoundError(requestId);
+  }
+  if (request.orgId !== callerOrgId) {
+    throw new OrgScopeMismatchError(callerOrgId, request.orgId, "direct");
   }
 
   // 3. Derive canton if building exists and canton not set

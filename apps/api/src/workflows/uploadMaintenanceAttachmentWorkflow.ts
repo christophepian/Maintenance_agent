@@ -12,7 +12,7 @@
 
 import * as crypto from "crypto";
 import { WorkflowContext } from "./context";
-import { resolveRequestOrg, assertOrgScope } from "../governance/orgScope";
+import { OrgScopeMismatchError } from "../governance/orgScope";
 import { maintenanceAttachmentRepo } from "../repositories";
 import { storage } from "../storage/attachments";
 import { emit } from "../events/bus";
@@ -38,28 +38,29 @@ export async function uploadMaintenanceAttachmentWorkflow(
   const { requestId, fileName, mimeType, buffer, tenantId } = input;
 
   // 1. Verify request exists
-  const resolution = await resolveRequestOrg(prisma, requestId);
-  if (!resolution.resolved) {
+  const reqRow = await prisma.request.findUnique({
+    where: { id: requestId },
+    select: { orgId: true, tenantId: true },
+  });
+  if (!reqRow) {
     throw Object.assign(new Error("Request not found"), { code: "NOT_FOUND" });
   }
 
   // 2a. Tenant-actor path: verify ownership
   if (tenantId) {
-    const request = await prisma.request.findUnique({
-      where: { id: requestId },
-      select: { tenantId: true },
-    });
-    if (!request || request.tenantId !== tenantId) {
+    if (reqRow.tenantId !== tenantId) {
       throw Object.assign(new Error("Not authorised for this request"), {
         code: "FORBIDDEN",
       });
     }
   } else {
     // 2b. Manager/standard path: assert org scope
-    assertOrgScope(ctx.orgId, resolution);
+    if (reqRow.orgId !== ctx.orgId) {
+      throw new OrgScopeMismatchError(ctx.orgId, reqRow.orgId, "direct");
+    }
   }
 
-  const orgId = resolution.orgId!;
+  const orgId = reqRow.orgId;
 
   // 3. Build storage key: maintenance-attachments/<requestId>/<uuid>.<ext>
   const uuid = crypto.randomUUID();

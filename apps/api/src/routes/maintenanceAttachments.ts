@@ -10,7 +10,6 @@
 import { Router, HandlerContext } from "../http/router";
 import { sendError, sendJson } from "../http/json";
 import { getAuthUser, requireAuth, requireAnyRole, requireTenantSession } from "../authz";
-import { resolveRequestOrg, assertOrgScope } from "../governance/orgScope";
 import { readRawBody, parseMultipart, MAX_FILE_SIZE, storage } from "../storage/attachments";
 import { maintenanceAttachmentRepo } from "../repositories";
 import { findRequestTenantId } from "../repositories/requestRepository";
@@ -39,15 +38,11 @@ export function registerMaintenanceAttachmentRoutes(router: Router) {
     const { req, res, prisma, params, orgId } = ctx;
     if (!requireAnyRole(req, res, ["MANAGER", "CONTRACTOR"])) return;
 
-    const resolution = await resolveRequestOrg(prisma, params.requestId);
-    if (!resolution.resolved) {
-      return sendError(res, 404, "NOT_FOUND", "Request not found");
-    }
-    try {
-      assertOrgScope(orgId, resolution);
-    } catch {
-      return sendError(res, 403, "FORBIDDEN", "Not authorised for this request");
-    }
+    const scopedReq = await prisma.request.findFirst({
+      where: { id: params.requestId, orgId },
+      select: { id: true },
+    });
+    if (!scopedReq) return sendError(res, 404, "NOT_FOUND", "Request not found");
 
     const records = await maintenanceAttachmentRepo.findAttachmentsByRequestId(
       prisma,
@@ -131,13 +126,12 @@ export function registerMaintenanceAttachmentRoutes(router: Router) {
         return sendError(res, 404, "NOT_FOUND", "Attachment not found");
       }
 
-      // Org-scope: resolve via the parent request
-      const resolution = await resolveRequestOrg(prisma, attachment.requestId);
-      try {
-        assertOrgScope(orgId, resolution);
-      } catch {
-        return sendError(res, 403, "FORBIDDEN", "Not authorised for this attachment");
-      }
+      // Org-scope: verify the parent request belongs to this org
+      const scopedReq = await prisma.request.findFirst({
+        where: { id: attachment.requestId, orgId },
+        select: { id: true },
+      });
+      if (!scopedReq) return sendError(res, 403, "FORBIDDEN", "Not authorised for this attachment");
 
       const fileExists = await storage.exists(attachment.storageKey);
       if (!fileExists) {
@@ -224,8 +218,11 @@ export function registerMaintenanceAttachmentRoutes(router: Router) {
       }
 
       // Resolve org from request for workflow context
-      const resolution = await resolveRequestOrg(prisma, params.requestId);
-      const tenantOrgId = resolution.resolved ? resolution.orgId! : ctx.orgId;
+      const reqRow = await prisma.request.findUnique({
+        where: { id: params.requestId },
+        select: { orgId: true },
+      });
+      const tenantOrgId = reqRow?.orgId ?? ctx.orgId;
 
       const result = await uploadMaintenanceAttachmentWorkflow(
         { orgId: tenantOrgId, prisma, actorUserId: tenantId },
