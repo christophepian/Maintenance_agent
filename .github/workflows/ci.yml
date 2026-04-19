@@ -73,6 +73,17 @@ jobs:
           fi
         working-directory: apps/api
 
+      # ── G11: Seed test database ──
+      # rentalIntegration.test.ts and others require default-org + seed data.
+      - name: "G11: Seed test database"
+        run: |
+          npx prisma db seed
+          node seed-category-mappings.js
+          node seed-test-legal-rule.js
+        working-directory: apps/api
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/maint_agent_test
+
       # ── G7-3: Backend type check ──
       - name: "G7: Type-check backend (tsc --noEmit)"
         run: npx tsc --noEmit
@@ -85,12 +96,11 @@ jobs:
         env:
           API_BASE_URL: http://127.0.0.1:3001
 
-      # ── G7-4b: Frontend lint ──
-      - name: "G7: Lint frontend (next lint)"
-        run: npx next lint --dir . --max-warnings 0
+      # ── G7-4b: Frontend type-check ──
+      # next lint was removed in Next.js 16 (no ESLint integration). Use tsc instead.
+      - name: "G7: Type-check frontend (tsc --noEmit)"
+        run: npx tsc --noEmit
         working-directory: apps/web
-        env:
-          API_BASE_URL: http://127.0.0.1:3001
 
       # ── G7-5: Jest tests ──
       - name: "G7: Run Jest tests"

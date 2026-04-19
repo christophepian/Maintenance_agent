@@ -68,7 +68,11 @@ describe("Owner-direct governance access", () => {
     await httpRequest(port, "PUT", "/org-config", { mode: "MANAGED" }, ownerToken);
   }, 20000);
 
-  afterAll(() => stopTestServer(proc));
+  afterAll(async () => {
+    // Reset org mode to MANAGED so subsequent suites (config.test.ts etc.) are not contaminated
+    await httpRequest(port, "PUT", "/org-config", { mode: "MANAGED" }, ownerToken).catch(() => {});
+    stopTestServer(proc);
+  });
 
   it("enforces governance access by org mode", async () => {
     const buildingRes = await httpRequest(

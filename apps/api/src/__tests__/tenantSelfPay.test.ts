@@ -131,7 +131,11 @@ describe("Tenant Self-Pay API", () => {
     // then reject. For simplicity, use the manager-reject route directly from PENDING_REVIEW.
   }, 25000);
 
-  afterAll(() => stopTestServer(proc));
+  afterAll(async () => {
+    // Reset org mode to MANAGED so subsequent suites are not contaminated by OWNER_DIRECT state
+    await apiRequest("PUT", "/org-config", { mode: "MANAGED" }, managerAuth).catch(() => {});
+    stopTestServer(proc);
+  });
 
   it("should reject self-pay when request is not REJECTED (409)", async () => {
     // Request is still PENDING_REVIEW — self-pay should fail

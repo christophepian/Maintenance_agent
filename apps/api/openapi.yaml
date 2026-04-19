@@ -49,6 +49,12 @@ tags:
     description: Swiss tenancy law decision engine, RFPs, depreciation, and legal rules
   - name: ChartOfAccounts
     description: Expense types, accounts, and expense-to-account mappings (COA)
+  - name: Strategy
+    description: Owner and building strategy profiles, archetypes, and scoring
+  - name: Recommendations
+    description: Repair-vs-replace decision options and recommendation engine
+  - name: TenantPortal
+    description: Tenant-facing portal endpoints
 
 # ──────────────────────────────────────────────────────────────
 # Reusable components
@@ -8502,3 +8508,276 @@ paths:
       responses:
         '200':
           description: Renovation catalog data
+
+  # ═══════════════════════════════════════════════════════════
+  # Strategy Engine (API-04)
+  # ═══════════════════════════════════════════════════════════
+
+  /strategy/owner-profile:
+    post:
+      tags: [Strategy]
+      summary: Upsert owner strategy profile
+      operationId: upsertOwnerStrategyProfile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Owner strategy profile
+
+  /strategy/owner-profile/{ownerId}:
+    get:
+      tags: [Strategy]
+      summary: Get owner strategy profile
+      operationId: getOwnerStrategyProfile
+      parameters:
+        - name: ownerId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Owner strategy profile
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /strategy/building-profile:
+    post:
+      tags: [Strategy]
+      summary: Upsert building strategy profile
+      operationId: upsertBuildingStrategyProfile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Building strategy profile
+
+  /strategy/building-profile/{buildingId}:
+    get:
+      tags: [Strategy]
+      summary: Get building strategy profile
+      operationId: getBuildingStrategyProfile
+      parameters:
+        - name: buildingId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Building strategy profile
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ═══════════════════════════════════════════════════════════
+  # Decision Options & Recommendations (API-05)
+  # ═══════════════════════════════════════════════════════════
+
+  /decision-options:
+    post:
+      tags: [Recommendations]
+      summary: Create or update decision options for an opportunity
+      operationId: upsertDecisionOptions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Decision options
+
+  /decision-options/{opportunityId}:
+    get:
+      tags: [Recommendations]
+      summary: Get decision options for an opportunity
+      operationId: getDecisionOptions
+      parameters:
+        - name: opportunityId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Decision options
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /recommendations/evaluate:
+    post:
+      tags: [Recommendations]
+      summary: Evaluate repair-vs-replace recommendations
+      operationId: evaluateRecommendations
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Recommendation evaluation result
+
+  /recommendations/{opportunityId}:
+    get:
+      tags: [Recommendations]
+      summary: Get recommendation result for an opportunity
+      operationId: getRecommendationResult
+      parameters:
+        - name: opportunityId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Recommendation result
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /recommendations/{resultId}/decision:
+    patch:
+      tags: [Recommendations]
+      summary: Record a decision on a recommendation result
+      operationId: recordRecommendationDecision
+      parameters:
+        - name: resultId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [decision]
+              properties:
+                decision:
+                  type: string
+                  enum: [REPAIR, REPLACE, DEFER]
+      responses:
+        '200':
+          description: Updated recommendation result
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ═══════════════════════════════════════════════════════════
+  # Capture Hardening additions (API-06)
+  # ═══════════════════════════════════════════════════════════
+
+  /tenant-portal/invoices/{id}/qr-bill:
+    get:
+      tags: [TenantPortal]
+      summary: Get QR-bill PNG for a tenant invoice
+      operationId: getTenantPortalInvoiceQrBill
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: QR bill PNG image
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /tenant-portal/capture-sessions:
+    post:
+      tags: [TenantPortal]
+      summary: Create a new capture session for mobile document upload
+      operationId: createTenantCaptureSession
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Capture session created
+
+  /tenant-portal/capture-sessions/{id}:
+    get:
+      tags: [TenantPortal]
+      summary: Get a capture session by ID
+      operationId: getTenantCaptureSession
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Capture session
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /invoices/{id}/source-file:
+    get:
+      tags: [Invoices]
+      summary: Download the original source file for an ingested invoice
+      operationId: getInvoiceSourceFile
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Invoice source file (PDF, JPEG, or PNG)
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /requests/{id}/claim-analysis:
+    get:
+      tags: [LegalEngine]
+      summary: Get claim analysis for a maintenance request
+      operationId: getRequestClaimAnalysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Claim analysis result
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /requests/{id}/manager-reject:
+    post:
+      tags: [Requests]
+      summary: Manager rejects a maintenance request
+      operationId: managerRejectRequest
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+      responses:
+        '200':
+          description: Request rejected
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
