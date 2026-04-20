@@ -225,6 +225,7 @@ beforeAll(async () => {
   // Create request with tenant
   const request = await prisma.request.create({
     data: {
+      orgId: ORG_ID,
       description: "Fix radiator for scheduling test",
       category: "HEATING",
       tenantId: tenant.id,

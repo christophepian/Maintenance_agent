@@ -22,7 +22,7 @@ export const JOB_FULL_INCLUDE = {
     include: {
       tenant: true,
       unit: { include: { building: true } },
-      appliance: { include: { assetModel: true } },
+      asset: { include: { assetModel: true } },
     },
   },
   contractor: true,

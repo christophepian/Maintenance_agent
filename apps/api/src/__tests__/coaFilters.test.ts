@@ -86,6 +86,7 @@ describe("FIN-COA-05: Financial views expose account metadata", () => {
     // 6. Request → Job → 3 Invoices (different account/expenseType combos)
     const request = await prisma.request.create({
       data: {
+        orgId,
         description: "COA filter test request",
         category: "plumbing",
         status: RequestStatus.COMPLETED,

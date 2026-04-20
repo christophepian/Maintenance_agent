@@ -46,6 +46,14 @@ enum AssetType {
   OTHER
 }
 
+/// Business-level grouping: EQUIPMENT = removable/replaceable items,
+/// COMPONENT = built-in/structural elements.
+/// Deterministic default derived from AssetType; can be overridden per-asset.
+enum AssetCategory {
+  EQUIPMENT
+  COMPONENT
+}
+
 enum SlotStatus {
   PROPOSED
   ACCEPTED
@@ -128,7 +136,6 @@ model Org {
   id                    String                      @id @default(uuid())
   name                  String
   mode                  OrgMode                     @default(MANAGED)
-  appliances            Appliance[]
   approvalRules         ApprovalRule[]
   assetModels           AssetModel[]
   billingEntities       BillingEntity[]
@@ -255,7 +262,7 @@ model Request {
   estimatedCost        Int?
   status               RequestStatus  @default(PENDING_REVIEW)
   assignedContractorId String?
-  applianceId          String?
+  assetId              String?
   tenantId             String?
   unitId               String?
   contactPhone         String?
@@ -269,7 +276,7 @@ model Request {
   urgency              RequestUrgency  @default(MEDIUM)
   org                  Org            @relation(fields: [orgId], references: [id])
   job                  Job?
-  appliance            Appliance?     @relation(fields: [applianceId], references: [id])
+  asset                Asset?         @relation(fields: [assetId], references: [id], onDelete: SetNull)
   assignedContractor   Contractor?    @relation(fields: [assignedContractorId], references: [id])
   tenant               Tenant?        @relation(fields: [tenantId], references: [id])
   unit                 Unit?          @relation(fields: [unitId], references: [id])
@@ -446,7 +453,6 @@ model Unit {
   energyLabel        EnergyLabel?
   heatingType        HeatingType?
 
-  appliances             Appliance[]
   occupancies            Occupancy[]
   requests               Request[]
   building               Building                @relation(fields: [buildingId], references: [id], onDelete: Cascade)
@@ -505,27 +511,6 @@ model RentEstimationConfig {
   @@index([orgId])
 }
 
-model Appliance {
-  id           String      @id @default(uuid())
-  unitId       String
-  assetModelId String?
-  name         String
-  serial       String?
-  installDate  DateTime?
-  notes        String?
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
-  isActive     Boolean     @default(true)
-  orgId        String
-  assetModel   AssetModel? @relation(fields: [assetModelId], references: [id])
-  org          Org         @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  unit         Unit        @relation(fields: [unitId], references: [id], onDelete: Cascade)
-  requests     Request[]
-
-  @@index([unitId])
-  @@index([orgId])
-}
-
 model AssetModel {
   id           String      @id @default(uuid())
   orgId        String?
@@ -533,10 +518,10 @@ model AssetModel {
   model        String
   category     String
   specs        String?
+  defaultUsefulLifeMonths Int?      /// Default useful life for assets linked to this model (tier 2 in depreciation resolution)
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
   isActive     Boolean     @default(true)
-  appliances   Appliance[]
   assets       Asset[]
   org          Org?        @relation(fields: [orgId], references: [id], onDelete: Cascade)
 
@@ -1614,10 +1599,11 @@ model LegalCategoryMapping {
 // ==========================================
 
 model Asset {
-  id              String    @id @default(uuid())
+  id              String        @id @default(uuid())
   orgId           String
   unitId          String
   type            AssetType
+  category        AssetCategory @default(EQUIPMENT)
   topic           String
   name            String
   assetModelId    String?
@@ -1628,8 +1614,10 @@ model Asset {
   modelNumber     String?
   serialNumber    String?
   notes           String?
+  usefulLifeOverrideMonths Int?      /// Per-asset override; highest priority in depreciation resolution
   isPresent       Boolean   @default(true)
   isActive        Boolean   @default(true)
+  legacyApplianceId String? @unique  /// TEMP: Phase 2 backfill mapping — links to Appliance.id for idempotent migration
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
@@ -1638,6 +1626,7 @@ model Asset {
   assetModel        AssetModel?          @relation(fields: [assetModelId], references: [id], onDelete: SetNull)
   interventions     AssetIntervention[]
   cashflowOverrides CashflowOverride[]
+  requests          Request[]
 
   @@index([orgId])
   @@index([unitId])

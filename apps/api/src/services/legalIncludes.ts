@@ -33,12 +33,22 @@ export const REQUEST_LEGAL_DECISION_INCLUDE = {
       },
     },
   },
-  appliance: {
+
+  // Phase 3: include canonical asset for dual-read
+  asset: {
     select: {
       id: true,
       name: true,
-      serial: true,
-      installDate: true,
+      type: true,
+      category: true,
+      topic: true,
+      serialNumber: true,
+      brand: true,
+      modelNumber: true,
+      installedAt: true,
+      notes: true,
+      isActive: true,
+      lastRenovatedAt: true,
       assetModel: {
         select: {
           id: true,

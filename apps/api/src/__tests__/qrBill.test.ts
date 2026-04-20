@@ -75,6 +75,7 @@ describe("Slice 8.4 - QR-Bill Integration", () => {
 
     const request = await prisma.request.create({
       data: {
+        orgId,
         category: "plumbing",
         description: "Leaking pipe",
         estimatedCost: 25000, // CHF 250
@@ -137,6 +138,13 @@ describe("Slice 8.4 - QR-Bill Integration", () => {
   });
 
   afterAll(async () => {
+    // Clean up FK-dependent records before deleting org
+    await prisma.invoice.deleteMany({ where: { orgId } });
+    await prisma.job.deleteMany({ where: { orgId } });
+    await prisma.request.deleteMany({ where: { orgId } });
+    await prisma.tenant.deleteMany({ where: { orgId } });
+    await prisma.billingEntity.deleteMany({ where: { orgId } });
+    await prisma.contractor.deleteMany({ where: { orgId } });
     await prisma.org.deleteMany({ where: { id: orgId } });
     await prisma.$disconnect();
   });
@@ -448,6 +456,7 @@ describe("Slice 8.4 - QR-Bill Integration", () => {
 
       const noissueRequest = await prisma.request.create({
         data: {
+          orgId,
           category: "oven",
           description: "Test",
           estimatedCost: 10000,

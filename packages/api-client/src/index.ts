@@ -128,6 +128,8 @@ export type EmailTemplate = "MISSING_DOCS" | "REJECTED" | "SELECTED_LEASE_LINK";
 
 export type AssetType = "APPLIANCE" | "FIXTURE" | "FINISH" | "STRUCTURAL" | "SYSTEM" | "OTHER";
 
+export type AssetCategory = "EQUIPMENT" | "COMPONENT";
+
 export type AssetInterventionType = "REPAIR" | "REPLACEMENT";
 
 export type RfpStatus = "DRAFT" | "OPEN" | "CLOSED" | "AWARDED" | "CANCELLED" | "PENDING_OWNER_APPROVAL";
@@ -185,12 +187,6 @@ export interface UnitSummary {
   };
 }
 
-export interface ApplianceSummary {
-  id: string;
-  category: string;
-  serial?: string;
-}
-
 export interface MaintenanceRequestDTO {
   id: string;
   requestNumber: number;
@@ -201,14 +197,33 @@ export interface MaintenanceRequestDTO {
   contactPhone?: string | null;
   tenantId?: string | null;
   unitId?: string | null;
-  applianceId?: string | null;
+  // Phase 6: assetId is the canonical link
+  assetId?: string | null;
   approvalSource?: string | null;
   rejectionReason?: string | null;
   payingParty?: PayingParty;
   assignedContractor: ContractorSummary | null;
   tenant?: TenantSummary | null;
   unit?: UnitSummary | null;
-  appliance?: ApplianceSummary | null;
+  // Phase 3: canonical asset
+  asset?: {
+    id: string;
+    name: string;
+    type: string;
+    category: string;
+    topic: string;
+    serialNumber?: string | null;
+    brand?: string | null;
+    modelNumber?: string | null;
+    installedAt?: string | null;
+    notes?: string | null;
+    assetModel?: {
+      id: string;
+      manufacturer: string;
+      model: string;
+      category: string;
+    } | null;
+  } | null;
   createdAt: string;
 }
 
@@ -257,7 +272,17 @@ export interface JobDTO {
     contactPhone?: string;
     tenant?: TenantSummary;
     unit?: UnitSummary;
-    appliance?: ApplianceSummary;
+    // Phase 3: canonical asset
+    asset?: {
+      id: string;
+      name: string;
+      type: string;
+      category: string;
+      topic: string;
+      serialNumber?: string | null;
+      brand?: string | null;
+      modelNumber?: string | null;
+    } | null;
   };
   contractor?: ContractorSummary;
   appointmentSlots?: Array<{
@@ -627,18 +652,6 @@ export interface UnitDTO {
   };
 }
 
-export interface ApplianceDTO {
-  id: string;
-  unitId: string;
-  orgId: string;
-  category: string;
-  serial?: string;
-  assetModelId?: string;
-  installedDate?: string;
-  lastServiceDate?: string;
-  assetModel?: AssetModelDTO;
-}
-
 export interface AssetModelDTO {
   id: string;
   orgId: string;
@@ -646,6 +659,7 @@ export interface AssetModelDTO {
   model: string;
   category: string;
   expectedLifespanYears?: number;
+  defaultUsefulLifeMonths?: number | null;
 }
 
 export interface AssetInterventionDTO {
@@ -659,6 +673,8 @@ export interface AssetInterventionDTO {
   createdAt: string;
 }
 
+export type DepreciationSource = "ASSET_OVERRIDE" | "ASSET_MODEL" | "STANDARD_CANTON" | "STANDARD_NATIONAL";
+
 export interface DepreciationInfoDTO {
   usefulLifeMonths: number;
   ageMonths: number;
@@ -666,20 +682,27 @@ export interface DepreciationInfoDTO {
   residualPct: number;
   clockStart: string | null;
   standardId: string | null;
+  /** Which resolution tier produced the useful life value. */
+  depreciationSource?: DepreciationSource | null;
 }
+
 
 export interface AssetInventoryItemDTO {
   id: string;
   orgId: string;
   unitId: string;
   type: AssetType;
+  category: AssetCategory;
   topic: string;
+  /** Canonical normalized topic key used for depreciation matching. */
+  topicKey: string;
   name: string;
   brand?: string;
   modelNumber?: string;
   serialNumber?: string;
   notes?: string;
   assetModelId?: string;
+  usefulLifeOverrideMonths?: number | null;
   installedAt?: string;
   lastRenovatedAt?: string;
   replacedAt?: string;
@@ -698,6 +721,7 @@ export interface UpsertAssetBody {
   topic: string;
   name: string;
   assetModelId?: string;
+  usefulLifeOverrideMonths?: number;
   installedAt?: string;
   lastRenovatedAt?: string;
   replacedAt?: string;
@@ -1070,7 +1094,7 @@ function buildRequestsApi(opts: ClientOptions) {
       contactPhone?: string;
       tenantId?: string;
       unitId?: string;
-      applianceId?: string;
+      assetId?: string;
     }) => request<MaintenanceRequestDTO>(opts, "POST", "/requests", body),
 
     listEvents: (id: string) =>
@@ -1126,7 +1150,7 @@ function buildWorkRequestsApi(opts: ClientOptions) {
       contactPhone?: string;
       tenantId?: string;
       unitId?: string;
-      applianceId?: string;
+      assetId?: string;
     }) => request<MaintenanceRequestDTO>(opts, "POST", "/work-requests", body),
   };
 }
@@ -1830,19 +1854,6 @@ function buildInventoryApi(opts: ClientOptions) {
 
     deleteUnit: (id: string) =>
       request<void>(opts, "DELETE", `/units/${id}`),
-
-    /* Appliances */
-    listUnitAppliances: (unitId: string, params?: { limit?: number; offset?: number }) =>
-      request<ApplianceDTO[]>(opts, "GET", `/units/${unitId}/appliances`, undefined, params as Record<string, string | number | boolean | undefined>),
-
-    createUnitAppliance: (unitId: string, body: { category: string; serial?: string; assetModelId?: string; installedDate?: string }) =>
-      request<ApplianceDTO>(opts, "POST", `/units/${unitId}/appliances`, body),
-
-    updateAppliance: (id: string, body: Partial<Pick<ApplianceDTO, "category" | "serial" | "assetModelId">>) =>
-      request<ApplianceDTO>(opts, "PATCH", `/appliances/${id}`, body),
-
-    deleteAppliance: (id: string) =>
-      request<void>(opts, "DELETE", `/appliances/${id}`),
 
     /* Asset Models */
     listAssetModels: (params?: { limit?: number; offset?: number }) =>

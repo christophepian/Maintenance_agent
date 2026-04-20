@@ -204,7 +204,7 @@ export async function evaluateRequestLegalDecision(
     canton,
     unitId: request.unitId,
     buildingId: request.unit?.buildingId ?? null,
-    hasAppliance: !!request.appliance,
+    hasAsset: !!request.asset,
   };
   const contextHash = sha256(JSON.stringify(contextJson));
 
@@ -848,16 +848,9 @@ async function computeDepreciationForRequest(
     return computeDepreciationSignal(asset, new Date(), canton);
   }
 
-  // Fallback: if request has an appliance with installDate, synthesize
-  if (request.appliance?.installDate) {
-    const syntheticAsset = {
-      id: `appliance:${request.appliance.id}`,
-      type: "APPLIANCE" as AssetType,
-      topic: legalTopic,
-      installedAt: request.appliance.installDate,
-      lastRenovatedAt: null,
-    };
-    return computeDepreciationSignal(syntheticAsset, new Date(), canton);
+  // Phase 6: use canonical request.asset only
+  if (request.asset?.installedAt) {
+    return computeDepreciationSignal(request.asset, new Date(), canton);
   }
 
   return null;

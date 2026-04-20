@@ -25,10 +25,12 @@ export interface TenantDTO {
     unitNumber: string;
     floor?: string;
   };
-  appliances?: Array<{
+  assets?: Array<{
     id: string;
     name: string;
-    serial?: string;
+    topic: string;
+    type: string;
+    serialNumber?: string;
     assetModelId?: string;
     assetModel?: {
       id: string;
@@ -61,18 +63,20 @@ function tenantToDTO(tenant: any): TenantDTO {
           floor: primaryUnit.floor || undefined,
         }
       : undefined,
-    appliances: primaryUnit?.appliances
-      ? primaryUnit.appliances.map((appliance: any) => ({
-          id: appliance.id,
-          name: appliance.name,
-          serial: appliance.serial || undefined,
-          assetModelId: appliance.assetModelId || undefined,
-          assetModel: appliance.assetModel
+    assets: primaryUnit?.assets
+      ? primaryUnit.assets.map((asset: any) => ({
+          id: asset.id,
+          name: asset.name,
+          topic: asset.topic,
+          type: asset.type,
+          serialNumber: asset.serialNumber || undefined,
+          assetModelId: asset.assetModelId || undefined,
+          assetModel: asset.assetModel
             ? {
-                id: appliance.assetModel.id,
-                manufacturer: appliance.assetModel.manufacturer,
-                model: appliance.assetModel.model,
-                category: appliance.assetModel.category,
+                id: asset.assetModel.id,
+                manufacturer: asset.assetModel.manufacturer,
+                model: asset.assetModel.model,
+                category: asset.assetModel.category,
               }
             : undefined,
         }))
@@ -110,7 +114,7 @@ export async function createOrGetTenant(
         include: {
           unit: {
             include: {
-              appliances: {
+              assets: {
                 include: {
                   assetModel: true,
                 },
@@ -152,7 +156,7 @@ export async function createOrGetTenant(
         include: {
           unit: {
             include: {
-              appliances: {
+              assets: {
                 include: {
                   assetModel: true,
                 },
@@ -194,7 +198,7 @@ export async function getTenantByPhone(
         include: {
           unit: {
             include: {
-              appliances: {
+              assets: {
                 include: {
                   assetModel: true,
                 },
@@ -220,7 +224,7 @@ export async function getTenantById(id: string): Promise<TenantDTO | null> {
         include: {
           unit: {
             include: {
-              appliances: {
+              assets: {
                 include: {
                   assetModel: true,
                 },
@@ -282,7 +286,7 @@ export async function updateTenant(
         include: {
           unit: {
             include: {
-              appliances: {
+              assets: {
                 include: {
                   assetModel: true,
                 },
@@ -312,7 +316,7 @@ export async function listTenants(orgId: string, includeInactive?: boolean): Pro
           include: {
             unit: {
               include: {
-                appliances: {
+                assets: {
                   include: {
                     assetModel: true,
                   },

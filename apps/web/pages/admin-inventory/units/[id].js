@@ -12,12 +12,13 @@ import DocumentsPanel from "../../../components/DocumentsPanel";
 import AssetInventoryPanel from "../../../components/AssetInventoryPanel";
 import Badge from "../../../components/ui/Badge";
 import { cn } from "../../../lib/utils";
+import { invoiceVariant, leaseVariant } from "../../../lib/statusVariants";
+import { formatChf, formatDate } from "../../../lib/format";
 export default function UnitDetail() {
   const router = useRouter();
   const { id } = router.query;
 
   const [unit, setUnit] = useState(null);
-  const [appliances, setAppliances] = useState([]);
   const [tenants, setTenants] = useState([]);
   const [allTenants, setAllTenants] = useState([]);
   const [selectedTenantId, setSelectedTenantId] = useState("");
@@ -34,14 +35,8 @@ export default function UnitDetail() {
   const [editNumber, setEditNumber] = useState("");
   const [editFloor, setEditFloor] = useState("");
   const [editType, setEditType] = useState("");
-  const [createApplianceName, setCreateApplianceName] = useState("");
-  const [createApplianceCategory, setCreateApplianceCategory] = useState("");
-  const [createApplianceSerial, setCreateApplianceSerial] = useState("");
-  const [createApplianceModel, setCreateApplianceModel] = useState("");
-  const [creatingApplianceModelId, setCreatingApplianceModelId] = useState(null);
   const [activeTab, setActiveTab] = useState("Details");
   const [tenantAction, setTenantAction] = useState(null);
-  const [applianceAction, setApplianceAction] = useState(null);
   const [applicationIds, setApplicationIds] = useState([]);
 
   // Rent estimation fields
@@ -64,6 +59,15 @@ export default function UnitDetail() {
   // Asset inventory state
   const [assetInventory, setAssetInventory] = useState([]);
   const [assetInventoryLoading, setAssetInventoryLoading] = useState(false);
+  const [showAssetAddForm, setShowAssetAddForm] = useState(false);
+
+  // Invoice state
+  const [unitInvoices, setUnitInvoices] = useState([]);
+  const [invoicesLoading, setInvoicesLoading] = useState(false);
+
+  // Lease / contracts state
+  const [unitLeases, setUnitLeases] = useState([]);
+  const [leasesLoading, setLeasesLoading] = useState(false);
 
   function setOk(message) {
     setNotice({ type: "ok", message });
@@ -122,7 +126,6 @@ export default function UnitDetail() {
       setEditHeatingType(u.heatingType || "");
       setEditMonthlyRent(u.monthlyRentChf ?? "");
       setEditMonthlyCharges(u.monthlyChargesChf ?? "");
-      await loadAppliances();
       await loadTenants();
       await loadAllTenants();
       await loadAssetModels();
@@ -141,6 +144,7 @@ export default function UnitDetail() {
     }
   }
 
+  // TODO: Legacy — replace with filtered Asset query (category=EQUIPMENT) once Appliance model is retired
   async function loadAppliances() {
     if (!id) return;
     try {
@@ -192,59 +196,42 @@ export default function UnitDetail() {
     }
   }
 
+  async function loadInvoices() {
+    if (!id) return;
+    try {
+      setInvoicesLoading(true);
+      const res = await fetchJSON(`/invoices?unitId=${id}&view=summary`);
+      setUnitInvoices(Array.isArray(res) ? res : res?.data || []);
+    } catch (e) {
+      // Silently fail — tab will show empty state
+    } finally {
+      setInvoicesLoading(false);
+    }
+  }
+
   useEffect(() => {
     if (id) loadUnit();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  async function onCreateAppliance(e) {
-    e.preventDefault();
-    if (!createApplianceName.trim()) return setErr("Appliance name is required.");
-
+  async function loadLeases() {
+    if (!id) return;
     try {
-      setLoading(true);
-      await fetchJSON(`/units/${id}/appliances`, {
-        method: "POST",
-        body: JSON.stringify({
-          name: createApplianceName,
-          ...(createApplianceCategory.trim() ? { category: createApplianceCategory } : {}),
-          serial: createApplianceSerial || undefined,
-          assetModelId: createApplianceModel || undefined,
-        }),
-      });
-      await loadAppliances();
-      setCreateApplianceName("");
-      setCreateApplianceCategory("");
-      setCreateApplianceSerial("");
-      setCreateApplianceModel("");
-      setApplianceAction(null);
-      setOk("Appliance created.");
+      setLeasesLoading(true);
+      const res = await fetchJSON(`/leases?unitId=${id}`);
+      setUnitLeases(Array.isArray(res) ? res : res?.data || []);
     } catch (e) {
-      setErr(`Create appliance failed: ${e.message}`);
+      // Silently fail
     } finally {
-      setLoading(false);
+      setLeasesLoading(false);
     }
   }
 
-  async function onCreateApplianceFromModel(model) {
-    try {
-      setCreatingApplianceModelId(model.id);
-      await fetchJSON(`/units/${id}/appliances`, {
-        method: "POST",
-        body: JSON.stringify({
-          name: model.name,
-          ...(model.category ? { category: model.category } : {}),
-          assetModelId: model.id,
-        }),
-      });
-      await loadAppliances();
-      setOk("Appliance created.");
-    } catch (e) {
-      setErr(`Create appliance failed: ${e.message}`);
-    } finally {
-      setCreatingApplianceModelId(null);
-    }
-  }
+  useEffect(() => {
+    if (id && activeTab === "Invoices") loadInvoices();
+    if (id && activeTab === "Contracts") loadLeases();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, activeTab]);
 
   async function onDeactivateUnit() {
     if (!confirm("Deactivate this unit? This cannot be undone.")) return;
@@ -256,6 +243,20 @@ export default function UnitDetail() {
     } catch (e) {
       setErr(`Deactivate failed: ${e.message}`);
       setLoading(false);
+    }
+  }
+
+  async function onCalculateEstimate() {
+    try {
+      setEstimateLoading(true);
+      setEstimateError(null);
+      const data = await fetchJSON(`/units/${id}/rent-estimate`);
+      setRentEstimate(data?.data || data);
+    } catch (e) {
+      setEstimateError(e.message);
+      setRentEstimate(null);
+    } finally {
+      setEstimateLoading(false);
     }
   }
 
@@ -291,17 +292,6 @@ export default function UnitDetail() {
       setErr(`Update failed: ${e.message}`);
     } finally {
       setLoading(false);
-    }
-  }
-
-  async function onDeactivateAppliance(applianceId) {
-    if (!confirm("Deactivate this appliance?")) return;
-    try {
-      await fetchJSON(`/appliances/${applianceId}`, { method: "DELETE" });
-      await loadAppliances();
-      setOk("Appliance deactivated.");
-    } catch (e) {
-      setErr(`Deactivate failed: ${e.message}`);
     }
   }
 
@@ -378,8 +368,10 @@ export default function UnitDetail() {
   }
 
   const assignedTenantIds = new Set(tenants.map((t) => t.id));
-  const isBusy = tenants.length > 0;
-  const occupancyLabel = isBusy ? "Busy" : "Empty";
+  const hasActiveLease = (unit?.leases ?? []).length > 0;
+  const occupancyStatus = hasActiveLease ? "OCCUPIED" : unit?.isVacant ? "LISTED" : "VACANT";
+  const occupancyLabel = occupancyStatus === "OCCUPIED" ? "Occupied" : occupancyStatus === "LISTED" ? "Listed" : "Vacant";
+  const occupancyVariant = occupancyStatus === "OCCUPIED" ? "success" : occupancyStatus === "LISTED" ? "info" : "destructive";
   const orgModels = assetModels.filter((m) => m.orgId);
 
   if (loading) {
@@ -404,11 +396,31 @@ export default function UnitDetail() {
         <PageHeader
           title={`Unit ${unit?.unitNumber || "Detail"}`}
           subtitle={unit?.building?.name ? `Building: ${unit.building.name}` : undefined}
-          actions={(
-            <div className="flex items-center gap-2">
-              {editMode ? (
-                <>
-                  <button type="button" className="button-secondary" onClick={() => {
+        />
+        <PageContent>
+          {notice && (
+            <div className={cn("notice", notice.type === "ok" ? "notice-ok" : "notice-err")}>
+              {notice.message}
+            </div>
+          )}
+
+          <div className="tab-strip overflow-x-auto">
+            {["Details", "Tenants", "Assets", "Rent Estimate", "Documents", "Invoices", "Contracts"].map((tab) => (
+              <button key={tab} type="button"
+                className={activeTab === tab ? "tab-btn-active" : "tab-btn"}
+                onClick={() => setActiveTab(tab)}>
+                {tab}
+              </button>
+            ))}
+          </div>
+
+          {activeTab === "Details" && (
+          <Panel title="Unit Details" actions={editMode ? (
+              <>
+                <button type="button" className="button-primary text-sm" onClick={onSaveUnit} disabled={loading}>
+                  {loading ? "Saving…" : "Save changes"}
+                </button>
+                <button type="button" className="button-cancel text-sm" onClick={() => {
                     setEditMode(false);
                     setEditNumber(unit?.unitNumber || "");
                     setEditFloor(unit?.floor || "");
@@ -426,39 +438,14 @@ export default function UnitDetail() {
                     setEditMonthlyRent(unit?.monthlyRentChf ?? "");
                     setEditMonthlyCharges(unit?.monthlyChargesChf ?? "");
                   }}>
-                    Cancel
-                  </button>
-                  <button type="button" className="button-primary" onClick={onSaveUnit} disabled={loading}>
-                    Save
-                  </button>
-                </>
-              ) : (
-                <button type="button" className="button-primary" onClick={() => setEditMode(true)}>
+                  Cancel
+                </button>
+              </>
+            ) : (
+                <button type="button" className="button-primary text-sm" onClick={() => setEditMode(true)}>
                   Edit
                 </button>
-              )}
-            </div>
-          )}
-        />
-        <PageContent>
-          {notice && (
-            <div className={cn("notice", notice.type === "ok" ? "notice-ok" : "notice-err")}>
-              {notice.message}
-            </div>
-          )}
-
-          <div className="tab-strip overflow-x-auto">
-            {["Details", "Tenants", "Appliances", "Assets", "Rent Estimate", "Documents", "Invoices", "Contracts"].map((tab) => (
-              <button key={tab} type="button"
-                className={activeTab === tab ? "tab-btn-active" : "tab-btn"}
-                onClick={() => setActiveTab(tab)}>
-                {tab}
-              </button>
-            ))}
-          </div>
-
-          {activeTab === "Details" && (
-          <Panel title="Unit Details" actions={<Badge variant={isBusy ? "info" : "muted"} size="sm">{occupancyLabel}</Badge>}>
+            )}>
             {editMode ? (
               <div className="mb-4">
                 <div className="grid grid-cols-2 gap-4">
@@ -601,6 +588,10 @@ export default function UnitDetail() {
                 <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Insulation</div>
                 <div className="text-sm text-slate-700 mt-1">{unit?.insulationQuality ? unit.insulationQuality.toLowerCase() : "—"}</div>
               </div>
+              <div>
+                <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Status</div>
+                <div className="text-sm text-slate-700 mt-1"><Badge variant={occupancyVariant} size="sm">{occupancyLabel}</Badge></div>
+              </div>
               <div className="col-span-full">
                 <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Features</div>
                 <div className="text-sm text-slate-700 mt-1 flex gap-2">
@@ -619,179 +610,14 @@ export default function UnitDetail() {
       </Panel>
           )}
 
-          {activeTab === "Appliances" && (
-        <Panel title="Appliances">
-          <div className="flex flex-col gap-3">
-            {appliances.length === 0 ? (
-              <div className="empty-state-text py-6 text-center italic">No appliances yet.</div>
-            ) : (
-              appliances.map((a) => (
-                <div key={a.id} className="flex justify-between items-center p-3 border border-slate-200 rounded-lg bg-slate-50">
-                  <div>
-                    <div className="font-semibold text-sm">
-                      {a.name}
-                      {a.category && <Badge variant="muted" size="sm" className="ml-1.5">{a.category}</Badge>}
-                    </div>
-                    <div className="text-sm text-slate-500 mt-1">
-                      {a.serial && <>SN: <code className="code-small">{a.serial}</code> • </>}
-                      <code className="code-small">{a.id}</code>
-                    </div>
-                    {a.assetModel && (
-                      <div className="text-sm text-slate-500 mt-1">
-                        Model: <strong>{a.assetModel.name}</strong> {a.assetModel.category && `(${a.assetModel.category})`}
-                      </div>
-                    )}
-                  </div>
-                  <button
-                    type="button"
-                    className="px-4 py-2 rounded-lg border-none bg-red-600 hover:bg-red-700 text-white cursor-pointer font-semibold text-sm"
-                    onClick={() => onDeactivateAppliance(a.id)}
-                    disabled={loading}
-                  >
-                    Remove
-                  </button>
-                </div>
-              ))
-            )}
-          </div>
-
-          <div className="bg-slate-50 border border-slate-200 rounded-lg p-3.5 flex flex-col gap-4 mt-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="font-semibold text-sm">Add appliance</div>
-                <div className="text-sm text-slate-500 mt-1">Create an appliance or manage models.</div>
-              </div>
-              {applianceAction ? (
-                <button type="button" className="button-secondary" onClick={() => setApplianceAction(null)}>
-                  Close
-                </button>
-              ) : (
-                <button type="button" className="button-primary" onClick={() => setApplianceAction("menu")}>
-                  Add
-                </button>
-              )}
-            </div>
-
-            {applianceAction === "menu" && (
-              <div className="grid gap-2.5">
-                <button type="button" className="button-secondary text-left" onClick={() => setApplianceAction("create")}> 
-                  Create appliance
-                  <div className="text-sm text-slate-500 mt-1">Add a unit appliance with optional model.</div>
-                </button>
-                <button type="button" className="button-secondary text-left" onClick={() => setApplianceAction("orgModels")}>
-                  Your organization models
-                  <div className="text-sm text-slate-500 mt-1">Browse existing models.</div>
-                </button>
-              </div>
-            )}
-
-            {applianceAction === "create" && (
-              <>
-                <button type="button" className="button-secondary" onClick={() => setApplianceAction("menu")}>
-                  Back to options
-                </button>
-                <form onSubmit={onCreateAppliance} className="mb-2">
-                  <div className="grid grid-cols-2 gap-4 mb-4">
-                    <div>
-                      <label className="filter-label">Name</label>
-                      <input
-                        className="filter-input w-full"
-                        value={createApplianceName}
-                        onChange={(e) => setCreateApplianceName(e.target.value)}
-                        placeholder="e.g. Kitchen Sink"
-                      />
-                    </div>
-                    <div>
-                      <label className="filter-label">Category</label>
-                      <select
-                        className="filter-input w-full"
-                        value={createApplianceCategory}
-                        onChange={(e) => setCreateApplianceCategory(e.target.value)}
-                      >
-                        <option value="">— None —</option>
-                        {ALLOWED_CATEGORIES.map((category) => (
-                          <option key={category} value={category}>
-                            {category}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="filter-label">Serial (optional)</label>
-                      <input
-                        className="filter-input w-full"
-                        value={createApplianceSerial}
-                        onChange={(e) => setCreateApplianceSerial(e.target.value)}
-                        placeholder="Serial number"
-                      />
-                    </div>
-                    <div>
-                      <label className="filter-label">Asset Model (optional)</label>
-                      <select
-                        className="filter-input w-full"
-                        value={createApplianceModel}
-                        onChange={(e) => setCreateApplianceModel(e.target.value)}
-                      >
-                        <option value="">— None —</option>
-                        {assetModels.map((m) => (
-                          <option key={m.id} value={m.id}>
-                            {m.name} {m.category ? `(${m.category})` : ""}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                  <button type="submit" className="button-primary" disabled={loading}>
-                    Create appliance
-                  </button>
-                </form>
-              </>
-            )}
-
-            {applianceAction === "orgModels" && (
-              <>
-                <button type="button" className="button-secondary" onClick={() => setApplianceAction("menu")}>
-                  Back to options
-                </button>
-                <div className="flex flex-col gap-3">
-                  {orgModels.length === 0 ? (
-                    <div className="empty-state-text py-6 text-center italic">No organization models yet.</div>
-                  ) : (
-                    orgModels.map((m) => (
-                      <div
-                        key={m.id}
-                        className={cn("flex justify-between items-center p-3 border border-slate-200 rounded-lg bg-slate-50", "cursor-pointer")}
-                      >
-                        <div>
-                          <div className="font-semibold text-sm">
-                            {m.name} {m.category && <Badge variant="muted" size="sm" className="ml-1.5">{m.category}</Badge>}
-                          </div>
-                          <div className="text-sm text-slate-500 mt-1">
-                            {m.manufacturer && <>Mfg: {m.manufacturer} • </>}
-                            {m.model && <>Model: {m.model} • </>}
-                            <code className="code-small">{m.id}</code>
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          className="button-primary"
-                          onClick={() => onCreateApplianceFromModel(m)}
-                          disabled={creatingApplianceModelId === m.id}
-                        >
-                          {creatingApplianceModelId === m.id ? "Adding..." : "Add"}
-                        </button>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </>
-            )}
-          </div>
-        </Panel>
-          )}
-
           {activeTab === "Assets" && (
-        <Panel title="Asset Inventory & Depreciation">
+        <Panel title="Asset Inventory & Depreciation" actions={
+            showAssetAddForm ? (
+              <button type="button" className="button-cancel text-sm" onClick={() => setShowAssetAddForm(false)}>Cancel</button>
+            ) : (
+              <button type="button" className="button-primary text-sm" onClick={() => setShowAssetAddForm(true)}>Add asset</button>
+            )
+          }>
           {assetInventoryLoading ? (
             <p className="text-center text-slate-400">Loading assets…</p>
           ) : (
@@ -801,24 +627,41 @@ export default function UnitDetail() {
               scope="unit"
               parentId={id}
               unitId={id}
+              showAddForm={showAssetAddForm}
+              setShowAddForm={setShowAssetAddForm}
             />
           )}
         </Panel>
           )}
 
           {activeTab === "Tenants" && (
-        <Panel title="Tenants">
+        <Panel title="Tenants" actions={
+            tenantAction ? (
+              <button type="button" className="button-cancel text-sm" onClick={() => setTenantAction(null)}>Close</button>
+            ) : (
+              <button type="button" className="button-primary text-sm" onClick={() => {
+                if (!hasActiveLease && tenants.length === 0) {
+                  setTenantAction("no-lease");
+                } else if (tenants.length > 0) {
+                  setTenantAction("add-secondary");
+                } else {
+                  setTenantAction("menu");
+                }
+              }}>Add tenant</button>
+            )
+          }>
           <div className="flex flex-col gap-3">
             {tenants.length === 0 ? (
               <div className="empty-state-text py-6 text-center italic">No tenants assigned to this unit.</div>
             ) : (
-              tenants.map((t) => (
+              tenants.map((t, idx) => (
                 <div key={t.id} className="flex justify-between items-center p-3 border border-slate-200 rounded-lg bg-slate-50">
                   <div>
                     <div className="font-semibold text-sm">
                       <Link href={`/manager/people/tenants/${t.id}`} className="text-blue-600 hover:underline">
                         {t.name || "Tenant"}
                       </Link>
+                      {idx === 0 && <span className="ml-2 text-xs text-slate-400 font-normal">(primary)</span>}
                     </div>
                     <div className="text-sm text-slate-500 mt-1">Phone: {t.phone || "—"}</div>
                   </div>
@@ -835,25 +678,64 @@ export default function UnitDetail() {
             )}
           </div>
 
+          {tenantAction && (
           <div className="bg-slate-50 border border-slate-200 rounded-lg p-3.5 flex flex-col gap-4 mt-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="font-semibold text-sm">Add tenant</div>
-                <div className="text-sm text-slate-500 mt-1">Assign an existing tenant or create a new one.</div>
+            {tenantAction === "no-lease" && (
+              <div className="text-sm text-slate-600">
+                <div className="font-semibold text-slate-800 mb-2">Lease required</div>
+                <p className="mb-3">
+                  A primary tenant must be added through a lease contract. Create a lease for this unit first — the tenant will be automatically assigned when the lease is sent for signature.
+                </p>
+                <Link
+                  href={`/manager/leases?unitId=${id}`}
+                  className="button-primary inline-block text-sm"
+                >
+                  Go to Leases →
+                </Link>
               </div>
-              {tenantAction ? (
-                <button type="button" className="button-secondary" onClick={() => setTenantAction(null)}>
-                  Close
+            )}
+
+            {tenantAction === "add-secondary" && (
+              <div className="grid gap-2.5">
+                <div className="text-sm text-slate-600 mb-1">
+                  <span className="font-semibold text-slate-800">Add additional occupant</span> — choose how to add this person:
+                </div>
+                <button type="button" className="button-secondary text-left" onClick={() => setTenantAction("lease-amendment")}>
+                  Add to lease (amendment)
+                  <div className="text-sm text-slate-500 mt-1">This person has contractual authority and should appear on the lease.</div>
                 </button>
-              ) : (
-                <button type="button" className="button-primary" onClick={() => setTenantAction("menu")}>
-                  Add
+                <button type="button" className="button-secondary text-left" onClick={() => setTenantAction("menu")}>
+                  Add as occupant only
+                  <div className="text-sm text-slate-500 mt-1">No lease change needed (e.g. children, dependants without contractual authority).</div>
                 </button>
-              )}
-            </div>
+              </div>
+            )}
+
+            {tenantAction === "lease-amendment" && (
+              <div className="text-sm text-slate-600">
+                <div className="font-semibold text-slate-800 mb-2">Lease amendment required</div>
+                <p className="mb-3">
+                  Adding a co-tenant to the lease requires an amendment to the existing contract. This will be available as a workflow in a future update.
+                </p>
+                <p className="text-xs text-slate-400">
+                  For now, you can add the person as an occupant and manually update the lease contract.
+                </p>
+                <div className="mt-3 flex gap-2">
+                  <button type="button" className="button-secondary text-sm" onClick={() => setTenantAction("menu")}>
+                    Add as occupant instead
+                  </button>
+                  <button type="button" className="button-cancel text-sm" onClick={() => setTenantAction(null)}>
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
 
             {tenantAction === "menu" && (
               <div className="grid gap-2.5">
+                {tenants.length > 0 && (
+                  <div className="text-xs text-slate-400 mb-1">Adding as occupant only — no lease change.</div>
+                )}
                 <button type="button" className="button-secondary text-left" onClick={() => setTenantAction("assign")}>
                   Assign tenant
                   <div className="text-sm text-slate-500 mt-1">Pick from existing tenants.</div>
@@ -867,7 +749,7 @@ export default function UnitDetail() {
 
             {tenantAction === "assign" && (
               <>
-                <button type="button" className="button-secondary" onClick={() => setTenantAction("menu")}>
+                <button type="button" className="button-secondary" onClick={() => setTenantAction(tenants.length > 0 ? "add-secondary" : "menu")}>
                   Back to options
                 </button>
                 <form onSubmit={onAssignTenant} className="flex gap-4 items-end mb-4 flex-wrap">
@@ -900,7 +782,7 @@ export default function UnitDetail() {
 
             {tenantAction === "create" && (
               <>
-                <button type="button" className="button-secondary" onClick={() => setTenantAction("menu")}>
+                <button type="button" className="button-secondary" onClick={() => setTenantAction(tenants.length > 0 ? "add-secondary" : "menu")}>
                   Back to options
                 </button>
                 <form onSubmit={onCreateTenant} className="flex gap-4 items-end mb-4 flex-wrap">
@@ -938,40 +820,29 @@ export default function UnitDetail() {
               </>
             )}
           </div>
+          )}
         </Panel>
           )}
 
           {activeTab === "Rent Estimate" && (
-        <Panel title="Rent Estimate">
-          {!unit?.livingAreaSqm ? (
-            <div className={cn("notice", "notice-err")}>
-              Living area (m²) is required to estimate rent. Click <strong>Edit</strong> above and fill in the estimation inputs.
-            </div>
-          ) : (
-            <>
+        <Panel title="Rent Estimate" actions={unit?.livingAreaSqm ? (
               <button
                 type="button"
-                className="button-primary"
+                className="button-primary text-sm"
                 disabled={estimateLoading}
-                onClick={async () => {
-                  try {
-                    setEstimateLoading(true);
-                    setEstimateError(null);
-                    const data = await fetchJSON(`/units/${id}/rent-estimate`);
-                    setRentEstimate(data?.data || data);
-                  } catch (e) {
-                    setEstimateError(e.message);
-                    setRentEstimate(null);
-                  } finally {
-                    setEstimateLoading(false);
-                  }
-                }}
+                onClick={onCalculateEstimate}
               >
                 {estimateLoading ? "Calculating…" : rentEstimate ? "Recalculate" : "Calculate Estimate"}
               </button>
-
+            ) : null}>
+          {!unit?.livingAreaSqm ? (
+            <div className={cn("notice", "notice-err")}>
+              Living area (m²) is required to estimate rent. Switch to the <strong>Details</strong> tab, click <strong>Edit</strong>, and fill in the estimation inputs.
+            </div>
+          ) : (
+            <>
               {estimateError && (
-                <div className={cn("notice notice-err", "mt-3")}>{estimateError}</div>
+                <div className={cn("notice notice-err")}>{estimateError}</div>
               )}
 
               {rentEstimate && (
@@ -1056,13 +927,97 @@ export default function UnitDetail() {
 
           {activeTab === "Invoices" && (
         <Panel title="Invoices">
-          <div className={cn("empty-state-text py-6 text-center italic", "p-8")}>Empty for now.</div>
+          {invoicesLoading ? (
+            <div className="py-6 text-center text-sm text-slate-500">Loading invoices…</div>
+          ) : unitInvoices.length === 0 ? (
+            <div className="empty-state-text py-6 text-center italic">No invoices linked to this unit.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="data-table w-full text-sm">
+                <thead>
+                  <tr>
+                    <th className="text-left px-3 py-2">Status</th>
+                    <th className="text-left px-3 py-2">Invoice #</th>
+                    <th className="text-left px-3 py-2">Description</th>
+                    <th className="text-right px-3 py-2">Amount</th>
+                    <th className="text-left px-3 py-2">Period</th>
+                    <th className="text-left px-3 py-2">Due Date</th>
+                    <th className="text-left px-3 py-2">Created</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {unitInvoices.map((inv) => (
+                    <tr key={inv.id} className="border-t border-slate-100 hover:bg-slate-50">
+                      <td className="px-3 py-2">
+                        <Badge variant={invoiceVariant(inv.status)}>{inv.status}</Badge>
+                      </td>
+                      <td className="px-3 py-2">
+                        <Link href={`/manager/finance/invoices/${inv.id}`} className="text-blue-600 hover:underline">
+                          {inv.invoiceNumber || "—"}
+                        </Link>
+                      </td>
+                      <td className="px-3 py-2 max-w-[200px] truncate">{inv.description || "—"}</td>
+                      <td className="px-3 py-2 text-right font-medium">{formatChf(inv.totalAmount)}</td>
+                      <td className="px-3 py-2 whitespace-nowrap">
+                        {inv.billingPeriodStart && inv.billingPeriodEnd
+                          ? `${formatDate(inv.billingPeriodStart)} – ${formatDate(inv.billingPeriodEnd)}`
+                          : "—"}
+                      </td>
+                      <td className="px-3 py-2 whitespace-nowrap">{inv.dueDate ? formatDate(inv.dueDate) : "—"}</td>
+                      <td className="px-3 py-2 whitespace-nowrap">{formatDate(inv.createdAt)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </Panel>
           )}
 
           {activeTab === "Contracts" && (
         <Panel title="Contracts">
-          <div className={cn("empty-state-text py-6 text-center italic", "p-8")}>Empty for now.</div>
+          {leasesLoading ? (
+            <div className="py-6 text-center text-sm text-slate-500">Loading leases…</div>
+          ) : unitLeases.length === 0 ? (
+            <div className="empty-state-text py-6 text-center italic">No leases found for this unit.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="data-table w-full text-sm">
+                <thead>
+                  <tr>
+                    <th className="text-left px-3 py-2">Status</th>
+                    <th className="text-left px-3 py-2">Tenant</th>
+                    <th className="text-right px-3 py-2">Net Rent</th>
+                    <th className="text-right px-3 py-2">Total</th>
+                    <th className="text-left px-3 py-2">Start</th>
+                    <th className="text-left px-3 py-2">End</th>
+                    <th className="text-left px-3 py-2">Notice</th>
+                    <th className="text-left px-3 py-2">Created</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {unitLeases.map((lease) => (
+                    <tr key={lease.id} className="border-t border-slate-100 hover:bg-slate-50">
+                      <td className="px-3 py-2">
+                        <Badge variant={leaseVariant(lease.status)}>{lease.status}</Badge>
+                      </td>
+                      <td className="px-3 py-2">
+                        <Link href={`/manager/leases/${lease.id}`} className="text-blue-600 hover:underline">
+                          {lease.tenantName || "—"}
+                        </Link>
+                      </td>
+                      <td className="px-3 py-2 text-right font-medium">{formatChf(lease.netRentChf)}</td>
+                      <td className="px-3 py-2 text-right">{lease.rentTotalChf != null ? formatChf(lease.rentTotalChf) : "—"}</td>
+                      <td className="px-3 py-2 whitespace-nowrap">{formatDate(lease.startDate)}</td>
+                      <td className="px-3 py-2 whitespace-nowrap">{lease.endDate ? formatDate(lease.endDate) : "Open-ended"}</td>
+                      <td className="px-3 py-2 whitespace-nowrap">{lease.noticeRule || "—"}</td>
+                      <td className="px-3 py-2 whitespace-nowrap">{formatDate(lease.createdAt)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </Panel>
           )}
       </PageContent>

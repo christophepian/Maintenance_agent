@@ -52,6 +52,7 @@ describe("Jobs and Invoices", () => {
     // Create request
     const request = await prisma.request.create({
       data: {
+        orgId,
         description: "Leaking pipe",
         category: "plumbing",
         estimatedCost: 200,
@@ -243,6 +244,7 @@ describe("Slice 8.3 — Invoice Model Upgrade", () => {
     // Create request
     const request = await prisma.request.create({
       data: {
+        orgId: testOrgId,
         description: "Leaking pipe - invoice test",
         category: "plumbing",
         estimatedCost: 500,

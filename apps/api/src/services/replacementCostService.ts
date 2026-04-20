@@ -11,6 +11,7 @@
  */
 
 import { PrismaClient, AssetType } from "@prisma/client";
+import { normalizeTopicKey } from "../utils/topicKey";
 import * as taxRuleRepo from "../repositories/taxRuleRepository";
 
 // ─── Types ─────────────────────────────────────────────────────
@@ -43,6 +44,9 @@ async function getHistoricalReplacementCosts(
   assetType: AssetType,
   topic: string,
 ): Promise<CostRange | null> {
+  // Normalize topic for matching — topic is the primary depreciation key
+  const topicKey = normalizeTopicKey(topic);
+
   // Find all REPLACEMENT interventions for this asset type+topic in the org
   const interventions = await prisma.assetIntervention.findMany({
     where: {
@@ -51,7 +55,7 @@ async function getHistoricalReplacementCosts(
       asset: {
         orgId,
         type: assetType,
-        topic,
+        topic: topicKey,
       },
     },
     select: { costChf: true },

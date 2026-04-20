@@ -37,11 +37,9 @@ export async function resolveRequestOrg(
       orgId: true,
       unitId: true,
       tenantId: true,
-      applianceId: true,
       assignedContractorId: true,
       unit: { select: { orgId: true } },
       tenant: { select: { orgId: true } },
-      appliance: { select: { orgId: true } },
       assignedContractor: { select: { orgId: true } },
     },
   });
@@ -54,7 +52,6 @@ export async function resolveRequestOrg(
   // Fallback: FK chains (pre-migration rows with empty orgId)
   if (row.unit?.orgId) return { resolved: true, orgId: row.unit.orgId, via: "unit" };
   if (row.tenant?.orgId) return { resolved: true, orgId: row.tenant.orgId, via: "tenant" };
-  if (row.appliance?.orgId) return { resolved: true, orgId: row.appliance.orgId, via: "appliance" };
   if (row.assignedContractor?.orgId) return { resolved: true, orgId: row.assignedContractor.orgId, via: "contractor" };
 
   return { resolved: false, orgId: null, via: "none" };
@@ -111,22 +108,6 @@ export async function resolveLeaseOrg(
   return { resolved: true, orgId: row.orgId, via: "lease" };
 }
 
-// ────────────── Resolve Appliance → orgId ────────────────────
-
-/**
- * Appliance has a direct orgId column.
- */
-export async function resolveApplianceOrg(
-  prisma: PrismaClient,
-  applianceId: string,
-): Promise<OrgResolution> {
-  const row = await prisma.appliance.findUnique({
-    where: { id: applianceId },
-    select: { orgId: true },
-  });
-  if (!row) return { resolved: false, orgId: null, via: "none" };
-  return { resolved: true, orgId: row.orgId, via: "appliance" };
-}
 
 // ────────────── Resolve Asset → orgId ────────────────────────
 

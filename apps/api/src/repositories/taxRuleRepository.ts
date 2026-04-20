@@ -9,6 +9,7 @@
  */
 
 import { PrismaClient, AssetType, TaxClassification } from "@prisma/client";
+import { normalizeTopicKey } from "../utils/topicKey";
 
 // ─── Canonical Includes (G9) ───────────────────────────────────
 
@@ -204,8 +205,9 @@ export async function findBenchmark(
   assetType: AssetType,
   topic: string,
 ): Promise<ReplacementBenchmarkRow | null> {
+  // Normalize topic for matching — topic is the primary depreciation key
   return prisma.replacementBenchmark.findFirst({
-    where: { assetType, topic, isActive: true },
+    where: { assetType, topic: normalizeTopicKey(topic), isActive: true },
   });
 }
 

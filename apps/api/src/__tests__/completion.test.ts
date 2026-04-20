@@ -229,6 +229,7 @@ beforeAll(async () => {
   // Create request with tenant + assigned contractor
   const request = await prisma.request.create({
     data: {
+      orgId: ORG_ID,
       description: "Fix sink for completion test",
       category: "PLUMBING",
       tenantId: "compl-tenant-id",

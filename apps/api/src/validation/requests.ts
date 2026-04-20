@@ -46,7 +46,7 @@ export const CreateRequestSchema = z.object({
   // Tenant asset context
   tenantId: z.string().uuid().optional(),
   unitId: z.string().uuid().optional(),
-  applianceId: z.string().uuid().optional(),
+  assetId: z.string().uuid().optional(),
 
   // legacy support
   text: z.string().optional(),

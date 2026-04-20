@@ -68,6 +68,7 @@ describe("Financial Performance Engine", () => {
     // 4. Request → Job → Paid Invoice (expense in Jan 2025)
     const request = await prisma.request.create({
       data: {
+        orgId,
         description: "Burst pipe repair",
         category: "plumbing",
         status: RequestStatus.COMPLETED,

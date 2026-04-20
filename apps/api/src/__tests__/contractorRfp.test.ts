@@ -223,6 +223,7 @@ describe("Contractor RFP Marketplace", () => {
     // Request linked to RFPs
     const request = await prisma.request.create({
       data: {
+        orgId: ORG_ID,
         description: "Kitchen sink leaking badly",
         category: "plumbing",
         unitId: unit.id,

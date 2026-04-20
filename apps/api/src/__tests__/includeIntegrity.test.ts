@@ -55,7 +55,6 @@ import {
   BUILDING_FULL_INCLUDE,
   BUILDING_LIST_INCLUDE,
   UNIT_FULL_INCLUDE,
-  APPLIANCE_INCLUDE,
 } from "../repositories/inventoryRepository";
 
 // ─── Compile-time type assertions ──────────────────────────────
@@ -83,7 +82,6 @@ type _RentalDocs = Prisma.RentalApplicationGetPayload<{ include: typeof RENTAL_D
 type _BuildingFull = Prisma.BuildingGetPayload<{ include: typeof BUILDING_FULL_INCLUDE }>;
 type _BuildingList = Prisma.BuildingGetPayload<{ include: typeof BUILDING_LIST_INCLUDE }>;
 type _UnitFull = Prisma.UnitGetPayload<{ include: typeof UNIT_FULL_INCLUDE }>;
-type _Appliance = Prisma.ApplianceGetPayload<{ include: typeof APPLIANCE_INCLUDE }>;
 // SELECTION_PIPELINE_INCLUDE is validated at call sites (rentalApplications.ts)
 // via Prisma's findMany type checking rather than GetPayload, since the deep
 // nested where/select/take clauses lose literal types without `as const`.
@@ -95,7 +93,7 @@ const _typeCheck: [
   _AssetList, _Contractor, _LegalVariable, _LegalRule,
   _LegalRuleVersions, _DepreciationStd, _RentalApp,
   _RentalAppUnit, _RentalDocs, _BuildingFull, _BuildingList,
-  _UnitFull, _Appliance,
+  _UnitFull,
 ] = null as any;
 void _typeCheck;
 
@@ -124,7 +122,6 @@ describe("Canonical include constants integrity", () => {
     ["BUILDING_FULL_INCLUDE", BUILDING_FULL_INCLUDE],
     ["BUILDING_LIST_INCLUDE", BUILDING_LIST_INCLUDE],
     ["UNIT_FULL_INCLUDE", UNIT_FULL_INCLUDE],
-    ["APPLIANCE_INCLUDE", APPLIANCE_INCLUDE],
   ];
 
   test.each(includes)("%s is a non-null object", (name, include) => {
@@ -152,7 +149,6 @@ describe("Canonical include constants integrity", () => {
       ["SELECTION_PIPELINE_INCLUDE", SELECTION_PIPELINE_INCLUDE as any],
       ["BUILDING_FULL_INCLUDE", BUILDING_FULL_INCLUDE as any],
       ["UNIT_FULL_INCLUDE", UNIT_FULL_INCLUDE as any],
-      ["APPLIANCE_INCLUDE", APPLIANCE_INCLUDE as any],
     ];
 
     for (const [name, include] of fullIncludes) {

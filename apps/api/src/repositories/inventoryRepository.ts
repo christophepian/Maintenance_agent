@@ -1,7 +1,7 @@
 /**
  * Inventory Repository
  *
- * Centralizes all Prisma access for Building, Unit, Appliance, and
+ * Centralizes all Prisma access for Building, Unit, and
  * AssetModel entities.  Route handlers and services should use these
  * functions instead of ad-hoc prisma calls.
  *
@@ -13,13 +13,9 @@ import { PrismaClient, UnitType, LocationSegment, InsulationQuality, EnergyLabel
 
 // ─── Canonical Includes (G9) ───────────────────────────────────
 
-/** Full include for building detail views — units with appliances, owners, config. */
+/** Full include for building detail views — units, owners, config. */
 export const BUILDING_FULL_INCLUDE = {
-  units: {
-    include: {
-      appliances: true,
-    },
-  },
+  units: true,
   owners: true,
   config: true,
 } as const;
@@ -30,9 +26,8 @@ export const BUILDING_LIST_INCLUDE = {
   config: true,
 } as const;
 
-/** Full include for unit detail views — appliances + parent building with config. */
+/** Full include for unit detail views — parent building with config. */
 export const UNIT_FULL_INCLUDE = {
-  appliances: true,
   building: {
     include: {
       config: true,
@@ -224,7 +219,13 @@ export async function findUnitByIdAndOrg(
 ) {
   return prisma.unit.findFirst({
     where: { id: unitId, orgId },
-    include: { building: true },
+    include: {
+      building: true,
+      leases: {
+        where: { status: "ACTIVE" },
+        select: { id: true, tenantName: true, startDate: true, status: true },
+      },
+    },
   });
 }
 
@@ -307,105 +308,6 @@ export async function countActiveUnits(
   });
 }
 
-// ─── Appliances ────────────────────────────────────────────────
-
-export async function listAppliances(
-  prisma: PrismaClient,
-  orgId: string,
-  unitId: string,
-  includeInactive?: boolean,
-) {
-  return prisma.appliance.findMany({
-    where: { orgId, unitId, ...activeFilter(includeInactive) },
-    include: { assetModel: true },
-    orderBy: { createdAt: "desc" },
-  });
-}
-
-export async function findApplianceByIdAndOrg(
-  prisma: PrismaClient,
-  applianceId: string,
-  orgId: string,
-) {
-  return prisma.appliance.findFirst({ where: { id: applianceId, orgId } });
-}
-
-export async function createAppliance(
-  prisma: PrismaClient,
-  orgId: string,
-  unitId: string,
-  data: {
-    name: string;
-    assetModelId?: string | null;
-    serial?: string | null;
-    installDate?: Date | null;
-    notes?: string | null;
-  },
-) {
-  return prisma.appliance.create({
-    data: {
-      unitId,
-      orgId,
-      name: data.name,
-      assetModelId: data.assetModelId ?? null,
-      serial: data.serial ?? null,
-      installDate: data.installDate ?? null,
-      notes: data.notes ?? null,
-    },
-    include: { assetModel: true },
-  });
-}
-
-export async function updateAppliance(
-  prisma: PrismaClient,
-  applianceId: string,
-  data: {
-    name?: string;
-    assetModelId?: string;
-    serial?: string;
-    installDate?: Date;
-    notes?: string;
-  },
-) {
-  return prisma.appliance.update({
-    where: { id: applianceId },
-    data: {
-      name: data.name ?? undefined,
-      assetModelId: data.assetModelId ?? undefined,
-      serial: data.serial ?? undefined,
-      installDate: data.installDate ?? undefined,
-      notes: data.notes ?? undefined,
-    },
-    include: { assetModel: true },
-  });
-}
-
-export async function deactivateAppliance(
-  prisma: PrismaClient,
-  applianceId: string,
-) {
-  return prisma.appliance.update({
-    where: { id: applianceId },
-    data: { isActive: false },
-  });
-}
-
-export async function countActiveAppliances(
-  prisma: PrismaClient,
-  unitId: string,
-) {
-  return prisma.appliance.count({
-    where: { unitId, isActive: true },
-  });
-}
-
-export async function countRequestsForAppliance(
-  prisma: PrismaClient,
-  applianceId: string,
-) {
-  return prisma.request.count({ where: { applianceId } });
-}
-
 // ─── Asset Models ──────────────────────────────────────────────
 
 export async function listAssetModels(
@@ -480,13 +382,6 @@ export async function deactivateAssetModel(
     where: { id: modelId },
     data: { isActive: false },
   });
-}
-
-export async function countAppliancesForAssetModel(
-  prisma: PrismaClient,
-  modelId: string,
-) {
-  return prisma.appliance.count({ where: { assetModelId: modelId } });
 }
 
 // ─── Building Owners ───────────────────────────────────────────

@@ -38,7 +38,7 @@ export interface CreateRequestWorkflowInput {
   contactPhone?: string | null;
   tenantId?: string | null;
   unitId?: string | null;
-  applianceId?: string | null;
+  assetId?: string | null;
 }
 
 export interface CreateRequestWorkflowResult {
@@ -71,7 +71,7 @@ export async function createRequestWorkflow(
 
   let tenantId = wfInput.tenantId ?? null;
   let unitId = wfInput.unitId ?? null;
-  const applianceId = wfInput.applianceId ?? null;
+  const assetId = wfInput.assetId ?? null;
 
   if (contactPhone && !tenantId) {
     const tenant = await getTenantByPhone({ phone: contactPhone, orgId });
@@ -103,7 +103,7 @@ export async function createRequestWorkflow(
     contactPhone,
     tenantId,
     unitId,
-    applianceId,
+    assetId,
   });
 
   // ── 5. Emit REQUEST_CREATED event ──────────────────────────

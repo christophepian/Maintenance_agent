@@ -168,6 +168,7 @@ describe("RFP Fallback Actions", () => {
 
     const request = await prisma.request.create({
       data: {
+        orgId: org.id,
         description: "Fuite dans la salle de bain — urgent",
         category: "plumbing",
         unitId: unit.id,

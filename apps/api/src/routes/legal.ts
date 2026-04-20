@@ -688,7 +688,10 @@ export function registerLegalRoutes(router: Router) {
         return sendError(res, 400, "VALIDATION_ERROR", msg);
       }
 
-      const asset = await assetRepo.createAssetSimple(prisma, orgId, parsed.data);
+      const asset = await assetRepo.createAssetSimple(prisma, orgId, {
+        ...parsed.data,
+        topic: parsed.data.topic ?? parsed.data.name.toUpperCase().replace(/\s+/g, '_'),
+      });
       sendJson(res, 201, { data: asset });
     } catch (e: any) {
       console.error("[POST /assets]", e);

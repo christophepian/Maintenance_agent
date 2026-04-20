@@ -192,6 +192,7 @@ describe("issueInvoiceWorkflow", () => {
 
     const request = await prisma.request.create({
       data: {
+        orgId,
         description: "Issue workflow test request",
         category: "plumbing",
         estimatedCost: 200,
@@ -299,6 +300,7 @@ describe("unassignContractorWorkflow", () => {
     // Create an ASSIGNED request
     const request = await prisma.request.create({
       data: {
+        orgId,
         description: "Unassign workflow test request",
         category: "electrical",
         estimatedCost: 150,
@@ -387,6 +389,7 @@ describe("ownerRejectWorkflow", () => {
   it("rejectRequestWorkflow: PENDING_OWNER_APPROVAL → REJECTED", async () => {
     const request = await prisma.request.create({
       data: {
+        orgId,
         description: "Owner reject test request",
         category: "carpentry",
         estimatedCost: 500,
@@ -408,6 +411,7 @@ describe("ownerRejectWorkflow", () => {
   it("rejectRequestWorkflow: PENDING_REVIEW → REJECTED (manager reject)", async () => {
     const request = await prisma.request.create({
       data: {
+        orgId,
         description: "Manager reject test",
         category: "carpentry",
         estimatedCost: 300,

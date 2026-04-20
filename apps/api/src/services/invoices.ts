@@ -513,6 +513,7 @@ export async function listInvoices(
     accountId?: string;
     direction?: string;
     ingestionStatus?: string;
+    unitId?: string;
   }
 ): Promise<{ data: InvoiceDTO[] | InvoiceSummaryDTO[]; total: number }> {
   const useSummary = filters?.view === "summary";
@@ -535,11 +536,21 @@ export async function listInvoices(
   if (filters?.buildingId) {
     jobFilter.request = { unit: { buildingId: filters.buildingId } };
   }
+  if (filters?.unitId) {
+    jobFilter.request = { ...jobFilter.request, unitId: filters.unitId };
+  }
   if (Object.keys(jobFilter).length > 0) {
     // Include invoices that match the job filter OR have no job (incoming invoices)
+    // When filtering by unitId, also include invoices linked via lease
+    const orClauses: any[] = [{ job: jobFilter }];
+    if (!filters?.contractorId) orClauses.push({ jobId: null });
+    if (filters?.unitId) orClauses.push({ lease: { unitId: filters.unitId } });
+    where.OR = orClauses;
+  } else if (filters?.unitId) {
+    // unitId-only filter (no other job-based filters)
     where.OR = [
-      { job: jobFilter },
-      ...(filters?.contractorId ? [] : [{ jobId: null }]),
+      { job: { request: { unitId: filters.unitId } } },
+      { lease: { unitId: filters.unitId } },
     ];
   }
 

@@ -5,6 +5,7 @@ import { authHeaders } from "../lib/api";
 import Badge from "./ui/Badge";
 
 import { cn } from "../lib/utils";
+import { TOPIC_EN } from "../lib/topicLabels";
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -48,7 +49,25 @@ const CATEGORY_NUMBERS = {
   "Cave/grenier": "11", "Ascenseur": "12", "Commun": "13",
 };
 
-/** French category → English subtitle */
+/** French DB key → English display label */
+const CATEGORY_EN = {
+  "Chauffage": "Heating",
+  "Eau chaude": "Hot Water",
+  "Cheminée": "Fireplace",
+  "Enveloppe": "Building Envelope",
+  "Intérieurs": "Interior",
+  "Sols": "Flooring",
+  "Cuisine": "Kitchen",
+  "Salle de bains": "Bathroom",
+  "Conduites": "Plumbing",
+  "Électricité": "Electrical",
+  "Extérieurs": "Exterior",
+  "Cave/grenier": "Cellar & Attic",
+  "Ascenseur": "Elevator",
+  "Commun": "Common Areas",
+};
+
+/** English category label → English subtitle */
 const CATEGORY_SUBTITLES = {
   "Chauffage": "Heating / Ventilation / Air Conditioning",
   "Eau chaude": "Hot Water",
@@ -133,7 +152,7 @@ function CategorySection({ category, items, collapsed, onToggle }) {
             {num}
           </span>
           <div>
-            <span className="text-sm font-semibold text-slate-800">{category}</span>
+            <span className="text-sm font-semibold text-slate-800">{CATEGORY_EN[category] || category}</span>
             {subtitle && <span className="ml-2 text-xs text-slate-400">{subtitle}</span>}
           </div>
         </div>
@@ -163,7 +182,7 @@ function CategorySection({ category, items, collapsed, onToggle }) {
             </thead>
             <tbody>
               {items.map((s) => {
-                const itemName = extractItemName(s.notes) || s.topic;
+                const itemName = TOPIC_EN[s.topic] || extractItemName(s.notes) || s.topic;
                 return (
                   <tr key={s.id}>
                     <td className="cell-bold">
@@ -230,7 +249,7 @@ function CreateStandardForm({ onCreated, onError }) {
           </select>
         </label>
         <label className="block">
-          <span className="text-xs font-medium text-slate-600">Topic Key</span>
+          <span className="text-xs font-medium text-slate-600">Topic Key <span className="font-normal text-slate-400">(primary lookup)</span></span>
           <input className="filter-input mt-1 block" value={form.topic} onChange={(e) => setForm({ ...form, topic: e.target.value })} placeholder="e.g. DISHWASHER, PARQUET_MOSAIC" required />
         </label>
         <label className="block">
@@ -298,9 +317,9 @@ export default function DepreciationStandards() {
       const q = search.toLowerCase();
       result = result.filter(
         (s) =>
-          s._itemName.toLowerCase().includes(q) ||
+          (TOPIC_EN[s.topic] || s._itemName).toLowerCase().includes(q) ||
           s.topic.toLowerCase().includes(q) ||
-          s._category.toLowerCase().includes(q) ||
+          (CATEGORY_EN[s._category] || s._category).toLowerCase().includes(q) ||
           (s.notes || "").toLowerCase().includes(q)
       );
     }
@@ -354,7 +373,7 @@ export default function DepreciationStandards() {
           <StatCard label="Total Items" value={enriched.length} sublabel={`${aslocaCount} from ASLOCA/FRI`} />
           <StatCard label="Categories" value={categoryCount} sublabel="Sections from official table" />
           <StatCard label="Avg. Lifespan" value={`${avgLifeYears} yr`} sublabel="Across all items" />
-          <StatCard label="Source" value="ASLOCA/FRI" sublabel="Tableau paritaire 2007" />
+          <StatCard label="Source" value="ASLOCA/FRI" sublabel="Joint depreciation table, 2007" />
         </div>
       )}
 
@@ -384,7 +403,7 @@ export default function DepreciationStandards() {
               </svg>
               <input
                 type="text"
-                placeholder="Search items… (e.g. cuisinière, parquet, radiateur)"
+                placeholder="Search items… (e.g. dishwasher, parquet, radiator)"
                 className="w-full rounded-lg border border-slate-200 py-2 pl-10 pr-3 text-sm focus:border-blue-300 focus:outline-none focus:ring-1 focus:ring-blue-300"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -448,12 +467,15 @@ export default function DepreciationStandards() {
             <span className="flex items-center gap-1"><span className="inline-block h-2 w-4 rounded-full bg-green-400" /> &gt; 30 years</span>
           </div>
           <p className="mt-2 text-[11px] text-slate-400">
-            Source: <em>Tableau paritaire des amortissements</em> — ASLOCA Fédération romande &amp; FRI, effective 1 March 2007.
+            Source: <em>Joint Depreciation Table (Tableau paritaire des amortissements)</em> — ASLOCA Fédération romande &amp; FRI, effective 1 March 2007.
             Section 14 commercial reductions: Offices −20%, Retail (low) −25%, Retail (high) −50%.
             {" "}
             <a href="https://www.asloca.ch/fiches-information" target="_blank" rel="noopener noreferrer" className="text-blue-500 underline">
               View original PDF ↗
             </a>
+          </p>
+          <p className="mt-1 text-[11px] text-slate-400">
+            Resolution priority: asset override → asset model → canton standard → national standard. Topic is the primary matching key.
           </p>
         </div>
       )}

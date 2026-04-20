@@ -535,9 +535,9 @@ Maintenance_Agent/
 
 ## 4. Database Schema (Prisma)
 
-> **Full schema reference:** See [SCHEMA_REFERENCE.md](SCHEMA_REFERENCE.md) for the complete models table (69 models), enums (61), schema gotchas, and Request.orgId migration path.
+> **Full schema reference:** See [SCHEMA_REFERENCE.md](SCHEMA_REFERENCE.md) for the complete models table (68 models), enums (61), schema gotchas, and Request.orgId migration path.
 >
-> **Status:** 76 migrations. 69 models · 61 enums. Last verified: 2026-04-19.
+> **Status:** 81 migrations. 68 models · 62 enums. Last verified: 2026-04-19.
 >
 > **Quick gotchas (always check SCHEMA_REFERENCE.md for full list):**
 > - `Request.orgId` FK to `Org` is now enforced — direct column filter replaces FK-chain traversal

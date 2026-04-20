@@ -57,11 +57,17 @@ export interface JobDTO {
         address: string;
       };
     };
-    appliance?: {
+    // Phase 6: canonical asset
+    asset?: {
       id: string;
+      name: string;
+      type: string;
       category: string;
-      serial?: string;
-    };
+      topic: string;
+      serialNumber?: string | null;
+      brand?: string | null;
+      modelNumber?: string | null;
+    } | null;
   };
   contractor?: {
     id: string;
@@ -274,11 +280,19 @@ function mapJobToDTO(job: JobWithFullInclude): JobDTO {
           address: job.request.unit.building.address,
         },
       } : undefined,
-      appliance: job.request.appliance ? {
-        id: job.request.appliance.id,
-        category: job.request.appliance.assetModel?.category ?? job.request.appliance.name,
-        serial: job.request.appliance.serial ?? undefined,
-      } : undefined,
+      // Phase 6: canonical asset object
+      asset: (job.request as any).asset
+        ? {
+            id: (job.request as any).asset.id,
+            name: (job.request as any).asset.name,
+            type: (job.request as any).asset.type,
+            category: (job.request as any).asset.category,
+            topic: (job.request as any).asset.topic,
+            serialNumber: (job.request as any).asset.serialNumber ?? null,
+            brand: (job.request as any).asset.brand ?? null,
+            modelNumber: (job.request as any).asset.modelNumber ?? null,
+          }
+        : null,
     } : undefined,
     contractor: job.contractor ? {
       id: job.contractor.id,

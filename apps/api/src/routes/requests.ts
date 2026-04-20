@@ -422,7 +422,7 @@ async function handleCreateRequest(ctx: HandlerContext, asWorkRequest: boolean) 
     contactPhone: (raw as any).contactPhone ?? null,
     tenantId: (raw as any).tenantId ?? null,
     unitId: (raw as any).unitId ?? null,
-    applianceId: (raw as any).applianceId ?? null,
+    assetId: (raw as any).assetId ?? null,
   });
 
   // Map response format

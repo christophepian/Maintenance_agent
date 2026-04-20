@@ -53,6 +53,7 @@ describe("Invoice COA classification (FIN-COA-02)", () => {
 
     const request = await prisma.request.create({
       data: {
+        orgId,
         description: "COA test request",
         category: "plumbing",
         estimatedCost: 100,

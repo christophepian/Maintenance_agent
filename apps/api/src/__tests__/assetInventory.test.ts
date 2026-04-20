@@ -27,7 +27,10 @@ function httpRequest(method: string, urlPath: string, body?: object): Promise<{ 
       port: url.port,
       path: url.pathname + url.search,
       method,
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "x-dev-role": "MANAGER",
+      },
     };
 
     const req = http.request(options, (res) => {
@@ -173,7 +176,7 @@ describe("Asset Inventory API", () => {
       expect(result.data.data.name).toBe("Dishwasher");
       expect(result.data.data.brand).toBe("Bosch");
       expect(result.data.data.type).toBe("APPLIANCE");
-      expect(result.data.data.topic).toBe("kitchen");
+      expect(result.data.data.topic).toBe("KITCHEN");
       assetId = result.data.data.id;
     }, 10000);
 
@@ -218,7 +221,7 @@ describe("Asset Inventory API", () => {
       expect(asset.name).toBe("Dishwasher");
       expect(asset.brand).toBe("Bosch Updated");
       expect(asset.type).toBe("APPLIANCE");
-      expect(asset.topic).toBe("kitchen");
+      expect(asset.topic).toBe("KITCHEN");
       expect(asset.interventions).toBeDefined();
       expect(Array.isArray(asset.interventions)).toBe(true);
       expect(asset.isPresent).toBe(true);
@@ -297,7 +300,7 @@ describe("Asset Inventory API", () => {
       });
       expect(result.status).toBe(201);
       expect(result.data.data.type).toBe("STRUCTURAL");
-      expect(result.data.data.topic).toBe("roof");
+      expect(result.data.data.topic).toBe("ROOF");
     }, 10000);
   });
 

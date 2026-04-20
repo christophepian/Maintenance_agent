@@ -7,7 +7,7 @@ import { cn } from "../lib/utils";
 /**
  * Tenant Form (Slice 4)
  * - Phone-based tenant identity
- * - Unit + appliance context
+ * - Unit + asset context (legacy: appliance)
  * - Plain JS (NO TypeScript generics)
  */
 
@@ -20,10 +20,10 @@ export default function TenantForm() {
   const [tenant, setTenant] = useState(null);
   const [buildings, setBuildings] = useState([]);
   const [units, setUnits] = useState([]);
-  const [appliances, setAppliances] = useState([]);
+  const [assets, setAssets] = useState([]);
   const [buildingId, setBuildingId] = useState("");
   const [unitId, setUnitId] = useState("");
-  const [applianceId, setApplianceId] = useState("");
+  const [assetId, setAssetId] = useState("");
   const [category, setCategory] = useState(ALLOWED_CATEGORIES[0] || "oven");
   const [description, setDescription] = useState("");
   const [estimatedCost, setEstimatedCost] = useState("");
@@ -136,8 +136,8 @@ export default function TenantForm() {
     if (!buildingId) {
       setUnits([]);
       setUnitId("");
-      setAppliances([]);
-      setApplianceId("");
+      setAssets([]);
+      setAssetId("");
       return;
     }
     api(`/buildings/${buildingId}/units`)
@@ -146,12 +146,12 @@ export default function TenantForm() {
   }, [buildingId]);
   useEffect(() => {
     if (!unitId) {
-      setAppliances([]);
-      setApplianceId("");
+      setAssets([]);
+      setAssetId("");
       return;
     }
-    api(`/units/${unitId}/appliances`)
-      .then((rows) => setAppliances(Array.isArray(rows) ? rows : []))
+    api(`/units/${unitId}/assets`)
+      .then((rows) => setAssets(Array.isArray(rows) ? rows : []))
       .catch(() => {});
   }, [unitId]);
   async function submitRequest(e) {
@@ -167,7 +167,7 @@ export default function TenantForm() {
         estimatedCost: Number.isFinite(costNum) ? costNum : undefined,
         tenantId: tenant?.id || undefined,
         unitId: unitId || tenant?.unitId || undefined,
-        applianceId: applianceId || undefined,
+        assetId: assetId || undefined,
       };
       const created = await api(`/requests`, {
         method: "POST",
@@ -273,18 +273,18 @@ export default function TenantForm() {
             </option>
           ))}
         </select>
-        <label className="label">Appliance</label>
+        <label className="label">Asset</label>
         <select
           className="input"
-          value={applianceId}
-          onChange={(e) => setApplianceId(e.target.value)}
+          value={assetId}
+          onChange={(e) => setAssetId(e.target.value)}
           disabled={!unitId}
         >
           <option value="">{unitId ? "Select\u2026" : "Select unit first"}</option>
-          {appliances.map((a) => (
+          {assets.map((a) => (
             <option key={a.id} value={a.id}>
               {a.name}
-              {a.serial ? ` (${a.serial})` : ""}
+              {a.serialNumber ? ` (${a.serialNumber})` : ""}
             </option>
           ))}
         </select>
@@ -316,7 +316,7 @@ export default function TenantForm() {
         </button>
         <div className="help">
           This will include: tenantId ({tenant?.id ? "yes" : "no"}), unitId (
-          {unitId || tenant?.unitId ? "yes" : "no"}), applianceId ({applianceId ? "yes" : "no"}).
+          {unitId || tenant?.unitId ? "yes" : "no"}), assetId ({assetId ? "yes" : "no"}).
         </div>
       </form>
       </div>

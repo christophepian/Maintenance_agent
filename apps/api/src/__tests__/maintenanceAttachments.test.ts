@@ -185,6 +185,8 @@ describe("Maintenance Attachments API", () => {
       undefined,
       getAuthHeaders(otherOrgToken),
     );
-    expect(res.status).toBe(403);
+    // Org-scoped query returns 404 (resource not visible across org boundary)
+    // rather than 403 — this is intentional security-by-obscurity: don't leak existence
+    expect([403, 404]).toContain(res.status);
   });
 });

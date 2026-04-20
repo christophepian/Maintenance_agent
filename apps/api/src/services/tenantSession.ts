@@ -19,10 +19,12 @@ export type TenantSessionResult = {
     name: string;
     address: string;
   } | null;
-  appliances: Array<{
+  assets: Array<{
     id: string;
     name: string;
-    serial?: string | null;
+    topic: string;
+    type: string;
+    serialNumber?: string | null;
     assetModelId?: string | null;
     assetModel?: {
       id: string;
@@ -56,7 +58,7 @@ export async function getTenantSession(
           unit: {
             include: {
               building: true,
-              appliances: {
+              assets: {
                 include: {
                   assetModel: true,
                 },
@@ -94,18 +96,20 @@ export async function getTenantSession(
           address: primaryUnit.building.address,
         }
       : null,
-    appliances: primaryUnit?.appliances
-      ? primaryUnit.appliances.map((appliance) => ({
-          id: appliance.id,
-          name: appliance.name,
-          serial: appliance.serial ?? null,
-          assetModelId: appliance.assetModelId ?? null,
-          assetModel: appliance.assetModel
+    assets: primaryUnit?.assets
+      ? primaryUnit.assets.map((asset) => ({
+          id: asset.id,
+          name: asset.name,
+          topic: asset.topic,
+          type: asset.type,
+          serialNumber: asset.serialNumber ?? null,
+          assetModelId: asset.assetModelId ?? null,
+          assetModel: asset.assetModel
             ? {
-                id: appliance.assetModel.id,
-                manufacturer: appliance.assetModel.manufacturer,
-                model: appliance.assetModel.model,
-                category: appliance.assetModel.category,
+                id: asset.assetModel.id,
+                manufacturer: asset.assetModel.manufacturer,
+                model: asset.assetModel.model,
+                category: asset.assetModel.category,
               }
             : null,
         }))

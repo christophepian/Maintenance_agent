@@ -73,6 +73,7 @@ export default function BuildingDetail() {
   // ─── Asset inventory state ───
   const [assetInventory, setAssetInventory] = useState([]);
   const [assetInventoryLoading, setAssetInventoryLoading] = useState(false);
+  const [assetAddMode, setAssetAddMode] = useState(false);
 
   useEffect(() => {
     if (activeTab === "Assets" && assetInventory.length === 0 && !assetInventoryLoading) {
@@ -260,7 +261,7 @@ export default function BuildingDetail() {
         body: JSON.stringify({
           name: editName,
           address: editAddress,
-          yearBuilt: editYearBuilt ? Number(editYearBuilt) : null,
+          ...(editYearBuilt ? { yearBuilt: Number(editYearBuilt) } : {}),
           hasElevator: editElevator,
           hasConcierge: editConcierge,
           managedSince: editManagedSince ? new Date(editManagedSince).toISOString() : null,
@@ -504,7 +505,41 @@ export default function BuildingDetail() {
           {activeTab === "Building information" && (
             <Panel
               title="Building information"
-              actions={!editMode && (
+              actions={editMode ? (
+                <>
+                  <button
+                    type="button"
+                    className="button-primary text-sm"
+                    disabled={loading}
+                    onClick={onUpdateBuilding}
+                  >
+                    {loading ? "Saving…" : "Save changes"}
+                  </button>
+                  <button
+                    type="button"
+                    className="button-cancel text-sm"
+                    onClick={() => {
+                      setEditMode(false);
+                      setEditName(building?.name || "");
+                      setEditAddress(building?.address || "");
+                      setEditYearBuilt(building?.yearBuilt != null ? String(building.yearBuilt) : "");
+                      setEditElevator(!!building?.hasElevator);
+                      setEditConcierge(!!building?.hasConcierge);
+                      setEditManagedSince(building?.managedSince ? building.managedSince.slice(0, 10) : "");
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    className="button-danger text-sm"
+                    onClick={onDeactivateBuilding}
+                    disabled={loading}
+                  >
+                    Deactivate
+                  </button>
+                </>
+              ) : (
                 <button
                   type="button"
                   className="button-primary text-sm"
@@ -577,38 +612,6 @@ export default function BuildingDetail() {
                         <span className="text-sm text-slate-700">Concierge</span>
                       </label>
                     </div>
-                  </div>
-                  <div className="flex gap-2 mt-4">
-                    <button
-                      type="submit"
-                      className="button-primary"
-                      disabled={loading}
-                    >
-                      {loading ? "Saving…" : "Save changes"}
-                    </button>
-                    <button
-                      type="button"
-                      className="button-secondary"
-                      onClick={() => {
-                        setEditMode(false);
-                        setEditName(building?.name || "");
-                        setEditAddress(building?.address || "");
-                        setEditYearBuilt(building?.yearBuilt != null ? String(building.yearBuilt) : "");
-                        setEditElevator(!!building?.hasElevator);
-                        setEditConcierge(!!building?.hasConcierge);
-                        setEditManagedSince(building?.managedSince ? building.managedSince.slice(0, 10) : "");
-                      }}
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="button"
-                      className="button-danger"
-                      onClick={onDeactivateBuilding}
-                      disabled={loading}
-                    >
-                      Deactivate
-                    </button>
                   </div>
                 </form>
               ) : (
@@ -968,7 +971,18 @@ export default function BuildingDetail() {
 
           {/* Assets tab */}
           {activeTab === "Assets" && (
-            <Panel title="Asset Inventory & Depreciation">
+            <Panel
+              title="Asset Inventory & Depreciation"
+              actions={!assetInventoryLoading && (
+                <button
+                  type="button"
+                  className={assetAddMode ? "button-cancel text-sm" : "button-primary text-sm"}
+                  onClick={() => setAssetAddMode((v) => !v)}
+                >
+                  {assetAddMode ? "Cancel" : "+ Add Asset"}
+                </button>
+              )}
+            >
               {assetInventoryLoading ? (
                 <p className="text-center text-slate-500 py-6">Loading assets…</p>
               ) : (
@@ -978,6 +992,8 @@ export default function BuildingDetail() {
                   scope="building"
                   parentId={id}
                   units={units.map((u) => ({ id: u.id, unitNumber: u.unitNumber }))}
+                  showAddForm={assetAddMode}
+                  setShowAddForm={setAssetAddMode}
                 />
               )}
             </Panel>
@@ -1052,7 +1068,26 @@ export default function BuildingDetail() {
           {/* Policies tab */}
           {activeTab === "Policies" && (
             <>
-              <Panel title="Policies">
+              <Panel
+                title="Policies"
+                actions={configMode === "edit" ? (
+                  <button
+                    type="button"
+                    className="button-cancel text-sm"
+                    onClick={() => setConfigMode(null)}
+                  >
+                    Cancel
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="button-primary text-sm"
+                    onClick={() => setConfigMode("edit")}
+                  >
+                    Edit policies
+                  </button>
+                )}
+              >
                 <div className="text-sm text-slate-600 mb-4">Building-level thresholds for auto-approval and emergency dispatch. Leave blank to use org defaults.</div>
                 {configMode === "edit" ? (
                   <form onSubmit={onSaveBuildingConfig} className="mt-4">
@@ -1089,14 +1124,9 @@ export default function BuildingDetail() {
                       />
                       <span className="text-sm font-semibold text-slate-700">Emergency auto-dispatch</span>
                     </label>
-                    <div className="flex gap-2">
-                      <button type="submit" className="button-primary" disabled={loading}>
-                        {loading ? "Saving…" : "Save policies"}
-                      </button>
-                      <button type="button" className="button-secondary" onClick={() => setConfigMode(null)}>
-                        Cancel
-                      </button>
-                    </div>
+                    <button type="submit" className="button-primary" disabled={loading}>
+                      {loading ? "Saving…" : "Save policies"}
+                    </button>
                   </form>
                 ) : (
                   <>
@@ -1120,18 +1150,36 @@ export default function BuildingDetail() {
                         </div>
                       </div>
                     </div>
-                    <button
-                      type="button"
-                      className="button-secondary mt-4"
-                      onClick={() => setConfigMode("edit")}
-                    >
-                      Edit policies
-                    </button>
                   </>
                 )}
               </Panel>
 
-              <Panel title="Overrides">
+              <Panel
+                title="Overrides"
+                actions={createRuleMode ? (
+                  <button
+                    type="button"
+                    className="button-cancel text-sm"
+                    onClick={() => {
+                      setCreateRuleMode(false);
+                      setNewRuleName("");
+                      setNewRulePriority("0");
+                      setNewRuleConditions([{ field: "CATEGORY", operator: "EQUALS", value: "" }]);
+                      setNewRuleAction("AUTO_APPROVE");
+                    }}
+                  >
+                    Cancel
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="button-primary text-sm"
+                    onClick={() => setCreateRuleMode(true)}
+                  >
+                    Create rule
+                  </button>
+                )}
+              >
                 <div className="text-sm text-slate-600 mb-4">Define context-specific approval overrides for this building (e.g., "auto-approve ovens &lt; CHF 500").</div>
 
               {createRuleMode ? (
@@ -1239,24 +1287,9 @@ export default function BuildingDetail() {
                     </select>
                   </div>
 
-                  <div className="flex gap-2">
-                    <button type="submit" className="button-primary" disabled={loading}>
-                      {loading ? "Creating…" : "Create rule"}
-                    </button>
-                    <button
-                      type="button"
-                      className="button-secondary"
-                      onClick={() => {
-                        setCreateRuleMode(false);
-                        setNewRuleName("");
-                        setNewRulePriority("0");
-                        setNewRuleConditions([{ field: "CATEGORY", operator: "EQUALS", value: "" }]);
-                        setNewRuleAction("AUTO_APPROVE");
-                      }}
-                    >
-                      Cancel
-                    </button>
-                  </div>
+                  <button type="submit" className="button-primary" disabled={loading}>
+                    {loading ? "Creating…" : "Create rule"}
+                  </button>
                 </form>
               ) : (
                 <>
@@ -1306,9 +1339,6 @@ export default function BuildingDetail() {
                     </div>
                   )}
                   {rules.length === 0 && <div className="text-center text-slate-500 italic text-sm py-6">No approval rules yet.</div>}
-                  <button type="button" className="button-primary" onClick={() => setCreateRuleMode(true)}>
-                    Create rule
-                  </button>
                 </>
               )}
               </Panel>

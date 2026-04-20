@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { normalizeTopicKey } from "../utils/topicKey";
+import { isModelEligible } from "../repositories/assetRepository";
 import { RfpStatus, LegalObligation, LegalAuthority, AssetType, LegalRuleType, LegalSourceStatus, LegalSourceScope } from "@prisma/client";
 
 // ── GET /rfps query params ──────────────────────────────────
@@ -124,11 +126,25 @@ export type UpdateLegalSourceBody = z.infer<typeof UpdateLegalSourceSchema>;
 export const CreateAssetSchema = z.object({
   unitId: z.string().uuid(),
   type: z.nativeEnum(AssetType),
-  topic: z.string().min(1).max(100),
+  topic: z.string().min(1).max(100).transform(normalizeTopicKey),
   name: z.string().min(1).max(200),
   assetModelId: z.string().uuid().nullable().optional(),
   installedAt: z.string().transform((s) => new Date(s)).nullable().optional(),
   lastRenovatedAt: z.string().transform((s) => new Date(s)).nullable().optional(),
+  brand: z.string().max(200).nullable().optional(),
+  modelNumber: z.string().max(200).nullable().optional(),
+  serialNumber: z.string().max(200).nullable().optional(),
+  usefulLifeOverrideMonths: z.number().int().min(1).nullable().optional(),
+  notes: z.string().max(2000).nullable().optional(),
+  isPresent: z.boolean().optional(),
+}).superRefine((data, ctx) => {
+  if (data.assetModelId && !isModelEligible(data.type)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["assetModelId"],
+      message: `Asset model assignment is not supported for type "${data.type}".`,
+    });
+  }
 });
 
 export type CreateAssetBody = z.infer<typeof CreateAssetSchema>;

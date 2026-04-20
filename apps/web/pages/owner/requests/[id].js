@@ -202,12 +202,12 @@ function DepreciationBar({ pct }) {
 
 /* ── Asset recommendation card ───────────────────────────────── */
 
-function AssetRecommendationCard({ applianceId, repairReplaceData, requestEstimate }) {
-  if (!applianceId) {
+function AssetRecommendationCard({ assetId, repairReplaceData, requestEstimate }) {
+  if (!assetId) {
     return (
       <div className="px-6 py-6 text-center">
-        <p className="text-sm text-slate-400 m-0">No appliance linked to this request.</p>
-        <p className="text-xs text-slate-400 mt-1 m-0">Link an appliance to get repair / replace recommendations.</p>
+        <p className="text-sm text-slate-400 m-0">No asset linked to this request.</p>
+        <p className="text-xs text-slate-400 mt-1 m-0">Link an asset to get repair / replace recommendations.</p>
       </div>
     );
   }
@@ -235,7 +235,7 @@ function AssetRecommendationCard({ applianceId, repairReplaceData, requestEstima
   }
 
   const items = repairReplaceData.data || [];
-  const item = items.find((a) => a.applianceId === applianceId);
+  const item = items.find((a) => a.applianceId === assetId);
 
   if (!item) {
     return (
@@ -448,7 +448,7 @@ export default function OwnerRequestDetailPage() {
   const unit      = r?.unit;
   const building  = unit?.building;
   const tenant    = r?.tenant;
-  const appliance = r?.appliance;
+  const asset     = r?.asset;
   const rfpId     = r?.rfpId || legalState.data?.rfpId || null;
   const nextStep  = r ? getNextStep(r, legalState.data) : null;
   const ctaList   = getOwnerCTAs(r);
@@ -680,7 +680,7 @@ export default function OwnerRequestDetailPage() {
                   {/* Asset Recommendation */}
                   <Panel title="Asset Recommendation" bodyClassName="p-0">
                     <AssetRecommendationCard
-                      applianceId={r.applianceId}
+                      assetId={r.assetId}
                       repairReplaceData={repairReplace}
                       requestEstimate={r.estimatedCost}
                     />
@@ -741,14 +741,14 @@ export default function OwnerRequestDetailPage() {
                     )}
                   </Panel>
 
-                  {/* Appliance */}
-                  {appliance && (
-                    <Panel title="Appliance">
+                  {/* Asset */}
+                  {asset && (
+                    <Panel title="Asset">
                       <dl className="space-y-3">
-                        <Field label="Name">{appliance.name || "\u2014"}</Field>
-                        {appliance.manufacturer && <Field label="Manufacturer">{appliance.manufacturer}</Field>}
-                        {appliance.modelNumber && <Field label="Model">{appliance.modelNumber}</Field>}
-                        {appliance.installationDate && <Field label="Installed">{formatDate(appliance.installationDate)}</Field>}
+                        <Field label="Name">{asset.name || "\u2014"}</Field>
+                        {asset.brand && <Field label="Brand">{asset.brand}</Field>}
+                        {asset.modelNumber && <Field label="Model">{asset.modelNumber}</Field>}
+                        {asset.installedAt && <Field label="Installed">{formatDate(asset.installedAt)}</Field>}
                       </dl>
                     </Panel>
                   )}

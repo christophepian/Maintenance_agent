@@ -939,6 +939,7 @@ export async function createLeaseInvoice(
     const adminContractor = await leaseRepo.findOrCreateAdminContractor(prisma, orgId);
 
     const adminRequest = await leaseRepo.createAdminRequest(prisma, {
+      orgId,
       description: 'System: Lease Administration',
       category: 'other',
       status: RequestStatus.AUTO_APPROVED,

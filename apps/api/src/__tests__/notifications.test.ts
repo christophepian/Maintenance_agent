@@ -63,9 +63,10 @@ describe("Notifications Service", () => {
     });
     contractorId = contractor.id;
 
-    // Create request (no orgId field in Request model)
+    // Create request
     const request = await prisma.request.create({
       data: {
+        orgId,
         description: "Test request",
         category: "stove",
         status: "PENDING_REVIEW",
@@ -356,6 +357,7 @@ describe("Notifications Service", () => {
     // Create new request
     const newRequest = await prisma.request.create({
       data: {
+        orgId,
         description: "Test for approval notification",
         category: "oven",
         status: "AUTO_APPROVED",

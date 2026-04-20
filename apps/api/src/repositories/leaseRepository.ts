@@ -246,7 +246,7 @@ export async function countLeases(
 /** Create a system admin Request for lease invoice scaffolding. */
 export async function createAdminRequest(
   prisma: PrismaClient,
-  data: { description: string; category: string; status: RequestStatus; contractorNotes: string },
+  data: { orgId: string; description: string; category: string; status: RequestStatus; contractorNotes: string },
 ) {
   return prisma.request.create({ data });
 }

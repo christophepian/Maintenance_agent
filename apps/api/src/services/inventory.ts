@@ -108,81 +108,7 @@ export async function deactivateUnit(orgId: string, unitId: string) {
   const existing = await inventoryRepo.findUnitByIdAndOrg(prisma, unitId, orgId);
   if (!existing) return { success: false, reason: "NOT_FOUND" };
 
-  const activeAppliances = await inventoryRepo.countActiveAppliances(prisma, unitId);
-  if (activeAppliances > 0) {
-    return { success: false, reason: "HAS_ACTIVE_APPLIANCES" };
-  }
-
   await inventoryRepo.deactivateUnit(prisma, unitId);
-  return { success: true };
-}
-
-// =========================
-// Appliances
-// =========================
-
-export async function listAppliances(
-  orgId: string,
-  unitId: string,
-  includeInactive?: boolean
-) {
-  return inventoryRepo.listAppliances(prisma, orgId, unitId, includeInactive);
-}
-export async function createAppliance(
-  orgId: string,
-  unitId: string,
-  data: {
-  name: string;
-  assetModelId?: string;
-  serial?: string;
-    installDate?: string;
-    notes?: string;
-  }
-) {
-  const unit = await inventoryRepo.findUnitByIdAndOrg(prisma, unitId, orgId);
-  if (!unit) return null;
-
-  return inventoryRepo.createAppliance(prisma, orgId, unitId, {
-    name: data.name,
-    assetModelId: data.assetModelId ?? null,
-    serial: data.serial ?? null,
-    installDate: data.installDate ? new Date(data.installDate) : null,
-    notes: data.notes ?? null,
-  });
-}
-export async function updateAppliance(
-  orgId: string,
-  applianceId: string,
-  data: {
-  name?: string;
-  assetModelId?: string;
-  serial?: string;
-    installDate?: string;
-    notes?: string;
-  }
-) {
-  const existing = await inventoryRepo.findApplianceByIdAndOrg(prisma, applianceId, orgId);
-  if (!existing) return null;
-
-  return inventoryRepo.updateAppliance(prisma, applianceId, {
-    name: data.name ?? undefined,
-    assetModelId: data.assetModelId ?? undefined,
-    serial: data.serial ?? undefined,
-    installDate: data.installDate ? new Date(data.installDate) : undefined,
-    notes: data.notes ?? undefined,
-  });
-}
-
-export async function deactivateAppliance(orgId: string, applianceId: string) {
-  const existing = await inventoryRepo.findApplianceByIdAndOrg(prisma, applianceId, orgId);
-  if (!existing) return { success: false, reason: "NOT_FOUND" };
-
-  const requestCount = await inventoryRepo.countRequestsForAppliance(prisma, applianceId);
-  if (requestCount > 0) {
-    return { success: false, reason: "HAS_REQUESTS" };
-  }
-
-  await inventoryRepo.deactivateAppliance(prisma, applianceId);
   return { success: true };
 }
 
@@ -249,9 +175,9 @@ export async function deactivateAssetModel(orgId: string, modelId: string) {
   if (!existing) return { success: false, reason: "NOT_FOUND" };
   if (!existing.orgId || existing.orgId !== orgId) return { success: false, reason: "FORBIDDEN" };
 
-  const applianceCount = await inventoryRepo.countAppliancesForAssetModel(prisma, modelId);
-  if (applianceCount > 0) {
-    return { success: false, reason: "HAS_APPLIANCES" };
+  const assetCount = await prisma.asset.count({ where: { assetModelId: modelId } });
+  if (assetCount > 0) {
+    return { success: false, reason: "HAS_ASSETS" };
   }
 
   await inventoryRepo.deactivateAssetModel(prisma, modelId);

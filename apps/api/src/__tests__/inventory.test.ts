@@ -13,7 +13,10 @@ function httpRequest(method: string, path: string, body?: object): Promise<{ sta
       port: url.port,
       path: url.pathname + url.search,
       method,
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'x-dev-role': 'MANAGER',
+      },
     };
 
     const req = http.request(options, (res) => {
@@ -134,61 +137,6 @@ describe("Inventory Admin API Tests (Slice 5)", () => {
     }, 10000);
   });
 
-  // ============ APPLIANCES ============
-
-  describe('Appliances', () => {
-    it('should list appliances in a unit (GET /units/:id/appliances)', async () => {
-      const result = await httpRequest('GET', `/units/${unitId}/appliances`);
-      expect(result.status).toBe(200);
-      expect(Array.isArray(result.data.data)).toBe(true);
-    }, 10000);
-
-    it('should create an appliance (POST /units/:id/appliances)', async () => {
-      const result = await httpRequest('POST', `/units/${unitId}/appliances`, {
-        name: 'Refrigerator',
-        category: 'kitchen',
-        serial: 'SN12345',
-      });
-      expect(result.status).toBe(201);
-      expect(result.data.data).toHaveProperty('id');
-      expect(result.data.data.name).toBe('Refrigerator');
-      // Note: category is accepted in request but not stored in DB schema
-      applianceId = result.data.data.id;
-    }, 10000);
-
-    it('should update an appliance (PATCH /appliances/:id)', async () => {
-      // Appliance may have been deactivated, so skip if 404
-      const result = await httpRequest('PATCH', `/appliances/${applianceId}`, {
-        name: 'Fridge',
-      });
-      expect([200, 404]).toContain(result.status);
-      if (result.status === 200) {
-        expect(result.data.data.name).toBe('Fridge');
-      }
-    }, 10000);
-
-    it('should link appliance to asset model', async () => {
-      // First create an asset model with unique values
-      const timestamp = Date.now();
-      const modelRes = await httpRequest('POST', `/asset-models`, {
-        name: `Samsung ${timestamp}`,
-        category: 'oven',
-        manufacturer: `Samsung${timestamp}`,
-        model: `RF65${timestamp}`,
-      });
-      expect([201, 500]).toContain(modelRes.status);
-      if (modelRes.status !== 201) return; // Skip if duplicate or error
-
-      const modelId = modelRes.data.data.id;
-
-      // Then link it to the appliance (may fail if applianceId is stale)
-      const result = await httpRequest('PATCH', `/appliances/${applianceId}`, {
-        assetModelId: modelId,
-      });
-      expect([200, 404]).toContain(result.status);
-    }, 10000);
-  });
-
   // ============ ASSET MODELS ============
 
   describe('Asset Models', () => {
@@ -221,39 +169,6 @@ describe("Inventory Admin API Tests (Slice 5)", () => {
       if (result.status === 200) {
         expect(result.data.data.model).toBe('SME68TX07E');
       }
-    }, 10000);
-
-    it('should prevent deactivating asset model if referenced by appliance', async () => {
-      // Create a fresh asset model with unique values
-      const timestamp = Date.now();
-      const modelRes = await httpRequest('POST', `/asset-models`, {
-        name: `Test Model ${timestamp}`,
-        category: 'dishwasher',
-        manufacturer: `TestMfg-${timestamp}`,
-        model: `TestModel-${timestamp}`,
-      });
-      expect(modelRes.status).toBe(201);
-      const testModelId = modelRes.data.data.id;
-
-      // Create an appliance with this asset model
-      const unit2Res = await httpRequest('POST', `/buildings/${buildingId}/units`, {
-        unitNumber: `Unit-${timestamp}`,
-        type: 'RESIDENTIAL',
-      });
-      expect(unit2Res.status).toBe(201);
-      const unit2Id = unit2Res.data.data.id;
-
-      const appRes = await httpRequest('POST', `/units/${unit2Id}/appliances`, {
-        name: 'Test Dishwasher',
-        category: 'dishwasher',
-        assetModelId: testModelId,
-      });
-      expect(appRes.status).toBe(201);
-
-      // Try to deactivate the asset model
-      const deleteRes = await httpRequest('DELETE', `/asset-models/${testModelId}`);
-      expect(deleteRes.status).toBe(409); // Conflict: has references
-      expect(deleteRes.data.error).toBeDefined();
     }, 10000);
   });
 
@@ -305,25 +220,6 @@ describe("Inventory Admin API Tests (Slice 5)", () => {
   // ============ SOFT DELETE BEHAVIORS ============
 
   describe('Soft Delete Behaviors', () => {
-    it('should prevent deactivating unit with active appliances', async () => {
-      // Create unit with appliance
-      const unitRes = await httpRequest('POST', `/buildings/${buildingId}/units`, {
-        unitNumber: 'Test104',
-        type: 'RESIDENTIAL',
-      });
-      const testUnitId = unitRes.data.data.id;
-
-      const appRes = await httpRequest('POST', `/units/${testUnitId}/appliances`, {
-        name: 'Oven',
-        category: 'kitchen',
-      });
-      expect(appRes.status).toBe(201);
-
-      // Try to deactivate unit
-      const deleteRes = await httpRequest('DELETE', `/units/${testUnitId}`);
-      expect(deleteRes.status).toBe(409); // Conflict: has active children
-    }, 10000);
-
     it('should prevent deactivating building with active units', async () => {
       // Create building with unit
       const bldgRes = await httpRequest('POST', `/buildings`, {
@@ -342,41 +238,22 @@ describe("Inventory Admin API Tests (Slice 5)", () => {
       expect(deleteRes.status).toBe(409); // Conflict: has active units
     }, 10000);
 
-    it('should deactivate appliance (soft delete)', async () => {
-      // Create a fresh appliance to delete
-      const appRes = await httpRequest('POST', `/units/${unitId}/appliances`, {
-        name: 'Appliance to Delete',
-        category: 'test',
-      });
-      expect(appRes.status).toBe(201);
-      const appIdToDelete = appRes.data.data.id;
-
-      const result = await httpRequest('DELETE', `/appliances/${appIdToDelete}`);
-      expect(result.status).toBe(200);
-
-      // Verify appliance still exists but is inactive
-      const listRes = await httpRequest('GET', `/units/${unitId}/appliances?includeInactive=true`);
-      expect(listRes.status).toBe(200);
-      const deactivated = listRes.data.data.find((a: any) => a.id === appIdToDelete);
-      expect(deactivated?.isActive).toBe(false);
-    }, 10000);
-
     it('should deactivate unit (soft delete)', async () => {
-      // First deactivate all appliances in the unit
-      const appRes = await httpRequest('GET', `/units/${unitId}/appliances?includeInactive=true`);
-      for (const app of appRes.data.data) {
-        if (app.isActive) {
-          await httpRequest('DELETE', `/appliances/${app.id}`);
-        }
-      }
+      // Create a new unit for testing
+      const unitRes = await httpRequest('POST', `/buildings/${buildingId}/units`, {
+        unitNumber: `DeleteTest-${Date.now()}`,
+        type: 'RESIDENTIAL',
+      });
+      expect(unitRes.status).toBe(201);
+      const testUnitId = unitRes.data.data.id;
 
-      // Now deactivate unit
-      const result = await httpRequest('DELETE', `/units/${unitId}`);
+      // Deactivate unit
+      const result = await httpRequest('DELETE', `/units/${testUnitId}`);
       expect(result.status).toBe(200);
 
       // Verify unit still exists but is inactive
       const listRes = await httpRequest('GET', `/buildings/${buildingId}/units?includeInactive=true`);
-      const deactivated = listRes.data.data.find((u: any) => u.id === unitId);
+      const deactivated = listRes.data.data.find((u: any) => u.id === testUnitId);
       expect(deactivated?.isActive).toBe(false);
     }, 10000);
   });
@@ -418,13 +295,6 @@ describe("Inventory Admin API Tests (Slice 5)", () => {
       const result = await httpRequest('POST', `/buildings/${buildingId}/units`, {
         unitNumber: '999',
         type: 'INVALID_TYPE',
-      });
-      expect(result.status).toBe(400);
-    }, 10000);
-
-    it('should reject appliance creation without name', async () => {
-      const result = await httpRequest('POST', `/units/${unitId}/appliances`, {
-        category: 'kitchen',
       });
       expect(result.status).toBe(400);
     }, 10000);

@@ -73,6 +73,7 @@ describe("Invoice Workflows — transition guards & domain events", () => {
     // Create request
     const request = await prisma.request.create({
       data: {
+        orgId,
         description: "Invoice workflow test request",
         category: "plumbing",
         estimatedCost: 200,

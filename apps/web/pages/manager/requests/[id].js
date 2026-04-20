@@ -260,7 +260,7 @@ function AssetRecommendationContent({ applianceId, repairReplaceData, requestEst
   if (!item) {
     return (
       <div className="py-4 text-center">
-        <p className="text-sm text-slate-400 m-0">No repair-vs-replace data available for this appliance.</p>
+        <p className="text-sm text-slate-400 m-0">No repair-vs-replace data available for this asset.</p>
         <p className="text-xs text-slate-300 mt-1 m-0">Asset inventory records are required for analysis.</p>
       </div>
     );
@@ -471,7 +471,32 @@ export default function RequestDetailPage() {
   const unit      = r?.unit;
   const building  = unit?.building;
   const tenant    = r?.tenant;
-  const appliance = r?.appliance;
+  // Phase 4: prefer canonical asset; fall back to legacy appliance
+  const rawAsset = r?.asset;
+  const rawAppliance = r?.appliance;
+  const linkedAsset = rawAsset
+    ? {
+        id: rawAsset.id,
+        name: rawAsset.name || rawAppliance?.name || null,
+        manufacturer: rawAsset.brand || rawAsset.assetModel?.manufacturer || rawAppliance?.assetModel?.manufacturer || null,
+        modelNumber: rawAsset.modelNumber || rawAsset.assetModel?.model || rawAppliance?.assetModel?.model || null,
+        category: rawAsset.category || rawAsset.assetModel?.category || rawAppliance?.assetModel?.category || null,
+        installDate: rawAsset.installedAt || rawAppliance?.installDate || null,
+        serial: rawAsset.serialNumber || rawAppliance?.serial || null,
+        assetModel: rawAsset.assetModel || rawAppliance?.assetModel || null,
+      }
+    : rawAppliance
+      ? {
+          id: rawAppliance.id,
+          name: rawAppliance.name || null,
+          manufacturer: rawAppliance.assetModel?.manufacturer || null,
+          modelNumber: rawAppliance.assetModel?.model || null,
+          category: rawAppliance.assetModel?.category || null,
+          installDate: rawAppliance.installDate || null,
+          serial: rawAppliance.serial || null,
+          assetModel: rawAppliance.assetModel || null,
+        }
+      : null;
   const rfpId     = legalState.data?.rfpId || r?.rfpId || null;
   const nextStep  = r ? getNextStep(r, legalState.data) : null;
   const ctaList   = r ? getAvailableCTAs(r, assigningOpen ? id : null) : [];
@@ -716,15 +741,15 @@ export default function RequestDetailPage() {
                     </div>
                   )}
 
-                  {/* Appliance */}
-                  {appliance && (
+                  {/* Linked Asset (prefers canonical Asset, falls back to Appliance) */}
+                  {linkedAsset && (
                     <div className="border-t border-slate-100 pt-4 mt-4">
-                      <h4 className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-3">Appliance</h4>
+                      <h4 className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-3">Asset</h4>
                       <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3">
-                        <Field label="Name">{appliance.name || "\u2014"}</Field>
-                        {appliance.manufacturer && <Field label="Manufacturer">{appliance.manufacturer}</Field>}
-                        {appliance.modelNumber && <Field label="Model">{appliance.modelNumber}</Field>}
-                        {appliance.installationDate && <Field label="Installed">{formatDate(appliance.installationDate)}</Field>}
+                        <Field label="Name">{linkedAsset.name || "\u2014"}</Field>
+                        {linkedAsset.manufacturer && <Field label="Manufacturer">{linkedAsset.manufacturer}</Field>}
+                        {linkedAsset.modelNumber && <Field label="Model">{linkedAsset.modelNumber}</Field>}
+                        {linkedAsset.installDate && <Field label="Installed">{formatDate(linkedAsset.installDate)}</Field>}
                       </dl>
                     </div>
                   )}
@@ -760,40 +785,40 @@ export default function RequestDetailPage() {
 
                   {/* Column 2 — Maintenance Decision (Repair vs Replace) */}
                   <Panel title="Maintenance Decision">
-                    {appliance ? (
+                    {linkedAsset ? (
                       <div className="space-y-4">
-                        {/* Linked appliance summary */}
+                        {/* Linked asset summary */}
                         <div className="flex flex-wrap items-baseline gap-x-5 gap-y-1">
                           <div>
-                            <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">Appliance</span>
-                            <span className="text-sm font-medium text-slate-900">{appliance.name || "\u2014"}</span>
+                            <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">Asset</span>
+                            <span className="text-sm font-medium text-slate-900">{linkedAsset.name || "\u2014"}</span>
                           </div>
-                          {appliance.assetModel?.manufacturer && (
+                          {linkedAsset.manufacturer && (
                             <div>
                               <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">Manufacturer</span>
-                              <span className="text-sm text-slate-700">{appliance.assetModel.manufacturer}</span>
+                              <span className="text-sm text-slate-700">{linkedAsset.manufacturer}</span>
                             </div>
                           )}
-                          {appliance.assetModel?.category && (
+                          {linkedAsset.category && (
                             <div>
                               <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">Category</span>
                               <Badge variant="muted" size="sm">
-                                {appliance.assetModel.category}
+                                {linkedAsset.category}
                               </Badge>
                             </div>
                           )}
-                          {appliance.installDate && (
+                          {linkedAsset.installDate && (
                             <div>
                               <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">Installed</span>
-                              <span className="text-sm text-slate-700">{formatDate(appliance.installDate)}</span>
+                              <span className="text-sm text-slate-700">{formatDate(linkedAsset.installDate)}</span>
                             </div>
                           )}
                         </div>
                         {/* Repair vs Replace analysis (if available) */}
-                        {r.applianceId && (
+                        {(r.assetId || r.applianceId) && (
                           <div className="border-t border-slate-100 pt-4">
                             <AssetRecommendationContent
-                              applianceId={r.applianceId}
+                              applianceId={r.assetId || r.applianceId}
                               repairReplaceData={repairReplace}
                               requestEstimate={r.estimatedCost}
                             />
@@ -802,7 +827,7 @@ export default function RequestDetailPage() {
                       </div>
                     ) : (
                       <div className="py-6 text-center">
-                        <p className="text-sm text-slate-400 m-0">No appliance linked to this request.</p>
+                        <p className="text-sm text-slate-400 m-0">No asset linked to this request.</p>
                       </div>
                     )}
                   </Panel>

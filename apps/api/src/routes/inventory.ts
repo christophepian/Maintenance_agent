@@ -14,10 +14,6 @@ import {
   updateUnit,
   deactivateUnit,
   getUnitById,
-  listAppliances,
-  createAppliance,
-  updateAppliance,
-  deactivateAppliance,
   listAssetModels,
   createAssetModel,
   updateAssetModel,
@@ -33,11 +29,11 @@ import { propertyFromBuilding } from "../services/adapters/propertyAdapter";
 import { contactFromTenant, contactFromContractor } from "../services/adapters/contactAdapter";
 import { CreateBuildingSchema, UpdateBuildingSchema } from "../validation/buildings";
 import { CreateUnitSchema, UpdateUnitSchema } from "../validation/units";
-import { CreateApplianceSchema, UpdateApplianceSchema } from "../validation/appliances";
 import { CreateAssetModelSchema, UpdateAssetModelSchema } from "../validation/assetModels";
-import { UpsertAssetSchema, AddInterventionSchema } from "../validation/assets";
+import { UpsertAssetSchema, AddInterventionSchema, PatchAssetSchema } from "../validation/assets";
 import { LinkTenantSchema } from "../validation/occupancies";
 import { normalizePhoneToE164 } from "../utils/phoneNormalization";
+import { normalizeTopicKey } from "../utils/topicKey";
 import * as inventoryRepo from "../repositories/inventoryRepository";
 import { mapBuildingToDetailDTO } from "../dto/buildingDetail";
 import { mapUnitToListDTO } from "../dto/unitList";
@@ -354,66 +350,9 @@ export function registerInventoryRoutes(router: Router) {
     try {
       const result = await deactivateUnit(orgId, params.id);
       if (!result.success && result.reason === "NOT_FOUND") return sendError(res, 404, "NOT_FOUND", "Unit not found");
-      if (!result.success && result.reason === "HAS_ACTIVE_APPLIANCES") return sendError(res, 409, "CONFLICT", "Unit has active appliances");
       sendJson(res, 200, { message: "Unit deactivated" });
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to deactivate unit", String(e));
-    }
-  });
-
-  /* ── Appliances ────────────────────────────────────────────── */
-
-  router.get("/units/:id/appliances", withAuthRequired(async ({ res, orgId, query, params }) => {
-    try {
-      const includeInactive = first(query, "includeInactive") === "true";
-      const appliances = await listAppliances(orgId, params.id, includeInactive);
-      sendJson(res, 200, { data: appliances });
-    } catch (e) {
-      sendError(res, 500, "DB_ERROR", "Failed to fetch appliances", String(e));
-    }
-  }));
-
-  router.post("/units/:id/appliances", async ({ req, res, orgId, params }) => {
-    if (!requireRole(req, res, "MANAGER")) return;
-    try {
-      const raw = await readJson(req);
-      const parsed = CreateApplianceSchema.safeParse(raw);
-      if (!parsed.success) return sendError(res, 400, "VALIDATION_ERROR", "Invalid appliance data", parsed.error.flatten());
-      const created = await createAppliance(orgId, params.id, parsed.data);
-      if (!created) return sendError(res, 404, "NOT_FOUND", "Unit not found");
-      sendJson(res, 201, { data: created });
-    } catch (e: any) {
-      const msg = String(e?.message || e);
-      if (msg === "Invalid JSON") return sendError(res, 400, "INVALID_JSON", "Invalid JSON");
-      sendError(res, 500, "DB_ERROR", "Failed to create appliance", String(e));
-    }
-  });
-
-  router.patch("/appliances/:id", async ({ req, res, orgId, params }) => {
-    if (!requireRole(req, res, "MANAGER")) return;
-    try {
-      const raw = await readJson(req);
-      const parsed = UpdateApplianceSchema.safeParse(raw);
-      if (!parsed.success) return sendError(res, 400, "VALIDATION_ERROR", "Invalid appliance data", parsed.error.flatten());
-      const updated = await updateAppliance(orgId, params.id, parsed.data);
-      if (!updated) return sendError(res, 404, "NOT_FOUND", "Appliance not found");
-      sendJson(res, 200, { data: updated });
-    } catch (e: any) {
-      const msg = String(e?.message || e);
-      if (msg === "Invalid JSON") return sendError(res, 400, "INVALID_JSON", "Invalid JSON");
-      sendError(res, 500, "DB_ERROR", "Failed to update appliance", String(e));
-    }
-  });
-
-  router.delete("/appliances/:id", async ({ req, res, orgId, params }) => {
-    if (!requireRole(req, res, "MANAGER")) return;
-    try {
-      const result = await deactivateAppliance(orgId, params.id);
-      if (!result.success && result.reason === "NOT_FOUND") return sendError(res, 404, "NOT_FOUND", "Appliance not found");
-      if (!result.success && result.reason === "HAS_REQUESTS") return sendError(res, 409, "CONFLICT", "Appliance is referenced by requests");
-      sendJson(res, 200, { message: "Appliance deactivated" });
-    } catch (e) {
-      sendError(res, 500, "DB_ERROR", "Failed to deactivate appliance", String(e));
     }
   });
 
@@ -466,7 +405,6 @@ export function registerInventoryRoutes(router: Router) {
     try {
       const result = await deactivateAssetModel(orgId, params.id);
       if (!result.success && result.reason === "NOT_FOUND") return sendError(res, 404, "NOT_FOUND", "Asset model not found");
-      if (!result.success && result.reason === "HAS_APPLIANCES") return sendError(res, 409, "CONFLICT", "Asset model is referenced by appliances");
       if (!result.success && result.reason === "FORBIDDEN") return sendError(res, 403, "FORBIDDEN", "Asset model is not org-private");
       sendJson(res, 200, { message: "Asset model deactivated" });
     } catch (e) {
@@ -538,6 +476,63 @@ export function registerInventoryRoutes(router: Router) {
     }
   });
 
+  /* ── Asset Topic Suggestions ────────────────────────────────── */
+
+  /**
+   * Returns distinct canonical topic keys from DepreciationStandard + existing Asset records.
+   * Used by the frontend to power autocomplete on the topic field.
+   * topic is the PRIMARY depreciation key — guiding users toward known values
+   * prevents silent depreciation misses.
+   */
+  router.get("/asset-topic-suggestions", withAuthRequired(async ({ res, orgId, prisma, query }) => {
+    try {
+      const assetType = first(query, "assetType") || undefined;
+      const where: any = {};
+      if (assetType) where.assetType = assetType;
+
+      // Source 1: depreciation standards (canonical)
+      const standards = await prisma.depreciationStandard.findMany({
+        where,
+        select: { topic: true, assetType: true, usefulLifeMonths: true },
+        distinct: ["topic", "assetType"],
+        orderBy: { topic: "asc" },
+      });
+
+      // Source 2: existing asset topics in this org (may include user-created values)
+      const assetWhere: any = { orgId, isActive: true };
+      if (assetType) assetWhere.type = assetType;
+      const assets = await prisma.asset.findMany({
+        where: assetWhere,
+        select: { topic: true, type: true },
+        distinct: ["topic", "type"],
+        orderBy: { topic: "asc" },
+      });
+
+      // Merge + deduplicate by normalized topic key
+      const seen = new Map<string, { topic: string; assetType: string; source: string; usefulLifeMonths: number | null }>();
+      for (const s of standards) {
+        const key = normalizeTopicKey(s.topic);
+        if (!seen.has(key)) seen.set(key, { topic: s.topic, assetType: s.assetType, source: "standard", usefulLifeMonths: s.usefulLifeMonths });
+      }
+      for (const a of assets) {
+        const key = normalizeTopicKey(a.topic);
+        if (!seen.has(key)) seen.set(key, { topic: a.topic, assetType: a.type, source: "asset", usefulLifeMonths: null });
+      }
+
+      const suggestions = Array.from(seen.entries()).map(([topicKey, v]) => ({
+        topicKey,
+        label: v.topic,
+        assetType: v.assetType,
+        source: v.source,
+        usefulLifeMonths: v.usefulLifeMonths,
+      })).sort((a, b) => a.topicKey.localeCompare(b.topicKey));
+
+      sendJson(res, 200, { data: suggestions });
+    } catch (e) {
+      sendError(res, 500, "DB_ERROR", "Failed to fetch topic suggestions", String(e));
+    }
+  }));
+
   /* ── Asset Inventory ───────────────────────────────────────── */
 
   router.get("/units/:id/asset-inventory", withAuthRequired(async ({ res, orgId, params, prisma, query }) => {
@@ -564,6 +559,7 @@ export function registerInventoryRoutes(router: Router) {
         topic: data.topic,
         name: data.name,
         assetModelId: data.assetModelId,
+        usefulLifeOverrideMonths: data.usefulLifeOverrideMonths,
         installedAt: data.installedAt ? new Date(data.installedAt) : null,
         lastRenovatedAt: data.lastRenovatedAt ? new Date(data.lastRenovatedAt) : null,
         replacedAt: data.replacedAt ? new Date(data.replacedAt) : null,
@@ -605,6 +601,7 @@ export function registerInventoryRoutes(router: Router) {
         topic: data.topic,
         name: data.name,
         assetModelId: data.assetModelId,
+        usefulLifeOverrideMonths: data.usefulLifeOverrideMonths,
         installedAt: data.installedAt ? new Date(data.installedAt) : null,
         lastRenovatedAt: data.lastRenovatedAt ? new Date(data.lastRenovatedAt) : null,
         replacedAt: data.replacedAt ? new Date(data.replacedAt) : null,
@@ -619,6 +616,45 @@ export function registerInventoryRoutes(router: Router) {
       const msg = String(e?.message || e);
       if (msg === "Invalid JSON") return sendError(res, 400, "INVALID_JSON", "Invalid JSON");
       sendError(res, 500, "DB_ERROR", "Failed to upsert asset", String(e));
+    }
+  });
+
+  router.patch("/assets/:id", async ({ req, res, orgId, params, prisma }) => {
+    if (!requireRole(req, res, "MANAGER")) return;
+    try {
+      const raw = await readJson(req);
+      const parsed = PatchAssetSchema.safeParse(raw);
+      if (!parsed.success) return sendError(res, 400, "VALIDATION_ERROR", "Invalid asset data", parsed.error.flatten());
+      const d = parsed.data;
+      const asset = await assetRepo.updateAsset(prisma, orgId, params.id, {
+        ...(d.name !== undefined ? { name: d.name } : {}),
+        ...(d.installedAt !== undefined ? { installedAt: d.installedAt ? new Date(d.installedAt) : null } : {}),
+        ...(d.lastRenovatedAt !== undefined ? { lastRenovatedAt: d.lastRenovatedAt ? new Date(d.lastRenovatedAt) : null } : {}),
+        ...(d.replacedAt !== undefined ? { replacedAt: d.replacedAt ? new Date(d.replacedAt) : null } : {}),
+        ...(d.brand !== undefined ? { brand: d.brand } : {}),
+        ...(d.modelNumber !== undefined ? { modelNumber: d.modelNumber } : {}),
+        ...(d.serialNumber !== undefined ? { serialNumber: d.serialNumber } : {}),
+        ...(d.usefulLifeOverrideMonths !== undefined ? { usefulLifeOverrideMonths: d.usefulLifeOverrideMonths } : {}),
+        ...(d.notes !== undefined ? { notes: d.notes } : {}),
+        ...(d.isPresent !== undefined ? { isPresent: d.isPresent } : {}),
+      });
+      if (!asset) return sendError(res, 404, "NOT_FOUND", "Asset not found");
+      sendJson(res, 200, { data: asset });
+    } catch (e: any) {
+      const msg = String(e?.message || e);
+      if (msg === "Invalid JSON") return sendError(res, 400, "INVALID_JSON", "Invalid JSON");
+      sendError(res, 500, "DB_ERROR", "Failed to update asset", String(e));
+    }
+  });
+
+  router.delete("/assets/:id", async ({ req, res, orgId, params, prisma }) => {
+    if (!requireRole(req, res, "MANAGER")) return;
+    try {
+      const asset = await assetRepo.deactivateAsset(prisma, orgId, params.id);
+      if (!asset) return sendError(res, 404, "NOT_FOUND", "Asset not found");
+      sendJson(res, 200, { data: asset });
+    } catch (e) {
+      sendError(res, 500, "DB_ERROR", "Failed to deactivate asset", String(e));
     }
   });
 

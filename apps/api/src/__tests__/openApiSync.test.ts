@@ -143,6 +143,10 @@ describe("OpenAPI spec ↔ Router sync", () => {
     "GET /invoices/:id/source-file",
     "GET /requests/:id/claim-analysis",
     "POST /requests/:id/manager-reject",
+    // API-07: Asset inventory management routes (Appliance→Asset migration, spec pending)
+    "GET /asset-topic-suggestions",
+    "PATCH /assets/:id",
+    "DELETE /assets/:id",
   ]);
 
   it("every code route has a spec entry", () => {
@@ -194,7 +198,6 @@ describe("OpenAPI spec ↔ Router sync", () => {
       "TenantDTO",
       "BuildingDTO",
       "UnitDTO",
-      "ApplianceDTO",
       "NotificationDTO",
       "ApprovalRuleDTO",
       "BillingEntityDTO",

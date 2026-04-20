@@ -69,7 +69,7 @@ describe("Ledger unit attribution", () => {
     contractorId = contractor.id;
 
     const request = await prisma.request.create({
-      data: { description: "Test repair", category: "plumbing", status: RequestStatus.ASSIGNED, unitId, assignedContractorId: contractorId },
+      data: { orgId, description: "Test repair", category: "plumbing", status: RequestStatus.ASSIGNED, unitId, assignedContractorId: contractorId },
     });
     requestId = request.id;
 

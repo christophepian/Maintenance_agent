@@ -93,15 +93,19 @@ async function main() {
     });
   }
 
-  let appliance = await prisma.appliance.findFirst({
+  // Create or find a seed Asset (replaces legacy Appliance)
+  let asset = await prisma.asset.findFirst({
     where: { unitId: unit.id, name: "Kitchen Oven" },
   });
-  if (!appliance) {
-    appliance = await prisma.appliance.create({
+  if (!asset) {
+    asset = await prisma.asset.create({
       data: {
         unitId: unit.id,
         orgId,
         name: "Kitchen Oven",
+        type: "APPLIANCE",
+        category: "EQUIPMENT",
+        topic: "kitchen_oven",
       },
     });
   }
@@ -207,7 +211,7 @@ async function main() {
           status: "APPROVED",
           tenantId: tenant.id,
           unitId: unit.id,
-          applianceId: appliance.id,
+          assetId: asset.id,
           assignedContractorId: contractor.id,
         },
       });
@@ -219,7 +223,7 @@ async function main() {
     orgId,
     buildingId: building.id,
     unitId: unit.id,
-    applianceId: appliance.id,
+    assetId: asset.id,
     tenantId: tenant.id,
     contractorId: contractor.id,
     billingEntityId: billingEntity.id,

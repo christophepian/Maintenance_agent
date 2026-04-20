@@ -4,16 +4,33 @@
  * Orchestrates asset lookups and depreciation computation.
  * Uses assetRepo for all Prisma queries (G10 — no Prisma in services).
  *
+ * ─── Domain Model ────────────────────────────────────────────
+ *
+ *   Asset          = umbrella instance (physical thing in a unit/building)
+ *   assetCategory  = EQUIPMENT | COMPONENT (business grouping)
+ *   assetType      = operational classification (part of depreciation compound key)
+ *   topic          = PRIMARY depreciation key (most specific depreciable item)
+ *   AssetModel     = reusable catalog entry — mainly for EQUIPMENT (model-identifiable)
+ *
  * Depreciation formula:
  *   clockStart = replacedAt ?? installedAt
  *   ageMonths = diff(now, clockStart)
  *   depreciationPct = min(100, (ageMonths / usefulLifeMonths) * 100)
  *   residualPct = 100 - depreciationPct
+ *
+ * Useful life resolution priority (topic-first):
+ *   1. Asset-specific override     (Asset.usefulLifeOverrideMonths)
+ *   2. AssetModel default life     (AssetModel.defaultUsefulLifeMonths)
+ *   3. DepreciationStandard by topic + canton
+ *   4. DepreciationStandard by topic, national
+ *   5. null → no depreciation
  */
 
-import { PrismaClient, AssetType } from "@prisma/client";
+import { PrismaClient, AssetType, AssetCategory } from "@prisma/client";
 import { assetRepo } from "../repositories";
+import { ASSET_TYPE_TO_CATEGORY } from "../repositories/assetRepository";
 import { estimateReplacementCost, ReplacementCostEstimate } from "./replacementCostService";
+import { normalizeTopicKey } from "../utils/topicKey";
 
 // ─── Types ─────────────────────────────────────────────────────
 
@@ -24,6 +41,8 @@ export interface DepreciationInfo {
   residualPct: number;
   clockStart: string | null;
   standardId: string | null;
+  /** Which resolution tier produced the useful life value. */
+  depreciationSource: DepreciationSource | null;
 }
 
 export interface AssetInventoryItem {
@@ -31,7 +50,10 @@ export interface AssetInventoryItem {
   orgId: string;
   unitId: string;
   type: AssetType;
+  category: AssetCategory;
   topic: string;
+  /** Canonical normalized form of topic, used for depreciation matching. */
+  topicKey: string;
   name: string;
   brand?: string;
   modelNumber?: string;
@@ -71,52 +93,124 @@ function monthsBetween(start: Date, end: Date): number {
 
 export function computeDepreciation(
   asset: { installedAt: Date | null; replacedAt: Date | null },
-  standard: { usefulLifeMonths: number; id: string } | null,
+  resolved: ResolvedUsefulLife | { usefulLifeMonths: number; id: string } | null,
 ): DepreciationInfo | null {
-  if (!standard) return null;
+  if (!resolved) return null;
 
   const clockStart = asset.replacedAt ?? asset.installedAt;
   if (!clockStart) return null;
 
   const now = new Date();
   const ageMonths = Math.max(0, monthsBetween(clockStart, now));
-  const depreciationPct = Math.min(100, Math.round((ageMonths / standard.usefulLifeMonths) * 100));
+  const usefulLifeMonths = resolved.usefulLifeMonths;
+  const depreciationPct = Math.min(100, Math.round((ageMonths / usefulLifeMonths) * 100));
   const residualPct = 100 - depreciationPct;
 
+  // Support both ResolvedUsefulLife (new) and legacy {id} shape
+  const source = "source" in resolved ? resolved.source : null;
+  const standardId = "standardId" in resolved ? resolved.standardId : ("id" in resolved ? (resolved as any).id : null);
+
   return {
-    usefulLifeMonths: standard.usefulLifeMonths,
+    usefulLifeMonths,
     ageMonths,
     depreciationPct,
     residualPct,
     clockStart: clockStart.toISOString(),
-    standardId: standard.id,
+    standardId,
+    depreciationSource: source,
   };
 }
 
-// ─── Depreciation Standard Lookup ──────────────────────────────
+// ─── Depreciation Resolution ───────────────────────────────────
+//
+// Resolution priority (topic-first):
+//   1. Asset-specific override     (Asset.usefulLifeOverrideMonths)
+//   2. AssetModel default life     (AssetModel.defaultUsefulLifeMonths)
+//   3. DepreciationStandard by topic + canton (exact match)
+//   4. DepreciationStandard by topic, national (canton = null)
+//   5. null → no depreciation computed
 
+/** Identifies which resolution tier produced the useful life value. */
+export type DepreciationSource =
+  | "ASSET_OVERRIDE"      // per-asset usefulLifeOverrideMonths
+  | "ASSET_MODEL"         // AssetModel.defaultUsefulLifeMonths
+  | "STANDARD_CANTON"     // DepreciationStandard matched by topic + canton
+  | "STANDARD_NATIONAL";  // DepreciationStandard matched by topic, national
+
+export interface ResolvedUsefulLife {
+  usefulLifeMonths: number;
+  standardId: string | null;
+  source: DepreciationSource;
+}
+
+/**
+ * Resolve the useful life for an asset using the topic-first priority chain.
+ *
+ * topic is the PRIMARY depreciation key.
+ * assetType is used only as part of the DepreciationStandard compound key
+ * (the standard table is keyed by assetType+topic), NOT as a standalone fallback.
+ */
+async function resolveUsefulLife(
+  prisma: PrismaClient,
+  assetType: AssetType,
+  topic: string,
+  canton?: string | null,
+  overrideMonths?: number | null,
+  assetModelDefaultMonths?: number | null,
+): Promise<ResolvedUsefulLife | null> {
+  // Tier 1: per-asset override (Asset.usefulLifeOverrideMonths)
+  if (overrideMonths != null) {
+    return { usefulLifeMonths: overrideMonths, standardId: null, source: "ASSET_OVERRIDE" };
+  }
+
+  // Tier 2: asset model default (AssetModel.defaultUsefulLifeMonths)
+  if (assetModelDefaultMonths != null) {
+    return { usefulLifeMonths: assetModelDefaultMonths, standardId: null, source: "ASSET_MODEL" };
+  }
+
+  // normalizeTopicKey → UPPER_SNAKE_CASE, but the DB may have mixed-case rows
+  // from older seeds ("Kitchen", "dishwasher", etc.).
+  // All topic queries use mode:"insensitive" so they match regardless of stored case.
+  const topicKey = normalizeTopicKey(topic);
+
+  // Tier 3: DepreciationStandard by topic + canton (case-insensitive)
+  if (canton) {
+    const standard = await prisma.depreciationStandard.findFirst({
+      where: { assetType, topic: { equals: topicKey, mode: "insensitive" }, canton, jurisdiction: "CH" },
+      select: { id: true, usefulLifeMonths: true },
+    });
+    if (standard) return { ...standard, standardId: standard.id, source: "STANDARD_CANTON" };
+  }
+
+  // Tier 4: DepreciationStandard by topic + assetType, national (case-insensitive)
+  const standard = await prisma.depreciationStandard.findFirst({
+    where: { assetType, topic: { equals: topicKey, mode: "insensitive" }, canton: null, jurisdiction: "CH" },
+    select: { id: true, usefulLifeMonths: true },
+  });
+  if (standard) return { ...standard, standardId: standard.id, source: "STANDARD_NATIONAL" };
+
+  // Tier 5: topic-only fallback — drop assetType constraint (case-insensitive).
+  // Handles assets whose stored assetType doesn't match the standard's type.
+  const fallback = await prisma.depreciationStandard.findFirst({
+    where: { topic: { equals: topicKey, mode: "insensitive" }, canton: null, jurisdiction: "CH" },
+    select: { id: true, usefulLifeMonths: true },
+    orderBy: { assetType: "asc" },
+  });
+  if (fallback) return { usefulLifeMonths: fallback.usefulLifeMonths, standardId: fallback.id, source: "STANDARD_NATIONAL" };
+
+  return null;
+}
+
+/** Backward-compatible wrapper — existing callers that only need {usefulLifeMonths, id}. */
 async function findDepreciationStandard(
   prisma: PrismaClient,
   assetType: AssetType,
   topic: string,
   canton?: string | null,
 ): Promise<{ usefulLifeMonths: number; id: string } | null> {
-  // First try exact canton match
-  if (canton) {
-    const standard = await prisma.depreciationStandard.findFirst({
-      where: { assetType, topic, canton, jurisdiction: "CH" },
-      select: { id: true, usefulLifeMonths: true },
-    });
-    if (standard) return standard;
-  }
-
-  // Fall back to national (canton = null)
-  const standard = await prisma.depreciationStandard.findFirst({
-    where: { assetType, topic, canton: null, jurisdiction: "CH" },
-    select: { id: true, usefulLifeMonths: true },
-  });
-
-  return standard;
+  const resolved = await resolveUsefulLife(prisma, assetType, topic, canton);
+  if (!resolved) return null;
+  return { usefulLifeMonths: resolved.usefulLifeMonths, id: resolved.standardId ?? "" };
 }
 
 // ─── DTO Mapping ───────────────────────────────────────────────
@@ -143,13 +237,16 @@ function mapAssetToDTO(
     orgId: asset.orgId,
     unitId: asset.unitId,
     type: asset.type,
+    category: asset.category ?? ASSET_TYPE_TO_CATEGORY[asset.type as AssetType] ?? "EQUIPMENT",
     topic: asset.topic,
+    topicKey: normalizeTopicKey(asset.topic),
     name: asset.name,
     ...(asset.brand ? { brand: asset.brand } : {}),
     ...(asset.modelNumber ? { modelNumber: asset.modelNumber } : {}),
     ...(asset.serialNumber ? { serialNumber: asset.serialNumber } : {}),
     ...(asset.notes ? { notes: asset.notes } : {}),
     ...(asset.assetModelId ? { assetModelId: asset.assetModelId } : {}),
+    ...(asset.usefulLifeOverrideMonths != null ? { usefulLifeOverrideMonths: asset.usefulLifeOverrideMonths } : {}),
     ...(asset.installedAt ? { installedAt: asset.installedAt.toISOString() } : {}),
     ...(asset.lastRenovatedAt ? { lastRenovatedAt: asset.lastRenovatedAt.toISOString() } : {}),
     ...(asset.replacedAt ? { replacedAt: asset.replacedAt.toISOString() } : {}),
@@ -178,8 +275,12 @@ export async function getAssetInventoryForUnit(
 
   const result: AssetInventoryItem[] = [];
   for (const asset of assets) {
-    const standard = await findDepreciationStandard(prisma, asset.type, asset.topic, canton);
-    const depreciation = computeDepreciation(asset, standard);
+    const resolved = await resolveUsefulLife(
+      prisma, asset.type, asset.topic, canton,
+      asset.usefulLifeOverrideMonths,
+      asset.assetModel?.defaultUsefulLifeMonths,
+    );
+    const depreciation = computeDepreciation(asset, resolved);
     result.push(mapAssetToDTO(asset, depreciation));
   }
 
@@ -372,8 +473,12 @@ export async function getAssetInventoryForBuilding(
 
   const result: AssetInventoryItem[] = [];
   for (const asset of assets) {
-    const standard = await findDepreciationStandard(prisma, asset.type, asset.topic, canton);
-    const depreciation = computeDepreciation(asset, standard);
+    const resolved = await resolveUsefulLife(
+      prisma, asset.type, asset.topic, canton,
+      asset.usefulLifeOverrideMonths,
+      asset.assetModel?.defaultUsefulLifeMonths,
+    );
+    const depreciation = computeDepreciation(asset, resolved);
     result.push(mapAssetToDTO(asset, depreciation));
   }
 

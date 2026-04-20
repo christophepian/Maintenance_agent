@@ -47,12 +47,17 @@ export const REQUEST_FULL_INCLUDE = {
       },
     },
   },
-  appliance: {
+  asset: {
     select: {
       id: true,
       name: true,
-      serial: true,
-      installDate: true,
+      type: true,
+      category: true,
+      topic: true,
+      serialNumber: true,
+      brand: true,
+      modelNumber: true,
+      installedAt: true,
       notes: true,
       assetModel: {
         select: {
@@ -165,7 +170,7 @@ export interface CreateRequestData {
   contactPhone?: string | null;
   tenantId?: string | null;
   unitId?: string | null;
-  applianceId?: string | null;
+  assetId?: string | null;
 }
 
 /**
@@ -182,7 +187,7 @@ export async function createRequest(prisma: PrismaClient, data: CreateRequestDat
       contactPhone: data.contactPhone ?? null,
       tenantId: data.tenantId ?? null,
       unitId: data.unitId ?? null,
-      applianceId: data.applianceId ?? null,
+      assetId: data.assetId ?? null,
     },
     include: REQUEST_FULL_INCLUDE,
   });

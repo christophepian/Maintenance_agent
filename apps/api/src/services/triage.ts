@@ -206,18 +206,6 @@ export function matchTriage(message: string, appliances: ApplianceLike[]): Triag
 }
 
 export async function triageIssue(prisma: PrismaClient, input: TriageInput): Promise<TriageResult> {
-  const appliances = await prisma.appliance.findMany({
-    where: { unitId: input.unitId },
-    select: {
-      id: true,
-      name: true,
-      assetModel: {
-        select: {
-          category: true,
-        },
-      },
-    },
-  });
-
-  return matchTriage(input.message, appliances);
+  // Appliance model removed. If triage by asset is needed, implement asset query here.
+  return { detectedCategory: null, candidateApplianceIds: [], suggestions: [] };
 }

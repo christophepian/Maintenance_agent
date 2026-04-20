@@ -32,7 +32,7 @@ tags:
   - name: BillingEntities
     description: Billing entity CRUD
   - name: Inventory
-    description: Properties, buildings, units, appliances, asset models
+    description: Properties, buildings, units, asset models
   - name: Tenants
     description: Tenant and contractor person management
   - name: Notifications
@@ -280,13 +280,6 @@ components:
             name: { type: string }
             address: { type: string }
 
-    ApplianceSummary:
-      type: object
-      properties:
-        id: { type: string, format: uuid }
-        category: { type: string }
-        serial: { type: string }
-
     MaintenanceRequestDTO:
       type: object
       required: [id, description, status, createdAt]
@@ -299,7 +292,7 @@ components:
         contactPhone: { type: string, nullable: true }
         tenantId: { type: string, format: uuid, nullable: true }
         unitId: { type: string, format: uuid, nullable: true }
-        applianceId: { type: string, format: uuid, nullable: true }
+        assetId: { type: string, format: uuid, nullable: true }
         approvalSource: { type: string, nullable: true }
         rejectionReason: { type: string, nullable: true }
         payingParty: { $ref: '#/components/schemas/PayingParty' }
@@ -312,9 +305,6 @@ components:
         unit:
           nullable: true
           $ref: '#/components/schemas/UnitSummary'
-        appliance:
-          nullable: true
-          $ref: '#/components/schemas/ApplianceSummary'
         createdAt: { type: string, format: date-time }
 
     MaintenanceRequestSummaryDTO:
@@ -365,7 +355,6 @@ components:
             contactPhone: { type: string }
             tenant: { $ref: '#/components/schemas/TenantSummary' }
             unit: { $ref: '#/components/schemas/UnitSummary' }
-            appliance: { $ref: '#/components/schemas/ApplianceSummary' }
         contractor: { $ref: '#/components/schemas/ContractorSummary' }
 
     JobSummaryDTO:
@@ -748,21 +737,6 @@ components:
             name: { type: string }
             address: { type: string }
 
-    ApplianceDTO:
-      type: object
-      required: [id, unitId, orgId, category]
-      properties:
-        id: { type: string, format: uuid }
-        unitId: { type: string, format: uuid }
-        orgId: { type: string, format: uuid }
-        category: { type: string }
-        serial: { type: string }
-        assetModelId: { type: string, format: uuid }
-        installedDate: { type: string, format: date }
-        lastServiceDate: { type: string, format: date }
-        assetModel:
-          $ref: '#/components/schemas/AssetModelDTO'
-
     AssetModelDTO:
       type: object
       required: [id, orgId, brand, model, category]
@@ -931,7 +905,6 @@ components:
         contactPhone: { type: string }
         tenantId: { type: string, format: uuid }
         unitId: { type: string, format: uuid }
-        applianceId: { type: string, format: uuid }
 
     PaginatedList:
       type: object
@@ -4340,81 +4313,6 @@ paths:
       responses:
         '201':
           description: Created intervention
-
-  /units/{id}/appliances:
-    get:
-      tags: [Inventory]
-      summary: List appliances in a unit
-      operationId: listUnitAppliances
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-        - $ref: '#/components/parameters/LimitParam'
-        - $ref: '#/components/parameters/OffsetParam'
-      responses:
-        '200':
-          description: Appliance list
-          content:
-            application/json:
-              schema:
-                type: array
-                items: { $ref: '#/components/schemas/ApplianceDTO' }
-    post:
-      tags: [Inventory]
-      summary: Create an appliance in a unit
-      operationId: createUnitAppliance
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [category]
-              properties:
-                category: { type: string }
-                serial: { type: string }
-                assetModelId: { type: string, format: uuid }
-                installedDate: { type: string, format: date }
-      responses:
-        '201':
-          description: Created appliance
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/ApplianceDTO' }
-
-  /appliances/{id}:
-    patch:
-      tags: [Inventory]
-      summary: Update an appliance
-      operationId: updateAppliance
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                category: { type: string }
-                serial: { type: string }
-                assetModelId: { type: string, format: uuid }
-      responses:
-        '200':
-          description: Updated appliance
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/ApplianceDTO' }
-    delete:
-      tags: [Inventory]
-      summary: Delete an appliance
-      operationId: deleteAppliance
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '204':
-          description: Deleted
 
   # ═══════════════════════════════════════════════════════════
   # Inventory — Asset Models

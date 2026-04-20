@@ -27,7 +27,7 @@ export type MaintenanceRequestDTO = {
   contactPhone?: string | null;
   tenantId?: string | null;
   unitId?: string | null;
-  applianceId?: string | null;
+  assetId?: string | null;
   approvalSource?: ApprovalSource | null;
   rejectionReason?: string | null;
   payingParty?: PayingParty;
@@ -61,11 +61,16 @@ export type MaintenanceRequestDTO = {
       address: string;
     };
   };
-  appliance?: null | {
+  asset?: null | {
     id: string;
     name: string;
-    serial: string | null;
-    installDate: Date | null;
+    type: string;
+    category: string;
+    topic: string;
+    serialNumber: string | null;
+    brand: string | null;
+    modelNumber: string | null;
+    installedAt: Date | null;
     notes: string | null;
     assetModel: {
       id: string;
@@ -138,12 +143,17 @@ const requestInclude = {
       },
     },
   },
-  appliance: {
+  asset: {
     select: {
       id: true,
       name: true,
-      serial: true,
-      installDate: true,
+      type: true,
+      category: true,
+      topic: true,
+      serialNumber: true,
+      brand: true,
+      modelNumber: true,
+      installedAt: true,
       notes: true,
       assetModel: {
         select: {
@@ -194,7 +204,7 @@ export function toDTO(r: RequestWithFullInclude): MaintenanceRequestDTO {
     contactPhone: r.contactPhone ?? null,
     tenantId: r.tenantId ?? null,
     unitId: r.unitId ?? null,
-    applianceId: r.applianceId ?? null,
+    assetId: (r as any).assetId ?? null,
     approvalSource: r.approvalSource ?? null,
     rejectionReason: r.rejectionReason ?? null,
     payingParty: r.payingParty,
@@ -220,7 +230,7 @@ export function toDTO(r: RequestWithFullInclude): MaintenanceRequestDTO {
       : null,
 
     unit: r.unit ?? null,
-    appliance: r.appliance ?? null,
+    asset: (r as any).asset ?? null,
     rfpId: r.rfps?.[0]?.id ?? null,
 
     createdAt: r.createdAt instanceof Date ? r.createdAt.toISOString() : String(r.createdAt),
@@ -316,7 +326,7 @@ export async function createMaintenanceRequest(
     contactPhone?: string | null;
     tenantId?: string | null;
     unitId?: string | null;
-    applianceId?: string | null;
+    assetId?: string | null;
   }
 ): Promise<MaintenanceRequestDTO> {
   const created = await prisma.request.create({
@@ -330,7 +340,7 @@ export async function createMaintenanceRequest(
       contactPhone: input.contactPhone ?? null,
       tenantId: input.tenantId ?? null,
       unitId: input.unitId ?? null,
-      applianceId: input.applianceId ?? null,
+      assetId: input.assetId ?? null,
     },
     include: requestInclude,
   });

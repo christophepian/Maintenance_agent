@@ -44,7 +44,24 @@ export type WorkRequestDTO = {
 export function workRequestFromRequest(req: MaintenanceRequestDTO): WorkRequestDTO {
   const unit = req.unit as any | null;
   const building = unit?.building ?? null;
-  const appliance = req.appliance as any | null;
+  // Phase 6: use canonical Asset only
+  const asset = (req as any).asset as any | null;
+
+  const resolvedAsset = asset
+    ? {
+        id: asset.id,
+        name: asset.name,
+        serial: asset.serialNumber ?? null,
+        model: asset.assetModel
+          ? {
+              id: asset.assetModel.id,
+              manufacturer: asset.assetModel.manufacturer,
+              model: asset.assetModel.model,
+              category: asset.assetModel.category,
+            }
+          : null,
+      }
+    : null;
 
   return {
     id: req.id,
@@ -67,21 +84,7 @@ export function workRequestFromRequest(req: MaintenanceRequestDTO): WorkRequestD
           floor: unit.floor ?? null,
         }
       : null,
-    asset: appliance
-      ? {
-          id: appliance.id,
-          name: appliance.name,
-          serial: appliance.serial ?? null,
-          model: appliance.assetModel
-            ? {
-                id: appliance.assetModel.id,
-                manufacturer: appliance.assetModel.manufacturer,
-                model: appliance.assetModel.model,
-                category: appliance.assetModel.category,
-              }
-            : null,
-        }
-      : null,
+    asset: resolvedAsset,
     createdBy: {
       tenantId: req.tenantId ?? null,
       contactPhone: req.contactPhone ?? null,

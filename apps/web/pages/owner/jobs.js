@@ -221,12 +221,12 @@ export default function OwnerJobs() {
                             )}
                           </div>
 
-                          {job.request?.appliance && (
+                          {job.request?.asset && (
                             <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 p-3">
-                              <p className="text-xs font-semibold text-amber-900 mb-1">Appliance</p>
+                              <p className="text-xs font-semibold text-amber-900 mb-1">Asset</p>
                               <p className="text-sm text-amber-700">
-                                {job.request.appliance.category}
-                                {job.request.appliance.serial && ` (Serial: ${job.request.appliance.serial})`}
+                                {job.request.asset.name || job.request.asset.category}
+                                {job.request.asset.serialNumber && ` (Serial: ${job.request.asset.serialNumber})`}
                               </p>
                             </div>
                           )}

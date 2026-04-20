@@ -99,6 +99,14 @@ h1, h2 {
   @apply py-2.5 px-3.5 rounded-lg border border-surface-border bg-surface text-muted-dark cursor-pointer;
 }
 
+.button-cancel {
+  @apply py-2.5 px-3.5 rounded-lg border border-muted-ring bg-muted-light text-muted-dark cursor-pointer;
+}
+
+.button-danger {
+  @apply py-2.5 px-3.5 rounded-lg border border-destructive bg-destructive text-white cursor-pointer;
+}
+
 .notice {
   @apply p-3 rounded-lg mb-3 border border-surface-border;
 }

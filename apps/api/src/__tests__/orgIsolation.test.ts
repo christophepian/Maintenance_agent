@@ -13,7 +13,6 @@ import {
   resolveJobOrg,
   resolveInvoiceOrg,
   resolveLeaseOrg,
-  resolveApplianceOrg,
   resolveAssetOrg,
   assertOrgScope,
   OrgScopeMismatchError,
@@ -39,9 +38,6 @@ function mockPrisma(overrides: Record<string, any> = {}): any {
     },
     lease: {
       findUnique: overrides.leaseFindUnique ?? jest.fn().mockResolvedValue(null),
-    },
-    appliance: {
-      findUnique: overrides.applianceFindUnique ?? jest.fn().mockResolvedValue(null),
     },
     asset: {
       findUnique: overrides.assetFindUnique ?? jest.fn().mockResolvedValue(null),
@@ -125,11 +121,9 @@ describe("resolveRequestOrg", () => {
       requestFindUnique: jest.fn().mockResolvedValue({
         unitId: "u1",
         tenantId: "t1",
-        applianceId: null,
         assignedContractorId: null,
         unit: { orgId: ORG_A },
         tenant: { orgId: ORG_A },
-        appliance: null,
         assignedContractor: null,
       }),
     });
@@ -143,11 +137,9 @@ describe("resolveRequestOrg", () => {
       requestFindUnique: jest.fn().mockResolvedValue({
         unitId: null,
         tenantId: "t1",
-        applianceId: null,
         assignedContractorId: null,
         unit: null,
         tenant: { orgId: ORG_B },
-        appliance: null,
         assignedContractor: null,
       }),
     });
@@ -156,39 +148,19 @@ describe("resolveRequestOrg", () => {
     expect(result).toEqual({ resolved: true, orgId: ORG_B, via: "tenant" });
   });
 
-  it("falls back to appliance.orgId", async () => {
-    const prisma = mockPrisma({
-      requestFindUnique: jest.fn().mockResolvedValue({
-        unitId: null,
-        tenantId: null,
-        applianceId: "a1",
-        assignedContractorId: null,
-        unit: null,
-        tenant: null,
-        appliance: { orgId: ORG_A },
-        assignedContractor: null,
-      }),
-    });
-
-    const result = await resolveRequestOrg(prisma, "req-3");
-    expect(result).toEqual({ resolved: true, orgId: ORG_A, via: "appliance" });
-  });
-
   it("falls back to contractor.orgId", async () => {
     const prisma = mockPrisma({
       requestFindUnique: jest.fn().mockResolvedValue({
         unitId: null,
         tenantId: null,
-        applianceId: null,
         assignedContractorId: "c1",
         unit: null,
         tenant: null,
-        appliance: null,
         assignedContractor: { orgId: ORG_B },
       }),
     });
 
-    const result = await resolveRequestOrg(prisma, "req-4");
+    const result = await resolveRequestOrg(prisma, "req-3");
     expect(result).toEqual({ resolved: true, orgId: ORG_B, via: "contractor" });
   });
 
@@ -197,16 +169,14 @@ describe("resolveRequestOrg", () => {
       requestFindUnique: jest.fn().mockResolvedValue({
         unitId: null,
         tenantId: null,
-        applianceId: null,
         assignedContractorId: null,
         unit: null,
         tenant: null,
-        appliance: null,
         assignedContractor: null,
       }),
     });
 
-    const result = await resolveRequestOrg(prisma, "req-5");
+    const result = await resolveRequestOrg(prisma, "req-4");
     expect(result).toEqual({ resolved: false, orgId: null, via: "none" });
   });
 
@@ -222,11 +192,9 @@ describe("resolveRequestOrg", () => {
         orgId: ORG_A,
         unitId: null,
         tenantId: null,
-        applianceId: null,
         assignedContractorId: null,
         unit: null,
         tenant: null,
-        appliance: null,
         assignedContractor: null,
       }),
     });
@@ -240,11 +208,9 @@ describe("resolveRequestOrg", () => {
         orgId: ORG_A,
         unitId: "u1",
         tenantId: null,
-        applianceId: null,
         assignedContractorId: null,
         unit: { orgId: ORG_B }, // different org — should be ignored
         tenant: null,
-        appliance: null,
         assignedContractor: null,
       }),
     });
@@ -303,24 +269,6 @@ describe("resolveLeaseOrg", () => {
   it("returns unresolved when lease not found", async () => {
     const prisma = mockPrisma();
     const result = await resolveLeaseOrg(prisma, "nonexistent");
-    expect(result).toEqual({ resolved: false, orgId: null, via: "none" });
-  });
-});
-
-// ────────────── resolveApplianceOrg ──────────────────────────
-
-describe("resolveApplianceOrg", () => {
-  it("resolves directly from appliance.orgId", async () => {
-    const prisma = mockPrisma({
-      applianceFindUnique: jest.fn().mockResolvedValue({ orgId: ORG_A }),
-    });
-    const result = await resolveApplianceOrg(prisma, "appl-1");
-    expect(result).toEqual({ resolved: true, orgId: ORG_A, via: "appliance" });
-  });
-
-  it("returns unresolved when appliance not found", async () => {
-    const prisma = mockPrisma();
-    const result = await resolveApplianceOrg(prisma, "nonexistent");
     expect(result).toEqual({ resolved: false, orgId: null, via: "none" });
   });
 });
@@ -396,8 +344,8 @@ describe("cross-org isolation matrix", () => {
       name: "Request via unit in Org A accessed by Org B → blocked",
       setup: {
         requestFindUnique: jest.fn().mockResolvedValue({
-          unitId: "u1", tenantId: null, applianceId: null, assignedContractorId: null,
-          unit: { orgId: ORG_A }, tenant: null, appliance: null, assignedContractor: null,
+          unitId: "u1", tenantId: null, assignedContractorId: null,
+          unit: { orgId: ORG_A }, tenant: null, assignedContractor: null,
         }),
       },
       entity: "request" as const,
@@ -409,8 +357,8 @@ describe("cross-org isolation matrix", () => {
       name: "Request via tenant in Org B accessed by Org B → allowed",
       setup: {
         requestFindUnique: jest.fn().mockResolvedValue({
-          unitId: null, tenantId: "t1", applianceId: null, assignedContractorId: null,
-          unit: null, tenant: { orgId: ORG_B }, appliance: null, assignedContractor: null,
+          unitId: null, tenantId: "t1", assignedContractorId: null,
+          unit: null, tenant: { orgId: ORG_B }, assignedContractor: null,
         }),
       },
       entity: "request" as const,
@@ -443,22 +391,6 @@ describe("cross-org isolation matrix", () => {
       shouldBlock: true,
     },
     {
-      name: "Appliance in Org A accessed by Org B → blocked",
-      setup: { applianceFindUnique: jest.fn().mockResolvedValue({ orgId: ORG_A }) },
-      entity: "appliance" as const,
-      entityId: "appl-cross-1",
-      callerOrg: ORG_B,
-      shouldBlock: true,
-    },
-    {
-      name: "Appliance in Org A accessed by Org A → allowed",
-      setup: { applianceFindUnique: jest.fn().mockResolvedValue({ orgId: ORG_A }) },
-      entity: "appliance" as const,
-      entityId: "appl-cross-2",
-      callerOrg: ORG_A,
-      shouldBlock: false,
-    },
-    {
       name: "Asset in Org B accessed by Org A → blocked",
       setup: { assetFindUnique: jest.fn().mockResolvedValue({ orgId: ORG_B }) },
       entity: "asset" as const,
@@ -481,7 +413,6 @@ describe("cross-org isolation matrix", () => {
     job: resolveJobOrg,
     invoice: resolveInvoiceOrg,
     lease: resolveLeaseOrg,
-    appliance: resolveApplianceOrg,
     asset: resolveAssetOrg,
   } as const;
 

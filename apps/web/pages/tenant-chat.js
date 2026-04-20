@@ -13,7 +13,8 @@ export default function TenantChat() {
   const [suggestions, setSuggestions] = useState([]);
   const [currentIssue, setCurrentIssue] = useState("");
   const [detectedCategory, setDetectedCategory] = useState(null);
-  const [candidateApplianceId, setCandidateApplianceId] = useState(null);
+  // Phase 5: prefer assetId; fall back to legacy candidateApplianceIds
+  const [candidateAssetId, setCandidateAssetId] = useState(null);
   const [needsClarification, setNeedsClarification] = useState(false);
   const [notice, setNotice] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -66,7 +67,7 @@ export default function TenantChat() {
 
       const result = data?.data || {};
       setDetectedCategory(result.detectedCategory || null);
-      setCandidateApplianceId(result.candidateApplianceIds?.[0] || null);
+      setCandidateAssetId(result.candidateAssetIds?.[0] || result.candidateApplianceIds?.[0] || null);
       setSuggestions(Array.isArray(result.suggestions) ? result.suggestions : []);
       setNeedsClarification(Boolean(result.needsClarification));
 
@@ -92,7 +93,7 @@ export default function TenantChat() {
         category: detectedCategory || undefined,
         tenantId: session.tenant?.id || undefined,
         unitId: session.unit?.id || undefined,
-        applianceId: candidateApplianceId || undefined,
+        assetId: candidateAssetId || undefined,
       };
 
       const res = await fetch("/api/requests", {

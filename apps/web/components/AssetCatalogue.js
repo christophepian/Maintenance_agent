@@ -289,7 +289,7 @@ export default function AssetCatalogue({ models = [], loading = false, onRefresh
       {models.length === 0 ? (
         <Panel>
           <div className="empty-state">
-            <p className="empty-state-text">No asset models yet. Use the Add button above to create your first model.</p>
+            <p className="empty-state-text">No equipment models yet. Use the Add button above to catalog a reusable appliance or fixture model.</p>
           </div>
         </Panel>
       ) : grouped.length === 0 ? (

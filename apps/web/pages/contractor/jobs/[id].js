@@ -379,7 +379,7 @@ export default function ContractorJobDetail() {
             <Panel title="📋 Scope of Work">
               <p className="text-sm text-slate-800 whitespace-pre-wrap">{req.description}</p>
               {req.category && <p className="text-xs text-slate-600 mt-2"><span className="font-medium">Category:</span> {req.category}</p>}
-              {req.appliance && <p className="text-xs text-slate-600 mt-1"><span className="font-medium">Appliance:</span> {req.appliance.category}{req.appliance.serial ? ` (S/N: ${req.appliance.serial})` : ""}</p>}
+              {req.asset && <p className="text-xs text-slate-600 mt-1"><span className="font-medium">Asset:</span> {req.asset.name || req.asset.category || "—"}{req.asset.serialNumber ? ` (S/N: ${req.asset.serialNumber})` : ""}</p>}
             </Panel>
           )}
 

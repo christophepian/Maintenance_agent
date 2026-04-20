@@ -88,6 +88,7 @@ describe("Ledger posting coverage", () => {
 
     const request = await prisma.request.create({
       data: {
+        orgId,
         description: "Coverage repair",
         category: "plumbing",
         status: RequestStatus.ASSIGNED,

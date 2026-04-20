@@ -1,5 +1,5 @@
 import { proxyToBackend } from "../../../lib/proxy";
 
 export default async function handler(req, res) {
-  await proxyToBackend(req, res, `/appliances/${req.query.id}`);
+  await proxyToBackend(req, res, `/assets/${req.query.id}`);
 }

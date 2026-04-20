@@ -305,7 +305,7 @@ function JobCard({
   onCompleteJob,
 }) {
   const req = job.request;
-  const category = req?.category || req?.appliance?.category || null;
+  const category = req?.category || req?.asset?.category || null;
   const loc = shortLocation(job);
   const timeLabel = slot ? `${fmtTime(slot.startTime)}–${fmtTime(slot.endTime)}` : null;
 
@@ -372,13 +372,13 @@ function JobCard({
               </div>
             )}
 
-            {/* Appliance */}
-            {req?.appliance && (
+            {/* Asset */}
+            {req?.asset && (
               <div className="p-3 bg-amber-50 rounded-lg border border-amber-200">
-                <h4 className="text-xs font-semibold text-amber-900 mb-1">🔧 Appliance</h4>
+                <h4 className="text-xs font-semibold text-amber-900 mb-1">🔧 Asset</h4>
                 <p className="text-sm text-amber-700">
-                  {req.appliance.category}
-                  {req.appliance.serial && ` (S/N: ${req.appliance.serial})`}
+                  {req.asset.name || req.asset.category || "—"}
+                  {req.asset.serialNumber && ` (S/N: ${req.asset.serialNumber})`}
                 </p>
               </div>
             )}

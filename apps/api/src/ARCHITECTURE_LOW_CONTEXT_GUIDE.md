@@ -4,7 +4,7 @@
 > For guardrails, rules, and task routing → **[PROJECT_OVERVIEW.md](../../../PROJECT_OVERVIEW.md)**.
 > For auth helpers, security rules, boot guards → same file.
 
-**Codebase:** 64 models · 55 enums · 72 migrations · 26 workflows · 23 repositories · ~68k backend LOC · ~44k frontend LOC · 289 API operations (224 URL paths)
+**Codebase:** 68 models · 62 enums · 81 migrations · 28 workflows · 27 repositories · ~73k backend LOC · ~45k frontend LOC · 289 API operations (224 URL paths)
 
 **Layer order (never skip):** routes → workflows → services → repositories → Prisma
 

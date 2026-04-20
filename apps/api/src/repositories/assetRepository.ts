@@ -7,9 +7,62 @@
  *
  * G3: include must match what DTO mappers access.
  * G9: canonical include constants live here.
+ *
+ * ─── Domain Model ───────────────────────────────────────────────
+ *
+ *   Asset          = umbrella instance (the physical thing in the building)
+ *   assetCategory  = EQUIPMENT | COMPONENT (business grouping)
+ *   assetType      = operational classification — fallback for depreciation
+ *   topic          = PRIMARY depreciation key (e.g. DISHWASHER, PARQUET_MOSAIC)
+ *   AssetModel     = reusable catalog entry for model-identifiable assets,
+ *                    primarily equipment (appliances, fixtures). Structural
+ *                    elements like walls/floors/ceilings are NOT model-driven.
+ *   DepreciationStandard = useful life rule, resolved PRIMARILY by topic.
+ *
+ * ─── Depreciation Resolution Priority ──────────────────────────
+ *
+ *   1. Asset-specific override (future: Asset.usefulLifeOverrideMonths)
+ *   2. AssetModel default useful life (future: AssetModel.defaultUsefulLifeMonths)
+ *   3. DepreciationStandard matched by exact topic + canton
+ *   4. DepreciationStandard matched by exact topic (national)
+ *   5. Fallback: no standard found → null (no depreciation computed)
+ *
+ *   Tiers 1 & 2 are NOT yet in schema — they are documented here as the
+ *   intended extension path. Today only tiers 3–4 are active.
  */
 
-import { PrismaClient, AssetType, AssetInterventionType } from "@prisma/client";
+import { PrismaClient, AssetType, AssetCategory, AssetInterventionType } from "@prisma/client";
+
+// ─── AssetType → AssetCategory deterministic mapping ───────────
+//
+// assetCategory = business grouping (EQUIPMENT vs COMPONENT)
+// assetType     = operational classification (UI, filters, legacy logic)
+// topic         = PRIMARY depreciation key (e.g. DISHWASHER, PARQUET_MOSAIC)
+//
+export const ASSET_TYPE_TO_CATEGORY: Record<AssetType, AssetCategory> = {
+  APPLIANCE: "EQUIPMENT",
+  FIXTURE: "EQUIPMENT",
+  FINISH: "COMPONENT",
+  STRUCTURAL: "COMPONENT",
+  SYSTEM: "COMPONENT",
+  OTHER: "EQUIPMENT",
+};
+
+export function deriveCategory(type: AssetType): AssetCategory {
+  return ASSET_TYPE_TO_CATEGORY[type];
+}
+
+/**
+ * Whether an asset type/category is eligible for AssetModel assignment.
+ *
+ * Asset models represent reusable catalog entries (manufacturer + model number)
+ * and are meaningful only for equipment-like assets: appliances, fixtures, etc.
+ * Structural elements (walls, ceilings, floors) and building systems (HVAC, plumbing)
+ * are typically not model-identifiable and should not be linked to AssetModel.
+ */
+export function isModelEligible(type: AssetType): boolean {
+  return deriveCategory(type) === "EQUIPMENT";
+}
 
 // ─── Canonical Includes ────────────────────────────────────────
 
@@ -19,6 +72,9 @@ export const ASSET_FULL_INCLUDE = {
     include: {
       job: { select: { id: true, status: true } },
     },
+  },
+  assetModel: {
+    select: { id: true, defaultUsefulLifeMonths: true },
   },
 } as const;
 
@@ -125,6 +181,7 @@ export async function upsertAsset(
     brand?: string | null;
     modelNumber?: string | null;
     serialNumber?: string | null;
+    usefulLifeOverrideMonths?: number | null;
     notes?: string | null;
     isPresent?: boolean;
   },
@@ -140,17 +197,23 @@ export async function upsertAsset(
     },
   });
 
+  // Safety net: strip assetModelId for non-model-eligible types.
+  // Generic components (walls, floors, ceilings, HVAC systems) are not model-driven.
+  const effectiveModelId = isModelEligible(data.type) ? (data.assetModelId ?? null) : null;
+
   const payload = {
     type: data.type,
+    category: deriveCategory(data.type),
     topic: data.topic,
     name: data.name,
-    assetModelId: data.assetModelId ?? null,
+    assetModelId: effectiveModelId,
     installedAt: data.installedAt ?? null,
     lastRenovatedAt: data.lastRenovatedAt ?? null,
     replacedAt: data.replacedAt ?? null,
     brand: data.brand ?? null,
     modelNumber: data.modelNumber ?? null,
     serialNumber: data.serialNumber ?? null,
+    usefulLifeOverrideMonths: data.usefulLifeOverrideMonths ?? null,
     notes: data.notes ?? null,
     isPresent: data.isPresent ?? true,
     isActive: true,
@@ -214,6 +277,37 @@ export async function addIntervention(
 }
 
 /**
+ * Partial update of mutable asset fields.
+ * topic and type are NOT updatable — they must remain stable for depreciation matching.
+ */
+export async function updateAsset(
+  prisma: PrismaClient,
+  orgId: string,
+  assetId: string,
+  data: {
+    name?: string;
+    installedAt?: Date | null;
+    lastRenovatedAt?: Date | null;
+    replacedAt?: Date | null;
+    brand?: string | null;
+    modelNumber?: string | null;
+    serialNumber?: string | null;
+    usefulLifeOverrideMonths?: number | null;
+    notes?: string | null;
+    isPresent?: boolean;
+  },
+) {
+  const existing = await prisma.asset.findFirst({ where: { id: assetId, orgId } });
+  if (!existing) return null;
+
+  return prisma.asset.update({
+    where: { id: assetId },
+    data,
+    include: ASSET_FULL_INCLUDE,
+  });
+}
+
+/**
  * Soft-delete an asset (set isActive = false).
  */
 export async function deactivateAsset(
@@ -262,16 +356,53 @@ export async function findAssetsForOrg(
 /**
  * Create a new asset (simple creation without upsert logic).
  * Used by POST /assets route. CQ-12 fix.
+ *
+ * Aligned with the canonical upsert path: enforces category derivation,
+ * model eligibility, and expects pre-validated/normalized input
+ * (callers must run through CreateAssetSchema or UpsertAssetSchema first).
  */
 export async function createAssetSimple(
   prisma: PrismaClient,
   orgId: string,
-  data: Record<string, unknown>,
+  data: {
+    unitId: string;
+    type: AssetType;
+    topic: string;
+    name: string;
+    assetModelId?: string | null;
+    installedAt?: Date | null;
+    lastRenovatedAt?: Date | null;
+    replacedAt?: Date | null;
+    brand?: string | null;
+    modelNumber?: string | null;
+    serialNumber?: string | null;
+    usefulLifeOverrideMonths?: number | null;
+    notes?: string | null;
+    isPresent?: boolean;
+  },
 ) {
+  const effectiveModelId = isModelEligible(data.type) ? (data.assetModelId ?? null) : null;
+
   return prisma.asset.create({
     data: {
       orgId,
-      ...data,
-    } as any,
+      unitId: data.unitId,
+      type: data.type,
+      category: deriveCategory(data.type),
+      topic: data.topic,
+      name: data.name,
+      assetModelId: effectiveModelId,
+      installedAt: data.installedAt ?? null,
+      lastRenovatedAt: data.lastRenovatedAt ?? null,
+      replacedAt: data.replacedAt ?? null,
+      brand: data.brand ?? null,
+      modelNumber: data.modelNumber ?? null,
+      serialNumber: data.serialNumber ?? null,
+      usefulLifeOverrideMonths: data.usefulLifeOverrideMonths ?? null,
+      notes: data.notes ?? null,
+      isPresent: data.isPresent ?? true,
+      isActive: true,
+    },
+    include: ASSET_FULL_INCLUDE,
   });
 }
