@@ -183,28 +183,27 @@ export default function OwnerWorkRequestsPage() {
           {/* ── Table ── */}
           {!loading && filteredRequests.length > 0 && (
             <Panel bodyClassName="p-0">
-              <div className="overflow-x-auto">
               <div className="rounded-lg border border-slate-200 bg-white overflow-hidden">
                 <table className="inline-table">
                   <thead>
                     <tr>
-                      <th>#</th>
+                      <th className="hidden sm:table-cell">#</th>
                       <th>Category</th>
-                      <th>Building / Unit</th>
+                      <th className="hidden sm:table-cell">Building / Unit</th>
                       <th>Status</th>
-                      <th className="text-right">Est. Cost</th>
-                      <th>Contractor</th>
-                      <th>Created</th>
+                      <th className="hidden sm:table-cell text-right">Est. Cost</th>
+                      <th className="hidden sm:table-cell">Contractor</th>
+                      <th className="hidden sm:table-cell">Created</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredRequests.map((r) => (
                       <tr key={r.id}>
-                        <td className="font-medium text-slate-900">
+                        <td className="hidden sm:table-cell font-medium text-slate-900">
                           {r.requestNumber ? `#${r.requestNumber}` : "—"}
                         </td>
                         <td className="text-sm text-slate-700">{r.category || "—"}</td>
-                        <td className="text-sm text-slate-700">
+                        <td className="hidden sm:table-cell text-sm text-slate-700">
                           {r.buildingName || "—"}
                           {r.unitNumber && (
                             <span className="text-slate-400"> / {r.unitNumber}</span>
@@ -213,18 +212,17 @@ export default function OwnerWorkRequestsPage() {
                         <td>
                           <StatusBadge status={r.status} />
                         </td>
-                        <td className="text-right text-sm font-mono text-slate-700">
+                        <td className="hidden sm:table-cell text-right text-sm font-mono text-slate-700">
                           {formatCurrency(r.estimatedCost)}
                         </td>
-                        <td className="text-sm text-slate-600">
+                        <td className="hidden sm:table-cell text-sm text-slate-600">
                           {r.assignedContractorName || "—"}
                         </td>
-                        <td className="text-sm text-slate-500">{formatDate(r.createdAt)}</td>
+                        <td className="hidden sm:table-cell text-sm text-slate-500">{formatDate(r.createdAt)}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
-              </div>
               </div>
             </Panel>
           )}

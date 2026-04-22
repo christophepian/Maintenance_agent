@@ -131,69 +131,67 @@ export default function VacanciesPanel({ role = "OWNER", refreshKey = 0 }) {
         )}
 
         {!loading && vacancyRows.length > 0 && (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-200 text-sm">
-              <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
-                <tr>
-                  <th className="px-4 py-3">Building</th>
-                  <th className="px-4 py-3">Unit</th>
-                  <th className="px-4 py-3">Rent</th>
-                  <th className="px-4 py-3">Charges</th>
-                  <th className="px-4 py-3">Total</th>
-                  <th className="px-4 py-3">Candidates</th>
-                  <th className="px-4 py-3 text-right">Action</th>
+          <table className="min-w-full divide-y divide-slate-200 text-sm">
+            <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+              <tr>
+                <th className="px-4 py-3">Building</th>
+                <th className="px-4 py-3">Unit</th>
+                <th className="hidden sm:table-cell px-4 py-3">Rent</th>
+                <th className="hidden sm:table-cell px-4 py-3">Charges</th>
+                <th className="px-4 py-3">Total</th>
+                <th className="hidden sm:table-cell px-4 py-3">Candidates</th>
+                <th className="px-4 py-3 text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 bg-white">
+              {vacancyRows.map((unit) => (
+                <tr key={unit.id}>
+                  <td className="px-4 py-3 text-slate-700">{unit.buildingName}</td>
+                  <td className="px-4 py-3 text-slate-700">{unit.unitNumber || "—"}</td>
+                  <td className="hidden sm:table-cell px-4 py-3 text-slate-700">
+                    {unit.monthlyRentChf != null
+                      ? `CHF ${unit.monthlyRentChf}.-`
+                      : "—"}
+                  </td>
+                  <td className="hidden sm:table-cell px-4 py-3 text-slate-700">
+                    {unit.monthlyChargesChf != null
+                      ? `CHF ${unit.monthlyChargesChf}.-`
+                      : "—"}
+                  </td>
+                  <td className="px-4 py-3 font-semibold text-slate-900">
+                    {unit.monthlyRentChf != null || unit.monthlyChargesChf != null
+                      ? `CHF ${(unit.monthlyRentChf || 0) + (unit.monthlyChargesChf || 0)}.-`
+                      : "—"}
+                  </td>
+                  <td className="hidden sm:table-cell px-4 py-3">
+                    {unit.candidateCount > 0 ? (
+                      <Badge variant="brand" size="sm">
+                        {unit.candidateCount}
+                      </Badge>
+                    ) : (
+                      <span className="text-slate-400 text-xs">None yet</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      <Link
+                        href={fillPath(unit.id)}
+                        className="rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-xs font-semibold text-green-700 hover:bg-green-100"
+                      >
+                        Fill →
+                      </Link>
+                      <Link
+                        href={candidatesPath(unit.id)}
+                        className="hidden sm:inline-flex rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-700 hover:bg-indigo-100"
+                      >
+                        Candidates
+                      </Link>
+                    </div>
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 bg-white">
-                {vacancyRows.map((unit) => (
-                  <tr key={unit.id}>
-                    <td className="px-4 py-3 text-slate-700">{unit.buildingName}</td>
-                    <td className="px-4 py-3 text-slate-700">{unit.unitNumber || "—"}</td>
-                    <td className="px-4 py-3 text-slate-700">
-                      {unit.monthlyRentChf != null
-                        ? `CHF ${unit.monthlyRentChf}.-`
-                        : "—"}
-                    </td>
-                    <td className="px-4 py-3 text-slate-700">
-                      {unit.monthlyChargesChf != null
-                        ? `CHF ${unit.monthlyChargesChf}.-`
-                        : "—"}
-                    </td>
-                    <td className="px-4 py-3 font-semibold text-slate-900">
-                      {unit.monthlyRentChf != null || unit.monthlyChargesChf != null
-                        ? `CHF ${(unit.monthlyRentChf || 0) + (unit.monthlyChargesChf || 0)}.-`
-                        : "—"}
-                    </td>
-                    <td className="px-4 py-3">
-                      {unit.candidateCount > 0 ? (
-                        <Badge variant="brand" size="sm">
-                          {unit.candidateCount}
-                        </Badge>
-                      ) : (
-                        <span className="text-slate-400 text-xs">None yet</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <Link
-                          href={fillPath(unit.id)}
-                          className="rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-xs font-semibold text-green-700 hover:bg-green-100"
-                        >
-                          Fill vacancy →
-                        </Link>
-                        <Link
-                          href={candidatesPath(unit.id)}
-                          className="rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-700 hover:bg-indigo-100"
-                        >
-                          Review candidates
-                        </Link>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+              ))}
+            </tbody>
+          </table>
         )}
       </Panel>
 
@@ -208,51 +206,49 @@ export default function VacanciesPanel({ role = "OWNER", refreshKey = 0 }) {
         )}
 
         {!selectionsLoading && selections.length > 0 && (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-200 text-sm">
-              <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
-                <tr>
-                  <th className="px-4 py-3">Building</th>
-                  <th className="px-4 py-3">Unit</th>
-                  <th className="px-4 py-3">Primary Candidate</th>
-                  <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3">Lease</th>
-                  <th className="px-4 py-3">Deadline</th>
+          <table className="min-w-full divide-y divide-slate-200 text-sm">
+            <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+              <tr>
+                <th className="px-4 py-3">Building</th>
+                <th className="hidden sm:table-cell px-4 py-3">Unit</th>
+                <th className="px-4 py-3">Candidate</th>
+                <th className="px-4 py-3">Status</th>
+                <th className="hidden sm:table-cell px-4 py-3">Lease</th>
+                <th className="hidden sm:table-cell px-4 py-3">Deadline</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 bg-white">
+              {selections.map((sel) => (
+                <tr key={sel.id}>
+                  <td className="px-4 py-3 text-slate-700">{sel.buildingName || "—"}</td>
+                  <td className="hidden sm:table-cell px-4 py-3 text-slate-700">{sel.unitNumber || "—"}</td>
+                  <td className="px-4 py-3">
+                    {sel.primaryCandidate ? (
+                      <div>
+                        <span className="font-medium text-slate-900">{sel.primaryCandidate.name}</span>
+                        <span className="ml-2 hidden sm:inline text-xs text-slate-400">{sel.primaryCandidate.email}</span>
+                      </div>
+                    ) : (
+                      <span className="text-slate-400">—</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">{statusBadge(sel.status)}</td>
+                  <td className="hidden sm:table-cell px-4 py-3">
+                    {sel.lease ? (
+                      <span className="inline-flex items-center gap-1.5">
+                        {leaseBadge(sel.lease)}
+                      </span>
+                    ) : (
+                      leaseBadge(null)
+                    )}
+                  </td>
+                  <td className="hidden sm:table-cell px-4 py-3 text-xs text-slate-500">
+                    {formatDate(sel.deadlineAt)}
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 bg-white">
-                {selections.map((sel) => (
-                  <tr key={sel.id}>
-                    <td className="px-4 py-3 text-slate-700">{sel.buildingName || "—"}</td>
-                    <td className="px-4 py-3 text-slate-700">{sel.unitNumber || "—"}</td>
-                    <td className="px-4 py-3">
-                      {sel.primaryCandidate ? (
-                        <div>
-                          <span className="font-medium text-slate-900">{sel.primaryCandidate.name}</span>
-                          <span className="ml-2 text-xs text-slate-400">{sel.primaryCandidate.email}</span>
-                        </div>
-                      ) : (
-                        <span className="text-slate-400">—</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">{statusBadge(sel.status)}</td>
-                    <td className="px-4 py-3">
-                      {sel.lease ? (
-                        <span className="inline-flex items-center gap-1.5">
-                          {leaseBadge(sel.lease)}
-                        </span>
-                      ) : (
-                        leaseBadge(null)
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-xs text-slate-500">
-                      {formatDate(sel.deadlineAt)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+              ))}
+            </tbody>
+          </table>
         )}
       </Panel>
     </>

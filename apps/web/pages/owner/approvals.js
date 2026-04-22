@@ -335,30 +335,29 @@ function RfpsTab() {
         <>
           {pendingApproval.length > 0 && (
             <Panel title={`Awaiting Your Approval (${pendingApproval.length})`} bodyClassName="p-0">
-              <div className="overflow-x-auto">
               <table className="inline-table">
                 <thead>
                   <tr>
-                    <th>RFP</th>
+                    <th className="hidden sm:table-cell">RFP</th>
                     <th>Category</th>
-                    <th>Building</th>
-                    <th>Urgency</th>
-                    <th>Quotes</th>
+                    <th className="hidden sm:table-cell">Building</th>
+                    <th className="hidden sm:table-cell">Urgency</th>
+                    <th className="hidden sm:table-cell">Quotes</th>
                     <th>Status</th>
-                    <th>Created</th>
+                    <th className="hidden sm:table-cell">Created</th>
                     <th></th>
                   </tr>
                 </thead>
                 <tbody>
                   {pendingApproval.map((r) => (
                     <tr key={r.id}>
-                      <td className="font-mono text-xs">{r.id?.slice(0, 8)}</td>
+                      <td className="hidden sm:table-cell font-mono text-xs">{r.id?.slice(0, 8)}</td>
                       <td>{r.category || "—"}</td>
-                      <td>{r.building?.name || "—"}</td>
-                      <td><UrgencyPill urgency={r.request?.urgency} /></td>
-                      <td>{r.quoteCount ?? r.quotes?.length ?? 0}</td>
+                      <td className="hidden sm:table-cell">{r.building?.name || "—"}</td>
+                      <td className="hidden sm:table-cell"><UrgencyPill urgency={r.request?.urgency} /></td>
+                      <td className="hidden sm:table-cell">{r.quoteCount ?? r.quotes?.length ?? 0}</td>
                       <td><RfpStatusPill status={r.status} /></td>
-                      <td>{formatDate(r.createdAt)}</td>
+                      <td className="hidden sm:table-cell">{formatDate(r.createdAt)}</td>
                       <td>
                         <Link href={`/owner/rfps/${r.id}`} className="cell-link text-sm font-medium">
                           Review →
@@ -368,36 +367,34 @@ function RfpsTab() {
                   ))}
                 </tbody>
               </table>
-              </div>
             </Panel>
           )}
 
           <Panel title={`All RFPs (${filtered.length})`} bodyClassName="p-0">
             {filtered.length > 0 ? (
-              <div className="overflow-x-auto">
               <table className="inline-table">
                 <thead>
                   <tr>
-                    <th>RFP</th>
+                    <th className="hidden sm:table-cell">RFP</th>
                     <th>Category</th>
-                    <th>Building</th>
-                    <th>Urgency</th>
-                    <th>Quotes</th>
+                    <th className="hidden sm:table-cell">Building</th>
+                    <th className="hidden sm:table-cell">Urgency</th>
+                    <th className="hidden sm:table-cell">Quotes</th>
                     <th>Status</th>
-                    <th>Created</th>
+                    <th className="hidden sm:table-cell">Created</th>
                     <th></th>
                   </tr>
                 </thead>
                 <tbody>
                   {filtered.map((r) => (
                     <tr key={r.id}>
-                      <td className="font-mono text-xs">{r.id?.slice(0, 8)}</td>
+                      <td className="hidden sm:table-cell font-mono text-xs">{r.id?.slice(0, 8)}</td>
                       <td>{r.category || "—"}</td>
-                      <td>{r.building?.name || "—"}</td>
-                      <td><UrgencyPill urgency={r.request?.urgency} /></td>
-                      <td>{r.quoteCount ?? r.quotes?.length ?? 0}</td>
+                      <td className="hidden sm:table-cell">{r.building?.name || "—"}</td>
+                      <td className="hidden sm:table-cell"><UrgencyPill urgency={r.request?.urgency} /></td>
+                      <td className="hidden sm:table-cell">{r.quoteCount ?? r.quotes?.length ?? 0}</td>
                       <td><RfpStatusPill status={r.status} /></td>
-                      <td>{formatDate(r.createdAt)}</td>
+                      <td className="hidden sm:table-cell">{formatDate(r.createdAt)}</td>
                       <td>
                         <Link href={`/owner/rfps/${r.id}`} className="cell-link text-sm font-medium">
                           View →
@@ -407,7 +404,6 @@ function RfpsTab() {
                   ))}
                 </tbody>
               </table>
-              </div>
             ) : (
               <p className="px-4 py-8 text-center text-sm text-slate-400">
                 {rfps.length === 0 ? "No RFPs found." : "No results match the current filters."}

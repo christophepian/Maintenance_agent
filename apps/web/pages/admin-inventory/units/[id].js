@@ -16,7 +16,8 @@ import { invoiceVariant, leaseVariant } from "../../../lib/statusVariants";
 import { formatChf, formatDate } from "../../../lib/format";
 export default function UnitDetail() {
   const router = useRouter();
-  const { id } = router.query;
+  const { id, role } = router.query;
+  const isOwner = role === "owner";
 
   const [unit, setUnit] = useState(null);
   const [tenants, setTenants] = useState([]);
@@ -376,7 +377,7 @@ export default function UnitDetail() {
 
   if (loading) {
     return (
-      <AppShell role="MANAGER">
+      <AppShell role={isOwner ? "OWNER" : "MANAGER"}>
         <PageShell variant="embedded">
           <PageHeader title="Unit" />
           <PageContent><p className="loading-text">Loading unit…</p></PageContent>
@@ -386,10 +387,10 @@ export default function UnitDetail() {
   }
 
   return (
-    <AppShell role="MANAGER">
+    <AppShell role={isOwner ? "OWNER" : "MANAGER"}>
       <PageShell variant="embedded">
         <div className="mb-3">
-          <Link href={unit?.building?.id ? `/admin-inventory/buildings/${unit.building.id}` : "/admin-inventory"} className="text-sm font-medium text-slate-600 hover:text-slate-900">
+          <Link href={unit?.building?.id ? `/admin-inventory/buildings/${unit.building.id}${isOwner ? "?role=owner" : ""}` : (isOwner ? "/owner/properties" : "/admin-inventory")} className="text-sm font-medium text-slate-600 hover:text-slate-900">
             ← Back
           </Link>
         </div>
@@ -658,9 +659,13 @@ export default function UnitDetail() {
                 <div key={t.id} className="flex justify-between items-center p-3 border border-slate-200 rounded-lg bg-slate-50">
                   <div>
                     <div className="font-semibold text-sm">
-                      <Link href={`/manager/people/tenants/${t.id}`} className="text-blue-600 hover:underline">
-                        {t.name || "Tenant"}
-                      </Link>
+                      {isOwner ? (
+                        <span>{t.name || "Tenant"}</span>
+                      ) : (
+                        <Link href={`/manager/people/tenants/${t.id}`} className="text-blue-600 hover:underline">
+                          {t.name || "Tenant"}
+                        </Link>
+                      )}
                       {idx === 0 && <span className="ml-2 text-xs text-slate-400 font-normal">(primary)</span>}
                     </div>
                     <div className="text-sm text-slate-500 mt-1">Phone: {t.phone || "—"}</div>
@@ -686,12 +691,14 @@ export default function UnitDetail() {
                 <p className="mb-3">
                   A primary tenant must be added through a lease contract. Create a lease for this unit first — the tenant will be automatically assigned when the lease is sent for signature.
                 </p>
-                <Link
-                  href={`/manager/leases?unitId=${id}`}
-                  className="button-primary inline-block text-sm"
-                >
-                  Go to Leases →
-                </Link>
+                {!isOwner && (
+                  <Link
+                    href={`/manager/leases?unitId=${id}`}
+                    className="button-primary inline-block text-sm"
+                  >
+                    Go to Leases →
+                  </Link>
+                )}
               </div>
             )}
 
@@ -952,9 +959,13 @@ export default function UnitDetail() {
                         <Badge variant={invoiceVariant(inv.status)}>{inv.status}</Badge>
                       </td>
                       <td className="px-3 py-2">
-                        <Link href={`/manager/finance/invoices/${inv.id}`} className="text-blue-600 hover:underline">
-                          {inv.invoiceNumber || "—"}
-                        </Link>
+                        {isOwner ? (
+                          <span>{inv.invoiceNumber || "—"}</span>
+                        ) : (
+                          <Link href={`/manager/finance/invoices/${inv.id}`} className="text-blue-600 hover:underline">
+                            {inv.invoiceNumber || "—"}
+                          </Link>
+                        )}
                       </td>
                       <td className="px-3 py-2 max-w-[200px] truncate">{inv.description || "—"}</td>
                       <td className="px-3 py-2 text-right font-medium">{formatChf(inv.totalAmount)}</td>
@@ -1002,9 +1013,13 @@ export default function UnitDetail() {
                         <Badge variant={leaseVariant(lease.status)}>{lease.status}</Badge>
                       </td>
                       <td className="px-3 py-2">
-                        <Link href={`/manager/leases/${lease.id}`} className="text-blue-600 hover:underline">
-                          {lease.tenantName || "—"}
-                        </Link>
+                        {isOwner ? (
+                          <span>{lease.tenantName || "—"}</span>
+                        ) : (
+                          <Link href={`/manager/leases/${lease.id}`} className="text-blue-600 hover:underline">
+                            {lease.tenantName || "—"}
+                          </Link>
+                        )}
                       </td>
                       <td className="px-3 py-2 text-right font-medium">{formatChf(lease.netRentChf)}</td>
                       <td className="px-3 py-2 text-right">{lease.rentTotalChf != null ? formatChf(lease.rentTotalChf) : "—"}</td>

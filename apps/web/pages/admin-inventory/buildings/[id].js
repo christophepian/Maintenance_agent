@@ -25,8 +25,9 @@ function displayDate(iso) {
 
 export default function BuildingDetail() {
   const router = useRouter();
-  const { id, from } = router.query;
-  const backHref = from || "/manager/inventory?tab=buildings";
+  const { id, from, role } = router.query;
+  const isOwner = role === "owner";
+  const backHref = from || (isOwner ? "/owner/properties" : "/manager/inventory?tab=buildings");
   const [activeTab, setActiveTab] = useState("Building information");
 
   // ui object removed — all styles now use Tailwind className
@@ -303,7 +304,7 @@ export default function BuildingDetail() {
       setLoading(true);
       await fetchJSON(`/buildings/${id}`, { method: "DELETE" });
       setOk("Building deactivated. Redirecting...");
-      setTimeout(() => router.push("/manager/inventory?tab=buildings"), 1500);
+      setTimeout(() => router.push(isOwner ? "/owner/properties" : "/manager/inventory?tab=buildings"), 1500);
     } catch (e) {
       setErr(`Deactivate failed: ${e.message}`);
       setLoading(false);
@@ -420,7 +421,7 @@ export default function BuildingDetail() {
 
   if (loading && !building) {
     return (
-      <AppShell role="MANAGER">
+      <AppShell role={isOwner ? "OWNER" : "MANAGER"}>
         <PageShell variant="embedded">
           <PageContent>
             <Panel>
@@ -434,7 +435,7 @@ export default function BuildingDetail() {
 
   if (!building) {
     return (
-      <AppShell role="MANAGER">
+      <AppShell role={isOwner ? "OWNER" : "MANAGER"}>
         <PageShell variant="embedded">
           <PageContent>
             <Panel>
@@ -463,7 +464,7 @@ export default function BuildingDetail() {
     : commonUnits.filter((u) => u.occupancyStatus === unitFilter);
 
   return (
-    <AppShell role="MANAGER">
+    <AppShell role={isOwner ? "OWNER" : "MANAGER"}>
       <PageShell variant="embedded">
         <PageHeader
           title={building?.name || "Building"}
@@ -488,8 +489,11 @@ export default function BuildingDetail() {
           )}
 
           {/* Tabs Navigation */}
-          <div className="tab-strip overflow-x-auto">
-            {["Building information", "Units", "Tenants", "Assets", "Documents", "Policies", "Financials"].map((tab) => (
+          <div className="tab-strip">
+            {(isOwner
+              ? ["Building information", "Units", "Tenants", "Assets"]
+              : ["Building information", "Units", "Tenants", "Assets", "Documents", "Policies", "Financials"]
+            ).map((tab) => (
               <button
                 key={tab}
                 type="button"
@@ -505,7 +509,7 @@ export default function BuildingDetail() {
           {activeTab === "Building information" && (
             <Panel
               title="Building information"
-              actions={editMode ? (
+              actions={!isOwner && editMode ? (
                 <>
                   <button
                     type="button"
@@ -539,7 +543,7 @@ export default function BuildingDetail() {
                     Deactivate
                   </button>
                 </>
-              ) : (
+              ) : !isOwner ? (
                 <button
                   type="button"
                   className="button-primary text-sm"
@@ -548,7 +552,7 @@ export default function BuildingDetail() {
                 >
                   Edit
                 </button>
-              )}
+              ) : null}
             >
               {editMode ? (
                 <form onSubmit={onUpdateBuilding}>
@@ -833,7 +837,7 @@ export default function BuildingDetail() {
                   <h3 className="font-semibold text-slate-900 mt-4 mb-3">Residential Units</h3>
                   <div className="space-y-2 mb-4">
                     {filteredResidential.map((u) => (
-                      <Link key={u.id} href={`/admin-inventory/units/${u.id}`} className="block border border-slate-200 rounded-lg p-3 hover:bg-slate-50 transition">
+                      <Link key={u.id} href={`/admin-inventory/units/${u.id}${isOwner ? "?role=owner" : ""}`} className="block border border-slate-200 rounded-lg p-3 hover:bg-slate-50 transition">
                         <div className="flex justify-between items-center">
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2 flex-wrap">
@@ -890,7 +894,7 @@ export default function BuildingDetail() {
                   <h3 className="font-semibold text-slate-900 mt-4 mb-3">Common Areas</h3>
                   <div className="space-y-2 mb-4">
                     {filteredCommon.map((u) => (
-                      <Link key={u.id} href={`/admin-inventory/units/${u.id}`} className="block border border-slate-200 rounded-lg p-3 hover:bg-slate-50 transition">
+                      <Link key={u.id} href={`/admin-inventory/units/${u.id}${isOwner ? "?role=owner" : ""}`} className="block border border-slate-200 rounded-lg p-3 hover:bg-slate-50 transition">
                         <div className="flex justify-between items-center">
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2 flex-wrap">
@@ -925,44 +929,42 @@ export default function BuildingDetail() {
           {activeTab === "Tenants" && (
             <Panel title="Tenants">
               {building?.tenants && building.tenants.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <table className="inline-table">
-                    <thead>
-                      <tr>
-                        <th className="py-2 font-medium text-slate-600">Name</th>
-                        <th className="py-2 font-medium text-slate-600">Unit</th>
-                        <th className="py-2 font-medium text-slate-600">Phone</th>
-                        <th className="py-2 font-medium text-slate-600">Email</th>
-                        <th className="py-2 font-medium text-slate-600">Move-in</th>
-                        <th className="py-2 font-medium text-slate-600">Source</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {building.tenants.map((t, idx) => {
-                        const badgeVariant =
-                          t.source === "BOTH"
-                            ? "success"
-                            : t.source === "LEASE"
-                            ? "info"
-                            : "muted";
-                        return (
-                          <tr key={t.tenantId || idx} className="border-b border-slate-100">
-                            <td className="py-2 text-slate-900 font-medium">{t.name}</td>
-                            <td className="py-2 text-slate-700">{t.unitNumber}</td>
-                            <td className="py-2 text-slate-700">{t.phone || "—"}</td>
-                            <td className="py-2 text-slate-700">{t.email || "—"}</td>
-                            <td className="py-2 text-slate-700">{t.moveInDate ? displayDate(t.moveInDate) : "—"}</td>
-                            <td className="py-2">
-                              <Badge variant={badgeVariant} size="sm">
-                                {t.source === "BOTH" ? "Both" : t.source === "LEASE" ? "Lease" : "Directory"}
-                              </Badge>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
+                <table className="inline-table">
+                  <thead>
+                    <tr>
+                      <th className="py-2 font-medium text-slate-600">Name</th>
+                      <th className="py-2 font-medium text-slate-600">Unit</th>
+                      <th className="hidden sm:table-cell py-2 font-medium text-slate-600">Phone</th>
+                      <th className="hidden sm:table-cell py-2 font-medium text-slate-600">Email</th>
+                      <th className="hidden sm:table-cell py-2 font-medium text-slate-600">Move-in</th>
+                      <th className="hidden sm:table-cell py-2 font-medium text-slate-600">Source</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {building.tenants.map((t, idx) => {
+                      const badgeVariant =
+                        t.source === "BOTH"
+                          ? "success"
+                          : t.source === "LEASE"
+                          ? "info"
+                          : "muted";
+                      return (
+                        <tr key={t.tenantId || idx} className="border-b border-slate-100">
+                          <td className="py-2 text-slate-900 font-medium">{t.name}</td>
+                          <td className="py-2 text-slate-700">{t.unitNumber}</td>
+                          <td className="hidden sm:table-cell py-2 text-slate-700">{t.phone || "—"}</td>
+                          <td className="hidden sm:table-cell py-2 text-slate-700">{t.email || "—"}</td>
+                          <td className="hidden sm:table-cell py-2 text-slate-700">{t.moveInDate ? displayDate(t.moveInDate) : "—"}</td>
+                          <td className="hidden sm:table-cell py-2">
+                            <Badge variant={badgeVariant} size="sm">
+                              {t.source === "BOTH" ? "Both" : t.source === "LEASE" ? "Lease" : "Directory"}
+                            </Badge>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               ) : (
                 <div className="text-center text-slate-500 italic text-sm py-6">No tenants found for this building.</div>
               )}

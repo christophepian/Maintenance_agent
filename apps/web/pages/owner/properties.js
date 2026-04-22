@@ -159,7 +159,7 @@ function BuildingsTab({ refreshKey }) {
           sortField={sortField}
           sortDir={sortDir}
           onSort={handleSort}
-          onRowClick={(b) => router.push(`/admin-inventory/buildings/${b.id}?from=/owner/properties`)}
+          onRowClick={(b) => router.push(`/admin-inventory/buildings/${b.id}?from=/owner/properties&role=owner`)}
           emptyState={<p className="text-sm text-slate-500">No properties found.</p>}
         />
       )}
