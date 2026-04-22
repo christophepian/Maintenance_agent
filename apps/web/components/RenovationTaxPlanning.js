@@ -95,6 +95,7 @@ function CapExSummaryBridge() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [bundlingExpanded, setBundlingExpanded] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -110,6 +111,14 @@ function CapExSummaryBridge() {
 
   const nearestYear = data?.yearlyTotals?.find((y) => y.totalChf > 0)?.year ?? null;
   const timingCount = data?.timingRecommendations?.length ?? 0;
+
+  // Flatten bundling advice across all buildings
+  const bundlingAdvice = useMemo(() => {
+    if (!data?.buildings) return [];
+    return data.buildings
+      .filter((b) => b.bundlingAdvice?.length > 0)
+      .flatMap((b) => b.bundlingAdvice.map((adv) => ({ ...adv, buildingName: b.buildingName })));
+  }, [data]);
 
   return (
     <Panel>
@@ -145,27 +154,90 @@ function CapExSummaryBridge() {
         )}
 
         {!loading && data && (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="card mb-0 flex flex-col gap-1">
-              <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Total projected CapEx</span>
-              <span className="text-lg font-bold text-amber-700">{fmtChf(data.totalProjectedChf)}</span>
-              <span className="text-xs text-slate-400">Across all buildings</span>
+          <>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="card mb-0 flex flex-col gap-1">
+                <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Total projected CapEx</span>
+                <span className="text-lg font-bold text-amber-700">{fmtChf(data.totalProjectedChf)}</span>
+                <span className="text-xs text-slate-400">Across all buildings</span>
+              </div>
+              <div className="card mb-0 flex flex-col gap-1">
+                <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Bundling opportunities</span>
+                <span className={cn("text-lg font-bold", bundlingAdvice.length > 0 ? "text-green-700" : "text-slate-400")}>
+                  {bundlingAdvice.length}
+                </span>
+                <span className="text-xs text-slate-400">
+                  {bundlingAdvice.length > 0 ? "Groups that can save on mobilisation" : "None identified"}
+                </span>
+              </div>
+              <div className="card mb-0 flex flex-col gap-1">
+                <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Timing opportunities</span>
+                <span className={cn("text-lg font-bold", timingCount > 0 ? "text-brand" : "text-slate-400")}>
+                  {timingCount}
+                </span>
+                <span className="text-xs text-slate-400">
+                  {timingCount > 0 ? "Scheduling shifts could save tax" : "None identified"}
+                </span>
+              </div>
+              <div className="card mb-0 flex flex-col gap-1">
+                <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Nearest replacement year</span>
+                <span className="text-lg font-bold text-slate-800">{nearestYear ?? "—"}</span>
+                <span className="text-xs text-slate-400">First year with projected spend</span>
+              </div>
             </div>
-            <div className="card mb-0 flex flex-col gap-1">
-              <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Timing opportunities</span>
-              <span className="text-lg font-bold text-brand">{timingCount}</span>
-              <span className="text-xs text-slate-400">
-                {timingCount > 0
-                  ? "Scheduling shifts could save tax"
-                  : "No opportunities identified"}
-              </span>
-            </div>
-            <div className="card mb-0 flex flex-col gap-1">
-              <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Nearest replacement year</span>
-              <span className="text-lg font-bold text-slate-800">{nearestYear ?? "—"}</span>
-              <span className="text-xs text-slate-400">First year with projected spend</span>
-            </div>
-          </div>
+
+            {/* Bundling recommendations — collapsible */}
+            {bundlingAdvice.length > 0 && (
+              <div className="border border-slate-100 rounded-lg overflow-hidden">
+                <button
+                  onClick={() => setBundlingExpanded((v) => !v)}
+                  className="w-full flex items-center justify-between px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+                  aria-expanded={bundlingExpanded}
+                >
+                  <span>
+                    Bundling Recommendations
+                    <span className="ml-2 text-xs font-normal text-slate-400">
+                      {bundlingAdvice.length} suggestion{bundlingAdvice.length !== 1 ? "s" : ""}
+                    </span>
+                  </span>
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"
+                    className={cn("w-4 h-4 text-slate-400 transition-transform duration-200", bundlingExpanded ? "rotate-180" : "")}>
+                    <path fillRule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
+                  </svg>
+                </button>
+
+                {bundlingExpanded && (
+                  <div className="border-t border-slate-100 divide-y divide-slate-100">
+                    {bundlingAdvice.map((adv, i) => (
+                      <div key={i} className="px-4 py-3 flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-sm font-semibold text-slate-800">{adv.yearRange}</span>
+                            <span className="text-xs text-slate-400">{adv.buildingName}</span>
+                            <span className="text-xs text-slate-400">· {adv.assetCount} asset{adv.assetCount !== 1 ? "s" : ""}</span>
+                          </div>
+                          <p className="text-xs text-slate-600 mt-1">{adv.rationale}</p>
+                          {adv.savingsBreakdown?.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5 mt-1.5">
+                              {adv.savingsBreakdown.map((s, j) => (
+                                <Badge key={j} variant="success" size="sm">
+                                  {s.category} ~{s.estimatedPct}%
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        <div className="text-right shrink-0">
+                          <div className="text-sm font-bold text-green-700">~{fmtChf(adv.estimatedSavingsChf)}</div>
+                          <div className="text-xs text-slate-400">~{adv.savingsEstimatePct}% savings</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </>
         )}
       </div>
     </Panel>
