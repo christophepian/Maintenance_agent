@@ -6,7 +6,6 @@ import {
   Wrench,
   KeyRound,
   Wallet,
-  TrendingUp,
   Users,
   Building2,
   Settings,
@@ -21,9 +20,8 @@ const MANAGER_NAV = [
   { label: "Inventory", icon: Building2, href: "/manager/inventory" },
   { label: "Requests",  icon: Wrench,    href: "/manager/requests" },
   { label: "Leases",    icon: KeyRound,  href: "/manager/leases" },
-  { label: "Finances",  icon: Wallet,      href: "/manager/finance" },
-  { label: "Cashflow",  icon: TrendingUp,  href: "/manager/cashflow" },
-  { label: "People",    icon: Users,       href: "/manager/people" },
+  { label: "Finances",  icon: Wallet,    href: "/manager/finance" },
+  { label: "People",    icon: Users,     href: "/manager/people" },
   { label: "Settings",  icon: Settings,  href: "/manager/settings" },
 ];
 

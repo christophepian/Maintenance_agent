@@ -251,3 +251,13 @@ const BILLING_SCHEDULE_MAP = {
 export function billingScheduleVariant(status) {
   return BILLING_SCHEDULE_MAP[status] || "default";
 }
+
+/* ── Cashflow plan status ────────────────────────────────────── */
+const PLAN_MAP = {
+  DRAFT: "muted",
+  SUBMITTED: "info",
+  APPROVED: "success",
+};
+export function planVariant(status) {
+  return PLAN_MAP[status] || "default";
+}

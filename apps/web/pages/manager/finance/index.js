@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import AppShell from "../../../components/AppShell";
@@ -12,6 +12,7 @@ import { authHeaders } from "../../../lib/api";
 import { InvoicesContent } from "./invoices";
 import BillingEntityManager from "../../../components/BillingEntityManager";
 import RenovationTaxPlanning from "../../../components/RenovationTaxPlanning";
+import CashflowPlansList from "../../../components/CashflowPlansList";
 import { cn } from "../../../lib/utils";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -63,6 +64,7 @@ const FINANCE_TABS = [
   { key: "invoices",         label: "Invoices" },
   { key: "billing-entities", label: "Billing Entities" },
   { key: "accounting",       label: "Accounting" },
+  { key: "planning",         label: "Planning" },
   { key: "renovation-tax",   label: "Renovation & Tax" },
   { key: "setup",            label: "Setup" },
 ];
@@ -71,6 +73,7 @@ const FINANCE_TABS = [
 
 export default function ManagerFinanceHome() {
   const router = useRouter();
+  const planListRef = useRef(null);
 
   const tabKeys = FINANCE_TABS.map((t) => t.key);
   const activeTabKey = router.isReady && tabKeys.includes(router.query.tab) ? router.query.tab : "overview";
@@ -111,7 +114,19 @@ export default function ManagerFinanceHome() {
   return (
     <AppShell role="MANAGER">
       <PageShell>
-        <PageHeader title="Finances" />
+        <PageHeader
+          title="Finances"
+          actions={
+            activeTabKey === "planning" ? (
+              <button
+                onClick={() => planListRef.current?.openModal()}
+                className="button-primary text-sm"
+              >
+                New plan
+              </button>
+            ) : undefined
+          }
+        />
         <PageContent>
 
           {/*
@@ -289,6 +304,15 @@ export default function ManagerFinanceHome() {
                     Chart of Accounts
                   </Link>
                 </div>
+              </div>
+            </Panel>
+          )}
+
+          {/* ── Planning ── */}
+          {activeTabKey === "planning" && (
+            <Panel bodyClassName="p-0">
+              <div className="px-4 py-4">
+                <CashflowPlansList ref={planListRef} />
               </div>
             </Panel>
           )}
