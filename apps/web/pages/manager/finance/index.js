@@ -65,7 +65,7 @@ const FINANCE_TABS = [
   { key: "billing-entities", label: "Billing Entities" },
   { key: "accounting",       label: "Accounting" },
   { key: "planning",         label: "Planning" },
-  { key: "renovation-tax",   label: "Renovation & Tax" },
+  { key: "renovation-tax",   label: "Renovation Guide" },
   { key: "setup",            label: "Setup" },
 ];
 
