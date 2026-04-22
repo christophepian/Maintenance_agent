@@ -319,7 +319,7 @@ export default function OwnerInvoices() {
                   <div
                     key={invoice.id}
                     id={`invoice-${invoice.id}`}
-                    className="flex items-center justify-between px-4 py-3 hover:bg-slate-50 cursor-pointer transition-colors"
+                    className="flex flex-col gap-2 px-4 py-3 hover:bg-slate-50 cursor-pointer transition-colors sm:flex-row sm:items-center sm:justify-between"
                     onClick={() => router.push(`/manager/finance/invoices?invoiceId=${invoice.id}`)}
                   >
                     {/* Left: info */}

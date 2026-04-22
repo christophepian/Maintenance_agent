@@ -768,6 +768,15 @@ export default function AssetInventoryPanel({ assets, onRefresh, scope, parentId
   const [deletingAsset, setDeletingAsset] = useState(null);
   const [deleteSubmitting, setDeleteSubmitting] = useState(false);
   const [filterType, setFilterType] = useState("");
+  const [unlinkedJobs, setUnlinkedJobs] = useState([]);
+
+  useEffect(() => {
+    if (scope !== "unit" || !unitId) return;
+    fetch(`/api/units/${unitId}/unlinked-jobs`, { headers: authHeaders() })
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => { if (d?.data) setUnlinkedJobs(d.data); })
+      .catch(() => {});
+  }, [unitId, scope]);
 
   const filtered = filterType ? assets.filter((a) => a.type === filterType) : assets;
 
@@ -821,6 +830,35 @@ export default function AssetInventoryPanel({ assets, onRefresh, scope, parentId
           </button>
         )}
       </div>
+
+      {/* Unlinked jobs warning */}
+      {unlinkedJobs.length > 0 && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 flex items-start gap-3">
+          <svg className="h-4 w-4 mt-0.5 shrink-0 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+          </svg>
+          <div>
+            <p className="text-sm font-semibold text-amber-700 m-0">
+              {unlinkedJobs.length} completed job{unlinkedJobs.length !== 1 ? "s" : ""} with no asset linked
+            </p>
+            <p className="text-xs text-amber-600 mt-0.5 m-0">
+              These interventions are not tracked against any asset. Open the request and use &ldquo;Link asset&rdquo; to associate them.
+            </p>
+            <ul className="mt-2 space-y-0.5">
+              {unlinkedJobs.slice(0, 5).map((job) => (
+                <li key={job.id} className="text-xs text-amber-700">
+                  {job.request?.requestNumber ? `#${job.request.requestNumber}` : job.id.slice(0, 8)}
+                  {job.request?.description ? ` — ${job.request.description.slice(0, 60)}` : ""}
+                  {job.completedAt ? ` (${new Date(job.completedAt).toLocaleDateString()})` : ""}
+                </li>
+              ))}
+              {unlinkedJobs.length > 5 && (
+                <li className="text-xs text-amber-500">…and {unlinkedJobs.length - 5} more</li>
+              )}
+            </ul>
+          </div>
+        </div>
+      )}
 
       {/* Add asset form */}
       {showAddForm && (

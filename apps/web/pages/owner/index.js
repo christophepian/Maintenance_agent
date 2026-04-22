@@ -9,6 +9,7 @@ import ErrorBanner from "../../components/ui/ErrorBanner";
 import Badge from "../../components/ui/Badge";
 import { ownerAuthHeaders } from "../../lib/api";
 import StrategyProfileBanner from "../../components/StrategyProfileBanner";
+import ScrollableTabs from "../../components/mobile/ScrollableTabs";
 
 
 function formatCurrency(value) {
@@ -73,7 +74,7 @@ function ActionItemsTabs({
       </h2>
 
       {/* Tab strip */}
-      <div className="tab-strip">
+      <ScrollableTabs activeIndex={active}>
         {ACTION_TABS.map((label, i) => (
           <button
             key={label}
@@ -93,7 +94,7 @@ function ActionItemsTabs({
             )}
           </button>
         ))}
-      </div>
+      </ScrollableTabs>
 
       {/* Tab 0 — Pending approvals */}
       <div className={active === 0 ? "tab-panel-active" : "tab-panel"}>
@@ -297,15 +298,8 @@ export default function OwnerDashboard() {
 
       // Check if owner has a strategy profile
       try {
-        const token = typeof window !== "undefined" ? localStorage.getItem("ownerToken") : null;
-        if (token) {
-          const payload = JSON.parse(atob(token.split(".")[1]));
-          const userId = payload.sub || payload.userId;
-          if (userId) {
-            const profileRes = await fetchJson(`/api/strategy/owner-profile/${userId}`);
-            setHasStrategyProfile(!!profileRes.profile);
-          }
-        }
+        const profileRes = await fetchJson("/api/strategy/owner-profile-current");
+        setHasStrategyProfile(!!profileRes.profile);
       } catch {
         // Non-critical — keep banner visible
         setHasStrategyProfile(false);

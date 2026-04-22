@@ -155,18 +155,18 @@ export default function OwnerJobs() {
                     <div key={job.id} className="rounded-lg border border-slate-200 bg-white">
                       {/* Clickable header */}
                       <div
-                        className="flex cursor-pointer items-center justify-between px-4 py-3 hover:bg-slate-50"
+                        className="flex cursor-pointer flex-col gap-2 px-4 py-3 hover:bg-slate-50 sm:flex-row sm:items-center sm:justify-between"
                         onClick={() => toggleAccordion(job.id)}
                       >
-                        <div className="flex items-center gap-3">
-                          <p className="text-sm font-semibold text-slate-900">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <p className="text-sm font-semibold text-slate-900 truncate">
                             {job.request?.category || `Job #${job.id.slice(0, 8)}`}
                           </p>
                           <Badge variant={jobVariant(job.status)} size="sm">
                             {job.status.replace("_", " ")}
                           </Badge>
                         </div>
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3 flex-wrap">
                           <UrgencyPill urgency={job.request?.urgency} />
                           {job.actualCost && (
                             <span className="text-sm font-semibold text-slate-700">CHF {job.actualCost}</span>

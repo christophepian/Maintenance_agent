@@ -133,33 +133,43 @@ async function findDepreciationStandard(
   topic: string,
   canton: string | null,
 ) {
-  // Try canton-specific first
+  // normalizeTopicKey → UPPER_SNAKE_CASE, but the DB may have mixed-case rows
+  // from older seeds. Use mode:"insensitive" throughout.
+  const topicKey = topic.trim().replace(/[\s]+/g, "_").replace(/-/g, "_").toUpperCase();
+
+  // Try canton-specific first (case-insensitive)
   if (canton) {
-    const cantonStd = await prisma.depreciationStandard.findUnique({
+    const cantonStd = await prisma.depreciationStandard.findFirst({
       where: {
-        jurisdiction_canton_assetType_topic: {
-          jurisdiction: "CH",
-          canton,
-          assetType,
-          topic,
-        },
+        jurisdiction: "CH",
+        canton,
+        assetType,
+        topic: { equals: topicKey, mode: "insensitive" },
       },
     });
     if (cantonStd) return cantonStd;
   }
 
-  // Fall back to national
-  // Note: Prisma unique constraint with nullable canton uses special handling
+  // Fall back to national (case-insensitive, with assetType)
   const national = await prisma.depreciationStandard.findFirst({
     where: {
       jurisdiction: "CH",
       canton: null,
       assetType,
-      topic,
+      topic: { equals: topicKey, mode: "insensitive" },
     },
   });
+  if (national) return national;
 
-  return national;
+  // Tier 5: topic-only fallback — drop assetType for mismatched legacy assets
+  return prisma.depreciationStandard.findFirst({
+    where: {
+      jurisdiction: "CH",
+      canton: null,
+      topic: { equals: topicKey, mode: "insensitive" },
+    },
+    orderBy: { assetType: "asc" },
+  });
 }
 
 /**

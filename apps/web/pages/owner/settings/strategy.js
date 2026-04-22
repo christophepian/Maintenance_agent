@@ -37,23 +37,7 @@ export default function StrategySettingsPage() {
   useEffect(() => {
     async function load() {
       try {
-        // Get current user ID from token
-        const token =
-          typeof window !== "undefined"
-            ? localStorage.getItem("ownerToken")
-            : null;
-        if (!token) {
-          setLoading(false);
-          return;
-        }
-        // Decode JWT payload to get userId
-        const payload = JSON.parse(atob(token.split(".")[1]));
-        const userId = payload.sub || payload.userId;
-        if (!userId) {
-          setLoading(false);
-          return;
-        }
-        const res = await fetch(`/api/strategy/owner-profile/${userId}`, {
+        const res = await fetch(`/api/strategy/owner-profile-current`, {
           headers: ownerAuthHeaders(),
         });
         const data = await res.json();

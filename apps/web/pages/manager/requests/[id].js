@@ -361,6 +361,11 @@ export default function RequestDetailPage() {
   const [selectedContractorId, setSelectedContractorId] = useState("");
   const [activeTab, setActiveTab]                 = useState("details");
 
+  const [unitAssets, setUnitAssets]               = useState([]);
+  const [assetPickerOpen, setAssetPickerOpen]     = useState(false);
+  const [selectedAssetId, setSelectedAssetId]     = useState("");
+  const [linkingAsset, setLinkingAsset]           = useState(false);
+
   /* ─── Data loading ─── */
 
   const loadRequest = useCallback(async () => {
@@ -398,6 +403,16 @@ export default function RequestDetailPage() {
       .then((d) => { if (d?.data) setContractors(d.data); })
       .catch(() => {});
   }, []);
+
+  // Unit assets (for link picker)
+  useEffect(() => {
+    const unitId = request?.unitId;
+    if (!unitId) return;
+    fetch(`/api/units/${unitId}/assets`, { headers: authHeaders() })
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => { if (d?.data) setUnitAssets(d.data); })
+      .catch(() => {});
+  }, [request?.unitId]);
 
   // Repair-replace analysis (per unit)
   useEffect(() => {
@@ -464,6 +479,37 @@ export default function RequestDetailPage() {
   }
 
   async function setUrgency(val) { await performAction("urgency", { urgency: val }); }
+
+  async function doLinkAsset() {
+    if (!selectedAssetId) return;
+    setLinkingAsset(true);
+    try {
+      const res = await fetch(`/api/requests/${id}/asset`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({ assetId: selectedAssetId }),
+      });
+      if (!res.ok) { const d = await res.json(); throw new Error(d?.error?.message || "Failed to link asset"); }
+      setAssetPickerOpen(false);
+      setSelectedAssetId("");
+      await loadRequest();
+    } catch (e) { setError(String(e?.message || e)); }
+    finally { setLinkingAsset(false); }
+  }
+
+  async function doUnlinkAsset() {
+    setLinkingAsset(true);
+    try {
+      const res = await fetch(`/api/requests/${id}/asset`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({ assetId: null }),
+      });
+      if (!res.ok) { const d = await res.json(); throw new Error(d?.error?.message || "Failed to unlink asset"); }
+      await loadRequest();
+    } catch (e) { setError(String(e?.message || e)); }
+    finally { setLinkingAsset(false); }
+  }
 
   /* ─── Derived ─── */
 
@@ -628,6 +674,37 @@ export default function RequestDetailPage() {
                 )}
               </Panel>
 
+              {/* ═══ 1b · Fast-track replacement banner ═══ */}
+              {(() => {
+                if (!repairReplace?.data || !r.assetId) return null;
+                const assetRec = repairReplace.data.find((a) => (a.assetId || a.applianceId) === r.assetId);
+                if (!assetRec) return null;
+                const rec = assetRec.recommendation;
+                if (rec !== "PLAN_REPLACEMENT" && rec !== "REPLACE") return null;
+                const isReplace = rec === "REPLACE";
+                return (
+                  <div className={cn(
+                    "rounded-lg border px-4 py-3 flex items-start gap-3",
+                    isReplace
+                      ? "border-red-200 bg-red-50"
+                      : "border-amber-200 bg-amber-50",
+                  )}>
+                    <svg className={cn("h-4 w-4 mt-0.5 shrink-0", isReplace ? "text-red-500" : "text-amber-500")} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                    </svg>
+                    <div>
+                      <p className={cn("text-sm font-semibold m-0", isReplace ? "text-red-700" : "text-amber-700")}>
+                        {isReplace ? "Replacement recommended" : "Plan replacement soon"}
+                      </p>
+                      <p className={cn("text-xs mt-0.5 m-0", isReplace ? "text-red-600" : "text-amber-600")}>
+                        {assetRec.applianceName || "This asset"} is {assetRec.depreciationPct ?? "?"}% through its useful life
+                        {assetRec.explanation ? ` — ${assetRec.explanation}` : ""}. Check the Advisory tab for repair/replace analysis.
+                      </p>
+                    </div>
+                  </div>
+                );
+              })()}
+
               {/* ═══ 2 · Tab bar ═══ */}
               <div className="tab-strip">
                 {[
@@ -742,17 +819,72 @@ export default function RequestDetailPage() {
                   )}
 
                   {/* Linked Asset (prefers canonical Asset, falls back to Appliance) */}
-                  {linkedAsset && (
-                    <div className="border-t border-slate-100 pt-4 mt-4">
-                      <h4 className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-3">Asset</h4>
+                  <div className="border-t border-slate-100 pt-4 mt-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 m-0">Asset</h4>
+                      {linkedAsset && r.assetId && !assetPickerOpen && (
+                        <button
+                          type="button"
+                          onClick={doUnlinkAsset}
+                          disabled={linkingAsset}
+                          className="text-xs text-slate-400 hover:text-red-500 transition disabled:opacity-50"
+                        >
+                          Unlink
+                        </button>
+                      )}
+                      {!linkedAsset && r.unitId && !assetPickerOpen && (
+                        <button
+                          type="button"
+                          onClick={() => setAssetPickerOpen(true)}
+                          className="text-xs text-indigo-600 hover:text-indigo-800 font-medium transition"
+                        >
+                          + Link asset
+                        </button>
+                      )}
+                    </div>
+
+                    {linkedAsset ? (
                       <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3">
                         <Field label="Name">{linkedAsset.name || "\u2014"}</Field>
                         {linkedAsset.manufacturer && <Field label="Manufacturer">{linkedAsset.manufacturer}</Field>}
                         {linkedAsset.modelNumber && <Field label="Model">{linkedAsset.modelNumber}</Field>}
                         {linkedAsset.installDate && <Field label="Installed">{formatDate(linkedAsset.installDate)}</Field>}
                       </dl>
-                    </div>
-                  )}
+                    ) : assetPickerOpen ? (
+                      <div className="flex items-center gap-2">
+                        <select
+                          value={selectedAssetId}
+                          onChange={(e) => setSelectedAssetId(e.target.value)}
+                          className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                        >
+                          <option value="">Select asset&hellip;</option>
+                          {unitAssets.map((a) => (
+                            <option key={a.id} value={a.id}>
+                              {a.name || a.topic || a.id.slice(0, 8)}
+                              {a.brand ? ` — ${a.brand}` : ""}
+                            </option>
+                          ))}
+                        </select>
+                        <button
+                          type="button"
+                          onClick={doLinkAsset}
+                          disabled={!selectedAssetId || linkingAsset}
+                          className="rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition disabled:opacity-50"
+                        >
+                          {linkingAsset ? "\u2026" : "Link"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { setAssetPickerOpen(false); setSelectedAssetId(""); }}
+                          className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-500 hover:bg-slate-50 transition"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-slate-400 m-0">No asset linked{r.unitId ? " — use \u201c+ Link asset\u201d above" : ""}.</p>
+                    )}
+                  </div>
 
                   {/* RFP link */}
                   {rfpId && (

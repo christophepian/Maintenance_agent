@@ -14,6 +14,12 @@ export const ContractorCompleteSchema = z.object({
   actualCost: z.number().int().min(0).optional(),
   completedAt: z.string().datetime().optional(),
   notes: z.string().max(2000).optional(),
+  /**
+   * Required when the request has a linked asset (Request.assetId is set).
+   * Declares whether the intervention was a repair or a full replacement.
+   * Used to auto-log an AssetIntervention on job completion.
+   */
+  interventionType: z.enum(["REPAIR", "REPLACEMENT"]).optional(),
 });
 
 export type ContractorCompleteInput = z.infer<typeof ContractorCompleteSchema>;

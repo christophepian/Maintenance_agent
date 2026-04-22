@@ -184,7 +184,12 @@ h1, h2 {
   /* ── Tab strip ── */
   .tab-strip {
     @apply flex border-b border-slate-200 mb-5;
+    /* Mobile: scroll horizontally when tabs overflow the viewport */
+    overflow-x: auto;
+    scrollbar-width: none;       /* Firefox */
+    -ms-overflow-style: none;    /* IE / Edge */
   }
+  .tab-strip::-webkit-scrollbar { display: none; }
 
   .tab-btn {
     @apply px-5 py-2.5 text-sm font-medium text-slate-500 bg-transparent;
@@ -344,9 +349,22 @@ h1, h2 {
   .link-card {
     @apply block no-underline text-inherit;
   }
+
+  /* ── Mobile: prevent left text from being squeezed by right-side badge ── */
+  .link-card > *:first-child { min-width: 0; }
+
+  /* ── Bottom safe area padding when BottomNav is present ── */
+  .has-bottom-nav {
+    padding-bottom: calc(5rem + env(safe-area-inset-bottom));
+  }
 }
 
 @keyframes undoToastSlideUp {
   from { opacity: 0; transform: translateY(20px); }
   to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes mobileSheetSlideUp {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
 }

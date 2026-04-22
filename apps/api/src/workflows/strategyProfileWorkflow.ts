@@ -157,8 +157,20 @@ export async function createBuildingProfileWorkflow(
       userId: ownerProfile.ownerId,
     },
   });
+
   if (!ownership) {
-    throw new Error("Owner does not have access to this building");
+    const sameOrgBuilding = await ctx.prisma.building.findFirst({
+      where: {
+        id: input.buildingId,
+        orgId: ctx.orgId,
+      },
+      select: { id: true },
+    });
+
+    const ownerProfileInOrg = ownerProfile.orgId === ctx.orgId;
+    if (!sameOrgBuilding || !ownerProfileInOrg) {
+      throw new Error("Owner does not have access to this building");
+    }
   }
 
   const ownerDimensions = JSON.parse(ownerProfile.dimensionsJson);

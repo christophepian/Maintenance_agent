@@ -12,6 +12,7 @@ import Badge from "../../components/ui/Badge";
 import { requestVariant } from "../../lib/statusVariants";
 
 import { cn } from "../../lib/utils";
+import ScrollableTabs from "../../components/mobile/ScrollableTabs";
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
@@ -132,7 +133,7 @@ export default function OwnerWorkRequestsPage() {
         />
         <PageContent>
           {/* ── Tab strip (F-UI1) ── */}
-          <div className="tab-strip">
+          <ScrollableTabs activeIndex={STATUS_TABS.findIndex((t) => t.key === activeTabKey)}>
             {STATUS_TABS.map((tab) => {
               if (tab.href) {
                 return (
@@ -162,7 +163,7 @@ export default function OwnerWorkRequestsPage() {
                 </button>
               );
             })}
-          </div>
+          </ScrollableTabs>
 
           {/* ── Error ── */}
           <ErrorBanner error={error} className="mb-4 text-sm" />
@@ -182,6 +183,7 @@ export default function OwnerWorkRequestsPage() {
           {/* ── Table ── */}
           {!loading && filteredRequests.length > 0 && (
             <Panel bodyClassName="p-0">
+              <div className="overflow-x-auto">
               <div className="rounded-lg border border-slate-200 bg-white overflow-hidden">
                 <table className="inline-table">
                   <thead>
@@ -222,6 +224,7 @@ export default function OwnerWorkRequestsPage() {
                     ))}
                   </tbody>
                 </table>
+              </div>
               </div>
             </Panel>
           )}

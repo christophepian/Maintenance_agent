@@ -11,7 +11,8 @@ export function ToastProvider({ children }) {
   return (
     <RToast.Provider swipeDirection="down">
       {children}
-      <RToast.Viewport className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[9999] flex flex-col gap-2 outline-none" />
+      {/* On mobile, shift up above the BottomNav (h-20 = 5rem) + original 1.5rem spacing */}
+      <RToast.Viewport className="fixed bottom-24 md:bottom-6 left-1/2 -translate-x-1/2 z-[9999] flex flex-col gap-2 outline-none" />
     </RToast.Provider>
   );
 }

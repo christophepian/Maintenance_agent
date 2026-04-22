@@ -152,6 +152,35 @@ const BUILDING_TYPE_OPTIONS = [
   { value: "commercial", label: "Commercial" },
 ];
 
+function archetypeToRoleIntent(archetype) {
+  switch (archetype) {
+    case "exit_optimizer":
+      return "sell";
+    case "yield_maximizer":
+      return "income";
+    case "value_builder":
+      return "long_term_quality";
+    case "capital_preserver":
+      return "stable_hold";
+    case "opportunistic_repositioner":
+      return "reposition";
+    default:
+      return "";
+  }
+}
+
+function createBuildingEntry(defaultRoleIntent = "") {
+  return {
+    name: "",
+    address: "",
+    strategyMode: "same",
+    roleIntent: defaultRoleIntent,
+    buildingType: "",
+    conditionRating: "",
+    approxUnits: "",
+  };
+}
+
 /* ─── Radio Group ───────────────────────────────────────────── */
 
 function RadioGroup({ options, value, onChange, name }) {
@@ -198,9 +227,11 @@ export default function StrategyPage() {
   const [submitting, setSubmitting] = useState(false);
 
   // Building setup state — multi-building creation
-  const [buildingEntries, setBuildingEntries] = useState([
-    { name: "", address: "", roleIntent: "", buildingType: "", conditionRating: "", approxUnits: "" },
-  ]);
+  const [buildingEntries, setBuildingEntries] = useState([createBuildingEntry("")]);
+
+  const portfolioArchetype = profile?.primaryArchetype || "";
+  const portfolioArchetypeLabel = USER_LABELS[portfolioArchetype] || portfolioArchetype;
+  const portfolioRoleIntent = archetypeToRoleIntent(portfolioArchetype);
 
   const currentQuestion = QUESTIONS[step];
   const totalQuestions = QUESTIONS.length;
@@ -237,7 +268,7 @@ export default function StrategyPage() {
   function addBuildingEntry() {
     setBuildingEntries((prev) => [
       ...prev,
-      { name: "", address: "", roleIntent: "", buildingType: "", conditionRating: "", approxUnits: "" },
+      createBuildingEntry(portfolioRoleIntent),
     ]);
   }
 
@@ -246,12 +277,18 @@ export default function StrategyPage() {
   }
 
   async function handleSubmitBuildingSetup() {
-    const valid = buildingEntries.filter((e) => e.name.trim() && e.roleIntent);
+    const valid = buildingEntries.filter((e) => {
+      if (!e.name.trim()) return false;
+      if (e.strategyMode === "same") return Boolean(portfolioRoleIntent);
+      return Boolean(e.roleIntent);
+    });
     if (valid.length === 0) return;
     setSubmitting(true);
     setError("");
     try {
       for (const entry of valid) {
+        const effectiveRoleIntent =
+          entry.strategyMode === "same" ? portfolioRoleIntent : entry.roleIntent;
         const res = await fetch("/api/strategy/building-profile", {
           method: "POST",
           headers: {
@@ -261,7 +298,7 @@ export default function StrategyPage() {
           body: JSON.stringify({
             building: { name: entry.name.trim(), address: entry.address.trim() },
             ownerProfileId: profile.id,
-            roleIntent: entry.roleIntent,
+            roleIntent: effectiveRoleIntent,
             buildingType: entry.buildingType || undefined,
             conditionRating: entry.conditionRating || undefined,
             approxUnits: entry.approxUnits ? parseInt(entry.approxUnits, 10) : undefined,
@@ -361,7 +398,10 @@ export default function StrategyPage() {
                 {/* Actions */}
                 <div className="flex items-center gap-4 pt-2">
                   <button
-                    onClick={() => setStep(6)}
+                    onClick={() => {
+                      setBuildingEntries([createBuildingEntry(archetypeToRoleIntent(profile.primaryArchetype))]);
+                      setStep(6);
+                    }}
                     className="rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-indigo-700 transition-colors"
                   >
                     Continue to set up your property
@@ -383,7 +423,11 @@ export default function StrategyPage() {
 
   /* ─── Building setup screen (step 6) ─── */
   if (step === 6) {
-    const canSubmit = buildingEntries.some((e) => e.name.trim() && e.roleIntent);
+    const canSubmit = buildingEntries.some((e) => {
+      if (!e.name.trim()) return false;
+      if (e.strategyMode === "same") return Boolean(portfolioRoleIntent);
+      return Boolean(e.roleIntent);
+    });
     return (
       <AppShell role="OWNER">
         <PageShell>
@@ -487,11 +531,45 @@ export default function StrategyPage() {
                       What is your intent for this building? *
                     </label>
                     <RadioGroup
-                      options={ROLE_INTENT_OPTIONS}
-                      value={entry.roleIntent}
-                      onChange={(val) => updateBuildingEntry(idx, "roleIntent", val)}
-                      name={`roleIntent-${idx}`}
+                      options={[
+                        {
+                          value: "same",
+                          label: `Same strategy as overall portfolio${portfolioArchetypeLabel ? ` (${portfolioArchetypeLabel})` : ""}`,
+                        },
+                        {
+                          value: "different",
+                          label: "Different strategy than overall portfolio",
+                        },
+                      ]}
+                      value={entry.strategyMode}
+                      onChange={(val) =>
+                        updateBuildingEntry(idx, "strategyMode", val)
+                      }
+                      name={`strategyMode-${idx}`}
                     />
+
+                    {entry.strategyMode === "different" && (
+                      <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+                        This building will be treated differently by the decision engine than buildings following your overall portfolio strategy (for example, maintenance and CAPEX decisions).
+                      </div>
+                    )}
+
+                    {entry.strategyMode === "different" && (
+                      <div className="mt-3">
+                        <RadioGroup
+                          options={ROLE_INTENT_OPTIONS}
+                          value={entry.roleIntent}
+                          onChange={(val) => updateBuildingEntry(idx, "roleIntent", val)}
+                          name={`roleIntent-${idx}`}
+                        />
+                      </div>
+                    )}
+
+                    {entry.strategyMode === "same" && (
+                      <p className="mt-3 text-xs text-slate-600">
+                        This building will use your overall portfolio strategy{portfolioArchetypeLabel ? `: ${portfolioArchetypeLabel}.` : "."}
+                      </p>
+                    )}
                   </div>
                 </div>
               </Panel>

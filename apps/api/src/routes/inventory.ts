@@ -545,6 +545,41 @@ export function registerInventoryRoutes(router: Router) {
     }
   }));
 
+  /* ── GET /units/:id/unlinked-jobs — completed jobs with no asset linked ── */
+  router.get("/units/:id/unlinked-jobs", withAuthRequired(async ({ res, orgId, params, prisma }) => {
+    try {
+      // Jobs are COMPLETED or INVOICED, request.assetId IS NULL
+      const jobs = await prisma.job.findMany({
+        where: {
+          orgId,
+          status: { in: ["COMPLETED", "INVOICED"] },
+          request: {
+            unitId: params.id,
+            assetId: null,
+          },
+        },
+        select: {
+          id: true,
+          status: true,
+          completedAt: true,
+          request: {
+            select: {
+              id: true,
+              requestNumber: true,
+              description: true,
+              category: true,
+            },
+          },
+        },
+        orderBy: { completedAt: "desc" },
+        take: 20,
+      });
+      sendJson(res, 200, { data: jobs, total: jobs.length });
+    } catch (e) {
+      sendError(res, 500, "DB_ERROR", "Failed to fetch unlinked jobs", String(e));
+    }
+  }));
+
   router.post("/units/:id/assets", async ({ req, res, orgId, params, prisma }) => {
     if (!requireRole(req, res, "MANAGER")) return;
     try {

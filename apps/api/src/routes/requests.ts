@@ -232,6 +232,37 @@ export function registerRequestRoutes(router: Router) {
     sendJson(res, 200, { data: updated });
   });
 
+  /* ── PATCH /requests/:id/asset — link/unlink asset ─────────── */
+
+  router.patch("/requests/:id/asset", async (ctx) => {
+    const { req, res, prisma, params, orgId } = ctx;
+    if (!requireRole(req, res, "MANAGER")) return;
+
+    const scopedReq = await resolveAndScopeRequest(prisma, params.id, orgId);
+    if (!scopedReq) return sendError(res, 404, "NOT_FOUND", "Request not found");
+
+    const raw = await readJson(req);
+    // assetId can be a string (link) or null (unlink)
+    const assetId: string | null = raw?.assetId ?? null;
+
+    if (assetId !== null && typeof assetId !== "string") {
+      return sendError(res, 400, "VALIDATION_ERROR", "assetId must be a string or null");
+    }
+
+    // Verify asset belongs to same org (if linking)
+    if (assetId) {
+      const asset = await prisma.asset.findFirst({ where: { id: assetId, orgId } });
+      if (!asset) return sendError(res, 404, "NOT_FOUND", "Asset not found");
+    }
+
+    const updated = await prisma.request.update({
+      where: { id: scopedReq.id },
+      data: { assetId },
+      select: { id: true, assetId: true },
+    });
+    sendJson(res, 200, { data: updated });
+  });
+
   /* ── DEV: delete all requests ──────────────────────────────── */
 
   router.delete("/__dev/requests", async ({ req, res, prisma }) => {

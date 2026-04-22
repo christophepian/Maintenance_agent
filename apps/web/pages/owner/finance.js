@@ -151,10 +151,10 @@ export default function OwnerFinance() {
                   return (
                     <div key={invoice.id} className="rounded-lg border border-slate-200 bg-white">
                       <div
-                        className="flex cursor-pointer items-center justify-between px-4 py-3 hover:bg-slate-50"
+                        className="flex cursor-pointer flex-col gap-2 px-4 py-3 hover:bg-slate-50 sm:flex-row sm:items-center sm:justify-between"
                         onClick={() => toggleAccordion(invoice.id)}
                       >
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-4 min-w-0">
                           <div>
                             <p className="text-sm font-semibold text-slate-900">
                               {invoice.invoiceNumber || "Draft"}
@@ -165,7 +165,7 @@ export default function OwnerFinance() {
                             {formatCurrency(getInvoiceTotal(invoice))}
                           </p>
                         </div>
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3 justify-end">
                           <Badge variant={invoiceVariant(invoice.status)} size="sm">
                             {invoice.status}
                           </Badge>

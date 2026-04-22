@@ -6,6 +6,7 @@ import ManagerSidebar from "./ManagerSidebar";
 import OwnerSidebar from "./OwnerSidebar";
 import ContractorSidebar from "./ContractorSidebar";
 import TenantSidebar from "./TenantSidebar";
+import BottomNav from "./mobile/BottomNav";
 
 function decodeRoleFromToken(token) {
   if (!token) return null;
@@ -316,7 +317,7 @@ export default function AppShell({ role: roleProp, children }) {
 
   return (
     <div
-      className="min-h-screen grid grid-cols-[260px_1fr] bg-slate-50 text-slate-900 font-sans overflow-hidden"
+      className="min-h-screen md:grid md:grid-cols-[260px_1fr] bg-slate-50 text-slate-900 font-sans overflow-hidden"
     >
       <a
         href="#main-content"
@@ -324,7 +325,7 @@ export default function AppShell({ role: roleProp, children }) {
       >
         Skip to main content
       </a>
-      <aside className="border-r border-slate-200 px-4 py-5 bg-white" aria-label="Sidebar navigation">
+      <aside className="hidden md:block border-r border-slate-200 px-4 py-5 bg-white" aria-label="Sidebar navigation">
         <div className="font-bold text-lg mb-5">
           Maintenance Agent
         </div>
@@ -374,7 +375,7 @@ export default function AppShell({ role: roleProp, children }) {
         )}
       </aside>
 
-      <main id="main-content" className="min-w-0 overflow-x-hidden p-6">
+      <main id="main-content" className="min-w-0 overflow-x-hidden p-6 pb-24 md:pb-6">
         {/* Header with notification bell */}
         {(role === "MANAGER" || role === "OWNER" || role === "TENANT" || role === "CONTRACTOR") && (
           <div className="flex justify-end mb-4 pr-2">
@@ -383,6 +384,9 @@ export default function AppShell({ role: roleProp, children }) {
         )}
         {children}
       </main>
+
+      {/* Mobile bottom navigation — self-hides above md via md:hidden */}
+      <BottomNav role={role} />
     </div>
   );
 }

@@ -83,6 +83,7 @@ export function registerCompletionRoutes(router: Router) {
             actualCost: body.actualCost,
             completedAt: body.completedAt,
             notes: body.notes,
+            interventionType: body.interventionType,
           },
         );
 

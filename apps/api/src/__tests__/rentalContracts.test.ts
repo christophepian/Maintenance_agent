@@ -47,6 +47,47 @@ describe("G10: Rental Application Contract Tests", () => {
         }
       }
     });
+
+    it("includes unleased residential units even when isVacant default is false", async () => {
+      const suffix = Date.now().toString(36);
+
+      const createBuilding = await fetchJson("/buildings", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-dev-role": "MANAGER",
+        },
+        body: JSON.stringify({
+          name: `Contract Test Building ${suffix}`,
+          address: `Contract Street ${suffix}`,
+        }),
+      });
+
+      expect(createBuilding.status).toBe(201);
+      const buildingId = createBuilding.body?.data?.id;
+      expect(typeof buildingId).toBe("string");
+
+      const createUnit = await fetchJson(`/buildings/${buildingId}/units`, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-dev-role": "MANAGER",
+        },
+        body: JSON.stringify({
+          unitNumber: `UT-${suffix}`,
+          type: "RESIDENTIAL",
+        }),
+      });
+
+      expect(createUnit.status).toBe(201);
+      const createdUnitId = createUnit.body?.data?.id;
+      expect(typeof createdUnitId).toBe("string");
+
+      const { status, body } = await fetchJson("/vacant-units");
+      expect(status).toBe(200);
+      const unitIds = (body?.data || []).map((u: any) => u.id);
+      expect(unitIds).toContain(createdUnitId);
+    });
   });
 
   // ── Manager: List Applications per Unit ──

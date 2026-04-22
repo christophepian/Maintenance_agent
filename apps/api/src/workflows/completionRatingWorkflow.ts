@@ -21,6 +21,7 @@ import {
 } from "../repositories/ratingRepository";
 import { createNotification } from "../services/notifications";
 import { issueInvoiceWorkflow } from "./issueInvoiceWorkflow";
+import { assetRepo } from "../repositories";
 import type { JobDTO } from "../services/jobs";
 
 // ─── Error class ───────────────────────────────────────────────
@@ -42,6 +43,7 @@ export interface ContractorCompleteInput {
   actualCost?: number;
   completedAt?: string;
   notes?: string;
+  interventionType?: "REPAIR" | "REPLACEMENT";
 }
 
 export interface ContractorCompleteResult {
@@ -82,7 +84,23 @@ export async function contractorCompleteJobWorkflow(
     completedAt: input.completedAt,
   });
 
-  // 3. Notify tenant that work is done (if tenant exists)
+  // 3. Auto-log AssetIntervention if request has a linked asset
+  const assetId = job.request?.assetId;
+  if (assetId && input.interventionType) {
+    try {
+      await assetRepo.addIntervention(prisma, assetId, {
+        type: input.interventionType as any,
+        interventionDate: input.completedAt ? new Date(input.completedAt) : new Date(),
+        costChf: input.actualCost ?? null,
+        jobId: input.jobId,
+        notes: input.notes ?? null,
+      });
+    } catch (err) {
+      console.warn("[completionRating] Failed to auto-log intervention", err);
+    }
+  }
+
+  // 4. Notify tenant that work is done (if tenant exists)
   const tenantId = job.request?.tenantId;
   if (tenantId) {
     try {

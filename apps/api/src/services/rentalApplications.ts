@@ -3,6 +3,9 @@ import {
   RentalApplicationUnitStatus,
   ApplicantRole,
   RentalDocType,
+  LeaseStatus,
+  RentalOwnerSelectionStatus,
+  UnitType,
 } from "@prisma/client";
 import prisma from "./prismaClient";
 import {
@@ -136,6 +139,39 @@ export interface RentalApplicationSummaryDTO {
     overrideReason?: string;
     rank?: number;
   }[];
+}
+
+const NON_MARKET_LEASE_STATUSES: LeaseStatus[] = [
+  LeaseStatus.ACTIVE,
+  LeaseStatus.READY_TO_SIGN,
+  LeaseStatus.SIGNED,
+];
+
+const RESERVED_SELECTION_STATUSES: RentalOwnerSelectionStatus[] = [
+  RentalOwnerSelectionStatus.AWAITING_SIGNATURE,
+  RentalOwnerSelectionStatus.FALLBACK_1,
+  RentalOwnerSelectionStatus.FALLBACK_2,
+  RentalOwnerSelectionStatus.SIGNED,
+];
+
+function listingEligibleUnitWhere(orgId: string, unitIds?: string[]) {
+  return {
+    ...(unitIds ? { id: { in: unitIds } } : {}),
+    building: { orgId },
+    isActive: true,
+    type: UnitType.RESIDENTIAL,
+    leases: {
+      none: {
+        status: { in: NON_MARKET_LEASE_STATUSES },
+        deletedAt: null,
+      },
+    },
+    ownerSelections: {
+      none: {
+        status: { in: RESERVED_SELECTION_STATUSES },
+      },
+    },
+  };
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -293,21 +329,16 @@ export async function createRentalApplicationDraft(
   orgId: string,
   input: CreateRentalApplicationInput,
 ): Promise<RentalApplicationDTO> {
-  // Verify all selected units exist, are vacant, and belong to this org
+  // Verify all selected units exist, are listing-eligible, and belong to this org
   const units = await prisma.unit.findMany({
-    where: {
-      id: { in: input.unitIds },
-      building: { orgId },
-      isVacant: true,
-      isActive: true,
-    },
+    where: listingEligibleUnitWhere(orgId, input.unitIds),
     select: { id: true },
   });
 
   const foundIds = new Set(units.map((u) => u.id));
   const missing = input.unitIds.filter((id) => !foundIds.has(id));
   if (missing.length > 0) {
-    throw new Error(`Units not found or not vacant: ${missing.join(", ")}`);
+    throw new Error(`Units not found or not listing-eligible: ${missing.join(", ")}`);
   }
 
   // Create application + applicants in a transaction
@@ -752,11 +783,7 @@ export async function overrideDisqualification(
  */
 export async function listVacantUnits(orgId: string) {
   const units = await prisma.unit.findMany({
-    where: {
-      building: { orgId },
-      isVacant: true,
-      isActive: true,
-    },
+    where: listingEligibleUnitWhere(orgId),
     include: {
       building: {
         select: {

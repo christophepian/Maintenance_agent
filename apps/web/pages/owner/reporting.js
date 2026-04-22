@@ -126,8 +126,7 @@ function TimelineHeader({ year, month, mode, onSelect, onYearNav, onModeToggle }
           {/* Month strip or year grid */}
           <div
             ref={scrollRef}
-            className="flex gap-1.5 overflow-x-auto no-scrollbar flex-1"
-            className="scrollbar-none"
+            className="flex gap-1.5 overflow-x-auto scrollbar-none flex-1"
           >
             {mode === "month"
               ? MONTHS_SHORT.map((m, i) => {

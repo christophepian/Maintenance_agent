@@ -13,6 +13,7 @@ import { urgencyVariant, rfpVariant } from "../../lib/statusVariants";
 
 import { cn } from "../../lib/utils";
 import { formatDate, formatDateTime } from "../../lib/format";
+import ScrollableTabs from "../../components/mobile/ScrollableTabs";
 // ─── Shared ────────────────────────────────────────────────────
 
 /** RAG left-border: green=LOW, neutral=MEDIUM, amber=HIGH, red=EMERGENCY */
@@ -64,7 +65,7 @@ export default function OwnerApprovalsPage() {
         <PageHeader title="Approvals" />
         <PageContent>
           {/* Tab bar */}
-          <div className="tab-strip">
+          <ScrollableTabs activeIndex={tab === "requests" ? 0 : 1}>
             {[
               { key: "requests", label: "Requests" },
               { key: "rfps",     label: "RFPs" },
@@ -77,7 +78,7 @@ export default function OwnerApprovalsPage() {
                 {label}
               </button>
             ))}
-          </div>
+          </ScrollableTabs>
 
           {tab === "requests" && <RequestsTab />}
           {tab === "rfps"     && <RfpsTab />}
@@ -334,6 +335,7 @@ function RfpsTab() {
         <>
           {pendingApproval.length > 0 && (
             <Panel title={`Awaiting Your Approval (${pendingApproval.length})`} bodyClassName="p-0">
+              <div className="overflow-x-auto">
               <table className="inline-table">
                 <thead>
                   <tr>
@@ -366,11 +368,13 @@ function RfpsTab() {
                   ))}
                 </tbody>
               </table>
+              </div>
             </Panel>
           )}
 
           <Panel title={`All RFPs (${filtered.length})`} bodyClassName="p-0">
             {filtered.length > 0 ? (
+              <div className="overflow-x-auto">
               <table className="inline-table">
                 <thead>
                   <tr>
@@ -403,6 +407,7 @@ function RfpsTab() {
                   ))}
                 </tbody>
               </table>
+              </div>
             ) : (
               <p className="px-4 py-8 text-center text-sm text-slate-400">
                 {rfps.length === 0 ? "No RFPs found." : "No results match the current filters."}

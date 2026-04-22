@@ -23,7 +23,7 @@ import {
   getOwnerProfileByOwnerId,
   getBuildingProfileByBuildingId,
 } from "../repositories/strategyProfileRepository";
-import { createBuilding } from "../repositories/inventoryRepository";
+import { addBuildingOwner, createBuilding } from "../repositories/inventoryRepository";
 import {
   OwnerProfileDTO,
   BuildingProfileDTO,
@@ -52,6 +52,34 @@ export function registerStrategyRoutes(router: Router) {
     } catch (err: any) {
       sendError(res, 400, "BAD_REQUEST", err.message);
     }
+  });
+
+  // ── GET /strategy/owner-profile-current (current owner) ─────
+  router.get("/strategy/owner-profile-current", async ({ req, res, orgId, prisma }) => {
+    const user = requireRole(req, res, "OWNER");
+    if (!user) return;
+
+    const profile = await getOwnerProfileByOwnerId(prisma, user.userId, orgId);
+    if (!profile) {
+      sendJson(res, 200, { profile: null });
+      return;
+    }
+
+    const dto: OwnerProfileDTO = {
+      id: profile.id,
+      ownerId: profile.ownerId,
+      primaryArchetype: profile.primaryArchetype,
+      secondaryArchetype: profile.secondaryArchetype ?? undefined,
+      confidence: profile.confidence,
+      userFacingGoalLabel: profile.userFacingGoalLabel,
+      dimensions: JSON.parse(profile.dimensionsJson),
+      archetypeScores: JSON.parse(profile.archetypeScoresJson),
+      contradictionScore: profile.contradictionScore,
+      createdAt: profile.createdAt.toISOString(),
+      updatedAt: profile.updatedAt.toISOString(),
+    };
+
+    sendJson(res, 200, { profile: dto });
   });
 
   // ── GET /strategy/owner-profile/:ownerId ─────────────────────
@@ -97,6 +125,20 @@ export function registerStrategyRoutes(router: Router) {
       return;
     }
 
+    const ownerProfile = await prisma.ownerStrategyProfile.findFirst({
+      where: {
+        id: body.ownerProfileId,
+        orgId,
+      },
+      select: {
+        ownerId: true,
+      },
+    });
+    if (!ownerProfile) {
+      sendError(res, 400, "BAD_REQUEST", "Owner strategy profile not found");
+      return;
+    }
+
     // Allow inline building creation: { building: { name, address } }
     let buildingId = body.buildingId;
     if (!buildingId && body.building) {
@@ -108,6 +150,7 @@ export function registerStrategyRoutes(router: Router) {
         name: body.building.name,
         address: body.building.address || "",
       });
+      await addBuildingOwner(prisma, created.id, ownerProfile.ownerId);
       buildingId = created.id;
     }
     if (!buildingId) {

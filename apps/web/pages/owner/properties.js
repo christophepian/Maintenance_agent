@@ -7,6 +7,7 @@ import PageContent from "../../components/layout/PageContent";
 import Panel from "../../components/layout/Panel";
 import ConfigurableTable from "../../components/ConfigurableTable";
 import VacanciesPanel from "../../components/VacanciesPanel";
+import ScrollableTabs from "../../components/mobile/ScrollableTabs";
 import ErrorBanner from "../../components/ui/ErrorBanner";
 import { useTableSort, clientSort } from "../../lib/tableUtils";
 import { ownerAuthHeaders } from "../../lib/api";
@@ -92,7 +93,7 @@ export default function OwnerPropertiesPage() {
         />
         <PageContent>
           {/* Tab bar */}
-          <div className="tab-strip">
+          <ScrollableTabs activeIndex={tab === "buildings" ? 0 : 1}>
             {[
               { key: "buildings", label: "Buildings" },
               { key: "vacancies", label: "Vacancies" },
@@ -105,7 +106,7 @@ export default function OwnerPropertiesPage() {
                 {label}
               </button>
             ))}
-          </div>
+          </ScrollableTabs>
 
           {tab === "buildings" && <BuildingsTab refreshKey={refreshKey} />}
           {tab === "vacancies" && <VacanciesPanel role="OWNER" refreshKey={refreshKey} />}
