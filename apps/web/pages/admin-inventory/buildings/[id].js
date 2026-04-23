@@ -929,6 +929,7 @@ export default function BuildingDetail() {
           {activeTab === "Tenants" && (
             <Panel title="Tenants">
               {building?.tenants && building.tenants.length > 0 ? (
+                <>
                 {/* Mobile: card list */}
                 <div className="sm:hidden space-y-2">
                   {building.tenants.map((t, idx) => (
@@ -975,6 +976,7 @@ export default function BuildingDetail() {
                     })}
                   </tbody>
                 </table>
+                </>
               ) : (
                 <div className="text-center text-slate-500 italic text-sm py-6">No tenants found for this building.</div>
               )}
