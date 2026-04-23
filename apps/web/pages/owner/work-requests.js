@@ -180,30 +180,45 @@ export default function OwnerWorkRequestsPage() {
             </div>
           )}
 
-          {/* ── Table ── */}
+          {/* ── List / Table ── */}
           {!loading && filteredRequests.length > 0 && (
             <Panel bodyClassName="p-0">
-              <div className="rounded-lg border border-slate-200 bg-white overflow-hidden">
+              {/* Mobile: card list */}
+              <div className="sm:hidden divide-y divide-slate-100">
+                {filteredRequests.map((r) => (
+                  <div key={r.id} className="px-4 py-3 flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-slate-900 truncate">{r.category || "—"}</p>
+                      <p className="text-xs text-slate-500 mt-0.5 truncate">
+                        {r.buildingName || "—"}{r.unitNumber ? ` / ${r.unitNumber}` : ""}
+                      </p>
+                    </div>
+                    <StatusBadge status={r.status} />
+                  </div>
+                ))}
+              </div>
+              {/* Desktop: table */}
+              <div className="hidden sm:block rounded-lg border border-slate-200 bg-white overflow-hidden">
                 <table className="inline-table">
                   <thead>
                     <tr>
-                      <th className="hidden sm:table-cell">#</th>
+                      <th>#</th>
                       <th>Category</th>
-                      <th className="hidden sm:table-cell">Building / Unit</th>
+                      <th>Building / Unit</th>
                       <th>Status</th>
-                      <th className="hidden sm:table-cell text-right">Est. Cost</th>
-                      <th className="hidden sm:table-cell">Contractor</th>
-                      <th className="hidden sm:table-cell">Created</th>
+                      <th className="text-right">Est. Cost</th>
+                      <th>Contractor</th>
+                      <th>Created</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredRequests.map((r) => (
                       <tr key={r.id}>
-                        <td className="hidden sm:table-cell font-medium text-slate-900">
+                        <td className="font-medium text-slate-900">
                           {r.requestNumber ? `#${r.requestNumber}` : "—"}
                         </td>
                         <td className="text-sm text-slate-700">{r.category || "—"}</td>
-                        <td className="hidden sm:table-cell text-sm text-slate-700">
+                        <td className="text-sm text-slate-700">
                           {r.buildingName || "—"}
                           {r.unitNumber && (
                             <span className="text-slate-400"> / {r.unitNumber}</span>
@@ -212,13 +227,13 @@ export default function OwnerWorkRequestsPage() {
                         <td>
                           <StatusBadge status={r.status} />
                         </td>
-                        <td className="hidden sm:table-cell text-right text-sm font-mono text-slate-700">
+                        <td className="text-right text-sm font-mono text-slate-700">
                           {formatCurrency(r.estimatedCost)}
                         </td>
-                        <td className="hidden sm:table-cell text-sm text-slate-600">
+                        <td className="text-sm text-slate-600">
                           {r.assignedContractorName || "—"}
                         </td>
-                        <td className="hidden sm:table-cell text-sm text-slate-500">{formatDate(r.createdAt)}</td>
+                        <td className="text-sm text-slate-500">{formatDate(r.createdAt)}</td>
                       </tr>
                     ))}
                   </tbody>

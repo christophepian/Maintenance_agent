@@ -335,29 +335,47 @@ function RfpsTab() {
         <>
           {pendingApproval.length > 0 && (
             <Panel title={`Awaiting Your Approval (${pendingApproval.length})`} bodyClassName="p-0">
-              <table className="inline-table">
+              {/* Mobile: card list */}
+              <div className="sm:hidden divide-y divide-slate-100">
+                {pendingApproval.map((r) => (
+                  <div key={r.id} className="px-4 py-3 flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-slate-900 truncate">{r.category || "—"}</p>
+                      <p className="text-xs text-slate-500 mt-0.5">{r.building?.name || "—"}</p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <RfpStatusPill status={r.status} />
+                      <Link href={`/owner/rfps/${r.id}`} className="cell-link text-sm font-medium">
+                        Review →
+                      </Link>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {/* Desktop: table */}
+              <table className="hidden sm:table inline-table">
                 <thead>
                   <tr>
-                    <th className="hidden sm:table-cell">RFP</th>
+                    <th>RFP</th>
                     <th>Category</th>
-                    <th className="hidden sm:table-cell">Building</th>
-                    <th className="hidden sm:table-cell">Urgency</th>
-                    <th className="hidden sm:table-cell">Quotes</th>
+                    <th>Building</th>
+                    <th>Urgency</th>
+                    <th>Quotes</th>
                     <th>Status</th>
-                    <th className="hidden sm:table-cell">Created</th>
+                    <th>Created</th>
                     <th></th>
                   </tr>
                 </thead>
                 <tbody>
                   {pendingApproval.map((r) => (
                     <tr key={r.id}>
-                      <td className="hidden sm:table-cell font-mono text-xs">{r.id?.slice(0, 8)}</td>
+                      <td className="font-mono text-xs">{r.id?.slice(0, 8)}</td>
                       <td>{r.category || "—"}</td>
-                      <td className="hidden sm:table-cell">{r.building?.name || "—"}</td>
-                      <td className="hidden sm:table-cell"><UrgencyPill urgency={r.request?.urgency} /></td>
-                      <td className="hidden sm:table-cell">{r.quoteCount ?? r.quotes?.length ?? 0}</td>
+                      <td>{r.building?.name || "—"}</td>
+                      <td><UrgencyPill urgency={r.request?.urgency} /></td>
+                      <td>{r.quoteCount ?? r.quotes?.length ?? 0}</td>
                       <td><RfpStatusPill status={r.status} /></td>
-                      <td className="hidden sm:table-cell">{formatDate(r.createdAt)}</td>
+                      <td>{formatDate(r.createdAt)}</td>
                       <td>
                         <Link href={`/owner/rfps/${r.id}`} className="cell-link text-sm font-medium">
                           Review →
@@ -372,38 +390,58 @@ function RfpsTab() {
 
           <Panel title={`All RFPs (${filtered.length})`} bodyClassName="p-0">
             {filtered.length > 0 ? (
-              <table className="inline-table">
-                <thead>
-                  <tr>
-                    <th className="hidden sm:table-cell">RFP</th>
-                    <th>Category</th>
-                    <th className="hidden sm:table-cell">Building</th>
-                    <th className="hidden sm:table-cell">Urgency</th>
-                    <th className="hidden sm:table-cell">Quotes</th>
-                    <th>Status</th>
-                    <th className="hidden sm:table-cell">Created</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
+              <>
+                {/* Mobile: card list */}
+                <div className="sm:hidden divide-y divide-slate-100">
                   {filtered.map((r) => (
-                    <tr key={r.id}>
-                      <td className="hidden sm:table-cell font-mono text-xs">{r.id?.slice(0, 8)}</td>
-                      <td>{r.category || "—"}</td>
-                      <td className="hidden sm:table-cell">{r.building?.name || "—"}</td>
-                      <td className="hidden sm:table-cell"><UrgencyPill urgency={r.request?.urgency} /></td>
-                      <td className="hidden sm:table-cell">{r.quoteCount ?? r.quotes?.length ?? 0}</td>
-                      <td><RfpStatusPill status={r.status} /></td>
-                      <td className="hidden sm:table-cell">{formatDate(r.createdAt)}</td>
-                      <td>
+                    <div key={r.id} className="px-4 py-3 flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-slate-900 truncate">{r.category || "—"}</p>
+                        <p className="text-xs text-slate-500 mt-0.5">{r.building?.name || "—"}</p>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <RfpStatusPill status={r.status} />
                         <Link href={`/owner/rfps/${r.id}`} className="cell-link text-sm font-medium">
                           View →
                         </Link>
-                      </td>
-                    </tr>
+                      </div>
+                    </div>
                   ))}
-                </tbody>
-              </table>
+                </div>
+                {/* Desktop: table */}
+                <table className="hidden sm:table inline-table">
+                  <thead>
+                    <tr>
+                      <th>RFP</th>
+                      <th>Category</th>
+                      <th>Building</th>
+                      <th>Urgency</th>
+                      <th>Quotes</th>
+                      <th>Status</th>
+                      <th>Created</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filtered.map((r) => (
+                      <tr key={r.id}>
+                        <td className="font-mono text-xs">{r.id?.slice(0, 8)}</td>
+                        <td>{r.category || "—"}</td>
+                        <td>{r.building?.name || "—"}</td>
+                        <td><UrgencyPill urgency={r.request?.urgency} /></td>
+                        <td>{r.quoteCount ?? r.quotes?.length ?? 0}</td>
+                        <td><RfpStatusPill status={r.status} /></td>
+                        <td>{formatDate(r.createdAt)}</td>
+                        <td>
+                          <Link href={`/owner/rfps/${r.id}`} className="cell-link text-sm font-medium">
+                            View →
+                          </Link>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </>
             ) : (
               <p className="px-4 py-8 text-center text-sm text-slate-400">
                 {rfps.length === 0 ? "No RFPs found." : "No results match the current filters."}

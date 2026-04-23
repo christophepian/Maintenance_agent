@@ -939,48 +939,63 @@ export default function UnitDetail() {
           ) : unitInvoices.length === 0 ? (
             <div className="empty-state-text py-6 text-center italic">No invoices linked to this unit.</div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="data-table w-full text-sm">
-                <thead>
-                  <tr>
-                    <th className="text-left px-3 py-2">Status</th>
-                    <th className="text-left px-3 py-2">Invoice #</th>
-                    <th className="text-left px-3 py-2">Description</th>
-                    <th className="text-right px-3 py-2">Amount</th>
-                    <th className="text-left px-3 py-2">Period</th>
-                    <th className="text-left px-3 py-2">Due Date</th>
-                    <th className="text-left px-3 py-2">Created</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {unitInvoices.map((inv) => (
-                    <tr key={inv.id} className="border-t border-slate-100 hover:bg-slate-50">
-                      <td className="px-3 py-2">
-                        <Badge variant={invoiceVariant(inv.status)}>{inv.status}</Badge>
-                      </td>
-                      <td className="px-3 py-2">
-                        {isOwner ? (
-                          <span>{inv.invoiceNumber || "—"}</span>
-                        ) : (
-                          <Link href={`/manager/finance/invoices/${inv.id}`} className="text-blue-600 hover:underline">
-                            {inv.invoiceNumber || "—"}
-                          </Link>
-                        )}
-                      </td>
-                      <td className="px-3 py-2 max-w-[200px] truncate">{inv.description || "—"}</td>
-                      <td className="px-3 py-2 text-right font-medium">{formatChf(inv.totalAmount)}</td>
-                      <td className="px-3 py-2 whitespace-nowrap">
-                        {inv.billingPeriodStart && inv.billingPeriodEnd
-                          ? `${formatDate(inv.billingPeriodStart)} – ${formatDate(inv.billingPeriodEnd)}`
-                          : "—"}
-                      </td>
-                      <td className="px-3 py-2 whitespace-nowrap">{inv.dueDate ? formatDate(inv.dueDate) : "—"}</td>
-                      <td className="px-3 py-2 whitespace-nowrap">{formatDate(inv.createdAt)}</td>
+            <>
+              {/* Mobile: card list */}
+              <div className="sm:hidden space-y-2">
+                {unitInvoices.map((inv) => (
+                  <div key={inv.id} className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 flex items-center justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-slate-900 truncate">{inv.invoiceNumber || "Draft"}</p>
+                      <p className="text-xs text-slate-500 mt-0.5">{formatChf(inv.totalAmount)}</p>
+                    </div>
+                    <Badge variant={invoiceVariant(inv.status)}>{inv.status}</Badge>
+                  </div>
+                ))}
+              </div>
+              {/* Desktop: table */}
+              <div className="hidden sm:block overflow-x-auto">
+                <table className="data-table w-full text-sm">
+                  <thead>
+                    <tr>
+                      <th className="text-left px-3 py-2">Status</th>
+                      <th className="text-left px-3 py-2">Invoice #</th>
+                      <th className="text-left px-3 py-2">Description</th>
+                      <th className="text-right px-3 py-2">Amount</th>
+                      <th className="text-left px-3 py-2">Period</th>
+                      <th className="text-left px-3 py-2">Due Date</th>
+                      <th className="text-left px-3 py-2">Created</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {unitInvoices.map((inv) => (
+                      <tr key={inv.id} className="border-t border-slate-100 hover:bg-slate-50">
+                        <td className="px-3 py-2">
+                          <Badge variant={invoiceVariant(inv.status)}>{inv.status}</Badge>
+                        </td>
+                        <td className="px-3 py-2">
+                          {isOwner ? (
+                            <span>{inv.invoiceNumber || "—"}</span>
+                          ) : (
+                            <Link href={`/manager/finance/invoices/${inv.id}`} className="text-blue-600 hover:underline">
+                              {inv.invoiceNumber || "—"}
+                            </Link>
+                          )}
+                        </td>
+                        <td className="px-3 py-2 max-w-[200px] truncate">{inv.description || "—"}</td>
+                        <td className="px-3 py-2 text-right font-medium">{formatChf(inv.totalAmount)}</td>
+                        <td className="px-3 py-2 whitespace-nowrap">
+                          {inv.billingPeriodStart && inv.billingPeriodEnd
+                            ? `${formatDate(inv.billingPeriodStart)} – ${formatDate(inv.billingPeriodEnd)}`
+                            : "—"}
+                        </td>
+                        <td className="px-3 py-2 whitespace-nowrap">{inv.dueDate ? formatDate(inv.dueDate) : "—"}</td>
+                        <td className="px-3 py-2 whitespace-nowrap">{formatDate(inv.createdAt)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </Panel>
           )}
@@ -992,46 +1007,63 @@ export default function UnitDetail() {
           ) : unitLeases.length === 0 ? (
             <div className="empty-state-text py-6 text-center italic">No leases found for this unit.</div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="data-table w-full text-sm">
-                <thead>
-                  <tr>
-                    <th className="text-left px-3 py-2">Status</th>
-                    <th className="text-left px-3 py-2">Tenant</th>
-                    <th className="text-right px-3 py-2">Net Rent</th>
-                    <th className="text-right px-3 py-2">Total</th>
-                    <th className="text-left px-3 py-2">Start</th>
-                    <th className="text-left px-3 py-2">End</th>
-                    <th className="text-left px-3 py-2">Notice</th>
-                    <th className="text-left px-3 py-2">Created</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {unitLeases.map((lease) => (
-                    <tr key={lease.id} className="border-t border-slate-100 hover:bg-slate-50">
-                      <td className="px-3 py-2">
-                        <Badge variant={leaseVariant(lease.status)}>{lease.status}</Badge>
-                      </td>
-                      <td className="px-3 py-2">
-                        {isOwner ? (
-                          <span>{lease.tenantName || "—"}</span>
-                        ) : (
-                          <Link href={`/manager/leases/${lease.id}`} className="text-blue-600 hover:underline">
-                            {lease.tenantName || "—"}
-                          </Link>
-                        )}
-                      </td>
-                      <td className="px-3 py-2 text-right font-medium">{formatChf(lease.netRentChf)}</td>
-                      <td className="px-3 py-2 text-right">{lease.rentTotalChf != null ? formatChf(lease.rentTotalChf) : "—"}</td>
-                      <td className="px-3 py-2 whitespace-nowrap">{formatDate(lease.startDate)}</td>
-                      <td className="px-3 py-2 whitespace-nowrap">{lease.endDate ? formatDate(lease.endDate) : "Open-ended"}</td>
-                      <td className="px-3 py-2 whitespace-nowrap">{lease.noticeRule || "—"}</td>
-                      <td className="px-3 py-2 whitespace-nowrap">{formatDate(lease.createdAt)}</td>
+            <>
+              {/* Mobile: card list */}
+              <div className="sm:hidden space-y-2">
+                {unitLeases.map((lease) => (
+                  <div key={lease.id} className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 flex items-center justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-slate-900 truncate">{lease.tenantName || "—"}</p>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        {formatDate(lease.startDate)} · {formatChf(lease.netRentChf)}/mo
+                      </p>
+                    </div>
+                    <Badge variant={leaseVariant(lease.status)}>{lease.status}</Badge>
+                  </div>
+                ))}
+              </div>
+              {/* Desktop: table */}
+              <div className="hidden sm:block overflow-x-auto">
+                <table className="data-table w-full text-sm">
+                  <thead>
+                    <tr>
+                      <th className="text-left px-3 py-2">Status</th>
+                      <th className="text-left px-3 py-2">Tenant</th>
+                      <th className="text-right px-3 py-2">Net Rent</th>
+                      <th className="text-right px-3 py-2">Total</th>
+                      <th className="text-left px-3 py-2">Start</th>
+                      <th className="text-left px-3 py-2">End</th>
+                      <th className="text-left px-3 py-2">Notice</th>
+                      <th className="text-left px-3 py-2">Created</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {unitLeases.map((lease) => (
+                      <tr key={lease.id} className="border-t border-slate-100 hover:bg-slate-50">
+                        <td className="px-3 py-2">
+                          <Badge variant={leaseVariant(lease.status)}>{lease.status}</Badge>
+                        </td>
+                        <td className="px-3 py-2">
+                          {isOwner ? (
+                            <span>{lease.tenantName || "—"}</span>
+                          ) : (
+                            <Link href={`/manager/leases/${lease.id}`} className="text-blue-600 hover:underline">
+                              {lease.tenantName || "—"}
+                            </Link>
+                          )}
+                        </td>
+                        <td className="px-3 py-2 text-right font-medium">{formatChf(lease.netRentChf)}</td>
+                        <td className="px-3 py-2 text-right">{lease.rentTotalChf != null ? formatChf(lease.rentTotalChf) : "—"}</td>
+                        <td className="px-3 py-2 whitespace-nowrap">{formatDate(lease.startDate)}</td>
+                        <td className="px-3 py-2 whitespace-nowrap">{lease.endDate ? formatDate(lease.endDate) : "Open-ended"}</td>
+                        <td className="px-3 py-2 whitespace-nowrap">{lease.noticeRule || "—"}</td>
+                        <td className="px-3 py-2 whitespace-nowrap">{formatDate(lease.createdAt)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </Panel>
           )}

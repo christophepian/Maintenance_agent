@@ -929,15 +929,25 @@ export default function BuildingDetail() {
           {activeTab === "Tenants" && (
             <Panel title="Tenants">
               {building?.tenants && building.tenants.length > 0 ? (
-                <table className="inline-table">
+                {/* Mobile: card list */}
+                <div className="sm:hidden space-y-2">
+                  {building.tenants.map((t, idx) => (
+                    <div key={t.tenantId || idx} className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5">
+                      <p className="text-sm font-medium text-slate-900">{t.name}</p>
+                      <p className="text-xs text-slate-500 mt-0.5">Unit {t.unitNumber}{t.phone ? ` · ${t.phone}` : ""}</p>
+                    </div>
+                  ))}
+                </div>
+                {/* Desktop: table */}
+                <table className="hidden sm:table inline-table">
                   <thead>
                     <tr>
                       <th className="py-2 font-medium text-slate-600">Name</th>
                       <th className="py-2 font-medium text-slate-600">Unit</th>
-                      <th className="hidden sm:table-cell py-2 font-medium text-slate-600">Phone</th>
-                      <th className="hidden sm:table-cell py-2 font-medium text-slate-600">Email</th>
-                      <th className="hidden sm:table-cell py-2 font-medium text-slate-600">Move-in</th>
-                      <th className="hidden sm:table-cell py-2 font-medium text-slate-600">Source</th>
+                      <th className="py-2 font-medium text-slate-600">Phone</th>
+                      <th className="py-2 font-medium text-slate-600">Email</th>
+                      <th className="py-2 font-medium text-slate-600">Move-in</th>
+                      <th className="py-2 font-medium text-slate-600">Source</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -952,10 +962,10 @@ export default function BuildingDetail() {
                         <tr key={t.tenantId || idx} className="border-b border-slate-100">
                           <td className="py-2 text-slate-900 font-medium">{t.name}</td>
                           <td className="py-2 text-slate-700">{t.unitNumber}</td>
-                          <td className="hidden sm:table-cell py-2 text-slate-700">{t.phone || "—"}</td>
-                          <td className="hidden sm:table-cell py-2 text-slate-700">{t.email || "—"}</td>
-                          <td className="hidden sm:table-cell py-2 text-slate-700">{t.moveInDate ? displayDate(t.moveInDate) : "—"}</td>
-                          <td className="hidden sm:table-cell py-2">
+                          <td className="py-2 text-slate-700">{t.phone || "—"}</td>
+                          <td className="py-2 text-slate-700">{t.email || "—"}</td>
+                          <td className="py-2 text-slate-700">{t.moveInDate ? displayDate(t.moveInDate) : "—"}</td>
+                          <td className="py-2">
                             <Badge variant={badgeVariant} size="sm">
                               {t.source === "BOTH" ? "Both" : t.source === "LEASE" ? "Lease" : "Directory"}
                             </Badge>
