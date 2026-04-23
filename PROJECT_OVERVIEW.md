@@ -290,6 +290,9 @@ npx prisma migrate diff \
 - Create icon-only `<button>` without `aria-label`
 - Add `<input>` / `<select>` without an associated `<label>`, `aria-label`, or `placeholder`
 - Introduce horizontal scroll on any page — viewport width is the hard max. `html, body` enforce `overflow-x: hidden` globally; use `min-w-0`, `truncate`, or responsive grids for wide content
+- Render a `<table>` or `ConfigurableTable` without a mobile card-list alternative — use the dual-render pattern (`sm:hidden` card list + `hidden sm:block` table) so mobile users never need to scroll horizontally (F-UI9)
+- Use a bare `<div className="tab-strip">` — always use `<ScrollableTabs activeIndex={...}>` so overflow tabs collapse into a "More" bottom sheet instead of clipping (F-UI11)
+- Hardcode `role="MANAGER"` in a shared page — read `role` from `router.query` and derive `isOwner` to scope AppShell, tabs, edit controls, and internal links (F-UI10)
 
 ---
 

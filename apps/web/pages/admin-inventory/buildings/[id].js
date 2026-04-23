@@ -11,6 +11,7 @@ import UndoToast, { useUndoToast } from "../../../components/ui/UndoToast";
 import Badge from "../../../components/ui/Badge";
 import AssetInventoryPanel from "../../../components/AssetInventoryPanel";
 import { authHeaders } from "../../../lib/api";
+import ScrollableTabs from "../../../components/mobile/ScrollableTabs";
 
 import { formatDate } from "../../../lib/format";
 import { cn } from "../../../lib/utils";
@@ -489,21 +490,25 @@ export default function BuildingDetail() {
           )}
 
           {/* Tabs Navigation */}
-          <div className="tab-strip">
-            {(isOwner
+          {(() => {
+            const tabs = isOwner
               ? ["Building information", "Units", "Tenants", "Assets"]
-              : ["Building information", "Units", "Tenants", "Assets", "Documents", "Policies", "Financials"]
-            ).map((tab) => (
-              <button
-                key={tab}
-                type="button"
-                className={activeTab === tab ? "tab-btn-active" : "tab-btn"}
-                onClick={() => setActiveTab(tab)}
-              >
-                {tab}
-              </button>
-            ))}
-          </div>
+              : ["Building information", "Units", "Tenants", "Assets", "Documents", "Policies", "Financials"];
+            return (
+              <ScrollableTabs activeIndex={tabs.indexOf(activeTab)}>
+                {tabs.map((tab) => (
+                  <button
+                    key={tab}
+                    type="button"
+                    className={activeTab === tab ? "tab-btn-active" : "tab-btn"}
+                    onClick={() => setActiveTab(tab)}
+                  >
+                    {tab}
+                  </button>
+                ))}
+              </ScrollableTabs>
+            );
+          })()}
 
           {/* Building information tab */}
           {activeTab === "Building information" && (

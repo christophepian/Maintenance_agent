@@ -320,7 +320,7 @@ To add a new status domain: add a mapper function to `statusVariants.js`. Never 
 
 #### F-UI4b: Accessibility Baseline
 
-- **No horizontal scroll** — `html, body` have `overflow-x: hidden` in `globals.css`; `<main>` in `AppShell.js` uses `min-w-0 overflow-x-hidden`. No page may exceed viewport width. Use `min-w-0`, `overflow-hidden`, `truncate`, or responsive grids to contain wide content.
+- **No horizontal scroll** — `html, body` have `overflow-x: hidden` in `globals.css`; `<main>` in `AppShell.js` uses `min-w-0 overflow-x-hidden`. No page may exceed viewport width. Use `min-w-0`, `overflow-hidden`, `truncate`, or responsive grids to contain wide content. **For tables specifically, use the dual-render pattern (F-UI9) — never add `overflow-x-auto` hoping mobile users will scroll.**
 - **Skip-to-content link** — in `AppShell.js`, links to `#main-content`
 - **`<nav aria-label="...">`** on all 4 sidebars (Manager/Owner/Contractor/Tenant)
 - **`<aside aria-label="Sidebar navigation">`** in `AppShell.js`
@@ -357,6 +357,87 @@ All user-visible text — UI labels, button text, status names, seed data (expen
 - Database content created via seed scripts, manual inserts, or admin forms must be English.
 - Do not add German, French, or any other language strings anywhere in the codebase or seed data.
 - Multilingual / i18n translation support will be implemented as a dedicated future epic. Until then, English is the single source language.
+
+#### F-UI9: Mobile Table Pattern — Dual-Render (No Horizontal Scroll)
+
+Tables must never be the mobile experience. The canonical approach is a **CSS dual-render**
+written inline at the page or component level:
+
+```jsx
+<Panel bodyClassName="p-0">
+  {/* Mobile: card list — shows 2–4 essential fields */}
+  <div className="sm:hidden divide-y divide-slate-100">
+    {rows.map((row) => (
+      <div key={row.id} className="px-4 py-3 flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-medium text-slate-900 truncate">{row.primary}</p>
+          <p className="text-xs text-slate-500 mt-0.5">{row.secondary}</p>
+        </div>
+        <StatusBadge status={row.status} />
+      </div>
+    ))}
+  </div>
+  {/* Desktop: full table */}
+  <div className="hidden sm:block">
+    <table className="inline-table">…</table>
+  </div>
+</Panel>
+```
+
+**Rules:**
+- `sm:hidden` on the card list div; `hidden sm:block` (or `hidden sm:table`) on the table.
+- Never use `overflow-x-auto` on a table as a mobile strategy.
+- `ConfigurableTable` has its own internal `overflow-x-auto` — bypass it entirely on mobile
+  by wrapping it in `hidden sm:block` and writing a separate mobile card list.
+- Always include the status badge and primary identifier in the mobile card. Never omit fields
+  entirely — reorganise or abbreviate instead.
+- No shared `MobileCardList` component or `useIsMobile()` hook needed — pure CSS is simpler
+  and avoids hydration concerns.
+
+**Completed pages (as of 2026-04-23):**
+`VacanciesPanel.js`, `owner/properties.js`, `owner/work-requests.js`, `owner/approvals.js`,
+`admin-inventory/buildings/[id].js` (Tenants tab), `admin-inventory/units/[id].js` (Invoices + Contracts tabs).
+
+#### F-UI10: Role-Aware Shared Pages — Owner Surface Routing Isolation
+
+When a page is shared between owner and manager surfaces (e.g. `admin-inventory/buildings/[id].js`),
+propagate `?role=owner` through the URL chain and scope the page at every decision point.
+
+```jsx
+// Caller
+router.push(`/admin-inventory/buildings/${id}?from=/owner/properties&role=owner`)
+
+// Shared page
+const { id, from, role } = router.query;
+const isOwner = role === "owner";
+
+<AppShell role={isOwner ? "OWNER" : "MANAGER"}>
+```
+
+Scope checklist for any shared page with `isOwner`:
+- [ ] `AppShell role` — owner nav, not manager nav
+- [ ] Tab list — owner sees a subset; manager-only tabs are excluded
+- [ ] Edit/create/delete controls — gated with `!isOwner`
+- [ ] Internal links (tenant names, invoice #, "Go to Leases") — plain `<span>` when `isOwner`
+- [ ] Back navigation — returns to owner route, not manager route
+- [ ] Child page links — append `?role=owner` so the chain continues (e.g. unit links from building page)
+
+**Implemented pages:** `admin-inventory/buildings/[id].js`, `admin-inventory/units/[id].js`.
+
+#### F-UI11: Tab Strip Overflow — ScrollableTabs "More" Pattern
+
+All tab strips must use `<ScrollableTabs activeIndex={...}>` — never a bare `<div className="tab-strip">`.
+
+When tabs overflow the container width, `ScrollableTabs` automatically shows a **"More ▾"**
+button in the last visible slot. Tapping it opens a `BottomSheet` listing the hidden tabs.
+The active tab is always promoted to the visible set — it is never hidden behind "More".
+
+This behaviour is entirely internal to `ScrollableTabs`. Callers only need the same props
+as before: `children` (tab buttons), `activeIndex`, optional `className`.
+
+**Do not:**
+- Use a bare `<div className="tab-strip">` — it will scroll horizontally on mobile without the overflow promotion logic.
+- Hardcode a subset of tabs for mobile — let `ScrollableTabs` compute the split dynamically.
 
 #### F-UI8: Shared Hooks & Presentational Components — Use Before Writing Custom Code
 
@@ -619,6 +700,7 @@ PORT=3001
 | Comprehensive Audit Remediation | 2026-03-31 | 46 findings resolved (CQ/SA/TC/SI/DOC); route→service extraction; 7 new test files |
 | Recurring Invoices (6 slices) | 2026-04-03 | RecurringBillingSchedule, ChargeReconciliation, RentAdjustment, ContractorBillingSchedule; 5 new models, added enum + migration support, 4 route modules, 4 repos, 10 frontend pages |
 | Strategy Engine & Capture Hardening | 2026-04-16 | 3-phase strategy engine (56 tests): StrategyProfile + BuildingProfile models, 5 archetypes, 6 scoring dimensions, decision scoring, cashflow strategyOverlay; capture flow fixes (auth bypass, QR LAN IP, ECONNREFUSED detection); Azure OCR activation; invoice source-file serving + original image display |
+| Mobile Responsive — Owner Surface | 2026-04-23 | Dual-render table pattern (F-UI9) applied to 6 files; role-aware shared page routing (F-UI10) on buildings/[id] + units/[id]; ScrollableTabs upgraded with "More" overflow bottom sheet (F-UI11); dev server bound to 0.0.0.0 for phone testing; test protocol + responsive scope doc updated |
 
 ---
 

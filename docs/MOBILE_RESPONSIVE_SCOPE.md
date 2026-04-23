@@ -3,6 +3,11 @@
 > **v1 — 2026-04-16.** Initial scope based on full codebase audit of `apps/web`. Covers
 > all pattern replacements, new shared components, per-page work, and phased delivery plan.
 >
+> **v2 — 2026-04-23.** Updated to reflect session work: dual-render pattern canonicalised
+> as the table mobile strategy (replaces MobileCardList + useIsMobile approach for tables);
+> ScrollableTabs upgraded with "More" overflow pattern; role-aware shared page routing added;
+> completed pages noted per §6; §3.5 and §3.4 updated.
+>
 > See §10 (Implementation phases) and §11 (Acceptance criteria) — read those first if you
 > are deciding whether/when to start.
 
@@ -186,39 +191,111 @@ interface BottomSheetProps {
 }
 ```
 
-### 3.4 `MobileCardList` — replaces all data tables on mobile
+### 3.4 Mobile card list — canonical dual-render pattern
 
-Renders a vertically stacked list of cards, one per data row. Each card shows a curated
-subset of columns (defined per-usage via `renderCard` prop). A "View details" tap expands
-the card inline or navigates to the detail page.
+**Implementation approach (confirmed 2026-04-23):** The canonical mobile table strategy is
+a **CSS dual-render** written inline at the page level — not a shared `MobileCardList`
+component with `useIsMobile()`. The dual-render avoids hydration concerns, is simpler, and
+requires no new abstraction.
 
-```
-apps/web/components/mobile/MobileCardList.jsx
+**Pattern:**
+```jsx
+<Panel bodyClassName="p-0">
+  {/* Mobile: card list */}
+  <div className="sm:hidden divide-y divide-slate-100">
+    {rows.map((row) => (
+      <div key={row.id} className="px-4 py-3 flex items-start justify-between gap-3">
+        {/* 2–4 most essential fields */}
+      </div>
+    ))}
+  </div>
+  {/* Desktop: table */}
+  <div className="hidden sm:block">
+    <table className="inline-table">…</table>
+  </div>
+</Panel>
 ```
 
-Props:
-```ts
-interface MobileCardListProps<T> {
-  data: T[];
-  renderCard: (row: T) => ReactNode;       // what to show in collapsed card
-  renderExpanded?: (row: T) => ReactNode;  // inline expansion; if omitted, no expansion
-  onRowClick?: (row: T) => void;           // navigate to detail page
-  keyExtractor: (row: T) => string;
-  emptyState?: ReactNode;
-  pagination?: ReactNode;                  // pass existing PaginationControls
-}
+Or for a clickable card list navigating to a detail page:
+```jsx
+<div className="sm:hidden divide-y divide-slate-100">
+  {rows.map((row) => (
+    <button key={row.id} type="button"
+      onClick={() => router.push(`/path/${row.id}`)}
+      className="w-full px-4 py-3 text-left flex items-center justify-between gap-3 hover:bg-slate-50"
+    >
+      …
+    </button>
+  ))}
+</div>
+<div className="hidden sm:block">
+  <ConfigurableTable … />
+</div>
 ```
+
+**Rules:**
+- Mobile shows 2–4 essential fields. Never omit the status badge or primary identifier.
+- Desktop gets the full table — ConfigurableTable, DataTable, or `<table className="inline-table">`.
+- Never add `overflow-x-auto` to a table hoping mobile users will scroll. Use dual-render.
+- `ConfigurableTable` wraps its own `overflow-x-auto` internally; bypass it on mobile by
+  not rendering it at all (`hidden sm:block` wrapper around ConfigurableTable).
+
+**Completed pages (dual-render applied):**
+- `apps/web/components/VacanciesPanel.js` — both vacancies table and awaiting-signature table
+- `apps/web/pages/owner/properties.js` — buildings table (bypasses ConfigurableTable on mobile)
+- `apps/web/pages/owner/work-requests.js` — request table
+- `apps/web/pages/owner/approvals.js` — RFP pending + history tables
+- `apps/web/pages/admin-inventory/buildings/[id].js` — Tenants tab
+- `apps/web/pages/admin-inventory/units/[id].js` — Invoices tab + Contracts tab
+
+**Deferred (still needing dual-render):**
+- `pages/manager/requests.js` (highest priority — 10+ column table)
+- `pages/manager/inventory.js`
+- `pages/manager/finance/*`
+- `pages/manager/settings.js`
 
 ### 3.5 `ScrollableTabs` — replaces fixed tab strips on mobile
 
-Wraps the existing `.tab-strip` pattern in a horizontally scrollable container with
-`overflow-x-auto scrollbar-none`. Active tab is scrolled into view on mount and on change.
-On desktop this component is a transparent pass-through — same visual output as the
-current implementation.
+**Status: implemented and upgraded (2026-04-23).**
+
+Wraps the existing `.tab-strip` pattern. Active tab is scrolled into view on mount and on
+change. On desktop where all tabs fit, behaviour is identical to a plain `.tab-strip` div.
 
 ```
 apps/web/components/mobile/ScrollableTabs.jsx
 ```
+
+**"More" overflow pattern (added 2026-04-23):**
+
+When tabs collectively exceed the container width, `ScrollableTabs` automatically switches
+to an overflow mode — it does NOT scroll horizontally. Instead:
+
+1. A `ResizeObserver` tracks the container's available width.
+2. A hidden off-screen measurement row reads each tab's natural width via
+   `getBoundingClientRect()`.
+3. Tabs are greedily assigned left-to-right. The last visible slot is reserved for a
+   **"More ▾"** button (~80px) when overflow exists.
+4. If the currently active tab falls in the overflow set, it is **promoted** into the
+   visible set (the last visible tab is pushed to overflow instead).
+5. Tapping "More ▾" opens a `BottomSheet` listing all overflow tab labels as full-width
+   tappable rows. Selecting one fires the tab's `onClick` and closes the sheet.
+
+**Props — identical to original (drop-in replacement):**
+```ts
+interface ScrollableTabsProps {
+  children: ReactNode;    // <button> tab elements
+  activeIndex: number;    // 0-based index of active tab
+  className?: string;
+}
+```
+
+No callers need to change. Overflow detection is fully internal.
+
+**Pages using ScrollableTabs:**
+- `apps/web/pages/admin-inventory/buildings/[id].js` (4 tabs as owner / 7 tabs as manager)
+- `apps/web/pages/admin-inventory/units/[id].js` (7 tabs)
+- `apps/web/pages/owner/properties.js` (2 tabs — no overflow expected)
+- All other pages using `<ScrollableTabs>` — verify with grep
 
 ### 3.6 `AccordionSection` — collapsible content block for dashboards and reporting
 
@@ -240,6 +317,45 @@ interface AccordionSectionProps {
   children: ReactNode;
 }
 ```
+
+### 3.7 Role-aware shared pages — owner surface routing isolation
+
+**Added 2026-04-23.** Some detail pages are shared between manager and owner surface
+(e.g. `admin-inventory/buildings/[id].js`, `admin-inventory/units/[id].js`). Without
+scoping, an owner clicking through from `/owner/properties` would land on a page wrapped
+in `AppShell role="MANAGER"`, see manager-only tabs, and have internal links navigate to
+manager routes.
+
+**Pattern:** propagate `?role=owner` through the URL chain and read it at each shared page.
+
+```jsx
+// Caller (owner surface)
+router.push(`/admin-inventory/buildings/${b.id}?from=/owner/properties&role=owner`)
+
+// Shared page
+const { id, from, role } = router.query;
+const isOwner = role === "owner";
+
+// Scope: AppShell, tabs, edit controls, internal links, back navigation
+<AppShell role={isOwner ? "OWNER" : "MANAGER"}>
+
+const backHref = from || (isOwner ? "/owner/properties" : "/manager/inventory?tab=buildings");
+
+const tabs = isOwner
+  ? ["Building information", "Units", "Tenants", "Assets"]
+  : ["Building information", "Units", "Tenants", "Assets", "Documents", "Policies", "Financials"];
+
+// Unit links within the shared page
+href={`/admin-inventory/units/${u.id}${isOwner ? "?role=owner" : ""}`}
+```
+
+**Rules:**
+- Never hardcode `role="MANAGER"` in a shared page. Always derive from `router.query.role`.
+- Edit/create controls (`Edit` button, deactivate, add unit) must be gated with `!isOwner`.
+- Internal navigation links (tenant names, invoice #, lease links) must be plain `<span>`
+  when `isOwner` — owners must not be routed to manager routes.
+- The `?role=owner` param propagates transitively: building page → unit page.
+- Pages implementing this: `admin-inventory/buildings/[id].js`, `admin-inventory/units/[id].js`.
 
 ---
 
@@ -576,64 +692,67 @@ No new pages or API routes. No backend changes.
 > mobile pass (Phase 3+) is not possible without the navigation and shared components in place.
 > Phases 3–6 can be parallelised across roles once Phase 2 is complete.
 
-### Phase 1 — Foundation
+### Phase 1 — Foundation ✅ COMPLETE
 
-* `useIsMobile()` hook
-* `BottomSheet` component
-* `ScrollableTabs` component
-* `AccordionSection` component
-* Global CSS additions (§7)
-* Viewport meta tag verification
+* `BottomSheet` component ✅
+* `ScrollableTabs` component ✅ (upgraded 2026-04-23 with "More" overflow pattern)
+* `AccordionSection` component ✅
+* Global CSS additions (§7) ✅
+* `useIsMobile()` hook — **not implemented**; dual-render CSS pattern used instead (see §3.4)
 
-**Deliverable:** Shared primitives are in place. No visible change for users yet.
+**Deliverable:** Shared primitives are in place.
 
-### Phase 2 — Navigation
+### Phase 2 — Navigation ✅ COMPLETE
 
-* `BottomNav` component with items for all four roles
-* `NavDrawer` component for overflow items
-* `AppShell` wiring: `isMobile` → render `BottomNav`, suppress sidebar, add `pb-20`
-* `PageShell` bottom safe area padding
+* `BottomNav` component with items for all four roles ✅
+* `NavDrawer` component for overflow items ✅
+* `AppShell` wiring: renders `BottomNav` on mobile, suppresses sidebar, adds `pb-20` ✅
+* `PageShell` bottom safe area padding ✅
 
-**Deliverable:** Mobile users can navigate between all sections. This is the highest-impact
-change — nothing else matters if navigation is broken.
+**Deliverable:** Mobile users can navigate between all sections. ✅
 
 ### Phase 3 — Data tables (Manager role)
 
-* `MobileCardList` component
-* `pages/manager/requests.js` — card list + scrollable tabs + bottom sheet column config
-* `pages/manager/inventory.js` — card list per tab, nested depreciation table
-* Request detail page mobile layout (single-column, bottom sheet for documents)
+* ~~`MobileCardList` component~~ — not built; dual-render pattern used instead (§3.4)
+* `pages/manager/requests.js` — card list + scrollable tabs + bottom sheet column config ❌ pending
+* `pages/manager/inventory.js` — card list per tab, nested depreciation table ❌ pending
+* Request detail page mobile layout (single-column, bottom sheet for documents) ❌ pending
 
-**Deliverable:** The manager's two heaviest pages are fully usable on a phone.
+**Deliverable:** The manager's two heaviest pages are fully usable on a phone. ❌ not yet
 
 ### Phase 4 — Dashboards and reporting
 
-* `pages/manager/index.js` — swipeable KPI cards, scrollable action tabs
-* `pages/owner/index.js` — same pattern
-* `pages/owner/reporting.js` — accordion sections, preserved month strip
-* `pages/owner/strategy.js` — verify only; likely adequate
-* `pages/manager/settings.js` — scrollable tabs, card lists
+* `pages/manager/index.js` — swipeable KPI cards, scrollable action tabs ❌ pending
+* `pages/owner/index.js` — same pattern ❌ pending
+* `pages/owner/reporting.js` — accordion sections, preserved month strip ❌ pending
+* `pages/owner/strategy.js` — verify only; likely adequate ❌ pending
+* `pages/manager/settings.js` — scrollable tabs, card lists ❌ pending
 
-**Deliverable:** Dashboards and reporting are usable on mobile.
+**Deliverable:** Dashboards and reporting are usable on mobile. ❌ not yet
 
-### Phase 5 — Owner role data pages + apply wizard
+### Phase 5 — Owner role data pages ✅ PARTIALLY COMPLETE (2026-04-23)
 
-* `pages/owner/approvals.js`
-* `pages/owner/invoices.js`
-* `pages/owner/jobs.js`
-* `pages/apply.js` — document upload tap-to-browse, single-column form steps, signature pad
+* `pages/owner/approvals.js` — dual-render on both RFP tables ✅
+* `pages/owner/work-requests.js` — dual-render on request table ✅
+* `pages/owner/properties.js` — dual-render bypassing ConfigurableTable on mobile ✅
+* `components/VacanciesPanel.js` — dual-render on vacancies + awaiting-signature tables ✅
+* `admin-inventory/buildings/[id].js` — role-aware scoping + ScrollableTabs + Tenants dual-render ✅
+* `admin-inventory/units/[id].js` — role-aware scoping + ScrollableTabs + Invoices/Contracts dual-render ✅
+* `pages/owner/invoices.js` ❌ pending
+* `pages/owner/jobs.js` ❌ pending
+* `pages/apply.js` — document upload tap-to-browse, single-column form steps ❌ pending
 
-**Deliverable:** Owner-facing pages complete. Public rental application usable on phone.
+**Deliverable:** Core owner data pages done; invoices/jobs/apply still pending.
 
 ### Phase 6 — Finance and remaining pages
 
-* `pages/manager/finance/*` — all finance sub-pages
-* `pages/contractor/rfps.js` and related contractor pages
-* Tenant pages — verify and fix any remaining issues
-* Link-card global fix applied and verified across all pages
-* End-to-end pass on all roles at 390px
+* `pages/manager/finance/*` — all finance sub-pages ❌ pending
+* `pages/contractor/rfps.js` and related contractor pages ❌ pending
+* Tenant pages — verify and fix any remaining issues ❌ pending
+* Link-card global fix applied and verified across all pages ❌ pending
+* End-to-end pass on all roles at 390px ❌ pending
 
-**Deliverable:** All roles fully functional on mobile. Ready for QA.
+**Deliverable:** All roles fully functional on mobile. Ready for QA. ❌ not yet
 
 ---
 
