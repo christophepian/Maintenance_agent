@@ -11,6 +11,7 @@ import ScrollableTabs from "../../components/mobile/ScrollableTabs";
 import ErrorBanner from "../../components/ui/ErrorBanner";
 import { useTableSort, clientSort } from "../../lib/tableUtils";
 import { ownerAuthHeaders } from "../../lib/api";
+import { cn } from "../../lib/utils";
 
 const BUILDINGS_SORT_FIELDS = ["name", "address", "unitCount", "status", "canton"];
 
@@ -151,17 +152,44 @@ function BuildingsTab({ refreshKey }) {
           <p className="empty-state-text">No properties found.</p>
         </div>
       ) : (
-        <ConfigurableTable
-          tableId="owner-buildings"
-          columns={OWNER_BUILDING_COLUMNS}
-          data={sortedBuildings}
-          rowKey={(b) => b.id}
-          sortField={sortField}
-          sortDir={sortDir}
-          onSort={handleSort}
-          onRowClick={(b) => router.push(`/admin-inventory/buildings/${b.id}?from=/owner/properties&role=owner`)}
-          emptyState={<p className="text-sm text-slate-500">No properties found.</p>}
-        />
+        <>
+          {/* Mobile: card list */}
+          <div className="sm:hidden divide-y divide-slate-100">
+            {sortedBuildings.map((b) => (
+              <button
+                key={b.id}
+                type="button"
+                onClick={() => router.push(`/admin-inventory/buildings/${b.id}?from=/owner/properties&role=owner`)}
+                className="w-full px-4 py-3 text-left flex items-center justify-between gap-3 hover:bg-slate-50 transition-colors"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-slate-900 truncate">{b.name}</p>
+                  {b.address && <p className="text-xs text-slate-500 mt-0.5 truncate">{b.address}</p>}
+                </div>
+                <div className="shrink-0 flex items-center gap-2">
+                  {b.unitCount != null && <span className="text-xs text-slate-400">{b.unitCount} units</span>}
+                  <span className={cn("inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold", b.isActive === false ? "bg-slate-100 text-slate-500" : "bg-green-100 text-green-700")}>
+                    {b.isActive === false ? "Inactive" : "Active"}
+                  </span>
+                </div>
+              </button>
+            ))}
+          </div>
+          {/* Desktop: configurable table */}
+          <div className="hidden sm:block">
+            <ConfigurableTable
+              tableId="owner-buildings"
+              columns={OWNER_BUILDING_COLUMNS}
+              data={sortedBuildings}
+              rowKey={(b) => b.id}
+              sortField={sortField}
+              sortDir={sortDir}
+              onSort={handleSort}
+              onRowClick={(b) => router.push(`/admin-inventory/buildings/${b.id}?from=/owner/properties&role=owner`)}
+              emptyState={<p className="text-sm text-slate-500">No properties found.</p>}
+            />
+          </div>
+        </>
       )}
     </Panel>
   );

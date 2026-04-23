@@ -14,6 +14,7 @@ import Badge from "../../../components/ui/Badge";
 import { cn } from "../../../lib/utils";
 import { invoiceVariant, leaseVariant } from "../../../lib/statusVariants";
 import { formatChf, formatDate } from "../../../lib/format";
+import ScrollableTabs from "../../../components/mobile/ScrollableTabs";
 export default function UnitDetail() {
   const router = useRouter();
   const { id, role } = router.query;
@@ -405,7 +406,7 @@ export default function UnitDetail() {
             </div>
           )}
 
-          <div className="tab-strip overflow-x-auto">
+          <ScrollableTabs activeIndex={["Details", "Tenants", "Assets", "Rent Estimate", "Documents", "Invoices", "Contracts"].indexOf(activeTab)}>
             {["Details", "Tenants", "Assets", "Rent Estimate", "Documents", "Invoices", "Contracts"].map((tab) => (
               <button key={tab} type="button"
                 className={activeTab === tab ? "tab-btn-active" : "tab-btn"}
@@ -413,7 +414,7 @@ export default function UnitDetail() {
                 {tab}
               </button>
             ))}
-          </div>
+          </ScrollableTabs>
 
           {activeTab === "Details" && (
           <Panel title="Unit Details" actions={editMode ? (
@@ -533,7 +534,7 @@ export default function UnitDetail() {
         ) : (
           <div className="mb-4">
             {/* ── Pricing ── */}
-            <div className="grid grid-cols-3 gap-4 mb-4 p-4 bg-slate-50 rounded-lg border border-slate-200">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4 p-4 bg-slate-50 rounded-lg border border-slate-200">
               <div>
                 <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Net rent</div>
                 <div className="text-lg font-bold text-slate-900 mt-1">{unit?.monthlyRentChf != null ? `CHF ${unit.monthlyRentChf}.-` : "—"}</div>
