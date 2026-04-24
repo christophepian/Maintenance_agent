@@ -13,7 +13,8 @@ import { first, getIntParam, getEnumParam } from "../http/query";
 import { getAuthUser, maybeRequireManager, requireRole, requireAnyRole, requireAuth } from "../authz";
 import { withAuthRequired } from "../http/routeProtection";
 import { requireOwnerAccess, logEvent } from "./helpers";
-import { resolveAndScopeRequest, findRequestRaw, updateRequestUrgency, deleteAllRequests } from "../repositories/requestRepository";
+import { resolveAndScopeRequest, findRequestRaw, updateRequestUrgency, deleteAllRequests, updateRequestAsset } from "../repositories/requestRepository";
+import { findAssetById } from "../repositories/assetRepository";
 import { findContractorOrgId } from "../repositories/contractorRepository";
 import { UpdateRequestStatusSchema } from "../validation/requestStatus";
 import { AssignContractorSchema } from "../validation/requestAssignment";
@@ -251,15 +252,11 @@ export function registerRequestRoutes(router: Router) {
 
     // Verify asset belongs to same org (if linking)
     if (assetId) {
-      const asset = await prisma.asset.findFirst({ where: { id: assetId, orgId } });
+      const asset = await findAssetById(prisma, orgId, assetId);
       if (!asset) return sendError(res, 404, "NOT_FOUND", "Asset not found");
     }
 
-    const updated = await prisma.request.update({
-      where: { id: scopedReq.id },
-      data: { assetId },
-      select: { id: true, assetId: true },
-    });
+    const updated = await updateRequestAsset(prisma, scopedReq.id, assetId);
     sendJson(res, 200, { data: updated });
   });
 

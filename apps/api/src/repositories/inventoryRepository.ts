@@ -531,3 +531,41 @@ export async function findOrgOwnerById(
   });
   return user;
 }
+
+/**
+ * Fetch depreciation standards for asset-topic autocomplete.
+ * Optionally filtered by assetType.
+ */
+export async function findDepreciationTopicSuggestions(
+  prisma: PrismaClient,
+  assetType?: string,
+) {
+  const where: Record<string, unknown> = {};
+  if (assetType) where.assetType = assetType;
+  return prisma.depreciationStandard.findMany({
+    where,
+    select: { topic: true, assetType: true, usefulLifeMonths: true },
+    distinct: ["topic", "assetType"],
+    orderBy: { topic: "asc" },
+  });
+}
+
+/**
+ * Fetch distinct asset topics for an org, for asset-topic autocomplete.
+ * Optionally filtered by assetType (stored as `type` on Asset).
+ */
+export async function findAssetTopicSuggestions(
+  prisma: PrismaClient,
+  orgId: string,
+  assetType?: string,
+) {
+  const where: Record<string, unknown> = { orgId, isActive: true };
+  if (assetType) where.type = assetType;
+  return prisma.asset.findMany({
+    where,
+    select: { topic: true, type: true },
+    distinct: ["topic", "type"],
+    orderBy: { topic: "asc" },
+  });
+}
+

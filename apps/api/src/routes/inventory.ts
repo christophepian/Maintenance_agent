@@ -35,6 +35,8 @@ import { LinkTenantSchema } from "../validation/occupancies";
 import { normalizePhoneToE164 } from "../utils/phoneNormalization";
 import { normalizeTopicKey } from "../utils/topicKey";
 import * as inventoryRepo from "../repositories/inventoryRepository";
+import { findDepreciationTopicSuggestions, findAssetTopicSuggestions } from "../repositories/inventoryRepository";
+import { findUnlinkedJobsByUnit } from "../repositories/jobRepository";
 import { mapBuildingToDetailDTO } from "../dto/buildingDetail";
 import { mapUnitToListDTO } from "../dto/unitList";
 import { createBillingEntity } from "../services/billingEntities";
@@ -487,26 +489,12 @@ export function registerInventoryRoutes(router: Router) {
   router.get("/asset-topic-suggestions", withAuthRequired(async ({ res, orgId, prisma, query }) => {
     try {
       const assetType = first(query, "assetType") || undefined;
-      const where: any = {};
-      if (assetType) where.assetType = assetType;
 
       // Source 1: depreciation standards (canonical)
-      const standards = await prisma.depreciationStandard.findMany({
-        where,
-        select: { topic: true, assetType: true, usefulLifeMonths: true },
-        distinct: ["topic", "assetType"],
-        orderBy: { topic: "asc" },
-      });
+      const standards = await findDepreciationTopicSuggestions(prisma, assetType);
 
       // Source 2: existing asset topics in this org (may include user-created values)
-      const assetWhere: any = { orgId, isActive: true };
-      if (assetType) assetWhere.type = assetType;
-      const assets = await prisma.asset.findMany({
-        where: assetWhere,
-        select: { topic: true, type: true },
-        distinct: ["topic", "type"],
-        orderBy: { topic: "asc" },
-      });
+      const assets = await findAssetTopicSuggestions(prisma, orgId, assetType);
 
       // Merge + deduplicate by normalized topic key
       const seen = new Map<string, { topic: string; assetType: string; source: string; usefulLifeMonths: number | null }>();
@@ -549,31 +537,7 @@ export function registerInventoryRoutes(router: Router) {
   router.get("/units/:id/unlinked-jobs", withAuthRequired(async ({ res, orgId, params, prisma }) => {
     try {
       // Jobs are COMPLETED or INVOICED, request.assetId IS NULL
-      const jobs = await prisma.job.findMany({
-        where: {
-          orgId,
-          status: { in: ["COMPLETED", "INVOICED"] },
-          request: {
-            unitId: params.id,
-            assetId: null,
-          },
-        },
-        select: {
-          id: true,
-          status: true,
-          completedAt: true,
-          request: {
-            select: {
-              id: true,
-              requestNumber: true,
-              description: true,
-              category: true,
-            },
-          },
-        },
-        orderBy: { completedAt: "desc" },
-        take: 20,
-      });
+      const jobs = await findUnlinkedJobsByUnit(prisma, orgId, params.id);
       sendJson(res, 200, { data: jobs, total: jobs.length });
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to fetch unlinked jobs", String(e));

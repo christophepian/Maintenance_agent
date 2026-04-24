@@ -22,6 +22,7 @@ import {
 import {
   getOwnerProfileByOwnerId,
   getBuildingProfileByBuildingId,
+  findOwnerStrategyProfileById,
 } from "../repositories/strategyProfileRepository";
 import { addBuildingOwner, createBuilding } from "../repositories/inventoryRepository";
 import {
@@ -125,15 +126,7 @@ export function registerStrategyRoutes(router: Router) {
       return;
     }
 
-    const ownerProfile = await prisma.ownerStrategyProfile.findFirst({
-      where: {
-        id: body.ownerProfileId,
-        orgId,
-      },
-      select: {
-        ownerId: true,
-      },
-    });
+    const ownerProfile = await findOwnerStrategyProfileById(prisma, body.ownerProfileId, orgId);
     if (!ownerProfile) {
       sendError(res, 400, "BAD_REQUEST", "Owner strategy profile not found");
       return;

@@ -46,6 +46,21 @@ export async function getOwnerProfileByOwnerId(
   });
 }
 
+/**
+ * Find an OwnerStrategyProfile by its id, scoped to orgId.
+ * Returns only ownerId (use for auth/ownership checks before further lookups).
+ */
+export async function findOwnerStrategyProfileById(
+  prisma: PrismaClient,
+  id: string,
+  orgId: string,
+): Promise<{ ownerId: string } | null> {
+  return prisma.ownerStrategyProfile.findFirst({
+    where: { id, orgId },
+    select: { ownerId: true },
+  });
+}
+
 export async function createOwnerProfile(
   prisma: PrismaClient,
   data: {

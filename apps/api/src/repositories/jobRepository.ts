@@ -161,3 +161,38 @@ export async function updateJobRecord(
     include: JOB_FULL_INCLUDE,
   });
 }
+
+/**
+ * Find completed/invoiced jobs for a unit that have no asset linked on their request.
+ * Used by the asset-inventory UI to prompt users to link jobs to assets.
+ */
+export async function findUnlinkedJobsByUnit(
+  prisma: PrismaClient,
+  orgId: string,
+  unitId: string,
+  take = 20,
+) {
+  return prisma.job.findMany({
+    where: {
+      orgId,
+      status: { in: ["COMPLETED", "INVOICED"] },
+      request: { unitId, assetId: null },
+    },
+    select: {
+      id: true,
+      status: true,
+      completedAt: true,
+      request: {
+        select: {
+          id: true,
+          requestNumber: true,
+          description: true,
+          category: true,
+        },
+      },
+    },
+    orderBy: { completedAt: "desc" },
+    take,
+  });
+}
+

@@ -12,7 +12,7 @@ import { sendError, sendJson } from "../http/json";
 import { getAuthUser, requireAuth, requireAnyRole, requireTenantSession } from "../authz";
 import { readRawBody, parseMultipart, MAX_FILE_SIZE, storage } from "../storage/attachments";
 import { maintenanceAttachmentRepo } from "../repositories";
-import { findRequestTenantId } from "../repositories/requestRepository";
+import { findRequestTenantId, resolveAndScopeRequest, findRequestOrgId } from "../repositories/requestRepository";
 import { uploadMaintenanceAttachmentWorkflow } from "../workflows/uploadMaintenanceAttachmentWorkflow";
 
 /* ── Helper: build WorkflowContext from HandlerContext ────────── */
@@ -38,10 +38,7 @@ export function registerMaintenanceAttachmentRoutes(router: Router) {
     const { req, res, prisma, params, orgId } = ctx;
     if (!requireAnyRole(req, res, ["MANAGER", "CONTRACTOR"])) return;
 
-    const scopedReq = await prisma.request.findFirst({
-      where: { id: params.requestId, orgId },
-      select: { id: true },
-    });
+    const scopedReq = await resolveAndScopeRequest(prisma, params.requestId, orgId);
     if (!scopedReq) return sendError(res, 404, "NOT_FOUND", "Request not found");
 
     const records = await maintenanceAttachmentRepo.findAttachmentsByRequestId(
@@ -127,10 +124,7 @@ export function registerMaintenanceAttachmentRoutes(router: Router) {
       }
 
       // Org-scope: verify the parent request belongs to this org
-      const scopedReq = await prisma.request.findFirst({
-        where: { id: attachment.requestId, orgId },
-        select: { id: true },
-      });
+      const scopedReq = await resolveAndScopeRequest(prisma, attachment.requestId, orgId);
       if (!scopedReq) return sendError(res, 403, "FORBIDDEN", "Not authorised for this attachment");
 
       const fileExists = await storage.exists(attachment.storageKey);
@@ -218,10 +212,7 @@ export function registerMaintenanceAttachmentRoutes(router: Router) {
       }
 
       // Resolve org from request for workflow context
-      const reqRow = await prisma.request.findUnique({
-        where: { id: params.requestId },
-        select: { orgId: true },
-      });
+      const reqRow = await findRequestOrgId(prisma, params.requestId);
       const tenantOrgId = reqRow?.orgId ?? ctx.orgId;
 
       const result = await uploadMaintenanceAttachmentWorkflow(

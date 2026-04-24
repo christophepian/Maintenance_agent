@@ -290,6 +290,29 @@ export async function findRequestTenantId(prisma: PrismaClient, id: string) {
 }
 
 /**
+ * Fetch only the orgId for a request — used when the caller (e.g. a tenant)
+ * may belong to a different org context.
+ */
+export async function findRequestOrgId(prisma: PrismaClient, id: string) {
+  return prisma.request.findUnique({ where: { id }, select: { orgId: true } });
+}
+
+/**
+ * Link or unlink an asset on a request. Returns id + assetId only.
+ */
+export async function updateRequestAsset(
+  prisma: PrismaClient,
+  id: string,
+  assetId: string | null,
+) {
+  return prisma.request.update({
+    where: { id },
+    data: { assetId },
+    select: { id: true, assetId: true },
+  });
+}
+
+/**
  * Update a request's urgency and return the full request with canonical includes.
  */
 export async function updateRequestUrgency(

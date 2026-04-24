@@ -22,7 +22,7 @@
 
 ## Area 1 — Code Quality & Architecture
 
-### CQ-1 · `routes/legal.ts` — massive layer violation (HIGH)
+### CQ-1 · ✅ `routes/legal.ts` — massive layer violation (HIGH)
 
 - **Status:** ✅ Resolved — 2026-03-22 (Legal Route Layer Extraction slice, S-P0-004-01)
 - **File:** `apps/api/src/routes/legal.ts`
@@ -268,14 +268,14 @@
 - **Fix:** Add a `GET /leases/:id` describe block asserting the full DTO shape including nested relations.
 - **Resolution:** Created `leaseContract.test.ts` with full DTO shape assertions including nested unit (unitNumber), building (name), expense items array, plus 404 and 401 tests.
 
-### TC-4 · `--runInBand` not configured; 16+ servers in parallel (HIGH)
+### TC-4 · ✅ `--runInBand` not configured; 16+ servers in parallel (HIGH)
 
 - **File:** `apps/api/jest.config.js`
 - **Description:** 14+ test files spawn child-process servers in parallel (no `maxWorkers` or `runInBand`). This is the documented root cause of 11–154 timeout failures.
 - **Fix:** Add `--runInBand` for integration suites or split into two Jest projects (pure parallel + integration serial).
 - **Status: ✅ Resolved 2026-03-10**
 
-### TC-5 · Port 3206 used by 3 test files (HIGH)
+### TC-5 · ✅ Port 3206 used by 3 test files (HIGH)
 
 - **Files:** `rentalContracts.test.ts`, `rentalIntegration.test.ts`, `ownerDirect.foundation.test.ts`
 - **Description:** All three use port 3206 in parallel, causing `EADDRINUSE` crashes.
@@ -350,7 +350,7 @@
 
 ## Area 4 — Security & Auth
 
-### SA-1 · `getOrgIdForRequest()` falls back to DEFAULT_ORG_ID (CRITICAL)
+### SA-1 · ✅ `getOrgIdForRequest()` falls back to DEFAULT_ORG_ID (CRITICAL)
 
 - **File:** `apps/api/src/authz.ts`
 - **Function:** `getOrgIdForRequest()`
@@ -358,7 +358,7 @@
 - **Fix:** In production, if no user is authenticated and the route isn't explicitly public, return 401 instead of defaulting.
 - **Status: ✅ Resolved 2026-03-10**
 
-### SA-2 · All tenant-portal routes are IDOR-vulnerable (HIGH)
+### SA-2 · ✅ All tenant-portal routes are IDOR-vulnerable (HIGH)
 
 - **File:** `apps/api/src/routes/tenants.ts`
 - **Routes:** All `/tenant-portal/*` endpoints
@@ -366,7 +366,7 @@
 - **Fix:** Require tenant authentication (JWT with tenant role), or session token from `createTenantSession`.
 - **Status: ✅ Resolved 2026-03-10**
 
-### SA-3 · Rental attachment download unprotected — PII exposure (HIGH)
+### SA-3 · ✅ Rental attachment download unprotected — PII exposure (HIGH)
 
 - **File:** `apps/api/src/routes/rentalApplications.ts`
 - **Route:** `GET /rental-attachments/:attachmentId/download`
@@ -374,7 +374,7 @@
 - **Fix:** Add `maybeRequireManager()` or role-based access.
 - **Status: ✅ Resolved 2026-03-10**
 
-### SA-4 · Rental application documents listing unprotected (HIGH)
+### SA-4 · ✅ Rental application documents listing unprotected (HIGH)
 
 - **File:** `apps/api/src/routes/rentalApplications.ts`
 - **Route:** `GET /rental-applications/:id/documents`
@@ -382,7 +382,7 @@
 - **Fix:** Add `maybeRequireManager()` or role-based access.
 - **Status: ✅ Resolved 2026-03-10**
 
-### SA-5 · Email outbox routes exposed without auth or prod guard (HIGH)
+### SA-5 · ✅ Email outbox routes exposed without auth or prod guard (HIGH)
 
 - **File:** `apps/api/src/routes/notifications.ts`
 - **Routes:** `GET /email-outbox`, `POST /email-outbox/:id/send`
@@ -390,14 +390,14 @@
 - **Fix:** Add production guard and require auth.
 - **Status: ✅ Resolved 2026-03-10**
 
-### SA-6 · `DEV_IDENTITY_ENABLED` has no production guard (HIGH)
+### SA-6 · ✅ `DEV_IDENTITY_ENABLED` has no production guard (HIGH)
 
 - **File:** `apps/api/src/authz.ts`
 - **Description:** When `DEV_IDENTITY_ENABLED=true`, any request can spoof any role via `x-dev-role`, `x-dev-org-id`, `x-dev-user-id` headers. The boot guard in `server.ts` checks `AUTH_OPTIONAL` and `AUTH_SECRET` but does NOT check `DEV_IDENTITY_ENABLED`. If accidentally set in production, any request can impersonate any user.
 - **Fix:** Add `DEV_IDENTITY_ENABLED` to the production boot guard.
 - **Status: ✅ Resolved 2026-03-10**
 
-### SA-7 · Contractor request events POST has no auth (HIGH)
+### SA-7 · ✅ Contractor request events POST has no auth (HIGH)
 
 - **File:** `apps/api/src/routes/requests.ts`
 - **Route:** `POST /requests/:id/events`
@@ -405,7 +405,7 @@
 - **Fix:** Wrap with `requireRole()` for CONTRACTOR or MANAGER.
 - **Status: ✅ Resolved 2026-03-10**
 
-### SA-8 · Contractor-assigned requests have no auth (HIGH)
+### SA-8 · ✅ Contractor-assigned requests have no auth (HIGH)
 
 - **File:** `apps/api/src/routes/requests.ts`
 - **Route:** `GET /requests/contractor/:contractorId`
@@ -413,14 +413,14 @@
 - **Fix:** Add `requireRole()` for CONTRACTOR.
 - **Status: ✅ Resolved 2026-03-10**
 
-### SA-9 · Dev identity header allows org spoofing (HIGH)
+### SA-9 · ✅ Dev identity header allows org spoofing (HIGH)
 
 - **File:** `apps/api/src/authz.ts`
 - **Description:** When `DEV_IDENTITY_ENABLED=true`, the `x-dev-org-id` header overrides org context. Combined with the missing production guard (SA-6), this allows accessing any org's data.
 - **Fix:** Add production guard for `DEV_IDENTITY_ENABLED`.
 - **Status: ✅ Resolved 2026-03-10**
 
-### SA-10 · `maybeRequireManager` allows MANAGER + OWNER on writes (MEDIUM)
+### SA-10 · ✅ `maybeRequireManager` allows MANAGER + OWNER on writes (MEDIUM)
 
 - **File:** `apps/api/src/authz.ts`
 - **Function:** `maybeRequireManager()`
@@ -428,7 +428,7 @@
 - **Fix:** Use `requireRole('MANAGER')` for mutation routes; reserve `maybeRequireManager` for reads.
 - **Status: ✅ Resolved 2026-03-10** — Replaced `maybeRequireManager` with `requireRole(req, res, 'MANAGER')` on all mutation routes in inventory.ts (×19), requests.ts (×3), tenants.ts (×6), notifications.ts (×3), rentEstimation.ts (×3), financials.ts (×1). `requireRole` includes AUTH_OPTIONAL dev bypass with warning log.
 
-### SA-11 · Legal routes lack org scoping (MEDIUM)
+### SA-11 · ✅ Legal routes lack org scoping (MEDIUM)
 
 - **File:** `apps/api/src/routes/legal.ts`
 - **Routes:** Legal rules, variables, depreciation standards, category mapping CRUD
@@ -436,14 +436,14 @@
 - **Fix:** Add org-scoping to queries, or document as intentionally global.
 - **Status: ✅ Resolved 2026-03-10** — Global models (LegalSource, LegalVariable, LegalRule, DepreciationStandard) documented as jurisdiction-scoped by design. PUT/DELETE category-mappings now validate `existing.orgId` matches caller's orgId.
 
-### SA-12 · `POST /requests` conditionally authed (MEDIUM)
+### SA-12 · ✅ `POST /requests` conditionally authed (MEDIUM)
 
 - **File:** `apps/api/src/routes/requests.ts`
 - **Description:** Auth is conditional: if `contractorId` query param is present, `maybeRequireManager` is checked. Otherwise, `getAuthUser` is used without enforcement. If `AUTH_OPTIONAL=false` is off, anyone can create requests.
 - **Fix:** Add an upfront auth wrapper.
 - **Status: ✅ Resolved 2026-03-10** — Added `requireAuth(req, res)` as first check in POST /requests and POST /work-requests handlers.
 
-### SA-13 · Contractor suggest and match endpoints no auth (MEDIUM)
+### SA-13 · ✅ Contractor suggest and match endpoints no auth (MEDIUM)
 
 - **File:** `apps/api/src/routes/requests.ts`
 - **Routes:** `GET /requests/:id/suggest-contractor`, `GET /requests/:id/match-contractors`
@@ -451,7 +451,7 @@
 - **Fix:** Add `maybeRequireManager()`.
 - **Status: ✅ Resolved 2026-03-10** — Added `maybeRequireManager(req, res)` guard to both endpoints.
 
-### SA-14 · `DELETE /requests` no auth (MEDIUM)
+### SA-14 · ✅ `DELETE /requests` no auth (MEDIUM)
 
 - **File:** `apps/api/src/routes/requests.ts`
 - **Route:** `DELETE /requests`
@@ -459,7 +459,7 @@
 - **Fix:** Add auth or IP whitelist.
 - **Status: ✅ Resolved 2026-03-10** — Added `requireRole(req, res, 'MANAGER')` after production guard in DELETE /__dev/requests.
 
-### SA-15 · `POST /document-scan` no auth (MEDIUM)
+### SA-15 · ✅ `POST /document-scan` no auth (MEDIUM)
 
 - **File:** `apps/api/src/routes/rentalApplications.ts`
 - **Route:** `POST /document-scan`
@@ -467,7 +467,7 @@
 - **Fix:** Add rate limiting and/or auth.
 - **Status: ✅ Resolved 2026-03-10** — Added `maybeRequireManager(req, res)` guard to POST /document-scan in rentalApplications.ts (actual file location, not inventory.ts).
 
-### SA-16 · Governance routes missing wrapper (MEDIUM)
+### SA-16 · ✅ Governance routes missing wrapper (MEDIUM)
 
 - **File:** `apps/api/src/routes/financials.ts`
 - **Routes:** `GET /governance/*`
@@ -475,7 +475,7 @@
 - **Fix:** Wrap with `withAuthRequired`.
 - **Status: ✅ Resolved 2026-03-10** — Added `requireAuth(req, res)` as first statement in all financial handlers. POST /invoices/:id/set-expense-category additionally requires MANAGER role.
 
-### SA-17 · `maybeRequireManager` bypasses role check on AUTH_OPTIONAL (MEDIUM)
+### SA-17 · ✅ `maybeRequireManager` bypasses role check on AUTH_OPTIONAL (MEDIUM)
 
 - **File:** `apps/api/src/authz.ts`
 - **Function:** `maybeRequireManager()`
@@ -483,7 +483,7 @@
 - **Fix:** Consider requiring dev identity header when AUTH_OPTIONAL so role checks still fire.
 - **Status: ✅ Resolved 2026-03-10** — `maybeRequireManager` now logs `console.warn` when AUTH_OPTIONAL bypasses without a dev-role header. `requireRole`/`requireAnyRole` also log warnings on dev bypass.
 
-### SA-18 · `POST /triage` no auth (MEDIUM)
+### SA-18 · ✅ `POST /triage` no auth (MEDIUM)
 
 - **File:** `apps/api/src/routes/auth.ts`
 - **Route:** `POST /triage`
@@ -491,14 +491,14 @@
 - **Fix:** Add rate limiting or basic auth.
 - **Status: ✅ Resolved 2026-03-10** — Added in-memory IP-based rate limiter: 10 requests/minute/IP, returns 429 on exceed. Map auto-resets per window.
 
-### SA-19 · Weak default JWT secret (LOW)
+### SA-19 · ✅ Weak default JWT secret (LOW)
 
 - **File:** `apps/api/src/services/auth.ts`
 - **Description:** Fallback secret `"dev-secret-key-change-in-prod"` used when `AUTH_SECRET` not set. Production guard prevents this in prod, but staging environments may use it.
 - **Fix:** Require `AUTH_SECRET` in all non-test environments.
 - **Status: ✅ Resolved 2026-03-10** — Non-test environments now fail hard with `process.exit(1)` if `AUTH_SECRET` is unset. Test environments keep fallback for convenience.
 
-### SA-20 · Event logger outputs payload (LOW)
+### SA-20 · ✅ Event logger outputs payload (LOW)
 
 - **File:** `apps/api/src/events/`
 - **Description:** `console.log` outputs event payloads which may contain business-sensitive data. Not directly tokens/passwords, but could leak business data in container logs.
@@ -579,7 +579,7 @@ Significant work completed since the original audit was generated. This section 
 | Backend LOC | ~34k | ~73k |
 | Frontend LOC | ~20k | ~45k |
 | Audit resolved | 20 | 91 |
-| Audit open | 62 | ~33 (see SA-* and TC-* open findings) |
+| Audit open | 62 | 1 (TC-1 ⚠️ partial — `submitRentalApplicationWorkflow` untested) |
 
 ### In Progress: RFP Epic
 

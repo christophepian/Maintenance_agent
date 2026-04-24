@@ -174,7 +174,7 @@ async function ensureTenantAndOccupancy(
       name: lease.tenantName,
       email: lease.tenantEmail || null,
     });
-    console.log(`[LEASE] Auto-created Tenant ${tenant.id} (${lease.tenantName}, ${normalizedPhone})`);
+    console.log(`[LEASE] Auto-created Tenant ${tenant.id}`); // PII omitted intentionally
   } else {
     // Update name/email if they changed on the lease
     const updates: any = {};
