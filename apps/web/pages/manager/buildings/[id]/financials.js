@@ -11,6 +11,7 @@ import { authHeaders } from "../../../../lib/api";
 import { formatChfCents, formatPercent } from "../../../../lib/format";
 
 import { cn } from "../../../../lib/utils";
+import { FilterToggle, FilterPanelBody, FilterSection, DateField } from "../../../../components/ui/FilterPanel";
 /* ─── Helpers ─── */
 
 function defaultRange() {
@@ -107,6 +108,7 @@ export default function BuildingFinancialsPage() {
   const [data, setData] = useState(null);
   const [range, setRange] = useState(defaultRange);
   const [rangeInput, setRangeInput] = useState(defaultRange);
+  const [filterOpen, setFilterOpen] = useState(false);
 
   const fetchFinancials = useCallback(
     async (forceRefresh = false) => {
@@ -196,46 +198,28 @@ export default function BuildingFinancialsPage() {
           </Link>
 
           {/* ─── Date range controls ─── */}
-          <Panel>
-            <div className="flex flex-wrap items-end gap-4">
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-medium text-slate-600">From</label>
-                <input
-                  type="date"
-                  value={rangeInput.from}
-                  onChange={(e) => setRangeInput((r) => ({ ...r, from: e.target.value }))}
-                  className="border border-slate-300 rounded px-2 py-1 text-sm"
-                />
-              </div>
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-medium text-slate-600">To</label>
-                <input
-                  type="date"
-                  value={rangeInput.to}
-                  onChange={(e) => setRangeInput((r) => ({ ...r, to: e.target.value }))}
-                  className="border border-slate-300 rounded px-2 py-1 text-sm"
-                />
-              </div>
-              <button
-                onClick={applyRange}
-                className="bg-blue-600 text-white text-sm font-medium px-4 py-1.5 rounded hover:bg-blue-700 transition-colors"
-              >
-                Apply
-              </button>
-              <button
-                onClick={() => fetchFinancials(true)}
-                className="bg-slate-100 text-slate-700 text-sm font-medium px-4 py-1.5 rounded border border-slate-300 hover:bg-slate-200 transition-colors"
-                title="Re-compute snapshots from source data"
-              >
-                ↻ Refresh
-              </button>
-              {d && (
-                <span className="text-xs text-slate-400 self-end pb-0.5">
-                  {displayDate(d.from)} – {displayDate(d.to)} · {d.activeUnitsCount} unit{d.activeUnitsCount !== 1 ? "s" : ""}
-                </span>
-              )}
-            </div>
-          </Panel>
+          <div>
+            <FilterToggle open={filterOpen} onToggle={() => setFilterOpen((v) => !v)} activeCount={0} label="Date range" />
+            {filterOpen && (
+              <FilterPanelBody>
+                <FilterSection title="Date range" first>
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                    <DateField label="From" value={rangeInput.from} onChange={(e) => setRangeInput((r) => ({ ...r, from: e.target.value }))} />
+                    <DateField label="To" value={rangeInput.to} onChange={(e) => setRangeInput((r) => ({ ...r, to: e.target.value }))} />
+                    <div className="flex items-end gap-2">
+                      <button onClick={() => { applyRange(); setFilterOpen(false); }} className="button-primary text-sm h-9 px-4">Apply</button>
+                      <button onClick={() => fetchFinancials(true)} className="button-secondary text-sm h-9 px-3" title="Re-compute snapshots from source data">↻ Refresh</button>
+                    </div>
+                  </div>
+                  {d && (
+                    <p className="text-xs text-slate-400 mt-2">
+                      {displayDate(d.from)} – {displayDate(d.to)} · {d.activeUnitsCount} unit{d.activeUnitsCount !== 1 ? "s" : ""}
+                    </p>
+                  )}
+                </FilterSection>
+              </FilterPanelBody>
+            )}
+          </div>
 
           {error && <div className="notice notice-err mb-4">{error}</div>}
           {loading && !d && <p className="loading-text">Loading financials…</p>}

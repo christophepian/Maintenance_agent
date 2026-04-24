@@ -10,6 +10,7 @@ import { authHeaders } from "../../../lib/api";
 import { formatChfCents, formatDate } from "../../../lib/format";
 
 import { cn } from "../../../lib/utils";
+import { FilterToggle, FilterPanelBody, FilterSection, FilterSectionClear, SelectField, DateField } from "../../../components/ui/FilterPanel";
 /* ── Constants ─────────────────────────────────────────────── */
 
 const SOURCE_TYPE_LABELS = {
@@ -91,6 +92,8 @@ export default function LedgerPage() {
   const [accountId, setAccountId] = useState("");
   const [buildingId, setBuildingId] = useState("");
   const [sourceType, setSourceType] = useState("");
+  const activeCount = [accountId, buildingId, sourceType].filter(Boolean).length;
+  const [filterOpen, setFilterOpen] = useState(false);
 
   /* ── Load reference data ─────────────────────────────────── */
   useEffect(() => {
@@ -288,50 +291,25 @@ export default function LedgerPage() {
           </div>
 
           {/* ── Filters ─────────────────────────────────────── */}
-          <Panel className="mb-4">
-            <div className="flex flex-wrap gap-3 items-end">
-              <div>
-                <label className="block text-xs text-slate-500 mb-1">From</label>
-                <input
-                  type="date"
-                  className="input input-sm"
-                  value={from}
-                  onChange={(e) => setFrom(e.target.value)}
-                />
-              </div>
-              <div>
-                <label className="block text-xs text-slate-500 mb-1">To</label>
-                <input
-                  type="date"
-                  className="input input-sm"
-                  value={to}
-                  onChange={(e) => setTo(e.target.value)}
-                />
-              </div>
-
+          <FilterToggle open={filterOpen} onToggle={() => setFilterOpen((v) => !v)} activeCount={activeCount} />
+          {filterOpen && (
+            <FilterPanelBody>
+              <FilterSection title="Date range" first>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  <DateField label="From" value={from} onChange={(e) => setFrom(e.target.value)} />
+                  <DateField label="To" value={to} onChange={(e) => setTo(e.target.value)} />
+                </div>
+              </FilterSection>
               {tab === "journal" && (
-                <>
-                  <div>
-                    <label className="block text-xs text-slate-500 mb-1">Building</label>
-                    <select
-                      className="input input-sm"
-                      value={buildingId}
-                      onChange={(e) => setBuildingId(e.target.value)}
-                    >
+                <FilterSection title="Scope">
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                    <SelectField label="Building" value={buildingId} onChange={(e) => setBuildingId(e.target.value)}>
                       <option value="">All buildings</option>
                       {buildings.map((b) => (
                         <option key={b.id} value={b.id}>{b.name}</option>
                       ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs text-slate-500 mb-1">Account</label>
-                    <select
-                      className="input input-sm"
-                      value={accountId}
-                      onChange={(e) => setAccountId(e.target.value)}
-                      className="min-w-[200px]"
-                    >
+                    </SelectField>
+                    <SelectField label="Account" value={accountId} onChange={(e) => setAccountId(e.target.value)}>
                       <option value="">All accounts</option>
                       {ACCOUNT_TYPE_ORDER.map((type) => {
                         const group = accounts.filter((a) => a.accountType === type);
@@ -346,38 +324,30 @@ export default function LedgerPage() {
                           </optgroup>
                         );
                       })}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs text-slate-500 mb-1">Event type</label>
-                    <select
-                      className="input input-sm"
-                      value={sourceType}
-                      onChange={(e) => setSourceType(e.target.value)}
-                    >
+                    </SelectField>
+                    <SelectField label="Event type" value={sourceType} onChange={(e) => setSourceType(e.target.value)}>
                       <option value="">All events</option>
                       {Object.entries(SOURCE_TYPE_LABELS).map(([k, v]) => (
                         <option key={k} value={k}>{v}</option>
                       ))}
-                    </select>
+                    </SelectField>
                   </div>
-                </>
+                </FilterSection>
               )}
-
-              <button
-                className="btn btn-primary btn-sm"
-                onClick={() => tab === "journal" ? fetchEntries(0) : fetchTrialBalance()}
-              >
-                Apply
-              </button>
-              <button className="btn btn-ghost btn-sm" onClick={clearFilters}>
-                Reset
-              </button>
-            </div>
-            <p className="text-xs text-slate-400 mt-2">
-              Showing entries for {from || "all time"}{to ? ` – ${to}` : ""}
-            </p>
-          </Panel>
+              <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3">
+                <FilterSectionClear hasFilter={activeCount > 0} onClear={clearFilters} />
+                <button
+                  className="button-primary text-sm"
+                  onClick={() => { tab === "journal" ? fetchEntries(0) : fetchTrialBalance(); setFilterOpen(false); }}
+                >
+                  Apply
+                </button>
+              </div>
+            </FilterPanelBody>
+          )}
+          <p className="text-xs text-slate-400 mb-4">
+            Showing entries for {from || "all time"}{to ? ` – ${to}` : ""}
+          </p>
 
           {/* ── Journal tab ─────────────────────────────────── */}
           {tab === "journal" && (

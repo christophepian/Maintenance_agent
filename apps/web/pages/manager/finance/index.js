@@ -14,6 +14,7 @@ import BillingEntityManager from "../../../components/BillingEntityManager";
 import RenovationTaxPlanning from "../../../components/RenovationTaxPlanning";
 import CashflowPlansList from "../../../components/CashflowPlansList";
 import { cn } from "../../../lib/utils";
+import { FilterToggle, FilterPanelBody, FilterSection, DateField } from "../../../components/ui/FilterPanel";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -87,6 +88,7 @@ export default function ManagerFinanceHome() {
   const [portfolioLoading, setPortfolioLoading] = useState(true);
   const [portfolioError, setPortfolioError] = useState("");
   const [buildingsExpanded, setBuildingsExpanded] = useState(false);
+  const [filterOpen, setFilterOpen] = useState(false);
 
   const fetchPortfolio = useCallback(async () => {
     setPortfolioLoading(true);
@@ -156,31 +158,24 @@ export default function ManagerFinanceHome() {
           {activeTabKey === "overview" && (
             // space-y-6 spaces: filter panel → error/loading → portfolio section → buildings section
             <div className="space-y-6">
-              <Panel>
-                <div className="filter-row">
-                  <div className="flex flex-col gap-1">
-                    <label className="filter-label">From</label>
-                    <input
-                      type="date"
-                      value={rangeInput.from}
-                      onChange={(e) => setRangeInput((r) => ({ ...r, from: e.target.value }))}
-                      className="filter-input"
-                    />
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <label className="filter-label">To</label>
-                    <input
-                      type="date"
-                      value={rangeInput.to}
-                      onChange={(e) => setRangeInput((r) => ({ ...r, to: e.target.value }))}
-                      className="filter-input"
-                    />
-                  </div>
-                  <button onClick={applyRange} className="button-primary text-sm">
-                    Apply
-                  </button>
-                </div>
-              </Panel>
+              <div>
+                <FilterToggle open={filterOpen} onToggle={() => setFilterOpen((v) => !v)} activeCount={0} label="Date range" />
+                {filterOpen && (
+                  <FilterPanelBody>
+                    <FilterSection title="Date range" first>
+                      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                        <DateField label="From" value={rangeInput.from} onChange={(e) => setRangeInput((r) => ({ ...r, from: e.target.value }))} />
+                        <DateField label="To" value={rangeInput.to} onChange={(e) => setRangeInput((r) => ({ ...r, to: e.target.value }))} />
+                        <div className="flex items-end">
+                          <button onClick={() => { applyRange(); setFilterOpen(false); }} className="button-primary text-sm h-9 px-4">
+                            Apply
+                          </button>
+                        </div>
+                      </div>
+                    </FilterSection>
+                  </FilterPanelBody>
+                )}
+              </div>
 
               {portfolioError && <div className="notice notice-err">{portfolioError}</div>}
 
