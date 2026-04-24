@@ -92,7 +92,7 @@ export default function LedgerPage() {
   const [accountId, setAccountId] = useState("");
   const [buildingId, setBuildingId] = useState("");
   const [sourceType, setSourceType] = useState("");
-  const activeCount = [accountId, buildingId, sourceType].filter(Boolean).length;
+  const activeCount = [accountId, buildingId, sourceType, from !== defaults.from ? from : "", to !== defaults.to ? to : ""].filter(Boolean).length;
   const [filterOpen, setFilterOpen] = useState(false);
 
   /* ── Load reference data ─────────────────────────────────── */

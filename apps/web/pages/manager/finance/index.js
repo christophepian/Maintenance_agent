@@ -14,7 +14,7 @@ import BillingEntityManager from "../../../components/BillingEntityManager";
 import RenovationTaxPlanning from "../../../components/RenovationTaxPlanning";
 import CashflowPlansList from "../../../components/CashflowPlansList";
 import { cn } from "../../../lib/utils";
-import { FilterToggle, FilterPanelBody, FilterSection, DateField } from "../../../components/ui/FilterPanel";
+import { FilterToggle, FilterPanelBody, FilterSection, FilterSectionClear, DateField } from "../../../components/ui/FilterPanel";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -165,6 +165,10 @@ export default function ManagerFinanceHome() {
                         <DateField label="To" value={range.to} onChange={(e) => setRange((r) => ({ ...r, to: e.target.value }))} />
                       </div>
                     </FilterSection>
+                    <FilterSectionClear
+                      hasFilter={range.from !== defaultRange().from || range.to !== defaultRange().to}
+                      onClear={() => setRange(defaultRange())}
+                    />
                   </FilterPanelBody>
                 )}
               </div>

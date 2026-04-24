@@ -918,7 +918,14 @@ export function InvoicesContent() {
       {/* Invoice PDF Overlay */}
       <InvoiceOverlay
         invoiceId={overlayInvoiceId}
-        onClose={() => setOverlayInvoiceId(null)}
+        onClose={() => {
+          setOverlayInvoiceId(null);
+          // Clear ?invoiceId= from URL so hot-reloads don't re-open the overlay
+          if (router.query.invoiceId) {
+            const { invoiceId: _omit, ...rest } = router.query;
+            router.replace({ pathname: router.pathname, query: rest }, undefined, { shallow: true });
+          }
+        }}
       />
 
       {/* Dispute Justification Modal */}

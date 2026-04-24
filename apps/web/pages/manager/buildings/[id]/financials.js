@@ -11,7 +11,7 @@ import { authHeaders } from "../../../../lib/api";
 import { formatChfCents, formatPercent } from "../../../../lib/format";
 
 import { cn } from "../../../../lib/utils";
-import { FilterToggle, FilterPanelBody, FilterSection, DateField } from "../../../../components/ui/FilterPanel";
+import { FilterToggle, FilterPanelBody, FilterSection, FilterSectionClear, DateField } from "../../../../components/ui/FilterPanel";
 /* ─── Helpers ─── */
 
 function defaultRange() {
@@ -213,6 +213,10 @@ export default function BuildingFinancialsPage() {
                     </p>
                   )}
                 </FilterSection>
+                <FilterSectionClear
+                  hasFilter={range.from !== defaultRange().from || range.to !== defaultRange().to}
+                  onClear={() => setRange(defaultRange())}
+                />
               </FilterPanelBody>
             )}
           </div>
