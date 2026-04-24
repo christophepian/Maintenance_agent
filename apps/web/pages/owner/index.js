@@ -246,7 +246,7 @@ function ActionItemsTabs({
                 </div>
               </Link>
             ))}
-            <Link href="/owner/rfps" className="block text-xs font-medium text-indigo-600 hover:text-indigo-700 pt-1">
+            <Link href="/owner/approvals?tab=rfps" className="block text-xs font-medium text-indigo-600 hover:text-indigo-700 pt-1">
               View all RFPs →
             </Link>
           </div>

@@ -55,7 +55,12 @@ function RfpStatusPill({ status }) {
 // ══════════════════════════════════════════════════════════════
 
 export default function OwnerApprovalsPage() {
+  const router = useRouter();
   const [tab, setTab] = useState("requests");
+
+  useEffect(() => {
+    if (router.isReady && router.query.tab === "rfps") setTab("rfps");
+  }, [router.isReady, router.query.tab]);
 
   return (
     <AppShell role="OWNER">
@@ -316,6 +321,7 @@ function RfpsTab() {
   const [buildingFilter, setBuildingFilter] = useState("");
   const [urgencyFilter, setUrgencyFilter] = useState("");
   const [requestNumberFilter, setRequestNumberFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("PENDING_OWNER_APPROVAL");
 
   useEffect(() => {
     async function load() {
@@ -343,6 +349,7 @@ function RfpsTab() {
     if (buildingFilter && r.building?.name !== buildingFilter) return false;
     if (urgencyFilter && r.request?.urgency !== urgencyFilter) return false;
     if (requestNumberFilter && String(r.request?.requestNumber) !== String(requestNumberFilter)) return false;
+    if (statusFilter && r.status !== statusFilter) return false;
     return true;
   });
 
@@ -350,22 +357,17 @@ function RfpsTab() {
   const hasFilter = activeCount > 0;
   const [filterOpen, setFilterOpen] = useState(false);
 
-  // ── Sort state ──────────────────────────────────────────────
   const URGENCY_RANK = { LOW: 1, MEDIUM: 2, HIGH: 3, EMERGENCY: 4 };
   const [sortKey, setSortKey] = useState("date");
   const [sortDir, setSortDir] = useState("desc");
   const [sortOpen, setSortOpen] = useState(false);
   const sortActive = !(sortKey === "date" && sortDir === "desc");
 
-  function handleSort(key, dir) {
-    setSortKey(key);
-    setSortDir(dir);
-  }
+  function handleSort(key, dir) { setSortKey(key); setSortDir(dir); }
 
   const sortedFiltered = [...filtered].sort((a, b) => {
     let cmp = 0;
     if (sortKey === "price") {
-      // Use lowest accepted/submitted quote total, fallback 0
       const priceA = a.quotes?.reduce((min, q) => Math.min(min, q.totalCents ?? q.total ?? Infinity), Infinity) ?? 0;
       const priceB = b.quotes?.reduce((min, q) => Math.min(min, q.totalCents ?? q.total ?? Infinity), Infinity) ?? 0;
       cmp = (priceA === Infinity ? 0 : priceA) - (priceB === Infinity ? 0 : priceB);
@@ -379,22 +381,31 @@ function RfpsTab() {
     return sortDir === "asc" ? cmp : -cmp;
   });
 
-  const pendingApproval = sortedFiltered.filter((r) => r.status === "PENDING_OWNER_APPROVAL");
-
   return (
     <>
       <ErrorBanner error={error} className="mb-4 text-sm" />
 
-      {/* Filter + Sort toggles in same row */}
       <div className="flex items-center justify-end gap-2">
         <FilterToggle open={filterOpen} onToggle={() => setFilterOpen((v) => !v)} activeCount={activeCount} />
         <SortToggle open={sortOpen} onToggle={() => setSortOpen((v) => !v)} active={sortActive} />
       </div>
 
-      {/* Collapsible filter panel */}
       {filterOpen && (
         <FilterPanelBody>
-          <FilterSection title="Date range" first>
+          <FilterSection title="Status" first>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <SelectField label="Show" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                <option value="PENDING_OWNER_APPROVAL">Pending approval</option>
+                <option value="">All RFPs</option>
+                <option value="DRAFT">Draft</option>
+                <option value="OPEN">Open</option>
+                <option value="CLOSED">Closed</option>
+                <option value="AWARDED">Awarded</option>
+                <option value="CANCELLED">Cancelled</option>
+              </SelectField>
+            </div>
+          </FilterSection>
+          <FilterSection title="Date range">
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               <DateField label="From" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
               <DateField label="To" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
@@ -430,160 +441,98 @@ function RfpsTab() {
 
       {sortOpen && (
         <SortPanelBody>
-          <SortRow
-            active={sortKey === "number"}
-            dir={sortKey === "number" ? sortDir : "asc"}
-            label="Request #"
-            ascLabel="Low → High"
-            descLabel="High → Low"
-            onSelect={(dir) => handleSort("number", dir)}
-          />
-          <SortRow
-            active={sortKey === "date"}
-            dir={sortKey === "date" ? sortDir : "desc"}
-            label="Request date"
-            descLabel="Newest first"
-            ascLabel="Oldest first"
-            onSelect={(dir) => handleSort("date", dir)}
-          />
-          <SortRow
-            active={sortKey === "urgency"}
-            dir={sortKey === "urgency" ? sortDir : "desc"}
-            label="Urgency"
-            descLabel="High → Low"
-            ascLabel="Low → High"
-            onSelect={(dir) => handleSort("urgency", dir)}
-          />
-          <SortRow
-            active={sortKey === "price"}
-            dir={sortKey === "price" ? sortDir : "desc"}
-            label="Quote price"
-            descLabel="High → Low"
-            ascLabel="Low → High"
-            onSelect={(dir) => handleSort("price", dir)}
-          />
+          <SortRow active={sortKey === "number"} dir={sortKey === "number" ? sortDir : "asc"} label="Request #" ascLabel="Low → High" descLabel="High → Low" onSelect={(dir) => handleSort("number", dir)} />
+          <SortRow active={sortKey === "date"} dir={sortKey === "date" ? sortDir : "desc"} label="Request date" descLabel="Newest first" ascLabel="Oldest first" onSelect={(dir) => handleSort("date", dir)} />
+          <SortRow active={sortKey === "urgency"} dir={sortKey === "urgency" ? sortDir : "desc"} label="Urgency" descLabel="High → Low" ascLabel="Low → High" onSelect={(dir) => handleSort("urgency", dir)} />
+          <SortRow active={sortKey === "price"} dir={sortKey === "price" ? sortDir : "desc"} label="Quote price" descLabel="High → Low" ascLabel="Low → High" onSelect={(dir) => handleSort("price", dir)} />
         </SortPanelBody>
       )}
 
       {loading ? (
         <p className="text-sm text-slate-500">Loading…</p>
+      ) : sortedFiltered.length === 0 ? (
+        <div className="empty-state">
+          <p className="empty-state-text">
+            {rfps.length === 0 ? "No RFPs found." : "No results match the current filters."}
+          </p>
+        </div>
       ) : (
         <>
-          {pendingApproval.length > 0 && (
-            <Panel title={`Awaiting Your Approval (${pendingApproval.length})`} bodyClassName="p-0">
-              {/* Mobile: card list */}
-              <div className="sm:hidden space-y-3">
-                {pendingApproval.map((r) => (
-                  <div key={r.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-slate-900">{r.category || "—"}</p>
-                      <p className="text-xs text-slate-500 mt-0.5">{r.building?.name || "—"}</p>
-                    </div>
-                    <div className="mt-3 flex flex-wrap items-center gap-2">
-                      <RfpStatusPill status={r.status} />
-                      <Link href={`/owner/rfps/${r.id}`} className="cell-link text-sm font-medium">
-                        Review →
-                      </Link>
+          {/* ── Cards: below md ── */}
+          <div className="md:hidden space-y-3">
+            {sortedFiltered.map((r) => {
+              const borderColor = URGENCY_BORDER[r.request?.urgency] || "border-l-slate-200";
+              const urgencyLabel = r.request?.urgency
+                ? r.request.urgency.charAt(0) + r.request.urgency.slice(1).toLowerCase()
+                : null;
+              const quoteCount = r.quoteCount ?? r.quotes?.length ?? 0;
+              const isPending = r.status === "PENDING_OWNER_APPROVAL";
+              return (
+                <Link key={r.id} href={`/owner/rfps/${r.id}`}>
+                  <div className={cn("rounded-2xl border border-slate-200 border-l-4", borderColor, "bg-white p-4 shadow-sm hover:bg-slate-50 transition-colors cursor-pointer")}>
+                    <div className="flex flex-col gap-2">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-slate-900">{r.category || "General Maintenance"}</p>
+                        <p className="text-xs text-slate-500 mt-0.5">
+                          {r.building?.name || "—"} · {formatDate(r.createdAt)}
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-3">
+                        {urgencyLabel && (
+                          <span className="text-xs font-medium text-slate-600">{urgencyLabel}</span>
+                        )}
+                        {quoteCount > 0 && (
+                          <span className="text-xs text-slate-500">{quoteCount} quote{quoteCount !== 1 ? "s" : ""}</span>
+                        )}
+                        <span className="text-xs font-medium text-blue-600">{isPending ? "Review" : "View"} →</span>
+                      </div>
                     </div>
                   </div>
-                ))}
-              </div>
-              {/* Desktop: table */}
-              <table className="hidden sm:table inline-table">
-                <thead>
-                  <tr>
-                    <th>RFP</th>
-                    <th>Category</th>
-                    <th>Building</th>
-                    <th>Urgency</th>
-                    <th>Quotes</th>
-                    <th>Status</th>
-                    <th>Created</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {pendingApproval.map((r) => (
+                </Link>
+              );
+            })}
+          </div>
+
+          {/* ── Table: md and above ── */}
+          <div className="hidden md:block overflow-x-auto">
+            <table className="inline-table">
+              <thead>
+                <tr>
+                  <th>RFP</th>
+                  <th>Category</th>
+                  <th>Building</th>
+                  <th>Urgency</th>
+                  <th>Quotes</th>
+                  <th>Created</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {sortedFiltered.map((r) => {
+                  const urgencyLabel = r.request?.urgency
+                    ? r.request.urgency.charAt(0) + r.request.urgency.slice(1).toLowerCase()
+                    : "—";
+                  const quoteCount = r.quoteCount ?? r.quotes?.length ?? 0;
+                  const isPending = r.status === "PENDING_OWNER_APPROVAL";
+                  return (
                     <tr key={r.id}>
                       <td className="font-mono text-xs">{r.id?.slice(0, 8)}</td>
                       <td>{r.category || "—"}</td>
                       <td>{r.building?.name || "—"}</td>
-                      <td><UrgencyPill urgency={r.request?.urgency} /></td>
-                      <td>{r.quoteCount ?? r.quotes?.length ?? 0}</td>
-                      <td><RfpStatusPill status={r.status} /></td>
+                      <td>{urgencyLabel}</td>
+                      <td>{quoteCount}</td>
                       <td>{formatDate(r.createdAt)}</td>
                       <td>
                         <Link href={`/owner/rfps/${r.id}`} className="cell-link text-sm font-medium">
-                          Review →
+                          {isPending ? "Review →" : "View →"}
                         </Link>
                       </td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </Panel>
-          )}
-
-          <Panel title={`All RFPs (${sortedFiltered.length})`} bodyClassName="p-0">
-            {sortedFiltered.length > 0 ? (
-              <>
-                {/* Mobile: card list */}
-                <div className="sm:hidden space-y-3">
-                  {sortedFiltered.map((r) => (
-                    <div key={r.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-slate-900">{r.category || "—"}</p>
-                        <p className="text-xs text-slate-500 mt-0.5">{r.building?.name || "—"}</p>
-                      </div>
-                      <div className="mt-3 flex flex-wrap items-center gap-2">
-                        <RfpStatusPill status={r.status} />
-                        <Link href={`/owner/rfps/${r.id}`} className="cell-link text-sm font-medium">
-                          View →
-                        </Link>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                {/* Desktop: table */}
-                <table className="hidden sm:table inline-table">
-                  <thead>
-                    <tr>
-                      <th>RFP</th>
-                      <th>Category</th>
-                      <th>Building</th>
-                      <th>Urgency</th>
-                      <th>Quotes</th>
-                      <th>Status</th>
-                      <th>Created</th>
-                      <th></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {sortedFiltered.map((r) => (
-                      <tr key={r.id}>
-                        <td className="font-mono text-xs">{r.id?.slice(0, 8)}</td>
-                        <td>{r.category || "—"}</td>
-                        <td>{r.building?.name || "—"}</td>
-                        <td><UrgencyPill urgency={r.request?.urgency} /></td>
-                        <td>{r.quoteCount ?? r.quotes?.length ?? 0}</td>
-                        <td><RfpStatusPill status={r.status} /></td>
-                        <td>{formatDate(r.createdAt)}</td>
-                        <td>
-                          <Link href={`/owner/rfps/${r.id}`} className="cell-link text-sm font-medium">
-                            View →
-                          </Link>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </>
-            ) : (
-              <p className="px-4 py-8 text-center text-sm text-slate-400">
-                {rfps.length === 0 ? "No RFPs found." : "No results match the current filters."}
-              </p>
-            )}
-          </Panel>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </>
       )}
     </>

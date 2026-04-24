@@ -12,6 +12,10 @@ import { ownerAuthHeaders } from "../../lib/api";
 import Badge from "../../components/ui/Badge";
 import { invoiceVariant, ingestionVariant } from "../../lib/statusVariants";
 
+// Re-evaluated on every Fast Refresh hot reload (module-level code always re-runs).
+// Used to detect that a reload happened and suppress stale modal state.
+const _moduleNonce = Date.now();
+
 /* ── Formatting helpers ──────────────────────────────────────── */
 
 function formatCurrency(value) {
@@ -129,6 +133,54 @@ const DIRECTION_TABS = [
   { key: "outgoing", label: "Outgoing", icon: "📤" },
 ];
 
+/* ── PDF Download Modal ──────────────────────────────────────── */
+
+function PdfDownloadModal({ invoice, onClose }) {
+  const [includeQr, setIncludeQr] = useState(true);
+  if (!invoice) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" role="dialog" aria-modal="true" aria-label="Download PDF">
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className="relative w-full max-w-sm rounded-t-2xl sm:rounded-2xl bg-white p-6 shadow-xl">
+        <h2 className="text-base font-semibold text-slate-800 mb-1">Download PDF</h2>
+        <p className="text-xs text-slate-500 mb-4">
+          {invoice.reference || invoice.invoiceNumber || invoice.id?.slice(0, 8)}
+        </p>
+        <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={includeQr}
+            onChange={(e) => setIncludeQr(e.target.checked)}
+            className="h-4 w-4 accent-blue-600"
+          />
+          <div>
+            <p className="text-sm font-medium text-slate-700">Include QR bill</p>
+            <p className="text-xs text-slate-400">Appends the Swiss QR payment slip</p>
+          </div>
+        </label>
+        <div className="mt-4 flex gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 rounded-xl border border-slate-200 bg-white py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 transition"
+          >
+            Cancel
+          </button>
+          <a
+            href={`/api/invoices/${invoice.id}/pdf?includeQRBill=${includeQr}`}
+            target="_blank"
+            rel="noreferrer"
+            onClick={onClose}
+            className="flex-1 rounded-xl bg-blue-600 py-2.5 text-center text-sm font-semibold text-white hover:bg-blue-700 transition"
+          >
+            Download
+          </a>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ── Main Component ──────────────────────────────────────────── */
 
 export default function OwnerInvoices() {
@@ -138,7 +190,14 @@ export default function OwnerInvoices() {
   const [error, setError] = useState("");
   const [direction, setDirection] = useState("incoming");
   const [activeTab, setActiveTab] = useState("ALL");
-  const [includeQr, setIncludeQr] = useState(true);
+  const [pdfModalInvoice, _setPdfModalInvoice] = useState(null);
+  const [pdfModalNonce, setPdfModalNonce] = useState(_moduleNonce);
+  // If the module nonce changed (hot reload), treat modal as closed.
+  const effectivePdfModal = pdfModalNonce === _moduleNonce ? pdfModalInvoice : null;
+  function setPdfModalInvoice(inv) {
+    _setPdfModalInvoice(inv);
+    setPdfModalNonce(_moduleNonce);
+  }
 
   // Date filters
   const [dateFrom, setDateFrom] = useState("");
@@ -230,12 +289,6 @@ export default function OwnerInvoices() {
         <PageHeader
           title="Invoices"
           subtitle="Review, approve, and manage invoice payments"
-          actions={
-            <label className="flex items-center gap-2 text-xs text-slate-600">
-              <input type="checkbox" checked={includeQr} onChange={(e) => setIncludeQr(e.target.checked)} />
-              Include QR in PDF
-            </label>
-          }
         />
 
         <PageContent>
@@ -355,7 +408,7 @@ export default function OwnerInvoices() {
                             }] : []),
                             {
                               label: "📄 Download PDF",
-                              onClick: () => window.open(`/api/invoices/${invoice.id}/pdf?includeQRBill=${includeQr}`, "_blank"),
+                              onClick: () => setPdfModalInvoice(invoice),
                             },
                             ...(invoice.status === "ISSUED" || invoice.status === "DRAFT" || invoice.status === "APPROVED" ? [{
                               label: "⚠ Dispute",
@@ -372,7 +425,7 @@ export default function OwnerInvoices() {
                           <ActionDropdown actions={[
                             {
                               label: "📄 Download PDF",
-                              onClick: () => window.open(`/api/invoices/${invoice.id}/pdf?includeQRBill=${includeQr}`, "_blank"),
+                              onClick: () => setPdfModalInvoice(invoice),
                             },
                           ]} />
                         </div>
@@ -399,6 +452,7 @@ export default function OwnerInvoices() {
           )}
         </PageContent>
       </PageShell>
+      <PdfDownloadModal invoice={effectivePdfModal} onClose={() => setPdfModalInvoice(null)} />
     </AppShell>
   );
 }

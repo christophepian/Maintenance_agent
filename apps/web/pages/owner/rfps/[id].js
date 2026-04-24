@@ -83,7 +83,7 @@ export default function OwnerRfpDetailPage() {
           subtitle={rfp ? `Category: ${rfp.category || "—"}` : "Loading…"}
           actions={
             <Link
-              href="/owner/rfps"
+              href="/owner/approvals?tab=rfps"
               className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
             >
               ← Back to RFPs
@@ -165,82 +165,96 @@ export default function OwnerRfpDetailPage() {
                 <ErrorBanner error={awardError} className="mx-4 mt-4 text-sm" />
                 {rfp.quotes?.length > 0 ? (
                   <div className="divide-y divide-slate-100">
-                    {rfp.quotes.map((q) => (
-                      <div
-                        key={q.id}
-                        className={cn("p-4", q.status === "AWARDED" ? "bg-green-50/40" :
-                          q.status === "REJECTED" ? "bg-slate-50/60 opacity-75" : "")}
-                      >
-                        <div className="flex items-center justify-between mb-3">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-semibold text-slate-800">
-                              {q.contractor?.name || q.contractorId?.slice(0, 8)}
-                            </span>
-                            <Badge variant={quoteVariant(q.status || "SUBMITTED")}>{(q.status || "SUBMITTED").replace(/_/g, " ")}</Badge>
-                          </div>
-                          <div className="flex items-center gap-3">
-                            <span className="text-base font-semibold text-slate-900 font-mono">
+                    {rfp.quotes.map((q) => {
+                      const canAward =
+                        (rfp.status === "OPEN" || rfp.status === "PENDING_OWNER_APPROVAL") &&
+                        q.status === "SUBMITTED";
+                      return (
+                        <div
+                          key={q.id}
+                          className={cn(
+                            "p-4 space-y-3",
+                            q.status === "AWARDED" ? "bg-green-50/40" :
+                            q.status === "REJECTED" ? "bg-slate-50/60 opacity-75" : "",
+                          )}
+                        >
+                          {/* Contractor + badge + price row */}
+                          <div className="flex flex-wrap items-start justify-between gap-2 min-w-0">
+                            <div className="flex flex-wrap items-center gap-2 min-w-0">
+                              <span className="text-sm font-semibold text-slate-800 truncate">
+                                {q.contractor?.name || q.contractorId?.slice(0, 8)}
+                              </span>
+                              <Badge variant={quoteVariant(q.status || "SUBMITTED")}>
+                                {(q.status || "SUBMITTED").replace(/_/g, " ")}
+                              </Badge>
+                            </div>
+                            <span className="text-base font-semibold text-slate-900 font-mono shrink-0">
                               {formatChfCents(q.amountCents)}
                               {q.vatIncluded === false && (
-                                <span className="text-xs text-slate-400 ml-1">excl. VAT</span>
+                                <span className="text-xs font-normal text-slate-400 ml-1">excl. VAT</span>
                               )}
                             </span>
-                            {(rfp.status === "OPEN" || rfp.status === "PENDING_OWNER_APPROVAL") &&
-                              q.status === "SUBMITTED" && (
-                              <button
-                                onClick={() => handleApproveAward(q.id, q.contractor?.name)}
-                                disabled={awarding}
-                                className="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                              >
-                                {awarding ? "Awarding…" : "🏆 Award"}
-                              </button>
+                          </div>
+
+                          {/* Metadata grid */}
+                          <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                            {q.estimatedDurationDays && (
+                              <div>
+                                <dt className="text-xs text-slate-500">Duration</dt>
+                                <dd className="text-slate-900">{q.estimatedDurationDays} day{q.estimatedDurationDays !== 1 ? "s" : ""}</dd>
+                              </div>
                             )}
-                          </div>
+                            {q.earliestAvailability && (
+                              <div>
+                                <dt className="text-xs text-slate-500">Available</dt>
+                                <dd className="text-slate-900">{formatDate(q.earliestAvailability)}</dd>
+                              </div>
+                            )}
+                            {q.validUntil && (
+                              <div>
+                                <dt className="text-xs text-slate-500">Valid Until</dt>
+                                <dd className="text-slate-900">{formatDate(q.validUntil)}</dd>
+                              </div>
+                            )}
+                            <div>
+                              <dt className="text-xs text-slate-500">Submitted</dt>
+                              <dd className="text-slate-900">{formatDate(q.submittedAt)}</dd>
+                            </div>
+                          </dl>
+
+                          {/* Text fields */}
+                          {q.workPlan && (
+                            <div>
+                              <p className="text-xs font-medium text-slate-500">Work Plan</p>
+                              <p className="mt-0.5 text-sm text-slate-700 whitespace-pre-line">{q.workPlan}</p>
+                            </div>
+                          )}
+                          {q.assumptions && (
+                            <div>
+                              <p className="text-xs font-medium text-slate-500">Assumptions</p>
+                              <p className="mt-0.5 text-sm text-slate-500 whitespace-pre-line">{q.assumptions}</p>
+                            </div>
+                          )}
+                          {q.notes && (
+                            <div>
+                              <p className="text-xs font-medium text-slate-500">Notes</p>
+                              <p className="mt-0.5 text-sm text-slate-500">{q.notes}</p>
+                            </div>
+                          )}
+
+                          {/* Award CTA — full-width, bottom of card */}
+                          {canAward && (
+                            <button
+                              onClick={() => handleApproveAward(q.id, q.contractor?.name)}
+                              disabled={awarding}
+                              className="mt-1 w-full rounded-lg bg-green-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {awarding ? "Awarding…" : "🏆 Award to " + (q.contractor?.name || "this contractor")}
+                            </button>
+                          )}
                         </div>
-                        <dl className="grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-4 text-sm mb-2">
-                          {q.estimatedDurationDays && (
-                            <div>
-                              <dt className="text-xs text-slate-500">Duration</dt>
-                              <dd className="text-slate-900">{q.estimatedDurationDays} day{q.estimatedDurationDays !== 1 ? "s" : ""}</dd>
-                            </div>
-                          )}
-                          {q.earliestAvailability && (
-                            <div>
-                              <dt className="text-xs text-slate-500">Available</dt>
-                              <dd className="text-slate-900">{formatDate(q.earliestAvailability)}</dd>
-                            </div>
-                          )}
-                          {q.validUntil && (
-                            <div>
-                              <dt className="text-xs text-slate-500">Valid Until</dt>
-                              <dd className="text-slate-900">{formatDate(q.validUntil)}</dd>
-                            </div>
-                          )}
-                          <div>
-                            <dt className="text-xs text-slate-500">Submitted</dt>
-                            <dd className="text-slate-900">{formatDate(q.submittedAt)}</dd>
-                          </div>
-                        </dl>
-                        {q.workPlan && (
-                          <div className="mt-2">
-                            <dt className="text-xs font-medium text-slate-500">Work Plan</dt>
-                            <dd className="mt-0.5 text-sm text-slate-700 whitespace-pre-line">{q.workPlan}</dd>
-                          </div>
-                        )}
-                        {q.assumptions && (
-                          <div className="mt-2">
-                            <dt className="text-xs font-medium text-slate-500">Assumptions</dt>
-                            <dd className="mt-0.5 text-sm text-slate-500 whitespace-pre-line">{q.assumptions}</dd>
-                          </div>
-                        )}
-                        {q.notes && (
-                          <div className="mt-2">
-                            <dt className="text-xs font-medium text-slate-500">Notes</dt>
-                            <dd className="mt-0.5 text-sm text-slate-500">{q.notes}</dd>
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 ) : (
                   <p className="px-4 py-8 text-center text-sm text-slate-400">

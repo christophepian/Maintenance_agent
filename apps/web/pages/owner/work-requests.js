@@ -24,7 +24,7 @@ const STATUS_TABS = [
   { key: "RFP_OPEN",         label: "RFP Open",         statuses: ["RFP_PENDING"] },
   { key: "ACTIVE",           label: "Active",           statuses: ["APPROVED", "AUTO_APPROVED", "ASSIGNED", "IN_PROGRESS"] },
   { key: "DONE",             label: "Completed",        statuses: ["COMPLETED", "OWNER_REJECTED"] },
-  { key: "RFPS",             label: "RFPs",             statuses: null, href: "/owner/rfps" },
+  { key: "RFPS",             label: "RFPs",             statuses: null, href: "/owner/approvals?tab=rfps" },
 ];
 
 // ---------------------------------------------------------------------------
