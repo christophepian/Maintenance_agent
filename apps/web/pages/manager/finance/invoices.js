@@ -501,6 +501,9 @@ export function InvoicesContent() {
 
   // Overlay state
   const [overlayInvoiceId, setOverlayInvoiceId] = useState(null);
+  // Track whether we've already consumed the ?invoiceId= deep-link so
+  // hot-reloads don't re-open the overlay on every compile.
+  const deepLinkConsumed = useRef(false);
 
   // Dispute modal state
   const [disputeInvoiceId, setDisputeInvoiceId] = useState(null);
@@ -526,13 +529,19 @@ export function InvoicesContent() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  // Deep-link: auto-open invoice overlay from ?invoiceId= query param
+  // Deep-link: auto-open invoice overlay from ?invoiceId= query param.
+  // Use a ref so this only fires once per mount — hot-reloads re-mount the
+  // component but the ref resets, while URL params persist, preventing loops.
   useEffect(() => {
     if (!router.isReady) return;
+    if (deepLinkConsumed.current) return;
     const qId = router.query.invoiceId;
-    if (qId && !overlayInvoiceId) {
-      setOverlayInvoiceId(qId);
-    }
+    if (!qId) return;
+    deepLinkConsumed.current = true;
+    setOverlayInvoiceId(qId);
+    // Immediately strip the param from the URL so the next hot-reload won't retrigger
+    const { invoiceId: _omit, ...rest } = router.query;
+    router.replace({ pathname: router.pathname, query: rest }, undefined, { shallow: true });
   }, [router.isReady, router.query.invoiceId]);
 
   const isOutgoing = direction === "outgoing";
@@ -918,14 +927,7 @@ export function InvoicesContent() {
       {/* Invoice PDF Overlay */}
       <InvoiceOverlay
         invoiceId={overlayInvoiceId}
-        onClose={() => {
-          setOverlayInvoiceId(null);
-          // Clear ?invoiceId= from URL so hot-reloads don't re-open the overlay
-          if (router.query.invoiceId) {
-            const { invoiceId: _omit, ...rest } = router.query;
-            router.replace({ pathname: router.pathname, query: rest }, undefined, { shallow: true });
-          }
-        }}
+        onClose={() => setOverlayInvoiceId(null)}
       />
 
       {/* Dispute Justification Modal */}
