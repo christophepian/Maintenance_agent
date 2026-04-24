@@ -107,7 +107,6 @@ export default function BuildingFinancialsPage() {
   const [error, setError] = useState("");
   const [data, setData] = useState(null);
   const [range, setRange] = useState(defaultRange);
-  const [rangeInput, setRangeInput] = useState(defaultRange);
   const [filterOpen, setFilterOpen] = useState(false);
 
   const fetchFinancials = useCallback(
@@ -138,8 +137,6 @@ export default function BuildingFinancialsPage() {
   );
 
   useEffect(() => { fetchFinancials(); }, [fetchFinancials]);
-
-  function applyRange() { setRange({ ...rangeInput }); }
 
   const d = data;
 
@@ -204,10 +201,9 @@ export default function BuildingFinancialsPage() {
               <FilterPanelBody>
                 <FilterSection title="Date range" first>
                   <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                    <DateField label="From" value={rangeInput.from} onChange={(e) => setRangeInput((r) => ({ ...r, from: e.target.value }))} />
-                    <DateField label="To" value={rangeInput.to} onChange={(e) => setRangeInput((r) => ({ ...r, to: e.target.value }))} />
-                    <div className="flex items-end gap-2">
-                      <button onClick={() => { applyRange(); setFilterOpen(false); }} className="button-primary text-sm h-9 px-4">Apply</button>
+                    <DateField label="From" value={range.from} onChange={(e) => setRange((r) => ({ ...r, from: e.target.value }))} />
+                    <DateField label="To" value={range.to} onChange={(e) => setRange((r) => ({ ...r, to: e.target.value }))} />
+                    <div className="flex items-end">
                       <button onClick={() => fetchFinancials(true)} className="button-secondary text-sm h-9 px-3" title="Re-compute snapshots from source data">↻ Refresh</button>
                     </div>
                   </div>

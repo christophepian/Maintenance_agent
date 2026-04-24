@@ -334,15 +334,7 @@ export default function LedgerPage() {
                   </div>
                 </FilterSection>
               )}
-              <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3">
-                <FilterSectionClear hasFilter={activeCount > 0} onClear={clearFilters} />
-                <button
-                  className="button-primary text-sm"
-                  onClick={() => { tab === "journal" ? fetchEntries(0) : fetchTrialBalance(); setFilterOpen(false); }}
-                >
-                  Apply
-                </button>
-              </div>
+              <FilterSectionClear hasFilter={activeCount > 0} onClear={clearFilters} />
             </FilterPanelBody>
           )}
           <p className="text-xs text-slate-400 mb-4">

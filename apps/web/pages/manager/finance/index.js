@@ -83,7 +83,6 @@ export default function ManagerFinanceHome() {
   }, [router]);
 
   const [range, setRange] = useState(defaultRange);
-  const [rangeInput, setRangeInput] = useState(defaultRange);
   const [portfolio, setPortfolio] = useState(null);
   const [portfolioLoading, setPortfolioLoading] = useState(true);
   const [portfolioError, setPortfolioError] = useState("");
@@ -107,8 +106,6 @@ export default function ManagerFinanceHome() {
   }, [range]);
 
   useEffect(() => { fetchPortfolio(); }, [fetchPortfolio]);
-
-  function applyRange() { setRange({ ...rangeInput }); }
 
   const p = portfolio;
   const netAccent = p ? (p.totalNetIncomeCents > 0 ? "green" : p.totalNetIncomeCents < 0 ? "red" : "") : "";
@@ -164,13 +161,8 @@ export default function ManagerFinanceHome() {
                   <FilterPanelBody>
                     <FilterSection title="Date range" first>
                       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                        <DateField label="From" value={rangeInput.from} onChange={(e) => setRangeInput((r) => ({ ...r, from: e.target.value }))} />
-                        <DateField label="To" value={rangeInput.to} onChange={(e) => setRangeInput((r) => ({ ...r, to: e.target.value }))} />
-                        <div className="flex items-end">
-                          <button onClick={() => { applyRange(); setFilterOpen(false); }} className="button-primary text-sm h-9 px-4">
-                            Apply
-                          </button>
-                        </div>
+                        <DateField label="From" value={range.from} onChange={(e) => setRange((r) => ({ ...r, from: e.target.value }))} />
+                        <DateField label="To" value={range.to} onChange={(e) => setRange((r) => ({ ...r, to: e.target.value }))} />
                       </div>
                     </FilterSection>
                   </FilterPanelBody>
