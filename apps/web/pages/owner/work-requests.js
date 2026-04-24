@@ -182,64 +182,80 @@ export default function OwnerWorkRequestsPage() {
 
           {/* ── List / Table ── */}
           {!loading && filteredRequests.length > 0 && (
-            <Panel bodyClassName="p-0">
-              {/* Mobile: card list */}
-              <div className="sm:hidden divide-y divide-slate-100">
+            <>
+              {/* Mobile: full-width card list */}
+              <div className="sm:hidden space-y-3">
                 {filteredRequests.map((r) => (
-                  <div key={r.id} className="px-4 py-3 flex items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-slate-900 truncate">{r.category || "—"}</p>
-                      <p className="text-xs text-slate-500 mt-0.5 truncate">
+                  <button
+                    key={r.id}
+                    type="button"
+                    onClick={() => router.push(`/owner/requests/${r.id}`)}
+                    className="w-full rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm hover:bg-slate-50 transition-colors"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-slate-900">{r.category || "—"}</p>
+                      <p className="text-xs text-slate-500 mt-0.5">
                         {r.buildingName || "—"}{r.unitNumber ? ` / ${r.unitNumber}` : ""}
                       </p>
                     </div>
-                    <StatusBadge status={r.status} />
-                  </div>
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      <StatusBadge status={r.status} />
+                      {typeof r.estimatedCost === "number" && (
+                        <span className="text-xs font-medium text-slate-600">{formatCurrency(r.estimatedCost)}</span>
+                      )}
+                      <span className="text-xs text-slate-500">{formatDate(r.createdAt)}</span>
+                    </div>
+                  </button>
                 ))}
               </div>
+
               {/* Desktop: table */}
-              <div className="hidden sm:block rounded-lg border border-slate-200 bg-white overflow-hidden">
-                <table className="inline-table">
-                  <thead>
-                    <tr>
-                      <th>#</th>
-                      <th>Category</th>
-                      <th>Building / Unit</th>
-                      <th>Status</th>
-                      <th className="text-right">Est. Cost</th>
-                      <th>Contractor</th>
-                      <th>Created</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredRequests.map((r) => (
-                      <tr key={r.id}>
-                        <td className="font-medium text-slate-900">
-                          {r.requestNumber ? `#${r.requestNumber}` : "—"}
-                        </td>
-                        <td className="text-sm text-slate-700">{r.category || "—"}</td>
-                        <td className="text-sm text-slate-700">
-                          {r.buildingName || "—"}
-                          {r.unitNumber && (
-                            <span className="text-slate-400"> / {r.unitNumber}</span>
-                          )}
-                        </td>
-                        <td>
-                          <StatusBadge status={r.status} />
-                        </td>
-                        <td className="text-right text-sm font-mono text-slate-700">
-                          {formatCurrency(r.estimatedCost)}
-                        </td>
-                        <td className="text-sm text-slate-600">
-                          {r.assignedContractorName || "—"}
-                        </td>
-                        <td className="text-sm text-slate-500">{formatDate(r.createdAt)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div className="hidden sm:block">
+                <Panel bodyClassName="p-0">
+                  <div className="rounded-lg border border-slate-200 bg-white overflow-hidden">
+                    <table className="inline-table">
+                      <thead>
+                        <tr>
+                          <th>#</th>
+                          <th>Category</th>
+                          <th>Building / Unit</th>
+                          <th>Status</th>
+                          <th className="text-right">Est. Cost</th>
+                          <th>Contractor</th>
+                          <th>Created</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredRequests.map((r) => (
+                          <tr key={r.id}>
+                            <td className="font-medium text-slate-900">
+                              {r.requestNumber ? `#${r.requestNumber}` : "—"}
+                            </td>
+                            <td className="text-sm text-slate-700">{r.category || "—"}</td>
+                            <td className="text-sm text-slate-700">
+                              {r.buildingName || "—"}
+                              {r.unitNumber && (
+                                <span className="text-slate-400"> / {r.unitNumber}</span>
+                              )}
+                            </td>
+                            <td>
+                              <StatusBadge status={r.status} />
+                            </td>
+                            <td className="text-right text-sm font-mono text-slate-700">
+                              {formatCurrency(r.estimatedCost)}
+                            </td>
+                            <td className="text-sm text-slate-600">
+                              {r.assignedContractorName || "—"}
+                            </td>
+                            <td className="text-sm text-slate-500">{formatDate(r.createdAt)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </Panel>
               </div>
-            </Panel>
+            </>
           )}
         </PageContent>
       </PageShell>

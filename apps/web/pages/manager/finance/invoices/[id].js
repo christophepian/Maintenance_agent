@@ -78,7 +78,6 @@ export default function InvoiceDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
-  const [pdfUrl, setPdfUrl] = useState(null);
   const [billingEntities, setBillingEntities] = useState([]);
   const [selectedBillingEntityId, setSelectedBillingEntityId] = useState("");
   const [showCreateBE, setShowCreateBE] = useState(false);
@@ -119,23 +118,6 @@ export default function InvoiceDetailPage() {
       setSelectedBillingEntityId(invoice.issuerBillingEntityId);
     }
   }, [invoice?.issuerBillingEntityId]);
-
-  // Load PDF preview
-  useEffect(() => {
-    if (!id) return;
-    fetch(`/api/invoices/${id}/pdf`, { headers: authHeaders() })
-      .then((r) => {
-        if (!r.ok) return null;
-        return r.blob();
-      })
-      .then((blob) => {
-        if (blob) setPdfUrl(URL.createObjectURL(blob));
-      })
-      .catch(() => {});
-    return () => {
-      setPdfUrl((prev) => { if (prev) URL.revokeObjectURL(prev); return null; });
-    };
-  }, [id]);
 
   async function invoiceAction(action, body) {
     setActionLoading(true);
@@ -226,7 +208,7 @@ export default function InvoiceDetailPage() {
           ]}
           actions={
             <button
-              onClick={() => router.back()}
+              onClick={() => router.push("/manager/finance/invoices")}
               className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 transition"
             >
               ← Back
@@ -541,23 +523,15 @@ export default function InvoiceDetailPage() {
 
               {/* Right column: original capture + PDF preview */}
               <div className="space-y-6">
-                {/* Original captured image (for ingested invoices) */}
-                {inv.sourceFileUrl && inv.sourceChannel !== "MANUAL" && (
+                {/* Original captured image — only for image-type sources (jpg/png/webp) */}
+                {inv.sourceFileUrl && inv.sourceChannel !== "MANUAL" && inv.sourceFileUrl.match(/\.(jpg|jpeg|png|webp)$/i) && (
                   <Panel title="Original Capture">
                     <div className="space-y-3">
-                      {inv.sourceFileUrl.match(/\.(jpg|jpeg|png|webp)$/i) ? (
-                        <img
-                          src={`/api/invoices/${id}/source-file`}
-                          alt="Original captured document"
-                          className="w-full rounded-lg border border-slate-200"
-                        />
-                      ) : (
-                        <iframe
-                          src={`/api/invoices/${id}/source-file`}
-                          title="Original document"
-                          className="w-full rounded-lg border-0 h-[500px]"
-                        />
-                      )}
+                      <img
+                        src={`/api/invoices/${id}/source-file`}
+                        alt="Original captured document"
+                        className="w-full rounded-lg border border-slate-200"
+                      />
                       <a
                         href={`/api/invoices/${id}/source-file`}
                         download
@@ -569,15 +543,13 @@ export default function InvoiceDetailPage() {
                   </Panel>
                 )}
 
-                {/* Generated PDF preview */}
-                <Panel title={inv.sourceFileUrl && inv.sourceChannel !== "MANUAL" ? "Generated PDF (from extracted data)" : "PDF Preview"}>
-                  {pdfUrl ? (
-                    <iframe src={pdfUrl} title="Invoice PDF" className="w-full rounded-lg border-0 h-[500px]" />
-                  ) : (
-                    <div className="flex items-center justify-center py-12">
-                      <p className="text-sm text-slate-400">PDF not available</p>
-                    </div>
-                  )}
+                {/* PDF preview — always shown */}
+                <Panel title="PDF Preview">
+                  <iframe
+                    src={`/api/invoices/${id}/pdf`}
+                    title="Invoice PDF"
+                    className="w-full rounded-lg border-0 h-[500px]"
+                  />
                 </Panel>
 
                 {/* Timeline */}

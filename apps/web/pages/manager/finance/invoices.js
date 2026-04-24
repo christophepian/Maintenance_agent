@@ -158,13 +158,11 @@ function ActionDropdown({ actions }) {
 function InvoiceOverlay({ invoiceId, onClose }) {
   const [pdfUrl, setPdfUrl] = useState(null);
   const [detail, setDetail] = useState(null);
-  const [loadError, setLoadError] = useState("");
 
   useEffect(() => {
     if (!invoiceId) return;
     setPdfUrl(null);
     setDetail(null);
-    setLoadError("");
 
     // Fetch the full invoice detail for header info
     fetch(`/api/invoices/${invoiceId}`, { headers: authHeaders() })
@@ -172,18 +170,9 @@ function InvoiceOverlay({ invoiceId, onClose }) {
       .then((d) => { if (d?.data) setDetail(d.data); })
       .catch(() => {});
 
-    // Fetch the PDF as a blob for the embedded viewer
-    fetch(`/api/invoices/${invoiceId}/pdf`, { headers: authHeaders() })
-      .then((r) => {
-        if (!r.ok) throw new Error("PDF not available");
-        return r.blob();
-      })
-      .then((blob) => setPdfUrl(URL.createObjectURL(blob)))
-      .catch((e) => setLoadError(e.message || "Failed to load PDF"));
-
-    return () => {
-      setPdfUrl((prev) => { if (prev) URL.revokeObjectURL(prev); return null; });
-    };
+    // Set PDF URL directly — AUTH_OPTIONAL=true in dev; in production auth is
+    // handled server-side via the existing session/JWT forwarded by the proxy.
+    setPdfUrl(`/api/invoices/${invoiceId}/pdf`);
   }, [invoiceId]);
 
   // Close on Escape
@@ -201,9 +190,8 @@ function InvoiceOverlay({ invoiceId, onClose }) {
       onClick={onClose}
     >
       <div
-        className="relative flex flex-col bg-white rounded-xl shadow-2xl w-full max-w-4xl mx-4"
+        className="relative flex flex-col bg-white rounded-xl shadow-2xl w-full max-w-4xl mx-4 h-[85vh]"
         onClick={(e) => e.stopPropagation()}
-        className="h-[85vh]"
       >
         {/* Header bar */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
@@ -237,20 +225,16 @@ function InvoiceOverlay({ invoiceId, onClose }) {
         </div>
         {/* PDF embed */}
         <div className="flex-1 overflow-hidden">
-          {loadError ? (
-            <div className="flex items-center justify-center h-full">
-              <p className="text-slate-500">{loadError}</p>
-            </div>
-          ) : !pdfUrl ? (
-            <div className="flex items-center justify-center h-full">
-              <p className="text-slate-400">Loading PDF…</p>
-            </div>
-          ) : (
+          {pdfUrl ? (
             <iframe
               src={pdfUrl}
               title="Invoice PDF"
               className="w-full h-full border-0"
             />
+          ) : (
+            <div className="flex items-center justify-center h-full">
+              <p className="text-slate-400">Loading PDF…</p>
+            </div>
           )}
         </div>
       </div>

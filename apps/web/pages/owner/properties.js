@@ -144,7 +144,7 @@ function BuildingsTab({ refreshKey }) {
   }
 
   return (
-    <Panel bodyClassName="p-0">
+    <>
       {loading ? (
         <p className="loading-text">Loading properties…</p>
       ) : buildings.length === 0 ? (
@@ -154,19 +154,19 @@ function BuildingsTab({ refreshKey }) {
       ) : (
         <>
           {/* Mobile: card list */}
-          <div className="sm:hidden divide-y divide-slate-100">
+          <div className="sm:hidden space-y-3">
             {sortedBuildings.map((b) => (
               <button
                 key={b.id}
                 type="button"
                 onClick={() => router.push(`/admin-inventory/buildings/${b.id}?from=/owner/properties&role=owner`)}
-                className="w-full px-4 py-3 text-left flex items-center justify-between gap-3 hover:bg-slate-50 transition-colors"
+                className="w-full rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm hover:bg-slate-50 transition-colors"
               >
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-slate-900 truncate">{b.name}</p>
-                  {b.address && <p className="text-xs text-slate-500 mt-0.5 truncate">{b.address}</p>}
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-slate-900">{b.name}</p>
+                  {b.address && <p className="text-xs text-slate-500 mt-0.5">{b.address}</p>}
                 </div>
-                <div className="shrink-0 flex items-center gap-2">
+                <div className="mt-3 flex flex-wrap items-center gap-2">
                   {b.unitCount != null && <span className="text-xs text-slate-400">{b.unitCount} units</span>}
                   <span className={cn("inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold", b.isActive === false ? "bg-slate-100 text-slate-500" : "bg-green-100 text-green-700")}>
                     {b.isActive === false ? "Inactive" : "Active"}
@@ -175,22 +175,25 @@ function BuildingsTab({ refreshKey }) {
               </button>
             ))}
           </div>
+
           {/* Desktop: configurable table */}
           <div className="hidden sm:block">
-            <ConfigurableTable
-              tableId="owner-buildings"
-              columns={OWNER_BUILDING_COLUMNS}
-              data={sortedBuildings}
-              rowKey={(b) => b.id}
-              sortField={sortField}
-              sortDir={sortDir}
-              onSort={handleSort}
-              onRowClick={(b) => router.push(`/admin-inventory/buildings/${b.id}?from=/owner/properties&role=owner`)}
-              emptyState={<p className="text-sm text-slate-500">No properties found.</p>}
-            />
+            <Panel bodyClassName="p-0">
+              <ConfigurableTable
+                tableId="owner-buildings"
+                columns={OWNER_BUILDING_COLUMNS}
+                data={sortedBuildings}
+                rowKey={(b) => b.id}
+                sortField={sortField}
+                sortDir={sortDir}
+                onSort={handleSort}
+                onRowClick={(b) => router.push(`/admin-inventory/buildings/${b.id}?from=/owner/properties&role=owner`)}
+                emptyState={<p className="text-sm text-slate-500">No properties found.</p>}
+              />
+            </Panel>
           </div>
         </>
       )}
-    </Panel>
+    </>
   );
 }

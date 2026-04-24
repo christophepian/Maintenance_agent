@@ -359,6 +359,31 @@ export function registerInvoiceRoutes(router: Router) {
   router.get("/invoices/:id/pdf", async ({ req, res, params, query, orgId }) => {
     if (!requireOrgViewer(req, res)) return;
     try {
+      // If the invoice has an uploaded PDF source file, serve it directly —
+      // this avoids regenerating from potentially incomplete DB data (e.g. DRAFT
+      // invoices created via MOBILE_CAPTURE that lack line items / issuer).
+      const invoice = await getInvoice(params.id);
+      if (!invoice) return sendError(res, 404, "NOT_FOUND", "Invoice not found");
+
+      const sourceKey = (invoice as any).sourceFileUrl as string | null;
+      const isPdfSource = sourceKey?.toLowerCase().endsWith(".pdf");
+      if (isPdfSource && sourceKey) {
+        const exists = await storage.exists(sourceKey);
+        if (exists) {
+          const buffer = await storage.get(sourceKey);
+          const fileName = sourceKey.split("/").pop() || "invoice.pdf";
+          res.writeHead(200, {
+            "Content-Type": "application/pdf",
+            "Content-Length": buffer.length,
+            "Content-Disposition": `inline; filename="${encodeURIComponent(fileName)}"`,
+            "Cache-Control": "private, max-age=3600",
+          });
+          res.end(buffer);
+          return;
+        }
+      }
+
+      // No uploaded PDF — generate one from DB data.
       const includeQRBillParam = first(query, "includeQRBill") || "true";
       const includeQRBill = includeQRBillParam !== "false";
       console.log(`[PDF] Generating PDF for invoice ${params.id}, includeQRBill=${includeQRBill}`);

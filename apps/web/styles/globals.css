@@ -357,6 +357,46 @@ h1, h2 {
   .has-bottom-nav {
     padding-bottom: calc(5rem + env(safe-area-inset-bottom));
   }
+
+  /*
+   * ── Card section divider (responsive design guideline) ──────────────────
+   * Use on every content section inside a Panel / card that needs a visual
+   * separator from the section above it.
+   * Mobile:  pt-8  mt-6  (generous breathing room on small screens)
+   * sm+:     pt-10 mt-8  (slightly more on wider viewports)
+   * Pair with `border-t border-slate-100` for the dividing line.
+   */
+  .card-section {
+    @apply border-t border-slate-100 pt-8 mt-6 sm:pt-10 sm:mt-8;
+  }
+
+  /*
+   * ── Card dual-action button pair (responsive design guideline) ───────────
+   * When a card surfaces two opposing actions (confirm vs. destructive):
+   *   1. Both buttons share the full row width equally: flex + flex-1 on each.
+   *   2. Never use flex-wrap on the row — buttons must stay side-by-side.
+   *   3. ORDER: destructive / cancel LEFT, confirm / primary RIGHT.
+   *      (matches native mobile conventions: Cancel | OK)
+   *   4. Minimum tap target: py-2.5 (≥ 44 px rendered height).
+   *   5. Labels: short and scannable — no full sentences on mobile.
+   */
+
+  /*
+   * ── Card data-chip row (responsive design guideline) ────────────────────
+   * A horizontal row of 2–4 labelled data chips inside a card
+   * (e.g. contractor name + quote amount + link).
+   *
+   * Mobile  (<sm): chips wrap left-to-right with gap-x-6 gap-y-2 — natural
+   *                stacking when they don't all fit on one line.
+   * Desktop (sm+): chips spread to fill the full card width with
+   *                justify-between, making use of horizontal space.
+   *
+   * Pattern:
+   *   className="flex flex-wrap gap-x-6 gap-y-2 sm:justify-between"
+   *
+   * Do NOT use a fixed gap or grid on desktop — let justify-between
+   * distribute the available space evenly regardless of chip count.
+   */
 }
 
 @keyframes undoToastSlideUp {

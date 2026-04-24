@@ -71,10 +71,41 @@
 | # | Check | Pass criteria |
 |---|-------|---------------|
 | RD1 | Status pipeline fits | 5- or 6-stage pipeline rendered in a single row; labels don't overlap or clip outside viewport |
-| RD2 | Owner CTAs are tappable | Approve / Reject buttons ≥ 44 px height, not cropped |
+| RD2 | Owner CTAs are tappable | Reject (left) / Approve (right) buttons ≥ 44 px height, same row, not cropped — destructive always on the left |
 | RD3 | Details panel — single column | Building/unit/description in 1 column (md:grid-cols-3 collapses) |
 | RD4 | Two-column layout collapses | Asset Recommendation, Photos, Legal Analysis stacked above Tenant/Contractor cards |
 | RD5 | Asset recommendation grid | `grid-cols-2` cost comparison row readable at 390 px |
+
+---
+
+## Mobile Card Design Guidelines
+
+Apply these rules to every card/panel that surfaces actions or multi-section content.
+
+### Section spacing — `.card-section`
+- Use the `card-section` CSS class on every content section inside a Panel that needs a visual separator from the one above.
+- Renders `border-t border-slate-100` + `pt-8 mt-6` on mobile, `pt-10 mt-8` on `sm+`.
+- Never hand-roll `border-t pt-4 mt-4` inline — always use `.card-section`.
+
+### Intra-section spacing
+- Between a contextual reason sentence and the data fields it introduces, use `pt-4` (not `pt-1`) to create breathing room for scan-reading.
+
+### Dual-action button pair (confirm vs. destructive)
+1. **Order:** destructive / cancel action **left**, confirm / primary action **right** (mirrors native mobile Cancel | OK convention).
+2. **Width:** `flex flex-1` on each button — equal halves, no wrapping (`flex`, never `flex-wrap`).
+3. **Tap target:** minimum `py-2.5` (≥ 44 px rendered height).
+4. **Labels:** keep short and scannable (e.g. "✗ Reject" / "✓ Approve") — no full-sentence labels on mobile.
+
+### Data-chip row (labelled fields inside a card)
+When a card surfaces 2–4 labelled data chips side by side (e.g. contractor name, quote amount, tender link):
+- **Mobile** (`<sm`): `flex flex-wrap gap-x-6 gap-y-2` — chips cluster left, wrap naturally when they don't all fit.
+- **Desktop** (`sm+`): add `sm:justify-between` — chips spread to fill the full card width, using available horizontal space evenly.
+- Pattern: `className="flex flex-wrap gap-x-6 gap-y-2 sm:justify-between"`
+- Do **not** use a fixed gap or grid on desktop — `justify-between` distributes space regardless of chip count.
+
+### Approval / context reason text
+- Use a single short clause, not a full paragraph (e.g. "Quoted amount exceeds the auto-approval limit for this building.").
+- Place it immediately below the section heading, before the data fields.
 
 ---
 

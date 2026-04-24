@@ -186,55 +186,53 @@ function RequestsTab() {
         )}
       </div>
 
-      <Panel bodyClassName="p-0">
-        {loading ? (
-          <p className="loading-text">Loading…</p>
-        ) : filtered.length === 0 ? (
-          <div className="empty-state">
-            <p className="empty-state-text">
-              {requests.length === 0 ? "No requests pending your approval." : "No results match the current filters."}
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-2 p-4">
-            {filtered.map((req) => {
-              const borderColor = URGENCY_BORDER[req.urgency] || "border-l-slate-200";
-              return (
-                <div
-                  key={req.id}
-                  className={cn("rounded-lg border border-slate-200 border-l-4", borderColor, "bg-white shadow-sm cursor-pointer hover:bg-slate-50 transition-colors")}
-                  onClick={() => router.push(`/owner/requests/${req.id}`)}
-                >
-                  <div className="flex items-center justify-between px-5 py-3.5">
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-semibold text-slate-900">
-                        {req.requestNumber ? `#${req.requestNumber} — ` : ""}
-                        {req.category || "General Maintenance"}
-                      </p>
-                      <p className="text-xs text-slate-500 mt-0.5">
-                        {req.unit?.building?.name || ""}{req.unit?.unitNumber ? ` · Unit ${req.unit.unitNumber}` : ""}
-                        {" · "}Submitted {formatDateTime(req.createdAt)}
-                      </p>
-                      {req.description && (
-                        <p className="text-xs text-slate-400 mt-1 truncate max-w-lg">{req.description}</p>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-3 shrink-0 ml-4">
-                      {req.estimatedCost > 0 && (
-                        <span className="text-xs font-medium text-slate-600">{formatCost(req.estimatedCost)}</span>
-                      )}
-                      <UrgencyPill urgency={req.urgency} />
-                      <svg className="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </div>
+      {loading ? (
+        <p className="loading-text">Loading…</p>
+      ) : filtered.length === 0 ? (
+        <div className="empty-state">
+          <p className="empty-state-text">
+            {requests.length === 0 ? "No requests pending your approval." : "No results match the current filters."}
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {filtered.map((req) => {
+            const borderColor = URGENCY_BORDER[req.urgency] || "border-l-slate-200";
+            return (
+              <div
+                key={req.id}
+                className={cn("rounded-2xl border border-slate-200 border-l-4", borderColor, "bg-white p-4 shadow-sm cursor-pointer hover:bg-slate-50 transition-colors")}
+                onClick={() => router.push(`/owner/requests/${req.id}`)}
+              >
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-slate-900">
+                      {req.requestNumber ? `#${req.requestNumber} — ` : ""}
+                      {req.category || "General Maintenance"}
+                    </p>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      {req.unit?.building?.name || ""}{req.unit?.unitNumber ? ` · Unit ${req.unit.unitNumber}` : ""}
+                      {" · "}Submitted {formatDateTime(req.createdAt)}
+                    </p>
+                    {req.description && (
+                      <p className="text-xs text-slate-400 mt-1 line-clamp-2">{req.description}</p>
+                    )}
+                  </div>
+                  <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:gap-3 sm:shrink-0">
+                    {req.estimatedCost > 0 && (
+                      <span className="text-xs font-medium text-slate-600">{formatCost(req.estimatedCost)}</span>
+                    )}
+                    <UrgencyPill urgency={req.urgency} />
+                    <svg className="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        )}
-      </Panel>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </>
   );
 }
@@ -336,14 +334,14 @@ function RfpsTab() {
           {pendingApproval.length > 0 && (
             <Panel title={`Awaiting Your Approval (${pendingApproval.length})`} bodyClassName="p-0">
               {/* Mobile: card list */}
-              <div className="sm:hidden divide-y divide-slate-100">
+              <div className="sm:hidden space-y-3">
                 {pendingApproval.map((r) => (
-                  <div key={r.id} className="px-4 py-3 flex items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-slate-900 truncate">{r.category || "—"}</p>
+                  <div key={r.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-slate-900">{r.category || "—"}</p>
                       <p className="text-xs text-slate-500 mt-0.5">{r.building?.name || "—"}</p>
                     </div>
-                    <div className="flex items-center gap-2 shrink-0">
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
                       <RfpStatusPill status={r.status} />
                       <Link href={`/owner/rfps/${r.id}`} className="cell-link text-sm font-medium">
                         Review →
@@ -392,14 +390,14 @@ function RfpsTab() {
             {filtered.length > 0 ? (
               <>
                 {/* Mobile: card list */}
-                <div className="sm:hidden divide-y divide-slate-100">
+                <div className="sm:hidden space-y-3">
                   {filtered.map((r) => (
-                    <div key={r.id} className="px-4 py-3 flex items-start justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-slate-900 truncate">{r.category || "—"}</p>
+                    <div key={r.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-slate-900">{r.category || "—"}</p>
                         <p className="text-xs text-slate-500 mt-0.5">{r.building?.name || "—"}</p>
                       </div>
-                      <div className="flex items-center gap-2 shrink-0">
+                      <div className="mt-3 flex flex-wrap items-center gap-2">
                         <RfpStatusPill status={r.status} />
                         <Link href={`/owner/rfps/${r.id}`} className="cell-link text-sm font-medium">
                           View →

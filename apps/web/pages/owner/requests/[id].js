@@ -3,17 +3,14 @@ import { useRouter } from "next/router";
 import Link from "next/link";
 import AppShell from "../../../components/AppShell";
 import PageShell from "../../../components/layout/PageShell";
-import PageHeader from "../../../components/layout/PageHeader";
 import PageContent from "../../../components/layout/PageContent";
 import Panel from "../../../components/layout/Panel";
 import { ownerAuthHeaders } from "../../../lib/api";
 import Badge from "../../../components/ui/Badge";
+import { urgencyVariant } from "../../../lib/statusVariants";
 import RecommendationPanel from "../../../components/RecommendationPanel";
-
 import { cn } from "../../../lib/utils";
-// Reuse shared components from the manager requests list page
 import {
-  RequestStatusBadge as StatusBadge,
   LegalRecommendationPanel,
   RequestPhotosPanel,
   getNextStep,
@@ -25,21 +22,6 @@ import {
    Constants
    ═══════════════════════════════════════════════════════════════ */
 
-/** RAG urgency — LOW (green) → MEDIUM (amber) → HIGH (red) */
-const URGENCY_RAG = {
-  LOW:       { variant: "success", dot: "bg-green-500" },
-  MEDIUM:    { variant: "warning", dot: "bg-amber-500" },
-  HIGH:      { variant: "destructive", dot: "bg-red-500" },
-  EMERGENCY: { variant: "destructive", dot: "bg-red-500" },
-};
-
-/**
- * Pipeline stages — base 5-stage flow.
- * When a request is at PENDING_OWNER_APPROVAL an extra "Owner Approval"
- * stage is inserted between "Contractor" and "In Progress" so the tollgate
- * appears at the correct chronological position (after quotes are received,
- * before work starts), not at the early RFP stage.
- */
 const REQUEST_STAGES_BASE = [
   { key: "review",      label: "Review" },
   { key: "rfp",         label: "RFP" },
@@ -52,7 +34,7 @@ const REQUEST_STAGES_WITH_OWNER = [
   { key: "review",         label: "Review" },
   { key: "rfp",            label: "RFP" },
   { key: "contractor",     label: "Contractor" },
-  { key: "owner_approval", label: "Owner Approval" },
+  { key: "owner_approval", label: "Pending Owner Approval" },
   { key: "in_progress",    label: "In Progress" },
   { key: "completed",      label: "Completed" },
 ];
@@ -64,7 +46,7 @@ function getStagesForStatus(status) {
 }
 
 function stageIndexForStatus(status) {
-  if (status === "PENDING_OWNER_APPROVAL") return 3; // index in the 6-stage pipeline
+  if (status === "PENDING_OWNER_APPROVAL") return 3;
   switch (status) {
     case "PENDING_REVIEW":  return 0;
     case "RFP_PENDING":
@@ -78,11 +60,10 @@ function stageIndexForStatus(status) {
   }
 }
 
-/** Recommendation badge styles from the depreciation engine */
 const REC_STYLES = {
-  REPAIR:           { variant: "success", label: "Repair" },
-  MONITOR:          { variant: "warning", label: "Monitor" },
-  PLAN_REPLACEMENT: { variant: "warning", label: "Plan Replacement" },
+  REPAIR:           { variant: "success",     label: "Repair" },
+  MONITOR:          { variant: "warning",     label: "Monitor" },
+  PLAN_REPLACEMENT: { variant: "warning",     label: "Plan Replacement" },
   REPLACE:          { variant: "destructive", label: "Replace" },
 };
 
@@ -93,21 +74,24 @@ const NEXT_STEP_STYLES = {
   error:   "border-red-200 bg-red-50 text-red-700",
 };
 
-/* ═══════════════════════════════════════════════════════════════
-   Owner-specific CTA logic
-   ═══════════════════════════════════════════════════════════════
-   In the current auth model there is NO delegation flag that lets
-   a manager act on behalf of an owner. If that changes (e.g. an
-   org-level "managerCanApprove" config), this function is the
-   single place to update.
-   ═══════════════════════════════════════════════════════════════ */
+/** Build a human-readable reason string for why owner sign-off is required. */
+function buildApprovalReason(r, rfpData) {
+  const awardedQuote = rfpData?.quotes?.find((q) => q.id === rfpData?.awardedQuoteId);
+  const contractorName =
+    rfpData?.awardedContractor?.name ||
+    awardedQuote?.contractor?.name ||
+    null;
+  const amountChf =
+    awardedQuote?.amountCents != null
+      ? formatCurrency(awardedQuote.amountCents / 100)
+      : null;
 
-function getOwnerCTAs(r) {
-  switch (r?.status) {
-    case "PENDING_OWNER_APPROVAL": return ["approve", "reject"];
-    case "RFP_PENDING":            return r.rfpId ? ["view_rfp"] : [];
-    default:                       return [];
+  let reason = "Quoted amount exceeds the auto-approval limit for this building.";
+  if (r?.approvalSource === "MANAGER_MANUAL") {
+    reason = "Manager escalated this request for your review.";
   }
+
+  return { reason, contractorName, amountChf };
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -126,59 +110,129 @@ function Field({ label, children }) {
 /* ── Status pipeline timeline ───────────────────────────────── */
 
 function StatusPipeline({ status, payingParty }) {
+  const [expanded, setExpanded] = useState(false);
   const stages = getStagesForStatus(status);
   const idx = stageIndexForStatus(status);
   const isRejected = status === "REJECTED";
-  const isTenantFunded = isRejected && payingParty === "TENANT";
+  const isTenantFunded = payingParty === "TENANT";
 
   function connectorColor(i) {
     if (i >= idx) return "bg-slate-200";
     if (isRejected && !isTenantFunded) return "bg-red-300";
-    if (isTenantFunded) return "bg-orange-300";
+    if (isTenantFunded && isRejected) return "bg-orange-300";
     return "bg-green-400";
   }
 
+  function getDotCls(i) {
+    const isCurrent = i === idx;
+    const reached = i <= idx;
+    const rejectedHere = isRejected && !isTenantFunded && i === idx;
+    const tenantFundedHere = isTenantFunded && isRejected && i === idx;
+    if (rejectedHere)     return "bg-red-500 border-red-600";
+    if (tenantFundedHere) return "bg-orange-500 border-orange-600";
+    if (isCurrent)        return "bg-indigo-500 border-indigo-600 ring-4 ring-indigo-100";
+    if (reached)          return "bg-green-500 border-green-600";
+    return "bg-slate-200 border-slate-300";
+  }
+
+  function getLabelText(stage, i) {
+    const isCurrent = i === idx;
+    if (!isCurrent) return stage.label;
+    switch (status) {
+      case "PENDING_REVIEW":         return "Pending Review";
+      case "RFP_PENDING":            return "RFP Pending";
+      case "PENDING_OWNER_APPROVAL": return "Pending Owner Approval";
+      case "AUTO_APPROVED":          return "Auto-Approved";
+      case "APPROVED":               return "Approved";
+      case "REJECTED":               return isTenantFunded ? "Tenant-Funded" : "Rejected";
+      default:                       return stage.label;
+    }
+  }
+
+  function getLabelCls(i) {
+    const reached = i <= idx;
+    const isCurrent = i === idx;
+    const rejectedHere = isRejected && !isTenantFunded && i === idx;
+    const tenantFundedHere = isTenantFunded && isRejected && i === idx;
+    if (rejectedHere)     return "text-red-600 font-semibold";
+    if (tenantFundedHere) return "text-orange-600 font-semibold";
+    if (isCurrent)        return "text-indigo-700 font-semibold";
+    if (reached)          return "text-green-700";
+    return "text-slate-400";
+  }
+
+  const currentStage = stages[idx];
+  const nextStage    = stages[idx + 1] ?? null;
+
   return (
-    <div className="flex items-start w-full">
-      {stages.map((stage, i) => {
-        const reached = i <= idx;
-        const isCurrent = i === idx;
-        const rejectedHere = isRejected && !isTenantFunded && i === idx;
-        const tenantFundedHere = isTenantFunded && i === idx;
+    <>
+      {/* Mobile: compressed summary + optional expand */}
+      <div className="sm:hidden">
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          className="flex w-full items-center justify-between gap-2 focus-visible:outline-none"
+          aria-expanded={expanded}
+        >
+          <div className="flex items-center gap-2 min-w-0">
+            <div className={cn("h-3 w-3 rounded-full border-2 shrink-0", getDotCls(idx))} />
+            <span className={cn("text-sm truncate", getLabelCls(idx))}>{getLabelText(currentStage, idx)}</span>
+            {nextStage && (
+              <>
+                <svg className="h-3.5 w-3.5 text-slate-300 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                </svg>
+                <div className={cn("h-3 w-3 rounded-full border-2 shrink-0", getDotCls(idx + 1))} />
+                <span className={cn("text-sm truncate text-slate-400", getLabelCls(idx + 1))}>{getLabelText(nextStage, idx + 1)}</span>
+              </>
+            )}
+          </div>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+            aria-hidden="true"
+            className={cn("h-4 w-4 shrink-0 text-slate-400 transition-transform duration-200", expanded && "rotate-180")}
+          >
+            <path fillRule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
+          </svg>
+        </button>
 
-        let dotCls;
-        if (rejectedHere)          dotCls = "bg-red-500 border-red-600";
-        else if (tenantFundedHere) dotCls = "bg-orange-500 border-orange-600";
-        else if (isCurrent)        dotCls = "bg-indigo-500 border-indigo-600 ring-4 ring-indigo-100";
-        else if (reached)          dotCls = "bg-green-500 border-green-600";
-        else                       dotCls = "bg-slate-200 border-slate-300";
+        {expanded && (
+          <div className="mt-3 space-y-2 border-t border-slate-100 pt-3">
+            {stages.map((stage, i) => (
+              <div key={stage.key} className="flex items-start gap-3">
+                <div className="flex flex-col items-center pt-0.5">
+                  <div className={cn("h-3.5 w-3.5 rounded-full border-2 shrink-0", getDotCls(i))} />
+                  {i < stages.length - 1 && (
+                    <div className={cn("mt-1 h-5 w-0.5", connectorColor(i))} />
+                  )}
+                </div>
+                <span className={cn("pt-0.5 text-xs leading-5", getLabelCls(i))}>
+                  {getLabelText(stage, i)}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
-        let labelText = stage.label;
-        let labelCls  = "text-slate-400";
-        if (rejectedHere) {
-          labelText = "Rejected"; labelCls = "text-red-600 font-semibold";
-        } else if (tenantFundedHere) {
-          labelText = "Tenant-funded"; labelCls = "text-orange-600 font-semibold";
-        } else if (isCurrent) {
-          labelCls = "text-indigo-700 font-semibold";
-        } else if (reached) {
-          labelCls = "text-green-700";
-        }
-
-        return (
+      {/* Desktop: horizontal pipeline */}
+      <div className="hidden sm:flex sm:items-start sm:w-full">
+        {stages.map((stage, i) => (
           <div key={stage.key} className="flex flex-col items-center flex-1">
             <div className="flex items-center w-full">
               {i > 0 && <div className={cn("h-0.5 flex-1", connectorColor(i - 1))} />}
-              <div className={cn("h-3.5 w-3.5 rounded-full border-2 shrink-0", dotCls)} />
+              <div className={cn("h-3.5 w-3.5 rounded-full border-2 shrink-0", getDotCls(i))} />
               {i < stages.length - 1 && <div className={cn("h-0.5 flex-1", connectorColor(i))} />}
             </div>
-            <span className={cn("mt-1.5 text-[11px] leading-tight text-center whitespace-nowrap", labelCls)}>
-              {labelText}
+            <span className={cn("mt-1.5 text-[11px] leading-tight text-center", getLabelCls(i))}>
+              {getLabelText(stage, i)}
             </span>
           </div>
-        );
-      })}
-    </div>
+        ))}
+      </div>
+    </>
   );
 }
 
@@ -186,9 +240,9 @@ function StatusPipeline({ status, payingParty }) {
 
 function DepreciationBar({ pct }) {
   const c =
-    pct >= 100 ? "bg-red-500" :
+    pct >= 100 ? "bg-red-500"    :
     pct >= 85  ? "bg-orange-500" :
-    pct >= 65  ? "bg-amber-500" :
+    pct >= 65  ? "bg-amber-500"  :
                  "bg-green-500";
   return (
     <div className="flex items-center gap-2">
@@ -200,12 +254,12 @@ function DepreciationBar({ pct }) {
   );
 }
 
-/* ── Asset recommendation card ───────────────────────────────── */
+/* ── Asset recommendation content ── */
 
-function AssetRecommendationCard({ assetId, repairReplaceData, requestEstimate }) {
+function AssetRecommendationContent({ assetId, repairReplaceData, requestEstimate }) {
   if (!assetId) {
     return (
-      <div className="px-6 py-6 text-center">
+      <div className="py-6 text-center">
         <p className="text-sm text-slate-400 m-0">No asset linked to this request.</p>
         <p className="text-xs text-slate-400 mt-1 m-0">Link an asset to get repair / replace recommendations.</p>
       </div>
@@ -213,43 +267,31 @@ function AssetRecommendationCard({ assetId, repairReplaceData, requestEstimate }
   }
 
   if (!repairReplaceData || repairReplaceData.loading) {
-    return <div className="px-6 py-6 text-center"><p className="text-sm text-slate-400 animate-pulse m-0">Loading asset analysis&hellip;</p></div>;
+    return <p className="text-sm text-slate-400 animate-pulse m-0">Loading asset analysis&hellip;</p>;
   }
 
   if (repairReplaceData.error) {
-    // Graceful fallback — owner may not have access to the MANAGER-only endpoint
     return (
-      <div className="px-6 py-5">
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">Recommendation</span>
-            <p className="mt-1 text-sm text-slate-400 m-0">Not available</p>
-          </div>
-          <div>
-            <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">Estimated price</span>
-            <p className="mt-1 text-sm text-slate-400 m-0">Not available</p>
-          </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">Recommendation</span>
+          <p className="mt-1 text-sm text-slate-400 m-0">Not available</p>
+        </div>
+        <div>
+          <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">Estimated price</span>
+          <p className="mt-1 text-sm text-slate-400 m-0">Not available</p>
         </div>
       </div>
     );
   }
 
   const items = repairReplaceData.data || [];
-  const item = items.find((a) => a.applianceId === assetId);
+  const item  = items.find((a) => a.applianceId === assetId);
 
   if (!item) {
     return (
-      <div className="px-6 py-5">
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">Recommendation</span>
-            <p className="mt-1 text-sm text-slate-400 m-0">Not available</p>
-          </div>
-          <div>
-            <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">Estimated price</span>
-            <p className="mt-1 text-sm text-slate-400 m-0">Not available</p>
-          </div>
-        </div>
+      <div className="py-4 text-center">
+        <p className="text-sm text-slate-400 m-0">No repair-vs-replace data available for this asset.</p>
       </div>
     );
   }
@@ -257,11 +299,9 @@ function AssetRecommendationCard({ assetId, repairReplaceData, requestEstimate }
   const rec = REC_STYLES[item.recommendation] || REC_STYLES.REPAIR;
 
   return (
-    <div className="px-6 py-5 space-y-4">
+    <div className="space-y-3">
       <div className="flex items-start gap-3">
-        <Badge variant={rec.variant} size="lg" className="shrink-0">
-          {rec.label}
-        </Badge>
+        <Badge variant={rec.variant} size="lg" className="shrink-0">{rec.label}</Badge>
         {item.explanation && (
           <p className="text-xs text-slate-500 leading-relaxed m-0">{item.explanation}</p>
         )}
@@ -279,21 +319,19 @@ function AssetRecommendationCard({ assetId, repairReplaceData, requestEstimate }
 
       <div className="grid grid-cols-2 gap-4 pt-3 border-t border-slate-100">
         <div>
-          <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">Est. repair cost</span>
+          <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">Est. repair</span>
           <p className="mt-0.5 text-sm font-semibold text-slate-900 m-0">
             {requestEstimate > 0
               ? formatCurrency(requestEstimate)
               : item.cumulativeRepairCostChf > 0
                 ? <>{formatCurrency(item.cumulativeRepairCostChf)} <span className="font-normal text-xs text-slate-400">(cumulative)</span></>
-                : "Not available"}
+                : "\u2014"}
           </p>
         </div>
         <div>
-          <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">Est. replacement cost</span>
+          <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">Est. replacement</span>
           <p className="mt-0.5 text-sm font-semibold text-slate-900 m-0">
-            {item.estimatedReplacementCostChf > 0
-              ? formatCurrency(item.estimatedReplacementCostChf)
-              : "Not available"}
+            {item.estimatedReplacementCostChf > 0 ? formatCurrency(item.estimatedReplacementCostChf) : "\u2014"}
           </p>
         </div>
       </div>
@@ -303,7 +341,7 @@ function AssetRecommendationCard({ assetId, repairReplaceData, requestEstimate }
           <span>
             Ratio:{" "}
             <strong className={
-              item.repairReplaceRatio >= 0.6 ? "text-red-600" :
+              item.repairReplaceRatio >= 0.6 ? "text-red-600"    :
               item.repairReplaceRatio >= 0.4 ? "text-orange-600" :
               "text-slate-700"
             }>
@@ -314,9 +352,9 @@ function AssetRecommendationCard({ assetId, repairReplaceData, requestEstimate }
             <span>
               Break-even:{" "}
               <strong className={
-                item.breakEvenMonths === 0  ? "text-red-600" :
-                item.breakEvenMonths < 12   ? "text-red-600" :
-                item.breakEvenMonths < 36   ? "text-amber-600" :
+                item.breakEvenMonths === 0 ? "text-red-600"    :
+                item.breakEvenMonths < 12  ? "text-red-600"    :
+                item.breakEvenMonths < 36  ? "text-amber-600"  :
                 "text-slate-700"
               }>
                 {item.breakEvenMonths === 0 ? "Exceeded" : `${item.breakEvenMonths}mo`}
@@ -341,19 +379,20 @@ export default function OwnerRequestDetailPage() {
   const [loading, setLoading]             = useState(true);
   const [error, setError]                 = useState("");
   const [actionLoading, setActionLoading] = useState(false);
+  const [activeTab, setActiveTab]         = useState("details");
 
   const [legalState, setLegalState]       = useState({ loading: true, error: null, data: null });
   const [repairReplace, setRepairReplace] = useState(null);
   const [rfpData, setRfpData]             = useState(null);
 
-  /* ─── Data loading ─── */
+  /* Data loading */
 
   const loadRequest = useCallback(async () => {
     if (!id) return;
     setLoading(true);
     setError("");
     try {
-      const res = await fetch(`/api/requests/${id}`, { headers: ownerAuthHeaders() });
+      const res  = await fetch(`/api/requests/${id}`, { headers: ownerAuthHeaders() });
       const body = await res.json();
       if (!res.ok) throw new Error(body?.error?.message || "Failed to load request");
       setRequest(body.data || null);
@@ -363,7 +402,6 @@ export default function OwnerRequestDetailPage() {
 
   useEffect(() => { loadRequest(); }, [loadRequest]);
 
-  // Legal decision (org-scoped — owners can access)
   useEffect(() => {
     if (!id) return;
     setLegalState({ loading: true, error: null, data: null });
@@ -376,7 +414,6 @@ export default function OwnerRequestDetailPage() {
       .catch((e) => setLegalState({ loading: false, error: String(e?.message || e), data: null }));
   }, [id]);
 
-  // RFP detail — only needed when awaiting owner approval to show awarded quote context
   useEffect(() => {
     const rfpId = request?.rfpId;
     if (!rfpId || request?.status !== "PENDING_OWNER_APPROVAL") { setRfpData(null); return; }
@@ -389,7 +426,6 @@ export default function OwnerRequestDetailPage() {
       .catch(() => {});
   }, [request?.rfpId, request?.status]);
 
-  // Repair-replace analysis — MANAGER-only endpoint, attempt but handle 403
   useEffect(() => {
     const unitId = request?.unitId;
     if (!unitId) return;
@@ -403,16 +439,16 @@ export default function OwnerRequestDetailPage() {
       .catch((e) => setRepairReplace({ loading: false, error: String(e?.message || e), data: null }));
   }, [request?.unitId]);
 
-  /* ─── Owner Actions ─── */
+  /* Owner Actions */
 
   async function handleApprove() {
     if (!confirm("Approve this maintenance request?")) return;
     setActionLoading(true);
     try {
       const res = await fetch(`/api/owner/approvals?id=${id}&action=approve`, {
-        method: "POST",
+        method:  "POST",
         headers: { "Content-Type": "application/json", ...ownerAuthHeaders() },
-        body: JSON.stringify({ comment: "Approved by owner" }),
+        body:    JSON.stringify({ comment: "Approved by owner" }),
       });
       if (!res.ok) {
         const d = await res.json();
@@ -429,9 +465,9 @@ export default function OwnerRequestDetailPage() {
     setActionLoading(true);
     try {
       const res = await fetch(`/api/owner/approvals?id=${id}&action=reject`, {
-        method: "POST",
+        method:  "POST",
         headers: { "Content-Type": "application/json", ...ownerAuthHeaders() },
-        body: JSON.stringify({ reason: reason || null }),
+        body:    JSON.stringify({ reason: reason || null }),
       });
       if (!res.ok) {
         const d = await res.json();
@@ -442,43 +478,51 @@ export default function OwnerRequestDetailPage() {
     finally { setActionLoading(false); }
   }
 
-  /* ─── Derived ─── */
+  /* Derived */
 
-  const r         = request;
-  const unit      = r?.unit;
-  const building  = unit?.building;
-  const tenant    = r?.tenant;
-  const asset     = r?.asset;
-  const rfpId     = r?.rfpId || legalState.data?.rfpId || null;
-  const nextStep  = r ? getNextStep(r, legalState.data) : null;
-  const ctaList   = getOwnerCTAs(r);
-  const urg       = URGENCY_RAG[r?.urgency] || URGENCY_RAG.MEDIUM;
-  const urgLabel  = r?.urgency === "EMERGENCY" ? "HIGH" : (r?.urgency || "MEDIUM");
-
-  /* ─── JSX ─── */
+  const r                  = request;
+  const unit               = r?.unit;
+  const building           = unit?.building;
+  const tenant             = r?.tenant;
+  const asset              = r?.asset;
+  const rfpId              = r?.rfpId || legalState.data?.rfpId || null;
+  const nextStep           = r ? getNextStep(r, legalState.data) : null;
+  const isTenantFunded     = r?.payingParty === "TENANT";
+  const needsOwnerApproval = r?.status === "PENDING_OWNER_APPROVAL";
+  const { reason: approvalReason, contractorName, amountChf } = needsOwnerApproval
+    ? buildApprovalReason(r, rfpData)
+    : {};
+  const urgencyDisplay = r?.urgency === "EMERGENCY" ? "HIGH" : (r?.urgency || "MEDIUM");
 
   return (
     <AppShell role="OWNER">
       <PageShell>
-        <PageHeader
-          title={loading ? "Request" : `Request #${r?.requestNumber || id?.slice(0, 8) || ""}`}
-          breadcrumbs={[{ label: "Approvals", href: "/owner/approvals" }]}
-          actions={
+        <PageContent>
+
+          {/* Page header */}
+          <div className="mb-6 flex flex-wrap items-center gap-3">
             <button
               onClick={() => router.push("/owner/approvals")}
-              className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 transition"
+              className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-500 hover:bg-slate-50 transition mr-1"
+              aria-label="Back to approvals"
             >
-              &larr; Back to approvals
+              &larr;
             </button>
-          }
-        />
+            <h1 className="text-xl font-bold text-slate-900 m-0">
+              {loading ? "Request" : `Request #${r?.requestNumber || id?.slice(0, 8) || ""}`}
+            </h1>
+            {!loading && r && (
+              <>
+                <Badge variant={urgencyVariant(r.urgency)} size="sm">{urgencyDisplay}</Badge>
+                {isTenantFunded && <Badge variant="warning" size="sm">Tenant-funded</Badge>}
+              </>
+            )}
+          </div>
 
-        <PageContent>
-          {/* Error banner */}
           {error && (
-            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 mb-4 flex items-center justify-between">
+            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 mb-4 flex items-center justify-between" role="alert">
               <span className="text-sm text-red-700"><strong>Error:</strong> {error}</span>
-              <button onClick={() => setError("")} className="text-xs text-red-500 hover:text-red-700 ml-4">Dismiss</button>
+              <button onClick={() => setError("")} className="text-xs text-red-500 hover:text-red-700 ml-4" aria-label="Dismiss error">Dismiss</button>
             </div>
           )}
 
@@ -489,209 +533,191 @@ export default function OwnerRequestDetailPage() {
           ) : (
             <div className="space-y-6">
 
-              {/* ═══ 1 · Timeline (full width) ═══ */}
+              {/* 1. Timeline */}
               <Panel>
-                <div className="flex items-center gap-3 mb-4">
-                  <StatusBadge status={r.status} />
-                  {r.payingParty === "TENANT" && (
-                    <Badge variant="warning" size="sm">
-                      Tenant-funded
-                    </Badge>
-                  )}
-                  {r.approvalSource && (
-                    <Badge variant="muted" size="sm">
-                      {r.approvalSource.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, c => c.toUpperCase())}
-                    </Badge>
-                  )}
-                </div>
                 <StatusPipeline status={r.status} payingParty={r.payingParty} />
 
-                {/* Owner CTAs — inline with timeline */}
-                {ctaList.length > 0 && (
-                  <div className="mt-4 pt-4 border-t border-slate-100 flex flex-wrap items-center gap-3">
-                    {ctaList.includes("approve") && (
-                      <button onClick={handleApprove} disabled={actionLoading}
-                        className="rounded-lg bg-green-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-green-700 transition disabled:opacity-50">
-                        {actionLoading ? "\u2026" : "\u2713 Approve Request"}
-                      </button>
+                {needsOwnerApproval && (
+                  <div className="mt-5 rounded-lg border border-amber-200 bg-amber-50 px-4 py-4 space-y-3">
+                    <p className="text-sm font-semibold text-amber-900 m-0">Your approval is required</p>
+                    <p className="text-xs text-amber-800 leading-relaxed m-0">{approvalReason}</p>
+
+                    {(contractorName || amountChf || rfpId) && (
+                      <div className="flex flex-wrap gap-x-6 gap-y-2 pt-4 sm:justify-between">
+                        {contractorName && (
+                          <div>
+                            <span className="text-[11px] font-medium text-amber-700 uppercase tracking-wide block">Selected Contractor</span>
+                            <span className="text-sm font-semibold text-slate-900">{contractorName}</span>
+                          </div>
+                        )}
+                        {amountChf && (
+                          <div>
+                            <span className="text-[11px] font-medium text-amber-700 uppercase tracking-wide block">Quote Amount</span>
+                            <span className="text-sm font-semibold text-slate-900">{amountChf}</span>
+                          </div>
+                        )}
+                        {rfpId && (
+                          <div className="flex items-end">
+                            <Link href={`/owner/rfps/${rfpId}`} className="cell-link text-xs font-medium">
+                              View full tender &rarr;
+                            </Link>
+                          </div>
+                        )}
+                      </div>
                     )}
-                    {ctaList.includes("reject") && (
-                      <button onClick={handleReject} disabled={actionLoading}
-                        className="rounded-lg border border-red-200 bg-red-50 px-5 py-2.5 text-sm font-medium text-red-700 hover:bg-red-100 transition disabled:opacity-50">
-                        {actionLoading ? "\u2026" : "\u2717 Reject Request"}
-                      </button>
-                    )}
-                    {ctaList.includes("view_rfp") && rfpId && (
-                      <Link href={`/owner/rfps/${rfpId}`}
-                        className="rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-indigo-700 transition no-underline">
-                        View RFP
-                      </Link>
+                  </div>
+                )}
+
+                {needsOwnerApproval && (
+                  <div className="mt-4 flex items-center gap-3">
+                    <button
+                      onClick={handleReject}
+                      disabled={actionLoading}
+                      className="flex-1 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-medium text-red-700 hover:bg-red-100 transition disabled:opacity-50"
+                    >
+                      {actionLoading ? "…" : "✗ Reject"}
+                    </button>
+                    <button
+                      onClick={handleApprove}
+                      disabled={actionLoading}
+                      className="flex-1 rounded-lg bg-green-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-green-700 transition disabled:opacity-50"
+                    >
+                      {actionLoading ? "…" : "✓ Approve"}
+                    </button>
+                  </div>
+                )}
+
+                {!needsOwnerApproval && nextStep && (
+                  <div className={cn("mt-4 rounded-lg border px-4 py-3", NEXT_STEP_STYLES[nextStep.variant] || NEXT_STEP_STYLES.info)}>
+                    <p className="text-sm font-semibold m-0">{nextStep.label}</p>
+                    <p className="mt-0.5 text-xs opacity-80 m-0">{nextStep.description}</p>
+                    {isTenantFunded && r.rejectionReason && (
+                      <p className="text-xs opacity-80 mt-1 m-0">Reason: &ldquo;{r.rejectionReason}&rdquo;</p>
                     )}
                   </div>
                 )}
               </Panel>
 
-              {/* ═══ 2 · Approval context — only when awaiting owner decision ═══ */}
-              {r.status === "PENDING_OWNER_APPROVAL" && rfpData && (() => {
-                const awardedQuote = rfpData.quotes?.find((q) => q.id === rfpData.awardedQuoteId);
-                const contractorName = rfpData.awardedContractor?.name
-                  || awardedQuote?.contractor?.name
-                  || null;
-                const amountChf = awardedQuote?.amountCents != null
-                  ? formatCurrency(awardedQuote.amountCents / 100)
-                  : null;
-                return (
-                  <div className="rounded-lg border-2 border-amber-300 bg-amber-50 px-5 py-4 space-y-3">
-                    <p className="text-sm font-semibold text-amber-900 m-0">Your approval is required to proceed</p>
-                    <p className="text-xs text-amber-800 m-0">
-                      The property manager selected a contractor quote that exceeds the building&rsquo;s
-                      auto-approval threshold. Your sign-off is required before work can begin.
+              {/* 2. Tab bar */}
+              <div className="tab-strip">
+                {[
+                  { key: "details",  label: "Details" },
+                  { key: "advisory", label: "Advisory" },
+                ].map((tab) => (
+                  <button
+                    key={tab.key}
+                    onClick={() => setActiveTab(tab.key)}
+                    className={activeTab === tab.key ? "tab-btn-active" : "tab-btn"}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* 3. Details tab */}
+              {activeTab === "details" && (
+                <Panel>
+                  <div className="flex flex-wrap items-baseline gap-x-6 gap-y-2 mb-4">
+                    {building && (
+                      <div>
+                        <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">Building</span>
+                        <span className="text-sm font-medium text-slate-900">{building.name}</span>
+                        {building.address && <p className="text-xs text-slate-400 mt-0.5 m-0">{building.address}</p>}
+                      </div>
+                    )}
+                    {unit && (
+                      <div>
+                        <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">Unit</span>
+                        <span className="text-sm font-medium text-slate-900">{unit.unitNumber}</span>
+                        {unit.floor != null && <span className="text-xs text-slate-400 ml-1.5">Floor {unit.floor}</span>}
+                      </div>
+                    )}
+                    {tenant && (
+                      <div>
+                        <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">Tenant</span>
+                        <span className="text-sm font-medium text-slate-900">{tenant.name}</span>
+                        {tenant.phone && <p className="text-xs text-slate-400 mt-0.5 m-0">{tenant.phone}</p>}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="mb-4">
+                    <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">Description</span>
+                    <p className="mt-1 text-sm text-slate-700 leading-relaxed whitespace-pre-wrap m-0">
+                      {r.description || <span className="text-slate-400">&mdash;</span>}
                     </p>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-2 pt-1">
-                      {contractorName && (
-                        <div>
-                          <span className="text-[11px] font-medium text-amber-700 uppercase tracking-wide block">Selected Contractor</span>
-                          <span className="text-sm font-semibold text-slate-900">{contractorName}</span>
-                        </div>
-                      )}
-                      {amountChf && (
-                        <div>
-                          <span className="text-[11px] font-medium text-amber-700 uppercase tracking-wide block">Quote Amount</span>
-                          <span className="text-sm font-semibold text-slate-900">{amountChf}</span>
-                        </div>
-                      )}
-                      {rfpId && (
-                        <div className="flex items-end">
-                          <Link href={`/owner/rfps/${rfpId}`}
-                            className="cell-link text-xs font-medium">
-                            View full tender &rarr;
-                          </Link>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })()}
-
-              {/* ═══ 3 · Details (full width top row) ═══ */}
-              <Panel>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {/* Left — Location + Description */}
-                  <div className="md:col-span-2 space-y-4">
-                    <div className="flex flex-wrap items-baseline gap-x-6 gap-y-2">
-                      {building && (
-                        <div>
-                          <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">Building</span>
-                          <span className="text-sm font-medium text-slate-900">{building.name}</span>
-                          {building.address && <p className="text-xs text-slate-400 mt-0.5 m-0">{building.address}</p>}
-                        </div>
-                      )}
-                      {unit && (
-                        <div>
-                          <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">Unit</span>
-                          <span className="text-sm font-medium text-slate-900">{unit.unitNumber}</span>
-                          {unit.floor != null && <span className="text-xs text-slate-400 ml-1.5">Floor {unit.floor}</span>}
-                        </div>
-                      )}
-                    </div>
-
-                    <div>
-                      <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">Description</span>
-                      <p className="mt-1 text-sm text-slate-700 leading-relaxed whitespace-pre-wrap m-0">
-                        {r.description || <span className="text-slate-400">&mdash;</span>}
-                      </p>
-                    </div>
                   </div>
 
-                  {/* Right — Key fields */}
-                  <div className="space-y-3 border-l border-slate-100 pl-6 max-md:border-l-0 max-md:pl-0 max-md:pt-4 max-md:border-t">
-                    {/* Urgency RAG (read-only for owner — no selector) */}
-                    <div>
-                      <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">Urgency</span>
-                      <Badge variant={urg.variant} size="lg" className="mt-1 gap-1.5">
-                        <span className={cn("h-2 w-2 rounded-full", urg.dot)} />
-                        {urgLabel}
-                      </Badge>
-                    </div>
-
-                    {r.category && (
-                      <div>
-                        <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">Category</span>
-                        <Badge variant="muted" size="sm" className="mt-0.5">
-                          {r.category}
-                        </Badge>
-                      </div>
-                    )}
-
-                    <div>
-                      <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">Paying Party</span>
-                      <Badge variant={r.payingParty === "TENANT" ? "warning" : "muted"} size="sm" className="mt-0.5">
-                        {r.payingParty === "TENANT" ? "Tenant" : "Landlord"}
-                      </Badge>
-                    </div>
-
-                    <div className="flex gap-6">
-                      <div>
-                        <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">Req #</span>
-                        <span className="text-sm font-mono text-slate-900">{r.requestNumber ? `#${r.requestNumber}` : "\u2014"}</span>
-                      </div>
-                      <div>
-                        <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">Created</span>
-                        <span className="text-sm text-slate-900">{formatDate(r.createdAt)}</span>
-                      </div>
-                    </div>
-
-                    {r.estimatedCost > 0 && (
-                      <div>
-                        <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">Estimated Cost</span>
-                        <span className="text-sm font-semibold text-slate-900">{formatCurrency(r.estimatedCost)}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </Panel>
-
-              {/* ═══ 3 · Two-column layout ═══ */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-                {/* ── Left column (2/3) ── */}
-                <div className="lg:col-span-2 space-y-6">
-
-                  {/* Tenant self-pay warning */}
-                  {r.payingParty === "TENANT" && (
-                    <div className="rounded-lg border border-orange-200 bg-orange-50 px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <span className="text-orange-500 text-sm leading-none">{"\u26A0"}</span>
-                        <p className="text-sm font-semibold text-orange-700 m-0">
-                          Tenant-funded request{r.rejectionReason ? ` \u2014 "${r.rejectionReason}"` : ""}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Next-step banner */}
-                  {nextStep && (
-                    <div className={cn("rounded-lg border px-4 py-3", NEXT_STEP_STYLES[nextStep.variant] || NEXT_STEP_STYLES.info)}>
-                      <p className="text-sm font-semibold m-0">{nextStep.label}</p>
-                      <p className="mt-0.5 text-xs opacity-80 m-0">{nextStep.description}</p>
-                    </div>
-                  )}
-
-                  {/* Asset Recommendation */}
-                  <Panel title="Asset Recommendation" bodyClassName="p-0">
-                    <AssetRecommendationCard
-                      assetId={r.assetId}
-                      repairReplaceData={repairReplace}
-                      requestEstimate={r.estimatedCost}
-                    />
-                  </Panel>
-
-                  {/* Photos & Attachments */}
-                  <Panel title="Photos &amp; Attachments" bodyClassName="p-0">
+                  <div className="card-section mb-6">
                     <RequestPhotosPanel requestId={id} />
-                  </Panel>
+                  </div>
 
-                  {/* Legal Analysis */}
+                  <div className="card-section">
+                    <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3">
+                      <Field label="Created">{formatDate(r.createdAt)}</Field>
+                      {r.category && (
+                        <Field label="Category">
+                          <Badge variant="muted" size="sm">{r.category}</Badge>
+                        </Field>
+                      )}
+                      {r.estimatedCost > 0 && (
+                        <Field label="Estimated Cost">
+                          <span className="font-semibold">{formatCurrency(r.estimatedCost)}</span>
+                        </Field>
+                      )}
+                      <Field label="Paying Party">
+                        <Badge variant={isTenantFunded ? "warning" : "muted"} size="sm">
+                          {isTenantFunded ? "Tenant" : "Landlord"}
+                        </Badge>
+                      </Field>
+                      {isTenantFunded && r.rejectionReason && (
+                        <Field label="Rejection Reason">
+                          <span className="text-orange-700">{r.rejectionReason}</span>
+                        </Field>
+                      )}
+                    </dl>
+                  </div>
+
+                  {r.assignedContractor && (
+                    <div className="card-section">
+                      <h4 className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-3">Contractor</h4>
+                      <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3">
+                        <Field label="Name">
+                          <span className="text-sm font-medium">
+                            {r.assignedContractor.name || r.assignedContractor.companyName || "\u2014"}
+                          </span>
+                        </Field>
+                        {r.assignedContractor.phone && <Field label="Phone">{r.assignedContractor.phone}</Field>}
+                        {r.assignedContractor.email && <Field label="Email">{r.assignedContractor.email}</Field>}
+                      </dl>
+                    </div>
+                  )}
+
+                  {asset && (
+                    <div className="card-section">
+                      <h4 className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-3">Asset</h4>
+                      <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3">
+                        <Field label="Name">{asset.name || "\u2014"}</Field>
+                        {asset.brand       && <Field label="Brand">{asset.brand}</Field>}
+                        {asset.modelNumber && <Field label="Model">{asset.modelNumber}</Field>}
+                        {asset.installedAt && <Field label="Installed">{formatDate(asset.installedAt)}</Field>}
+                      </dl>
+                    </div>
+                  )}
+
+                  {rfpId && (
+                    <div className="card-section">
+                      <Link href={`/owner/rfps/${rfpId}`} className="cell-link text-sm font-medium">
+                        View Request for Proposals &rarr;
+                      </Link>
+                    </div>
+                  )}
+                </Panel>
+              )}
+
+              {/* 4. Advisory tab */}
+              {activeTab === "advisory" && (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <Panel title="Legal Analysis" bodyClassName="p-0">
                     <LegalRecommendationPanel
                       decision={legalState.data}
@@ -704,68 +730,51 @@ export default function OwnerRequestDetailPage() {
                       </div>
                     )}
                   </Panel>
-                </div>
 
-                {/* ── Right column (1/3) ── */}
-                <div className="space-y-6">
-
-                  {/* Tenant */}
-                  <Panel title="Tenant">
-                    {tenant ? (
-                      <dl className="space-y-3">
-                        <Field label="Name">
-                          <span className="text-sm font-medium">{tenant.name}</span>
-                        </Field>
-                        {tenant.phone && <Field label="Phone">{tenant.phone}</Field>}
-                        {tenant.email && <Field label="Email">{tenant.email}</Field>}
-                      </dl>
+                  <Panel title="Maintenance Decision">
+                    {asset ? (
+                      <div className="space-y-4">
+                        <div className="flex flex-wrap items-baseline gap-x-5 gap-y-1">
+                          <div>
+                            <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">Asset</span>
+                            <span className="text-sm font-medium text-slate-900">{asset.name || "\u2014"}</span>
+                          </div>
+                          {asset.brand && (
+                            <div>
+                              <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">Brand</span>
+                              <span className="text-sm text-slate-700">{asset.brand}</span>
+                            </div>
+                          )}
+                          {asset.installedAt && (
+                            <div>
+                              <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">Installed</span>
+                              <span className="text-sm text-slate-700">{formatDate(asset.installedAt)}</span>
+                            </div>
+                          )}
+                        </div>
+                        {r.assetId && (
+                          <div className="border-t border-slate-100 pt-4">
+                            <AssetRecommendationContent
+                              assetId={r.assetId}
+                              repairReplaceData={repairReplace}
+                              requestEstimate={r.estimatedCost}
+                            />
+                          </div>
+                        )}
+                      </div>
                     ) : (
-                      <p className="text-sm text-slate-400 m-0">No tenant linked.</p>
+                      <div className="py-6 text-center">
+                        <p className="text-sm text-slate-400 m-0">No asset linked to this request.</p>
+                      </div>
                     )}
                   </Panel>
 
-                  {/* Contractor */}
-                  <Panel title="Contractor">
-                    {r.assignedContractor ? (
-                      <dl className="space-y-3">
-                        <Field label="Name">
-                          <span className="text-sm font-medium">
-                            {r.assignedContractor.name || r.assignedContractor.companyName || "\u2014"}
-                          </span>
-                        </Field>
-                        {r.assignedContractor.phone && <Field label="Phone">{r.assignedContractor.phone}</Field>}
-                        {r.assignedContractor.email && <Field label="Email">{r.assignedContractor.email}</Field>}
-                      </dl>
-                    ) : (
-                      <p className="text-sm text-slate-400 m-0">No contractor assigned yet.</p>
-                    )}
-                  </Panel>
-
-                  {/* Asset */}
-                  {asset && (
-                    <Panel title="Asset">
-                      <dl className="space-y-3">
-                        <Field label="Name">{asset.name || "\u2014"}</Field>
-                        {asset.brand && <Field label="Brand">{asset.brand}</Field>}
-                        {asset.modelNumber && <Field label="Model">{asset.modelNumber}</Field>}
-                        {asset.installedAt && <Field label="Installed">{formatDate(asset.installedAt)}</Field>}
-                      </dl>
-                    </Panel>
-                  )}
-
-                  {/* RFP */}
-                  {rfpId && (
-                    <Panel title="Request for Proposals">
-                      <Link href={`/owner/rfps/${rfpId}`} className="cell-link text-sm font-medium">
-                        View RFP &rarr;
-                      </Link>
-                    </Panel>
-                  )}
-
-                  {/* Strategy Recommendation */}
-                  <RecommendationPanel requestId={r.id} />
+                  <div className="lg:col-span-2">
+                    <RecommendationPanel requestId={r.id} />
+                  </div>
                 </div>
-              </div>
+              )}
+
             </div>
           )}
         </PageContent>
