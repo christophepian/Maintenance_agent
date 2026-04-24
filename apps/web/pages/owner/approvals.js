@@ -7,7 +7,7 @@ import PageHeader from "../../components/layout/PageHeader";
 import PageContent from "../../components/layout/PageContent";
 import Panel from "../../components/layout/Panel.jsx";
 import ErrorBanner from "../../components/ui/ErrorBanner";
-import { FilterToggle, FilterPanelBody, FilterSection, FilterSectionClear, SelectField, DateField } from "../../components/ui/FilterPanel";
+import { FilterToggle, FilterPanelBody, FilterSection, FilterSectionClear, SelectField, DateField, SortToggle, SortPanelBody, SortRow } from "../../components/ui/FilterPanel";
 import { ownerAuthHeaders } from "../../lib/api";
 import Badge from "../../components/ui/Badge";
 import { urgencyVariant, rfpVariant } from "../../lib/statusVariants";
@@ -137,10 +137,38 @@ function RequestsTab() {
   const hasFilter = activeCount > 0;
   const [filterOpen, setFilterOpen] = useState(false);
 
+  // ── Sort state ──────────────────────────────────────────────
+  const URGENCY_RANK = { LOW: 1, MEDIUM: 2, HIGH: 3, EMERGENCY: 4 };
+  const [sortKey, setSortKey] = useState("date");
+  const [sortDir, setSortDir] = useState("desc");
+  const [sortOpen, setSortOpen] = useState(false);
+  const sortActive = !(sortKey === "date" && sortDir === "desc");
+
+  function handleSort(key, dir) {
+    setSortKey(key);
+    setSortDir(dir);
+  }
+
+  const sorted = [...filtered].sort((a, b) => {
+    let cmp = 0;
+    if (sortKey === "price") {
+      cmp = (a.estimatedCost || 0) - (b.estimatedCost || 0);
+    } else if (sortKey === "urgency") {
+      cmp = (URGENCY_RANK[a.urgency] || 0) - (URGENCY_RANK[b.urgency] || 0);
+    } else {
+      // date
+      cmp = new Date(a.createdAt) - new Date(b.createdAt);
+    }
+    return sortDir === "asc" ? cmp : -cmp;
+  });
+
   return (
     <>
-      {/* Filter toggle */}
-      <FilterToggle open={filterOpen} onToggle={() => setFilterOpen((v) => !v)} activeCount={activeCount} />
+      {/* Filter + Sort toggles in same row */}
+      <div className="flex items-center justify-end gap-2">
+        <FilterToggle open={filterOpen} onToggle={() => setFilterOpen((v) => !v)} activeCount={activeCount} />
+        <SortToggle open={sortOpen} onToggle={() => setSortOpen((v) => !v)} active={sortActive} />
+      </div>
 
       {filterOpen && (
         <FilterPanelBody>
@@ -177,9 +205,38 @@ function RequestsTab() {
         </FilterPanelBody>
       )}
 
+      {sortOpen && (
+        <SortPanelBody>
+          <SortRow
+            active={sortKey === "date"}
+            dir={sortKey === "date" ? sortDir : "desc"}
+            label="Request date"
+            descLabel="Newest first"
+            ascLabel="Oldest first"
+            onSelect={(dir) => handleSort("date", dir)}
+          />
+          <SortRow
+            active={sortKey === "urgency"}
+            dir={sortKey === "urgency" ? sortDir : "desc"}
+            label="Urgency"
+            descLabel="High → Low"
+            ascLabel="Low → High"
+            onSelect={(dir) => handleSort("urgency", dir)}
+          />
+          <SortRow
+            active={sortKey === "price"}
+            dir={sortKey === "price" ? sortDir : "desc"}
+            label="Quote price"
+            descLabel="High → Low"
+            ascLabel="Low → High"
+            onSelect={(dir) => handleSort("price", dir)}
+          />
+        </SortPanelBody>
+      )}
+
       {loading ? (
         <p className="loading-text">Loading…</p>
-      ) : filtered.length === 0 ? (
+      ) : sorted.length === 0 ? (
         <div className="empty-state">
           <p className="empty-state-text">
             {requests.length === 0 ? "No requests pending your approval." : "No results match the current filters."}
@@ -187,7 +244,7 @@ function RequestsTab() {
         </div>
       ) : (
         <div className="space-y-3">
-          {filtered.map((req) => {
+          {sorted.map((req) => {
             const borderColor = URGENCY_BORDER[req.urgency] || "border-l-slate-200";
             return (
               <div
@@ -270,18 +327,48 @@ function RfpsTab() {
     return true;
   });
 
-  const pendingApproval = filtered.filter((r) => r.status === "PENDING_OWNER_APPROVAL");
-
   const activeCount = [dateFrom, dateTo, buildingFilter, urgencyFilter].filter(Boolean).length;
   const hasFilter = activeCount > 0;
   const [filterOpen, setFilterOpen] = useState(false);
+
+  // ── Sort state ──────────────────────────────────────────────
+  const URGENCY_RANK = { LOW: 1, MEDIUM: 2, HIGH: 3, EMERGENCY: 4 };
+  const [sortKey, setSortKey] = useState("date");
+  const [sortDir, setSortDir] = useState("desc");
+  const [sortOpen, setSortOpen] = useState(false);
+  const sortActive = !(sortKey === "date" && sortDir === "desc");
+
+  function handleSort(key, dir) {
+    setSortKey(key);
+    setSortDir(dir);
+  }
+
+  const sortedFiltered = [...filtered].sort((a, b) => {
+    let cmp = 0;
+    if (sortKey === "price") {
+      // Use lowest accepted/submitted quote total, fallback 0
+      const priceA = a.quotes?.reduce((min, q) => Math.min(min, q.totalCents ?? q.total ?? Infinity), Infinity) ?? 0;
+      const priceB = b.quotes?.reduce((min, q) => Math.min(min, q.totalCents ?? q.total ?? Infinity), Infinity) ?? 0;
+      cmp = (priceA === Infinity ? 0 : priceA) - (priceB === Infinity ? 0 : priceB);
+    } else if (sortKey === "urgency") {
+      cmp = (URGENCY_RANK[a.request?.urgency] || 0) - (URGENCY_RANK[b.request?.urgency] || 0);
+    } else {
+      cmp = new Date(a.createdAt) - new Date(b.createdAt);
+    }
+    return sortDir === "asc" ? cmp : -cmp;
+  });
+
+  const pendingApproval = sortedFiltered.filter((r) => r.status === "PENDING_OWNER_APPROVAL");
 
   return (
     <>
       <ErrorBanner error={error} className="mb-4 text-sm" />
 
-      {/* Filter toggle */}
-      <FilterToggle open={filterOpen} onToggle={() => setFilterOpen((v) => !v)} activeCount={activeCount} />
+      {/* Filter + Sort toggles in same row */}
+      <div className="flex items-center justify-end gap-2">
+        <FilterToggle open={filterOpen} onToggle={() => setFilterOpen((v) => !v)} activeCount={activeCount} />
+        <SortToggle open={sortOpen} onToggle={() => setSortOpen((v) => !v)} active={sortActive} />
+      </div>
 
       {/* Collapsible filter panel */}
       {filterOpen && (
@@ -313,6 +400,35 @@ function RfpsTab() {
           </FilterSection>
           <FilterSectionClear hasFilter={hasFilter} onClear={() => { setDateFrom(""); setDateTo(""); setBuildingFilter(""); setUrgencyFilter(""); }} />
         </FilterPanelBody>
+      )}
+
+      {sortOpen && (
+        <SortPanelBody>
+          <SortRow
+            active={sortKey === "date"}
+            dir={sortKey === "date" ? sortDir : "desc"}
+            label="Request date"
+            descLabel="Newest first"
+            ascLabel="Oldest first"
+            onSelect={(dir) => handleSort("date", dir)}
+          />
+          <SortRow
+            active={sortKey === "urgency"}
+            dir={sortKey === "urgency" ? sortDir : "desc"}
+            label="Urgency"
+            descLabel="High → Low"
+            ascLabel="Low → High"
+            onSelect={(dir) => handleSort("urgency", dir)}
+          />
+          <SortRow
+            active={sortKey === "price"}
+            dir={sortKey === "price" ? sortDir : "desc"}
+            label="Quote price"
+            descLabel="High → Low"
+            ascLabel="Low → High"
+            onSelect={(dir) => handleSort("price", dir)}
+          />
+        </SortPanelBody>
       )}
 
       {loading ? (
@@ -374,12 +490,12 @@ function RfpsTab() {
             </Panel>
           )}
 
-          <Panel title={`All RFPs (${filtered.length})`} bodyClassName="p-0">
-            {filtered.length > 0 ? (
+          <Panel title={`All RFPs (${sortedFiltered.length})`} bodyClassName="p-0">
+            {sortedFiltered.length > 0 ? (
               <>
                 {/* Mobile: card list */}
                 <div className="sm:hidden space-y-3">
-                  {filtered.map((r) => (
+                  {sortedFiltered.map((r) => (
                     <div key={r.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                       <div className="min-w-0">
                         <p className="text-sm font-medium text-slate-900">{r.category || "—"}</p>
@@ -409,7 +525,7 @@ function RfpsTab() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filtered.map((r) => (
+                    {sortedFiltered.map((r) => (
                       <tr key={r.id}>
                         <td className="font-mono text-xs">{r.id?.slice(0, 8)}</td>
                         <td>{r.category || "—"}</td>

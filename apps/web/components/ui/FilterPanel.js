@@ -115,6 +115,96 @@ export function SelectField({ label, value, onChange, children, className }) {
   );
 }
 
+/**
+ * SortToggle — sits alongside FilterToggle in the same flex row.
+ * active=true when a non-default sort is applied.
+ */
+export function SortToggle({ open, onToggle, active }) {
+  return (
+    <button
+      onClick={onToggle}
+      className={cn(
+        "inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium transition-colors",
+        open
+          ? "text-blue-700 bg-blue-50"
+          : "text-slate-400 hover:text-blue-600 hover:bg-blue-50/50"
+      )}
+      aria-label="Toggle sort"
+      aria-expanded={open}
+    >
+      {/* Bar-chart / sort icon */}
+      <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+        <path d="M3 4.5A1.5 1.5 0 0 1 4.5 3h11A1.5 1.5 0 0 1 17 4.5v1A1.5 1.5 0 0 1 15.5 7h-11A1.5 1.5 0 0 1 3 5.5v-1ZM3 10a1.5 1.5 0 0 1 1.5-1.5h7A1.5 1.5 0 0 1 13 10v1a1.5 1.5 0 0 1-1.5 1.5h-7A1.5 1.5 0 0 1 3 11v-1ZM4.5 14.5A1.5 1.5 0 0 0 3 16v1a1.5 1.5 0 0 0 1.5 1.5h4A1.5 1.5 0 0 0 10 17v-1a1.5 1.5 0 0 0-1.5-1.5h-4Z" />
+      </svg>
+      Sort
+      {active && (
+        <span className="inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-blue-600 px-1 text-[10px] font-semibold text-white" aria-hidden="true">
+          1
+        </span>
+      )}
+    </button>
+  );
+}
+
+/** Outer card for the sort panel — same visual weight as FilterPanelBody */
+export function SortPanelBody({ children }) {
+  return (
+    <div className="mb-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">Sort by</p>
+      <div className="space-y-1">{children}</div>
+    </div>
+  );
+}
+
+/**
+ * A single sort option row.
+ * active — this criterion is currently selected
+ * dir    — current direction: 'asc' | 'desc'
+ * label  — display name
+ * ascLabel / descLabel — human-readable direction labels
+ * onSelect(dir) — called with the toggled / selected direction
+ */
+export function SortRow({ active, dir, label, ascLabel, descLabel, onSelect }) {
+  function handleClick() {
+    if (active) {
+      // toggle direction
+      onSelect(dir === 'asc' ? 'desc' : 'asc');
+    } else {
+      // select with default direction for this criterion
+      onSelect(dir);
+    }
+  }
+
+  return (
+    <button
+      onClick={handleClick}
+      className={cn(
+        "flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm transition-colors",
+        active
+          ? "bg-blue-50 text-blue-700 font-medium"
+          : "text-slate-600 hover:bg-slate-50"
+      )}
+    >
+      <span className="flex items-center gap-2">
+        {/* radio dot */}
+        <span className={cn(
+          "h-3.5 w-3.5 shrink-0 rounded-full border-2 transition-colors",
+          active ? "border-blue-600 bg-blue-600" : "border-slate-300 bg-white"
+        )} aria-hidden="true" />
+        {label}
+      </span>
+      {active && (
+        <span className="flex items-center gap-1 text-xs text-blue-600">
+          {dir === 'asc' ? ascLabel : descLabel}
+          <svg className={cn("h-3.5 w-3.5 transition-transform", dir === 'asc' ? "rotate-180" : "")} viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+            <path fillRule="evenodd" d="M10 3a.75.75 0 0 1 .75.75v10.19l3.22-3.22a.75.75 0 1 1 1.06 1.06l-4.5 4.5a.75.75 0 0 1-1.06 0l-4.5-4.5a.75.75 0 1 1 1.06-1.06l3.22 3.22V3.75A.75.75 0 0 1 10 3Z" clipRule="evenodd" />
+          </svg>
+        </span>
+      )}
+    </button>
+  );
+}
+
 /** Wraps a date <input> with a consistent label */
 export function DateField({ label, value, onChange, className }) {
   return (
