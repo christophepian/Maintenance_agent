@@ -16,9 +16,9 @@ const VALID_REQUEST_TRANSITIONS: Record<string, RequestStatus[]> = {
     RequestStatus.REJECTED,                  // manager or owner rejects
   ],
   [RequestStatus.RFP_PENDING]: [
-    RequestStatus.AUTO_APPROVED,             // awarded quote ≤ threshold
+    RequestStatus.AUTO_APPROVED,             // created below auto-approve threshold (no RFP path)
     RequestStatus.PENDING_OWNER_APPROVAL,    // awarded quote > threshold
-    RequestStatus.ASSIGNED,                  // direct assignment fallback
+    RequestStatus.ASSIGNED,                  // direct assignment / quote awarded under threshold
   ],
   [RequestStatus.PENDING_OWNER_APPROVAL]: [
     RequestStatus.APPROVED,                  // owner approves (post-quote cost approval)
@@ -26,19 +26,14 @@ const VALID_REQUEST_TRANSITIONS: Record<string, RequestStatus[]> = {
   ],
   [RequestStatus.AUTO_APPROVED]: [
     RequestStatus.ASSIGNED,                  // contractor assigned after auto-approval
-    RequestStatus.IN_PROGRESS,               // contractor books appointment
   ],
   [RequestStatus.APPROVED]: [
     RequestStatus.ASSIGNED,
-    RequestStatus.IN_PROGRESS,
   ],
   [RequestStatus.ASSIGNED]: [
     RequestStatus.APPROVED,                  // contractor unassigned → back to assignable
-    RequestStatus.IN_PROGRESS,
-    RequestStatus.COMPLETED,
-  ],
-  [RequestStatus.IN_PROGRESS]: [
-    RequestStatus.COMPLETED,
+    RequestStatus.COMPLETED,                 // job completed → terminal
+    RequestStatus.REJECTED,                  // escape valve: manager rejects post-assignment
   ],
   [RequestStatus.COMPLETED]: [],
   [RequestStatus.REJECTED]: [

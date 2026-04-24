@@ -9,9 +9,11 @@
  *   4. Canonical reload + DTO return
  */
 
+import { RequestStatus } from "@prisma/client";
 import { WorkflowContext } from "./context";
+import { assertRequestTransition } from "./transitions";
 import { emit } from "../events/bus";
-import { findRequestById } from "../repositories/requestRepository";
+import { findRequestById, updateRequestStatus } from "../repositories/requestRepository";
 import { assignContractor } from "../services/requestAssignment";
 import { getOrCreateJobForRequest } from "../services/jobs";
 import { toDTO, type MaintenanceRequestDTO } from "../services/maintenanceRequests";
@@ -42,6 +44,16 @@ export async function assignContractorWorkflow(
   const result = await assignContractor(prisma, requestId, contractorId);
   if (!result.success) {
     throw Object.assign(new Error(result.message), { code: "ASSIGNMENT_FAILED" });
+  }
+
+  // ── 1b. Transition request to ASSIGNED ────────────────────
+  const current = await prisma.request.findUnique({
+    where: { id: requestId },
+    select: { status: true },
+  });
+  if (current && current.status !== RequestStatus.ASSIGNED) {
+    assertRequestTransition(current.status as RequestStatus, RequestStatus.ASSIGNED);
+    await updateRequestStatus(prisma, requestId, RequestStatus.ASSIGNED);
   }
 
   // ── 2. Auto-create job ─────────────────────────────────────

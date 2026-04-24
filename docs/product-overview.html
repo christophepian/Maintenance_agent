@@ -1,0 +1,1350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Maintenance Agent — Product Overview</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=DM+Serif+Display:ital@0;1&display=swap');
+
+  :root {
+    --bg: #f8f9fc;
+    --surface: #ffffff;
+    --surface-2: #f1f3f9;
+    --border: #e2e6f0;
+    --text: #1a1f36;
+    --text-secondary: #6b7280;
+    --text-muted: #9ca3af;
+    --brand: #4f46e5;
+    --brand-light: #ede9fe;
+    --brand-mid: #7c3aed;
+    --green: #059669;
+    --green-light: #d1fae5;
+    --amber: #d97706;
+    --amber-light: #fef3c7;
+    --blue: #2563eb;
+    --blue-light: #dbeafe;
+    --rose: #e11d48;
+    --rose-light: #ffe4e6;
+    --cyan: #0891b2;
+    --cyan-light: #cffafe;
+    --radius: 12px;
+    --radius-sm: 8px;
+    --shadow: 0 1px 3px rgba(0,0,0,.08), 0 4px 16px rgba(0,0,0,.04);
+    --shadow-md: 0 4px 12px rgba(0,0,0,.1), 0 8px 32px rgba(0,0,0,.06);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 15px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ─── LAYOUT ─── */
+  .container { max-width: 1160px; margin: 0 auto; padding: 0 32px; }
+
+  /* ─── NAV ─── */
+  nav {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(255,255,255,.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 0;
+  }
+  .nav-inner { display: flex; align-items: center; justify-content: space-between; }
+  .nav-logo { display: flex; align-items: center; gap: 10px; }
+  .nav-logo-mark {
+    width: 32px; height: 32px; border-radius: 8px;
+    background: linear-gradient(135deg, var(--brand), var(--brand-mid));
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-weight: 700; font-size: 14px; letter-spacing: -0.5px;
+  }
+  .nav-logo-text { font-weight: 700; font-size: 16px; color: var(--text); letter-spacing: -0.3px; }
+  .nav-badge {
+    background: var(--green-light); color: var(--green);
+    font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 20px;
+    letter-spacing: 0.3px;
+  }
+  .nav-links { display: flex; gap: 28px; }
+  .nav-links a {
+    text-decoration: none; color: var(--text-secondary); font-size: 14px; font-weight: 500;
+    transition: color .15s;
+  }
+  .nav-links a:hover { color: var(--brand); }
+
+  /* ─── HERO ─── */
+  .hero {
+    padding: 80px 0 72px;
+    background: linear-gradient(160deg, #ffffff 0%, #f5f3ff 50%, #eff6ff 100%);
+    border-bottom: 1px solid var(--border);
+  }
+  .hero-eyebrow {
+    display: inline-flex; align-items: center; gap: 7px;
+    background: var(--brand-light); color: var(--brand);
+    font-size: 12px; font-weight: 600; letter-spacing: 0.6px; text-transform: uppercase;
+    padding: 5px 12px; border-radius: 20px; margin-bottom: 24px;
+  }
+  .hero-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
+  .hero h1 {
+    font-family: 'DM Serif Display', Georgia, serif;
+    font-size: 52px; font-weight: 800;
+    color: var(--text); letter-spacing: -1.5px; line-height: 1.1;
+    max-width: 740px; margin-bottom: 20px;
+  }
+  .hero h1 span { color: var(--brand); }
+  .hero-sub {
+    font-size: 18px; color: var(--text-secondary); max-width: 580px;
+    line-height: 1.65; margin-bottom: 40px;
+  }
+  .hero-ctas { display: flex; gap: 12px; align-items: center; margin-bottom: 56px; }
+  .btn-primary {
+    background: var(--brand); color: #fff;
+    padding: 12px 24px; border-radius: var(--radius-sm);
+    font-size: 14px; font-weight: 600; text-decoration: none;
+    transition: background .15s, transform .1s;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .btn-primary:hover { background: var(--brand-mid); transform: translateY(-1px); }
+  .btn-ghost {
+    color: var(--text-secondary); font-size: 14px; font-weight: 500;
+    text-decoration: none; display: inline-flex; align-items: center; gap: 5px;
+  }
+  .btn-ghost:hover { color: var(--text); }
+  .hero-stats {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 1px; background: var(--border);
+    border: 1px solid var(--border); border-radius: var(--radius);
+    overflow: hidden; max-width: 680px;
+  }
+  .hero-stat {
+    background: white; padding: 20px 24px;
+  }
+  .hero-stat-num {
+    font-family: 'DM Serif Display', Georgia, serif; font-size: 28px; font-weight: 800;
+    color: var(--brand); letter-spacing: -1px; line-height: 1;
+    margin-bottom: 4px;
+  }
+  .hero-stat-label { font-size: 12px; color: var(--text-secondary); font-weight: 500; }
+
+  /* ─── SECTION ─── */
+  section { padding: 72px 0; }
+  section + section { border-top: 1px solid var(--border); }
+  .section-label {
+    font-size: 12px; font-weight: 600; letter-spacing: 0.8px; text-transform: uppercase;
+    color: var(--brand); margin-bottom: 10px;
+  }
+  .section-title {
+    font-family: 'DM Serif Display', Georgia, serif; font-size: 32px; font-weight: 700;
+    color: var(--text); letter-spacing: -0.8px; line-height: 1.2;
+    margin-bottom: 12px;
+  }
+  .section-sub {
+    font-size: 16px; color: var(--text-secondary); max-width: 560px; line-height: 1.65;
+    margin-bottom: 48px;
+  }
+
+  /* ─── PERSONAS ─── */
+  .personas-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  .persona-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 24px 20px;
+    box-shadow: var(--shadow); transition: transform .15s, box-shadow .15s;
+  }
+  .persona-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+  .persona-icon {
+    width: 44px; height: 44px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; margin-bottom: 14px;
+  }
+  .persona-name { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+  .persona-desc { font-size: 13px; color: var(--text-secondary); line-height: 1.55; margin-bottom: 16px; }
+  .persona-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+  .tag {
+    font-size: 11px; font-weight: 500; padding: 3px 9px; border-radius: 20px;
+    border: 1px solid;
+  }
+
+  .tag-brand { background: var(--brand-light); color: var(--brand); border-color: #c4b5fd; }
+  .tag-green { background: var(--green-light); color: var(--green); border-color: #6ee7b7; }
+  .tag-blue { background: var(--blue-light); color: var(--blue); border-color: #93c5fd; }
+  .tag-amber { background: var(--amber-light); color: var(--amber); border-color: #fcd34d; }
+  .tag-cyan { background: var(--cyan-light); color: var(--cyan); border-color: #67e8f9; }
+  .tag-rose { background: var(--rose-light); color: var(--rose); border-color: #fda4af; }
+
+  /* ─── FEATURE AREAS ─── */
+  .features-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .feature-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 24px 22px;
+    box-shadow: var(--shadow); position: relative; overflow: hidden;
+  }
+  .feature-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  }
+  .feature-card.live::before { background: var(--green); }
+  .feature-card-icon { font-size: 24px; margin-bottom: 14px; display: block; }
+  .feature-card-title { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+  .feature-card-desc { font-size: 13px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 14px; }
+  .feature-list { list-style: none; }
+  .feature-list li {
+    font-size: 12.5px; color: var(--text-secondary);
+    padding: 4px 0; display: flex; align-items: flex-start; gap: 7px;
+  }
+  .feature-list li::before { content: '✓'; color: var(--green); font-weight: 700; flex-shrink: 0; margin-top: 1px; }
+  .live-pill {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 10px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
+    background: var(--green-light); color: var(--green);
+    padding: 3px 8px; border-radius: 20px; margin-bottom: 12px;
+  }
+  .live-pill-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--green); }
+
+  /* ─── WORKFLOW JOURNEY ─── */
+  .journey-block {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 32px; box-shadow: var(--shadow);
+    margin-bottom: 16px;
+  }
+  .journey-title { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+  .journey-steps {
+    display: flex; align-items: flex-start; flex-wrap: wrap; gap: 0; row-gap: 12px;
+  }
+  .journey-step {
+    display: flex; align-items: center;
+  }
+  .step-node {
+    background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 9px 14px; white-space: nowrap;
+  }
+  .step-node-label { font-size: 12px; font-weight: 600; color: var(--text); }
+  .step-node-sub { font-size: 10px; color: var(--text-muted); margin-top: 1px; }
+  .step-node.active { background: var(--brand-light); border-color: #c4b5fd; }
+  .step-node.active .step-node-label { color: var(--brand); }
+  .step-arrow { padding: 0 10px; color: var(--text-muted); font-size: 16px; }
+  .journey-badge {
+    font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px;
+  }
+
+  /* ─── SWISS POSITIONING ─── */
+  .swiss-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .swiss-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 24px; box-shadow: var(--shadow);
+  }
+  .swiss-card-flag { font-size: 20px; margin-bottom: 12px; }
+  .swiss-card-title { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+  .swiss-card-desc { font-size: 13px; color: var(--text-secondary); line-height: 1.6; }
+  .swiss-items { margin-top: 12px; display: flex; flex-direction: column; gap: 6px; }
+  .swiss-item { font-size: 12.5px; color: var(--text-secondary); display: flex; gap: 8px; align-items: flex-start; }
+  .swiss-item::before { content: '→'; color: var(--brand); font-weight: 700; flex-shrink: 0; }
+
+  /* ─── ROADMAP ─── */
+  .roadmap-timeline { display: flex; flex-direction: column; gap: 4px; }
+  .roadmap-phase {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow);
+  }
+  .roadmap-phase-head {
+    display: flex; align-items: center; gap: 16px; padding: 18px 24px;
+    cursor: pointer; user-select: none;
+  }
+  .roadmap-phase-head:hover { background: var(--surface-2); }
+  .phase-num {
+    font-family: 'DM Serif Display', Georgia, serif; font-size: 12px; font-weight: 700;
+    letter-spacing: 0.5px; padding: 4px 10px; border-radius: 6px; flex-shrink: 0;
+  }
+  .phase-p0 { background: #d1fae5; color: #065f46; }
+  .phase-p1 { background: #dbeafe; color: #1e40af; }
+  .phase-p2 { background: #ede9fe; color: #5b21b6; }
+  .phase-p3 { background: #fef3c7; color: #92400e; }
+  .phase-p4 { background: #fce7f3; color: #9d174d; }
+  .phase-p5 { background: #ecfeff; color: #164e63; }
+  .phase-info { flex: 1; }
+  .phase-name { font-size: 15px; font-weight: 700; color: var(--text); }
+  .phase-window { font-size: 12px; color: var(--text-muted); margin-top: 1px; }
+  .phase-status {
+    font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px; flex-shrink: 0;
+  }
+  .status-active { background: var(--green-light); color: var(--green); }
+  .status-planned { background: var(--surface-2); color: var(--text-muted); border: 1px solid var(--border); }
+  .roadmap-phase-body { padding: 0 24px 20px; border-top: 1px solid var(--border); display: none; }
+  .roadmap-phase-body.open { display: block; padding-top: 20px; }
+  .phase-goal { font-size: 13px; color: var(--text-secondary); font-style: italic; margin-bottom: 16px; padding: 10px 14px; background: var(--surface-2); border-radius: 8px; }
+  .roadmap-features { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+  .roadmap-feature {
+    background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 12px 14px;
+  }
+  .roadmap-feature-title { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+  .roadmap-feature-desc { font-size: 12px; color: var(--text-secondary); line-height: 1.5; }
+  .feature-type-tag {
+    display: inline-block; font-size: 10px; font-weight: 600; padding: 2px 7px;
+    border-radius: 4px; margin-bottom: 7px; letter-spacing: 0.3px;
+  }
+  .ftype-build { background: #dbeafe; color: #1e40af; }
+  .ftype-extend { background: #d1fae5; color: #065f46; }
+  .ftype-wire { background: #ede9fe; color: #5b21b6; }
+  .ftype-product { background: #fef3c7; color: #92400e; }
+  .ftype-infra { background: #fee2e2; color: #991b1b; }
+
+  /* ─── DIFFERENTIATORS ─── */
+  .diff-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .diff-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 24px 22px; box-shadow: var(--shadow);
+  }
+  .diff-num {
+    font-family: 'DM Serif Display', Georgia, serif; font-size: 36px; font-weight: 800;
+    color: var(--brand-light); letter-spacing: -2px; margin-bottom: 4px; line-height: 1;
+  }
+  .diff-title { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+  .diff-desc { font-size: 13px; color: var(--text-secondary); line-height: 1.6; }
+
+  /* ─── SCREENSHOTS / EDITORIAL ─── */
+  .editorial-section { background: var(--surface); }
+  .editorial-row {
+    display: grid; grid-template-columns: 58% 1fr;
+    gap: 64px; align-items: center; margin-bottom: 96px;
+  }
+  .editorial-row:last-child { margin-bottom: 0; }
+  .editorial-row-reverse { grid-template-columns: 1fr 52%; }
+  .editorial-row-reverse .editorial-copy { order: -1; }
+
+  /* screen side */
+  .editorial-screen-lg { position: relative; }
+  .editorial-caption {
+    display: flex; align-items: center; gap: 8px; margin-top: 12px;
+    font-size: 12px; color: var(--text-muted);
+  }
+
+  /* copy side */
+  .editorial-copy { display: flex; flex-direction: column; gap: 20px; }
+  .editorial-eyebrow {
+    font-size: 11px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase;
+    color: var(--brand);
+  }
+  .editorial-heading {
+    font-family: 'DM Serif Display', Georgia, serif;
+    font-size: 26px; line-height: 1.25; color: var(--text); letter-spacing: -0.3px;
+  }
+  .editorial-body { font-size: 14px; color: var(--text-secondary); line-height: 1.7; }
+  .editorial-features { display: flex; flex-direction: column; gap: 16px; padding-top: 4px; }
+  .editorial-feature { padding-left: 16px; border-left: 2px solid var(--border); }
+  .editorial-feature-title { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 3px; }
+  .editorial-feature-desc { font-size: 13px; color: var(--text-secondary); line-height: 1.6; }
+
+  /* two-phone cluster */
+  .editorial-phones {
+    position: relative; display: flex; justify-content: center;
+    align-items: flex-end; gap: 0; height: 480px;
+  }
+  .editorial-phone { position: absolute; bottom: 0; }
+  .editorial-phone-back {
+    left: 0; width: 180px; transform: rotate(-4deg) translateY(12px);
+    filter: brightness(.92);
+    z-index: 1;
+  }
+  .editorial-phone-front {
+    right: 0; width: 190px; transform: rotate(3deg);
+    z-index: 2;
+  }
+  .editorial-phone .editorial-caption {
+    justify-content: center; margin-top: 8px; transform: none;
+  }
+  .editorial-phone-back .editorial-caption { opacity: .6; }
+
+  /* shared frame styles */
+  .screenshot-persona {
+    font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 20px; letter-spacing: 0.3px;
+  }
+  .screenshot-persona-manager { background: var(--brand-light); color: var(--brand); }
+  .screenshot-persona-owner { background: var(--amber-light); color: var(--amber); }
+  .screenshot-frame {
+    border-radius: var(--radius); overflow: hidden;
+    border: 1px solid var(--border); box-shadow: var(--shadow-md); background: #e5e7eb;
+  }
+  .screenshot-frame-desktop .screenshot-bar {
+    display: flex; gap: 5px; padding: 8px 12px;
+    background: #f3f4f6; border-bottom: 1px solid var(--border);
+  }
+  .screenshot-frame-desktop .screenshot-bar span {
+    width: 10px; height: 10px; border-radius: 50%;
+  }
+  .screenshot-frame-desktop .screenshot-bar span:first-child { background: #fca5a5; }
+  .screenshot-frame-desktop .screenshot-bar span:nth-child(2) { background: #fde68a; }
+  .screenshot-frame-desktop .screenshot-bar span:nth-child(3) { background: #a7f3d0; }
+  .screenshot-frame img { display: block; width: 100%; height: auto; }
+  .screenshot-frame-mobile {
+    border-radius: 22px; overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0,0,0,.18), 0 0 0 7px #1a1f36;
+    background: #fff;
+  }
+  .screenshot-frame-mobile img { display: block; width: 100%; height: auto; }
+
+  /* ─── FOOTER ─── */
+  footer {
+    border-top: 1px solid var(--border); padding: 32px 0;
+    background: var(--surface);
+  }
+  .footer-inner { display: flex; align-items: center; justify-content: space-between; }
+  .footer-left { font-size: 13px; color: var(--text-muted); }
+  .footer-right { font-size: 12px; color: var(--text-muted); }
+
+  /* ─── MISC HELPERS ─── */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .badge-live {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 11px; font-weight: 600; letter-spacing: 0.3px;
+    background: var(--green-light); color: var(--green);
+    padding: 4px 10px; border-radius: 20px;
+  }
+  .badge-live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+  .divider { border: none; border-top: 1px solid var(--border); margin: 0; }
+  .mt-24 { margin-top: 24px; }
+  .mb-4 { margin-bottom: 4px; }
+  .text-small { font-size: 12px; color: var(--text-muted); }
+  .highlight-box {
+    background: linear-gradient(135deg, #f5f3ff, #eff6ff);
+    border: 1px solid #c4b5fd; border-radius: var(--radius);
+    padding: 28px 32px;
+  }
+</style>
+</head>
+<body>
+
+<!-- ─── NAV ─── -->
+<nav>
+  <div class="container">
+    <div class="nav-inner">
+      <div class="nav-logo">
+        <div class="nav-logo-mark">MA</div>
+        <span class="nav-logo-text">Maintenance Agent</span>
+        <span class="nav-badge">Swiss Market</span>
+      </div>
+      <div class="nav-links">
+        <a href="#platform">Platform</a>
+        <a href="#journeys">How it works</a>
+        <a href="#swiss">Swiss compliance</a>
+        <a href="#roadmap">Roadmap</a>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- ─── HERO ─── -->
+<div class="hero">
+  <div class="container">
+    <div class="hero-eyebrow">
+      <span class="hero-dot"></span>
+      Live Platform · Swiss Residential Property
+    </div>
+    <h1>Property management,<br><span>end to end</span>.</h1>
+    <p class="hero-sub">
+      One platform connecting property managers, building owners, tenants, and contractors.
+      Maintenance, leases, compliance, and cashflow — all in one place, built for the Swiss market.
+    </p>
+    <div class="hero-ctas">
+      <a href="#platform" class="btn-primary">Explore the platform ↓</a>
+      <a href="#roadmap" class="btn-ghost">View roadmap →</a>
+    </div>
+    <div class="hero-stats">
+      <div class="hero-stat">
+        <div class="hero-stat-num">4</div>
+        <div class="hero-stat-label">Connected roles</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-num">291</div>
+        <div class="hero-stat-label">API operations</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-num">26</div>
+        <div class="hero-stat-label">Roadmap features</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-num">274</div>
+        <div class="hero-stat-label">Depreciation standards</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── WHO IS IT FOR ─── -->
+<section id="platform">
+  <div class="container">
+    <div class="section-label">Who it's for</div>
+    <div class="section-title">One platform, four roles</div>
+    <p class="section-sub">
+      Every party in a property relationship has a dedicated interface, with the right level of access and exactly the information they need.
+    </p>
+
+    <div class="personas-grid">
+
+      <div class="persona-card">
+        <div class="persona-icon" style="background:#ede9fe;">🏢</div>
+        <div class="persona-name">Property Manager</div>
+        <div class="persona-desc">Full operational control. Manage requests, contractors, leases, compliance, and finances from a single hub.</div>
+        <div class="persona-tags">
+          <span class="tag tag-brand">Maintenance hub</span>
+          <span class="tag tag-brand">Legal engine</span>
+          <span class="tag tag-brand">Invoicing</span>
+          <span class="tag tag-brand">Leases</span>
+          <span class="tag tag-brand">Asset registry</span>
+          <span class="tag tag-brand">General ledger</span>
+        </div>
+      </div>
+
+      <div class="persona-card">
+        <div class="persona-icon" style="background:#fef3c7;">🏠</div>
+        <div class="persona-name">Building Owner</div>
+        <div class="persona-desc">Real-time visibility into your portfolio. Approve work orders, review financials, and track performance without day-to-day management.</div>
+        <div class="persona-tags">
+          <span class="tag tag-amber">Approval workflow</span>
+          <span class="tag tag-amber">Financial overview</span>
+          <span class="tag tag-amber">Portfolio view</span>
+          <span class="tag tag-amber">Strategy profiles</span>
+        </div>
+      </div>
+
+      <div class="persona-card">
+        <div class="persona-icon" style="background:#d1fae5;">🏡</div>
+        <div class="persona-name">Tenant</div>
+        <div class="persona-desc">A clean self-service portal for submitting requests, tracking status, viewing leases, and paying rent — no phone calls required.</div>
+        <div class="persona-tags">
+          <span class="tag tag-green">Request intake</span>
+          <span class="tag tag-green">Invoice &amp; QR pay</span>
+          <span class="tag tag-green">Lease access</span>
+          <span class="tag tag-green">Apply online</span>
+        </div>
+      </div>
+
+      <div class="persona-card">
+        <div class="persona-icon" style="background:#dbeafe;">🔧</div>
+        <div class="persona-name">Contractor</div>
+        <div class="persona-desc">A focused job list with all the context needed to act. Accept jobs, update progress, and submit invoices — all from the same interface.</div>
+        <div class="persona-tags">
+          <span class="tag tag-blue">Job queue</span>
+          <span class="tag tag-blue">Status updates</span>
+          <span class="tag tag-blue">Invoice creation</span>
+          <span class="tag tag-blue">Job ratings</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ─── JOURNEYS ─── -->
+<section id="journeys" style="background:var(--surface);">
+  <div class="container">
+    <div class="section-label">How it works</div>
+    <div class="section-title">Connected end-to-end workflows</div>
+    <p class="section-sub">
+      Every process has a defined workflow with automatic status transitions, approvals, and notifications at each step.
+    </p>
+
+    <!-- Maintenance Journey -->
+    <div class="journey-block">
+      <div class="journey-title">
+        <span style="background:#ede9fe;border-radius:6px;padding:4px 10px;font-size:12px;color:var(--brand);font-weight:700;">MAINTENANCE</span>
+        From request to closed job
+      </div>
+      <div class="journey-steps">
+        <div class="journey-step">
+          <div class="step-node">
+            <div class="step-node-label">Tenant submits</div>
+            <div class="step-node-sub">Chat intake or form</div>
+          </div>
+          <span class="step-arrow">→</span>
+        </div>
+        <div class="journey-step">
+          <div class="step-node active">
+            <div class="step-node-label">Auto-triage</div>
+            <div class="step-node-sub">Category + urgency</div>
+          </div>
+          <span class="step-arrow">→</span>
+        </div>
+        <div class="journey-step">
+          <div class="step-node">
+            <div class="step-node-label">Legal check</div>
+            <div class="step-node-sub">Auto-route if relevant</div>
+          </div>
+          <span class="step-arrow">→</span>
+        </div>
+        <div class="journey-step">
+          <div class="step-node">
+            <div class="step-node-label">Owner approval</div>
+            <div class="step-node-sub">If required by config</div>
+          </div>
+          <span class="step-arrow">→</span>
+        </div>
+        <div class="journey-step">
+          <div class="step-node">
+            <div class="step-node-label">Assign contractor</div>
+            <div class="step-node-sub">Direct or via RFP</div>
+          </div>
+          <span class="step-arrow">→</span>
+        </div>
+        <div class="journey-step">
+          <div class="step-node">
+            <div class="step-node-label">Job completed</div>
+            <div class="step-node-sub">With rating</div>
+          </div>
+          <span class="step-arrow">→</span>
+        </div>
+        <div class="journey-step">
+          <div class="step-node active">
+            <div class="step-node-label">Invoice &amp; close</div>
+            <div class="step-node-sub">Captured + approved</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Financial Journey -->
+    <div class="journey-block">
+      <div class="journey-title">
+        <span style="background:#d1fae5;border-radius:6px;padding:4px 10px;font-size:12px;color:var(--green);font-weight:700;">FINANCIAL</span>
+        From invoice capture to ledger
+      </div>
+      <div class="journey-steps">
+        <div class="journey-step">
+          <div class="step-node active">
+            <div class="step-node-label">Invoice capture</div>
+            <div class="step-node-sub">Camera / OCR / upload</div>
+          </div>
+          <span class="step-arrow">→</span>
+        </div>
+        <div class="journey-step">
+          <div class="step-node">
+            <div class="step-node-label">OCR extraction</div>
+            <div class="step-node-sub">Azure Doc Intelligence</div>
+          </div>
+          <span class="step-arrow">→</span>
+        </div>
+        <div class="journey-step">
+          <div class="step-node">
+            <div class="step-node-label">Draft &amp; review</div>
+            <div class="step-node-sub">Line items + COA</div>
+          </div>
+          <span class="step-arrow">→</span>
+        </div>
+        <div class="journey-step">
+          <div class="step-node">
+            <div class="step-node-label">Manager approval</div>
+            <div class="step-node-sub">Or dispute flow</div>
+          </div>
+          <span class="step-arrow">→</span>
+        </div>
+        <div class="journey-step">
+          <div class="step-node active">
+            <div class="step-node-label">Auto-post ledger</div>
+            <div class="step-node-sub">Debit / credit entry</div>
+          </div>
+          <span class="step-arrow">→</span>
+        </div>
+        <div class="journey-step">
+          <div class="step-node">
+            <div class="step-node-label">Financial snapshot</div>
+            <div class="step-node-sub">Per building, monthly</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Lease Journey -->
+    <div class="journey-block">
+      <div class="journey-title">
+        <span style="background:#dbeafe;border-radius:6px;padding:4px 10px;font-size:12px;color:var(--blue);font-weight:700;">LEASE</span>
+        From rental application to active tenancy
+      </div>
+      <div class="journey-steps">
+        <div class="journey-step">
+          <div class="step-node">
+            <div class="step-node-label">Online application</div>
+            <div class="step-node-sub">Multi-unit wizard</div>
+          </div>
+          <span class="step-arrow">→</span>
+        </div>
+        <div class="journey-step">
+          <div class="step-node">
+            <div class="step-node-label">Owner selection</div>
+            <div class="step-node-sub">Approve / reject</div>
+          </div>
+          <span class="step-arrow">→</span>
+        </div>
+        <div class="journey-step">
+          <div class="step-node active">
+            <div class="step-node-label">Lease creation</div>
+            <div class="step-node-sub">PDF generated</div>
+          </div>
+          <span class="step-arrow">→</span>
+        </div>
+        <div class="journey-step">
+          <div class="step-node">
+            <div class="step-node-label">Digital signature</div>
+            <div class="step-node-sub">SHA-256 verified</div>
+          </div>
+          <span class="step-arrow">→</span>
+        </div>
+        <div class="journey-step">
+          <div class="step-node active">
+            <div class="step-node-label">Active tenancy</div>
+            <div class="step-node-sub">Rent + billing live</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ─── SCREENSHOTS ─── -->
+<section class="editorial-section">
+  <div class="container">
+    <div class="section-label">See it live</div>
+    <div class="section-title">The platform in action</div>
+    <p class="section-sub">Real screens from the current build — no mockups.</p>
+
+    <!-- Block 1: Manager desktop left, copy right -->
+    <div class="editorial-row">
+      <div class="editorial-screen editorial-screen-lg">
+        <div class="screenshot-frame screenshot-frame-desktop">
+          <div class="screenshot-bar"><span></span><span></span><span></span></div>
+          <img src="screenshots/manager-desktop.png" alt="Manager dashboard" loading="lazy">
+        </div>
+        <div class="editorial-caption">
+          <span class="screenshot-persona screenshot-persona-manager">Manager</span>
+          Dashboard — desktop
+        </div>
+      </div>
+      <div class="editorial-copy">
+        <div class="editorial-eyebrow">Operations at a glance</div>
+        <h3 class="editorial-heading">Everything that needs attention, surfaced up front.</h3>
+        <p class="editorial-body">The manager dashboard opens on a live pulse of the portfolio — open requests, jobs in flight, spend this month, and a building-by-building health grid. No hunting through menus.</p>
+        <div class="editorial-features">
+          <div class="editorial-feature">
+            <div class="editorial-feature-title">Action-first tabs</div>
+            <div class="editorial-feature-desc">Pending review, owner approval needed, disputed invoices, and stale jobs are each one click away from the dashboard.</div>
+          </div>
+          <div class="editorial-feature">
+            <div class="editorial-feature-title">Portfolio NOI at the top</div>
+            <div class="editorial-feature-desc">Net operating income and collection rate are surfaced as KPIs — not buried in a finance sub-menu.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Block 2: copy left, two phones right -->
+    <div class="editorial-row editorial-row-reverse">
+      <div class="editorial-copy">
+        <div class="editorial-eyebrow">Built for owners on the go</div>
+        <h3 class="editorial-heading">Owners get full visibility — without any of the noise.</h3>
+        <p class="editorial-body">The owner surface is intentionally separate from the manager's. Owners see their portfolio summary, what drove performance this month, and any work requests waiting for their sign-off — all readable on a phone in under a minute.</p>
+        <div class="editorial-features">
+          <div class="editorial-feature">
+            <div class="editorial-feature-title">Monthly narrative report</div>
+            <div class="editorial-feature-desc">The portfolio report leads with plain-language commentary — "Operating costs came down by CHF 4k" — before showing the numbers.</div>
+          </div>
+          <div class="editorial-feature">
+            <div class="editorial-feature-title">One-tap approvals</div>
+            <div class="editorial-feature-desc">Work orders requiring sign-off show the contractor, quote amount, and full request context. Approve or reject in two taps.</div>
+          </div>
+        </div>
+      </div>
+      <div class="editorial-phones">
+        <div class="editorial-phone editorial-phone-back">
+          <div class="screenshot-frame screenshot-frame-mobile">
+            <img src="screenshots/owner-request-detail-mobile.png" alt="Owner request approval" loading="lazy">
+          </div>
+          <div class="editorial-caption">
+            <span class="screenshot-persona screenshot-persona-owner">Owner</span>
+            Request approval
+          </div>
+        </div>
+        <div class="editorial-phone editorial-phone-front">
+          <div class="screenshot-frame screenshot-frame-mobile">
+            <img src="screenshots/owner-reporting-mobile.png" alt="Owner portfolio report" loading="lazy">
+          </div>
+          <div class="editorial-caption">
+            <span class="screenshot-persona screenshot-persona-owner">Owner</span>
+            Portfolio report
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ─── LIVE FEATURES ─── -->
+<section>
+  <div class="container">
+    <div class="section-label">Platform capabilities</div>
+    <div class="section-title">What's live today</div>
+    <p class="section-sub">
+      A production-grade platform covering the full management lifecycle — from a tenant's first message to the owner's financial report.
+    </p>
+
+    <div class="features-grid">
+
+      <div class="feature-card live">
+        <div class="live-pill"><span class="live-pill-dot"></span>Live</div>
+        <span class="feature-card-icon">🔧</span>
+        <div class="feature-card-title">Maintenance Management</div>
+        <div class="feature-card-desc">Full request lifecycle with automatic triage, contractor assignment, job tracking, and completion rating.</div>
+        <ul class="feature-list">
+          <li>Tenant intake via chat or structured form</li>
+          <li>Category + urgency auto-classification</li>
+          <li>Direct assign or RFP to multiple contractors</li>
+          <li>Job status tracking with real-time updates</li>
+          <li>Contractor performance ratings</li>
+          <li>Owner approval gate (configurable per building)</li>
+        </ul>
+      </div>
+
+      <div class="feature-card live">
+        <div class="live-pill"><span class="live-pill-dot"></span>Live</div>
+        <span class="feature-card-icon">⚖️</span>
+        <div class="feature-card-title">Swiss Legal Compliance Engine</div>
+        <div class="feature-card-desc">A rules-based engine that interprets Swiss tenancy law in context and routes cases automatically.</div>
+        <ul class="feature-list">
+          <li>DSL rule evaluation against live SNB/BFS data</li>
+          <li>CO 259a statutory rules (6 canton-specific rules)</li>
+          <li>Rent reduction calculator for defect claims</li>
+          <li>FR→EN bilingual legal term matching</li>
+          <li>Legal auto-routing with confidence scoring</li>
+          <li>Evaluation log with variable resolution trail</li>
+        </ul>
+      </div>
+
+      <div class="feature-card live">
+        <div class="live-pill"><span class="live-pill-dot"></span>Live</div>
+        <span class="feature-card-icon">📄</span>
+        <div class="feature-card-title">Invoicing &amp; OCR Capture</div>
+        <div class="feature-card-desc">Capture invoices by photo, scan, or upload. Azure Document Intelligence extracts line items automatically.</div>
+        <ul class="feature-list">
+          <li>QR-bill compliant (SIX spec v2.3 / ISO 20022)</li>
+          <li>Mobile camera capture → OCR → draft</li>
+          <li>Azure Document Intelligence (primary OCR)</li>
+          <li>Line item editing + Chart of Accounts mapping</li>
+          <li>Approval / dispute workflow</li>
+          <li>Original source file preserved and viewable</li>
+        </ul>
+      </div>
+
+      <div class="feature-card live">
+        <div class="live-pill"><span class="live-pill-dot"></span>Live</div>
+        <span class="feature-card-icon">📋</span>
+        <div class="feature-card-title">Lease Management</div>
+        <div class="feature-card-desc">End-to-end lease lifecycle from rental application to active tenancy, including digital signing.</div>
+        <ul class="feature-list">
+          <li>Online rental application wizard</li>
+          <li>Multi-unit applicant tracking</li>
+          <li>Lease PDF generation with SHA-256 footer</li>
+          <li>Digital signature integration (SignatureRequest)</li>
+          <li>Lease termination workflow</li>
+          <li>Vacancy tracking linked to financials</li>
+        </ul>
+      </div>
+
+      <div class="feature-card live">
+        <div class="live-pill"><span class="live-pill-dot"></span>Live</div>
+        <span class="feature-card-icon">📊</span>
+        <div class="feature-card-title">Financial Engine</div>
+        <div class="feature-card-desc">A full financial layer — chart of accounts, general ledger, recurring billing, and per-building snapshots.</div>
+        <ul class="feature-list">
+          <li>Chart of Accounts with expense type mapping</li>
+          <li>Double-entry General Ledger (auto-posted)</li>
+          <li>Recurring billing schedules</li>
+          <li>Charge reconciliation</li>
+          <li>Rent adjustments (CO 269d compliant)</li>
+          <li>Per-building financial snapshots</li>
+        </ul>
+      </div>
+
+      <div class="feature-card live">
+        <div class="live-pill"><span class="live-pill-dot"></span>Live</div>
+        <span class="feature-card-icon">🏗️</span>
+        <div class="feature-card-title">Asset Inventory &amp; Depreciation</div>
+        <div class="feature-card-desc">Full asset registry with Swiss depreciation standards and intervention history for every building.</div>
+        <ul class="feature-list">
+          <li>Asset model catalog with canton-specific data</li>
+          <li>274 Swiss depreciation standards built in</li>
+          <li>Intervention history per asset</li>
+          <li>Depreciation calculator (residual value, timeline)</li>
+          <li>Asset condition tracking</li>
+          <li>PAIF &amp; Swiss real estate taxonomy</li>
+        </ul>
+      </div>
+
+      <div class="feature-card live">
+        <div class="live-pill"><span class="live-pill-dot"></span>Live</div>
+        <span class="feature-card-icon">🧠</span>
+        <div class="feature-card-title">Strategy &amp; Cashflow Engine</div>
+        <div class="feature-card-desc">Building-level strategy profiles with financial scoring, archetypes, and cashflow overlays.</div>
+        <ul class="feature-list">
+          <li>5 building archetypes (stability, growth, yield…)</li>
+          <li>6 financial scoring dimensions</li>
+          <li>Decision scoring with ranked options</li>
+          <li>Cashflow plan with strategy overlay</li>
+          <li>Forecasting with scenario comparison</li>
+          <li>56 passing unit tests</li>
+        </ul>
+      </div>
+
+      <div class="feature-card live">
+        <div class="live-pill"><span class="live-pill-dot"></span>Live</div>
+        <span class="feature-card-icon">📱</span>
+        <div class="feature-card-title">Tenant Portal</div>
+        <div class="feature-card-desc">A clean web interface for tenants to manage their tenancy without calling or emailing the manager.</div>
+        <ul class="feature-list">
+          <li>Maintenance request submission</li>
+          <li>Invoice view with QR payment slip</li>
+          <li>Lease and contract access</li>
+          <li>Asset list for their unit</li>
+          <li>Listing browse &amp; application wizard</li>
+          <li>Mobile responsive (dual-render layout)</li>
+        </ul>
+      </div>
+
+      <div class="feature-card live">
+        <div class="live-pill"><span class="live-pill-dot"></span>Live</div>
+        <span class="feature-card-icon">👁️</span>
+        <div class="feature-card-title">Owner Portal</div>
+        <div class="feature-card-desc">Read-only visibility and approval access for building owners — no operational noise, just what matters.</div>
+        <ul class="feature-list">
+          <li>Portfolio overview (buildings &amp; units)</li>
+          <li>Pending approvals with full context</li>
+          <li>Invoice review</li>
+          <li>Vacancy tracking</li>
+          <li>Financial overview per building</li>
+          <li>Role-isolated routing (separate from manager)</li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ─── SWISS COMPLIANCE ─── -->
+<section id="swiss" style="background:var(--surface);">
+  <div class="container">
+    <div class="section-label">Built for Switzerland</div>
+    <div class="section-title">Swiss compliance, out of the box</div>
+    <p class="section-sub">
+      Not a generic platform adapted for Switzerland — built from the ground up for Swiss law, formats, and banking standards.
+    </p>
+
+    <div class="swiss-grid">
+
+      <div class="swiss-card">
+        <div class="swiss-card-flag">🏦</div>
+        <div class="swiss-card-title">SIX QR-Bill (ISO 20022)</div>
+        <div class="swiss-card-desc">Every invoice can generate a compliant Swiss QR payment slip. Tenants see the QR code directly in their portal.</div>
+        <div class="swiss-items">
+          <div class="swiss-item">SIX spec v2.3 validated payload generation</div>
+          <div class="swiss-item">IBAN + structured reference (QRR / SCOR)</div>
+          <div class="swiss-item">PNG output displayed inline for tenants</div>
+          <div class="swiss-item">F5 golden test guards financial precision</div>
+        </div>
+      </div>
+
+      <div class="swiss-card">
+        <div class="swiss-card-flag">📜</div>
+        <div class="swiss-card-title">Swiss Tenancy Law (CO 259a / 269d)</div>
+        <div class="swiss-card-desc">The legal engine evaluates DSL rules against live reference data from the SNB and BFS.</div>
+        <div class="swiss-items">
+          <div class="swiss-item">CO 259a defect &amp; rent reduction rules</div>
+          <div class="swiss-item">CO 269d rent adjustment compliance</div>
+          <div class="swiss-item">Canton-scoped variable resolution</div>
+          <div class="swiss-item">Live reference interest rate (SNB) ingestion</div>
+        </div>
+      </div>
+
+      <div class="swiss-card">
+        <div class="swiss-card-flag">🗂️</div>
+        <div class="swiss-card-title">Depreciation Standards (PAIF)</div>
+        <div class="swiss-card-desc">274 Swiss depreciation standards covering all major property asset categories, canton-specific where applicable.</div>
+        <div class="swiss-items">
+          <div class="swiss-item">Full Swiss residential asset taxonomy</div>
+          <div class="swiss-item">Residual value &amp; timeline calculation</div>
+          <div class="swiss-item">Per-intervention deduction tracking</div>
+          <div class="swiss-item">Condition-adjusted depreciation</div>
+        </div>
+      </div>
+
+      <div class="swiss-card">
+        <div class="swiss-card-flag">🌐</div>
+        <div class="swiss-card-title">Multilingual (Roadmap)</div>
+        <div class="swiss-card-desc">The tenant portal will serve FR / DE / IT based on tenant language preference — the backend already supports bilingual legal term matching.</div>
+        <div class="swiss-items">
+          <div class="swiss-item">FR→EN legal term translation layer (live)</div>
+          <div class="swiss-item">Full FR/DE/IT tenant UI (Phase 2)</div>
+          <div class="swiss-item">Canton-specific initial rent notification forms</div>
+          <div class="swiss-item">German &amp; French Betreibungshinweis templates</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ─── DIFFERENTIATORS ─── -->
+<section>
+  <div class="container">
+    <div class="section-label">Why Maintenance Agent</div>
+    <div class="section-title">What makes it different</div>
+    <p class="section-sub">Most property tools are either too simple for professional managers or too complex for small landlords. We're building both, on the same platform.</p>
+
+    <div class="diff-grid">
+      <div class="diff-card">
+        <div class="diff-num">→</div>
+        <div class="diff-title">One source of truth</div>
+        <div class="diff-desc">Maintenance events, lease data, invoices, and legal cases all live in the same system and cross-reference each other. No more spreadsheet bridges between tools.</div>
+      </div>
+      <div class="diff-card">
+        <div class="diff-num">→</div>
+        <div class="diff-title">Swiss law built in</div>
+        <div class="diff-desc">The legal engine isn't a PDF library — it evaluates actual Swiss law rules against live reference rates and building-specific data. Automatically flags and routes legal exposure.</div>
+      </div>
+      <div class="diff-card">
+        <div class="diff-num">→</div>
+        <div class="diff-title">All four parties, one platform</div>
+        <div class="diff-desc">Manager, owner, tenant, and contractor each have a role-scoped interface. Communication flows through the platform, not via email chains and WhatsApp groups.</div>
+      </div>
+      <div class="diff-card">
+        <div class="diff-num">→</div>
+        <div class="diff-title">Financial intelligence, not just bookkeeping</div>
+        <div class="diff-desc">Per-building financial snapshots, strategy profiles, and cashflow forecasting. The platform tells owners what their buildings are doing financially — not just what was paid.</div>
+      </div>
+      <div class="diff-card">
+        <div class="diff-num">→</div>
+        <div class="diff-title">Scales from 1 to many buildings</div>
+        <div class="diff-desc">The same backend powers the professional manager view and a simplified private landlord mode (Phase 2). No separate product, no data migration needed.</div>
+      </div>
+      <div class="diff-card">
+        <div class="diff-num">→</div>
+        <div class="diff-title">Built for AI augmentation</div>
+        <div class="diff-desc">Triage, classification, and legal analysis already use rule-based AI. The platform is architected to add LLM-based triage and self-service resolution as the next layer.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── ROADMAP ─── -->
+<section id="roadmap" style="background:var(--surface);">
+  <div class="container">
+    <div class="section-label">What's next</div>
+    <div class="section-title">Product roadmap</div>
+    <p class="section-sub">
+      Six phases taking the platform from production-ready to a full-coverage Swiss property intelligence layer. Click any phase to explore.
+    </p>
+
+    <div class="roadmap-timeline">
+
+      <!-- P0 -->
+      <div class="roadmap-phase">
+        <div class="roadmap-phase-head" onclick="togglePhase(this)">
+          <span class="phase-num phase-p0">P0</span>
+          <div class="phase-info">
+            <div class="phase-name">Foundation Hardening</div>
+            <div class="phase-window">Now → Month 1</div>
+          </div>
+          <span class="phase-status status-active">In progress</span>
+          <span style="color:var(--text-muted);font-size:14px;margin-left:8px;">▾</span>
+        </div>
+        <div class="roadmap-phase-body open">
+          <div class="phase-goal">Clear the critical path blockers before adding any new features. Three items directly block monetizable work.</div>
+          <div class="roadmap-features">
+            <div class="roadmap-feature">
+              <div class="feature-type-tag ftype-wire">Wire</div>
+              <div class="roadmap-feature-title">Email Delivery (SMTP / SendGrid)</div>
+              <div class="roadmap-feature-desc">EmailOutbox model and dev sink built. Wiring production transport enables rent reminders, invoice delivery, and tenant notifications.</div>
+            </div>
+            <div class="roadmap-feature">
+              <div class="feature-type-tag ftype-wire">Wire</div>
+              <div class="roadmap-feature-title">Legal DSL Variable Resolver ✓</div>
+              <div class="roadmap-feature-desc">LegalVariable, LegalVariableVersion and LegalRule wired to live SNB/BFS data. Canton-scoped reference interest rate ingestion complete.</div>
+            </div>
+            <div class="roadmap-feature">
+              <div class="feature-type-tag ftype-wire">Wire</div>
+              <div class="roadmap-feature-title">Digital Lease Signing (Skribble)</div>
+              <div class="roadmap-feature-desc">SignatureRequest model exists. Wire to Skribble API — the Swiss-compliant e-signature provider. Table stakes for private landlord positioning.</div>
+            </div>
+            <div class="roadmap-feature">
+              <div class="feature-type-tag" style="background:#ecfeff;color:#164e63;">Refactor</div>
+              <div class="roadmap-feature-title">Service Layer Extraction</div>
+              <div class="roadmap-feature-desc">legal.ts, tenants.ts, leases.ts have business logic in route handlers. Extract to services before P1 financial work adds complexity.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- P1 -->
+      <div class="roadmap-phase">
+        <div class="roadmap-phase-head" onclick="togglePhase(this)">
+          <span class="phase-num phase-p1">P1</span>
+          <div class="phase-info">
+            <div class="phase-name">Cashflow Layer</div>
+            <div class="phase-window">Month 1–3</div>
+          </div>
+          <span class="phase-status status-planned">Planned</span>
+          <span style="color:var(--text-muted);font-size:14px;margin-left:8px;">▾</span>
+        </div>
+        <div class="roadmap-phase-body">
+          <div class="phase-goal">Build the financial visibility layer for building owners — cash in, cash out, per-building balance — without crossing into accounting.</div>
+          <div class="roadmap-features">
+            <div class="roadmap-feature">
+              <div class="feature-type-tag ftype-build">Build</div>
+              <div class="roadmap-feature-title">QR-Invoice Rent Demand Generation</div>
+              <div class="roadmap-feature-desc">Generate ISO 20022 compliant Swiss QR-invoices for monthly rent demands from lease data. Send via email. Track payment status automatically.</div>
+            </div>
+            <div class="roadmap-feature">
+              <div class="feature-type-tag ftype-build">Build</div>
+              <div class="roadmap-feature-title">Bank Payment Reconciliation (MT940)</div>
+              <div class="roadmap-feature-desc">Accept MT940/CSV exports from major Swiss banks. Auto-match incoming payments to open rent demands by amount + reference.</div>
+            </div>
+            <div class="roadmap-feature">
+              <div class="feature-type-tag ftype-extend">Extend</div>
+              <div class="roadmap-feature-title">Cashflow Service</div>
+              <div class="roadmap-feature-desc">Monthly snapshot of income, expenses, vacancy loss, and net balance per building. Populates BuildingFinancialSnapshot for owner reporting.</div>
+            </div>
+            <div class="roadmap-feature">
+              <div class="feature-type-tag ftype-build">Build</div>
+              <div class="roadmap-feature-title">Rent Arrears Workflow</div>
+              <div class="roadmap-feature-desc">Escalating reminders: friendly nudge (D+3) → formal notice (D+14) → Betreibungshinweis template (D+30). Fully automated email delivery.</div>
+            </div>
+            <div class="roadmap-feature">
+              <div class="feature-type-tag ftype-build">Build</div>
+              <div class="roadmap-feature-title">Nebenkosten Statements</div>
+              <div class="roadmap-feature-desc">Annual utility charge statement generation. Input: expense invoices tagged as Nebenkosten over 12 months. Output: PDF per tenant with settlement.</div>
+            </div>
+            <div class="roadmap-feature">
+              <div class="feature-type-tag ftype-extend">Extend</div>
+              <div class="roadmap-feature-title">Owner Cashflow Dashboard</div>
+              <div class="roadmap-feature-desc">Per-building monthly cashflow view: income bar, expense bar, net balance trend. Real data from BuildingFinancialSnapshot.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- P2 -->
+      <div class="roadmap-phase">
+        <div class="roadmap-phase-head" onclick="togglePhase(this)">
+          <span class="phase-num phase-p2">P2</span>
+          <div class="phase-info">
+            <div class="phase-name">Private Landlord SaaS</div>
+            <div class="phase-window">Month 3–6</div>
+          </div>
+          <span class="phase-status status-planned">Planned</span>
+          <span style="color:var(--text-muted);font-size:14px;margin-left:8px;">▾</span>
+        </div>
+        <div class="roadmap-phase-body">
+          <div class="phase-goal">The current product is built for professional managers. This phase creates a simplified entry point for private individuals owning 1–20 properties — same backend, different UX skin and onboarding.</div>
+          <div class="roadmap-features">
+            <div class="roadmap-feature">
+              <div class="feature-type-tag ftype-product">Product</div>
+              <div class="roadmap-feature-title">Self-Service Onboarding Wizard</div>
+              <div class="roadmap-feature-desc">Private landlord operational in under 15 minutes: add building → add unit → upload lease → set rent → generate first QR-invoice. Multi-language from day one.</div>
+            </div>
+            <div class="roadmap-feature">
+              <div class="feature-type-tag ftype-build">Build</div>
+              <div class="roadmap-feature-title">Simplified Landlord Mode</div>
+              <div class="roadmap-feature-desc">OrgConfig flag that collapses Manager and Owner personas into a single simplified interface for private landlords who manage their own properties.</div>
+            </div>
+            <div class="roadmap-feature">
+              <div class="feature-type-tag ftype-build">Build</div>
+              <div class="roadmap-feature-title">Multilingual Tenant Portal (FR/DE/IT)</div>
+              <div class="roadmap-feature-desc">All tenant-facing pages served in FR, DE, or IT based on tenant language preference. Without this, the platform is only usable by German-speaking tenants.</div>
+            </div>
+            <div class="roadmap-feature">
+              <div class="feature-type-tag ftype-extend">Extend</div>
+              <div class="roadmap-feature-title">Canton Rent Notification Forms</div>
+              <div class="roadmap-feature-desc">Generate the correct canton-specific initial rent notification form from lease data, pre-filled and ready to sign. First target: Form-10/11 (Zurich, Bern).</div>
+            </div>
+            <div class="roadmap-feature">
+              <div class="feature-type-tag ftype-extend">Extend</div>
+              <div class="roadmap-feature-title">Tenant PWA (Mobile App)</div>
+              <div class="roadmap-feature-desc">Wrap the tenant portal as a PWA — installable on iOS/Android, push notifications, offline document access. Replaces phone calls for issue reporting.</div>
+            </div>
+            <div class="roadmap-feature">
+              <div class="feature-type-tag ftype-build">Build</div>
+              <div class="roadmap-feature-title">Document Vault</div>
+              <div class="roadmap-feature-desc">Structured document storage — lease PDFs, signed addenda, Nebenkosten statements, correspondence — linked to tenant and unit with search.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- P3 -->
+      <div class="roadmap-phase">
+        <div class="roadmap-phase-head" onclick="togglePhase(this)">
+          <span class="phase-num phase-p3">P3</span>
+          <div class="phase-info">
+            <div class="phase-name">AI Triage Upgrade</div>
+            <div class="phase-window">Month 5–8</div>
+          </div>
+          <span class="phase-status status-planned">Planned</span>
+          <span style="color:var(--text-muted);font-size:14px;margin-left:8px;">▾</span>
+        </div>
+        <div class="roadmap-phase-body">
+          <div class="phase-goal">Extend the existing triage service from classify-and-route to resolve-before-dispatch. The infrastructure is there. The intelligence layer is not.</div>
+          <div class="roadmap-features">
+            <div class="roadmap-feature">
+              <div class="feature-type-tag ftype-build">Build</div>
+              <div class="roadmap-feature-title">Media Attachments on Requests</div>
+              <div class="roadmap-feature-desc">Tenant attaches photos/video when submitting a request. Forwarded to contractor before dispatch — eliminates "I need to see it first" call-outs.</div>
+            </div>
+            <div class="roadmap-feature">
+              <div class="feature-type-tag ftype-build">Build</div>
+              <div class="roadmap-feature-title">LLM-Based Triage</div>
+              <div class="roadmap-feature-desc">Replace/augment rule-based triage with LLM classification. Input: free-text + photos. Output: category, urgency score, recommended action, confidence.</div>
+            </div>
+            <div class="roadmap-feature">
+              <div class="feature-type-tag ftype-extend">Extend</div>
+              <div class="roadmap-feature-title">Self-Service Resolution Q&amp;A</div>
+              <div class="roadmap-feature-desc">When tenant submits a request, present structured Q&amp;A to resolve at intake without dispatch. Target: resolve ~20% of requests without contractor involvement.</div>
+            </div>
+            <div class="roadmap-feature">
+              <div class="feature-type-tag ftype-build">Build</div>
+              <div class="roadmap-feature-title">Maintenance Analytics</div>
+              <div class="roadmap-feature-desc">Requests by category/building, avg time-to-resolution, self-resolution rate, contractor performance, cost-per-category. Decision-ready reporting for managers.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- P4 -->
+      <div class="roadmap-phase">
+        <div class="roadmap-phase-head" onclick="togglePhase(this)">
+          <span class="phase-num phase-p4">P4</span>
+          <div class="phase-info">
+            <div class="phase-name">NOI Intelligence</div>
+            <div class="phase-window">Month 8–14</div>
+          </div>
+          <span class="phase-status status-planned">Planned</span>
+          <span style="color:var(--text-muted);font-size:14px;margin-left:8px;">▾</span>
+        </div>
+        <div class="roadmap-phase-body">
+          <div class="phase-goal">Connect cashflow + maintenance analytics + vacancy data into a per-building P&amp;L proxy. Explicitly not accounting — the output is decision intelligence, not a financial statement.</div>
+          <div class="roadmap-features">
+            <div class="roadmap-feature">
+              <div class="feature-type-tag ftype-build">Build</div>
+              <div class="roadmap-feature-title">Maintenance Cost Tagging</div>
+              <div class="roadmap-feature-desc">Link every closed maintenance request to its total cost. Tag as capex or opex. Maintenance events appear as tagged expenses in the financial model.</div>
+            </div>
+            <div class="roadmap-feature">
+              <div class="feature-type-tag ftype-extend">Extend</div>
+              <div class="roadmap-feature-title">Vacancy Cost Tracking</div>
+              <div class="roadmap-feature-desc">Calculate and display vacancy cost as a negative cash event. Links to reason where known. Makes the cost of slow re-letting visible in the owner dashboard.</div>
+            </div>
+            <div class="roadmap-feature">
+              <div class="feature-type-tag ftype-product">Product</div>
+              <div class="roadmap-feature-title">NOI Dashboard</div>
+              <div class="roadmap-feature-desc">Per-building: gross income, total expenses (with maintenance breakdown), vacancy loss, net operating income proxy. Clear enough for an owner meeting.</div>
+            </div>
+            <div class="roadmap-feature">
+              <div class="feature-type-tag ftype-build">Build</div>
+              <div class="roadmap-feature-title">Predictive Maintenance Signals</div>
+              <div class="roadmap-feature-desc">Use AssetIntervention + DepreciationStandard to surface forward-looking signals: aging assets, recommended replacement budget, risk alerts.</div>
+            </div>
+            <div class="roadmap-feature">
+              <div class="feature-type-tag ftype-build">Build</div>
+              <div class="roadmap-feature-title">Accountant Export</div>
+              <div class="roadmap-feature-desc">One-click annual summary for accountant: all income, expense invoices, Nebenkosten statements, lease periods, vacancy periods — structured export.</div>
+            </div>
+            <div class="roadmap-feature">
+              <div class="feature-type-tag ftype-infra">Infra</div>
+              <div class="roadmap-feature-title">Live Bank Feed (SIX bLink)</div>
+              <div class="roadmap-feature-desc">Replace MT940 manual import with live bank feed via SIX bLink. Automatic daily reconciliation. Built after MT940 is proven in production.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- P5 -->
+      <div class="roadmap-phase">
+        <div class="roadmap-phase-head" onclick="togglePhase(this)">
+          <span class="phase-num phase-p5">P5</span>
+          <div class="phase-info">
+            <div class="phase-name">ESG Layer</div>
+            <div class="phase-window">Month 14+</div>
+          </div>
+          <span class="phase-status status-planned">Planned</span>
+          <span style="color:var(--text-muted);font-size:14px;margin-left:8px;">▾</span>
+        </div>
+        <div class="roadmap-phase-body">
+          <div class="phase-goal">Energy tracking, cantonal compliance deadlines, retrofit ROI modeling. New vertical targeting institutional owners.</div>
+          <div class="roadmap-features">
+            <div class="roadmap-feature">
+              <div class="feature-type-tag ftype-build">Build</div>
+              <div class="roadmap-feature-title">Energy Consumption Tracking</div>
+              <div class="roadmap-feature-desc">Per-building energy data ingestion and reporting. Cantonal compliance deadlines surfaced proactively.</div>
+            </div>
+            <div class="roadmap-feature">
+              <div class="feature-type-tag ftype-build">Build</div>
+              <div class="roadmap-feature-title">Retrofit ROI Modeling</div>
+              <div class="roadmap-feature-desc">Connect depreciation standards and energy data to model the financial return on insulation, heating, and window retrofits.</div>
+            </div>
+            <div class="roadmap-feature">
+              <div class="feature-type-tag ftype-product">Product</div>
+              <div class="roadmap-feature-title">Institutional Owner Reporting</div>
+              <div class="roadmap-feature-desc">ESG-grade reporting layer for pension funds and institutional owners managing large Swiss residential portfolios.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ─── CLOSING CTA ─── -->
+<section style="padding: 64px 0;">
+  <div class="container">
+    <div class="highlight-box" style="text-align:center;">
+      <div class="section-label" style="justify-content:center;display:flex;">Get started</div>
+      <div class="section-title" style="margin-bottom:12px;">Ready to see it in action?</div>
+      <p style="font-size:16px;color:var(--text-secondary);max-width:480px;margin:0 auto 32px;">
+        Schedule a demo to walk through the platform with real Swiss property data.
+      </p>
+      <div style="display:flex;gap:12px;justify-content:center;align-items:center;">
+        <a href="#" class="btn-primary">Request a demo</a>
+        <a href="#platform" class="btn-ghost">Back to top ↑</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── FOOTER ─── -->
+<footer>
+  <div class="container">
+    <div class="footer-inner">
+      <div class="footer-left">
+        Maintenance Agent — Swiss Property Management Platform
+      </div>
+      <div class="footer-right">
+        <span class="badge-live"><span class="badge-live-dot"></span> Platform live · Updated April 2026</span>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script>
+  function togglePhase(head) {
+    const body = head.nextElementSibling;
+    const arrow = head.querySelector('span:last-child');
+    const isOpen = body.classList.contains('open');
+    body.classList.toggle('open', !isOpen);
+    arrow.textContent = isOpen ? '▾' : '▴';
+  }
+</script>
+
+</body>
+</html>

@@ -21,16 +21,17 @@ const STATUS_TABS = [
   { key: "PENDING",          label: "Pending Review",   statuses: ["PENDING_REVIEW"] },
   { key: "OWNER_APPROVAL",   label: "Owner Approval",   statuses: ["PENDING_OWNER_APPROVAL"] },
   { key: "RFP_OPEN",         label: "RFP Open",         statuses: ["RFP_PENDING"] },
-  { key: "AUTO_APPROVED",    label: "Auto-Approved",    statuses: ["AUTO_APPROVED"] },
-  { key: "ACTIVE",           label: "Active",           statuses: ["APPROVED", "ASSIGNED", "IN_PROGRESS"] },
-  { key: "DONE",             label: "Completed",        statuses: ["COMPLETED", "REJECTED"] },
+  { key: "AUTO_APPROVED",    label: "Direct Approval",  statuses: ["AUTO_APPROVED"] },
+  { key: "ACTIVE",           label: "Active",           statuses: ["APPROVED", "ASSIGNED"] },
+  { key: "DONE",             label: "Done",             statuses: ["COMPLETED"] },
+  { key: "REJECTED",         label: "Rejected",         statuses: ["REJECTED"] },
   { key: "RFPS",             label: "RFPs",             statuses: null, href: "/manager/rfps" },
 ];
 
 // Derive TAB_KEYS from STATUS_TABS to prevent drift; preserve backward-compat aliases
 const TAB_KEYS = STATUS_TABS.map((t) => t.key.toLowerCase());
 // Old deep-link aliases → map to new index
-const TAB_ALIASES = { overview: "all", pending_review: "pending", completed: "done" };
+const TAB_ALIASES = { overview: "all", pending_review: "pending", completed: "done", rejected: "rejected" };
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -59,8 +60,7 @@ function nextApproverLabel(status) {
     case "PENDING_OWNER_APPROVAL": return "Owner";
     case "RFP_PENDING":            return "Manager (RFP)";
     case "APPROVED":
-    case "ASSIGNED":
-    case "IN_PROGRESS":            return "Contractor";
+    case "ASSIGNED":               return "Contractor";
     default:                       return "\u2014";
   }
 }
@@ -371,13 +371,12 @@ function getAvailableCTAs(r, assigningId) {
   const ctaMap = {
     PENDING_REVIEW:           [],                         // auto-routed by legal engine
     RFP_PENDING:              ['view_rfp'],
-    AUTO_APPROVED:            ['view_rfp'],
+    AUTO_APPROVED:            ['assign'],
     PENDING_OWNER_APPROVAL:   [],                         // owner-only — manager cannot approve/reject on behalf
     APPROVED:                 ['assign'],
     ASSIGNED:                 ['unassign'],
-    IN_PROGRESS:              ['view_rfp'],               // read-only link
     COMPLETED:                [],
-    REJECTED:                  [],
+    REJECTED:                 [],
   };
 
   const base = ctaMap[r.status] || [];
@@ -462,12 +461,28 @@ function getNextStep(r, legalDecision) {
         variant: 'success',
       };
 
-    case 'IN_PROGRESS':
+    case 'ASSIGNED': {
+      const jobStatus = r.job?.status;
+      if (jobStatus === 'IN_PROGRESS') {
+        return {
+          label: 'Work in progress',
+          description: 'The contractor is actively working on this repair.',
+          variant: 'info',
+        };
+      }
+      if (jobStatus === 'COMPLETED' || jobStatus === 'INVOICED') {
+        return {
+          label: 'Work complete \u2014 invoice pending',
+          description: 'The contractor has marked the job done. Awaiting invoice review.',
+          variant: 'success',
+        };
+      }
       return {
-        label: 'Work in progress',
-        description: 'A contractor is assigned and work is underway.',
+        label: 'Work assigned',
+        description: 'A contractor is assigned and will begin work shortly.',
         variant: 'info',
       };
+    }
 
     case 'REJECTED':
       return {
@@ -677,8 +692,8 @@ function LegalRecommendationPanel({ decision, loading: isLoading, error: loadErr
       {/* Recommended actions (Phase C) — context-aware based on request status */}
       {decision.recommendedActions?.length > 0 && (() => {
         // Statuses that mean we're past the initial review stage
-        const pastReview = ['RFP_PENDING', 'AUTO_APPROVED', 'PENDING_OWNER_APPROVAL', 'APPROVED', 'ASSIGNED', 'IN_PROGRESS', 'COMPLETED', 'REJECTED'];
-        const pastOwnerApproval = ['APPROVED', 'ASSIGNED', 'IN_PROGRESS', 'COMPLETED'];
+        const pastReview = ['RFP_PENDING', 'AUTO_APPROVED', 'PENDING_OWNER_APPROVAL', 'APPROVED', 'ASSIGNED', 'COMPLETED', 'REJECTED'];
+        const pastOwnerApproval = ['APPROVED', 'ASSIGNED', 'COMPLETED'];
         const isPastReview = pastReview.includes(requestStatus);
         const isPastOwnerApproval = pastOwnerApproval.includes(requestStatus);
 
@@ -1163,7 +1178,7 @@ export default function ManagerRequestsPage() {
     if (reason === null) return; // user cancelled
     setActionLoading(id);
     try {
-      const res = await fetch(`/api/requests/${id}/owner-reject`, {
+      const res = await fetch(`/api/requests/${id}/manager-reject`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...authHeaders() },
         body: JSON.stringify({ reason: reason || null }),

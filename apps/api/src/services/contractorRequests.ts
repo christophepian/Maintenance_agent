@@ -1,4 +1,5 @@
-import { PrismaClient, RequestStatus } from "@prisma/client";
+import { PrismaClient, JobStatus, RequestStatus } from "@prisma/client";
+import { assertJobTransition } from "../workflows/transitions";
 import { MaintenanceRequestDTO } from "./maintenanceRequests";
 import {
   listContractors as listContractorsCore,
@@ -78,9 +79,13 @@ export async function getContractorAssignedRequests(
 }
 
 /**
- * Contractor updates request status.
- * Allowed transitions: any approval status → IN_PROGRESS → COMPLETED
- * Contractor cannot transition back to PENDING_REVIEW or AUTO_APPROVED
+ * Contractor updates job execution state for their assigned request.
+ *
+ * IN_PROGRESS → updates Job.status via assertJobTransition (respects state machine).
+ * COMPLETED   → updates Job.status to COMPLETED and mirrors COMPLETED onto Request.status
+ *               so the manager DONE tab reflects completion.
+ *
+ * Request.status is no longer written directly — execution state lives on Job.
  */
 export async function updateContractorRequestStatus(
   prisma: PrismaClient,
@@ -88,18 +93,25 @@ export async function updateContractorRequestStatus(
   contractorId: string,
   newStatus: RequestStatus
 ): Promise<{ success: boolean; message: string; data?: MaintenanceRequestDTO }> {
+  // Only IN_PROGRESS and COMPLETED are valid contractor-initiated transitions.
+  // IN_PROGRESS no longer exists on RequestStatus; map it to the Job status string.
+  const validValues = ["IN_PROGRESS", "COMPLETED"];
+  if (!validValues.includes(String(newStatus))) {
+    return {
+      success: false,
+      message: `Contractors can only update to: IN_PROGRESS, COMPLETED (not ${newStatus})`,
+    };
+  }
+
   // Verify the request exists and is assigned to this contractor
   const request = await prisma.request.findUnique({
     where: { id: requestId },
     include: {
       assignedContractor: {
-        select: {
-          id: true,
-          name: true,
-          phone: true,
-          email: true,
-          hourlyRate: true,
-        },
+        select: { id: true, name: true, phone: true, email: true, hourlyRate: true },
+      },
+      job: {
+        select: { id: true, status: true },
       },
     },
   });
@@ -112,40 +124,51 @@ export async function updateContractorRequestStatus(
     return { success: false, message: "Not authorized: this request is not assigned to you" };
   }
 
-  // Validate status transition
-  const validContractorStatuses: RequestStatus[] = [RequestStatus.IN_PROGRESS, RequestStatus.COMPLETED];
-  if (!validContractorStatuses.includes(newStatus)) {
+  if (!request.job) {
+    return { success: false, message: "No job found for this request" };
+  }
+
+  const targetJobStatus = newStatus === RequestStatus.COMPLETED
+    ? JobStatus.COMPLETED
+    : JobStatus.IN_PROGRESS;
+
+  // Guard via state machine
+  try {
+    assertJobTransition(request.job.status as JobStatus, targetJobStatus);
+  } catch {
     return {
       success: false,
-      message: `Contractors can only update to: IN_PROGRESS, COMPLETED (not ${newStatus})`,
+      message: `Cannot transition job from ${request.job.status} to ${targetJobStatus}`,
     };
   }
 
-  // Prevent going backwards
-  if (newStatus === RequestStatus.IN_PROGRESS && request.status === RequestStatus.COMPLETED) {
-    return { success: false, message: "Cannot transition from COMPLETED back to IN_PROGRESS" };
+  // Update Job.status
+  await prisma.job.update({
+    where: { id: request.job.id },
+    data: { status: targetJobStatus },
+  });
+
+  // Mirror COMPLETED onto Request.status so the DONE tab works
+  if (targetJobStatus === JobStatus.COMPLETED && request.status === RequestStatus.ASSIGNED) {
+    await prisma.request.update({
+      where: { id: requestId },
+      data: { status: RequestStatus.COMPLETED },
+    });
   }
 
-  const updated = await prisma.request.update({
+  const reloaded = await prisma.request.findUnique({
     where: { id: requestId },
-    data: { status: newStatus },
     include: {
       assignedContractor: {
-        select: {
-          id: true,
-          name: true,
-          phone: true,
-          email: true,
-          hourlyRate: true,
-        },
+        select: { id: true, name: true, phone: true, email: true, hourlyRate: true },
       },
     },
   });
 
   return {
     success: true,
-    message: `Request updated to ${newStatus}`,
-    data: toDTO(updated),
+    message: `Job updated to ${targetJobStatus}`,
+    data: reloaded ? toDTO(reloaded) : undefined,
   };
 }
 

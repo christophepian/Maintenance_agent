@@ -162,7 +162,7 @@
 - **Fix:** Add `resolveApplianceOrg()` / `resolveAssetOrg()` to `orgScope.ts`.
 - **Resolution:** Added `resolveApplianceOrg()` and `resolveAssetOrg()` following the existing direct-orgId pattern (identical to `resolveJobOrg`). 8 new unit tests in `orgIsolation.test.ts` (resolver happy/not-found + 4 cross-org matrix scenarios). (`pre-rfp-scope-and-auth-hardening` slice)
 
-### SI-2 · SCHEMA_REFERENCE.md claims orgId on LegalSource (MEDIUM)
+### SI-2 · SCHEMA_REFERENCE.md claims orgId on LegalSource (MEDIUM) ✅ Resolved 2026-03-10
 
 - **File:** `SCHEMA_REFERENCE.md`
 - **Model:** `LegalSource`
@@ -170,7 +170,7 @@
 - **Fix:** Update SCHEMA_REFERENCE.md to remove orgId from LegalSource entry.
 - **Status: ✅ Resolved 2026-03-10**
 
-### SI-3 · SCHEMA_REFERENCE.md claims orgId on LegalVariable (MEDIUM)
+### SI-3 · SCHEMA_REFERENCE.md claims orgId on LegalVariable (MEDIUM) ✅ Resolved 2026-03-10
 
 - **File:** `SCHEMA_REFERENCE.md`
 - **Model:** `LegalVariable`
@@ -178,7 +178,7 @@
 - **Fix:** Update SCHEMA_REFERENCE.md to match actual schema.
 - **Status: ✅ Resolved 2026-03-10**
 
-### SI-4 · SCHEMA_REFERENCE.md claims orgId on LegalRule (MEDIUM)
+### SI-4 · SCHEMA_REFERENCE.md claims orgId on LegalRule (MEDIUM) ✅ Resolved 2026-03-10
 
 - **File:** `SCHEMA_REFERENCE.md`
 - **Model:** `LegalRule`
@@ -572,14 +572,14 @@ Significant work completed since the original audit was generated. This section 
 | Migrations | 32 | 60 |
 | Workflows | 14 | 24 |
 | Repositories | 8 | 17 |
-| Tests | ~312 | 769 |
-| Suites | ~28 | 56 |
+| Tests | ~312 | 980 |
+| Suites | ~28 | 65 |
 | API routes | ~120 | 247 |
-| Frontend pages | 185 | 247 |
-| Backend LOC | ~34k | ~54k |
-| Frontend LOC | ~20k | ~37k |
+| Frontend pages | 185 | 288 |
+| Backend LOC | ~34k | ~73k |
+| Frontend LOC | ~20k | ~45k |
 | Audit resolved | 20 | 91 |
-| Audit open | 62 | 3 |
+| Audit open | 62 | ~33 (see SA-* and TC-* open findings) |
 
 ### In Progress: RFP Epic
 

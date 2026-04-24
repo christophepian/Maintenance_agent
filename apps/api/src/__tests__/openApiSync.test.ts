@@ -147,6 +147,10 @@ describe("OpenAPI spec ↔ Router sync", () => {
     "GET /asset-topic-suggestions",
     "PATCH /assets/:id",
     "DELETE /assets/:id",
+    // API-08: Routes added 2026-04-24, spec pending
+    "GET /units/:id/unlinked-jobs",
+    "PATCH /requests/:id/asset",
+    "GET /strategy/owner-profile-current",
   ]);
 
   it("every code route has a spec entry", () => {

@@ -173,6 +173,7 @@ describe("RFP Fallback Actions", () => {
         category: "plumbing",
         unitId: unit.id,
         assignedContractorId: cA.id,
+        status: "RFP_PENDING", // linked to an open RFP; ASSIGNED is a valid transition from RFP_PENDING
       },
     });
     requestId = request.id;

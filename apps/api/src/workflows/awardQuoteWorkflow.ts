@@ -242,14 +242,13 @@ export async function awardQuoteWorkflow(
           await updateRequestStatus(prisma, rfp.requestId, RequestStatus.ASSIGNED);
         }
       } else if (reqStatus === RequestStatus.RFP_PENDING) {
-        // Manager direct award (under threshold) — transition through AUTO_APPROVED
-        if (canTransitionRequest(reqStatus, RequestStatus.AUTO_APPROVED)) {
-          await updateRequestStatus(prisma, rfp.requestId, RequestStatus.AUTO_APPROVED, {
+        // Manager direct award (under threshold) — transition directly to ASSIGNED,
+        // preserving SYSTEM_AUTO as approvalSource. AUTO_APPROVED is no longer used
+        // as an intermediate step; the distinction is carried by approvalSource alone.
+        if (canTransitionRequest(reqStatus, RequestStatus.ASSIGNED)) {
+          await updateRequestStatus(prisma, rfp.requestId, RequestStatus.ASSIGNED, {
             approvalSource: "SYSTEM_AUTO" as any,
           });
-        }
-        if (canTransitionRequest(RequestStatus.AUTO_APPROVED, RequestStatus.ASSIGNED)) {
-          await updateRequestStatus(prisma, rfp.requestId, RequestStatus.ASSIGNED);
         }
       } else if (canTransitionRequest(reqStatus, RequestStatus.ASSIGNED)) {
         // Fallback: direct to ASSIGNED if transition is valid

@@ -9,12 +9,13 @@
  *   4. Return updated job DTO
  */
 
-import { JobStatus } from "@prisma/client";
+import { JobStatus, RequestStatus } from "@prisma/client";
 import { WorkflowContext } from "./context";
 import { assertJobTransition } from "./transitions";
 import { emit } from "../events/bus";
 import { getJob, updateJob, getOrCreateJobForRequest } from "../services/jobs";
 import { getOrCreateInvoiceForJob } from "../services/invoices";
+import { updateRequestStatus } from "../repositories/requestRepository";
 import type { JobDTO } from "../services/jobs";
 
 // ─── Input / Output ────────────────────────────────────────────
@@ -59,7 +60,25 @@ export async function completeJobWorkflow(
     completedAt: completedAt ? new Date(completedAt) : new Date(),
   });
 
-  // ── 4. Auto-create invoice if cost provided ────────────────
+  // ── 4. Propagate COMPLETED to the parent Request ──────────
+  // The Request no longer carries IN_PROGRESS; COMPLETED on the Request
+  // is the authoritative signal for the DONE tab. Only update if the
+  // request is currently ASSIGNED (prevents overwriting terminal states).
+  if (updated.requestId) {
+    try {
+      const req = await ctx.prisma.request.findUnique({
+        where: { id: updated.requestId },
+        select: { status: true },
+      });
+      if (req?.status === RequestStatus.ASSIGNED) {
+        await updateRequestStatus(ctx.prisma, updated.requestId, RequestStatus.COMPLETED);
+      }
+    } catch (err) {
+      console.warn("[completeJobWorkflow] Failed to propagate COMPLETED to Request:", err);
+    }
+  }
+
+  // ── 5. Auto-create invoice if cost provided ────────────────
   let invoiceAutoCreated = false;
   if (updated.actualCost) {
     try {

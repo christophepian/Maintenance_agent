@@ -1,4 +1,4 @@
-import { PrismaClient, Prisma, RequestStatus, ApprovalSource, PayingParty, RequestUrgency } from "@prisma/client";
+import { PrismaClient, Prisma, RequestStatus, JobStatus, ApprovalSource, PayingParty, RequestUrgency } from "@prisma/client";
 import { REQUEST_FULL_INCLUDE, REQUEST_SUMMARY_INCLUDE } from "../repositories/requestRepository";
 
 /** Compile-time type for a Request row loaded with REQUEST_FULL_INCLUDE. */
@@ -43,6 +43,15 @@ export type MaintenanceRequestDTO = {
 
   /** ID of the most-recent RFP linked to this request, if any. */
   rfpId?: string | null;
+
+  /** Linked job — carries execution state (IN_PROGRESS/COMPLETED) that no longer lives on Request.status */
+  job?: {
+    id: string;
+    status: JobStatus;
+    startedAt: string | null;
+    completedAt: string | null;
+    contractorId: string;
+  } | null;
 
   // optional enrichments
   tenant?: null | {
@@ -102,6 +111,8 @@ export type MaintenanceRequestDTO = {
     payingParty?: PayingParty;
     approvalSource?: ApprovalSource | null;
     urgency?: RequestUrgency;
+    jobStatus?: JobStatus | null;
+    jobCompletedAt?: string | null;
   }
 
 type ListOpts = {
@@ -170,6 +181,15 @@ const requestInclude = {
     orderBy: { createdAt: "desc" as const },
     take: 1,
   },
+  job: {
+    select: {
+      id: true,
+      status: true,
+      startedAt: true,
+      completedAt: true,
+      contractorId: true,
+    },
+  },
 } as const;
 
   const requestSummaryInclude = {
@@ -187,6 +207,9 @@ const requestInclude = {
           },
         },
       },
+    },
+    job: {
+      select: { id: true, status: true, completedAt: true },
     },
   } as const;
 
@@ -233,6 +256,20 @@ export function toDTO(r: RequestWithFullInclude): MaintenanceRequestDTO {
     asset: (r as any).asset ?? null,
     rfpId: r.rfps?.[0]?.id ?? null,
 
+    job: (r as any).job
+      ? {
+          id: (r as any).job.id,
+          status: (r as any).job.status as JobStatus,
+          startedAt: (r as any).job.startedAt instanceof Date
+            ? (r as any).job.startedAt.toISOString()
+            : ((r as any).job.startedAt ?? null),
+          completedAt: (r as any).job.completedAt instanceof Date
+            ? (r as any).job.completedAt.toISOString()
+            : ((r as any).job.completedAt ?? null),
+          contractorId: (r as any).job.contractorId,
+        }
+      : null,
+
     createdAt: r.createdAt instanceof Date ? r.createdAt.toISOString() : String(r.createdAt),
   };
 }
@@ -251,6 +288,10 @@ export function toSummaryDTO(r: RequestWithSummaryInclude): MaintenanceRequestSu
       payingParty: r.payingParty,
       approvalSource: r.approvalSource ?? null,
       urgency: r.urgency,
+      jobStatus: (r as any).job?.status ?? null,
+      jobCompletedAt: (r as any).job?.completedAt instanceof Date
+        ? (r as any).job.completedAt.toISOString()
+        : ((r as any).job?.completedAt ?? null),
       createdAt: r.createdAt instanceof Date ? r.createdAt.toISOString() : String(r.createdAt),
     };
   }

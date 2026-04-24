@@ -75,6 +75,16 @@ export const REQUEST_FULL_INCLUDE = {
     orderBy: { createdAt: "desc" as const },
     take: 1,
   },
+  // Linked job — carries execution state (IN_PROGRESS/COMPLETED) that no longer lives on Request
+  job: {
+    select: {
+      id: true,
+      status: true,
+      startedAt: true,
+      completedAt: true,
+      contractorId: true,
+    },
+  },
 } as const;
 
 /** Lighter include for summary/list views. */
@@ -89,6 +99,9 @@ export const REQUEST_SUMMARY_INCLUDE = {
         select: { name: true },
       },
     },
+  },
+  job: {
+    select: { id: true, status: true, completedAt: true },
   },
 } as const;
 
