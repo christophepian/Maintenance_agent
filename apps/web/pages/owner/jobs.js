@@ -5,6 +5,7 @@ import PageHeader from "../../components/layout/PageHeader";
 import PageContent from "../../components/layout/PageContent";
 import Panel from "../../components/layout/Panel";
 import ErrorBanner from "../../components/ui/ErrorBanner";
+import { FilterToggle, FilterPanelBody, FilterSection, FilterSectionClear, SelectField, DateField } from "../../components/ui/FilterPanel";
 import { formatDate } from "../../lib/format";
 import Badge from "../../components/ui/Badge";
 import { urgencyVariant, jobVariant } from "../../lib/statusVariants";
@@ -71,6 +72,9 @@ export default function OwnerJobs() {
     return true;
   });
 
+  const activeCount = [filter !== "ALL" ? filter : "", dateFrom, dateTo, buildingFilter, unitFilter, urgencyFilter].filter(Boolean).length;
+  const [filterOpen, setFilterOpen] = useState(false);
+
   return (
     <AppShell role="OWNER">
       <PageShell>
@@ -79,66 +83,52 @@ export default function OwnerJobs() {
         <PageContent>
           <ErrorBanner error={error} className="text-sm" />
 
-          {/* Filter bar */}
-          <div className="mb-4 flex flex-wrap items-start gap-3">
-            <div className="flex flex-col items-center justify-end gap-1">
-              <label className="text-xs font-medium text-slate-500">Status</label>
-              <select value={filter} onChange={(e) => setFilter(e.target.value)}
-                className="min-h-[36px] appearance-none rounded-lg border border-slate-200 bg-white px-3 py-2 leading-tight text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-400">
-                <option value="ALL">All statuses</option>
-                <option value="PENDING">Pending</option>
-                <option value="IN_PROGRESS">In Progress</option>
-                <option value="COMPLETED">Completed</option>
-                <option value="INVOICED">Invoiced</option>
-              </select>
-            </div>
-            <div className="flex flex-col justify-end gap-1">
-              <label className="text-xs font-medium text-slate-500">From</label>
-              <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)}
-                className="h-9 appearance-none rounded-lg border border-slate-200 bg-white px-3 py-2 leading-tight text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-400" />
-            </div>
-            <div className="flex flex-col justify-end gap-1">
-              <label className="text-xs font-medium text-slate-500">To</label>
-              <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)}
-                className="h-9 appearance-none rounded-lg border border-slate-200 bg-white px-3 py-2 leading-tight text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-400" />
-            </div>
-            <div className="flex flex-col items-center justify-end gap-1">
-              <label className="text-xs font-medium text-slate-500">Building</label>
-              <select value={buildingFilter} onChange={(e) => { setBuildingFilter(e.target.value); setUnitFilter(""); }}
-                className="min-h-[36px] appearance-none rounded-lg border border-slate-200 bg-white px-3 py-2 leading-tight text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-400">
-                <option value="">All buildings</option>
-                {buildings.map((b) => <option key={b} value={b}>{b}</option>)}
-              </select>
-            </div>
-            <div className="flex flex-col items-center justify-end gap-1">
-              <label className="text-xs font-medium text-slate-500">Unit</label>
-              <select value={unitFilter} onChange={(e) => setUnitFilter(e.target.value)}
-                className="min-h-[36px] appearance-none rounded-lg border border-slate-200 bg-white px-3 py-2 leading-tight text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-400">
-                <option value="">All units</option>
-                {units.map((u) => <option key={u} value={u}>{u}</option>)}
-              </select>
-            </div>
-            <div className="flex flex-col items-center justify-end gap-1">
-              <label className="text-xs font-medium text-slate-500">Urgency</label>
-              <select value={urgencyFilter} onChange={(e) => setUrgencyFilter(e.target.value)}
-                className="min-h-[36px] appearance-none rounded-lg border border-slate-200 bg-white px-3 py-2 leading-tight text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-400">
-                <option value="">All</option>
-                <option value="LOW">Low</option>
-                <option value="MEDIUM">Medium</option>
-                <option value="HIGH">High</option>
-                <option value="EMERGENCY">Emergency</option>
-              </select>
-            </div>
-            {(filter !== "ALL" || dateFrom || dateTo || buildingFilter || unitFilter || urgencyFilter) && (
-              <div className="flex flex-col justify-end gap-1">
-                <span className="text-xs opacity-0 select-none">x</span>
-                <button onClick={() => { setFilter("ALL"); setDateFrom(""); setDateTo(""); setBuildingFilter(""); setUnitFilter(""); setUrgencyFilter(""); }}
-                  className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-500 hover:bg-slate-50">
-                  Clear
-                </button>
-              </div>
-            )}
-          </div>
+          <FilterToggle open={filterOpen} onToggle={() => setFilterOpen((v) => !v)} activeCount={activeCount} />
+          {filterOpen && (
+            <FilterPanelBody>
+              <FilterSection title="Status" first>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  <SelectField label="Status" value={filter} onChange={(e) => setFilter(e.target.value)}>
+                    <option value="ALL">All statuses</option>
+                    <option value="PENDING">Pending</option>
+                    <option value="IN_PROGRESS">In Progress</option>
+                    <option value="COMPLETED">Completed</option>
+                    <option value="INVOICED">Invoiced</option>
+                  </SelectField>
+                </div>
+              </FilterSection>
+              <FilterSection title="Date range">
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  <DateField label="From" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+                  <DateField label="To" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+                </div>
+              </FilterSection>
+              <FilterSection title="Scope">
+                <div className="grid grid-cols-2 gap-3">
+                  <SelectField label="Building" value={buildingFilter} onChange={(e) => { setBuildingFilter(e.target.value); setUnitFilter(""); }}>
+                    <option value="">All buildings</option>
+                    {buildings.map((b) => <option key={b} value={b}>{b}</option>)}
+                  </SelectField>
+                  <SelectField label="Unit" value={unitFilter} onChange={(e) => setUnitFilter(e.target.value)}>
+                    <option value="">All units</option>
+                    {units.map((u) => <option key={u} value={u}>{u}</option>)}
+                  </SelectField>
+                </div>
+              </FilterSection>
+              <FilterSection title="Priority">
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  <SelectField label="Urgency" value={urgencyFilter} onChange={(e) => setUrgencyFilter(e.target.value)}>
+                    <option value="">All levels</option>
+                    <option value="LOW">Low</option>
+                    <option value="MEDIUM">Medium</option>
+                    <option value="HIGH">High</option>
+                    <option value="EMERGENCY">Emergency</option>
+                  </SelectField>
+                </div>
+              </FilterSection>
+              <FilterSectionClear hasFilter={activeCount > 0} onClear={() => { setFilter("ALL"); setDateFrom(""); setDateTo(""); setBuildingFilter(""); setUnitFilter(""); setUrgencyFilter(""); }} />
+            </FilterPanelBody>
+          )}
 
           <Panel>
             {loading ? (

@@ -4,6 +4,7 @@ import PageShell from "../../../components/layout/PageShell";
 import PageHeader from "../../../components/layout/PageHeader";
 import PageContent from "../../../components/layout/PageContent";
 import Panel from "../../../components/layout/Panel";
+import { FilterToggle, FilterPanelBody, FilterSection, FilterSectionClear, SelectField, DateField } from "../../../components/ui/FilterPanel";
 import { authHeaders } from "../../../lib/api";
 
 function formatDate(iso) {
@@ -72,6 +73,8 @@ export default function ManagerPaymentsPage() {
   }
 
   const hasFilters = buildingId || paidAfter || paidBefore;
+  const activeCount = [buildingId, paidAfter, paidBefore].filter(Boolean).length;
+  const [filterOpen, setFilterOpen] = useState(false);
 
   return (
     <AppShell role="MANAGER">
@@ -85,50 +88,26 @@ export default function ManagerPaymentsPage() {
             </Panel>
           )}
 
-          {/* Filters */}
-          <Panel>
-            <div className="filter-row">
-              <div>
-                <label className="filter-label">Building</label>
-                <select
-                  value={buildingId}
-                  onChange={(e) => setBuildingId(e.target.value)}
-                  className="filter-select"
-                >
-                  <option value="">All buildings</option>
-                  {buildings.map((b) => (
-                    <option key={b.id} value={b.id}>{b.name || b.address}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="filter-label">Paid after</label>
-                <input
-                  type="date"
-                  value={paidAfter}
-                  onChange={(e) => setPaidAfter(e.target.value)}
-                  className="filter-input"
-                />
-              </div>
-              <div>
-                <label className="filter-label">Paid before</label>
-                <input
-                  type="date"
-                  value={paidBefore}
-                  onChange={(e) => setPaidBefore(e.target.value)}
-                  className="filter-input"
-                />
-              </div>
-              {hasFilters && (
-                <button
-                  onClick={clearFilters}
-                  className="action-btn"
-                >
-                  Clear filters
-                </button>
-              )}
-            </div>
-          </Panel>
+          <FilterToggle open={filterOpen} onToggle={() => setFilterOpen((v) => !v)} activeCount={activeCount} />
+          {filterOpen && (
+            <FilterPanelBody>
+              <FilterSection title="Scope" first>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  <SelectField label="Building" value={buildingId} onChange={(e) => setBuildingId(e.target.value)}>
+                    <option value="">All buildings</option>
+                    {buildings.map((b) => <option key={b.id} value={b.id}>{b.name || b.address}</option>)}
+                  </SelectField>
+                </div>
+              </FilterSection>
+              <FilterSection title="Date range">
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  <DateField label="Paid after" value={paidAfter} onChange={(e) => setPaidAfter(e.target.value)} />
+                  <DateField label="Paid before" value={paidBefore} onChange={(e) => setPaidBefore(e.target.value)} />
+                </div>
+              </FilterSection>
+              <FilterSectionClear hasFilter={hasFilters} onClear={clearFilters} />
+            </FilterPanelBody>
+          )}
 
           {loading ? (
             <Panel><p className="m-0">Loading payments...</p></Panel>

@@ -9,6 +9,7 @@ import ErrorBanner from "../../components/ui/ErrorBanner";
 import { ownerAuthHeaders } from "../../lib/api";
 import Badge from "../../components/ui/Badge";
 import { invoiceVariant } from "../../lib/statusVariants";
+import { FilterToggle, FilterPanelBody, FilterSection, FilterSectionClear, SelectField, DateField } from "../../components/ui/FilterPanel";
 
 import { cn } from "../../lib/utils";
 function formatCurrency(value) {
@@ -43,6 +44,8 @@ export default function OwnerFinance() {
 
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const activeCount = [filter !== "ALL" ? filter : "", dateFrom, dateTo].filter(Boolean).length;
+  const [filterOpen, setFilterOpen] = useState(false);
 
   function toggleAccordion(id) { setExpandedId((prev) => (prev === id ? null : id)); }
 
@@ -102,40 +105,30 @@ export default function OwnerFinance() {
         <PageContent>
           <ErrorBanner error={error} className="text-sm" />
 
-          {/* Filter bar */}
-          <div className="mb-4 flex flex-wrap items-start gap-3">
-            <div className="flex flex-col items-center justify-end gap-1">
-              <label className="text-xs font-medium text-slate-500">Status</label>
-              <select value={filter} onChange={(e) => setFilter(e.target.value)}
-                className="min-h-[36px] appearance-none rounded-lg border border-slate-200 bg-white px-3 py-2 leading-tight text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-400">
-                <option value="ALL">All statuses</option>
-                <option value="DRAFT">Draft</option>
-                <option value="ISSUED">Issued</option>
-                <option value="APPROVED">Approved</option>
-                <option value="PAID">Paid</option>
-                <option value="DISPUTED">Disputed</option>
-              </select>
-            </div>
-            <div className="flex flex-col justify-end gap-1">
-              <label className="text-xs font-medium text-slate-500">From</label>
-              <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)}
-                className="h-9 appearance-none rounded-lg border border-slate-200 bg-white px-3 py-2 leading-tight text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-400" />
-            </div>
-            <div className="flex flex-col justify-end gap-1">
-              <label className="text-xs font-medium text-slate-500">To</label>
-              <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)}
-                className="h-9 appearance-none rounded-lg border border-slate-200 bg-white px-3 py-2 leading-tight text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-400" />
-            </div>
-            {(filter !== "ALL" || dateFrom || dateTo) && (
-              <div className="flex flex-col justify-end gap-1">
-                <span className="text-xs opacity-0 select-none">x</span>
-                <button onClick={() => { setFilter("ALL"); setDateFrom(""); setDateTo(""); }}
-                  className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-500 hover:bg-slate-50">
-                  Clear
-                </button>
-              </div>
-            )}
-          </div>
+          <FilterToggle open={filterOpen} onToggle={() => setFilterOpen((v) => !v)} activeCount={activeCount} />
+{filterOpen && (
+            <FilterPanelBody>
+              <FilterSection title="Status" first>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  <SelectField label="Status" value={filter} onChange={(e) => setFilter(e.target.value)}>
+                    <option value="ALL">All statuses</option>
+                    <option value="DRAFT">Draft</option>
+                    <option value="ISSUED">Issued</option>
+                    <option value="APPROVED">Approved</option>
+                    <option value="PAID">Paid</option>
+                    <option value="DISPUTED">Disputed</option>
+                  </SelectField>
+                </div>
+              </FilterSection>
+              <FilterSection title="Date range">
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  <DateField label="From" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+                  <DateField label="To" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+                </div>
+              </FilterSection>
+              <FilterSectionClear hasFilter={filter !== "ALL" || dateFrom || dateTo} onClear={() => { setFilter("ALL"); setDateFrom(""); setDateTo(""); }} />
+            </FilterPanelBody>
+          )}
 
           <Panel>
             {loading ? (

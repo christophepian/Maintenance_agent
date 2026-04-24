@@ -7,6 +7,7 @@ import PageHeader from "../../components/layout/PageHeader";
 import PageContent from "../../components/layout/PageContent";
 import Panel from "../../components/layout/Panel";
 import ErrorBanner from "../../components/ui/ErrorBanner";
+import { FilterToggle, FilterPanelBody, FilterSection, FilterSectionClear, SelectField, DateField } from "../../components/ui/FilterPanel";
 import { ownerAuthHeaders } from "../../lib/api";
 import Badge from "../../components/ui/Badge";
 import { invoiceVariant, ingestionVariant } from "../../lib/statusVariants";
@@ -142,6 +143,8 @@ export default function OwnerInvoices() {
   // Date filters
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const activeCount = [activeTab !== "ALL" ? activeTab : "", dateFrom, dateTo].filter(Boolean).length;
+  const [filterOpen, setFilterOpen] = useState(false);
 
   useEffect(() => { fetchInvoices(); }, []);
 
@@ -273,37 +276,25 @@ export default function OwnerInvoices() {
             ))}
           </div>
 
-          {/* Filter bar */}
-          <div className="mb-4 flex flex-wrap items-start gap-3">
-            <div className="flex flex-col items-center justify-end gap-1">
-              <label className="text-xs font-medium text-slate-500">Status</label>
-              <select value={activeTab} onChange={(e) => setActiveTab(e.target.value)}
-                className="min-h-[36px] appearance-none rounded-lg border border-slate-200 bg-white px-3 py-2 leading-tight text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-400">
-                {STATUS_TABS.map((t) => (
-                  <option key={t.key} value={t.key}>{t.label}</option>
-                ))}
-              </select>
-            </div>
-            <div className="flex flex-col justify-end gap-1">
-              <label className="text-xs font-medium text-slate-500">From</label>
-              <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)}
-                className="h-9 appearance-none rounded-lg border border-slate-200 bg-white px-3 py-2 leading-tight text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-400" />
-            </div>
-            <div className="flex flex-col justify-end gap-1">
-              <label className="text-xs font-medium text-slate-500">To</label>
-              <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)}
-                className="h-9 appearance-none rounded-lg border border-slate-200 bg-white px-3 py-2 leading-tight text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-400" />
-            </div>
-            {(activeTab !== "ALL" || dateFrom || dateTo) && (
-              <div className="flex flex-col justify-end gap-1">
-                <span className="text-xs opacity-0 select-none">x</span>
-                <button onClick={() => { setActiveTab("ALL"); setDateFrom(""); setDateTo(""); }}
-                  className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-500 hover:bg-slate-50">
-                  Clear
-                </button>
-              </div>
-            )}
-          </div>
+          <FilterToggle open={filterOpen} onToggle={() => setFilterOpen((v) => !v)} activeCount={activeCount} />
+          {filterOpen && (
+            <FilterPanelBody>
+              <FilterSection title="Status" first>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  <SelectField label="Status" value={activeTab} onChange={(e) => setActiveTab(e.target.value)}>
+                    {STATUS_TABS.map((t) => <option key={t.key} value={t.key}>{t.label}</option>)}
+                  </SelectField>
+                </div>
+              </FilterSection>
+              <FilterSection title="Date range">
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  <DateField label="From" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+                  <DateField label="To" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+                </div>
+              </FilterSection>
+              <FilterSectionClear hasFilter={activeCount > 0} onClear={() => { setActiveTab("ALL"); setDateFrom(""); setDateTo(""); }} />
+            </FilterPanelBody>
+          )}
 
           {/* Invoice list */}
           <Panel>

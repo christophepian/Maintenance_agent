@@ -382,6 +382,36 @@ h1, h2 {
    */
 
   /*
+   * ── Collapsible filter panel pattern ────────────────────────────────────
+   * All list/table pages that expose filter controls MUST use this pattern.
+   * Implementation: import from components/ui/FilterPanel.js
+   *
+   * Structure:
+   *   <FilterToggle open={filterOpen} onToggle={...} activeCount={n} />
+   *   {filterOpen && (
+   *     <FilterPanelBody>
+   *       <FilterSection title="Date range" first>…</FilterSection>
+   *       <FilterSection title="Scope">…</FilterSection>
+   *       <FilterSection title="Priority">…</FilterSection>
+   *       <FilterSectionClear hasFilter={n > 0} onClear={clearAll} />
+   *     </FilterPanelBody>
+   *   )}
+   *
+   * Rules:
+   *   1. FilterToggle sits top-right (justify-end), styled like ConfigurableTable
+   *      "Columns" button: slate-400 default → blue-600 hover, blue-50 active.
+   *      Shows a filled blue count badge when activeCount > 0.
+   *   2. Filters are HIDDEN by default (filterOpen starts false).
+   *   3. All <select> elements must use <SelectField> (shows chevron arrow).
+   *   4. All date inputs must use <DateField>.
+   *   5. Sections are separated by border-t border-slate-100 via <FilterSection>.
+   *      Section grid: grid grid-cols-2 gap-3, responsive to sm:grid-cols-4.
+   *   6. "Clear all filters" is a text link in a footer row inside the panel,
+   *      only visible when at least one filter is active.
+   *   7. Do NOT use flat flex-wrap filter bars (the old pattern). Migrate on touch.
+   */
+
+  /*
    * ── Card data-chip row (responsive design guideline) ────────────────────
    * A horizontal row of 2–4 labelled data chips inside a card
    * (e.g. contractor name + quote amount + link).

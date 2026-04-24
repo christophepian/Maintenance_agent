@@ -4,6 +4,7 @@ import PageShell from "../../../components/layout/PageShell";
 import PageHeader from "../../../components/layout/PageHeader";
 import PageContent from "../../../components/layout/PageContent";
 import Panel from "../../../components/layout/Panel";
+import { FilterToggle, FilterPanelBody, FilterSection, FilterSectionClear, SelectField } from "../../../components/ui/FilterPanel";
 import { authHeaders } from "../../../lib/api";
 import Badge from "../../../components/ui/Badge";
 
@@ -135,6 +136,8 @@ export default function ManagerExpensesPage() {
   }
 
   const hasFilters = categoryFilter || buildingId || expenseTypeId || accountId;
+  const activeCount = [categoryFilter, buildingId, expenseTypeId, accountId].filter(Boolean).length;
+  const [filterOpen, setFilterOpen] = useState(false);
 
   return (
     <AppShell role="MANAGER">
@@ -148,75 +151,40 @@ export default function ManagerExpensesPage() {
             </Panel>
           )}
 
-          {/* Filters */}
-          <Panel>
-            <div className="filter-row">
-              <div>
-                <label className="filter-label">Category</label>
-                <select
-                  value={categoryFilter}
-                  onChange={(e) => setCategoryFilter(e.target.value)}
-                  className="filter-select"
-                >
-                  <option value="">All categories</option>
-                  {EXPENSE_CATEGORIES.map((cat) => (
-                    <option key={cat} value={cat}>{cat}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="filter-label">Building</label>
-                <select
-                  value={buildingId}
-                  onChange={(e) => setBuildingId(e.target.value)}
-                  className="filter-select"
-                >
-                  <option value="">All buildings</option>
-                  {buildings.map((b) => (
-                    <option key={b.id} value={b.id}>{b.name || b.address}</option>
-                  ))}
-                </select>
-              </div>
-              {expenseTypes.length > 0 && (
-                <div>
-                  <label className="filter-label">Expense Type</label>
-                  <select
-                    value={expenseTypeId}
-                    onChange={(e) => setExpenseTypeId(e.target.value)}
-                    className="filter-select"
-                  >
-                    <option value="">All expense types</option>
-                    {expenseTypes.map((et) => (
-                      <option key={et.id} value={et.id}>{et.code} — {et.name}</option>
-                    ))}
-                  </select>
+          <FilterToggle open={filterOpen} onToggle={() => setFilterOpen((v) => !v)} activeCount={activeCount} />
+          {filterOpen && (
+            <FilterPanelBody>
+              <FilterSection title="Category" first>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  <SelectField label="Category" value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
+                    <option value="">All categories</option>
+                    {EXPENSE_CATEGORIES.map((cat) => <option key={cat} value={cat}>{cat}</option>)}
+                  </SelectField>
                 </div>
-              )}
-              {accounts.length > 0 && (
-                <div>
-                  <label className="filter-label">Account</label>
-                  <select
-                    value={accountId}
-                    onChange={(e) => setAccountId(e.target.value)}
-                    className="filter-select"
-                  >
-                    <option value="">All accounts</option>
-                    {accounts.map((a) => (
-                      <option key={a.id} value={a.id}>{a.code} — {a.name}</option>
-                    ))}
-                  </select>
+              </FilterSection>
+              <FilterSection title="Scope">
+                <div className="grid grid-cols-2 gap-3">
+                  <SelectField label="Building" value={buildingId} onChange={(e) => setBuildingId(e.target.value)}>
+                    <option value="">All buildings</option>
+                    {buildings.map((b) => <option key={b.id} value={b.id}>{b.name || b.address}</option>)}
+                  </SelectField>
+                  {expenseTypes.length > 0 && (
+                    <SelectField label="Expense Type" value={expenseTypeId} onChange={(e) => setExpenseTypeId(e.target.value)}>
+                      <option value="">All expense types</option>
+                      {expenseTypes.map((et) => <option key={et.id} value={et.id}>{et.code} — {et.name}</option>)}
+                    </SelectField>
+                  )}
+                  {accounts.length > 0 && (
+                    <SelectField label="Account" value={accountId} onChange={(e) => setAccountId(e.target.value)}>
+                      <option value="">All accounts</option>
+                      {accounts.map((a) => <option key={a.id} value={a.id}>{a.code} — {a.name}</option>)}
+                    </SelectField>
+                  )}
                 </div>
-              )}
-              {hasFilters && (
-                <button
-                  onClick={clearFilters}
-                  className="action-btn"
-                >
-                  Clear filters
-                </button>
-              )}
-            </div>
-          </Panel>
+              </FilterSection>
+              <FilterSectionClear hasFilter={hasFilters} onClear={clearFilters} />
+            </FilterPanelBody>
+          )}
 
           {loading ? (
             <Panel><p className="m-0">Loading expenses...</p></Panel>
