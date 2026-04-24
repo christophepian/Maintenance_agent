@@ -7,7 +7,7 @@ import PageHeader from "../../components/layout/PageHeader";
 import PageContent from "../../components/layout/PageContent";
 import Panel from "../../components/layout/Panel.jsx";
 import ErrorBanner from "../../components/ui/ErrorBanner";
-import { FilterToggle, FilterPanelBody, FilterSection, FilterSectionClear, SelectField, DateField, SortToggle, SortPanelBody, SortRow } from "../../components/ui/FilterPanel";
+import { FilterToggle, FilterPanelBody, FilterSection, FilterSectionClear, SelectField, DateField, NumberField, SortToggle, SortPanelBody, SortRow } from "../../components/ui/FilterPanel";
 import { ownerAuthHeaders } from "../../lib/api";
 import Badge from "../../components/ui/Badge";
 import { urgencyVariant, rfpVariant } from "../../lib/statusVariants";
@@ -100,6 +100,7 @@ function RequestsTab() {
   const [buildingFilter, setBuildingFilter] = useState("");
   const [unitFilter, setUnitFilter] = useState("");
   const [urgencyFilter, setUrgencyFilter] = useState("");
+  const [requestNumberFilter, setRequestNumberFilter] = useState("");
 
   useEffect(() => { loadPendingApprovals(); }, []);
 
@@ -130,10 +131,11 @@ function RequestsTab() {
     if (buildingFilter && r.unit?.building?.name !== buildingFilter) return false;
     if (unitFilter && r.unit?.unitNumber !== unitFilter) return false;
     if (urgencyFilter && r.urgency !== urgencyFilter) return false;
+    if (requestNumberFilter && String(r.requestNumber) !== String(requestNumberFilter)) return false;
     return true;
   });
 
-  const activeCount = [dateFrom, dateTo, buildingFilter, unitFilter, urgencyFilter].filter(Boolean).length;
+  const activeCount = [dateFrom, dateTo, buildingFilter, unitFilter, urgencyFilter, requestNumberFilter].filter(Boolean).length;
   const hasFilter = activeCount > 0;
   const [filterOpen, setFilterOpen] = useState(false);
 
@@ -155,6 +157,8 @@ function RequestsTab() {
       cmp = (a.estimatedCost || 0) - (b.estimatedCost || 0);
     } else if (sortKey === "urgency") {
       cmp = (URGENCY_RANK[a.urgency] || 0) - (URGENCY_RANK[b.urgency] || 0);
+    } else if (sortKey === "number") {
+      cmp = (a.requestNumber || 0) - (b.requestNumber || 0);
     } else {
       // date
       cmp = new Date(a.createdAt) - new Date(b.createdAt);
@@ -201,12 +205,25 @@ function RequestsTab() {
               </SelectField>
             </div>
           </FilterSection>
-          <FilterSectionClear hasFilter={hasFilter} onClear={() => { setDateFrom(""); setDateTo(""); setBuildingFilter(""); setUnitFilter(""); setUrgencyFilter(""); }} />
+          <FilterSection title="Request #">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <NumberField label="Request number" value={requestNumberFilter} onChange={(e) => setRequestNumberFilter(e.target.value)} placeholder="e.g. 42" />
+            </div>
+          </FilterSection>
+          <FilterSectionClear hasFilter={hasFilter} onClear={() => { setDateFrom(""); setDateTo(""); setBuildingFilter(""); setUnitFilter(""); setUrgencyFilter(""); setRequestNumberFilter(""); }} />
         </FilterPanelBody>
       )}
 
       {sortOpen && (
         <SortPanelBody>
+          <SortRow
+            active={sortKey === "number"}
+            dir={sortKey === "number" ? sortDir : "asc"}
+            label="Request #"
+            ascLabel="Low → High"
+            descLabel="High → Low"
+            onSelect={(dir) => handleSort("number", dir)}
+          />
           <SortRow
             active={sortKey === "date"}
             dir={sortKey === "date" ? sortDir : "desc"}
@@ -298,6 +315,7 @@ function RfpsTab() {
   const [dateTo, setDateTo] = useState("");
   const [buildingFilter, setBuildingFilter] = useState("");
   const [urgencyFilter, setUrgencyFilter] = useState("");
+  const [requestNumberFilter, setRequestNumberFilter] = useState("");
 
   useEffect(() => {
     async function load() {
@@ -324,10 +342,11 @@ function RfpsTab() {
     if (dateTo && r.createdAt > dateTo + "T23:59:59") return false;
     if (buildingFilter && r.building?.name !== buildingFilter) return false;
     if (urgencyFilter && r.request?.urgency !== urgencyFilter) return false;
+    if (requestNumberFilter && String(r.request?.requestNumber) !== String(requestNumberFilter)) return false;
     return true;
   });
 
-  const activeCount = [dateFrom, dateTo, buildingFilter, urgencyFilter].filter(Boolean).length;
+  const activeCount = [dateFrom, dateTo, buildingFilter, urgencyFilter, requestNumberFilter].filter(Boolean).length;
   const hasFilter = activeCount > 0;
   const [filterOpen, setFilterOpen] = useState(false);
 
@@ -352,6 +371,8 @@ function RfpsTab() {
       cmp = (priceA === Infinity ? 0 : priceA) - (priceB === Infinity ? 0 : priceB);
     } else if (sortKey === "urgency") {
       cmp = (URGENCY_RANK[a.request?.urgency] || 0) - (URGENCY_RANK[b.request?.urgency] || 0);
+    } else if (sortKey === "number") {
+      cmp = (a.request?.requestNumber || 0) - (b.request?.requestNumber || 0);
     } else {
       cmp = new Date(a.createdAt) - new Date(b.createdAt);
     }
@@ -398,12 +419,25 @@ function RfpsTab() {
               </SelectField>
             </div>
           </FilterSection>
-          <FilterSectionClear hasFilter={hasFilter} onClear={() => { setDateFrom(""); setDateTo(""); setBuildingFilter(""); setUrgencyFilter(""); }} />
+          <FilterSection title="Request #">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <NumberField label="Request number" value={requestNumberFilter} onChange={(e) => setRequestNumberFilter(e.target.value)} placeholder="e.g. 42" />
+            </div>
+          </FilterSection>
+          <FilterSectionClear hasFilter={hasFilter} onClear={() => { setDateFrom(""); setDateTo(""); setBuildingFilter(""); setUrgencyFilter(""); setRequestNumberFilter(""); }} />
         </FilterPanelBody>
       )}
 
       {sortOpen && (
         <SortPanelBody>
+          <SortRow
+            active={sortKey === "number"}
+            dir={sortKey === "number" ? sortDir : "asc"}
+            label="Request #"
+            ascLabel="Low → High"
+            descLabel="High → Low"
+            onSelect={(dir) => handleSort("number", dir)}
+          />
           <SortRow
             active={sortKey === "date"}
             dir={sortKey === "date" ? sortDir : "desc"}

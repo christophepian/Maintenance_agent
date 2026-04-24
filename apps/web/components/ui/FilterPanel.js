@@ -115,6 +115,23 @@ export function SelectField({ label, value, onChange, children, className }) {
   );
 }
 
+/** Wraps a number <input> (e.g. request #) with a consistent label */
+export function NumberField({ label, value, onChange, placeholder, min, className }) {
+  return (
+    <div className={cn("flex flex-col gap-1", className)}>
+      <label className="text-xs font-medium text-slate-500">{label}</label>
+      <input
+        type="number"
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder ?? ""}
+        min={min ?? 1}
+        className="w-full min-h-[36px] rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-400 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+      />
+    </div>
+  );
+}
+
 /**
  * SortToggle — sits alongside FilterToggle in the same flex row.
  * active=true when a non-default sort is applied.
