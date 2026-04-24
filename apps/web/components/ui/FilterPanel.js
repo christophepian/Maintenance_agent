@@ -72,16 +72,21 @@ export function FilterSection({ title, first = false, children }) {
   );
 }
 
-/** "Clear all filters" footer link — only rendered when hasFilter is true */
+/** "Reset filters" footer link — always visible, dimmed when nothing active */
 export function FilterSectionClear({ hasFilter, onClear }) {
-  if (!hasFilter) return null;
   return (
     <div className="mt-4 flex justify-end border-t border-slate-100 pt-3">
       <button
         onClick={onClear}
-        className="text-sm text-slate-500 hover:text-slate-700 underline underline-offset-2"
+        disabled={!hasFilter}
+        className={cn(
+          "text-sm underline underline-offset-2 transition-colors",
+          hasFilter
+            ? "text-slate-500 hover:text-slate-700 cursor-pointer"
+            : "text-slate-300 cursor-default"
+        )}
       >
-        Clear all filters
+        Reset filters
       </button>
     </div>
   );
