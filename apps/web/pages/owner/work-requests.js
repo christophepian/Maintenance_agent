@@ -22,7 +22,7 @@ const STATUS_TABS = [
   { key: "PENDING",          label: "Pending Review",   statuses: ["PENDING_REVIEW"] },
   { key: "OWNER_APPROVAL",   label: "Owner Approval",   statuses: ["PENDING_OWNER_APPROVAL"] },
   { key: "RFP_OPEN",         label: "RFP Open",         statuses: ["RFP_PENDING"] },
-  { key: "ACTIVE",           label: "Active",           statuses: ["APPROVED", "AUTO_APPROVED", "ASSIGNED", "IN_PROGRESS"] },
+  { key: "ACTIVE",           label: "Active",           statuses: ["APPROVED", "ASSIGNED"] },
   { key: "DONE",             label: "Completed",        statuses: ["COMPLETED", "OWNER_REJECTED"] },
   { key: "RFPS",             label: "RFPs",             statuses: null, href: "/owner/approvals?tab=rfps" },
 ];

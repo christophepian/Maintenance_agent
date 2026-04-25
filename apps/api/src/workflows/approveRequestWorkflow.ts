@@ -129,37 +129,46 @@ export async function approveRequestWorkflow(
     };
   }
 
-  // ── 4B. Owner approves from PENDING_OWNER_APPROVAL → APPROVED
-  //        Also completes the pending RFP award and creates the job.
+  // ── 4B. Owner approves from PENDING_OWNER_APPROVAL → APPROVED → ASSIGNED
+  //        The APPROVED intermediate state and the final ASSIGNED write are wrapped
+  //        in a single transaction so the request can never get stuck at APPROVED.
+  //        Note: emit() and createNotification() calls inside awardQuoteWorkflow are
+  //        fire-and-forget side effects outside the DB transaction — they will not roll
+  //        back if the transaction fails, which is acceptable.
   if (
     approvalType === "owner" &&
     current.status === RequestStatus.PENDING_OWNER_APPROVAL
   ) {
     assertRequestTransition(current.status, RequestStatus.APPROVED);
 
-    await updateRequestStatus(prisma, requestId, RequestStatus.APPROVED, {
-      approvalSource: ApprovalSource.OWNER_APPROVED,
-    });
-
-    // Find the RFP that's pending owner approval and complete the award
     let jobAutoCreated = false;
     try {
-      const pendingRfp = await prisma.rfp.findFirst({
-        where: { requestId, status: RfpStatus.PENDING_OWNER_APPROVAL },
-        select: { id: true, awardedQuoteId: true },
-      });
-
-      if (pendingRfp?.awardedQuoteId) {
-        // Delegate to awardQuoteWorkflow to complete the RFP award + job creation
-        await awardQuoteWorkflow(ctx, {
-          rfpId: pendingRfp.id,
-          quoteId: pendingRfp.awardedQuoteId,
-          actorRole: "OWNER",
+      await prisma.$transaction(async (tx: any) => {
+        // Set APPROVED inside the transaction
+        await tx.request.update({
+          where: { id: requestId },
+          data: { status: RequestStatus.APPROVED, approvalSource: ApprovalSource.OWNER_APPROVED },
         });
-        jobAutoCreated = true;
-      }
+
+        // Find the RFP and complete the award (also writes ASSIGNED) inside the same tx
+        const pendingRfp = await tx.rfp.findFirst({
+          where: { requestId, status: RfpStatus.PENDING_OWNER_APPROVAL },
+          select: { id: true, awardedQuoteId: true },
+        });
+
+        if (pendingRfp?.awardedQuoteId) {
+          await awardQuoteWorkflow(
+            { ...ctx, prisma: tx as unknown as PrismaClient },
+            { rfpId: pendingRfp.id, quoteId: pendingRfp.awardedQuoteId, actorRole: "OWNER" },
+          );
+          jobAutoCreated = true;
+        }
+      });
     } catch (rfpErr: any) {
-      console.warn(`[approve] RFP award completion failed for ${requestId}:`, rfpErr.message);
+      throw Object.assign(
+        new Error(`Owner approval failed: ${rfpErr.message}`),
+        { code: "OWNER_APPROVAL_FAILED" },
+      );
     }
 
     emit({

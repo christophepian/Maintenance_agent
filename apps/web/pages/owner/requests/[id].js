@@ -50,7 +50,6 @@ function stageIndexForStatus(status) {
   switch (status) {
     case "PENDING_REVIEW":  return 0;
     case "RFP_PENDING":
-    case "AUTO_APPROVED":
     case "APPROVED":
     case "REJECTED":        return 1;
     case "ASSIGNED":        return 2;
@@ -142,7 +141,6 @@ function StatusPipeline({ status, payingParty }) {
       case "PENDING_REVIEW":         return "Pending Review";
       case "RFP_PENDING":            return "RFP Pending";
       case "PENDING_OWNER_APPROVAL": return "Pending Owner Approval";
-      case "AUTO_APPROVED":          return "Auto-Approved";
       case "APPROVED":               return "Approved";
       case "REJECTED":               return isTenantFunded ? "Tenant-Funded" : "Rejected";
       default:                       return stage.label;

@@ -227,7 +227,7 @@ export async function awardQuoteWorkflow(
 
     // Transition request through the proper approval chain:
     // - If owner completed award: PENDING_OWNER_APPROVAL → APPROVED → ASSIGNED
-    // - If manager direct award (under threshold): RFP_PENDING → AUTO_APPROVED → ASSIGNED
+    // - If manager direct award (under threshold): RFP_PENDING → ASSIGNED (approvalSource: SYSTEM_AUTO)
     const request = await prisma.request.findUnique({ where: { id: rfp.requestId }, select: { status: true } });
     if (request) {
       const reqStatus = request.status as RequestStatus;
@@ -242,9 +242,8 @@ export async function awardQuoteWorkflow(
           await updateRequestStatus(prisma, rfp.requestId, RequestStatus.ASSIGNED);
         }
       } else if (reqStatus === RequestStatus.RFP_PENDING) {
-        // Manager direct award (under threshold) — transition directly to ASSIGNED,
-        // preserving SYSTEM_AUTO as approvalSource. AUTO_APPROVED is no longer used
-        // as an intermediate step; the distinction is carried by approvalSource alone.
+        // Manager direct award (under threshold) — transition directly to ASSIGNED.
+        // approvalSource SYSTEM_AUTO distinguishes this from owner-approved awards.
         if (canTransitionRequest(reqStatus, RequestStatus.ASSIGNED)) {
           await updateRequestStatus(prisma, rfp.requestId, RequestStatus.ASSIGNED, {
             approvalSource: "SYSTEM_AUTO" as any,

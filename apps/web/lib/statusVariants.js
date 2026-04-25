@@ -38,7 +38,6 @@ export function jobVariant(status) {
 const REQUEST_MAP = {
   PENDING_REVIEW: "warning",
   PENDING_OWNER_APPROVAL: "brand",
-  AUTO_APPROVED: "success",
   APPROVED: "success",
   RFP_PENDING: "info",
   ASSIGNED: "info",

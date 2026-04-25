@@ -942,7 +942,7 @@ export async function createLeaseInvoice(
       orgId,
       description: 'System: Lease Administration',
       category: 'other',
-      status: RequestStatus.AUTO_APPROVED,
+      status: RequestStatus.ASSIGNED,
       contractorNotes: '__LEASE_ADMIN__',
     });
 

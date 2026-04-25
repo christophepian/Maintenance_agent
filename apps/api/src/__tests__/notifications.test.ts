@@ -360,7 +360,7 @@ describe("Notifications Service", () => {
         orgId,
         description: "Test for approval notification",
         category: "oven",
-        status: "AUTO_APPROVED",
+        status: "PENDING_REVIEW",
       },
     });
 

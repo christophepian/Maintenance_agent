@@ -834,7 +834,6 @@ enum Role {
 
 enum RequestStatus {
   PENDING_REVIEW
-  AUTO_APPROVED
   APPROVED
   RFP_PENDING
   COMPLETED

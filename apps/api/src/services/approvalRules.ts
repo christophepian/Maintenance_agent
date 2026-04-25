@@ -249,7 +249,8 @@ export async function evaluateRules(
 export function ruleActionToStatus(action: RuleAction): RequestStatus {
   switch (action) {
     case RuleAction.AUTO_APPROVE:
-      return RequestStatus.AUTO_APPROVED;
+      // AUTO_APPROVED status removed — all requests route through PENDING_REVIEW
+      return RequestStatus.PENDING_REVIEW;
     case RuleAction.REQUIRE_MANAGER_REVIEW:
       return RequestStatus.PENDING_REVIEW;
     case RuleAction.REQUIRE_OWNER_APPROVAL:

@@ -596,7 +596,7 @@ export default function RequestDetailPage() {
               <Panel>
                 <div className="flex items-center gap-3 mb-4">
                   {!(isTenantFunded && r.status === "REJECTED") && (
-                    <StatusBadge status={r.status} />
+                    <StatusBadge request={r} />
                   )}
                   {r.approvalSource && (
                     <Badge variant="muted" size="sm">

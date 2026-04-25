@@ -166,9 +166,9 @@ describe("Workflow Layer — Integration", () => {
 
     it("manager-approves a PENDING_REVIEW request → RFP_PENDING", async () => {
       if (initialStatus === "PENDING_REVIEW") {
-        const { status, data } = await POST(
-          `/requests/${pendingRequestId}/owner-approve`,
-          {},
+        const { status, data } = await PATCH(
+          `/requests/${pendingRequestId}/status`,
+          { status: "APPROVED" },
           auth,
         );
         expect(status).toBe(200);
@@ -224,9 +224,9 @@ describe("Workflow Layer — Integration", () => {
 
       // Drive to RFP_PENDING via manager-approve if in PENDING_REVIEW
       if (rData.data.status === "PENDING_REVIEW") {
-        await POST(
-          `/requests/${approvedRequestId}/owner-approve`,
-          {},
+        await PATCH(
+          `/requests/${approvedRequestId}/status`,
+          { status: "APPROVED" },
           auth,
         );
       }

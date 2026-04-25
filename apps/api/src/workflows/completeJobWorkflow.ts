@@ -4,18 +4,19 @@
  * Canonical entry point for marking a job as completed.
  * Orchestrates:
  *   1. Validate the job exists and belongs to the org
- *   2. Update job fields (status, actualCost, dates)
- *   3. Auto-create invoice when job is COMPLETED (idempotent)
- *   4. Return updated job DTO
+ *   2. Atomically update Job.status=COMPLETED + mirror Request.status=COMPLETED
+ *      in a single $transaction (prevents stuck-at-ASSIGNED if mirror fails)
+ *   3. Auto-create invoice when job is COMPLETED (idempotent, outside transaction)
+ *   4. Emit JOB_COMPLETED event (outside transaction)
+ *   5. Return updated job DTO
  */
 
 import { JobStatus, RequestStatus } from "@prisma/client";
 import { WorkflowContext } from "./context";
 import { assertJobTransition } from "./transitions";
 import { emit } from "../events/bus";
-import { getJob, updateJob, getOrCreateJobForRequest } from "../services/jobs";
+import { getJob } from "../services/jobs";
 import { getOrCreateInvoiceForJob } from "../services/invoices";
-import { updateRequestStatus } from "../repositories/requestRepository";
 import type { JobDTO } from "../services/jobs";
 
 // ─── Input / Output ────────────────────────────────────────────
@@ -52,30 +53,40 @@ export async function completeJobWorkflow(
     assertJobTransition(job.status as JobStatus, JobStatus.COMPLETED);
   }
 
-  // ── 3. Update job ─────────────────────────────────────────
-  const updated = await updateJob(jobId, {
-    status: JobStatus.COMPLETED,
-    actualCost,
-    startedAt: startedAt ? new Date(startedAt) : undefined,
-    completedAt: completedAt ? new Date(completedAt) : new Date(),
+  const completedAt_date = completedAt ? new Date(completedAt) : new Date();
+
+  // ── 3+4. Atomically update Job + mirror COMPLETED onto Request ─
+  // Both writes are in one transaction: if either fails the other rolls back.
+  // This prevents the request from getting stuck at ASSIGNED while Job = COMPLETED.
+  // Invoice creation and event emission happen outside (they are idempotent side effects).
+  await ctx.prisma.$transaction(async (tx) => {
+    await tx.job.update({
+      where: { id: jobId },
+      data: {
+        status: JobStatus.COMPLETED,
+        ...(actualCost !== undefined && { actualCost }),
+        ...(startedAt && { startedAt: new Date(startedAt) }),
+        completedAt: completedAt_date,
+      },
+    });
+
+    // Mirror COMPLETED onto the parent Request only if it is currently ASSIGNED
+    const req = await tx.request.findUnique({
+      where: { id: job.requestId! },
+      select: { status: true },
+    });
+    if (req?.status === RequestStatus.ASSIGNED) {
+      await tx.request.update({
+        where: { id: job.requestId! },
+        data: { status: RequestStatus.COMPLETED },
+      });
+    }
   });
 
-  // ── 4. Propagate COMPLETED to the parent Request ──────────
-  // The Request no longer carries IN_PROGRESS; COMPLETED on the Request
-  // is the authoritative signal for the DONE tab. Only update if the
-  // request is currently ASSIGNED (prevents overwriting terminal states).
-  if (updated.requestId) {
-    try {
-      const req = await ctx.prisma.request.findUnique({
-        where: { id: updated.requestId },
-        select: { status: true },
-      });
-      if (req?.status === RequestStatus.ASSIGNED) {
-        await updateRequestStatus(ctx.prisma, updated.requestId, RequestStatus.COMPLETED);
-      }
-    } catch (err) {
-      console.warn("[completeJobWorkflow] Failed to propagate COMPLETED to Request:", err);
-    }
+  // Reload the full DTO via the canonical getJob (includes relations)
+  const updated = await getJob(jobId);
+  if (!updated) {
+    throw Object.assign(new Error("Job not found after completion"), { code: "NOT_FOUND" });
   }
 
   // ── 5. Auto-create invoice if cost provided ────────────────

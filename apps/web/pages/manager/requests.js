@@ -17,21 +17,28 @@ import { cn } from "../../lib/utils";
 // ---------------------------------------------------------------------------
 
 const STATUS_TABS = [
-  { key: "ALL",              label: "Overview",         statuses: null },
-  { key: "PENDING",          label: "Pending Review",   statuses: ["PENDING_REVIEW"] },
-  { key: "OWNER_APPROVAL",   label: "Owner Approval",   statuses: ["PENDING_OWNER_APPROVAL"] },
-  { key: "RFP_OPEN",         label: "RFP Open",         statuses: ["RFP_PENDING"] },
-  { key: "AUTO_APPROVED",    label: "Direct Approval",  statuses: ["AUTO_APPROVED"] },
-  { key: "ACTIVE",           label: "Active",           statuses: ["APPROVED", "ASSIGNED"] },
-  { key: "DONE",             label: "Done",             statuses: ["COMPLETED"] },
-  { key: "REJECTED",         label: "Rejected",         statuses: ["REJECTED"] },
-  { key: "RFPS",             label: "RFPs",             statuses: null, href: "/manager/rfps" },
+  { key: "ALL",            label: "Overview",                statuses: null },
+  { key: "PENDING",        label: "Pending Review",          statuses: ["PENDING_REVIEW"] },
+  { key: "RFP_OPEN",       label: "RFP Open",                statuses: ["RFP_PENDING"] },
+  { key: "OWNER_APPROVAL", label: "Pending Owner Approval",  statuses: ["PENDING_OWNER_APPROVAL"] },
+  { key: "IN_PROGRESS",    label: "In Progress",             statuses: ["APPROVED", "ASSIGNED"] },
+  {
+    key: "DONE",
+    label: "Done",
+    statuses: ["COMPLETED"],
+    // Belt-and-suspenders: catch ASSIGNED rows where Job is COMPLETED but mirror lagged
+    extraFilter: (r) =>
+      r.status === "COMPLETED" ||
+      (r.status === "ASSIGNED" && r.job?.status === "COMPLETED"),
+  },
+  { key: "REJECTED",       label: "Rejected",                statuses: ["REJECTED"] },
+  { key: "RFPS",           label: "RFPs",                    statuses: null, href: "/manager/rfps" },
 ];
 
 // Derive TAB_KEYS from STATUS_TABS to prevent drift; preserve backward-compat aliases
 const TAB_KEYS = STATUS_TABS.map((t) => t.key.toLowerCase());
 // Old deep-link aliases → map to new index
-const TAB_ALIASES = { overview: "all", pending_review: "pending", completed: "done", rejected: "rejected" };
+const TAB_ALIASES = { overview: "all", pending_review: "pending", active: "in_progress", completed: "done", rejected: "rejected" };
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -89,7 +96,7 @@ function buildRequestColumns({ assigningId, setAssigningId, selectedContractorId
       defaultVisible: true,
       render: (r) => (
         <>
-          <StatusBadge status={r.status} />
+          <StatusBadge request={r} />
           {r.payingParty === "TENANT" && (
             <span className="ml-1.5 inline-block rounded-full border border-orange-200 bg-orange-50 px-2 py-0.5 text-[10px] font-semibold text-orange-700">
               Tenant-funded
@@ -320,10 +327,28 @@ function requestFieldExtractor(r, field) {
 // Badge sub-components (Tailwind)
 // ---------------------------------------------------------------------------
 
-function StatusBadge({ status }) {
+function getStatusLabel(r) {
+  const s = r.status;
+  const js = r.job?.status;
+  if (s === "PENDING_REVIEW")         return { label: "Pending Review",          variant: "warning"  };
+  if (s === "RFP_PENDING")            return { label: "RFP Open",                variant: "info"     };
+  if (s === "PENDING_OWNER_APPROVAL") return { label: "Awaiting Owner Approval", variant: "warning"  };
+  if (s === "APPROVED")               return { label: "Approved",                variant: "info"     };
+  if (s === "ASSIGNED") {
+    if (js === "IN_PROGRESS")         return { label: "Work underway",           variant: "success"  };
+    if (js === "COMPLETED" || js === "INVOICED") return { label: "Work done",    variant: "success"  };
+    return                                       { label: "Assigned",            variant: "info"     };
+  }
+  if (s === "COMPLETED")              return { label: "Completed",               variant: "success"  };
+  if (s === "REJECTED")               return { label: "Rejected",                variant: "danger"   };
+  return { label: (s || "").replace(/_/g, " "), variant: "default" };
+}
+
+function StatusBadge({ request }) {
+  const { label, variant } = getStatusLabel(request);
   return (
-    <Badge variant={requestVariant(status)} size="sm">
-      {(status || "").replace(/_/g, " ")}
+    <Badge variant={variant} size="sm">
+      {label}
     </Badge>
   );
 }
@@ -369,9 +394,8 @@ const OBLIGATION_META = {
  */
 function getAvailableCTAs(r, assigningId) {
   const ctaMap = {
-    PENDING_REVIEW:           [],                         // auto-routed by legal engine
+    PENDING_REVIEW:           [],                         // auto-routed by legal engine or manager approves
     RFP_PENDING:              ['view_rfp'],
-    AUTO_APPROVED:            ['assign'],
     PENDING_OWNER_APPROVAL:   [],                         // owner-only — manager cannot approve/reject on behalf
     APPROVED:                 ['assign'],
     ASSIGNED:                 ['unassign'],
@@ -431,13 +455,6 @@ function getNextStep(r, legalDecision) {
         label: 'RFP open',
         description: 'The owner approved this request. Contractors are being invited to quote.',
         variant: 'info',
-      };
-
-    case 'AUTO_APPROVED':
-      return {
-        label: 'Auto-approved \u2014 RFP open',
-        description: 'This repair was legally obligated and automatically approved.',
-        variant: 'success',
       };
 
     case 'PENDING_OWNER_APPROVAL':
@@ -692,7 +709,7 @@ function LegalRecommendationPanel({ decision, loading: isLoading, error: loadErr
       {/* Recommended actions (Phase C) — context-aware based on request status */}
       {decision.recommendedActions?.length > 0 && (() => {
         // Statuses that mean we're past the initial review stage
-        const pastReview = ['RFP_PENDING', 'AUTO_APPROVED', 'PENDING_OWNER_APPROVAL', 'APPROVED', 'ASSIGNED', 'COMPLETED', 'REJECTED'];
+        const pastReview = ['RFP_PENDING', 'PENDING_OWNER_APPROVAL', 'APPROVED', 'ASSIGNED', 'COMPLETED', 'REJECTED'];
         const pastOwnerApproval = ['APPROVED', 'ASSIGNED', 'COMPLETED'];
         const isPastReview = pastReview.includes(requestStatus);
         const isPastOwnerApproval = pastOwnerApproval.includes(requestStatus);
@@ -1143,6 +1160,7 @@ export default function ManagerRequestsPage() {
   const filteredRequests = useMemo(() => {
     const tab = STATUS_TABS[activeTab];
     if (!tab || !tab.statuses) return requests;
+    if (tab.extraFilter) return requests.filter(tab.extraFilter);
     return requests.filter((r) => tab.statuses.includes(r.status));
   }, [requests, activeTab]);
 
@@ -1270,7 +1288,9 @@ export default function ManagerRequestsPage() {
               }
               const count = !tab.statuses
                 ? requestsTotal
-                : requests.filter((r) => tab.statuses.includes(r.status)).length;
+                : tab.extraFilter
+                  ? requests.filter(tab.extraFilter).length
+                  : requests.filter((r) => tab.statuses.includes(r.status)).length;
               const active = activeTab === i;
               return (
                 <button
