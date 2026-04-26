@@ -46,7 +46,7 @@
 
   /* ── Surface (white / slate) ── */
   --color-surface:        #ffffff;   /* white     */
-  --color-surface-raised: #f8fafc;   /* slate-50  */
+  --color-surface-raised: #f8fafc;   /* slate-50  — card/panel bg on white pages */
   --color-surface-border: #e2e8f0;   /* slate-200 */
   --color-surface-hover:  #f1f5f9;   /* slate-100 */
 }
@@ -59,7 +59,7 @@ html, body {
 
 body {
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
-  @apply bg-slate-50 m-0 text-slate-800;
+  @apply bg-white m-0 text-slate-800;
 }
 
 h1, h2 {
@@ -75,7 +75,7 @@ h1, h2 {
 /* ── Base components ── */
 
 .card {
-  @apply border border-surface-border rounded-xl p-4 bg-surface mb-4;
+  @apply border border-surface-border rounded-xl p-4 bg-surface-raised mb-4;
 }
 
 .label {

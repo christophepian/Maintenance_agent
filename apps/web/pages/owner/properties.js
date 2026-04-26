@@ -178,8 +178,7 @@ function BuildingsTab({ refreshKey }) {
 
           {/* Desktop: configurable table */}
           <div className="hidden sm:block">
-            <Panel bodyClassName="p-0">
-              <ConfigurableTable
+            <ConfigurableTable
                 tableId="owner-buildings"
                 columns={OWNER_BUILDING_COLUMNS}
                 data={sortedBuildings}
@@ -190,7 +189,6 @@ function BuildingsTab({ refreshKey }) {
                 onRowClick={(b) => router.push(`/admin-inventory/buildings/${b.id}?from=/owner/properties&role=owner`)}
                 emptyState={<p className="text-sm text-slate-500">No properties found.</p>}
               />
-            </Panel>
           </div>
         </>
       )}

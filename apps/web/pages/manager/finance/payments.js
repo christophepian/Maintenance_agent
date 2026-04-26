@@ -1,4 +1,5 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
+import { useRouter } from "next/router";
 import AppShell from "../../../components/AppShell";
 import PageShell from "../../../components/layout/PageShell";
 import PageHeader from "../../../components/layout/PageHeader";
@@ -6,30 +7,74 @@ import PageContent from "../../../components/layout/PageContent";
 import Panel from "../../../components/layout/Panel";
 import { FilterToggle, FilterPanelBody, FilterSection, FilterSectionClear, SelectField, DateField } from "../../../components/ui/FilterPanel";
 import { authHeaders } from "../../../lib/api";
+import { formatDate, formatChf } from "../../../lib/format";
+import ConfigurableTable from "../../../components/ConfigurableTable";
+import { useTableSort, clientSort } from "../../../lib/tableUtils";
 
-function formatDate(iso) {
-  if (!iso) return "—";
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return iso;
-  const dd = String(d.getDate()).padStart(2, "0");
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const yyyy = d.getFullYear();
-  return `${dd}.${mm}.${yyyy}`;
+const PAYMENT_SORT_FIELDS = ["invoiceNumber", "amount", "paidAt"];
+
+function paymentFieldExtractor(p, field) {
+  switch (field) {
+    case "invoiceNumber": return p.invoiceNumber || "";
+    case "amount": return p.totalAmount ?? 0;
+    case "paidAt": return p.paidAt || "";
+    default: return "";
+  }
 }
 
-function formatCurrency(amount) {
-  if (typeof amount !== "number") return "—";
-  const str = amount.toFixed(2);
-  const [intPart, decPart] = str.split(".");
-  const formatted = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, "'");
-  return `CHF ${formatted}.${decPart}`;
-}
+const PAYMENT_COLUMNS = [
+  {
+    id: "invoiceNumber",
+    label: "Invoice #",
+    sortable: true,
+    alwaysVisible: true,
+    render: (p) => p.invoiceNumber || p.id.slice(0, 8),
+  },
+  {
+    id: "description",
+    label: "Description",
+    defaultVisible: true,
+    render: (p) => p.description || "\u2014",
+  },
+  {
+    id: "amount",
+    label: "Amount (CHF)",
+    sortable: true,
+    defaultVisible: true,
+    className: "text-right",
+    render: (p) => <span className="tabular-nums cell-bold">{formatChf(p.totalAmount)}</span>,
+  },
+  {
+    id: "paidAt",
+    label: "Paid on",
+    sortable: true,
+    defaultVisible: true,
+    render: (p) => formatDate(p.paidAt),
+  },
+  {
+    id: "reference",
+    label: "Payment reference",
+    defaultVisible: true,
+    render: (p) => p.paymentReference || "\u2014",
+  },
+  {
+    id: "actions",
+    label: "Actions",
+    alwaysVisible: true,
+    render: () => (
+      <a href="/manager/finance/invoices" className="action-btn-brand no-underline inline-block">View Invoice</a>
+    ),
+  },
+];
 
 export default function ManagerPaymentsPage() {
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [payments, setPayments] = useState([]);
   const [buildings, setBuildings] = useState([]);
+  const { sortField, sortDir, handleSort } = useTableSort(router, PAYMENT_SORT_FIELDS, { defaultField: "paidAt", defaultDir: "desc" });
+  const sortedPayments = useMemo(() => clientSort(payments, sortField, sortDir, paymentFieldExtractor), [payments, sortField, sortDir]);
 
   // Filters
   const [buildingId, setBuildingId] = useState("");
@@ -111,44 +156,19 @@ export default function ManagerPaymentsPage() {
 
           {loading ? (
             <Panel><p className="m-0">Loading payments...</p></Panel>
-          ) : payments.length === 0 ? (
-            <Panel>
-              <p className="m-0">No payments found for the selected filters.</p>
-            </Panel>
           ) : (
-            <Panel bodyClassName="p-0">
-            <table className="inline-table">
-                <thead>
-                  <tr>
-                    <th>Invoice #</th>
-                    <th>Description</th>
-                    <th>Amount (CHF)</th>
-                    <th>Paid on</th>
-                    <th>Payment reference</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {payments.map((p) => (
-                    <tr key={p.id}>
-                      <td>{p.invoiceNumber || p.id.slice(0, 8)}</td>
-                      <td>{p.description || "—"}</td>
-                      <td className="cell-bold">{formatCurrency(p.totalAmount)}</td>
-                      <td>{formatDate(p.paidAt)}</td>
-                      <td>{p.paymentReference || "—"}</td>
-                      <td>
-                        <a
-                          href="/manager/finance/invoices"
-                          className="action-btn-brand no-underline inline-block"
-                        >
-                          View Invoice
-                        </a>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </Panel>
+            <ConfigurableTable
+                tableId="manager-payments"
+                columns={PAYMENT_COLUMNS}
+                data={sortedPayments}
+                rowKey={(p) => p.id}
+                sortField={sortField}
+                sortDir={sortDir}
+                onSort={handleSort}
+                emptyState={
+                  <p className="px-4 py-8 text-center text-sm text-slate-400">No payments found for the selected filters.</p>
+                }
+              />
           )}
         </PageContent>
       </PageShell>

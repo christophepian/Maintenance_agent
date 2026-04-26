@@ -1,6 +1,8 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/router";
 import AppShell from "../../../components/AppShell";
+import ConfigurableTable from "../../../components/ConfigurableTable";
+import { useTableSort, clientSort } from "../../../lib/tableUtils";
 import PageShell from "../../../components/layout/PageShell";
 import PageHeader from "../../../components/layout/PageHeader";
 import PageContent from "../../../components/layout/PageContent";
@@ -21,6 +23,87 @@ const TABS = [
 
 const TAB_KEYS = ["draft", "finalized", "settled", "all"];
 
+const RECON_SORT_FIELDS = ["tenant", "year", "status", "acompte", "actual", "balance"];
+
+function reconFieldExtractor(r, field) {
+  switch (field) {
+    case "tenant": return (r.lease?.tenantName || "").toLowerCase();
+    case "year": return r.fiscalYear ?? 0;
+    case "status": return r.status || "";
+    case "acompte": return r.totalAcomptePaidCents ?? 0;
+    case "actual": return r.totalActualCostsCents ?? 0;
+    case "balance": return r.balanceCents ?? 0;
+    default: return "";
+  }
+}
+
+const RECON_COLUMNS = [
+  {
+    id: "tenant",
+    label: "Tenant",
+    sortable: true,
+    alwaysVisible: true,
+    render: (r) => (
+      <Link href={`/manager/charge-reconciliations/${r.id}`} className="cell-link" onClick={(e) => e.stopPropagation()}>
+        {r.lease?.tenantName || "\u2014"}
+      </Link>
+    ),
+  },
+  {
+    id: "year",
+    label: "Year",
+    sortable: true,
+    defaultVisible: true,
+    render: (r) => <span className="tabular-nums">{r.fiscalYear}</span>,
+  },
+  {
+    id: "status",
+    label: "Status",
+    sortable: true,
+    defaultVisible: true,
+    render: (r) => <Badge variant={reconciliationVariant(r.status)} size="sm">{r.status}</Badge>,
+  },
+  {
+    id: "acompte",
+    label: "Acompte Paid",
+    sortable: true,
+    defaultVisible: true,
+    className: "text-right",
+    render: (r) => <span className="tabular-nums">{formatChfCents(r.totalAcomptePaidCents)}</span>,
+  },
+  {
+    id: "actual",
+    label: "Actual Costs",
+    sortable: true,
+    defaultVisible: true,
+    className: "text-right",
+    render: (r) => <span className="tabular-nums">{formatChfCents(r.totalActualCostsCents)}</span>,
+  },
+  {
+    id: "balance",
+    label: "Balance",
+    sortable: true,
+    defaultVisible: true,
+    className: "text-right",
+    render: (r) => (
+      <span className={cn("tabular-nums", r.balanceCents > 0 ? "text-red-600" : r.balanceCents < 0 ? "text-green-600" : "")}>
+        {r.balanceCents > 0 ? "+" : ""}{formatChfCents(r.balanceCents)}
+      </span>
+    ),
+  },
+  {
+    id: "actions",
+    label: "",
+    alwaysVisible: true,
+    className: "text-right",
+    render: (r) => (
+      <Link href={`/manager/charge-reconciliations/${r.id}`} className="cell-link" onClick={(e) => e.stopPropagation()}>
+        {r.status === "DRAFT" ? "Edit" : "View"}
+      </Link>
+    ),
+  },
+];
+
 export default function ChargeReconciliationsPage() {
   const router = useRouter();
   const activeTab = router.isReady ? Math.max(0, TAB_KEYS.indexOf(router.query.tab)) || 0 : 0;
@@ -35,6 +118,8 @@ export default function ChargeReconciliationsPage() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const { sortField, sortDir, handleSort } = useTableSort(router, RECON_SORT_FIELDS, { defaultField: "year", defaultDir: "desc" });
+  const sortedItems = useMemo(() => clientSort(items, sortField, sortDir, reconFieldExtractor), [items, sortField, sortDir]);
 
   const fetchItems = useCallback(async () => {
     setLoading(true);
@@ -72,62 +157,24 @@ export default function ChargeReconciliationsPage() {
             ))}
           </div>
 
-          <Panel bodyClassName="p-0">
-            {loading && <p className="loading-text">Loading…</p>}
-            {!loading && !error && items.length === 0 && (
-              <div className="empty-state">
-                <p className="empty-state-text">No reconciliations found. Create one from a lease detail page.</p>
-              </div>
-            )}
-            {!loading && !error && items.length > 0 && (
-              <table className="inline-table">
-                <thead>
-                  <tr>
-                    <th>Tenant</th>
-                    <th>Year</th>
-                    <th>Status</th>
-                    <th className="text-right">Acompte Paid</th>
-                    <th className="text-right">Actual Costs</th>
-                    <th className="text-right">Balance</th>
-                    <th className="text-right">Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {items.map((r) => (
-                    <tr key={r.id}>
-                      <td>
-                        <Link
-                          href={`/manager/charge-reconciliations/${r.id}`}
-                          className="cell-link"
-                        >
-                          {r.lease?.tenantName || "—"}
-                        </Link>
-                      </td>
-                      <td className="tabular-nums">{r.fiscalYear}</td>
-                      <td>
-                        <Badge variant={reconciliationVariant(r.status)} size="sm">
-                          {r.status}
-                        </Badge>
-                      </td>
-                      <td className="text-right tabular-nums">{formatChfCents(r.totalAcomptePaidCents)}</td>
-                      <td className="text-right tabular-nums">{formatChfCents(r.totalActualCostsCents)}</td>
-                      <td className={cn("text-right tabular-nums", r.balanceCents > 0 ? "text-red-600" : r.balanceCents < 0 ? "text-green-600" : "")}>
-                        {r.balanceCents > 0 ? "+" : ""}{formatChfCents(r.balanceCents)}
-                      </td>
-                      <td className="text-right">
-                        <Link
-                          href={`/manager/charge-reconciliations/${r.id}`}
-                          className="cell-link"
-                        >
-                          {r.status === "DRAFT" ? "Edit" : "View"}
-                        </Link>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </Panel>
+          {loading && <p className="loading-text">Loading…</p>}
+          {!loading && !error && (
+            <ConfigurableTable
+                tableId="manager-charge-reconciliations"
+                columns={RECON_COLUMNS}
+                data={sortedItems}
+                rowKey={(r) => r.id}
+                sortField={sortField}
+                sortDir={sortDir}
+                onSort={handleSort}
+                onRowClick={(r) => router.push(`/manager/charge-reconciliations/${r.id}`)}
+                emptyState={
+                  <div className="empty-state">
+                    <p className="empty-state-text">No reconciliations found. Create one from a lease detail page.</p>
+                  </div>
+                }
+            />
+          )}
         </PageContent>
       </PageShell>
     </AppShell>

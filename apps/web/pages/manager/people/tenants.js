@@ -131,8 +131,7 @@ export default function PeopleTenantsPage() {
           subtitle={`${tenants.length} tenant${tenants.length !== 1 ? "s" : ""}`}
         />
         <PageContent>
-          <Panel>
-            <div className="mb-4">
+          <div className="mb-4">
               <input
                 type="text"
                 placeholder="Search by name, email, phone, or unit…"
@@ -164,7 +163,6 @@ export default function PeopleTenantsPage() {
                 emptyState={<p className="text-sm text-slate-500">No tenants found.</p>}
               />
             )}
-          </Panel>
         </PageContent>
       </PageShell>
     </AppShell>

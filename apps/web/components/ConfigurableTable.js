@@ -189,15 +189,15 @@ export default function ConfigurableTable({
 
 
   return (
-    <div>
-      {/* Toolbar row — gear button */}
-      <div className="flex items-center justify-end px-4 py-1.5">
+    <>
+      {/* Toolbar row — gear button (outside table, right-aligned) */}
+      <div className="flex items-center justify-end pb-3">
         <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
           <PopoverTrigger asChild>
             <button
               className={cn("inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors", popoverOpen
                   ? "text-blue-700 bg-blue-50"
-                  : "text-slate-400 hover:text-blue-600 hover:bg-blue-50/50")}
+                  : "text-slate-900 hover:text-blue-600 hover:bg-blue-50/50")}
               title="Configure columns"
               aria-label="Configure columns"
               aria-expanded={popoverOpen}
@@ -225,10 +225,10 @@ export default function ConfigurableTable({
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto rounded-lg border border-slate-200">
         <table className={cn("w-full text-sm", ds.text)}>
           <thead>
-            <tr className="border-b border-slate-300 text-left text-[11px] font-medium uppercase tracking-wider text-slate-400">
+            <tr className="border-b border-slate-200 bg-slate-100 text-left text-[11px] font-medium uppercase tracking-wider text-slate-900">
               {leadingHeader}
               {visibleColumns.map((col) =>
                 col.sortable ? (
@@ -295,6 +295,6 @@ export default function ConfigurableTable({
           </tbody>
         </table>
       </div>
-    </div>
+    </>
   );
 }

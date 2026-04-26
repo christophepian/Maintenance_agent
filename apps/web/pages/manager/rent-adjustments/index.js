@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import AppShell from "../../../components/AppShell";
@@ -8,6 +8,8 @@ import PageContent from "../../../components/layout/PageContent";
 import Panel from "../../../components/layout/Panel";
 import Badge from "../../../components/ui/Badge";
 import { fetchWithAuth } from "../../../lib/api";
+import ConfigurableTable from "../../../components/ConfigurableTable";
+import { useTableSort, clientSort } from "../../../lib/tableUtils";
 import { formatChfCents, formatDate } from "../../../lib/format";
 import { rentAdjustmentVariant } from "../../../lib/statusVariants";
 import { cn } from "../../../lib/utils";
@@ -27,6 +29,97 @@ const TABS = [
 ];
 const TAB_KEYS = TABS.map((t) => t.key.toLowerCase());
 
+const RA_SORT_FIELDS = ["tenant", "type", "effectiveDate", "status", "newRent", "change"];
+
+function raFieldExtractor(adj, field) {
+  switch (field) {
+    case "tenant": return (adj.lease?.tenantName || "").toLowerCase();
+    case "type": return adj.adjustmentType || "";
+    case "effectiveDate": return adj.effectiveDate || "";
+    case "status": return adj.status || "";
+    case "newRent": return adj.newRentCents ?? 0;
+    case "change": return adj.adjustmentCents ?? 0;
+    default: return "";
+  }
+}
+
+const RA_COLUMNS = [
+  {
+    id: "tenant",
+    label: "Tenant",
+    sortable: true,
+    alwaysVisible: true,
+    render: (adj) => (
+      <Link href={`/manager/rent-adjustments/${adj.id}`} className="cell-link" onClick={(e) => e.stopPropagation()}>
+        {adj.lease?.tenantName || "\u2014"}
+      </Link>
+    ),
+  },
+  {
+    id: "type",
+    label: "Type",
+    sortable: true,
+    defaultVisible: true,
+    render: (adj) => TYPE_LABELS[adj.adjustmentType] || adj.adjustmentType,
+  },
+  {
+    id: "effectiveDate",
+    label: "Effective",
+    sortable: true,
+    defaultVisible: true,
+    render: (adj) => formatDate(adj.effectiveDate),
+  },
+  {
+    id: "status",
+    label: "Status",
+    sortable: true,
+    defaultVisible: true,
+    render: (adj) => <Badge variant={rentAdjustmentVariant(adj.status)}>{adj.status}</Badge>,
+  },
+  {
+    id: "oldRent",
+    label: "Old Rent",
+    defaultVisible: true,
+    className: "text-right",
+    render: (adj) => <span className="tabular-nums">{formatChfCents(adj.previousRentCents)}</span>,
+  },
+  {
+    id: "newRent",
+    label: "New Rent",
+    sortable: true,
+    defaultVisible: true,
+    className: "text-right",
+    render: (adj) => <span className="tabular-nums cell-bold">{formatChfCents(adj.newRentCents)}</span>,
+  },
+  {
+    id: "change",
+    label: "Change",
+    sortable: true,
+    defaultVisible: true,
+    className: "text-right",
+    render: (adj) => {
+      const changePct = adj.previousRentCents
+        ? ((adj.adjustmentCents / adj.previousRentCents) * 100).toFixed(1)
+        : "\u2014";
+      return (
+        <span className={cn("tabular-nums", adj.adjustmentCents > 0 ? "text-red-600" : adj.adjustmentCents < 0 ? "text-green-600" : "")}>
+          {adj.adjustmentCents > 0 ? "+" : ""}{formatChfCents(adj.adjustmentCents)} ({changePct}%)
+        </span>
+      );
+    },
+  },
+  {
+    id: "action",
+    label: "",
+    alwaysVisible: true,
+    render: (adj) => (
+      <Link href={`/manager/rent-adjustments/${adj.id}`} className="cell-link" onClick={(e) => e.stopPropagation()}>
+        {adj.status === "DRAFT" ? "Edit" : "View"}
+      </Link>
+    ),
+  },
+];
+
 export default function RentAdjustmentsList() {
   const router = useRouter();
   const activeTab = router.isReady
@@ -45,6 +138,8 @@ export default function RentAdjustmentsList() {
 
   const [adjustments, setAdjustments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { sortField, sortDir, handleSort } = useTableSort(router, RA_SORT_FIELDS, { defaultField: "effectiveDate", defaultDir: "desc" });
+  const sortedAdjustments = useMemo(() => clientSort(adjustments, sortField, sortDir, raFieldExtractor), [adjustments, sortField, sortDir]);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -87,83 +182,27 @@ export default function RentAdjustmentsList() {
             ))}
           </div>
 
-          <Panel bodyClassName="p-0">
-            {loading ? (
-              <p className="loading-text p-4">Loading…</p>
-            ) : adjustments.length === 0 ? (
-              <div className="empty-state">
-                <p className="empty-state-text">
-                  No rent adjustments found. Use the lease detail page to create adjustments.
-                </p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="inline-table">
-                  <thead>
-                    <tr>
-                      <th>Tenant</th>
-                      <th>Type</th>
-                      <th>Effective</th>
-                      <th>Status</th>
-                      <th className="text-right">Old Rent</th>
-                      <th className="text-right">New Rent</th>
-                      <th className="text-right">Change</th>
-                      <th>Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {adjustments.map((adj) => {
-                      const changePct = adj.previousRentCents
-                        ? ((adj.adjustmentCents / adj.previousRentCents) * 100).toFixed(1)
-                        : "—";
-                      return (
-                        <tr key={adj.id}>
-                          <td className="cell-bold">
-                            <Link
-                              href={`/manager/rent-adjustments/${adj.id}`}
-                              className="cell-link"
-                            >
-                              {adj.lease?.tenantName || "—"}
-                            </Link>
-                          </td>
-                          <td>{TYPE_LABELS[adj.adjustmentType] || adj.adjustmentType}</td>
-                          <td>{formatDate(adj.effectiveDate)}</td>
-                          <td>
-                            <Badge variant={rentAdjustmentVariant(adj.status)}>
-                              {adj.status}
-                            </Badge>
-                          </td>
-                          <td className="text-right">{formatChfCents(adj.previousRentCents)}</td>
-                          <td className="text-right cell-bold">{formatChfCents(adj.newRentCents)}</td>
-                          <td
-                            className={cn(
-                              "text-right",
-                              adj.adjustmentCents > 0
-                                ? "text-red-600"
-                                : adj.adjustmentCents < 0
-                                  ? "text-green-600"
-                                  : "",
-                            )}
-                          >
-                            {adj.adjustmentCents > 0 ? "+" : ""}
-                            {formatChfCents(adj.adjustmentCents)} ({changePct}%)
-                          </td>
-                          <td>
-                            <Link
-                              href={`/manager/rent-adjustments/${adj.id}`}
-                              className="cell-link"
-                            >
-                              {adj.status === "DRAFT" ? "Edit" : "View"}
-                            </Link>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </Panel>
+          {loading ? (
+            <p className="loading-text p-4">Loading…</p>
+          ) : (
+            <ConfigurableTable
+                tableId="manager-rent-adjustments"
+                columns={RA_COLUMNS}
+                data={sortedAdjustments}
+                rowKey={(adj) => adj.id}
+                sortField={sortField}
+                sortDir={sortDir}
+                onSort={handleSort}
+                onRowClick={(adj) => router.push(`/manager/rent-adjustments/${adj.id}`)}
+                emptyState={
+                  <div className="empty-state">
+                    <p className="empty-state-text">
+                      No rent adjustments found. Use the lease detail page to create adjustments.
+                    </p>
+                  </div>
+                }
+            />
+          )}
         </PageContent>
       </PageShell>
     </AppShell>

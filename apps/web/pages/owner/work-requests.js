@@ -8,6 +8,9 @@ import PageContent from "../../components/layout/PageContent";
 import Panel from "../../components/layout/Panel";
 import ErrorBanner from "../../components/ui/ErrorBanner";
 import { ownerAuthHeaders } from "../../lib/api";
+import { formatDate, formatChf } from "../../lib/format";
+import ConfigurableTable from "../../components/ConfigurableTable";
+import { useTableSort, clientSort } from "../../lib/tableUtils";
 import Badge from "../../components/ui/Badge";
 import { requestVariant } from "../../lib/statusVariants";
 
@@ -28,25 +31,79 @@ const STATUS_TABS = [
 ];
 
 // ---------------------------------------------------------------------------
-// Helpers
+// Sort + table
 // ---------------------------------------------------------------------------
 
-function formatDate(iso) {
-  if (!iso) return "—";
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return iso;
-  const dd = String(d.getDate()).padStart(2, "0");
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const yyyy = d.getFullYear();
-  return `${dd}.${mm}.${yyyy}`;
+const WR_SORT_FIELDS = ["requestNumber", "category", "building", "status", "estimatedCost", "createdAt"];
+
+function wrFieldExtractor(r, field) {
+  switch (field) {
+    case "requestNumber": return r.requestNumber ?? 0;
+    case "category": return (r.category || "").toLowerCase();
+    case "building": return (r.buildingName || "").toLowerCase();
+    case "status": return r.status || "";
+    case "estimatedCost": return r.estimatedCost ?? 0;
+    case "createdAt": return r.createdAt || "";
+    default: return "";
+  }
 }
 
-function formatCurrency(chf) {
-  if (typeof chf !== "number") return "—";
-  const str = chf.toFixed(0);
-  const formatted = str.replace(/\B(?=(\d{3})+(?!\d))/g, "\u2019");
-  return `CHF\u00A0${formatted}`;
-}
+const WR_COLUMNS = [
+  {
+    id: "requestNumber",
+    label: "#",
+    sortable: true,
+    alwaysVisible: true,
+    render: (r) => <span className="font-medium text-slate-900">{r.requestNumber ? `#${r.requestNumber}` : "\u2014"}</span>,
+  },
+  {
+    id: "category",
+    label: "Category",
+    sortable: true,
+    defaultVisible: true,
+    render: (r) => <span className="text-sm text-slate-700">{r.category || "\u2014"}</span>,
+  },
+  {
+    id: "building",
+    label: "Building / Unit",
+    sortable: true,
+    defaultVisible: true,
+    render: (r) => (
+      <span className="text-sm text-slate-700">
+        {r.buildingName || "\u2014"}
+        {r.unitNumber && <span className="text-slate-400"> / {r.unitNumber}</span>}
+      </span>
+    ),
+  },
+  {
+    id: "status",
+    label: "Status",
+    sortable: true,
+    defaultVisible: true,
+    render: (r) => <Badge variant={requestVariant(r.status)} size="sm">{(r.status || "").replace(/_/g, " ")}</Badge>,
+  },
+  {
+    id: "estimatedCost",
+    label: "Est. Cost",
+    sortable: true,
+    defaultVisible: true,
+    className: "text-right",
+    render: (r) => <span className="tabular-nums text-sm font-mono text-slate-700">{typeof r.estimatedCost === "number" ? formatChf(r.estimatedCost) : "\u2014"}</span>,
+  },
+  {
+    id: "contractor",
+    label: "Contractor",
+    defaultVisible: true,
+    render: (r) => <span className="text-sm text-slate-600">{r.assignedContractorName || "\u2014"}</span>,
+  },
+  {
+    id: "createdAt",
+    label: "Created",
+    sortable: true,
+    defaultVisible: true,
+    render: (r) => <span className="text-sm text-slate-500">{formatDate(r.createdAt)}</span>,
+  },
+];
 
 // ---------------------------------------------------------------------------
 // Status badge
@@ -69,6 +126,7 @@ export default function OwnerWorkRequestsPage() {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const { sortField, sortDir, handleSort } = useTableSort(router, WR_SORT_FIELDS, { defaultField: "createdAt", defaultDir: "desc" });
 
   // Active tab — sync with ?tab= query param
   const activeTabKey = useMemo(() => {
@@ -110,6 +168,8 @@ export default function OwnerWorkRequestsPage() {
     if (!tab || !tab.statuses) return requests;
     return requests.filter((r) => tab.statuses.includes(r.status));
   }, [requests, activeTabKey]);
+
+  const sortedRequests = useMemo(() => clientSort(filteredRequests, sortField, sortDir, wrFieldExtractor), [filteredRequests, sortField, sortDir]);
 
   // Tab counts
   const tabCounts = useMemo(() => {
@@ -201,7 +261,7 @@ export default function OwnerWorkRequestsPage() {
                     <div className="mt-3 flex flex-wrap items-center gap-2">
                       <StatusBadge status={r.status} />
                       {typeof r.estimatedCost === "number" && (
-                        <span className="text-xs font-medium text-slate-600">{formatCurrency(r.estimatedCost)}</span>
+                        <span className="text-xs font-medium text-slate-600">{formatChf(r.estimatedCost)}</span>
                       )}
                       <span className="text-xs text-slate-500">{formatDate(r.createdAt)}</span>
                     </div>
@@ -211,49 +271,16 @@ export default function OwnerWorkRequestsPage() {
 
               {/* Desktop: table */}
               <div className="hidden sm:block">
-                <Panel bodyClassName="p-0">
-                  <div className="rounded-lg border border-slate-200 bg-white overflow-hidden">
-                    <table className="inline-table">
-                      <thead>
-                        <tr>
-                          <th>#</th>
-                          <th>Category</th>
-                          <th>Building / Unit</th>
-                          <th>Status</th>
-                          <th className="text-right">Est. Cost</th>
-                          <th>Contractor</th>
-                          <th>Created</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {filteredRequests.map((r) => (
-                          <tr key={r.id}>
-                            <td className="font-medium text-slate-900">
-                              {r.requestNumber ? `#${r.requestNumber}` : "—"}
-                            </td>
-                            <td className="text-sm text-slate-700">{r.category || "—"}</td>
-                            <td className="text-sm text-slate-700">
-                              {r.buildingName || "—"}
-                              {r.unitNumber && (
-                                <span className="text-slate-400"> / {r.unitNumber}</span>
-                              )}
-                            </td>
-                            <td>
-                              <StatusBadge status={r.status} />
-                            </td>
-                            <td className="text-right text-sm font-mono text-slate-700">
-                              {formatCurrency(r.estimatedCost)}
-                            </td>
-                            <td className="text-sm text-slate-600">
-                              {r.assignedContractorName || "—"}
-                            </td>
-                            <td className="text-sm text-slate-500">{formatDate(r.createdAt)}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </Panel>
+                <ConfigurableTable
+                    tableId="owner-work-requests"
+                    columns={WR_COLUMNS}
+                    data={sortedRequests}
+                    rowKey={(r) => r.id}
+                    sortField={sortField}
+                    sortDir={sortDir}
+                    onSort={handleSort}
+                    onRowClick={(r) => router.push(`/owner/requests/${r.id}`)}
+                  />
               </div>
             </>
           )}

@@ -40,9 +40,9 @@ export default function TenantSidebar() {
             href={item.href}
             className={[
               "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-              "hover:bg-slate-100 hover:text-slate-900",
+              "hover:bg-white hover:text-slate-900",
               isActive
-                ? "bg-slate-100 text-slate-900 font-semibold"
+                ? "bg-white text-slate-900 font-semibold"
                 : "text-slate-600",
             ].join(" ")}
           >

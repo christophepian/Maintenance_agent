@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import AppShell from "../../../components/AppShell";
@@ -9,6 +9,8 @@ import Panel from "../../../components/layout/Panel";
 import Badge from "../../../components/ui/Badge";
 import Button from "../../../components/ui/Button";
 import { fetchWithAuth, postWithAuth } from "../../../lib/api";
+import ConfigurableTable from "../../../components/ConfigurableTable";
+import { useTableSort, clientSort } from "../../../lib/tableUtils";
 import { formatChfCents, formatDate } from "../../../lib/format";
 import { billingScheduleVariant } from "../../../lib/statusVariants";
 
@@ -26,6 +28,86 @@ const TABS = [
   { key: "COMPLETED", label: "Completed" },
 ];
 const TAB_KEYS = TABS.map((t) => t.key.toLowerCase());
+
+const CBS_SORT_FIELDS = ["contractor", "description", "frequency", "amount", "status", "nextPeriod", "building"];
+
+function cbsFieldExtractor(s, field) {
+  switch (field) {
+    case "contractor": return (s.contractor?.name || "").toLowerCase();
+    case "description": return (s.description || "").toLowerCase();
+    case "frequency": return s.frequency || "";
+    case "amount": return s.amountCents ?? 0;
+    case "status": return s.status || "";
+    case "nextPeriod": return s.nextPeriodStart || "";
+    case "building": return (s.building?.name || "").toLowerCase();
+    default: return "";
+  }
+}
+
+const CBS_COLUMNS = [
+  {
+    id: "contractor",
+    label: "Contractor",
+    sortable: true,
+    alwaysVisible: true,
+    render: (s) => (
+      <Link href={`/manager/contractor-billing-schedules/${s.id}`} className="cell-link" onClick={(e) => e.stopPropagation()}>
+        {s.contractor?.name || "\u2014"}
+      </Link>
+    ),
+  },
+  {
+    id: "description",
+    label: "Description",
+    sortable: true,
+    defaultVisible: true,
+    render: (s) => s.description || "\u2014",
+  },
+  {
+    id: "frequency",
+    label: "Frequency",
+    sortable: true,
+    defaultVisible: true,
+    render: (s) => FREQUENCY_LABELS[s.frequency] || s.frequency,
+  },
+  {
+    id: "amount",
+    label: "Amount",
+    sortable: true,
+    defaultVisible: true,
+    className: "text-right",
+    render: (s) => <span className="tabular-nums cell-bold">{formatChfCents(s.amountCents)}</span>,
+  },
+  {
+    id: "status",
+    label: "Status",
+    sortable: true,
+    defaultVisible: true,
+    render: (s) => <Badge variant={billingScheduleVariant(s.status)}>{s.status}</Badge>,
+  },
+  {
+    id: "nextPeriod",
+    label: "Next Period",
+    sortable: true,
+    defaultVisible: true,
+    render: (s) => formatDate(s.nextPeriodStart),
+  },
+  {
+    id: "building",
+    label: "Building",
+    sortable: true,
+    defaultVisible: true,
+    render: (s) => s.building?.name || "\u2014",
+  },
+  {
+    id: "action",
+    label: "",
+    alwaysVisible: true,
+    render: (s) => (
+      <Link href={`/manager/contractor-billing-schedules/${s.id}`} className="cell-link" onClick={(e) => e.stopPropagation()}>View</Link>
+    ),
+  },
+];
 
 export default function ContractorBillingSchedulesList() {
   const router = useRouter();
@@ -46,6 +128,8 @@ export default function ContractorBillingSchedulesList() {
   const [schedules, setSchedules] = useState([]);
   const [contractors, setContractors] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { sortField, sortDir, handleSort } = useTableSort(router, CBS_SORT_FIELDS, { defaultField: "contractor", defaultDir: "asc" });
+  const sortedSchedules = useMemo(() => clientSort(schedules, sortField, sortDir, cbsFieldExtractor), [schedules, sortField, sortDir]);
 
   // Create form
   const [showCreate, setShowCreate] = useState(false);
@@ -258,64 +342,25 @@ export default function ContractorBillingSchedulesList() {
             ))}
           </div>
 
-          <Panel bodyClassName="p-0">
-            {loading ? (
-              <p className="loading-text p-4">Loading…</p>
-            ) : schedules.length === 0 ? (
-              <div className="empty-state">
-                <p className="empty-state-text">No contractor billing schedules found.</p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="inline-table">
-                  <thead>
-                    <tr>
-                      <th>Contractor</th>
-                      <th>Description</th>
-                      <th>Frequency</th>
-                      <th className="text-right">Amount</th>
-                      <th>Status</th>
-                      <th>Next Period</th>
-                      <th>Building</th>
-                      <th>Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {schedules.map((s) => (
-                      <tr key={s.id}>
-                        <td className="cell-bold">
-                          <Link
-                            href={`/manager/contractor-billing-schedules/${s.id}`}
-                            className="cell-link"
-                          >
-                            {s.contractor?.name || "—"}
-                          </Link>
-                        </td>
-                        <td>{s.description}</td>
-                        <td>{FREQUENCY_LABELS[s.frequency] || s.frequency}</td>
-                        <td className="text-right cell-bold">{formatChfCents(s.amountCents)}</td>
-                        <td>
-                          <Badge variant={billingScheduleVariant(s.status)}>
-                            {s.status}
-                          </Badge>
-                        </td>
-                        <td>{formatDate(s.nextPeriodStart)}</td>
-                        <td>{s.building?.name || "—"}</td>
-                        <td>
-                          <Link
-                            href={`/manager/contractor-billing-schedules/${s.id}`}
-                            className="cell-link"
-                          >
-                            View
-                          </Link>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </Panel>
+          {loading ? (
+            <p className="loading-text p-4">Loading…</p>
+          ) : (
+            <ConfigurableTable
+                tableId="manager-contractor-billing-schedules"
+                columns={CBS_COLUMNS}
+                data={sortedSchedules}
+                rowKey={(s) => s.id}
+                sortField={sortField}
+                sortDir={sortDir}
+                onSort={handleSort}
+                onRowClick={(s) => router.push(`/manager/contractor-billing-schedules/${s.id}`)}
+                emptyState={
+                  <div className="empty-state">
+                    <p className="empty-state-text">No contractor billing schedules found.</p>
+                  </div>
+                }
+            />
+          )}
         </PageContent>
       </PageShell>
     </AppShell>

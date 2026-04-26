@@ -126,8 +126,7 @@ export default function PeopleVendorsPage() {
           subtitle={`${contractors.length} contractor${contractors.length !== 1 ? "s" : ""}`}
         />
         <PageContent>
-          <Panel>
-            <div className="mb-4">
+          <div className="mb-4">
               <input
                 type="text"
                 placeholder="Search by name, email, or phone…"
@@ -159,7 +158,6 @@ export default function PeopleVendorsPage() {
                 emptyState={<p className="text-sm text-slate-500">No contractors found.</p>}
               />
             )}
-          </Panel>
         </PageContent>
       </PageShell>
     </AppShell>

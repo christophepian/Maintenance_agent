@@ -317,7 +317,7 @@ export default function AppShell({ role: roleProp, children }) {
 
   return (
     <div
-      className="min-h-screen md:grid md:grid-cols-[260px_1fr] bg-slate-50 text-slate-900 font-sans overflow-hidden"
+      className="min-h-screen md:grid md:grid-cols-[260px_1fr] bg-white text-slate-900 font-sans overflow-hidden"
     >
       <a
         href="#main-content"
@@ -325,7 +325,7 @@ export default function AppShell({ role: roleProp, children }) {
       >
         Skip to main content
       </a>
-      <aside className="hidden md:block border-r border-slate-200 px-4 py-5 bg-white" aria-label="Sidebar navigation">
+      <aside className="hidden md:block border-r border-slate-200 px-4 py-5 bg-slate-100" aria-label="Sidebar navigation">
         <div className="font-bold text-lg mb-5">
           Maintenance Agent
         </div>

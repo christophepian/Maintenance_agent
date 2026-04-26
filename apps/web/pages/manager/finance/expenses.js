@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
+import { useRouter } from "next/router";
 import AppShell from "../../../components/AppShell";
 import PageShell from "../../../components/layout/PageShell";
 import PageHeader from "../../../components/layout/PageHeader";
@@ -6,6 +7,9 @@ import PageContent from "../../../components/layout/PageContent";
 import Panel from "../../../components/layout/Panel";
 import { FilterToggle, FilterPanelBody, FilterSection, FilterSectionClear, SelectField } from "../../../components/ui/FilterPanel";
 import { authHeaders } from "../../../lib/api";
+import { formatDate, formatChf } from "../../../lib/format";
+import ConfigurableTable from "../../../components/ConfigurableTable";
+import { useTableSort, clientSort } from "../../../lib/tableUtils";
 import Badge from "../../../components/ui/Badge";
 
 const EXPENSE_CATEGORIES = [
@@ -32,30 +36,27 @@ function CategoryBadge({ category }) {
   );
 }
 
-function formatDate(iso) {
-  if (!iso) return "—";
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return iso;
-  const dd = String(d.getDate()).padStart(2, "0");
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const yyyy = d.getFullYear();
-  return `${dd}.${mm}.${yyyy}`;
-}
+const EXPENSE_SORT_FIELDS = ["invoiceNumber", "category", "amount", "date"];
 
-function formatCurrency(amount) {
-  if (typeof amount !== "number") return "—";
-  const str = amount.toFixed(2);
-  const [intPart, decPart] = str.split(".");
-  const formatted = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, "'");
-  return `CHF ${formatted}.${decPart}`;
+function expenseFieldExtractor(inv, field) {
+  switch (field) {
+    case "invoiceNumber": return inv.invoiceNumber || "";
+    case "category": return inv.expenseCategory || "";
+    case "amount": return inv.totalAmount ?? 0;
+    case "date": return inv.createdAt || "";
+    default: return "";
+  }
 }
 
 export default function ManagerExpensesPage() {
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [invoices, setInvoices] = useState([]);
   const [buildings, setBuildings] = useState([]);
   const [actionLoading, setActionLoading] = useState(null);
+  const { sortField, sortDir, handleSort } = useTableSort(router, EXPENSE_SORT_FIELDS, { defaultField: "date", defaultDir: "desc" });
+  const sortedInvoices = useMemo(() => clientSort(invoices, sortField, sortDir, expenseFieldExtractor), [invoices, sortField, sortDir]);
 
   // Filters
   const [categoryFilter, setCategoryFilter] = useState("");
@@ -188,56 +189,79 @@ export default function ManagerExpensesPage() {
 
           {loading ? (
             <Panel><p className="m-0">Loading expenses...</p></Panel>
-          ) : invoices.length === 0 ? (
-            <Panel>
-              <p className="m-0">No expenses found. Tag invoices with an expense category to track them here.</p>
-            </Panel>
           ) : (
-            <Panel bodyClassName="p-0">
-            <table className="inline-table">
-                <thead>
-                  <tr>
-                    <th>Invoice #</th>
-                    <th>Category</th>
-                    <th>Description</th>
-                    <th>Amount (CHF)</th>
-                    <th>Date</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {invoices.map((inv) => {
-                    const isJobLinked = inv.jobId && inv.expenseCategory === "MAINTENANCE";
-                    return (
-                      <tr key={inv.id}>
-                        <td>{inv.invoiceNumber || inv.id.slice(0, 8)}</td>
-                        <td><CategoryBadge category={inv.expenseCategory} /></td>
-                        <td>{inv.description || "—"}</td>
-                        <td className="cell-bold">{formatCurrency(inv.totalAmount)}</td>
-                        <td>{formatDate(inv.createdAt)}</td>
-                        <td>
-                          {isJobLinked ? (
-                            <span className="text-xs text-slate-400">Auto (job-linked)</span>
-                          ) : (
-                            <select
-                              value={inv.expenseCategory || ""}
-                              onChange={(e) => setExpenseCategory(inv.id, e.target.value)}
-                              disabled={actionLoading === inv.id}
-                              className="edit-input cursor-pointer"
-                            >
-                              <option value="">Set category…</option>
-                              {EXPENSE_CATEGORIES.map((cat) => (
-                                <option key={cat} value={cat}>{cat}</option>
-                              ))}
-                            </select>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </Panel>
+            <ConfigurableTable
+                tableId="manager-expenses"
+                columns={useMemo(() => [
+                  {
+                    id: "invoiceNumber",
+                    label: "Invoice #",
+                    sortable: true,
+                    alwaysVisible: true,
+                    render: (inv) => inv.invoiceNumber || inv.id.slice(0, 8),
+                  },
+                  {
+                    id: "category",
+                    label: "Category",
+                    sortable: true,
+                    defaultVisible: true,
+                    render: (inv) => <CategoryBadge category={inv.expenseCategory} />,
+                  },
+                  {
+                    id: "description",
+                    label: "Description",
+                    defaultVisible: true,
+                    render: (inv) => inv.description || "\u2014",
+                  },
+                  {
+                    id: "amount",
+                    label: "Amount (CHF)",
+                    sortable: true,
+                    defaultVisible: true,
+                    className: "text-right",
+                    render: (inv) => <span className="tabular-nums cell-bold">{formatChf(inv.totalAmount)}</span>,
+                  },
+                  {
+                    id: "date",
+                    label: "Date",
+                    sortable: true,
+                    defaultVisible: true,
+                    render: (inv) => formatDate(inv.createdAt),
+                  },
+                  {
+                    id: "actions",
+                    label: "Actions",
+                    alwaysVisible: true,
+                    render: (inv) => {
+                      const isJobLinked = inv.jobId && inv.expenseCategory === "MAINTENANCE";
+                      return isJobLinked ? (
+                        <span className="text-xs text-slate-400">Auto (job-linked)</span>
+                      ) : (
+                        <select
+                          value={inv.expenseCategory || ""}
+                          onChange={(e) => setExpenseCategory(inv.id, e.target.value)}
+                          disabled={actionLoading === inv.id}
+                          className="edit-input cursor-pointer"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <option value="">Set category\u2026</option>
+                          {EXPENSE_CATEGORIES.map((cat) => (
+                            <option key={cat} value={cat}>{cat}</option>
+                          ))}
+                        </select>
+                      );
+                    },
+                  },
+                ], [setExpenseCategory, actionLoading])}
+                data={sortedInvoices}
+                rowKey={(inv) => inv.id}
+                sortField={sortField}
+                sortDir={sortDir}
+                onSort={handleSort}
+                emptyState={
+                  <p className="px-4 py-8 text-center text-sm text-slate-400">No expenses found. Tag invoices with an expense category to track them here.</p>
+                }
+              />
           )}
         </PageContent>
       </PageShell>

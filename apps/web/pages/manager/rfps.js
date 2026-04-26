@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import AppShell from "../../components/AppShell";
@@ -11,6 +11,8 @@ import Badge from "../../components/ui/Badge";
 import { rfpVariant } from "../../lib/statusVariants";
 import { authHeaders } from "../../lib/api";
 import { formatDate } from "../../lib/format";
+import ConfigurableTable from "../../components/ConfigurableTable";
+import { useTableSort, clientSort } from "../../lib/tableUtils";
 
 const STATUS_TABS = [
   { key: "ALL", label: "All" },
@@ -21,6 +23,88 @@ const STATUS_TABS = [
   { key: "CANCELLED", label: "Cancelled" },
 ];
 
+const RFP_SORT_FIELDS = ["category", "status", "invites", "quotes", "createdAt"];
+
+function rfpFieldExtractor(rfp, field) {
+  switch (field) {
+    case "category": return (rfp.category || "").toLowerCase();
+    case "status": return rfp.status || "";
+    case "invites": return rfp.invites?.length ?? 0;
+    case "quotes": return rfp.quoteCount ?? 0;
+    case "createdAt": return rfp.createdAt || "";
+    default: return "";
+  }
+}
+
+const RFP_COLUMNS = [
+  {
+    id: "request",
+    label: "Request",
+    alwaysVisible: true,
+    render: (rfp) =>
+      rfp.request ? (
+        <span className="text-sm">
+          <span className="font-medium text-slate-900">#{rfp.request.requestNumber}</span>
+          <span className="block text-xs text-slate-500 max-w-[200px] truncate">{rfp.request.description}</span>
+        </span>
+      ) : (
+        <span className="text-xs text-slate-400">No request linked</span>
+      ),
+  },
+  {
+    id: "category",
+    label: "Category",
+    sortable: true,
+    defaultVisible: true,
+    render: (rfp) => <span className="text-sm text-slate-700">{rfp.category || "\u2014"}</span>,
+  },
+  {
+    id: "location",
+    label: "Building / Unit",
+    defaultVisible: true,
+    render: (rfp) => (
+      <span className="text-sm text-slate-700">
+        {rfp.building?.name || "\u2014"}
+        {rfp.unit && <span className="text-slate-400"> / {rfp.unit.unitNumber}</span>}
+      </span>
+    ),
+  },
+  {
+    id: "status",
+    label: "Status",
+    sortable: true,
+    defaultVisible: true,
+    render: (rfp) => <Badge variant={rfpVariant(rfp.status)} size="sm">{rfp.status}</Badge>,
+  },
+  {
+    id: "invites",
+    label: "Invites",
+    sortable: true,
+    defaultVisible: true,
+    className: "text-center",
+    render: (rfp) => <span className="text-sm text-slate-700">{rfp.invites?.length ?? 0}</span>,
+  },
+  {
+    id: "quotes",
+    label: "Quotes",
+    sortable: true,
+    defaultVisible: true,
+    className: "text-center",
+    render: (rfp) => (
+      <span className={rfp.quoteCount > 0 ? "font-medium text-green-700 text-sm" : "text-sm text-slate-700"}>
+        {rfp.quoteCount ?? 0}
+      </span>
+    ),
+  },
+  {
+    id: "createdAt",
+    label: "Created",
+    sortable: true,
+    defaultVisible: true,
+    render: (rfp) => <span className="text-sm text-slate-500">{formatDate(rfp.createdAt)}</span>,
+  },
+];
+
 export default function ManagerRfpsPage() {
   const router = useRouter();
   const [rfps, setRfps] = useState([]);
@@ -28,6 +112,8 @@ export default function ManagerRfpsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [activeTab, setActiveTab] = useState("ALL");
+  const { sortField, sortDir, handleSort } = useTableSort(router, RFP_SORT_FIELDS, { defaultField: "createdAt", defaultDir: "desc" });
+  const sortedRfps = useMemo(() => clientSort(rfps, sortField, sortDir, rfpFieldExtractor), [rfps, sortField, sortDir]);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -79,84 +165,22 @@ export default function ManagerRfpsPage() {
           <Panel title={`RFPs (${total})`} bodyClassName="p-0">
             {loading ? (
               <p className="px-4 py-8 text-center text-sm text-slate-500">Loading…</p>
-            ) : rfps.length === 0 ? (
-              <p className="px-4 py-8 text-center text-sm text-slate-400">
-                No RFPs found{activeTab !== "ALL" ? ` with status ${activeTab}` : ""}. RFPs are created automatically when the legal engine determines an obligation.
-              </p>
             ) : (
-              <table className="inline-table">
-                <thead>
-                  <tr>
-                    <th>Request</th>
-                    <th>Category</th>
-                    <th>Building / Unit</th>
-                    <th>Status</th>
-                    <th>Invites</th>
-                    <th>Quotes</th>
-                    <th>Created</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rfps.map((rfp) => (
-                    <tr
-                      key={rfp.id}
-                      className="cursor-pointer hover:bg-slate-50/80"
-                      onClick={() => router.push(`/manager/rfps/${rfp.id}`)}
-                    >
-                      <td>
-                        {rfp.request ? (
-                          <span className="text-sm">
-                            <span className="font-medium text-slate-900">
-                              #{rfp.request.requestNumber}
-                            </span>
-                            <span className="block text-xs text-slate-500 max-w-[200px] truncate">
-                              {rfp.request.description}
-                            </span>
-                          </span>
-                        ) : (
-                          <span className="text-xs text-slate-400">No request linked</span>
-                        )}
-                      </td>
-                      <td className="text-sm text-slate-700">{rfp.category || "—"}</td>
-                      <td className="text-sm text-slate-700">
-                        {rfp.building?.name || "—"}
-                        {rfp.unit && (
-                          <span className="text-slate-400"> / {rfp.unit.unitNumber}</span>
-                        )}
-                      </td>
-                      <td>
-                        <Badge variant={rfpVariant(rfp.status)} size="sm">
-                          {rfp.status}
-                        </Badge>
-                      </td>
-                      <td className="text-center text-sm text-slate-700">
-                        {rfp.invites?.length ?? 0}
-                      </td>
-                      <td className="text-center text-sm text-slate-700">
-                        <span className={rfp.quoteCount > 0 ? "font-medium text-green-700" : ""}>
-                          {rfp.quoteCount ?? 0}
-                        </span>
-                      </td>
-                      <td className="text-sm text-slate-500">{formatDate(rfp.createdAt)}</td>
-                      <td>
-                        <button
-                          aria-label="View RFP"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            router.push(`/manager/rfps/${rfp.id}`);
-                          }}
-                          className="inline-flex items-center justify-center rounded p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                            <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                          </svg>
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <ConfigurableTable
+                tableId="manager-rfps"
+                columns={RFP_COLUMNS}
+                data={sortedRfps}
+                rowKey={(rfp) => rfp.id}
+                sortField={sortField}
+                sortDir={sortDir}
+                onSort={handleSort}
+                onRowClick={(rfp) => router.push(`/manager/rfps/${rfp.id}`)}
+                emptyState={
+                  <p className="px-4 py-8 text-center text-sm text-slate-400">
+                    No RFPs found{activeTab !== "ALL" ? ` with status ${activeTab}` : ""}. RFPs are created automatically when the legal engine determines an obligation.
+                  </p>
+                }
+              />
             )}
           </Panel>
         </PageContent>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/router";
 import AppShell from "../../components/AppShell";
 import PageShell from "../../components/layout/PageShell";
@@ -9,6 +9,8 @@ import Badge from "../../components/ui/Badge";
 import Button from "../../components/ui/Button";
 import Link from "next/link";
 import { authHeaders } from "../../lib/api";
+import ConfigurableTable from "../../components/ConfigurableTable";
+import { useTableSort, clientSort } from "../../lib/tableUtils";
 import { formatChfCents, formatDate } from "../../lib/format";
 import { billingScheduleVariant } from "../../lib/statusVariants";
 
@@ -20,6 +22,20 @@ const TABS = [
 ];
 
 const TAB_KEYS = ["active", "paused", "completed", "all"];
+
+const BS_SORT_FIELDS = ["tenant", "status", "baseRent", "total", "nextPeriod", "anchorDay"];
+
+function bsFieldExtractor(s, field) {
+  switch (field) {
+    case "tenant": return (s.lease?.tenantName || "").toLowerCase();
+    case "status": return s.status || "";
+    case "baseRent": return s.baseRentCents ?? 0;
+    case "total": return (s.baseRentCents ?? 0) + (s.totalChargesCents ?? 0);
+    case "nextPeriod": return s.nextPeriodStart || "";
+    case "anchorDay": return s.anchorDay ?? 0;
+    default: return "";
+  }
+}
 
 export default function BillingSchedulesPage() {
   const router = useRouter();
@@ -36,6 +52,8 @@ export default function BillingSchedulesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [actionLoading, setActionLoading] = useState(null);
+  const { sortField, sortDir, handleSort } = useTableSort(router, BS_SORT_FIELDS, { defaultField: "tenant", defaultDir: "asc" });
+  const sortedSchedules = useMemo(() => clientSort(schedules, sortField, sortDir, bsFieldExtractor), [schedules, sortField, sortDir]);
 
   const fetchSchedules = useCallback(async () => {
     setLoading(true);
@@ -105,88 +123,101 @@ export default function BillingSchedulesPage() {
             {loading ? "" : `${schedules.length} schedule${schedules.length !== 1 ? "s" : ""}`}
           </span>
 
-          <Panel bodyClassName="p-0">
-            {loading ? (
-              <p className="loading-text p-4">Loading schedules…</p>
-            ) : schedules.length === 0 ? (
-              <div className="empty-state">
-                <p className="empty-state-text">
-                  No {TABS[activeTab].key !== "ALL" ? TABS[activeTab].label.toLowerCase() : ""} billing schedules found.
-                </p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="inline-table">
-                  <thead>
-                    <tr>
-                      <th>Tenant</th>
-                      <th>Status</th>
-                      <th>Base Rent</th>
-                      <th>Charges</th>
-                      <th>Total</th>
-                      <th>Next Period</th>
-                      <th>Anchor Day</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {schedules.map((s) => {
-                      return (
-                        <tr key={s.id}>
-                          <td className="cell-bold">
-                            {s.lease ? (
-                              <Link href={`/manager/leases/${s.leaseId}`} className="cell-link">
-                                {s.lease.tenantName || "—"}
-                              </Link>
-                            ) : (
-                              "—"
-                            )}
-                          </td>
-                          <td>
-                            <Badge variant={billingScheduleVariant(s.status)}>
-                              {s.status}
-                            </Badge>
-                          </td>
-                          <td>{formatChfCents(s.baseRentCents)}</td>
-                          <td>{formatChfCents(s.totalChargesCents)}</td>
-                          <td className="cell-bold">{formatChfCents(s.baseRentCents + s.totalChargesCents)}</td>
-                          <td>{s.nextPeriodStart ? formatDate(s.nextPeriodStart) : "—"}</td>
-                          <td>{s.anchorDay}</td>
-                          <td>
-                            {s.status === "ACTIVE" && (
-                              <Button
-                                variant="warning"
-                                size="sm"
-                                onClick={() => handleAction(s.id, "pause")}
-                                disabled={actionLoading === s.id}
-                              >
-                                {actionLoading === s.id ? "…" : "Pause"}
-                              </Button>
-                            )}
-                            {s.status === "PAUSED" && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleAction(s.id, "resume")}
-                                disabled={actionLoading === s.id}
-                              >
-                                {actionLoading === s.id ? "…" : "Resume"}
-                              </Button>
-                            )}
-                            {s.status === "COMPLETED" && (
-                              <span className="text-xs text-slate-400">
-                                {s.completionReason || "—"}
-                              </span>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </Panel>
+          {loading ? (
+            <p className="loading-text p-4">Loading schedules…</p>
+          ) : (
+            <ConfigurableTable
+                tableId="manager-billing-schedules"
+                columns={useMemo(() => [
+                  {
+                    id: "tenant",
+                    label: "Tenant",
+                    sortable: true,
+                    alwaysVisible: true,
+                    render: (s) => s.lease ? (
+                      <Link href={`/manager/leases/${s.leaseId}`} className="cell-link" onClick={(e) => e.stopPropagation()}>
+                        {s.lease.tenantName || "—"}
+                      </Link>
+                    ) : "—",
+                  },
+                  {
+                    id: "status",
+                    label: "Status",
+                    sortable: true,
+                    defaultVisible: true,
+                    render: (s) => <Badge variant={billingScheduleVariant(s.status)}>{s.status}</Badge>,
+                  },
+                  {
+                    id: "baseRent",
+                    label: "Base Rent",
+                    sortable: true,
+                    defaultVisible: true,
+                    render: (s) => <span className="tabular-nums">{formatChfCents(s.baseRentCents)}</span>,
+                  },
+                  {
+                    id: "charges",
+                    label: "Charges",
+                    defaultVisible: true,
+                    render: (s) => <span className="tabular-nums">{formatChfCents(s.totalChargesCents)}</span>,
+                  },
+                  {
+                    id: "total",
+                    label: "Total",
+                    sortable: true,
+                    defaultVisible: true,
+                    render: (s) => <span className="tabular-nums cell-bold">{formatChfCents(s.baseRentCents + s.totalChargesCents)}</span>,
+                  },
+                  {
+                    id: "nextPeriod",
+                    label: "Next Period",
+                    sortable: true,
+                    defaultVisible: true,
+                    render: (s) => s.nextPeriodStart ? formatDate(s.nextPeriodStart) : "—",
+                  },
+                  {
+                    id: "anchorDay",
+                    label: "Anchor Day",
+                    sortable: true,
+                    defaultVisible: true,
+                    render: (s) => s.anchorDay,
+                  },
+                  {
+                    id: "actions",
+                    label: "Actions",
+                    alwaysVisible: true,
+                    render: (s) => (
+                      <>
+                        {s.status === "ACTIVE" && (
+                          <Button variant="warning" size="sm" onClick={(e) => { e.stopPropagation(); handleAction(s.id, "pause"); }} disabled={actionLoading === s.id}>
+                            {actionLoading === s.id ? "…" : "Pause"}
+                          </Button>
+                        )}
+                        {s.status === "PAUSED" && (
+                          <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleAction(s.id, "resume"); }} disabled={actionLoading === s.id}>
+                            {actionLoading === s.id ? "…" : "Resume"}
+                          </Button>
+                        )}
+                        {s.status === "COMPLETED" && (
+                          <span className="text-xs text-slate-400">{s.completionReason || "—"}</span>
+                        )}
+                      </>
+                    ),
+                  },
+                ], [handleAction, actionLoading])}
+                data={sortedSchedules}
+                rowKey={(s) => s.id}
+                sortField={sortField}
+                sortDir={sortDir}
+                onSort={handleSort}
+                emptyState={
+                  <div className="empty-state">
+                    <p className="empty-state-text">
+                      No {TABS[activeTab].key !== "ALL" ? TABS[activeTab].label.toLowerCase() : ""} billing schedules found.
+                    </p>
+                  </div>
+                }
+            />
+          )}
         </PageContent>
       </PageShell>
     </AppShell>
