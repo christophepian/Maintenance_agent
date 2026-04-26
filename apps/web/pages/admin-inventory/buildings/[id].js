@@ -10,10 +10,11 @@ import Panel from "../../../components/layout/Panel";
 import UndoToast, { useUndoToast } from "../../../components/ui/UndoToast";
 import Badge from "../../../components/ui/Badge";
 import AssetInventoryPanel from "../../../components/AssetInventoryPanel";
+import BuildingFinancialsView from "../../../components/BuildingFinancialsView";
 import { authHeaders } from "../../../lib/api";
 import ScrollableTabs from "../../../components/mobile/ScrollableTabs";
 
-import { formatDate } from "../../../lib/format";
+import { formatDate, formatChfCents, formatPercent } from "../../../lib/format";
 import { cn } from "../../../lib/utils";
 function displayDate(iso) {
   if (!iso) return "—";
@@ -77,9 +78,24 @@ export default function BuildingDetail() {
   const [assetInventoryLoading, setAssetInventoryLoading] = useState(false);
   const [assetAddMode, setAssetAddMode] = useState(false);
 
+  // ─── Building KPI state ───
+  const [buildingKpis, setBuildingKpis] = useState(null);
+  const [kpisLoading, setKpisLoading] = useState(false);
+
+  // ─── Building requests tab state ───
+  const [buildingRequests, setBuildingRequests] = useState([]);
+  const [requestsLoading, setRequestsLoading] = useState(false);
+  const [requestsLoaded, setRequestsLoaded] = useState(false);
+
   useEffect(() => {
     if (activeTab === "Assets" && assetInventory.length === 0 && !assetInventoryLoading) {
       loadAssetInventory();
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (activeTab === "Requests" && !requestsLoaded && !requestsLoading) {
+      loadBuildingRequests();
     }
   }, [activeTab]);
 
@@ -126,10 +142,77 @@ export default function BuildingDetail() {
       await loadBuildingConfig();
       await loadApprovalRules();
       await loadLeaseTemplates();
+      loadBuildingKpis();
     } catch (e) {
       setErr(`Failed to load building: ${e.message}`);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function loadBuildingKpis() {
+    if (!id) return;
+    setKpisLoading(true);
+    try {
+      const now = new Date();
+      const from = `${now.getFullYear()}-01-01`;
+      const to = now.toISOString().slice(0, 10);
+      const [reqRes, jobRes, finRes, portRes] = await Promise.all([
+        fetch("/api/requests?view=summary&limit=2000", { headers: authHeaders() }),
+        fetch("/api/jobs?view=summary&limit=2000", { headers: authHeaders() }),
+        fetch(`/api/buildings/${id}/financial-summary?from=${from}&to=${to}`, { headers: authHeaders() }),
+        fetch(`/api/financials/portfolio-summary?from=${from}&to=${to}`, { headers: authHeaders() }),
+      ]);
+      const [reqData, jobData, finData, portData] = await Promise.all([
+        reqRes.json(), jobRes.json(), finRes.json(), portRes.json(),
+      ]);
+      const allRequests = reqData?.data || [];
+      const allJobs = jobData?.data || [];
+      const openRequests = allRequests.filter(
+        (r) => r.buildingId === id && ["PENDING_REVIEW", "PENDING_OWNER_APPROVAL", "RFP_PENDING", "APPROVED", "ASSIGNED"].includes(r.status)
+      ).length;
+      const openJobs = allJobs.filter(
+        (j) => j.buildingId === id && ["PENDING", "IN_PROGRESS"].includes(j.status)
+      ).length;
+      const financials = finData?.data || null;
+      const portfolio = portData?.data || null;
+      let portfolioComparison = null;
+      if (portfolio && portfolio.buildingCount > 0 && financials) {
+        const buildingNoi = financials.netIncomeCents ?? 0;
+        const portfolioBuildings = portfolio.buildings || [];
+        if (portfolioBuildings.length > 1) {
+          const otherBuildings = portfolioBuildings.filter((b) => b.buildingId !== id);
+          if (otherBuildings.length > 0) {
+            const avgOtherNoi = otherBuildings.reduce((sum, b) => sum + (b.netIncomeCents ?? 0), 0) / otherBuildings.length;
+            if (avgOtherNoi !== 0) {
+              const pct = ((buildingNoi - avgOtherNoi) / Math.abs(avgOtherNoi)) * 100;
+              portfolioComparison = { pct: Math.round(pct), better: pct >= 0 };
+            }
+          }
+        }
+      }
+      setBuildingKpis({ openRequests, openJobs, financials, portfolioComparison });
+    } catch (e) {
+      // non-fatal — KPIs just won't show
+    } finally {
+      setKpisLoading(false);
+    }
+  }
+
+  async function loadBuildingRequests() {
+    if (!id) return;
+    setRequestsLoading(true);
+    try {
+      const res = await fetch("/api/requests?view=summary&limit=2000&order=desc", { headers: authHeaders() });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error?.message || "Failed to load requests");
+      const all = json?.data || [];
+      setBuildingRequests(all.filter((r) => r.buildingId === id));
+      setRequestsLoaded(true);
+    } catch (e) {
+      setBuildingRequests([]);
+    } finally {
+      setRequestsLoading(false);
     }
   }
 
@@ -492,8 +575,8 @@ export default function BuildingDetail() {
           {/* Tabs Navigation */}
           {(() => {
             const tabs = isOwner
-              ? ["Building information", "Units", "Tenants", "Assets"]
-              : ["Building information", "Units", "Tenants", "Assets", "Documents", "Policies", "Financials"];
+              ? ["Building information", "Units", "Tenants", "Assets", "Requests"]
+              : ["Building information", "Units", "Tenants", "Assets", "Documents", "Policies", "Financials", "Requests"];
             return (
               <ScrollableTabs activeIndex={tabs.indexOf(activeTab)}>
                 {tabs.map((tab) => (
@@ -512,6 +595,76 @@ export default function BuildingDetail() {
 
           {/* Building information tab */}
           {activeTab === "Building information" && (
+            <>
+              {/* KPIs */}
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4 mb-4">
+                {/* Open Requests */}
+                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                  <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Open Requests</div>
+                  {kpisLoading ? (
+                    <div className="mt-3 text-sm text-slate-400">Loading…</div>
+                  ) : (
+                    <>
+                      <div className={cn("mt-3 text-2xl font-semibold tracking-tight", buildingKpis?.openRequests > 20 ? "text-amber-700" : "text-slate-900")}>
+                        {buildingKpis?.openRequests ?? "—"}
+                      </div>
+                      <div className="text-sm text-slate-600">Pending, approved, assigned</div>
+                    </>
+                  )}
+                </div>
+                {/* Open Jobs */}
+                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                  <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Open Jobs</div>
+                  {kpisLoading ? (
+                    <div className="mt-3 text-sm text-slate-400">Loading…</div>
+                  ) : (
+                    <>
+                      <div className={cn("mt-3 text-2xl font-semibold tracking-tight", buildingKpis?.openJobs > 15 ? "text-amber-700" : "text-slate-900")}>
+                        {buildingKpis?.openJobs ?? "—"}
+                      </div>
+                      <div className="text-sm text-slate-600">Pending + in progress</div>
+                    </>
+                  )}
+                </div>
+                {/* Building NOI */}
+                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                  <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Building NOI (YTD)</div>
+                  {kpisLoading ? (
+                    <div className="mt-3 text-sm text-slate-400">Loading…</div>
+                  ) : (
+                    <>
+                      <div className={cn("mt-3 text-2xl font-semibold tracking-tight", !buildingKpis?.financials ? "text-slate-400" : buildingKpis.financials.netIncomeCents >= 0 ? "text-green-700" : "text-red-700")}>
+                        {buildingKpis?.financials ? formatChfCents(buildingKpis.financials.netIncomeCents) : "—"}
+                      </div>
+                      <div className="text-sm text-slate-600">
+                        {buildingKpis?.financials ? `${formatPercent(buildingKpis.financials.collectionRate)} collection rate` : "No financial data"}
+                      </div>
+                    </>
+                  )}
+                </div>
+                {/* Portfolio Comparison */}
+                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                  <div className="text-xs font-medium uppercase tracking-wide text-slate-400">vs. Portfolio</div>
+                  {kpisLoading ? (
+                    <div className="mt-3 text-sm text-slate-400">Loading…</div>
+                  ) : buildingKpis?.portfolioComparison ? (
+                    <>
+                      <div className={cn("mt-3 text-2xl font-semibold tracking-tight", buildingKpis.portfolioComparison.better ? "text-green-700" : "text-red-700")}>
+                        {buildingKpis.portfolioComparison.better ? "+" : ""}{buildingKpis.portfolioComparison.pct}%
+                      </div>
+                      <div className="text-sm text-slate-600">
+                        {buildingKpis.portfolioComparison.better ? "Better" : "Worse"} than other assets (NOI)
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="mt-3 text-2xl font-semibold tracking-tight text-slate-400">—</div>
+                      <div className="text-sm text-slate-600">Not enough portfolio data</div>
+                    </>
+                  )}
+                </div>
+              </div>
+
             <Panel
               title="Building information"
               actions={!isOwner && editMode ? (
@@ -762,6 +915,7 @@ export default function BuildingDetail() {
                     )}
                   </div>
             </Panel>
+            </>
           )}
 
           {/* Units tab */}
@@ -1364,21 +1518,64 @@ export default function BuildingDetail() {
             </>
           )}
 
-          {/* Financials tab — canonical view lives at manager/buildings/:id/financials */}
-          {activeTab === "Financials" && id && (
-            <Panel>
-              <div className="flex flex-col items-start gap-4">
-                <p className="text-sm text-slate-600">
-                  Full financial analysis including income, expenses, ledger breakdown, and health indicators.
-                </p>
-                <a
-                  href={`/manager/buildings/${id}/financials`}
-                  className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition-colors"
-                >
-                  Open Financial View →
-                </a>
-              </div>
+          {/* Requests tab */}
+          {activeTab === "Requests" && (
+            <Panel title="Requests">
+              {requestsLoading ? (
+                <p className="text-sm text-slate-500 py-4">Loading requests…</p>
+              ) : buildingRequests.length === 0 ? (
+                <p className="text-sm text-slate-500 italic py-4">No requests found for this building.</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-slate-200 text-left">
+                        <th className="pb-2 pr-4 text-xs font-medium uppercase tracking-wide text-slate-400">#</th>
+                        <th className="pb-2 pr-4 text-xs font-medium uppercase tracking-wide text-slate-400">Status</th>
+                        <th className="pb-2 pr-4 text-xs font-medium uppercase tracking-wide text-slate-400">Category</th>
+                        <th className="pb-2 pr-4 text-xs font-medium uppercase tracking-wide text-slate-400">Unit</th>
+                        <th className="pb-2 pr-4 text-xs font-medium uppercase tracking-wide text-slate-400">Urgency</th>
+                        <th className="pb-2 pr-4 text-xs font-medium uppercase tracking-wide text-slate-400">Contractor</th>
+                        <th className="pb-2 text-xs font-medium uppercase tracking-wide text-slate-400">Date</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {buildingRequests.map((r) => (
+                        <tr
+                          key={r.id}
+                          className="cursor-pointer hover:bg-slate-50"
+                          onClick={() => router.push(`/manager/requests?id=${r.id}`)}
+                        >
+                          <td className="py-2 pr-4 font-mono text-slate-600">#{r.requestNumber}</td>
+                          <td className="py-2 pr-4">
+                            <Badge variant={
+                              r.status === "COMPLETED" ? "success" :
+                              r.status === "REJECTED" ? "destructive" :
+                              r.status === "PENDING_REVIEW" || r.status === "PENDING_OWNER_APPROVAL" || r.status === "RFP_PENDING" ? "warning" :
+                              r.status === "APPROVED" || r.status === "ASSIGNED" ? "info" : "default"
+                            } size="sm">
+                              {r.status.replace(/_/g, " ")}
+                            </Badge>
+                          </td>
+                          <td className="py-2 pr-4 text-slate-700">{r.category || "—"}</td>
+                          <td className="py-2 pr-4 text-slate-600">{r.unitNumber || "—"}</td>
+                          <td className="py-2 pr-4 text-slate-600">{r.urgency || "—"}</td>
+                          <td className="py-2 pr-4 text-slate-600">{r.assignedContractorName || "—"}</td>
+                          <td className="py-2 text-slate-400">
+                            {r.createdAt ? new Date(r.createdAt).toLocaleDateString("de-CH") : "—"}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </Panel>
+          )}
+
+          {/* Financials tab */}
+          {activeTab === "Financials" && id && (
+            <BuildingFinancialsView buildingId={id} />
           )}
         </PageContent>
         <UndoToast {...toast} />

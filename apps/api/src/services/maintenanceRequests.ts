@@ -106,6 +106,7 @@ export type MaintenanceRequestDTO = {
     estimatedCost: number | null;
     category: string | null;
     unitNumber: string | null;
+    buildingId: string | null;
     buildingName: string | null;
     assignedContractorName: string | null;
     payingParty?: PayingParty;
@@ -203,6 +204,7 @@ const requestInclude = {
         unitNumber: true,
         building: {
           select: {
+            id: true,
             name: true,
           },
         },
@@ -283,6 +285,7 @@ export function toSummaryDTO(r: RequestWithSummaryInclude): MaintenanceRequestSu
       estimatedCost: r.estimatedCost ?? null,
       category: r.category ?? null,
       unitNumber: r.unit?.unitNumber ?? null,
+      buildingId: r.unit?.building?.id ?? null,
       buildingName: r.unit?.building?.name ?? null,
       assignedContractorName: r.assignedContractor?.name ?? null,
       payingParty: r.payingParty,

@@ -731,7 +731,7 @@ export default function RequestDetailPage() {
                     {building && (
                       <div>
                         <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">Building</span>
-                        <Link href={`/manager/buildings/${building.id}/financials`} className="cell-link text-sm font-medium">
+                        <Link href={`/admin-inventory/buildings/${building.id}?from=/manager/requests/${id}`} className="cell-link text-sm font-medium">
                           {building.name}
                         </Link>
                         {building.address && <p className="text-xs text-slate-400 mt-0.5 m-0">{building.address}</p>}

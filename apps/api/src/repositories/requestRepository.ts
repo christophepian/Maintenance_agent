@@ -96,7 +96,7 @@ export const REQUEST_SUMMARY_INCLUDE = {
     select: {
       unitNumber: true,
       building: {
-        select: { name: true },
+        select: { id: true, name: true },
       },
     },
   },

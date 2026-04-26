@@ -113,7 +113,7 @@ function buildRequestColumns({ assigningId, setAssigningId, selectedContractorId
       render: (r) => (
         <span className="text-slate-700">
           {r.buildingId ? (
-            <Link href={`/manager/buildings/${r.buildingId}/financials`} className="cell-link" onClick={(e) => e.stopPropagation()}>
+            <Link href={`/admin-inventory/buildings/${r.buildingId}?from=/manager/requests`} className="cell-link" onClick={(e) => e.stopPropagation()}>
               {r.buildingName || "\u2014"}
             </Link>
           ) : (r.buildingName || "\u2014")}

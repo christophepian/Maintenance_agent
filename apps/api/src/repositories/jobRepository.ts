@@ -42,7 +42,7 @@ export const JOB_SUMMARY_INCLUDE = {
       unit: {
         select: {
           unitNumber: true,
-          building: { select: { name: true } },
+          building: { select: { id: true, name: true } },
         },
       },
     },

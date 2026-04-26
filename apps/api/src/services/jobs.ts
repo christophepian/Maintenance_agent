@@ -115,6 +115,7 @@ export interface JobSummaryDTO {
   contractorName?: string;
   requestDescription?: string;
   unitNumber?: string;
+  buildingId?: string;
   buildingName?: string;
   appointmentSlots?: Array<{
     id: string;
@@ -338,6 +339,7 @@ function mapJobToSummaryDTO(job: JobWithSummaryInclude): JobSummaryDTO {
     contractorName: job.contractor?.name,
     requestDescription: job.request?.description,
     unitNumber: job.request?.unit?.unitNumber,
+    buildingId: (job.request?.unit?.building as any)?.id,
     buildingName: job.request?.unit?.building?.name,
     appointmentSlots: job.appointmentSlots?.map((s) => ({
       id: s.id,
