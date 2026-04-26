@@ -347,7 +347,7 @@ function AssetRecommendationContent({ applianceId, repairReplaceData, requestEst
 
 export default function RequestDetailPage() {
   const router = useRouter();
-  const { id } = router.query;
+  const { id, from } = router.query;
 
   const [request, setRequest]             = useState(null);
   const [loading, setLoading]             = useState(true);
@@ -557,7 +557,7 @@ export default function RequestDetailPage() {
           {/* ── Custom header (title + urgency pill + tenant-funded pill) ── */}
           <div className="mb-6 flex flex-wrap items-center gap-3">
             <button
-              onClick={() => router.push("/manager/requests")}
+              onClick={() => router.push(from || "/manager/requests")}
               className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-500 hover:bg-slate-50 transition mr-1"
             >
               &larr;

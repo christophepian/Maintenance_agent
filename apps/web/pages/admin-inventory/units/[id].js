@@ -12,8 +12,9 @@ import DocumentsPanel from "../../../components/DocumentsPanel";
 import AssetInventoryPanel from "../../../components/AssetInventoryPanel";
 import Badge from "../../../components/ui/Badge";
 import { cn } from "../../../lib/utils";
-import { invoiceVariant, leaseVariant } from "../../../lib/statusVariants";
-import { formatChf, formatDate } from "../../../lib/format";
+import { invoiceVariant, leaseVariant, reconciliationVariant } from "../../../lib/statusVariants";
+import { formatChf, formatDate, formatChfCents } from "../../../lib/format";
+import { authHeaders } from "../../../lib/api";
 import ScrollableTabs from "../../../components/mobile/ScrollableTabs";
 export default function UnitDetail() {
   const router = useRouter();
@@ -63,9 +64,22 @@ export default function UnitDetail() {
   const [assetInventoryLoading, setAssetInventoryLoading] = useState(false);
   const [showAssetAddForm, setShowAssetAddForm] = useState(false);
 
-  // Invoice state
+  // Invoice state (all invoices — used inside Financials tab)
   const [unitInvoices, setUnitInvoices] = useState([]);
   const [invoicesLoading, setInvoicesLoading] = useState(false);
+
+  // Financials tab state
+  const [incomingInvoices, setIncomingInvoices] = useState([]);
+  const [outgoingInvoices, setOutgoingInvoices] = useState([]);
+  const [unitReconciliations, setUnitReconciliations] = useState([]);
+  const [financialsLoading, setFinancialsLoading] = useState(false);
+  const [financialsLoaded, setFinancialsLoaded] = useState(false);
+  const [financialsSubTab, setFinancialsSubTab] = useState("overview");
+
+  // Requests tab state
+  const [unitRequests, setUnitRequests] = useState([]);
+  const [requestsLoading, setRequestsLoading] = useState(false);
+  const [requestsLoaded, setRequestsLoaded] = useState(false);
 
   // Lease / contracts state
   const [unitLeases, setUnitLeases] = useState([]);
@@ -211,6 +225,49 @@ export default function UnitDetail() {
     }
   }
 
+  async function loadUnitFinancials() {
+    if (!id || financialsLoaded) return;
+    try {
+      setFinancialsLoading(true);
+      const [incRes, outRes, recRes, allInvRes] = await Promise.all([
+        fetch(`/api/invoices?unitId=${id}&direction=INCOMING`, { headers: authHeaders() }),
+        fetch(`/api/invoices?unitId=${id}&direction=OUTGOING`, { headers: authHeaders() }),
+        fetch(`/api/charge-reconciliations`, { headers: authHeaders() }),
+        fetchJSON(`/invoices?unitId=${id}&view=summary`),
+      ]);
+      const incJson = await incRes.json();
+      const outJson = await outRes.json();
+      const recJson = await recRes.json();
+      setIncomingInvoices(Array.isArray(incJson) ? incJson : incJson?.data || []);
+      setOutgoingInvoices(Array.isArray(outJson) ? outJson : outJson?.data || []);
+      const allRec = Array.isArray(recJson) ? recJson : recJson?.data || [];
+      setUnitReconciliations(allRec.filter((r) => r.lease?.unitId === id));
+      setUnitInvoices(Array.isArray(allInvRes) ? allInvRes : allInvRes?.data || []);
+      setFinancialsLoaded(true);
+    } catch (e) {
+      // Silently fail — tab will show empty state
+    } finally {
+      setFinancialsLoading(false);
+    }
+  }
+
+  async function loadUnitRequests() {
+    if (!id || requestsLoaded) return;
+    try {
+      setRequestsLoading(true);
+      const res = await fetch(`/api/requests`, { headers: authHeaders() });
+      const json = await res.json();
+      const all = Array.isArray(json) ? json : json?.data || [];
+      const OPEN_STATUSES = new Set(["PENDING_REVIEW", "APPROVED", "ASSIGNED", "IN_PROGRESS", "RFP_PENDING", "PENDING_OWNER_APPROVAL"]);
+      setUnitRequests(all.filter((r) => r.unitId === id && OPEN_STATUSES.has(r.status)));
+      setRequestsLoaded(true);
+    } catch (e) {
+      // Silently fail
+    } finally {
+      setRequestsLoading(false);
+    }
+  }
+
   useEffect(() => {
     if (id) loadUnit();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -230,8 +287,9 @@ export default function UnitDetail() {
   }
 
   useEffect(() => {
-    if (id && activeTab === "Invoices") loadInvoices();
     if (id && activeTab === "Contracts") loadLeases();
+    if (id && activeTab === "Financials") loadUnitFinancials();
+    if (id && activeTab === "Requests") loadUnitRequests();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, activeTab]);
 
@@ -406,8 +464,8 @@ export default function UnitDetail() {
             </div>
           )}
 
-          <ScrollableTabs activeIndex={["Details", "Tenants", "Assets", "Rent Estimate", "Documents", "Invoices", "Contracts"].indexOf(activeTab)}>
-            {["Details", "Tenants", "Assets", "Rent Estimate", "Documents", "Invoices", "Contracts"].map((tab) => (
+          <ScrollableTabs activeIndex={["Details", "Tenants", "Assets", "Rent Estimate", "Documents", "Financials", "Contracts", "Requests"].indexOf(activeTab)}>
+            {["Details", "Tenants", "Assets", "Rent Estimate", "Documents", "Financials", "Contracts", "Requests"].map((tab) => (
               <button key={tab} type="button"
                 className={activeTab === tab ? "tab-btn-active" : "tab-btn"}
                 onClick={() => setActiveTab(tab)}>
@@ -933,72 +991,201 @@ export default function UnitDetail() {
         </Panel>
           )}
 
-          {activeTab === "Invoices" && (
-        <Panel title="Invoices">
-          {invoicesLoading ? (
-            <div className="py-6 text-center text-sm text-slate-500">Loading invoices…</div>
-          ) : unitInvoices.length === 0 ? (
-            <div className="empty-state-text py-6 text-center italic">No invoices linked to this unit.</div>
+          {activeTab === "Financials" && (
+        <div>
+          {/* Segmented pill control */}
+          <div className="inline-flex rounded-lg border border-slate-200 bg-slate-100 p-0.5 gap-0.5 mt-4 mb-6 flex-wrap">
+            {[
+              { key: "overview", label: "Overview" },
+              { key: "reconciliations", label: "Reconciliations" },
+              { key: "invoices", label: "Invoices" },
+            ].map(({ key, label }) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setFinancialsSubTab(key)}
+                className={financialsSubTab === key
+                  ? "rounded-md bg-white shadow-sm px-4 py-1.5 text-sm font-medium text-slate-900 transition"
+                  : "rounded-md px-4 py-1.5 text-sm font-medium text-slate-500 hover:text-slate-700 transition"}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {financialsLoading ? (
+            <div className="py-6 text-center text-sm text-slate-500">Loading financials…</div>
           ) : (
             <>
-              {/* Mobile: card list */}
-              <div className="sm:hidden space-y-2">
-                {unitInvoices.map((inv) => (
-                  <div key={inv.id} className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 flex items-center justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-slate-900 truncate">{inv.invoiceNumber || "Draft"}</p>
-                      <p className="text-xs text-slate-500 mt-0.5">{formatChf(inv.totalAmount)}</p>
-                    </div>
-                    <Badge variant={invoiceVariant(inv.status)}>{inv.status}</Badge>
+              {financialsSubTab === "overview" && (() => {
+                const totalIncome = incomingInvoices.reduce((s, inv) => s + (inv.totalAmount ?? 0), 0);
+                const totalExpenses = outgoingInvoices.reduce((s, inv) => s + (inv.totalAmount ?? 0), 0);
+                const net = totalIncome - totalExpenses;
+                return (
+                  <div className="space-y-6">
+                    <Panel title="Income vs. Expenses">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                          <div className="text-xs font-medium uppercase tracking-wide text-green-700">Income (tenant invoices)</div>
+                          <div className="text-2xl font-bold text-green-800 mt-1">{formatChf(totalIncome)}</div>
+                          <div className="text-xs text-slate-500 mt-0.5">{incomingInvoices.length} invoice{incomingInvoices.length !== 1 ? "s" : ""}</div>
+                        </div>
+                        <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                          <div className="text-xs font-medium uppercase tracking-wide text-red-700">Expenses (maintenance)</div>
+                          <div className="text-2xl font-bold text-red-800 mt-1">{formatChf(totalExpenses)}</div>
+                          <div className="text-xs text-slate-500 mt-0.5">{outgoingInvoices.length} invoice{outgoingInvoices.length !== 1 ? "s" : ""}</div>
+                        </div>
+                        <div className={cn("p-4 border rounded-lg", net >= 0 ? "bg-blue-50 border-blue-200" : "bg-amber-50 border-amber-200")}>
+                          <div className={cn("text-xs font-medium uppercase tracking-wide", net >= 0 ? "text-blue-700" : "text-amber-700")}>Net</div>
+                          <div className={cn("text-2xl font-bold mt-1", net >= 0 ? "text-blue-800" : "text-amber-800")}>{formatChf(net)}</div>
+                        </div>
+                      </div>
+                    </Panel>
+                    {unitReconciliations.length > 0 && (
+                      <Panel title="Nebenkosten Summary">
+                        <div className="overflow-x-auto">
+                          <table className="data-table w-full text-sm">
+                            <thead>
+                              <tr>
+                                <th className="text-left px-3 py-2">Year</th>
+                                <th className="text-left px-3 py-2">Status</th>
+                                <th className="text-right px-3 py-2">Acompte Paid</th>
+                                <th className="text-right px-3 py-2">Actual Costs</th>
+                                <th className="text-right px-3 py-2">Balance</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {unitReconciliations.map((r) => (
+                                <tr key={r.id} className="border-t border-slate-100 hover:bg-slate-50 cursor-pointer" onClick={() => router.push(`/manager/charge-reconciliations/${r.id}`)}>
+                                  <td className="px-3 py-2 tabular-nums">{r.fiscalYear}</td>
+                                  <td className="px-3 py-2"><Badge variant={reconciliationVariant(r.status)} size="sm">{r.status}</Badge></td>
+                                  <td className="px-3 py-2 text-right tabular-nums">{formatChfCents(r.totalAcomptePaidCents)}</td>
+                                  <td className="px-3 py-2 text-right tabular-nums">{formatChfCents(r.totalActualCostsCents)}</td>
+                                  <td className={cn("px-3 py-2 text-right tabular-nums", r.balanceCents > 0 ? "text-red-600" : r.balanceCents < 0 ? "text-green-600" : "")}>
+                                    {r.balanceCents > 0 ? "+" : ""}{formatChfCents(r.balanceCents)}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </Panel>
+                    )}
                   </div>
-                ))}
-              </div>
-              {/* Desktop: table */}
-              <div className="hidden sm:block overflow-x-auto">
-                <table className="data-table w-full text-sm">
-                  <thead>
-                    <tr>
-                      <th className="text-left px-3 py-2">Status</th>
-                      <th className="text-left px-3 py-2">Invoice #</th>
-                      <th className="text-left px-3 py-2">Description</th>
-                      <th className="text-right px-3 py-2">Amount</th>
-                      <th className="text-left px-3 py-2">Period</th>
-                      <th className="text-left px-3 py-2">Due Date</th>
-                      <th className="text-left px-3 py-2">Created</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {unitInvoices.map((inv) => (
-                      <tr key={inv.id} className="border-t border-slate-100 hover:bg-slate-50">
-                        <td className="px-3 py-2">
-                          <Badge variant={invoiceVariant(inv.status)}>{inv.status}</Badge>
-                        </td>
-                        <td className="px-3 py-2">
-                          {isOwner ? (
-                            <span>{inv.invoiceNumber || "—"}</span>
-                          ) : (
-                            <Link href={`/manager/finance/invoices/${inv.id}`} className="text-blue-600 hover:underline">
-                              {inv.invoiceNumber || "—"}
-                            </Link>
-                          )}
-                        </td>
-                        <td className="px-3 py-2 max-w-[200px] truncate">{inv.description || "—"}</td>
-                        <td className="px-3 py-2 text-right font-medium">{formatChf(inv.totalAmount)}</td>
-                        <td className="px-3 py-2 whitespace-nowrap">
-                          {inv.billingPeriodStart && inv.billingPeriodEnd
-                            ? `${formatDate(inv.billingPeriodStart)} – ${formatDate(inv.billingPeriodEnd)}`
-                            : "—"}
-                        </td>
-                        <td className="px-3 py-2 whitespace-nowrap">{inv.dueDate ? formatDate(inv.dueDate) : "—"}</td>
-                        <td className="px-3 py-2 whitespace-nowrap">{formatDate(inv.createdAt)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                );
+              })()}
+
+              {financialsSubTab === "reconciliations" && (
+                <Panel title="Charge Reconciliations (Nebenkosten)">
+                  {unitReconciliations.length === 0 ? (
+                    <div className="empty-state-text py-6 text-center italic">No charge reconciliations for this unit.</div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="data-table w-full text-sm">
+                        <thead>
+                          <tr>
+                            <th className="text-left px-3 py-2">Tenant</th>
+                            <th className="text-left px-3 py-2">Year</th>
+                            <th className="text-left px-3 py-2">Status</th>
+                            <th className="text-right px-3 py-2">Acompte Paid</th>
+                            <th className="text-right px-3 py-2">Actual Costs</th>
+                            <th className="text-right px-3 py-2">Balance</th>
+                            <th className="text-right px-3 py-2">Action</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {unitReconciliations.map((r) => (
+                            <tr key={r.id} className="border-t border-slate-100 hover:bg-slate-50">
+                              <td className="px-3 py-2">
+                                <Link href={`/manager/charge-reconciliations/${r.id}`} className="cell-link">
+                                  {r.lease?.tenantName || "—"}
+                                </Link>
+                              </td>
+                              <td className="px-3 py-2 tabular-nums">{r.fiscalYear}</td>
+                              <td className="px-3 py-2"><Badge variant={reconciliationVariant(r.status)} size="sm">{r.status}</Badge></td>
+                              <td className="px-3 py-2 text-right tabular-nums">{formatChfCents(r.totalAcomptePaidCents)}</td>
+                              <td className="px-3 py-2 text-right tabular-nums">{formatChfCents(r.totalActualCostsCents)}</td>
+                              <td className={cn("px-3 py-2 text-right tabular-nums", r.balanceCents > 0 ? "text-red-600" : r.balanceCents < 0 ? "text-green-600" : "")}>
+                                {r.balanceCents > 0 ? "+" : ""}{formatChfCents(r.balanceCents)}
+                              </td>
+                              <td className="px-3 py-2 text-right">
+                                <Link href={`/manager/charge-reconciliations/${r.id}`} className="cell-link">
+                                  {r.status === "DRAFT" ? "Edit" : "View"}
+                                </Link>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </Panel>
+              )}
+
+              {financialsSubTab === "invoices" && (
+                <Panel title="Invoices">
+                  {unitInvoices.length === 0 ? (
+                    <div className="empty-state-text py-6 text-center italic">No invoices linked to this unit.</div>
+                  ) : (
+                    <>
+                      <div className="sm:hidden space-y-2">
+                        {unitInvoices.map((inv) => (
+                          <div key={inv.id} className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 flex items-center justify-between gap-3">
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-medium text-slate-900 truncate">{inv.invoiceNumber || "Draft"}</p>
+                              <p className="text-xs text-slate-500 mt-0.5">{formatChf(inv.totalAmount)}</p>
+                            </div>
+                            <Badge variant={invoiceVariant(inv.status)}>{inv.status}</Badge>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="hidden sm:block overflow-x-auto">
+                        <table className="data-table w-full text-sm">
+                          <thead>
+                            <tr>
+                              <th className="text-left px-3 py-2">Status</th>
+                              <th className="text-left px-3 py-2">Invoice #</th>
+                              <th className="text-left px-3 py-2">Description</th>
+                              <th className="text-right px-3 py-2">Amount</th>
+                              <th className="text-left px-3 py-2">Period</th>
+                              <th className="text-left px-3 py-2">Due Date</th>
+                              <th className="text-left px-3 py-2">Created</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {unitInvoices.map((inv) => (
+                              <tr key={inv.id} className="border-t border-slate-100 hover:bg-slate-50">
+                                <td className="px-3 py-2"><Badge variant={invoiceVariant(inv.status)}>{inv.status}</Badge></td>
+                                <td className="px-3 py-2">
+                                  {isOwner ? (
+                                    <span>{inv.invoiceNumber || "—"}</span>
+                                  ) : (
+                                    <Link href={`/manager/finance/invoices/${inv.id}`} className="text-blue-600 hover:underline">
+                                      {inv.invoiceNumber || "—"}
+                                    </Link>
+                                  )}
+                                </td>
+                                <td className="px-3 py-2 max-w-[200px] truncate">{inv.description || "—"}</td>
+                                <td className="px-3 py-2 text-right font-medium">{formatChf(inv.totalAmount)}</td>
+                                <td className="px-3 py-2 whitespace-nowrap">
+                                  {inv.billingPeriodStart && inv.billingPeriodEnd
+                                    ? `${formatDate(inv.billingPeriodStart)} – ${formatDate(inv.billingPeriodEnd)}`
+                                    : "—"}
+                                </td>
+                                <td className="px-3 py-2 whitespace-nowrap">{inv.dueDate ? formatDate(inv.dueDate) : "—"}</td>
+                                <td className="px-3 py-2 whitespace-nowrap">{formatDate(inv.createdAt)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </>
+                  )}
+                </Panel>
+              )}
             </>
           )}
-        </Panel>
+        </div>
           )}
 
           {activeTab === "Contracts" && (
@@ -1068,6 +1255,49 @@ export default function UnitDetail() {
           )}
         </Panel>
           )}
+          {activeTab === "Requests" && (
+        <Panel title="Open Requests">
+          {requestsLoading ? (
+            <div className="py-6 text-center text-sm text-slate-500">Loading requests…</div>
+          ) : unitRequests.length === 0 ? (
+            <div className="empty-state-text py-6 text-center italic">No open requests for this unit.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="data-table w-full text-sm">
+                <thead>
+                  <tr>
+                    <th className="text-left px-3 py-2">#</th>
+                    <th className="text-left px-3 py-2">Status</th>
+                    <th className="text-left px-3 py-2">Category</th>
+                    <th className="text-left px-3 py-2">Description</th>
+                    <th className="text-left px-3 py-2">Urgency</th>
+                    <th className="text-left px-3 py-2">Contractor</th>
+                    <th className="text-left px-3 py-2">Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {unitRequests.map((r) => (
+                    <tr
+                      key={r.id}
+                      className="border-t border-slate-100 hover:bg-slate-50 cursor-pointer"
+                      onClick={() => router.push(`/manager/requests/${r.id}?from=/admin-inventory/units/${id}`)}
+                    >
+                      <td className="px-3 py-2 tabular-nums font-medium">#{r.requestNumber}</td>
+                      <td className="px-3 py-2"><Badge variant="muted" size="sm">{r.status?.replace(/_/g, " ")}</Badge></td>
+                      <td className="px-3 py-2">{r.category || "—"}</td>
+                      <td className="px-3 py-2 max-w-[200px] truncate">{r.description || "—"}</td>
+                      <td className="px-3 py-2">{r.urgency || "—"}</td>
+                      <td className="px-3 py-2">{r.assignedContractor?.name || "—"}</td>
+                      <td className="px-3 py-2 whitespace-nowrap">{formatDate(r.createdAt)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Panel>
+          )}
+
       </PageContent>
     </PageShell>
     </AppShell>

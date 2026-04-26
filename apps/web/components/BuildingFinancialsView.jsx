@@ -93,7 +93,7 @@ const TABS = [
 
 /* ─── Main component ─── */
 
-export default function BuildingFinancialsView({ buildingId }) {
+export default function BuildingFinancialsView({ buildingId, variant = "page" }) {
   const [activeTab, setActiveTab] = useState("overview");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -199,22 +199,41 @@ export default function BuildingFinancialsView({ buildingId }) {
 
       {d && (
         <>
-          {/* ─── Tab bar ─── */}
-          <div className="tab-strip mt-4">
-            {TABS.map((t) => (
-              <button
-                key={t.key}
-                onClick={() => setActiveTab(t.key)}
-                className={activeTab === t.key ? "tab-btn-active" : "tab-btn"}
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
+          {/* ─── Tab / segmented control ─── */}
+          {variant === "embedded" ? (
+            <div className="inline-flex rounded-lg border border-slate-200 bg-slate-100 p-0.5 gap-0.5 mt-4 mb-6 flex-wrap">
+              {TABS.map((t) => (
+                <button
+                  key={t.key}
+                  onClick={() => setActiveTab(t.key)}
+                  className={[
+                    "rounded-lg px-4 py-1.5 text-sm font-medium transition-colors",
+                    activeTab === t.key
+                      ? "bg-white text-slate-900 shadow-sm"
+                      : "text-slate-500 hover:text-slate-700",
+                  ].join(" ")}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="tab-strip mt-4">
+              {TABS.map((t) => (
+                <button
+                  key={t.key}
+                  onClick={() => setActiveTab(t.key)}
+                  className={activeTab === t.key ? "tab-btn-active" : "tab-btn"}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* ═══ Overview tab ═══ */}
           {activeTab === "overview" && (
-            <>
+            <div className="space-y-6">
               {healthBullets.length > 0 && (
                 <Section title="Health Summary">
                   <div className="flex flex-col gap-2">
@@ -301,7 +320,7 @@ export default function BuildingFinancialsView({ buildingId }) {
                   </Panel>
                 </Section>
               )}
-            </>
+            </div>
           )}
 
           {/* ═══ Income tab ═══ */}

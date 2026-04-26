@@ -1575,7 +1575,7 @@ export default function BuildingDetail() {
 
           {/* Financials tab */}
           {activeTab === "Financials" && id && (
-            <BuildingFinancialsView buildingId={id} />
+            <BuildingFinancialsView buildingId={id} variant="embedded" />
           )}
         </PageContent>
         <UndoToast {...toast} />
