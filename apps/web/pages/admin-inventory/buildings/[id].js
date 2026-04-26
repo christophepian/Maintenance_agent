@@ -158,8 +158,8 @@ export default function BuildingDetail() {
       const from = `${now.getFullYear()}-01-01`;
       const to = now.toISOString().slice(0, 10);
       const [reqRes, jobRes, finRes, portRes] = await Promise.all([
-        fetch("/api/requests?view=summary&limit=2000", { headers: authHeaders() }),
-        fetch("/api/jobs?view=summary&limit=2000", { headers: authHeaders() }),
+        fetch("/api/requests?limit=2000&order=desc", { headers: authHeaders() }),
+        fetch("/api/jobs?limit=2000", { headers: authHeaders() }),
         fetch(`/api/buildings/${id}/financial-summary?from=${from}&to=${to}`, { headers: authHeaders() }),
         fetch(`/api/financials/portfolio-summary?from=${from}&to=${to}`, { headers: authHeaders() }),
       ]);
@@ -169,10 +169,10 @@ export default function BuildingDetail() {
       const allRequests = reqData?.data || [];
       const allJobs = jobData?.data || [];
       const openRequests = allRequests.filter(
-        (r) => r.buildingId === id && ["PENDING_REVIEW", "PENDING_OWNER_APPROVAL", "RFP_PENDING", "APPROVED", "ASSIGNED"].includes(r.status)
+        (r) => r.unit?.building?.id === id && ["PENDING_REVIEW", "PENDING_OWNER_APPROVAL", "RFP_PENDING", "APPROVED", "ASSIGNED"].includes(r.status)
       ).length;
       const openJobs = allJobs.filter(
-        (j) => j.buildingId === id && ["PENDING", "IN_PROGRESS"].includes(j.status)
+        (j) => j.request?.unit?.building?.id === id && ["PENDING", "IN_PROGRESS"].includes(j.status)
       ).length;
       const financials = finData?.data || null;
       const portfolio = portData?.data || null;
@@ -203,11 +203,11 @@ export default function BuildingDetail() {
     if (!id) return;
     setRequestsLoading(true);
     try {
-      const res = await fetch("/api/requests?view=summary&limit=2000&order=desc", { headers: authHeaders() });
+      const res = await fetch("/api/requests?limit=2000&order=desc", { headers: authHeaders() });
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error?.message || "Failed to load requests");
       const all = json?.data || [];
-      setBuildingRequests(all.filter((r) => r.buildingId === id));
+      setBuildingRequests(all.filter((r) => r.unit?.building?.id === id));
       setRequestsLoaded(true);
     } catch (e) {
       setBuildingRequests([]);
@@ -1558,9 +1558,9 @@ export default function BuildingDetail() {
                             </Badge>
                           </td>
                           <td className="py-2 pr-4 text-slate-700">{r.category || "—"}</td>
-                          <td className="py-2 pr-4 text-slate-600">{r.unitNumber || "—"}</td>
+                          <td className="py-2 pr-4 text-slate-600">{r.unit?.unitNumber || "—"}</td>
                           <td className="py-2 pr-4 text-slate-600">{r.urgency || "—"}</td>
-                          <td className="py-2 pr-4 text-slate-600">{r.assignedContractorName || "—"}</td>
+                          <td className="py-2 pr-4 text-slate-600">{r.assignedContractor?.name || "—"}</td>
                           <td className="py-2 text-slate-400">
                             {r.createdAt ? new Date(r.createdAt).toLocaleDateString("de-CH") : "—"}
                           </td>
