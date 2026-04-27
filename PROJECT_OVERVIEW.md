@@ -163,7 +163,7 @@ Three-layer CSS architecture on **Tailwind v4.1**:
 3. **CVA primitives** — 10 variant-based components in `components/ui/` (Button, Badge, Card, DataTable, Input, Select, ErrorBanner, EmptyState, StatusPill, KpiCard)
 
 - **`cn()`** = `twMerge(clsx())` in `lib/utils.js` — **mandatory** for all dynamic className composition (replaces template-literal interpolation)
-- **`statusVariants.js`** — 14 status→Badge variant mappers. All status indicators use `<Badge variant={mapper(status)}>`. Never define per-file color constants.
+- **`statusVariants.js`** — 20 status→Badge variant mappers. All status indicators use `<Badge variant={mapper(status)}>`. Never define per-file color constants.
 - **Inline Tailwind utilities** (e.g. `className="rounded-2xl border ..."`) — fine for one-off styling
 - **Never:** static `style={{}}`, hardcoded hex/rgb, new `.css` files, `tailwind.config.js` theme extensions (TW v4 uses `@theme {}` in CSS), `className={\`...${x}\`}` template literals, per-file `STATUS_COLORS` objects
 - **Design reference:** [docs/design-system.html](docs/design-system.html) — visual spec with architecture summary
@@ -298,7 +298,7 @@ npx prisma migrate diff \
 
 ## Current System Snapshot
 
-65 suites · 980 tests · 0 TS errors · 91/94 audit findings resolved. Strategy Engine & Capture Hardening epic complete (3-phase strategy engine with 56 tests, Azure OCR activation, invoice source-file serving).
+65 suites · 980 tests · 0 TS errors · 91/94 audit findings resolved. Strategy Engine & Capture Hardening epic complete (3-phase strategy engine with 56 tests, Azure OCR activation, invoice source-file serving). Responsive polish pass complete: dual-render pattern (F-UI9) applied to 18+ pages across all 4 personas; PENDING_REVIEW CTA fix; timeline stage bug fixed; `manager-reject` proxy created; tenant scheduling UX improved.
 
 For full counts, state integrity verification, and Document Integrity table, see [PROJECT_STATE.md](PROJECT_STATE.md).
 

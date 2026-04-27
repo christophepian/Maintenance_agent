@@ -1,6 +1,6 @@
 # Maintenance Agent — Project State
 
-**Last updated:** 2026-04-18 (Trust-restoration audit pass: count corrections, contradiction fixes, fragile metric removal)
+**Last updated:** 2026-04-27 (Responsive polish pass, bug fixes: PENDING_REVIEW CTAs, timeline stage, tenant scheduling UX, manager-reject proxy)
 
 > **For routine implementation work, start with [PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md)** (~220 lines).
 > This file is the canonical deep reference — guardrail details, backlog, state integrity, epic summaries.
@@ -280,10 +280,10 @@ All styles resolve to **Tailwind tokens** at build time. Three-layer architectur
 - `cn()` = `twMerge(clsx())` in `lib/utils.js` — **mandatory** for all dynamic className composition. Template-literal interpolation (`className={\`...${x}\`}`) is banned.
 - `statusVariants.js` — 20 status→Badge variant mapper functions. All status indicators use `<Badge variant={mapper(status)}>`. Per-file `STATUS_COLORS` / color-map objects are banned.
 
-**Migration status (2026-04-18):**
+**Migration status (2026-04-27):**
 - Inline `style={{}}`: ~10 remaining (all dynamic chart/progress bar values — allowed)
 - Hardcoded hex/rgb: ~15–20 remaining (SVG chart fills — allowed)
-- `className={\`...${x}\`}` template literals: **0** (fully migrated)
+- `className={\`...${x}\`}` template literals: **0** (fully migrated; pre-commit guardrail enforces this)
 * Per-file STATUS_COLORS/URGENCY_COLORS constants: **0** in pages (depreciation page uses ASSET_TYPE_COLORS — noted in backlog, allowed as non-status layout styling)
 
 **Allowed:**
@@ -394,9 +394,13 @@ written inline at the page or component level:
 - No shared `MobileCardList` component or `useIsMobile()` hook needed — pure CSS is simpler
   and avoids hydration concerns.
 
-**Completed pages (as of 2026-04-23):**
+**Completed pages (as of 2026-04-27):**
 `VacanciesPanel.js`, `owner/properties.js`, `owner/work-requests.js`, `owner/approvals.js`,
-`admin-inventory/buildings/[id].js` (Tenants tab), `admin-inventory/units/[id].js` (Invoices + Contracts tabs).
+`admin-inventory/buildings/[id].js` (Tenants tab), `admin-inventory/units/[id].js` (Invoices + Contracts tabs),
+`manager/rfps/[id].js`, `manager/leases/index.js`, `manager/leases/[id].js`, `manager/people/index.js`,
+`manager/finance/charges.js`, `manager/finance/ledger.js`, `manager/finance/chart-of-accounts.js`,
+`manager/vacancies/index.js`, `manager/vacancies/[unitId]/applications.js`,
+`owner/index.js`, `owner/vacancies/[unitId]/candidates.js`, `tenant/requests.js`.
 
 #### F-UI10: Role-Aware Shared Pages — Owner Surface Routing Isolation
 
@@ -701,6 +705,7 @@ PORT=3001
 | Recurring Invoices (6 slices) | 2026-04-03 | RecurringBillingSchedule, ChargeReconciliation, RentAdjustment, ContractorBillingSchedule; 5 new models, added enum + migration support, 4 route modules, 4 repos, 10 frontend pages |
 | Strategy Engine & Capture Hardening | 2026-04-16 | 3-phase strategy engine (56 tests): StrategyProfile + BuildingProfile models, 5 archetypes, 6 scoring dimensions, decision scoring, cashflow strategyOverlay; capture flow fixes (auth bypass, QR LAN IP, ECONNREFUSED detection); Azure OCR activation; invoice source-file serving + original image display |
 | Mobile Responsive — Owner Surface | 2026-04-23 | Dual-render table pattern (F-UI9) applied to 6 files; role-aware shared page routing (F-UI10) on buildings/[id] + units/[id]; ScrollableTabs upgraded with "More" overflow bottom sheet (F-UI11); dev server bound to 0.0.0.0 for phone testing; test protocol + responsive scope doc updated |
+| UI Responsiveness & Bug Fixes | 2026-04-27 | Responsive polish (flex-wrap, overflow-x-auto, hidden sm:table-cell) across 30+ manager/owner/contractor/tenant pages; PENDING_REVIEW approve/reject CTAs fixed (were empty); `manager-reject` proxy created + detail page called wrong endpoint; contractor page Panel import; timeline stage bug fixed (stuck at Contractor when job IN_PROGRESS); tenant scheduling Accept/Decline buttons moved below slot; F-UI4 template-literal violation caught and fixed |
 
 ---
 
@@ -789,7 +794,7 @@ Safe to:
 
 ---
 
-✅ **Project stabilized, security-hardened, org-scoped, and UI-connected (2026-04-18).** 65 test suites · 980 tests, 0 TS errors. 91/94 audit findings resolved. Backend: ~73k LOC | Frontend: ~45k LOC | 291 API operations | 68 Prisma models | 62 enums | 82 migrations | 288 frontend pages | 28 workflows | 28 route modules. Strategy Engine & Capture Hardening epic complete: 3-phase strategy engine (56 tests) with StrategyProfile + BuildingProfile models, 5 archetypes, 6 scoring dimensions, decision scoring, cashflow strategyOverlay integration; capture flow hardened (auth bypass fix, QR LAN IP, ECONNREFUSED detection); Azure Document Intelligence activated as primary OCR; invoice source-file serving + original image display on detail page. See [EPIC_HISTORY.md](EPIC_HISTORY.md) for full completion details.
+✅ **Project stabilized, security-hardened, org-scoped, and UI-connected (2026-04-27).** 65 test suites · 980 tests, 0 TS errors. 91/94 audit findings resolved. Backend: ~73k LOC | Frontend: ~45k LOC | 291 API operations | 68 Prisma models | 62 enums | 82 migrations | 289 frontend pages | 28 workflows | 28 route modules. Strategy Engine & Capture Hardening epic complete. Responsive polish pass complete: dual-render pattern (F-UI9) applied to 18+ pages across all 4 personas; PENDING_REVIEW CTA + timeline stage + manager-reject proxy bugs fixed. See [EPIC_HISTORY.md](EPIC_HISTORY.md) for full completion details.
 
 
 ## 13. Authentication & Testing
@@ -833,7 +838,7 @@ JWT-based. Production boot guard enforced (F1). All routes auth-gated. `AUTH_OPT
 | Audit findings open | 3 (SI-2/3/4: legal model orgId doc drift) | docs/AUDIT.md — manual |
 | Audit findings resolved | 91 | docs/AUDIT.md — manual |
 | Last auto-sync | 2026-04-03 | blueprint.js |
-| Last manual review | 2026-04-18 | human |
+| Last manual review | 2026-04-27 | human |
 
 > Derived fields are auto-updated by `npm run blueprint`. Manual fields must be updated at the end of each slice.
 
