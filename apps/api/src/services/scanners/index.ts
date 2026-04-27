@@ -55,7 +55,26 @@ class FallbackScanner implements DocumentScanner {
     hintDocType?: string,
   ): Promise<ScanResult> {
     try {
-      return await this.primary.scan(buffer, fileName, mimeType, hintDocType);
+      const result = await this.primary.scan(buffer, fileName, mimeType, hintDocType);
+
+      // If the primary returned no usable fields and low confidence, try the
+      // fallback rather than returning an empty result to the user.
+      // This covers cases where Azure succeeds but extracts nothing (e.g. a
+      // synthetic test document or a doc type the prebuilt model doesn't recognise).
+      if (this.fallback) {
+        const usableFields = Object.entries(result.fields || {})
+          .filter(([k, v]) => !k.startsWith("_") && v != null)
+          .length;
+        if (usableFields === 0 && (result.confidence ?? 100) < 50) {
+          console.log(
+            `[DOC-SCAN] Primary scanner (${SCAN_PROVIDER}) returned 0 usable fields ` +
+            `(confidence=${result.confidence}), falling back to "${FALLBACK_PROVIDER}".`,
+          );
+          return this.fallback.scan(buffer, fileName, mimeType, hintDocType);
+        }
+      }
+
+      return result;
     } catch (err) {
       if (!this.fallback) throw err;
 

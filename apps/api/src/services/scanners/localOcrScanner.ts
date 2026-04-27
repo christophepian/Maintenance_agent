@@ -198,13 +198,22 @@ async function extractText(buffer: Buffer, mimeType: string, fileName: string): 
   // 1. Try PDF text extraction
   if (isPdf) {
     try {
-      // pdf-parse exports a plain async function as its default, not a class.
-      // Cast through `any` because the @types/pdf-parse declaration doesn't
-      // expose a `.default` property even though the CJS bundle sets one.
+      // pdf-parse v2+ exports a class-based API: { PDFParse }
+      // Older versions exported a plain function as .default.
+      // Support both shapes.
       const pdfParseMod: any = await import("pdf-parse");
-      const pdfParse = (pdfParseMod.default || pdfParseMod) as (buf: Buffer, opts?: any) => Promise<{ text: string }>;
-      const result = await pdfParse(buffer, { verbosity: 0 });
-      const text = (result.text || "").trim();
+      let text = "";
+      if (pdfParseMod.PDFParse) {
+        // New class-based API (pdf-parse v2+)
+        const instance = new pdfParseMod.PDFParse({ data: buffer, verbosity: 0 });
+        const result = await instance.getText();
+        text = (result.text || "").trim();
+      } else {
+        // Legacy function API (pdf-parse v1)
+        const pdfParse = (pdfParseMod.default || pdfParseMod) as (buf: Buffer, opts?: any) => Promise<{ text: string }>;
+        const result = await pdfParse(buffer, { verbosity: 0 });
+        text = (result.text || "").trim();
+      }
       if (text.length > 10) {
         console.log(`[DOC-SCAN] pdf-parse extracted ${text.length} chars from ${fileName}`);
         return text;
@@ -296,12 +305,23 @@ async function ocrImage(buffer: Buffer, fileName: string): Promise<string> {
       return (data.text || "").trim();
     }
 
-    // Score OCR text: more alphabetic words + MRZ-like lines → higher score
+    // Score OCR text: more alphabetic words + MRZ-like lines → higher score.
+    // Also rewards structured "Label: Value" lines (critical for field parsers)
+    // and penalises garbage lines produced by over-aggressive binarization.
     function scoreText(text: string): number {
+      const lines = text.split(/\n/);
       const words = text.match(/[A-Za-zÀ-ÿ]{2,}/g) || [];
-      const mrzLines = text.split(/\n/).filter(l => /^[A-Z0-9<]{20,}$/.test(l.trim().replace(/\s/g, "")));
+      const mrzLines = lines.filter(l => /^[A-Z0-9<]{20,}$/.test(l.trim().replace(/\s/g, "")));
       const dates = text.match(/\d{1,2}[.\/-]\d{1,2}[.\/-]\d{2,4}/g) || [];
-      return words.length + mrzLines.length * 20 + dates.length * 10;
+      // Bonus: lines containing "LabelWord: Value" — exactly what field parsers need
+      const structuredLines = lines.filter(l => /[A-Za-zÀ-ÿ]{3,}.*:\s+[A-Za-zÀ-ÿ0-9]/.test(l));
+      // Penalty: garbage lines from background noise / binarization artefacts
+      const garbageCount = lines.filter(l => isGarbageLine(l)).length;
+      return words.length
+        + mrzLines.length * 20
+        + dates.length * 10
+        + structuredLines.length * 15
+        - garbageCount * 5;
     }
 
     // ── Strategy 1: Grayscale + normalize + sharpen (general purpose) ──
@@ -476,6 +496,7 @@ function parseFields(docType: DetectedDocType, text: string, fileName: string): 
 const NAME_VALUE = `([A-Za-z\u00C0-\u00FF][A-Za-z\u00C0-\u00FF '-]+)`;
 const DATE_VALUE = `(\\d{1,2}[.\\/-]\\d{1,2}[.\\/-]\\d{2,4})`;
 const DATE_VALUE_ISO = `(\\d{4}-\\d{2}-\\d{2})`;
+const DATE_VALUE_TEXT = `(\\d{1,2}\\s+[A-Za-z]{3,9}\\s+\\d{2,4})`;
 const DOC_NUM_VALUE = `([A-Z0-9][A-Z0-9 \\-]{4,20})`;
 const AMOUNT_VALUE = `([0-9][0-9\u2019'\u2018., ]+)`;
 
@@ -505,6 +526,13 @@ const LABELS = {
     'nome', 'nombre', 'prenome',
   ]),
   dateOfBirth: [
+    // Text-month dates first (e.g. "21 Jun 1993") — must precede numeric patterns
+    // so same-line capture fires before the two-line fallback grabs the next line
+    ...lbl([
+      'date\\s*(?:of|de)\\s*(?:birth|naissance)',
+      'birth\\s*date', 'born\\s*(?:on)?', 'DOB',
+      'geburtsdatum', 'geb(?:oren)?(?:\\.)?\\s*(?:am)?',
+    ], DATE_VALUE_TEXT),
     ...lbl([
       'date\\s*(?:of|de)\\s*(?:birth|naissance)',
       'birth\\s*date', 'born\\s*(?:on)?', 'DOB',
