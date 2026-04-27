@@ -10,7 +10,7 @@ import Section from "../../../components/layout/Section";
 import { authHeaders } from "../../../lib/api";
 import UndoToast, { useUndoToast } from "../../../components/ui/UndoToast";
 import ConfigurableTable from "../../../components/ConfigurableTable";
-import { clientSort } from "../../../lib/tableUtils";
+import { clientSort, useLocalSort } from "../../../lib/tableUtils";
 import Badge from "../../../components/ui/Badge";
 import { leaseVariant } from "../../../lib/statusVariants";
 import { cn } from "../../../lib/utils";
@@ -238,8 +238,7 @@ export default function LeasesPage() {
     noticeRule: "3_MONTHS", paymentDueDayOfMonth: "1", paymentIban: "",
     referenceRatePercent: "1.75", depositDueRule: "AT_SIGNATURE", includesHouseRules: true,
   });
-  const [tmplSortField, setTmplSortField] = useState("templateName");
-  const [tmplSortDir, setTmplSortDir] = useState("asc");
+  const { sortField: tmplSortField, sortDir: tmplSortDir, handleSort: handleTmplSort } = useLocalSort("templateName", "asc");
   const toast = useUndoToast();
 
   const availableBuildings = useMemo(() => {
@@ -256,11 +255,6 @@ export default function LeasesPage() {
     () => clientSort(filteredTemplates, tmplSortField, tmplSortDir, templateFieldExtractor),
     [filteredTemplates, tmplSortField, tmplSortDir]
   );
-
-  function handleTmplSort(field) {
-    if (tmplSortField === field) setTmplSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    else { setTmplSortField(field); setTmplSortDir("asc"); }
-  }
 
   // Load buildings on mount (needed for lease + template create forms)
   useEffect(() => {

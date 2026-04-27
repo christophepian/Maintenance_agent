@@ -11,10 +11,10 @@
  *   const page = pager.pageSlice(sorted);
  */
 
-import { useMemo, useCallback } from "react";
+import { useMemo, useCallback, useState } from "react";
 
 // ---------------------------------------------------------------------------
-// useTableSort — URL-driven sort state
+// useTableSort — URL-driven sort state (pages)
 // ---------------------------------------------------------------------------
 
 /**
@@ -123,4 +123,33 @@ export function clientSort(items, sortField, sortDir, fieldExtractor) {
     if (va > vb) return sortDir === "asc" ? 1 : -1;
     return 0;
   });
+}
+
+// ---------------------------------------------------------------------------
+// useLocalSort — component-level sort state (shared components, no router)
+// ---------------------------------------------------------------------------
+
+/**
+ * Same API as useTableSort but uses useState instead of URL query params.
+ * Use this in shared components (panels, modals) that can't rely on a router.
+ *
+ * @param {string} [defaultField="createdAt"]
+ * @param {"asc"|"desc"} [defaultDir="desc"]
+ */
+export function useLocalSort(defaultField = "createdAt", defaultDir = "desc") {
+  const [sortField, setSortField] = useState(defaultField);
+  const [sortDir, setSortDir] = useState(defaultDir);
+
+  const handleSort = useCallback((field) => {
+    setSortField((prev) => {
+      if (prev === field) {
+        setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+        return prev;
+      }
+      setSortDir("asc");
+      return field;
+    });
+  }, []);
+
+  return { sortField, sortDir, handleSort };
 }

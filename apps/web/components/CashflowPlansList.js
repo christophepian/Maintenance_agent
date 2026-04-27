@@ -10,6 +10,7 @@
 import { useState, useEffect, useCallback, useMemo, forwardRef, useImperativeHandle } from "react";
 import { useRouter } from "next/router";
 import ConfigurableTable from "./ConfigurableTable";
+import { useLocalSort, clientSort } from "../lib/tableUtils";
 import Badge from "./ui/Badge";
 import { authHeaders } from "../lib/api";
 import { formatDate } from "../lib/format";
@@ -31,50 +32,17 @@ function isPlanStale(plan) {
 
 const STATUS_ORDER = { SUBMITTED: 0, DRAFT: 1, APPROVED: 2 };
 
-function usePlanSort(plans) {
-  const [sortField, setSortField] = useState("status");
-  const [sortDir, setSortDir] = useState("asc");
-
-  function handleSort(field) {
-    if (field === sortField) {
-      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    } else {
-      setSortField(field);
-      setSortDir("asc");
-    }
+function planFieldExtractor(plan, field) {
+  switch (field) {
+    case "name":     return (plan.name || "").toLowerCase();
+    case "status":   return STATUS_ORDER[plan.status] ?? 9;
+    case "scope":    return plan.buildingId ? 1 : 0;
+    case "horizon":  return plan.horizonMonths ?? 0;
+    case "growth":   return plan.incomeGrowthRatePct ?? 0;
+    case "computed": return plan.lastComputedAt || "";
+    case "created":  return plan.createdAt || "";
+    default:         return "";
   }
-
-  const sorted = [...plans].sort((a, b) => {
-    let cmp = 0;
-    switch (sortField) {
-      case "name":
-        cmp = a.name.localeCompare(b.name);
-        break;
-      case "status":
-        cmp = (STATUS_ORDER[a.status] ?? 9) - (STATUS_ORDER[b.status] ?? 9);
-        break;
-      case "scope":
-        cmp = (a.buildingId ? 1 : 0) - (b.buildingId ? 1 : 0);
-        break;
-      case "horizon":
-        cmp = a.horizonMonths - b.horizonMonths;
-        break;
-      case "growth":
-        cmp = (a.incomeGrowthRatePct ?? 0) - (b.incomeGrowthRatePct ?? 0);
-        break;
-      case "computed":
-        cmp = (a.lastComputedAt || "").localeCompare(b.lastComputedAt || "");
-        break;
-      case "created":
-        cmp = a.createdAt.localeCompare(b.createdAt);
-        break;
-      default:
-        break;
-    }
-    return sortDir === "asc" ? cmp : -cmp;
-  });
-
-  return { sorted, sortField, sortDir, handleSort };
 }
 
 // ─── Create Plan Modal ────────────────────────────────────────────────────────
@@ -266,7 +234,11 @@ const CashflowPlansList = forwardRef(function CashflowPlansList(_props, ref) {
   const submittedPlans = plans.filter((p) => p.status === "SUBMITTED");
   const approvedPlans  = plans.filter((p) => p.status === "APPROVED");
 
-  const { sorted, sortField, sortDir, handleSort } = usePlanSort(plans);
+  const { sortField, sortDir, handleSort } = useLocalSort("status", "asc");
+  const sorted = useMemo(
+    () => clientSort(plans, sortField, sortDir, planFieldExtractor),
+    [plans, sortField, sortDir],
+  );
 
   const buildingMap = {};
   buildings.forEach((b) => { buildingMap[b.id] = b.name; });
