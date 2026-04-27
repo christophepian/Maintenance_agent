@@ -369,7 +369,29 @@ export default function LedgerPage() {
                 </div>
               ) : (
                 <>
-                  <div className="overflow-x-auto">
+                  {/* Mobile card list — sm:hidden */}
+                  <div className="sm:hidden overflow-hidden rounded-lg border border-table-border divide-y divide-table-divider mb-4">
+                    {entries.map((e) => (
+                      <div key={e.id} className="table-card">
+                        <div className="flex items-start justify-between gap-2">
+                          <span className="text-xs text-slate-500">{formatDate(e.date)}</span>
+                          <span className="text-xs text-slate-500">{SOURCE_TYPE_LABELS[e.sourceType] || e.sourceType || "—"}</span>
+                        </div>
+                        <p className="table-card-head mt-1">
+                          <span className="font-mono text-xs text-slate-400 mr-1">{e.accountCode}</span>
+                          {e.accountName}
+                        </p>
+                        <p className="table-card-sub">{e.description}</p>
+                        <div className="table-card-footer">
+                          {e.debitCents > 0 && <span className="font-mono">Dr {formatChfCents(e.debitCents)}</span>}
+                          {e.creditCents > 0 && <span className="font-mono">Cr {formatChfCents(e.creditCents)}</span>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Wide table — hidden sm:block */}
+                  <div className="hidden sm:block overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="border-b border-slate-200 text-left text-xs text-slate-500">
@@ -464,45 +486,66 @@ export default function LedgerPage() {
                           <span>{ACCOUNT_TYPE_LABELS[type] || type}</span>
                           <span className="font-mono">{rows.length} account{rows.length !== 1 ? "s" : ""}</span>
                         </div>
-                        <div className="overflow-x-auto border border-slate-200 rounded-b">
-                          <table className="w-full text-sm">
-                            <thead>
-                              <tr className="border-b border-slate-200 text-left text-xs text-slate-500 bg-slate-50">
-                                <th className="px-3 py-2">Code</th>
-                                <th className="px-3 py-2">Account</th>
-                                <th className="px-3 py-2 text-right">Debit CHF</th>
-                                <th className="px-3 py-2 text-right">Credit CHF</th>
-                                <th className="px-3 py-2 text-right">Balance CHF</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {rows.map((b) => {
-                                const isDebitBal = b.balanceCents >= 0;
-                                return (
-                                  <tr key={b.accountId} className="border-b border-slate-100 hover:bg-slate-50">
-                                    <td className="px-3 py-2 font-mono text-xs text-slate-400">{b.accountCode || "—"}</td>
-                                    <td className="px-3 py-2 text-slate-800">{b.accountName}</td>
-                                    <td className="px-3 py-2 text-right font-mono text-slate-700">{formatChfCents(b.debitCents)}</td>
-                                    <td className="px-3 py-2 text-right font-mono text-slate-700">{formatChfCents(b.creditCents)}</td>
-                                    <td className={cn("px-3 py-2 text-right font-mono font-semibold", isDebitBal ? "text-slate-900" : "text-blue-700")}>
-                                      {isDebitBal ? "" : "("}
-                                      {formatChfCents(Math.abs(b.balanceCents))}
-                                      {isDebitBal ? "" : ")"}
-                                    </td>
-                                  </tr>
-                                );
-                              })}
-                            </tbody>
-                            <tfoot>
-                              <tr className="border-t border-slate-300 bg-slate-50 text-xs font-semibold">
-                                <td colSpan={2} className="px-3 py-1.5 text-slate-600">Subtotal</td>
-                                <td className="px-3 py-1.5 text-right font-mono">{formatChfCents(typeDebit)}</td>
-                                <td className="px-3 py-1.5 text-right font-mono">{formatChfCents(typeCredit)}</td>
-                                <td />
-                              </tr>
-                            </tfoot>
-                          </table>
-                        </div>
+                        <>
+                          {/* Mobile card list — sm:hidden */}
+                          <div className="sm:hidden overflow-hidden border border-slate-200 rounded-b divide-y divide-slate-100">
+                            {rows.map((b) => {
+                              const isDebitBal = b.balanceCents >= 0;
+                              return (
+                                <div key={b.accountId} className="table-card">
+                                  <div className="flex items-start justify-between gap-2">
+                                    <span className="font-mono text-xs text-slate-400">{b.accountCode || "—"}</span>
+                                    <span className={cn("font-mono text-xs font-semibold", isDebitBal ? "text-slate-900" : "text-blue-700")}>
+                                      {isDebitBal ? "" : "("}{formatChfCents(Math.abs(b.balanceCents))}{isDebitBal ? "" : ")"}
+                                    </span>
+                                  </div>
+                                  <p className="table-card-head mt-0.5">{b.accountName}</p>
+                                </div>
+                              );
+                            })}
+                          </div>
+
+                          {/* Wide table — hidden sm:block */}
+                          <div className="hidden sm:block overflow-x-auto border border-slate-200 rounded-b">
+                            <table className="w-full text-sm">
+                              <thead>
+                                <tr className="border-b border-slate-200 text-left text-xs text-slate-500 bg-slate-50">
+                                  <th className="px-3 py-2">Code</th>
+                                  <th className="px-3 py-2">Account</th>
+                                  <th className="px-3 py-2 text-right">Debit CHF</th>
+                                  <th className="px-3 py-2 text-right">Credit CHF</th>
+                                  <th className="px-3 py-2 text-right">Balance CHF</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {rows.map((b) => {
+                                  const isDebitBal = b.balanceCents >= 0;
+                                  return (
+                                    <tr key={b.accountId} className="border-b border-slate-100 hover:bg-slate-50">
+                                      <td className="px-3 py-2 font-mono text-xs text-slate-400">{b.accountCode || "—"}</td>
+                                      <td className="px-3 py-2 text-slate-800">{b.accountName}</td>
+                                      <td className="px-3 py-2 text-right font-mono text-slate-700">{formatChfCents(b.debitCents)}</td>
+                                      <td className="px-3 py-2 text-right font-mono text-slate-700">{formatChfCents(b.creditCents)}</td>
+                                      <td className={cn("px-3 py-2 text-right font-mono font-semibold", isDebitBal ? "text-slate-900" : "text-blue-700")}>
+                                        {isDebitBal ? "" : "("}
+                                        {formatChfCents(Math.abs(b.balanceCents))}
+                                        {isDebitBal ? "" : ")"}
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                              <tfoot>
+                                <tr className="border-t border-slate-300 bg-slate-50 text-xs font-semibold">
+                                  <td colSpan={2} className="px-3 py-1.5 text-slate-600">Subtotal</td>
+                                  <td className="px-3 py-1.5 text-right font-mono">{formatChfCents(typeDebit)}</td>
+                                  <td className="px-3 py-1.5 text-right font-mono">{formatChfCents(typeCredit)}</td>
+                                  <td />
+                                </tr>
+                              </tfoot>
+                            </table>
+                          </div>
+                        </>
                       </div>
                     );
                   })}

@@ -216,127 +216,197 @@ export default function UnitApplicationsPage() {
             )}
 
             {!loading && sorted.length > 0 && (
-                <table className="inline-table">
-                  <thead>
-                    <tr>
-                      <th>Rank</th>
-                      <th>Applicant</th>
-                      <th>Income (CHF)</th>
-                      <th>Score</th>
-                      <th>Confidence</th>
-                      <th>Status</th>
-                      <th className="text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {sorted.map((row, idx) => {
-                      const conf = confidenceBadge(row.confidence || 0);
-                      const isDocExpanded = expandedDocApp === row.id;
-                      const reasons = Array.isArray(row.disqualifiedReasons)
-                        ? row.disqualifiedReasons
-                        : typeof row.disqualifiedReasons === "string"
-                          ? [row.disqualifiedReasons]
-                          : [];
-                      return (
-                        <React.Fragment key={row.id}>
-                        <tr className={row.disqualified ? "bg-red-50/40" : ""}>
-                          <td className="font-mono">{idx + 1}</td>
-                          <td>
-                            <div className="flex items-center flex-wrap gap-x-2">
-                              <button
-                                onClick={() => setExpandedDocApp(isDocExpanded ? null : row.id)}
-                                className={cn("font-medium underline decoration-dotted underline-offset-2 transition-colors", isDocExpanded
-                                    ? "text-indigo-700"
-                                    : "text-slate-900 hover:text-indigo-600")}
-                                title="Click to view corroborative documents"
-                              >
-                                {row.name}
-                              </button>
-                              {row.disqualified && (
-                                <span className="rounded bg-red-100 px-1.5 py-0.5 text-xs text-red-700">
-                                  Disqualified
-                                </span>
-                              )}
-                              {row.overrideReason && !row.disqualified && (
-                                <span className="rounded bg-amber-100 px-1.5 py-0.5 text-xs text-amber-700" title={`Override: ${row.overrideReason}`}>
-                                  ✓ Override
-                                </span>
-                              )}
-                              {isDocExpanded && (
-                                <span className="text-xs text-indigo-500">▼ docs</span>
-                              )}
-                            </div>
-                          </td>
-                          <td>
-                            {row.income != null ? formatNumber(row.income) : "—"}
-                          </td>
-                          <td>
-                            <span className={cn("inline-flex rounded-full px-2 py-0.5 text-xs font-semibold", scoreColor(row.score || 0))}>
-                              {row.score ?? "—"}
-                            </span>
-                          </td>
-                          <td>
-                            <Badge variant={conf.variant} size="sm">
-                              {row.confidence ?? 0}% {conf.label}
-                            </Badge>
-                          </td>
-                          <td>
-                            {(row.status || "").replace(/_/g, " ")}
-                          </td>
-                          <td className="text-right space-x-2">
+              <>
+                {/* Mobile card list — sm:hidden */}
+                <div className="sm:hidden overflow-hidden rounded-lg border border-table-border divide-y divide-table-divider">
+                  {sorted.map((row, idx) => {
+                    const conf = confidenceBadge(row.confidence || 0);
+                    const isDocExpanded = expandedDocApp === row.id;
+                    const reasons = Array.isArray(row.disqualifiedReasons)
+                      ? row.disqualifiedReasons
+                      : typeof row.disqualifiedReasons === "string"
+                        ? [row.disqualifiedReasons]
+                        : [];
+                    return (
+                      <div key={row.id} className={cn("table-card", row.disqualified ? "bg-red-50/40" : "")}>
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-mono text-xs text-slate-400">#{idx + 1}</span>
                             <button
-                              onClick={() => router.push(`/manager/rental-applications/${row.id}`)}
-                              className="cell-link text-xs"
+                              onClick={() => setExpandedDocApp(isDocExpanded ? null : row.id)}
+                              className={cn("table-card-head underline decoration-dotted underline-offset-2", isDocExpanded ? "text-indigo-700" : "text-slate-900")}
                             >
-                              View
+                              {row.name}
                             </button>
-                            {row.applicationUnitId && !row.disqualified && (
-                              <button
-                                onClick={() => setAdjustTarget(row.applicationUnitId)}
-                                className="text-xs text-amber-600 hover:underline"
-                              >
-                                Adjust
-                              </button>
-                            )}
-                            {row.disqualified && row.applicationUnitId && (
-                              <button
-                                onClick={() => {
-                                  setOverrideTarget({ applicationUnitId: row.applicationUnitId, name: row.name });
-                                  setOverrideReason("");
-                                }}
-                                className="rounded px-2 py-0.5 text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 hover:bg-amber-100 transition-colors"
-                              >
-                                ⚠ Override
-                              </button>
-                            )}
-                          </td>
-                        </tr>
+                          </div>
+                          <span className={cn("inline-flex rounded-full px-2 py-0.5 text-xs font-semibold shrink-0", scoreColor(row.score || 0))}>
+                            {row.score ?? "—"}
+                          </span>
+                        </div>
+                        <div className="table-card-footer">
+                          {row.disqualified ? (
+                            <span className="rounded bg-red-100 px-1.5 py-0.5 text-xs text-red-700">Disqualified</span>
+                          ) : row.overrideReason ? (
+                            <span className="rounded bg-amber-100 px-1.5 py-0.5 text-xs text-amber-700">✓ Override</span>
+                          ) : null}
+                          <Badge variant={conf.variant} size="sm">{row.confidence ?? 0}% {conf.label}</Badge>
+                          {row.income != null && <span>CHF {formatNumber(row.income)}</span>}
+                        </div>
+                        <div className="mt-2 flex gap-2 flex-wrap">
+                          <button onClick={() => router.push(`/manager/rental-applications/${row.id}`)} className="text-xs font-medium text-blue-600 hover:text-blue-700">View</button>
+                          {row.applicationUnitId && !row.disqualified && (
+                            <button onClick={() => setAdjustTarget(row.applicationUnitId)} className="text-xs text-amber-600 hover:underline">Adjust</button>
+                          )}
+                          {row.disqualified && row.applicationUnitId && (
+                            <button
+                              onClick={() => { setOverrideTarget({ applicationUnitId: row.applicationUnitId, name: row.name }); setOverrideReason(""); }}
+                              className="rounded px-2 py-0.5 text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 hover:bg-amber-100 transition-colors"
+                            >⚠ Override</button>
+                          )}
+                        </div>
                         {isDocExpanded && (
-                          <tr>
-                            <td colSpan={7} className="bg-slate-50/50">
-                              <div className="space-y-4">
-                                {/* Disqualification reasons (human-friendly) */}
-                                {row.disqualified && reasons.length > 0 && (
-                                  <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3">
-                                    <h4 className="text-sm font-semibold text-red-700 mb-2">Disqualification Reasons</h4>
-                                    <ul className="list-disc ml-5 space-y-1.5">
-                                      {formatDisqualificationReasons(reasons).map((text, i) => (
-                                        <li key={i} className="text-sm text-red-700 leading-relaxed">{text}</li>
-                                      ))}
-                                    </ul>
-                                  </div>
+                          <div className="mt-3 space-y-3 border-t border-slate-100 pt-3">
+                            {row.disqualified && reasons.length > 0 && (
+                              <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3">
+                                <h4 className="text-sm font-semibold text-red-700 mb-2">Disqualification Reasons</h4>
+                                <ul className="list-disc ml-5 space-y-1.5">
+                                  {formatDisqualificationReasons(reasons).map((text, i) => (
+                                    <li key={i} className="text-sm text-red-700 leading-relaxed">{text}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                            <DocumentsPanel applicationId={row.id} compact title={`Documents — ${row.name}`} />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Wide table — hidden sm:block */}
+                <div className="hidden sm:block">
+                  <table className="inline-table">
+                    <thead>
+                      <tr>
+                        <th>Rank</th>
+                        <th>Applicant</th>
+                        <th>Income (CHF)</th>
+                        <th>Score</th>
+                        <th>Confidence</th>
+                        <th>Status</th>
+                        <th className="text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sorted.map((row, idx) => {
+                        const conf = confidenceBadge(row.confidence || 0);
+                        const isDocExpanded = expandedDocApp === row.id;
+                        const reasons = Array.isArray(row.disqualifiedReasons)
+                          ? row.disqualifiedReasons
+                          : typeof row.disqualifiedReasons === "string"
+                            ? [row.disqualifiedReasons]
+                            : [];
+                        return (
+                          <React.Fragment key={row.id}>
+                          <tr className={row.disqualified ? "bg-red-50/40" : ""}>
+                            <td className="font-mono">{idx + 1}</td>
+                            <td>
+                              <div className="flex items-center flex-wrap gap-x-2">
+                                <button
+                                  onClick={() => setExpandedDocApp(isDocExpanded ? null : row.id)}
+                                  className={cn("font-medium underline decoration-dotted underline-offset-2 transition-colors", isDocExpanded
+                                      ? "text-indigo-700"
+                                      : "text-slate-900 hover:text-indigo-600")}
+                                  title="Click to view corroborative documents"
+                                >
+                                  {row.name}
+                                </button>
+                                {row.disqualified && (
+                                  <span className="rounded bg-red-100 px-1.5 py-0.5 text-xs text-red-700">
+                                    Disqualified
+                                  </span>
                                 )}
-                                {/* Corroborative documents */}
-                                <DocumentsPanel applicationId={row.id} compact title={`Documents — ${row.name}`} />
+                                {row.overrideReason && !row.disqualified && (
+                                  <span className="rounded bg-amber-100 px-1.5 py-0.5 text-xs text-amber-700" title={`Override: ${row.overrideReason}`}>
+                                    ✓ Override
+                                  </span>
+                                )}
+                                {isDocExpanded && (
+                                  <span className="text-xs text-indigo-500">▼ docs</span>
+                                )}
                               </div>
                             </td>
+                            <td>
+                              {row.income != null ? formatNumber(row.income) : "—"}
+                            </td>
+                            <td>
+                              <span className={cn("inline-flex rounded-full px-2 py-0.5 text-xs font-semibold", scoreColor(row.score || 0))}>
+                                {row.score ?? "—"}
+                              </span>
+                            </td>
+                            <td>
+                              <Badge variant={conf.variant} size="sm">
+                                {row.confidence ?? 0}% {conf.label}
+                              </Badge>
+                            </td>
+                            <td>
+                              {(row.status || "").replace(/_/g, " ")}
+                            </td>
+                            <td className="text-right space-x-2">
+                              <button
+                                onClick={() => router.push(`/manager/rental-applications/${row.id}`)}
+                                className="cell-link text-xs"
+                              >
+                                View
+                              </button>
+                              {row.applicationUnitId && !row.disqualified && (
+                                <button
+                                  onClick={() => setAdjustTarget(row.applicationUnitId)}
+                                  className="text-xs text-amber-600 hover:underline"
+                                >
+                                  Adjust
+                                </button>
+                              )}
+                              {row.disqualified && row.applicationUnitId && (
+                                <button
+                                  onClick={() => {
+                                    setOverrideTarget({ applicationUnitId: row.applicationUnitId, name: row.name });
+                                    setOverrideReason("");
+                                  }}
+                                  className="rounded px-2 py-0.5 text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 hover:bg-amber-100 transition-colors"
+                                >
+                                  ⚠ Override
+                                </button>
+                              )}
+                            </td>
                           </tr>
-                        )}
-                        </React.Fragment>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                          {isDocExpanded && (
+                            <tr>
+                              <td colSpan={7} className="bg-slate-50/50">
+                                <div className="space-y-4">
+                                  {row.disqualified && reasons.length > 0 && (
+                                    <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3">
+                                      <h4 className="text-sm font-semibold text-red-700 mb-2">Disqualification Reasons</h4>
+                                      <ul className="list-disc ml-5 space-y-1.5">
+                                        {formatDisqualificationReasons(reasons).map((text, i) => (
+                                          <li key={i} className="text-sm text-red-700 leading-relaxed">{text}</li>
+                                        ))}
+                                      </ul>
+                                    </div>
+                                  )}
+                                  <DocumentsPanel applicationId={row.id} compact title={`Documents — ${row.name}`} />
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                          </React.Fragment>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             )}
           </Panel>
         </PageContent>

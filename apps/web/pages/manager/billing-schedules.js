@@ -216,6 +216,18 @@ export default function BillingSchedulesPage() {
                     </p>
                   </div>
                 }
+                mobileCard={(sched) => (
+                  <div className="table-card">
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="table-card-head">{sched.lease?.tenantName || "—"}</p>
+                      <Badge variant={billingScheduleVariant(sched.status)}>{sched.status}</Badge>
+                    </div>
+                    <div className="table-card-footer">
+                      <span className="tabular-nums">{formatChfCents(sched.baseRentCents + sched.totalChargesCents)}</span>
+                      {sched.nextPeriodStart && <span>Next {formatDate(sched.nextPeriodStart)}</span>}
+                    </div>
+                  </div>
+                )}
             />
           )}
         </PageContent>

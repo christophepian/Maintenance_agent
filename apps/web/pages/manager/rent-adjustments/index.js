@@ -201,6 +201,21 @@ export default function RentAdjustmentsList() {
                     </p>
                   </div>
                 }
+                mobileCard={(adj) => (
+                  <div className="table-card">
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="table-card-head">{adj.lease?.tenantName || "—"}</p>
+                      <Badge variant={rentAdjustmentVariant(adj.status)}>{adj.status}</Badge>
+                    </div>
+                    <div className="table-card-footer">
+                      <span>{TYPE_LABELS[adj.adjustmentType] || adj.adjustmentType || "—"}</span>
+                      <span>Effective {formatDate(adj.effectiveDate)}</span>
+                      <span className={cn("tabular-nums", adj.adjustmentCents > 0 ? "text-red-600" : adj.adjustmentCents < 0 ? "text-green-600" : "")}>
+                        {adj.adjustmentCents > 0 ? "+" : ""}{formatChfCents(adj.adjustmentCents)}
+                      </span>
+                    </div>
+                  </div>
+                )}
             />
           )}
         </PageContent>

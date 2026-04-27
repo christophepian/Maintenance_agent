@@ -298,6 +298,33 @@ td: px-4 py-3
 
 ## Cards / Panels
 
+### KPI grid (mobile-first)
+All KPI card rows must use the `.kpi-grid` utility class (defined in `globals.css`). It enforces a
+2-column grid on mobile, which pages expand via Tailwind responsive modifiers.
+
+```html
+<!-- 5-card row (owner dashboard) -->
+<div class="kpi-grid md:grid-cols-5">
+  <div class="card mb-0">…</div>
+  <div class="card mb-0">…</div>
+  <div class="card mb-0">…</div>
+  <div class="card mb-0">…</div>
+  <!-- Odd (5th) card — spans 2 cols on mobile so it fills the row -->
+  <a class="card mb-0 col-span-2 md:col-span-1">…</a>
+</div>
+
+<!-- 4-card row (reporting) -->
+<div class="kpi-grid gap-4 xl:grid-cols-4">
+  <!-- 4 = 2×2 on mobile, no col-span needed -->
+</div>
+```
+
+**Rule:** When a KPI grid has an odd number of cards, the last card **must** carry
+`col-span-2 [breakpoint]:col-span-1` so it spans the full mobile row instead of leaving an empty
+half-width slot. Never use a single-column (`grid-cols-1`) layout for KPI sections.
+
+---
+
 ### Standard panel
 ```html
 <div class="rounded-xl border border-slate-200 bg-white shadow-sm">

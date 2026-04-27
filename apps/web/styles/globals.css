@@ -46,9 +46,19 @@
 
   /* ── Surface (white / slate) ── */
   --color-surface:        #ffffff;   /* white     */
-  --color-surface-raised: #f8fafc;   /* slate-50  — card/panel bg on white pages */
+  --color-surface-raised: #ffffff;   /* white — card/panel bg (matches manager dashboard KPI cards) */
   --color-surface-border: #e2e8f0;   /* slate-200 */
   --color-surface-hover:  #f1f5f9;   /* slate-100 */
+
+  /* ── Table surface ────────────────────────────────────────────────────
+     Tables are NEVER wrapped in a card/Panel. They self-border.
+     Change these three tokens to restyle every table across the app.
+     Card/Panel bg: --color-surface-raised (#ffffff)
+     Table row bg:  always bg-white (--color-surface)
+     ────────────────────────────────────────────────────────────────── */
+  --color-table-header:  #f1f5f9;   /* slate-100 — thead background */
+  --color-table-border:  #e2e8f0;   /* slate-200 — outer border + thead divider */
+  --color-table-divider: #e2e8f0;   /* slate-200 — tbody row dividers */
 }
 
 /* ── Global resets ── */
@@ -75,7 +85,7 @@ h1, h2 {
 /* ── Base components ── */
 
 .card {
-  @apply border border-surface-border rounded-xl p-4 bg-surface-raised mb-4;
+  @apply border border-surface-border rounded-2xl p-5 bg-surface-raised shadow-sm mb-4;
 }
 
 .label {
@@ -141,7 +151,45 @@ h1, h2 {
    Each class resolves to Tailwind utilities at build time.
    ═══════════════════════════════════════════════════════════════════ */
 
+/*
+ * ── Design system: TABLE vs CARD ────────────────────────────────────
+ *
+ * CARD / PANEL  →  use <Panel> or <Card>
+ *   bg: --color-surface-raised (slate-50)
+ *   border: --color-surface-border (slate-200)
+ *   radius: rounded-2xl
+ *   shadow: shadow-sm
+ *   Rule: panels/cards sit on the white page (#ffffff) and are visually
+ *         elevated by their slate-50 background.
+ *
+ * TABLE  →  use <ConfigurableTable> (never wrap in <Panel>)
+ *   row bg:    #ffffff (transparent on white page)
+ *   header bg: --color-table-header (slate-100)
+ *   border:    --color-table-border (slate-200)
+ *   dividers:  --color-table-divider (slate-200)
+ *   radius: rounded-lg (outer wrapper)
+ *   Rule: tables self-border and self-round. Adding a Panel around a
+ *         ConfigurableTable is forbidden — it creates a double-border
+ *         and a grey card background that clashes with the white page.
+ *
+ * CARD-LIST (accordion rows, invoice rows, etc.)  →  use <Panel>
+ *   When content is not tabular (each "row" has variable height,
+ *   expandable content, or card-style hierarchy), wrap in <Panel>.
+ *   The Panel's slate-50 background correctly groups the content.
+ *
+ * Changing the table chrome: edit the three --color-table-* tokens
+ * above in @theme {}. All ConfigurableTable instances update globally.
+ * Changing card chrome: edit --color-surface-raised in @theme {}.
+ */
+
 @layer components {
+  /* ── KPI grid — 2-col on mobile, expands at larger breakpoints via page-level overrides.
+     Rule: if the last card would sit alone on a mobile row, add col-span-2 [breakpoint]:col-span-1
+     to it so it fills the row. Never use a single-column grid for KPI sections. */
+  .kpi-grid {
+    @apply grid grid-cols-2 gap-3;
+  }
+
   /* ── Day group header (job schedule) ── */
   .day-header {
     @apply text-[13px] font-semibold text-slate-800 uppercase tracking-wide;
@@ -244,6 +292,11 @@ h1, h2 {
     @apply text-sm text-slate-500 m-0;
   }
 
+  /* ── Section heading ── */
+  .section-title {
+    @apply text-sm font-semibold text-slate-700;
+  }
+
   /* ── Loading / error ── */
   .loading-text {
     @apply text-xs text-slate-400 py-6;
@@ -336,6 +389,24 @@ h1, h2 {
   .icon-btn {
     @apply inline-flex items-center justify-center rounded p-1;
     @apply text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer;
+  }
+
+  /* ── Responsive table card list (Pattern A — narrow view) ─────────────
+   * Use the dual-render pattern: sm:hidden card list + hidden sm:block table.
+   * Wrap the card list in a div with the same border/radius as the table.
+   * Each card is one .table-card div inside the container.
+   * ─────────────────────────────────────────────────────────────────────── */
+  .table-card {
+    @apply px-4 py-3.5 bg-white;
+  }
+  .table-card-head {
+    @apply font-medium text-slate-900 text-[13px];
+  }
+  .table-card-sub {
+    @apply text-xs text-slate-500 mt-0.5;
+  }
+  .table-card-footer {
+    @apply flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 pt-2 border-t border-slate-100 text-xs text-slate-500;
   }
 
   /* ── Expand / collapse footer row ── */

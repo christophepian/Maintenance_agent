@@ -4,7 +4,6 @@ import AppShell from "../../components/AppShell";
 import PageShell from "../../components/layout/PageShell";
 import PageHeader from "../../components/layout/PageHeader";
 import PageContent from "../../components/layout/PageContent";
-import Panel from "../../components/layout/Panel";
 import ConfigurableTable from "../../components/ConfigurableTable";
 import { useTableSort, clientSort } from "../../lib/tableUtils";
 import AssetCatalogue from "../../components/AssetCatalogue";
@@ -304,14 +303,13 @@ export default function ManagerInventoryPage() {
             })()}
           </div>
 
-          {/* Count + full-view link — outside the Panel card */}
+          {/* Count + full-view link */}
           <span className="tab-panel-count">
             {activeTab === 0 ? `${sortedBuildings.length} building${sortedBuildings.length !== 1 ? "s" : ""}${buildingSearch.trim() ? ` matching "${buildingSearch.trim()}"` : ""}` : null}
             {activeTab === 1 ? `${assetModels.length} asset model${assetModels.length !== 1 ? "s" : ""}` : null}
             {activeTab === 2 ? "Maintenance decisions — select a unit to see repair vs replace analysis" : null}
           </span>
 
-          <Panel bodyClassName="p-0">
           {/* Buildings tab */}
           <div className={activeTab === 0 ? "tab-panel-active" : "tab-panel"}>
             <div className="px-4 pt-3 pb-2 flex items-center gap-3">
@@ -373,6 +371,18 @@ export default function ManagerInventoryPage() {
                 onSort={handleSort}
                 onRowClick={(b) => router.push(`/admin-inventory/buildings/${b.id}?from=/manager/inventory`)}
                 emptyState={<p className="text-sm text-slate-500">No buildings found.</p>}
+                mobileCard={(b) => (
+                  <div className="table-card">
+                    <p className="table-card-head">{b.name || "Unnamed"}</p>
+                    <p className="table-card-sub">{b.address || "—"}</p>
+                    <div className="table-card-footer">
+                      {b.canton && <span>{b.canton}</span>}
+                      {(b._count?.units ?? b.unitCount) != null && (
+                        <span>{b._count?.units ?? b.unitCount} unit{(b._count?.units ?? b.unitCount) !== 1 ? "s" : ""}</span>
+                      )}
+                    </div>
+                  </div>
+                )}
               />
             )}
           </div>
@@ -414,7 +424,59 @@ export default function ManagerInventoryPage() {
                 <p className="empty-state-text">No assets recorded for this unit yet.</p>
               </div>
             ) : decisionsData ? (
-              <div className="overflow-x-auto">
+              <>
+              {/* Mobile card list — md:hidden (9-column analysis table needs more width) */}
+              <div className="md:hidden p-4 space-y-3">
+                {decisionsData.map((item) => {
+                  const dep = item.depreciationPct;
+                  const depColor = dep >= 100 ? "text-red-600 font-semibold" : dep >= 85 ? "text-orange-600 font-semibold" : dep >= 65 ? "text-amber-600 font-semibold" : "text-slate-700";
+                  const rawInput = sensitivityInputs[item.assetId];
+                  const hyp = rawInput != null && rawInput !== "" ? Number(rawInput) : null;
+                  const projected = hyp != null && hyp > 0 ? clientSideVerdict(item, hyp) : null;
+                  const effectiveRec = projected || item.recommendation;
+                  const recStyle = RECOMMENDATION_STYLES[effectiveRec] || RECOMMENDATION_STYLES.REPAIR;
+                  return (
+                    <div key={item.assetId} className="rounded-xl border border-slate-200 p-3.5 bg-white" title={item.recommendationReason}>
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="font-medium text-slate-900 text-[13px] truncate">{item.assetName}</p>
+                          <p className="text-xs text-slate-500 mt-0.5">{item.topic}</p>
+                        </div>
+                        <span className={cn("inline-block shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold", recStyle.badge)}>
+                          {recStyle.label}
+                        </span>
+                      </div>
+                      <div className="mt-2 flex flex-wrap gap-3 text-xs text-slate-600">
+                        {dep != null && <span className={depColor}>Depr. {dep}%</span>}
+                        {item.repairToReplacementRatio != null && (
+                          <span>Ratio {Math.round(item.repairToReplacementRatio * 100)}%</span>
+                        )}
+                        {item.breakEvenMonths != null && (
+                          <span>
+                            Break-even: {item.breakEvenMonths === 0 ? "Exceeded" : item.breakEvenMonths < 12 ? `${item.breakEvenMonths} mo` : `${(item.breakEvenMonths / 12).toFixed(1)} yr`}
+                          </span>
+                        )}
+                      </div>
+                      {item.estimatedReplacementCostChf != null && (
+                        <div className="mt-2.5 flex items-center gap-2">
+                          <input
+                            type="number" min="0" step="100"
+                            placeholder="0"
+                            aria-label="Hypothetical next repair cost in CHF"
+                            value={sensitivityInputs[item.assetId] ?? ""}
+                            onChange={(e) => setSensitivityInputs((prev) => ({ ...prev, [item.assetId]: e.target.value }))}
+                            className="w-28 rounded border border-slate-200 px-2 py-1 text-xs text-right focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                          />
+                          <span className="text-xs text-slate-400">If next repair CHF</span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Wide table — hidden md:block */}
+              <div className="hidden md:block overflow-x-auto">
                 <table className="inline-table">
                   <thead>
                     <tr>
@@ -558,9 +620,10 @@ export default function ManagerInventoryPage() {
                   <p className="italic">Hover a row for the recommendation reason.</p>
                 </div>
               </div>
+              </>
             ) : null}
           </div>
-          </Panel>
+
         </PageContent>
       </PageShell>
     </AppShell>

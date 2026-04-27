@@ -500,38 +500,58 @@ export default function ManagerSettingsPage() {
                 <p className="empty-state-text">No buildings configured yet. Per-building settings will appear once buildings are added.</p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="inline-table">
-                  <thead>
-                    <tr>
-                      <th>Name</th>
-                      <th>Address</th>
-                      <th>Canton</th>
-                      <th></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {buildings.map((b) => (
-                      <tr key={b.id} className="cursor-pointer hover:bg-slate-50/80" onClick={() => router.push(`/admin-inventory/buildings/${b.id}`)}>
-                        <td className="cell-bold">{b.name || "Unnamed"}</td>
-                        <td>{b.address || "—"}</td>
-                        <td>{b.canton || "—"}</td>
-                        <td>
-                          <button
-                            aria-label="Configure building"
-                            onClick={(e) => { e.stopPropagation(); router.push(`/admin-inventory/buildings/${b.id}`); }}
-                            className="inline-flex items-center justify-center rounded p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                              <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                            </svg>
-                          </button>
-                        </td>
+              <>
+                {/* Mobile card list — sm:hidden */}
+                <div className="sm:hidden overflow-hidden rounded-lg border border-table-border divide-y divide-table-divider">
+                  {buildings.map((b) => (
+                    <div
+                      key={b.id}
+                      className="table-card cursor-pointer hover:bg-slate-50/80 transition-colors"
+                      onClick={() => router.push(`/admin-inventory/buildings/${b.id}`)}
+                    >
+                      <p className="table-card-head">{b.name || "Unnamed"}</p>
+                      <div className="table-card-footer">
+                        <span>{b.address || "—"}</span>
+                        {b.canton && <span>{b.canton}</span>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Wide table — hidden sm:block */}
+                <div className="hidden sm:block overflow-x-auto">
+                  <table className="inline-table">
+                    <thead>
+                      <tr>
+                        <th>Name</th>
+                        <th>Address</th>
+                        <th>Canton</th>
+                        <th></th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {buildings.map((b) => (
+                        <tr key={b.id} className="cursor-pointer hover:bg-slate-50/80" onClick={() => router.push(`/admin-inventory/buildings/${b.id}`)}>
+                          <td className="cell-bold">{b.name || "Unnamed"}</td>
+                          <td>{b.address || "—"}</td>
+                          <td>{b.canton || "—"}</td>
+                          <td>
+                            <button
+                              aria-label="Configure building"
+                              onClick={(e) => { e.stopPropagation(); router.push(`/admin-inventory/buildings/${b.id}`); }}
+                              className="inline-flex items-center justify-center rounded p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                              </svg>
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             )}
           </div>
 
@@ -619,52 +639,89 @@ export default function ManagerSettingsPage() {
                 <p className="empty-state-text">No legal sources configured. Sources are auto-created on server startup.</p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="inline-table">
-                  <thead>
-                    <tr>
-                      <th>Name</th>
-                      <th>Type</th>
-                      <th>Scope</th>
-                      <th>Frequency</th>
-                      <th>Status</th>
-                      <th>Last Synced</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {legalSources
-                      .filter((s) => scopeFilter === "ALL" || s.scope === scopeFilter)
-                      .map((s) => (
-                      <tr key={s.id}>
-                        <td className="cell-bold">
+              <>
+                {/* Mobile card list — sm:hidden */}
+                <div className="sm:hidden overflow-hidden rounded-lg border border-table-border divide-y divide-table-divider">
+                  {legalSources
+                    .filter((s) => scopeFilter === "ALL" || s.scope === scopeFilter)
+                    .map((s) => (
+                    <div key={s.id} className="table-card">
+                      <div className="flex items-start justify-between gap-2">
+                        <span className="table-card-head">
                           {s.url ? (
                             <a href={s.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">{s.name}</a>
                           ) : s.name}
-                        </td>
-                        <td className="font-mono text-xs">{formatFetcherType(s.fetcherType)}</td>
-                        <td><LegalScopeBadge scope={s.scope} /></td>
-                        <td>{s.updateFrequency || "—"}</td>
-                        <td><LegalStatusPill status={s.status} /></td>
-                        <td>{s.lastSuccessAt ? formatLegalDate(s.lastSuccessAt) : "Never"}</td>
-                        <td>
-                          <div className="flex gap-2">
-                            <button className="text-xs text-blue-600 hover:underline" onClick={() => openLegalEditForm(s)}>Edit</button>
-                            {s.status === "ACTIVE" ? (
-                              <button className="text-xs text-amber-600 hover:underline" onClick={() => toggleSourceStatus(s)}>Deactivate</button>
-                            ) : (
-                              <button className="text-xs text-green-600 hover:underline" onClick={() => toggleSourceStatus(s)}>Activate</button>
-                            )}
-                            {s.status === "INACTIVE" && (
-                              <button className="text-xs text-red-600 hover:underline" onClick={() => deleteSource(s)}>Delete</button>
-                            )}
-                          </div>
-                        </td>
+                        </span>
+                        <LegalStatusPill status={s.status} />
+                      </div>
+                      <div className="table-card-footer">
+                        <LegalScopeBadge scope={s.scope} />
+                        <span>{formatFetcherType(s.fetcherType)}</span>
+                        <span>{s.lastSuccessAt ? formatLegalDate(s.lastSuccessAt) : "Never synced"}</span>
+                      </div>
+                      <div className="mt-2 flex gap-3">
+                        <button className="text-xs text-blue-600 hover:underline" onClick={() => openLegalEditForm(s)}>Edit</button>
+                        {s.status === "ACTIVE" ? (
+                          <button className="text-xs text-amber-600 hover:underline" onClick={() => toggleSourceStatus(s)}>Deactivate</button>
+                        ) : (
+                          <button className="text-xs text-green-600 hover:underline" onClick={() => toggleSourceStatus(s)}>Activate</button>
+                        )}
+                        {s.status === "INACTIVE" && (
+                          <button className="text-xs text-red-600 hover:underline" onClick={() => deleteSource(s)}>Delete</button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Wide table — hidden sm:block */}
+                <div className="hidden sm:block overflow-x-auto">
+                  <table className="inline-table">
+                    <thead>
+                      <tr>
+                        <th>Name</th>
+                        <th>Type</th>
+                        <th>Scope</th>
+                        <th>Frequency</th>
+                        <th>Status</th>
+                        <th>Last Synced</th>
+                        <th>Actions</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {legalSources
+                        .filter((s) => scopeFilter === "ALL" || s.scope === scopeFilter)
+                        .map((s) => (
+                        <tr key={s.id}>
+                          <td className="cell-bold">
+                            {s.url ? (
+                              <a href={s.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">{s.name}</a>
+                            ) : s.name}
+                          </td>
+                          <td className="font-mono text-xs">{formatFetcherType(s.fetcherType)}</td>
+                          <td><LegalScopeBadge scope={s.scope} /></td>
+                          <td>{s.updateFrequency || "—"}</td>
+                          <td><LegalStatusPill status={s.status} /></td>
+                          <td>{s.lastSuccessAt ? formatLegalDate(s.lastSuccessAt) : "Never"}</td>
+                          <td>
+                            <div className="flex gap-2">
+                              <button className="text-xs text-blue-600 hover:underline" onClick={() => openLegalEditForm(s)}>Edit</button>
+                              {s.status === "ACTIVE" ? (
+                                <button className="text-xs text-amber-600 hover:underline" onClick={() => toggleSourceStatus(s)}>Deactivate</button>
+                              ) : (
+                                <button className="text-xs text-green-600 hover:underline" onClick={() => toggleSourceStatus(s)}>Activate</button>
+                              )}
+                              {s.status === "INACTIVE" && (
+                                <button className="text-xs text-red-600 hover:underline" onClick={() => deleteSource(s)}>Delete</button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             )}
 
             {!legalLoading && legalVariables.length > 0 && (
@@ -673,26 +730,42 @@ export default function ManagerSettingsPage() {
                   <h3 className="text-sm font-semibold text-slate-800">Legal Variables</h3>
                   <p className="text-xs text-slate-500 mt-0.5">{legalVariables.length} variable{legalVariables.length !== 1 ? "s" : ""} tracked</p>
                 </div>
-                <div className="overflow-x-auto">
-                  <table className="inline-table">
-                    <thead>
-                      <tr>
-                        <th>Key</th>
-                        <th>Description</th>
-                        <th>Versions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {legalVariables.map((v) => (
-                        <tr key={v.id}>
-                          <td className="font-mono text-xs">{v.key}</td>
-                          <td>{v.description || "—"}</td>
-                          <td>{v.versions?.length || 0}</td>
+                <>
+                  {/* Mobile card list — sm:hidden */}
+                  <div className="sm:hidden overflow-hidden rounded-lg border border-table-border divide-y divide-table-divider">
+                    {legalVariables.map((v) => (
+                      <div key={v.id} className="table-card">
+                        <span className="font-mono text-xs text-slate-700">{v.key}</span>
+                        <p className="table-card-head mt-0.5">{v.description || "—"}</p>
+                        <div className="table-card-footer">
+                          <span>{v.versions?.length || 0} version{(v.versions?.length || 0) !== 1 ? "s" : ""}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Wide table — hidden sm:block */}
+                  <div className="hidden sm:block overflow-x-auto">
+                    <table className="inline-table">
+                      <thead>
+                        <tr>
+                          <th>Key</th>
+                          <th>Description</th>
+                          <th>Versions</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody>
+                        {legalVariables.map((v) => (
+                          <tr key={v.id}>
+                            <td className="font-mono text-xs">{v.key}</td>
+                            <td>{v.description || "—"}</td>
+                            <td>{v.versions?.length || 0}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
               </>
             )}
           </div>

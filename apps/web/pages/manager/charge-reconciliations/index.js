@@ -173,6 +173,20 @@ export default function ChargeReconciliationsPage() {
                     <p className="empty-state-text">No reconciliations found. Create one from a lease detail page.</p>
                   </div>
                 }
+                mobileCard={(r) => (
+                  <div className="table-card">
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="table-card-head">{r.lease?.tenantName || "—"}</p>
+                      <Badge variant={reconciliationVariant(r.status)} size="sm">{r.status}</Badge>
+                    </div>
+                    <div className="table-card-footer">
+                      <span>{r.fiscalYear}</span>
+                      <span className={cn("tabular-nums", r.balanceCents > 0 ? "text-red-600" : r.balanceCents < 0 ? "text-green-600" : "")}>
+                        Balance {r.balanceCents > 0 ? "+" : ""}{formatChfCents(r.balanceCents)}
+                      </span>
+                    </div>
+                  </div>
+                )}
             />
           )}
         </PageContent>

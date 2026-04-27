@@ -597,7 +597,7 @@ export default function BuildingDetail() {
           {activeTab === "Building information" && (
             <>
               {/* KPIs */}
-              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4 mb-4">
+              <div className="kpi-grid gap-4 xl:grid-cols-4 mb-4">
                 {/* Open Requests */}
                 <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                   <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Open Requests</div>

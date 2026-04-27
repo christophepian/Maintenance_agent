@@ -160,7 +160,7 @@ export default function OwnerCandidatesPage() {
         body: JSON.stringify(body),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.message || "Selection failed");
+      if (!res.ok) throw new Error(data?.error?.message || data?.message || "Selection failed");
 
       setSuccess("Candidates selected successfully. The primary candidate has been notified to sign the lease.");
       setShowConfirm(false);
@@ -344,144 +344,175 @@ export default function OwnerCandidatesPage() {
               )}
 
               {!loading && rows.length > 0 && (
-                <div className="overflow-x-auto">
-                  <table className="inline-table">
-                    <thead>
-                      <tr>
-                        <th className="px-4 py-3">Rank</th>
-                        <th className="px-4 py-3">Applicant</th>
-                        <th className="px-4 py-3">Income (CHF)</th>
-                        <th className="px-4 py-3">Score</th>
-                        <th className="px-4 py-3">Confidence</th>
-                        <th className="px-4 py-3 text-right">Assign</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 bg-white">
-                      {rows.map((row, idx) => {
-                        const conf = confidenceBadge(row.confidence || 0);
-                        const currentRole = roleOf(row.applicationUnitId);
-                        const roleInfo = currentRole ? ROLES.find((r) => r.key === currentRole) : null;
-                        const isDocExpanded = expandedDocApp === row.id;
-                        const reasons = Array.isArray(row.disqualifiedReasons)
-                          ? row.disqualifiedReasons
-                          : typeof row.disqualifiedReasons === "string"
-                            ? [row.disqualifiedReasons]
-                            : [];
-
-                        return (
-                          <React.Fragment key={row.applicationUnitId || row.id}>
-                          <tr
-                            className={cn(row.disqualified ? "bg-red-50/40" : "", currentRole ? "ring-2 ring-blue-200 ring-inset" : "")}
-                          >
-                            <td className="px-4 py-3 text-slate-600 font-mono">{idx + 1}</td>
-                            <td className="px-4 py-3">
-                              <div className="flex items-center flex-wrap gap-x-2">
-                                <button
-                                  onClick={() => setExpandedDocApp(isDocExpanded ? null : row.id)}
-                                  className={cn("font-medium underline decoration-dotted underline-offset-2 transition-colors", isDocExpanded
-                                      ? "text-indigo-700"
-                                      : "text-slate-900 hover:text-indigo-600")}
-                                  title="Click to view corroborative documents"
-                                >
-                                  {row.name}
-                                </button>
-                                {row.disqualified && (
-                                  <span className="rounded bg-red-100 px-1.5 py-0.5 text-xs text-red-700">
-                                    Disqualified
-                                  </span>
-                                )}
-                                {row.overrideReason && !row.disqualified && (
-                                  <span className="rounded bg-amber-100 px-1.5 py-0.5 text-xs text-amber-700" title={`Override: ${row.overrideReason}`}>
-                                    ✓ Override
-                                  </span>
-                                )}
-                                {roleInfo && (
-                                  <span
-                                    className={cn("rounded px-1.5 py-0.5 text-xs font-bold text-white", roleInfo.color)}
-                                  >
-                                    {roleInfo.label}
-                                  </span>
-                                )}
-                                {isDocExpanded && (
-                                  <span className="text-xs text-indigo-500">▼ docs</span>
-                                )}
-                              </div>
-                            </td>
-                            <td className="px-4 py-3 text-slate-700">
-                              {row.income != null ? formatNumber(row.income) : "—"}
-                            </td>
-                            <td className="px-4 py-3">
-                              <Badge variant={scoreVariant(row.score || 0)} size="sm">
-                                {row.score ?? "—"}
-                              </Badge>
-                            </td>
-                            <td className="px-4 py-3">
-                              <Badge variant={conf.variant} size="sm">
-                                {row.confidence ?? 0}% {conf.label}
-                              </Badge>
-                            </td>
-
-                            <td className="px-4 py-3 text-right">
-                              {row.disqualified ? (
-                                <button
-                                  onClick={() => {
-                                    setOverrideTarget({ applicationUnitId: row.applicationUnitId, name: row.name });
-                                    setOverrideReason("");
-                                  }}
-                                  className="rounded px-3 py-1.5 text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 hover:bg-amber-100 transition-colors"
-                                  title="Override disqualification and make this candidate eligible"
-                                >
-                                  ⚠ Override
-                                </button>
-                              ) : (
-                                <div className="flex items-center justify-end gap-1">
-                                  {ROLES.map((r) => {
-                                    const isThis = selection[r.key] === row.applicationUnitId;
-                                    return (
-                                      <button
-                                        key={r.key}
-                                        onClick={() => toggleSelection(r.key, row.applicationUnitId)}
-                                        title={`Set as ${r.label}`}
-                                        className={cn("rounded px-2 py-1 text-xs font-semibold transition-colors", isThis
-                                            ? `${r.color} text-white`
-                                            : "border border-slate-200 text-slate-500 hover:bg-slate-100")}
-                                      >
-                                        {r.label.charAt(0)}
-                                        {r.key !== "primary" ? r.key.slice(-1) : ""}
-                                      </button>
-                                    );
-                                  })}
+                <>
+                  {/* Mobile card list — sm:hidden */}
+                  <div className="sm:hidden overflow-hidden rounded-lg border border-table-border divide-y divide-table-divider">
+                    {rows.map((row, idx) => {
+                      const conf = confidenceBadge(row.confidence || 0);
+                      const currentRole = roleOf(row.applicationUnitId);
+                      const roleInfo = currentRole ? ROLES.find((r) => r.key === currentRole) : null;
+                      const isDocExpanded = expandedDocApp === row.id;
+                      const reasons = Array.isArray(row.disqualifiedReasons)
+                        ? row.disqualifiedReasons
+                        : typeof row.disqualifiedReasons === "string"
+                          ? [row.disqualifiedReasons]
+                          : [];
+                      return (
+                        <div key={row.applicationUnitId || row.id} className={cn("table-card", row.disqualified ? "bg-red-50/40" : "", currentRole ? "ring-2 ring-blue-200 ring-inset" : "")}>
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-mono text-xs text-slate-400">#{idx + 1}</span>
+                              <button
+                                onClick={() => setExpandedDocApp(isDocExpanded ? null : row.id)}
+                                className={cn("table-card-head underline decoration-dotted underline-offset-2", isDocExpanded ? "text-indigo-700" : "text-slate-900")}
+                              >{row.name}</button>
+                              {row.disqualified && <span className="rounded bg-red-100 px-1.5 py-0.5 text-xs text-red-700">Disqualified</span>}
+                              {row.overrideReason && !row.disqualified && <span className="rounded bg-amber-100 px-1.5 py-0.5 text-xs text-amber-700">✓ Override</span>}
+                              {roleInfo && <span className={cn("rounded px-1.5 py-0.5 text-xs font-bold text-white", roleInfo.color)}>{roleInfo.label}</span>}
+                            </div>
+                            <Badge variant={scoreVariant(row.score || 0)} size="sm">{row.score ?? "—"}</Badge>
+                          </div>
+                          <div className="table-card-footer">
+                            <Badge variant={conf.variant} size="sm">{row.confidence ?? 0}% {conf.label}</Badge>
+                            {row.income != null && <span>CHF {formatNumber(row.income)}</span>}
+                          </div>
+                          <div className="mt-2 flex flex-wrap gap-1">
+                            {row.disqualified ? (
+                              <button
+                                onClick={() => { setOverrideTarget({ applicationUnitId: row.applicationUnitId, name: row.name }); setOverrideReason(""); }}
+                                className="rounded px-2 py-1 text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 hover:bg-amber-100"
+                              >⚠ Override</button>
+                            ) : (
+                              ROLES.map((r) => {
+                                const isThis = selection[r.key] === row.applicationUnitId;
+                                return (
+                                  <button
+                                    key={r.key}
+                                    onClick={() => toggleSelection(r.key, row.applicationUnitId)}
+                                    title={`Set as ${r.label}`}
+                                    className={cn("rounded px-2 py-1 text-xs font-semibold transition-colors", isThis ? `${r.color} text-white` : "border border-slate-200 text-slate-500 hover:bg-slate-100")}
+                                  >{r.label}</button>
+                                );
+                              })
+                            )}
+                          </div>
+                          {isDocExpanded && (
+                            <div className="mt-3 space-y-3 border-t border-slate-100 pt-3">
+                              {row.disqualified && reasons.length > 0 && (
+                                <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3">
+                                  <h4 className="text-sm font-semibold text-red-700 mb-2">Disqualification Reasons</h4>
+                                  <ul className="list-disc ml-5 space-y-1.5">
+                                    {formatDisqualificationReasons(reasons).map((text, i) => (
+                                      <li key={i} className="text-sm text-red-700 leading-relaxed">{text}</li>
+                                    ))}
+                                  </ul>
                                 </div>
                               )}
-                            </td>
-                          </tr>
-                          {isDocExpanded && (
-                            <tr>
-                              <td colSpan={6} className="px-4 py-3 bg-slate-50/50">
-                                <div className="space-y-4">
-                                  {/* Disqualification reasons (human-friendly) */}
-                                  {row.disqualified && reasons.length > 0 && (
-                                    <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3">
-                                      <h4 className="text-sm font-semibold text-red-700 mb-2">Disqualification Reasons</h4>
-                                      <ul className="list-disc ml-5 space-y-1.5">
-                                        {formatDisqualificationReasons(reasons).map((text, i) => (
-                                          <li key={i} className="text-sm text-red-700 leading-relaxed">{text}</li>
-                                        ))}
-                                      </ul>
-                                    </div>
-                                  )}
-                                  {/* Corroborative documents */}
-                                  <DocumentsPanel applicationId={row.id} compact title={`Documents — ${row.name}`} />
+                              <DocumentsPanel applicationId={row.id} compact title={`Documents — ${row.name}`} />
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Wide table — hidden sm:block */}
+                  <div className="hidden sm:block overflow-x-auto">
+                    <table className="inline-table">
+                      <thead>
+                        <tr>
+                          <th className="px-4 py-3">Rank</th>
+                          <th className="px-4 py-3">Applicant</th>
+                          <th className="px-4 py-3">Income (CHF)</th>
+                          <th className="px-4 py-3">Score</th>
+                          <th className="px-4 py-3">Confidence</th>
+                          <th className="px-4 py-3 text-right">Assign</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 bg-white">
+                        {rows.map((row, idx) => {
+                          const conf = confidenceBadge(row.confidence || 0);
+                          const currentRole = roleOf(row.applicationUnitId);
+                          const roleInfo = currentRole ? ROLES.find((r) => r.key === currentRole) : null;
+                          const isDocExpanded = expandedDocApp === row.id;
+                          const reasons = Array.isArray(row.disqualifiedReasons)
+                            ? row.disqualifiedReasons
+                            : typeof row.disqualifiedReasons === "string"
+                              ? [row.disqualifiedReasons]
+                              : [];
+
+                          return (
+                            <React.Fragment key={row.applicationUnitId || row.id}>
+                            <tr className={cn(row.disqualified ? "bg-red-50/40" : "", currentRole ? "ring-2 ring-blue-200 ring-inset" : "")}>
+                              <td className="px-4 py-3 text-slate-600 font-mono">{idx + 1}</td>
+                              <td className="px-4 py-3">
+                                <div className="flex items-center flex-wrap gap-x-2">
+                                  <button
+                                    onClick={() => setExpandedDocApp(isDocExpanded ? null : row.id)}
+                                    className={cn("font-medium underline decoration-dotted underline-offset-2 transition-colors", isDocExpanded ? "text-indigo-700" : "text-slate-900 hover:text-indigo-600")}
+                                    title="Click to view corroborative documents"
+                                  >{row.name}</button>
+                                  {row.disqualified && <span className="rounded bg-red-100 px-1.5 py-0.5 text-xs text-red-700">Disqualified</span>}
+                                  {row.overrideReason && !row.disqualified && <span className="rounded bg-amber-100 px-1.5 py-0.5 text-xs text-amber-700" title={`Override: ${row.overrideReason}`}>✓ Override</span>}
+                                  {roleInfo && <span className={cn("rounded px-1.5 py-0.5 text-xs font-bold text-white", roleInfo.color)}>{roleInfo.label}</span>}
+                                  {isDocExpanded && <span className="text-xs text-indigo-500">▼ docs</span>}
                                 </div>
                               </td>
+                              <td className="px-4 py-3 text-slate-700">{row.income != null ? formatNumber(row.income) : "—"}</td>
+                              <td className="px-4 py-3"><Badge variant={scoreVariant(row.score || 0)} size="sm">{row.score ?? "—"}</Badge></td>
+                              <td className="px-4 py-3"><Badge variant={conf.variant} size="sm">{row.confidence ?? 0}% {conf.label}</Badge></td>
+                              <td className="px-4 py-3 text-right">
+                                {row.disqualified ? (
+                                  <button
+                                    onClick={() => { setOverrideTarget({ applicationUnitId: row.applicationUnitId, name: row.name }); setOverrideReason(""); }}
+                                    className="rounded px-3 py-1.5 text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 hover:bg-amber-100 transition-colors"
+                                    title="Override disqualification and make this candidate eligible"
+                                  >⚠ Override</button>
+                                ) : (
+                                  <div className="flex items-center justify-end gap-1">
+                                    {ROLES.map((r) => {
+                                      const isThis = selection[r.key] === row.applicationUnitId;
+                                      return (
+                                        <button
+                                          key={r.key}
+                                          onClick={() => toggleSelection(r.key, row.applicationUnitId)}
+                                          title={`Set as ${r.label}`}
+                                          className={cn("rounded px-2 py-1 text-xs font-semibold transition-colors", isThis ? `${r.color} text-white` : "border border-slate-200 text-slate-500 hover:bg-slate-100")}
+                                        >
+                                          {r.label.charAt(0)}{r.key !== "primary" ? r.key.slice(-1) : ""}
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                              </td>
                             </tr>
-                          )}
-                          </React.Fragment>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
+                            {isDocExpanded && (
+                              <tr>
+                                <td colSpan={6} className="px-4 py-3 bg-slate-50/50">
+                                  <div className="space-y-4">
+                                    {row.disqualified && reasons.length > 0 && (
+                                      <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3">
+                                        <h4 className="text-sm font-semibold text-red-700 mb-2">Disqualification Reasons</h4>
+                                        <ul className="list-disc ml-5 space-y-1.5">
+                                          {formatDisqualificationReasons(reasons).map((text, i) => (
+                                            <li key={i} className="text-sm text-red-700 leading-relaxed">{text}</li>
+                                          ))}
+                                        </ul>
+                                      </div>
+                                    )}
+                                    <DocumentsPanel applicationId={row.id} compact title={`Documents — ${row.name}`} />
+                                  </div>
+                                </td>
+                              </tr>
+                            )}
+                            </React.Fragment>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
               )}
             </Panel>
           )}

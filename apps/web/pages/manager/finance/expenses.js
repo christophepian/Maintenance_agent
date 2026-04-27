@@ -261,6 +261,19 @@ export default function ManagerExpensesPage() {
                 emptyState={
                   <p className="px-4 py-8 text-center text-sm text-slate-400">No expenses found. Tag invoices with an expense category to track them here.</p>
                 }
+                mobileCard={(inv) => (
+                  <div className="table-card">
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="font-mono text-xs text-slate-500">{inv.invoiceNumber || inv.id?.slice(0, 8)}</span>
+                      <CategoryBadge category={inv.expenseCategory} />
+                    </div>
+                    <p className="table-card-head mt-1">{inv.description || "—"}</p>
+                    <div className="table-card-footer">
+                      <span className="font-medium">{formatChf(inv.totalAmount)}</span>
+                      <span>{formatDate(inv.createdAt)}</span>
+                    </div>
+                  </div>
+                )}
               />
           )}
         </PageContent>

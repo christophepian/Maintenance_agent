@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import AppShell from "../../../components/AppShell";
@@ -50,6 +50,136 @@ function AccordionSection({ title, open, onToggle, children }) {
       </button>
       {open && <div className="px-5 pb-5 pt-2 border-t">{children}</div>}
     </div>
+  );
+}
+
+function LeaseActions({
+  isDraft, isTemplate, isReadyToSign, isSigned, isActive, editMode, saving,
+  pdfGenerating, resendingForSignature, needsResend, actionLoading, lease,
+  onEdit, onSave, onCancelEdit, onGeneratePDF, onSendForSignature,
+  onResend, onActivate, onTerminate, onArchive, onInvoice, onCancel,
+}) {
+  const [open, setOpen] = useState(false);
+  const [dropPos, setDropPos] = useState({ top: 0, left: 0 });
+  const ref = useRef(null);
+  const triggerRef = useRef(null);
+
+  // Recompute fixed position whenever the dropdown opens or the window scrolls/resizes
+  useEffect(() => {
+    if (!open || !triggerRef.current) return;
+    function compute() {
+      const r = triggerRef.current.getBoundingClientRect();
+      const dropW = 208; // w-52 = 13rem = 208px
+      const margin = 8;
+      // Prefer right-aligned to the button, but clamp so left edge stays on screen
+      const preferred = r.right - dropW;
+      const left = Math.max(margin, Math.min(preferred, window.innerWidth - dropW - margin));
+      setDropPos({ top: r.bottom + 4, left });
+    }
+    compute();
+    window.addEventListener("scroll", compute, true);
+    window.addEventListener("resize", compute);
+    return () => {
+      window.removeEventListener("scroll", compute, true);
+      window.removeEventListener("resize", compute);
+    };
+  }, [open]);
+
+  useEffect(() => {
+    function handler(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false); }
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []); 
+
+  const items = [
+    (isDraft || isTemplate) && !editMode && { label: "✏️ Edit", action: onEdit },
+    (isDraft || isTemplate) && editMode && { label: saving ? "Saving…" : "💾 Save", action: onSave, disabled: saving },
+    (isDraft || isTemplate) && editMode && { label: "✕ Cancel Edit", action: onCancelEdit },
+    { label: pdfGenerating ? "Generating…" : "📄 Generate PDF", action: onGeneratePDF, disabled: pdfGenerating },
+    isDraft && !isTemplate && { label: "✍️ Send for Signature", action: onSendForSignature },
+    needsResend && { label: resendingForSignature ? "Sending…" : "↩️ Re-send for Signature", action: onResend, disabled: resendingForSignature },
+    isSigned && !isTemplate && { label: actionLoading === "activate" ? "Activating…" : "⚡ Activate", action: onActivate, disabled: !!actionLoading },
+    isActive && !isTemplate && { label: "📋 Terminate", action: onTerminate },
+    !isTemplate && !lease.archivedAt && ["SIGNED","ACTIVE","TERMINATED","CANCELLED"].includes(lease.status) && { label: "📦 Archive", action: onArchive, disabled: !!actionLoading },
+    !isTemplate && { label: "💰 Invoice", action: onInvoice },
+    !isTemplate && !["SIGNED","ACTIVE","TERMINATED","CANCELLED"].includes(lease.status) && { label: "Cancel Lease", action: onCancel, danger: true },
+  ].filter(Boolean);
+
+  return (
+    <>
+      {/* Desktop: full button row */}
+      <div className="hidden sm:flex items-center gap-2 flex-wrap">
+        {(isDraft || isTemplate) && !editMode && (
+          <Button variant="secondary" size="sm" onClick={onEdit}>✏️ Edit</Button>
+        )}
+        {(isDraft || isTemplate) && editMode && (
+          <>
+            <Button variant="primary" size="sm" onClick={onSave} disabled={saving}>
+              {saving ? "Saving..." : "Save"}
+            </Button>
+            <Button variant="secondary" size="sm" onClick={onCancelEdit}>Cancel</Button>
+          </>
+        )}
+        <Button variant="neutral" size="sm" onClick={onGeneratePDF} disabled={pdfGenerating}>
+          {pdfGenerating ? "Generating..." : "📄 Generate PDF"}
+        </Button>
+        {isDraft && !isTemplate && (
+          <Button variant="success" size="sm" onClick={onSendForSignature}>✍️ Send for Signature</Button>
+        )}
+        {needsResend && (
+          <Button variant="warning" size="sm" onClick={onResend} disabled={resendingForSignature}>
+            {resendingForSignature ? "Sending…" : "↩️ Re-send for Signature"}
+          </Button>
+        )}
+        {isSigned && !isTemplate && (
+          <Button variant="success" size="sm" onClick={onActivate} disabled={!!actionLoading}>
+            {actionLoading === "activate" ? "Activating..." : "⚡ Activate"}
+          </Button>
+        )}
+        {isActive && !isTemplate && (
+          <Button variant="warning" size="sm" onClick={onTerminate}>📋 Terminate</Button>
+        )}
+        {!isTemplate && !lease.archivedAt && ["SIGNED","ACTIVE","TERMINATED","CANCELLED"].includes(lease.status) && (
+          <Button variant="secondary" size="sm" onClick={onArchive} disabled={!!actionLoading}>📦 Archive</Button>
+        )}
+        {!isTemplate && (
+          <Button variant="ghost" size="sm" className="text-brand hover:bg-brand-light" onClick={onInvoice}>💰 Invoice</Button>
+        )}
+        {!isTemplate && !["SIGNED","ACTIVE","TERMINATED","CANCELLED"].includes(lease.status) && (
+          <Button variant="destructiveGhost" size="sm" onClick={onCancel}>Cancel</Button>
+        )}
+      </div>
+
+      {/* Mobile: collapsed dropdown — fixed so no parent overflow-hidden clips it */}
+      <div className="sm:hidden" ref={ref}>
+        <button
+          ref={triggerRef}
+          onClick={() => setOpen(v => !v)}
+          aria-label="Lease actions menu"
+          aria-expanded={open}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-white border border-slate-200 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 active:bg-slate-100"
+        >
+          Actions <span className="text-xs text-slate-400">{open ? "▲" : "▼"}</span>
+        </button>
+        {open && (
+          <div
+            style={{ position: "fixed", top: dropPos.top, left: dropPos.left, zIndex: 9999, maxHeight: `calc(100dvh - ${dropPos.top + 8}px)` }}
+            className="w-52 rounded-md bg-white shadow-lg ring-1 ring-black/5 py-1 overflow-y-auto"
+          >
+            {items.map((item, i) => (
+              <button
+                key={i}
+                disabled={item.disabled}
+                onClick={() => { setOpen(false); item.action(); }}
+                className={cn("w-full text-left px-4 py-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed", item.danger ? "text-red-600 hover:bg-red-50" : "text-slate-700 hover:bg-slate-50")}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </>
   );
 }
 
@@ -498,7 +628,7 @@ export default function LeaseEditorPage() {
         <PageHeader
           title={isTemplate ? `Template — ${lease.templateName || lease.landlordName}` : `Lease — ${lease.tenantName}`}
           subtitle={
-            <span className="flex items-center gap-2">
+            <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
               <Link href={isTemplate ? "/manager/leases/templates" : "/manager/leases"} className="text-blue-600 hover:underline">{isTemplate ? "← Templates" : "← Leases"}</Link>
               <span>·</span>
               {isTemplate && (
@@ -515,64 +645,24 @@ export default function LeaseEditorPage() {
               )}
             </span>
           }
-          actions={
-            <div className="flex items-center gap-2 flex-wrap">
-              {(isDraft || isTemplate) && !editMode && (
-                <Button variant="secondary" size="sm" onClick={() => setEditMode(true)}>
-                  ✏️ Edit
-                </Button>
-              )}
-              {(isDraft || isTemplate) && editMode && (
-                <>
-                  <Button variant="primary" size="sm" onClick={() => { handleSave(); setEditMode(false); }} disabled={saving}>
-                    {saving ? "Saving..." : "Save"}
-                  </Button>
-                  <Button variant="secondary" size="sm" onClick={() => { setEditMode(false); fetchLease(); }}>
-                    Cancel
-                  </Button>
-                </>
-              )}
-              <Button variant="neutral" size="sm" onClick={handleGeneratePDF} disabled={pdfGenerating}>
-                {pdfGenerating ? "Generating..." : "📄 Generate PDF"}
-              </Button>
-              {isDraft && !isTemplate && (
-                <Button variant="success" size="sm" onClick={() => setShowSignModal(true)}>
-                  ✍️ Send for Signature
-                </Button>
-              )}
-              {needsResend && (
-                <Button variant="warning" size="sm" onClick={handleResendForSignature} disabled={resendingForSignature}
-                  title="This submitted lease has no sent signature request. Click to create and send one now.">
-                  {resendingForSignature ? "Sending…" : "↩️ Re-send for Signature"}
-                </Button>
-              )}
-              {isSigned && !isTemplate && (
-                <Button variant="success" size="sm" onClick={handleActivate} disabled={!!actionLoading}>
-                  {actionLoading === "activate" ? "Activating..." : "⚡ Activate"}
-                </Button>
-              )}
-              {isActive && !isTemplate && (
-                <Button variant="warning" size="sm" onClick={() => setShowTerminateModal(true)}>
-                  📋 Terminate
-                </Button>
-              )}
-              {!isTemplate && !lease.archivedAt && ["SIGNED", "ACTIVE", "TERMINATED", "CANCELLED"].includes(lease.status) && (
-                <Button variant="secondary" size="sm" onClick={handleArchive} disabled={!!actionLoading}>
-                  📦 Archive
-                </Button>
-              )}
-              {!isTemplate && (
-                <Button variant="ghost" size="sm" className="text-brand hover:bg-brand-light" onClick={() => setShowInvoiceModal(true)}>
-                  💰 Invoice
-                </Button>
-              )}
-              {!isTemplate && lease.status !== "SIGNED" && lease.status !== "ACTIVE" && lease.status !== "TERMINATED" && lease.status !== "CANCELLED" && (
-                <Button variant="destructiveGhost" size="sm" onClick={handleCancel}>
-                  Cancel
-                </Button>
-              )}
-            </div>
-          }
+          actions={<LeaseActions
+            isDraft={isDraft} isTemplate={isTemplate} isReadyToSign={isReadyToSign}
+            isSigned={isSigned} isActive={isActive} editMode={editMode} saving={saving}
+            pdfGenerating={pdfGenerating} resendingForSignature={resendingForSignature}
+            needsResend={needsResend} actionLoading={actionLoading}
+            lease={lease}
+            onEdit={() => setEditMode(true)}
+            onSave={() => { handleSave(); setEditMode(false); }}
+            onCancelEdit={() => { setEditMode(false); fetchLease(); }}
+            onGeneratePDF={handleGeneratePDF}
+            onSendForSignature={() => setShowSignModal(true)}
+            onResend={handleResendForSignature}
+            onActivate={handleActivate}
+            onTerminate={() => setShowTerminateModal(true)}
+            onArchive={handleArchive}
+            onInvoice={() => setShowInvoiceModal(true)}
+            onCancel={handleCancel}
+          />}
         />
 
         {error && <p className="mt-4 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-2">{error}</p>}
@@ -584,7 +674,7 @@ export default function LeaseEditorPage() {
           <AccordionSection title="§1 — Parties (Bailleur & Locataire)" open={openSections.parties} onToggle={() => toggle("parties")}>
             <div className="space-y-4">
               <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wide">§1.1 Bailleresse / Bailleur</h4>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Field label="Nom / Raison sociale"><Input value={lease.landlordName} onChange={v => updateField("landlordName", v)} disabled={!editMode} /></Field>
                 <Field label="Adresse"><Input value={lease.landlordAddress} onChange={v => updateField("landlordAddress", v)} disabled={!editMode} /></Field>
                 <Field label="NPA / Localité"><Input value={lease.landlordZipCity} onChange={v => updateField("landlordZipCity", v)} disabled={!editMode} /></Field>
@@ -594,7 +684,7 @@ export default function LeaseEditorPage() {
               </div>
 
               <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mt-6">§1.2 Locataire</h4>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Field label="Nom *"><Input value={lease.tenantName} onChange={v => updateField("tenantName", v)} disabled={!editMode} /></Field>
                 <Field label="Adresse"><Input value={lease.tenantAddress} onChange={v => updateField("tenantAddress", v)} disabled={!editMode} /></Field>
                 <Field label="NPA / Localité"><Input value={lease.tenantZipCity} onChange={v => updateField("tenantZipCity", v)} disabled={!editMode} /></Field>
@@ -607,7 +697,7 @@ export default function LeaseEditorPage() {
 
           {/* §2 — Object */}
           <AccordionSection title="§2 — Objet du bail" open={openSections.object} onToggle={() => toggle("object")}>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Field label="Type d'objet">
                 <select value={lease.objectType || "APPARTEMENT"} onChange={e => updateField("objectType", e.target.value)} disabled={!editMode}
                   className="w-full border rounded-lg px-3 py-1.5 text-sm disabled:bg-slate-100">
@@ -626,7 +716,7 @@ export default function LeaseEditorPage() {
 
           {/* §3–4 — Dates & Termination */}
           <AccordionSection title="§3–4 — Durée & Résiliation" open={openSections.dates} onToggle={() => toggle("dates")}>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Field label="Début du bail *"><Input type="date" value={lease.startDate?.split("T")[0]} onChange={v => updateField("startDate", v)} disabled={!editMode} /></Field>
               <Field label="Durée déterminée">
                 <select value={lease.isFixedTerm ? "true" : "false"} onChange={e => updateField("isFixedTerm", e.target.value === "true")} disabled={!editMode}
@@ -659,7 +749,7 @@ export default function LeaseEditorPage() {
 
           {/* §5 — Rent & Charges */}
           <AccordionSection title="§5 — Loyer & Charges" open={openSections.rent} onToggle={() => toggle("rent")}>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Field label="Loyer net (CHF/mois) *"><Input type="number" value={lease.netRentChf} onChange={v => updateField("netRentChf", v)} disabled={!editMode} /></Field>
               <Field label="Loyer garage (CHF/mois)"><Input type="number" value={lease.garageRentChf} onChange={v => updateField("garageRentChf", v)} disabled={!editMode} /></Field>
               <Field label="Autres prestations (CHF/mois)"><Input type="number" value={lease.otherServiceRentChf} onChange={v => updateField("otherServiceRentChf", v)} disabled={!editMode} /></Field>
@@ -674,7 +764,7 @@ export default function LeaseEditorPage() {
 
           {/* §6 — Payment */}
           <AccordionSection title="§6 — Paiement" open={openSections.payment} onToggle={() => toggle("payment")}>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Field label="Jour d'échéance"><Input type="number" value={lease.paymentDueDayOfMonth} onChange={v => updateField("paymentDueDayOfMonth", v)} placeholder="1" disabled={!editMode} /></Field>
               <Field label="Bénéficiaire"><Input value={lease.paymentRecipient} onChange={v => updateField("paymentRecipient", v)} disabled={!editMode} /></Field>
               <Field label="Institut financier"><Input value={lease.paymentInstitution} onChange={v => updateField("paymentInstitution", v)} disabled={!editMode} /></Field>
@@ -686,7 +776,7 @@ export default function LeaseEditorPage() {
 
           {/* §7 — Deposit */}
           <AccordionSection title="§7 — Garantie" open={openSections.deposit} onToggle={() => toggle("deposit")}>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Field label="Montant de la garantie (CHF)"><Input type="number" value={lease.depositChf} onChange={v => updateField("depositChf", v)} disabled={!editMode} /></Field>
               <Field label="Exigibilité">
                 <select value={lease.depositDueRule || "AT_SIGNATURE"} onChange={e => updateField("depositDueRule", e.target.value)} disabled={!editMode}
@@ -728,6 +818,7 @@ export default function LeaseEditorPage() {
           {/* Signature Requests */}
           {sigRequests.length > 0 && (
             <Panel title="Signature Requests" bodyClassName="p-0">
+              <div className="overflow-x-auto">
                 <table className="inline-table">
                   <thead>
                     <tr>
@@ -766,6 +857,7 @@ export default function LeaseEditorPage() {
                     ))}
                   </tbody>
                 </table>
+              </div>
             </Panel>
           )}
 
@@ -1087,6 +1179,7 @@ export default function LeaseEditorPage() {
               {invoices.length === 0 ? (
                 <p className="text-sm text-slate-500">No invoices linked to this lease yet.</p>
               ) : (
+                  <div className="overflow-x-auto">
                   <table className="inline-table">
                     <thead>
                       <tr>
@@ -1113,6 +1206,7 @@ export default function LeaseEditorPage() {
                       ))}
                     </tbody>
                   </table>
+                  </div>
               )}
             </Panel>
           )}

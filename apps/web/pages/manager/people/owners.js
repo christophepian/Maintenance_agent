@@ -119,6 +119,15 @@ export default function PeopleOwnersPage() {
                     <p className="empty-state-text">{search ? "No owners match your search." : "No owners found."}</p>
                   </div>
                 }
+                mobileCard={(o) => (
+                  <div className="table-card">
+                    <p className="table-card-head">{o.name || "—"}</p>
+                    <div className="table-card-footer">
+                      <span>{o.email || "—"}</span>
+                      {o.billingEntity?.name && <span>{o.billingEntity.name}</span>}
+                    </div>
+                  </div>
+                )}
               />
             )}
         </PageContent>

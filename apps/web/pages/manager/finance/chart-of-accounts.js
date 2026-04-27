@@ -271,26 +271,47 @@ export default function ChartOfAccountsPage() {
                       </p>
                     </div>
                   ) : (
-                    <table className="inline-table">
-                      <thead>
-                        <tr>
-                          <th>Name</th>
-                          <th>Code</th>
-                          <th>Description</th>
-                          <th>Status</th>
-                        </tr>
-                      </thead>
-                      <tbody>
+                    <>
+                      {/* Mobile card list — sm:hidden */}
+                      <div className="sm:hidden overflow-hidden divide-y divide-table-divider">
                         {expenseTypes.map((et) => (
-                          <tr key={et.id}>
-                            <td className="cell-bold">{et.name}</td>
-                            <td><span className="code-small">{et.code || "\u2014"}</span></td>
-                            <td>{et.description || "\u2014"}</td>
-                            <td><StatusBadge active={et.isActive} /></td>
-                          </tr>
+                          <div key={et.id} className="table-card">
+                            <div className="flex items-start justify-between gap-2">
+                              <p className="table-card-head">{et.name}</p>
+                              <StatusBadge active={et.isActive} />
+                            </div>
+                            <div className="table-card-footer">
+                              {et.code && <span className="font-mono text-xs">{et.code}</span>}
+                              {et.description && <span>{et.description}</span>}
+                            </div>
+                          </div>
                         ))}
-                      </tbody>
-                    </table>
+                      </div>
+
+                      {/* Wide table — hidden sm:block */}
+                      <div className="hidden sm:block">
+                        <table className="inline-table">
+                          <thead>
+                            <tr>
+                              <th>Name</th>
+                              <th>Code</th>
+                              <th>Description</th>
+                              <th>Status</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {expenseTypes.map((et) => (
+                              <tr key={et.id}>
+                                <td className="cell-bold">{et.name}</td>
+                                <td><span className="code-small">{et.code || "\u2014"}</span></td>
+                                <td>{et.description || "\u2014"}</td>
+                                <td><StatusBadge active={et.isActive} /></td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </>
                   )}
 
                   {/* Inline create form */}
@@ -343,26 +364,47 @@ export default function ChartOfAccountsPage() {
                       </p>
                     </div>
                   ) : (
-                    <table className="inline-table">
-                      <thead>
-                        <tr>
-                          <th>Name</th>
-                          <th>Code</th>
-                          <th>Type</th>
-                          <th>Status</th>
-                        </tr>
-                      </thead>
-                      <tbody>
+                    <>
+                      {/* Mobile card list — sm:hidden */}
+                      <div className="sm:hidden overflow-hidden divide-y divide-table-divider">
                         {accounts.map((acc) => (
-                          <tr key={acc.id}>
-                            <td className="cell-bold">{acc.name}</td>
-                            <td><span className="code-small">{acc.code || "\u2014"}</span></td>
-                            <td><AccountTypeBadge type={acc.accountType} /></td>
-                            <td><StatusBadge active={acc.isActive} /></td>
-                          </tr>
+                          <div key={acc.id} className="table-card">
+                            <div className="flex items-start justify-between gap-2">
+                              <p className="table-card-head">{acc.name}</p>
+                              <StatusBadge active={acc.isActive} />
+                            </div>
+                            <div className="table-card-footer">
+                              {acc.code && <span className="font-mono text-xs">{acc.code}</span>}
+                              <AccountTypeBadge type={acc.accountType} />
+                            </div>
+                          </div>
                         ))}
-                      </tbody>
-                    </table>
+                      </div>
+
+                      {/* Wide table — hidden sm:block */}
+                      <div className="hidden sm:block">
+                        <table className="inline-table">
+                          <thead>
+                            <tr>
+                              <th>Name</th>
+                              <th>Code</th>
+                              <th>Type</th>
+                              <th>Status</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {accounts.map((acc) => (
+                              <tr key={acc.id}>
+                                <td className="cell-bold">{acc.name}</td>
+                                <td><span className="code-small">{acc.code || "\u2014"}</span></td>
+                                <td><AccountTypeBadge type={acc.accountType} /></td>
+                                <td><StatusBadge active={acc.isActive} /></td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </>
                   )}
 
                   {/* Inline create form */}
@@ -423,40 +465,63 @@ export default function ChartOfAccountsPage() {
                       </p>
                     </div>
                   ) : (
-                    <table className="inline-table">
-                      <thead>
-                        <tr>
-                          <th>Expense Type</th>
-                          <th></th>
-                          <th>Account</th>
-                          <th>Scope</th>
-                          <th></th>
-                        </tr>
-                      </thead>
-                      <tbody>
+                    <>
+                      {/* Mobile card list — sm:hidden */}
+                      <div className="sm:hidden overflow-hidden divide-y divide-table-divider">
                         {mappings.map((m) => (
-                          <tr key={m.id}>
-                            <td className="cell-bold">{m.expenseType?.name || m.expenseTypeId}</td>
-                            <td className="text-slate-400">{"\u2192"}</td>
-                            <td>{m.account?.name || m.accountId}{m.account?.code ? ` (${m.account.code})` : ""}</td>
-                            <td>
-                              <span className="text-xs text-slate-400">
-                                {m.building?.name || "Org-wide"}
-                              </span>
-                            </td>
-                            <td>
+                          <div key={m.id} className="table-card">
+                            <p className="table-card-head">{m.expenseType?.name || m.expenseTypeId}</p>
+                            <p className="table-card-sub">→ {m.account?.name || m.accountId}{m.account?.code ? ` (${m.account.code})` : ""}</p>
+                            <div className="table-card-footer">
+                              <span className="text-xs text-slate-400">{m.building?.name || "Org-wide"}</span>
                               <button
                                 onClick={() => handleDeleteMapping(m.id)}
                                 disabled={actionLoading}
-                                className="rounded border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-100 disabled:opacity-50"
-                              >
-                                Remove
-                              </button>
-                            </td>
-                          </tr>
+                                className="text-xs font-medium text-red-600 hover:text-red-700 disabled:opacity-50"
+                              >Remove</button>
+                            </div>
+                          </div>
                         ))}
-                      </tbody>
-                    </table>
+                      </div>
+
+                      {/* Wide table — hidden sm:block */}
+                      <div className="hidden sm:block">
+                        <table className="inline-table">
+                          <thead>
+                            <tr>
+                              <th>Expense Type</th>
+                              <th></th>
+                              <th>Account</th>
+                              <th>Scope</th>
+                              <th></th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {mappings.map((m) => (
+                              <tr key={m.id}>
+                                <td className="cell-bold">{m.expenseType?.name || m.expenseTypeId}</td>
+                                <td className="text-slate-400">{"\u2192"}</td>
+                                <td>{m.account?.name || m.accountId}{m.account?.code ? ` (${m.account.code})` : ""}</td>
+                                <td>
+                                  <span className="text-xs text-slate-400">
+                                    {m.building?.name || "Org-wide"}
+                                  </span>
+                                </td>
+                                <td>
+                                  <button
+                                    onClick={() => handleDeleteMapping(m.id)}
+                                    disabled={actionLoading}
+                                    className="rounded border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-100 disabled:opacity-50"
+                                  >
+                                    Remove
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </>
                   )}
 
                   {/* Inline create form */}

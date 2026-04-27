@@ -406,8 +406,8 @@ export default function ManagerDashboard() {
 
           {/* ─── KPIs ─── */}
           <Section title="KPIs">
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="kpi-grid gap-4 xl:grid-cols-4">
+              <div className="rounded-2xl border border-surface-border bg-surface-raised p-5 shadow-sm">
                 <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Open Requests</div>
                 <div className={cn("mt-3 text-2xl font-semibold tracking-tight", openRequestsCount > 20 ? "text-amber-700" : "text-slate-900")}>
                   {openRequestsCount}
@@ -416,7 +416,7 @@ export default function ManagerDashboard() {
                   Pending, approved, assigned
                 </div>
               </div>
-              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="rounded-2xl border border-surface-border bg-surface-raised p-5 shadow-sm">
                 <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Open Jobs</div>
                 <div className={cn("mt-3 text-2xl font-semibold tracking-tight", openJobsCount > 15 ? "text-amber-700" : "text-slate-900")}>
                   {openJobsCount}
@@ -425,7 +425,7 @@ export default function ManagerDashboard() {
                   Pending + in progress
                 </div>
               </div>
-              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="rounded-2xl border border-surface-border bg-surface-raised p-5 shadow-sm">
                 <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Spend This Month</div>
                 <div className="mt-3 text-2xl font-semibold tracking-tight text-slate-900">
                   {formatCurrency(spendThisMonth)}
@@ -434,7 +434,7 @@ export default function ManagerDashboard() {
                   Paid invoices
                 </div>
               </div>
-              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="rounded-2xl border border-surface-border bg-surface-raised p-5 shadow-sm">
                 <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Pending Invoices</div>
                 <div className={cn("mt-3 text-2xl font-semibold tracking-tight", pendingInvoicesCount > 0 ? "text-amber-700" : "text-slate-900")}>
                   {pendingInvoicesCount}
@@ -443,8 +443,8 @@ export default function ManagerDashboard() {
                   Awaiting payment
                 </div>
               </div>
-              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Avg. Days to Complete</div>
+              <div className={cn("rounded-2xl border border-surface-border bg-surface-raised p-5 shadow-sm", !portfolio && "col-span-2")}>
+                <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Avg Days to Complete</div>
                 <div className="mt-3 text-2xl font-semibold tracking-tight text-slate-900">
                   {avgDaysToComplete ?? "—"}
                 </div>
@@ -454,9 +454,9 @@ export default function ManagerDashboard() {
               </div>
               {portfolio && (
                 <>
-                  <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                  <div className="rounded-2xl border border-surface-border bg-surface-raised p-5 shadow-sm">
                     <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Portfolio NOI</div>
-                    <div className={cn("mt-3 text-2xl font-semibold tracking-tight", portfolio.totalNetIncomeCents >= 0 ? "text-green-700" : "text-red-700")}>
+                    <div className={cn("mt-3 text-2xl font-semibold tracking-tight", portfolio.totalNetIncomeCents >= 0 ? "text-success-text" : "text-destructive-text")}>
                       {formatChfCents(portfolio.totalNetIncomeCents)}
                     </div>
                     <div className="text-sm text-slate-600">
@@ -465,10 +465,10 @@ export default function ManagerDashboard() {
                   </div>
                   <Link
                     href="/manager/finance"
-                    className="rounded-2xl border border-slate-200 bg-slate-50 p-5 shadow-sm flex flex-col justify-between hover:bg-slate-100 transition-colors no-underline"
+                    className="rounded-2xl border border-surface-border bg-slate-50 p-5 shadow-sm flex flex-col justify-between hover:bg-surface-hover transition-colors no-underline col-span-2"
                   >
                     <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Buildings in Red</div>
-                    <div className={cn("mt-2 text-2xl font-semibold tracking-tight", portfolio.buildingsInRed > 0 ? "text-red-700" : "text-green-700")}>
+                    <div className={cn("mt-2 text-2xl font-semibold tracking-tight", portfolio.buildingsInRed > 0 ? "text-destructive-text" : "text-success-text")}>
                       {portfolio.buildingsInRed} / {portfolio.buildingCount}
                     </div>
                     <div className="mt-1 text-sm font-medium text-indigo-600">View finance →</div>
@@ -476,13 +476,13 @@ export default function ManagerDashboard() {
                 </>
               )}
               {!portfolio && !portfolioLoading && (
-                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm col-span-2">
+                <div className="rounded-2xl border border-surface-border bg-surface-raised p-5 shadow-sm col-span-2">
                   <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Portfolio</div>
                   <div className="mt-3 text-sm text-slate-500">No portfolio data available</div>
                 </div>
               )}
               {portfolioLoading && !portfolio && (
-                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm col-span-2">
+                <div className="rounded-2xl border border-surface-border bg-surface-raised p-5 shadow-sm col-span-2">
                   <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Portfolio</div>
                   <div className="mt-3 text-sm text-slate-500">Loading…</div>
                 </div>
@@ -528,41 +528,63 @@ export default function ManagerDashboard() {
           {/* ─── Building Performance (YTD) ─── */}
           {portfolio && portfolio.buildings.length > 0 && (
             <Section title="Building Performance (YTD)">
-              <div className="rounded-lg border border-slate-200 bg-white overflow-hidden">
-                <table className="inline-table">
-                  <thead>
-                    <tr>
-                      <th>Building</th>
-                      <th className="text-center">Health</th>
-                      <th className="text-right">Net Income</th>
-                      <th className="text-right">Collection</th>
-                      <th className="text-right hidden sm:table-cell">Units</th>
-                      <th></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {portfolio.buildings.map((b) => (
-                      <tr key={b.buildingId}>
-                        <td className="cell-bold">{b.buildingName}</td>
-                        <td className="text-center"><HealthDot health={b.health} /></td>
-                        <td className={cn("text-right font-mono text-sm", b.netIncomeCents >= 0 ? "text-green-700" : "text-red-700")}>
+              <>
+                {/* Mobile card list — sm:hidden */}
+                <div className="sm:hidden overflow-hidden rounded-lg border border-table-border divide-y divide-table-divider">
+                  {portfolio.buildings.map((b) => (
+                    <div key={b.buildingId} className="table-card">
+                      <div className="flex items-center gap-2">
+                        <HealthDot health={b.health} />
+                        <span className="table-card-head">{b.buildingName}</span>
+                      </div>
+                      <div className="table-card-footer">
+                        <span className={cn("font-medium font-mono", b.netIncomeCents >= 0 ? "text-green-700" : "text-red-700")}>
                           {formatChfCents(b.netIncomeCents)}
-                        </td>
-                        <td className="text-right">{formatPercent(b.collectionRate)}</td>
-                        <td className="text-right hidden sm:table-cell">{b.activeUnitsCount}</td>
-                        <td className="text-right">
-                          <Link
-                            href={`/admin-inventory/buildings/${b.buildingId}`}
-                            className="text-xs font-medium text-indigo-600 hover:text-indigo-700"
-                          >
-                            Details
-                          </Link>
-                        </td>
+                        </span>
+                        <span>Collection {formatPercent(b.collectionRate)}</span>
+                        <Link href={`/admin-inventory/buildings/${b.buildingId}`} className="text-xs font-medium text-indigo-600 hover:text-indigo-700" onClick={(e) => e.stopPropagation()}>Details</Link>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Wide table — hidden sm:block */}
+                <div className="hidden sm:block rounded-lg border border-slate-200 bg-white overflow-hidden">
+                  <table className="inline-table">
+                    <thead>
+                      <tr>
+                        <th>Building</th>
+                        <th className="text-center">Health</th>
+                        <th className="text-right">Net Income</th>
+                        <th className="text-right">Collection</th>
+                        <th className="text-right">Units</th>
+                        <th></th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {portfolio.buildings.map((b) => (
+                        <tr key={b.buildingId}>
+                          <td className="cell-bold">{b.buildingName}</td>
+                          <td className="text-center"><HealthDot health={b.health} /></td>
+                          <td className={cn("text-right font-mono text-sm", b.netIncomeCents >= 0 ? "text-green-700" : "text-red-700")}>
+                            {formatChfCents(b.netIncomeCents)}
+                          </td>
+                          <td className="text-right">{formatPercent(b.collectionRate)}</td>
+                          <td className="text-right">{b.activeUnitsCount}</td>
+                          <td className="text-right">
+                            <Link
+                              href={`/admin-inventory/buildings/${b.buildingId}`}
+                              className="text-xs font-medium text-indigo-600 hover:text-indigo-700"
+                            >
+                              Details
+                            </Link>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             </Section>
           )}
 

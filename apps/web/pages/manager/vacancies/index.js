@@ -11,6 +11,7 @@ import ErrorBanner from "../../../components/ui/ErrorBanner";
 import { authHeaders } from "../../../lib/api";
 import Badge from "../../../components/ui/Badge";
 import { selectionVariant, leaseVariant } from "../../../lib/statusVariants";
+import { cn } from "../../../lib/utils";
 /**
  * Reusable action dropdown button — renders a "⋯" pill that opens
  * a positioned dropdown with a list of actions.
@@ -211,68 +212,112 @@ export default function ManagerVacanciesPage() {
             )}
 
             {!selectionsLoading && selections.length > 0 && (
-                <table className="inline-table">
-                  <thead>
-                    <tr>
-                      <th>Building</th>
-                      <th>Unit</th>
-                      <th>Selected Tenant</th>
-                      <th>Status</th>
-                      <th>Lease</th>
-                      <th>Deadline</th>
-                      <th className="text-right">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {selections.map((sel) => (
-                      <tr key={sel.id} className={!sel.lease ? "bg-amber-50/50" : ""}>
-                        <td>{sel.buildingName || "—"}</td>
-                        <td>{sel.unitNumber || "—"}</td>
-                        <td>
-                          {sel.primaryCandidate ? (
-                            <div>
-                              <span className="cell-bold">{sel.primaryCandidate.name}</span>
-                              <span className="ml-2 text-xs text-slate-400">{sel.primaryCandidate.email}</span>
-                            </div>
-                          ) : (
-                            <span className="text-slate-400">—</span>
-                          )}
-                        </td>
-                        <td>{selectionStatusBadge(sel.status)}</td>
-                        <td>
-                          {sel.lease ? (
-                            <Link
-                              href={"/manager/leases/" + sel.lease.id}
-                              className="cell-link inline-flex items-center gap-1.5"
-                            >
-                              {leaseBadge(sel.lease)}
-                            </Link>
-                          ) : (
-                            leaseBadge(null, sel.hasLeaseTemplate)
-                          )}
-                        </td>
-                        <td>
-                          {formatDate(sel.deadlineAt)}
-                        </td>
-                        <td className="text-right">
-                          <ActionDropdown actions={[
-                            ...(sel.lease ? [
-                              { label: "📄 View Lease Project", onClick: () => router.push("/manager/leases/" + sel.lease.id) },
-                            ] : sel.hasLeaseTemplate ? [
-                              { label: "📝 Generate Lease from Template", onClick: () => generateLeaseFromTemplate(sel) },
-                            ] : [
-                              { label: "📐 Create Lease Template", onClick: () => router.push("/manager/leases/templates?buildingId=" + (sel.buildingId || "") + "&autoCreate=true") },
-                            ]),
-                            { label: "👤 View Candidate", onClick: () => router.push("/manager/vacancies/" + sel.unitId + "/applications") },
-                            ...(sel.buildingId ? [
-                              { label: "🏢 View Building", onClick: () => router.push("/admin-inventory/buildings/" + sel.buildingId) },
-                            ] : []),
-                          ]} />
-                        </td>
+              <>
+                {/* Mobile card list — sm:hidden */}
+                <div className="sm:hidden rounded-lg border border-table-border divide-y divide-table-divider">
+                  {selections.map((sel) => (
+                    <div key={sel.id} className={cn("table-card", !sel.lease ? "bg-amber-50/50" : "")}>
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <p className="table-card-head">{sel.unitNumber || "—"}</p>
+                          <p className="table-card-sub">{sel.buildingName || "—"}</p>
+                        </div>
+                        {selectionStatusBadge(sel.status)}
+                      </div>
+                      {sel.primaryCandidate && (
+                        <p className="mt-2 text-[13px] text-slate-700">{sel.primaryCandidate.name}</p>
+                      )}
+                      <div className="table-card-footer">
+                        {sel.lease ? (
+                          <Link href={"/manager/leases/" + sel.lease.id} className="cell-link">{leaseBadge(sel.lease)}</Link>
+                        ) : leaseBadge(null, sel.hasLeaseTemplate)}
+                        <span>Due {formatDate(sel.deadlineAt)}</span>
+                      </div>
+                      <div className="mt-2 flex justify-end">
+                        <ActionDropdown actions={[
+                          ...(sel.lease ? [
+                            { label: "📄 View Lease Project", onClick: () => router.push("/manager/leases/" + sel.lease.id) },
+                          ] : sel.hasLeaseTemplate ? [
+                            { label: "📝 Generate Lease from Template", onClick: () => generateLeaseFromTemplate(sel) },
+                          ] : [
+                            { label: "📐 Create Lease Template", onClick: () => router.push("/manager/leases/templates?buildingId=" + (sel.buildingId || "") + "&autoCreate=true") },
+                          ]),
+                          { label: "👤 View Candidate", onClick: () => router.push("/manager/vacancies/" + sel.unitId + "/applications") },
+                          ...(sel.buildingId ? [
+                            { label: "🏢 View Building", onClick: () => router.push("/admin-inventory/buildings/" + sel.buildingId) },
+                          ] : []),
+                        ]} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Wide table — hidden sm:block */}
+                <div className="hidden sm:block">
+                  <table className="inline-table">
+                    <thead>
+                      <tr>
+                        <th>Building</th>
+                        <th>Unit</th>
+                        <th>Selected Tenant</th>
+                        <th>Status</th>
+                        <th>Lease</th>
+                        <th>Deadline</th>
+                        <th className="text-right">Action</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {selections.map((sel) => (
+                        <tr key={sel.id} className={!sel.lease ? "bg-amber-50/50" : ""}>
+                          <td>{sel.buildingName || "—"}</td>
+                          <td>{sel.unitNumber || "—"}</td>
+                          <td>
+                            {sel.primaryCandidate ? (
+                              <div>
+                                <span className="cell-bold">{sel.primaryCandidate.name}</span>
+                                <span className="ml-2 text-xs text-slate-400">{sel.primaryCandidate.email}</span>
+                              </div>
+                            ) : (
+                              <span className="text-slate-400">—</span>
+                            )}
+                          </td>
+                          <td>{selectionStatusBadge(sel.status)}</td>
+                          <td>
+                            {sel.lease ? (
+                              <Link
+                                href={"/manager/leases/" + sel.lease.id}
+                                className="cell-link inline-flex items-center gap-1.5"
+                              >
+                                {leaseBadge(sel.lease)}
+                              </Link>
+                            ) : (
+                              leaseBadge(null, sel.hasLeaseTemplate)
+                            )}
+                          </td>
+                          <td>
+                            {formatDate(sel.deadlineAt)}
+                          </td>
+                          <td className="text-right">
+                            <ActionDropdown actions={[
+                              ...(sel.lease ? [
+                                { label: "📄 View Lease Project", onClick: () => router.push("/manager/leases/" + sel.lease.id) },
+                              ] : sel.hasLeaseTemplate ? [
+                                { label: "📝 Generate Lease from Template", onClick: () => generateLeaseFromTemplate(sel) },
+                              ] : [
+                                { label: "📐 Create Lease Template", onClick: () => router.push("/manager/leases/templates?buildingId=" + (sel.buildingId || "") + "&autoCreate=true") },
+                              ]),
+                              { label: "👤 View Candidate", onClick: () => router.push("/manager/vacancies/" + sel.unitId + "/applications") },
+                              ...(sel.buildingId ? [
+                                { label: "🏢 View Building", onClick: () => router.push("/admin-inventory/buildings/" + sel.buildingId) },
+                              ] : []),
+                            ]} />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             )}
           </Panel>
 
@@ -289,7 +334,45 @@ export default function ManagerVacanciesPage() {
                 <h3 className="text-sm font-semibold text-slate-700 mb-2">
                   {group.building?.name || "Unknown"} — {group.building?.address || ""}
                 </h3>
-                <table className="inline-table">
+
+                {/* Mobile card list — sm:hidden */}
+                <div className="sm:hidden rounded-lg border border-table-border divide-y divide-table-divider">
+                  {group.units.map((u) => (
+                    <div key={u.id} className="table-card">
+                      <p className="table-card-head">{u.unitNumber || "—"}</p>
+                      <p className="table-card-sub">Floor {u.floor || "—"} · Empty since {u.vacantSince ? formatDate(u.vacantSince) : "unknown"}</p>
+                      <div className="table-card-footer">
+                        {u.monthlyRentChf != null && <span>CHF {u.monthlyRentChf} rent</span>}
+                        {u.monthlyChargesChf != null && <span>CHF {u.monthlyChargesChf} charges</span>}
+                        {u.applicationCount > 0 && (
+                          <span className="text-xs font-medium text-indigo-600">
+                            {u.applicationCount} application{u.applicationCount !== 1 ? "s" : ""}
+                          </span>
+                        )}
+                      </div>
+                      <div className="mt-2 flex justify-end">
+                        <ActionDropdown actions={[
+                          {
+                            label: u.applicationCount > 0 ? "📋 View Applications" : "📋 View Applications (none yet)",
+                            onClick: u.applicationCount > 0 ? () => router.push("/manager/vacancies/" + u.id + "/applications") : undefined,
+                            className: u.applicationCount === 0 ? "opacity-50 cursor-not-allowed text-slate-400" : "text-slate-700",
+                            title: u.applicationCount === 0 ? "No applications yet" : undefined,
+                          },
+                          ...(u.building?.id ? [
+                            { label: "🏢 View Building", onClick: () => router.push("/admin-inventory/buildings/" + u.building.id) },
+                          ] : []),
+                          ...(u.id ? [
+                            { label: "🔧 View Unit", onClick: () => router.push("/admin-inventory/units/" + u.id) },
+                          ] : []),
+                        ]} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Wide table — hidden sm:block */}
+                <div className="hidden sm:block">
+                  <table className="inline-table">
                     <thead>
                       <tr>
                         <th>Unit</th>
@@ -333,6 +416,7 @@ export default function ManagerVacanciesPage() {
                       ))}
                     </tbody>
                   </table>
+                </div>
               </div>
             ))}
           </Panel>

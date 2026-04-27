@@ -394,7 +394,7 @@ const OBLIGATION_META = {
  */
 function getAvailableCTAs(r, assigningId) {
   const ctaMap = {
-    PENDING_REVIEW:           [],                         // auto-routed by legal engine or manager approves
+    PENDING_REVIEW:           ['approve', 'reject'], // manager can approve (→ RFP) or reject
     RFP_PENDING:              ['view_rfp'],
     PENDING_OWNER_APPROVAL:   [],                         // owner-only — manager cannot approve/reject on behalf
     APPROVED:                 ['assign'],
@@ -430,7 +430,7 @@ function getNextStep(r, legalDecision) {
 
   switch (r.status) {
     case 'PENDING_REVIEW':
-      if (!r.unitNumber) {
+      if (!r.unitId && !r.unit) {
         return {
           label: 'Unit Required',
           description: 'This request has no unit assigned. Assign a unit before legal evaluation can proceed.',
@@ -438,8 +438,8 @@ function getNextStep(r, legalDecision) {
         };
       }
       return {
-        label: 'Auto-Routing',
-        description: 'The legal engine is evaluating this request. It will be routed automatically based on obligation rules.',
+        label: 'Pending Review',
+        description: 'Approve to create an RFP and begin the contractor selection process, or reject the request.',
         variant: 'info',
       };
 
@@ -1321,6 +1321,96 @@ export default function ManagerRequestsPage() {
                 onSort={handleSort}
                 onRowClick={(r) => router.push(`/manager/requests/${r.id}`)}
                 emptyState={<p className="text-sm text-slate-500">No requests match this filter.</p>}
+                mobileCard={(r) => {
+                  const ctaList = getAvailableCTAs(r, assigningId);
+                  return (
+                    <div className="table-card">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-mono text-xs text-slate-400">
+                            {r.requestNumber ? `#${r.requestNumber}` : "—"}
+                          </span>
+                          <StatusBadge request={r} />
+                          {(r.urgency === "EMERGENCY" || r.urgency === "HIGH") && (
+                            <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold", r.urgency === "EMERGENCY"
+                                ? "bg-red-100 text-red-700 border border-red-200"
+                                : "bg-orange-100 text-orange-700 border border-orange-200")}>
+                              {r.urgency === "EMERGENCY" ? "🚨" : "⚠"} {r.urgency === "EMERGENCY" ? "Emergency" : "High"}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <p className="table-card-head mt-1.5">{r.buildingName || "—"}{r.unitNumber ? ` / ${r.unitNumber}` : ""}</p>
+                      {r.category && (
+                        <p className="mt-0.5">
+                          <span className="inline-block rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">{r.category}</span>
+                        </p>
+                      )}
+                      {ctaList.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 mt-3" onClick={(e) => e.stopPropagation()}>
+                          {ctaList.map((cta) => {
+                            switch (cta) {
+                              case 'approve':
+                                return (
+                                  <button key="approve" onClick={() => approveRequest(r.id)} disabled={actionLoading === r.id}
+                                    className="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-50">
+                                    {actionLoading === r.id ? "…" : "Approve"}
+                                  </button>
+                                );
+                              case 'reject':
+                                return (
+                                  <button key="reject" onClick={() => rejectRequest(r.id)} disabled={actionLoading === r.id}
+                                    className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50">
+                                    {actionLoading === r.id ? "…" : "Reject"}
+                                  </button>
+                                );
+                              case 'view_rfp':
+                                return (
+                                  <a key="view_rfp" href="/manager/rfps" className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-700">
+                                    View RFP
+                                  </a>
+                                );
+                              case 'assign':
+                                return assigningId === r.id ? (
+                                  <div key="assign-modal" className="flex items-center gap-1.5">
+                                    <select value={selectedContractorId} onChange={(e) => setSelectedContractorId(e.target.value)}
+                                      className="rounded border border-slate-300 px-2 py-1 text-xs">
+                                      <option value="">Select…</option>
+                                      {contractors.map((c) => (
+                                        <option key={c.id} value={c.id}>{c.name || c.companyName || c.id.slice(0, 8)}</option>
+                                      ))}
+                                    </select>
+                                    <button onClick={() => doAssignContractor(r.id)} disabled={!selectedContractorId || actionLoading === r.id}
+                                      className="rounded-lg bg-blue-600 px-2 py-1 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50">
+                                      {actionLoading === r.id ? "…" : "OK"}
+                                    </button>
+                                    <button onClick={() => { setAssigningId(null); setSelectedContractorId(""); }}
+                                      className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-500 hover:bg-slate-50">
+                                      ×
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <button key="assign" onClick={() => setAssigningId(r.id)}
+                                    className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700">
+                                    Assign
+                                  </button>
+                                );
+                              case 'unassign':
+                                return (
+                                  <button key="unassign" onClick={() => doUnassignContractor(r.id)} disabled={actionLoading === r.id}
+                                    className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700 disabled:opacity-50">
+                                    {actionLoading === r.id ? "…" : "Unassign"}
+                                  </button>
+                                );
+                              default:
+                                return null;
+                            }
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                }}
               />
 
               <PaginationControls

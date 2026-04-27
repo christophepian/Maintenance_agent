@@ -298,37 +298,54 @@ export default function ManagerChargesPage() {
           ) : activeTab === "SUMMARY" ? (
             /* Summary view */
             <Panel bodyClassName="p-0">
-            <table className="inline-table">
-                <thead>
-                  <tr>
-                    <th>Tenant</th>
-                    <th>Unit</th>
-                    <th>Building</th>
-                    <th>Monthly charges (CHF)</th>
-                    <th>Settlement date</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
+              <>
+                {/* Mobile card list — sm:hidden */}
+                <div className="sm:hidden overflow-hidden divide-y divide-table-divider">
                   {leasesWithCharges.map((l) => (
-                    <tr key={l.id}>
-                      <td className="cell-bold">{l.tenantName}</td>
-                      <td>{l.unit?.unitNumber || "—"}</td>
-                      <td>{l.unit?.building?.name || l.unit?.building?.address || "—"}</td>
-                      <td className="cell-bold">{formatCurrency(l.chargesTotalChf)}</td>
-                      <td>{l.chargesSettlementDate || "—"}</td>
-                      <td>
-                        <button
-                          onClick={() => startEdit(l)}
-                          className="action-btn-brand"
-                        >
-                          Edit charges
-                        </button>
-                      </td>
-                    </tr>
+                    <div key={l.id} className="table-card">
+                      <p className="table-card-head">{l.tenantName}</p>
+                      <p className="table-card-sub">{l.unit?.building?.name || l.unit?.building?.address || "—"}{l.unit?.unitNumber ? ` / ${l.unit.unitNumber}` : ""}</p>
+                      <div className="table-card-footer">
+                        <span className="font-medium">{formatCurrency(l.chargesTotalChf)}/mo</span>
+                        {l.chargesSettlementDate && <span>Settlement {l.chargesSettlementDate}</span>}
+                        <button onClick={() => startEdit(l)} className="text-xs font-medium text-indigo-600 hover:text-indigo-700">Edit charges</button>
+                      </div>
+                    </div>
                   ))}
-                </tbody>
-              </table>
+                </div>
+
+                {/* Wide table — hidden sm:block */}
+                <div className="hidden sm:block">
+                  <table className="inline-table">
+                    <thead>
+                      <tr>
+                        <th>Tenant</th>
+                        <th>Unit</th>
+                        <th>Building</th>
+                        <th>Monthly charges (CHF)</th>
+                        <th>Settlement date</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {leasesWithCharges.map((l) => (
+                        <tr key={l.id}>
+                          <td className="cell-bold">{l.tenantName}</td>
+                          <td>{l.unit?.unitNumber || "—"}</td>
+                          <td>{l.unit?.building?.name || l.unit?.building?.address || "—"}</td>
+                          <td className="cell-bold">{formatCurrency(l.chargesTotalChf)}</td>
+                          <td>{l.chargesSettlementDate || "—"}</td>
+                          <td>
+                            <button onClick={() => startEdit(l)} className="action-btn-brand">
+                              Edit charges
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             </Panel>
           ) : (
             /* Itemized view */
@@ -338,47 +355,73 @@ export default function ManagerChargesPage() {
               </Panel>
             ) : (
               <Panel bodyClassName="p-0">
-              <table className="inline-table">
-                  <thead>
-                    <tr>
-                      <th>Tenant</th>
-                      <th>Unit</th>
-                      <th>Item name</th>
-                      <th>Mode</th>
-                      <th>Amount (CHF)</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+                <>
+                  {/* Mobile card list — sm:hidden */}
+                  <div className="sm:hidden overflow-hidden divide-y divide-table-divider">
                     {itemizedRows.map((row, idx) => (
-                      <tr key={`${row.leaseId}-${idx}`}>
-                        <td className="cell-bold">{row.tenantName}</td>
-                        <td>{row.unitNumber}</td>
-                        <td>{row.label}</td>
-                        <td>
+                      <div key={`${row.leaseId}-${idx}`} className="table-card">
+                        <p className="table-card-head">{row.tenantName}</p>
+                        <p className="table-card-sub">{row.unitNumber} · {row.label}</p>
+                        <div className="table-card-footer">
                           <span className={row.mode === "FORFAIT"
-                            ? "inline-block px-2 py-0.5 rounded-xl text-xs font-semibold bg-amber-50 text-orange-700 border border-amber-300"
-                            : "inline-block px-2 py-0.5 rounded-xl text-xs font-semibold bg-blue-50 text-blue-800 border border-blue-300"
-                          }>
-                            {row.mode}
-                          </span>
-                        </td>
-                        <td className="cell-bold">{formatCurrency(row.amountChf)}</td>
-                        <td>
+                            ? "px-2 py-0.5 rounded-xl text-xs font-semibold bg-amber-50 text-orange-700 border border-amber-300"
+                            : "px-2 py-0.5 rounded-xl text-xs font-semibold bg-blue-50 text-blue-800 border border-blue-300"
+                          }>{row.mode}</span>
+                          <span className="font-medium">{formatCurrency(row.amountChf)}</span>
                           <button
-                            onClick={() => {
-                              const lease = leases.find((l) => l.id === row.leaseId);
-                              if (lease) startEdit(lease);
-                            }}
-                            className="action-btn action-btn-brand text-xs"
-                          >
-                            Edit charges
-                          </button>
-                        </td>
-                      </tr>
+                            onClick={() => { const lease = leases.find((l) => l.id === row.leaseId); if (lease) startEdit(lease); }}
+                            className="text-xs font-medium text-indigo-600 hover:text-indigo-700"
+                          >Edit</button>
+                        </div>
+                      </div>
                     ))}
-                  </tbody>
-                </table>
+                  </div>
+
+                  {/* Wide table — hidden sm:block */}
+                  <div className="hidden sm:block">
+                    <table className="inline-table">
+                      <thead>
+                        <tr>
+                          <th>Tenant</th>
+                          <th>Unit</th>
+                          <th>Item name</th>
+                          <th>Mode</th>
+                          <th>Amount (CHF)</th>
+                          <th>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {itemizedRows.map((row, idx) => (
+                          <tr key={`${row.leaseId}-${idx}`}>
+                            <td className="cell-bold">{row.tenantName}</td>
+                            <td>{row.unitNumber}</td>
+                            <td>{row.label}</td>
+                            <td>
+                              <span className={row.mode === "FORFAIT"
+                                ? "inline-block px-2 py-0.5 rounded-xl text-xs font-semibold bg-amber-50 text-orange-700 border border-amber-300"
+                                : "inline-block px-2 py-0.5 rounded-xl text-xs font-semibold bg-blue-50 text-blue-800 border border-blue-300"
+                              }>
+                                {row.mode}
+                              </span>
+                            </td>
+                            <td className="cell-bold">{formatCurrency(row.amountChf)}</td>
+                            <td>
+                              <button
+                                onClick={() => {
+                                  const lease = leases.find((l) => l.id === row.leaseId);
+                                  if (lease) startEdit(lease);
+                                }}
+                                className="action-btn action-btn-brand text-xs"
+                              >
+                                Edit charges
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
               </Panel>
             )
           )}

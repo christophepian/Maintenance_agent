@@ -156,6 +156,16 @@ export default function PeopleVendorsPage() {
                 onSort={handleSort}
                 onRowClick={(c) => router.push(`/manager/people/vendors/${c.id}`)}
                 emptyState={<p className="text-sm text-slate-500">No contractors found.</p>}
+                mobileCard={(c) => (
+                  <div className="table-card cursor-pointer" onClick={() => router.push(`/manager/people/vendors/${c.id}`)}>
+                    <p className="table-card-head">{c.name || "—"}</p>
+                    <p className="table-card-sub">{c.specialty || "—"}{c.hourlyRate != null ? ` · CHF ${c.hourlyRate}/h` : ""}</p>
+                    <div className="table-card-footer">
+                      <span>{c.email || "—"}</span>
+                      {c.phone && <span>{c.phone}</span>}
+                    </div>
+                  </div>
+                )}
               />
             )}
         </PageContent>

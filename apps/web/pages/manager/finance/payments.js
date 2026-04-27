@@ -168,6 +168,16 @@ export default function ManagerPaymentsPage() {
                 emptyState={
                   <p className="px-4 py-8 text-center text-sm text-slate-400">No payments found for the selected filters.</p>
                 }
+                mobileCard={(p) => (
+                  <div className="table-card">
+                    <span className="font-mono text-xs text-slate-500">{p.invoiceNumber || p.id?.slice(0, 8)}</span>
+                    <p className="table-card-head mt-1">{p.description || "—"}</p>
+                    <div className="table-card-footer">
+                      <span className="font-medium">{formatChf(p.totalAmount)}</span>
+                      <span>{formatDate(p.paidAt)}</span>
+                    </div>
+                  </div>
+                )}
               />
           )}
         </PageContent>

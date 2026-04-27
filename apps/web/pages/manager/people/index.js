@@ -4,7 +4,6 @@ import AppShell from "../../../components/AppShell";
 import PageShell from "../../../components/layout/PageShell";
 import PageHeader from "../../../components/layout/PageHeader";
 import PageContent from "../../../components/layout/PageContent";
-import Panel from "../../../components/layout/Panel";
 import Link from "next/link";
 import ErrorBanner from "../../../components/ui/ErrorBanner";
 import Badge from "../../../components/ui/Badge";
@@ -149,100 +148,172 @@ function OwnersTab({ showAddForm, onAddFormClose }) {
         </div>
       )}
 
-      <Panel bodyClassName="p-0">
-        {loading ? (
-          <p className="loading-text">Loading owners…</p>
-        ) : owners.length === 0 && !showAddForm ? (
-          <div className="empty-state">
-            <p className="empty-state-text">No owners yet. Use the "+ Add owner" button above to create one.</p>
+      {loading ? (
+        <p className="loading-text">Loading owners…</p>
+      ) : owners.length === 0 && !showAddForm ? (
+        <div className="empty-state">
+          <p className="empty-state-text">No owners yet. Use the "+ Add owner" button above to create one.</p>
+        </div>
+      ) : (
+        <>
+          {/* Mobile card list */}
+          <div className="sm:hidden overflow-hidden rounded-lg border border-table-border divide-y divide-table-divider">
+            {owners.map((owner) => (
+              <div key={owner.id}>
+                <div
+                  className="table-card cursor-pointer hover:bg-slate-50/80 transition-colors"
+                  onClick={() => window.location.href = `/manager/people/owners`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="table-card-head">{owner.name}</p>
+                    {owner.billingEntity
+                      ? <Badge variant="success" size="md">✓ Billing set</Badge>
+                      : <Badge variant="muted" size="md">Not set</Badge>}
+                  </div>
+                  <p className="table-card-sub">{owner.email || "—"}</p>
+                  {!owner.billingEntity && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); expandedBilling === owner.id ? setExpandedBilling(null) : openBilling(owner); }}
+                      className="mt-2.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                    >
+                      {expandedBilling === owner.id ? "Cancel" : "Set up billing →"}
+                    </button>
+                  )}
+                </div>
+                {expandedBilling === owner.id && (
+                  <div className="bg-slate-50 px-4 py-4 border-t border-slate-100">
+                    <p className="text-xs font-semibold text-slate-600 mb-3">Billing entity for {owner.name}</p>
+                    <form onSubmit={(e) => handleCreateBillingEntity(e, owner.id)} className="flex flex-wrap gap-3 items-end">
+                      <div className="w-full">
+                        <label className="block text-xs font-medium text-slate-600 mb-1">Address</label>
+                        <input required value={billingForm.addressLine1}
+                          onChange={(e) => setBillingForm((f) => ({ ...f, addressLine1: e.target.value }))}
+                          className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-full" placeholder="Rue de la Paix 1" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-slate-600 mb-1">Postal code</label>
+                        <input required value={billingForm.postalCode}
+                          onChange={(e) => setBillingForm((f) => ({ ...f, postalCode: e.target.value }))}
+                          className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-24" placeholder="1200" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-slate-600 mb-1">City</label>
+                        <input required value={billingForm.city}
+                          onChange={(e) => setBillingForm((f) => ({ ...f, city: e.target.value }))}
+                          className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-32" placeholder="Genève" />
+                      </div>
+                      <div className="w-full">
+                        <label className="block text-xs font-medium text-slate-600 mb-1">IBAN</label>
+                        <input required value={billingForm.iban}
+                          onChange={(e) => setBillingForm((f) => ({ ...f, iban: e.target.value }))}
+                          className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-full font-mono" placeholder="CH56 0483 5012 3456 7800 9" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-slate-600 mb-1">VAT number</label>
+                        <input value={billingForm.vatNumber}
+                          onChange={(e) => setBillingForm((f) => ({ ...f, vatNumber: e.target.value }))}
+                          className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-36" placeholder="CHE-123.456.789" />
+                      </div>
+                      <button type="submit" disabled={billingSubmitting}
+                        className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">
+                        {billingSubmitting ? "Saving…" : "Save billing entity"}
+                      </button>
+                    </form>
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
-        ) : (
-          <table className="inline-table">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Billing entity</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {owners.map((owner) => (
-                <>
-                  <tr key={owner.id} className="cursor-pointer hover:bg-slate-50/80" onClick={() => window.location.href = `/manager/people/owners`}>
-                    <td className="cell-bold">{owner.name}</td>
-                    <td className="text-slate-500">{owner.email || "—"}</td>
-                    <td>
-                      {owner.billingEntity ? (
-                        <Badge variant="success" size="md">
-                          ✓ {owner.billingEntity.name}
-                        </Badge>
-                      ) : (
-                        <Badge variant="muted" size="md">
-                          Not set
-                        </Badge>
-                      )}
-                    </td>
-                    <td className="text-right">
-                      {!owner.billingEntity && (
-                        <button
-                          onClick={() => expandedBilling === owner.id ? setExpandedBilling(null) : openBilling(owner)}
-                          className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-                        >
-                          {expandedBilling === owner.id ? "Cancel" : "Set up billing →"}
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                  {expandedBilling === owner.id && (
-                    <tr key={`${owner.id}-billing`}>
-                      <td colSpan={4} className="bg-slate-50 px-4 py-4">
-                        <p className="text-xs font-semibold text-slate-600 mb-3">Billing entity for {owner.name}</p>
-                        <form onSubmit={(e) => handleCreateBillingEntity(e, owner.id)} className="flex flex-wrap gap-3 items-end">
-                          <div>
-                            <label className="block text-xs font-medium text-slate-600 mb-1">Address</label>
-                            <input required value={billingForm.addressLine1}
-                              onChange={(e) => setBillingForm((f) => ({ ...f, addressLine1: e.target.value }))}
-                              className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-52" placeholder="Rue de la Paix 1" />
-                          </div>
-                          <div>
-                            <label className="block text-xs font-medium text-slate-600 mb-1">Postal code</label>
-                            <input required value={billingForm.postalCode}
-                              onChange={(e) => setBillingForm((f) => ({ ...f, postalCode: e.target.value }))}
-                              className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-24" placeholder="1200" />
-                          </div>
-                          <div>
-                            <label className="block text-xs font-medium text-slate-600 mb-1">City</label>
-                            <input required value={billingForm.city}
-                              onChange={(e) => setBillingForm((f) => ({ ...f, city: e.target.value }))}
-                              className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-32" placeholder="Genève" />
-                          </div>
-                          <div>
-                            <label className="block text-xs font-medium text-slate-600 mb-1">IBAN</label>
-                            <input required value={billingForm.iban}
-                              onChange={(e) => setBillingForm((f) => ({ ...f, iban: e.target.value }))}
-                              className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-52 font-mono" placeholder="CH56 0483 5012 3456 7800 9" />
-                          </div>
-                          <div>
-                            <label className="block text-xs font-medium text-slate-600 mb-1">VAT number</label>
-                            <input value={billingForm.vatNumber}
-                              onChange={(e) => setBillingForm((f) => ({ ...f, vatNumber: e.target.value }))}
-                              className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-36" placeholder="CHE-123.456.789" />
-                          </div>
-                          <button type="submit" disabled={billingSubmitting}
-                            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">
-                            {billingSubmitting ? "Saving…" : "Save billing entity"}
+
+          {/* Wide table */}
+          <div className="hidden sm:block overflow-x-auto rounded-lg border border-table-border">
+            <table className="inline-table w-full">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Billing entity</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {owners.map((owner) => (
+                  <>
+                    <tr key={owner.id} className="cursor-pointer hover:bg-slate-50/80" onClick={() => window.location.href = `/manager/people/owners`}>
+                      <td className="cell-bold">{owner.name}</td>
+                      <td className="text-slate-500">{owner.email || "—"}</td>
+                      <td>
+                        {owner.billingEntity ? (
+                          <Badge variant="success" size="md">
+                            ✓ {owner.billingEntity.name}
+                          </Badge>
+                        ) : (
+                          <Badge variant="muted" size="md">
+                            Not set
+                          </Badge>
+                        )}
+                      </td>
+                      <td className="text-right">
+                        {!owner.billingEntity && (
+                          <button
+                            onClick={() => expandedBilling === owner.id ? setExpandedBilling(null) : openBilling(owner)}
+                            className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                          >
+                            {expandedBilling === owner.id ? "Cancel" : "Set up billing →"}
                           </button>
-                        </form>
+                        )}
                       </td>
                     </tr>
-                  )}
-                </>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </Panel>
+                    {expandedBilling === owner.id && (
+                      <tr key={`${owner.id}-billing`}>
+                        <td colSpan={4} className="bg-slate-50 px-4 py-4">
+                          <p className="text-xs font-semibold text-slate-600 mb-3">Billing entity for {owner.name}</p>
+                          <form onSubmit={(e) => handleCreateBillingEntity(e, owner.id)} className="flex flex-wrap gap-3 items-end">
+                            <div>
+                              <label className="block text-xs font-medium text-slate-600 mb-1">Address</label>
+                              <input required value={billingForm.addressLine1}
+                                onChange={(e) => setBillingForm((f) => ({ ...f, addressLine1: e.target.value }))}
+                                className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-52" placeholder="Rue de la Paix 1" />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-slate-600 mb-1">Postal code</label>
+                              <input required value={billingForm.postalCode}
+                                onChange={(e) => setBillingForm((f) => ({ ...f, postalCode: e.target.value }))}
+                                className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-24" placeholder="1200" />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-slate-600 mb-1">City</label>
+                              <input required value={billingForm.city}
+                                onChange={(e) => setBillingForm((f) => ({ ...f, city: e.target.value }))}
+                                className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-32" placeholder="Genève" />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-slate-600 mb-1">IBAN</label>
+                              <input required value={billingForm.iban}
+                                onChange={(e) => setBillingForm((f) => ({ ...f, iban: e.target.value }))}
+                                className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-52 font-mono" placeholder="CH56 0483 5012 3456 7800 9" />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-slate-600 mb-1">VAT number</label>
+                              <input value={billingForm.vatNumber}
+                                onChange={(e) => setBillingForm((f) => ({ ...f, vatNumber: e.target.value }))}
+                                className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-36" placeholder="CHE-123.456.789" />
+                            </div>
+                            <button type="submit" disabled={billingSubmitting}
+                              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">
+                              {billingSubmitting ? "Saving…" : "Save billing entity"}
+                            </button>
+                          </form>
+                        </td>
+                      </tr>
+                    )}
+                  </>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -339,7 +410,6 @@ export default function ManagerPeoplePage() {
             )}
           </div>
 
-          <Panel bodyClassName="p-0">
           {/* Tenants tab */}
           <div className={activeTab === 0 ? "tab-panel-active" : "tab-panel"}>
             {loading ? (
@@ -349,42 +419,68 @@ export default function ManagerPeoplePage() {
                 <p className="empty-state-text">No tenants found.</p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="inline-table">
-                  <thead>
-                    <tr>
-                      <th>Name</th>
-                      <th>Phone</th>
-                      <th>Email</th>
-                      <th>Unit</th>
-                      <th></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {tenants.slice(0, 200).map((t) => (
-                      <tr key={t.id} className="cursor-pointer hover:bg-slate-50/80" onClick={() => router.push(`/manager/people/tenants/${t.id}`)}>
-                        <td className="cell-bold">{t.name || "—"}</td>
-                        <td>{t.phone || "—"}</td>
-                        <td>{t.email || "—"}</td>
-                        <td>
-                          {t.unit ? `${t.unit.unitNumber}${t.unit.floor ? ` (Floor ${t.unit.floor})` : ""}` : "—"}
-                        </td>
-                        <td>
-                          <button
-                            aria-label="View tenant"
-                            onClick={(e) => { e.stopPropagation(); router.push(`/manager/people/tenants/${t.id}`); }}
-                            className="inline-flex items-center justify-center rounded p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                              <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                            </svg>
-                          </button>
-                        </td>
+              <>
+                {/* Mobile card list */}
+                <div className="sm:hidden overflow-hidden rounded-lg border border-table-border divide-y divide-table-divider">
+                  {tenants.slice(0, 200).map((t) => (
+                    <div
+                      key={t.id}
+                      className="table-card cursor-pointer hover:bg-slate-50/80 transition-colors"
+                      onClick={() => router.push(`/manager/people/tenants/${t.id}`)}
+                    >
+                      <p className="table-card-head">{t.name || "—"}</p>
+                      {t.unit && (
+                        <p className="table-card-sub">
+                          {t.unit.unitNumber}{t.unit.floor ? ` · Floor ${t.unit.floor}` : ""}
+                        </p>
+                      )}
+                      <div className="table-card-footer">
+                        {t.email && <span>{t.email}</span>}
+                        {t.phone && <span>{t.phone}</span>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {/* Wide table */}
+                <div className="hidden sm:block overflow-hidden rounded-lg border border-table-border">
+                <div className="overflow-x-auto">
+                  <table className="inline-table">
+                    <thead>
+                      <tr>
+                        <th>Name</th>
+                        <th>Phone</th>
+                        <th>Email</th>
+                        <th>Unit</th>
+                        <th></th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {tenants.slice(0, 200).map((t) => (
+                        <tr key={t.id} className="cursor-pointer hover:bg-slate-50/80" onClick={() => router.push(`/manager/people/tenants/${t.id}`)}>
+                          <td className="cell-bold">{t.name || "—"}</td>
+                          <td>{t.phone || "—"}</td>
+                          <td>{t.email || "—"}</td>
+                          <td>
+                            {t.unit ? `${t.unit.unitNumber}${t.unit.floor ? ` (Floor ${t.unit.floor})` : ""}` : "—"}
+                          </td>
+                          <td>
+                            <button
+                              aria-label="View tenant"
+                              onClick={(e) => { e.stopPropagation(); router.push(`/manager/people/tenants/${t.id}`); }}
+                              className="inline-flex items-center justify-center rounded p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                              </svg>
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                </div>
+              </>
             )}
           </div>
 
@@ -397,40 +493,64 @@ export default function ManagerPeoplePage() {
                 <p className="empty-state-text">No contractors found.</p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="inline-table">
-                  <thead>
-                    <tr>
-                      <th>Name</th>
-                      <th>Phone</th>
-                      <th>Email</th>
-                      <th>Rate</th>
-                      <th></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {contractors.slice(0, 200).map((c) => (
-                      <tr key={c.id} className="cursor-pointer hover:bg-slate-50/80" onClick={() => router.push(`/manager/people/vendors/${c.id}`)}>
-                        <td className="cell-bold">{c.name || "—"}</td>
-                        <td>{c.phone || "—"}</td>
-                        <td>{c.email || "—"}</td>
-                        <td>{c.hourlyRate != null ? `CHF ${c.hourlyRate}/h` : "—"}</td>
-                        <td>
-                          <button
-                            aria-label="View vendor"
-                            onClick={(e) => { e.stopPropagation(); router.push(`/manager/people/vendors/${c.id}`); }}
-                            className="inline-flex items-center justify-center rounded p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                              <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                            </svg>
-                          </button>
-                        </td>
+              <>
+                {/* Mobile card list */}
+                <div className="sm:hidden overflow-hidden rounded-lg border border-table-border divide-y divide-table-divider">
+                  {contractors.slice(0, 200).map((c) => (
+                    <div
+                      key={c.id}
+                      className="table-card cursor-pointer hover:bg-slate-50/80 transition-colors"
+                      onClick={() => router.push(`/manager/people/vendors/${c.id}`)}
+                    >
+                      <p className="table-card-head">{c.name || "—"}</p>
+                      {c.hourlyRate != null && (
+                        <p className="table-card-sub">CHF {c.hourlyRate}/h</p>
+                      )}
+                      <div className="table-card-footer">
+                        {c.email && <span>{c.email}</span>}
+                        {c.phone && <span>{c.phone}</span>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {/* Wide table */}
+                <div className="hidden sm:block overflow-hidden rounded-lg border border-table-border">
+                <div className="overflow-x-auto">
+                  <table className="inline-table">
+                    <thead>
+                      <tr>
+                        <th>Name</th>
+                        <th>Phone</th>
+                        <th>Email</th>
+                        <th>Rate</th>
+                        <th></th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {contractors.slice(0, 200).map((c) => (
+                        <tr key={c.id} className="cursor-pointer hover:bg-slate-50/80" onClick={() => router.push(`/manager/people/vendors/${c.id}`)}>
+                          <td className="cell-bold">{c.name || "—"}</td>
+                          <td>{c.phone || "—"}</td>
+                          <td>{c.email || "—"}</td>
+                          <td>{c.hourlyRate != null ? `CHF ${c.hourlyRate}/h` : "—"}</td>
+                          <td>
+                            <button
+                              aria-label="View vendor"
+                              onClick={(e) => { e.stopPropagation(); router.push(`/manager/people/vendors/${c.id}`); }}
+                              className="inline-flex items-center justify-center rounded p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                              </svg>
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                </div>
+              </>
             )}
           </div>
 
@@ -438,7 +558,6 @@ export default function ManagerPeoplePage() {
           <div className={activeTab === 2 ? "tab-panel-active" : "tab-panel"}>
             <OwnersTab showAddForm={showAddOwner} onAddFormClose={() => setShowAddOwner(false)} />
           </div>
-          </Panel>
         </PageContent>
       </PageShell>
     </AppShell>

@@ -60,7 +60,7 @@ function getStagesForStatus(status) {
     : REQUEST_STAGES_BASE;
 }
 
-function stageIndexForStatus(status) {
+function stageIndexForStatus(status, jobStatus) {
   if (status === "PENDING_OWNER_APPROVAL") return 3; // index in the 6-stage pipeline
   switch (status) {
     case "PENDING_REVIEW":  return 0;
@@ -68,7 +68,7 @@ function stageIndexForStatus(status) {
     case "AUTO_APPROVED":
     case "APPROVED":
     case "REJECTED":        return 1;
-    case "ASSIGNED":        return 2;
+    case "ASSIGNED":        return jobStatus === "IN_PROGRESS" ? 3 : 2;
     case "IN_PROGRESS":     return 3;
     case "COMPLETED":       return 4;
     default:                return 0;
@@ -157,9 +157,10 @@ function UrgencyPill({ urgency, onChangeUrgency }) {
 
 /* ── Status pipeline timeline ───────────────────────────────── */
 
-function StatusPipeline({ status, payingParty }) {
+function StatusPipeline({ status, jobStatus, payingParty }) {
+  const [expanded, setExpanded] = useState(false);
   const stages = getStagesForStatus(status);
-  const idx = stageIndexForStatus(status);
+  const idx = stageIndexForStatus(status, jobStatus);
   const isRejected = status === "REJECTED";
   const isTenantFunded = payingParty === "TENANT";
 
@@ -170,58 +171,116 @@ function StatusPipeline({ status, payingParty }) {
     return "bg-green-400";
   }
 
+  function getDotCls(i) {
+    const isCurrent = i === idx;
+    const reached = i <= idx;
+    const rejectedHere = isRejected && !isTenantFunded && i === idx;
+    const tenantFundedHere = isTenantFunded && isRejected && i === idx;
+    if (rejectedHere)     return "bg-red-500 border-red-600";
+    if (tenantFundedHere) return "bg-orange-500 border-orange-600";
+    if (isCurrent)        return "bg-indigo-500 border-indigo-600 ring-4 ring-indigo-100";
+    if (reached)          return "bg-green-500 border-green-600";
+    return "bg-slate-200 border-slate-300";
+  }
+
+  function getLabelText(stage, i) {
+    const isCurrent = i === idx;
+    if (!isCurrent) return stage.label;
+    switch (status) {
+      case "PENDING_REVIEW":         return "Pending Review";
+      case "RFP_PENDING":            return "RFP Pending";
+      case "PENDING_OWNER_APPROVAL": return "Owner Approval";
+      case "AUTO_APPROVED":          return "Auto-Approved";
+      case "APPROVED":               return "Approved";
+      case "REJECTED":               return isTenantFunded ? "Tenant-Funded" : "Rejected";
+      default:                       return stage.label;
+    }
+  }
+
+  function getLabelCls(i) {
+    const reached = i <= idx;
+    const isCurrent = i === idx;
+    const rejectedHere = isRejected && !isTenantFunded && i === idx;
+    const tenantFundedHere = isTenantFunded && isRejected && i === idx;
+    if (rejectedHere)     return "text-red-600 font-semibold";
+    if (tenantFundedHere) return "text-orange-600 font-semibold";
+    if (isCurrent)        return "text-indigo-700 font-semibold";
+    if (reached)          return "text-green-700";
+    return "text-slate-400";
+  }
+
+  const currentStage = stages[idx];
+  const nextStage    = stages[idx + 1] ?? null;
+
   return (
-    <div className="flex items-start w-full">
-      {stages.map((stage, i) => {
-        const reached = i <= idx;
-        const isCurrent = i === idx;
-        const rejectedHere = isRejected && !isTenantFunded && i === idx;
-        const tenantFundedHere = isTenantFunded && isRejected && i === idx;
+    <>
+      {/* Mobile: compressed summary + optional expand */}
+      <div className="sm:hidden">
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          className="flex w-full items-center justify-between gap-2 focus-visible:outline-none"
+          aria-expanded={expanded}
+        >
+          <div className="flex items-center gap-2 min-w-0">
+            <div className={cn("h-3 w-3 rounded-full border-2 shrink-0", getDotCls(idx))} />
+            <span className={cn("text-sm truncate", getLabelCls(idx))}>{getLabelText(currentStage, idx)}</span>
+            {nextStage && (
+              <>
+                <svg className="h-3.5 w-3.5 text-slate-300 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                </svg>
+                <div className={cn("h-3 w-3 rounded-full border-2 shrink-0", getDotCls(idx + 1))} />
+                <span className={cn("text-sm truncate", getLabelCls(idx + 1))}>{getLabelText(nextStage, idx + 1)}</span>
+              </>
+            )}
+          </div>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+            aria-hidden="true"
+            className={cn("h-4 w-4 shrink-0 text-slate-400 transition-transform duration-200", expanded && "rotate-180")}
+          >
+            <path fillRule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
+          </svg>
+        </button>
 
-        let dotCls;
-        if (rejectedHere)          dotCls = "bg-red-500 border-red-600";
-        else if (tenantFundedHere) dotCls = "bg-orange-500 border-orange-600";
-        else if (isCurrent)        dotCls = "bg-indigo-500 border-indigo-600 ring-4 ring-indigo-100";
-        else if (reached)          dotCls = "bg-green-500 border-green-600";
-        else                       dotCls = "bg-slate-200 border-slate-300";
+        {expanded && (
+          <div className="mt-3 space-y-2 border-t border-slate-100 pt-3">
+            {stages.map((stage, i) => (
+              <div key={stage.key} className="flex items-start gap-3">
+                <div className="flex flex-col items-center pt-0.5">
+                  <div className={cn("h-3.5 w-3.5 rounded-full border-2 shrink-0", getDotCls(i))} />
+                  {i < stages.length - 1 && (
+                    <div className={cn("mt-1 h-5 w-0.5", connectorColor(i))} />
+                  )}
+                </div>
+                <span className={cn("pt-0.5 text-xs leading-5", getLabelCls(i))}>
+                  {getLabelText(stage, i)}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
-        /* Override label for the current stage to match actual status */
-        let labelText = stage.label;
-        let labelCls  = "text-slate-400";
-
-        if (isCurrent) {
-          switch (status) {
-            case "PENDING_REVIEW":         labelText = "Pending Review"; break;
-            case "RFP_PENDING":            labelText = "RFP Pending"; break;
-            case "PENDING_OWNER_APPROVAL": labelText = "Owner Approval"; break;
-            case "AUTO_APPROVED":          labelText = "Auto-Approved"; break;
-            case "APPROVED":               labelText = "Approved"; break;
-            case "REJECTED":               labelText = isTenantFunded ? "Tenant-Funded" : "Rejected"; break;
-            default:                       break;
-          }
-          labelCls = rejectedHere
-            ? "text-red-600 font-semibold"
-            : tenantFundedHere
-              ? "text-orange-600 font-semibold"
-              : "text-indigo-700 font-semibold";
-        } else if (reached) {
-          labelCls = "text-green-700";
-        }
-
-        return (
+      {/* Desktop: horizontal pipeline */}
+      <div className="hidden sm:flex sm:items-start sm:w-full">
+        {stages.map((stage, i) => (
           <div key={stage.key} className="flex flex-col items-center flex-1">
             <div className="flex items-center w-full">
               {i > 0 && <div className={cn("h-0.5 flex-1", connectorColor(i - 1))} />}
-              <div className={cn("h-3.5 w-3.5 rounded-full border-2 shrink-0", dotCls)} />
+              <div className={cn("h-3.5 w-3.5 rounded-full border-2 shrink-0", getDotCls(i))} />
               {i < stages.length - 1 && <div className={cn("h-0.5 flex-1", connectorColor(i))} />}
             </div>
-            <span className={cn("mt-1.5 text-[11px] leading-tight text-center whitespace-nowrap", labelCls)}>
-              {labelText}
+            <span className={cn("mt-1.5 text-[11px] leading-tight text-center", getLabelCls(i))}>
+              {getLabelText(stage, i)}
             </span>
           </div>
-        );
-      })}
-    </div>
+        ))}
+      </div>
+    </>
   );
 }
 
@@ -458,7 +517,7 @@ export default function RequestDetailPage() {
   async function rejectRequest() {
     const reason = prompt("Reason for rejection (optional):");
     if (reason === null) return;
-    await performAction("owner-reject", { reason: reason || null });
+    await performAction("manager-reject", { reason: reason || null });
   }
 
   async function doAssign() {
@@ -594,7 +653,7 @@ export default function RequestDetailPage() {
 
               {/* ═══ 1 · Timeline + CTAs ═══ */}
               <Panel>
-                <div className="flex items-center gap-3 mb-4">
+                <div className="flex flex-wrap items-center gap-2 mb-4">
                   {!(isTenantFunded && r.status === "REJECTED") && (
                     <StatusBadge request={r} />
                   )}
@@ -604,7 +663,7 @@ export default function RequestDetailPage() {
                     </Badge>
                   )}
                 </div>
-                <StatusPipeline status={r.status} payingParty={r.payingParty} />
+                <StatusPipeline status={r.status} jobStatus={r.job?.status} payingParty={r.payingParty} />
 
                 {/* Next-step banner + actions — inside Timeline card */}
                 {(nextStep || ctaList.length > 0 || assigningOpen) && (

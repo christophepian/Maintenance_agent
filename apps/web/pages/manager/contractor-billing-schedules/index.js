@@ -359,6 +359,19 @@ export default function ContractorBillingSchedulesList() {
                     <p className="empty-state-text">No contractor billing schedules found.</p>
                   </div>
                 }
+                mobileCard={(s) => (
+                  <div className="table-card">
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="table-card-head">{s.contractor?.name || "—"}</p>
+                      <Badge variant={billingScheduleVariant(s.status)}>{s.status}</Badge>
+                    </div>
+                    {s.description && <p className="table-card-sub">{s.description}</p>}
+                    <div className="table-card-footer">
+                      <span className="tabular-nums">{formatChfCents(s.amountCents)}</span>
+                      {s.building?.name && <span>{s.building.name}</span>}
+                    </div>
+                  </div>
+                )}
             />
           )}
         </PageContent>

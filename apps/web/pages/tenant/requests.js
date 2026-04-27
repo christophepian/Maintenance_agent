@@ -127,12 +127,12 @@ function TenantSchedulingPanel({ requestId }) {
             {proposed.map((slot) => (
               <div
                 key={slot.id}
-                className={cn("flex items-center justify-between rounded-lg border p-3", slot.status === "ACCEPTED" ? "border-green-200 bg-green-50" : slot.status === "DECLINED" ? "border-red-200 bg-red-50" : slot.status === "PROPOSED" ? "border-yellow-200 bg-yellow-50" : "bg-white border-slate-200")}
+                className={cn("rounded-lg border p-3", slot.status === "ACCEPTED" ? "border-green-200 bg-green-50" : slot.status === "DECLINED" ? "border-red-200 bg-red-50" : slot.status === "PROPOSED" ? "border-yellow-200 bg-yellow-50" : "bg-white border-slate-200")}
               >
                 <p className="text-sm font-medium text-slate-900">
                   {formatSlotTime(slot.startTime)} – {formatSlotTime(slot.endTime)}
                 </p>
-                <div className="flex items-center gap-2">
+                <div className="mt-2 flex items-center gap-2">
                   <button
                     onClick={() => handleAction(slot.id, "accept")}
                     disabled={!!actionLoading}
@@ -564,8 +564,8 @@ function TenantJobReviewPanel({ job, onRefresh }) {
 
       {/* Step 1: confirm */}
       {!job.confirmedAt && (
-        <div className="flex items-center justify-between">
-          <p className="text-xs text-green-700">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <p className="text-xs text-green-700 flex-1">
             The contractor has marked this job as done. Please confirm you are satisfied.
           </p>
           <button
@@ -580,11 +580,11 @@ function TenantJobReviewPanel({ job, onRefresh }) {
 
       {/* Step 2: rate */}
       {job.confirmedAt && !job.tenantRated && !showRating && (
-        <div className="flex items-center justify-between">
-          <p className="text-xs text-green-700">Completion confirmed. How was the service?</p>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-xs text-green-700 flex-1">Completion confirmed. How was the service?</p>
           <button
             onClick={() => setShowRating(true)}
-            className="ml-3 flex-shrink-0 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-700"
+            className="flex-shrink-0 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-700"
           >
             Rate the service
           </button>
@@ -680,7 +680,7 @@ function TenantClaimAnalysisPanel({ requestId }) {
   if (!analysis && !loading && !error) {
     return (
       <div className="mt-3 rounded-lg border border-violet-100 bg-violet-50/50 p-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h3 className="text-sm font-semibold text-violet-900">⚖️ Legal Analysis</h3>
             <p className="text-xs text-violet-700 mt-0.5">
@@ -1267,7 +1267,7 @@ export default function TenantRequestsPage() {
             />
           )}
 
-          <Panel bodyClassName="p-0">
+          <div>
             {loading ? (
               <p className="loading-text">Loading…</p>
             ) : requests.length === 0 ? (
@@ -1281,14 +1281,14 @@ export default function TenantRequestsPage() {
                 </button>
               </div>
             ) : (
-              <div className="space-y-2 p-4">
+              <div className="space-y-2">
                 {requests.map((r) => {
               const isExpanded = expandedId === r.id;
               return (
                 <div key={r.id} className="card border overflow-hidden">
                   {/* Clickable header */}
                   <div
-                    className="flex cursor-pointer items-start justify-between p-4 hover:bg-slate-50"
+                    className="flex cursor-pointer items-start justify-between px-3 py-3 hover:bg-slate-50"
                     onClick={() => toggleAccordion(r.id)}
                   >
                     <div className="flex-1 min-w-0">
@@ -1306,7 +1306,7 @@ export default function TenantRequestsPage() {
                           </Badge>
                         )}
                       </div>
-                      <div className="flex gap-3 mt-1 text-xs text-slate-400">
+                      <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1 text-xs text-slate-400">
                         {r.buildingName && <span>{r.buildingName}</span>}
                         {r.unitNumber && <span>Unit {r.unitNumber}</span>}
                         {r.category && <span>{r.category}</span>}
@@ -1314,15 +1314,6 @@ export default function TenantRequestsPage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2 ml-3 flex-shrink-0">
-                      {r.status === "OWNER_REJECTED" && (
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleSelfPay(r.id); }}
-                          disabled={selfPayLoading === r.id}
-                          className="px-3 py-1.5 bg-orange-500 text-white text-xs font-medium rounded hover:bg-orange-600 disabled:opacity-50"
-                        >
-                          {selfPayLoading === r.id ? "Processing…" : "Proceed at my own expense"}
-                        </button>
-                      )}
                       <svg
                         className={cn("h-4 w-4 text-slate-400 transition-transform", isExpanded ? "rotate-90" : "")}
                         fill="none" viewBox="0 0 24 24" stroke="currentColor"
@@ -1332,9 +1323,22 @@ export default function TenantRequestsPage() {
                     </div>
                   </div>
 
+                  {/* Self-pay CTA — full-width row below header to avoid cramping on mobile */}
+                  {r.status === "OWNER_REJECTED" && (
+                    <div className="px-3 pb-3 border-t border-orange-100 bg-orange-50/40">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleSelfPay(r.id); }}
+                        disabled={selfPayLoading === r.id}
+                        className="w-full rounded-lg bg-orange-500 px-4 py-2 text-sm font-medium text-white hover:bg-orange-600 disabled:opacity-50 sm:w-auto"
+                      >
+                        {selfPayLoading === r.id ? "Processing…" : "Proceed at my own expense"}
+                      </button>
+                    </div>
+                  )}
+
                   {/* Expanded detail */}
                   {isExpanded && (
-                    <div className="border-t border-slate-100 px-4 pb-4 pt-3">
+                    <div className="border-t border-slate-100 px-3 pb-4 pt-3">
                       {r.rejectionReason && r.status === "OWNER_REJECTED" && (
                         <p className="mb-2 text-xs text-red-600">Reason: {r.rejectionReason}</p>
                       )}
@@ -1364,7 +1368,7 @@ export default function TenantRequestsPage() {
             })}
               </div>
             )}
-          </Panel>
+          </div>
         </PageContent>
       </PageShell>
     </AppShell>

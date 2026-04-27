@@ -278,41 +278,43 @@ export default function RfpDetailPage() {
                 bodyClassName="p-0"
               >
                 {rfp.invites?.length > 0 ? (
-                  <table className="inline-table">
-                    <thead>
-                      <tr>
-                        <th>Contractor</th>
-                        <th>Email</th>
-                        <th>Phone</th>
-                        <th>Invite Status</th>
-                        <th>Invited</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {rfp.invites.map((inv) => (
-                        <tr key={inv.id}>
-                          <td>
-                            {inv.contractor ? (
-                              <Link
-                                href={`/manager/people/vendors/${inv.contractorId}`}
-                                className="cell-link"
-                              >
-                                {inv.contractor.name}
-                              </Link>
-                            ) : (
-                              inv.contractorId?.slice(0, 8)
-                            )}
-                          </td>
-                          <td className="text-slate-500">{inv.contractor?.email || "—"}</td>
-                          <td className="text-slate-500">{inv.contractor?.phone || "—"}</td>
-                          <td>
-                            <Badge variant={inviteVariant(inv.status)}>{inv.status}</Badge>
-                          </td>
-                          <td>{formatDate(inv.createdAt)}</td>
+                  <div className="overflow-x-auto">
+                    <table className="inline-table">
+                      <thead>
+                        <tr>
+                          <th>Contractor</th>
+                          <th className="hidden sm:table-cell">Email</th>
+                          <th className="hidden sm:table-cell">Phone</th>
+                          <th>Status</th>
+                          <th className="hidden sm:table-cell">Invited</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {rfp.invites.map((inv) => (
+                          <tr key={inv.id}>
+                            <td className="min-w-0">
+                              {inv.contractor ? (
+                                <Link
+                                  href={`/manager/people/vendors/${inv.contractorId}`}
+                                  className="cell-link"
+                                >
+                                  {inv.contractor.name}
+                                </Link>
+                              ) : (
+                                inv.contractorId?.slice(0, 8)
+                              )}
+                            </td>
+                            <td className="hidden sm:table-cell text-slate-500">{inv.contractor?.email || "—"}</td>
+                            <td className="hidden sm:table-cell text-slate-500">{inv.contractor?.phone || "—"}</td>
+                            <td>
+                              <Badge variant={inviteVariant(inv.status)}>{inv.status}</Badge>
+                            </td>
+                            <td className="hidden sm:table-cell">{formatDate(inv.createdAt)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 ) : (
                   <p className="px-4 py-8 text-center text-sm text-slate-400">
                     No contractors invited yet.
@@ -339,8 +341,8 @@ export default function RfpDetailPage() {
                         className={cn("p-4", q.status === "AWARDED" ? "bg-green-50/40" :
                           q.status === "REJECTED" ? "bg-slate-50/60 opacity-75" : "")}
                       >
-                        <div className="flex items-center justify-between mb-3">
-                          <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-start justify-between gap-2 mb-3">
+                          <div className="flex flex-wrap items-center gap-2 min-w-0">
                             {q.contractor ? (
                               <Link
                                 href={`/manager/people/vendors/${q.contractorId}`}
@@ -353,7 +355,7 @@ export default function RfpDetailPage() {
                             )}
                             <Badge variant={quoteVariant(q.status || "SUBMITTED")}>{q.status || "SUBMITTED"}</Badge>
                           </div>
-                          <div className="flex items-center gap-3">
+                          <div className="flex flex-wrap items-center gap-3 shrink-0">
                             <span className="text-base font-semibold text-slate-900 font-mono">
                               {formatChfCents(q.amountCents)}
                               {q.vatIncluded === false && (
@@ -417,8 +419,7 @@ export default function RfpDetailPage() {
                         {q.lineItems && q.lineItems.length > 0 && (
                           <div className="mt-2">
                             <dt className="text-xs font-medium text-slate-500 mb-1">Line Items</dt>
-                            <dd>
-                              <table className="inline-table">
+                            <dd>                              <div className="overflow-x-auto">                              <table className="inline-table">
                                 <tbody>
                                   {q.lineItems.map((li, idx) => (
                                     <tr key={idx} className="border-b border-slate-100 last:border-0">
@@ -428,6 +429,7 @@ export default function RfpDetailPage() {
                                   ))}
                                 </tbody>
                               </table>
+                              </div>
                             </dd>
                           </div>
                         )}
@@ -463,8 +465,7 @@ export default function RfpDetailPage() {
                               Array.from(e.target.selectedOptions, (o) => o.value),
                             )
                           }
-                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:border-blue-400 focus:ring-1 focus:ring-blue-300"
-                          className="min-h-[80px]"
+                          className="min-h-[80px] w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:border-blue-400 focus:ring-1 focus:ring-blue-300"
                         >
                           {contractors
                             .filter(

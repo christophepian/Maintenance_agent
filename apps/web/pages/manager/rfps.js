@@ -180,6 +180,20 @@ export default function ManagerRfpsPage() {
                     No RFPs found{activeTab !== "ALL" ? ` with status ${activeTab}` : ""}. RFPs are created automatically when the legal engine determines an obligation.
                   </p>
                 }
+                mobileCard={(rfp) => (
+                  <div className="table-card">
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="table-card-head">#{rfp.request?.requestNumber || "—"}</p>
+                      <Badge variant={rfpVariant(rfp.status)} size="sm">{rfp.status}</Badge>
+                    </div>
+                    {rfp.request?.description && <p className="table-card-sub truncate">{rfp.request.description}</p>}
+                    <div className="table-card-footer">
+                      {rfp.category && <span>{rfp.category}</span>}
+                      {rfp.building?.name && <span>{rfp.building.name}{rfp.unit ? ` / ${rfp.unit.unitNumber}` : ""}</span>}
+                      <span>{rfp.invites?.length ?? 0} invited · {rfp.quoteCount ?? 0} quotes</span>
+                    </div>
+                  </div>
+                )}
               />
             )}
           </Panel>

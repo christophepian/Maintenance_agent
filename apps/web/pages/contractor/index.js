@@ -5,6 +5,7 @@ import PageShell from "../../components/layout/PageShell";
 import PageHeader from "../../components/layout/PageHeader";
 import PageContent from "../../components/layout/PageContent";
 import Section from "../../components/layout/Section";
+import Panel from "../../components/layout/Panel";
 import ContractorPicker from "../../components/ContractorPicker";
 import { formatChf as formatCurrency, formatDate } from "../../lib/format";
 import { authHeaders } from "../../lib/api";

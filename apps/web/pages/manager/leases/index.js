@@ -714,6 +714,15 @@ export default function LeasesPage() {
                     onSort={handleTmplSort}
                     onRowClick={(t) => router.push(`/manager/leases/${t.id}`)}
                     emptyState={<p className="text-sm text-slate-500 px-4 py-4">No templates match this filter.</p>}
+                    mobileCard={(t) => (
+                      <div className="table-card cursor-pointer" onClick={() => router.push(`/manager/leases/${t.id}`)}>
+                        <p className="table-card-head">{t.name || "—"}</p>
+                        <div className="table-card-footer">
+                          <span>{t.buildingName || "—"}</span>
+                          {t.landlordName && <span>{t.landlordName}</span>}
+                        </div>
+                      </div>
+                    )}
                   />
                 </div>
               )}
@@ -732,60 +741,103 @@ export default function LeasesPage() {
                     <p className="empty-state-text">Leases sent to candidates for signature appear here.</p>
                   </div>
                 ) : (
-                  <table className="inline-table">
-                    <thead>
-                      <tr>
-                        <th>Tenant</th>
-                        <th>Unit</th>
-                        <th>Building</th>
-                        <th>Rent</th>
-                        <th>Sent</th>
-                        <th>Deadline</th>
-                        <th>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
+                  <>
+                    {/* Mobile card list — sm:hidden */}
+                    <div className="sm:hidden overflow-hidden rounded-lg border border-table-border divide-y divide-table-divider">
                       {submitted.map(lease => {
                         const expired = isExpired(lease.sentForSignatureAt);
                         const result = expiryResult[lease.id];
                         return (
-                          <tr key={lease.id} onClick={() => router.push(`/manager/leases/${lease.id}`)} className={cn("cursor-pointer hover:bg-slate-50", expired ? "bg-red-50" : "")}>
-                            <td className="cell-bold">{lease.tenantName}</td>
-                            <td>{lease.unit?.unitNumber || "—"}</td>
-                            <td>{lease.unit?.building?.name || "—"}</td>
-                            <td>CHF {lease.rentTotalChf ?? lease.netRentChf}.-</td>
-                            <td>{lease.sentForSignatureAt ? formatDate(lease.sentForSignatureAt) : "—"}</td>
-                            <td><CountdownBadge sentForSignatureAt={lease.sentForSignatureAt} /></td>
-                            <td onClick={(e) => e.stopPropagation()}>
-                              <div className="flex items-center gap-2 flex-wrap">
+                          <div
+                            key={lease.id}
+                            className={cn("table-card cursor-pointer hover:bg-slate-50/80 transition-colors", expired ? "bg-red-50" : "")}
+                            onClick={() => router.push(`/manager/leases/${lease.id}`)}
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <span className="table-card-head">{lease.tenantName}</span>
+                              <CountdownBadge sentForSignatureAt={lease.sentForSignatureAt} />
+                            </div>
+                            <p className="table-card-sub">{lease.unit?.building?.name || "—"}{lease.unit?.unitNumber ? ` / ${lease.unit.unitNumber}` : ""}</p>
+                            <div className="table-card-footer">
+                              <span className="font-medium">CHF {lease.rentTotalChf ?? lease.netRentChf}.-</span>
+                              <span>{lease.sentForSignatureAt ? formatDate(lease.sentForSignatureAt) : "—"}</span>
+                            </div>
+                            {expired && (
+                              <div className="mt-2" onClick={(e) => e.stopPropagation()}>
                                 <button
-                                  onClick={() => router.push(`/manager/leases/${lease.id}`)}
-                                  className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+                                  onClick={() => handleExpiry(lease)}
+                                  disabled={expiryLoading[lease.id]}
+                                  className="text-xs px-2 py-1 rounded bg-red-100 text-red-700 hover:bg-red-200 disabled:opacity-50 font-medium"
                                 >
-                                  View →
+                                  {expiryLoading[lease.id] ? "Processing…" : "Handle expired"}
                                 </button>
-                                {expired && (
-                                  <button
-                                    onClick={() => handleExpiry(lease)}
-                                    disabled={expiryLoading[lease.id]}
-                                    className="text-xs px-2 py-1 rounded bg-red-100 text-red-700 hover:bg-red-200 disabled:opacity-50 font-medium"
-                                  >
-                                    {expiryLoading[lease.id] ? "Processing…" : "Handle expired"}
-                                  </button>
-                                )}
+                                {result?.ok && <p className="text-xs text-green-700 mt-1">{result.ok.message}</p>}
+                                {result?.error && <p className="text-xs text-red-600 mt-1">{result.error}</p>}
                               </div>
-                              {result?.ok && (
-                                <p className="text-xs text-green-700 mt-1">{result.ok.message}</p>
-                              )}
-                              {result?.error && (
-                                <p className="text-xs text-red-600 mt-1">{result.error}</p>
-                              )}
-                            </td>
-                          </tr>
+                            )}
+                          </div>
                         );
                       })}
-                    </tbody>
-                  </table>
+                    </div>
+
+                    {/* Wide table — hidden sm:block */}
+                    <div className="hidden sm:block overflow-x-auto">
+                      <table className="inline-table">
+                        <thead>
+                          <tr>
+                            <th>Tenant</th>
+                            <th>Unit</th>
+                            <th>Building</th>
+                            <th>Rent</th>
+                            <th>Sent</th>
+                            <th>Deadline</th>
+                            <th>Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {submitted.map(lease => {
+                            const expired = isExpired(lease.sentForSignatureAt);
+                            const result = expiryResult[lease.id];
+                            return (
+                              <tr key={lease.id} onClick={() => router.push(`/manager/leases/${lease.id}`)} className={cn("cursor-pointer hover:bg-slate-50", expired ? "bg-red-50" : "")}>
+                                <td className="cell-bold">{lease.tenantName}</td>
+                                <td>{lease.unit?.unitNumber || "—"}</td>
+                                <td>{lease.unit?.building?.name || "—"}</td>
+                                <td>CHF {lease.rentTotalChf ?? lease.netRentChf}.-</td>
+                                <td>{lease.sentForSignatureAt ? formatDate(lease.sentForSignatureAt) : "—"}</td>
+                                <td><CountdownBadge sentForSignatureAt={lease.sentForSignatureAt} /></td>
+                                <td onClick={(e) => e.stopPropagation()}>
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <button
+                                      onClick={() => router.push(`/manager/leases/${lease.id}`)}
+                                      className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+                                    >
+                                      View →
+                                    </button>
+                                    {expired && (
+                                      <button
+                                        onClick={() => handleExpiry(lease)}
+                                        disabled={expiryLoading[lease.id]}
+                                        className="text-xs px-2 py-1 rounded bg-red-100 text-red-700 hover:bg-red-200 disabled:opacity-50 font-medium"
+                                      >
+                                        {expiryLoading[lease.id] ? "Processing…" : "Handle expired"}
+                                      </button>
+                                    )}
+                                  </div>
+                                  {result?.ok && (
+                                    <p className="text-xs text-green-700 mt-1">{result.ok.message}</p>
+                                  )}
+                                  {result?.error && (
+                                    <p className="text-xs text-red-600 mt-1">{result.error}</p>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </>
                 )}
               </div>
             </div>
@@ -806,65 +858,98 @@ export default function LeasesPage() {
                       <p className="empty-state-text">Click &quot;+ New Lease&quot; to create your first rental contract.</p>
                     </div>
                   ) : (
-                    <div className="overflow-x-auto">
-                      <table className="inline-table">
-                        <thead>
-                          <tr>
-                            <th>Tenant</th>
-                            <th>Unit</th>
-                            <th>Building</th>
-                            <th>Net Rent</th>
-                            {tabIndex === 0 && <th>Charges</th>}
-                            {tabIndex === 0 && <th>Total/mo</th>}
-                            <th>Start</th>
-                            <th>Status</th>
-                            {tabIndex === 1 && <th>Tag</th>}
-                            <th>Actions</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {filtered.slice(0, 200).map(lease => {
-                            const netRent = lease.netRentChf ?? 0;
-                            const charges = lease.chargesTotalChf ?? 0;
-                            const totalMo = netRent + charges;
-                            return (
-                            <tr key={lease.id} onClick={() => router.push(`/manager/leases/${lease.id}`)} className="cursor-pointer hover:bg-slate-50">
-                              <td className="cell-bold">{lease.tenantName}</td>
-                              <td>{lease.unit?.unitNumber || "—"}</td>
-                              <td>{lease.unit?.building?.name || "—"}</td>
-                              <td>CHF {netRent}.-</td>
-                              {tabIndex === 0 && <td>{charges ? `CHF ${charges}.-` : "—"}</td>}
-                              {tabIndex === 0 && <td className="font-semibold">CHF {totalMo}.-</td>}
-                              <td>{formatDate(lease.startDate)}</td>
-                              <td>
-                                <Badge variant={leaseVariant(lease.status)}>
+                    <>
+                      {/* Mobile card list — sm:hidden */}
+                      <div className="sm:hidden overflow-hidden rounded-lg border border-table-border divide-y divide-table-divider">
+                        {filtered.slice(0, 200).map(lease => {
+                          const netRent = lease.netRentChf ?? 0;
+                          const charges = lease.chargesTotalChf ?? 0;
+                          const totalMo = netRent + charges;
+                          return (
+                            <div
+                              key={lease.id}
+                              className="table-card cursor-pointer hover:bg-slate-50/80 transition-colors"
+                              onClick={() => router.push(`/manager/leases/${lease.id}`)}
+                            >
+                              <div className="flex items-start justify-between gap-2">
+                                <span className="table-card-head">{lease.tenantName}</span>
+                                <Badge variant={leaseVariant(lease.status)} size="sm">
                                   {lease.status.replace(/_/g, " ")}
                                 </Badge>
-                              </td>
-                              {tabIndex === 1 && (
-                                <td>
-                                  {/* "Ready for review" tag for backup-candidate redrafts */}
-                                  {lease.applicationId ? (
-                                    <span className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-700">
-                                      Ready for review
-                                    </span>
-                                  ) : null}
-                                </td>
-                              )}
-                              <td onClick={(e) => e.stopPropagation()}>
-                                <button
-                                  onClick={() => router.push(`/manager/leases/${lease.id}`)}
-                                  className="text-blue-600 hover:text-blue-700 text-sm font-medium"
-                                >
-                                  Edit →
-                                </button>
-                              </td>
+                              </div>
+                              <p className="table-card-sub">{lease.unit?.building?.name || "—"}{lease.unit?.unitNumber ? ` / ${lease.unit.unitNumber}` : ""}</p>
+                              <div className="table-card-footer">
+                                <span className="font-medium">CHF {tabIndex === 0 ? totalMo : netRent}.-</span>
+                                <span>{formatDate(lease.startDate)}</span>
+                                {tabIndex === 1 && lease.applicationId && (
+                                  <span className="px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-700">Ready for review</span>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Wide table — hidden sm:block */}
+                      <div className="hidden sm:block overflow-x-auto">
+                        <table className="inline-table">
+                          <thead>
+                            <tr>
+                              <th>Tenant</th>
+                              <th>Unit</th>
+                              <th>Building</th>
+                              <th>Net Rent</th>
+                              {tabIndex === 0 && <th>Charges</th>}
+                              {tabIndex === 0 && <th>Total/mo</th>}
+                              <th>Start</th>
+                              <th>Status</th>
+                              {tabIndex === 1 && <th>Tag</th>}
+                              <th>Actions</th>
                             </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
+                          </thead>
+                          <tbody>
+                            {filtered.slice(0, 200).map(lease => {
+                              const netRent = lease.netRentChf ?? 0;
+                              const charges = lease.chargesTotalChf ?? 0;
+                              const totalMo = netRent + charges;
+                              return (
+                              <tr key={lease.id} onClick={() => router.push(`/manager/leases/${lease.id}`)} className="cursor-pointer hover:bg-slate-50">
+                                <td className="cell-bold">{lease.tenantName}</td>
+                                <td>{lease.unit?.unitNumber || "—"}</td>
+                                <td>{lease.unit?.building?.name || "—"}</td>
+                                <td>CHF {netRent}.-</td>
+                                {tabIndex === 0 && <td>{charges ? `CHF ${charges}.-` : "—"}</td>}
+                                {tabIndex === 0 && <td className="font-semibold">CHF {totalMo}.-</td>}
+                                <td>{formatDate(lease.startDate)}</td>
+                                <td>
+                                  <Badge variant={leaseVariant(lease.status)}>
+                                    {lease.status.replace(/_/g, " ")}
+                                  </Badge>
+                                </td>
+                                {tabIndex === 1 && (
+                                  <td>
+                                    {lease.applicationId ? (
+                                      <span className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-700">
+                                        Ready for review
+                                      </span>
+                                    ) : null}
+                                  </td>
+                                )}
+                                <td onClick={(e) => e.stopPropagation()}>
+                                  <button
+                                    onClick={() => router.push(`/manager/leases/${lease.id}`)}
+                                    className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+                                  >
+                                    Edit →
+                                  </button>
+                                </td>
+                              </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </>
                   )}
                 </div>
               );

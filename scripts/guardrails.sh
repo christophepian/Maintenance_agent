@@ -138,6 +138,53 @@ else
   pass "All DTO mapper calls appear to have matching includes"
 fi
 
+# ─── F-UI9: No Panel wrapping ConfigurableTable ───────────────────────────
+# Panel adds bg-surface-raised (slate-50). ConfigurableTable self-borders and
+# must never sit inside a Panel. The canonical smell is bodyClassName="p-0"
+# used to flush a table/list component into a Panel card.
+#
+# Whitelist: files where Panel bodyClassName="p-0" is intentional (detail-page
+# sub-sections that embed inline tables for compact related-record display, not
+# full hub tables). Add with a one-line justification.
+FUI9_WHITELIST="
+  leases/[id].js        -- Signature Requests / Invoices / Rent Adjustments sub-tables in detail panel
+  invoices/[id].js      -- Line Items sub-table inside invoice detail card
+  requests/[id].js      -- Legal Analysis panel body uses p-0 for flush display
+  rfps/[id].js          -- Quotes table inside RFP detail card
+  units/[id].js         -- Nebenkosten / Income sub-tables inside unit detail card
+  buildings/[id].js     -- Tenants sub-table inside building detail card
+  cashflow/[id].js      -- Monthly cashflow sub-table inside plan detail card
+  _template_detail.js   -- Template scaffold — intentional example
+  _template_hub.js      -- Template scaffold — intentional example
+  chart-of-accounts.js  -- Account-tree tables are structural sub-panels, not hub tables
+  BuildingFinancialsView.jsx  -- Component: financial sub-tables inside building detail context
+  BillingEntityManager.js     -- Component: billing entity sub-tables, used inside detail context
+"
+
+FUI9_HITS=""
+while IFS= read -r f; do
+  # Check whitelist by path substring — skip if any whitelist pattern matches the file path
+  skip=false
+  while IFS= read -r entry; do
+    wl_pat=$(echo "$entry" | awk '{print $1}' | xargs)
+    [[ -z "$wl_pat" ]] && continue
+    [[ "$f" == *"$wl_pat"* ]] && skip=true && break
+  done <<< "$FUI9_WHITELIST"
+  $skip && continue
+
+  if grep -q 'bodyClassName="p-0"' "$f" && grep -q 'ConfigurableTable\|CashflowPlansList\|inline-table\|data-table' "$f"; then
+    FUI9_HITS="${FUI9_HITS}\n  $f"
+  fi
+done < <(find "$ROOT/apps/web/pages" "$ROOT/apps/web/components" -name "*.js" -o -name "*.jsx" | grep -v node_modules)
+
+if [ -n "$FUI9_HITS" ]; then
+  warn "F-UI9: Panel bodyClassName=\"p-0\" may be wrapping a table component (ConfigurableTable / inline-table)."
+  echo "  Tables must NOT sit inside a Panel — use Section headings or plain divs."
+  echo -e "$FUI9_HITS"
+else
+  pass "F-UI9: No Panel-wrapping-table violations detected"
+fi
+
 # ─── Summary ─────────────────────────────────────────────────────────────
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

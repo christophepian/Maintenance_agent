@@ -206,6 +206,23 @@ export default function ContractorRfpsPage() {
                 <p className="text-slate-400 text-sm mt-2">RFPs matching your service categories will appear here.</p>
               </div>
             }
+            mobileCard={(rfp) => (
+              <div className="table-card cursor-pointer" onClick={() => router.push(`/contractor/rfps/${rfp.id}`)}>
+                <div className="flex items-start justify-between gap-2">
+                  <span className="font-medium text-slate-900 text-sm">#{rfp.request?.requestNumber}</span>
+                  <div className="flex gap-1">
+                    <Badge variant={rfpVariant(rfp.status)} size="sm">{rfp.status}</Badge>
+                    {rfp.isInvited && <Badge variant="brand" size="sm">Invited</Badge>}
+                  </div>
+                </div>
+                <p className="table-card-sub">{rfp.request?.description ? rfp.request.description.slice(0, 80) : "—"}</p>
+                <div className="table-card-footer">
+                  <span>{rfp.category || "—"}</span>
+                  <span>{rfp.buildingName || "—"}{rfp.unitNumber ? ` / ${rfp.unitNumber}` : ""}</span>
+                  <span>{formatDate(rfp.createdAt)}</span>
+                </div>
+              </div>
+            )}
           />
         )}
 

@@ -199,13 +199,40 @@ export default function ManagerFinanceHome() {
                   </Section>
 
                   <Section title="Buildings">
-                    <Panel bodyClassName="p-0">
+                    <div>
                       {p.buildings.length === 0 ? (
                         <div className="empty-state">
                           <p className="empty-state-text">No buildings in this portfolio yet.</p>
                         </div>
                       ) : (
                         <>
+                          {/* Mobile card list — md:hidden (financial table needs more width) */}
+                          <div className="md:hidden overflow-hidden rounded-lg border border-table-border divide-y divide-table-divider">
+                            {(buildingsExpanded ? p.buildings : p.buildings.slice(0, 5)).map((b) => (
+                              <div
+                                key={b.buildingId}
+                                className="table-card cursor-pointer hover:bg-slate-50/80 transition-colors"
+                                onClick={() => router.push(`/manager/buildings/${b.buildingId}/financials`)}
+                              >
+                                <div className="flex items-center gap-2">
+                                  <HealthDot health={b.health} />
+                                  <span className="table-card-head">{b.buildingName}</span>
+                                </div>
+                                <div className="table-card-footer">
+                                  <span className={cn("font-medium font-mono", b.netIncomeCents >= 0 ? "text-success-text" : "text-destructive-text")}>
+                                    Net {formatChfCents(b.netIncomeCents)}
+                                  </span>
+                                  <span>Collection {formatPercent(b.collectionRate)}</span>
+                                  {b.receivablesCents > 0 && (
+                                    <span className="text-amber-700">{formatChfCents(b.receivablesCents)} recv.</span>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+
+                          {/* Wide table — hidden md:block */}
+                          <div className="hidden md:block overflow-hidden rounded-lg border border-table-border">
                           <div className="overflow-x-auto">
                             <table className="inline-table">
                               <thead>
@@ -255,6 +282,7 @@ export default function ManagerFinanceHome() {
                               </tbody>
                             </table>
                           </div>
+                          </div>
                           {p.buildings.length > 5 && (
                             <div className="expand-footer" onClick={() => setBuildingsExpanded((v) => !v)}>
                               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"
@@ -267,7 +295,7 @@ export default function ManagerFinanceHome() {
                           )}
                         </>
                       )}
-                    </Panel>
+                    </div>
                   </Section>
                 </>
               )}
@@ -301,11 +329,7 @@ export default function ManagerFinanceHome() {
 
           {/* ── Planning ── */}
           {activeTabKey === "planning" && (
-            <Panel bodyClassName="p-0">
-              <div className="px-4 py-4">
-                <CashflowPlansList ref={planListRef} />
-              </div>
-            </Panel>
+            <CashflowPlansList ref={planListRef} />
           )}
 
           {/* ── Renovation & Tax ── */}

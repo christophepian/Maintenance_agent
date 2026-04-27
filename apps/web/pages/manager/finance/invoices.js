@@ -894,6 +894,19 @@ export function InvoicesContent() {
             onSort={handleSort}
             onRowClick={(inv) => router.push(`/manager/finance/invoices/${inv.id}`)}
             emptyState="No invoices match this filter."
+            mobileCard={(inv) => (
+              <div className="table-card cursor-pointer" onClick={() => router.push(`/manager/finance/invoices/${inv.id}`)}>
+                <div className="flex items-start justify-between gap-2">
+                  <span className="font-mono text-xs text-slate-500">{inv.invoiceNumber || inv.id?.slice(0, 8)}</span>
+                  <StatusBadge status={inv.status} />
+                </div>
+                <p className="table-card-head mt-1">{inv.buildingName || "—"}{inv.unitNumber ? ` / ${inv.unitNumber}` : ""}</p>
+                <div className="table-card-footer">
+                  <span className="font-medium">{formatChf(inv.totalAmount ?? inv.amount)}</span>
+                  <span>{formatDate(inv.createdAt)}</span>
+                </div>
+              </div>
+            )}
           />
           {/* Expand / collapse row */}
           <div

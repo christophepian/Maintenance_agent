@@ -440,6 +440,19 @@ export default function OwnerInvoices() {
                   {invoices.length === 0 ? "No invoices yet." : "No invoices match the current filters."}
                 </p>
               }
+              mobileCard={(inv) => (
+                <div className="table-card">
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="font-mono text-xs text-slate-500">{inv.invoiceNumber || inv.id?.slice(0, 8)}</span>
+                    <Badge variant={invoiceVariant(inv.status)} size="sm">{inv.status}</Badge>
+                  </div>
+                  <p className="table-card-head mt-1">{inv.recipientName || "—"}</p>
+                  <div className="table-card-footer">
+                    <span className="font-medium">{formatCurrency(getInvoiceTotal(inv))}</span>
+                    <span>{formatDate(inv.createdAt)}</span>
+                  </div>
+                </div>
+              )}
             />
           )}
 

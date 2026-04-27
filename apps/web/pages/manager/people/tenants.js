@@ -161,6 +161,16 @@ export default function PeopleTenantsPage() {
                 onSort={handleSort}
                 onRowClick={(t) => router.push(`/manager/people/tenants/${t.id}`)}
                 emptyState={<p className="text-sm text-slate-500">No tenants found.</p>}
+                mobileCard={(t) => (
+                  <div className="table-card cursor-pointer" onClick={() => router.push(`/manager/people/tenants/${t.id}`)}>
+                    <p className="table-card-head">{t.name || "—"}</p>
+                    <p className="table-card-sub">{t.unit?.building?.name || "—"}{t.unit?.unitNumber ? ` / ${t.unit.unitNumber}` : ""}</p>
+                    <div className="table-card-footer">
+                      <span>{t.email || "—"}</span>
+                      {t.phone && <span>{t.phone}</span>}
+                    </div>
+                  </div>
+                )}
               />
             )}
         </PageContent>

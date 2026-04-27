@@ -567,7 +567,7 @@ export default function OwnerReportingPage() {
         </header>
 
         {/* ── KPI ROW ──────────────────────────────────────────── */}
-        <section className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <section className="kpi-grid mb-8 gap-4 xl:grid-cols-4">
           <KpiCard label="Net Income"       value={fmtChf(netIncome)}     delta={netDelta}    isLoading={loading} />
           <KpiCard label="Rent Collected"   value={fmtChf(earned)}        delta={earnedDelta} isLoading={loading} />
           <KpiCard label="Total Expenses"   value={fmtChf(expenses)}      delta={expDelta}    isLoading={loading} />

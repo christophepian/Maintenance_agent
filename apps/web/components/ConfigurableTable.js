@@ -157,6 +157,9 @@ function ColumnConfigPopover({ orderedColumns, visibility, density, onToggle, on
  *   renderBeforeRow    — (row) => JSX.Element | null — extra content before cells
  *   leadingCells       — (row) => JSX.Element | null — cells before column cells
  *   leadingHeader      — JSX.Element | null — header cell(s) before column headers
+ *   mobileCard         — (row) => JSX.Element — renders a mobile card for this row (Pattern A).
+ *                        When provided: table is hidden on narrow (hidden sm:block),
+ *                        card list shown on narrow (sm:hidden). Gear button also hidden on narrow.
  */
 export default function ConfigurableTable({
   tableId,
@@ -176,6 +179,8 @@ export default function ConfigurableTable({
   leadingHeader,
   trailingCells,
   trailingHeader,
+  mobileCard,
+  toolbarSlot,
 }) {
   const prefs = useTablePreferences(tableId, columns);
   const { visibleColumns, orderedColumns, visibility, density, toggleColumn, reorderColumns, setDensity, reset } = prefs;
@@ -190,12 +195,13 @@ export default function ConfigurableTable({
 
   return (
     <>
-      {/* Toolbar row — gear button (outside table, right-aligned) */}
-      <div className="flex items-center justify-end pb-3">
+      {/* Toolbar row — gear button; hidden on narrow when mobileCard is active */}
+      <div className={cn("flex items-center gap-2 pb-3", mobileCard && "hidden sm:flex")}>
+        {toolbarSlot && <div className="flex-1 min-w-0">{toolbarSlot}</div>}
         <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
           <PopoverTrigger asChild>
             <button
-              className={cn("inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors", popoverOpen
+              className={cn("inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors shrink-0", popoverOpen
                   ? "text-blue-700 bg-blue-50"
                   : "text-slate-900 hover:text-blue-600 hover:bg-blue-50/50")}
               title="Configure columns"
@@ -224,11 +230,36 @@ export default function ConfigurableTable({
         </Popover>
       </div>
 
-      {/* Table */}
-      <div className="overflow-x-auto rounded-lg border border-slate-200">
+      {/* Mobile card list — rendered on narrow when mobileCard prop is provided */}
+      {mobileCard && (
+        <div className="sm:hidden overflow-hidden rounded-lg border border-table-border divide-y divide-table-divider">
+          {data.length === 0 && emptyState ? (
+            <div className="px-6 py-8 text-center">{emptyState}</div>
+          ) : (
+            data.map((row) => {
+              const key = getRowKey(row);
+              return (
+                <div
+                  key={key}
+                  onClick={onRowClick ? () => onRowClick(row) : undefined}
+                  className={cn(
+                    onRowClick ? "cursor-pointer hover:bg-slate-50/80 transition-colors" : "",
+                    rowClassName?.(row) || ""
+                  )}
+                >
+                  {mobileCard(row)}
+                </div>
+              );
+            })
+          )}
+        </div>
+      )}
+
+      {/* Table — hidden on narrow when mobileCard is active */}
+      <div className={cn("overflow-x-auto rounded-lg border border-table-border", mobileCard && "hidden sm:block")}>
         <table className={cn("w-full text-sm", ds.text)}>
           <thead>
-            <tr className="border-b border-slate-200 bg-slate-100 text-left text-[11px] font-medium uppercase tracking-wider text-slate-900">
+            <tr className="border-b border-table-border bg-table-header text-left text-[11px] font-medium uppercase tracking-wider text-slate-900">
               {leadingHeader}
               {visibleColumns.map((col) =>
                 col.sortable ? (
@@ -250,7 +281,7 @@ export default function ConfigurableTable({
               {trailingHeader}
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-200">
+          <tbody className="divide-y divide-table-divider">
             {data.length === 0 && emptyState ? (
               <tr>
                 <td colSpan={colSpan} className="px-6 py-8 text-center">

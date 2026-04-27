@@ -583,6 +583,15 @@ export default function LeaseTemplatesPage() {
                 onSort={handleSort}
                 onRowClick={(t) => router.push(`/manager/leases/${t.id}`)}
                 emptyState={<p className="text-sm text-slate-500">No lease templates found.</p>}
+                mobileCard={(t) => (
+                  <div className="table-card">
+                    <p className="table-card-head">{t.templateName || "Untitled"}</p>
+                    <div className="table-card-footer">
+                      {t.unit?.building?.name && <span>{t.unit.building.name}</span>}
+                      {t.landlordName && <span>{t.landlordName}</span>}
+                    </div>
+                  </div>
+                )}
               />
             )}
           </Panel>

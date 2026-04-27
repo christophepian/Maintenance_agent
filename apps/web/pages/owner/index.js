@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
+import { useRouter } from "next/router";
 import Link from "next/link";
 import AppShell from "../../components/AppShell";
 import PageShell from "../../components/layout/PageShell";
@@ -9,20 +10,23 @@ import ErrorBanner from "../../components/ui/ErrorBanner";
 import Badge from "../../components/ui/Badge";
 import { ownerAuthHeaders } from "../../lib/api";
 import StrategyProfileBanner from "../../components/StrategyProfileBanner";
-import ScrollableTabs from "../../components/mobile/ScrollableTabs";
+import { formatChf, formatPercent } from "../../lib/format";
+import { cn } from "../../lib/utils";
 
-
-function formatCurrency(value) {
-  const safeValue = Number.isFinite(value) ? value : 0;
-  // Use manual formatting to avoid Intl.NumberFormat hydration mismatch
-  // (Node.js uses U+00A0 non-breaking space, browsers use U+202F narrow NBSP)
-  const formatted = safeValue.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, "'");
-  return `CHF ${formatted}`;
-}
-
-function formatPercent(value) {
-  if (!Number.isFinite(value)) return "0%";
-  return `${(value * 100).toFixed(1)}%`;
+// ─── Summary card (matches manager/finance SummaryCard) ───────────────────────
+function SummaryCard({ label, value, sub, accent }) {
+  const accentClass =
+    accent === "green" ? "text-success-text" :
+    accent === "red"   ? "text-destructive-text" :
+    accent === "amber" ? "text-amber-700" :
+    "text-slate-900";
+  return (
+    <div className="card mb-0 flex flex-col gap-1">
+      <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">{label}</span>
+      <span className={cn("text-xl font-bold", accentClass)}>{value}</span>
+      {sub && <span className="text-xs text-slate-400">{sub}</span>}
+    </div>
+  );
 }
 
 
@@ -49,207 +53,119 @@ function sortByDateDesc(items, dateKey) {
   });
 }
 
-/* ─── Action Items tabs ─────────────────────────────────────── */
-
-const ACTION_TABS = ["Pending approvals", "Invoices needing action", "Vacancies", "RFPs"];
+const ACTION_TABS = [
+  { key: "approvals", label: "Approvals" },
+  { key: "invoices",  label: "Invoices" },
+  { key: "vacancies", label: "Vacancies" },
+  { key: "rfps",      label: "RFPs" },
+];
 
 function ActionItemsTabs({
   recentApprovals, draftInvoices, approvedInvoices,
   topVacancies, vacantUnits, rfpsPendingApproval, rfpsOpen,
-  formatCurrency, getInvoiceTotal,
+  activeTab, setActiveTab, getInvoiceTotal,
 }) {
-  const [active, setActive] = useState(0);
-
-  const badges = [
-    recentApprovals.length || null,
-    (draftInvoices.length + approvedInvoices.length) || null,
-    vacantUnits.length || null,
-    (rfpsPendingApproval.length + rfpsOpen.length) || null,
-  ];
+  const badgeCounts = {
+    approvals: recentApprovals.length,
+    invoices:  draftInvoices.length + approvedInvoices.length,
+    vacancies: vacantUnits.length,
+    rfps:      rfpsPendingApproval.length + rfpsOpen.length,
+  };
 
   return (
-    <div className="mb-5">
-      <h2 className="text-lg font-semibold text-slate-900 mb-4">
-        Action Items
-      </h2>
-
-      {/* Tab strip */}
-      <ScrollableTabs activeIndex={active}>
-        {ACTION_TABS.map((label, i) => (
+    <div>
+      <div className="tab-strip" role="tablist">
+        {ACTION_TABS.map((t) => (
           <button
-            key={label}
-            onClick={() => setActive(i)}
-            className={active === i ? "tab-btn-active" : "tab-btn"}
+            key={t.key}
+            role="tab"
+            aria-selected={activeTab === t.key}
+            className={activeTab === t.key ? "tab-btn-active" : "tab-btn"}
+            onClick={() => setActiveTab(t.key)}
           >
-            {label}
-            {badges[i] != null && (
-              <span className={[
-                "ml-1.5 inline-flex items-center justify-center rounded-full px-1.5 py-0.5 text-xs font-semibold leading-none",
-                active === i
-                  ? "bg-indigo-100 text-indigo-700"
-                  : "bg-slate-100 text-slate-600",
-              ].join(" ")}>
-                {badges[i]}
+            {t.label}
+            {badgeCounts[t.key] > 0 && (
+              <span className="ml-1.5 inline-flex items-center justify-center rounded-full bg-slate-200 px-1.5 py-0.5 text-xs font-semibold text-slate-700">
+                {badgeCounts[t.key]}
               </span>
             )}
           </button>
         ))}
-      </ScrollableTabs>
+      </div>
 
-      {/* Tab 0 — Pending approvals */}
-      <div className={active === 0 ? "tab-panel-active" : "tab-panel"}>
+      <div className={activeTab === "approvals" ? "tab-panel-active" : "tab-panel"}>
+        <h3 className="section-title">Recent Approval Requests</h3>
         {recentApprovals.length === 0 ? (
           <p className="text-sm text-slate-500">No pending approvals.</p>
         ) : (
-          <div className="space-y-2">
+          <ul className="space-y-2">
             {recentApprovals.map((req) => (
-              <Link key={req.id} href={`/owner/requests/${req.id}`} className="link-card">
-                <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-4 py-3 hover:bg-slate-50 transition-colors">
-                  <div className="min-w-0">
-                    <div className="text-sm font-semibold text-slate-900 truncate">{req.description}</div>
-                    <div className="mt-0.5 text-xs text-slate-500">
-                      {req.unit?.building?.name || "—"} · Unit {req.unit?.unitNumber || "—"}
-                    </div>
-                  </div>
-                  <div className="ml-6 shrink-0 text-right">
-                    <div className="text-sm font-semibold text-slate-900">{formatCurrency(req.estimatedCost || 0)}</div>
-                    <div className="mt-0.5 text-xs text-amber-600">Awaiting decision</div>
-                  </div>
-                </div>
-              </Link>
+              <li key={req.id} className="card mb-0">
+                <Link href={`/owner/requests/${req.id}`} className="block text-sm font-medium text-slate-800 hover:text-indigo-600">
+                  {req.title || req.description || req.id}
+                </Link>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  {req.status} · {req.estimatedCost ? formatChf(req.estimatedCost) : "No estimate"}
+                </p>
+              </li>
             ))}
-            <Link href="/owner/approvals" className="block text-xs font-medium text-indigo-600 hover:text-indigo-700 pt-1">
-              View all approvals →
-            </Link>
-          </div>
+          </ul>
         )}
       </div>
 
-      {/* Tab 1 — Invoices needing action */}
-      <div className={active === 1 ? "tab-panel-active" : "tab-panel"}>
+      <div className={activeTab === "invoices" ? "tab-panel-active" : "tab-panel"}>
+        <h3 className="section-title">Invoices Awaiting Review</h3>
         {draftInvoices.length === 0 && approvedInvoices.length === 0 ? (
-          <p className="text-sm text-slate-500">No invoices require action.</p>
+          <p className="text-sm text-slate-500">No invoices to review.</p>
         ) : (
-          <div className="space-y-2">
-            {draftInvoices.map((invoice) => (
-              <Link key={invoice.id} href={`/owner/invoices?invoiceId=${invoice.id}`} className="link-card">
-                <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-4 py-3 hover:bg-slate-50 transition-colors">
-                  <div className="min-w-0">
-                    <div className="text-sm font-semibold text-slate-900 truncate">
-                      {invoice.invoiceNumber || "Draft invoice"}
-                    </div>
-                    <div className="mt-0.5 text-xs text-slate-500">
-                      {invoice.contractor?.name || invoice.jobId || "—"}
-                    </div>
-                  </div>
-                  <div className="ml-6 shrink-0 text-right">
-                    <div className="text-sm font-semibold text-slate-900">{formatCurrency(getInvoiceTotal(invoice))}</div>
-                    <div className="mt-0.5 text-xs font-medium text-amber-600">Draft</div>
-                  </div>
-                </div>
-              </Link>
+          <ul className="space-y-2">
+            {[...draftInvoices, ...approvedInvoices].map((inv) => (
+              <li key={inv.id} className="card mb-0">
+                <Link href={`/owner/invoices/${inv.id}`} className="block text-sm font-medium text-slate-800 hover:text-indigo-600">
+                  {inv.reference || inv.id}
+                </Link>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  {inv.status} · {formatChf(getInvoiceTotal(inv))}
+                </p>
+              </li>
             ))}
-            {approvedInvoices.map((invoice) => (
-              <Link key={invoice.id} href={`/owner/invoices?invoiceId=${invoice.id}`} className="link-card">
-                <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-4 py-3 hover:bg-slate-50 transition-colors">
-                  <div className="min-w-0">
-                    <div className="text-sm font-semibold text-slate-900 truncate">
-                      {invoice.invoiceNumber || "Invoice"}
-                    </div>
-                    <div className="mt-0.5 text-xs text-slate-500">
-                      {invoice.contractor?.name || invoice.jobId || "—"}
-                    </div>
-                  </div>
-                  <div className="ml-6 shrink-0 text-right">
-                    <div className="text-sm font-semibold text-slate-900">{formatCurrency(getInvoiceTotal(invoice))}</div>
-                    <div className="mt-0.5 text-xs font-medium text-green-600">Approved · due</div>
-                  </div>
-                </div>
-              </Link>
-            ))}
-            <Link href="/owner/invoices" className="block text-xs font-medium text-indigo-600 hover:text-indigo-700 pt-1">
-              View all invoices →
-            </Link>
-          </div>
+          </ul>
         )}
       </div>
 
-      {/* Tab 2 — Vacancies */}
-      <div className={active === 2 ? "tab-panel-active" : "tab-panel"}>
+      <div className={activeTab === "vacancies" ? "tab-panel-active" : "tab-panel"}>
+        <h3 className="section-title">Vacant Units</h3>
         {topVacancies.length === 0 ? (
-          <p className="text-sm text-slate-500">No vacant units detected.</p>
+          <p className="text-sm text-slate-500">No vacant units.</p>
         ) : (
-          <div className="space-y-2">
+          <ul className="space-y-2">
             {topVacancies.map((unit) => (
-              <Link key={unit.id} href={`/admin-inventory/units/${unit.id}`} className="link-card">
-                <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-4 py-3 hover:bg-slate-50 transition-colors">
-                  <div className="min-w-0">
-                    <div className="text-sm font-semibold text-slate-900">
-                      Unit {unit.unitNumber || "—"}
-                    </div>
-                    <div className="mt-0.5 text-xs text-slate-500">
-                      {unit.building?.name || unit.buildingName || "—"}
-                    </div>
-                  </div>
-                  <div className="ml-6 shrink-0">
-                    <Badge variant="destructive" size="sm">
-                      Vacant
-                    </Badge>
-                  </div>
-                </div>
-              </Link>
+              <li key={unit.id} className="card mb-0">
+                <Link href={`/owner/units/${unit.id}`} className="block text-sm font-medium text-slate-800 hover:text-indigo-600">
+                  {unit.unitNumber || unit.id}
+                </Link>
+                <p className="text-xs text-slate-500 mt-0.5">{unit.buildingName || ""}</p>
+              </li>
             ))}
-            <Link href="/owner/vacancies" className="block text-xs font-medium text-indigo-600 hover:text-indigo-700 pt-1">
-              View all vacancies →
-            </Link>
-          </div>
+          </ul>
         )}
       </div>
 
-      {/* Tab 3 — RFPs */}
-      <div className={active === 3 ? "tab-panel-active" : "tab-panel"}>
+      <div className={activeTab === "rfps" ? "tab-panel-active" : "tab-panel"}>
+        <h3 className="section-title">RFPs</h3>
         {rfpsPendingApproval.length === 0 && rfpsOpen.length === 0 ? (
-          <p className="text-sm text-slate-500">No RFPs require attention.</p>
+          <p className="text-sm text-slate-500">No active RFPs.</p>
         ) : (
-          <div className="space-y-2">
-            {rfpsPendingApproval.map((rfp) => (
-              <Link key={rfp.id} href={`/owner/rfps/${rfp.id}`} className="link-card">
-                <div className="flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 hover:bg-amber-100 transition-colors">
-                  <div className="min-w-0">
-                    <div className="text-sm font-semibold text-slate-900 truncate">{rfp.category || "RFP"}</div>
-                    <div className="mt-0.5 text-xs text-slate-500">
-                      {rfp.building?.name || "—"} · {rfp.quoteCount ?? 0} quote{rfp.quoteCount !== 1 ? "s" : ""} received
-                    </div>
-                  </div>
-                  <div className="ml-6 shrink-0">
-                    <Badge variant="warning" size="sm">
-                      Awaiting approval
-                    </Badge>
-                  </div>
-                </div>
-              </Link>
+          <ul className="space-y-2">
+            {[...rfpsPendingApproval, ...rfpsOpen].map((rfp) => (
+              <li key={rfp.id} className="card mb-0">
+                <Link href={`/owner/rfps/${rfp.id}`} className="block text-sm font-medium text-slate-800 hover:text-indigo-600">
+                  {rfp.title || rfp.id}
+                </Link>
+                <p className="text-xs text-slate-500 mt-0.5">{rfp.status}</p>
+              </li>
             ))}
-            {rfpsOpen.map((rfp) => (
-              <Link key={rfp.id} href={`/owner/rfps/${rfp.id}`} className="link-card">
-                <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-4 py-3 hover:bg-slate-50 transition-colors">
-                  <div className="min-w-0">
-                    <div className="text-sm font-semibold text-slate-900 truncate">{rfp.category || "RFP"}</div>
-                    <div className="mt-0.5 text-xs text-slate-500">
-                      {rfp.building?.name || "—"} · {rfp.quoteCount ?? 0} quote{rfp.quoteCount !== 1 ? "s" : ""} received
-                    </div>
-                  </div>
-                  <div className="ml-6 shrink-0">
-                    <Badge variant="info" size="sm">
-                      Open
-                    </Badge>
-                  </div>
-                </div>
-              </Link>
-            ))}
-            <Link href="/owner/approvals?tab=rfps" className="block text-xs font-medium text-indigo-600 hover:text-indigo-700 pt-1">
-              View all RFPs →
-            </Link>
-          </div>
+          </ul>
         )}
       </div>
     </div>
@@ -257,6 +173,13 @@ function ActionItemsTabs({
 }
 
 export default function OwnerDashboard() {
+  const router = useRouter();
+  const TAB_KEYS = ACTION_TABS.map((t) => t.key);
+  const activeTab = router.isReady && TAB_KEYS.includes(router.query.tab) ? router.query.tab : "approvals";
+  const setActiveTab = useCallback((key) => {
+    router.push({ pathname: router.pathname, query: { ...router.query, tab: key } }, undefined, { shallow: true });
+  }, [router]);
+
   const [approvals, setApprovals] = useState([]);
   const [invoices, setInvoices] = useState([]);
   const [leases, setLeases] = useState([]);
@@ -409,56 +332,38 @@ export default function OwnerDashboard() {
           <ErrorBanner error={error} className="text-sm" />
 
           <Section title="KPIs">
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Vacant units</div>
-                <div className="mt-3 text-2xl font-semibold tracking-tight text-slate-900">
-                  {vacantUnits.length}
-                </div>
-                <div className="text-sm text-slate-600">
-                  {formatPercent(vacancyRate)} vacancy · {residentialUnits.length} residential
-                </div>
-              </div>
-              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                <div className="text-xs font-medium uppercase tracking-wide text-slate-400">
-                  Expected monthly rent
-                </div>
-                <div className="mt-3 text-2xl font-semibold tracking-tight text-slate-900">
-                  {formatCurrency(expectedMonthlyRentChf)}
-                </div>
-                <div className="text-sm text-slate-600">
-                  From {activeLeases.length} active lease{activeLeases.length !== 1 ? "s" : ""}
-                </div>
-              </div>
-              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                <div className="text-xs font-medium uppercase tracking-wide text-slate-400">
-                  Outstanding liabilities
-                </div>
-                <div className="mt-3 text-2xl font-semibold tracking-tight text-slate-900">
-                  {formatCurrency(outstandingLiabilitiesChf)}
-                </div>
-                <div className="text-sm text-slate-600">
-                  Drafts: {formatCurrency(draftInvoicesChf)}
-                </div>
-              </div>
-              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                <div className="text-xs font-medium uppercase tracking-wide text-slate-400">
-                  Pending approval exposure
-                </div>
-                <div className="mt-3 text-2xl font-semibold tracking-tight text-slate-900">
-                  {formatCurrency(pendingApprovalExposureChf)}
-                </div>
-                <div className="text-sm text-slate-600">
-                  {approvals.length} requests awaiting decision
-                </div>
-              </div>
+            <div className="kpi-grid md:grid-cols-5">
+              <SummaryCard
+                label="Vacant units"
+                value={String(vacantUnits.length)}
+                sub={`${formatPercent(vacancyRate)} vacancy · ${residentialUnits.length} residential`}
+                accent={vacantUnits.length > 0 ? "amber" : ""}
+              />
+              <SummaryCard
+                label="Expected monthly rent"
+                value={formatChf(expectedMonthlyRentChf)}
+                sub={`From ${activeLeases.length} active lease${activeLeases.length !== 1 ? "s" : ""}`}
+                accent="green"
+              />
+              <SummaryCard
+                label="Outstanding liabilities"
+                value={formatChf(outstandingLiabilitiesChf)}
+                sub={`Drafts: ${formatChf(draftInvoicesChf)}`}
+                accent={outstandingLiabilitiesChf > 0 ? "amber" : ""}
+              />
+              <SummaryCard
+                label="Pending approval exposure"
+                value={formatChf(pendingApprovalExposureChf)}
+                sub={`${approvals.length} requests awaiting decision`}
+                accent={pendingApprovalExposureChf > 0 ? "amber" : ""}
+              />
               <Link
                 href="/owner/reporting"
-                className="rounded-2xl border border-slate-200 bg-slate-50 p-5 shadow-sm flex flex-col justify-between hover:bg-slate-100 transition-colors no-underline"
+                className="card mb-0 flex flex-col justify-between hover:bg-slate-50 transition-colors no-underline col-span-2 md:col-span-1"
               >
-                <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Performance report</div>
-                <div className="mt-2 text-sm font-medium text-slate-700">Monthly income, expenses, and building breakdown.</div>
-                <div className="mt-3 text-sm font-semibold text-indigo-600">View report →</div>
+                <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Performance report</span>
+                <span className="mt-2 text-sm font-medium text-slate-700">Monthly income, expenses, and building breakdown.</span>
+                <span className="mt-3 text-sm font-semibold text-indigo-600">View report →</span>
               </Link>
             </div>
           </Section>
@@ -474,7 +379,8 @@ export default function OwnerDashboard() {
               vacantUnits={vacantUnits}
               rfpsPendingApproval={rfpsPendingApproval}
               rfpsOpen={rfpsOpen}
-              formatCurrency={formatCurrency}
+              activeTab={activeTab}
+              setActiveTab={setActiveTab}
               getInvoiceTotal={getInvoiceTotal}
             />
           )}
