@@ -115,6 +115,38 @@ export function SelectField({ label, value, onChange, children, className }) {
   );
 }
 
+/**
+ * Multi-select checkbox group — value is an array of selected strings.
+ * onChange receives the new array.
+ */
+export function CheckboxGroupField({ label, options, value, onChange }) {
+  function toggle(opt) {
+    onChange(value.includes(opt) ? value.filter((v) => v !== opt) : [...value, opt]);
+  }
+  return (
+    <div className="flex flex-col gap-1">
+      {label && <label className="text-xs font-medium text-slate-500">{label}</label>}
+      {options.length === 0 ? (
+        <p className="text-xs text-slate-400 italic">No options available</p>
+      ) : (
+        <div className="flex flex-wrap gap-x-5 gap-y-2 pt-0.5">
+          {options.map((opt) => (
+            <label key={opt} className="flex items-center gap-1.5 text-sm text-slate-700 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={value.includes(opt)}
+                onChange={() => toggle(opt)}
+                className="h-4 w-4 rounded border-slate-300 text-blue-600 accent-blue-600 focus:ring-blue-500"
+              />
+              {opt}
+            </label>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /** Wraps a number <input> (e.g. request #) with a consistent label */
 export function NumberField({ label, value, onChange, placeholder, min, className }) {
   return (
