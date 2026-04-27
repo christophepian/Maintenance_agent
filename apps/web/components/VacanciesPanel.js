@@ -410,9 +410,6 @@ export default function VacanciesPanel({ role = "OWNER", refreshKey = 0 }) {
     </>
   );
 }
-
-
-  const fetchJson = useCallback(async (path) => {
     const res = await fetch(path, { headers: authHeaders() });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
