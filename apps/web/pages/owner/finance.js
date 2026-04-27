@@ -1,32 +1,17 @@
-import { useMemo, useState, useEffect } from "react";
-import Link from "next/link";
+import { useMemo, useState, useEffect, useRef } from "react";
+import { useRouter } from "next/router";
 import AppShell from "../../components/AppShell";
 import PageShell from "../../components/layout/PageShell";
 import PageHeader from "../../components/layout/PageHeader";
 import PageContent from "../../components/layout/PageContent";
-import Panel from "../../components/layout/Panel";
 import ErrorBanner from "../../components/ui/ErrorBanner";
-import { ownerAuthHeaders } from "../../lib/api";
+import ConfigurableTable from "../../components/ConfigurableTable";
 import Badge from "../../components/ui/Badge";
 import { invoiceVariant } from "../../lib/statusVariants";
+import { formatChf, formatDate } from "../../lib/format";
 import { FilterToggle, FilterPanelBody, FilterSection, FilterSectionClear, SelectField, DateField } from "../../components/ui/FilterPanel";
-
-import { cn } from "../../lib/utils";
-function formatCurrency(value) {
-  const safeValue = Number.isFinite(value) ? value : 0;
-  const formatted = safeValue.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, "'");
-  return `CHF ${formatted}`;
-}
-
-function formatDate(dateStr) {
-  if (!dateStr) return "—";
-  const d = new Date(dateStr);
-  if (Number.isNaN(d.getTime())) return "—";
-  const dd = String(d.getDate()).padStart(2, "0");
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const yyyy = d.getFullYear();
-  return `${dd}.${mm}.${yyyy}`;
-}
+import { useTableSort, clientSort } from "../../lib/tableUtils";
+import { ownerAuthHeaders } from "../../lib/api";
 
 function getInvoiceTotal(invoice) {
   if (typeof invoice.totalAmount === "number") return invoice.totalAmount;
@@ -34,20 +19,72 @@ function getInvoiceTotal(invoice) {
   return 0;
 }
 
+const SORT_FIELDS = ["status", "invoiceNumber", "amount", "createdAt"];
+
+function fieldExtractor(inv, field) {
+  switch (field) {
+    case "status": return inv.status ?? "";
+    case "invoiceNumber": return inv.invoiceNumber ?? "";
+    case "amount": return getInvoiceTotal(inv);
+    case "createdAt": return inv.createdAt || "";
+    default: return "";
+  }
+}
+
+function ActionDropdown({ actions }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!open) return;
+    function handleClick(e) {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [open]);
+  if (!actions.length) return null;
+  return (
+    <div ref={ref} className="relative inline-block text-left">
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }}
+        className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition"
+      >
+        Actions ▾
+      </button>
+      {open && (
+        <div className="absolute right-0 z-20 mt-1 w-48 origin-top-right rounded-lg border border-slate-200 bg-white shadow-lg ring-1 ring-black/5">
+          <div className="py-1">
+            {actions.map((a, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={(e) => { e.stopPropagation(); setOpen(false); a.onClick(); }}
+                className={"w-full text-left px-4 py-2 text-sm hover:bg-slate-50 transition " + (a.className || "text-slate-700")}
+              >
+                {a.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function OwnerFinance() {
+  const router = useRouter();
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [filter, setFilter] = useState("ALL");
   const [includeQr, setIncludeQr] = useState(true);
-  const [expandedId, setExpandedId] = useState(null);
-
+  const [filter, setFilter] = useState("ALL");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
-  const activeCount = [filter !== "ALL" ? filter : "", dateFrom, dateTo].filter(Boolean).length;
   const [filterOpen, setFilterOpen] = useState(false);
 
-  function toggleAccordion(id) { setExpandedId((prev) => (prev === id ? null : id)); }
+  const activeCount = [filter !== "ALL" ? filter : "", dateFrom, dateTo].filter(Boolean).length;
+  const { sortField, sortDir, handleSort } = useTableSort(router, SORT_FIELDS);
 
   useEffect(() => { fetchInvoices(); }, []);
 
@@ -88,6 +125,61 @@ export default function OwnerFinance() {
     });
   }, [filter, dateFrom, dateTo, invoices]);
 
+  const sortedInvoices = useMemo(
+    () => clientSort(filteredInvoices, sortField, sortDir, fieldExtractor),
+    [filteredInvoices, sortField, sortDir],
+  );
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const columns = useMemo(() => [
+    {
+      id: "status",
+      label: "Status",
+      sortable: true,
+      defaultVisible: true,
+      render: (inv) => <Badge variant={invoiceVariant(inv.status)} size="sm">{inv.status}</Badge>,
+    },
+    {
+      id: "invoiceNumber",
+      label: "Invoice #",
+      sortable: true,
+      defaultVisible: true,
+      className: "cell-bold",
+      render: (inv) => inv.invoiceNumber || inv.id?.slice(0, 8) || "Draft",
+    },
+    {
+      id: "createdAt",
+      label: "Date",
+      sortable: true,
+      defaultVisible: true,
+      render: (inv) => formatDate(inv.createdAt),
+    },
+    {
+      id: "amount",
+      label: "Amount",
+      sortable: true,
+      defaultVisible: true,
+      render: (inv) => formatChf(getInvoiceTotal(inv)),
+    },
+    {
+      id: "actions",
+      label: "Actions",
+      sortable: false,
+      alwaysVisible: true,
+      className: "text-right",
+      headerClassName: "text-right",
+      render: (inv) => (
+        <ActionDropdown actions={[
+          { label: "📄 View PDF", onClick: () => window.open(`/api/invoices/${inv.id}/pdf?includeQRBill=${includeQr}`, "_blank") },
+          { label: "🔷 View QR", onClick: () => window.open(`/api/invoices/${inv.id}/qr-code.png`, "_blank") },
+          ...(inv.status === "DRAFT" ? [{ label: "✓ Approve", className: "text-green-700 font-semibold", onClick: () => actionRequest(inv.id, "approve") }] : []),
+          ...(inv.status === "APPROVED" ? [{ label: "💰 Mark Paid", className: "text-green-700 font-semibold", onClick: () => actionRequest(inv.id, "mark-paid") }] : []),
+          ...((inv.status === "DRAFT" || inv.status === "APPROVED") ? [{ label: "⚠ Dispute", className: "text-rose-600", onClick: () => actionRequest(inv.id, "dispute") }] : []),
+        ]} />
+      ),
+    },
+  ], [includeQr]);
+
   return (
     <AppShell role="OWNER">
       <PageShell>
@@ -101,12 +193,10 @@ export default function OwnerFinance() {
             </label>
           }
         />
-
         <PageContent>
           <ErrorBanner error={error} className="text-sm" />
-
           <FilterToggle open={filterOpen} onToggle={() => setFilterOpen((v) => !v)} activeCount={activeCount} />
-{filterOpen && (
+          {filterOpen && (
             <FilterPanelBody>
               <FilterSection title="Status" first>
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -126,105 +216,30 @@ export default function OwnerFinance() {
                   <DateField label="To" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
                 </div>
               </FilterSection>
-              <FilterSectionClear hasFilter={filter !== "ALL" || dateFrom || dateTo} onClear={() => { setFilter("ALL"); setDateFrom(""); setDateTo(""); }} />
+              <FilterSectionClear
+                hasFilter={activeCount > 0}
+                onClear={() => { setFilter("ALL"); setDateFrom(""); setDateTo(""); }}
+              />
             </FilterPanelBody>
           )}
-
-          <Panel>
-            {loading ? (
-              <p className="text-sm text-slate-600">Loading invoices...</p>
-            ) : filteredInvoices.length === 0 ? (
-              <div className="rounded-lg border border-slate-200 bg-slate-50 p-6 text-center text-slate-600">
-                {invoices.length === 0 ? "No invoices yet" : "No results match the current filters."}
-              </div>
-            ) : (
-              <div className="space-y-1">
-                {filteredInvoices.map((invoice) => {
-                  const isExpanded = expandedId === invoice.id;
-                  return (
-                    <div key={invoice.id} className="rounded-lg border border-slate-200 bg-white">
-                      <div
-                        className="flex cursor-pointer flex-col gap-2 px-4 py-3 hover:bg-slate-50 sm:flex-row sm:items-center sm:justify-between"
-                        onClick={() => toggleAccordion(invoice.id)}
-                      >
-                        <div className="flex items-center gap-4 min-w-0">
-                          <div>
-                            <p className="text-sm font-semibold text-slate-900">
-                              {invoice.invoiceNumber || "Draft"}
-                            </p>
-                            <p className="text-xs text-slate-500">Created {formatDate(invoice.createdAt)}</p>
-                          </div>
-                          <p className="text-base font-bold text-slate-800">
-                            {formatCurrency(getInvoiceTotal(invoice))}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-3 justify-end">
-                          <Badge variant={invoiceVariant(invoice.status)} size="sm">
-                            {invoice.status}
-                          </Badge>
-                          <svg
-                            className={cn("h-4 w-4 text-slate-400 transition-transform", isExpanded ? "rotate-90" : "")}
-                            fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                          >
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                          </svg>
-                        </div>
-                      </div>
-
-                      {isExpanded && (
-                        <div className="border-t border-slate-100 px-4 py-3">
-                          <p className="mb-3 text-xs text-slate-500">
-                            Job{" "}
-                            <Link href="/owner/jobs" className="cell-link" onClick={(e) => e.stopPropagation()}>
-                              {invoice.jobId?.slice(0, 8)}
-                            </Link>
-                          </p>
-                          <div className="flex flex-wrap gap-2" onClick={(e) => e.stopPropagation()}>
-                            <button
-                              onClick={() => window.open(`/api/invoices/${invoice.id}/pdf?includeQRBill=${includeQr}`, "_blank")}
-                              className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-                            >
-                              View PDF
-                            </button>
-                            <button
-                              onClick={() => window.open(`/api/invoices/${invoice.id}/qr-code.png`, "_blank")}
-                              className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-                            >
-                              View QR
-                            </button>
-                            {invoice.status === "DRAFT" && (
-                              <button
-                                onClick={() => actionRequest(invoice.id, "approve")}
-                                className="rounded-lg bg-green-600 px-3 py-2 text-xs font-semibold text-white hover:bg-green-700"
-                              >
-                                Approve
-                              </button>
-                            )}
-                            {invoice.status === "APPROVED" && (
-                              <button
-                                onClick={() => actionRequest(invoice.id, "mark-paid")}
-                                className="rounded-lg bg-green-700 px-3 py-2 text-xs font-semibold text-white hover:bg-green-800"
-                              >
-                                Mark paid
-                              </button>
-                            )}
-                            {(invoice.status === "DRAFT" || invoice.status === "APPROVED") && (
-                              <button
-                                onClick={() => actionRequest(invoice.id, "dispute")}
-                                className="rounded-lg bg-rose-600 px-3 py-2 text-xs font-semibold text-white hover:bg-rose-700"
-                              >
-                                Dispute
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </Panel>
+          {loading ? (
+            <p className="loading-text">Loading invoices…</p>
+          ) : (
+            <ConfigurableTable
+              tableId="owner-finance-invoices"
+              columns={columns}
+              data={sortedInvoices}
+              rowKey="id"
+              sortField={sortField}
+              sortDir={sortDir}
+              onSort={handleSort}
+              emptyState={
+                <p className="empty-state-text">
+                  {invoices.length === 0 ? "No invoices yet." : "No results match the current filters."}
+                </p>
+              }
+            />
+          )}
         </PageContent>
       </PageShell>
     </AppShell>

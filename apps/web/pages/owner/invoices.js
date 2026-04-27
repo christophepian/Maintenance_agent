@@ -5,33 +5,34 @@ import AppShell from "../../components/AppShell";
 import PageShell from "../../components/layout/PageShell";
 import PageHeader from "../../components/layout/PageHeader";
 import PageContent from "../../components/layout/PageContent";
-import Panel from "../../components/layout/Panel";
+import ConfigurableTable from "../../components/ConfigurableTable";
 import ErrorBanner from "../../components/ui/ErrorBanner";
 import { FilterToggle, FilterPanelBody, FilterSection, FilterSectionClear, SelectField, DateField } from "../../components/ui/FilterPanel";
 import { ownerAuthHeaders } from "../../lib/api";
 import Badge from "../../components/ui/Badge";
 import { invoiceVariant, ingestionVariant } from "../../lib/statusVariants";
+import { formatChf, formatDate as formatDateLib } from "../../lib/format";
+import { useTableSort, clientSort } from "../../lib/tableUtils";
 
 // Re-evaluated on every Fast Refresh hot reload (module-level code always re-runs).
 // Used to detect that a reload happened and suppress stale modal state.
 const _moduleNonce = Date.now();
 
-/* ── Formatting helpers ──────────────────────────────────────── */
+/* ── Helpers ────────────────────────────────────────────────── */
 
-function formatCurrency(value) {
-  const safeValue = Number.isFinite(value) ? value : 0;
-  const formatted = safeValue.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, "'");
-  return `CHF ${formatted}`;
-}
+const formatDate = formatDateLib;
+const formatCurrency = formatChf;
 
-function formatDate(dateStr) {
-  if (!dateStr) return "—";
-  const d = new Date(dateStr);
-  if (Number.isNaN(d.getTime())) return "—";
-  const dd = String(d.getDate()).padStart(2, "0");
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const yyyy = d.getFullYear();
-  return `${dd}.${mm}.${yyyy}`;
+const SORT_FIELDS = ["status", "invoiceNumber", "amount", "createdAt"];
+
+function fieldExtractor(inv, field) {
+  switch (field) {
+    case "status": return inv.status ?? "";
+    case "invoiceNumber": return inv.invoiceNumber ?? "";
+    case "amount": return getInvoiceTotal(inv);
+    case "createdAt": return inv.createdAt || "";
+    default: return "";
+  }
 }
 
 function getInvoiceTotal(invoice) {
@@ -204,6 +205,7 @@ export default function OwnerInvoices() {
   const [dateTo, setDateTo] = useState("");
   const activeCount = [activeTab !== "ALL" ? activeTab : "", dateFrom, dateTo].filter(Boolean).length;
   const [filterOpen, setFilterOpen] = useState(false);
+  const { sortField, sortDir, handleSort } = useTableSort(router, SORT_FIELDS);
 
   useEffect(() => { fetchInvoices(); }, []);
 
@@ -283,6 +285,76 @@ export default function OwnerInvoices() {
     });
   }, [directionFiltered, activeTab, dateFrom, dateTo]);
 
+  const sortedInvoices = useMemo(
+    () => clientSort(filteredInvoices, sortField, sortDir, fieldExtractor),
+    [filteredInvoices, sortField, sortDir],
+  );
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const invoiceColumns = useMemo(() => [
+    {
+      id: "status",
+      label: "Status",
+      sortable: true,
+      defaultVisible: true,
+      render: (inv) => <Badge variant={invoiceVariant(inv.status)} size="sm">{inv.status}</Badge>,
+    },
+    {
+      id: "invoiceNumber",
+      label: "Invoice #",
+      sortable: true,
+      defaultVisible: true,
+      className: "cell-bold",
+      render: (inv) => (
+        <span className="flex items-center gap-1 flex-wrap">
+          {inv.invoiceNumber || inv.id?.slice(0, 8) || "Draft"}
+          <SourceChannelIcon channel={inv.sourceChannel} />
+          <IngestionBadge ingestionStatus={inv.ingestionStatus} />
+        </span>
+      ),
+    },
+    {
+      id: "recipient",
+      label: isOutgoing ? "Tenant" : "Issuer",
+      sortable: false,
+      defaultVisible: true,
+      render: (inv) => inv.recipientName || <span className="text-slate-400">—</span>,
+    },
+    {
+      id: "createdAt",
+      label: "Date",
+      sortable: true,
+      defaultVisible: true,
+      render: (inv) => formatDate(inv.createdAt),
+    },
+    {
+      id: "amount",
+      label: "Amount",
+      sortable: true,
+      defaultVisible: true,
+      className: "font-semibold",
+      render: (inv) => formatCurrency(getInvoiceTotal(inv)),
+    },
+    {
+      id: "actions",
+      label: "Actions",
+      sortable: false,
+      alwaysVisible: true,
+      className: "text-right",
+      headerClassName: "text-right",
+      render: (inv) => (
+        <div onClick={(e) => e.stopPropagation()}>
+          <ActionDropdown actions={[
+            ...(!isOutgoing && (inv.status === "ISSUED" || inv.status === "DRAFT") ? [{ label: "✓ Approve", className: "text-green-700 font-semibold", onClick: () => actionRequest(inv.id, "approve") }] : []),
+            ...(!isOutgoing && inv.status === "APPROVED" ? [{ label: "💰 Mark as Paid", className: "text-green-700 font-semibold", onClick: () => actionRequest(inv.id, "mark-paid") }] : []),
+            { label: "📄 Download PDF", onClick: () => setPdfModalInvoice(inv) },
+            ...(!isOutgoing && (inv.status === "ISSUED" || inv.status === "DRAFT" || inv.status === "APPROVED") ? [{ label: "⚠ Dispute", className: "text-rose-600", onClick: () => actionRequest(inv.id, "dispute") }] : []),
+          ]} />
+        </div>
+      ),
+    },
+  ], [isOutgoing]);
+
   return (
     <AppShell role="OWNER">
       <PageShell>
@@ -349,104 +421,34 @@ export default function OwnerInvoices() {
             </FilterPanelBody>
           )}
 
-          {/* Invoice list */}
-          <Panel>
-            {loading ? (
-              <p className="text-sm text-slate-600 p-4">Loading invoices...</p>
-            ) : filteredInvoices.length === 0 ? (
-              <div className="rounded-lg border border-slate-200 bg-slate-50 p-6 text-center text-slate-600">
-                {invoices.length === 0 ? "No invoices yet" : "No invoices match the current filters."}
-              </div>
-            ) : (
-              <div className="divide-y divide-slate-100">
-                {filteredInvoices.map((invoice) => (
-                  <div
-                    key={invoice.id}
-                    id={`invoice-${invoice.id}`}
-                    className="flex flex-col gap-2 px-4 py-3 hover:bg-slate-50 cursor-pointer transition-colors sm:flex-row sm:items-center sm:justify-between"
-                    onClick={() => router.push(`/manager/finance/invoices?invoiceId=${invoice.id}`)}
-                  >
-                    {/* Left: info */}
-                    <div className="flex items-center gap-4 min-w-0">
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className="text-sm font-semibold text-slate-900 truncate">
-                            {invoice.invoiceNumber || "Draft"}
-                          </p>
-                          <SourceChannelIcon channel={invoice.sourceChannel} />
-                          <IngestionBadge ingestionStatus={invoice.ingestionStatus} />
-                        </div>
-                        <p className="text-xs text-slate-500 mt-0.5">
-                          {formatDate(invoice.createdAt)}
-                          {invoice.recipientName && ` · ${invoice.recipientName}`}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Right: amount + status + actions */}
-                    <div className="flex items-center gap-3 flex-shrink-0">
-                      <p className="text-base font-bold text-slate-800">
-                        {formatCurrency(getInvoiceTotal(invoice))}
-                      </p>
-                      <Badge variant={invoiceVariant(invoice.status)} size="sm" className="whitespace-nowrap">
-                        {invoice.status}
-                      </Badge>
-
-                      {/* Actions dropdown for incoming invoices */}
-                      {!isOutgoing && (
-                        <div onClick={(e) => e.stopPropagation()}>
-                          <ActionDropdown actions={[
-                            ...(invoice.status === "ISSUED" || invoice.status === "DRAFT" ? [{
-                              label: "✓ Approve",
-                              onClick: () => actionRequest(invoice.id, "approve"),
-                              className: "text-green-700 font-semibold",
-                            }] : []),
-                            ...(invoice.status === "APPROVED" ? [{
-                              label: "💰 Mark as Paid",
-                              onClick: () => actionRequest(invoice.id, "mark-paid"),
-                              className: "text-green-700 font-semibold",
-                            }] : []),
-                            {
-                              label: "📄 Download PDF",
-                              onClick: () => setPdfModalInvoice(invoice),
-                            },
-                            ...(invoice.status === "ISSUED" || invoice.status === "DRAFT" || invoice.status === "APPROVED" ? [{
-                              label: "⚠ Dispute",
-                              onClick: () => actionRequest(invoice.id, "dispute"),
-                              className: "text-rose-600",
-                            }] : []),
-                          ]} />
-                        </div>
-                      )}
-
-                      {/* Read-only actions for outgoing */}
-                      {isOutgoing && (
-                        <div onClick={(e) => e.stopPropagation()}>
-                          <ActionDropdown actions={[
-                            {
-                              label: "📄 Download PDF",
-                              onClick: () => setPdfModalInvoice(invoice),
-                            },
-                          ]} />
-                        </div>
-                      )}
-
-                      <svg className="h-4 w-4 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </Panel>
+          {/* Invoice table */}
+          {loading ? (
+            <p className="loading-text">Loading invoices…</p>
+          ) : (
+            <ConfigurableTable
+              tableId="owner-invoices"
+              columns={invoiceColumns}
+              data={sortedInvoices}
+              rowKey="id"
+              rowId={(inv) => `invoice-${inv.id}`}
+              rowClassName={(inv) => inv.id === highlightedId ? "ring-2 ring-inset ring-indigo-400 bg-indigo-50" : ""}
+              sortField={sortField}
+              sortDir={sortDir}
+              onSort={handleSort}
+              emptyState={
+                <p className="empty-state-text">
+                  {invoices.length === 0 ? "No invoices yet." : "No invoices match the current filters."}
+                </p>
+              }
+            />
+          )}
 
           {/* Summary */}
-          {!loading && filteredInvoices.length > 0 && (
+          {!loading && sortedInvoices.length > 0 && (
             <div className="mt-3 flex items-center justify-between text-xs text-slate-500 px-1">
-              <span>{filteredInvoices.length} invoice{filteredInvoices.length !== 1 ? "s" : ""}</span>
+              <span>{sortedInvoices.length} invoice{sortedInvoices.length !== 1 ? "s" : ""}</span>
               <span>
-                Total: {formatCurrency(filteredInvoices.reduce((sum, inv) => sum + getInvoiceTotal(inv), 0))}
+                Total: {formatCurrency(sortedInvoices.reduce((sum, inv) => sum + getInvoiceTotal(inv), 0))}
               </span>
             </div>
           )}
