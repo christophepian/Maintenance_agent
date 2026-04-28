@@ -328,15 +328,48 @@ export function registerLeaseRoutes(router: Router) {
   });
 
   // POST /signature-requests/:id/mark-signed
-  router.post("/signature-requests/:id/mark-signed", async ({ req, res, params, orgId }) => {
+  router.post("/signature-requests/:id/mark-signed", async ({ req, res, params, orgId, prisma }) => {
     if (!requireRole(req, res, 'MANAGER')) return;
     try {
       const sr = await markSignatureRequestSigned(params.id, orgId);
+
+      // Activate the lease (SIGNED → ACTIVE) and auto-issue invoices
+      if (sr.entityType === 'LEASE') {
+        try {
+          await activateLeaseWorkflow({ orgId, prisma }, { leaseId: sr.entityId });
+        } catch (activateErr: any) {
+          // Lease may already be ACTIVE or in an unexpected state — log but don't fail
+          console.warn(`[LEASE] Auto-activate after mark-signed: ${activateErr?.message}`);
+        }
+        try {
+          const { autoActivateLeaseInvoices } = await import('../services/leases');
+          await autoActivateLeaseInvoices(sr.entityId, orgId);
+        } catch (invoiceErr) {
+          console.error(`[LEASE] Auto-invoice after mark-signed failed (non-critical):`, invoiceErr);
+        }
+      }
+
       sendJson(res, 200, { data: sr });
     } catch (e: any) {
       if (e.message?.includes("not found")) return sendError(res, 404, "NOT_FOUND", e.message);
       if (e.message?.includes("Only SENT")) return sendError(res, 409, "CONFLICT", e.message);
       sendError(res, 500, "DB_ERROR", "Failed to mark signature request as signed", String(e));
+    }
+  });
+
+  /* ── Monthly Rent Invoice Generation ──────────────────────── */
+
+  // POST /leases/run-monthly-invoicing
+  // Generates and issues one RENT invoice per active lease for the current calendar month.
+  // Idempotent — skips leases that already have a rent invoice this month.
+  router.post("/leases/run-monthly-invoicing", async ({ req, res, orgId }) => {
+    if (!requireRole(req, res, 'MANAGER')) return;
+    try {
+      const { generateMonthlyRentInvoices } = await import('../services/leases');
+      const result = await generateMonthlyRentInvoices(orgId);
+      sendJson(res, 200, { data: result });
+    } catch (e) {
+      sendError(res, 500, "DB_ERROR", "Failed to run monthly invoicing", String(e));
     }
   });
 

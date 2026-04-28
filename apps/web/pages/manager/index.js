@@ -10,6 +10,7 @@ import ErrorBanner from "../../components/ui/ErrorBanner";
 import { formatChf as formatCurrency, formatChfCents, formatPercent, formatDate } from "../../lib/format";
 import { authHeaders } from "../../lib/api";
 import { cn } from "../../lib/utils";
+import ScrollableTabs from "../../components/mobile/ScrollableTabs";
 
 /* ─── YTD date range ─── */
 function ytdRange() {
@@ -63,7 +64,7 @@ function ActionItemsTabs({
       <h2 className="text-lg font-semibold text-slate-900 mb-4">Action Items</h2>
 
       {/* Tab strip */}
-      <div className="tab-strip">
+      <ScrollableTabs activeIndex={active}>
         {ACTION_TABS.map((label, i) => (
           <button
             key={label}
@@ -81,7 +82,7 @@ function ActionItemsTabs({
             )}
           </button>
         ))}
-      </div>
+      </ScrollableTabs>
 
       {/* Tab 0 — Pending review */}
       <div className={active === 0 ? "tab-panel-active" : "tab-panel"}>

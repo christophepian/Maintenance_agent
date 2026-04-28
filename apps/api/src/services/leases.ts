@@ -1509,3 +1509,138 @@ function mapExpenseItemToDTO(item: any): LeaseExpenseItemDTO {
     updatedAt: item.updatedAt.toISOString(),
   };
 }
+
+// ==========================================
+// Invoice auto-activation helpers
+// ==========================================
+
+/**
+ * Issues all DRAFT invoices linked to a lease.
+ * If no invoices exist at all, creates and immediately issues a first-rent invoice.
+ * Called from both tenant-portal signing and manager mark-signed paths.
+ */
+export async function autoActivateLeaseInvoices(
+  leaseId: string,
+  orgId: string,
+): Promise<void> {
+  const { issueInvoice } = await import('./invoices');
+
+  // Issue existing DRAFT invoices (deposit, first rent, etc. created at owner-selection step)
+  const draftInvoices = await prisma.invoice.findMany({
+    where: { leaseId, orgId, status: 'DRAFT' },
+  });
+
+  for (const inv of draftInvoices) {
+    try {
+      await issueInvoice(inv.id);
+      console.log(`[LEASE] Auto-issued invoice ${inv.id} (${inv.description}) for lease ${leaseId}`);
+    } catch (e) {
+      console.error(`[LEASE] Failed to auto-issue invoice ${inv.id}:`, e);
+    }
+  }
+
+  // If there were no invoices at all (lease created manually, outside the rental pipeline),
+  // create and issue a first-rent invoice for the current month.
+  if (draftInvoices.length === 0) {
+    const existingAny = await prisma.invoice.findFirst({ where: { leaseId, orgId } });
+    if (!existingAny) {
+      const lease = await leaseRepo.findLeaseById(prisma, leaseId);
+      if (lease) {
+        const rentAmount = (lease as any).rentTotalChf ?? (lease as any).netRentChf;
+        if (rentAmount && rentAmount > 0) {
+          try {
+            const inv = await createLeaseInvoice(leaseId, orgId, {
+              type: 'FIRST_RENT',
+              amountChf: rentAmount,
+            });
+            await issueInvoice(inv.id);
+            console.log(`[LEASE] Auto-created first-rent invoice and issued for lease ${leaseId}`);
+          } catch (e) {
+            console.error(`[LEASE] Failed to auto-create first-rent invoice for lease ${leaseId}:`, e);
+          }
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Monthly rent invoice generation routine.
+ * For every ACTIVE lease in the org, generates and issues one RENT invoice
+ * for the current calendar month if none has been created yet this month.
+ *
+ * Idempotent: safe to call multiple times — skips any lease that already
+ * has a "Loyer mensuel" invoice created in the current month.
+ */
+export async function generateMonthlyRentInvoices(
+  orgId: string,
+): Promise<{ created: number; skipped: number; errors: number }> {
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  const monthLabel = now.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+
+  const activeLeases = await prisma.lease.findMany({
+    where: { orgId, status: LeaseStatus.ACTIVE, isTemplate: false },
+    select: {
+      id: true,
+      tenantName: true,
+      netRentChf: true,
+      rentTotalChf: true,
+      startDate: true,
+      endDate: true,
+    },
+  });
+
+  let created = 0;
+  let skipped = 0;
+  let errors = 0;
+
+  const { issueInvoice } = await import('./invoices');
+
+  for (const lease of activeLeases) {
+    // Skip leases that haven't started yet
+    if (lease.startDate > now) {
+      skipped++;
+      continue;
+    }
+
+    // Check if a rent invoice already exists for this calendar month
+    const existing = await prisma.invoice.findFirst({
+      where: {
+        leaseId: lease.id,
+        orgId,
+        createdAt: { gte: monthStart, lt: monthEnd },
+        description: { contains: 'Loyer mensuel' },
+      },
+    });
+
+    if (existing) {
+      skipped++;
+      continue;
+    }
+
+    const rentAmount = (lease as any).rentTotalChf ?? lease.netRentChf;
+    if (!rentAmount || rentAmount <= 0) {
+      skipped++;
+      continue;
+    }
+
+    try {
+      const inv = await createLeaseInvoice(lease.id, orgId, {
+        type: 'RENT',
+        amountChf: rentAmount,
+        description: `Loyer mensuel ${monthLabel} — ${lease.tenantName}`,
+      });
+      await issueInvoice(inv.id);
+      created++;
+      console.log(`[MONTHLY_INVOICING] Issued rent invoice ${inv.id} for lease ${lease.id} (${lease.tenantName})`);
+    } catch (e) {
+      console.error(`[MONTHLY_INVOICING] Failed for lease ${lease.id}:`, e);
+      errors++;
+    }
+  }
+
+  console.log(`[MONTHLY_INVOICING] Done for org ${orgId}: created=${created} skipped=${skipped} errors=${errors}`);
+  return { created, skipped, errors };
+}

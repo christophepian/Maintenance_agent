@@ -285,25 +285,12 @@ export async function tenantAcceptLease(
     },
   });
 
-  // Auto-issue all DRAFT invoices linked to this lease (deposit, first rent, etc.)
+  // Auto-issue all DRAFT invoices; create first-rent invoice if none exist yet
   try {
-    const { issueInvoice } = await import('./invoices');
-    const draftInvoices = await prisma.invoice.findMany({
-      where: { leaseId, orgId, status: 'DRAFT' },
-    });
-    for (const inv of draftInvoices) {
-      try {
-        await issueInvoice(inv.id);
-        console.log(`[LEASE] Auto-issued invoice ${inv.id} (${inv.description}) for lease ${leaseId}`);
-      } catch (issueErr) {
-        console.error(`[LEASE] Failed to auto-issue invoice ${inv.id}:`, issueErr);
-      }
-    }
-    if (draftInvoices.length === 0) {
-      console.log(`[LEASE] No DRAFT invoices to auto-issue for lease ${leaseId}`);
-    }
+    const { autoActivateLeaseInvoices } = await import('./leases');
+    await autoActivateLeaseInvoices(leaseId, orgId);
   } catch (invoiceErr) {
-    console.error(`[LEASE] Failed to auto-issue invoices for lease ${leaseId}:`, invoiceErr);
+    console.error(`[LEASE] Failed to auto-activate lease invoices for lease ${leaseId}:`, invoiceErr);
   }
 
   // Mark the RentalOwnerSelection as SIGNED (removes from "Awaiting Signature" pipeline)
