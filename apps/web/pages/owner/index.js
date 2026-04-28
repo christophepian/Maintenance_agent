@@ -312,38 +312,6 @@ export default function OwnerDashboard() {
     [rfps]
   );
 
-  const kpiCards = useMemo(() => [
-    {
-      label: "Vacant units",
-      value: String(vacantUnits.length),
-      sub: `${formatPercent(vacancyRate)} vacancy · ${residentialUnits.length} residential`,
-      accent: vacantUnits.length > 0 ? "amber" : "",
-    },
-    {
-      label: "Expected monthly rent",
-      value: formatChf(expectedMonthlyRentChf),
-      sub: `From ${activeLeases.length} active lease${activeLeases.length !== 1 ? "s" : ""}`,
-      accent: "green",
-    },
-    {
-      label: "Outstanding liabilities",
-      value: formatChf(outstandingLiabilitiesChf),
-      sub: `Drafts: ${formatChf(draftInvoicesChf)}`,
-      accent: outstandingLiabilitiesChf > 0 ? "amber" : "",
-    },
-    {
-      label: "Pending approval exposure",
-      value: formatChf(pendingApprovalExposureChf),
-      sub: `${approvals.length} requests awaiting decision`,
-      accent: pendingApprovalExposureChf > 0 ? "amber" : "",
-    },
-  ], [
-    vacantUnits, vacancyRate, residentialUnits,
-    expectedMonthlyRentChf, activeLeases,
-    outstandingLiabilitiesChf, draftInvoicesChf,
-    pendingApprovalExposureChf, approvals,
-  ]);
-
   return (
     <AppShell role="OWNER">
       <PageShell>
@@ -366,9 +334,30 @@ export default function OwnerDashboard() {
 
           <Section title="KPIs">
             <div className="kpi-grid md:grid-cols-5">
-              {kpiCards.map((card) => (
-                <SummaryCard key={card.label} {...card} />
-              ))}
+              <SummaryCard
+                label="Vacant units"
+                value={String(vacantUnits.length)}
+                sub={`${formatPercent(vacancyRate)} vacancy · ${residentialUnits.length} residential`}
+                accent={vacantUnits.length > 0 ? "amber" : ""}
+              />
+              <SummaryCard
+                label="Expected monthly rent"
+                value={formatChf(expectedMonthlyRentChf)}
+                sub={`From ${activeLeases.length} active lease${activeLeases.length !== 1 ? "s" : ""}`}
+                accent="green"
+              />
+              <SummaryCard
+                label="Outstanding liabilities"
+                value={formatChf(outstandingLiabilitiesChf)}
+                sub={`Drafts: ${formatChf(draftInvoicesChf)}`}
+                accent={outstandingLiabilitiesChf > 0 ? "amber" : ""}
+              />
+              <SummaryCard
+                label="Pending approval exposure"
+                value={formatChf(pendingApprovalExposureChf)}
+                sub={`${approvals.length} requests awaiting decision`}
+                accent={pendingApprovalExposureChf > 0 ? "amber" : ""}
+              />
               <Link
                 href="/owner/reporting"
                 className="card mb-0 flex flex-col justify-between hover:bg-slate-50 transition-colors no-underline col-span-2 md:col-span-1"
