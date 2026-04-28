@@ -1396,10 +1396,6 @@ export default function ManagerRequestsPage() {
                             </button>
                           </div>
                         )}
-                        {/* Swipe hint — only on cards that have actions and aren't in assign mode */}
-                        {swipeActions.length > 0 && (
-                          <p className="mt-2 text-[10px] text-slate-300 select-none">← swipe for actions</p>
-                        )}
                       </div>
                     </SwipeableCard>
                   );

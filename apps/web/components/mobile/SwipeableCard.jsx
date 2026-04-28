@@ -169,6 +169,16 @@ export default function SwipeableCard({ actions = [], children, className = "" }
         onClick={handleBodyClick}
       >
         {children}
+        {/* Swipe signifier — drag handle at right edge, fades as card opens */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 flex flex-col gap-[3px]"
+          style={{ opacity: Math.max(0, 1 + offset / totalWidth) * 0.45 }}
+        >
+          <div className="h-0.5 w-4 rounded-full bg-slate-400" />
+          <div className="h-0.5 w-4 rounded-full bg-slate-400" />
+          <div className="h-0.5 w-4 rounded-full bg-slate-400" />
+        </div>
       </div>
     </div>
   );

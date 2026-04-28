@@ -357,6 +357,114 @@ href={`/admin-inventory/units/${u.id}${isOwner ? "?role=owner" : ""}`}
 - The `?role=owner` param propagates transitively: building page → unit page.
 - Pages implementing this: `admin-inventory/buildings/[id].js`, `admin-inventory/units/[id].js`.
 
+### 3.8 `SwipeableCard` — swipe-left to reveal inline actions
+
+**Status: implemented 2026-04-28.** Used on `manager/requests.js` mobile card list.
+
+Wraps a card body in an iOS-mail-style swipe-left gesture that reveals action buttons
+without cluttering the card surface. Use this pattern whenever a card list row has 1–3
+contextual actions (approve, reject, assign, delete, etc.) that would otherwise sit as
+inline buttons on every row.
+
+```
+apps/web/components/mobile/SwipeableCard.jsx
+```
+
+**Props:**
+```ts
+interface SwipeableCardProps {
+  actions: Array<{
+    label:    string;
+    onClick:  (e: React.MouseEvent) => void;
+    variant:  "green" | "red" | "blue" | "indigo" | "slate";
+    loading?: boolean;
+    disabled?: boolean;
+  }>;
+  children:  ReactNode;   // card body — rendered inside a bg-white sliding div
+  className?: string;
+}
+```
+
+**Behaviour:**
+- Swipe left → card body slides left (CSS `translateX`), exposing an action panel
+  fixed at the right edge of the container.
+- Each action is an equal-width button (`80px`) in its variant colour.
+- Snap logic: fast flick (>0.4 px/ms) snaps by swipe direction; slow drag snaps at
+  40% of the panel width. Either direction snaps back on insufficient movement.
+- When panel is open, tapping the card body closes it (`e.stopPropagation()` suppresses
+  the outer `onRowClick` navigation handler).
+- Cards with no actions render children directly with no touch handling.
+
+**Implementation notes:**
+- Touch move is registered imperatively with `{ passive: false }` so `e.preventDefault()`
+  can suppress vertical page scroll during a horizontal swipe. React JSX `onTouchMove`
+  cannot be used for this — it is treated as passive in modern browsers.
+- Axis locking: the first 6px of movement determines whether the gesture is horizontal
+  or vertical. Vertical gestures are never intercepted.
+- `willChange: "transform"` promotes the card body to its own GPU layer.
+
+**Swipe signifier:**
+Three horizontal grip lines (`h-0.5 w-4 bg-slate-400`, 3px gap) sit `absolute right-2
+top-1/2 -translate-y-1/2` inside the card body. They fade from 45% opacity → 0 as the
+card slides open, giving a persistent but unobtrusive drag-handle affordance. The signifier
+is always `aria-hidden` and `pointer-events-none`.
+
+**Usage pattern:**
+```jsx
+// Inside a ConfigurableTable mobileCard render — or any sm:hidden card list
+mobileCard={(r) => {
+  const isLoading = actionLoading === r.id;
+  const swipeActions = [
+    { label: "Approve", variant: "green", loading: isLoading, onClick: () => approve(r.id) },
+    { label: "Reject",  variant: "slate", loading: isLoading, onClick: () => reject(r.id) },
+  ];
+  return (
+    <SwipeableCard actions={swipeActions}>
+      <div className="table-card">
+        {/* primary card content — no action buttons here */}
+      </div>
+    </SwipeableCard>
+  );
+}}
+```
+
+**Sub-flows that need inline expansion (e.g. contractor select):**
+When an action triggers a multi-step sub-flow (contractor assignment), tap the action
+button to set the sub-flow state and close the swipe panel. Render the sub-flow UI
+inline in the card body behind a state check. Pass `actions={[]}` to `SwipeableCard`
+when the sub-flow is active (the card becomes non-swipeable while the form is open).
+
+```jsx
+// "Assign" CTA → sets assigningId → sub-flow renders inline, no swipe actions
+const swipeActions = isAssigning ? [] : [
+  { label: "Assign", variant: "blue", onClick: () => setAssigningId(r.id) },
+];
+
+return (
+  <SwipeableCard actions={swipeActions}>
+    <div className="table-card">
+      {/* normal card content */}
+      {isAssigning && (
+        <div className="flex gap-1.5 mt-2" onClick={(e) => e.stopPropagation()}>
+          <select>…</select>
+          <button onClick={doAssign}>OK</button>
+          <button onClick={cancel}>×</button>
+        </div>
+      )}
+    </div>
+  </SwipeableCard>
+);
+```
+
+**Navigation compatibility:**
+`ConfigurableTable` wraps each `mobileCard` output in a `<div onClick={onRowClick}>`.
+`SwipeableCard` does not need its own navigation prop. When the panel is closed, the body
+click event bubbles to the outer `onRowClick` normally. When the panel is open, the body
+click calls `e.stopPropagation()` to close the panel instead of navigating.
+
+**Pages using SwipeableCard:**
+- `apps/web/pages/manager/requests.js` — Approve/Reject, View RFP, Assign, Unassign
+
 ---
 
 ## 4. Layout and navigation changes
