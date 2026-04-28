@@ -16,6 +16,7 @@ import ScrollableTabs from "../../../components/mobile/ScrollableTabs";
 
 import { formatDate, formatChfCents, formatPercent } from "../../../lib/format";
 import { cn } from "../../../lib/utils";
+import KpiInlineGrid from "../../../components/ui/KpiInlineGrid";
 function displayDate(iso) {
   if (!iso) return "—";
   const d = new Date(iso);
@@ -596,8 +597,19 @@ export default function BuildingDetail() {
           {/* Building information tab */}
           {activeTab === "Building information" && (
             <>
-              {/* KPIs */}
-              <div className="kpi-grid gap-4 xl:grid-cols-4 mb-4">
+              {/* KPIs — mobile: compact inline grid */}
+              <div className="sm:hidden mb-4">
+                <KpiInlineGrid
+                  items={[
+                    { label: "Open Requests", value: kpisLoading ? "…" : (buildingKpis?.openRequests ?? "—"), tone: buildingKpis?.openRequests > 20 ? "warn" : undefined },
+                    { label: "Open Jobs",     value: kpisLoading ? "…" : (buildingKpis?.openJobs ?? "—"), tone: buildingKpis?.openJobs > 15 ? "warn" : undefined },
+                    { label: "NOI (YTD)",     value: kpisLoading ? "…" : (buildingKpis?.financials ? formatChfCents(buildingKpis.financials.netIncomeCents) : "—"), tone: buildingKpis?.financials ? (buildingKpis.financials.netIncomeCents >= 0 ? "good" : "warn") : undefined },
+                    { label: "vs Portfolio",  value: kpisLoading ? "…" : (buildingKpis?.portfolioComparison ? `${buildingKpis.portfolioComparison.better ? "+" : ""}${buildingKpis.portfolioComparison.pct}%` : "—"), tone: buildingKpis?.portfolioComparison ? (buildingKpis.portfolioComparison.better ? "good" : "warn") : undefined },
+                  ]}
+                />
+              </div>
+              {/* KPIs — desktop: card grid */}
+              <div className="hidden sm:grid kpi-grid gap-4 xl:grid-cols-4 mb-4">
                 {/* Open Requests */}
                 <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                   <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Open Requests</div>
@@ -663,7 +675,7 @@ export default function BuildingDetail() {
                     </>
                   )}
                 </div>
-              </div>
+              </div>{/* end desktop grid */}
 
             <Panel
               title="Building information"

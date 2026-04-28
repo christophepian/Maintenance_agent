@@ -251,6 +251,8 @@ import { formatChf, formatDate } from "../../lib/format";
 | `DetailList` / `DetailRow` | Vertical key-value list |
 | `Modal` / `ModalFooter` | Overlay dialog |
 | `ActionBar` | Bottom-anchored action strip |
+| `KpiInlineGrid` | Compact 2-col mobile KPI grid — stacked label/value, `tone` prop |
+| `QuickLinksRail` | Icon-rail quick-links with count badges — mobile companion to desktop card grids |
 
 Button has 10 variants: `primary`, `secondary`, `ghost`, `outline`, `destructive`, `destructiveGhost`, `warning`, `warningGhost`, `neutral`, `link`.
 

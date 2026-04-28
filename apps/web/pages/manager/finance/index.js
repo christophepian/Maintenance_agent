@@ -16,6 +16,7 @@ import CashflowPlansList from "../../../components/CashflowPlansList";
 import { cn } from "../../../lib/utils";
 import { FilterToggle, FilterPanelBody, FilterSection, FilterSectionClear, DateField } from "../../../components/ui/FilterPanel";
 import ScrollableTabs from "../../../components/mobile/ScrollableTabs";
+import KpiInlineGrid from "../../../components/ui/KpiInlineGrid";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -181,7 +182,20 @@ export default function ManagerFinanceHome() {
               ) : p && (
                 <>
                   <Section title="Portfolio Overview">
-                    <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                    {/* Mobile: compact inline grid */}
+                    <div className="sm:hidden mb-3">
+                      <KpiInlineGrid
+                        items={[
+                          { label: "Earned Income",  value: formatChfCents(p.totalEarnedIncomeCents), tone: "good" },
+                          { label: "Total Expenses", value: formatChfCents(p.totalExpensesCents) },
+                          { label: "Net Result",     value: formatChfCents(p.totalNetIncomeCents), tone: p.totalNetIncomeCents >= 0 ? "good" : "warn" },
+                          { label: "Receivables",    value: formatChfCents(p.totalReceivablesCents), tone: p.totalReceivablesCents > 0 ? "warn" : undefined },
+                          { label: "Payables",       value: formatChfCents(p.totalPayablesCents), tone: p.totalPayablesCents > 0 ? "warn" : undefined },
+                        ]}
+                      />
+                    </div>
+                    {/* Desktop: card grid */}
+                    <div className="hidden sm:grid grid-cols-2 md:grid-cols-5 gap-3">
                       <SummaryCard label="Earned Income"  value={formatChfCents(p.totalEarnedIncomeCents)} accent="green" />
                       <SummaryCard label="Total Expenses" value={formatChfCents(p.totalExpensesCents)} />
                       <SummaryCard label="Net Result"     value={formatChfCents(p.totalNetIncomeCents)} accent={netAccent} sub="Income − Expenses" />

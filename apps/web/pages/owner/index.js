@@ -13,6 +13,7 @@ import StrategyProfileBanner from "../../components/StrategyProfileBanner";
 import { formatChf, formatPercent } from "../../lib/format";
 import { cn } from "../../lib/utils";
 import ScrollableTabs from "../../components/mobile/ScrollableTabs";
+import KpiInlineGrid from "../../components/ui/KpiInlineGrid";
 
 // ─── Summary card (matches manager/finance SummaryCard) ───────────────────────
 function SummaryCard({ label, value, sub, accent }) {
@@ -333,7 +334,19 @@ export default function OwnerDashboard() {
           <ErrorBanner error={error} className="text-sm" />
 
           <Section title="KPIs">
-            <div className="kpi-grid md:grid-cols-5">
+            {/* Mobile: compact inline grid */}
+            <div className="sm:hidden mb-4">
+              <KpiInlineGrid
+                items={[
+                  { label: "Vacant units",     value: String(vacantUnits.length), tone: vacantUnits.length > 0 ? "warn" : undefined },
+                  { label: "Monthly rent",     value: formatChf(expectedMonthlyRentChf), tone: "good" },
+                  { label: "Outstanding",      value: formatChf(outstandingLiabilitiesChf), tone: outstandingLiabilitiesChf > 0 ? "warn" : undefined },
+                  { label: "Pending approval", value: formatChf(pendingApprovalExposureChf), tone: pendingApprovalExposureChf > 0 ? "warn" : undefined },
+                ]}
+              />
+            </div>
+            {/* Desktop: card grid */}
+            <div className="hidden sm:grid kpi-grid md:grid-cols-5">
               <SummaryCard
                 label="Vacant units"
                 value={String(vacantUnits.length)}
@@ -366,7 +379,7 @@ export default function OwnerDashboard() {
                 <span className="mt-2 text-sm font-medium text-slate-700">Monthly income, expenses, and building breakdown.</span>
                 <span className="mt-3 text-sm font-semibold text-indigo-600">View report →</span>
               </Link>
-            </div>
+            </div>{/* end desktop grid */}
           </Section>
 
           {loading && <div className="text-sm text-slate-600">Loading dashboard data...</div>}

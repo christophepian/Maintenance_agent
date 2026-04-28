@@ -8,6 +8,8 @@ export { default as ErrorBanner } from "./ErrorBanner";
 export { default as EmptyState } from "./EmptyState";
 export { default as StatusPill } from "./StatusPill";
 export { default as KpiCard } from "./KpiCard";
+export { default as KpiInlineGrid } from "./KpiInlineGrid";
+export { default as QuickLinksRail } from "./QuickLinksRail";
 export { default as ActionBar } from "./ActionBar";
 export { DetailGrid, DetailItem } from "./DetailGrid";
 export { DetailList, DetailRow } from "./DetailList";

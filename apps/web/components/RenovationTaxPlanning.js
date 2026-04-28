@@ -18,6 +18,7 @@ import { authHeaders } from "../lib/api";
 import Badge from "./ui/Badge";
 import { taxVariant } from "../lib/statusVariants";
 import { cn } from "../lib/utils";
+import KpiInlineGrid from "./ui/KpiInlineGrid";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -155,7 +156,18 @@ function CapExSummaryBridge() {
 
         {!loading && data && (
           <>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {/* Mobile: compact inline grid */}
+            <div className="sm:hidden mb-3">
+              <KpiInlineGrid
+                items={[
+                  { label: "Total CapEx",      value: fmtChf(data.totalProjectedChf), tone: "warn" },
+                  { label: "Bundling opps",    value: String(bundlingAdvice.length), tone: bundlingAdvice.length > 0 ? "good" : undefined },
+                  { label: "Timing opps",      value: String(timingCount), tone: timingCount > 0 ? "good" : undefined },
+                ]}
+              />
+            </div>
+            {/* Desktop: card grid */}
+            <div className="hidden sm:grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div className="card mb-0 flex flex-col gap-1">
                 <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Total projected CapEx</span>
                 <span className="text-lg font-bold text-amber-700">{fmtChf(data.totalProjectedChf)}</span>
@@ -309,7 +321,19 @@ export default function RenovationTaxPlanning() {
       <CapExSummaryBridge />
 
       {/* Classification Guide — category summary cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      {/* Mobile: compact inline grid */}
+      <div className="sm:hidden mb-3">
+        <KpiInlineGrid
+          items={[
+            { label: "Value Preserving", value: String(categoryCounts.WERTERHALTEND),    tone: "good" },
+            { label: "Value Enhancing",  value: String(categoryCounts.WERTVERMEHREND),   tone: "warn" },
+            { label: "Mixed",            value: String(categoryCounts.MIXED),            tone: categoryCounts.MIXED > 0 ? "warn" : undefined },
+            { label: "Energy / Env",     value: String(categoryCounts.ENERGY_ENVIRONMENT) },
+          ]}
+        />
+      </div>
+      {/* Desktop: card grid */}
+      <div className="hidden sm:grid grid-cols-2 md:grid-cols-4 gap-3">
         <div className="card mb-0 flex flex-col gap-1">
           <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Value Preserving</span>
           <span className="text-xl font-bold text-green-700">{categoryCounts.WERTERHALTEND}</span>

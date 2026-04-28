@@ -63,6 +63,8 @@ AppShell [role="CONTRACTOR"|"TENANT"|"OWNER"]  — sidebar + main area
 | `DetailGrid` / `DetailItem` | Key-value grid for record metadata |
 | `DetailList` / `DetailRow` | Vertical key-value list |
 | `ActionBar` | Bottom-anchored action button strip |
+| `KpiInlineGrid` | Compact 2-col mobile KPI grid — stacked label/value cells with optional `tone` (`warn`/`good`) |
+| `QuickLinksRail` | Icon-rail quick-links (4–5 tiles) with live count badges — mobile-only companion to desktop card grids |
 | `Modal` / `ModalFooter` | Overlay dialog with standardized footer layout |
 | `ResourceShell` | Wraps loading / error / not-found / ready states — replaces early-return guards |
 | `ErrorBanner` | `role="alert"` error display — renders nothing when error is falsy |

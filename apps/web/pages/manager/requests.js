@@ -258,7 +258,7 @@ function buildRequestColumns({ assigningId, setAssigningId, selectedContractorId
                   );
                 case 'view_rfp':
                   return (
-                    <a key="view_rfp" href="/manager/rfps" className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-700">
+                    <a key="view_rfp" href={r.rfpId ? `/manager/rfps/${r.rfpId}` : "/manager/rfps"} className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-700">
                       View RFP
                     </a>
                   );
@@ -1321,7 +1321,7 @@ export default function ManagerRequestsPage() {
                 sortField={sortField}
                 sortDir={sortDir}
                 onSort={handleSort}
-                onRowClick={(r) => router.push(`/manager/requests/${r.id}`)}
+                onRowClick={(r) => router.push(r.rfpId ? `/manager/rfps/${r.rfpId}` : `/manager/requests/${r.id}`)}
                 emptyState={<p className="text-sm text-slate-500">No requests match this filter.</p>}
                 mobileCard={(r) => {
                   const ctaList = getAvailableCTAs(r, assigningId);
@@ -1336,7 +1336,7 @@ export default function ManagerRequestsPage() {
                       case 'reject':
                         return { label: "Reject",  variant: "slate",  loading: isLoading, onClick: () => rejectRequest(r.id) };
                       case 'view_rfp':
-                        return { label: "RFP",     variant: "indigo", onClick: () => router.push("/manager/rfps") };
+                        return { label: "RFP",     variant: "indigo", onClick: () => router.push(r.rfpId ? `/manager/rfps/${r.rfpId}` : "/manager/rfps") };
                       case 'assign':
                         return { label: "Assign",  variant: "blue",   onClick: () => setAssigningId(r.id) };
                       case 'unassign':

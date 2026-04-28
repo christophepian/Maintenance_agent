@@ -1,6 +1,6 @@
 # Maintenance Agent — Project State
 
-**Last updated:** 2026-04-27 (Responsive polish pass, bug fixes: PENDING_REVIEW CTAs, timeline stage, tenant scheduling UX, manager-reject proxy)
+**Last updated:** 2026-04-28 (Mobile KPI rail + icon quick-links; Panel header wrapping fix; RFP deep-link navigation fix)
 
 > **For routine implementation work, start with [PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md)** (~220 lines).
 > This file is the canonical deep reference — guardrail details, backlog, state integrity, epic summaries.
@@ -456,6 +456,8 @@ The following shared abstractions are canonical. Use them before writing custom 
 | `DetailList` / `DetailRow` | Ad-hoc vertical key-value lists | `components/ui/DetailList.jsx` |
 | `Modal` / `ModalFooter` | Custom overlay markup | `components/ui/Modal.jsx` |
 | `ActionBar` | Bottom-anchored action strips | `components/ui/ActionBar.jsx` |
+| `KpiInlineGrid` | Compact 2-col mobile KPI grid (stacked label + value, tone support) | `components/ui/KpiInlineGrid.jsx` |
+| `QuickLinksRail` | Icon-rail quick-links with count badges — 4–5 tiles, mobile only | `components/ui/QuickLinksRail.jsx` |
 | `formatChf`, `formatChfCents`, `formatDate`, ... | Inline format functions | `lib/format.js` |
 
 **Rules:**
@@ -706,6 +708,7 @@ PORT=3001
 | Strategy Engine & Capture Hardening | 2026-04-16 | 3-phase strategy engine (56 tests): StrategyProfile + BuildingProfile models, 5 archetypes, 6 scoring dimensions, decision scoring, cashflow strategyOverlay; capture flow fixes (auth bypass, QR LAN IP, ECONNREFUSED detection); Azure OCR activation; invoice source-file serving + original image display |
 | Mobile Responsive — Owner Surface | 2026-04-23 | Dual-render table pattern (F-UI9) applied to 6 files; role-aware shared page routing (F-UI10) on buildings/[id] + units/[id]; ScrollableTabs upgraded with "More" overflow bottom sheet (F-UI11); dev server bound to 0.0.0.0 for phone testing; test protocol + responsive scope doc updated |
 | UI Responsiveness & Bug Fixes | 2026-04-27 | Responsive polish (flex-wrap, overflow-x-auto, hidden sm:table-cell) across 30+ manager/owner/contractor/tenant pages; PENDING_REVIEW approve/reject CTAs fixed (were empty); `manager-reject` proxy created + detail page called wrong endpoint; contractor page Panel import; timeline stage bug fixed (stuck at Contractor when job IN_PROGRESS); tenant scheduling Accept/Decline buttons moved below slot; F-UI4 template-literal violation caught and fixed |
+| Mobile KPI & Navigation Polish | 2026-04-28 | `KpiInlineGrid` component (stacked label/value, tone, 2-col bordered grid) applied to 5 pages (manager/owner dashboards, finance overview, building detail, RenovationTaxPlanning); `QuickLinksRail` icon-rail with live count badges on manager dashboard Quick Links (mobile only); `Panel.jsx` header fixed — was `flex-col` on mobile causing action button to wrap below title, now always `flex-row items-center justify-between` with `min-w-0 truncate` on title + `shrink-0` on actions; RFP deep-link fixed in 3 touch points on `/manager/requests` (card click, swipe button, desktop link all now route to `/manager/rfps/[rfpId]`) |
 
 ---
 
@@ -794,7 +797,7 @@ Safe to:
 
 ---
 
-✅ **Project stabilized, security-hardened, org-scoped, and UI-connected (2026-04-27).** 65 test suites · 980 tests, 0 TS errors. 91/94 audit findings resolved. Backend: ~73k LOC | Frontend: ~45k LOC | 291 API operations | 68 Prisma models | 62 enums | 82 migrations | 289 frontend pages | 28 workflows | 28 route modules. Strategy Engine & Capture Hardening epic complete. Responsive polish pass complete: dual-render pattern (F-UI9) applied to 18+ pages across all 4 personas; PENDING_REVIEW CTA + timeline stage + manager-reject proxy bugs fixed. See [EPIC_HISTORY.md](EPIC_HISTORY.md) for full completion details.
+✅ **Project stabilized, security-hardened, org-scoped, and UI-connected (2026-04-28).** 65 test suites · 980 tests, 0 TS errors. 91/94 audit findings resolved. Backend: ~73k LOC | Frontend: ~45k LOC | 291 API operations | 68 Prisma models | 62 enums | 82 migrations | 289 frontend pages | 28 workflows | 28 route modules. Strategy Engine & Capture Hardening epic complete. Responsive polish pass complete: dual-render pattern (F-UI9) applied to 18+ pages; `KpiInlineGrid` + `QuickLinksRail` components added; `Panel.jsx` header wrapping fixed; RFP deep-link navigation fixed. See [EPIC_HISTORY.md](EPIC_HISTORY.md) for full completion details.
 
 
 ## 13. Authentication & Testing

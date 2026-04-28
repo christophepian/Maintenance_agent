@@ -11,6 +11,8 @@ import { formatChf as formatCurrency, formatChfCents, formatPercent, formatDate 
 import { authHeaders } from "../../lib/api";
 import { cn } from "../../lib/utils";
 import ScrollableTabs from "../../components/mobile/ScrollableTabs";
+import KpiInlineGrid from "../../components/ui/KpiInlineGrid";
+import QuickLinksRail from "../../components/ui/QuickLinksRail";
 
 /* ─── YTD date range ─── */
 function ytdRange() {
@@ -407,7 +409,23 @@ export default function ManagerDashboard() {
 
           {/* ─── KPIs ─── */}
           <Section title="KPIs">
-            <div className="kpi-grid gap-4 xl:grid-cols-4">
+            {/* Mobile: compact inline grid */}
+            <div className="sm:hidden mb-4">
+              <KpiInlineGrid
+                items={[
+                  { label: "Open Requests", value: openRequestsCount, tone: openRequestsCount > 20 ? "warn" : undefined },
+                  { label: "Open Jobs",     value: openJobsCount,     tone: openJobsCount > 15 ? "warn" : undefined },
+                  { label: "Spend MTD",     value: formatCurrency(spendThisMonth) },
+                  { label: "Pending Invoices", value: pendingInvoicesCount, tone: pendingInvoicesCount > 0 ? "warn" : undefined },
+                  { label: "Avg Days",      value: avgDaysToComplete ?? "—" },
+                  ...(portfolio ? [
+                    { label: "NOI", value: formatChfCents(portfolio.totalNetIncomeCents), tone: portfolio.totalNetIncomeCents >= 0 ? "good" : "warn" },
+                  ] : []),
+                ]}
+              />
+            </div>
+            {/* Desktop: card grid */}
+            <div className="hidden sm:grid kpi-grid gap-4 xl:grid-cols-4">
               <div className="rounded-2xl border border-surface-border bg-surface-raised p-5 shadow-sm">
                 <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Open Requests</div>
                 <div className={cn("mt-3 text-2xl font-semibold tracking-tight", openRequestsCount > 20 ? "text-amber-700" : "text-slate-900")}>
@@ -488,14 +506,73 @@ export default function ManagerDashboard() {
                   <div className="mt-3 text-sm text-slate-500">Loading…</div>
                 </div>
               )}
-            </div>
+            </div>{/* end desktop grid */}
           </Section>
 
           <ErrorBanner error={portfolioError} className="text-sm" />
 
           {/* ─── Quick Links ─── */}
           <Section title="Quick Links">
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            {/* Mobile: icon rail — sm:hidden */}
+            <div className="sm:hidden">
+              <QuickLinksRail
+                items={[
+                  {
+                    href: "/manager/requests",
+                    label: "Requests",
+                    count: openRequestsCount,
+                    icon: (
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75} aria-hidden="true">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                      </svg>
+                    ),
+                  },
+                  {
+                    href: "/manager/jobs",
+                    label: "Jobs",
+                    count: openJobsCount,
+                    icon: (
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75} aria-hidden="true">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l5.653-4.655m5.519-5.24l2.046-2.046a2 2 0 012.828 0l.14.14a2 2 0 010 2.829l-2.046 2.046M13.965 9.929l-1.207.767" />
+                      </svg>
+                    ),
+                  },
+                  {
+                    href: "/manager/finance/invoices",
+                    label: "Invoices",
+                    count: pendingInvoicesCount,
+                    icon: (
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75} aria-hidden="true">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                    ),
+                  },
+                  {
+                    href: "/manager/leases",
+                    label: "Leases",
+                    count: 0,
+                    icon: (
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75} aria-hidden="true">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z" />
+                      </svg>
+                    ),
+                  },
+                  {
+                    href: "/admin-inventory",
+                    label: "Inventory",
+                    count: 0,
+                    icon: (
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75} aria-hidden="true">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12m-.75 4.5H21m-3.75 3.75h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008z" />
+                      </svg>
+                    ),
+                  },
+                ]}
+              />
+            </div>
+
+            {/* Desktop: card grid — hidden sm:grid */}
+            <div className="hidden sm:grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               <Link href="/manager/requests" className="rounded-xl border border-slate-200 bg-white px-4 py-3 hover:bg-slate-50 transition-colors no-underline">
                 <div className="text-sm font-semibold text-slate-900">All Requests</div>
                 <div className="mt-0.5 text-xs text-slate-500">Review and manage work requests</div>
