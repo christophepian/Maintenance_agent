@@ -1526,49 +1526,84 @@ export default function BuildingDetail() {
               ) : buildingRequests.length === 0 ? (
                 <p className="text-sm text-slate-500 italic py-4">No requests found for this building.</p>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-slate-200 text-left">
-                        <th className="pb-2 pr-4 text-xs font-medium uppercase tracking-wide text-slate-400">#</th>
-                        <th className="pb-2 pr-4 text-xs font-medium uppercase tracking-wide text-slate-400">Status</th>
-                        <th className="pb-2 pr-4 text-xs font-medium uppercase tracking-wide text-slate-400">Category</th>
-                        <th className="pb-2 pr-4 text-xs font-medium uppercase tracking-wide text-slate-400">Unit</th>
-                        <th className="pb-2 pr-4 text-xs font-medium uppercase tracking-wide text-slate-400">Urgency</th>
-                        <th className="pb-2 pr-4 text-xs font-medium uppercase tracking-wide text-slate-400">Contractor</th>
-                        <th className="pb-2 text-xs font-medium uppercase tracking-wide text-slate-400">Date</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {buildingRequests.map((r) => (
-                        <tr
-                          key={r.id}
-                          className="cursor-pointer hover:bg-slate-50"
-                          onClick={() => router.push(`/manager/requests?id=${r.id}`)}
-                        >
-                          <td className="py-2 pr-4 font-mono text-slate-600">#{r.requestNumber}</td>
-                          <td className="py-2 pr-4">
-                            <Badge variant={
-                              r.status === "COMPLETED" ? "success" :
-                              r.status === "REJECTED" ? "destructive" :
-                              r.status === "PENDING_REVIEW" || r.status === "PENDING_OWNER_APPROVAL" || r.status === "RFP_PENDING" ? "warning" :
-                              r.status === "APPROVED" || r.status === "ASSIGNED" ? "info" : "default"
-                            } size="sm">
-                              {r.status.replace(/_/g, " ")}
-                            </Badge>
-                          </td>
-                          <td className="py-2 pr-4 text-slate-700">{r.category || "—"}</td>
-                          <td className="py-2 pr-4 text-slate-600">{r.unit?.unitNumber || "—"}</td>
-                          <td className="py-2 pr-4 text-slate-600">{r.urgency || "—"}</td>
-                          <td className="py-2 pr-4 text-slate-600">{r.assignedContractor?.name || "—"}</td>
-                          <td className="py-2 text-slate-400">
-                            {r.createdAt ? new Date(r.createdAt).toLocaleDateString("de-CH") : "—"}
-                          </td>
+                <>
+                  {/* Mobile cards */}
+                  <div className="sm:hidden divide-y divide-slate-100">
+                    {buildingRequests.map((r) => (
+                      <div
+                        key={r.id}
+                        className="py-3 flex flex-col gap-1 cursor-pointer hover:bg-slate-50"
+                        onClick={() => router.push(`/manager/requests?id=${r.id}`)}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-sm font-medium text-slate-700">
+                            #{r.requestNumber}{r.category ? ` · ${r.category}` : ""}
+                          </span>
+                          <Badge variant={
+                            r.status === "COMPLETED" ? "success" :
+                            r.status === "REJECTED" ? "destructive" :
+                            r.status === "PENDING_REVIEW" || r.status === "PENDING_OWNER_APPROVAL" || r.status === "RFP_PENDING" ? "warning" :
+                            r.status === "APPROVED" || r.status === "ASSIGNED" ? "info" : "default"
+                          } size="sm">
+                            {r.status.replace(/_/g, " ")}
+                          </Badge>
+                        </div>
+                        <div className="text-xs text-slate-500 flex items-center gap-2">
+                          {r.unit?.unitNumber && <span>Unit {r.unit.unitNumber}</span>}
+                          {r.urgency && <span>· {r.urgency}</span>}
+                          {r.assignedContractor?.name && <span>· {r.assignedContractor.name}</span>}
+                        </div>
+                        <span className="text-xs text-slate-400">
+                          {r.createdAt ? new Date(r.createdAt).toLocaleDateString("de-CH") : "—"}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  {/* Desktop table */}
+                  <div className="hidden sm:block overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-slate-200 text-left">
+                          <th className="pb-2 pr-4 text-xs font-medium uppercase tracking-wide text-slate-400">#</th>
+                          <th className="pb-2 pr-4 text-xs font-medium uppercase tracking-wide text-slate-400">Status</th>
+                          <th className="pb-2 pr-4 text-xs font-medium uppercase tracking-wide text-slate-400">Category</th>
+                          <th className="pb-2 pr-4 text-xs font-medium uppercase tracking-wide text-slate-400">Unit</th>
+                          <th className="pb-2 pr-4 text-xs font-medium uppercase tracking-wide text-slate-400">Urgency</th>
+                          <th className="pb-2 pr-4 text-xs font-medium uppercase tracking-wide text-slate-400">Contractor</th>
+                          <th className="pb-2 text-xs font-medium uppercase tracking-wide text-slate-400">Date</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {buildingRequests.map((r) => (
+                          <tr
+                            key={r.id}
+                            className="cursor-pointer hover:bg-slate-50"
+                            onClick={() => router.push(`/manager/requests?id=${r.id}`)}
+                          >
+                            <td className="py-2 pr-4 font-mono text-slate-600">#{r.requestNumber}</td>
+                            <td className="py-2 pr-4">
+                              <Badge variant={
+                                r.status === "COMPLETED" ? "success" :
+                                r.status === "REJECTED" ? "destructive" :
+                                r.status === "PENDING_REVIEW" || r.status === "PENDING_OWNER_APPROVAL" || r.status === "RFP_PENDING" ? "warning" :
+                                r.status === "APPROVED" || r.status === "ASSIGNED" ? "info" : "default"
+                              } size="sm">
+                                {r.status.replace(/_/g, " ")}
+                              </Badge>
+                            </td>
+                            <td className="py-2 pr-4 text-slate-700">{r.category || "—"}</td>
+                            <td className="py-2 pr-4 text-slate-600">{r.unit?.unitNumber || "—"}</td>
+                            <td className="py-2 pr-4 text-slate-600">{r.urgency || "—"}</td>
+                            <td className="py-2 pr-4 text-slate-600">{r.assignedContractor?.name || "—"}</td>
+                            <td className="py-2 text-slate-400">
+                              {r.createdAt ? new Date(r.createdAt).toLocaleDateString("de-CH") : "—"}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
               )}
             </Panel>
           )}
