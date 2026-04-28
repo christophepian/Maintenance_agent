@@ -348,6 +348,27 @@ const CashflowPlansList = forwardRef(function CashflowPlansList(_props, ref) {
             onSort={handleSort}
             onRowClick={(plan) => router.push(`/manager/cashflow/${plan.id}`)}
             emptyState="No plans match your criteria."
+            mobileCard={(p) => {
+              const stale = isPlanStale(p);
+              return (
+                <div className="table-card">
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="font-medium text-slate-900 text-sm">{p.name}</span>
+                    <Badge variant={planVariant(p.status)}>{p.status}</Badge>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1">
+                    {p.buildingId ? (buildingMap[p.buildingId] || "Building") : "Portfolio"}
+                    {" · "}{p.horizonMonths} mo
+                    {p.incomeGrowthRatePct != null && ` · ${p.incomeGrowthRatePct}% growth`}
+                  </p>
+                  {p.lastComputedAt && (
+                    <p className={cn("text-xs mt-0.5", stale ? "text-amber-600 font-medium" : "text-slate-400")}>
+                      Computed {formatDate(p.lastComputedAt)}{stale ? " (stale)" : ""}
+                    </p>
+                  )}
+                </div>
+              );
+            }}
           />
           <div className="px-3 py-2 text-xs text-slate-400 border-t border-slate-100">
             {plans.length} plan{plans.length !== 1 ? "s" : ""}
