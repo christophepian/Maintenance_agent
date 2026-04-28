@@ -334,13 +334,13 @@ export default function RenovationTaxPlanning() {
 
       {/* Catalog filters */}
       <Panel>
-        <div className="flex flex-wrap items-end gap-3">
+        <div className="grid grid-cols-1 sm:flex sm:flex-wrap sm:items-end gap-3">
           <div className="flex flex-col gap-1">
             <label className="text-xs font-medium text-slate-600">Building System</label>
             <select
               value={catalogFilter.system}
               onChange={(e) => setCatalogFilter((f) => ({ ...f, system: e.target.value }))}
-              className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
+              className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-full sm:w-auto"
             >
               <option value="">All systems</option>
               {Object.entries(SYSTEM_LABELS).map(([k, v]) => (
@@ -353,7 +353,7 @@ export default function RenovationTaxPlanning() {
             <select
               value={catalogFilter.taxCategory}
               onChange={(e) => setCatalogFilter((f) => ({ ...f, taxCategory: e.target.value }))}
-              className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
+              className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-full sm:w-auto"
             >
               <option value="">All categories</option>
               {Object.entries(TAX_CATEGORY_STYLES).map(([k, v]) => (
@@ -368,13 +368,13 @@ export default function RenovationTaxPlanning() {
               value={catalogFilter.search}
               onChange={(e) => setCatalogFilter((f) => ({ ...f, search: e.target.value }))}
               placeholder="Search renovation jobs…"
-              className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-56"
+              className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-full sm:w-56"
             />
           </div>
           {(catalogFilter.system || catalogFilter.taxCategory || catalogFilter.search) && (
             <button
               onClick={() => setCatalogFilter({ system: "", taxCategory: "", search: "" })}
-              className="text-xs text-brand hover:underline pb-2"
+              className="text-xs text-brand hover:underline sm:pb-2"
             >
               Clear filters
             </button>
@@ -451,20 +451,20 @@ function CatalogEntryRow({ entry }) {
         onClick={() => setOpen((o) => !o)}
       >
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="text-sm font-medium text-slate-800">{entry.label}</span>
             <span className="text-xs text-slate-400 font-mono">{entry.code}</span>
           </div>
           <div className="text-xs text-slate-500 mt-0.5">{accounting}</div>
+          <div className="flex items-center gap-2 flex-wrap mt-1.5">
+            <TaxBadge category={entry.taxCategory} />
+            <TimingBadge sensitivity={entry.timingSensitivity} />
+          </div>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <TaxBadge category={entry.taxCategory} />
-          <TimingBadge sensitivity={entry.timingSensitivity} />
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"
-            className={cn("w-4 h-4 text-slate-400 transition-transform duration-200", open ? "rotate-180" : "")}>
-            <path fillRule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
-          </svg>
-        </div>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"
+          className={cn("w-4 h-4 text-slate-400 shrink-0 transition-transform duration-200", open ? "rotate-180" : "")}>
+          <path fillRule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
+        </svg>
       </div>
       {open && (
         <div className="px-4 pb-4 pt-1 border-t border-slate-50 bg-slate-50/50">
