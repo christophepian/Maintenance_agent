@@ -138,7 +138,53 @@ export default function ChargeReconciliationDetailPage() {
 
           {/* Line Items */}
           <Panel title="Expense Lines" className="mt-6">
-            <div className="overflow-x-auto">
+            {/* Mobile cards */}
+            <div className="sm:hidden divide-y divide-slate-100">
+              {recon.lineItems.map((line) => (
+                <div key={line.id} className="py-3 flex flex-col gap-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-medium text-slate-800">{line.description}</span>
+                    <Badge variant={line.chargeMode === "ACOMPTE" ? "info" : "muted"} size="sm">
+                      {line.chargeMode}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center justify-between text-xs text-slate-500">
+                    <span>ACOMPTE: {formatChfCents(line.acomptePaidCents)}</span>
+                    <span>
+                      Actual:{" "}
+                      {isDraft && line.chargeMode === "ACOMPTE" ? (
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          className="w-24 text-right border rounded px-2 py-0.5 text-xs"
+                          value={editValues[line.id] || ""}
+                          onChange={(e) => setEditValues((prev) => ({ ...prev, [line.id]: e.target.value }))}
+                          onKeyDown={(e) => { if (e.key === "Enter") saveLine(line.id); }}
+                        />
+                      ) : (
+                        formatChfCents(line.actualCostCents)
+                      )}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className={cn("tabular-nums", line.balanceCents > 0 ? "text-red-600" : line.balanceCents < 0 ? "text-green-600" : "text-slate-500")}>
+                      Balance:{" "}
+                      {line.chargeMode === "ACOMPTE"
+                        ? <>{line.balanceCents > 0 ? "+" : ""}{formatChfCents(line.balanceCents)}</>
+                        : "—"}
+                    </span>
+                    {isDraft && line.chargeMode === "ACOMPTE" && (
+                      <Button variant="primary" size="xs" onClick={() => saveLine(line.id)} disabled={saving === line.id}>
+                        {saving === line.id ? "Saving…" : "Save"}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+            {/* Desktop table */}
+            <div className="hidden sm:block overflow-x-auto">
               <table className="inline-table">
                 <thead>
                   <tr>

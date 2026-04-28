@@ -13,6 +13,7 @@ import { reconciliationVariant } from "../../../lib/statusVariants";
 import { authHeaders } from "../../../lib/api";
 import { formatChfCents } from "../../../lib/format";
 import { cn } from "../../../lib/utils";
+import ScrollableTabs from "../../../components/mobile/ScrollableTabs";
 
 const TABS = [
   { key: "DRAFT",     label: "Draft" },
@@ -145,7 +146,7 @@ export default function ChargeReconciliationsPage() {
         <PageContent>
           {error && <p className="error-banner">{error}</p>}
           {/* Tab strip */}
-          <div className="tab-strip">
+          <ScrollableTabs activeIndex={activeTab}>
             {TABS.map((tab, i) => (
               <button
                 key={tab.key}
@@ -155,7 +156,7 @@ export default function ChargeReconciliationsPage() {
                 {tab.label}
               </button>
             ))}
-          </div>
+          </ScrollableTabs>
 
           {loading && <p className="loading-text">Loading…</p>}
           {!loading && !error && (

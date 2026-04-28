@@ -13,6 +13,7 @@ import { authHeaders } from "../../lib/api";
 import { formatDate } from "../../lib/format";
 import ConfigurableTable from "../../components/ConfigurableTable";
 import { useTableSort, clientSort } from "../../lib/tableUtils";
+import ScrollableTabs from "../../components/mobile/ScrollableTabs";
 
 const STATUS_TABS = [
   { key: "ALL", label: "All" },
@@ -150,7 +151,7 @@ export default function ManagerRfpsPage() {
           <ErrorBanner error={error} className="text-sm" />
 
           {/* Status tabs */}
-          <div className="tab-strip">
+          <ScrollableTabs activeIndex={STATUS_TABS.findIndex((t) => t.key === activeTab)}>
             {STATUS_TABS.map((tab) => (
               <button
                 key={tab.key}
@@ -160,7 +161,7 @@ export default function ManagerRfpsPage() {
                 {tab.label}
               </button>
             ))}
-          </div>
+          </ScrollableTabs>
 
           <Panel title={`RFPs (${total})`} bodyClassName="p-0">
             {loading ? (

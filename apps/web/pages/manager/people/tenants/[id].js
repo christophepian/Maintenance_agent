@@ -13,6 +13,7 @@ import Badge from "../../../../components/ui/Badge";
 import ErrorBanner from "../../../../components/ui/ErrorBanner";
 import { cn } from "../../../../lib/utils";
 import { leaseVariant, invoiceVariant } from "../../../../lib/statusVariants";
+import ScrollableTabs from "../../../../components/mobile/ScrollableTabs";
 
 export default function TenantDetailPage() {
   const router = useRouter();
@@ -194,7 +195,7 @@ export default function TenantDetailPage() {
             <p className="loading-text">Loading tenant…</p>
           ) : tenant ? (
             <div className="grid gap-4">
-              <div className="tab-strip">
+              <ScrollableTabs activeIndex={["Personal information", "Unit", "Documents", "Contracts", "Invoices"].indexOf(activeTab)}>
                 {["Personal information", "Unit", "Documents", "Contracts", "Invoices"].map((tab) => (
                   <button
                     key={tab}
@@ -205,7 +206,7 @@ export default function TenantDetailPage() {
                     {tab}
                   </button>
                 ))}
-              </div>
+              </ScrollableTabs>
 
               {activeTab === "Personal information" && (
                 <Panel title="Personal information">
@@ -327,85 +328,131 @@ export default function TenantDetailPage() {
               )}
 
               {activeTab === "Contracts" && (
-                <Panel title="Contracts">
+                <Panel title="Contracts" bodyClassName="p-0">
                   {leasesLoading ? (
-                    <p className="text-sm text-slate-600">Loading leases…</p>
+                    <p className="px-4 py-3 text-sm text-slate-600">Loading leases…</p>
                   ) : leases.length === 0 ? (
-                    <p className="text-sm text-slate-500">No leases found for this tenant.</p>
+                    <p className="px-4 py-3 text-sm text-slate-500">No leases found for this tenant.</p>
                   ) : (
-                      <table className="inline-table">
-                        <thead>
-                          <tr>
-                            <th>Unit</th>
-                            <th>Building</th>
-                            <th>Start date</th>
-                            <th>End date</th>
-                            <th>Status</th>
-                            <th className="text-right">Monthly rent</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {leases.map((l) => (
-                            <tr key={l.id}>
-                              <td>
-                                <Link href={`/manager/leases/${l.id}`} className="cell-link">
-                                  {l.unit?.unitNumber || l.unitId?.slice(0, 8) || "—"}
-                                </Link>
-                              </td>
-                              <td>{l.unit?.building?.name || "—"}</td>
-                              <td>{formatDate(l.startDate)}</td>
-                              <td>{formatDate(l.endDate)}</td>
-                              <td>
-                                <Badge variant={leaseVariant(l.status)} size="sm">
-                                  {l.status}
-                                </Badge>
-                              </td>
-                              <td className="text-right">
-                                {l.netRentChf != null ? `CHF ${l.netRentChf}.-` : "—"}
-                              </td>
+                    <>
+                      {/* Mobile cards */}
+                      <div className="sm:hidden divide-y divide-slate-100">
+                        {leases.map((l) => (
+                          <div key={l.id} className="px-4 py-3 flex flex-col gap-1">
+                            <div className="flex items-center justify-between gap-2">
+                              <Link href={`/manager/leases/${l.id}`} className="cell-link text-sm font-medium">
+                                {l.unit?.unitNumber || l.unitId?.slice(0, 8) || "—"}
+                              </Link>
+                              <Badge variant={leaseVariant(l.status)} size="sm">{l.status}</Badge>
+                            </div>
+                            <span className="text-xs text-slate-500">{l.unit?.building?.name || "—"}</span>
+                            <div className="flex items-center justify-between text-xs text-slate-500">
+                              <span>{formatDate(l.startDate)} – {formatDate(l.endDate)}</span>
+                              <span>{l.netRentChf != null ? `CHF ${l.netRentChf}.-` : "—"}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      {/* Desktop table */}
+                      <div className="hidden sm:block overflow-x-auto">
+                        <table className="inline-table">
+                          <thead>
+                            <tr>
+                              <th>Unit</th>
+                              <th>Building</th>
+                              <th>Start date</th>
+                              <th>End date</th>
+                              <th>Status</th>
+                              <th className="text-right">Monthly rent</th>
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                          </thead>
+                          <tbody>
+                            {leases.map((l) => (
+                              <tr key={l.id}>
+                                <td>
+                                  <Link href={`/manager/leases/${l.id}`} className="cell-link">
+                                    {l.unit?.unitNumber || l.unitId?.slice(0, 8) || "—"}
+                                  </Link>
+                                </td>
+                                <td>{l.unit?.building?.name || "—"}</td>
+                                <td>{formatDate(l.startDate)}</td>
+                                <td>{formatDate(l.endDate)}</td>
+                                <td>
+                                  <Badge variant={leaseVariant(l.status)} size="sm">
+                                    {l.status}
+                                  </Badge>
+                                </td>
+                                <td className="text-right">
+                                  {l.netRentChf != null ? `CHF ${l.netRentChf}.-` : "—"}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </>
                   )}
                 </Panel>
               )}
 
               {activeTab === "Invoices" && (
-                <Panel title="Invoices">
+                <Panel title="Invoices" bodyClassName="p-0">
                   {invoicesLoading ? (
-                    <p className="text-sm text-slate-600">Loading invoices…</p>
+                    <p className="px-4 py-3 text-sm text-slate-600">Loading invoices…</p>
                   ) : leaseInvoices.length === 0 ? (
-                    <p className="text-sm text-slate-500">No invoices found for this tenant.</p>
+                    <p className="px-4 py-3 text-sm text-slate-500">No invoices found for this tenant.</p>
                   ) : (
-                      <table className="inline-table">
-                        <thead>
-                          <tr>
-                            <th>Invoice #</th>
-                            <th>Description</th>
-                            <th className="text-right">Amount</th>
-                            <th>Due date</th>
-                            <th>Status</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {leaseInvoices.map((inv) => (
-                            <tr key={inv.id}>
-                              <td>{inv.invoiceNumber || inv.id?.slice(0, 8) || "—"}</td>
-                              <td>{inv.description || "—"}</td>
-                              <td className="text-right">
-                                {inv.totalAmount != null ? formatChf(inv.totalAmount) : "—"}
-                              </td>
-                              <td>{formatDate(inv.dueDate)}</td>
-                              <td>
-                                <Badge variant={invoiceVariant(inv.status)} size="sm">
-                                  {inv.status}
-                                </Badge>
-                              </td>
+                    <>
+                      {/* Mobile cards */}
+                      <div className="sm:hidden divide-y divide-slate-100">
+                        {leaseInvoices.map((inv) => (
+                          <div key={inv.id} className="px-4 py-3 flex flex-col gap-1">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-sm font-medium text-slate-800">
+                                {inv.invoiceNumber || inv.id?.slice(0, 8) || "—"}
+                              </span>
+                              <Badge variant={invoiceVariant(inv.status)} size="sm">{inv.status}</Badge>
+                            </div>
+                            <span className="text-xs text-slate-500">{inv.description || "—"}</span>
+                            <div className="flex items-center justify-between text-xs text-slate-500">
+                              <span>Due: {formatDate(inv.dueDate)}</span>
+                              <span className="font-mono">{inv.totalAmount != null ? formatChf(inv.totalAmount) : "—"}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      {/* Desktop table */}
+                      <div className="hidden sm:block overflow-x-auto">
+                        <table className="inline-table">
+                          <thead>
+                            <tr>
+                              <th>Invoice #</th>
+                              <th>Description</th>
+                              <th className="text-right">Amount</th>
+                              <th>Due date</th>
+                              <th>Status</th>
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                          </thead>
+                          <tbody>
+                            {leaseInvoices.map((inv) => (
+                              <tr key={inv.id}>
+                                <td>{inv.invoiceNumber || inv.id?.slice(0, 8) || "—"}</td>
+                                <td>{inv.description || "—"}</td>
+                                <td className="text-right">
+                                  {inv.totalAmount != null ? formatChf(inv.totalAmount) : "—"}
+                                </td>
+                                <td>{formatDate(inv.dueDate)}</td>
+                                <td>
+                                  <Badge variant={invoiceVariant(inv.status)} size="sm">
+                                    {inv.status}
+                                  </Badge>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </>
                   )}
                 </Panel>
               )}

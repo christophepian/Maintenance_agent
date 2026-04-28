@@ -17,6 +17,7 @@ import {
   requestFormatDate as formatDate,
   formatCurrency,
 } from "../../manager/requests";
+import ScrollableTabs from "../../../components/mobile/ScrollableTabs";
 
 /* ═══════════════════════════════════════════════════════════════
    Constants
@@ -597,7 +598,7 @@ export default function OwnerRequestDetailPage() {
               </Panel>
 
               {/* 2. Tab bar */}
-              <div className="tab-strip">
+              <ScrollableTabs activeIndex={activeTab === "details" ? 0 : 1}>
                 {[
                   { key: "details",  label: "Details" },
                   { key: "advisory", label: "Advisory" },
@@ -610,7 +611,7 @@ export default function OwnerRequestDetailPage() {
                     {tab.label}
                   </button>
                 ))}
-              </div>
+              </ScrollableTabs>
 
               {/* 3. Details tab */}
               {activeTab === "details" && (

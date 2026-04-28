@@ -13,6 +13,7 @@ import Badge from "../../../../components/ui/Badge";
 import ErrorBanner from "../../../../components/ui/ErrorBanner";
 import { cn } from "../../../../lib/utils";
 import { jobVariant, invoiceVariant } from "../../../../lib/statusVariants";
+import ScrollableTabs from "../../../../components/mobile/ScrollableTabs";
 
 export default function ContractorDetailPage() {
   const router = useRouter();
@@ -248,7 +249,7 @@ export default function ContractorDetailPage() {
             <p className="loading-text">Loading contractor…</p>
           ) : contractor ? (
             <div className="grid gap-4">
-              <div className="tab-strip">
+              <ScrollableTabs activeIndex={["Personal information", "Service details", "Contracts", "Invoices"].indexOf(activeTab)}>
                 {["Personal information", "Service details", "Contracts", "Invoices"].map((tab) => (
                   <button
                     key={tab}
@@ -259,7 +260,7 @@ export default function ContractorDetailPage() {
                     {tab}
                   </button>
                 ))}
-              </div>
+              </ScrollableTabs>
 
               {activeTab === "Personal information" && (
                 <Panel title="Personal information">

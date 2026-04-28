@@ -11,6 +11,7 @@ import { formatChfCents, formatDate } from "../../../lib/format";
 
 import { cn } from "../../../lib/utils";
 import { FilterToggle, FilterPanelBody, FilterSection, FilterSectionClear, SelectField, DateField } from "../../../components/ui/FilterPanel";
+import ScrollableTabs from "../../../components/mobile/ScrollableTabs";
 /* ── Constants ─────────────────────────────────────────────── */
 
 const SOURCE_TYPE_LABELS = {
@@ -275,7 +276,7 @@ export default function LedgerPage() {
           })()}
 
           {/* ── Tab bar ─────────────────────────────────────── */}
-          <div className="tab-strip">
+          <ScrollableTabs activeIndex={tab === "journal" ? 0 : 1}>
             {[
               { key: "journal",       label: "Journal" },
               { key: "trial-balance", label: "Trial Balance" },
@@ -288,7 +289,7 @@ export default function LedgerPage() {
                 {t.label}
               </button>
             ))}
-          </div>
+          </ScrollableTabs>
 
           {/* ── Filters ─────────────────────────────────────── */}
           <FilterToggle open={filterOpen} onToggle={() => setFilterOpen((v) => !v)} activeCount={activeCount} />

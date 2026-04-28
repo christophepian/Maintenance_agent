@@ -11,6 +11,7 @@ import Badge from "../../components/ui/Badge";
 import { legalVariant } from "../../lib/statusVariants";
 import { cn } from "../../lib/utils";
 import { formatDate } from "../../lib/format";
+import ScrollableTabs from "../../components/mobile/ScrollableTabs";
 import DepreciationStandards from "../../components/DepreciationStandards";
 
 const SETTINGS_TABS = [
@@ -366,7 +367,7 @@ export default function ManagerSettingsPage() {
           ) : null}
 
           {/* Tab strip */}
-          <div className="tab-strip">
+          <ScrollableTabs activeIndex={activeTab}>
             {SETTINGS_TABS.map((tab, i) => (
               <button
                 key={tab.key}
@@ -376,7 +377,7 @@ export default function ManagerSettingsPage() {
                 {tab.label}
               </button>
             ))}
-          </div>
+          </ScrollableTabs>
 
           {/* Count + full-view link — outside the Panel card */}
           <span className="tab-panel-count">

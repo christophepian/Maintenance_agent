@@ -12,6 +12,7 @@ import { authHeaders } from "../../../lib/api";
 import Badge from "../../../components/ui/Badge";
 import { selectionVariant, leaseVariant } from "../../../lib/statusVariants";
 import { cn } from "../../../lib/utils";
+import ScrollableTabs from "../../../components/mobile/ScrollableTabs";
 /**
  * Reusable action dropdown button — renders a "⋯" pill that opens
  * a positioned dropdown with a list of actions.
@@ -194,14 +195,14 @@ export default function ManagerVacanciesPage() {
         <PageContent>
           <ErrorBanner error={error} className="text-sm" />
 
-          {/* Inventory tab strip — mirrors /manager/inventory */}
-          <div className="tab-strip">
+          {/* Inventory tab strip — mirrors /manager/inventory; Vacancies is always active at index 1 */}
+          <ScrollableTabs activeIndex={1}>
             <Link href="/manager/inventory?tab=buildings" className="tab-btn">Buildings</Link>
             <button className="tab-btn-active">Vacancies</button>
             <Link href="/manager/inventory?tab=assets" className="tab-btn">Assets</Link>
             <Link href="/manager/inventory?tab=decisions" className="tab-btn">Maintenance Decisions</Link>
             <Link href="/manager/inventory?tab=depreciation" className="tab-btn">Depreciation</Link>
-          </div>
+          </ScrollableTabs>
 
           {/* ── Tenant Selections Pipeline ─────────────────── */}
           <Panel title={"Tenant Selections" + (selections.length > 0 ? ` (${selections.length})` : "")}>

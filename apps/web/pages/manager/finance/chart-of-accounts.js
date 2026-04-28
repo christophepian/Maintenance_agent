@@ -9,6 +9,7 @@ import ErrorBanner from "../../../components/ui/ErrorBanner";
 import Badge from "../../../components/ui/Badge";
 import { accountTypeVariant } from "../../../lib/statusVariants";
 import { authHeaders } from "../../../lib/api";
+import ScrollableTabs from "../../../components/mobile/ScrollableTabs";
 
 /* ─── Tabs ─────────────────────────────────────────────── */
 
@@ -242,7 +243,7 @@ export default function ChartOfAccountsPage() {
           )}
 
           {/* Tab strip */}
-          <div className="tab-strip">
+          <ScrollableTabs activeIndex={activeTab}>
             {TABS.map((tab, i) => (
               <button
                 key={tab.key}
@@ -255,7 +256,7 @@ export default function ChartOfAccountsPage() {
                 </span>
               </button>
             ))}
-          </div>
+          </ScrollableTabs>
 
           {loading ? (
             <p className="loading-text">Loading&#8230;</p>

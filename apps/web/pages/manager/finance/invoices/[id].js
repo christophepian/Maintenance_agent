@@ -445,28 +445,46 @@ export default function InvoiceDetailPage() {
                 {/* Line items */}
                 {inv.lineItems?.length > 0 && (
                   <Panel title="Line Items" bodyClassName="p-0">
-                    <table className="inline-table">
-                      <thead>
-                        <tr>
-                          <th>Description</th>
-                          <th className="text-right">Qty</th>
-                          <th className="text-right">Unit Price</th>
-                          <th className="text-right">VAT %</th>
-                          <th className="text-right">Total</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {inv.lineItems.map((li, i) => (
-                          <tr key={i}>
-                            <td>{li.description || "—"}</td>
-                            <td className="text-right">{li.quantity ?? "—"}</td>
-                            <td className="text-right">{formatChf(li.unitPrice)}</td>
-                            <td className="text-right">{li.vatRate != null ? `${li.vatRate}%` : "—"}</td>
-                            <td className="text-right">{formatChf(li.lineTotal)}</td>
+                    {/* Mobile cards */}
+                    <div className="sm:hidden divide-y divide-slate-100">
+                      {inv.lineItems.map((li, i) => (
+                        <div key={i} className="px-4 py-3 flex flex-col gap-0.5">
+                          <div className="flex items-start justify-between gap-2">
+                            <span className="text-sm font-medium text-slate-800">{li.description || "—"}</span>
+                            <span className="text-sm font-mono text-slate-700 shrink-0">{formatChf(li.lineTotal)}</span>
+                          </div>
+                          <span className="text-xs text-slate-500">
+                            {li.quantity ?? "—"} × {formatChf(li.unitPrice)}
+                            {li.vatRate != null && <span className="ml-1">· VAT {li.vatRate}%</span>}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                    {/* Desktop table */}
+                    <div className="hidden sm:block overflow-x-auto">
+                      <table className="inline-table">
+                        <thead>
+                          <tr>
+                            <th>Description</th>
+                            <th className="text-right">Qty</th>
+                            <th className="text-right">Unit Price</th>
+                            <th className="text-right">VAT %</th>
+                            <th className="text-right">Total</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody>
+                          {inv.lineItems.map((li, i) => (
+                            <tr key={i}>
+                              <td>{li.description || "—"}</td>
+                              <td className="text-right">{li.quantity ?? "—"}</td>
+                              <td className="text-right">{formatChf(li.unitPrice)}</td>
+                              <td className="text-right">{li.vatRate != null ? `${li.vatRate}%` : "—"}</td>
+                              <td className="text-right">{formatChf(li.lineTotal)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   </Panel>
                 )}
 

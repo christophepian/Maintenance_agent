@@ -13,6 +13,7 @@ import ConfigurableTable from "../../components/ConfigurableTable";
 import { useTableSort, clientSort } from "../../lib/tableUtils";
 import { formatChfCents, formatDate } from "../../lib/format";
 import { billingScheduleVariant } from "../../lib/statusVariants";
+import ScrollableTabs from "../../components/mobile/ScrollableTabs";
 
 const TABS = [
   { key: "ACTIVE",    label: "Active" },
@@ -107,7 +108,7 @@ export default function BillingSchedulesPage() {
           )}
 
           {/* Tab strip */}
-          <div className="tab-strip">
+          <ScrollableTabs activeIndex={activeTab}>
             {TABS.map((tab, i) => (
               <button
                 key={tab.key}
@@ -117,7 +118,7 @@ export default function BillingSchedulesPage() {
                 {tab.label}
               </button>
             ))}
-          </div>
+          </ScrollableTabs>
 
           <span className="tab-panel-count">
             {loading ? "" : `${schedules.length} schedule${schedules.length !== 1 ? "s" : ""}`}

@@ -15,6 +15,7 @@ import RenovationTaxPlanning from "../../../components/RenovationTaxPlanning";
 import CashflowPlansList from "../../../components/CashflowPlansList";
 import { cn } from "../../../lib/utils";
 import { FilterToggle, FilterPanelBody, FilterSection, FilterSectionClear, DateField } from "../../../components/ui/FilterPanel";
+import ScrollableTabs from "../../../components/mobile/ScrollableTabs";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -133,7 +134,7 @@ export default function ManagerFinanceHome() {
             space-y-6 fires once between nav and content, not twice.
           */}
           <div>
-            <div className="tab-strip">
+            <ScrollableTabs activeIndex={FINANCE_TABS.findIndex((t) => t.key === activeTabKey)}>
               {FINANCE_TABS.map((tab) => (
                 <button
                   key={tab.key}
@@ -143,7 +144,7 @@ export default function ManagerFinanceHome() {
                   {tab.label}
                 </button>
               ))}
-            </div>
+            </ScrollableTabs>
             {activeTabKey === "overview" && p && (
               <span className="tab-panel-count">
                 {p.buildingCount} building{p.buildingCount !== 1 ? "s" : ""} · {p.totalActiveUnits} unit{p.totalActiveUnits !== 1 ? "s" : ""}

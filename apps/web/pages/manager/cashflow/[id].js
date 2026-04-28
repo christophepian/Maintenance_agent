@@ -341,37 +341,159 @@ function CapexEventTable({ buckets, overrides, timingRecommendations, planId, is
   }
 
   return (
-    <div className="overflow-x-auto">
-      <table className="inline-table">
-        <thead>
-          <tr>
-            <th>Asset</th>
-            <th>Scheduled</th>
-            <th className="text-right">Estimated cost</th>
-            <th>Trade group</th>
-            <th>Bundle</th>
-            {isDraft && <th>Override</th>}
-          </tr>
-        </thead>
-        <tbody>
-          {events.map((ev, i) => {
-            const ov = overrideByAsset[ev.assetId];
-            const rec = recByAsset[ev.assetId];
-            return (
-              <CapexEventRow
-                key={i}
-                ev={ev}
-                ov={ov}
-                rec={rec}
-                planId={planId}
-                isDraft={isDraft}
-                onRefresh={onRefresh}
-                alignmentMap={alignmentMap}
-              />
-            );
-          })}
-        </tbody>
-      </table>
+    <>
+      {/* Mobile cards */}
+      <div className="sm:hidden divide-y divide-slate-100">
+        {events.map((ev, i) => {
+          const ov = overrideByAsset[ev.assetId];
+          const rec = recByAsset[ev.assetId];
+          return (
+            <CapexMobileCard
+              key={i}
+              ev={ev}
+              ov={ov}
+              rec={rec}
+              planId={planId}
+              isDraft={isDraft}
+              onRefresh={onRefresh}
+              alignmentMap={alignmentMap}
+            />
+          );
+        })}
+      </div>
+      {/* Desktop table */}
+      <div className="hidden sm:block overflow-x-auto">
+        <table className="inline-table">
+          <thead>
+            <tr>
+              <th>Asset</th>
+              <th>Scheduled</th>
+              <th className="text-right">Estimated cost</th>
+              <th>Trade group</th>
+              <th>Bundle</th>
+              {isDraft && <th>Override</th>}
+            </tr>
+          </thead>
+          <tbody>
+            {events.map((ev, i) => {
+              const ov = overrideByAsset[ev.assetId];
+              const rec = recByAsset[ev.assetId];
+              return (
+                <CapexEventRow
+                  key={i}
+                  ev={ev}
+                  ov={ov}
+                  rec={rec}
+                  planId={planId}
+                  isDraft={isDraft}
+                  onRefresh={onRefresh}
+                  alignmentMap={alignmentMap}
+                />
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </>
+  );
+}
+
+function CapexMobileCard({ ev, ov, rec, planId, isDraft, onRefresh, alignmentMap }) {
+  const currentYear = new Date().getFullYear();
+  const [shifting, setShifting] = useState(false);
+  const [removing, setRemoving] = useState(false);
+  const [error, setError] = useState("");
+
+  async function handleShiftYear(newYear) {
+    setShifting(true);
+    setError("");
+    try {
+      const res = await fetch(`/api/cashflow-plans/${planId}/overrides`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({
+          assetId: ev.assetId,
+          originalYear: ev.isOverridden && ov ? ov.originalYear : ev.year,
+          overriddenYear: newYear,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error?.message || "Failed to add override");
+      onRefresh();
+    } catch (e) {
+      setError(String(e?.message || e));
+    } finally {
+      setShifting(false);
+    }
+  }
+
+  async function handleRemoveOverride() {
+    if (!ov) return;
+    setRemoving(true);
+    setError("");
+    try {
+      const res = await fetch(`/api/cashflow-plans/${planId}/overrides/${ov.id}`, {
+        method: "DELETE",
+        headers: authHeaders(),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error?.message || "Failed to remove override");
+      onRefresh();
+    } catch (e) {
+      setError(String(e?.message || e));
+    } finally {
+      setRemoving(false);
+    }
+  }
+
+  const baseYear = ov ? ov.originalYear : ev.year;
+  const minYear = Math.max(currentYear + 1, baseYear - 3);
+  const maxYear = baseYear + 3;
+  const yearOptions = [];
+  for (let y = minYear; y <= maxYear; y++) {
+    if (!ov || y !== ov.overriddenYear) yearOptions.push(y);
+  }
+  const isOverridden = ev.isOverridden || !!ov;
+
+  return (
+    <div className="py-3 flex flex-col gap-1">
+      <div className="flex items-start justify-between gap-2">
+        <span className={cn("text-sm font-medium text-slate-800", isOverridden && "italic text-slate-500")}>
+          {isOverridden && <span className="mr-1 text-amber-500 text-xs">⟳</span>}
+          {ev.assetName}
+        </span>
+        <span className="text-sm font-mono text-slate-700 shrink-0">{formatChfCents(ev.costCents)}</span>
+      </div>
+      <div className="text-xs text-slate-500">
+        {fmtMonth(ev.year, ev.month)}
+        {isOverridden && ov && <span className="ml-1">(was {ov.originalYear})</span>}
+        {ev.tradeGroup && <span className="ml-2">· {ev.tradeGroup}</span>}
+      </div>
+      {isDraft && (
+        <div className="flex items-center gap-1 mt-1">
+          <select
+            onChange={(e) => e.target.value && handleShiftYear(Number(e.target.value))}
+            value=""
+            disabled={shifting}
+            className="border border-slate-200 rounded px-1.5 py-0.5 text-xs text-slate-600 disabled:opacity-50"
+          >
+            <option value="">Shift year…</option>
+            {yearOptions.map((y) => (
+              <option key={y} value={y}>{y}</option>
+            ))}
+          </select>
+          {isOverridden && (
+            <button
+              onClick={handleRemoveOverride}
+              disabled={removing}
+              className="text-xs text-slate-400 hover:text-red-500 disabled:opacity-50"
+            >
+              {removing ? "…" : "Reset"}
+            </button>
+          )}
+        </div>
+      )}
+      {error && <span className="text-xs text-red-600">{error}</span>}
     </div>
   );
 }

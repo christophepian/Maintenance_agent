@@ -12,6 +12,7 @@ import { fetchWithAuth, postWithAuth } from "../../../lib/api";
 import ConfigurableTable from "../../../components/ConfigurableTable";
 import { useTableSort, clientSort } from "../../../lib/tableUtils";
 import { formatChfCents, formatDate } from "../../../lib/format";
+import ScrollableTabs from "../../../components/mobile/ScrollableTabs";
 import { billingScheduleVariant } from "../../../lib/statusVariants";
 
 const FREQUENCY_LABELS = {
@@ -330,7 +331,7 @@ export default function ContractorBillingSchedulesList() {
           )}
 
           {/* Tabs */}
-          <div className="tab-strip">
+          <ScrollableTabs activeIndex={activeTab}>
             {TABS.map((t, i) => (
               <button
                 key={t.key}
@@ -340,7 +341,7 @@ export default function ContractorBillingSchedulesList() {
                 {t.label}
               </button>
             ))}
-          </div>
+          </ScrollableTabs>
 
           {loading ? (
             <p className="loading-text p-4">Loading…</p>

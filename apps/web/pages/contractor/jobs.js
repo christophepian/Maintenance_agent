@@ -14,6 +14,7 @@ import { formatDate, formatDateLong } from "../../lib/format";
 import { authHeaders } from "../../lib/api";
 
 import { cn } from "../../lib/utils";
+import ScrollableTabs from "../../components/mobile/ScrollableTabs";
 /* ── Tab config (F-UI1) ────────────────────────────────── */
 const TABS = [
   { key: "upcoming", label: "Upcoming" },
@@ -202,7 +203,7 @@ export default function ContractorJobs() {
 
           <Panel bodyClassName="p-0">
             {/* Tab strip */}
-            <div className="tab-strip">
+            <ScrollableTabs activeIndex={activeTab}>
               {TABS.map((tab, i) => (
                 <button
                   key={tab.key}
@@ -215,7 +216,7 @@ export default function ContractorJobs() {
                   </span>
                 </button>
               ))}
-            </div>
+            </ScrollableTabs>
 
             {/* ── Upcoming tab ── */}
             <div className={activeTab === 0 ? "tab-panel-active" : "tab-panel"}>

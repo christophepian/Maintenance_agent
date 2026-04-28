@@ -12,6 +12,7 @@ import Badge from "../../components/ui/Badge";
 import { invoiceVariant, ingestionVariant } from "../../lib/statusVariants";
 import { formatDate } from "../../lib/format";
 import { authHeaders } from "../../lib/api";
+import ScrollableTabs from "../../components/mobile/ScrollableTabs";
 
 const STATUS_TABS = [
   { key: "ALL", label: "All" },
@@ -409,7 +410,7 @@ export default function ContractorInvoices() {
 
         <Panel bodyClassName="p-0">
           {/* Status Tabs */}
-          <div className="tab-strip">
+          <ScrollableTabs activeIndex={STATUS_TABS.findIndex((t) => t.key === activeTab)}>
             {STATUS_TABS.map((tab) => {
               const count = tab.key === "ALL"
                 ? invoices.length
@@ -425,7 +426,7 @@ export default function ContractorInvoices() {
                 </button>
               );
             })}
-          </div>
+          </ScrollableTabs>
 
           {loading ? (
             <p className="p-4 text-sm text-slate-600">Loading invoices…</p>

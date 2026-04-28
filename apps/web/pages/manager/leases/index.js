@@ -14,6 +14,7 @@ import { clientSort, useLocalSort } from "../../../lib/tableUtils";
 import Badge from "../../../components/ui/Badge";
 import { leaseVariant } from "../../../lib/statusVariants";
 import { cn } from "../../../lib/utils";
+import ScrollableTabs from "../../../components/mobile/ScrollableTabs";
 
 // Tabs: Active (ACTIVE+SIGNED), Draft (DRAFT), Submitted (READY_TO_SIGN), Archive (CANCELLED+TERMINATED)
 const LEASE_TABS = [
@@ -523,7 +524,7 @@ export default function LeasesPage() {
           )}
 
           {/* Tab strip */}
-          <div className="tab-strip">
+          <ScrollableTabs activeIndex={activeTab}>
             {LEASE_TABS.map((tab, i) => (
               <button
                 key={tab.key}
@@ -533,7 +534,7 @@ export default function LeasesPage() {
                 {tab.label}
               </button>
             ))}
-          </div>
+          </ScrollableTabs>
 
           {/* Count + CTA row */}
           <div className="flex items-center justify-between">

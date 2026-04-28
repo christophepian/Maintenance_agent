@@ -12,6 +12,7 @@ import ErrorBanner from "../../components/ui/ErrorBanner";
 import { authHeaders } from "../../lib/api";
 
 import { cn } from "../../lib/utils";
+import ScrollableTabs from "../../components/mobile/ScrollableTabs";
 const INVENTORY_SORT_FIELDS = ["name", "address", "canton", "unitCount", "category", "manufacturer", "scope"];
 
 function inventoryFieldExtractor(row, field) {
@@ -277,8 +278,9 @@ export default function ManagerInventoryPage() {
         <PageContent>
           <ErrorBanner error={error} />
 
-          {/* Tab strip */}
-          <div className="tab-strip">
+          {/* Tab strip — INVENTORY_TABS has 4 items; index 1 (Vacancies) is a Link.
+              activeTab 0→BUILDINGS (idx 0), 1→ASSETS (idx 2), 2→DECISIONS (idx 3). */}
+          <ScrollableTabs activeIndex={[0, 2, 3][activeTab] ?? 0}>
             {(() => {
               let tabIndex = 0;
               return INVENTORY_TABS.map((tab) => {
@@ -301,7 +303,7 @@ export default function ManagerInventoryPage() {
                 );
               });
             })()}
-          </div>
+          </ScrollableTabs>
 
           {/* Count + full-view link */}
           <span className="tab-panel-count">

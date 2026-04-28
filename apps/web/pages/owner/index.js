@@ -12,6 +12,7 @@ import { ownerAuthHeaders } from "../../lib/api";
 import StrategyProfileBanner from "../../components/StrategyProfileBanner";
 import { formatChf, formatPercent } from "../../lib/format";
 import { cn } from "../../lib/utils";
+import ScrollableTabs from "../../components/mobile/ScrollableTabs";
 
 // ─── Summary card (matches manager/finance SummaryCard) ───────────────────────
 function SummaryCard({ label, value, sub, accent }) {
@@ -74,7 +75,7 @@ function ActionItemsTabs({
 
   return (
     <div>
-      <div className="tab-strip" role="tablist">
+      <ScrollableTabs activeIndex={ACTION_TABS.findIndex((t) => t.key === activeTab)}>
         {ACTION_TABS.map((t) => (
           <button
             key={t.key}
@@ -91,7 +92,7 @@ function ActionItemsTabs({
             )}
           </button>
         ))}
-      </div>
+      </ScrollableTabs>
 
       <div className={activeTab === "approvals" ? "tab-panel-active" : "tab-panel"}>
         <h3 className="section-title">Recent Approval Requests</h3>

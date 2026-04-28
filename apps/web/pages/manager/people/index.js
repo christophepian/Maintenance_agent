@@ -10,6 +10,7 @@ import Badge from "../../../components/ui/Badge";
 import { authHeaders } from "../../../lib/api";
 
 import { cn } from "../../../lib/utils";
+import ScrollableTabs from "../../../components/mobile/ScrollableTabs";
 /* ─── Owner create form ──────────────────────────────────── */
 
 const OWNER_FORM_DEFAULT = { name: "", email: "", password: "" };
@@ -378,7 +379,7 @@ export default function ManagerPeoplePage() {
           <ErrorBanner error={error} />
 
           {/* Tab strip */}
-          <div className="tab-strip">
+          <ScrollableTabs activeIndex={activeTab}>
             {PEOPLE_TABS.map((tab, i) => (
               <button
                 key={tab.key}
@@ -388,7 +389,7 @@ export default function ManagerPeoplePage() {
                 {tab.label}
               </button>
             ))}
-          </div>
+          </ScrollableTabs>
 
           {/* Count + CTA row — below tab strip, above table */}
           <div className="flex items-center justify-between">

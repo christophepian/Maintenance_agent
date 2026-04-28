@@ -278,43 +278,64 @@ export default function RfpDetailPage() {
                 bodyClassName="p-0"
               >
                 {rfp.invites?.length > 0 ? (
-                  <div className="overflow-x-auto">
-                    <table className="inline-table">
-                      <thead>
-                        <tr>
-                          <th>Contractor</th>
-                          <th className="hidden sm:table-cell">Email</th>
-                          <th className="hidden sm:table-cell">Phone</th>
-                          <th>Status</th>
-                          <th className="hidden sm:table-cell">Invited</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {rfp.invites.map((inv) => (
-                          <tr key={inv.id}>
-                            <td className="min-w-0">
-                              {inv.contractor ? (
-                                <Link
-                                  href={`/manager/people/vendors/${inv.contractorId}`}
-                                  className="cell-link"
-                                >
-                                  {inv.contractor.name}
-                                </Link>
-                              ) : (
-                                inv.contractorId?.slice(0, 8)
-                              )}
-                            </td>
-                            <td className="hidden sm:table-cell text-slate-500">{inv.contractor?.email || "—"}</td>
-                            <td className="hidden sm:table-cell text-slate-500">{inv.contractor?.phone || "—"}</td>
-                            <td>
-                              <Badge variant={inviteVariant(inv.status)}>{inv.status}</Badge>
-                            </td>
-                            <td className="hidden sm:table-cell">{formatDate(inv.createdAt)}</td>
+                  <>
+                    {/* Mobile cards */}
+                    <div className="sm:hidden divide-y divide-slate-100">
+                      {rfp.invites.map((inv) => (
+                        <div key={inv.id} className="px-4 py-3 flex items-center justify-between gap-2">
+                          <div className="min-w-0">
+                            {inv.contractor ? (
+                              <Link href={`/manager/people/vendors/${inv.contractorId}`} className="cell-link text-sm font-medium">
+                                {inv.contractor.name}
+                              </Link>
+                            ) : (
+                              <span className="text-sm text-slate-700">{inv.contractorId?.slice(0, 8)}</span>
+                            )}
+                            <p className="text-xs text-slate-500 mt-0.5">{formatDate(inv.createdAt)}</p>
+                          </div>
+                          <Badge variant={inviteVariant(inv.status)}>{inv.status}</Badge>
+                        </div>
+                      ))}
+                    </div>
+                    {/* Desktop table */}
+                    <div className="hidden sm:block overflow-x-auto">
+                      <table className="inline-table">
+                        <thead>
+                          <tr>
+                            <th>Contractor</th>
+                            <th>Email</th>
+                            <th>Phone</th>
+                            <th>Status</th>
+                            <th>Invited</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                        </thead>
+                        <tbody>
+                          {rfp.invites.map((inv) => (
+                            <tr key={inv.id}>
+                              <td className="min-w-0">
+                                {inv.contractor ? (
+                                  <Link
+                                    href={`/manager/people/vendors/${inv.contractorId}`}
+                                    className="cell-link"
+                                  >
+                                    {inv.contractor.name}
+                                  </Link>
+                                ) : (
+                                  inv.contractorId?.slice(0, 8)
+                                )}
+                              </td>
+                              <td className="text-slate-500">{inv.contractor?.email || "—"}</td>
+                              <td className="text-slate-500">{inv.contractor?.phone || "—"}</td>
+                              <td>
+                                <Badge variant={inviteVariant(inv.status)}>{inv.status}</Badge>
+                              </td>
+                              <td>{formatDate(inv.createdAt)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </>
                 ) : (
                   <p className="px-4 py-8 text-center text-sm text-slate-400">
                     No contractors invited yet.
@@ -419,16 +440,28 @@ export default function RfpDetailPage() {
                         {q.lineItems && q.lineItems.length > 0 && (
                           <div className="mt-2">
                             <dt className="text-xs font-medium text-slate-500 mb-1">Line Items</dt>
-                            <dd>                              <div className="overflow-x-auto">                              <table className="inline-table">
-                                <tbody>
-                                  {q.lineItems.map((li, idx) => (
-                                    <tr key={idx} className="border-b border-slate-100 last:border-0">
-                                      <td className="py-1 text-slate-700">{li.description}</td>
-                                      <td className="py-1 text-right font-mono text-slate-700">{formatChfCents(li.amountCents)}</td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
+                            <dd>
+                              {/* Mobile list */}
+                              <div className="sm:hidden divide-y divide-slate-100">
+                                {q.lineItems.map((li, idx) => (
+                                  <div key={idx} className="py-1 flex items-center justify-between gap-2 text-sm">
+                                    <span className="text-slate-700">{li.description}</span>
+                                    <span className="font-mono text-slate-700 shrink-0">{formatChfCents(li.amountCents)}</span>
+                                  </div>
+                                ))}
+                              </div>
+                              {/* Desktop table */}
+                              <div className="hidden sm:block overflow-x-auto">
+                                <table className="inline-table">
+                                  <tbody>
+                                    {q.lineItems.map((li, idx) => (
+                                      <tr key={idx} className="border-b border-slate-100 last:border-0">
+                                        <td className="py-1 text-slate-700">{li.description}</td>
+                                        <td className="py-1 text-right font-mono text-slate-700">{formatChfCents(li.amountCents)}</td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
                               </div>
                             </dd>
                           </div>

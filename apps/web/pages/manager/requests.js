@@ -12,6 +12,7 @@ import { authHeaders } from "../../lib/api";
 import Badge from "../../components/ui/Badge";
 import { requestVariant } from "../../lib/statusVariants";
 import { cn } from "../../lib/utils";
+import ScrollableTabs from "../../components/mobile/ScrollableTabs";
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
@@ -1277,7 +1278,7 @@ export default function ManagerRequestsPage() {
           )}
 
           {/* Status Tabs */}
-          <div className="tab-strip">
+          <ScrollableTabs activeIndex={activeTab}>
             {STATUS_TABS.map((tab, i) => {
               if (tab.href) {
                 return (
@@ -1302,7 +1303,7 @@ export default function ManagerRequestsPage() {
                 </button>
               );
             })}
-          </div>
+          </ScrollableTabs>
 
           {/* Content */}
           {loading ? (

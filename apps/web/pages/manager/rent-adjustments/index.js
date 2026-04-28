@@ -13,6 +13,7 @@ import { useTableSort, clientSort } from "../../../lib/tableUtils";
 import { formatChfCents, formatDate } from "../../../lib/format";
 import { rentAdjustmentVariant } from "../../../lib/statusVariants";
 import { cn } from "../../../lib/utils";
+import ScrollableTabs from "../../../components/mobile/ScrollableTabs";
 
 const TYPE_LABELS = {
   CPI_INDEXATION: "CPI Indexation",
@@ -170,7 +171,7 @@ export default function RentAdjustmentsList() {
           subtitle="CPI-indexed and manual rent adjustments"
         />
         <PageContent>
-          <div className="tab-strip">
+          <ScrollableTabs activeIndex={activeTab}>
             {TABS.map((t, i) => (
               <button
                 key={t.key}
@@ -180,7 +181,7 @@ export default function RentAdjustmentsList() {
                 {t.label}
               </button>
             ))}
-          </div>
+          </ScrollableTabs>
 
           {loading ? (
             <p className="loading-text p-4">Loading…</p>
