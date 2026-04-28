@@ -13,6 +13,7 @@ import Badge from "../../components/ui/Badge";
 import { requestVariant } from "../../lib/statusVariants";
 import { cn } from "../../lib/utils";
 import ScrollableTabs from "../../components/mobile/ScrollableTabs";
+import SwipeableCard from "../../components/mobile/SwipeableCard";
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
@@ -1324,9 +1325,30 @@ export default function ManagerRequestsPage() {
                 emptyState={<p className="text-sm text-slate-500">No requests match this filter.</p>}
                 mobileCard={(r) => {
                   const ctaList = getAvailableCTAs(r, assigningId);
+                  const isAssigning = assigningId === r.id;
+                  const isLoading = actionLoading === r.id;
+
+                  // Build swipe action descriptors — assign sub-flow is shown inline
+                  const swipeActions = isAssigning ? [] : ctaList.map((cta) => {
+                    switch (cta) {
+                      case 'approve':
+                        return { label: "Approve", variant: "green",  loading: isLoading, onClick: () => approveRequest(r.id) };
+                      case 'reject':
+                        return { label: "Reject",  variant: "slate",  loading: isLoading, onClick: () => rejectRequest(r.id) };
+                      case 'view_rfp':
+                        return { label: "RFP",     variant: "indigo", onClick: () => router.push("/manager/rfps") };
+                      case 'assign':
+                        return { label: "Assign",  variant: "blue",   onClick: () => setAssigningId(r.id) };
+                      case 'unassign':
+                        return { label: "Unassign",variant: "red",    loading: isLoading, onClick: () => doUnassignContractor(r.id) };
+                      default:
+                        return null;
+                    }
+                  }).filter(Boolean);
+
                   return (
-                    <div className="table-card">
-                      <div className="flex items-start justify-between gap-2">
+                    <SwipeableCard actions={swipeActions}>
+                      <div className="table-card">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-mono text-xs text-slate-400">
                             {r.requestNumber ? `#${r.requestNumber}` : "—"}
@@ -1340,76 +1362,46 @@ export default function ManagerRequestsPage() {
                             </span>
                           )}
                         </div>
+                        <p className="table-card-head mt-1.5">{r.buildingName || "—"}{r.unitNumber ? ` / ${r.unitNumber}` : ""}</p>
+                        {r.category && (
+                          <p className="mt-0.5">
+                            <span className="inline-block rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">{r.category}</span>
+                          </p>
+                        )}
+                        {/* Assign sub-flow — shown inline after tapping Assign in the swipe panel */}
+                        {isAssigning && (
+                          <div className="flex items-center gap-1.5 mt-2 flex-wrap" onClick={(e) => e.stopPropagation()}>
+                            <select
+                              value={selectedContractorId}
+                              onChange={(e) => setSelectedContractorId(e.target.value)}
+                              className="rounded border border-slate-300 px-2 py-1 text-xs flex-1 min-w-0"
+                            >
+                              <option value="">Select contractor…</option>
+                              {contractors.map((c) => (
+                                <option key={c.id} value={c.id}>{c.name || c.companyName || c.id.slice(0, 8)}</option>
+                              ))}
+                            </select>
+                            <button
+                              onClick={() => doAssignContractor(r.id)}
+                              disabled={!selectedContractorId || isLoading}
+                              className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
+                            >
+                              {isLoading ? "…" : "OK"}
+                            </button>
+                            <button
+                              onClick={() => { setAssigningId(null); setSelectedContractorId(""); }}
+                              className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-500"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        )}
+                        {/* Swipe hint — only on cards that have actions and aren't in assign mode */}
+                        {swipeActions.length > 0 && (
+                          <p className="mt-2 text-[10px] text-slate-300 select-none">← swipe for actions</p>
+                        )}
                       </div>
-                      <p className="table-card-head mt-1.5">{r.buildingName || "—"}{r.unitNumber ? ` / ${r.unitNumber}` : ""}</p>
-                      {r.category && (
-                        <p className="mt-0.5">
-                          <span className="inline-block rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">{r.category}</span>
-                        </p>
-                      )}
-                      {ctaList.length > 0 && (
-                        <div className="flex flex-wrap gap-1.5 mt-3" onClick={(e) => e.stopPropagation()}>
-                          {ctaList.map((cta) => {
-                            switch (cta) {
-                              case 'approve':
-                                return (
-                                  <button key="approve" onClick={() => approveRequest(r.id)} disabled={actionLoading === r.id}
-                                    className="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-50">
-                                    {actionLoading === r.id ? "…" : "Approve"}
-                                  </button>
-                                );
-                              case 'reject':
-                                return (
-                                  <button key="reject" onClick={() => rejectRequest(r.id)} disabled={actionLoading === r.id}
-                                    className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50">
-                                    {actionLoading === r.id ? "…" : "Reject"}
-                                  </button>
-                                );
-                              case 'view_rfp':
-                                return (
-                                  <a key="view_rfp" href="/manager/rfps" className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-700">
-                                    View RFP
-                                  </a>
-                                );
-                              case 'assign':
-                                return assigningId === r.id ? (
-                                  <div key="assign-modal" className="flex items-center gap-1.5">
-                                    <select value={selectedContractorId} onChange={(e) => setSelectedContractorId(e.target.value)}
-                                      className="rounded border border-slate-300 px-2 py-1 text-xs">
-                                      <option value="">Select…</option>
-                                      {contractors.map((c) => (
-                                        <option key={c.id} value={c.id}>{c.name || c.companyName || c.id.slice(0, 8)}</option>
-                                      ))}
-                                    </select>
-                                    <button onClick={() => doAssignContractor(r.id)} disabled={!selectedContractorId || actionLoading === r.id}
-                                      className="rounded-lg bg-blue-600 px-2 py-1 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50">
-                                      {actionLoading === r.id ? "…" : "OK"}
-                                    </button>
-                                    <button onClick={() => { setAssigningId(null); setSelectedContractorId(""); }}
-                                      className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-500 hover:bg-slate-50">
-                                      ×
-                                    </button>
-                                  </div>
-                                ) : (
-                                  <button key="assign" onClick={() => setAssigningId(r.id)}
-                                    className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700">
-                                    Assign
-                                  </button>
-                                );
-                              case 'unassign':
-                                return (
-                                  <button key="unassign" onClick={() => doUnassignContractor(r.id)} disabled={actionLoading === r.id}
-                                    className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700 disabled:opacity-50">
-                                    {actionLoading === r.id ? "…" : "Unassign"}
-                                  </button>
-                                );
-                              default:
-                                return null;
-                            }
-                          })}
-                        </div>
-                      )}
-                    </div>
+                    </SwipeableCard>
                   );
                 }}
               />
