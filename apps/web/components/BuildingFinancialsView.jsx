@@ -6,6 +6,7 @@ import { authHeaders } from "../lib/api";
 import { formatChfCents, formatPercent } from "../lib/format";
 import { cn } from "../lib/utils";
 import { FilterToggle, FilterPanelBody, FilterSection, FilterSectionClear, DateField } from "./ui/FilterPanel";
+import KpiInlineGrid from "./ui/KpiInlineGrid";
 
 /* ─── Helpers ─── */
 
@@ -245,7 +246,26 @@ export default function BuildingFinancialsView({ buildingId, variant = "page" })
               )}
 
               <Section title="Financial Summary">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {/* Mobile: compact inline grid */}
+                <div className="sm:hidden">
+                  <KpiInlineGrid
+                    items={[
+                      { label: "Earned Income",  value: formatChfCents(d.earnedIncomeCents),        tone: "good" },
+                      { label: "Total Expenses", value: formatChfCents(d.expensesTotalCents) },
+                      { label: "NOI",            value: formatChfCents(d.netOperatingIncomeCents),  tone: d.netOperatingIncomeCents >= 0 ? "good" : "warn" },
+                      { label: "Collection",     value: formatPercent(d.collectionRate),             tone: d.collectionRate >= 0.8 ? "good" : "warn" },
+                      { label: "Maintenance",    value: formatChfCents(d.maintenanceTotalCents) },
+                      { label: "Maint. Ratio",   value: formatPercent(d.maintenanceRatio),           tone: d.maintenanceRatio > 0.15 ? "warn" : "good" },
+                      { label: "CapEx",          value: formatChfCents(d.capexTotalCents) },
+                      { label: "Cost / Unit",    value: formatChfCents(d.costPerUnitCents) },
+                      ...(d.receivablesCents > 0 ? [{ label: "Receivables", value: formatChfCents(d.receivablesCents), tone: "warn" }] : []),
+                      ...(d.payablesCents > 0   ? [{ label: "Payables",     value: formatChfCents(d.payablesCents),    tone: "warn" }] : []),
+                    ]}
+                  />
+                </div>
+
+                {/* Desktop: original KpiCard grids */}
+                <div className="hidden sm:grid grid-cols-2 md:grid-cols-4 gap-3">
                   <KpiCard label="Earned Income" value={formatChfCents(d.earnedIncomeCents)} accent="green" />
                   <KpiCard label="Total Expenses" value={formatChfCents(d.expensesTotalCents)} />
                   <KpiCard
@@ -261,7 +281,7 @@ export default function BuildingFinancialsView({ buildingId, variant = "page" })
                     sub="Earned ÷ Projected"
                   />
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3">
+                <div className="hidden sm:grid grid-cols-2 md:grid-cols-4 gap-3 mt-3">
                   <KpiCard label="Maintenance" value={formatChfCents(d.maintenanceTotalCents)} sub="of total expenses" />
                   <KpiCard
                     label="Maintenance Ratio"
@@ -277,7 +297,7 @@ export default function BuildingFinancialsView({ buildingId, variant = "page" })
                   />
                 </div>
                 {(d.receivablesCents > 0 || d.payablesCents > 0) && (
-                  <div className="grid grid-cols-2 gap-3 mt-3">
+                  <div className="hidden sm:grid grid-cols-2 gap-3 mt-3">
                     {d.receivablesCents > 0 && (
                       <KpiCard
                         label="Receivables"
