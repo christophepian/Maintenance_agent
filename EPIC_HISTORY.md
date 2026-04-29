@@ -2543,3 +2543,65 @@ Stale exception language was removed or annotated as resolved across all source-
 - **Source file serving:** New `GET /invoices/:id/source-file` endpoint serves original captured images/PDFs from storage; new proxy route `pages/api/invoices/[id]/source-file.js`
 - **Invoice detail page redesign:** Original captured image shown prominently in "Original Capture" panel (img tag for images, iframe for PDFs) with download link; generated PDF clearly labeled as "Generated PDF (from extracted data)"
 - **Invoice list timestamp:** "Created" column renamed to "Date" with time (HH:MM) appended in lighter font for same-day document differentiation
+---
+
+## Dashboard Redesign — Manager & Owner (Apr 29, 2026)
+
+**Overview:** Replaced both the Manager and Owner dashboard index pages (`/manager` and `/owner`) with a new unified "priority feed" layout. The redesign removes the tabbed `ScrollableTabs`/`KpiInlineGrid`/`PageShell` boilerplate and replaces it with a more actionable, at-a-glance design.
+
+### New Layout Pattern (both dashboards)
+
+```
+Portfolio Overview row (read-only InfoStat chips — financial KPIs)
+  ─── divider ───
+Eyebrow + urgency h1 headline (dynamic text: "N items need your attention today.")
+  + Refresh button (icon-only, aria-label)
+Actionable KPI chips row (3-col grid — clickable ActionStat chips with count + arrow)
+  ─── section ───
+Priority feed (all action items in urgency order — ActionRow cards)
+  expand/collapse toggle when > 7 items
+  category summary quick-links (pill row)
+  ─── section ───
+Footer cross-links card (More tools / More views)
+```
+
+### Manager Dashboard (`/manager` = `pages/manager/index.js`)
+
+- **Replaced:** Old 674-line file using `PageShell`, `PageHeader`, `PageContent`, `ScrollableTabs`, `KpiInlineGrid`, `QuickLinksRail`
+- **New file:** 509 lines, derived from `pages/manager/dashboard-v2.js` (prototype kept as `/manager/dashboard-v2`)
+- **Portfolio InfoStats:** Spend MTD · Avg days done · Collection rate · NOI YTD · Buildings in red
+- **Portfolio data:** `GET /api/financials/portfolio-summary?from=<ytd>&to=<today>` (parallel load)
+- **ActionStat chips:** Open requests · Open jobs · Pending invoices
+- **Priority feed categories:** `approval` (owner approval) · `disputed` (disputed invoice) · `stale` (in-progress > 7 days) · `review` (pending review) · `rfp` (RFP routed)
+- **APIs:** `/api/requests?view=summary`, `/api/jobs?view=summary`, `/api/invoices?view=summary`
+
+### Owner Dashboard (`/owner` = `pages/owner/index.js`)
+
+- **Replaced:** Old 213-line file using `PageShell`, `PageHeader`, `PageContent`, `SummaryCard`, `ActionItemsTabs`, `ScrollableTabs`, `KpiInlineGrid`
+- **New file:** 315 lines
+- **Portfolio InfoStats:** Monthly rent · Vacancy rate · Outstanding liabilities · Active leases
+- **ActionStat chips:** Pending approvals · Invoices to review · Vacant units
+- **Priority feed categories:** `approval` (needs approval) · `rfp` (RFP to review) · `invoice` (invoice pending) · `vacancy` (vacant unit)
+- **APIs:** `/api/owner/approvals`, `/api/owner/invoices`, `/api/leases?limit=200`, `/api/units?limit=500`, `/api/rfps`, `/api/strategy/owner-profile-current`
+- **`StrategyProfileBanner`** shown when owner has no strategy profile
+
+### Shared Components / Patterns Used
+
+- `ActionStat` — clickable chip: label + count (tone-aware colour) + arrow → links to hub page
+- `InfoStat` — read-only KPI: label + value (tone-aware colour)
+- `ActionRow` — priority feed card: category pill + title + building + date + chevron
+- `heroHeadline()` — dynamic urgency headline based on `actionFeed.length`
+- `cn()` from `lib/utils.js` for all conditional classNames ✅
+- `formatChf`, `formatDate`, etc. from `lib/format.js` ✅
+- No `PageShell` / `PageHeader` / `PageContent` — layout is bare `AppShell` + `max-w-7xl` wrapper
+
+### Files Changed
+
+| File | Change |
+|------|--------|
+| `apps/web/pages/manager/index.js` | Full replacement (674 → 509 lines) |
+| `apps/web/pages/owner/index.js` | Full replacement (213 → 315 lines) |
+| `apps/web/pages/manager/dashboard-v2.js` | New file — prototype that became the basis for index.js |
+| `apps/web/pages/manager/index.js.bak` | Backup of old manager dashboard |
+| `apps/web/pages/owner/index.js.bak` | Backup of old owner dashboard |
+| `docs/FRONTEND_INVENTORY.md` | Updated last-modified dates; added dashboard-v2 entry |

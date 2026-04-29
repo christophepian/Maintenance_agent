@@ -1,3 +1,15 @@
+/**
+ * /manager/dashboard-v2 — Redesigned Manager Dashboard (prototype)
+ *
+ * Same data + same CTAs as /manager/index.js, but a more dynamic layout
+ * inspired by /owner/reporting:
+ *   • Gradient hero with urgency headline
+ *   • KPI cards with tone-aware colour accents
+ *   • Unified priority action feed (no tabs — everything visible at once)
+ *   • Two-column body: action feed + sidebar (quick links + building health)
+ *   • Building performance as colour-accent cards, not a plain table
+ */
+
 import { useEffect, useState, useMemo, useCallback } from "react";
 import Link from "next/link";
 import AppShell from "../../components/AppShell";
@@ -130,7 +142,7 @@ function heroHeadline(totalActions, openRequests) {
 /* ──────────────────────────────────────────────────────────────
    Main page
    ────────────────────────────────────────────────────────────── */
-export default function ManagerDashboard() {
+export default function ManagerDashboardV2() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [requests, setRequests] = useState([]);
@@ -375,6 +387,7 @@ export default function ManagerDashboard() {
             <div>
               <div className="mb-1 flex items-center gap-2">
                 <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">Manager Dashboard</span>
+                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-500">v2 preview</span>
               </div>
               <h1 className="text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
                 {heroHeadline(totalActions, openRequestsCount)}

@@ -25,7 +25,8 @@ Updated: 2026-04-03 (recurring invoices epic)
 
 | Path | Type | Uses proxyToBackend | Has empty state | Last modified | Status |
 |------|------|--------------------|-----------------|----|--------|
-| /manager/index | UI — dashboard | N/A | yes | 2026-03-08 | active |
+| /manager/index | UI — dashboard | N/A | yes | 2026-04-29 | active |
+| /manager/dashboard-v2 | UI — dashboard (prototype) | N/A | yes | 2026-04-29 | active |
 | /manager/requests | UI — list | N/A | yes | 2026-03-08 | active |
 | /manager/work-requests | UI — redirect | N/A | — | 2026-02-27 | active (→ /manager/requests) |
 | /manager/assets | UI — redirect | N/A | — | 2026-03-08 | active (→ /admin-inventory) |
@@ -86,7 +87,7 @@ Updated: 2026-04-03 (recurring invoices epic)
 
 | Path | Type | Uses proxyToBackend | Has empty state | Last modified | Status |
 |------|------|--------------------|-----------------|----|--------|
-| /owner/index | UI — dashboard | N/A | yes | 2026-03-08 | active |
+| /owner/index | UI — dashboard | N/A | yes | 2026-04-29 | active |
 | /owner/approvals | UI — list | N/A | yes | 2026-03-04 | active |
 | /owner/invoices | UI — list | N/A | yes | 2026-03-08 | active |
 | /owner/jobs | UI — list | N/A | yes | 2026-03-02 | active |
