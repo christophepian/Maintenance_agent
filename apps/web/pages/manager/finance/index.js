@@ -11,7 +11,7 @@ import { formatChfCents, formatPercent } from "../../../lib/format";
 import { authHeaders } from "../../../lib/api";
 import { InvoicesContent } from "./invoices";
 import BillingEntityManager from "../../../components/BillingEntityManager";
-import RenovationTaxPlanning from "../../../components/RenovationTaxPlanning";
+import { CapExSummaryBridge } from "../../../components/RenovationTaxPlanning";
 import CashflowPlansList from "../../../components/CashflowPlansList";
 import { cn } from "../../../lib/utils";
 import { FilterToggle, FilterPanelBody, FilterSection, FilterSectionClear, DateField } from "../../../components/ui/FilterPanel";
@@ -68,7 +68,6 @@ const FINANCE_TABS = [
   { key: "billing-entities", label: "Billing Entities" },
   { key: "accounting",       label: "Accounting" },
   { key: "planning",         label: "Planning" },
-  { key: "renovation-tax",   label: "Renovation Guide" },
   { key: "setup",            label: "Setup" },
 ];
 
@@ -344,11 +343,11 @@ export default function ManagerFinanceHome() {
 
           {/* ── Planning ── */}
           {activeTabKey === "planning" && (
-            <CashflowPlansList ref={planListRef} />
+            <div className="space-y-4">
+              <CapExSummaryBridge />
+              <CashflowPlansList ref={planListRef} />
+            </div>
           )}
-
-          {/* ── Renovation & Tax ── */}
-          {activeTabKey === "renovation-tax" && <RenovationTaxPlanning />}
 
           {/* ── Setup ── */}
           {activeTabKey === "setup" && (

@@ -107,19 +107,36 @@ export async function upsertOwnerProfile(
     contradictionScore: number;
   },
 ): Promise<OwnerProfileWithRelations> {
-  return prisma.ownerStrategyProfile.upsert({
-    where: { ownerId },
-    create: {
-      orgId,
-      ownerId,
-      ...data,
-      secondaryArchetype: data.secondaryArchetype ?? null,
-    },
-    update: {
-      ...data,
-      secondaryArchetype: data.secondaryArchetype ?? null,
-    },
-    include: OWNER_PROFILE_INCLUDE,
+  return prisma.$transaction(async (tx) => {
+    // Ensure the User row exists before inserting the FK-constrained profile.
+    // In production, the User is always created during onboarding; this guard
+    // prevents FK violations in dev (AUTH_OPTIONAL) where no real auth exists.
+    await tx.user.upsert({
+      where: { id: ownerId },
+      create: {
+        id: ownerId,
+        email: `${ownerId}@dev.local`,
+        role: "OWNER",
+        orgId,
+        name: "Dev Owner",
+      },
+      update: {},
+    });
+
+    return tx.ownerStrategyProfile.upsert({
+      where: { ownerId },
+      create: {
+        orgId,
+        ownerId,
+        ...data,
+        secondaryArchetype: data.secondaryArchetype ?? null,
+      },
+      update: {
+        ...data,
+        secondaryArchetype: data.secondaryArchetype ?? null,
+      },
+      include: OWNER_PROFILE_INCLUDE,
+    });
   });
 }
 

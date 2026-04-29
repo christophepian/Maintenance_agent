@@ -3,9 +3,9 @@ import Panel from "./layout/Panel";
 import ErrorBanner from "./ui/ErrorBanner";
 import { authHeaders } from "../lib/api";
 import Badge from "./ui/Badge";
-
 import { cn } from "../lib/utils";
 import { TOPIC_EN } from "../lib/topicLabels";
+import { RenovationCatalog } from "./RenovationTaxPlanning";
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -267,10 +267,60 @@ function CreateStandardForm({ onCreated, onError }) {
 }
 
 // ---------------------------------------------------------------------------
-// Main Component
+// Standards tab — segmented control shell
 // ---------------------------------------------------------------------------
 
 export default function DepreciationStandards() {
+  const [segment, setSegment] = useState("depreciation");
+
+  return (
+    <div className="space-y-4">
+      {/* ── Segmented control ── */}
+      <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-1">
+        <button
+          onClick={() => setSegment("depreciation")}
+          className={cn(
+            "rounded-md px-4 py-1.5 text-sm font-medium transition-colors",
+            segment === "depreciation"
+              ? "bg-white text-slate-800 shadow-sm"
+              : "text-slate-500 hover:text-slate-700"
+          )}
+        >
+          Depreciation Standards
+        </button>
+        <button
+          onClick={() => setSegment("renovation")}
+          className={cn(
+            "rounded-md px-4 py-1.5 text-sm font-medium transition-colors",
+            segment === "renovation"
+              ? "bg-white text-slate-800 shadow-sm"
+              : "text-slate-500 hover:text-slate-700"
+          )}
+        >
+          Renovation Classification
+        </button>
+      </div>
+
+      {segment === "depreciation" && <DepreciationContent />}
+      {segment === "renovation" && (
+        <div className="space-y-3">
+          <p className="text-xs text-slate-500">
+            Standard Swiss tax classifications for renovation work on privately owned rental buildings.
+            Each job type is tagged with its usual tax treatment (value-preserving vs value-enhancing)
+            and timing sensitivity — used by cashflow plans to surface tax optimisation opportunities.
+          </p>
+          <RenovationCatalog />
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Depreciation content
+// ---------------------------------------------------------------------------
+
+function DepreciationContent() {
   const [standards, setStandards] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");

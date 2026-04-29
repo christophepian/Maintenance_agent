@@ -92,7 +92,7 @@ function TimingBadge({ sensitivity }) {
 
 // ─── CapEx Summary Bridge ─────────────────────────────────────────────────────
 
-function CapExSummaryBridge() {
+export function CapExSummaryBridge() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -258,7 +258,11 @@ function CapExSummaryBridge() {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export default function RenovationTaxPlanning() {
+/**
+ * RenovationCatalog — the Swiss renovation job classification table only.
+ * Used standalone in Settings → Standards tab.
+ */
+export function RenovationCatalog() {
   const [catalog, setCatalog] = useState([]);
   const [catalogLoading, setCatalogLoading] = useState(true);
   const [catalogFilter, setCatalogFilter] = useState({ system: "", taxCategory: "", search: "" });
@@ -316,9 +320,6 @@ export default function RenovationTaxPlanning() {
           This is not legal or tax advice. Consult a qualified advisor for your specific situation.
         </p>
       </div>
-
-      {/* CapEx summary bridge — links to Planning tab for full detail */}
-      <CapExSummaryBridge />
 
       {/* Classification Guide — category summary cards */}
       {/* Mobile: compact inline grid */}
@@ -428,6 +429,9 @@ export default function RenovationTaxPlanning() {
     </div>
   );
 }
+
+/** @deprecated Use RenovationCatalog named export instead */
+export default RenovationCatalog;
 
 // ─── Catalog System Group ─────────────────────────────────────────────────────
 

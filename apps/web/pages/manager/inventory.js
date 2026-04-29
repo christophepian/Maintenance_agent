@@ -12,6 +12,7 @@ import ErrorBanner from "../../components/ui/ErrorBanner";
 import { authHeaders } from "../../lib/api";
 
 import { cn } from "../../lib/utils";
+import { formatChfCents, formatPercent } from "../../lib/format";
 import ScrollableTabs from "../../components/mobile/ScrollableTabs";
 const INVENTORY_SORT_FIELDS = ["name", "address", "canton", "unitCount", "category", "manufacturer", "scope"];
 
@@ -62,6 +63,41 @@ const BUILDING_COLUMNS = [
     sortable: true,
     defaultVisible: false,
     render: (b) => <span className="text-slate-600">{b._count?.units ?? b.unitCount ?? "\u2014"}</span>,
+  },
+  {
+    id: "health",
+    label: "Health",
+    defaultVisible: true,
+    render: (b) => {
+      const h = b._financial?.health;
+      if (!h) return <span className="text-slate-300">\u2014</span>;
+      const dot = { green: "bg-green-500 ring-green-200", amber: "bg-amber-500 ring-amber-200", red: "bg-red-500 ring-red-200" }[h] ?? "bg-slate-400 ring-slate-200";
+      return (
+        <span className={cn("inline-block h-2.5 w-2.5 rounded-full ring-2", dot)}>
+          <span className="sr-only">{h}</span>
+        </span>
+      );
+    },
+  },
+  {
+    id: "netIncome",
+    label: "NOI YTD",
+    defaultVisible: true,
+    render: (b) => {
+      const n = b._financial?.netIncomeCents;
+      if (n == null) return <span className="text-slate-300">\u2014</span>;
+      return <span className={cn("text-sm font-medium tabular-nums", n >= 0 ? "text-green-700" : "text-red-600")}>{formatChfCents(n)}</span>;
+    },
+  },
+  {
+    id: "collectionRate",
+    label: "Collection",
+    defaultVisible: true,
+    render: (b) => {
+      const r = b._financial?.collectionRate;
+      if (r == null) return <span className="text-slate-300">\u2014</span>;
+      return <span className={cn("text-sm tabular-nums", r >= 0.95 ? "text-green-700" : r >= 0.8 ? "text-amber-700" : "text-red-600")}>{formatPercent(r)}</span>;
+    },
   },
 ];
 
@@ -170,14 +206,33 @@ export default function ManagerInventoryPage() {
     setLoading(true);
     setError("");
     try {
-      const [bldRes, assetRes] = await Promise.all([
+      const now = new Date();
+      const from = `${now.getFullYear()}-01-01`;
+      const to = now.toISOString().slice(0, 10);
+      const [bldRes, assetRes, pfRes] = await Promise.all([
         fetch("/api/buildings", { headers: authHeaders() }),
         fetch("/api/asset-models", { headers: authHeaders() }),
+        fetch(`/api/financials/portfolio-summary?from=${from}&to=${to}`, { headers: authHeaders() }).catch(() => null),
       ]);
       const bldData = await bldRes.json();
       const assetData = await assetRes.json();
       if (!bldRes.ok) throw new Error(bldData?.error?.message || "Failed to load buildings");
-      setBuildings(bldData?.data || []);
+
+      // Build financial lookup map: buildingId → { health, netIncomeCents, collectionRate }
+      const pfMap = new Map();
+      if (pfRes?.ok) {
+        const pfData = await pfRes.json();
+        (pfData?.data?.buildings || []).forEach((pf) => {
+          pfMap.set(pf.buildingId, {
+            health: pf.health,
+            netIncomeCents: pf.netIncomeCents,
+            collectionRate: pf.collectionRate,
+          });
+        });
+      }
+
+      const rawBuildings = bldData?.data || [];
+      setBuildings(rawBuildings.map((b) => ({ ...b, _financial: pfMap.get(b.id) ?? null })));
       const models = Array.isArray(assetData) ? assetData : assetData?.data || [];
       setAssetModels(models);
     } catch (e) {
@@ -377,18 +432,33 @@ export default function ManagerInventoryPage() {
                 onSort={handleSort}
                 onRowClick={(b) => router.push(`/admin-inventory/buildings/${b.id}?from=/manager/inventory`)}
                 emptyState={<p className="text-sm text-slate-500">No buildings found.</p>}
-                mobileCard={(b) => (
-                  <div className="table-card">
-                    <p className="table-card-head">{b.name || "Unnamed"}</p>
-                    <p className="table-card-sub">{b.address || "—"}</p>
-                    <div className="table-card-footer">
-                      {b.canton && <span>{b.canton}</span>}
-                      {(b._count?.units ?? b.unitCount) != null && (
-                        <span>{b._count?.units ?? b.unitCount} unit{(b._count?.units ?? b.unitCount) !== 1 ? "s" : ""}</span>
-                      )}
+                mobileCard={(b) => {
+                  const h = b._financial?.health;
+                  const dot = h ? ({ green: "bg-green-500 ring-green-200", amber: "bg-amber-500 ring-amber-200", red: "bg-red-500 ring-red-200" }[h] ?? "bg-slate-400 ring-slate-200") : null;
+                  const n = b._financial?.netIncomeCents;
+                  const r = b._financial?.collectionRate;
+                  return (
+                    <div className="table-card">
+                      <div className="flex items-center gap-2">
+                        {dot && <span className={cn("inline-block h-2.5 w-2.5 shrink-0 rounded-full ring-2", dot)}><span className="sr-only">{h}</span></span>}
+                        <p className="table-card-head">{b.name || "Unnamed"}</p>
+                      </div>
+                      <p className="table-card-sub">{b.address || "—"}</p>
+                      <div className="table-card-footer">
+                        {b.canton && <span>{b.canton}</span>}
+                        {(b._count?.units ?? b.unitCount) != null && (
+                          <span>{b._count?.units ?? b.unitCount} unit{(b._count?.units ?? b.unitCount) !== 1 ? "s" : ""}</span>
+                        )}
+                        {n != null && (
+                          <span className={n >= 0 ? "text-green-700 font-medium" : "text-red-600 font-medium"}>{formatChfCents(n)}</span>
+                        )}
+                        {r != null && (
+                          <span className={r >= 0.95 ? "text-green-700" : r >= 0.8 ? "text-amber-700" : "text-red-600"}>{formatPercent(r)}</span>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  );
+                }}
               />
             )}
           </div>

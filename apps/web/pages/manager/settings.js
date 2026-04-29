@@ -20,7 +20,7 @@ const SETTINGS_TABS = [
   { key: "NOTIFICATIONS", label: "Notifications" },
   { key: "INTEGRATIONS", label: "Integrations" },
   { key: "LEGAL", label: "Legal Sources" },
-  { key: "DEPRECIATION", label: "Depreciation" },
+  { key: "DEPRECIATION", label: "Standards" },
 ];
 
 const TAB_KEYS = ['organisation', 'buildings', 'notifications', 'integrations', 'legal', 'depreciation'];
