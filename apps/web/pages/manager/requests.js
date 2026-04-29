@@ -14,6 +14,7 @@ import { requestVariant } from "../../lib/statusVariants";
 import { cn } from "../../lib/utils";
 import ScrollableTabs from "../../components/mobile/ScrollableTabs";
 import SwipeableCard from "../../components/mobile/SwipeableCard";
+import { FilterToggle, FilterPanelBody, FilterSection, FilterSectionClear, SelectField, NumberField, SortToggle, SortPanelBody, SortRow } from "../../components/ui/FilterPanel";
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
@@ -1226,31 +1227,42 @@ export default function ManagerRequestsPage() {
         );
       });
     }
-    if (filterUrgency !== "ALL") {
-      list = list.filter((r) => r.urgency === filterUrgency);
-    }
-    if (filterCategory !== "ALL") {
-      list = list.filter((r) => r.category === filterCategory);
-    }
-    if (filterBuilding !== "ALL") {
-      list = list.filter((r) => r.buildingId === filterBuilding);
-    }
+    if (filterUrgency) list = list.filter((r) => r.urgency === filterUrgency);
+    if (filterCategory) list = list.filter((r) => r.category === filterCategory);
+    if (filterBuilding) list = list.filter((r) => r.buildingId === filterBuilding);
     return list;
   }, [filteredRequests, search, filterUrgency, filterCategory, filterBuilding]);
 
-  const hasActiveFilters = search.trim() || filterUrgency !== "ALL" || filterCategory !== "ALL" || filterBuilding !== "ALL";
+  const activeFilterCount = [search.trim(), filterUrgency, filterCategory, filterBuilding].filter(Boolean).length;
+  const hasActiveFilters = activeFilterCount > 0;
 
   function clearFilters() {
     setSearch("");
-    setFilterUrgency("ALL");
-    setFilterCategory("ALL");
-    setFilterBuilding("ALL");
+    setFilterUrgency("");
+    setFilterCategory("");
+    setFilterBuilding("");
   }
 
-  const sortedRequests = useMemo(
-    () => clientSort(searchFilteredRequests, sortField, sortDir, requestFieldExtractor),
-    [searchFilteredRequests, sortField, sortDir]
-  );
+  // Local sort (replaces URL-synced sort for simplicity, matching owner/approvals)
+  const URGENCY_RANK = { LOW: 1, NORMAL: 2, HIGH: 3, EMERGENCY: 4 };
+  const sortedRequests = useMemo(() => {
+    return [...searchFilteredRequests].sort((a, b) => {
+      let cmp = 0;
+      if (sortKey === "number") {
+        cmp = (a.requestNumber || 0) - (b.requestNumber || 0);
+      } else if (sortKey === "urgency") {
+        cmp = (URGENCY_RANK[a.urgency] || 0) - (URGENCY_RANK[b.urgency] || 0);
+      } else if (sortKey === "cost") {
+        cmp = (a.estimatedCost || 0) - (b.estimatedCost || 0);
+      } else if (sortKey === "building") {
+        cmp = (a.buildingName || "").localeCompare(b.buildingName || "");
+      } else {
+        // date (default)
+        cmp = new Date(a.createdAt) - new Date(b.createdAt);
+      }
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+  }, [searchFilteredRequests, sortKey, sortDir]);
   const pager = useTablePagination(router, sortedRequests.length, 25);
   const paginatedRequests = useMemo(
     () => pager.pageSlice(sortedRequests),
@@ -1390,85 +1402,79 @@ export default function ManagerRequestsPage() {
             })}
           </ScrollableTabs>
 
-          {/* Search + Filter bar */}
+          {/* Filter + Sort toggles */}
           {!loading && (
-            <div className="flex flex-wrap items-center gap-2 px-4 py-3 border-b border-slate-100">
-              {/* Search */}
-              <div className="relative flex-1 min-w-[160px] max-w-xs">
-                <svg className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z" />
-                </svg>
-                <input
-                  type="search"
-                  aria-label="Search requests"
-                  placeholder="Search #, description, building…"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="w-full rounded-lg border border-slate-200 bg-white py-1.5 pl-8 pr-3 text-sm text-slate-700 placeholder:text-slate-400 focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-300"
-                />
-              </div>
-
-              {/* Urgency */}
-              <select
-                aria-label="Filter by urgency"
-                value={filterUrgency}
-                onChange={(e) => setFilterUrgency(e.target.value)}
-                className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-sm text-slate-700 focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-300"
-              >
-                <option value="ALL">All urgencies</option>
-                <option value="EMERGENCY">🚨 Emergency</option>
-                <option value="HIGH">⚠ High</option>
-                <option value="NORMAL">Normal</option>
-                <option value="LOW">Low</option>
-              </select>
-
-              {/* Category */}
-              {categoryOptions.length > 0 && (
-                <select
-                  aria-label="Filter by category"
-                  value={filterCategory}
-                  onChange={(e) => setFilterCategory(e.target.value)}
-                  className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-sm text-slate-700 focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-300"
-                >
-                  <option value="ALL">All categories</option>
-                  {categoryOptions.map((c) => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
-              )}
-
-              {/* Building */}
-              {buildingOptions.length > 1 && (
-                <select
-                  aria-label="Filter by building"
-                  value={filterBuilding}
-                  onChange={(e) => setFilterBuilding(e.target.value)}
-                  className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-sm text-slate-700 focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-300"
-                >
-                  <option value="ALL">All buildings</option>
-                  {buildingOptions.map(([id, name]) => (
-                    <option key={id} value={id}>{name}</option>
-                  ))}
-                </select>
-              )}
-
-              {/* Result count + clear */}
-              <span className="ml-auto text-xs text-slate-400 whitespace-nowrap">
-                {sortedRequests.length} result{sortedRequests.length !== 1 ? "s" : ""}
-              </span>
-              {hasActiveFilters && (
-                <button
-                  onClick={clearFilters}
-                  aria-label="Clear all filters"
-                  className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-500 hover:bg-slate-50"
-                >
-                  <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                  Clear
-                </button>
-              )}
+            <div className="flex items-center justify-end gap-2">
+              <FilterToggle open={filterOpen} onToggle={() => setFilterOpen((v) => !v)} activeCount={activeFilterCount} />
+              <SortToggle open={sortOpen} onToggle={() => setSortOpen((v) => !v)} active={sortActive} />
             </div>
+          )}
+
+          {/* Collapsible filter panel */}
+          {filterOpen && (
+            <FilterPanelBody>
+              <FilterSection title="Search" first>
+                <div className="relative">
+                  <svg className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z" />
+                  </svg>
+                  <input
+                    type="search"
+                    aria-label="Search requests"
+                    placeholder="#, description, building, unit, contractor…"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="w-full min-h-[36px] rounded-lg border border-slate-200 bg-white py-2 pl-8 pr-3 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  />
+                </div>
+              </FilterSection>
+
+              <FilterSection title="Priority">
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  <SelectField label="Urgency" value={filterUrgency} onChange={(e) => setFilterUrgency(e.target.value)}>
+                    <option value="">All urgencies</option>
+                    <option value="EMERGENCY">🚨 Emergency</option>
+                    <option value="HIGH">⚠️ High</option>
+                    <option value="NORMAL">Normal</option>
+                    <option value="LOW">Low</option>
+                  </SelectField>
+                </div>
+              </FilterSection>
+
+              <FilterSection title="Scope">
+                <div className="grid grid-cols-2 gap-3">
+                  {buildingOptions.length > 1 && (
+                    <SelectField label="Building" value={filterBuilding} onChange={(e) => { setFilterBuilding(e.target.value); }}>
+                      <option value="">All buildings</option>
+                      {buildingOptions.map(([id, name]) => (
+                        <option key={id} value={id}>{name}</option>
+                      ))}
+                    </SelectField>
+                  )}
+                  {categoryOptions.length > 0 && (
+                    <SelectField label="Category" value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)}>
+                      <option value="">All categories</option>
+                      {categoryOptions.map((c) => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                    </SelectField>
+                  )}
+                </div>
+              </FilterSection>
+
+              <FilterSectionClear hasFilter={hasActiveFilters} onClear={clearFilters} />
+            </FilterPanelBody>
+          )}
+
+          {/* Collapsible sort panel */}
+          {sortOpen && (
+            <SortPanelBody>
+              <SortRow active={sortKey === "date"} dir={sortKey === "date" ? sortDir : "desc"} label="Date" descLabel="Newest first" ascLabel="Oldest first" onSelect={(dir) => handleSort("date", dir)} />
+              <SortRow active={sortKey === "number"} dir={sortKey === "number" ? sortDir : "asc"} label="Request #" ascLabel="Low → High" descLabel="High → Low" onSelect={(dir) => handleSort("number", dir)} />
+              <SortRow active={sortKey === "urgency"} dir={sortKey === "urgency" ? sortDir : "desc"} label="Urgency" descLabel="High → Low" ascLabel="Low → High" onSelect={(dir) => handleSort("urgency", dir)} />
+              <SortRow active={sortKey === "cost"} dir={sortKey === "cost" ? sortDir : "desc"} label="Est. Cost" descLabel="High → Low" ascLabel="Low → High" onSelect={(dir) => handleSort("cost", dir)} />
+              <SortRow active={sortKey === "building"} dir={sortKey === "building" ? sortDir : "asc"} label="Building" ascLabel="A → Z" descLabel="Z → A" onSelect={(dir) => handleSort("building", dir)} />
+            </SortPanelBody>
           )}
 
           {/* Content */}
@@ -1478,7 +1484,7 @@ export default function ManagerRequestsPage() {
             <div className="px-4 py-6 text-center">
               <p className="empty-state-text">{hasActiveFilters ? "No requests match your search or filters." : "No requests match this filter."}</p>
               {hasActiveFilters && (
-                <button onClick={clearFilters} className="mt-2 text-xs text-blue-600 hover:underline">Clear filters</button>
+                <button onClick={clearFilters} className="mt-2 text-xs text-blue-600 hover:underline">Reset filters</button>
               )}
             </div>
           ) : (
@@ -1488,9 +1494,9 @@ export default function ManagerRequestsPage() {
                 columns={requestColumns}
                 data={paginatedRequests}
                 rowKey={(r) => r.id}
-                sortField={sortField}
+                sortField={null}
                 sortDir={sortDir}
-                onSort={handleSort}
+                onSort={null}
                 onRowClick={(r) => router.push(r.rfpId ? `/manager/rfps/${r.rfpId}` : `/manager/requests/${r.id}`)}
                 emptyState={<p className="text-sm text-slate-500">No requests match this filter.</p>}
                 mobileCard={(r) => {
