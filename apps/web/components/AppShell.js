@@ -375,7 +375,7 @@ export default function AppShell({ role: roleProp, children }) {
         )}
       </aside>
 
-      <main id="main-content" className="min-w-0 overflow-x-hidden p-6 pb-24 md:pb-6">
+      <main id="main-content" className="min-w-0 overflow-x-hidden px-3 py-6 pb-24 md:px-6 md:pb-6">
         {/* Header with notification bell */}
         {(role === "MANAGER" || role === "OWNER" || role === "TENANT" || role === "CONTRACTOR") && (
           <div className="flex justify-end mb-4 pr-2">
