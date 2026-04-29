@@ -151,39 +151,6 @@ export default function TenantDetailPage() {
         <PageHeader
           title={tenant?.name || "Tenant"}
           subtitle="Tenant profile and contact details."
-          actions={(
-            <div className="flex items-center gap-2">
-              {isEditing ? (
-                <>
-                  <button
-                    type="button"
-                    className="button-secondary"
-                    onClick={handleCancel}
-                    disabled={saving}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    className="button-primary"
-                    onClick={handleSave}
-                    disabled={saving}
-                  >
-                    {saving ? "Saving…" : "Save"}
-                  </button>
-                </>
-              ) : (
-                <button
-                  type="button"
-                  className="button-primary"
-                  onClick={() => setIsEditing(true)}
-                  disabled={loading || !tenant}
-                >
-                  Edit
-                </button>
-              )}
-            </div>
-          )}
         />
         <PageContent>
           {message ? (
@@ -209,7 +176,19 @@ export default function TenantDetailPage() {
               </ScrollableTabs>
 
               {activeTab === "Personal information" && (
-                <Panel title="Personal information">
+                <Panel
+                  title="Personal information"
+                  actions={
+                    isEditing ? (
+                      <div className="flex items-center gap-2">
+                        <button type="button" className="button-secondary text-sm" onClick={handleCancel} disabled={saving}>Cancel</button>
+                        <button type="button" className="button-primary text-sm" onClick={handleSave} disabled={saving}>{saving ? "Saving…" : "Save"}</button>
+                      </div>
+                    ) : (
+                      <button type="button" className="button-primary text-sm" onClick={() => setIsEditing(true)} disabled={loading || !tenant}>Edit</button>
+                    )
+                  }
+                >
                   <div className="grid gap-4 sm:grid-cols-2">
                     <label className="grid gap-2">
                       <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Name</span>
@@ -256,13 +235,13 @@ export default function TenantDetailPage() {
                   </div>
 
                   <div className="mt-6 grid gap-4 sm:grid-cols-2">
-                    <div>
+                    <div className="min-w-0">
                       <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Tenant ID</div>
-                      <div className="text-sm text-slate-700 mt-1">{tenant?.id}</div>
+                      <div className="text-sm text-slate-700 mt-1 break-all">{tenant?.id}</div>
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Org ID</div>
-                      <div className="text-sm text-slate-700 mt-1">{tenant?.orgId || "—"}</div>
+                      <div className="text-sm text-slate-700 mt-1 break-all">{tenant?.orgId || "—"}</div>
                     </div>
                     <div>
                       <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Created</div>
@@ -287,9 +266,9 @@ export default function TenantDetailPage() {
                       <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Unit</div>
                       <div className="text-sm text-slate-700 mt-1">{unitLabel}</div>
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Building ID</div>
-                      <div className="text-sm text-slate-700 mt-1">
+                      <div className="text-sm text-slate-700 mt-1 break-all">
                         {tenant?.unit?.buildingId ? (
                           <Link href={`/manager/buildings/${tenant.unit.buildingId}/financials`} className="cell-link">
                             {tenant.unit.buildingId}
@@ -297,9 +276,9 @@ export default function TenantDetailPage() {
                         ) : "—"}
                       </div>
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Unit ID</div>
-                      <div className="text-sm text-slate-700 mt-1">
+                      <div className="text-sm text-slate-700 mt-1 break-all">
                         {(tenant?.unit?.id || tenant?.unitId) ? (
                           <Link href={`/admin-inventory/units/${tenant?.unit?.id || tenant?.unitId}`} className="cell-link">
                             {tenant?.unit?.id || tenant?.unitId}
