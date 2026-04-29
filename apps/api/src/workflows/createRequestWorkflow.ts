@@ -20,7 +20,8 @@ import { RequestStatus, ApprovalSource, LegalObligation, PrismaClient } from "@p
 import { WorkflowContext } from "./context";
 import { assertRequestTransition } from "./transitions";
 import { emit } from "../events/bus";
-import { findRequestById, createRequest as repoCreateRequest, updateRequestStatus } from "../repositories/requestRepository";
+import { findRequestById, createRequest as repoCreateRequest, updateRequestStatus, updateRequestAsset } from "../repositories/requestRepository";
+import { findAssetsByUnit } from "../repositories/assetRepository";
 import { getTenantByPhone } from "../services/tenants";
 import { getOrgConfig } from "../services/orgConfig";
 import { createRfpForRequest } from "../services/rfps";
@@ -105,6 +106,59 @@ export async function createRequestWorkflow(
     unitId,
     assetId,
   });
+
+  // ── 4b. Asset auto-link ────────────────────────────────────
+  // If no assetId was explicitly provided, try to match a unit asset by
+  // scoring topic / name against the request description and category.
+  if (!assetId && unitId) {
+    try {
+      const unitAssets = await findAssetsByUnit(prisma, orgId, unitId);
+      if (unitAssets.length > 0) {
+        const descLower = (description ?? "").toLowerCase();
+        const catLower  = (category ?? "").toLowerCase();
+        const combined  = `${descLower} ${catLower}`;
+
+        // Score each asset: +3 for topic substring match, +2 for name match,
+        // +1 for type/category loose match. Tie-break by createdAt desc.
+        let bestAsset: string | null = null;
+        let bestScore = 0;
+
+        for (const a of unitAssets) {
+          let score = 0;
+          const topicLower = (a.topic ?? "").toLowerCase().replace(/_/g, " ");
+          const nameLower  = (a.name ?? "").toLowerCase();
+          const typeLower  = (a.type ?? "").toLowerCase();
+
+          // Topic keywords: SHOWER_CABIN_GLASS → "shower cabin glass"
+          const topicTokens = topicLower.split(/[\s_]+/);
+          for (const token of topicTokens) {
+            if (token.length >= 3 && combined.includes(token)) score += 3;
+          }
+          // Name match
+          const nameTokens = nameLower.split(/\s+/);
+          for (const token of nameTokens) {
+            if (token.length >= 3 && combined.includes(token)) score += 2;
+          }
+          // Type/category loose match
+          if (combined.includes(typeLower)) score += 1;
+
+          if (score > bestScore) {
+            bestScore = score;
+            bestAsset = a.id;
+          }
+        }
+
+        // Only auto-link if we have a meaningful match (score ≥ 3 = at least
+        // one topic token matched)
+        if (bestAsset && bestScore >= 3) {
+          await updateRequestAsset(prisma, created.id, bestAsset);
+          console.log(`[ASSET-LINK] Auto-linked asset ${bestAsset} (score=${bestScore}) to request ${created.id}`);
+        }
+      }
+    } catch (linkErr: any) {
+      console.warn(`[ASSET-LINK] Auto-link failed for ${created.id} (non-blocking):`, linkErr.message);
+    }
+  }
 
   // ── 5. Emit REQUEST_CREATED event ──────────────────────────
   emit({

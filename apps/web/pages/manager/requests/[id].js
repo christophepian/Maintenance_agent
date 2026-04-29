@@ -571,6 +571,22 @@ export default function RequestDetailPage() {
     finally { setLinkingAsset(false); }
   }
 
+  async function doRouteToRfp() {
+    setActionLoading(true);
+    try {
+      const res = await fetch(`/api/requests/${id}/route-to-rfp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body?.error?.message || "Failed to route to RFP");
+      // Reload request + refresh legal state
+      await loadRequest();
+      setLegalState((prev) => ({ ...prev, data: prev.data ? { ...prev.data, rfpId: body.data?.rfpId } : prev.data }));
+    } catch (e) { setError(String(e?.message || e)); }
+    finally { setActionLoading(false); }
+  }
+
   /* ─── Derived ─── */
 
   const r         = request;
@@ -603,7 +619,7 @@ export default function RequestDetailPage() {
           assetModel: rawAppliance.assetModel || null,
         }
       : null;
-  const rfpId     = legalState.data?.rfpId || r?.rfpId || null;
+  const rfpId     = legalState.data?.rfpId || r?.rfps?.[0]?.id || null;
   const nextStep  = r ? getNextStep(r, legalState.data) : null;
   const ctaList   = r ? getAvailableCTAs(r, assigningOpen ? id : null) : [];
   const isTenantFunded = r?.payingParty === "TENANT";
@@ -902,20 +918,53 @@ export default function RequestDetailPage() {
                         {linkedAsset.installDate && <Field label="Installed">{formatDate(linkedAsset.installDate)}</Field>}
                       </dl>
                     ) : assetPickerOpen ? (
-                      <div className="flex items-center gap-2">
-                        <select
-                          value={selectedAssetId}
-                          onChange={(e) => setSelectedAssetId(e.target.value)}
-                          className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                        >
-                          <option value="">Select asset&hellip;</option>
-                          {unitAssets.map((a) => (
-                            <option key={a.id} value={a.id}>
-                              {a.name || a.topic || a.id.slice(0, 8)}
-                              {a.brand ? ` — ${a.brand}` : ""}
-                            </option>
-                          ))}
-                        </select>
+                      <div className="flex items-start gap-2 flex-wrap">
+                        {(() => {
+                          // Score assets by topic/name overlap with description + category
+                          const combined = `${(r.description || "").toLowerCase()} ${(r.category || "").toLowerCase()}`;
+                          const scored = unitAssets.map((a) => {
+                            let score = 0;
+                            const topicTokens = (a.topic || "").toLowerCase().replace(/_/g, " ").split(/[\s_]+/);
+                            const nameTokens  = (a.name || "").toLowerCase().split(/\s+/);
+                            for (const t of topicTokens) { if (t.length >= 3 && combined.includes(t)) score += 3; }
+                            for (const t of nameTokens)  { if (t.length >= 3 && combined.includes(t)) score += 2; }
+                            return { ...a, _score: score };
+                          }).sort((a, b) => b._score - a._score);
+                          return (
+                            <>
+                              {scored[0]?._score >= 3 && (
+                                <div className="w-full mb-2">
+                                  <p className="text-[11px] text-indigo-600 font-medium mb-1">Suggested match</p>
+                                  <button
+                                    type="button"
+                                    onClick={() => { setSelectedAssetId(scored[0].id); doLinkAsset && setTimeout(doLinkAsset, 0); }}
+                                    className="w-full text-left rounded-lg border-2 border-indigo-300 bg-indigo-50 px-3 py-2 text-sm hover:bg-indigo-100 transition"
+                                    disabled={linkingAsset}
+                                  >
+                                    <span className="font-medium text-indigo-800">{scored[0].name || scored[0].topic}</span>
+                                    {scored[0].brand && <span className="text-indigo-600 ml-2">— {scored[0].brand}</span>}
+                                    <span className="ml-2 rounded-full bg-indigo-200 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-700">Suggested</span>
+                                  </button>
+                                </div>
+                              )}
+                              <select
+                                value={selectedAssetId}
+                                onChange={(e) => setSelectedAssetId(e.target.value)}
+                                className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                                aria-label="Select asset to link"
+                              >
+                                <option value="">Select asset&hellip;</option>
+                                {scored.map((a) => (
+                                  <option key={a.id} value={a.id}>
+                                    {a.name || a.topic || a.id.slice(0, 8)}
+                                    {a.brand ? ` — ${a.brand}` : ""}
+                                    {a._score >= 3 ? " ✓" : ""}
+                                  </option>
+                                ))}
+                              </select>
+                            </>
+                          );
+                        })()}
                         <button
                           type="button"
                           onClick={doLinkAsset}
@@ -962,6 +1011,23 @@ export default function RequestDetailPage() {
                     {!legalState.loading && !legalState.data && !legalState.error && (
                       <div className="px-6 py-8 text-center">
                         <p className="text-sm text-slate-400 m-0">No legal analysis available for this request.</p>
+                      </div>
+                    )}
+                    {/* Route-to-RFP CTA: only when OBLIGATED + PENDING_REVIEW + no rfpId yet */}
+                    {!legalState.loading && legalState.data?.legalObligation === "OBLIGATED"
+                      && r.status === "PENDING_REVIEW" && !rfpId && (
+                      <div className="border-t border-blue-100 bg-blue-50 px-6 py-4">
+                        <p className="text-xs text-blue-700 mb-3">
+                          This request is a legal obligation — the landlord must act. Auto-routing was skipped or not yet applied.
+                        </p>
+                        <button
+                          type="button"
+                          className="button-primary text-sm"
+                          onClick={doRouteToRfp}
+                          disabled={actionLoading}
+                        >
+                          {actionLoading ? "Routing…" : "Route to RFP →"}
+                        </button>
                       </div>
                     )}
                   </Panel>

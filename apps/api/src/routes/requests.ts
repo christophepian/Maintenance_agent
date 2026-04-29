@@ -5,7 +5,7 @@
  * All orchestration logic lives in workflows/.
  */
 
-import { RequestStatus, RequestUrgency } from "@prisma/client";
+import { RequestStatus, RequestUrgency, ApprovalSource, LegalObligation } from "@prisma/client";
 import { Router, HandlerContext } from "../http/router";
 import { sendError, sendJson } from "../http/json";
 import { readJson } from "../http/body";
@@ -13,7 +13,7 @@ import { first, getIntParam, getEnumParam } from "../http/query";
 import { getAuthUser, maybeRequireManager, requireRole, requireAnyRole, requireAuth } from "../authz";
 import { withAuthRequired } from "../http/routeProtection";
 import { requireOwnerAccess, logEvent } from "./helpers";
-import { resolveAndScopeRequest, findRequestRaw, updateRequestUrgency, deleteAllRequests, updateRequestAsset } from "../repositories/requestRepository";
+import { resolveAndScopeRequest, findRequestRaw, updateRequestUrgency, deleteAllRequests, updateRequestAsset, updateRequestStatus } from "../repositories/requestRepository";
 import { findAssetById } from "../repositories/assetRepository";
 import { findContractorOrgId } from "../repositories/contractorRepository";
 import { UpdateRequestStatusSchema } from "../validation/requestStatus";
@@ -38,6 +38,9 @@ import { assignContractorWorkflow } from "../workflows/assignContractorWorkflow"
 import { unassignContractorWorkflow } from "../workflows/unassignContractorWorkflow";
 import { rejectRequestWorkflow } from "../workflows/ownerRejectWorkflow";
 import { InvalidTransitionError } from "../workflows/transitions";
+import { evaluateLegalRoutingWorkflow } from "../workflows/evaluateLegalRoutingWorkflow";
+import { createRfpForRequest } from "../services/rfps";
+import { assertRequestTransition } from "../workflows/transitions";
 
 /* ── Helper: build WorkflowContext from HandlerContext ────────── */
 
@@ -260,7 +263,62 @@ export function registerRequestRoutes(router: Router) {
     sendJson(res, 200, { data: updated });
   });
 
-  /* ── DEV: delete all requests ──────────────────────────────── */
+  /* ── Manual legal route-to-RFP (for OBLIGATED requests not auto-routed) ── */
+
+  router.post("/requests/:id/route-to-rfp", async (ctx) => {
+    const { req, res, prisma, params, orgId } = ctx;
+    if (!requireRole(req, res, "MANAGER")) return;
+
+    const scopedReq = await resolveAndScopeRequest(prisma, params.id, orgId);
+    if (!scopedReq) return sendError(res, 404, "NOT_FOUND", "Request not found");
+
+    const reqFields = await prisma.request.findUnique({
+      where: { id: scopedReq.id },
+      select: { status: true },
+    });
+    if (!reqFields) return sendError(res, 404, "NOT_FOUND", "Request not found");
+
+    if (reqFields.status !== RequestStatus.PENDING_REVIEW) {
+      return sendError(res, 409, "INVALID_STATE",
+        `Request is ${reqFields.status} — only PENDING_REVIEW requests can be manually routed to RFP`);
+    }
+
+    const existingRfp = await prisma.rfp.findFirst({
+      where: { requestId: scopedReq.id },
+      select: { id: true },
+    });
+    if (existingRfp) {
+      return sendError(res, 409, "ALREADY_ROUTED", "Request already has an RFP");
+    }
+
+    try {
+      // Re-evaluate legal engine
+      const { decision } = await evaluateLegalRoutingWorkflow(wfCtx(ctx), { requestId: scopedReq.id });
+
+      if (decision.legalObligation !== LegalObligation.OBLIGATED) {
+        return sendError(res, 422, "NOT_OBLIGATED",
+          `Legal engine returned ${decision.legalObligation} — cannot route to RFP`);
+      }
+
+      const rfp = await createRfpForRequest(orgId, scopedReq.id, {
+        legalObligation: decision.legalObligation,
+        legalTopic: decision.legalTopic,
+      });
+
+      assertRequestTransition(RequestStatus.PENDING_REVIEW, RequestStatus.RFP_PENDING);
+      await updateRequestStatus(prisma, scopedReq.id, RequestStatus.RFP_PENDING, {
+        approvalSource: ApprovalSource.LEGAL_OBLIGATION,
+      });
+
+      sendJson(res, 200, { data: { rfpId: rfp.id, status: "RFP_PENDING" } });
+    } catch (err: any) {
+      if (err instanceof InvalidTransitionError) {
+        return sendError(res, 409, "INVALID_TRANSITION", err.message);
+      }
+      console.error("[route-to-rfp]", err);
+      sendError(res, 500, "INTERNAL_ERROR", "Failed to route request to RFP");
+    }
+  });
 
   router.delete("/__dev/requests", async ({ req, res, prisma }) => {
     if (process.env.NODE_ENV === "production") return sendError(res, 403, "FORBIDDEN", "Not allowed in production");

@@ -3330,6 +3330,15 @@ paths:
         '409':
           description: Lease not eligible for expiry handling
 
+  /leases/run-monthly-invoicing:
+    post:
+      tags: [Leases]
+      summary: Trigger monthly invoicing run for all active leases
+      operationId: runMonthlyInvoicing
+      responses:
+        '200':
+          description: Monthly invoicing run completed
+
   /leases/{id}/resend-for-signature:
     post:
       tags: [Leases]
@@ -8679,3 +8688,22 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
+  /requests/{id}/route-to-rfp:
+    post:
+      tags: [Requests]
+      summary: Manually route an OBLIGATED request to RFP
+      operationId: routeRequestToRfp
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Request routed to RFP
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          description: Legal engine returned non-OBLIGATED decision
