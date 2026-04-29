@@ -104,7 +104,7 @@ export default function ScrollableTabs({ children, activeIndex, className }) {
       <div
         ref={hiddenRef}
         aria-hidden="true"
-        className="fixed flex whitespace-nowrap pointer-events-none"
+        className="fixed flex whitespace-nowrap pointer-events-none text-[15px]"
         style={{ top: -9999, left: 0, visibility: 'hidden' }}
       >
         {tabs.map((tab, i) =>
