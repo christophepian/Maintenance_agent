@@ -139,7 +139,7 @@ export default function DocumentsPanel({ applicationId, title, compact }) {
                   return (
                     <div
                       key={att.id}
-                      className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 hover:bg-slate-100 transition-colors group"
+                      className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 hover:bg-slate-100 transition-colors group min-w-0"
                     >
                       <div className="flex items-center gap-2 min-w-0">
                         <span className="text-base flex-shrink-0">{icon}</span>

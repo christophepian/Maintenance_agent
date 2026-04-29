@@ -16,8 +16,7 @@ export default function Panel({
 
   if (collapsibleOnMobile && title) {
     return (
-      <section className={cn("rounded-2xl border border-slate-200 bg-surface-raised shadow-sm", className)}>
-        {/* Mobile: tappable toggle header */}
+      <section className={cn("rounded-2xl border border-slate-200 bg-surface-raised shadow-sm min-w-0 overflow-hidden", className)}>}
         <button
           type="button"
           onClick={() => setMobileOpen((o) => !o)}
@@ -53,7 +52,7 @@ export default function Panel({
   }
 
   return (
-    <section className={cn("rounded-2xl border border-slate-200 bg-surface-raised shadow-sm", className)}>
+    <section className={cn("rounded-2xl border border-slate-200 bg-surface-raised shadow-sm min-w-0 overflow-hidden", className)}>
       {(title || actions) ? (
         <div className="flex flex-row items-center justify-between gap-3 border-b border-slate-100 px-4 py-3">
           {title ? <h2 className="text-lg font-semibold text-slate-900 min-w-0 truncate">{title}</h2> : <span />}
