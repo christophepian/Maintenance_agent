@@ -17,7 +17,7 @@ export default function QuickLinksRail({ items }) {
             item.count > 0 ? `${item.label} (${item.count})` : item.label
           }
         >
-          <span className="relative flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-600">
+          <span className="relative flex h-12 w-12 items-center justify-center rounded-full bg-indigo-50 text-indigo-600">
             {item.icon}
             {item.count > 0 && (
               <span
@@ -31,7 +31,7 @@ export default function QuickLinksRail({ items }) {
               </span>
             )}
           </span>
-          <span className="text-[11px] font-medium text-slate-600 text-center -tracking-[0.005em]">
+          <span className="text-[11px] font-medium text-indigo-700 text-center -tracking-[0.005em]">
             {item.label}
           </span>
         </Link>

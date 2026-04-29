@@ -278,8 +278,9 @@ export default function ManagerInventoryPage() {
         <PageContent>
           <ErrorBanner error={error} />
 
-          {/* Tab strip — INVENTORY_TABS has 4 items; index 1 (Vacancies) is a Link.
-              activeTab 0→BUILDINGS (idx 0), 1→ASSETS (idx 2), 2→DECISIONS (idx 3). */}
+          {/* Tab strip + count label — wrapped in a div so space-y-6 from
+              PageContent doesn't insert a 24px gap between the two. */}
+          <div>
           <ScrollableTabs activeIndex={[0, 2, 3][activeTab] ?? 0}>
             {(() => {
               let tabIndex = 0;
@@ -311,27 +312,22 @@ export default function ManagerInventoryPage() {
             {activeTab === 1 ? `${assetModels.length} asset model${assetModels.length !== 1 ? "s" : ""}` : null}
             {activeTab === 2 ? "Maintenance decisions — select a unit to see repair vs replace analysis" : null}
           </span>
+          </div>
 
           {/* Buildings tab */}
           <div className={activeTab === 0 ? "tab-panel-active" : "tab-panel"}>
-            <div className="px-4 pt-3 pb-2 flex items-center gap-3">
-              <input
-                type="search"
-                placeholder="Search buildings…"
-                value={buildingSearch}
-                onChange={(e) => setBuildingSearch(e.target.value)}
-                className="filter-input w-full max-w-sm mb-0"
-              />
-              <button
-                type="button"
-                className="button-primary shrink-0"
-                onClick={() => setBuildingFormVisible((v) => !v)}
-              >
-                {buildingFormVisible ? "Cancel" : "Add"}
-              </button>
-            </div>
-            {buildingFormVisible && (
-              <form onSubmit={onCreateBuilding} className="mx-4 mb-3 rounded-xl border border-brand bg-brand-light/30 p-4 grid gap-4">
+            <div className="pt-1 pb-2 flex flex-col gap-4">
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  className="button-primary shrink-0"
+                  onClick={() => setBuildingFormVisible((v) => !v)}
+                >
+                  {buildingFormVisible ? "Cancel" : "Add"}
+                </button>
+              </div>
+              {buildingFormVisible && (
+                <form onSubmit={onCreateBuilding} className="rounded-xl border border-brand bg-brand-light/30 p-4 grid gap-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="col-span-full">
                     <label className="filter-label">Address</label>
@@ -355,7 +351,15 @@ export default function ManagerInventoryPage() {
                   <button type="submit" className="button-primary" disabled={loading}>Save building</button>
                 </div>
               </form>
-            )}
+              )}
+              <input
+                type="search"
+                placeholder="Search buildings…"
+                value={buildingSearch}
+                onChange={(e) => setBuildingSearch(e.target.value)}
+                className="filter-input w-full mb-0"
+              />
+            </div>
             {loading ? (
               <p className="loading-text">Loading buildings…</p>
             ) : buildings.length === 0 ? (

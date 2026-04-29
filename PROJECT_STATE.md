@@ -540,7 +540,8 @@ Three-layer CSS architecture backed by Tailwind v4.1:
 - Tailwind v4 reads tokens from `@theme {}` in CSS — NOT from `tailwind.config.js`
 
 **Layer 2 — @apply component classes** (84 classes in `globals.css @layer components`):
-- Buttons: `.button-primary`, `.action-btn-brand`, `.action-btn-success`, `.action-btn-dismiss`
+- Buttons: `.button-primary`, `.button-secondary`, `.button-destructive` (red stroke, white bg — solo action upgrades to `.button-primary`), `.button-danger` (red fill), `.action-btn-brand`, `.action-btn-success`, `.action-btn-dismiss`
+  - **Solo-CTA rule:** when only one action is available on a detail page, always render it as `.button-primary` regardless of destructive intent (Reject, Unassign, View RFP all promote to primary when alone)
 - Notices: `.error-banner`, `.notice-warn`, `.notice-ok`
 - Tables: `.inline-table`, `.cell-bold`, `.cell-link`
 - Tabs: `.tab-strip`, `.pill-tab`, `.pill-tab-active`
@@ -559,7 +560,7 @@ Three-layer CSS architecture backed by Tailwind v4.1:
 
 **Design reference:** [docs/design-system.html](docs/design-system.html) — visual spec with architecture summary
 
-<!-- reviewed 2026-04-20 -->
+<!-- reviewed 2026-04-29 -->
 
 ---
 
@@ -709,6 +710,7 @@ PORT=3001
 | Mobile Responsive — Owner Surface | 2026-04-23 | Dual-render table pattern (F-UI9) applied to 6 files; role-aware shared page routing (F-UI10) on buildings/[id] + units/[id]; ScrollableTabs upgraded with "More" overflow bottom sheet (F-UI11); dev server bound to 0.0.0.0 for phone testing; test protocol + responsive scope doc updated |
 | UI Responsiveness & Bug Fixes | 2026-04-27 | Responsive polish (flex-wrap, overflow-x-auto, hidden sm:table-cell) across 30+ manager/owner/contractor/tenant pages; PENDING_REVIEW approve/reject CTAs fixed (were empty); `manager-reject` proxy created + detail page called wrong endpoint; contractor page Panel import; timeline stage bug fixed (stuck at Contractor when job IN_PROGRESS); tenant scheduling Accept/Decline buttons moved below slot; F-UI4 template-literal violation caught and fixed |
 | Mobile KPI & Navigation Polish | 2026-04-28 | `KpiInlineGrid` component (stacked label/value, tone, 2-col bordered grid) applied to 5 pages (manager/owner dashboards, finance overview, building detail, RenovationTaxPlanning); `QuickLinksRail` icon-rail with live count badges on manager dashboard Quick Links (mobile only); `Panel.jsx` header fixed — was `flex-col` on mobile causing action button to wrap below title, now always `flex-row items-center justify-between` with `min-w-0 truncate` on title + `shrink-0` on actions; RFP deep-link fixed in 3 touch points on `/manager/requests` (card click, swipe button, desktop link all now route to `/manager/rfps/[rfpId]`) |
+| Request Detail CTA Polish | 2026-04-29 | CTAs merged into status/timeline Panel (no more separate card below); buttons right-aligned (`justify-end`); `.button-destructive` added to design system (red stroke, white bg, `hover:bg-red-50`); solo-CTA rule: any single action always renders as `.button-primary` regardless of destructive intent (Reject, Unassign, View RFP all promote); `.tab-strip` mb tuned to mb-4; `.tab-panel-count` mb tuned to mb-1 |
 
 ---
 

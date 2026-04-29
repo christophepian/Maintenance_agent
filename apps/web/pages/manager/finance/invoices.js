@@ -791,25 +791,25 @@ export function InvoicesContent() {
       )}
 
       {/* Top bar: direction toggle + action buttons */}
-      <div className="flex flex-wrap items-center justify-between gap-3 my-4">
-        {/* Direction toggle */}
-        <div className="inline-flex rounded-lg border border-slate-200 bg-slate-100 p-0.5 gap-0.5">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 my-4">
+        {/* Direction toggle — full width on mobile so it doesn't overflow */}
+        <div className="inline-flex w-full sm:w-auto rounded-lg border border-slate-200 bg-slate-100 p-0.5 gap-0.5">
           {[
             { key: "incoming", label: "Incoming" },
             { key: "outgoing", label: "Outgoing" },
-            { key: "pending", label: `Pending Review${pendingReviewCount ? ` (${pendingReviewCount})` : ""}` },
+            { key: "pending", label: pendingReviewCount ? `Pending (${pendingReviewCount})` : "Pending" },
           ].map(({ key, label }) => (
             <button
               key={key}
               onClick={() => { setDirection(key); setTableExpanded(false); }}
-              className={[
-                "rounded-lg px-4 py-1.5 text-sm font-medium transition-colors",
+              className={cn(
+                "flex-1 sm:flex-none rounded-lg px-3 sm:px-4 py-1.5 text-sm font-medium transition-colors",
                 direction === key
                   ? key === "pending"
                     ? "bg-amber-50 text-amber-700 shadow-sm"
                     : "bg-white text-slate-900 shadow-sm"
                   : "text-slate-500 hover:text-slate-700",
-              ].join(" ")}
+              )}
             >
               {label}
             </button>
@@ -817,28 +817,42 @@ export function InvoicesContent() {
         </div>
 
         {/* Action buttons */}
-        <div className="flex gap-2">
+        <div className="flex gap-6 shrink-0">
           {direction === "outgoing" && (
             <Link
               href="/manager/finance/invoices/new"
-              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition no-underline"
+              className="rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 transition no-underline"
             >
-              + New Invoice
+              <span className="sm:hidden">+</span>
+              <span className="hidden sm:inline">+ New Invoice</span>
             </Link>
           )}
           {direction !== "outgoing" && (
             <>
               <button
                 onClick={() => setShowUploadModal(true)}
-                className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-medium text-blue-700 hover:bg-blue-100 transition"
+                aria-label="Upload Invoice"
+                className="flex flex-col items-center gap-1.5"
               >
-                🖥 Upload Invoice
+                <span className="flex h-12 w-12 items-center justify-center rounded-full bg-indigo-50 text-indigo-600">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75} aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+                  </svg>
+                </span>
+                <span className="text-[11px] font-medium text-indigo-700 text-center -tracking-[0.005em]">Upload</span>
               </button>
               <button
                 onClick={() => setShowCaptureModal(true)}
-                className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-medium text-blue-700 hover:bg-blue-100 transition"
+                aria-label="Capture with Phone"
+                className="flex flex-col items-center gap-1.5"
               >
-                📷 Capture with Phone
+                <span className="flex h-12 w-12 items-center justify-center rounded-full bg-indigo-50 text-indigo-600">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75} aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" />
+                  </svg>
+                </span>
+                <span className="text-[11px] font-medium text-indigo-700 text-center -tracking-[0.005em]">Capture</span>
               </button>
             </>
           )}
@@ -847,17 +861,17 @@ export function InvoicesContent() {
 
       {/* Status sub-tabs + category filter */}
       <div className="flex flex-wrap items-center gap-3 mb-4">
-        <div className="inline-flex rounded-lg border border-slate-200 bg-slate-100 p-0.5 gap-0.5">
+        <div className="inline-flex w-full sm:w-auto rounded-lg border border-slate-200 bg-slate-100 p-0.5 gap-0.5">
           {(isOutgoing ? OUTGOING_STATUS_TABS : INCOMING_STATUS_TABS).map(({ key, label }) => (
             <button
               key={key}
               onClick={() => { setStatusFilter(key); setTableExpanded(false); }}
-              className={[
-                "rounded-lg px-3 py-1 text-xs font-medium transition-colors",
+              className={cn(
+                "flex-1 sm:flex-none rounded-lg px-2 sm:px-3 py-1 text-xs font-medium transition-colors",
                 statusFilter === key
                   ? "bg-white text-slate-900 shadow-sm"
                   : "text-slate-500 hover:text-slate-700",
-              ].join(" ")}
+              )}
             >
               {label}
             </button>
@@ -883,19 +897,15 @@ export function InvoicesContent() {
       ) : filteredInvoices.length === 0 ? (
         <div className="empty-state"><p className="empty-state-text">No invoices match this filter.</p></div>
       ) : (
-        <Panel bodyClassName="p-0">
-          <ConfigurableTable
-            tableId="manager-invoices"
-            columns={invoiceColumns}
-            data={visibleInvoices}
-            rowKey="id"
-            sortField={sortField}
-            sortDir={sortDir}
-            onSort={handleSort}
-            onRowClick={(inv) => router.push(`/manager/finance/invoices/${inv.id}`)}
-            emptyState="No invoices match this filter."
-            mobileCard={(inv) => (
-              <div className="table-card cursor-pointer" onClick={() => router.push(`/manager/finance/invoices/${inv.id}`)}>
+        <>
+          {/* Mobile: clean card list (no Panel wrapper) */}
+          <div className="sm:hidden overflow-hidden rounded-lg border border-table-border divide-y divide-table-divider">
+            {visibleInvoices.map((inv) => (
+              <div
+                key={inv.id}
+                className="table-card cursor-pointer hover:bg-slate-50/80 transition-colors"
+                onClick={() => router.push(`/manager/finance/invoices/${inv.id}`)}
+              >
                 <div className="flex items-start justify-between gap-2">
                   <span className="font-mono text-xs text-slate-500">{inv.invoiceNumber || inv.id?.slice(0, 8)}</span>
                   <StatusBadge status={inv.status} />
@@ -906,35 +916,63 @@ export function InvoicesContent() {
                   <span>{formatDate(inv.createdAt)}</span>
                 </div>
               </div>
-            )}
-          />
-          {/* Expand / collapse row */}
-          <div
-            className="flex items-center justify-center gap-1.5 px-4 py-2.5 border-t border-slate-100 cursor-pointer hover:bg-slate-50 transition-colors text-sm text-slate-500 select-none"
-            onClick={() => setTableExpanded((e) => !e)}
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 20 20"
-              fill="currentColor"
-              className={cn("w-4 h-4 transition-transform duration-200", tableExpanded ? "rotate-180" : "")}
+            ))}
+            {/* Expand / collapse */}
+            <div
+              className="expand-footer"
+              onClick={() => setTableExpanded((e) => !e)}
             >
-              <path fillRule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
-            </svg>
-            {tableExpanded
-              ? "Show less"
-              : `Show all ${sortedInvoices.length} invoice${sortedInvoices.length !== 1 ? "s" : ""}`}
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"
+                className={cn("w-4 h-4 transition-transform duration-200", tableExpanded ? "rotate-180" : "")}>
+                <path fillRule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
+              </svg>
+              {tableExpanded ? "Show less" : `Show all ${sortedInvoices.length} invoice${sortedInvoices.length !== 1 ? "s" : ""}`}
+            </div>
           </div>
-          {tableExpanded && (
-            <PaginationControls
-              currentPage={pager.currentPage}
-              totalPages={pager.totalPages}
-              totalItems={sortedInvoices.length}
-              pageSize={pager.pageSize}
-              onPageChange={pager.setPage}
-            />
-          )}
-        </Panel>
+
+          {/* Desktop: Panel + ConfigurableTable */}
+          <div className="hidden sm:block">
+            <Panel bodyClassName="p-0">
+              <ConfigurableTable
+                tableId="manager-invoices"
+                columns={invoiceColumns}
+                data={visibleInvoices}
+                rowKey="id"
+                sortField={sortField}
+                sortDir={sortDir}
+                onSort={handleSort}
+                onRowClick={(inv) => router.push(`/manager/finance/invoices/${inv.id}`)}
+                emptyState="No invoices match this filter."
+              />
+              {/* Expand / collapse row */}
+              <div
+                className="expand-footer"
+                onClick={() => setTableExpanded((e) => !e)}
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  className={cn("w-4 h-4 transition-transform duration-200", tableExpanded ? "rotate-180" : "")}
+                >
+                  <path fillRule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
+                </svg>
+                {tableExpanded
+                  ? "Show less"
+                  : `Show all ${sortedInvoices.length} invoice${sortedInvoices.length !== 1 ? "s" : ""}`}
+              </div>
+              {tableExpanded && (
+                <PaginationControls
+                  currentPage={pager.currentPage}
+                  totalPages={pager.totalPages}
+                  totalItems={sortedInvoices.length}
+                  pageSize={pager.pageSize}
+                  onPageChange={pager.setPage}
+                />
+              )}
+            </Panel>
+          </div>
+        </>
       )}
 
       {/* Invoice PDF Overlay */}

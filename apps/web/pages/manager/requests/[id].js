@@ -666,53 +666,46 @@ export default function RequestDetailPage() {
                 </div>
                 <StatusPipeline status={r.status} jobStatus={r.job?.status} payingParty={r.payingParty} />
 
-                {/* Next-step banner + actions — inside Timeline card */}
-                {(nextStep || ctaList.length > 0 || assigningOpen) && (
-                  <div className={cn("mt-5 rounded-lg border px-4 py-3", nextStep ? (NEXT_STEP_STYLES[nextStep.variant] || NEXT_STEP_STYLES.info) : "border-slate-200 bg-slate-50")}>
-                    {nextStep && (
-                      <div className="mb-2">
-                        <p className="text-sm font-semibold m-0">{nextStep.label}</p>
-                        <p className="mt-0.5 text-xs opacity-80 m-0">{nextStep.description}</p>
-                      </div>
-                    )}
-                    {isTenantFunded && r.rejectionReason && (
-                      <p className="text-xs text-orange-700 mb-2 m-0">Reason: &ldquo;{r.rejectionReason}&rdquo;</p>
-                    )}
-                    <div className="flex flex-wrap items-center gap-2">
+                {/* Status description — always visible, even on mobile when timeline is collapsed */}
+                {nextStep?.description && (
+                  <p className="mt-3 text-sm text-slate-500 m-0">{nextStep.description}</p>
+                )}
+                {isTenantFunded && r.rejectionReason && (
+                  <p className="mt-2 text-xs text-orange-700 m-0">Reason: &ldquo;{r.rejectionReason}&rdquo;</p>
+                )}
+
+                {/* ═══ CTAs — inside card, right-aligned ═══ */}
+                {(ctaList.length > 0 || assigningOpen) && (
+                  <div className="mt-4 space-y-3">
+                    <div className="flex flex-wrap items-center justify-end gap-2">
                       {ctaList.includes("approve") && (
-                        <button onClick={approveRequest} disabled={actionLoading}
-                          className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 transition disabled:opacity-50">
+                        <button onClick={approveRequest} disabled={actionLoading} className="button-primary disabled:opacity-50">
                           {actionLoading ? "\u2026" : "\u2713 Approve"}
                         </button>
                       )}
                       {ctaList.includes("reject") && (
-                        <button onClick={rejectRequest} disabled={actionLoading}
-                          className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-100 transition disabled:opacity-50">
+                        <button onClick={rejectRequest} disabled={actionLoading} className={cn(ctaList.length === 1 ? "button-primary" : "button-destructive", "disabled:opacity-50")}>
                           {actionLoading ? "\u2026" : "\u2717 Reject"}
                         </button>
                       )}
                       {ctaList.includes("view_rfp") && rfpId && (
-                        <Link href={`/manager/rfps/${rfpId}`}
-                          className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition no-underline">
+                        <Link href={`/manager/rfps/${rfpId}`} className={cn(ctaList.length === 1 ? "button-primary" : "button-secondary", "no-underline")}>
                           View RFP
                         </Link>
                       )}
                       {ctaList.includes("assign") && !assigningOpen && (
-                        <button onClick={() => setAssigningOpen(true)}
-                          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition">
+                        <button onClick={() => setAssigningOpen(true)} className="button-primary">
                           Assign Contractor
                         </button>
                       )}
                       {ctaList.includes("unassign") && (
-                        <button onClick={doUnassign} disabled={actionLoading}
-                          className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 transition disabled:opacity-50">
+                        <button onClick={doUnassign} disabled={actionLoading} className={cn(ctaList.length === 1 ? "button-primary" : "button-destructive", "disabled:opacity-50")}>
                           {actionLoading ? "\u2026" : "Unassign"}
                         </button>
                       )}
                     </div>
-
                     {assigningOpen && (
-                      <div className="mt-3 flex items-center gap-2 pt-3 border-t border-slate-100/50">
+                      <div className="flex items-center gap-2">
                         <select value={selectedContractorId} onChange={(e) => setSelectedContractorId(e.target.value)}
                           className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm">
                           <option value="">Select contractor&hellip;</option>
@@ -720,12 +713,10 @@ export default function RequestDetailPage() {
                             <option key={c.id} value={c.id}>{c.name || c.companyName || c.id.slice(0, 8)}</option>
                           ))}
                         </select>
-                        <button onClick={doAssign} disabled={!selectedContractorId || actionLoading}
-                          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition disabled:opacity-50">
+                        <button onClick={doAssign} disabled={!selectedContractorId || actionLoading} className="button-primary disabled:opacity-50">
                           {actionLoading ? "\u2026" : "Confirm"}
                         </button>
-                        <button onClick={() => { setAssigningOpen(false); setSelectedContractorId(""); }}
-                          className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-500 hover:bg-slate-50 transition">
+                        <button onClick={() => { setAssigningOpen(false); setSelectedContractorId(""); }} className="button-secondary">
                           Cancel
                         </button>
                       </div>

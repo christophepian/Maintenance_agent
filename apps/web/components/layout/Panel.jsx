@@ -16,7 +16,7 @@ export default function Panel({
 
   if (collapsibleOnMobile && title) {
     return (
-      <section className={cn("rounded-2xl border border-slate-200 bg-surface-raised shadow-sm min-w-0 overflow-hidden", className)}>}
+      <section className={cn("rounded-2xl border border-slate-200 bg-surface-raised shadow-sm min-w-0 overflow-hidden", className)}>
         <button
           type="button"
           onClick={() => setMobileOpen((o) => !o)}

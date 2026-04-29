@@ -117,6 +117,10 @@ h1, h2 {
   @apply py-2.5 px-3.5 rounded-lg border border-destructive bg-destructive text-white cursor-pointer;
 }
 
+.button-destructive {
+  @apply py-2.5 px-3.5 rounded-lg border-2 border-red-600 bg-white text-red-600 text-sm font-medium cursor-pointer hover:bg-red-50 transition-colors;
+}
+
 .notice {
   @apply p-3 rounded-lg mb-3 border border-surface-border;
 }
@@ -231,7 +235,7 @@ h1, h2 {
 
   /* ── Tab strip ── */
   .tab-strip {
-    @apply flex border-b border-slate-200 mb-5;
+    @apply flex border-b border-slate-200 mb-4;
     /* min-width:0 is required so CSS-grid/flex parents can constrain this
        container's width; without it, the strip expands to fit all children
        and the JS overflow-detection never fires. */
@@ -261,7 +265,7 @@ h1, h2 {
   /* ── Tab panels ── */
   .tab-panel        { @apply hidden; }
   .tab-panel-active { @apply block; }
-  .tab-panel-count  { @apply block text-xs text-slate-500 mb-2; }
+  .tab-panel-count  { @apply block text-xs text-slate-500 mb-1; }
   .full-page-link   { @apply text-[13px] text-brand font-medium no-underline; }
 
   /* ── Inline data table ── */
