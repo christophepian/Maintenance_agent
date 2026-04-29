@@ -1,6 +1,6 @@
 # Maintenance Agent — Project State
 
-**Last updated:** 2026-04-28 (Mobile KPI rail + icon quick-links; Panel header wrapping fix; RFP deep-link navigation fix)
+**Last updated:** 2026-04-29 (Requests page runtime bug fixes; request detail asset-inventory endpoint fix)
 
 > **For routine implementation work, start with [PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md)** (~220 lines).
 > This file is the canonical deep reference — guardrail details, backlog, state integrity, epic summaries.
@@ -710,6 +710,7 @@ PORT=3001
 | Mobile Responsive — Owner Surface | 2026-04-23 | Dual-render table pattern (F-UI9) applied to 6 files; role-aware shared page routing (F-UI10) on buildings/[id] + units/[id]; ScrollableTabs upgraded with "More" overflow bottom sheet (F-UI11); dev server bound to 0.0.0.0 for phone testing; test protocol + responsive scope doc updated |
 | UI Responsiveness & Bug Fixes | 2026-04-27 | Responsive polish (flex-wrap, overflow-x-auto, hidden sm:table-cell) across 30+ manager/owner/contractor/tenant pages; PENDING_REVIEW approve/reject CTAs fixed (were empty); `manager-reject` proxy created + detail page called wrong endpoint; contractor page Panel import; timeline stage bug fixed (stuck at Contractor when job IN_PROGRESS); tenant scheduling Accept/Decline buttons moved below slot; F-UI4 template-literal violation caught and fixed |
 | Mobile KPI & Navigation Polish | 2026-04-28 | `KpiInlineGrid` component (stacked label/value, tone, 2-col bordered grid) applied to 5 pages (manager/owner dashboards, finance overview, building detail, RenovationTaxPlanning); `QuickLinksRail` icon-rail with live count badges on manager dashboard Quick Links (mobile only); `Panel.jsx` header fixed — was `flex-col` on mobile causing action button to wrap below title, now always `flex-row items-center justify-between` with `min-w-0 truncate` on title + `shrink-0` on actions; RFP deep-link fixed in 3 touch points on `/manager/requests` (card click, swipe button, desktop link all now route to `/manager/rfps/[rfpId]`) |
+| Requests Page & Asset Picker Bug Fixes | 2026-04-29 | Fixed 4 runtime ReferenceErrors on `/manager/requests` (`sortKey`, `filterOpen`, `sortOpen`, `sortActive` missing); replaced URL-driven `useTableSort` with local `useState` so sort-by-date works; fixed empty "Link asset" dropdown on request detail — wrong fetch URL `/units/:id/assets` → `/units/:id/asset-inventory`; corrected DB asset topic `KITCHEN` → `DISHWASHER` on unit `6c8847de` |
 | Request Detail CTA Polish | 2026-04-29 | CTAs merged into status/timeline Panel (no more separate card below); buttons right-aligned (`justify-end`); `.button-destructive` added to design system (red stroke, white bg, `hover:bg-red-50`); solo-CTA rule: any single action always renders as `.button-primary` regardless of destructive intent (Reject, Unassign, View RFP all promote); `.tab-strip` mb tuned to mb-4; `.tab-panel-count` mb tuned to mb-1 |
 
 ---
@@ -799,7 +800,7 @@ Safe to:
 
 ---
 
-✅ **Project stabilized, security-hardened, org-scoped, and UI-connected (2026-04-28).** 65 test suites · 980 tests, 0 TS errors. 91/94 audit findings resolved. Backend: ~73k LOC | Frontend: ~45k LOC | 291 API operations | 68 Prisma models | 62 enums | 82 migrations | 289 frontend pages | 28 workflows | 28 route modules. Strategy Engine & Capture Hardening epic complete. Responsive polish pass complete: dual-render pattern (F-UI9) applied to 18+ pages; `KpiInlineGrid` + `QuickLinksRail` components added; `Panel.jsx` header wrapping fixed; RFP deep-link navigation fixed. See [EPIC_HISTORY.md](EPIC_HISTORY.md) for full completion details.
+✅ **Project stabilized, security-hardened, org-scoped, and UI-connected (2026-04-29).** 65 test suites · 980 tests, 0 TS errors. 91/94 audit findings resolved. Backend: ~73k LOC | Frontend: ~45k LOC | 291 API operations | 68 Prisma models | 62 enums | 82 migrations | 289 frontend pages | 28 workflows | 28 route modules. Strategy Engine & Capture Hardening epic complete. Responsive polish pass complete: dual-render pattern (F-UI9) applied to 18+ pages; `KpiInlineGrid` + `QuickLinksRail` components added; `Panel.jsx` header wrapping fixed; RFP deep-link navigation fixed. See [EPIC_HISTORY.md](EPIC_HISTORY.md) for full completion details.
 
 
 ## 13. Authentication & Testing

@@ -468,7 +468,7 @@ export default function RequestDetailPage() {
   useEffect(() => {
     const unitId = request?.unitId;
     if (!unitId) return;
-    fetch(`/api/units/${unitId}/assets`, { headers: authHeaders() })
+    fetch(`/api/units/${unitId}/asset-inventory`, { headers: authHeaders() })
       .then((r) => r.ok ? r.json() : null)
       .then((d) => { if (d?.data) setUnitAssets(d.data); })
       .catch(() => {});

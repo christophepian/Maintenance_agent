@@ -1146,12 +1146,20 @@ export default function ManagerRequestsPage() {
     );
   }, [router]);
 
-  const { sortField, sortDir, handleSort } = useTableSort(router, REQUEST_SORT_FIELDS);
+  const [sortKey, setSortKey] = useState("date");
+  const [sortDir, setSortDir] = useState("desc");
+  const handleSort = useCallback((field, dir) => {
+    setSortKey(field);
+    setSortDir(dir || "desc");
+  }, []);
 
   const [search, setSearch]             = useState("");
-  const [filterUrgency, setFilterUrgency] = useState("ALL");
-  const [filterCategory, setFilterCategory] = useState("ALL");
-  const [filterBuilding, setFilterBuilding] = useState("ALL");
+  const [filterUrgency, setFilterUrgency] = useState("");
+  const [filterCategory, setFilterCategory] = useState("");
+  const [filterBuilding, setFilterBuilding] = useState("");
+
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [sortOpen, setSortOpen]     = useState(false);
 
   const [actionLoading, setActionLoading] = useState(null);
 
@@ -1235,6 +1243,7 @@ export default function ManagerRequestsPage() {
 
   const activeFilterCount = [search.trim(), filterUrgency, filterCategory, filterBuilding].filter(Boolean).length;
   const hasActiveFilters = activeFilterCount > 0;
+  const sortActive = !!(sortKey && sortKey !== "date");
 
   function clearFilters() {
     setSearch("");
