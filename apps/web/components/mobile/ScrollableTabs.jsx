@@ -65,7 +65,6 @@ export default function ScrollableTabs({ children, activeIndex, className }) {
       if (used + widths[i] <= available) { visible.push(i); used += widths[i]; }
       else { overflow.push(i); }
     }
-    // Promote active tab out of overflow
     if (activeIndex != null && overflow.includes(activeIndex)) {
       const lastVisible = visible[visible.length - 1];
       visible[visible.length - 1] = activeIndex;
@@ -81,7 +80,6 @@ export default function ScrollableTabs({ children, activeIndex, className }) {
 
   return (
     <>
-      {/* Hidden measurement row */}
       <div
         ref={hiddenRef}
         aria-hidden="true"
@@ -91,7 +89,6 @@ export default function ScrollableTabs({ children, activeIndex, className }) {
         {tabs.map((tab, i) => cloneElement(tab, { key: i, tabIndex: -1 }))}
       </div>
 
-      {/* Outer wrapper: overflow hidden so getBoundingClientRect gives true width */}
       <div ref={wrapperRef} className={cn('w-full min-w-0 overflow-hidden', className)}>
         <div ref={stripRef} className="tab-strip">
           {visibleIndexes.map((i) => tabs[i])}
@@ -109,7 +106,6 @@ export default function ScrollableTabs({ children, activeIndex, className }) {
         </div>
       </div>
 
-      {/* Overflow bottom sheet */}
       {hasOverflow && (
         <BottomSheet open={moreOpen} onClose={closeMore} title="More">
           <div className="divide-y divide-slate-100">
