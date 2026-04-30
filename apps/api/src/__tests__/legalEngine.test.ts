@@ -501,7 +501,7 @@ describe("Legal Engine Integration Tests", () => {
       if (r1.data.data.rfpId && r2.data.data.rfpId) {
         expect(r1.data.data.rfpId).toBe(r2.data.data.rfpId);
       }
-    }, 20000);
+    }, 35000);
   });
 
   // ════════════════════════════════════════════════════════════

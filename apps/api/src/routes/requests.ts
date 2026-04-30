@@ -13,9 +13,10 @@ import { first, getIntParam, getEnumParam } from "../http/query";
 import { getAuthUser, maybeRequireManager, requireRole, requireAnyRole, requireAuth } from "../authz";
 import { withAuthRequired } from "../http/routeProtection";
 import { requireOwnerAccess, logEvent } from "./helpers";
-import { resolveAndScopeRequest, findRequestRaw, updateRequestUrgency, deleteAllRequests, updateRequestAsset, updateRequestStatus } from "../repositories/requestRepository";
+import { resolveAndScopeRequest, findRequestRaw, findRequestStatus, findRequestForMaintenanceDecision, updateRequestUrgency, deleteAllRequests, updateRequestAsset, updateRequestStatus } from "../repositories/requestRepository";
 import { findAssetById } from "../repositories/assetRepository";
 import { findContractorOrgId } from "../repositories/contractorRepository";
+import { findExistingRfpForRequest } from "../repositories/rfpRepository";
 import { UpdateRequestStatusSchema } from "../validation/requestStatus";
 import { AssignContractorSchema } from "../validation/requestAssignment";
 import { CreateRequestSchema } from "../validation/requests";
@@ -30,11 +31,6 @@ import { updateContractorRequestStatus, getContractorAssignedRequests } from "..
 import { findMatchingContractor } from "../services/requestAssignment";
 import { workRequestFromRequest } from "../services/adapters/workRequestAdapter";
 import { listRequestEvents, createRequestEvent } from "../services/requestEventService";
-import { getRepairReplaceAnalysis } from "../services/assetInventory";
-import { evaluateRequestLegalDecision } from "../services/legalDecisionEngine";
-import { getOwnerProfileByOwnerId } from "../repositories/strategyProfileRepository";
-import { blendMaintenanceDecision } from "../services/maintenanceDecisionService";
-import type { StrategyArchetype } from "../services/strategy/archetypes";
 import { getRepairReplaceAnalysis } from "../services/assetInventory";
 import { evaluateRequestLegalDecision } from "../services/legalDecisionEngine";
 import { getOwnerProfileByOwnerId } from "../repositories/strategyProfileRepository";
@@ -282,10 +278,7 @@ export function registerRequestRoutes(router: Router) {
     const scopedReq = await resolveAndScopeRequest(prisma, params.id, orgId);
     if (!scopedReq) return sendError(res, 404, "NOT_FOUND", "Request not found");
 
-    const reqFields = await prisma.request.findUnique({
-      where: { id: scopedReq.id },
-      select: { status: true },
-    });
+    const reqFields = await findRequestStatus(prisma, scopedReq.id);
     if (!reqFields) return sendError(res, 404, "NOT_FOUND", "Request not found");
 
     if (reqFields.status !== RequestStatus.PENDING_REVIEW) {
@@ -293,10 +286,7 @@ export function registerRequestRoutes(router: Router) {
         `Request is ${reqFields.status} — only PENDING_REVIEW requests can be manually routed to RFP`);
     }
 
-    const existingRfp = await prisma.rfp.findFirst({
-      where: { requestId: scopedReq.id },
-      select: { id: true },
-    });
+    const existingRfp = await findExistingRfpForRequest(prisma, scopedReq.id);
     if (existingRfp) {
       return sendError(res, 409, "ALREADY_ROUTED", "Request already has an RFP");
     }
@@ -394,26 +384,7 @@ export function registerRequestRoutes(router: Router) {
     if (!scopedReq) return sendError(res, 404, "NOT_FOUND", "Request not found");
 
     // Load full request with unit → building → owners chain
-    const reqRow = await prisma.request.findUnique({
-      where: { id: scopedReq.id },
-      select: {
-        urgency: true,
-        estimatedCost: true,
-        unit: {
-          select: {
-            id: true,
-            building: {
-              select: {
-                id: true,
-                canton: true,
-                address: true,
-                owners: { select: { user: { select: { id: true, name: true } } } },
-              },
-            },
-          },
-        },
-      },
-    });
+    const reqRow = await findRequestForMaintenanceDecision(prisma, scopedReq.id);
     if (!reqRow) return sendError(res, 404, "NOT_FOUND", "Request not found");
 
     const unitId   = reqRow.unit?.id ?? null;

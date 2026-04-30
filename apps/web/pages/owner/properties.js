@@ -13,7 +13,7 @@ import { useTableSort, clientSort } from "../../lib/tableUtils";
 import { ownerAuthHeaders } from "../../lib/api";
 import { cn } from "../../lib/utils";
 import OwnerPicker from "../../components/OwnerPicker";
-import { formatChf, formatChfCents } from "../../lib/format";
+import { formatChf, formatChfCents, formatDate } from "../../lib/format";
 
 // ── Monopoly palette: deterministic top-band colour from building name ──────
 // Colours are kept fun/bold (the Monopoly identity), but the rest of the
@@ -78,12 +78,12 @@ function MonopolyCard({ building, fin, onClick }) {
     <button
       type="button"
       onClick={onClick}
+      style={{ "--band": bandColor }}
       className="group w-full text-left rounded-2xl border border-surface-border bg-surface-raised shadow-sm hover:shadow-md transition-all flex flex-col overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-ring"
     >
       {/* Coloured band — Monopoly identity */}
       <div
-        className="px-4 pt-4 pb-3.5 flex flex-col"
-        style={{ backgroundColor: bandColor }}
+        className="px-4 pt-4 pb-3.5 flex flex-col bg-[var(--band)]"
       >
         <span className="text-[9px] font-semibold uppercase tracking-[0.18em] text-white/70 mb-0.5">
           Title Deed
@@ -105,8 +105,7 @@ function MonopolyCard({ building, fin, onClick }) {
         <div className="flex items-center gap-1.5 flex-wrap mb-4">
           {building.canton && (
             <span
-              className="inline-block text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded text-white"
-              style={{ backgroundColor: bandColor }}
+              className="inline-block text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded text-white bg-[var(--band)]"
             >
               {building.canton}
             </span>
@@ -287,9 +286,8 @@ function trailingYear() {
   const to = new Date();
   const from = new Date(to);
   from.setFullYear(from.getFullYear() - 1);
-  const fmt = (d) => d.toISOString().slice(0, 10);
   // months elapsed in this window (always 12)
-  return { from: fmt(from), to: fmt(to), months: 12 };
+  return { from: formatDate(from), to: formatDate(to), months: 12 };
 }
 
 function BuildingsTab({ refreshKey }) {

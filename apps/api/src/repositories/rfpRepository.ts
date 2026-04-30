@@ -468,3 +468,17 @@ export async function closeRfpForDirectAssign(
   });
   return loaded as RfpWithRelations;
 }
+
+/**
+ * Return the id of an existing RFP for a given request, or null.
+ * Used as a duplicate-creation guard.
+ */
+export async function findExistingRfpForRequest(
+  prisma: PrismaClient,
+  requestId: string,
+): Promise<{ id: string } | null> {
+  return prisma.rfp.findFirst({
+    where: { requestId },
+    select: { id: true },
+  });
+}

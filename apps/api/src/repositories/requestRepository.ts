@@ -333,3 +333,48 @@ export async function updateRequestUrgency(
 export async function deleteAllRequests(prisma: PrismaClient) {
   return prisma.request.deleteMany({});
 }
+
+/**
+ * Return only the status of a request. Used for pre-mutation guard checks.
+ */
+export async function findRequestStatus(
+  prisma: PrismaClient,
+  id: string,
+): Promise<{ status: RequestStatus } | null> {
+  return prisma.request.findUnique({
+    where: { id },
+    select: { status: true },
+  });
+}
+
+/** Include tree for the maintenance-decision endpoint. */
+export const REQUEST_MAINTENANCE_DECISION_SELECT = {
+  urgency: true,
+  estimatedCost: true,
+  unit: {
+    select: {
+      id: true,
+      building: {
+        select: {
+          id: true,
+          canton: true,
+          address: true,
+          owners: { select: { user: { select: { id: true, name: true } } } },
+        },
+      },
+    },
+  },
+} as const;
+
+/**
+ * Load the request fields required for the maintenance-decision endpoint.
+ */
+export async function findRequestForMaintenanceDecision(
+  prisma: PrismaClient,
+  id: string,
+) {
+  return prisma.request.findUnique({
+    where: { id },
+    select: REQUEST_MAINTENANCE_DECISION_SELECT,
+  });
+}

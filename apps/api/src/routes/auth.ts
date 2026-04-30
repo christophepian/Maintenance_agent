@@ -14,6 +14,7 @@ import { TenantSessionSchema } from "../validation/tenantSession";
 import { TriageSchema } from "../validation/triage";
 import { LoginSchema, RegisterSchema } from "../validation/auth";
 import { LEASE_FULL_INCLUDE } from "../repositories/leaseRepository";
+import { findUserProfile, findUserForCredentialCheck, updateUserProfile } from "../repositories/userRepository";
 import {
   findTenantRequests,
   findTenantUnitId,
@@ -509,10 +510,7 @@ export function registerAuthRoutes(router: Router) {
     const actor = requireAuth(req, res);
     if (!actor) return;
     try {
-      const user = await prisma.user.findFirst({
-        where: { id: actor.userId, orgId },
-        select: { id: true, name: true, email: true, role: true, createdAt: true },
-      });
+      const user = await findUserProfile(prisma, actor.userId, orgId);
       if (!user) return sendError(res, 404, "NOT_FOUND", "User not found");
       sendJson(res, 200, { data: user });
     } catch (e: any) {
@@ -528,10 +526,7 @@ export function registerAuthRoutes(router: Router) {
       const body = await readJson(req);
       const { name, email, currentPassword, newPassword } = body ?? {};
 
-      const user = await prisma.user.findFirst({
-        where: { id: actor.userId, orgId },
-        select: { id: true, passwordHash: true },
-      });
+      const user = await findUserForCredentialCheck(prisma, actor.userId, orgId);
       if (!user) return sendError(res, 404, "NOT_FOUND", "User not found");
 
       const updates: Record<string, unknown> = {};
@@ -547,11 +542,7 @@ export function registerAuthRoutes(router: Router) {
 
       if (Object.keys(updates).length === 0) return sendError(res, 400, "BAD_REQUEST", "No fields to update");
 
-      const updated = await prisma.user.update({
-        where: { id: user.id },
-        data: updates,
-        select: { id: true, name: true, email: true, role: true, createdAt: true },
-      });
+      const updated = await updateUserProfile(prisma, user.id, updates as { name?: string; email?: string; passwordHash?: string });
       sendJson(res, 200, { data: updated });
     } catch (e: any) {
       if (e?.code === "P2002") return sendError(res, 409, "CONFLICT", "Email already in use");

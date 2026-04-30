@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import Head from "next/head";
+import { formatChf, formatDate } from "../lib/format";
 
 /**
  * Public Rental Listings Page
@@ -15,19 +16,13 @@ import Head from "next/head";
  * No auth required — standalone public page.
  */
 
-function formatChf(amount) {
-  if (amount == null) return "—";
-  const str = Number(amount).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, "'");
-  return `CHF ${str}`;
-}
-
 function PhotoPlaceholder({ seed }) {
   // Deterministic soft colour from seed string
   const hue = [...(seed || "a")].reduce((h, c) => h + c.charCodeAt(0), 0) % 360;
   return (
     <div
       className="w-full aspect-[4/3] rounded-t-xl flex flex-col items-center justify-center select-none"
-      style={{ background: `hsl(${hue}, 30%, 92%)` }}
+      style={{ "--ph-hue": hue, background: "hsl(var(--ph-hue), 30%, 92%)" }}
     >
       {/* Simple wireframe house icon via SVG */}
       <svg

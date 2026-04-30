@@ -9,6 +9,9 @@
  *   - rejectRequestWorkflow: PENDING_OWNER_APPROVAL → REJECTED, PENDING_REVIEW → REJECTED
  *   - submitRentalApplicationWorkflow: DRAFT → SUBMITTED
  *
+ * Also covers new workflows added post-audit:
+ *   - cashflowPlanWorkflow: DRAFT → SUBMITTED → APPROVED
+ *
  * Pattern: Direct DB + workflow calls, no server spawn.
  */
 
@@ -428,5 +431,150 @@ describe("ownerRejectWorkflow", () => {
 
     expect(result.dto).toBeDefined();
     expect(result.dto.status).toBe(RequestStatus.REJECTED);
+  });
+});
+
+// ─── CashflowPlan Workflow Tests ──────────────────────────────
+
+describe("cashflowPlanWorkflow", () => {
+  let orgId: string;
+  let ctx: WorkflowContext;
+  const prismaLocal = new PrismaClient();
+
+  beforeAll(async () => {
+    const org = await prismaLocal.org.create({
+      data: { name: `CashflowPlan Test ${Date.now()}` },
+    });
+    orgId = org.id;
+    ctx = { orgId, prisma: prismaLocal, actorUserId: null };
+  });
+
+  afterAll(async () => {
+    await prismaLocal.cashflowPlan.deleteMany({ where: { orgId } }).catch(() => {});
+    await prismaLocal.org.delete({ where: { id: orgId } }).catch(() => {});
+    await prismaLocal.$disconnect();
+  });
+
+  it("createPlanWorkflow: creates a DRAFT plan", async () => {
+    const { createPlanWorkflow } = await import("../workflows/cashflowPlanWorkflow");
+    const result = await createPlanWorkflow(ctx, { name: "Test Plan" });
+    expect(result.plan).toBeDefined();
+    expect(result.plan.status).toBe("DRAFT");
+    expect(result.plan.name).toBe("Test Plan");
+  });
+
+  it("submitPlanWorkflow: DRAFT → SUBMITTED", async () => {
+    const { createPlanWorkflow, submitPlanWorkflow } = await import("../workflows/cashflowPlanWorkflow");
+    const { plan } = await createPlanWorkflow(ctx, { name: "Submit Test Plan" });
+    const result = await submitPlanWorkflow(ctx, { planId: plan.id });
+    expect(result.plan.status).toBe("SUBMITTED");
+  });
+
+  it("approvePlanWorkflow: SUBMITTED → APPROVED", async () => {
+    const { createPlanWorkflow, submitPlanWorkflow, approvePlanWorkflow } = await import("../workflows/cashflowPlanWorkflow");
+    const { plan } = await createPlanWorkflow(ctx, { name: "Approve Test Plan" });
+    await submitPlanWorkflow(ctx, { planId: plan.id });
+    const result = await approvePlanWorkflow(ctx, { planId: plan.id });
+    expect(result.plan.status).toBe("APPROVED");
+  });
+
+  it("submitPlanWorkflow: rejects invalid transition from APPROVED", async () => {
+    const { InvalidTransitionError } = await import("../workflows/transitions");
+    const { createPlanWorkflow, submitPlanWorkflow, approvePlanWorkflow } = await import("../workflows/cashflowPlanWorkflow");
+    const { plan } = await createPlanWorkflow(ctx, { name: "Double Submit Test" });
+    await submitPlanWorkflow(ctx, { planId: plan.id });
+    await approvePlanWorkflow(ctx, { planId: plan.id });
+    await expect(submitPlanWorkflow(ctx, { planId: plan.id })).rejects.toThrow(InvalidTransitionError);
+  });
+});
+
+// ─── submitRentalApplicationWorkflow ─────────────────────────
+
+describe("submitRentalApplicationWorkflow", () => {
+  let orgId: string;
+  let unitId: string;
+  let buildingId: string;
+  let ctx: WorkflowContext;
+  const prismaLocal = new PrismaClient();
+
+  beforeAll(async () => {
+    const org = await prismaLocal.org.create({ data: { name: `SubmitApp Test ${Date.now()}` } });
+    orgId = org.id;
+
+    const building = await prismaLocal.building.create({
+      data: { orgId, name: "SubmitApp Building", address: "Test St 1", canton: "ZH" },
+    });
+    buildingId = building.id;
+
+    const unit = await prismaLocal.unit.create({
+      data: { orgId, buildingId, unitNumber: "1A", monthlyRentChf: 1500, monthlyChargesChf: 100 },
+    });
+    unitId = unit.id;
+
+    ctx = { orgId, prisma: prismaLocal, actorUserId: null };
+  });
+
+  afterAll(async () => {
+    await prismaLocal.rentalApplication.deleteMany({ where: { orgId } }).catch(() => {});
+    await prismaLocal.unit.delete({ where: { id: unitId } }).catch(() => {});
+    await prismaLocal.building.delete({ where: { id: buildingId } }).catch(() => {});
+    await prismaLocal.org.delete({ where: { id: orgId } }).catch(() => {});
+    await prismaLocal.$disconnect();
+  });
+
+  it("submitRentalApplicationWorkflow: DRAFT → SUBMITTED with applicant + unit", async () => {
+    const { submitRentalApplicationWorkflow } = await import("../workflows/submitRentalApplicationWorkflow");
+
+    // Create application with a unit and applicant
+    const app = await prismaLocal.rentalApplication.create({
+      data: {
+        orgId,
+        status: "DRAFT",
+        householdSize: 1,
+        applicants: {
+          create: [{
+            role: "PRIMARY",
+            firstName: "Jane",
+            lastName: "Doe",
+            netMonthlyIncome: 5000,
+            hasDebtEnforcement: false,
+          }],
+        },
+        applicationUnits: {
+          create: [{ unitId }],
+        },
+      },
+    });
+
+    const result = await submitRentalApplicationWorkflow(ctx, {
+      applicationId: app.id,
+      signedName: "Jane Doe",
+      meta: { ip: "127.0.0.1", userAgent: "test-agent" },
+    });
+
+    expect(result.dto).toBeDefined();
+    expect(result.dto.status).toBe("SUBMITTED");
+  });
+
+  it("submitRentalApplicationWorkflow: rejects ALREADY_SUBMITTED", async () => {
+    const { submitRentalApplicationWorkflow } = await import("../workflows/submitRentalApplicationWorkflow");
+
+    const app = await prismaLocal.rentalApplication.create({
+      data: {
+        orgId,
+        status: "SUBMITTED",
+        householdSize: 1,
+        applicants: { create: [{ role: "PRIMARY", firstName: "Bob", lastName: "Smith", netMonthlyIncome: 4000, hasDebtEnforcement: false }] },
+        applicationUnits: { create: [{ unitId }] },
+      },
+    });
+
+    await expect(
+      submitRentalApplicationWorkflow(ctx, {
+        applicationId: app.id,
+        signedName: "Bob Smith",
+        meta: { ip: "127.0.0.1", userAgent: "test-agent" },
+      }),
+    ).rejects.toThrow("ALREADY_SUBMITTED");
   });
 });

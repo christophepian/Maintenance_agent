@@ -294,6 +294,7 @@ export type RepairReplaceRecommendation = "REPAIR" | "MONITOR" | "PLAN_REPLACEME
 export interface RepairReplaceItem {
   assetId: string;
   assetName: string;
+  applianceName: string | null;
   assetType: string;
   topic: string;
   installedAt: string | null;
@@ -433,6 +434,7 @@ export async function getRepairReplaceAnalysis(
     results.push({
       assetId: asset.id,
       assetName: asset.name,
+      applianceName: asset.name,
       assetType: asset.type,
       topic: asset.topic,
       installedAt: asset.installedAt ?? null,

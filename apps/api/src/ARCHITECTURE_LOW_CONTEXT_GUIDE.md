@@ -163,33 +163,37 @@
 
 ---
 
-## 3 · Route Module Index (21 files)
+## 3 · Route Module Index (25 files)
 
 | File | Domain |
 |------|--------|
-| `routes/auth.ts` | Login, registration |
+| `routes/auth.ts` | Login, registration, user profile (GET/PATCH /users/me) |
 | `routes/captureSessions.ts` | Capture sessions |
 | `routes/cashflowPlans.ts` | Cashflow planning — list, create, update, submit, approve, RFP candidates |
 | `routes/coa.ts` | Chart of Accounts (7 endpoints) |
 | `routes/completion.ts` | Job completion + rating |
 | `routes/config.ts` | Org + building config |
 | `routes/contractor.ts` | Contractor profiles + RFPs |
+| `routes/decision-options.ts` | Decision options (strategy capture) |
 | `routes/financials.ts` | Financial summaries |
 | `routes/helpers.ts` | Shared route utilities |
 | `routes/inventory.ts` | Assets, depreciation, repair-replace |
 | `routes/invoices.ts` | Invoice CRUD + lifecycle |
 | `routes/leases.ts` | Lease CRUD + expense items |
 | `routes/ledger.ts` | Journal entries, trial balance |
-| `routes/legal.ts` | Legal variables, rules, mappings |
+| `routes/legal.ts` | Legal variables, rules, mappings, claim analysis |
 | `routes/maintenanceAttachments.ts` | File attachments |
 | `routes/notifications.ts` | Notification endpoints |
+| `routes/recommendations.ts` | Owner recommendations — evaluate, get, patch decision |
 | `routes/rentEstimation.ts` | Rent estimation |
 | `routes/rentalApplications.ts` | Rental applications |
 | `routes/requests.ts` | Maintenance requests |
 | `routes/scheduling.ts` | Scheduling |
+| `routes/strategy.ts` | Strategy engine — owner/building profiles |
 | `routes/tenants.ts` | Tenant portal |
+| `routes/users.ts` | (future) User management |
 
-## 4 · Repository Index (20 files)
+## 4 · Repository Index (21 files)
 
 | File | Include constant | Entity |
 |------|-----------------|--------|
@@ -212,8 +216,10 @@
 | `expenseMappingRepository.ts` | — | ExpenseMapping |
 | `cashflowPlanRepository.ts` | `CASHFLOW_PLAN_INCLUDE` | CashflowPlan / CashflowOverride |
 | `taxRuleRepository.ts` | — | TaxRule / TaxRuleVersion |
+| `strategyProfileRepository.ts` | — | OwnerStrategyProfile / BuildingStrategyProfile |
+| `userRepository.ts` | `USER_PROFILE_SELECT` | User (profile read/write) |
 
-## 5 · Workflow Index (25 workflows)
+## 5 · Workflow Index (29 workflows)
 
 | Workflow | Entity | Transition |
 |----------|--------|------------|
@@ -242,6 +248,10 @@
 | `rfpDirectAssignWorkflow` | Rfp | (direct assign) |
 | `rfpReinviteWorkflow` | Rfp | (re-invite) |
 | `cashflowPlanWorkflow` | CashflowPlan | DRAFT → SUBMITTED → APPROVED |
+| `analyseClaimWorkflow` | Request | (claim analysis — read-only, no transition) |
+| `strategyProfileWorkflow` | OwnerStrategyProfile | (upsert) |
+| `recommendationWorkflow` | RecommendationResult | (evaluate + patch decision) |
+| `captureDecisionOptionWorkflow` | DecisionOption | (upsert) |
 
 Support files: `workflows/transitions.ts` (guards), `workflows/context.ts` (WorkflowContext type)
 
