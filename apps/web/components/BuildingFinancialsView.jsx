@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import Panel from "./layout/Panel";
 import Section from "./layout/Section";
@@ -22,18 +22,7 @@ function displayDate(iso) {
   return `${String(d.getDate()).padStart(2, "0")}.${String(d.getMonth() + 1).padStart(2, "0")}.${d.getFullYear()}`;
 }
 
-/* ─── RAG health bullet ─── */
 
-function HealthBullet({ icon, text, color }) {
-  const bg = { green: "bg-green-50", amber: "bg-amber-50", red: "bg-red-50" }[color] || "bg-slate-50";
-  const border = { green: "border-green-200", amber: "border-amber-200", red: "border-red-200" }[color] || "border-slate-200";
-  return (
-    <div className={cn("flex items-start gap-2.5 px-4 py-3 rounded-lg border", bg, border)}>
-      <span className="text-lg leading-none mt-0.5">{icon}</span>
-      <span className="text-sm text-slate-800">{text}</span>
-    </div>
-  );
-}
 
 /* ─── Labels ─── */
 
@@ -50,7 +39,7 @@ const CATEGORY_LABELS = {
 
 /* ─── KPI card ─── */
 
-function KpiCard({ label, value, sub, accent }) {
+function KpiCard({ label, value, sub, accent, rag }) {
   const cls = accent === "green" ? "text-green-700"
     : accent === "red" ? "text-red-600"
     : accent === "amber" ? "text-amber-700"
@@ -60,6 +49,9 @@ function KpiCard({ label, value, sub, accent }) {
       <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">{label}</span>
       <span className={cn("text-xl font-bold", cls)}>{value}</span>
       {sub && <span className="text-xs text-slate-400">{sub}</span>}
+      {rag && (
+        <span className="text-xs font-medium text-slate-600 mt-0.5">{rag.dot} {rag.label}</span>
+      )}
     </div>
   );
 }
@@ -133,38 +125,7 @@ export default function BuildingFinancialsView({ buildingId, variant = "page" })
 
   const d = data;
 
-  const healthBullets = useMemo(() => {
-    if (!d) return [];
-    const bullets = [];
-    const net = d.netIncomeCents;
-    if (net > 0)
-      bullets.push({ icon: "🟢", color: "green", text: `Building is profitable — net income of ${formatChfCents(net)} for the period.` });
-    else if (net === 0)
-      bullets.push({ icon: "🟡", color: "amber", text: "Income and expenses are exactly balanced — no profit or loss." });
-    else
-      bullets.push({ icon: "🔴", color: "red", text: `Expenses exceed income by ${formatChfCents(Math.abs(net))} — review the breakdown below.` });
-    const cr = d.collectionRate;
-    if (cr >= 0.95)
-      bullets.push({ icon: "🟢", color: "green", text: `Collection rate is ${formatPercent(cr)} — rent is being paid on time.` });
-    else if (cr >= 0.80)
-      bullets.push({ icon: "🟡", color: "amber", text: `Collection rate is ${formatPercent(cr)} — some rent payments are outstanding.` });
-    else if (d.projectedIncomeCents > 0)
-      bullets.push({ icon: "🔴", color: "red", text: `Collection rate is only ${formatPercent(cr)} — significant rent is overdue.` });
-    else
-      bullets.push({ icon: "🟡", color: "amber", text: "No projected income — collection rate cannot be assessed." });
-    const mr = d.maintenanceRatio;
-    if (d.earnedIncomeCents === 0 && d.maintenanceTotalCents === 0)
-      bullets.push({ icon: "🟡", color: "amber", text: "No maintenance spend and no income recorded this period." });
-    else if (mr <= 0.15)
-      bullets.push({ icon: "🟢", color: "green", text: `Maintenance is ${formatPercent(mr)} of income — well within healthy range.` });
-    else if (mr <= 0.30)
-      bullets.push({ icon: "🟡", color: "amber", text: `Maintenance is ${formatPercent(mr)} of income — monitor for rising costs.` });
-    else
-      bullets.push({ icon: "🔴", color: "red", text: `Maintenance is ${formatPercent(mr)} of income — unusually high, investigate major repairs.` });
-    if (d.payablesCents > 0)
-      bullets.push({ icon: "🟡", color: "amber", text: `${formatChfCents(d.payablesCents)} in outstanding supplier invoices awaiting payment.` });
-    return bullets;
-  }, [d]);
+
 
   /* ─── Date range controls ─── */
   return (
@@ -235,17 +196,7 @@ export default function BuildingFinancialsView({ buildingId, variant = "page" })
           {/* ═══ Overview tab ═══ */}
           {activeTab === "overview" && (
             <div className="space-y-6">
-              {healthBullets.length > 0 && (
-                <Section title="Health Summary">
-                  <div className="flex flex-col gap-2">
-                    {healthBullets.map((b, i) => (
-                      <HealthBullet key={i} icon={b.icon} text={b.text} color={b.color} />
-                    ))}
-                  </div>
-                </Section>
-              )}
-
-              <Section title="Financial Summary">
+              <Section>
                 {/* Mobile: compact inline grid */}
                 <div className="sm:hidden">
                   <KpiInlineGrid
@@ -273,12 +224,14 @@ export default function BuildingFinancialsView({ buildingId, variant = "page" })
                     value={formatChfCents(d.netOperatingIncomeCents)}
                     accent={d.netOperatingIncomeCents >= 0 ? "green" : "red"}
                     sub="Income − Operating Expenses"
+                    rag={d.netOperatingIncomeCents > 0 ? { dot: "🟢", label: "Profitable" } : d.netOperatingIncomeCents === 0 ? { dot: "🟡", label: "Balanced" } : { dot: "🔴", label: "At risk" }}
                   />
                   <KpiCard
                     label="Collection Rate"
                     value={formatPercent(d.collectionRate)}
                     accent={d.collectionRate >= 0.95 ? "green" : d.collectionRate >= 0.8 ? "amber" : "red"}
                     sub="Earned ÷ Projected"
+                    rag={d.projectedIncomeCents === 0 ? { dot: "🟡", label: "No projection" } : d.collectionRate >= 0.95 ? { dot: "🟢", label: "On track" } : d.collectionRate >= 0.8 ? { dot: "🟡", label: "Watch" } : { dot: "🔴", label: "Overdue" }}
                   />
                 </div>
                 <div className="hidden sm:grid grid-cols-2 md:grid-cols-4 gap-3 mt-3">
@@ -288,6 +241,7 @@ export default function BuildingFinancialsView({ buildingId, variant = "page" })
                     value={formatPercent(d.maintenanceRatio)}
                     accent={d.maintenanceRatio > 0.3 ? "red" : d.maintenanceRatio > 0.15 ? "amber" : "green"}
                     sub="Maintenance ÷ Income"
+                    rag={d.earnedIncomeCents === 0 && d.maintenanceTotalCents === 0 ? { dot: "🟡", label: "No data" } : d.maintenanceRatio <= 0.15 ? { dot: "🟢", label: "Healthy" } : d.maintenanceRatio <= 0.3 ? { dot: "🟡", label: "Monitor" } : { dot: "🔴", label: "High" }}
                   />
                   <KpiCard label="CapEx" value={formatChfCents(d.capexTotalCents)} sub="Capital expenditure" />
                   <KpiCard
@@ -312,6 +266,7 @@ export default function BuildingFinancialsView({ buildingId, variant = "page" })
                         value={formatChfCents(d.payablesCents)}
                         accent="amber"
                         sub="Unpaid supplier invoices (now)"
+                        rag={{ dot: "🟡", label: "Outstanding" }}
                       />
                     )}
                   </div>

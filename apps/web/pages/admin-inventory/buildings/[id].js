@@ -16,6 +16,7 @@ import ScrollableTabs from "../../../components/mobile/ScrollableTabs";
 
 import { formatDate, formatChfCents, formatPercent } from "../../../lib/format";
 import { cn } from "../../../lib/utils";
+import { ARCHETYPE_LABELS, ARCHETYPE_EXPLANATION_COPY } from "../../../lib/archetypes";
 import KpiInlineGrid from "../../../components/ui/KpiInlineGrid";
 function displayDate(iso) {
   if (!iso) return "—";
@@ -73,6 +74,7 @@ export default function BuildingDetail() {
   const [ownerCandidates, setOwnerCandidates] = useState([]);
   const [selectedCandidateId, setSelectedCandidateId] = useState("");
   const [ownerLoading, setOwnerLoading] = useState(false);
+  const [ownerStrategyProfiles, setOwnerStrategyProfiles] = useState({});
 
   // ─── Asset inventory state ───
   const [assetInventory, setAssetInventory] = useState([]);
@@ -144,6 +146,9 @@ export default function BuildingDetail() {
       await loadApprovalRules();
       await loadLeaseTemplates();
       loadBuildingKpis();
+      if (b.owners && b.owners.length > 0) {
+        loadOwnerStrategyProfiles(b.owners.map((o) => o.id));
+      }
     } catch (e) {
       setErr(`Failed to load building: ${e.message}`);
     } finally {
@@ -198,6 +203,24 @@ export default function BuildingDetail() {
     } finally {
       setKpisLoading(false);
     }
+  }
+
+  async function loadOwnerStrategyProfiles(ownerIds) {
+    const results = {};
+    await Promise.all(
+      ownerIds.map(async (ownerId) => {
+        try {
+          const res = await fetch(`/api/strategy/owner-profile/${ownerId}`, { headers: authHeaders() });
+          if (res.ok) {
+            const json = await res.json();
+            if (json?.profile) results[ownerId] = json.profile;
+          }
+        } catch {
+          // non-fatal
+        }
+      })
+    );
+    setOwnerStrategyProfiles(results);
   }
 
   async function loadBuildingRequests() {
@@ -870,25 +893,63 @@ export default function BuildingDetail() {
                     {building?.owners && building.owners.length > 0 ? (
                       <div>
                         <div className="text-xs font-medium uppercase tracking-wide text-slate-400 mb-2">Owners</div>
-                        <div className="grid gap-2 sm:grid-cols-2">
-                          {building.owners.map((owner) => (
-                            <div key={owner.id} className="border border-slate-200 rounded-lg p-3 bg-slate-50 flex items-center justify-between">
-                              <div>
-                                <div className="font-semibold text-sm text-slate-900">{owner.name}</div>
-                                {owner.email && <div className="text-xs text-slate-500 mt-0.5">{owner.email}</div>}
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          {building.owners.map((owner) => {
+                            const profile = ownerStrategyProfiles[owner.id];
+                            const archetype = profile?.primaryArchetype;
+                            const copy = archetype ? ARCHETYPE_EXPLANATION_COPY[archetype] : null;
+                            const label = archetype ? ARCHETYPE_LABELS[archetype] : null;
+                            return (
+                              <div key={owner.id} className="border border-slate-200 rounded-lg p-3 bg-slate-50">
+                                <div className="flex items-center justify-between">
+                                  <div>
+                                    <div className="font-semibold text-sm text-slate-900">{owner.name}</div>
+                                    {owner.email && <div className="text-xs text-slate-500 mt-0.5">{owner.email}</div>}
+                                  </div>
+                                  {editMode && (
+                                    <button
+                                      type="button"
+                                      className="text-xs text-red-500 hover:text-red-700 font-medium ml-2 flex-shrink-0"
+                                      disabled={ownerLoading}
+                                      onClick={() => onRemoveOwner(owner.id)}
+                                    >
+                                      Remove
+                                    </button>
+                                  )}
+                                </div>
+                                {profile && (
+                                  <div className="mt-2.5 pt-2.5 border-t border-slate-200">
+                                    <div className="flex items-center gap-2 mb-1.5">
+                                      <span className="text-xs font-semibold text-slate-700">Strategy</span>
+                                      {label && (
+                                        <Badge variant="brand" size="sm">{label}</Badge>
+                                      )}
+                                      {profile.secondaryArchetype && ARCHETYPE_LABELS[profile.secondaryArchetype] && (
+                                        <Badge variant="info" size="sm">{ARCHETYPE_LABELS[profile.secondaryArchetype]}</Badge>
+                                      )}
+                                    </div>
+                                    {profile.userFacingGoalLabel && (
+                                      <p className="text-xs text-slate-500 italic mb-1.5">"{profile.userFacingGoalLabel}"</p>
+                                    )}
+                                    {copy && (
+                                      <ul className="space-y-0.5">
+                                        {copy.bullets.map((b, i) => (
+                                          <li key={i} className="text-xs text-slate-600 flex gap-1.5">
+                                            <span className="text-slate-400 flex-shrink-0">·</span>
+                                            <span>{b}</span>
+                                          </li>
+                                        ))}
+                                        <li className="text-xs text-slate-400 flex gap-1.5 mt-1">
+                                          <span className="flex-shrink-0">↓</span>
+                                          <span>{copy.deprioritize}</span>
+                                        </li>
+                                      </ul>
+                                    )}
+                                  </div>
+                                )}
                               </div>
-                              {editMode && (
-                                <button
-                                  type="button"
-                                  className="text-xs text-red-500 hover:text-red-700 font-medium ml-2"
-                                  disabled={ownerLoading}
-                                  onClick={() => onRemoveOwner(owner.id)}
-                                >
-                                  Remove
-                                </button>
-                              )}
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       </div>
                     ) : (
