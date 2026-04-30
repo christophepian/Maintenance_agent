@@ -458,11 +458,11 @@
         <div class="hero-stat-label">Frontend pages</div>
       </div>
       <div class="hero-stat">
-        <div class="hero-stat-num">65</div>
+        <div class="hero-stat-num">67</div>
         <div class="hero-stat-label">Test suites</div>
       </div>
       <div class="hero-stat">
-        <div class="hero-stat-num">82</div>
+        <div class="hero-stat-num">84</div>
         <div class="hero-stat-label">DB migrations</div>
       </div>
     </div>
@@ -915,7 +915,7 @@
         <tbody>
           <tr><td>Backend runtime</td><td>Node.js + TypeScript</td><td>Raw <code>http.createServer</code>, no framework</td></tr>
           <tr><td>Frontend</td><td>Next.js 14, Pages Router</td><td>SSR + CSR, <code>pages/</code> directory</td></tr>
-          <tr><td>ORM</td><td>Prisma</td><td>68 models, 82 migrations, shadow DB verified</td></tr>
+          <tr><td>ORM</td><td>Prisma</td><td>68 models, 84 migrations, shadow DB verified</td></tr>
           <tr><td>Database</td><td>PostgreSQL 16</td><td>Docker volume <code>maint_agent_pgdata</code></td></tr>
           <tr><td>Styling</td><td>Tailwind CSS v4.1</td><td><code>@theme {}</code> tokens + CVA + <code>@apply</code> in globals.css</td></tr>
           <tr><td>Component variants</td><td>CVA (class-variance-authority)</td><td>Button, Badge, Card, DataTable, etc.</td></tr>
@@ -942,7 +942,7 @@
       <div class="code-block"><pre>
 Maintenance_Agent/
 ├── <span class="path">apps/api/</span>
-│   ├── prisma/              <span class="comment"># schema.prisma + 82 migrations/</span>
+│   ├── prisma/              <span class="comment"># schema.prisma + 84 migrations/</span>
 │   └── src/
 │       ├── server.ts        <span class="comment"># Entry point (port 3001)</span>
 │       ├── routes/          <span class="comment"># 28 route modules — thin HTTP handlers</span>
@@ -1001,7 +1001,7 @@ Maintenance_Agent/
     <section class="wiki-section" id="schema">
       <div class="section-eyebrow">Technical</div>
       <div class="section-title">Data model</div>
-      <p class="section-sub">68 Prisma models, 62 enums, 82 migrations. All schema changes go through <code class="inline">prisma migrate dev</code> — never <code class="inline">db push</code>.</p>
+      <p class="section-sub">68 Prisma models, 62 enums, 84 migrations. All schema changes go through <code class="inline">prisma migrate dev</code> — never <code class="inline">db push</code>.</p>
 
       <div class="callout callout-info">
         Full schema with all fields and relations: <a href="../SCHEMA_REFERENCE.md"><strong>SCHEMA_REFERENCE.md</strong></a>. The table below covers the 20 most important models for day-to-day work.
@@ -1688,10 +1688,19 @@ node -e "const jwt=require('jsonwebtoken'); \
           </div>
         </div>
 
+        <div class="tl-row infra">
+          <div class="tl-date">Apr 30</div>
+          <div class="tl-body">
+            <div class="tl-title">Deployment readiness — audit, schema drift fix, Supabase staging live</div>
+            <div class="tl-desc">Uncompromising audit produced 11 findings (C/H/M/F/L) — all resolved. Discovered+fixed schema drift (AUTO_APPROVED enum value removed in code without migration; 16 legacy rows broke <code class="inline">GET /requests</code>). Migration <code class="inline">20260430120000_remove_auto_approved_request_status</code> backfills then drops. Migration plan Phase 1 begun: T-01 (audit + Node 20 pin via <code class="inline">.nvmrc</code> + <code class="inline">engines.node</code>), T-03 (unauthenticated <code class="inline">GET /health</code> with DB latency probe), T-04 (hard shutdown timeout for Render SIGKILL safety, prod-readiness checklist), T-05 (Supabase project provisioned, all 84 migrations deployed, <code class="inline">/health</code> returns 200 against staging at 89ms RTT). 67 suites · 1004 tests · 0 TS errors.</div>
+            <div class="tl-tags"><span class="tl-tag tl-tag-infra">Infra</span><span class="tl-tag tl-tag-backend">Backend</span><span class="tl-tag tl-tag-security">Security</span></div>
+          </div>
+        </div>
+
       </div>
 
       <div class="callout callout-tip" style="margin-top:24px;">
-        <strong>Platform maturity at a glance:</strong> ~12 weeks from initial commit to a fully responsive, security-hardened, law-aware production platform with 68 models, 291 API operations, 288 pages, and 980 tests.
+        <strong>Platform maturity at a glance:</strong> ~13 weeks from initial commit to a fully responsive, security-hardened, law-aware platform with 68 models, 291 API operations, 288 pages, 1004 tests, and a live Supabase staging environment ready for Render + Vercel deploy.
       </div>
     </section>
 
