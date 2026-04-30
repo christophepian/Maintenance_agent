@@ -1,6 +1,9 @@
 {
   "name": "@apps/api",
   "private": true,
+  "engines": {
+    "node": ">=20.0.0 <21.0.0"
+  },
   "scripts": {
     "start": "node dist/server.js",
     "start:dev": "ts-node src/server.ts",
