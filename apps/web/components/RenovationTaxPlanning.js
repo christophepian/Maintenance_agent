@@ -122,8 +122,7 @@ export function CapExSummaryBridge() {
   }, [data]);
 
   return (
-    <Panel>
-      <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-3">
         <div className="flex items-start justify-between gap-4">
           <div>
             <h3 className="text-sm font-semibold text-slate-800">CapEx Outlook</h3>
@@ -251,8 +250,7 @@ export function CapExSummaryBridge() {
             )}
           </>
         )}
-      </div>
-    </Panel>
+    </div>
   );
 }
 

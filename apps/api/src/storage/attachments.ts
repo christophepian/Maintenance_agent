@@ -1,6 +1,13 @@
 import * as fs from "fs";
 import * as path from "path";
 import * as crypto from "crypto";
+import {
+  S3Client,
+  PutObjectCommand,
+  GetObjectCommand,
+  HeadObjectCommand,
+  DeleteObjectCommand,
+} from "@aws-sdk/client-s3";
 
 /* ── Configuration ─────────────────────────────────────────── */
 
@@ -140,6 +147,130 @@ class LocalDiskStorage implements AttachmentStorage {
   }
 }
 
+/* ── S3-Compatible Storage Implementation ──────────────────── */
+
+class S3AttachmentStorage implements AttachmentStorage {
+  private client: S3Client;
+  private bucket: string;
+
+  constructor() {
+    const region = process.env.S3_REGION;
+    const bucket = process.env.S3_BUCKET;
+    const accessKeyId = process.env.S3_ACCESS_KEY_ID;
+    const secretAccessKey = process.env.S3_SECRET_ACCESS_KEY;
+
+    if (!region) throw new Error("S3 storage: S3_REGION is required");
+    if (!bucket) throw new Error("S3 storage: S3_BUCKET is required");
+    if (!accessKeyId) throw new Error("S3 storage: S3_ACCESS_KEY_ID is required");
+    if (!secretAccessKey) throw new Error("S3 storage: S3_SECRET_ACCESS_KEY is required");
+
+    this.bucket = bucket;
+
+    const clientConfig: ConstructorParameters<typeof S3Client>[0] = {
+      region,
+      credentials: { accessKeyId, secretAccessKey },
+    };
+
+    const endpoint = process.env.S3_ENDPOINT;
+    if (endpoint) clientConfig.endpoint = endpoint;
+
+    const forcePathStyle = process.env.S3_FORCE_PATH_STYLE;
+    if (forcePathStyle === "true") clientConfig.forcePathStyle = true;
+
+    this.client = new S3Client(clientConfig);
+  }
+
+  async save(
+    buffer: Buffer,
+    opts: {
+      applicationId: string;
+      applicantId: string;
+      docType: string;
+      fileName: string;
+      mimeType: string;
+    },
+  ): Promise<SaveResult> {
+    if (buffer.length > MAX_FILE_SIZE) {
+      throw new Error(`File exceeds maximum size of ${MAX_FILE_SIZE} bytes`);
+    }
+
+    const uniqueId = crypto.randomUUID();
+    const safeName = opts.fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
+    const key = [
+      opts.applicationId,
+      opts.applicantId,
+      opts.docType,
+      `${uniqueId}-${safeName}`,
+    ].join("/");
+
+    await this.put(key, buffer, opts.mimeType);
+
+    const sha256 = crypto.createHash("sha256").update(buffer).digest("hex");
+
+    return { key, size: buffer.length, sha256, mimeType: opts.mimeType };
+  }
+
+  async put(key: string, buffer: Buffer, contentType?: string): Promise<void> {
+    if (buffer.length > MAX_FILE_SIZE) {
+      throw new Error(`File exceeds maximum size of ${MAX_FILE_SIZE} bytes`);
+    }
+    await this.client.send(
+      new PutObjectCommand({
+        Bucket: this.bucket,
+        Key: key,
+        Body: buffer,
+        ContentType: contentType,
+        ContentLength: buffer.length,
+      }),
+    );
+  }
+
+  async get(key: string): Promise<Buffer> {
+    const response = await this.client.send(
+      new GetObjectCommand({ Bucket: this.bucket, Key: key }),
+    );
+    if (!response.Body) {
+      throw new Error(`S3 object not found or empty: ${key}`);
+    }
+    // Body is a Readable stream in Node.js — collect chunks into a Buffer
+    const chunks: Uint8Array[] = [];
+    for await (const chunk of response.Body as AsyncIterable<Uint8Array>) {
+      chunks.push(chunk);
+    }
+    return Buffer.concat(chunks);
+  }
+
+  getStream(_key: string): fs.ReadStream {
+    // S3 streaming is async; getStream() is not called anywhere in this codebase.
+    throw new Error("getStream() is not supported for S3 storage. Use get() instead.");
+  }
+
+  async delete(key: string): Promise<void> {
+    await this.client.send(
+      new DeleteObjectCommand({ Bucket: this.bucket, Key: key }),
+    );
+  }
+
+  async exists(key: string): Promise<boolean> {
+    try {
+      await this.client.send(
+        new HeadObjectCommand({ Bucket: this.bucket, Key: key }),
+      );
+      return true;
+    } catch (err: any) {
+      // HeadObject throws with $metadata.httpStatusCode 404 or name "NotFound"
+      if (
+        err.$metadata?.httpStatusCode === 404 ||
+        err.name === "NotFound" ||
+        err.name === "NoSuchKey"
+      ) {
+        return false;
+      }
+      throw err;
+    }
+  }
+}
+
 /* ── Factory ───────────────────────────────────────────────── */
 
 function createStorage(): AttachmentStorage {
@@ -147,10 +278,7 @@ function createStorage(): AttachmentStorage {
     case "local":
       return new LocalDiskStorage(LOCAL_ROOT);
     case "s3":
-      // Placeholder — S3 integration is Phase 2 backlog
-      throw new Error(
-        "S3 storage not yet implemented. Set ATTACHMENTS_STORAGE=local or leave unset.",
-      );
+      return new S3AttachmentStorage();
     default:
       throw new Error(
         `Unknown ATTACHMENTS_STORAGE backend: ${STORAGE_BACKEND}`,

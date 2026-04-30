@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import AppShell from "../../../components/AppShell";
@@ -75,9 +75,7 @@ const FINANCE_TABS = [
 
 export default function ManagerFinanceHome() {
   const router = useRouter();
-  const planListRef = useRef(null);
-
-  const tabKeys = FINANCE_TABS.map((t) => t.key);
+const tabKeys = FINANCE_TABS.map((t) => t.key);
   const activeTabKey = router.isReady && tabKeys.includes(router.query.tab) ? router.query.tab : "overview";
   const setActiveTabKey = useCallback((key) => {
     router.push({ pathname: router.pathname, query: { ...router.query, tab: key } }, undefined, { shallow: true });
@@ -116,16 +114,7 @@ export default function ManagerFinanceHome() {
       <PageShell>
         <PageHeader
           title="Finances"
-          actions={
-            activeTabKey === "planning" ? (
-              <button
-                onClick={() => planListRef.current?.openModal()}
-                className="button-primary text-sm"
-              >
-                New plan
-              </button>
-            ) : undefined
-          }
+
         />
         <PageContent>
 
@@ -180,7 +169,7 @@ export default function ManagerFinanceHome() {
                 <p className="loading-text">Loading portfolio summary…</p>
               ) : p && (
                 <>
-                  <Section title="Portfolio Overview">
+                  <Section>
                     {/* Mobile: compact inline grid */}
                     <div className="sm:hidden mb-3">
                       <KpiInlineGrid
@@ -201,7 +190,10 @@ export default function ManagerFinanceHome() {
                       <SummaryCard label="Receivables"    value={formatChfCents(p.totalReceivablesCents)} accent={p.totalReceivablesCents > 0 ? "amber" : ""} sub="Unpaid rent invoices" />
                       <SummaryCard label="Payables"       value={formatChfCents(p.totalPayablesCents)} accent={p.totalPayablesCents > 0 ? "amber" : ""} sub="Unpaid supplier invoices" />
                     </div>
-                    {/* Stats row — no mt-* here; Section's space-y-3 handles the gap */}
+                  </Section>
+
+                  <Section title="Buildings">
+                    {/* Stats row */}
                     <div className="flex gap-4 text-xs text-slate-500">
                       <span>Avg collection rate: <strong>{formatPercent(p.avgCollectionRate)}</strong></span>
                       {p.buildingsInRed > 0 && (
@@ -210,9 +202,6 @@ export default function ManagerFinanceHome() {
                         </span>
                       )}
                     </div>
-                  </Section>
-
-                  <Section title="Buildings">
                     <div>
                       {p.buildings.length === 0 ? (
                         <div className="empty-state">
@@ -345,7 +334,7 @@ export default function ManagerFinanceHome() {
           {activeTabKey === "planning" && (
             <div className="space-y-4">
               <CapExSummaryBridge />
-              <CashflowPlansList ref={planListRef} />
+              <CashflowPlansList />
             </div>
           )}
 

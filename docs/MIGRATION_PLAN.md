@@ -1,6 +1,6 @@
 # Migration Plan: Local Docker Dev → Vercel + Render + Supabase
 
-**Document status:** Planning only — no code written yet  
+**Document status:** B1 and B2 implemented (2026-04-30); platform setup pending  
 **Date:** 2026-04-29  
 **Author:** Claude Code  
 **Guardrails obeyed:** no `db push`, no destructive DB commands, no CI merges while red, Docker dev workflow preserved
@@ -17,6 +17,32 @@ The project is a TypeScript monorepo: raw `http.createServer` API (`apps/api`, p
 | B2 | **Prisma `DIRECT_URL`** | `schema.prisma` datasource only declares `url = env("DATABASE_URL")`. Supabase's runtime connection (via PgBouncer pooling) is incompatible with `prisma migrate deploy`, which requires a direct TCP connection. A `directUrl = env("DIRECT_URL")` line must be added to the `datasource db {}` block — this is a one-line schema change with a no-op migration. |
 
 Non-blocking issues that need resolution before production go-live are called out per section.
+
+---
+
+## 0.1 Two-Gate Deployment Strategy
+
+Infrastructure setup and production launch are independent decisions. This plan separates them into two gates.
+
+**Gate 1 — Infrastructure (start now, UI-state independent)**
+
+Set up Supabase, Render, and Vercel staging environments. This gate has no dependency on UI completeness or in-progress feature work. It can and should start as soon as the two hard blockers are resolved (both now done). Tickets: T-01 through T-08.
+
+What Gate 1 unlocks:
+- Every PR to `main` gets a **Vercel preview deployment** automatically — shareable URLs for UI review without anyone running the app locally
+- UI changes on Next.js deploy to Vercel in ~1 minute and do not require any Render or Supabase changes
+- Integration issues (CORS, proxy forwarding, auth headers, PDF serving) surface in staging before they surprise you in production
+- Local Docker dev remains **entirely unchanged** throughout
+
+**Gate 2 — Production Launch (after UI stabilises)**
+
+Let real users in. This gate requires feature completeness, end-to-end staging sign-off, and production-specific decisions (custom domains, Render tier, Supabase Pro, email provider). Tickets: T-UI, T-09, T-10, T-11.
+
+**Why the separation matters:**
+
+The fear that "going online makes iteration harder" applies to Gate 2, not Gate 1. What actually introduces friction is having real users with real data — not the existence of a staging environment. Gate 1 infrastructure makes UI iteration *faster*: every branch gets a live preview, stakeholders can review changes on a URL instead of running the app, and the deployment muscle is built while the stakes are low.
+
+Deferring Gate 1 until the UI is done has a concrete cost: the first Supabase migration run grows with every migration added. It is currently 82+ migrations. That run is no harder today than in three months, but it also does not get easier.
 
 ---
 
@@ -1065,6 +1091,12 @@ If all production services are unstable:
 
 Break the migration into these atomic tickets. Each can be merged independently without breaking local dev.
 
+Tickets are grouped by gate (see §0.1). Gate 1 tickets are safe to execute regardless of in-progress UI or feature work. Gate 2 tickets require feature completeness and staging sign-off first.
+
+---
+
+## Gate 1 — Infrastructure Setup (start now, UI-state independent)
+
 ---
 
 ### T-01: Audit & Pre-Flight (1–2 days)
@@ -1205,6 +1237,28 @@ Tasks:
 **Files changed:**
 - `.github/workflows/ci.yml`
 - (optional) `.github/workflows/post-deploy-smoke.yml` (new file)
+
+---
+
+## Gate 2 — Production Launch (after UI stabilises)
+
+Do not start Gate 2 until: (a) all Gate 1 tickets are merged, (b) T-UI sign-off is complete, and (c) staging has been verified end-to-end.
+
+---
+
+### T-UI: Feature Completeness Sign-Off (no time estimate — product decision)
+
+**Goal:** Confirm the product is ready for real users before production cutover. This is the explicit gate between staging infrastructure and production launch.
+
+Tasks:
+- [ ] Owner portal additions are complete and signed off (in-progress features visible in current `git status`: `apps/web/pages/owner/index.js`)
+- [ ] `apps/web/pages/manager/dashboard-v2.js` is either shipped or explicitly deferred/hidden
+- [ ] In-progress manager pages are stable: `finance/index.js`, `inventory.js`, `settings.js`
+- [ ] All 4 persona portals reviewed on Vercel staging (Manager, Contractor, Tenant, Owner) — no blocking UX issues
+- [ ] Any partially-built surface is either feature-flagged, hidden behind a route guard, or explicitly accepted as-is for launch
+- [ ] Product owner sign-off given in writing before T-09 begins
+
+**Note:** This ticket has no code changes. It is a product decision checkpoint, not an engineering one.
 
 ---
 

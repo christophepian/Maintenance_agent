@@ -12,7 +12,7 @@ import { useRouter } from "next/router";
 import ConfigurableTable from "./ConfigurableTable";
 import { useLocalSort, clientSort } from "../lib/tableUtils";
 import Badge from "./ui/Badge";
-import { authHeaders } from "../lib/api";
+import { authHeaders, ownerAuthHeaders } from "../lib/api";
 import { formatDate } from "../lib/format";
 import { planVariant } from "../lib/statusVariants";
 import { cn } from "../lib/utils";
@@ -189,13 +189,16 @@ function CreatePlanModal({ buildings, onClose, onCreate }) {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-const CashflowPlansList = forwardRef(function CashflowPlansList(_props, ref) {
+const CashflowPlansList = forwardRef(function CashflowPlansList({ ownerMode = false }, ref) {
   const router = useRouter();
+  const hdrs = ownerMode ? ownerAuthHeaders : authHeaders;
   const [plans, setPlans] = useState([]);
   const [buildings, setBuildings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showModal, setShowModal] = useState(false);
+  const [approving, setApproving] = useState(null); // planId being approved
+  const [search, setSearch] = useState("");
 
   // Expose openModal() to parent (e.g. Finance PageHeader CTA)
   useImperativeHandle(ref, () => ({
@@ -206,7 +209,7 @@ const CashflowPlansList = forwardRef(function CashflowPlansList(_props, ref) {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch("/api/cashflow-plans", { headers: authHeaders() });
+      const res = await fetch("/api/cashflow-plans", { headers: hdrs() });
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error?.message || "Failed to load plans");
       setPlans(json.data || []);
@@ -215,16 +218,35 @@ const CashflowPlansList = forwardRef(function CashflowPlansList(_props, ref) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [hdrs]);
 
   useEffect(() => { loadPlans(); }, [loadPlans]);
 
   useEffect(() => {
-    fetch("/api/buildings", { headers: authHeaders() })
+    fetch("/api/buildings", { headers: hdrs() })
       .then((r) => r.json())
       .then((d) => setBuildings(d?.data || []))
       .catch(() => {});
-  }, []);
+  }, [hdrs]);
+
+  async function handleApprove(planId) {
+    setApproving(planId);
+    setError("");
+    try {
+      const res = await fetch(`/api/cashflow-plans/${planId}/approve`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...hdrs() },
+        body: JSON.stringify({}),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error?.message || "Failed to approve plan");
+      await loadPlans();
+    } catch (e) {
+      setError(String(e?.message || e));
+    } finally {
+      setApproving(null);
+    }
+  }
 
   function handleCreated(plan) {
     setShowModal(false);
@@ -242,6 +264,15 @@ const CashflowPlansList = forwardRef(function CashflowPlansList(_props, ref) {
 
   const buildingMap = {};
   buildings.forEach((b) => { buildingMap[b.id] = b.name; });
+
+  const q = search.trim().toLowerCase();
+  const filtered = q
+    ? sorted.filter((p) =>
+        (p.name || "").toLowerCase().includes(q) ||
+        (p.buildingId ? (buildingMap[p.buildingId] || "").toLowerCase().includes(q) : "portfolio".includes(q)) ||
+        (p.status || "").toLowerCase().includes(q)
+      )
+    : sorted;
 
   const planColumns = useMemo(() => [
     {
@@ -324,13 +355,65 @@ const CashflowPlansList = forwardRef(function CashflowPlansList(_props, ref) {
         </span>
       ),
     },
-  ], [buildingMap]);
+    ...(ownerMode ? [{
+      id: "approve",
+      label: "",
+      sortable: false,
+      alwaysVisible: true,
+      className: "text-right",
+      headerClassName: "text-right",
+      render: (p) => p.status === "SUBMITTED" ? (
+        <button
+          type="button"
+          disabled={approving === p.id}
+          onClick={(e) => { e.stopPropagation(); handleApprove(p.id); }}
+          className="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-green-700 disabled:opacity-50 transition"
+        >
+          {approving === p.id ? "Approving…" : "Approve"}
+        </button>
+      ) : null,
+    }] : []),
+  ], [buildingMap, ownerMode, approving]);
 
   if (loading) return <p className="loading-text">Loading plans…</p>;
 
   return (
     <>
       {error && <div className="error-banner mb-4" role="alert">{error}</div>}
+
+      {/* Pending approval banner — owner mode only */}
+      {ownerMode && submittedPlans.length > 0 && (
+        <div className="mb-4 flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+          <span className="text-lg">📋</span>
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-amber-700">
+              {submittedPlans.length} plan{submittedPlans.length !== 1 ? "s" : ""} awaiting your approval
+            </p>
+            <p className="text-xs text-amber-600">Review and approve submitted cashflow plans</p>
+          </div>
+        </div>
+      )}
+
+      {/* Toolbar: search + New Plan */}
+      <div className="flex items-center gap-2 mb-3">
+        <input
+          type="search"
+          placeholder="Search plans…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="filter-input flex-1 min-w-0 mb-0"
+          aria-label="Search cashflow plans"
+        />
+        {!ownerMode && (
+          <button
+            type="button"
+            onClick={() => setShowModal(true)}
+            className="flex shrink-0 items-center gap-1.5 rounded-lg border border-brand bg-brand px-3 py-2 text-sm font-medium text-white hover:bg-brand-dark transition-colors"
+          >
+            ＋ New Plan
+          </button>
+        )}
+      </div>
 
       {plans.length === 0 ? (
         <div className="empty-state">
@@ -341,7 +424,7 @@ const CashflowPlansList = forwardRef(function CashflowPlansList(_props, ref) {
           <ConfigurableTable
             tableId="cashflow-plans"
             columns={planColumns}
-            data={sorted}
+            data={filtered}
             rowKey="id"
             sortField={sortField}
             sortDir={sortDir}
@@ -371,14 +454,16 @@ const CashflowPlansList = forwardRef(function CashflowPlansList(_props, ref) {
             }}
           />
           <div className="px-3 py-2 text-xs text-slate-400 border-t border-slate-100">
-            {plans.length} plan{plans.length !== 1 ? "s" : ""}
+            {filtered.length !== plans.length
+              ? `${filtered.length} of ${plans.length} plan${plans.length !== 1 ? "s" : ""}`
+              : `${plans.length} plan${plans.length !== 1 ? "s" : ""}`}
             {submittedPlans.length > 0 && ` · ${submittedPlans.length} pending approval`}
             {approvedPlans.length > 0 && ` · ${approvedPlans.length} approved`}
           </div>
         </>
       )}
 
-      {showModal && (
+      {showModal && !ownerMode && (
         <CreatePlanModal
           buildings={buildings}
           onClose={() => setShowModal(false)}

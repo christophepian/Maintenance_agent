@@ -21,7 +21,7 @@ import { Router } from "../http/router";
 import { sendError, sendJson } from "../http/json";
 import { readJson } from "../http/body";
 import { first } from "../http/query";
-import { maybeRequireManager, requireRole, getAuthUser } from "../authz";
+import { maybeRequireManager, requireRole, requireAnyRole, getAuthUser } from "../authz";
 import { withAuthRequired } from "../http/routeProtection";
 import { CashflowPlanStatus } from "@prisma/client";
 import {
@@ -260,7 +260,7 @@ export function registerCashflowPlanRoutes(router: Router) {
 
   // ── POST /cashflow-plans/:id/approve ─────────────────────────
   router.post("/cashflow-plans/:id/approve", withAuthRequired(async ({ req, res, orgId, prisma, params }) => {
-    if (!requireRole(req, res, "MANAGER")) return;
+    if (!requireAnyRole(req, res, ["MANAGER", "OWNER"])) return;
     const actorUserId = getAuthUser(req)?.userId ?? null;
     try {
       const { plan } = await approvePlanWorkflow(

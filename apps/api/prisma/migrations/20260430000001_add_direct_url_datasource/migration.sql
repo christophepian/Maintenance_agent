@@ -1,0 +1,2 @@
+-- Datasource-only change: added directUrl = env("DIRECT_URL") for PgBouncer compatibility.
+-- No SQL changes required.
