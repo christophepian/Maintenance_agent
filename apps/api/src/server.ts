@@ -326,6 +326,15 @@ async function shutdown() {
   isShuttingDown = true;
   console.log("[SHUTDOWN] Stopping new connections…");
 
+  /* T-04: Hard upper-bound on shutdown duration. Render sends SIGKILL after
+     30s; self-exit before then so the orchestrator records a clean stop. */
+  const HARD_EXIT_MS = Number(process.env.SHUTDOWN_HARD_EXIT_MS) || 25_000;
+  const hardExit = setTimeout(() => {
+    console.error("[SHUTDOWN] Hard exit — drain exceeded budget");
+    process.exit(1);
+  }, HARD_EXIT_MS);
+  hardExit.unref();
+
   if (bgJobTimer) clearInterval(bgJobTimer);
   server.close();
 
