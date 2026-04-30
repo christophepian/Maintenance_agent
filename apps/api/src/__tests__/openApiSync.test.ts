@@ -166,9 +166,13 @@ describe("OpenAPI spec ↔ Router sync", () => {
   });
 
   it("every spec route has a code registration", () => {
+    // Routes handled inline in server.ts (not via the Router) — kept here so
+    // the sync test stays green. Currently: T-03 health probe.
+    const INLINE_SERVER_ROUTES = new Set<string>(["GET /health"]);
+
     const extra: string[] = [];
     for (const route of specRoutes) {
-      if (!codeRoutes.has(route)) {
+      if (!codeRoutes.has(route) && !INLINE_SERVER_ROUTES.has(route)) {
         extra.push(route);
       }
     }

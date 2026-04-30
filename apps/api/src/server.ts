@@ -189,6 +189,34 @@ const server = http.createServer(async (req: AuthedRequest, res) => {
 
     /* Parse URL + resolve org */
     const { path, query } = parseQuery(req.url);
+
+    /* T-03: Health endpoint — unauthenticated, used by Render/Vercel uptime probes.
+       Must be reachable without AUTH_SECRET, before org resolution, and never throw. */
+    if ((path === "/health" || path === "/healthz") && req.method === "GET") {
+      const startedAt = Date.now();
+      let dbStatus: "connected" | "disconnected" = "disconnected";
+      let dbLatencyMs: number | null = null;
+      try {
+        const t0 = Date.now();
+        await prisma.$queryRaw`SELECT 1`;
+        dbLatencyMs = Date.now() - t0;
+        dbStatus = "connected";
+      } catch {
+        // fall through with disconnected
+      }
+      const healthy = dbStatus === "connected" && !isShuttingDown;
+      sendJson(res, healthy ? 200 : 503, {
+        status: healthy ? "ok" : "degraded",
+        db: dbStatus,
+        dbLatencyMs,
+        shuttingDown: isShuttingDown,
+        uptimeSeconds: Math.round(process.uptime()),
+        version: process.env.GIT_SHA || "dev",
+        checkedInMs: Date.now() - startedAt,
+      });
+      return;
+    }
+
     const orgId = getOrgIdForRequest(req);
 
     if (orgId === null) {

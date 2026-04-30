@@ -1687,6 +1687,45 @@ components:
 
 paths:
   # ═══════════════════════════════════════════════════════════
+  # Health (unauthenticated — uptime probes)
+  # ═══════════════════════════════════════════════════════════
+
+  /health:
+    get:
+      tags: [Health]
+      summary: Liveness + DB readiness probe
+      description: |
+        Unauthenticated. Returns 200 when DB reachable and not draining,
+        503 otherwise. Used by Render & Vercel uptime probes.
+      operationId: getHealth
+      responses:
+        '200':
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, db]
+                properties:
+                  status: { type: string, enum: [ok] }
+                  db: { type: string, enum: [connected] }
+                  dbLatencyMs: { type: integer, nullable: true }
+                  shuttingDown: { type: boolean }
+                  uptimeSeconds: { type: integer }
+                  version: { type: string }
+                  checkedInMs: { type: integer }
+        '503':
+          description: Degraded (DB unreachable or shutting down)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, enum: [degraded] }
+                  db: { type: string, enum: [disconnected, connected] }
+                  shuttingDown: { type: boolean }
+
+  # ═══════════════════════════════════════════════════════════
   # Auth & Tenant Portal
   # ═══════════════════════════════════════════════════════════
 
