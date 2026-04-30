@@ -9,7 +9,8 @@ import PageContent from "../../../components/layout/PageContent";
 import Panel from "../../../components/layout/Panel";
 import ConfigurableTable from "../../../components/ConfigurableTable";
 import PaginationControls from "../../../components/PaginationControls";
-import { useTableSort, useTablePagination, clientSort } from "../../../lib/tableUtils";
+import { useLocalSort, clientSort } from "../../../lib/tableUtils";
+import { FilterToggle, FilterPanelBody, FilterSection, FilterSectionClear } from "../../../components/ui/FilterPanel";
 import { authHeaders } from "../../../lib/api";
 import Badge from "../../../components/ui/Badge";
 import { invoiceVariant, ingestionVariant } from "../../../lib/statusVariants";
@@ -512,6 +513,11 @@ export function InvoicesContent() {
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showCaptureModal, setShowCaptureModal] = useState(false);
 
+  // Toolbar
+  const [invSearch, setInvSearch] = useState("");
+  const [actionsOpen, setActionsOpen] = useState(false);
+  const [filterOpen, setFilterOpen] = useState(false);
+
   const loadData = useCallback(async () => {
     setLoading(true);
     setError("");
@@ -563,7 +569,7 @@ export function InvoicesContent() {
     });
   }, [invoices, isOutgoing, isPending]);
 
-  // Apply status + category filters on top of direction
+  // Apply status + category + text search filters on top of direction
   const filteredInvoices = useMemo(() => {
     let list = directionFiltered;
     if (statusFilter !== "ALL") {
@@ -572,8 +578,18 @@ export function InvoicesContent() {
     if (categoryFilter) {
       list = list.filter((inv) => inv.expenseCategory === categoryFilter);
     }
+    const q = invSearch.trim().toLowerCase();
+    if (q) {
+      list = list.filter((inv) =>
+        (inv.invoiceNumber || "").toLowerCase().includes(q) ||
+        (inv.issuerName || "").toLowerCase().includes(q) ||
+        (inv.recipientName || "").toLowerCase().includes(q) ||
+        (inv.buildingName || "").toLowerCase().includes(q) ||
+        (inv.description || "").toLowerCase().includes(q)
+      );
+    }
     return list;
-  }, [directionFiltered, statusFilter, categoryFilter]);
+  }, [directionFiltered, statusFilter, categoryFilter, invSearch]);
 
   // Unique expense categories across all invoices for the filter dropdown
   const availableCategories = useMemo(() => {
@@ -584,19 +600,35 @@ export function InvoicesContent() {
 
   const [tableExpanded, setTableExpanded] = useState(false);
 
-  const { sortField, sortDir, handleSort } = useTableSort(router, INVOICE_SORT_FIELDS);
+  const INV_SORT_CYCLE = [
+    { field: "createdAt", label: "Date" },
+    { field: "amount",    label: "Amount" },
+    { field: "status",    label: "Status" },
+    { field: "invoiceNumber", label: "Invoice #" },
+  ];
+  const [sortCycleIdx, setSortCycleIdx] = useState(0);
+  const { sortField, sortDir, handleSort } = useLocalSort(
+    INV_SORT_CYCLE[0].field, "desc"
+  );
+  function cycleSort() {
+    const next = (sortCycleIdx + 1) % INV_SORT_CYCLE.length;
+    setSortCycleIdx(next);
+    handleSort(INV_SORT_CYCLE[next].field);
+  }
+
   const sortedInvoices = useMemo(
     () => clientSort(filteredInvoices, sortField, sortDir, invoiceFieldExtractor),
     [filteredInvoices, sortField, sortDir]
   );
-  const pager = useTablePagination(router, sortedInvoices.length, 25);
-  const pageInvoices = useMemo(
-    () => pager.pageSlice(sortedInvoices),
-    [sortedInvoices, pager.pageSlice]
-  );
 
   const COLLAPSED_ROWS = 5;
-  const visibleInvoices = tableExpanded ? pageInvoices : sortedInvoices.slice(0, COLLAPSED_ROWS);
+  const visibleInvoices = tableExpanded ? sortedInvoices : sortedInvoices.slice(0, COLLAPSED_ROWS);
+
+  const activeFilterCount = [
+    direction !== "incoming",
+    statusFilter !== "ALL",
+    !!categoryFilter,
+  ].filter(Boolean).length;
 
   /* ─── Actions ─── */
 
@@ -790,107 +822,159 @@ export function InvoicesContent() {
         </div>
       )}
 
-      {/* Top bar: direction toggle + action buttons */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 my-4">
-        {/* Direction toggle — full width on mobile so it doesn't overflow */}
-        <div className="inline-flex w-full sm:w-auto rounded-lg border border-slate-200 bg-slate-100 p-0.5 gap-0.5">
-          {[
-            { key: "incoming", label: "Incoming" },
-            { key: "outgoing", label: "Outgoing" },
-            { key: "pending", label: pendingReviewCount ? `Pending (${pendingReviewCount})` : "Pending" },
-          ].map(({ key, label }) => (
-            <button
-              key={key}
-              onClick={() => { setDirection(key); setTableExpanded(false); }}
-              className={cn(
-                "flex-1 sm:flex-none rounded-lg px-3 sm:px-4 py-1.5 text-sm font-medium transition-colors",
-                direction === key
-                  ? key === "pending"
-                    ? "bg-amber-50 text-amber-700 shadow-sm"
-                    : "bg-white text-slate-900 shadow-sm"
-                  : "text-slate-500 hover:text-slate-700",
-              )}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-
-        {/* Action buttons */}
-        <div className="flex gap-6 shrink-0">
-          {direction === "outgoing" && (
-            <Link
-              href="/manager/finance/invoices/new"
-              className="rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 transition no-underline"
-            >
-              <span className="sm:hidden">+</span>
-              <span className="hidden sm:inline">+ New Invoice</span>
-            </Link>
-          )}
-          {direction !== "outgoing" && (
+      {/* Toolbar */}
+      <div className="flex items-center gap-2 mb-3">
+        <input
+          type="search"
+          placeholder="Search invoices…"
+          value={invSearch}
+          onChange={(e) => { setInvSearch(e.target.value); setTableExpanded(false); }}
+          className="filter-input flex-1 min-w-0 mb-0"
+        />
+        {/* Filter button */}
+        <FilterToggle open={filterOpen} onToggle={() => setFilterOpen((v) => !v)} activeCount={activeFilterCount} />
+        {/* Sort cycle button */}
+        <button
+          onClick={cycleSort}
+          className="flex shrink-0 items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors"
+          title="Cycle sort field"
+        >
+          {INV_SORT_CYCLE[sortCycleIdx].label}
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"
+            className={cn("w-3 h-3 transition-transform", sortDir === "desc" && "rotate-180")} aria-hidden="true">
+            <path fillRule="evenodd" d="M10 17a.75.75 0 0 1-.75-.75V5.612L5.29 9.77a.75.75 0 0 1-1.08-1.04l5.25-5.5a.75.75 0 0 1 1.08 0l5.25 5.5a.75.75 0 1 1-1.08 1.04L10.75 5.612V16.25A.75.75 0 0 1 10 17Z" clipRule="evenodd" />
+          </svg>
+        </button>
+        {/* Actions dropdown */}
+        <div className="relative shrink-0">
+          <button
+            onClick={() => setActionsOpen((v) => !v)}
+            className="flex shrink-0 items-center gap-1.5 rounded-lg border border-brand bg-brand px-3 py-2 text-sm font-medium text-white hover:bg-brand-dark transition-colors"
+          >
+            Actions
+            <svg xmlns="http://www.w3.org/2000/svg" className={cn("w-3 h-3 transition-transform", actionsOpen && "rotate-180")} viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+              <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
+            </svg>
+          </button>
+          {actionsOpen && (
             <>
-              <button
-                onClick={() => setShowUploadModal(true)}
-                aria-label="Upload Invoice"
-                className="flex flex-col items-center gap-1.5"
-              >
-                <span className="flex h-12 w-12 items-center justify-center rounded-full bg-indigo-50 text-indigo-600">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75} aria-hidden="true">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
-                  </svg>
-                </span>
-                <span className="text-[11px] font-medium text-indigo-700 text-center -tracking-[0.005em]">Upload</span>
-              </button>
-              <button
-                onClick={() => setShowCaptureModal(true)}
-                aria-label="Capture with Phone"
-                className="flex flex-col items-center gap-1.5"
-              >
-                <span className="flex h-12 w-12 items-center justify-center rounded-full bg-indigo-50 text-indigo-600">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75} aria-hidden="true">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" />
-                  </svg>
-                </span>
-                <span className="text-[11px] font-medium text-indigo-700 text-center -tracking-[0.005em]">Capture</span>
-              </button>
+              <div className="fixed inset-0 z-10" onClick={() => setActionsOpen(false)} aria-hidden="true" />
+              <div className="absolute right-0 z-20 mt-1 w-44 rounded-lg border border-slate-200 bg-white shadow-lg py-1">
+                {direction === "outgoing" && (
+                  <Link
+                    href="/manager/finance/invoices/new"
+                    onClick={() => setActionsOpen(false)}
+                    className="flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 no-underline"
+                  >
+                    + New Invoice
+                  </Link>
+                )}
+                {direction !== "outgoing" && (
+                  <>
+                    <button
+                      onClick={() => { setActionsOpen(false); setShowUploadModal(true); }}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 text-left"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75} aria-hidden="true">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+                      </svg>
+                      Upload Invoice
+                    </button>
+                    <button
+                      onClick={() => { setActionsOpen(false); setShowCaptureModal(true); }}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 text-left"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75} aria-hidden="true">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" />
+                      </svg>
+                      Capture with Phone
+                    </button>
+                  </>
+                )}
+              </div>
             </>
           )}
         </div>
       </div>
 
-      {/* Status sub-tabs + category filter */}
-      <div className="flex flex-wrap items-center gap-3 mb-4">
-        <div className="inline-flex w-full sm:w-auto rounded-lg border border-slate-200 bg-slate-100 p-0.5 gap-0.5">
-          {(isOutgoing ? OUTGOING_STATUS_TABS : INCOMING_STATUS_TABS).map(({ key, label }) => (
-            <button
-              key={key}
-              onClick={() => { setStatusFilter(key); setTableExpanded(false); }}
-              className={cn(
-                "flex-1 sm:flex-none rounded-lg px-2 sm:px-3 py-1 text-xs font-medium transition-colors",
-                statusFilter === key
-                  ? "bg-white text-slate-900 shadow-sm"
-                  : "text-slate-500 hover:text-slate-700",
-              )}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-        {availableCategories.length > 0 && (
-          <select
-            value={categoryFilter}
-            onChange={(e) => { setCategoryFilter(e.target.value); setTableExpanded(false); }}
-            className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-700 bg-white"
-          >
-            <option value="">All categories</option>
-            {availableCategories.map((cat) => (
-              <option key={cat} value={cat}>{cat.charAt(0) + cat.slice(1).toLowerCase()}</option>
-            ))}
-          </select>
-        )}
-        <span className="text-xs text-slate-400">{filteredInvoices.length} invoice{filteredInvoices.length !== 1 ? "s" : ""}</span>
-      </div>
+      {filterOpen && (
+        <FilterPanelBody>
+          <FilterSection title="Direction" first>
+            <div className="flex flex-wrap gap-2">
+              {[
+                { key: "incoming", label: "Incoming" },
+                { key: "outgoing", label: "Outgoing" },
+                { key: "pending",  label: pendingReviewCount ? `Pending (${pendingReviewCount})` : "Pending" },
+              ].map(({ key, label }) => (
+                <button
+                  key={key}
+                  onClick={() => { setDirection(key); setStatusFilter("ALL"); setTableExpanded(false); }}
+                  className={cn(
+                    "rounded-lg px-3 py-1.5 text-sm font-medium border transition-colors",
+                    direction === key
+                      ? "bg-brand text-white border-brand"
+                      : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </FilterSection>
+          <FilterSection title="Status">
+            <div className="flex flex-wrap gap-2">
+              {(isOutgoing ? OUTGOING_STATUS_TABS : INCOMING_STATUS_TABS).map(({ key, label }) => (
+                <button
+                  key={key}
+                  onClick={() => { setStatusFilter(key); setTableExpanded(false); }}
+                  className={cn(
+                    "rounded-lg px-3 py-1.5 text-sm font-medium border transition-colors",
+                    statusFilter === key
+                      ? "bg-brand text-white border-brand"
+                      : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </FilterSection>
+          {availableCategories.length > 0 && (
+            <FilterSection title="Category">
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => { setCategoryFilter(""); setTableExpanded(false); }}
+                  className={cn(
+                    "rounded-lg px-3 py-1.5 text-sm font-medium border transition-colors",
+                    !categoryFilter
+                      ? "bg-brand text-white border-brand"
+                      : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+                  )}
+                >All</button>
+                {availableCategories.map((cat) => (
+                  <button
+                    key={cat}
+                    onClick={() => { setCategoryFilter(cat); setTableExpanded(false); }}
+                    className={cn(
+                      "rounded-lg px-3 py-1.5 text-sm font-medium border transition-colors",
+                      categoryFilter === cat
+                        ? "bg-brand text-white border-brand"
+                        : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+                    )}
+                  >
+                    {cat.charAt(0) + cat.slice(1).toLowerCase()}
+                  </button>
+                ))}
+              </div>
+            </FilterSection>
+          )}
+          <FilterSectionClear
+            hasFilter={activeFilterCount > 0}
+            onClear={() => { setDirection("incoming"); setStatusFilter("ALL"); setCategoryFilter(""); }}
+          />
+        </FilterPanelBody>
+      )}
 
       {loading ? (
         <Panel><p className="loading-text">Loading invoices…</p></Panel>
@@ -932,7 +1016,6 @@ export function InvoicesContent() {
 
           {/* Desktop: Panel + ConfigurableTable */}
           <div className="hidden sm:block">
-            <Panel bodyClassName="p-0">
               <ConfigurableTable
                 tableId="manager-invoices"
                 columns={invoiceColumns}
@@ -970,7 +1053,6 @@ export function InvoicesContent() {
                   onPageChange={pager.setPage}
                 />
               )}
-            </Panel>
           </div>
         </>
       )}

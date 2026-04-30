@@ -30,7 +30,6 @@ import AppShell from "../../components/AppShell";
 import PageShell from "../../components/layout/PageShell";
 import PageHeader from "../../components/layout/PageHeader";
 import PageContent from "../../components/layout/PageContent";
-import Panel from "../../components/layout/Panel";
 import Link from "next/link";
 import ErrorBanner from "../../components/ui/ErrorBanner";
 import { authHeaders } from "../../lib/api";
@@ -140,10 +139,7 @@ export default function TemplateHubPage() {
               <span className="tab-panel-count">0 items</span>
             )}
 
-            {/* ── Panel — wraps ONLY the TabsContent panels.
-                 bodyClassName="p-0" removes default padding so that
-                 inline-tables sit flush against panel edges. */}
-            <Panel bodyClassName="p-0">
+
               {/* ── Tab one panel ──
                    Tables sit flush (no wrapper needed).
                    Non-table content (forms, empty states) needs:
@@ -178,7 +174,6 @@ export default function TemplateHubPage() {
                   </div>
                 )}
               </TabsContent>
-            </Panel>
           </Tabs>
         </PageContent>
       </PageShell>

@@ -1241,8 +1241,8 @@ export default function ManagerRequestsPage() {
     return list;
   }, [filteredRequests, search, filterUrgency, filterCategory, filterBuilding]);
 
-  const activeFilterCount = [search.trim(), filterUrgency, filterCategory, filterBuilding].filter(Boolean).length;
-  const hasActiveFilters = activeFilterCount > 0;
+  const activeFilterCount = [filterUrgency, filterCategory, filterBuilding].filter(Boolean).length;
+  const hasActiveFilters = activeFilterCount > 0 || search.trim().length > 0;
   const sortActive = !!(sortKey && sortKey !== "date");
 
   function clearFilters() {
@@ -1413,7 +1413,15 @@ export default function ManagerRequestsPage() {
 
           {/* Filter + Sort toggles */}
           {!loading && (
-            <div className="flex items-center justify-end gap-2">
+            <div className="flex items-center gap-2">
+              <input
+                type="search"
+                aria-label="Search requests"
+                placeholder="#, description, building, unit, contractor…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="filter-input flex-1 min-w-0 mb-0"
+              />
               <FilterToggle open={filterOpen} onToggle={() => setFilterOpen((v) => !v)} activeCount={activeFilterCount} />
               <SortToggle open={sortOpen} onToggle={() => setSortOpen((v) => !v)} active={sortActive} />
             </div>
@@ -1422,23 +1430,7 @@ export default function ManagerRequestsPage() {
           {/* Collapsible filter panel */}
           {filterOpen && (
             <FilterPanelBody>
-              <FilterSection title="Search" first>
-                <div className="relative">
-                  <svg className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z" />
-                  </svg>
-                  <input
-                    type="search"
-                    aria-label="Search requests"
-                    placeholder="#, description, building, unit, contractor…"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="w-full min-h-[36px] rounded-lg border border-slate-200 bg-white py-2 pl-8 pr-3 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                  />
-                </div>
-              </FilterSection>
-
-              <FilterSection title="Priority">
+              <FilterSection title="Priority" first>
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                   <SelectField label="Urgency" value={filterUrgency} onChange={(e) => setFilterUrgency(e.target.value)}>
                     <option value="">All urgencies</option>

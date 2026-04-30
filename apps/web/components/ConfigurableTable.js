@@ -195,40 +195,8 @@ export default function ConfigurableTable({
 
   return (
     <>
-      {/* Toolbar row — gear button; hidden on narrow when mobileCard is active */}
-      <div className={cn("flex items-center gap-2 pb-3", mobileCard && "hidden sm:flex")}>
-        {toolbarSlot && <div className="flex-1 min-w-0">{toolbarSlot}</div>}
-        <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
-          <PopoverTrigger asChild>
-            <button
-              className={cn("inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors shrink-0", popoverOpen
-                  ? "text-blue-700 bg-blue-50"
-                  : "text-slate-900 hover:text-blue-600 hover:bg-blue-50/50")}
-              title="Configure columns"
-              aria-label="Configure columns"
-              aria-expanded={popoverOpen}
-              aria-haspopup="dialog"
-            >
-              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-              Columns
-            </button>
-          </PopoverTrigger>
-          <PopoverContent className="w-64">
-            <ColumnConfigPopover
-              orderedColumns={orderedColumns}
-              visibility={visibility}
-              density={density}
-              onToggle={toggleColumn}
-              onReorder={reorderColumns}
-              onDensityChange={setDensity}
-              onReset={reset}
-            />
-          </PopoverContent>
-        </Popover>
-      </div>
+      {/* toolbarSlot — optional content above the table (filters, search, etc.) */}
+      {toolbarSlot && <div className="flex items-center gap-2 pb-3 min-w-0">{toolbarSlot}</div>}
 
       {/* Mobile card list — rendered on narrow when mobileCard prop is provided */}
       {mobileCard && (
@@ -259,7 +227,7 @@ export default function ConfigurableTable({
       <div className={cn("overflow-x-auto rounded-lg border border-table-border", mobileCard && "hidden sm:block")}>
         <table className={cn("w-full text-sm", ds.text)}>
           <thead>
-            <tr className="border-b border-table-border bg-table-header text-left text-[11px] font-medium uppercase tracking-wider text-slate-900">
+            <tr className="border-b-2 border-table-border bg-transparent text-left text-[11px] font-medium uppercase tracking-wider text-slate-400">
               {leadingHeader}
               {visibleColumns.map((col) =>
                 col.sortable ? (
@@ -279,6 +247,41 @@ export default function ConfigurableTable({
                 ),
               )}
               {trailingHeader}
+              {/* Gear button — anchored in the header row, right side */}
+              <th className={cn(ds.th, "w-8 text-right", mobileCard && "hidden sm:table-cell")}>
+                <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+                  <PopoverTrigger asChild>
+                    <button
+                      className={cn(
+                        "inline-flex items-center justify-center rounded p-1 transition-colors",
+                        popoverOpen
+                          ? "text-brand bg-brand-light"
+                          : "text-slate-300 hover:text-slate-500 hover:bg-slate-100"
+                      )}
+                      title="Configure columns"
+                      aria-label="Configure columns"
+                      aria-expanded={popoverOpen}
+                      aria-haspopup="dialog"
+                    >
+                      <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-64">
+                    <ColumnConfigPopover
+                      orderedColumns={orderedColumns}
+                      visibility={visibility}
+                      density={density}
+                      onToggle={toggleColumn}
+                      onReorder={reorderColumns}
+                      onDensityChange={setDensity}
+                      onReset={reset}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-table-divider">

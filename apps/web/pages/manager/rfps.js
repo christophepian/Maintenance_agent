@@ -5,7 +5,6 @@ import AppShell from "../../components/AppShell";
 import PageShell from "../../components/layout/PageShell";
 import PageHeader from "../../components/layout/PageHeader";
 import PageContent from "../../components/layout/PageContent";
-import Panel from "../../components/layout/Panel";
 import ErrorBanner from "../../components/ui/ErrorBanner";
 import Badge from "../../components/ui/Badge";
 import { rfpVariant } from "../../lib/statusVariants";
@@ -163,10 +162,9 @@ export default function ManagerRfpsPage() {
             ))}
           </ScrollableTabs>
 
-          <Panel title={`RFPs (${total})`} bodyClassName="p-0">
-            {loading ? (
-              <p className="px-4 py-8 text-center text-sm text-slate-500">Loading…</p>
-            ) : (
+          {loading ? (
+            <p className="px-4 py-8 text-center text-sm text-slate-500">Loading…</p>
+          ) : (
               <ConfigurableTable
                 tableId="manager-rfps"
                 columns={RFP_COLUMNS}
@@ -196,8 +194,7 @@ export default function ManagerRfpsPage() {
                   </div>
                 )}
               />
-            )}
-          </Panel>
+          )}
         </PageContent>
       </PageShell>
     </AppShell>

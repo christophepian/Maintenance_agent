@@ -55,8 +55,19 @@ export default function ManagerExpensesPage() {
   const [invoices, setInvoices] = useState([]);
   const [buildings, setBuildings] = useState([]);
   const [actionLoading, setActionLoading] = useState(null);
+  const [expSearch, setExpSearch] = useState("");
   const { sortField, sortDir, handleSort } = useTableSort(router, EXPENSE_SORT_FIELDS, { defaultField: "date", defaultDir: "desc" });
-  const sortedInvoices = useMemo(() => clientSort(invoices, sortField, sortDir, expenseFieldExtractor), [invoices, sortField, sortDir]);
+  const sortedInvoices = useMemo(() => {
+    const q = expSearch.trim().toLowerCase();
+    const base = q
+      ? invoices.filter((inv) =>
+          (inv.invoiceNumber || "").toLowerCase().includes(q) ||
+          (inv.description || "").toLowerCase().includes(q) ||
+          (inv.expenseCategory || "").toLowerCase().includes(q)
+        )
+      : invoices;
+    return clientSort(base, sortField, sortDir, expenseFieldExtractor);
+  }, [invoices, expSearch, sortField, sortDir]);
 
   // Filters
   const [categoryFilter, setCategoryFilter] = useState("");
@@ -152,7 +163,16 @@ export default function ManagerExpensesPage() {
             </Panel>
           )}
 
-          <FilterToggle open={filterOpen} onToggle={() => setFilterOpen((v) => !v)} activeCount={activeCount} />
+          <div className="flex items-center gap-2 mb-3">
+            <input
+              type="search"
+              placeholder="Search expenses…"
+              value={expSearch}
+              onChange={(e) => setExpSearch(e.target.value)}
+              className="filter-input flex-1 min-w-0 mb-0"
+            />
+            <FilterToggle open={filterOpen} onToggle={() => setFilterOpen((v) => !v)} activeCount={activeCount} />
+          </div>
           {filterOpen && (
             <FilterPanelBody>
               <FilterSection title="Category" first>

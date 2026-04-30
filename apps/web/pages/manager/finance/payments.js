@@ -74,7 +74,6 @@ export default function ManagerPaymentsPage() {
   const [payments, setPayments] = useState([]);
   const [buildings, setBuildings] = useState([]);
   const { sortField, sortDir, handleSort } = useTableSort(router, PAYMENT_SORT_FIELDS, { defaultField: "paidAt", defaultDir: "desc" });
-  const sortedPayments = useMemo(() => clientSort(payments, sortField, sortDir, paymentFieldExtractor), [payments, sortField, sortDir]);
 
   // Filters
   const [buildingId, setBuildingId] = useState("");
@@ -117,6 +116,20 @@ export default function ManagerPaymentsPage() {
     setPaidBefore("");
   }
 
+  const [paySearch, setPaySearch] = useState("");
+  const filteredPayments = useMemo(() => {
+    const q = paySearch.trim().toLowerCase();
+    if (!q) return payments;
+    return payments.filter((p) =>
+      (p.invoiceNumber || "").toLowerCase().includes(q) ||
+      (p.description || "").toLowerCase().includes(q)
+    );
+  }, [payments, paySearch]);
+  const sortedPayments = useMemo(
+    () => clientSort(filteredPayments, sortField, sortDir, paymentFieldExtractor),
+    [filteredPayments, sortField, sortDir]
+  );
+
   const hasFilters = buildingId || paidAfter || paidBefore;
   const activeCount = [buildingId, paidAfter, paidBefore].filter(Boolean).length;
   const [filterOpen, setFilterOpen] = useState(false);
@@ -133,7 +146,16 @@ export default function ManagerPaymentsPage() {
             </Panel>
           )}
 
-          <FilterToggle open={filterOpen} onToggle={() => setFilterOpen((v) => !v)} activeCount={activeCount} />
+          <div className="flex items-center gap-2 mb-3">
+            <input
+              type="search"
+              placeholder="Search payments…"
+              value={paySearch}
+              onChange={(e) => setPaySearch(e.target.value)}
+              className="filter-input flex-1 min-w-0 mb-0"
+            />
+            <FilterToggle open={filterOpen} onToggle={() => setFilterOpen((v) => !v)} activeCount={activeCount} />
+          </div>
           {filterOpen && (
             <FilterPanelBody>
               <FilterSection title="Scope" first>

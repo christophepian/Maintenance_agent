@@ -23,8 +23,8 @@ export default function SortableHeader({ label, field, sortField, sortDir, onSor
       <span className="inline-flex items-center gap-1">
         {label}
         <span className="inline-flex flex-col leading-none -space-y-0.5">
-          <span className={cn("text-[8px]", active && sortDir === "asc" ? "text-indigo-600" : "text-slate-300")}>▲</span>
-          <span className={cn("text-[8px]", active && sortDir === "desc" ? "text-indigo-600" : "text-slate-300")}>▼</span>
+          <span className={cn("text-[8px]", active && sortDir === "asc" ? "text-brand" : "text-slate-300")}>▲</span>
+          <span className={cn("text-[8px]", active && sortDir === "desc" ? "text-brand" : "text-slate-300")}>▼</span>
         </span>
       </span>
     </th>

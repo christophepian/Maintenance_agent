@@ -817,8 +817,9 @@ export default function LeaseEditorPage() {
 
           {/* Signature Requests */}
           {sigRequests.length > 0 && (
-            <Panel title="Signature Requests" bodyClassName="p-0">
-              <div className="overflow-x-auto">
+            <div>
+              <h2 className="mb-3 text-sm font-semibold text-slate-700">Signature Requests</h2>
+              <div className="overflow-x-auto rounded-lg border border-table-border">
                 <table className="inline-table">
                   <thead>
                     <tr>
@@ -858,10 +859,10 @@ export default function LeaseEditorPage() {
                   </tbody>
                 </table>
               </div>
-            </Panel>
+            </div>
           )}
 
-          {/* PDF Artifact */}
+          {/* PDF Artifact */}}
           {(lease.draftPdfStorageKey || lease.signedPdfStorageKey) && (
             <Panel title="PDF Artifacts">
               <div className="space-y-3">
@@ -1006,7 +1007,7 @@ export default function LeaseEditorPage() {
               ) : (
                 <div>
                   {reconciliations.length > 0 && (
-                    <div className="overflow-x-auto mb-4">
+                    <div className="overflow-x-auto rounded-lg border border-table-border mb-4">
                       <table className="inline-table">
                         <thead>
                           <tr>
@@ -1078,7 +1079,7 @@ export default function LeaseEditorPage() {
             <Panel title="📈 Rent Adjustments">
               <div className="space-y-3">
                 {rentAdjustments.length > 0 && (
-                  <div className="overflow-x-auto">
+                  <div className="overflow-x-auto rounded-lg border border-table-border">
                     <table className="inline-table">
                       <thead>
                         <tr>
@@ -1175,11 +1176,12 @@ export default function LeaseEditorPage() {
 
           {/* Invoices */}
           {(invoices.length > 0 || lease.status !== "DRAFT") && (
-            <Panel title={`💰 Invoices (${invoices.length})`} bodyClassName={invoices.length > 0 ? "p-0" : undefined}>
+            <div>
+              <h2 className="mb-3 text-sm font-semibold text-slate-700">{`💰 Invoices (${invoices.length})`}</h2>
               {invoices.length === 0 ? (
                 <p className="text-sm text-slate-500">No invoices linked to this lease yet.</p>
               ) : (
-                  <div className="overflow-x-auto">
+                  <div className="overflow-x-auto rounded-lg border border-table-border">
                   <table className="inline-table">
                     <thead>
                       <tr>
@@ -1208,7 +1210,7 @@ export default function LeaseEditorPage() {
                   </table>
                   </div>
               )}
-            </Panel>
+            </div>
           )}
         </PageContent>
 

@@ -5,6 +5,8 @@ import PageHeader from "../../../components/layout/PageHeader";
 import PageContent from "../../../components/layout/PageContent";
 import Panel from "../../../components/layout/Panel";
 import { authHeaders } from "../../../lib/api";
+import { useLocalSort, clientSort } from "../../../lib/tableUtils";
+import { cn } from "../../../lib/utils";
 
 function formatCurrency(chf) {
   if (typeof chf !== "number") return "—";
@@ -30,6 +32,8 @@ export default function ManagerChargesPage() {
   // COA filter (feature-flagged: only renders when expense types exist)
   const [expenseTypeId, setExpenseTypeId] = useState("");
   const [expenseTypes, setExpenseTypes] = useState([]);
+  const [chargeSearch, setChargeSearch] = useState("");
+  const { sortField: cSortField, sortDir: cSortDir, handleSort: handleChargeSort } = useLocalSort("tenant", "asc");
 
   useEffect(() => {
     fetch("/api/coa/expense-types", { headers: authHeaders() })
@@ -62,10 +66,31 @@ export default function ManagerChargesPage() {
     return leases.filter((l) => l.chargesTotalChf || (l.chargesItems && l.chargesItems.length > 0));
   }, [leases]);
 
+  function chargeFieldExtractor(l, field) {
+    switch (field) {
+      case "tenant": return (l.tenantName || "").toLowerCase();
+      case "building": return (l.unit?.building?.name || "").toLowerCase();
+      case "chargesTotalChf": return l.chargesTotalChf ?? 0;
+      default: return "";
+    }
+  }
+
+  const filteredCharges = useMemo(() => {
+    if (!chargeSearch.trim()) return leasesWithCharges;
+    const q = chargeSearch.toLowerCase();
+    return leasesWithCharges.filter((l) =>
+      (l.tenantName || "").toLowerCase().includes(q) ||
+      (l.unit?.building?.name || "").toLowerCase().includes(q) ||
+      (l.unit?.unitNumber || "").toLowerCase().includes(q)
+    );
+  }, [leasesWithCharges, chargeSearch]);
+
+  const sortedCharges = useMemo(() => clientSort(filteredCharges, cSortField, cSortDir, chargeFieldExtractor), [filteredCharges, cSortField, cSortDir]);
+
   // Flatten chargesItems across all leases for itemized view
   const itemizedRows = useMemo(() => {
     const rows = [];
-    leasesWithCharges.forEach((l) => {
+    sortedCharges.forEach((l) => {
       const items = l.chargesItems || [];
       items.forEach((item) => {
         rows.push({
@@ -80,7 +105,7 @@ export default function ManagerChargesPage() {
       });
     });
     return rows;
-  }, [leasesWithCharges]);
+  }, [sortedCharges]);
 
   function startEdit(lease) {
     setEditingLeaseId(lease.id);
@@ -202,6 +227,31 @@ export default function ManagerChargesPage() {
             })}
           </div>
 
+          {/* Toolbar */}
+          <div className="flex items-center gap-2">
+            <input
+              type="search"
+              placeholder="Search by tenant, building or unit…"
+              value={chargeSearch}
+              onChange={(e) => setChargeSearch(e.target.value)}
+              className="filter-input flex-1 min-w-0 mb-0"
+            />
+            <button
+              type="button"
+              aria-label="Sort charges"
+              onClick={() => {
+                const cycle = ["tenant", "building", "chargesTotalChf"];
+                const next = cycle[(cycle.indexOf(cSortField) + 1) % cycle.length];
+                handleChargeSort(next);
+              }}
+              className="flex shrink-0 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4" aria-hidden="true"><path fillRule="evenodd" d="M2 3.75A.75.75 0 0 1 2.75 3h11.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 3.75ZM2 7.5a.75.75 0 0 1 .75-.75h7.508a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 7.5ZM14 7a.75.75 0 0 1 .75.75v6.59l1.95-2.1a.75.75 0 1 1 1.1 1.02l-3.25 3.5a.75.75 0 0 1-1.1 0l-3.25-3.5a.75.75 0 0 1 1.1-1.02l1.95 2.1V7.75A.75.75 0 0 1 14 7ZM2 11.25a.75.75 0 0 1 .75-.75h4.562a.75.75 0 0 1 0 1.5H2.75a.75.75 0 0 1-.75-.75Z" clipRule="evenodd" /></svg>
+              <span className="hidden sm:inline capitalize">{cSortField === "building" ? "Building" : cSortField === "chargesTotalChf" ? "Amount" : "Tenant"}</span>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className={cn("w-3 h-3 transition-transform", cSortDir === "desc" && "rotate-180")} aria-hidden="true"><path fillRule="evenodd" d="M8 2a.75.75 0 0 1 .75.75v8.69l1.22-1.22a.75.75 0 1 1 1.06 1.06l-2.5 2.5a.75.75 0 0 1-1.06 0l-2.5-2.5a.75.75 0 0 1 1.06-1.06l1.22 1.22V2.75A.75.75 0 0 1 8 2Z" clipRule="evenodd" /></svg>
+            </button>
+          </div>
+
           {/* Edit Modal (inline panel) */}
           {editingLeaseId && (
             <Panel className="edit-panel">
@@ -291,17 +341,16 @@ export default function ManagerChargesPage() {
 
           {loading ? (
             <Panel><p className="m-0">Loading charges...</p></Panel>
-          ) : leasesWithCharges.length === 0 ? (
+          ) : sortedCharges.length === 0 ? (
             <Panel>
-              <p className="m-0">No active leases with charge data found.</p>
+              <p className="m-0">{chargeSearch ? "No charges match your search." : "No active leases with charge data found."}</p>
             </Panel>
           ) : activeTab === "SUMMARY" ? (
             /* Summary view */
-            <Panel bodyClassName="p-0">
-              <>
+            <>
                 {/* Mobile card list — sm:hidden */}
                 <div className="sm:hidden overflow-hidden divide-y divide-table-divider">
-                  {leasesWithCharges.map((l) => (
+                  {sortedCharges.map((l) => (
                     <div key={l.id} className="table-card">
                       <p className="table-card-head">{l.tenantName}</p>
                       <p className="table-card-sub">{l.unit?.building?.name || l.unit?.building?.address || "—"}{l.unit?.unitNumber ? ` / ${l.unit.unitNumber}` : ""}</p>
@@ -315,7 +364,7 @@ export default function ManagerChargesPage() {
                 </div>
 
                 {/* Wide table — hidden sm:block */}
-                <div className="hidden sm:block">
+                <div className="hidden sm:block overflow-x-auto rounded-lg border border-table-border">
                   <table className="inline-table">
                     <thead>
                       <tr>
@@ -328,7 +377,7 @@ export default function ManagerChargesPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {leasesWithCharges.map((l) => (
+                      {sortedCharges.map((l) => (
                         <tr key={l.id}>
                           <td className="cell-bold">{l.tenantName}</td>
                           <td>{l.unit?.unitNumber || "—"}</td>
@@ -346,7 +395,6 @@ export default function ManagerChargesPage() {
                   </table>
                 </div>
               </>
-            </Panel>
           ) : (
             /* Itemized view */
             itemizedRows.length === 0 ? (
@@ -354,8 +402,7 @@ export default function ManagerChargesPage() {
                 <p className="m-0">No itemized charge data found.</p>
               </Panel>
             ) : (
-              <Panel bodyClassName="p-0">
-                <>
+              <>
                   {/* Mobile card list — sm:hidden */}
                   <div className="sm:hidden overflow-hidden divide-y divide-table-divider">
                     {itemizedRows.map((row, idx) => (
@@ -378,7 +425,7 @@ export default function ManagerChargesPage() {
                   </div>
 
                   {/* Wide table — hidden sm:block */}
-                  <div className="hidden sm:block">
+                  <div className="hidden sm:block overflow-x-auto rounded-lg border border-table-border">
                     <table className="inline-table">
                       <thead>
                         <tr>
@@ -422,7 +469,6 @@ export default function ManagerChargesPage() {
                     </table>
                   </div>
                 </>
-              </Panel>
             )
           )}
         </PageContent>

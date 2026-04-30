@@ -273,6 +273,12 @@ h1, h2 {
     @apply w-full text-sm;
     border-collapse: collapse;
   }
+  /* Canonical wrapper for every inline-table on desktop.
+     Use: <div class="hidden sm:block inline-table-wrap"> (or md:block for wider tables)
+     This is the design-system reference — do NOT add overflow/border inline. */
+  .inline-table-wrap {
+    @apply overflow-x-auto rounded-lg border border-table-border;
+  }
   .inline-table th {
     @apply px-3 py-1.5 text-left font-medium text-[11px] uppercase tracking-wider;
     @apply text-slate-400 bg-transparent border-b-2 border-slate-200;

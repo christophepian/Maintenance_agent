@@ -274,6 +274,8 @@ export default function ManagerInventoryPage() {
   }, [activeTab, decisionsUnitId, loadDecisions]);
 
   const [buildingSearch, setBuildingSearch] = useState("");
+  const [buildingCantonFilter, setBuildingCantonFilter] = useState("");
+  const [buildingFilterOpen, setBuildingFilterOpen] = useState(false);
   const [buildingFormVisible, setBuildingFormVisible] = useState(false);
   const [buildingAddress, setBuildingAddress] = useState("");
   const [buildingCityCode, setBuildingCityCode] = useState("");
@@ -317,14 +319,16 @@ export default function ManagerInventoryPage() {
   const { sortField, sortDir, handleSort } = useTableSort(router, INVENTORY_SORT_FIELDS, { defaultField: "name", defaultDir: "asc" });
   const sortedBuildings = useMemo(() => {
     const sorted = clientSort(buildings, sortField, sortDir, inventoryFieldExtractor);
-    if (!buildingSearch.trim()) return sorted;
+    let filtered = sorted;
+    if (buildingCantonFilter) filtered = filtered.filter((b) => (b.canton || "") === buildingCantonFilter);
+    if (!buildingSearch.trim()) return filtered;
     const q = buildingSearch.trim().toLowerCase();
     return sorted.filter((b) =>
       (b.name || "").toLowerCase().includes(q) ||
       (b.address || "").toLowerCase().includes(q) ||
       (b.canton || "").toLowerCase().includes(q)
     );
-  }, [buildings, sortField, sortDir, buildingSearch]);
+  }, [buildings, sortField, sortDir, buildingSearch, buildingCantonFilter]);
 
   return (
     <AppShell role="MANAGER">
@@ -363,7 +367,7 @@ export default function ManagerInventoryPage() {
 
           {/* Count + full-view link */}
           <span className="tab-panel-count">
-            {activeTab === 0 ? `${sortedBuildings.length} building${sortedBuildings.length !== 1 ? "s" : ""}${buildingSearch.trim() ? ` matching "${buildingSearch.trim()}"` : ""}` : null}
+            {activeTab === 0 ? `${sortedBuildings.length} building${sortedBuildings.length !== 1 ? "s" : ""}${buildingCantonFilter ? ` in ${buildingCantonFilter}` : ""}${buildingSearch.trim() ? ` matching "${buildingSearch.trim()}"` : ""}` : null}
             {activeTab === 1 ? `${assetModels.length} asset model${assetModels.length !== 1 ? "s" : ""}` : null}
             {activeTab === 2 ? "Maintenance decisions — select a unit to see repair vs replace analysis" : null}
           </span>
@@ -372,15 +376,6 @@ export default function ManagerInventoryPage() {
           {/* Buildings tab */}
           <div className={activeTab === 0 ? "tab-panel-active" : "tab-panel"}>
             <div className="pt-1 pb-2 flex flex-col gap-4">
-              <div className="flex justify-end">
-                <button
-                  type="button"
-                  className="button-primary shrink-0"
-                  onClick={() => setBuildingFormVisible((v) => !v)}
-                >
-                  {buildingFormVisible ? "Cancel" : "Add"}
-                </button>
-              </div>
               {buildingFormVisible && (
                 <form onSubmit={onCreateBuilding} className="rounded-xl border border-brand bg-brand-light/30 p-4 grid gap-4">
                 <div className="grid grid-cols-2 gap-4">
@@ -407,13 +402,90 @@ export default function ManagerInventoryPage() {
                 </div>
               </form>
               )}
-              <input
-                type="search"
-                placeholder="Search buildings…"
-                value={buildingSearch}
-                onChange={(e) => setBuildingSearch(e.target.value)}
-                className="filter-input w-full mb-0"
-              />
+              <div className="flex items-center gap-2">
+                <input
+                  type="search"
+                  placeholder="Search buildings…"
+                  value={buildingSearch}
+                  onChange={(e) => setBuildingSearch(e.target.value)}
+                  className="filter-input flex-1 min-w-0 mb-0"
+                />
+                {/* Filter dropdown */}
+                <div className="relative shrink-0">
+                  <button
+                    type="button"
+                    aria-label="Filter buildings"
+                    onClick={() => setBuildingFilterOpen((v) => !v)}
+                    className={cn(
+                      "flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
+                      buildingCantonFilter
+                        ? "border-brand bg-brand-light text-brand"
+                        : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                    )}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4" aria-hidden="true">
+                      <path fillRule="evenodd" d="M2.628 1.601C5.028 1.206 7.49 1 10 1s4.973.206 7.372.601a.75.75 0 0 1 .628.74v2.288a2.25 2.25 0 0 1-.659 1.59l-4.682 4.683a2.25 2.25 0 0 0-.659 1.59v3.037c0 .684-.31 1.33-.844 1.757l-1.937 1.55A.75.75 0 0 1 8 18.25v-5.757a2.25 2.25 0 0 0-.659-1.591L2.659 6.22A2.25 2.25 0 0 1 2 4.629V2.34a.75.75 0 0 1 .628-.74Z" clipRule="evenodd" />
+                    </svg>
+                    <span className="hidden sm:inline">Filter</span>
+                    {buildingCantonFilter && <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-brand text-white text-[10px] font-bold leading-none">1</span>}
+                  </button>
+                {buildingFilterOpen && (
+                    <>
+                    <div className="fixed inset-0 z-10" aria-hidden="true" onClick={() => setBuildingFilterOpen(false)} />
+                    <div className="absolute right-0 top-full mt-1.5 z-20 w-52 rounded-xl border border-slate-200 bg-white shadow-lg p-3 space-y-2">
+                      <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Canton</p>
+                      <select
+                        className="filter-input w-full"
+                        value={buildingCantonFilter}
+                        onChange={(e) => setBuildingCantonFilter(e.target.value)}
+                        aria-label="Filter by canton"
+                      >
+                        <option value="">All cantons</option>
+                        {[...new Set(buildings.map((b) => b.canton).filter(Boolean))].sort().map((c) => (
+                          <option key={c} value={c}>{c}</option>
+                        ))}
+                      </select>
+                      {buildingCantonFilter && (
+                        <button
+                          type="button"
+                          onClick={() => { setBuildingCantonFilter(""); setBuildingFilterOpen(false); }}
+                          className="w-full text-xs text-slate-500 hover:text-red-600 transition-colors"
+                        >
+                          Clear filter
+                        </button>
+                      )}
+                    </div>
+                    </>
+                  )}
+                </div>
+                {/* Sort button — cycles: name → unitCount → canton */}
+                <button
+                  type="button"
+                  aria-label="Sort buildings"
+                  onClick={() => {
+                    const cycle = ["name", "unitCount", "canton"];
+                    const next = cycle[(cycle.indexOf(sortField) + 1) % cycle.length];
+                    handleSort(next);
+                  }}
+                  className="flex shrink-0 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4" aria-hidden="true">
+                    <path fillRule="evenodd" d="M2 3.75A.75.75 0 0 1 2.75 3h11.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 3.75ZM2 7.5a.75.75 0 0 1 .75-.75h7.508a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 7.5ZM14 7a.75.75 0 0 1 .75.75v6.59l1.95-2.1a.75.75 0 1 1 1.1 1.02l-3.25 3.5a.75.75 0 0 1-1.1 0l-3.25-3.5a.75.75 0 1 1 1.1-1.02l1.95 2.1V7.75A.75.75 0 0 1 14 7ZM2 11.25a.75.75 0 0 1 .75-.75h4.562a.75.75 0 0 1 0 1.5H2.75a.75.75 0 0 1-.75-.75Z" clipRule="evenodd" />
+                  </svg>
+                  <span className="hidden sm:inline capitalize">{sortField === "unitCount" ? "Units" : sortField === "canton" ? "Canton" : "Name"}</span>
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className={cn("w-3 h-3 transition-transform", sortDir === "desc" && "rotate-180")} aria-hidden="true">
+                    <path fillRule="evenodd" d="M8 2a.75.75 0 0 1 .75.75v8.69l1.22-1.22a.75.75 0 1 1 1.06 1.06l-2.5 2.5a.75.75 0 0 1-1.06 0l-2.5-2.5a.75.75 0 0 1 1.06-1.06l1.22 1.22V2.75A.75.75 0 0 1 8 2Z" clipRule="evenodd" />
+                  </svg>
+                </button>
+                {/* Add building button */}
+                <button
+                  type="button"
+                  className="flex shrink-0 items-center gap-1.5 rounded-lg border border-brand bg-brand px-3 py-2 text-sm font-medium text-white hover:bg-brand-dark transition-colors"
+                  onClick={() => setBuildingFormVisible((v) => !v)}
+                >
+                  {buildingFormVisible ? "Cancel" : "+ Add"}
+                </button>
+              </div>
             </div>
             {loading ? (
               <p className="loading-text">Loading buildings…</p>

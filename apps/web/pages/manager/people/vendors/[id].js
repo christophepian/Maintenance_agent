@@ -504,6 +504,7 @@ export default function ContractorDetailPage() {
                   ) : jobs.length === 0 ? (
                     <p className="text-sm text-slate-500">No jobs found for this contractor.</p>
                   ) : (
+                    <div className="overflow-x-auto rounded-lg border border-table-border">
                       <table className="inline-table">
                         <thead>
                           <tr>
@@ -545,6 +546,7 @@ export default function ContractorDetailPage() {
                   ) : contractorInvoices.length === 0 ? (
                     <p className="text-sm text-slate-500">No invoices found for this contractor.</p>
                   ) : (
+                    <div className="overflow-x-auto rounded-lg border border-table-border">
                       <table className="inline-table">
                         <thead>
                           <tr>
@@ -577,6 +579,7 @@ export default function ContractorDetailPage() {
                           ))}
                         </tbody>
                       </table>
+                    </div>
                   )}
                 </Panel>
               )}

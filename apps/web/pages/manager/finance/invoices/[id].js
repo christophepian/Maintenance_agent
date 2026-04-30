@@ -461,7 +461,7 @@ export default function InvoiceDetailPage() {
                       ))}
                     </div>
                     {/* Desktop table */}
-                    <div className="hidden sm:block overflow-x-auto">
+                    <div className="hidden sm:block inline-table-wrap">
                       <table className="inline-table">
                         <thead>
                           <tr>

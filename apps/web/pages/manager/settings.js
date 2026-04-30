@@ -4,7 +4,6 @@ import AppShell from "../../components/AppShell";
 import PageShell from "../../components/layout/PageShell";
 import PageHeader from "../../components/layout/PageHeader";
 import PageContent from "../../components/layout/PageContent";
-import Panel from "../../components/layout/Panel";
 import Link from "next/link";
 import { authHeaders } from "../../lib/api";
 import Badge from "../../components/ui/Badge";
@@ -387,7 +386,7 @@ export default function ManagerSettingsPage() {
           {activeTab === 1 && <Link href="/admin-inventory/buildings" className="full-page-link">Manage buildings →</Link>}
 
           {activeTab !== 5 && (
-          <Panel bodyClassName="p-0">
+          <>
 
           {/* Organisation tab */}
           <div className={activeTab === 0 ? "tab-panel-active" : "tab-panel"}>
@@ -520,7 +519,7 @@ export default function ManagerSettingsPage() {
                 </div>
 
                 {/* Wide table — hidden sm:block */}
-                <div className="hidden sm:block overflow-x-auto">
+                <div className="hidden sm:block inline-table-wrap">
                   <table className="inline-table">
                     <thead>
                       <tr>
@@ -676,7 +675,7 @@ export default function ManagerSettingsPage() {
                 </div>
 
                 {/* Wide table — hidden sm:block */}
-                <div className="hidden sm:block overflow-x-auto">
+                <div className="hidden sm:block inline-table-wrap">
                   <table className="inline-table">
                     <thead>
                       <tr>
@@ -746,7 +745,7 @@ export default function ManagerSettingsPage() {
                   </div>
 
                   {/* Wide table — hidden sm:block */}
-                  <div className="hidden sm:block overflow-x-auto">
+                  <div className="hidden sm:block inline-table-wrap">
                     <table className="inline-table">
                       <thead>
                         <tr>
@@ -771,7 +770,7 @@ export default function ManagerSettingsPage() {
             )}
           </div>
 
-          </Panel>
+          </>
           )}
 
           {/* Depreciation tab — renders its own Panels internally */}

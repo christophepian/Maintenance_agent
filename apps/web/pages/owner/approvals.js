@@ -494,7 +494,7 @@ function RfpsTab() {
           </div>
 
           {/* ── Table: md and above ── */}
-          <div className="hidden md:block overflow-x-auto">
+          <div className="hidden md:block inline-table-wrap">
             <table className="inline-table">
               <thead>
                 <tr>

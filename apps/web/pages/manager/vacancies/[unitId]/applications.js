@@ -7,7 +7,6 @@ import PageShell from "../../../../components/layout/PageShell";
 import PageHeader from "../../../../components/layout/PageHeader";
 import { formatNumber } from "../../../../lib/format";
 import PageContent from "../../../../components/layout/PageContent";
-import Panel from "../../../../components/layout/Panel";
 import DocumentsPanel from "../../../../components/DocumentsPanel";
 import ErrorBanner from "../../../../components/ui/ErrorBanner";
 import { formatDisqualificationReasons } from "../../../../lib/formatDisqualificationReasons";
@@ -208,7 +207,8 @@ export default function UnitApplicationsPage() {
         <PageContent>
           <ErrorBanner error={error} className="text-sm" />
 
-          <Panel title={`${sorted.length} Application${sorted.length !== 1 ? "s" : ""}`}>
+          <div>
+          <h2 className="mb-3 text-sm font-semibold text-slate-700">{`${sorted.length} Application${sorted.length !== 1 ? "s" : ""}`}</h2>
             {loading && <p className="text-sm text-slate-500">Loading…</p>}
 
             {!loading && sorted.length === 0 && (
@@ -285,7 +285,7 @@ export default function UnitApplicationsPage() {
                 </div>
 
                 {/* Wide table — hidden sm:block */}
-                <div className="hidden sm:block">
+                <div className="hidden sm:block overflow-x-auto rounded-lg border border-table-border">
                   <table className="inline-table">
                     <thead>
                       <tr>
@@ -408,7 +408,7 @@ export default function UnitApplicationsPage() {
                 </div>
               </>
             )}
-          </Panel>
+          </div>
         </PageContent>
 
         {/* Override disqualification modal */}

@@ -4,7 +4,6 @@ import AppShell from "../../../components/AppShell";
 import PageShell from "../../../components/layout/PageShell";
 import PageHeader from "../../../components/layout/PageHeader";
 import PageContent from "../../../components/layout/PageContent";
-import Panel from "../../../components/layout/Panel";
 import ErrorBanner from "../../../components/ui/ErrorBanner";
 import Badge from "../../../components/ui/Badge";
 import { accountTypeVariant } from "../../../lib/statusVariants";
@@ -264,7 +263,6 @@ export default function ChartOfAccountsPage() {
             <>
               {/* ─── Tab 0: Expense Types ─────────────── */}
               <div className={activeTab === 0 ? "tab-panel-active" : "tab-panel"}>
-                <Panel bodyClassName="p-0">
                   {expenseTypes.length === 0 ? (
                     <div className="empty-state">
                       <p className="empty-state-text">
@@ -290,7 +288,7 @@ export default function ChartOfAccountsPage() {
                       </div>
 
                       {/* Wide table — hidden sm:block */}
-                      <div className="hidden sm:block">
+                      <div className="hidden sm:block overflow-x-auto rounded-lg border border-table-border">
                         <table className="inline-table">
                           <thead>
                             <tr>
@@ -352,12 +350,10 @@ export default function ChartOfAccountsPage() {
                       Add
                     </button>
                   </form>
-                </Panel>
               </div>
 
               {/* ─── Tab 1: Accounts ──────────────────── */}
               <div className={activeTab === 1 ? "tab-panel-active" : "tab-panel"}>
-                <Panel bodyClassName="p-0">
                   {accounts.length === 0 ? (
                     <div className="empty-state">
                       <p className="empty-state-text">
@@ -383,7 +379,7 @@ export default function ChartOfAccountsPage() {
                       </div>
 
                       {/* Wide table — hidden sm:block */}
-                      <div className="hidden sm:block">
+                      <div className="hidden sm:block overflow-x-auto rounded-lg border border-table-border">
                         <table className="inline-table">
                           <thead>
                             <tr>
@@ -449,12 +445,10 @@ export default function ChartOfAccountsPage() {
                       Add
                     </button>
                   </form>
-                </Panel>
               </div>
 
               {/* ─── Tab 2: Expense Mappings ──────────── */}
               <div className={activeTab === 2 ? "tab-panel-active" : "tab-panel"}>
-                <Panel bodyClassName="p-0">
                   <p className="px-4 pt-3 pb-2 text-sm text-slate-500">
                     Each mapping links an expense type to an accounting bucket. Org-wide defaults have no building override.
                   </p>
@@ -486,7 +480,7 @@ export default function ChartOfAccountsPage() {
                       </div>
 
                       {/* Wide table — hidden sm:block */}
-                      <div className="hidden sm:block">
+                      <div className="hidden sm:block overflow-x-auto rounded-lg border border-table-border">
                         <table className="inline-table">
                           <thead>
                             <tr>
@@ -561,7 +555,6 @@ export default function ChartOfAccountsPage() {
                       Add
                     </button>
                   </form>
-                </Panel>
               </div>
             </>
           )}

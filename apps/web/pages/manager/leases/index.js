@@ -5,7 +5,6 @@ import PageShell from "../../../components/layout/PageShell";
 import PageHeader from "../../../components/layout/PageHeader";
 import { formatDate } from "../../../lib/format";
 import PageContent from "../../../components/layout/PageContent";
-import Panel from "../../../components/layout/Panel";
 import Section from "../../../components/layout/Section";
 import { authHeaders } from "../../../lib/api";
 import UndoToast, { useUndoToast } from "../../../components/ui/UndoToast";
@@ -201,6 +200,7 @@ export default function LeasesPage() {
     depositChf: "",
   });
   const [createError, setCreateError] = useState(null);
+  const [leaseSearch, setLeaseSearch] = useState("");
   const [expiryLoading, setExpiryLoading] = useState({});
   const [expiryResult, setExpiryResult] = useState({});
 
@@ -410,10 +410,19 @@ export default function LeasesPage() {
   const templateColumns = useMemo(() => buildTemplateColumns(router, handleDeleteTemplate), [router]);
 
   // Derive filtered lease lists
-  const activeLease  = leases.filter(l => ["ACTIVE", "SIGNED"].includes(l.status));
-  const draftLeases  = leases.filter(l => l.status === "DRAFT");
-  const submitted    = leases.filter(l => l.status === "READY_TO_SIGN");
-  const archived     = leases.filter(l => ["CANCELLED", "TERMINATED"].includes(l.status));
+  const searchedLeases = useMemo(() => {
+    if (!leaseSearch.trim()) return leases;
+    const q = leaseSearch.toLowerCase();
+    return leases.filter((l) =>
+      (l.tenantName || "").toLowerCase().includes(q) ||
+      (l.unit?.building?.name || "").toLowerCase().includes(q) ||
+      (l.unit?.unitNumber || "").toLowerCase().includes(q)
+    );
+  }, [leases, leaseSearch]);
+  const activeLease  = searchedLeases.filter(l => ["ACTIVE", "SIGNED"].includes(l.status));
+  const draftLeases  = searchedLeases.filter(l => l.status === "DRAFT");
+  const submitted    = searchedLeases.filter(l => l.status === "READY_TO_SIGN");
+  const archived     = searchedLeases.filter(l => ["CANCELLED", "TERMINATED"].includes(l.status));
 
   const tabCounts = [activeLease.length, draftLeases.length, submitted.length, templates.length, archived.length];
 
@@ -536,18 +545,25 @@ export default function LeasesPage() {
             ))}
           </ScrollableTabs>
 
-          {/* Count + CTA row */}
-          <div className="flex items-center justify-between">
-            <span className="tab-panel-count">
-              {activeTab === 0 && `${activeLease.length} active lease${activeLease.length !== 1 ? "s" : ""}`}
-              {activeTab === 1 && `${draftLeases.length} draft${draftLeases.length !== 1 ? "s" : ""}`}
-              {activeTab === 2 && `${submitted.length} awaiting signature`}
-              {activeTab === 3 && `${templates.length} template${templates.length !== 1 ? "s" : ""}`}
-              {activeTab === 4 && `${archived.length} archived`}
-            </span>
+          {/* Count + toolbar row */}
+          <span className="tab-panel-count">
+            {activeTab === 0 && `${activeLease.length} active lease${activeLease.length !== 1 ? "s" : ""}`}
+            {activeTab === 1 && `${draftLeases.length} draft${draftLeases.length !== 1 ? "s" : ""}`}
+            {activeTab === 2 && `${submitted.length} awaiting signature`}
+            {activeTab === 3 && `${templates.length} template${templates.length !== 1 ? "s" : ""}`}
+            {activeTab === 4 && `${archived.length} archived`}
+          </span>
+          <div className="flex items-center gap-2">
+            <input
+              type="search"
+              placeholder="Search by tenant, building or unit…"
+              value={leaseSearch}
+              onChange={(e) => setLeaseSearch(e.target.value)}
+              className="filter-input flex-1 min-w-0 mb-0"
+            />
             <button
               onClick={activeTab === 3 ? () => setShowCreateTemplate((v) => !v) : () => setShowCreate((v) => !v)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+              className="flex shrink-0 items-center gap-1.5 rounded-lg border border-brand bg-brand px-3 py-2 text-sm font-medium text-white hover:bg-brand-dark transition-colors"
             >
               {activeTab === 3
                 ? (showCreateTemplate ? "Cancel" : "+ New Template")
@@ -555,7 +571,6 @@ export default function LeasesPage() {
             </button>
           </div>
 
-          <Panel bodyClassName="p-0">
             {/* Templates tab (index 3) */}
             <div className={activeTab === 3 ? "tab-panel-active" : "tab-panel"}>
               {/* Template create form */}
@@ -698,13 +713,6 @@ export default function LeasesPage() {
                 </div>
               ) : (
                 <div>
-                  <div className="flex items-center justify-between px-4 pt-4 pb-2">
-                    <span className="text-sm text-slate-500">{sortedTemplates.length} of {templates.length} template{templates.length !== 1 ? "s" : ""}</span>
-                    <select value={tmplSelectedBuildingId} onChange={(e) => setTmplSelectedBuildingId(e.target.value)} className="border border-slate-200 rounded-lg px-3 py-1.5 text-sm text-slate-700">
-                      <option value="">All buildings</option>
-                      {buildings.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
-                    </select>
-                  </div>
                   <ConfigurableTable
                     tableId="lease-templates"
                     columns={templateColumns}
@@ -782,7 +790,7 @@ export default function LeasesPage() {
                     </div>
 
                     {/* Wide table — hidden sm:block */}
-                    <div className="hidden sm:block overflow-x-auto">
+                    <div className="hidden sm:block overflow-x-auto rounded-lg border border-table-border">
                       <table className="inline-table">
                         <thead>
                           <tr>
@@ -892,7 +900,7 @@ export default function LeasesPage() {
                       </div>
 
                       {/* Wide table — hidden sm:block */}
-                      <div className="hidden sm:block overflow-x-auto">
+                      <div className="hidden sm:block overflow-x-auto rounded-lg border border-table-border">
                         <table className="inline-table">
                           <thead>
                             <tr>
@@ -955,7 +963,6 @@ export default function LeasesPage() {
                 </div>
               );
             })}
-          </Panel>
         </PageContent>
         <UndoToast {...toast} />
       </PageShell>

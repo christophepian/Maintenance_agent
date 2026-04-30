@@ -5,7 +5,6 @@ import AppShell from "../../../components/AppShell";
 import PageShell from "../../../components/layout/PageShell";
 import PageHeader from "../../../components/layout/PageHeader";
 import PageContent from "../../../components/layout/PageContent";
-import Panel from "../../../components/layout/Panel";
 import { formatDate } from "../../../lib/format";
 import ErrorBanner from "../../../components/ui/ErrorBanner";
 import { authHeaders } from "../../../lib/api";
@@ -205,7 +204,8 @@ export default function ManagerVacanciesPage() {
           </ScrollableTabs>
 
           {/* ── Tenant Selections Pipeline ─────────────────── */}
-          <Panel title={"Tenant Selections" + (selections.length > 0 ? ` (${selections.length})` : "")}>
+          <div>
+          <h2 className="mb-3 text-sm font-semibold text-slate-700">{"Tenant Selections" + (selections.length > 0 ? ` (${selections.length})` : "")}</h2>
             {selectionsLoading && <p className="text-sm text-slate-500">Loading selections…</p>}
 
             {!selectionsLoading && selections.length === 0 && (
@@ -254,7 +254,7 @@ export default function ManagerVacanciesPage() {
                 </div>
 
                 {/* Wide table — hidden sm:block */}
-                <div className="hidden sm:block">
+                <div className="hidden sm:block overflow-x-auto rounded-lg border border-table-border">
                   <table className="inline-table">
                     <thead>
                       <tr>
@@ -320,10 +320,11 @@ export default function ManagerVacanciesPage() {
                 </div>
               </>
             )}
-          </Panel>
+          </div>
 
           {/* ── Vacant Units ─────────────────────────────────── */}
-          <Panel title="Vacant Units — Open for Applications">
+          <div>
+          <h2 className="mb-3 text-sm font-semibold text-slate-700">Vacant Units — Open for Applications</h2>
             {loading && <p className="text-sm text-slate-500">Loading…</p>}
 
             {!loading && units.length === 0 && (
@@ -372,7 +373,7 @@ export default function ManagerVacanciesPage() {
                 </div>
 
                 {/* Wide table — hidden sm:block */}
-                <div className="hidden sm:block">
+                <div className="hidden sm:block overflow-x-auto rounded-lg border border-table-border">
                   <table className="inline-table">
                     <thead>
                       <tr>
@@ -420,7 +421,7 @@ export default function ManagerVacanciesPage() {
                 </div>
               </div>
             ))}
-          </Panel>
+          </div>
         </PageContent>
       </PageShell>
     </AppShell>
