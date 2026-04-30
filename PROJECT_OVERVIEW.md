@@ -300,7 +300,7 @@ npx prisma migrate diff \
 
 ## Current System Snapshot
 
-66 suites · 995 tests · 0 TS errors · 91/94 audit findings resolved. Strategy Engine & Capture Hardening epic complete (3-phase strategy engine with 56 tests, Azure OCR activation, invoice source-file serving). Responsive polish pass complete: dual-render pattern (F-UI9) applied to 18+ pages across all 4 personas; PENDING_REVIEW CTA fix; timeline stage bug fixed; `manager-reject` proxy created; tenant scheduling UX improved. Audit remediation pass: prisma-in-routes eliminated (userRepository/requestRepository/rfpRepository), workflowCoverage tests added for cashflowPlan + submitRentalApplication, openapi.yaml updated with 3 missing routes.
+66 suites · 1001 tests (100% passing) · 0 TS errors · 91/94 audit findings resolved. Strategy Engine & Capture Hardening epic complete (3-phase strategy engine with 56 tests, Azure OCR activation, invoice source-file serving). Responsive polish pass complete: dual-render pattern (F-UI9) applied to 18+ pages across all 4 personas; PENDING_REVIEW CTA fix; timeline stage bug fixed; `manager-reject` proxy created; tenant scheduling UX improved. Audit remediation pass: prisma-in-routes eliminated (userRepository/requestRepository/rfpRepository), workflowCoverage tests added for cashflowPlan + submitRentalApplication, openapi.yaml updated with 3 missing routes.
 
 For full counts, state integrity verification, and Document Integrity table, see [PROJECT_STATE.md](PROJECT_STATE.md).
 
