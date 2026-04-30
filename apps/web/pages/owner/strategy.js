@@ -8,6 +8,7 @@ import Panel from "../../components/layout/Panel";
 import ErrorBanner from "../../components/ui/ErrorBanner";
 import { cn } from "../../lib/utils";
 import { ownerAuthHeaders } from "../../lib/api";
+import OwnerPicker from "../../components/OwnerPicker";
 
 /* ─── Constants ─────────────────────────────────────────────── */
 
@@ -340,6 +341,7 @@ export default function StrategyPage() {
     return (
       <AppShell role="OWNER">
         <PageShell>
+          <OwnerPicker onSelect={() => router.replace(router.asPath)} />
           <PageHeader title="Your Strategy" />
           <PageContent>
             <Panel>
@@ -616,6 +618,7 @@ export default function StrategyPage() {
   return (
     <AppShell role="OWNER">
       <PageShell>
+        <OwnerPicker onSelect={() => router.replace(router.asPath)} />
         <PageHeader
           title="Strategy Questionnaire"
           subtitle={`Question ${step + 1} of ${totalQuestions}`}

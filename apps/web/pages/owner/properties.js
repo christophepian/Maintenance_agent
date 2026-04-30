@@ -12,6 +12,7 @@ import ErrorBanner from "../../components/ui/ErrorBanner";
 import { useTableSort, clientSort } from "../../lib/tableUtils";
 import { ownerAuthHeaders } from "../../lib/api";
 import { cn } from "../../lib/utils";
+import OwnerPicker from "../../components/OwnerPicker";
 import { formatChf, formatChfCents } from "../../lib/format";
 
 // ── Monopoly palette: deterministic top-band colour from building name ──────
@@ -243,6 +244,7 @@ export default function OwnerPropertiesPage() {
   return (
     <AppShell role="OWNER">
       <PageShell>
+        <OwnerPicker onSelect={() => setRefreshKey((k) => k + 1)} />
         <PageHeader
           title="Properties"
           subtitle="Buildings and units in your portfolio"

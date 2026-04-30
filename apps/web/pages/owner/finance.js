@@ -12,6 +12,7 @@ import { formatChf, formatDate } from "../../lib/format";
 import { FilterToggle, FilterPanelBody, FilterSection, FilterSectionClear, SelectField, DateField } from "../../components/ui/FilterPanel";
 import { useTableSort, clientSort } from "../../lib/tableUtils";
 import { ownerAuthHeaders } from "../../lib/api";
+import OwnerPicker from "../../components/OwnerPicker";
 
 function getInvoiceTotal(invoice) {
   if (typeof invoice.totalAmount === "number") return invoice.totalAmount;
@@ -183,6 +184,7 @@ export default function OwnerFinance() {
   return (
     <AppShell role="OWNER">
       <PageShell>
+        <OwnerPicker onSelect={fetchInvoices} />
         <PageHeader
           title="Finance"
           subtitle="Review, approve, and manage invoice payments"

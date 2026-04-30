@@ -5,7 +5,7 @@ import { readJson } from "../http/body";
 import { first } from "../http/query";
 import { encodeToken } from "../services/auth";
 import { registerUser, authenticateUser } from "../services/userService";
-import { requireTenantSession } from "../authz";
+import { requireAuth, requireTenantSession } from "../authz";
 import { getTenantSession } from "../services/tenantSession";
 import { listTenantLeases, getTenantLease, tenantAcceptLease } from "../services/tenantPortal";
 import { getUserNotifications, markNotificationAsRead, markAllNotificationsAsRead, getUnreadNotificationCount, deleteNotification } from "../services/notifications";
@@ -501,6 +501,61 @@ export function registerAuthRoutes(router: Router) {
       const msg = String(e?.message || e);
       if (msg === "Invalid JSON") return sendError(res, 400, "INVALID_JSON", "Invalid JSON");
       sendError(res, 500, "DB_ERROR", "Failed to login", String(e));
+    }
+  });
+
+  // GET /users/me — return current authenticated user's profile
+  router.get("/users/me", async ({ req, res, prisma, orgId }) => {
+    const actor = requireAuth(req, res);
+    if (!actor) return;
+    try {
+      const user = await prisma.user.findFirst({
+        where: { id: actor.userId, orgId },
+        select: { id: true, name: true, email: true, role: true, createdAt: true },
+      });
+      if (!user) return sendError(res, 404, "NOT_FOUND", "User not found");
+      sendJson(res, 200, { data: user });
+    } catch (e: any) {
+      sendError(res, 500, "DB_ERROR", "Failed to fetch user", String(e));
+    }
+  });
+
+  // PATCH /users/me — update name, email, and/or password
+  router.patch("/users/me", async ({ req, res, prisma, orgId }) => {
+    const actor = requireAuth(req, res);
+    if (!actor) return;
+    try {
+      const body = await readJson(req);
+      const { name, email, currentPassword, newPassword } = body ?? {};
+
+      const user = await prisma.user.findFirst({
+        where: { id: actor.userId, orgId },
+        select: { id: true, passwordHash: true },
+      });
+      if (!user) return sendError(res, 404, "NOT_FOUND", "User not found");
+
+      const updates: Record<string, unknown> = {};
+      if (typeof name === "string" && name.trim()) updates.name = name.trim();
+      if (typeof email === "string" && email.trim()) updates.email = email.trim().toLowerCase();
+
+      if (newPassword) {
+        if (!currentPassword) return sendError(res, 400, "BAD_REQUEST", "currentPassword is required to change password");
+        const valid = user.passwordHash ? await bcrypt.compare(currentPassword, user.passwordHash) : false;
+        if (!valid) return sendError(res, 401, "UNAUTHORIZED", "Current password is incorrect");
+        updates.passwordHash = await bcrypt.hash(newPassword, 10);
+      }
+
+      if (Object.keys(updates).length === 0) return sendError(res, 400, "BAD_REQUEST", "No fields to update");
+
+      const updated = await prisma.user.update({
+        where: { id: user.id },
+        data: updates,
+        select: { id: true, name: true, email: true, role: true, createdAt: true },
+      });
+      sendJson(res, 200, { data: updated });
+    } catch (e: any) {
+      if (e?.code === "P2002") return sendError(res, 409, "CONFLICT", "Email already in use");
+      sendError(res, 500, "DB_ERROR", "Failed to update user", String(e));
     }
   });
 

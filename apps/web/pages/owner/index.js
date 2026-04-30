@@ -14,6 +14,7 @@ import StrategyProfileBanner from "../../components/StrategyProfileBanner";
 import { formatChf, formatPercent, formatDate } from "../../lib/format";
 import { ownerAuthHeaders } from "../../lib/api";
 import { cn } from "../../lib/utils";
+import OwnerPicker from "../../components/OwnerPicker";
 
 function ActionStat({ label, value, href, tone }) {
   const countColor = { warn: "text-amber-700", bad: "text-red-600", good: "text-green-700" }[tone] ?? "text-slate-900";
@@ -213,6 +214,7 @@ export default function OwnerDashboard() {
   return (
     <AppShell role="OWNER">
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+        <OwnerPicker onSelect={loadDashboard} />
         {!hasStrategyProfile && <StrategyProfileBanner />}
         <ErrorBanner error={error} />
 

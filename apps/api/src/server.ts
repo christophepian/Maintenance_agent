@@ -3,11 +3,13 @@ import "dotenv/config";
 import * as http from "http";
 import { sendError, sendJson } from "./http/json";
 import { parseQuery } from "./http/query";
-import { getOrgIdForRequest, AuthedRequest } from "./authz";
+import { getOrgIdForRequest, AuthedRequest, requireAuth } from "./authz";
 import { ensureDefaultOrgConfig } from "./services/orgConfig";
 import { bootstrapLegalEngine } from "./services/bootstrapLegalEngine";
 import prisma from "./services/prismaClient";
 import { Router } from "./http/router";
+import { readJson } from "./http/body";
+import { encodeToken } from "./services/auth";
 
 /* ── Route registration ─────────────────────────────────────── */
 import { registerAuthRoutes } from "./routes/auth";
@@ -119,6 +121,32 @@ router.post("/__dev/rental/run-jobs", async ({ res }) => {
     console.error("[DEV] run-jobs error:", e);
     sendError(res, 500, "INTERNAL_ERROR", e.message);
   }
+});
+
+/* ── Dev-only: switch-owner — issues a JWT for any OWNER user ── */
+router.post("/dev/switch-owner", async ({ req, res, prisma, orgId }) => {
+  if (isProdEnv) {
+    sendError(res, 403, "FORBIDDEN", "Dev route disabled in production");
+    return;
+  }
+  const actor = requireAuth(req, res);
+  if (!actor) return;
+  const body = await readJson(req);
+  const ownerId: string | undefined = body?.ownerId;
+  if (!ownerId) {
+    sendError(res, 400, "BAD_REQUEST", "ownerId is required");
+    return;
+  }
+  const user = await prisma.user.findFirst({
+    where: { id: ownerId, orgId, role: "OWNER" },
+    select: { id: true, email: true, name: true },
+  });
+  if (!user) {
+    sendError(res, 404, "NOT_FOUND", "Owner user not found");
+    return;
+  }
+  const token = encodeToken({ userId: user.id, orgId, email: user.email || "", role: "OWNER" });
+  sendJson(res, 200, { data: { token, owner: { id: user.id, name: user.name, email: user.email } } });
 });
 
 /* ── Connection tracking for graceful shutdown ──────────────── */

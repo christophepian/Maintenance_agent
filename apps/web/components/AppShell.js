@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import NotificationBell from "./NotificationBell";
@@ -102,195 +102,7 @@ export default function AppShell({ role: roleProp, children }) {
     ensureAuth();
   }, [role, authRole]);
 
-  const managerNav = useMemo(
-    () => [
-      {
-        section: "Overview",
-        items: [
-          { label: "Dashboard", href: "/manager" },
-        ],
-      },
-      {
-        section: "Properties",
-        items: [
-          { label: "Properties", href: "/manager/properties" },
-          { label: "Inventory", href: "/manager/inventory" },
-          { label: "Buildings", href: "/admin-inventory/buildings" },
-          { label: "Inventory admin", href: "/admin-inventory" },
-        ],
-      },
-      {
-        section: "People",
-        items: [
-          { label: "People overview", href: "/manager/people" },
-          { label: "Tenants", href: "/manager/people/tenants" },
-          { label: "Contractors", href: "/manager/people/vendors" },
-        ],
-      },
-      {
-        section: "Appliances",
-        items: [
-          { label: "Appliance models", href: "/admin-inventory/asset-models" },
-        ],
-      },
-      {
-        section: "Rental Applications",
-        items: [
-          { label: "Vacancies", href: "/manager/vacancies" },
-        ],
-      },
-      {
-        section: "Work Requests",
-        items: [
-          { label: "Work Requests", href: "/manager/work-requests" },
-          { label: "RFPs", href: "/manager/rfps" },
-        ],
-      },
-      {
-        section: "Finance",
-        items: [
-          { label: "Finance overview", href: "/manager/finance" },
-          { label: "Invoices & Bills", href: "/manager/finance/invoices" },
-          { label: "Billing Entities", href: "/manager/finance/billing-entities" },
-          { label: "Ledger", href: "/manager/finance/ledger" },
-        ],
-      },
-      {
-        section: "Leases",
-        items: [
-          { label: "Leases", href: "/manager/leases" },
-          { label: "Lease Templates", href: "/manager/leases/templates" },
-        ],
-      },
-      {
-        section: "Settings",
-        items: [{ label: "Settings", href: "/manager/settings" }],
-      },
-      {
-        section: "Dev Tools",
-        items: [
-          { label: "Email Sink", href: "/manager/emails" },
-          { label: "Tenant Login", href: "/tenant" },
-        ],
-      },
-    ],
-    []
-  );
-
-  const ownerNav = useMemo(
-    () => [
-      {
-        section: "Overview",
-        items: [
-          { label: "Dashboard", href: "/owner" },
-          { label: "Vacancies", href: "/owner/vacancies" },
-        ],
-      },
-      {
-        section: "Approvals",
-        items: [{ label: "Pending Approvals", href: "/owner/approvals" }],
-      },
-      {
-        section: "Jobs & Invoices",
-        items: [
-          { label: "Jobs", href: "/owner/jobs" },
-          { label: "Invoices", href: "/owner/invoices" },
-          { label: "Billing Entities", href: "/owner/billing-entities" },
-        ],
-      },
-      {
-        section: "Properties",
-        items: [
-          { label: "Properties", href: "/manager/properties" },
-          { label: "Inventory admin", href: "/admin-inventory" },
-        ],
-      },
-      {
-        section: "Work Requests",
-        items: [{ label: "Work Requests", href: "/owner/work-requests" }],
-      },
-      {
-        section: "RFPs",
-        items: [{ label: "RFPs", href: "/owner/rfps" }],
-      },
-    ],
-    []
-  );
-
-  const contractorNav = useMemo(
-    () => [
-      {
-        section: "Overview",
-        items: [
-          { label: "Dashboard", href: "/contractor" },
-        ],
-      },
-      {
-        section: "Jobs",
-        items: [
-          { label: "Jobs", href: "/contractor/jobs" },
-          { label: "Status updates", href: "/contractor/status-updates" },
-        ],
-      },
-      {
-        section: "Bidding",
-        items: [
-          { label: "RFPs", href: "/contractor/rfps" },
-        ],
-      },
-      {
-        section: "Finance",
-        items: [
-          { label: "Invoices", href: "/contractor/invoices" },
-          { label: "Estimates", href: "/contractor/estimates" },
-        ],
-      },
-    ],
-    []
-  );
-
-  const tenantNav = useMemo(
-    () => [
-      {
-        section: "Overview",
-        items: [
-          { label: "Dashboard", href: "/tenant" },
-          { label: "Inbox", href: "/tenant/inbox" },
-        ],
-      },
-      {
-        section: "Work Requests",
-        items: [
-          { label: "Submit Work Request", href: "/tenant-form" },
-          { label: "My Requests", href: "/tenant/requests" },
-          { label: "Chat intake", href: "/tenant-chat" },
-        ],
-      },
-      {
-        section: "My Tenancy",
-        items: [
-          { label: "My Leases", href: "/tenant/leases" },
-          { label: "My Invoices", href: "/tenant/invoices" },
-          { label: "My unit & assets", href: "/tenant/assets" },
-        ],
-      },
-      {
-        section: "Applications",
-        items: [
-          { label: "Browse Listings", href: "/listings" },
-          { label: "Apply for a unit", href: "/apply" },
-        ],
-      },
-    ],
-    []
-  );
-
-  const nav = role === "CONTRACTOR" ? contractorNav : role === "TENANT" ? tenantNav : role === "OWNER" ? ownerNav : managerNav;
   const showSwitcher = true;
-
-  function isActive(href) {
-    return router.asPath === href || router.asPath.startsWith(`${href}/`);
-  }
 
   function setRoleAndRoute(nextRole) {
     if (typeof window !== "undefined") {
@@ -306,13 +118,6 @@ export default function AppShell({ role: roleProp, children }) {
     } else {
       router.push("/manager");
     }
-  }
-
-  function navLinkClass(active) {
-    return [
-      "block rounded-full px-3 py-1.5 text-sm font-medium transition-colors",
-      active ? "bg-slate-100 text-slate-900" : "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
-    ].join(" ");
   }
 
   return (
@@ -357,22 +162,7 @@ export default function AppShell({ role: roleProp, children }) {
           <ContractorSidebar />
         ) : role === "TENANT" ? (
           <TenantSidebar />
-        ) : (
-          nav.map((group) => (
-            <div key={group.section} className="mb-4">
-              <div className="text-xs uppercase text-slate-400 mb-1.5">
-                {group.section}
-              </div>
-              <div className="grid gap-1.5">
-                {group.items.map((item) => (
-                  <Link key={item.href} href={item.href} className={navLinkClass(isActive(item.href))}>
-                    {item.label}
-                  </Link>
-                ))}
-              </div>
-            </div>
-          ))
-        )}
+        ) : null}
       </aside>
 
       <main id="main-content" className="min-w-0 overflow-x-hidden px-3 py-6 pb-24 md:px-6 md:pb-6">

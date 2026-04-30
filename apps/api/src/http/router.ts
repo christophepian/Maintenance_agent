@@ -101,15 +101,15 @@ export class Router {
    * Path patterns use `:name` for UUID parameters:
    *   `/leases/:id/generate-pdf`  →  params.id = "abc-123-…"
    *
-   * Each `:name` segment matches `[a-f0-9-]{1,36}` — accepts both
-   * standard UUIDs and shorter identifiers (e.g. numeric requestNumber).
+   * Each `:name` segment matches `[a-zA-Z0-9_-]{1,64}` — accepts standard
+   * UUIDs, numeric request numbers, and non-UUID identifiers (e.g. "dev-user").
    */
   private add(method: HttpMethod, pathPattern: string, handler: Handler): this {
     const paramNames: string[] = [];
     const regexParts = pathPattern.split("/").map((segment) => {
       if (segment.startsWith(":")) {
         paramNames.push(segment.slice(1));
-        return "([a-f0-9\\-]{1,36})";
+        return "([a-zA-Z0-9_\\-]{1,64})";
       }
       // Escape regex-special characters in literal segments
       return segment.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");

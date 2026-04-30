@@ -10,6 +10,7 @@ import ErrorBanner from "../../components/ui/ErrorBanner";
 import { FilterToggle, FilterPanelBody, FilterSection, FilterSectionClear, SelectField, DateField, NumberField, SortToggle, SortPanelBody, SortRow } from "../../components/ui/FilterPanel";
 import { ownerAuthHeaders } from "../../lib/api";
 import Badge from "../../components/ui/Badge";
+import OwnerPicker from "../../components/OwnerPicker";
 import { urgencyVariant, rfpVariant } from "../../lib/statusVariants";
 
 import { cn } from "../../lib/utils";
@@ -65,6 +66,7 @@ export default function OwnerApprovalsPage() {
   return (
     <AppShell role="OWNER">
       <PageShell>
+        <OwnerPicker onSelect={() => router.replace(router.asPath)} />
         <PageHeader title="Approvals" />
         <PageContent>
           {/* Tab bar */}

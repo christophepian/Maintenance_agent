@@ -75,6 +75,7 @@ export default function BuildingDetail() {
   const [selectedCandidateId, setSelectedCandidateId] = useState("");
   const [ownerLoading, setOwnerLoading] = useState(false);
   const [ownerStrategyProfiles, setOwnerStrategyProfiles] = useState({});
+  const [buildingStrategyProfile, setBuildingStrategyProfile] = useState(null);
 
   // ─── Asset inventory state ───
   const [assetInventory, setAssetInventory] = useState([]);
@@ -149,6 +150,7 @@ export default function BuildingDetail() {
       if (b.owners && b.owners.length > 0) {
         loadOwnerStrategyProfiles(b.owners.map((o) => o.id));
       }
+      loadBuildingStrategyProfile();
     } catch (e) {
       setErr(`Failed to load building: ${e.message}`);
     } finally {
@@ -221,6 +223,19 @@ export default function BuildingDetail() {
       })
     );
     setOwnerStrategyProfiles(results);
+  }
+
+  async function loadBuildingStrategyProfile() {
+    if (!id) return;
+    try {
+      const res = await fetch(`/api/strategy/building-profile/${id}`, { headers: authHeaders() });
+      if (res.ok) {
+        const json = await res.json();
+        setBuildingStrategyProfile(json?.profile ?? null);
+      }
+    } catch {
+      // non-fatal
+    }
   }
 
   async function loadBuildingRequests() {
@@ -987,6 +1002,52 @@ export default function BuildingDetail() {
                       </div>
                     )}
                   </div>
+
+              {/* Building Strategy Profile */}
+              {buildingStrategyProfile && (() => {
+                const bp = buildingStrategyProfile;
+                const archLabel = bp.primaryArchetype ? ARCHETYPE_LABELS[bp.primaryArchetype] : null;
+                const copy = bp.primaryArchetype ? ARCHETYPE_EXPLANATION_COPY[bp.primaryArchetype] : null;
+                const secLabel = bp.secondaryArchetype ? ARCHETYPE_LABELS[bp.secondaryArchetype] : null;
+                return (
+                  <div className="mt-6 pt-4 border-t border-slate-200">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-sm font-semibold text-slate-900">Management Guidelines</h3>
+                      <div className="flex items-center gap-1.5">
+                        {archLabel && <Badge variant="brand" size="sm">{archLabel}</Badge>}
+                        {secLabel && <Badge variant="info" size="sm">{secLabel}</Badge>}
+                      </div>
+                    </div>
+                    <KpiInlineGrid
+                      items={[
+                        { label: "Role intent", value: bp.roleIntent ? bp.roleIntent.replace(/_/g, " ") : "—" },
+                        { label: "Building type", value: bp.buildingType ? bp.buildingType.replace(/_/g, " ") : "—" },
+                        { label: "Condition", value: bp.conditionRating != null ? `${bp.conditionRating}/10` : "—" },
+                        { label: "Approx. units", value: bp.approxUnits != null ? String(bp.approxUnits) : "—" },
+                      ]}
+                    />
+                    {copy && (
+                      <div className="mt-3">
+                        <div className="text-xs font-medium uppercase tracking-wide text-slate-400 mb-1.5">Guidelines</div>
+                        <ul className="space-y-1">
+                          {copy.bullets.map((b, i) => (
+                            <li key={i} className="text-xs text-slate-600 flex gap-1.5">
+                              <span className="text-slate-400 flex-shrink-0">·</span>
+                              <span>{b}</span>
+                            </li>
+                          ))}
+                          {copy.deprioritize && (
+                            <li className="text-xs text-slate-400 flex gap-1.5 mt-1">
+                              <span className="flex-shrink-0">↓ Deprioritise:</span>
+                              <span>{copy.deprioritize}</span>
+                            </li>
+                          )}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </Panel>
             </>
           )}

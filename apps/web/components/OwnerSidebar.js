@@ -8,6 +8,7 @@ import {
   Building2,
   BarChart2,
   FileText,
+  Settings,
 } from "lucide-react";
 
 const OWNER_NAV = [
@@ -17,6 +18,7 @@ const OWNER_NAV = [
   { label: "Approvals",  icon: ClipboardCheck,   href: "/owner/approvals" },
   { label: "Finance",    icon: Landmark,         href: "/owner/finance" },
   { label: "Invoices",   icon: FileText,         href: "/owner/invoices" },
+  { label: "Settings",   icon: Settings,         href: "/owner/settings" },
 ];
 
 export default function OwnerSidebar() {

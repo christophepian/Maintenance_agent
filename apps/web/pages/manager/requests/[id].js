@@ -402,6 +402,102 @@ function AssetRecommendationContent({ applianceId, repairReplaceData, requestEst
 }
 
 /* ═══════════════════════════════════════════════════════════════
+   Owner-Adjusted Maintenance Decision Panel
+   ═══════════════════════════════════════════════════════════════ */
+
+const VERDICT_STYLES = {
+  REPAIR:           { cls: "bg-green-100 text-green-700 border border-green-200",    label: "Repair" },
+  MONITOR:          { cls: "bg-amber-100 text-amber-700 border border-amber-200",    label: "Monitor & Repair" },
+  PLAN_REPLACEMENT: { cls: "bg-orange-100 text-orange-700 border border-orange-200", label: "Plan Replacement" },
+  REPLACE:          { cls: "bg-red-100 text-red-700 border border-red-200",          label: "Replace" },
+};
+
+const CONFIDENCE_VARIANT = { high: "success", medium: "warning", low: "neutral" };
+
+function OwnerAdjustedDecision({ state }) {
+  const { loading, error, data } = state;
+
+  if (loading) {
+    return (
+      <div className="border-t border-slate-100 pt-4 mt-4">
+        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
+          Owner Context
+        </p>
+        <p className="text-sm text-slate-400">Calculating…</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="border-t border-slate-100 pt-4 mt-4">
+        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
+          Owner Context
+        </p>
+        <p className="text-sm text-red-500">{error}</p>
+      </div>
+    );
+  }
+
+  if (!data) return null;
+
+  const vs = VERDICT_STYLES[data.verdict] || VERDICT_STYLES.REPAIR;
+  const confVariant = CONFIDENCE_VARIANT[data.confidence] || "neutral";
+
+  return (
+    <div className="border-t border-slate-100 pt-4 mt-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+          Owner Context
+        </p>
+        <Badge variant={confVariant}>{data.confidence} confidence</Badge>
+      </div>
+
+      {/* Verdict badge */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className={cn("text-sm font-semibold px-3 py-1 rounded-full", vs.cls)}>
+          {vs.label}
+        </span>
+        {data.archetypeAdjusted && (
+          <span className="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full border border-slate-200">
+            Archetype adjusted
+          </span>
+        )}
+      </div>
+
+      {/* Archetype alignment */}
+      {data.archetypeAlignment && (
+        <p className="text-xs text-slate-500 italic">{data.archetypeAlignment}</p>
+      )}
+
+      {/* Owner preference note */}
+      {data.ownerPreferenceNote && (
+        <p className="text-xs text-slate-600">{data.ownerPreferenceNote}</p>
+      )}
+
+      {/* Rationale bullets */}
+      {Array.isArray(data.rationale) && data.rationale.length > 0 && (
+        <ul className="space-y-1">
+          {data.rationale.map((r, i) => (
+            <li key={i} className="text-xs text-slate-600 flex gap-2">
+              <span className="text-slate-400 flex-shrink-0">•</span>
+              <span>{r}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {/* Missing data callout */}
+      {data.dataSources?.missingDataNote && (
+        <div className="bg-amber-50 border border-amber-200 rounded-md px-3 py-2 text-xs text-amber-700">
+          {data.dataSources.missingDataNote}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════
    Main Page
    ═══════════════════════════════════════════════════════════════ */
 
@@ -416,6 +512,7 @@ export default function RequestDetailPage() {
 
   const [legalState, setLegalState]               = useState({ loading: true, error: null, data: null });
   const [repairReplace, setRepairReplace]         = useState(null);
+  const [ownerDecision, setOwnerDecision]         = useState({ loading: true, error: null, data: null });
   const [contractors, setContractors]             = useState([]);
   const [assigningOpen, setAssigningOpen]         = useState(false);
   const [selectedContractorId, setSelectedContractorId] = useState("");
@@ -487,6 +584,19 @@ export default function RequestDetailPage() {
       })
       .catch((e) => setRepairReplace({ loading: false, error: String(e?.message || e), data: null }));
   }, [request?.unitId]);
+
+  // Owner-blended maintenance decision (automatic, non-blocking)
+  useEffect(() => {
+    if (!id) return;
+    setOwnerDecision({ loading: true, error: null, data: null });
+    fetch(`/api/requests/${id}/maintenance-decision`, { headers: authHeaders() })
+      .then(async (res) => {
+        const body = await res.json();
+        if (!res.ok) throw new Error(body?.error?.message || "Decision failed");
+        setOwnerDecision({ loading: false, error: null, data: body.data || null });
+      })
+      .catch((e) => setOwnerDecision({ loading: false, error: String(e?.message || e), data: null }));
+  }, [id]);
 
   /* ─── Actions ─── */
 
@@ -1079,6 +1189,9 @@ export default function RequestDetailPage() {
                         <p className="text-sm text-slate-400 m-0">No asset linked to this request.</p>
                       </div>
                     )}
+
+                    {/* ─── Owner-blended decision ──────────────────────── */}
+                    <OwnerAdjustedDecision state={ownerDecision} />
                   </Panel>
                 </div>
               )}

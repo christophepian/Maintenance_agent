@@ -30,6 +30,16 @@ import { updateContractorRequestStatus, getContractorAssignedRequests } from "..
 import { findMatchingContractor } from "../services/requestAssignment";
 import { workRequestFromRequest } from "../services/adapters/workRequestAdapter";
 import { listRequestEvents, createRequestEvent } from "../services/requestEventService";
+import { getRepairReplaceAnalysis } from "../services/assetInventory";
+import { evaluateRequestLegalDecision } from "../services/legalDecisionEngine";
+import { getOwnerProfileByOwnerId } from "../repositories/strategyProfileRepository";
+import { blendMaintenanceDecision } from "../services/maintenanceDecisionService";
+import type { StrategyArchetype } from "../services/strategy/archetypes";
+import { getRepairReplaceAnalysis } from "../services/assetInventory";
+import { evaluateRequestLegalDecision } from "../services/legalDecisionEngine";
+import { getOwnerProfileByOwnerId } from "../repositories/strategyProfileRepository";
+import { blendMaintenanceDecision } from "../services/maintenanceDecisionService";
+import type { StrategyArchetype } from "../services/strategy/archetypes";
 
 // Workflows
 import { createRequestWorkflow } from "../workflows/createRequestWorkflow";
@@ -376,6 +386,118 @@ export function registerRequestRoutes(router: Router) {
   });
 
   /* ── Suggest contractor (thin — pure query) ────────────────── */
+
+  router.get("/requests/:id/maintenance-decision", async ({ req, res, prisma, params, orgId }) => {
+    if (!maybeRequireManager(req, res)) return;
+
+    const scopedReq = await resolveAndScopeRequest(prisma, params.id, orgId);
+    if (!scopedReq) return sendError(res, 404, "NOT_FOUND", "Request not found");
+
+    // Load full request with unit → building → owners chain
+    const reqRow = await prisma.request.findUnique({
+      where: { id: scopedReq.id },
+      select: {
+        urgency: true,
+        estimatedCost: true,
+        unit: {
+          select: {
+            id: true,
+            building: {
+              select: {
+                id: true,
+                canton: true,
+                address: true,
+                owners: { select: { user: { select: { id: true, name: true } } } },
+              },
+            },
+          },
+        },
+      },
+    });
+    if (!reqRow) return sendError(res, 404, "NOT_FOUND", "Request not found");
+
+    const unitId   = reqRow.unit?.id ?? null;
+    const canton   = reqRow.unit?.building?.canton ?? null;
+    const owners   = (reqRow.unit?.building?.owners ?? []).map((o) => o.user);
+
+    // ── 1. Repair-replace signal (non-blocking) ──────────────
+    let repairReplaceSignal = null;
+    if (unitId) {
+      try {
+        const items = await getRepairReplaceAnalysis(prisma, orgId, unitId, canton);
+        // Pick the most alarming item (highest tier) as the signal
+        const tierRank: Record<string, number> = {
+          REPLACE: 3, PLAN_REPLACEMENT: 2, MONITOR: 1, REPAIR: 0,
+        };
+        const sorted = [...items].sort(
+          (a, b) => (tierRank[b.recommendation] ?? 0) - (tierRank[a.recommendation] ?? 0),
+        );
+        if (sorted.length > 0) {
+          const top = sorted[0];
+          repairReplaceSignal = {
+            recommendation:              top.recommendation as any,
+            depreciationPct:             top.depreciationPct ?? null,
+            repairToReplacementRatio:    top.repairToReplacementRatio ?? null,
+            remainingLifeMonths:         top.remainingLifeMonths ?? null,
+            breakEvenMonths:             top.breakEvenMonths ?? null,
+            cumulativeRepairCostChf:     top.cumulativeRepairCostChf,
+            estimatedReplacementCostChf: top.estimatedReplacementCostChf ?? null,
+            applianceName:               top.applianceName ?? null,
+          };
+        }
+      } catch (e) {
+        console.warn("[maintenance-decision] repair-replace analysis failed (non-blocking):", e);
+      }
+    }
+
+    // ── 2. Legal obligation (non-blocking, no ingestion re-run) ─
+    let legalObligation: "OBLIGATED" | "DISCRETIONARY" | "NOT_APPLICABLE" | null = null;
+    try {
+      const decision = await evaluateRequestLegalDecision(orgId, scopedReq.id);
+      legalObligation = decision.legalObligation as typeof legalObligation;
+    } catch (e) {
+      console.warn("[maintenance-decision] legal decision failed (non-blocking):", e);
+    }
+
+    // ── 3. Owner strategy profiles (non-blocking) ────────────
+    let ownerArchetype: StrategyArchetype | null = null;
+    let ownerSecondaryArchetype: StrategyArchetype | null = null;
+    let ownerDimensions = null;
+    if (owners.length > 0) {
+      try {
+        // Use the first owner's profile (primary building owner)
+        const profile = await getOwnerProfileByOwnerId(prisma, owners[0].id, orgId ?? "");
+        if (profile) {
+          ownerArchetype           = profile.primaryArchetype as StrategyArchetype;
+          ownerSecondaryArchetype  = (profile.secondaryArchetype ?? null) as StrategyArchetype | null;
+          const dims               = JSON.parse(profile.dimensionsJson);
+          ownerDimensions = {
+            capexTolerance:          dims.capexTolerance          ?? 50,
+            horizon:                 dims.horizon                 ?? 50,
+            modernizationPreference: dims.modernizationPreference ?? 50,
+            liquiditySensitivity:    dims.liquiditySensitivity    ?? 50,
+            saleReadiness:           dims.saleReadiness           ?? 50,
+            stabilityPreference:     dims.stabilityPreference     ?? 50,
+          };
+        }
+      } catch (e) {
+        console.warn("[maintenance-decision] owner profile failed (non-blocking):", e);
+      }
+    }
+
+    // ── 4. Blend ─────────────────────────────────────────────
+    const result = blendMaintenanceDecision({
+      repairReplace:          repairReplaceSignal,
+      legalObligation,
+      urgency:                reqRow.urgency ?? "MEDIUM",
+      estimatedCostChf:       reqRow.estimatedCost ?? null,
+      ownerArchetype,
+      ownerSecondaryArchetype,
+      ownerDimensions,
+    });
+
+    sendJson(res, 200, { data: result });
+  });
 
   router.get("/requests/:id/suggest-contractor", async ({ req, res, prisma, params, orgId }) => {
     // SA-13: Auth required for contractor suggestion

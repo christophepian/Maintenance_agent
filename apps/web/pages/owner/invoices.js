@@ -10,6 +10,7 @@ import ErrorBanner from "../../components/ui/ErrorBanner";
 import { FilterToggle, FilterPanelBody, FilterSection, FilterSectionClear, SelectField, DateField } from "../../components/ui/FilterPanel";
 import { ownerAuthHeaders } from "../../lib/api";
 import Badge from "../../components/ui/Badge";
+import OwnerPicker from "../../components/OwnerPicker";
 import { invoiceVariant, ingestionVariant } from "../../lib/statusVariants";
 import { formatChf, formatDate as formatDateLib } from "../../lib/format";
 import { useTableSort, clientSort } from "../../lib/tableUtils";
@@ -358,6 +359,7 @@ export default function OwnerInvoices() {
   return (
     <AppShell role="OWNER">
       <PageShell>
+        <OwnerPicker onSelect={fetchInvoices} />
         <PageHeader
           title="Invoices"
           subtitle="Review, approve, and manage invoice payments"
