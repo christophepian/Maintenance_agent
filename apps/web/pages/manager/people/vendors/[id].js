@@ -535,6 +535,7 @@ export default function ContractorDetailPage() {
                           ))}
                         </tbody>
                       </table>
+                    </div>
                   )}
                 </Panel>
               )}

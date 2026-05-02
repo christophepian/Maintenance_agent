@@ -15,10 +15,11 @@ import { cn } from "../lib/utils";
  */
 export default function SortableHeader({ label, field, sortField, sortDir, onSort, className = "" }) {
   const active = sortField === field;
+  const sortable = typeof onSort === "function";
   return (
     <th
-      className={cn("cursor-pointer select-none hover:text-slate-600 transition-colors", className)}
-      onClick={() => onSort(field)}
+      className={cn(sortable && "cursor-pointer select-none hover:text-slate-600 transition-colors", className)}
+      onClick={sortable ? () => onSort(field) : undefined}
     >
       <span className="inline-flex items-center gap-1">
         {label}
