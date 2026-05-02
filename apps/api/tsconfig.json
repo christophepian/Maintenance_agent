@@ -5,6 +5,9 @@
   "compilerOptions": {
     "module": "commonjs",
     "target": "es2020",
+    "strict": false,
+    "noImplicitAny": false,
+    "strictNullChecks": false,
     "declaration": false,
     "sourceMap": true,
     "outDir": "./dist",
