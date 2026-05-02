@@ -15,10 +15,10 @@ services:
         value: "20.19.0"
 
     # --- Build ---
-    buildCommand: cd apps/api && npm install && npx prisma generate && npm run build
+    buildCommand: cd apps/api && npm install && npx prisma generate --schema ./prisma/schema.prisma && npm run build
 
     # --- Pre-deploy: run migrations before new code goes live ---
-    preDeployCommand: cd apps/api && npx prisma migrate deploy
+    preDeployCommand: cd apps/api && npx prisma migrate deploy --schema ./prisma/schema.prisma
 
     # --- Start ---
     startCommand: cd apps/api && node dist/server.js
