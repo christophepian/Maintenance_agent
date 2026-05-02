@@ -6,7 +6,8 @@ services:
     plan: starter
 
     # --- Source ---
-    rootDir: apps/api
+    # rootDir omitted — commands cd into apps/api explicitly to avoid
+    # Render dashboard/yaml rootDir conflicts.
 
     # --- Node version ---
     envVars:
@@ -14,13 +15,13 @@ services:
         value: "20.19.0"
 
     # --- Build ---
-    buildCommand: npm ci && npx prisma generate && npm run build
+    buildCommand: cd apps/api && npm ci && npx prisma generate && npm run build
 
     # --- Pre-deploy: run migrations before new code goes live ---
-    preDeployCommand: npx prisma migrate deploy
+    preDeployCommand: cd apps/api && npx prisma migrate deploy
 
     # --- Start ---
-    startCommand: node dist/server.js
+    startCommand: cd apps/api && node dist/server.js
 
     # --- Health check ---
     healthCheckPath: /health
