@@ -9,8 +9,6 @@
     "sourceMap": true,
     "outDir": "./dist",
     "rootDir": "./src",
-    "baseUrl": "./",
-    "ignoreDeprecations": "5.0",
     "incremental": true,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
