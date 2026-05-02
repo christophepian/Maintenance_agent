@@ -862,7 +862,7 @@ export default function LeaseEditorPage() {
             </div>
           )}
 
-          {/* PDF Artifact */}}
+          {/* PDF Artifact */}
           {(lease.draftPdfStorageKey || lease.signedPdfStorageKey) && (
             <Panel title="PDF Artifacts">
               <div className="space-y-3">
