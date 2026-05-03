@@ -472,7 +472,7 @@ export function registerAuthRoutes(router: Router) {
 
       const { email, password, name, role } = parsed.data;
       if (role === "OWNER") {
-        const allowOwner = process.env.NODE_ENV !== "production" && process.env.ALLOW_OWNER_REGISTRATION === "true";
+        const allowOwner = process.env.ALLOW_OWNER_REGISTRATION === "true";
         if (!allowOwner) return sendError(res, 403, "FORBIDDEN", "OWNER registration disabled");
       }
 
