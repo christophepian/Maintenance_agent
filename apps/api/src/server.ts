@@ -4,7 +4,7 @@ import * as http from "http";
 import { sendError, sendJson } from "./http/json";
 import { parseQuery } from "./http/query";
 import { getOrgIdForRequest, AuthedRequest, requireAuth } from "./authz";
-import { ensureDefaultOrgConfig } from "./services/orgConfig";
+import { ensureDefaultOrgConfig, DEFAULT_ORG_ID } from "./services/orgConfig";
 import { bootstrapLegalEngine } from "./services/bootstrapLegalEngine";
 import prisma from "./services/prismaClient";
 import { Router } from "./http/router";
@@ -218,6 +218,16 @@ const server = http.createServer(async (req: AuthedRequest, res) => {
     }
 
     const orgId = getOrgIdForRequest(req);
+
+    /* ── Public auth routes — must be reachable before org/auth resolution ── */
+    if (
+      (path === "/auth/login" || path === "/auth/register" || path === "/triage") &&
+      req.method === "POST"
+    ) {
+      const handled = await router.dispatch(req, res, path, query, DEFAULT_ORG_ID, prisma);
+      if (!handled) sendError(res, 404, "NOT_FOUND", "Not found");
+      return;
+    }
 
     if (orgId === null) {
       sendError(res, 401, "UNAUTHORIZED", "Authentication required");
