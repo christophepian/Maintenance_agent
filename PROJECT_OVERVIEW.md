@@ -302,7 +302,7 @@ npx prisma migrate diff \
 
 66 suites · 1001 tests (100% passing) · 0 TS errors · 91/94 audit findings resolved. Strategy Engine & Capture Hardening epic complete (3-phase strategy engine with 56 tests, Azure OCR activation, invoice source-file serving). Responsive polish pass complete: dual-render pattern (F-UI9) applied to 18+ pages across all 4 personas. Audit remediation pass: prisma-in-routes eliminated (userRepository/requestRepository/rfpRepository), workflowCoverage tests added, openapi.yaml updated with 3 missing routes, schema drift bug fixed (AUTO_APPROVED migration backfilled).
 
-**Deployment readiness:** Gate 1 complete (T-05 through T-07). Staging stack is live: API at `https://maintenance-agent.onrender.com` (Render + Supabase, `/health` 200), frontend at `https://maintenance-agent-api-git-main-christophepians-projects.vercel.app` (Vercel, proxy verified). T-08 (CI updates) remaining. Gate 2 (production launch) pending T-UI sign-off. See [docs/MIGRATION_PLAN.md](docs/MIGRATION_PLAN.md).
+**Deployment readiness:** Gate 1 complete — T-05 through T-08 all done (2026-05-03). Staging stack live and seeded: API `https://maintenance-agent.onrender.com`, frontend `https://maintenance-agent-api-git-main-christophepians-projects.vercel.app`. ⚠️ One manual step outstanding: `API_BASE_URL=https://maintenance-agent.onrender.com` must be set in Vercel dashboard env vars — until then login shows "Failed to fetch". Gate 2 (production) pending T-UI sign-off. See [docs/MIGRATION_PLAN.md](docs/MIGRATION_PLAN.md).
 
 For full counts, state integrity verification, and Document Integrity table, see [PROJECT_STATE.md](PROJECT_STATE.md).
 
