@@ -110,6 +110,24 @@ jobs:
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/maint_agent_test
 
+      # ── T-08: Production boot guard validation ──
+      # Verify the server correctly refuses to start when production safety vars are misconfigured.
+      - name: "T-08: Production boot guard — rejects AUTH_OPTIONAL=true"
+        run: |
+          AUTH_OPTIONAL=true NODE_ENV=production AUTH_SECRET=dummy \
+            timeout 8 npx ts-node --transpile-only src/server.ts 2>&1 | grep -q "\[FATAL\]" \
+            && echo "✅ Boot guard: AUTH_OPTIONAL=true correctly rejected" \
+            || { echo "❌ Boot guard did not fire for AUTH_OPTIONAL=true"; exit 1; }
+        working-directory: apps/api
+
+      - name: "T-08: Production boot guard — rejects missing AUTH_SECRET"
+        run: |
+          NODE_ENV=production \
+            timeout 8 npx ts-node --transpile-only src/server.ts 2>&1 | grep -q "\[FATAL\]" \
+            && echo "✅ Boot guard: missing AUTH_SECRET correctly rejected" \
+            || { echo "❌ Boot guard did not fire for missing AUTH_SECRET"; exit 1; }
+        working-directory: apps/api
+
       # ── G7-6: Boot smoke test ──
       - name: "G7: Backend boot + smoke curls"
         run: |
