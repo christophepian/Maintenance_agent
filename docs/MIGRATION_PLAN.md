@@ -1191,7 +1191,7 @@ Tasks:
 
 ---
 
-### T-06: Render Staging API Service ⚠️ BUILD PASSING — STARTUP BLOCKED (2026-05-xx)
+### T-06: Render Staging API Service ✅ COMPLETE (2026-05-03)
 
 **Goal:** Deploy the API to Render staging and verify it starts and serves.
 
@@ -1202,15 +1202,13 @@ Tasks:
 - [x] Set all required env vars (see §5.3 — full list in conversation summary)
 - [x] Configure health check path: `/health`
 - [x] Build succeeds — `tsc` compiles cleanly
-- [ ] **BLOCKER:** Startup fails — Prisma can't reach Supabase on port 5432 from Render. Fix: change `DATABASE_URL` env var in Render dashboard to the **pooler URL (port 6543)** and add `DIRECT_URL` = direct port-5432 URL. See note below.
-- [ ] Verify `/health` returns 200 (blocked)
-- [ ] Verify auth-gated endpoints return 401 without token (blocked)
+- [x] Startup fix: switched `DATABASE_URL` to Supabase Transaction Pooler (port 6543, region `aws-1-eu-central-1`)
+- [x] `GET /health` → `{"status":"ok","db":"connected","dbLatencyMs":23}` HTTP 200 ✅
+- [x] `GET /requests` (no token) → HTTP 401 ✅
 
-> **⚠️ Fix required — Render startup blocker:**
-> Render's outbound connections to Supabase port 5432 are blocked. Switch `DATABASE_URL` in Render env to the Transaction Pooler URL:
-> `postgresql://postgres.znsdygeodyglbyunitcp:***@aws-0-eu-central-1.pooler.supabase.com:6543/postgres?pgbouncer=true`
-> Keep `DIRECT_URL` = direct connection (port 5432) — used by Prisma for migrations only.
-> In `apps/api/prisma/schema.prisma`, ensure `directUrl = env("DIRECT_URL")` is present (added in T-02).
+> **Connection URLs (region was `aws-1`, not `aws-0`):**
+> - `DATABASE_URL`: `postgresql://postgres.znsdygeodyglbyunitcp:***@aws-1-eu-central-1.pooler.supabase.com:6543/postgres?pgbouncer=true`
+> - `DIRECT_URL`: `postgresql://postgres.znsdygeodyglbyunitcp:***@aws-1-eu-central-1.pooler.supabase.com:5432/postgres`
 
 **`apps/api/tsconfig.json` changes applied for Render compatibility:**
 - `"strict": false, "noImplicitAny": false, "strictNullChecks": false` added
@@ -1230,9 +1228,9 @@ Tasks:
 - [x] `vercel.json` at repo root contains only `{ "framework": "nextjs" }`
 - [x] Trigger first deploy — HTTP 200 confirmed at `https://maintenance-agent-api-git-main-christophepians-projects.vercel.app`
 - [x] Vercel Deployment Protection (SSO wall) disabled in Project Settings
-- [ ] Set `API_BASE_URL` env var pointing to Render staging URL — pending Render T-06 fix
-- [ ] End-to-end proxy test — pending T-06
-- [ ] PDF endpoint test — pending T-06
+- [x] Set `API_BASE_URL` = `https://maintenance-agent.onrender.com` in Vercel env vars
+- [x] End-to-end proxy verified: `GET /api/requests` on Vercel → Render → Supabase → HTTP 401 ✅
+- [ ] PDF endpoint test — deferred to Gate 2 sign-off
 
 **Fixes applied during T-07:**
 - Removed `rootDirectory` from `vercel.json` (Vercel schema v1 rejects it; must be set in dashboard)

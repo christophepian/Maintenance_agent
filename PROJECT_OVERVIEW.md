@@ -302,7 +302,7 @@ npx prisma migrate diff \
 
 66 suites · 1001 tests (100% passing) · 0 TS errors · 91/94 audit findings resolved. Strategy Engine & Capture Hardening epic complete (3-phase strategy engine with 56 tests, Azure OCR activation, invoice source-file serving). Responsive polish pass complete: dual-render pattern (F-UI9) applied to 18+ pages across all 4 personas. Audit remediation pass: prisma-in-routes eliminated (userRepository/requestRepository/rfpRepository), workflowCoverage tests added, openapi.yaml updated with 3 missing routes, schema drift bug fixed (AUTO_APPROVED migration backfilled).
 
-**Deployment readiness:** Gate 1 infrastructure in progress. T-05 (Supabase DB — 84 migrations applied) ✅, T-07 (Vercel frontend live at `maintenance-agent-api-git-main-christophepians-projects.vercel.app`) ✅, T-06 (Render API build passes) ⚠️ startup blocked — switch `DATABASE_URL` in Render env to Supabase Transaction Pooler URL (port 6543) to resolve. T-08 (CI updates) not started. See [docs/MIGRATION_PLAN.md](docs/MIGRATION_PLAN.md) for per-ticket status.
+**Deployment readiness:** Gate 1 complete (T-05 through T-07). Staging stack is live: API at `https://maintenance-agent.onrender.com` (Render + Supabase, `/health` 200), frontend at `https://maintenance-agent-api-git-main-christophepians-projects.vercel.app` (Vercel, proxy verified). T-08 (CI updates) remaining. Gate 2 (production launch) pending T-UI sign-off. See [docs/MIGRATION_PLAN.md](docs/MIGRATION_PLAN.md).
 
 For full counts, state integrity verification, and Document Integrity table, see [PROJECT_STATE.md](PROJECT_STATE.md).
 
