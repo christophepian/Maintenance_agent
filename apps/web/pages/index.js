@@ -1,8 +1,20 @@
 
+import { useEffect } from "react";
+import { useRouter } from "next/router";
 import Link from "next/link";
 import { useMemo } from "react";
 
 export default function Home() {
+  const router = useRouter();
+
+  useEffect(() => {
+    // In production, redirect straight to login.
+    // In dev, fall through to the launcher below.
+    if (process.env.NODE_ENV === "production") {
+      router.replace("/login");
+    }
+  }, [router]);
+
   // Only use NEXT_PUBLIC_ env vars here — non-prefixed vars exist server-side
   // only, which causes a hydration mismatch.
   const API_BASE =
