@@ -85,6 +85,9 @@ export async function proxyToBackend(req, res, path, options = {}) {
 
     // H3: Forward all response headers
     backendRes.headers.forEach((value, key) => {
+      // Drop hop-by-hop and encoding headers — fetch() already decoded the body,
+      // so forwarding content-encoding/transfer-encoding would corrupt the response.
+      if (["content-encoding", "transfer-encoding"].includes(key.toLowerCase())) return;
       res.setHeader(key, value);
     });
 
