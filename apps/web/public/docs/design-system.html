@@ -60,46 +60,67 @@
 <style>body{padding-top:36px}</style>
 <script>
 (function(){
-  'use strict';
-  var RK='TUFJTlQtRE9DUy1SRVNFVA==',SK='ma_docs_pw',AK='ma_docs_ok';
-  function h(s){var v=5381;for(var i=0;i<s.length;i++)v=(Math.imul(v,33)^s.charCodeAt(i))>>>0;return v.toString(16);}
-  function ok(){return sessionStorage.getItem(AK)==='1';}
-  function hasPw(){return!!localStorage.getItem(SK);}
-  function chk(p){return h(p)===localStorage.getItem(SK);}
-  function sav(p){localStorage.setItem(SK,h(p));}
-  function grn(){sessionStorage.setItem(AK,'1');}
-  window.DocsAuth={logout:function(){sessionStorage.removeItem(AK);location.reload();},clearAll:function(){localStorage.removeItem(SK);sessionStorage.removeItem(AK);location.reload();}};
-  if(ok())return;
-  function boot(){
-    if(document.getElementById('docs-gate'))return;
-    var s=document.createElement('style');
-    s.textContent='#docs-gate{position:fixed;inset:0;z-index:9999;background:#fff;overflow-y:auto;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#1e293b}.gate-wrap{max-width:420px;margin:72px auto 0;padding:0 16px 48px}.gate-logo{display:flex;align-items:center;gap:10px;margin-bottom:28px}.gate-logo-mark{width:36px;height:36px;border-radius:9px;background:linear-gradient(135deg,#4f46e5,#7c3aed);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:14px}.gate-logo-text{font-weight:700;font-size:16px;color:#1e293b}.gate-title{font-size:22px;font-weight:700;color:#1e293b;margin:0 0 6px}.gate-sub{font-size:13px;color:#475569;margin:0 0 16px;line-height:1.5}.gate-card{border:1px solid #e2e8f0;border-radius:16px;padding:20px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.06);margin-bottom:12px}.gate-err{background:#fef2f2;border:1px solid #fca5a5;color:#b91c1c;padding:10px 12px;border-radius:8px;font-size:13px;margin-bottom:14px;display:none}.gate-label{display:block;font-size:14px;font-weight:600;color:#1e293b;margin-bottom:5px}.gate-input{width:100%;padding:10px;border-radius:8px;border:1px solid #e2e8f0;margin-bottom:12px;font-size:15px;box-sizing:border-box;font-family:inherit;color:#1e293b;outline:none}.gate-input:focus{border-color:#4f46e5;box-shadow:0 0 0 3px rgba(79,70,229,.12)}.gate-btn{width:100%;padding:10px 14px;border-radius:8px;border:1px solid #4f46e5;background:#4f46e5;color:#fff;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit}.gate-btn:hover{background:#4338ca}.gate-footer{text-align:center;padding-top:4px}.gate-link{font-size:13px;color:#4f46e5;text-decoration:none}.gate-link:hover{text-decoration:underline}';
-    document.head.appendChild(s);
-    var g=document.createElement('div');g.id='docs-gate';
-    document.body.insertBefore(g,document.body.firstChild);
-    show(hasPw()?'login':'setup');
+'use strict';
+var RK='TUFJTlQtRE9DUy1SRVNFVA==',UK='ma_docs_users',AK='ma_docs_ok';
+function h(s){var v=5381;for(var i=0;i<s.length;i++)v=(Math.imul(v,33)^s.charCodeAt(i))>>>0;return v.toString(16);}
+function ok(){return sessionStorage.getItem(AK)==='1';}
+function users(){try{return JSON.parse(localStorage.getItem(UK))||[];}catch(e){return[];}}
+function saveU(a){localStorage.setItem(UK,JSON.stringify(a));}
+function grn(){sessionStorage.setItem(AK,'1');}
+function chk(u,p){return users().some(function(x){return x.n===u&&x.ph===h(p);});}
+window.DocsAuth={logout:function(){sessionStorage.removeItem(AK);location.reload();}};
+if(ok())return;
+function boot(){
+  if(document.getElementById('docs-gate'))return;
+  var s=document.createElement('style');
+  s.textContent='#docs-gate{position:fixed;inset:0;z-index:9999;background:#fff;overflow-y:auto;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#1e293b}.gate-wrap{max-width:420px;margin:72px auto 0;padding:0 16px 48px}.gate-logo{display:flex;align-items:center;gap:10px;margin-bottom:28px}.gate-logo-mark{width:36px;height:36px;border-radius:9px;background:linear-gradient(135deg,#4f46e5,#7c3aed);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:14px}.gate-logo-text{font-weight:700;font-size:16px;color:#1e293b}.gate-title{font-size:22px;font-weight:700;color:#1e293b;margin:0 0 6px}.gate-sub{font-size:13px;color:#475569;margin:0 0 16px;line-height:1.5}.gate-card{border:1px solid #e2e8f0;border-radius:16px;padding:20px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.06);margin-bottom:12px}.gate-err{background:#fef2f2;border:1px solid #fca5a5;color:#b91c1c;padding:10px 12px;border-radius:8px;font-size:13px;margin-bottom:14px;display:none}.gate-ok{background:#f0fdf4;border:1px solid #86efac;color:#15803d;padding:10px 12px;border-radius:8px;font-size:13px;margin-bottom:14px;display:none}.gate-label{display:block;font-size:14px;font-weight:600;color:#1e293b;margin-bottom:5px}.gate-input{width:100%;padding:10px;border-radius:8px;border:1px solid #e2e8f0;margin-bottom:12px;font-size:15px;box-sizing:border-box;font-family:inherit;color:#1e293b;outline:none}.gate-input:focus{border-color:#4f46e5;box-shadow:0 0 0 3px rgba(79,70,229,.12)}.gate-btn{width:100%;padding:10px 14px;border-radius:8px;border:1px solid #4f46e5;background:#4f46e5;color:#fff;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit}.gate-btn:hover{background:#4338ca}.gate-btn-sm{padding:5px 12px;border-radius:6px;border:1px solid #ef4444;background:#fff;color:#ef4444;font-size:12px;font-weight:500;cursor:pointer;font-family:inherit}.gate-btn-sm:hover{background:#fef2f2}.gate-footer{text-align:center;padding-top:4px}.gate-link{font-size:13px;color:#4f46e5;text-decoration:none}.gate-link:hover{text-decoration:underline}.gate-sep{border:none;border-top:1px solid #e2e8f0;margin:16px 0}.gate-urow{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f1f5f9;font-size:14px}';
+  document.head.appendChild(s);
+  var g=document.createElement('div');g.id='docs-gate';
+  document.body.insertBefore(g,document.body.firstChild);
+  show('login');
+}
+if(document.body)boot();else document.addEventListener('DOMContentLoaded',boot);
+var logo='<div class="gate-logo"><div class="gate-logo-mark">MA</div><span class="gate-logo-text">Maintenance Agent</span></div>';
+function show(v){
+  var g=document.getElementById('docs-gate');
+  if(v==='login'){
+    g.innerHTML=W('Sign in','Enter your credentials to access the documentation.',F('f1','Username','text','Your username')+F('f2','Password','password','Your password'),'Sign in','<a href="#" id="ga" class="gate-link">Admin access</a>');
+    g.querySelector('#gf').addEventListener('submit',doLogin);
+    g.querySelector('#ga').addEventListener('click',function(e){e.preventDefault();show('admin-key');});
   }
-  if(document.body)boot();else document.addEventListener('DOMContentLoaded',boot);
-  function show(v){
-    var g=document.getElementById('docs-gate');
-    g.innerHTML=tpl(v);
-    if(v==='setup')g.querySelector('#gf').addEventListener('submit',doSetup);
-    if(v==='login'){g.querySelector('#gf').addEventListener('submit',doLogin);g.querySelector('#gs').addEventListener('click',function(e){e.preventDefault();show('reset');});}
-    if(v==='reset'){g.querySelector('#gf').addEventListener('submit',doReset);g.querySelector('#gs').addEventListener('click',function(e){e.preventDefault();show('login');});}
+  if(v==='admin-key'){
+    g.innerHTML=W('Admin access','Enter the admin key to manage users.',F('f1','Admin key','password','Recovery / admin key'),'Continue','<a href="#" id="gs" class="gate-link">Back to sign in</a>');
+    g.querySelector('#gf').addEventListener('submit',doAdminKey);
+    g.querySelector('#gs').addEventListener('click',function(e){e.preventDefault();show('login');});
   }
-  function doSetup(e){e.preventDefault();var a=v('f1'),b=v('f2');if(a.length<8)return er('Password must be at least 8 characters.');if(a!==b)return er('Passwords do not match.');sav(a);grn();document.getElementById('docs-gate').remove();}
-  function doLogin(e){e.preventDefault();var p=v('f1');if(!chk(p)){er('Incorrect password.');document.getElementById('f1').value='';return;}grn();document.getElementById('docs-gate').remove();}
-  function doReset(e){e.preventDefault();var k=v('f1').trim(),a=v('f2'),b=v('f3');if(k!==atob(RK))return er('Invalid recovery key.');if(a.length<8)return er('Password must be at least 8 characters.');if(a!==b)return er('Passwords do not match.');sav(a);grn();document.getElementById('docs-gate').remove();}
-  function v(id){return document.getElementById(id).value;}
-  function er(m){var e=document.getElementById('ge');e.textContent=m;e.style.display='block';}
-  var logo='<div class="gate-logo"><div class="gate-logo-mark">MA</div><span class="gate-logo-text">Maintenance Agent</span></div>';
-  function tpl(view){
-    if(view==='setup')return W('Set your password','First time here &mdash; choose an access password.',F('f1','Password','password','Min 8 characters')+F('f2','Confirm password','password','Repeat password'),'Set password','');
-    if(view==='login')return W('Sign in','Enter the docs access password.',F('f1','Password','password','Access password'),'Sign in','<a href="#" id="gs" class="gate-link">Forgot password?</a>');
-    if(view==='reset')return W('Reset password','Enter the recovery key, then choose a new password.',F('f1','Recovery key','text','Your recovery key')+F('f2','New password','password','Min 8 chars')+F('f3','Confirm password','password','Repeat new password'),'Reset password','<a href="#" id="gs" class="gate-link">Back to sign in</a>');
+  if(v==='admin'){
+    var arr=users();
+    var rows=arr.length?arr.map(function(x){return '<div class="gate-urow"><span>'+esc(x.n)+'</span><button type="button" class="gate-btn-sm" data-n="'+esc(x.n)+'">Remove</button></div>';}).join(''):'<p style="color:#94a3b8;font-size:13px;padding:8px 0">No users yet.</p>';
+    g.innerHTML='<div class="gate-wrap">'+logo+'<h1 class="gate-title">Admin panel</h1><p class="gate-sub">Add or remove authorised users.</p><div class="gate-card"><div id="ge" class="gate-err"></div><div id="gok" class="gate-ok"></div><form id="gadd">'+F('fu','Username','text','e.g. alice')+F('fp','Password','password','Min 8 characters')+F('fp2','Confirm password','password','Repeat password')+'<button type="submit" class="gate-btn">Add user</button></form><hr class="gate-sep"><div id="ulist">'+rows+'</div></div><div class="gate-footer"><a href="#" id="gs" class="gate-link">Back to sign in</a></div></div>';
+    g.querySelector('#gadd').addEventListener('submit',doAddUser);
+    g.querySelector('#gs').addEventListener('click',function(e){e.preventDefault();show('login');});
+    g.querySelectorAll('.gate-btn-sm').forEach(function(btn){btn.addEventListener('click',function(){saveU(users().filter(function(x){return x.n!==this.getAttribute('data-n');},this));show('admin');});});
   }
-  function W(t,s,fields,btn,footer){return '<div class="gate-wrap">'+logo+'<h1 class="gate-title">'+t+'</h1><p class="gate-sub">'+s+'</p><div class="gate-card"><div id="ge" class="gate-err"></div><form id="gf">'+fields+'<button type="submit" class="gate-btn">'+btn+'</button></form></div>'+(footer?'<div class="gate-footer">'+footer+'</div>':'')+'</div>';}
-  function F(id,label,type,ph){return '<label class="gate-label" for="'+id+'">'+label+'</label><input id="'+id+'" type="'+type+'" class="gate-input" placeholder="'+ph+'" required />';}
+}
+function doLogin(e){e.preventDefault();var u=vl('f1'),p=vl('f2');if(!chk(u,p)){er('Invalid username or password.');document.getElementById('f2').value='';return;}grn();document.getElementById('docs-gate').remove();}
+function doAdminKey(e){e.preventDefault();if(vl('f1').trim()!==atob(RK)){er('Invalid admin key.');return;}show('admin');}
+function doAddUser(e){
+  e.preventDefault();
+  var u=vl('fu').trim(),p=vl('fp'),p2=vl('fp2');
+  if(!u)return er('Username required.');
+  if(users().some(function(x){return x.n===u;}))return er('Username already exists.');
+  if(p.length<8)return er('Password must be at least 8 characters.');
+  if(p!==p2)return er('Passwords do not match.');
+  saveU(users().concat([{n:u,ph:h(p)}]));
+  document.getElementById('fu').value='';document.getElementById('fp').value='';document.getElementById('fp2').value='';
+  var ok=document.getElementById('gok');ok.textContent='User "'+esc(u)+'" added.';ok.style.display='block';
+  setTimeout(function(){ok.style.display='none';show('admin');},1200);
+}
+function vl(id){return document.getElementById(id).value;}
+function er(m){var e=document.getElementById('ge');e.textContent=m;e.style.display='block';}
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function W(t,s,fields,btn,footer){return '<div class="gate-wrap">'+logo+'<h1 class="gate-title">'+t+'</h1><p class="gate-sub">'+s+'</p><div class="gate-card"><div id="ge" class="gate-err"></div><form id="gf">'+fields+'<button type="submit" class="gate-btn">'+btn+'</button></form></div>'+(footer?'<div class="gate-footer">'+footer+'</div>':'')+'</div>';}
+function F(id,label,type,ph){return '<label class="gate-label" for="'+id+'">'+label+'</label><input id="'+id+'" type="'+type+'" class="gate-input" placeholder="'+ph+'" required />';}
 }());
 </script>
 </head>
