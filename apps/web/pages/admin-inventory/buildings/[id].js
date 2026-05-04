@@ -92,6 +92,28 @@ export default function BuildingDetail() {
   const [requestsLoading, setRequestsLoading] = useState(false);
   const [requestsLoaded, setRequestsLoaded] = useState(false);
 
+  // ─── Sort state for Tenants + Requests tabs (must be here, before early returns) ───
+  const { sortField: tenSF, sortDir: tenSD, handleSort: handleTenSort } = useLocalSort("name", "asc");
+  const { sortField: reqSF, sortDir: reqSD, handleSort: handleReqSort } = useLocalSort("createdAt", "desc");
+  const sortedBuildingTenants = useMemo(() => clientSort(building?.tenants ?? [], tenSF, tenSD, (t, f) => {
+    if (f === "name") return (t.name || "").toLowerCase();
+    if (f === "unit") return (t.unitNumber || "").toLowerCase();
+    if (f === "phone") return (t.phone || "").toLowerCase();
+    if (f === "email") return (t.email || "").toLowerCase();
+    if (f === "moveIn") return t.moveInDate || "";
+    if (f === "source") return (t.source || "").toLowerCase();
+    return "";
+  }), [building?.tenants, tenSF, tenSD]);
+  const sortedBuildingRequests = useMemo(() => clientSort(buildingRequests, reqSF, reqSD, (r, f) => {
+    if (f === "status") return (r.status || "").toLowerCase();
+    if (f === "category") return (r.category || "").toLowerCase();
+    if (f === "unit") return (r.unit?.unitNumber || "").toLowerCase();
+    if (f === "urgency") return ({ LOW: 1, MEDIUM: 2, HIGH: 3, EMERGENCY: 4 }[r.urgency] || 0);
+    if (f === "contractor") return (r.contractor?.name || "").toLowerCase();
+    if (f === "createdAt") return r.createdAt || "";
+    return "";
+  }), [buildingRequests, reqSF, reqSD]);
+
   useEffect(() => {
     if (activeTab === "Assets" && assetInventory.length === 0 && !assetInventoryLoading) {
       loadAssetInventory();
@@ -586,27 +608,6 @@ export default function BuildingDetail() {
   const filteredCommon = unitFilter === "ALL"
     ? commonUnits
     : commonUnits.filter((u) => u.occupancyStatus === unitFilter);
-
-  const { sortField: tenSF, sortDir: tenSD, handleSort: handleTenSort } = useLocalSort("name", "asc");
-  const { sortField: reqSF, sortDir: reqSD, handleSort: handleReqSort } = useLocalSort("createdAt", "desc");
-  const sortedBuildingTenants = useMemo(() => clientSort(building?.tenants ?? [], tenSF, tenSD, (t, f) => {
-    if (f === "name") return (t.name || "").toLowerCase();
-    if (f === "unit") return (t.unitNumber || "").toLowerCase();
-    if (f === "phone") return (t.phone || "").toLowerCase();
-    if (f === "email") return (t.email || "").toLowerCase();
-    if (f === "moveIn") return t.moveInDate || "";
-    if (f === "source") return (t.source || "").toLowerCase();
-    return "";
-  }), [building?.tenants, tenSF, tenSD]);
-  const sortedBuildingRequests = useMemo(() => clientSort(buildingRequests, reqSF, reqSD, (r, f) => {
-    if (f === "status") return (r.status || "").toLowerCase();
-    if (f === "category") return (r.category || "").toLowerCase();
-    if (f === "unit") return (r.unit?.unitNumber || "").toLowerCase();
-    if (f === "urgency") return ({ LOW: 1, MEDIUM: 2, HIGH: 3, EMERGENCY: 4 }[r.urgency] || 0);
-    if (f === "contractor") return (r.contractor?.name || "").toLowerCase();
-    if (f === "createdAt") return r.createdAt || "";
-    return "";
-  }), [buildingRequests, reqSF, reqSD]);
 
   return (
     <AppShell role={isOwner ? "OWNER" : "MANAGER"}>
