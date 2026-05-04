@@ -1,5 +1,7 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/router";
+import SortableHeader from "../../../components/SortableHeader";
+import { useLocalSort, clientSort } from "../../../lib/tableUtils";
 import Link from "next/link";
 import AppShell from "../../../components/AppShell";
 import PageShell from "../../../components/layout/PageShell";
@@ -105,6 +107,18 @@ const tabKeys = FINANCE_TABS.map((t) => t.key);
   }, [range]);
 
   useEffect(() => { fetchPortfolio(); }, [fetchPortfolio]);
+
+  const { sortField: bSortField, sortDir: bSortDir, handleSort: handleBuildingSort } = useLocalSort("name", "asc");
+  const sortedBuildings = useMemo(() => {
+    const buildings = portfolio?.buildings ?? [];
+    return clientSort(buildings, bSortField, bSortDir, (b, f) => {
+      if (f === "name") return (b.buildingName || "").toLowerCase();
+      if (f === "net") return b.netIncomeCents ?? 0;
+      if (f === "collection") return b.collectionRate ?? 0;
+      if (f === "receivables") return b.receivablesCents ?? 0;
+      return "";
+    });
+  }, [portfolio, bSortField, bSortDir]);
 
   const p = portfolio;
   const netAccent = p ? (p.totalNetIncomeCents > 0 ? "green" : p.totalNetIncomeCents < 0 ? "red" : "") : "";
@@ -240,17 +254,17 @@ const tabKeys = FINANCE_TABS.map((t) => t.key);
                             <table className="data-table">
                               <thead>
                                 <tr>
-                                  <th>Building</th>
+                                  <SortableHeader label="Building" field="name" sortField={bSortField} sortDir={bSortDir} onSort={handleBuildingSort} />
                                   <th className="text-right">Earned Income</th>
                                   <th className="text-right">Expenses</th>
-                                  <th className="text-right">Net</th>
-                                  <th className="text-right">Collection</th>
-                                  <th className="text-right">Receivables</th>
+                                  <SortableHeader label="Net" field="net" sortField={bSortField} sortDir={bSortDir} onSort={handleBuildingSort} className="text-right" />
+                                  <SortableHeader label="Collection" field="collection" sortField={bSortField} sortDir={bSortDir} onSort={handleBuildingSort} className="text-right" />
+                                  <SortableHeader label="Receivables" field="receivables" sortField={bSortField} sortDir={bSortDir} onSort={handleBuildingSort} className="text-right" />
                                   <th></th>
                                 </tr>
                               </thead>
                               <tbody>
-                                {(buildingsExpanded ? p.buildings : p.buildings.slice(0, 5)).map((b) => (
+                                {(buildingsExpanded ? sortedBuildings : sortedBuildings.slice(0, 5)).map((b) => (
                                   <tr key={b.buildingId} className="cursor-pointer hover:bg-slate-50/80" onClick={() => router.push(`/manager/buildings/${b.buildingId}/financials`)}>
                                     <td>
                                       <span className="flex items-center gap-2">

@@ -1,5 +1,7 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/router";
+import SortableHeader from "../../../components/SortableHeader";
+import { useLocalSort, clientSort } from "../../../lib/tableUtils";
 import AppShell from "../../../components/AppShell";
 import PageShell from "../../../components/layout/PageShell";
 import PageHeader from "../../../components/layout/PageHeader";
@@ -65,6 +67,21 @@ export default function ChartOfAccountsPage() {
   const [error, setError] = useState("");
   const [seedResult, setSeedResult] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
+
+  /* Sort */
+  const { sortField: etSortField, sortDir: etSortDir, handleSort: handleETSort } = useLocalSort("name", "asc");
+  const sortedExpenseTypes = useMemo(() => clientSort(expenseTypes, etSortField, etSortDir, (et, f) => {
+    if (f === "name") return (et.name || "").toLowerCase();
+    if (f === "code") return (et.code || "").toLowerCase();
+    return "";
+  }), [expenseTypes, etSortField, etSortDir]);
+
+  const { sortField: accSortField, sortDir: accSortDir, handleSort: handleAccSort } = useLocalSort("name", "asc");
+  const sortedAccounts = useMemo(() => clientSort(accounts, accSortField, accSortDir, (acc, f) => {
+    if (f === "name") return (acc.name || "").toLowerCase();
+    if (f === "code") return (acc.code || "").toLowerCase();
+    return "";
+  }), [accounts, accSortField, accSortDir]);
 
   /* New-item forms */
   const [newET, setNewET] = useState({ name: "", description: "", code: "" });
@@ -292,14 +309,14 @@ export default function ChartOfAccountsPage() {
                         <table className="data-table">
                           <thead>
                             <tr>
-                              <th>Name</th>
-                              <th>Code</th>
+                              <SortableHeader label="Name" field="name" sortField={etSortField} sortDir={etSortDir} onSort={handleETSort} />
+                              <SortableHeader label="Code" field="code" sortField={etSortField} sortDir={etSortDir} onSort={handleETSort} />
                               <th>Description</th>
                               <th>Status</th>
                             </tr>
                           </thead>
                           <tbody>
-                            {expenseTypes.map((et) => (
+                            {sortedExpenseTypes.map((et) => (
                               <tr key={et.id}>
                                 <td className="cell-bold">{et.name}</td>
                                 <td><span className="code-small">{et.code || "\u2014"}</span></td>
@@ -383,14 +400,14 @@ export default function ChartOfAccountsPage() {
                         <table className="data-table">
                           <thead>
                             <tr>
-                              <th>Name</th>
-                              <th>Code</th>
+                              <SortableHeader label="Name" field="name" sortField={accSortField} sortDir={accSortDir} onSort={handleAccSort} />
+                              <SortableHeader label="Code" field="code" sortField={accSortField} sortDir={accSortDir} onSort={handleAccSort} />
                               <th>Type</th>
                               <th>Status</th>
                             </tr>
                           </thead>
                           <tbody>
-                            {accounts.map((acc) => (
+                            {sortedAccounts.map((acc) => (
                               <tr key={acc.id}>
                                 <td className="cell-bold">{acc.name}</td>
                                 <td><span className="code-small">{acc.code || "\u2014"}</span></td>
