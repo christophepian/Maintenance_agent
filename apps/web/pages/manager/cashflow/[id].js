@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import AppShell from "../../../components/AppShell";
@@ -10,6 +10,8 @@ import Section from "../../../components/layout/Section";
 import { authHeaders } from "../../../lib/api";
 import { formatChfCents, formatDate, formatChf } from "../../../lib/format";
 import Badge from "../../../components/ui/Badge";
+import SortableHeader from "../../../components/SortableHeader";
+import { useLocalSort, clientSort } from "../../../lib/tableUtils";
 
 import { cn } from "../../../lib/utils";
 
@@ -330,9 +332,19 @@ function CapexEventTable({ buckets, overrides, timingRecommendations, planId, is
       }
     }
   }
-  events.sort((a, b) => a.year !== b.year ? a.year - b.year : a.month - b.month);
 
-  if (events.length === 0) {
+  const { sortField: evSF, sortDir: evSD, handleSort: handleEvSort } = useLocalSort("scheduled", "asc");
+  const sortedEvents = useMemo(() => clientSort(events, evSF, evSD, (ev, f) => {
+    if (f === "asset") return (ev.assetName || "").toLowerCase();
+    if (f === "scheduled") return ev.year * 100 + (ev.month ?? 0);
+    if (f === "estimatedCost") return ev.estimatedCostCents ?? 0;
+    if (f === "tradeGroup") return (ev.tradeGroup || "").toLowerCase();
+    if (f === "bundle") return (ev.bundle || "").toLowerCase();
+    return "";
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [events, evSF, evSD]);
+
+  if (sortedEvents.length === 0) {
     return (
       <div className="empty-state">
         <p className="empty-state-text">No scheduled CapEx events in the projection horizon.</p>
@@ -344,7 +356,7 @@ function CapexEventTable({ buckets, overrides, timingRecommendations, planId, is
     <>
       {/* Mobile cards */}
       <div className="sm:hidden divide-y divide-slate-100">
-        {events.map((ev, i) => {
+        {sortedEvents.map((ev, i) => {
           const ov = overrideByAsset[ev.assetId];
           const rec = recByAsset[ev.assetId];
           return (
@@ -366,16 +378,16 @@ function CapexEventTable({ buckets, overrides, timingRecommendations, planId, is
         <table className="data-table">
           <thead>
             <tr>
-              <th>Asset</th>
-              <th>Scheduled</th>
-              <th className="text-right">Estimated cost</th>
-              <th>Trade group</th>
-              <th>Bundle</th>
+              <SortableHeader label="Asset" field="asset" sortField={evSF} sortDir={evSD} onSort={handleEvSort} />
+              <SortableHeader label="Scheduled" field="scheduled" sortField={evSF} sortDir={evSD} onSort={handleEvSort} />
+              <SortableHeader label="Estimated cost" field="estimatedCost" sortField={evSF} sortDir={evSD} onSort={handleEvSort} className="text-right" />
+              <SortableHeader label="Trade group" field="tradeGroup" sortField={evSF} sortDir={evSD} onSort={handleEvSort} />
+              <SortableHeader label="Bundle" field="bundle" sortField={evSF} sortDir={evSD} onSort={handleEvSort} />
               {isDraft && <th>Override</th>}
             </tr>
           </thead>
           <tbody>
-            {events.map((ev, i) => {
+            {sortedEvents.map((ev, i) => {
               const ov = overrideByAsset[ev.assetId];
               const rec = recByAsset[ev.assetId];
               return (

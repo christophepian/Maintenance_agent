@@ -13,7 +13,8 @@ import AssetInventoryPanel from "../../../components/AssetInventoryPanel";
 import BuildingFinancialsView from "../../../components/BuildingFinancialsView";
 import { authHeaders } from "../../../lib/api";
 import ScrollableTabs from "../../../components/mobile/ScrollableTabs";
-
+import SortableHeader from "../../../components/SortableHeader";
+import { useLocalSort, clientSort } from "../../../lib/tableUtils";
 import { formatDate, formatChfCents, formatPercent } from "../../../lib/format";
 import { cn } from "../../../lib/utils";
 import { ARCHETYPE_LABELS, ARCHETYPE_EXPLANATION_COPY } from "../../../lib/archetypes";
@@ -585,6 +586,27 @@ export default function BuildingDetail() {
   const filteredCommon = unitFilter === "ALL"
     ? commonUnits
     : commonUnits.filter((u) => u.occupancyStatus === unitFilter);
+
+  const { sortField: tenSF, sortDir: tenSD, handleSort: handleTenSort } = useLocalSort("name", "asc");
+  const { sortField: reqSF, sortDir: reqSD, handleSort: handleReqSort } = useLocalSort("createdAt", "desc");
+  const sortedBuildingTenants = useMemo(() => clientSort(building?.tenants ?? [], tenSF, tenSD, (t, f) => {
+    if (f === "name") return (t.name || "").toLowerCase();
+    if (f === "unit") return (t.unitNumber || "").toLowerCase();
+    if (f === "phone") return (t.phone || "").toLowerCase();
+    if (f === "email") return (t.email || "").toLowerCase();
+    if (f === "moveIn") return t.moveInDate || "";
+    if (f === "source") return (t.source || "").toLowerCase();
+    return "";
+  }), [building?.tenants, tenSF, tenSD]);
+  const sortedBuildingRequests = useMemo(() => clientSort(buildingRequests, reqSF, reqSD, (r, f) => {
+    if (f === "status") return (r.status || "").toLowerCase();
+    if (f === "category") return (r.category || "").toLowerCase();
+    if (f === "unit") return (r.unit?.unitNumber || "").toLowerCase();
+    if (f === "urgency") return ({ LOW: 1, MEDIUM: 2, HIGH: 3, EMERGENCY: 4 }[r.urgency] || 0);
+    if (f === "contractor") return (r.contractor?.name || "").toLowerCase();
+    if (f === "createdAt") return r.createdAt || "";
+    return "";
+  }), [buildingRequests, reqSF, reqSD]);
 
   return (
     <AppShell role={isOwner ? "OWNER" : "MANAGER"}>
@@ -1225,7 +1247,7 @@ export default function BuildingDetail() {
                 <>
                 {/* Mobile: card list */}
                 <div className="sm:hidden space-y-2">
-                  {building.tenants.map((t, idx) => (
+                  {sortedBuildingTenants.map((t, idx) => (
                     <div key={t.tenantId || idx} className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5">
                       <p className="text-sm font-medium text-slate-900">{t.name}</p>
                       <p className="text-xs text-slate-500 mt-0.5">Unit {t.unitNumber}{t.phone ? ` · ${t.phone}` : ""}</p>
@@ -1236,16 +1258,16 @@ export default function BuildingDetail() {
                 <table className="hidden sm:table data-table">
                   <thead>
                     <tr>
-                      <th>Name</th>
-                      <th>Unit</th>
-                      <th>Phone</th>
-                      <th>Email</th>
-                      <th>Move-in</th>
-                      <th>Source</th>
+                      <SortableHeader label="Name" field="name" sortField={tenSF} sortDir={tenSD} onSort={handleTenSort} />
+                      <SortableHeader label="Unit" field="unit" sortField={tenSF} sortDir={tenSD} onSort={handleTenSort} />
+                      <SortableHeader label="Phone" field="phone" sortField={tenSF} sortDir={tenSD} onSort={handleTenSort} />
+                      <SortableHeader label="Email" field="email" sortField={tenSF} sortDir={tenSD} onSort={handleTenSort} />
+                      <SortableHeader label="Move-in" field="moveIn" sortField={tenSF} sortDir={tenSD} onSort={handleTenSort} />
+                      <SortableHeader label="Source" field="source" sortField={tenSF} sortDir={tenSD} onSort={handleTenSort} />
                     </tr>
                   </thead>
                   <tbody>
-                    {building.tenants.map((t, idx) => {
+                    {sortedBuildingTenants.map((t, idx) => {
                       const badgeVariant =
                         t.source === "BOTH"
                           ? "success"
@@ -1663,7 +1685,7 @@ export default function BuildingDetail() {
                 <>
                   {/* Mobile cards */}
                   <div className="sm:hidden divide-y divide-slate-100">
-                    {buildingRequests.map((r) => (
+                    {sortedBuildingRequests.map((r) => (
                       <div
                         key={r.id}
                         className="py-3 flex flex-col gap-1 cursor-pointer hover:bg-slate-50"
@@ -1699,16 +1721,16 @@ export default function BuildingDetail() {
                       <thead>
                         <tr>
                           <th>#</th>
-                          <th>Status</th>
-                          <th>Category</th>
-                          <th>Unit</th>
-                          <th>Urgency</th>
-                          <th>Contractor</th>
-                          <th>Date</th>
+                          <SortableHeader label="Status" field="status" sortField={reqSF} sortDir={reqSD} onSort={handleReqSort} />
+                          <SortableHeader label="Category" field="category" sortField={reqSF} sortDir={reqSD} onSort={handleReqSort} />
+                          <SortableHeader label="Unit" field="unit" sortField={reqSF} sortDir={reqSD} onSort={handleReqSort} />
+                          <SortableHeader label="Urgency" field="urgency" sortField={reqSF} sortDir={reqSD} onSort={handleReqSort} />
+                          <SortableHeader label="Contractor" field="contractor" sortField={reqSF} sortDir={reqSD} onSort={handleReqSort} />
+                          <SortableHeader label="Date" field="createdAt" sortField={reqSF} sortDir={reqSD} onSort={handleReqSort} />
                         </tr>
                       </thead>
                       <tbody>
-                        {buildingRequests.map((r) => (
+                        {sortedBuildingRequests.map((r) => (
                           <tr
                             key={r.id}
                             className="cursor-pointer hover:bg-slate-50"

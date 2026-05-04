@@ -28,6 +28,7 @@ function OwnersTab({ showAddForm, onAddFormClose }) {
   const sortedOwners = useMemo(() => clientSort(owners, oSortField, oSortDir, (o, f) => {
     if (f === "name") return (o.name || "").toLowerCase();
     if (f === "email") return (o.email || "").toLowerCase();
+    if (f === "billingEntity") return (o.billingEntity?.name || "").toLowerCase();
     return "";
   }), [owners, oSortField, oSortDir]);
 
@@ -242,7 +243,7 @@ function OwnersTab({ showAddForm, onAddFormClose }) {
                 <tr>
                   <SortableHeader label="Name" field="name" sortField={oSortField} sortDir={oSortDir} onSort={handleOwnerSort} />
                   <SortableHeader label="Email" field="email" sortField={oSortField} sortDir={oSortDir} onSort={handleOwnerSort} />
-                  <th>Billing entity</th>
+                  <SortableHeader label="Billing entity" field="billingEntity" sortField={oSortField} sortDir={oSortDir} onSort={handleOwnerSort} />
                   <th></th>
                 </tr>
               </thead>
@@ -381,6 +382,8 @@ export default function ManagerPeoplePage() {
   const sortedTenants = useMemo(() => clientSort(tenants, tSortField, tSortDir, (t, f) => {
     if (f === "name") return (t.name || "").toLowerCase();
     if (f === "email") return (t.email || "").toLowerCase();
+    if (f === "phone") return (t.phone || "").toLowerCase();
+    if (f === "unit") return (t.unit?.unitNumber || "").toLowerCase();
     return "";
   }), [tenants, tSortField, tSortDir]);
 
@@ -388,6 +391,8 @@ export default function ManagerPeoplePage() {
   const sortedVendors = useMemo(() => clientSort(contractors, vSortField, vSortDir, (c, f) => {
     if (f === "name") return (c.name || "").toLowerCase();
     if (f === "hourlyRate") return c.hourlyRate ?? 0;
+    if (f === "phone") return (c.phone || "").toLowerCase();
+    if (f === "email") return (c.email || "").toLowerCase();
     return "";
   }), [contractors, vSortField, vSortDir]);
 
@@ -472,9 +477,9 @@ export default function ManagerPeoplePage() {
                     <thead>
                       <tr>
                         <SortableHeader label="Name" field="name" sortField={tSortField} sortDir={tSortDir} onSort={handleTenantSort} />
-                        <th>Phone</th>
+                        <SortableHeader label="Phone" field="phone" sortField={tSortField} sortDir={tSortDir} onSort={handleTenantSort} />
                         <SortableHeader label="Email" field="email" sortField={tSortField} sortDir={tSortDir} onSort={handleTenantSort} />
-                        <th>Unit</th>
+                        <SortableHeader label="Unit" field="unit" sortField={tSortField} sortDir={tSortDir} onSort={handleTenantSort} />
                         <th></th>
                       </tr>
                     </thead>
@@ -544,8 +549,8 @@ export default function ManagerPeoplePage() {
                     <thead>
                       <tr>
                         <SortableHeader label="Name" field="name" sortField={vSortField} sortDir={vSortDir} onSort={handleVendorSort} />
-                        <th>Phone</th>
-                        <th>Email</th>
+                        <SortableHeader label="Phone" field="phone" sortField={vSortField} sortDir={vSortDir} onSort={handleVendorSort} />
+                        <SortableHeader label="Email" field="email" sortField={vSortField} sortDir={vSortDir} onSort={handleVendorSort} />
                         <SortableHeader label="Rate" field="hourlyRate" sortField={vSortField} sortDir={vSortDir} onSort={handleVendorSort} />
                         <th></th>
                       </tr>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/router";
 import AppShell from "../../../components/AppShell";
 import PageShell from "../../../components/layout/PageShell";
@@ -17,6 +17,8 @@ import ResourceShell from "../../../components/ui/ResourceShell";
 import { cn } from "../../../lib/utils";
 import { reconciliationVariant } from "../../../lib/statusVariants";
 import { formatChfCents } from "../../../lib/format";
+import SortableHeader from "../../../components/SortableHeader";
+import { useLocalSort, clientSort } from "../../../lib/tableUtils";
 
 export default function ChargeReconciliationDetailPage() {
   const router = useRouter();
@@ -28,6 +30,20 @@ export default function ChargeReconciliationDetailPage() {
   const { pending: actionLoading, run: runAction } = useAction();
   // Local edits for actual costs (lineId → cents string)
   const [editValues, setEditValues] = useState({});
+
+  const { sortField: liSF, sortDir: liSD, handleSort: handleLineSort } = useLocalSort("description", "asc");
+  const sortedLineItems = useMemo(() => {
+    const items = recon?.lineItems || [];
+    return [...items].sort((a, b) => {
+      let va = "", vb = "";
+      if (liSF === "mode") { va = a.chargeMode || ""; vb = b.chargeMode || ""; }
+      else if (liSF === "acompte") return liSD === "asc" ? (a.acomptePaidCents ?? 0) - (b.acomptePaidCents ?? 0) : (b.acomptePaidCents ?? 0) - (a.acomptePaidCents ?? 0);
+      else if (liSF === "actual") return liSD === "asc" ? (a.actualCostCents ?? 0) - (b.actualCostCents ?? 0) : (b.actualCostCents ?? 0) - (a.actualCostCents ?? 0);
+      else if (liSF === "balance") return liSD === "asc" ? (a.balanceCents ?? 0) - (b.balanceCents ?? 0) : (b.balanceCents ?? 0) - (a.balanceCents ?? 0);
+      else { va = (a.description || "").toLowerCase(); vb = (b.description || "").toLowerCase(); }
+      return liSD === "asc" ? va.localeCompare(vb) : vb.localeCompare(va);
+    });
+  }, [recon, liSF, liSD]);
 
   // Initialize edit values when recon loads
   useEffect(() => {
@@ -140,7 +156,7 @@ export default function ChargeReconciliationDetailPage() {
           <Panel title="Expense Lines" className="mt-6">
             {/* Mobile cards */}
             <div className="sm:hidden divide-y divide-slate-100">
-              {recon.lineItems.map((line) => (
+              {sortedLineItems.map((line) => (
                 <div key={line.id} className="py-3 flex flex-col gap-1">
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-sm font-medium text-slate-800">{line.description}</span>
@@ -188,16 +204,16 @@ export default function ChargeReconciliationDetailPage() {
               <table className="data-table">
                 <thead>
                   <tr>
-                    <th>Expense</th>
-                    <th>Mode</th>
-                    <th className="text-right">ACOMPTE Paid</th>
-                    <th className="text-right">Actual Cost</th>
-                    <th className="text-right">Balance</th>
+                    <SortableHeader label="Expense" field="description" sortField={liSF} sortDir={liSD} onSort={handleLineSort} />
+                    <SortableHeader label="Mode" field="mode" sortField={liSF} sortDir={liSD} onSort={handleLineSort} />
+                    <SortableHeader label="ACOMPTE Paid" field="acompte" sortField={liSF} sortDir={liSD} onSort={handleLineSort} className="text-right" />
+                    <SortableHeader label="Actual Cost" field="actual" sortField={liSF} sortDir={liSD} onSort={handleLineSort} className="text-right" />
+                    <SortableHeader label="Balance" field="balance" sortField={liSF} sortDir={liSD} onSort={handleLineSort} className="text-right" />
                     {isDraft && <th className="text-right">Action</th>}
                   </tr>
                 </thead>
                 <tbody>
-                  {recon.lineItems.map((line) => (
+                  {sortedLineItems.map((line) => (
                     <tr key={line.id} className="border-b last:border-0">
                       <td className="font-medium">{line.description}</td>
                       <td>

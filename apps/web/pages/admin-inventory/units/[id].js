@@ -1,5 +1,5 @@
 import { useRouter } from "next/router";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import AppShell from "../../../components/AppShell";
 import PageShell from "../../../components/layout/PageShell";
@@ -16,6 +16,8 @@ import { invoiceVariant, leaseVariant, reconciliationVariant } from "../../../li
 import { formatChf, formatDate, formatChfCents } from "../../../lib/format";
 import { authHeaders } from "../../../lib/api";
 import ScrollableTabs from "../../../components/mobile/ScrollableTabs";
+import SortableHeader from "../../../components/SortableHeader";
+import { useLocalSort, clientSort } from "../../../lib/tableUtils";
 export default function UnitDetail() {
   const router = useRouter();
   const { id, role } = router.query;
@@ -84,6 +86,52 @@ export default function UnitDetail() {
   // Lease / contracts state
   const [unitLeases, setUnitLeases] = useState([]);
   const [leasesLoading, setLeasesLoading] = useState(false);
+
+  const { sortField: reconSF, sortDir: reconSD, handleSort: handleReconSort } = useLocalSort("year", "desc");
+  const { sortField: tReconSF, sortDir: tReconSD, handleSort: handleTReconSort } = useLocalSort("year", "desc");
+  const { sortField: invSF, sortDir: invSD, handleSort: handleInvSort } = useLocalSort("createdAt", "desc");
+  const { sortField: lsSF, sortDir: lsSD, handleSort: handleLsSort } = useLocalSort("startDate", "desc");
+  const { sortField: reqSF, sortDir: reqSD, handleSort: handleReqSort } = useLocalSort("createdAt", "desc");
+
+  const sortedUnitReconciliations = useMemo(() => clientSort(unitReconciliations, reconSF, reconSD, (r, f) => {
+    if (f === "year") return r.fiscalYear ?? r.year ?? 0;
+    if (f === "status") return (r.status || "").toLowerCase();
+    return "";
+  }), [unitReconciliations, reconSF, reconSD]);
+
+  const sortedUnitInvoices = useMemo(() => {
+    const all = [...(unitInvoices || []), ...(incomingInvoices || []), ...(outgoingInvoices || [])];
+    const unique = all.filter((v, i, a) => a.findIndex(x => x.id === v.id) === i);
+    return clientSort(unique, invSF, invSD, (inv, f) => {
+      if (f === "status") return (inv.status || "").toLowerCase();
+      if (f === "description") return (inv.description || "").toLowerCase();
+      if (f === "amount") return inv.totalAmountChf ?? inv.amountCents ?? 0;
+      if (f === "period") return inv.periodStart || "";
+      if (f === "dueDate") return inv.dueDate || "";
+      if (f === "createdAt") return inv.createdAt || "";
+      return "";
+    });
+  }, [unitInvoices, incomingInvoices, outgoingInvoices, invSF, invSD]);
+
+  const sortedUnitLeases = useMemo(() => clientSort(unitLeases, lsSF, lsSD, (l, f) => {
+    if (f === "status") return (l.status || "").toLowerCase();
+    if (f === "tenant") return (l.tenantName || "").toLowerCase();
+    if (f === "startDate") return l.startDate || "";
+    if (f === "endDate") return l.endDate || "";
+    if (f === "notice") return l.noticeDate || "";
+    if (f === "createdAt") return l.createdAt || "";
+    return "";
+  }), [unitLeases, lsSF, lsSD]);
+
+  const sortedUnitRequests = useMemo(() => clientSort(unitRequests, reqSF, reqSD, (r, f) => {
+    if (f === "status") return (r.status || "").toLowerCase();
+    if (f === "category") return (r.category || "").toLowerCase();
+    if (f === "description") return (r.description || "").toLowerCase();
+    if (f === "urgency") return ({ LOW: 1, MEDIUM: 2, HIGH: 3, EMERGENCY: 4 }[r.urgency] || 0);
+    if (f === "contractor") return (r.assignedContractor?.name || "").toLowerCase();
+    if (f === "createdAt") return r.createdAt || "";
+    return "";
+  }), [unitRequests, reqSF, reqSD]);
 
   function setOk(message) {
     setNotice({ type: "ok", message });
@@ -1047,15 +1095,15 @@ export default function UnitDetail() {
                           <table className="data-table w-full">
                             <thead>
                               <tr>
-                                <th>Year</th>
-                                <th>Status</th>
+                                <SortableHeader label="Year" field="year" sortField={reconSF} sortDir={reconSD} onSort={handleReconSort} />
+                                <SortableHeader label="Status" field="status" sortField={reconSF} sortDir={reconSD} onSort={handleReconSort} />
                                 <th className="text-right">Acompte Paid</th>
                                 <th className="text-right">Actual Costs</th>
                                 <th className="text-right">Balance</th>
                               </tr>
                             </thead>
                             <tbody>
-                              {unitReconciliations.map((r) => (
+                              {sortedUnitReconciliations.map((r) => (
                                 <tr key={r.id} className="border-t border-slate-100 hover:bg-slate-50 cursor-pointer" onClick={() => router.push(`/manager/charge-reconciliations/${r.id}`)}>
                                   <td className="tabular-nums">{r.fiscalYear}</td>
                                   <td><Badge variant={reconciliationVariant(r.status)} size="sm">{r.status}</Badge></td>
@@ -1084,9 +1132,9 @@ export default function UnitDetail() {
                       <table className="data-table w-full">
                         <thead>
                           <tr>
-                            <th>Tenant</th>
-                            <th>Year</th>
-                            <th>Status</th>
+                            <SortableHeader label="Tenant" field="tenant" sortField={tReconSF} sortDir={tReconSD} onSort={handleTReconSort} />
+                            <SortableHeader label="Year" field="year" sortField={tReconSF} sortDir={tReconSD} onSort={handleTReconSort} />
+                            <SortableHeader label="Status" field="status" sortField={tReconSF} sortDir={tReconSD} onSort={handleTReconSort} />
                             <th className="text-right">Acompte Paid</th>
                             <th className="text-right">Actual Costs</th>
                             <th className="text-right">Balance</th>
@@ -1094,7 +1142,7 @@ export default function UnitDetail() {
                           </tr>
                         </thead>
                         <tbody>
-                          {unitReconciliations.map((r) => (
+                          {sortedUnitReconciliations.map((r) => (
                             <tr key={r.id} className="border-t border-slate-100 hover:bg-slate-50">
                               <td>
                                 <Link href={`/manager/charge-reconciliations/${r.id}`} className="cell-link">
@@ -1129,7 +1177,7 @@ export default function UnitDetail() {
                   ) : (
                     <>
                       <div className="sm:hidden space-y-2">
-                        {unitInvoices.map((inv) => (
+                        {sortedUnitInvoices.map((inv) => (
                           <div key={inv.id} className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 flex items-center justify-between gap-3">
                             <div className="min-w-0 flex-1">
                               <p className="text-sm font-medium text-slate-900 truncate">{inv.invoiceNumber || "Draft"}</p>
@@ -1143,17 +1191,17 @@ export default function UnitDetail() {
                         <table className="data-table w-full">
                           <thead>
                             <tr>
-                              <th>Status</th>
+                              <SortableHeader label="Status" field="status" sortField={invSF} sortDir={invSD} onSort={handleInvSort} />
                               <th>Invoice #</th>
-                              <th>Description</th>
-                              <th className="text-right">Amount</th>
-                              <th>Period</th>
-                              <th>Due Date</th>
-                              <th>Created</th>
+                              <SortableHeader label="Description" field="description" sortField={invSF} sortDir={invSD} onSort={handleInvSort} />
+                              <SortableHeader label="Amount" field="amount" sortField={invSF} sortDir={invSD} onSort={handleInvSort} className="text-right" />
+                              <SortableHeader label="Period" field="period" sortField={invSF} sortDir={invSD} onSort={handleInvSort} />
+                              <SortableHeader label="Due Date" field="dueDate" sortField={invSF} sortDir={invSD} onSort={handleInvSort} />
+                              <SortableHeader label="Created" field="createdAt" sortField={invSF} sortDir={invSD} onSort={handleInvSort} />
                             </tr>
                           </thead>
                           <tbody>
-                            {unitInvoices.map((inv) => (
+                            {sortedUnitInvoices.map((inv) => (
                               <tr key={inv.id} className="border-t border-slate-100 hover:bg-slate-50">
                                 <td><Badge variant={invoiceVariant(inv.status)}>{inv.status}</Badge></td>
                                 <td>
@@ -1198,7 +1246,7 @@ export default function UnitDetail() {
             <>
               {/* Mobile: card list */}
               <div className="sm:hidden space-y-2">
-                {unitLeases.map((lease) => (
+                {sortedUnitLeases.map((lease) => (
                   <div key={lease.id} className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 flex items-center justify-between gap-3">
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium text-slate-900 truncate">{lease.tenantName || "—"}</p>
@@ -1215,18 +1263,18 @@ export default function UnitDetail() {
                 <table className="data-table w-full">
                   <thead>
                     <tr>
-                      <th>Status</th>
-                      <th>Tenant</th>
+                      <SortableHeader label="Status" field="status" sortField={lsSF} sortDir={lsSD} onSort={handleLsSort} />
+                      <SortableHeader label="Tenant" field="tenant" sortField={lsSF} sortDir={lsSD} onSort={handleLsSort} />
                       <th className="text-right">Net Rent</th>
                       <th className="text-right">Total</th>
-                      <th>Start</th>
-                      <th>End</th>
+                      <SortableHeader label="Start" field="startDate" sortField={lsSF} sortDir={lsSD} onSort={handleLsSort} />
+                      <SortableHeader label="End" field="endDate" sortField={lsSF} sortDir={lsSD} onSort={handleLsSort} />
                       <th>Notice</th>
-                      <th>Created</th>
+                      <SortableHeader label="Created" field="createdAt" sortField={lsSF} sortDir={lsSD} onSort={handleLsSort} />
                     </tr>
                   </thead>
                   <tbody>
-                    {unitLeases.map((lease) => (
+                    {sortedUnitLeases.map((lease) => (
                       <tr key={lease.id} className="border-t border-slate-100 hover:bg-slate-50">
                         <td>
                           <Badge variant={leaseVariant(lease.status)}>{lease.status}</Badge>
@@ -1267,16 +1315,16 @@ export default function UnitDetail() {
                 <thead>
                   <tr>
                     <th>#</th>
-                    <th>Status</th>
-                    <th>Category</th>
-                    <th>Description</th>
-                    <th>Urgency</th>
-                    <th>Contractor</th>
-                    <th>Date</th>
+                    <SortableHeader label="Status" field="status" sortField={reqSF} sortDir={reqSD} onSort={handleReqSort} />
+                    <SortableHeader label="Category" field="category" sortField={reqSF} sortDir={reqSD} onSort={handleReqSort} />
+                    <SortableHeader label="Description" field="description" sortField={reqSF} sortDir={reqSD} onSort={handleReqSort} />
+                    <SortableHeader label="Urgency" field="urgency" sortField={reqSF} sortDir={reqSD} onSort={handleReqSort} />
+                    <SortableHeader label="Contractor" field="contractor" sortField={reqSF} sortDir={reqSD} onSort={handleReqSort} />
+                    <SortableHeader label="Date" field="createdAt" sortField={reqSF} sortDir={reqSD} onSort={handleReqSort} />
                   </tr>
                 </thead>
                 <tbody>
-                  {unitRequests.map((r) => (
+                  {sortedUnitRequests.map((r) => (
                     <tr
                       key={r.id}
                       className="border-t border-slate-100 hover:bg-slate-50 cursor-pointer"

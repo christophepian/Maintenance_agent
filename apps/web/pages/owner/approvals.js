@@ -16,6 +16,8 @@ import { urgencyVariant, rfpVariant } from "../../lib/statusVariants";
 import { cn } from "../../lib/utils";
 import { formatDate, formatDateTime } from "../../lib/format";
 import ScrollableTabs from "../../components/mobile/ScrollableTabs";
+import SortableHeader from "../../components/SortableHeader";
+import { useLocalSort, clientSort } from "../../lib/tableUtils";
 // ─── Shared ────────────────────────────────────────────────────
 
 /** RAG left-border: green=LOW, neutral=MEDIUM, amber=HIGH, red=EMERGENCY */
@@ -360,28 +362,16 @@ function RfpsTab() {
   const [filterOpen, setFilterOpen] = useState(false);
 
   const URGENCY_RANK = { LOW: 1, MEDIUM: 2, HIGH: 3, EMERGENCY: 4 };
-  const [sortKey, setSortKey] = useState("date");
-  const [sortDir, setSortDir] = useState("desc");
-  const [sortOpen, setSortOpen] = useState(false);
-  const sortActive = !(sortKey === "date" && sortDir === "desc");
-
-  function handleSort(key, dir) { setSortKey(key); setSortDir(dir); }
-
-  const sortedFiltered = [...filtered].sort((a, b) => {
-    let cmp = 0;
-    if (sortKey === "price") {
-      const priceA = a.quotes?.reduce((min, q) => Math.min(min, q.totalCents ?? q.total ?? Infinity), Infinity) ?? 0;
-      const priceB = b.quotes?.reduce((min, q) => Math.min(min, q.totalCents ?? q.total ?? Infinity), Infinity) ?? 0;
-      cmp = (priceA === Infinity ? 0 : priceA) - (priceB === Infinity ? 0 : priceB);
-    } else if (sortKey === "urgency") {
-      cmp = (URGENCY_RANK[a.request?.urgency] || 0) - (URGENCY_RANK[b.request?.urgency] || 0);
-    } else if (sortKey === "number") {
-      cmp = (a.request?.requestNumber || 0) - (b.request?.requestNumber || 0);
-    } else {
-      cmp = new Date(a.createdAt) - new Date(b.createdAt);
-    }
-    return sortDir === "asc" ? cmp : -cmp;
-  });
+  const { sortField: rfpSF, sortDir: rfpSD, handleSort: handleRfpSort } = useLocalSort("createdAt", "desc");
+  const sortedFiltered = useMemo(() => clientSort(filtered, rfpSF, rfpSD, (r, f) => {
+    if (f === "category") return (r.category || "").toLowerCase();
+    if (f === "building") return (r.building?.name || "").toLowerCase();
+    if (f === "urgency") return URGENCY_RANK[r.request?.urgency] ?? 0;
+    if (f === "quoteCount") return r.quoteCount ?? r.quotes?.length ?? 0;
+    if (f === "createdAt") return r.createdAt || "";
+    return "";
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [filtered, rfpSF, rfpSD]);
 
   return (
     <>
@@ -389,7 +379,6 @@ function RfpsTab() {
 
       <div className="flex items-center justify-end gap-2">
         <FilterToggle open={filterOpen} onToggle={() => setFilterOpen((v) => !v)} activeCount={activeCount} />
-        <SortToggle open={sortOpen} onToggle={() => setSortOpen((v) => !v)} active={sortActive} />
       </div>
 
       {filterOpen && (
@@ -501,11 +490,11 @@ function RfpsTab() {
               <thead>
                 <tr>
                   <th>RFP</th>
-                  <th>Category</th>
-                  <th>Building</th>
-                  <th>Urgency</th>
-                  <th>Quotes</th>
-                  <th>Created</th>
+                  <SortableHeader label="Category" field="category" sortField={rfpSF} sortDir={rfpSD} onSort={handleRfpSort} />
+                  <SortableHeader label="Building" field="building" sortField={rfpSF} sortDir={rfpSD} onSort={handleRfpSort} />
+                  <SortableHeader label="Urgency" field="urgency" sortField={rfpSF} sortDir={rfpSD} onSort={handleRfpSort} />
+                  <SortableHeader label="Quotes" field="quoteCount" sortField={rfpSF} sortDir={rfpSD} onSort={handleRfpSort} />
+                  <SortableHeader label="Created" field="createdAt" sortField={rfpSF} sortDir={rfpSD} onSort={handleRfpSort} />
                   <th></th>
                 </tr>
               </thead>

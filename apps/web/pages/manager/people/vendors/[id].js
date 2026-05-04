@@ -14,6 +14,8 @@ import ErrorBanner from "../../../../components/ui/ErrorBanner";
 import { cn } from "../../../../lib/utils";
 import { jobVariant, invoiceVariant } from "../../../../lib/statusVariants";
 import ScrollableTabs from "../../../../components/mobile/ScrollableTabs";
+import SortableHeader from "../../../../components/SortableHeader";
+import { useLocalSort, clientSort } from "../../../../lib/tableUtils";
 
 export default function ContractorDetailPage() {
   const router = useRouter();
@@ -38,6 +40,9 @@ export default function ContractorDetailPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+
+  const { sortField: jSortField, sortDir: jSortDir, handleSort: handleJobSort } = useLocalSort("createdAt", "desc");
+  const { sortField: invSortField, sortDir: invSortDir, handleSort: handleInvSort } = useLocalSort("submittedAt", "desc");
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState("Personal information");
   const [jobs, setJobs] = useState([]);
@@ -508,15 +513,22 @@ export default function ContractorDetailPage() {
                       <table className="data-table">
                         <thead>
                           <tr>
-                            <th>Job #</th>
-                            <th>Request title</th>
-                            <th>Building</th>
-                            <th>Status</th>
-                            <th>Created date</th>
+                            <SortableHeader label="Job #" field="jobId" sortField={jSortField} sortDir={jSortDir} onSort={handleJobSort} />
+                            <SortableHeader label="Request title" field="request" sortField={jSortField} sortDir={jSortDir} onSort={handleJobSort} />
+                            <SortableHeader label="Building" field="building" sortField={jSortField} sortDir={jSortDir} onSort={handleJobSort} />
+                            <SortableHeader label="Status" field="status" sortField={jSortField} sortDir={jSortDir} onSort={handleJobSort} />
+                            <SortableHeader label="Created date" field="createdAt" sortField={jSortField} sortDir={jSortDir} onSort={handleJobSort} />
                           </tr>
                         </thead>
                         <tbody>
-                          {jobs.map((job) => (
+                          {[...jobs].sort((a, b) => {
+                            let va = "", vb = "";
+                            if (jSortField === "status") { va = a.status || ""; vb = b.status || ""; }
+                            else if (jSortField === "building") { va = a.request?.unit?.building?.name || ""; vb = b.request?.unit?.building?.name || ""; }
+                            else if (jSortField === "request") { va = a.request?.description || ""; vb = b.request?.description || ""; }
+                            else { va = a.createdAt || ""; vb = b.createdAt || ""; }
+                            return jSortDir === "asc" ? va.localeCompare(vb) : vb.localeCompare(va);
+                          }).map((job) => (
                             <tr key={job.id}>
                               <td>
                                 <Link href="/manager/requests" className="cell-link">
@@ -532,7 +544,7 @@ export default function ContractorDetailPage() {
                               </td>
                               <td>{formatDate(job.createdAt)}</td>
                             </tr>
-                          ))}
+                            ))}
                         </tbody>
                       </table>
                     </div>
@@ -551,15 +563,23 @@ export default function ContractorDetailPage() {
                       <table className="data-table">
                         <thead>
                           <tr>
-                            <th>Invoice #</th>
-                            <th>Job #</th>
-                            <th className="text-right">Amount</th>
-                            <th>Status</th>
-                            <th>Submitted date</th>
+                            <SortableHeader label="Invoice #" field="invoiceNumber" sortField={invSortField} sortDir={invSortDir} onSort={handleInvSort} />
+                            <SortableHeader label="Job #" field="jobId" sortField={invSortField} sortDir={invSortDir} onSort={handleInvSort} />
+                            <SortableHeader label="Amount" field="amount" sortField={invSortField} sortDir={invSortDir} onSort={handleInvSort} className="text-right" />
+                            <SortableHeader label="Status" field="status" sortField={invSortField} sortDir={invSortDir} onSort={handleInvSort} />
+                            <SortableHeader label="Submitted date" field="submittedAt" sortField={invSortField} sortDir={invSortDir} onSort={handleInvSort} />
                           </tr>
                         </thead>
                         <tbody>
-                          {contractorInvoices.map((inv) => (
+                          {[...contractorInvoices].sort((a, b) => {
+                            let va = "", vb = "";
+                            if (invSortField === "status") { va = a.status || ""; vb = b.status || ""; }
+                            else if (invSortField === "amount") { return invSortDir === "asc" ? (a.totalAmount ?? 0) - (b.totalAmount ?? 0) : (b.totalAmount ?? 0) - (a.totalAmount ?? 0); }
+                            else if (invSortField === "jobId") { va = a.jobId || ""; vb = b.jobId || ""; }
+                            else if (invSortField === "invoiceNumber") { va = a.invoiceNumber || ""; vb = b.invoiceNumber || ""; }
+                            else { va = a.submittedAt || ""; vb = b.submittedAt || ""; }
+                            return invSortDir === "asc" ? va.localeCompare(vb) : vb.localeCompare(va);
+                          }).map((inv) => (
                             <tr key={inv.id}>
                               <td>{inv.invoiceNumber || inv.id?.slice(0, 8) || "—"}</td>
                               <td>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import AppShell from "../../../components/AppShell";
@@ -9,6 +9,8 @@ import Panel from "../../../components/layout/Panel";
 import ErrorBanner from "../../../components/ui/ErrorBanner";
 import { authHeaders } from "../../../lib/api";
 import Badge from "../../../components/ui/Badge";
+import SortableHeader from "../../../components/SortableHeader";
+import { useLocalSort, clientSort } from "../../../lib/tableUtils";
 import { rfpVariant, quoteVariant, inviteVariant } from "../../../lib/statusVariants";
 
 import { cn } from "../../../lib/utils";
@@ -152,6 +154,16 @@ export default function RfpDetailPage() {
     ? `RFP #${rfp.id?.slice(0, 8)}`
     : "RFP Detail";
 
+  const { sortField: invSF, sortDir: invSD, handleSort: handleInvSort } = useLocalSort("contractor", "asc");
+  const sortedInvites = useMemo(() => clientSort(rfp?.invites || [], invSF, invSD, (inv, f) => {
+    if (f === "contractor") return (inv.contractor?.name || "").toLowerCase();
+    if (f === "status") return inv.status || "";
+    if (f === "email") return (inv.contractor?.email || "").toLowerCase();
+    if (f === "phone") return (inv.contractor?.phone || "").toLowerCase();
+    if (f === "invited") return inv.createdAt || "";
+    return "";
+  }), [rfp, invSF, invSD]);
+
   return (
     <AppShell role="MANAGER">
       <PageShell>
@@ -281,7 +293,7 @@ export default function RfpDetailPage() {
                   <>
                     {/* Mobile cards */}
                     <div className="sm:hidden divide-y divide-slate-100">
-                      {rfp.invites.map((inv) => (
+                      {sortedInvites.map((inv) => (
                         <div key={inv.id} className="px-4 py-3 flex items-center justify-between gap-2">
                           <div className="min-w-0">
                             {inv.contractor ? (
@@ -302,15 +314,15 @@ export default function RfpDetailPage() {
                       <table className="data-table">
                         <thead>
                           <tr>
-                            <th>Contractor</th>
-                            <th>Email</th>
-                            <th>Phone</th>
-                            <th>Status</th>
-                            <th>Invited</th>
+                            <SortableHeader label="Contractor" field="contractor" sortField={invSF} sortDir={invSD} onSort={handleInvSort} />
+                            <SortableHeader label="Email" field="email" sortField={invSF} sortDir={invSD} onSort={handleInvSort} />
+                            <SortableHeader label="Phone" field="phone" sortField={invSF} sortDir={invSD} onSort={handleInvSort} />
+                            <SortableHeader label="Status" field="status" sortField={invSF} sortDir={invSD} onSort={handleInvSort} />
+                            <SortableHeader label="Invited" field="invited" sortField={invSF} sortDir={invSD} onSort={handleInvSort} />
                           </tr>
                         </thead>
                         <tbody>
-                          {rfp.invites.map((inv) => (
+                          {sortedInvites.map((inv) => (
                             <tr key={inv.id}>
                               <td className="min-w-0">
                                 {inv.contractor ? (

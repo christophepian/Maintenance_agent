@@ -116,6 +116,8 @@ const tabKeys = FINANCE_TABS.map((t) => t.key);
       if (f === "net") return b.netIncomeCents ?? 0;
       if (f === "collection") return b.collectionRate ?? 0;
       if (f === "receivables") return b.receivablesCents ?? 0;
+      if (f === "earned") return b.earnedIncomeCents ?? 0;
+      if (f === "expenses") return b.expensesTotalCents ?? 0;
       return "";
     });
   }, [portfolio, bSortField, bSortDir]);
@@ -255,8 +257,8 @@ const tabKeys = FINANCE_TABS.map((t) => t.key);
                               <thead>
                                 <tr>
                                   <SortableHeader label="Building" field="name" sortField={bSortField} sortDir={bSortDir} onSort={handleBuildingSort} />
-                                  <th className="text-right">Earned Income</th>
-                                  <th className="text-right">Expenses</th>
+                                  <SortableHeader label="Earned Income" field="earned" sortField={bSortField} sortDir={bSortDir} onSort={handleBuildingSort} className="text-right" />
+                                  <SortableHeader label="Expenses" field="expenses" sortField={bSortField} sortDir={bSortDir} onSort={handleBuildingSort} className="text-right" />
                                   <SortableHeader label="Net" field="net" sortField={bSortField} sortDir={bSortDir} onSort={handleBuildingSort} className="text-right" />
                                   <SortableHeader label="Collection" field="collection" sortField={bSortField} sortDir={bSortDir} onSort={handleBuildingSort} className="text-right" />
                                   <SortableHeader label="Receivables" field="receivables" sortField={bSortField} sortDir={bSortDir} onSort={handleBuildingSort} className="text-right" />

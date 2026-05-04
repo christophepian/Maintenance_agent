@@ -73,6 +73,8 @@ export default function ChartOfAccountsPage() {
   const sortedExpenseTypes = useMemo(() => clientSort(expenseTypes, etSortField, etSortDir, (et, f) => {
     if (f === "name") return (et.name || "").toLowerCase();
     if (f === "code") return (et.code || "").toLowerCase();
+    if (f === "description") return (et.description || "").toLowerCase();
+    if (f === "status") return et.isActive ? 0 : 1;
     return "";
   }), [expenseTypes, etSortField, etSortDir]);
 
@@ -80,8 +82,18 @@ export default function ChartOfAccountsPage() {
   const sortedAccounts = useMemo(() => clientSort(accounts, accSortField, accSortDir, (acc, f) => {
     if (f === "name") return (acc.name || "").toLowerCase();
     if (f === "code") return (acc.code || "").toLowerCase();
+    if (f === "type") return (acc.accountType || "").toLowerCase();
+    if (f === "status") return acc.isActive ? 0 : 1;
     return "";
   }), [accounts, accSortField, accSortDir]);
+
+  const { sortField: mapSF, sortDir: mapSD, handleSort: handleMapSort } = useLocalSort("expenseType", "asc");
+  const sortedMappings = useMemo(() => clientSort(mappings, mapSF, mapSD, (m, f) => {
+    if (f === "expenseType") return (m.expenseType?.name || m.expenseTypeId || "").toLowerCase();
+    if (f === "account") return (m.account?.name || m.accountId || "").toLowerCase();
+    if (f === "scope") return (m.building?.name || "org-wide").toLowerCase();
+    return "";
+  }), [mappings, mapSF, mapSD]);
 
   /* New-item forms */
   const [newET, setNewET] = useState({ name: "", description: "", code: "" });
@@ -311,8 +323,8 @@ export default function ChartOfAccountsPage() {
                             <tr>
                               <SortableHeader label="Name" field="name" sortField={etSortField} sortDir={etSortDir} onSort={handleETSort} />
                               <SortableHeader label="Code" field="code" sortField={etSortField} sortDir={etSortDir} onSort={handleETSort} />
-                              <th>Description</th>
-                              <th>Status</th>
+                              <SortableHeader label="Description" field="description" sortField={etSortField} sortDir={etSortDir} onSort={handleETSort} />
+                              <SortableHeader label="Status" field="status" sortField={etSortField} sortDir={etSortDir} onSort={handleETSort} />
                             </tr>
                           </thead>
                           <tbody>
@@ -402,8 +414,8 @@ export default function ChartOfAccountsPage() {
                             <tr>
                               <SortableHeader label="Name" field="name" sortField={accSortField} sortDir={accSortDir} onSort={handleAccSort} />
                               <SortableHeader label="Code" field="code" sortField={accSortField} sortDir={accSortDir} onSort={handleAccSort} />
-                              <th>Type</th>
-                              <th>Status</th>
+                              <SortableHeader label="Type" field="type" sortField={accSortField} sortDir={accSortDir} onSort={handleAccSort} />
+                              <SortableHeader label="Status" field="status" sortField={accSortField} sortDir={accSortDir} onSort={handleAccSort} />
                             </tr>
                           </thead>
                           <tbody>
@@ -480,7 +492,7 @@ export default function ChartOfAccountsPage() {
                     <>
                       {/* Mobile card list — sm:hidden */}
                       <div className="sm:hidden overflow-hidden divide-y divide-table-divider">
-                        {mappings.map((m) => (
+                        {sortedMappings.map((m) => (
                           <div key={m.id} className="table-card">
                             <p className="table-card-head">{m.expenseType?.name || m.expenseTypeId}</p>
                             <p className="table-card-sub">→ {m.account?.name || m.accountId}{m.account?.code ? ` (${m.account.code})` : ""}</p>
@@ -501,15 +513,15 @@ export default function ChartOfAccountsPage() {
                         <table className="data-table">
                           <thead>
                             <tr>
-                              <th>Expense Type</th>
+                              <SortableHeader label="Expense Type" field="expenseType" sortField={mapSF} sortDir={mapSD} onSort={handleMapSort} />
                               <th></th>
-                              <th>Account</th>
-                              <th>Scope</th>
+                              <SortableHeader label="Account" field="account" sortField={mapSF} sortDir={mapSD} onSort={handleMapSort} />
+                              <SortableHeader label="Scope" field="scope" sortField={mapSF} sortDir={mapSD} onSort={handleMapSort} />
                               <th></th>
                             </tr>
                           </thead>
                           <tbody>
-                            {mappings.map((m) => (
+                            {sortedMappings.map((m) => (
                               <tr key={m.id}>
                                 <td className="cell-bold">{m.expenseType?.name || m.expenseTypeId}</td>
                                 <td className="text-slate-400">{"\u2192"}</td>

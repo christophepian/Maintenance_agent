@@ -17,6 +17,7 @@ import { invoiceVariant } from "../../lib/statusVariants";
 import { formatChf, formatChfCents, formatDate, formatPercent } from "../../lib/format";
 import { ownerAuthHeaders } from "../../lib/api";
 import { useTableSort, useLocalSort, clientSort } from "../../lib/tableUtils";
+import SortableHeader from "../../components/SortableHeader";
 import { cn } from "../../lib/utils";
 
 /* ═══════════════════════════════════════════════════════════════
@@ -177,6 +178,7 @@ function OverviewTab() {
   const [error, setError] = useState("");
   const [buildingsExpanded, setBuildingsExpanded] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
+  const { sortField: bSF, sortDir: bSD, handleSort: handleBSort } = useLocalSort("buildingName", "asc");
 
   const fetchPortfolio = useCallback(async () => {
     setLoading(true);
@@ -198,6 +200,15 @@ function OverviewTab() {
 
   const p = portfolio;
   const netAccent = p ? (p.totalNetIncomeCents > 0 ? "green" : p.totalNetIncomeCents < 0 ? "red" : "") : "";
+  const sortedBuildings = useMemo(() => clientSort(p?.buildings ?? [], bSF, bSD, (b, f) => {
+    if (f === "buildingName") return (b.buildingName || "").toLowerCase();
+    if (f === "earnedIncomeCents") return b.earnedIncomeCents ?? 0;
+    if (f === "expensesTotalCents") return b.expensesTotalCents ?? 0;
+    if (f === "netIncomeCents") return b.netIncomeCents ?? 0;
+    if (f === "collectionRate") return b.collectionRate ?? 0;
+    if (f === "receivablesCents") return b.receivablesCents ?? 0;
+    return "";
+  }), [p?.buildings, bSF, bSD]);
 
   return (
     <div className="space-y-6">
@@ -264,7 +275,7 @@ function OverviewTab() {
               <>
                 {/* Mobile */}
                 <div className="md:hidden overflow-hidden rounded-lg border border-table-border divide-y divide-table-divider">
-                  {(buildingsExpanded ? p.buildings : p.buildings.slice(0, 5)).map((b) => (
+                  {(buildingsExpanded ? sortedBuildings : sortedBuildings.slice(0, 5)).map((b) => (
                     <div key={b.buildingId} className="table-card">
                       <div className="flex items-center gap-2">
                         <HealthDot health={b.health} />
@@ -286,16 +297,16 @@ function OverviewTab() {
                     <table className="data-table">
                       <thead>
                         <tr>
-                          <th>Building</th>
-                          <th className="text-right">Earned Income</th>
-                          <th className="text-right">Expenses</th>
-                          <th className="text-right">Net</th>
-                          <th className="text-right">Collection</th>
-                          <th className="text-right">Receivables</th>
+                          <SortableHeader label="Building" field="buildingName" sortField={bSF} sortDir={bSD} onSort={handleBSort} />
+                          <SortableHeader label="Earned Income" field="earnedIncomeCents" sortField={bSF} sortDir={bSD} onSort={handleBSort} className="text-right" />
+                          <SortableHeader label="Expenses" field="expensesTotalCents" sortField={bSF} sortDir={bSD} onSort={handleBSort} className="text-right" />
+                          <SortableHeader label="Net" field="netIncomeCents" sortField={bSF} sortDir={bSD} onSort={handleBSort} className="text-right" />
+                          <SortableHeader label="Collection" field="collectionRate" sortField={bSF} sortDir={bSD} onSort={handleBSort} className="text-right" />
+                          <SortableHeader label="Receivables" field="receivablesCents" sortField={bSF} sortDir={bSD} onSort={handleBSort} className="text-right" />
                         </tr>
                       </thead>
                       <tbody>
-                        {(buildingsExpanded ? p.buildings : p.buildings.slice(0, 5)).map((b) => (
+                        {(buildingsExpanded ? sortedBuildings : sortedBuildings.slice(0, 5)).map((b) => (
                           <tr key={b.buildingId}>
                             <td>
                               <span className="flex items-center gap-2">
@@ -320,7 +331,7 @@ function OverviewTab() {
                     </table>
                   </div>
                 </div>
-                {p.buildings.length > 5 && (
+                  {sortedBuildings.length > 5 && (
                   <div className="expand-footer" onClick={() => setBuildingsExpanded((v) => !v)}>
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"
                       className={cn("w-4 h-4 transition-transform duration-200", buildingsExpanded ? "rotate-180" : "")}>

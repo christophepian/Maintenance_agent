@@ -12,6 +12,8 @@ import { cn } from "../../lib/utils";
 import { formatDate } from "../../lib/format";
 import ScrollableTabs from "../../components/mobile/ScrollableTabs";
 import DepreciationStandards from "../../components/DepreciationStandards";
+import SortableHeader from "../../components/SortableHeader";
+import { useLocalSort, clientSort } from "../../lib/tableUtils";
 
 const SETTINGS_TABS = [
   { key: "ORG", label: "Organisation" },
@@ -59,6 +61,17 @@ export default function ManagerSettingsPage() {
   const [legalSaving, setLegalSaving] = useState(false);
   const [legalFormError, setLegalFormError] = useState("");
   const [scopeFilter, setScopeFilter] = useState("ALL");
+
+  const { sortField: bldSF, sortDir: bldSD, handleSort: handleBldSort } = useLocalSort("name", "asc");
+  const sortedBuildings = useMemo(() => clientSort(buildings, bldSF, bldSD, (b, f) => {
+    if (f === "name") return (b.name || "").toLowerCase();
+    if (f === "address") return (b.address || "").toLowerCase();
+    if (f === "canton") return (b.canton || "").toLowerCase();
+    return "";
+  }), [buildings, bldSF, bldSD]);
+
+  const { sortField: lsSF, sortDir: lsSD, handleSort: handleLsSort } = useLocalSort("name", "asc");
+  const { sortField: lvSF, sortDir: lvSD, handleSort: handleLvSort } = useLocalSort("key", "asc");
 
   // Load buildings for the Buildings tab (lazy — on first tab switch)
   const loadBuildings = useCallback(async () => {
@@ -523,14 +536,14 @@ export default function ManagerSettingsPage() {
                   <table className="data-table">
                     <thead>
                       <tr>
-                        <th>Name</th>
-                        <th>Address</th>
-                        <th>Canton</th>
+                        <SortableHeader label="Name" field="name" sortField={bldSF} sortDir={bldSD} onSort={handleBldSort} />
+                        <SortableHeader label="Address" field="address" sortField={bldSF} sortDir={bldSD} onSort={handleBldSort} />
+                        <SortableHeader label="Canton" field="canton" sortField={bldSF} sortDir={bldSD} onSort={handleBldSort} />
                         <th></th>
                       </tr>
                     </thead>
                     <tbody>
-                      {buildings.map((b) => (
+                      {sortedBuildings.map((b) => (
                         <tr key={b.id} className="cursor-pointer hover:bg-slate-50/80" onClick={() => router.push(`/admin-inventory/buildings/${b.id}`)}>
                           <td className="cell-bold">{b.name || "Unnamed"}</td>
                           <td>{b.address || "—"}</td>
@@ -679,18 +692,28 @@ export default function ManagerSettingsPage() {
                   <table className="data-table">
                     <thead>
                       <tr>
-                        <th>Name</th>
-                        <th>Type</th>
-                        <th>Scope</th>
-                        <th>Frequency</th>
-                        <th>Status</th>
-                        <th>Last Synced</th>
+                        <SortableHeader label="Name" field="name" sortField={lsSF} sortDir={lsSD} onSort={handleLsSort} />
+                        <SortableHeader label="Type" field="type" sortField={lsSF} sortDir={lsSD} onSort={handleLsSort} />
+                        <SortableHeader label="Scope" field="scope" sortField={lsSF} sortDir={lsSD} onSort={handleLsSort} />
+                        <SortableHeader label="Frequency" field="frequency" sortField={lsSF} sortDir={lsSD} onSort={handleLsSort} />
+                        <SortableHeader label="Status" field="status" sortField={lsSF} sortDir={lsSD} onSort={handleLsSort} />
+                        <SortableHeader label="Last Synced" field="lastSynced" sortField={lsSF} sortDir={lsSD} onSort={handleLsSort} />
                         <th>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {legalSources
+                      {[...legalSources]
                         .filter((s) => scopeFilter === "ALL" || s.scope === scopeFilter)
+                        .sort((a, b) => {
+                          let va = "", vb = "";
+                          if (lsSF === "status") { va = a.status || ""; vb = b.status || ""; }
+                          else if (lsSF === "scope") { va = a.scope || ""; vb = b.scope || ""; }
+                          else if (lsSF === "type") { va = a.fetcherType || ""; vb = b.fetcherType || ""; }
+                          else if (lsSF === "frequency") { va = a.updateFrequency || ""; vb = b.updateFrequency || ""; }
+                          else if (lsSF === "lastSynced") { va = a.lastSuccessAt || ""; vb = b.lastSuccessAt || ""; }
+                          else { va = (a.name || "").toLowerCase(); vb = (b.name || "").toLowerCase(); }
+                          return lsSD === "asc" ? va.localeCompare(vb) : vb.localeCompare(va);
+                        })
                         .map((s) => (
                         <tr key={s.id}>
                           <td className="cell-bold">
@@ -749,13 +772,18 @@ export default function ManagerSettingsPage() {
                     <table className="data-table">
                       <thead>
                         <tr>
-                          <th>Key</th>
-                          <th>Description</th>
+                          <SortableHeader label="Key" field="key" sortField={lvSF} sortDir={lvSD} onSort={handleLvSort} />
+                          <SortableHeader label="Description" field="description" sortField={lvSF} sortDir={lvSD} onSort={handleLvSort} />
                           <th>Versions</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {legalVariables.map((v) => (
+                        {[...legalVariables].sort((a, b) => {
+                          let va = "", vb = "";
+                          if (lvSF === "description") { va = (a.description || "").toLowerCase(); vb = (b.description || "").toLowerCase(); }
+                          else { va = (a.key || "").toLowerCase(); vb = (b.key || "").toLowerCase(); }
+                          return lvSD === "asc" ? va.localeCompare(vb) : vb.localeCompare(va);
+                        }).map((v) => (
                           <tr key={v.id}>
                             <td className="font-mono text-xs">{v.key}</td>
                             <td>{v.description || "—"}</td>

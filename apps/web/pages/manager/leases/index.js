@@ -10,6 +10,7 @@ import { authHeaders } from "../../../lib/api";
 import UndoToast, { useUndoToast } from "../../../components/ui/UndoToast";
 import ConfigurableTable from "../../../components/ConfigurableTable";
 import { clientSort, useLocalSort } from "../../../lib/tableUtils";
+import SortableHeader from "../../../components/SortableHeader";
 import Badge from "../../../components/ui/Badge";
 import { leaseVariant } from "../../../lib/statusVariants";
 import { cn } from "../../../lib/utils";
@@ -240,6 +241,8 @@ export default function LeasesPage() {
     referenceRatePercent: "1.75", depositDueRule: "AT_SIGNATURE", includesHouseRules: true,
   });
   const { sortField: tmplSortField, sortDir: tmplSortDir, handleSort: handleTmplSort } = useLocalSort("templateName", "asc");
+  const { sortField: subSF, sortDir: subSD, handleSort: handleSubSort } = useLocalSort("sentForSignatureAt", "desc");
+  const { sortField: lsSF, sortDir: lsSD, handleSort: handleLsSort } = useLocalSort("tenantName", "asc");
   const toast = useUndoToast();
 
   const availableBuildings = useMemo(() => {
@@ -423,6 +426,22 @@ export default function LeasesPage() {
   const draftLeases  = searchedLeases.filter(l => l.status === "DRAFT");
   const submitted    = searchedLeases.filter(l => l.status === "READY_TO_SIGN");
   const archived     = searchedLeases.filter(l => ["CANCELLED", "TERMINATED"].includes(l.status));
+
+  function leaseExtractor(lease, f) {
+    if (f === "tenantName") return (lease.tenantName || "").toLowerCase();
+    if (f === "unit") return (lease.unit?.unitNumber || "").toLowerCase();
+    if (f === "building") return (lease.unit?.building?.name || "").toLowerCase();
+    if (f === "rent") return lease.rentTotalChf ?? lease.netRentChf ?? 0;
+    if (f === "netRentChf") return lease.netRentChf ?? 0;
+    if (f === "startDate") return lease.startDate || "";
+    if (f === "sentForSignatureAt") return lease.sentForSignatureAt || "";
+    if (f === "status") return (lease.status || "").toLowerCase();
+    return "";
+  }
+  const sortedSubmitted = useMemo(() => clientSort(submitted, subSF, subSD, leaseExtractor), [submitted, subSF, subSD]);
+  const sortedActive    = useMemo(() => clientSort(activeLease, lsSF, lsSD, leaseExtractor), [activeLease, lsSF, lsSD]);
+  const sortedDraft     = useMemo(() => clientSort(draftLeases, lsSF, lsSD, leaseExtractor), [draftLeases, lsSF, lsSD]);
+  const sortedArchived  = useMemo(() => clientSort(archived, lsSF, lsSD, leaseExtractor), [archived, lsSF, lsSD]);
 
   const tabCounts = [activeLease.length, draftLeases.length, submitted.length, templates.length, archived.length];
 
@@ -753,7 +772,7 @@ export default function LeasesPage() {
                   <>
                     {/* Mobile card list — sm:hidden */}
                     <div className="sm:hidden overflow-hidden rounded-lg border border-table-border divide-y divide-table-divider">
-                      {submitted.map(lease => {
+                      {sortedSubmitted.map(lease => {
                         const expired = isExpired(lease.sentForSignatureAt);
                         const result = expiryResult[lease.id];
                         return (
@@ -794,17 +813,17 @@ export default function LeasesPage() {
                       <table className="data-table">
                         <thead>
                           <tr>
-                            <th>Tenant</th>
-                            <th>Unit</th>
-                            <th>Building</th>
-                            <th>Rent</th>
-                            <th>Sent</th>
+                            <SortableHeader label="Tenant" field="tenantName" sortField={subSF} sortDir={subSD} onSort={handleSubSort} />
+                            <SortableHeader label="Unit" field="unit" sortField={subSF} sortDir={subSD} onSort={handleSubSort} />
+                            <SortableHeader label="Building" field="building" sortField={subSF} sortDir={subSD} onSort={handleSubSort} />
+                            <SortableHeader label="Rent" field="rent" sortField={subSF} sortDir={subSD} onSort={handleSubSort} />
+                            <SortableHeader label="Sent" field="sentForSignatureAt" sortField={subSF} sortDir={subSD} onSort={handleSubSort} />
                             <th>Deadline</th>
                             <th>Actions</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {submitted.map(lease => {
+                          {sortedSubmitted.map(lease => {
                             const expired = isExpired(lease.sentForSignatureAt);
                             const result = expiryResult[lease.id];
                             return (
@@ -855,6 +874,7 @@ export default function LeasesPage() {
             {[0, 1, 4].map((tabIndex) => {
               const tab = LEASE_TABS[tabIndex];
               const filtered = [activeLease, draftLeases, null, null, archived][tabIndex];
+              const sortedFiltered = [sortedActive, sortedDraft, null, null, sortedArchived][tabIndex];
               return (
                 <div key={tabIndex} className={activeTab === tabIndex ? "tab-panel-active" : "tab-panel"}>
                   {loading ? (
@@ -870,7 +890,7 @@ export default function LeasesPage() {
                     <>
                       {/* Mobile card list — sm:hidden */}
                       <div className="sm:hidden overflow-hidden rounded-lg border border-table-border divide-y divide-table-divider">
-                        {filtered.slice(0, 200).map(lease => {
+                        {sortedFiltered.slice(0, 200).map(lease => {
                           const netRent = lease.netRentChf ?? 0;
                           const charges = lease.chargesTotalChf ?? 0;
                           const totalMo = netRent + charges;
@@ -904,20 +924,20 @@ export default function LeasesPage() {
                         <table className="data-table">
                           <thead>
                             <tr>
-                              <th>Tenant</th>
-                              <th>Unit</th>
-                              <th>Building</th>
-                              <th>Net Rent</th>
+                              <SortableHeader label="Tenant" field="tenantName" sortField={lsSF} sortDir={lsSD} onSort={handleLsSort} />
+                              <SortableHeader label="Unit" field="unit" sortField={lsSF} sortDir={lsSD} onSort={handleLsSort} />
+                              <SortableHeader label="Building" field="building" sortField={lsSF} sortDir={lsSD} onSort={handleLsSort} />
+                              <SortableHeader label="Net Rent" field="netRentChf" sortField={lsSF} sortDir={lsSD} onSort={handleLsSort} />
                               {tabIndex === 0 && <th>Charges</th>}
                               {tabIndex === 0 && <th>Total/mo</th>}
-                              <th>Start</th>
-                              <th>Status</th>
+                              <SortableHeader label="Start" field="startDate" sortField={lsSF} sortDir={lsSD} onSort={handleLsSort} />
+                              <SortableHeader label="Status" field="status" sortField={lsSF} sortDir={lsSD} onSort={handleLsSort} />
                               {tabIndex === 1 && <th>Tag</th>}
                               <th>Actions</th>
                             </tr>
                           </thead>
                           <tbody>
-                            {filtered.slice(0, 200).map(lease => {
+                            {sortedFiltered.slice(0, 200).map(lease => {
                               const netRent = lease.netRentChf ?? 0;
                               const charges = lease.chargesTotalChf ?? 0;
                               const totalMo = netRent + charges;

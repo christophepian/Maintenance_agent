@@ -14,6 +14,8 @@ import ErrorBanner from "../../../../components/ui/ErrorBanner";
 import { cn } from "../../../../lib/utils";
 import { leaseVariant, invoiceVariant } from "../../../../lib/statusVariants";
 import ScrollableTabs from "../../../../components/mobile/ScrollableTabs";
+import SortableHeader from "../../../../components/SortableHeader";
+import { useLocalSort, clientSort } from "../../../../lib/tableUtils";
 
 export default function TenantDetailPage() {
   const router = useRouter();
@@ -31,6 +33,27 @@ export default function TenantDetailPage() {
   const [leasesLoading, setLeasesLoading] = useState(false);
   const [leaseInvoices, setLeaseInvoices] = useState([]);
   const [invoicesLoading, setInvoicesLoading] = useState(false);
+
+  const { sortField: lSortField, sortDir: lSortDir, handleSort: handleLeaseSort } = useLocalSort("startDate", "desc");
+  const sortedLeases = useMemo(() => clientSort(leases, lSortField, lSortDir, (l, f) => {
+    if (f === "unit") return (l.unit?.unitNumber || "").toLowerCase();
+    if (f === "building") return (l.unit?.building?.name || "").toLowerCase();
+    if (f === "startDate") return l.startDate || "";
+    if (f === "endDate") return l.endDate || "";
+    if (f === "status") return l.status || "";
+    if (f === "rent") return l.netRentChf ?? 0;
+    return "";
+  }), [leases, lSortField, lSortDir]);
+
+  const { sortField: iSortField, sortDir: iSortDir, handleSort: handleInvSort } = useLocalSort("dueDate", "desc");
+  const sortedInvoices = useMemo(() => clientSort(leaseInvoices, iSortField, iSortDir, (inv, f) => {
+    if (f === "invoiceNumber") return inv.invoiceNumber || "";
+    if (f === "description") return (inv.description || "").toLowerCase();
+    if (f === "amount") return inv.totalAmount ?? 0;
+    if (f === "dueDate") return inv.dueDate || "";
+    if (f === "status") return inv.status || "";
+    return "";
+  }), [leaseInvoices, iSortField, iSortDir]);
 
   useEffect(() => {
     if (!id) return;
@@ -316,7 +339,7 @@ export default function TenantDetailPage() {
                     <>
                       {/* Mobile cards */}
                       <div className="sm:hidden divide-y divide-slate-100">
-                        {leases.map((l) => (
+                        {sortedLeases.map((l) => (
                           <div key={l.id} className="px-4 py-3 flex flex-col gap-1">
                             <div className="flex items-center justify-between gap-2">
                               <Link href={`/manager/leases/${l.id}`} className="cell-link text-sm font-medium">
@@ -337,16 +360,16 @@ export default function TenantDetailPage() {
                         <table className="data-table">
                           <thead>
                             <tr>
-                              <th>Unit</th>
-                              <th>Building</th>
-                              <th>Start date</th>
-                              <th>End date</th>
-                              <th>Status</th>
-                              <th className="text-right">Monthly rent</th>
+                              <SortableHeader label="Unit" field="unit" sortField={lSortField} sortDir={lSortDir} onSort={handleLeaseSort} />
+                              <SortableHeader label="Building" field="building" sortField={lSortField} sortDir={lSortDir} onSort={handleLeaseSort} />
+                              <SortableHeader label="Start date" field="startDate" sortField={lSortField} sortDir={lSortDir} onSort={handleLeaseSort} />
+                              <SortableHeader label="End date" field="endDate" sortField={lSortField} sortDir={lSortDir} onSort={handleLeaseSort} />
+                              <SortableHeader label="Status" field="status" sortField={lSortField} sortDir={lSortDir} onSort={handleLeaseSort} />
+                              <SortableHeader label="Monthly rent" field="rent" sortField={lSortField} sortDir={lSortDir} onSort={handleLeaseSort} className="text-right" />
                             </tr>
                           </thead>
                           <tbody>
-                            {leases.map((l) => (
+                            {sortedLeases.map((l) => (
                               <tr key={l.id}>
                                 <td>
                                   <Link href={`/manager/leases/${l.id}`} className="cell-link">
@@ -384,7 +407,7 @@ export default function TenantDetailPage() {
                     <>
                       {/* Mobile cards */}
                       <div className="sm:hidden divide-y divide-slate-100">
-                        {leaseInvoices.map((inv) => (
+                        {sortedInvoices.map((inv) => (
                           <div key={inv.id} className="px-4 py-3 flex flex-col gap-1">
                             <div className="flex items-center justify-between gap-2">
                               <span className="text-sm font-medium text-slate-800">
@@ -405,15 +428,15 @@ export default function TenantDetailPage() {
                         <table className="data-table">
                           <thead>
                             <tr>
-                              <th>Invoice #</th>
-                              <th>Description</th>
-                              <th className="text-right">Amount</th>
-                              <th>Due date</th>
-                              <th>Status</th>
+                              <SortableHeader label="Invoice #" field="invoiceNumber" sortField={iSortField} sortDir={iSortDir} onSort={handleInvSort} />
+                              <SortableHeader label="Description" field="description" sortField={iSortField} sortDir={iSortDir} onSort={handleInvSort} />
+                              <SortableHeader label="Amount" field="amount" sortField={iSortField} sortDir={iSortDir} onSort={handleInvSort} className="text-right" />
+                              <SortableHeader label="Due date" field="dueDate" sortField={iSortField} sortDir={iSortDir} onSort={handleInvSort} />
+                              <SortableHeader label="Status" field="status" sortField={iSortField} sortDir={iSortDir} onSort={handleInvSort} />
                             </tr>
                           </thead>
                           <tbody>
-                            {leaseInvoices.map((inv) => (
+                            {sortedInvoices.map((inv) => (
                               <tr key={inv.id}>
                                 <td>{inv.invoiceNumber || inv.id?.slice(0, 8) || "—"}</td>
                                 <td>{inv.description || "—"}</td>

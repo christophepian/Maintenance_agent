@@ -13,6 +13,8 @@ import ErrorBanner from "../../../../components/ui/ErrorBanner";
 import Badge from "../../../../components/ui/Badge";
 import { ownerAuthHeaders } from "../../../../lib/api";
 import { cn } from "../../../../lib/utils";
+import SortableHeader from "../../../../components/SortableHeader";
+import { useLocalSort, clientSort } from "../../../../lib/tableUtils";
 function scoreColor(score) {
   if (score >= 700) return "text-green-700 bg-green-50";
   if (score >= 400) return "text-amber-700 bg-amber-50";
@@ -113,6 +115,15 @@ export default function OwnerCandidatesPage() {
 
   // Eligible candidates (not disqualified)
   const eligible = useMemo(() => rows.filter((r) => !r.disqualified), [rows]);
+
+  const { sortField: candSF, sortDir: candSD, handleSort: handleCandSort } = useLocalSort("score", "desc");
+  const sortedRows = useMemo(() => clientSort(rows, candSF, candSD, (r, f) => {
+    if (f === "name") return (r.name || "").toLowerCase();
+    if (f === "income") return r.income ?? 0;
+    if (f === "score") return r.score ?? 0;
+    if (f === "confidence") return r.confidence ?? 0;
+    return 0;
+  }), [rows, candSF, candSD]);
 
   function isSelected(auId) {
     return Object.values(selection).includes(auId);
@@ -422,15 +433,15 @@ export default function OwnerCandidatesPage() {
                       <thead>
                         <tr>
                           <th className="px-4 py-3">Rank</th>
-                          <th className="px-4 py-3">Applicant</th>
-                          <th className="px-4 py-3">Income (CHF)</th>
-                          <th className="px-4 py-3">Score</th>
-                          <th className="px-4 py-3">Confidence</th>
+                          <SortableHeader label="Applicant" field="name" sortField={candSF} sortDir={candSD} onSort={handleCandSort} />
+                          <SortableHeader label="Income (CHF)" field="income" sortField={candSF} sortDir={candSD} onSort={handleCandSort} />
+                          <SortableHeader label="Score" field="score" sortField={candSF} sortDir={candSD} onSort={handleCandSort} />
+                          <SortableHeader label="Confidence" field="confidence" sortField={candSF} sortDir={candSD} onSort={handleCandSort} />
                           <th className="px-4 py-3 text-right">Assign</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100 bg-white">
-                        {rows.map((row, idx) => {
+                        {sortedRows.map((row, idx) => {
                           const conf = confidenceBadge(row.confidence || 0);
                           const currentRole = roleOf(row.applicationUnitId);
                           const roleInfo = currentRole ? ROLES.find((r) => r.key === currentRole) : null;

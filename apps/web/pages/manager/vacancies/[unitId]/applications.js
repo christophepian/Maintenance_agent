@@ -13,6 +13,8 @@ import { formatDisqualificationReasons } from "../../../../lib/formatDisqualific
 import { authHeaders } from "../../../../lib/api";
 import Badge from "../../../../components/ui/Badge";
 import { cn } from "../../../../lib/utils";
+import SortableHeader from "../../../../components/SortableHeader";
+import { useLocalSort, clientSort } from "../../../../lib/tableUtils";
 function scoreColor(score) {
   if (score >= 700) return "text-green-700 bg-green-50";
   if (score >= 400) return "text-amber-700 bg-amber-50";
@@ -166,14 +168,18 @@ export default function UnitApplicationsPage() {
     });
   }, [applications, view, unitId]);
 
+  const { sortField: appSF, sortDir: appSD, handleSort: handleAppSort } = useLocalSort("score", "desc");
   const sorted = useMemo(() => {
-    return [...rows].sort((a, b) => {
-      // Non-disqualified first
-      if (a.disqualified !== b.disqualified) return a.disqualified ? 1 : -1;
-      // Then by score descending
-      return (b.score || 0) - (a.score || 0);
+    return clientSort(rows, appSF, appSD, (r, f) => {
+      if (f === "rank") return r.score ?? 0; // rank by score
+      if (f === "name") return (r.name || "").toLowerCase();
+      if (f === "income") return r.income ?? 0;
+      if (f === "score") return r.score ?? 0;
+      if (f === "confidence") return r.confidence ?? 0;
+      if (f === "status") return r.status || "";
+      return 0;
     });
-  }, [rows]);
+  }, [rows, appSF, appSD]);
 
   return (
     <AppShell role="MANAGER">
@@ -290,11 +296,11 @@ export default function UnitApplicationsPage() {
                     <thead>
                       <tr>
                         <th>Rank</th>
-                        <th>Applicant</th>
-                        <th>Income (CHF)</th>
-                        <th>Score</th>
-                        <th>Confidence</th>
-                        <th>Status</th>
+                        <SortableHeader label="Applicant" field="name" sortField={appSF} sortDir={appSD} onSort={handleAppSort} />
+                        <SortableHeader label="Income (CHF)" field="income" sortField={appSF} sortDir={appSD} onSort={handleAppSort} />
+                        <SortableHeader label="Score" field="score" sortField={appSF} sortDir={appSD} onSort={handleAppSort} />
+                        <SortableHeader label="Confidence" field="confidence" sortField={appSF} sortDir={appSD} onSort={handleAppSort} />
+                        <SortableHeader label="Status" field="status" sortField={appSF} sortDir={appSD} onSort={handleAppSort} />
                         <th className="text-right">Actions</th>
                       </tr>
                     </thead>

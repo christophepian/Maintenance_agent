@@ -35,6 +35,7 @@ export default function ManagerChargesPage() {
   const [expenseTypes, setExpenseTypes] = useState([]);
   const [chargeSearch, setChargeSearch] = useState("");
   const { sortField: cSortField, sortDir: cSortDir, handleSort: handleChargeSort } = useLocalSort("tenant", "asc");
+  const { sortField: iSortField, sortDir: iSortDir, handleSort: handleISort } = useLocalSort("tenantName", "asc");
 
   useEffect(() => {
     fetch("/api/coa/expense-types", { headers: authHeaders() })
@@ -72,6 +73,8 @@ export default function ManagerChargesPage() {
       case "tenant": return (l.tenantName || "").toLowerCase();
       case "building": return (l.unit?.building?.name || "").toLowerCase();
       case "chargesTotalChf": return l.chargesTotalChf ?? 0;
+      case "unit": return (l.unit?.unitNumber || "").toLowerCase();
+      case "settlementDate": return l.chargesSettlementDate || "";
       default: return "";
     }
   }
@@ -107,6 +110,15 @@ export default function ManagerChargesPage() {
     });
     return rows;
   }, [sortedCharges]);
+
+  const sortedItemizedRows = useMemo(() => clientSort(itemizedRows, iSortField, iSortDir, (row, f) => {
+    if (f === "tenantName") return (row.tenantName || "").toLowerCase();
+    if (f === "unitNumber") return (row.unitNumber || "").toLowerCase();
+    if (f === "label") return (row.label || "").toLowerCase();
+    if (f === "mode") return (row.mode || "").toLowerCase();
+    if (f === "amountChf") return row.amountChf ?? 0;
+    return "";
+  }), [itemizedRows, iSortField, iSortDir]);
 
   function startEdit(lease) {
     setEditingLeaseId(lease.id);
@@ -370,10 +382,10 @@ export default function ManagerChargesPage() {
                     <thead>
                       <tr>
                         <SortableHeader label="Tenant" field="tenant" sortField={cSortField} sortDir={cSortDir} onSort={handleChargeSort} />
-                        <th>Unit</th>
+                        <SortableHeader label="Unit" field="unit" sortField={cSortField} sortDir={cSortDir} onSort={handleChargeSort} />
                         <SortableHeader label="Building" field="building" sortField={cSortField} sortDir={cSortDir} onSort={handleChargeSort} />
                         <SortableHeader label="Monthly charges (CHF)" field="chargesTotalChf" sortField={cSortField} sortDir={cSortDir} onSort={handleChargeSort} />
-                        <th>Settlement date</th>
+                        <SortableHeader label="Settlement date" field="settlementDate" sortField={cSortField} sortDir={cSortDir} onSort={handleChargeSort} />
                         <th>Actions</th>
                       </tr>
                     </thead>
@@ -406,7 +418,7 @@ export default function ManagerChargesPage() {
               <>
                   {/* Mobile card list — sm:hidden */}
                   <div className="sm:hidden overflow-hidden divide-y divide-table-divider">
-                    {itemizedRows.map((row, idx) => (
+                    {sortedItemizedRows.map((row, idx) => (
                       <div key={`${row.leaseId}-${idx}`} className="table-card">
                         <p className="table-card-head">{row.tenantName}</p>
                         <p className="table-card-sub">{row.unitNumber} · {row.label}</p>
@@ -430,16 +442,16 @@ export default function ManagerChargesPage() {
                     <table className="data-table">
                       <thead>
                         <tr>
-                          <th>Tenant</th>
-                          <th>Unit</th>
-                          <th>Item name</th>
-                          <th>Mode</th>
-                          <th>Amount (CHF)</th>
+                          <SortableHeader label="Tenant" field="tenantName" sortField={iSortField} sortDir={iSortDir} onSort={handleISort} />
+                          <SortableHeader label="Unit" field="unitNumber" sortField={iSortField} sortDir={iSortDir} onSort={handleISort} />
+                          <SortableHeader label="Item name" field="label" sortField={iSortField} sortDir={iSortDir} onSort={handleISort} />
+                          <SortableHeader label="Mode" field="mode" sortField={iSortField} sortDir={iSortDir} onSort={handleISort} />
+                          <SortableHeader label="Amount (CHF)" field="amountChf" sortField={iSortField} sortDir={iSortDir} onSort={handleISort} />
                           <th>Actions</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {itemizedRows.map((row, idx) => (
+                        {sortedItemizedRows.map((row, idx) => (
                           <tr key={`${row.leaseId}-${idx}`}>
                             <td className="cell-bold">{row.tenantName}</td>
                             <td>{row.unitNumber}</td>

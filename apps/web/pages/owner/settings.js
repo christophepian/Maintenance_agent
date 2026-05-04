@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import AppShell from "../../components/AppShell";
@@ -14,6 +14,8 @@ import { ownerAuthHeaders } from "../../lib/api";
 import ScrollableTabs from "../../components/mobile/ScrollableTabs";
 import DepreciationStandards from "../../components/DepreciationStandards";
 import OwnerPicker from "../../components/OwnerPicker";
+import SortableHeader from "../../components/SortableHeader";
+import { useLocalSort } from "../../lib/tableUtils";
 
 const SETTINGS_TABS = [
   { key: "ACCOUNT", label: "Account" },
@@ -144,6 +146,9 @@ export default function OwnerSettingsPage() {
   const [legalVariables, setLegalVariables] = useState([]);
   const [legalLoading, setLegalLoading] = useState(false);
   const [scopeFilter, setScopeFilter] = useState("ALL");
+
+  const { sortField: lsSF, sortDir: lsSD, handleSort: handleLsSort } = useLocalSort("name", "asc");
+  const { sortField: lvSF, sortDir: lvSD, handleSort: handleLvSort } = useLocalSort("key", "asc");
 
   const loadLegalData = useCallback(async () => {
     if (legalSources.length > 0) return;
@@ -425,16 +430,25 @@ export default function OwnerSettingsPage() {
                       <table className="data-table">
                         <thead>
                           <tr>
-                            <th>Name</th>
-                            <th>Scope</th>
-                            <th>Frequency</th>
-                            <th>Status</th>
-                            <th>Last Synced</th>
+                            <SortableHeader label="Name" field="name" sortField={lsSF} sortDir={lsSD} onSort={handleLsSort} />
+                            <SortableHeader label="Scope" field="scope" sortField={lsSF} sortDir={lsSD} onSort={handleLsSort} />
+                            <SortableHeader label="Frequency" field="frequency" sortField={lsSF} sortDir={lsSD} onSort={handleLsSort} />
+                            <SortableHeader label="Status" field="status" sortField={lsSF} sortDir={lsSD} onSort={handleLsSort} />
+                            <SortableHeader label="Last Synced" field="lastSynced" sortField={lsSF} sortDir={lsSD} onSort={handleLsSort} />
                           </tr>
                         </thead>
                         <tbody>
-                          {legalSources
+                          {[...legalSources]
                             .filter((s) => scopeFilter === "ALL" || s.scope === scopeFilter)
+                            .sort((a, b) => {
+                              let va = "", vb = "";
+                              if (lsSF === "status") { va = a.status || ""; vb = b.status || ""; }
+                              else if (lsSF === "scope") { va = a.scope || ""; vb = b.scope || ""; }
+                              else if (lsSF === "frequency") { va = a.updateFrequency || ""; vb = b.updateFrequency || ""; }
+                              else if (lsSF === "lastSynced") { va = a.lastSuccessAt || ""; vb = b.lastSuccessAt || ""; }
+                              else { va = (a.name || "").toLowerCase(); vb = (b.name || "").toLowerCase(); }
+                              return lsSD === "asc" ? va.localeCompare(vb) : vb.localeCompare(va);
+                            })
                             .map((s) => (
                               <tr key={s.id}>
                                 <td className="cell-bold">
@@ -468,13 +482,18 @@ export default function OwnerSettingsPage() {
                       <table className="data-table">
                         <thead>
                           <tr>
-                            <th>Key</th>
-                            <th>Description</th>
+                            <SortableHeader label="Key" field="key" sortField={lvSF} sortDir={lvSD} onSort={handleLvSort} />
+                            <SortableHeader label="Description" field="description" sortField={lvSF} sortDir={lvSD} onSort={handleLvSort} />
                             <th>Versions</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {legalVariables.map((v) => (
+                          {[...legalVariables].sort((a, b) => {
+                            let va = "", vb = "";
+                            if (lvSF === "description") { va = (a.description || "").toLowerCase(); vb = (b.description || "").toLowerCase(); }
+                            else { va = (a.key || "").toLowerCase(); vb = (b.key || "").toLowerCase(); }
+                            return lvSD === "asc" ? va.localeCompare(vb) : vb.localeCompare(va);
+                          }).map((v) => (
                             <tr key={v.id}>
                               <td className="font-mono text-xs">{v.key}</td>
                               <td>{v.description || "—"}</td>

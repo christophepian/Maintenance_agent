@@ -5,7 +5,8 @@ import PageShell from "../../components/layout/PageShell";
 import PageHeader from "../../components/layout/PageHeader";
 import PageContent from "../../components/layout/PageContent";
 import ConfigurableTable from "../../components/ConfigurableTable";
-import { useTableSort, clientSort } from "../../lib/tableUtils";
+import { useTableSort, useLocalSort, clientSort } from "../../lib/tableUtils";
+import SortableHeader from "../../components/SortableHeader";
 import AssetCatalogue from "../../components/AssetCatalogue";
 import Link from "next/link";
 import ErrorBanner from "../../components/ui/ErrorBanner";
@@ -201,6 +202,23 @@ export default function ManagerInventoryPage() {
   const [decisionsLoading, setDecisionsLoading] = useState(false);
   const [decisionsError, setDecisionsError] = useState("");
   const [sensitivityInputs, setSensitivityInputs] = useState({});
+
+  const { sortField: decSF, sortDir: decSD, handleSort: handleDecSort } = useLocalSort("assetName", "asc");
+  const sortedDecisions = useMemo(() => {
+    if (!decisionsData) return [];
+    return clientSort(decisionsData, decSF, decSD, (item, f) => {
+      if (f === "assetName") return (item.assetName || "").toLowerCase();
+      if (f === "type") return (item.topic || "").toLowerCase();
+      if (f === "depreciation") return item.depreciationPct ?? 0;
+      if (f === "repairs") return item.cumulativeRepairCostChf ?? 0;
+      if (f === "replace") return item.estimatedReplacementCostChf ?? 0;
+      if (f === "ratio") return item.repairToReplacementRatio ?? 0;
+      if (f === "recommendation") return item.recommendation || "";
+      if (f === "ageMonths") return item.ageMonths ?? 0;
+      if (f === "breakEvenMonths") return item.breakEvenMonths ?? 9999;
+      return "";
+    });
+  }, [decisionsData, decSF, decSD]);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -628,19 +646,20 @@ export default function ManagerInventoryPage() {
                 <table className="data-table">
                   <thead>
                     <tr>
-                      <th>Asset</th>
-                      <th>Type</th>
-                      <th>Age / Life</th>
-                      <th>Depreciation</th>
-                      <th className="text-right">Repairs (CHF)</th>
-                      <th className="text-right">Replace est. (CHF)</th>
-                      <th className="text-right">Ratio</th>
-                      <th className="text-right">Break-even</th>
-                      <th>Recommendation</th>
+                      <SortableHeader label="Asset" field="assetName" sortField={decSF} sortDir={decSD} onSort={handleDecSort} />
+                      <SortableHeader label="Type" field="type" sortField={decSF} sortDir={decSD} onSort={handleDecSort} />
+                      <SortableHeader label="Age / Life" field="ageMonths" sortField={decSF} sortDir={decSD} onSort={handleDecSort} />
+                      <SortableHeader label="Depreciation" field="depreciation" sortField={decSF} sortDir={decSD} onSort={handleDecSort} />
+                      <SortableHeader label="Repairs (CHF)" field="repairs" sortField={decSF} sortDir={decSD} onSort={handleDecSort} className="text-right" />
+                      <SortableHeader label="Replace est. (CHF)" field="replace" sortField={decSF} sortDir={decSD} onSort={handleDecSort} className="text-right" />
+                      <SortableHeader label="Ratio" field="ratio" sortField={decSF} sortDir={decSD} onSort={handleDecSort} className="text-right" />
+                      <SortableHeader label="Break-even" field="breakEvenMonths" sortField={decSF} sortDir={decSD} onSort={handleDecSort} className="text-right" />
+                      <SortableHeader label="Recommendation" field="recommendation" sortField={decSF} sortDir={decSD} onSort={handleDecSort} />
+                    </tr>
                     </tr>
                   </thead>
                   <tbody>
-                    {decisionsData.map((item) => {
+                    {sortedDecisions.map((item) => {
                       const ageYears = item.ageMonths != null ? (item.ageMonths / 12).toFixed(1) : "—";
                       const lifeYears = item.usefulLifeMonths != null ? (item.usefulLifeMonths / 12).toFixed(0) : null;
                       const remainYears = item.remainingLifeMonths != null ? (item.remainingLifeMonths / 12).toFixed(1) : null;

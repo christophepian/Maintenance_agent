@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import AppShell from "../../../components/AppShell";
@@ -8,6 +8,8 @@ import PageHeader from "../../../components/layout/PageHeader";
 import PageContent from "../../../components/layout/PageContent";
 import Panel from "../../../components/layout/Panel";
 import { authHeaders } from "../../../lib/api";
+import SortableHeader from "../../../components/SortableHeader";
+import { useLocalSort, clientSort } from "../../../lib/tableUtils";
 
 import { cn } from "../../../lib/utils";
 import Badge from "../../../components/ui/Badge";
@@ -240,6 +242,41 @@ export default function LeaseEditorPage() {
   const [adjCpiNew, setAdjCpiNew] = useState("");
   const [adjEffective, setAdjEffective] = useState("");
   const [adjComputing, setAdjComputing] = useState(false);
+
+  const { sortField: srSF, sortDir: srSD, handleSort: handleSrSort } = useLocalSort("createdAt", "desc");
+  const { sortField: recSF, sortDir: recSD, handleSort: handleRecSort } = useLocalSort("year", "desc");
+  const { sortField: raSF, sortDir: raSD, handleSort: handleRaSort } = useLocalSort("effectiveDate", "desc");
+  const { sortField: invSF, sortDir: invSD, handleSort: handleInvSort } = useLocalSort("createdAt", "desc");
+
+  const sortedSigRequests = useMemo(() => clientSort(sigRequests, srSF, srSD, (sr, f) => {
+    if (f === "provider") return (sr.provider || "").toLowerCase();
+    if (f === "level") return (sr.level || "").toLowerCase();
+    if (f === "status") return (sr.status || "").toLowerCase();
+    if (f === "sentAt") return sr.sentAt || "";
+    if (f === "createdAt") return sr.createdAt || "";
+    return "";
+  }), [sigRequests, srSF, srSD]);
+
+  const sortedReconciliations = useMemo(() => clientSort(reconciliations, recSF, recSD, (r, f) => {
+    if (f === "year") return r.year ?? 0;
+    if (f === "status") return (r.status || "").toLowerCase();
+    return "";
+  }), [reconciliations, recSF, recSD]);
+
+  const sortedRentAdjustments = useMemo(() => clientSort(rentAdjustments, raSF, raSD, (ra, f) => {
+    if (f === "type") return (ra.type || "").toLowerCase();
+    if (f === "effectiveDate") return ra.effectiveDate || "";
+    if (f === "status") return (ra.status || "").toLowerCase();
+    return "";
+  }), [rentAdjustments, raSF, raSD]);
+
+  const sortedInvoices = useMemo(() => clientSort(invoices, invSF, invSD, (inv, f) => {
+    if (f === "description") return (inv.description || "").toLowerCase();
+    if (f === "amount") return inv.totalCents ?? inv.amountCents ?? 0;
+    if (f === "status") return (inv.status || "").toLowerCase();
+    if (f === "createdAt") return inv.createdAt || "";
+    return "";
+  }), [invoices, invSF, invSD]);
 
   const isDraft = lease?.status === "DRAFT";
   const isReadyToSign = lease?.status === "READY_TO_SIGN";
@@ -823,17 +860,17 @@ export default function LeaseEditorPage() {
                 <table className="data-table">
                   <thead>
                     <tr>
-                      <th>Provider</th>
-                      <th>Level</th>
-                      <th>Status</th>
+                      <SortableHeader label="Provider" field="provider" sortField={srSF} sortDir={srSD} onSort={handleSrSort} />
+                      <SortableHeader label="Level" field="level" sortField={srSF} sortDir={srSD} onSort={handleSrSort} />
+                      <SortableHeader label="Status" field="status" sortField={srSF} sortDir={srSD} onSort={handleSrSort} />
                       <th>Signers</th>
-                      <th>Sent</th>
-                      <th>Created</th>
+                      <SortableHeader label="Sent" field="sentAt" sortField={srSF} sortDir={srSD} onSort={handleSrSort} />
+                      <SortableHeader label="Created" field="createdAt" sortField={srSF} sortDir={srSD} onSort={handleSrSort} />
                       <th>Action</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {sigRequests.map(sr => (
+                    {sortedSigRequests.map(sr => (
                       <tr key={sr.id}>
                         <td>{sr.provider}</td>
                         <td>{sr.level}</td>
@@ -1011,8 +1048,8 @@ export default function LeaseEditorPage() {
                       <table className="data-table">
                         <thead>
                           <tr>
-                            <th>Year</th>
-                            <th>Status</th>
+                            <SortableHeader label="Year" field="year" sortField={recSF} sortDir={recSD} onSort={handleRecSort} />
+                            <SortableHeader label="Status" field="status" sortField={recSF} sortDir={recSD} onSort={handleRecSort} />
                             <th className="text-right">ACOMPTE</th>
                             <th className="text-right">Actual</th>
                             <th className="text-right">Balance</th>
@@ -1020,7 +1057,7 @@ export default function LeaseEditorPage() {
                           </tr>
                         </thead>
                         <tbody>
-                          {reconciliations.map((r) => (
+                          {sortedReconciliations.map((r) => (
                             <tr key={r.id} className="border-b last:border-0">
                               <td className="font-medium">{r.fiscalYear}</td>
                               <td>
@@ -1083,9 +1120,9 @@ export default function LeaseEditorPage() {
                     <table className="data-table">
                       <thead>
                         <tr>
-                          <th>Type</th>
-                          <th>Effective</th>
-                          <th>Status</th>
+                          <SortableHeader label="Type" field="type" sortField={raSF} sortDir={raSD} onSort={handleRaSort} />
+                          <SortableHeader label="Effective" field="effectiveDate" sortField={raSF} sortDir={raSD} onSort={handleRaSort} />
+                          <SortableHeader label="Status" field="status" sortField={raSF} sortDir={raSD} onSort={handleRaSort} />
                           <th className="text-right">Old</th>
                           <th className="text-right">New</th>
                           <th className="text-right">Change</th>
@@ -1093,7 +1130,7 @@ export default function LeaseEditorPage() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100">
-                        {rentAdjustments.map((a) => {
+                        {sortedRentAdjustments.map((a) => {
                           return (
                             <tr key={a.id} className="hover:bg-slate-50">
                               <td>{a.adjustmentType === "CPI_INDEXATION" ? "CPI" : a.adjustmentType === "MANUAL" ? "Manual" : a.adjustmentType}</td>
@@ -1185,14 +1222,14 @@ export default function LeaseEditorPage() {
                   <table className="data-table">
                     <thead>
                       <tr>
-                        <th>Description</th>
-                        <th>Amount</th>
-                        <th>Status</th>
-                        <th>Created</th>
+                        <SortableHeader label="Description" field="description" sortField={invSF} sortDir={invSD} onSort={handleInvSort} />
+                        <SortableHeader label="Amount" field="amount" sortField={invSF} sortDir={invSD} onSort={handleInvSort} />
+                        <SortableHeader label="Status" field="status" sortField={invSF} sortDir={invSD} onSort={handleInvSort} />
+                        <SortableHeader label="Created" field="createdAt" sortField={invSF} sortDir={invSD} onSort={handleInvSort} />
                       </tr>
                     </thead>
                     <tbody>
-                      {invoices.map(inv => (
+                      {sortedInvoices.map(inv => (
                         <tr key={inv.id}>
                           <td>
                             <Link href={`/manager/finance/invoices/${inv.id}`} className="cell-link">
