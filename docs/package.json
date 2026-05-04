@@ -1,7 +1,4 @@
 {
   "name": "maintenance-agent-docs",
-  "private": true,
-  "scripts": {
-    "vercel-build": "echo 'Static site — no build required'"
-  }
+  "private": true
 }
