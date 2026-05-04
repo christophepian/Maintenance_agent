@@ -258,6 +258,55 @@ Button has 10 variants: `primary`, `secondary`, `ghost`, `outline`, `destructive
 
 See `PROJECT_STATE.md` §F-UI8 for full rules and migration guidance.
 
+### Sortable Tables — Mandatory Protocol
+
+**Before touching any table sorting task:**
+```bash
+node scripts/audit-sortable-tables.js          # list all files with unsorted <th>
+node scripts/audit-sortable-tables.js --details # show exact line numbers
+```
+Fix **every file in the output in one pass** before committing.
+
+**Rules (non-negotiable):**
+- Every non-trivial `<th>` (not empty, not Actions, not colSpan) in a `data-table` MUST be a `<SortableHeader>` — no plain `<th>Label</th>` left behind
+- Sub-components with their own state (e.g. `OwnersTab`, `TenantsTab`) need `useLocalSort` + `clientSort` + `useMemo` **inside that component** — parent sort state does not flow in
+- The **mobile card list** and the **wide table `<tbody>`** MUST iterate the same sorted array — never `rawArray.map()` for one and `sortedArray.map()` for the other
+- `useLocalSort` lives in `lib/tableUtils` — always import from there; never hand-roll `useState` sort state
+- After all files are fixed: `git add -A apps/web && git push origin main` in the same step — Vercel only deploys what is pushed
+
+**Correct pattern for a raw `data-table`:**
+```jsx
+import SortableHeader from "../../components/SortableHeader";
+import { useLocalSort, clientSort } from "../../lib/tableUtils";
+
+const { sortField, sortDir, handleSort } = useLocalSort("name", "asc");
+const sorted = useMemo(
+  () => clientSort(items, sortField, sortDir, (item, f) => {
+    if (f === "name") return (item.name || "").toLowerCase();
+    if (f === "amount") return item.amountCents ?? 0;
+    return "";
+  }),
+  [items, sortField, sortDir]
+);
+
+// Wide table
+<table className="data-table">
+  <thead><tr>
+    <SortableHeader label="Name"   field="name"   sortField={sortField} sortDir={sortDir} onSort={handleSort} />
+    <SortableHeader label="Amount" field="amount" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
+    <th>Actions</th>  {/* action/empty columns stay as plain th */}
+  </tr></thead>
+  <tbody>{sorted.map(item => ...)}</tbody>
+</table>
+
+// Mobile card list — SAME sorted array
+<div className="sm:hidden">{sorted.map(item => ...)}</div>
+```
+
+**Columns that legitimately stay as plain `<th>`:**  empty (`<th></th>`), "Actions", colSpan cells, read-only display columns in detail pages (invoices line items, ledger entries).
+
+---
+
 ### Accessibility Baseline
 
 - **Skip-to-content link** — present in `AppShell.js` (links to `#main-content`)
