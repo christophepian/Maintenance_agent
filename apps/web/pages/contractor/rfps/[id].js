@@ -651,7 +651,7 @@ function QuoteSummary({ quote }) {
         <div className="mt-3">
           <dt className={cn("text-sm font-medium", cfg.labelColor, "mb-1")}>Line Items</dt>
           <dd className="mt-1">
-            <table className="inline-table">
+            <table className="data-table">
               <tbody>
                 {quote.lineItems.map((li, idx) => (
                   <tr key={idx} className={cn("border-b", cfg.rowBorder, "last:border-0")}>

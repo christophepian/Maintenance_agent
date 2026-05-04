@@ -393,7 +393,7 @@ export default function LedgerPage() {
 
                   {/* Wide table — hidden sm:block */}
                   <div className="hidden sm:block overflow-x-auto">
-                    <table className="inline-table w-full">
+                    <table className="data-table w-full">
                       <thead>
                         <tr>
                           <th>Date</th>
@@ -508,7 +508,7 @@ export default function LedgerPage() {
 
                           {/* Wide table — hidden sm:block */}
                           <div className="hidden sm:block overflow-x-auto border border-slate-200 rounded-b">
-                            <table className="inline-table w-full">
+                            <table className="data-table w-full">
                               <thead>
                                 <tr className="bg-slate-50">
                                   <th>Code</th>

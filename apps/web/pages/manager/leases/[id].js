@@ -820,7 +820,7 @@ export default function LeaseEditorPage() {
             <div>
               <h2 className="mb-3 text-sm font-semibold text-slate-700">Signature Requests</h2>
               <div className="overflow-x-auto rounded-lg border border-table-border">
-                <table className="inline-table">
+                <table className="data-table">
                   <thead>
                     <tr>
                       <th>Provider</th>
@@ -1008,7 +1008,7 @@ export default function LeaseEditorPage() {
                 <div>
                   {reconciliations.length > 0 && (
                     <div className="overflow-x-auto rounded-lg border border-table-border mb-4">
-                      <table className="inline-table">
+                      <table className="data-table">
                         <thead>
                           <tr>
                             <th>Year</th>
@@ -1080,7 +1080,7 @@ export default function LeaseEditorPage() {
               <div className="space-y-3">
                 {rentAdjustments.length > 0 && (
                   <div className="overflow-x-auto rounded-lg border border-table-border">
-                    <table className="inline-table">
+                    <table className="data-table">
                       <thead>
                         <tr>
                           <th>Type</th>
@@ -1182,7 +1182,7 @@ export default function LeaseEditorPage() {
                 <p className="text-sm text-slate-500">No invoices linked to this lease yet.</p>
               ) : (
                   <div className="overflow-x-auto rounded-lg border border-table-border">
-                  <table className="inline-table">
+                  <table className="data-table">
                     <thead>
                       <tr>
                         <th>Description</th>

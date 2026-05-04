@@ -228,7 +228,7 @@ function OwnersTab({ showAddForm, onAddFormClose }) {
 
           {/* Wide table */}
           <div className="hidden sm:block overflow-x-auto rounded-lg border border-table-border">
-            <table className="inline-table w-full">
+            <table className="data-table w-full">
               <thead>
                 <tr>
                   <th>Name</th>
@@ -445,7 +445,7 @@ export default function ManagerPeoplePage() {
                 {/* Wide table */}
                 <div className="hidden sm:block overflow-hidden rounded-lg border border-table-border">
                 <div className="overflow-x-auto">
-                  <table className="inline-table">
+                  <table className="data-table">
                     <thead>
                       <tr>
                         <th>Name</th>
@@ -517,7 +517,7 @@ export default function ManagerPeoplePage() {
                 {/* Wide table */}
                 <div className="hidden sm:block overflow-hidden rounded-lg border border-table-border">
                 <div className="overflow-x-auto">
-                  <table className="inline-table">
+                  <table className="data-table">
                     <thead>
                       <tr>
                         <th>Name</th>

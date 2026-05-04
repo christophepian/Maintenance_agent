@@ -255,7 +255,7 @@ export default function ManagerVacanciesPage() {
 
                 {/* Wide table — hidden sm:block */}
                 <div className="hidden sm:block overflow-x-auto rounded-lg border border-table-border">
-                  <table className="inline-table">
+                  <table className="data-table">
                     <thead>
                       <tr>
                         <th>Building</th>
@@ -374,7 +374,7 @@ export default function ManagerVacanciesPage() {
 
                 {/* Wide table — hidden sm:block */}
                 <div className="hidden sm:block overflow-x-auto rounded-lg border border-table-border">
-                  <table className="inline-table">
+                  <table className="data-table">
                     <thead>
                       <tr>
                         <th>Unit</th>

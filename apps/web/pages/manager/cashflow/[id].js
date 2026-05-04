@@ -362,8 +362,8 @@ function CapexEventTable({ buckets, overrides, timingRecommendations, planId, is
         })}
       </div>
       {/* Desktop table */}
-      <div className="hidden sm:block inline-table-wrap">
-        <table className="inline-table">
+      <div className="hidden sm:block data-table-wrap">
+        <table className="data-table">
           <thead>
             <tr>
               <th>Asset</th>

@@ -333,8 +333,8 @@ export default function TenantDetailPage() {
                         ))}
                       </div>
                       {/* Desktop table */}
-                      <div className="hidden sm:block inline-table-wrap">
-                        <table className="inline-table">
+                      <div className="hidden sm:block data-table-wrap">
+                        <table className="data-table">
                           <thead>
                             <tr>
                               <th>Unit</th>
@@ -401,8 +401,8 @@ export default function TenantDetailPage() {
                         ))}
                       </div>
                       {/* Desktop table */}
-                      <div className="hidden sm:block inline-table-wrap">
-                        <table className="inline-table">
+                      <div className="hidden sm:block data-table-wrap">
+                        <table className="data-table">
                           <thead>
                             <tr>
                               <th>Invoice #</th>

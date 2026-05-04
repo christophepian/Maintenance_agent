@@ -289,7 +289,7 @@ export default function ChartOfAccountsPage() {
 
                       {/* Wide table — hidden sm:block */}
                       <div className="hidden sm:block overflow-x-auto rounded-lg border border-table-border">
-                        <table className="inline-table">
+                        <table className="data-table">
                           <thead>
                             <tr>
                               <th>Name</th>
@@ -380,7 +380,7 @@ export default function ChartOfAccountsPage() {
 
                       {/* Wide table — hidden sm:block */}
                       <div className="hidden sm:block overflow-x-auto rounded-lg border border-table-border">
-                        <table className="inline-table">
+                        <table className="data-table">
                           <thead>
                             <tr>
                               <th>Name</th>
@@ -481,7 +481,7 @@ export default function ChartOfAccountsPage() {
 
                       {/* Wide table — hidden sm:block */}
                       <div className="hidden sm:block overflow-x-auto rounded-lg border border-table-border">
-                        <table className="inline-table">
+                        <table className="data-table">
                           <thead>
                             <tr>
                               <th>Expense Type</th>

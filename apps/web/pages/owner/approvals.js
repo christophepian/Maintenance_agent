@@ -496,8 +496,8 @@ function RfpsTab() {
           </div>
 
           {/* ── Table: md and above ── */}
-          <div className="hidden md:block inline-table-wrap">
-            <table className="inline-table">
+          <div className="hidden md:block data-table-wrap">
+            <table className="data-table">
               <thead>
                 <tr>
                   <th>RFP</th>

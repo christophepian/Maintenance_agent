@@ -417,8 +417,8 @@ export default function OwnerCandidatesPage() {
                   </div>
 
                   {/* Wide table — hidden sm:block */}
-                  <div className="hidden sm:block inline-table-wrap">
-                    <table className="inline-table">
+                  <div className="hidden sm:block data-table-wrap">
+                    <table className="data-table">
                       <thead>
                         <tr>
                           <th className="px-4 py-3">Rank</th>

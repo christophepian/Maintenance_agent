@@ -298,8 +298,8 @@ export default function RfpDetailPage() {
                       ))}
                     </div>
                     {/* Desktop table */}
-                    <div className="hidden sm:block inline-table-wrap">
-                      <table className="inline-table">
+                    <div className="hidden sm:block data-table-wrap">
+                      <table className="data-table">
                         <thead>
                           <tr>
                             <th>Contractor</th>
@@ -451,8 +451,8 @@ export default function RfpDetailPage() {
                                 ))}
                               </div>
                               {/* Desktop table */}
-                              <div className="hidden sm:block inline-table-wrap">
-                                <table className="inline-table">
+                              <div className="hidden sm:block data-table-wrap">
+                                <table className="data-table">
                                   <tbody>
                                     {q.lineItems.map((li, idx) => (
                                       <tr key={idx} className="border-b border-slate-100 last:border-0">

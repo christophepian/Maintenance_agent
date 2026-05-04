@@ -421,8 +421,8 @@ export default function OwnerSettingsPage() {
                         ))}
                     </div>
 
-                    <div className="hidden sm:block inline-table-wrap">
-                      <table className="inline-table">
+                    <div className="hidden sm:block data-table-wrap">
+                      <table className="data-table">
                         <thead>
                           <tr>
                             <th>Name</th>
@@ -464,8 +464,8 @@ export default function OwnerSettingsPage() {
                       <h3 className="text-sm font-semibold text-slate-800">Legal Variables</h3>
                       <p className="text-xs text-slate-500 mt-0.5">{legalVariables.length} variable{legalVariables.length !== 1 ? "s" : ""} tracked</p>
                     </div>
-                    <div className="hidden sm:block inline-table-wrap">
-                      <table className="inline-table">
+                    <div className="hidden sm:block data-table-wrap">
+                      <table className="data-table">
                         <thead>
                           <tr>
                             <th>Key</th>

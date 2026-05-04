@@ -625,7 +625,7 @@ export default function ManagerInventoryPage() {
 
               {/* Wide table — hidden md:block */}
               <div className="hidden md:block overflow-x-auto">
-                <table className="inline-table">
+                <table className="data-table">
                   <thead>
                     <tr>
                       <th>Asset</th>

@@ -1044,7 +1044,7 @@ export default function UnitDetail() {
                     {unitReconciliations.length > 0 && (
                       <Panel title="Nebenkosten Summary">
                         <div className="overflow-x-auto">
-                          <table className="inline-table w-full">
+                          <table className="data-table w-full">
                             <thead>
                               <tr>
                                 <th>Year</th>
@@ -1081,7 +1081,7 @@ export default function UnitDetail() {
                     <div className="empty-state-text py-6 text-center italic">No charge reconciliations for this unit.</div>
                   ) : (
                     <div className="overflow-x-auto">
-                      <table className="inline-table w-full">
+                      <table className="data-table w-full">
                         <thead>
                           <tr>
                             <th>Tenant</th>
@@ -1140,7 +1140,7 @@ export default function UnitDetail() {
                         ))}
                       </div>
                       <div className="hidden sm:block overflow-x-auto">
-                        <table className="inline-table w-full">
+                        <table className="data-table w-full">
                           <thead>
                             <tr>
                               <th>Status</th>
@@ -1212,7 +1212,7 @@ export default function UnitDetail() {
               </div>
               {/* Desktop: table */}
               <div className="hidden sm:block overflow-x-auto">
-                <table className="inline-table w-full">
+                <table className="data-table w-full">
                   <thead>
                     <tr>
                       <th>Status</th>
@@ -1263,7 +1263,7 @@ export default function UnitDetail() {
             <div className="empty-state-text py-6 text-center italic">No open requests for this unit.</div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="inline-table w-full">
+              <table className="data-table w-full">
                 <thead>
                   <tr>
                     <th>#</th>

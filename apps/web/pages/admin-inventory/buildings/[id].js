@@ -1233,7 +1233,7 @@ export default function BuildingDetail() {
                   ))}
                 </div>
                 {/* Desktop: table */}
-                <table className="hidden sm:table inline-table">
+                <table className="hidden sm:table data-table">
                   <thead>
                     <tr>
                       <th>Name</th>
@@ -1695,7 +1695,7 @@ export default function BuildingDetail() {
                   </div>
                   {/* Desktop table */}
                   <div className="hidden sm:block overflow-x-auto">
-                    <table className="inline-table w-full">
+                    <table className="data-table w-full">
                       <thead>
                         <tr>
                           <th>#</th>

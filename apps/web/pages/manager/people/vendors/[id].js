@@ -505,7 +505,7 @@ export default function ContractorDetailPage() {
                     <p className="text-sm text-slate-500">No jobs found for this contractor.</p>
                   ) : (
                     <div className="overflow-x-auto rounded-lg border border-table-border">
-                      <table className="inline-table">
+                      <table className="data-table">
                         <thead>
                           <tr>
                             <th>Job #</th>
@@ -548,7 +548,7 @@ export default function ContractorDetailPage() {
                     <p className="text-sm text-slate-500">No invoices found for this contractor.</p>
                   ) : (
                     <div className="overflow-x-auto rounded-lg border border-table-border">
-                      <table className="inline-table">
+                      <table className="data-table">
                         <thead>
                           <tr>
                             <th>Invoice #</th>

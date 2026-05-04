@@ -44,7 +44,7 @@ function CategorySection({ category, items, collapsed, onToggle }) {
 
       {!collapsed && (
         <div className="border-t border-slate-100">
-          <table className="inline-table">
+          <table className="data-table">
             <thead>
               <tr>
                 <th>Name</th>

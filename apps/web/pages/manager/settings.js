@@ -519,8 +519,8 @@ export default function ManagerSettingsPage() {
                 </div>
 
                 {/* Wide table — hidden sm:block */}
-                <div className="hidden sm:block inline-table-wrap">
-                  <table className="inline-table">
+                <div className="hidden sm:block data-table-wrap">
+                  <table className="data-table">
                     <thead>
                       <tr>
                         <th>Name</th>
@@ -675,8 +675,8 @@ export default function ManagerSettingsPage() {
                 </div>
 
                 {/* Wide table — hidden sm:block */}
-                <div className="hidden sm:block inline-table-wrap">
-                  <table className="inline-table">
+                <div className="hidden sm:block data-table-wrap">
+                  <table className="data-table">
                     <thead>
                       <tr>
                         <th>Name</th>
@@ -745,8 +745,8 @@ export default function ManagerSettingsPage() {
                   </div>
 
                   {/* Wide table — hidden sm:block */}
-                  <div className="hidden sm:block inline-table-wrap">
-                    <table className="inline-table">
+                  <div className="hidden sm:block data-table-wrap">
+                    <table className="data-table">
                       <thead>
                         <tr>
                           <th>Key</th>

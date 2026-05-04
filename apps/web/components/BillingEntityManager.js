@@ -343,7 +343,7 @@ export default function BillingEntityManager() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="inline-table">
+            <table className="data-table">
               <thead>
                 <tr>
                   <th>Name</th>

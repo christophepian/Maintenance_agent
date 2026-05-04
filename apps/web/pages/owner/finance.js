@@ -283,7 +283,7 @@ function OverviewTab() {
                 {/* Desktop */}
                 <div className="hidden md:block overflow-hidden rounded-lg border border-table-border">
                   <div className="overflow-x-auto">
-                    <table className="inline-table">
+                    <table className="data-table">
                       <thead>
                         <tr>
                           <th>Building</th>
