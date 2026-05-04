@@ -1,0 +1,10 @@
+docs/
+apps/api/
+packages/
+scripts/
+infra/
+backups/
+_archive/
+*.md
+*.json
+!package.json
