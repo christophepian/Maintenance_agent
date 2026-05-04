@@ -1,6 +1,8 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/router";
 import AppShell from "../../../components/AppShell";
+import SortableHeader from "../../../components/SortableHeader";
+import { useLocalSort, clientSort } from "../../../lib/tableUtils";
 import PageShell from "../../../components/layout/PageShell";
 import PageHeader from "../../../components/layout/PageHeader";
 import PageContent from "../../../components/layout/PageContent";
@@ -368,6 +370,20 @@ export default function ManagerPeoplePage() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
+  const { sortField: tSortField, sortDir: tSortDir, handleSort: handleTenantSort } = useLocalSort("name", "asc");
+  const sortedTenants = useMemo(() => clientSort(tenants, tSortField, tSortDir, (t, f) => {
+    if (f === "name") return (t.name || "").toLowerCase();
+    if (f === "email") return (t.email || "").toLowerCase();
+    return "";
+  }), [tenants, tSortField, tSortDir]);
+
+  const { sortField: vSortField, sortDir: vSortDir, handleSort: handleVendorSort } = useLocalSort("name", "asc");
+  const sortedVendors = useMemo(() => clientSort(contractors, vSortField, vSortDir, (c, f) => {
+    if (f === "name") return (c.name || "").toLowerCase();
+    if (f === "hourlyRate") return c.hourlyRate ?? 0;
+    return "";
+  }), [contractors, vSortField, vSortDir]);
+
   return (
     <AppShell role="MANAGER">
       <PageShell>
@@ -448,15 +464,15 @@ export default function ManagerPeoplePage() {
                   <table className="data-table">
                     <thead>
                       <tr>
-                        <th>Name</th>
+                        <SortableHeader label="Name" field="name" sortField={tSortField} sortDir={tSortDir} onSort={handleTenantSort} />
                         <th>Phone</th>
-                        <th>Email</th>
+                        <SortableHeader label="Email" field="email" sortField={tSortField} sortDir={tSortDir} onSort={handleTenantSort} />
                         <th>Unit</th>
                         <th></th>
                       </tr>
                     </thead>
                     <tbody>
-                      {tenants.slice(0, 200).map((t) => (
+                      {sortedTenants.slice(0, 200).map((t) => (
                         <tr key={t.id} className="cursor-pointer hover:bg-slate-50/80" onClick={() => router.push(`/manager/people/tenants/${t.id}`)}>
                           <td className="cell-bold">{t.name || "—"}</td>
                           <td>{t.phone || "—"}</td>
@@ -520,15 +536,15 @@ export default function ManagerPeoplePage() {
                   <table className="data-table">
                     <thead>
                       <tr>
-                        <th>Name</th>
+                        <SortableHeader label="Name" field="name" sortField={vSortField} sortDir={vSortDir} onSort={handleVendorSort} />
                         <th>Phone</th>
                         <th>Email</th>
-                        <th>Rate</th>
+                        <SortableHeader label="Rate" field="hourlyRate" sortField={vSortField} sortDir={vSortDir} onSort={handleVendorSort} />
                         <th></th>
                       </tr>
                     </thead>
                     <tbody>
-                      {contractors.slice(0, 200).map((c) => (
+                      {sortedVendors.slice(0, 200).map((c) => (
                         <tr key={c.id} className="cursor-pointer hover:bg-slate-50/80" onClick={() => router.push(`/manager/people/vendors/${c.id}`)}>
                           <td className="cell-bold">{c.name || "—"}</td>
                           <td>{c.phone || "—"}</td>

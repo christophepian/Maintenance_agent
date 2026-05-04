@@ -7,6 +7,7 @@ import Panel from "../../../components/layout/Panel";
 import { authHeaders } from "../../../lib/api";
 import { useLocalSort, clientSort } from "../../../lib/tableUtils";
 import { cn } from "../../../lib/utils";
+import SortableHeader from "../../../components/SortableHeader";
 
 function formatCurrency(chf) {
   if (typeof chf !== "number") return "—";
@@ -368,10 +369,10 @@ export default function ManagerChargesPage() {
                   <table className="data-table">
                     <thead>
                       <tr>
-                        <th>Tenant</th>
+                        <SortableHeader label="Tenant" field="tenant" sortField={cSortField} sortDir={cSortDir} onSort={handleChargeSort} />
                         <th>Unit</th>
-                        <th>Building</th>
-                        <th>Monthly charges (CHF)</th>
+                        <SortableHeader label="Building" field="building" sortField={cSortField} sortDir={cSortDir} onSort={handleChargeSort} />
+                        <SortableHeader label="Monthly charges (CHF)" field="chargesTotalChf" sortField={cSortField} sortDir={cSortDir} onSort={handleChargeSort} />
                         <th>Settlement date</th>
                         <th>Actions</th>
                       </tr>
