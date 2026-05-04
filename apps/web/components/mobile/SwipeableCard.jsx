@@ -169,15 +169,20 @@ export default function SwipeableCard({ actions = [], children, className = "" }
         onClick={handleBodyClick}
       >
         {children}
-        {/* Swipe signifier — drag handle at right edge, fades as card opens */}
+        {/* Swipe signifier — two stacked left-pointing chevrons, fades as card opens */}
         <div
           aria-hidden
-          className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 flex flex-col gap-[3px]"
-          style={{ opacity: Math.max(0, 1 + offset / totalWidth) * 0.45 }}
+          className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 flex gap-0.5"
+          style={{ opacity: Math.max(0, 1 + offset / totalWidth) * 0.5 }}
         >
-          <div className="h-0.5 w-4 rounded-full bg-slate-400" />
-          <div className="h-0.5 w-4 rounded-full bg-slate-400" />
-          <div className="h-0.5 w-4 rounded-full bg-slate-400" />
+          {/* Leading chevron (dimmer) */}
+          <svg width="8" height="14" viewBox="0 0 8 14" fill="none" className="opacity-50">
+            <path d="M7 1L1 7l6 6" stroke="#64748b" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+          {/* Trailing chevron (full opacity) */}
+          <svg width="8" height="14" viewBox="0 0 8 14" fill="none">
+            <path d="M7 1L1 7l6 6" stroke="#64748b" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
         </div>
       </div>
     </div>

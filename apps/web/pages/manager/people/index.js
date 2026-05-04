@@ -400,7 +400,7 @@ export default function ManagerPeoplePage() {
     <AppShell role="MANAGER">
       <PageShell>
         <PageHeader
-          title="People"
+          title="Contacts"
           subtitle="Contacts across tenants, vendors and owners."
         />
         <PageContent>

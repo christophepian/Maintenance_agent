@@ -17,11 +17,11 @@ import {
  */
 const MANAGER_NAV = [
   { label: "Dashboard", icon: LayoutDashboard, href: "/manager" },
-  { label: "Inventory", icon: Building2, href: "/manager/inventory" },
+  { label: "Properties", icon: Building2, href: "/manager/inventory" },
   { label: "Requests",  icon: Wrench,    href: "/manager/requests" },
   { label: "Leases",    icon: KeyRound,  href: "/manager/leases" },
   { label: "Finances",  icon: Wallet,    href: "/manager/finance" },
-  { label: "People",    icon: Users,     href: "/manager/people" },
+  { label: "Contacts",   icon: Users,     href: "/manager/people" },
   { label: "Settings",  icon: Settings,  href: "/manager/settings" },
 ];
 

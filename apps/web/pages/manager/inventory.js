@@ -351,7 +351,7 @@ export default function ManagerInventoryPage() {
   return (
     <AppShell role="MANAGER">
       <PageShell>
-        <PageHeader title="Inventory" subtitle="Buildings, units, assets and depreciation schedules." />
+        <PageHeader title="Properties" subtitle="Buildings, units, assets and depreciation schedules." />
         <PageContent>
           <ErrorBanner error={error} />
 
