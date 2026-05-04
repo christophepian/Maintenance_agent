@@ -656,7 +656,6 @@ export default function ManagerInventoryPage() {
                       <SortableHeader label="Break-even" field="breakEvenMonths" sortField={decSF} sortDir={decSD} onSort={handleDecSort} className="text-right" />
                       <SortableHeader label="Recommendation" field="recommendation" sortField={decSF} sortDir={decSD} onSort={handleDecSort} />
                     </tr>
-                    </tr>
                   </thead>
                   <tbody>
                     {sortedDecisions.map((item) => {
