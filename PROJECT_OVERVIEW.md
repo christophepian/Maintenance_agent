@@ -279,6 +279,8 @@ npx prisma migrate diff \
 - Define inline `include: { ... }` — use canonical constants
 - Use `prisma db push` — ever, under any circumstances
 - Add inline `style={{}}` — use Tailwind classes, `@apply` classes, or CVA components from `components/ui/`
+- **Add `MyApp.getInitialProps` to `_app.js`** — this forces ALL pages through Node.js SSR and causes `FUNCTION_INVOCATION_FAILED` on Vercel because Radix UI accesses `document`/`window` at module eval time (2026-05-04 incident, half a day lost). Fix individual pages with `getServerSideProps` on that page only. See G16 in `PROJECT_STATE.md`.
+- **Push directly to `main` for non-trivial changes** — always use a feature branch, run `cd apps/web && npm run build` locally first, verify the Vercel Preview URL, then merge. See G17 in `PROJECT_STATE.md`.
 - Change `maybeRequireManager` to allow writes — use `requireRole('MANAGER')`
 - Accept `tenantId` as a query param on tenant-portal routes — use `requireTenantSession()`
 - Add non-English labels, seed data, or UI text — English only (F-UI7)

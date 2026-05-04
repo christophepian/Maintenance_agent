@@ -185,6 +185,23 @@ else
   pass "F-UI9: No Panel-wrapping-table violations detected"
 fi
 
+# ─── G16: Ban MyApp.getInitialProps in _app.js ──────────────────────────
+echo ""
+echo "━━━ G16: Checking for banned MyApp.getInitialProps in _app.js ━━━"
+
+APP_FILE="$ROOT/apps/web/pages/_app.js"
+if [ -f "$APP_FILE" ]; then
+  G16_HITS=$(grep -n "getInitialProps" "$APP_FILE" 2>/dev/null || true)
+  if [ -n "$G16_HITS" ]; then
+    fail "G16 VIOLATION: MyApp.getInitialProps found in _app.js — this forces ALL pages through Node.js SSR"
+    echo "  This caused a half-day production outage on 2026-05-04 (FUNCTION_INVOCATION_FAILED)."
+    echo "  Fix: use getServerSideProps on individual pages, or dynamic() with ssr:false for browser-only components."
+    echo "$G16_HITS" | while read -r line; do echo "    $_app.js:$line"; done
+  else
+    pass "G16: No MyApp.getInitialProps in _app.js"
+  fi
+fi
+
 # ─── Summary ─────────────────────────────────────────────────────────────
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

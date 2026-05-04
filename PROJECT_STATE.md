@@ -215,6 +215,83 @@ This converts the stash into a proper branch that won't be silently garbage-coll
 
 ---
 
+### G16: Never Add `getInitialProps` to `_app.js` — Production-Killer (2026-05-04 incident)
+
+> **This single line cost half a day of production downtime on 2026-05-04.**
+
+**The rule:** Do NOT add `MyApp.getInitialProps` to `apps/web/pages/_app.js`.
+
+**Why it kills production:**
+Next.js uses automatic client-side rendering for pages that have no `getServerSideProps` / `getStaticProps`. This means Radix UI, `localStorage`, and other browser-only code never runs on the server. The moment you add `getInitialProps` to `_app.js`, Next.js disables that optimisation globally and forces **every page** through Node.js SSR on every request. Any component in any page's import tree that accesses `document` or `window` at module evaluation time (e.g. `@radix-ui/react-toast` imported statically in `UndoToast.js`) will crash the entire serverless function at startup — before any error handler fires — producing `FUNCTION_INVOCATION_FAILED` with no stack trace.
+
+**The correct fix for a single SSR-unsafe page** (e.g. `capture/[token].js`):
+```js
+// Add only to the specific page that needs it — NOT to _app.js
+export async function getServerSideProps() {
+  return { props: {} };
+}
+```
+
+**If you need a browser-only provider in `_app.js`** (e.g. `ToastProvider`), use dynamic import with `ssr: false`:
+```js
+import dynamic from 'next/dynamic';
+const ToastProvider = dynamic(
+  () => import('../components/ui/UndoToast').then(m => ({ default: m.ToastProvider })),
+  { ssr: false, loading: () => null }
+);
+```
+
+**Pre-commit check — if you ever touch `_app.js`:**
+```bash
+grep -n "getInitialProps" apps/web/pages/_app.js
+# Must return 0 matches
+```
+
+---
+
+### G17: Production Deployment Safety — Feature Branches + Preview-First
+
+> **Never push directly to `main` for any non-trivial change. `main` = production.**
+
+**Rule:** All changes beyond single-file typo fixes must go through a Vercel Preview URL before merging.
+
+**Required workflow:**
+```bash
+# 1. Create a feature branch
+git checkout -b fix/<short-description>
+
+# 2. Make your changes
+
+# 3. Run a local production build — catches SSR crashes before Vercel does
+cd apps/web && npm run build
+# Must complete with 0 errors before pushing
+
+# 4. Push to the feature branch — Vercel creates a Preview URL automatically
+git push origin fix/<short-description>
+
+# 5. Visit the Vercel Preview URL and verify the page loads
+# https://<project>-<hash>-<owner>.vercel.app
+
+# 6. Only then merge / fast-forward to main
+git checkout main && git merge --ff-only fix/<short-description> && git push origin main
+```
+
+**Emergency rollback** (if main is broken):
+```bash
+# Find the last working commit from `git log --oneline`
+git reset --hard <last-good-sha>
+git push --force origin main
+# Vercel redeploys automatically within ~60 seconds
+```
+
+**Local production build command** (add to muscle memory):
+```bash
+cd apps/web && npm run build && echo "✅ build OK"
+```
+If this fails locally, it will fail on Vercel. Fix it before pushing.
+
+---
+
 ### 🎨 FRONTEND UI GUARDRAILS (F-UI1–F-UI8)
 
 > These rules prevent the layout drift that required a full session to fix in March 2026.
