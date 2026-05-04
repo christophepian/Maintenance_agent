@@ -22,6 +22,7 @@ import { assertRequestTransition } from "./transitions";
 import { emit } from "../events/bus";
 import { findRequestById, createRequest as repoCreateRequest, updateRequestStatus, updateRequestAsset } from "../repositories/requestRepository";
 import { findAssetsByUnit } from "../repositories/assetRepository";
+import { resolveAssetWithAI } from "../services/assetMatcher";
 import { getTenantByPhone } from "../services/tenants";
 import { getOrgConfig } from "../services/orgConfig";
 import { createRfpForRequest } from "../services/rfps";
@@ -61,6 +62,7 @@ export async function createRequestWorkflow(
   const category = input.category ?? null;
   const hasEstimatedCost = typeof input.estimatedCost === "number";
   const estimatedCost = hasEstimatedCost ? input.estimatedCost! : null;
+  const urgency = input.urgency ?? null;
 
   // ── 1. Resolve contact phone / tenant ──────────────────────
   let contactPhone: string | null = null;
@@ -100,6 +102,7 @@ export async function createRequestWorkflow(
     description,
     category,
     estimatedCost,
+    urgency,
     status,
     contactPhone,
     tenantId,
@@ -107,52 +110,70 @@ export async function createRequestWorkflow(
     assetId,
   });
 
-  // ── 4b. Asset auto-link ────────────────────────────────────
-  // If no assetId was explicitly provided, try to match a unit asset by
-  // scoring topic / name against the request description and category.
+  // ── 4b. Asset auto-link (AI-powered) ────────────────────────
+  // If no assetId was explicitly provided, ask Claude to identify the most
+  // likely affected asset from the unit's asset list.
+  // Falls back to keyword scoring if the AI call fails or is unavailable.
   if (!assetId && unitId) {
     try {
       const unitAssets = await findAssetsByUnit(prisma, orgId, unitId);
       if (unitAssets.length > 0) {
-        const descLower = (description ?? "").toLowerCase();
-        const catLower  = (category ?? "").toLowerCase();
-        const combined  = `${descLower} ${catLower}`;
+        let linkedAssetId: string | null = null;
 
-        // Score each asset: +3 for topic substring match, +2 for name match,
-        // +1 for type/category loose match. Tie-break by createdAt desc.
-        let bestAsset: string | null = null;
-        let bestScore = 0;
-
-        for (const a of unitAssets) {
-          let score = 0;
-          const topicLower = (a.topic ?? "").toLowerCase().replace(/_/g, " ");
-          const nameLower  = (a.name ?? "").toLowerCase();
-          const typeLower  = (a.type ?? "").toLowerCase();
-
-          // Topic keywords: SHOWER_CABIN_GLASS → "shower cabin glass"
-          const topicTokens = topicLower.split(/[\s_]+/);
-          for (const token of topicTokens) {
-            if (token.length >= 3 && combined.includes(token)) score += 3;
-          }
-          // Name match
-          const nameTokens = nameLower.split(/\s+/);
-          for (const token of nameTokens) {
-            if (token.length >= 3 && combined.includes(token)) score += 2;
-          }
-          // Type/category loose match
-          if (combined.includes(typeLower)) score += 1;
-
-          if (score > bestScore) {
-            bestScore = score;
-            bestAsset = a.id;
-          }
+        // ── AI path — only when 2+ assets exist (single-asset units are trivial) ──
+        if (process.env.ANTHROPIC_API_KEY && unitAssets.length >= 2) {
+          linkedAssetId = await resolveAssetWithAI(
+            description ?? "",
+            category,
+            unitAssets.map((a) => ({
+              id: a.id,
+              name: a.name ?? null,
+              topic: a.topic ?? null,
+              type: a.type ?? null,
+              category: a.category ?? null,
+            }))
+          );
         }
 
-        // Only auto-link if we have a meaningful match (score ≥ 3 = at least
-        // one topic token matched)
-        if (bestAsset && bestScore >= 3) {
-          await updateRequestAsset(prisma, created.id, bestAsset);
-          console.log(`[ASSET-LINK] Auto-linked asset ${bestAsset} (score=${bestScore}) to request ${created.id}`);
+        // ── Keyword fallback (used when AI is unavailable or returns null) ──
+        if (!linkedAssetId) {
+          const descLower = (description ?? "").toLowerCase();
+          const catLower  = (category ?? "").toLowerCase();
+          const combined  = `${descLower} ${catLower}`;
+
+          const AMBIGUOUS_TOKENS = new Set([
+            "glass", "panel", "unit", "door", "wall", "pipe", "floor",
+            "ceiling", "cabin", "cover", "frame", "seal", "base",
+          ]);
+
+          let bestAsset: string | null = null;
+          let bestScore = 0;
+
+          for (const a of unitAssets) {
+            let score = 0;
+            const topicLower = (a.topic ?? "").toLowerCase().replace(/_/g, " ");
+            const nameLower  = (a.name ?? "").toLowerCase();
+            const typeLower  = (a.type ?? "").toLowerCase();
+
+            const topicTokens = topicLower.split(/[\s_]+/);
+            for (const token of topicTokens) {
+              if (token.length >= 4 && !AMBIGUOUS_TOKENS.has(token) && combined.includes(token)) score += 3;
+            }
+            const nameTokens = nameLower.split(/\s+/);
+            for (const token of nameTokens) {
+              if (token.length >= 4 && !AMBIGUOUS_TOKENS.has(token) && combined.includes(token)) score += 2;
+            }
+            if (combined.includes(typeLower)) score += 1;
+
+            if (score > bestScore) { bestScore = score; bestAsset = a.id; }
+          }
+
+          if (bestAsset && bestScore >= 3) linkedAssetId = bestAsset;
+        }
+
+        if (linkedAssetId) {
+          await updateRequestAsset(prisma, created.id, linkedAssetId);
+          console.log(`[ASSET-LINK] Linked asset ${linkedAssetId} to request ${created.id}`);
         }
       }
     } catch (linkErr: any) {

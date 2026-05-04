@@ -36,6 +36,9 @@ export const CreateRequestSchema = z.object({
     .max(100000, { message: "estimatedCost must be <= 100000" })
     .optional(),
 
+  // Urgency — set by AI chat or manager UI; defaults to MEDIUM in workflow
+  urgency: z.enum(["LOW", "MEDIUM", "HIGH"]).optional(),
+
   // NEW: always allow a contact phone for follow-up, even when tenantId is not recognized
   contactPhone: z
     .string()

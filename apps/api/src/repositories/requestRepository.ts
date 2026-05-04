@@ -180,6 +180,7 @@ export interface CreateRequestData {
   category: string | null;
   estimatedCost: number | null;
   status: RequestStatus;
+  urgency?: RequestUrgency | null;
   contactPhone?: string | null;
   tenantId?: string | null;
   unitId?: string | null;
@@ -197,6 +198,7 @@ export async function createRequest(prisma: PrismaClient, data: CreateRequestDat
       category: data.category,
       estimatedCost: data.estimatedCost,
       status: data.status,
+      urgency: data.urgency ?? undefined,
       contactPhone: data.contactPhone ?? null,
       tenantId: data.tenantId ?? null,
       unitId: data.unitId ?? null,

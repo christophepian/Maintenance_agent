@@ -271,10 +271,10 @@ export default function ChatWidget() {
                     <MessageBubble key={i} role={m.role} content={m.content} />
                   ))}
                   {sending && <TypingIndicator />}
-                  {error && (
-                    <p className="text-xs text-red-500 text-center">{error}</p>
-                  )}
                 </>
+              )}
+              {error && (
+                <p className="text-xs text-red-500 text-center px-2">{error}</p>
               )}
               <div ref={messagesEndRef} />
             </div>

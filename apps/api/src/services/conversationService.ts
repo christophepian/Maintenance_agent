@@ -12,6 +12,7 @@
 
 import Anthropic from "@anthropic-ai/sdk";
 import { PrismaClient } from "@prisma/client";
+import { getAnthropicClient } from "./aiClient";
 import {
   findOrCreateThread,
   getRecentMessages,
@@ -117,19 +118,6 @@ const CONVERSATION_TOOLS: Anthropic.Tool[] = [
 
 // ─── Service ───────────────────────────────────────────────────────────────────
 
-let _anthropicClient: Anthropic | null = null;
-
-function getAnthropicClient(): Anthropic {
-  if (!_anthropicClient) {
-    const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey) {
-      throw new Error("ANTHROPIC_API_KEY environment variable is not set");
-    }
-    _anthropicClient = new Anthropic({ apiKey });
-  }
-  return _anthropicClient;
-}
-
 /**
  * Process a single conversation turn.
  * Finds or creates the thread, calls Claude API, executes the resolved action,
@@ -219,6 +207,7 @@ async function executeReportIssue(
         input: {
           description: toolInput.description,
           category: toolInput.category || undefined,
+          urgency: (toolInput.urgency as "LOW" | "MEDIUM" | "HIGH") || undefined,
         },
         tenantId: ctx.tenantId,
         unitId: unitId ?? undefined,
