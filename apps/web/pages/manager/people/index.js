@@ -24,6 +24,13 @@ function OwnersTab({ showAddForm, onAddFormClose }) {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
+  const { sortField: oSortField, sortDir: oSortDir, handleSort: handleOwnerSort } = useLocalSort("name", "asc");
+  const sortedOwners = useMemo(() => clientSort(owners, oSortField, oSortDir, (o, f) => {
+    if (f === "name") return (o.name || "").toLowerCase();
+    if (f === "email") return (o.email || "").toLowerCase();
+    return "";
+  }), [owners, oSortField, oSortDir]);
+
   const [ownerForm, setOwnerForm] = useState(OWNER_FORM_DEFAULT);
   const [ownerSubmitting, setOwnerSubmitting] = useState(false);
 
@@ -233,14 +240,14 @@ function OwnersTab({ showAddForm, onAddFormClose }) {
             <table className="data-table w-full">
               <thead>
                 <tr>
-                  <th>Name</th>
-                  <th>Email</th>
+                  <SortableHeader label="Name" field="name" sortField={oSortField} sortDir={oSortDir} onSort={handleOwnerSort} />
+                  <SortableHeader label="Email" field="email" sortField={oSortField} sortDir={oSortDir} onSort={handleOwnerSort} />
                   <th>Billing entity</th>
                   <th></th>
                 </tr>
               </thead>
               <tbody>
-                {owners.map((owner) => (
+                {sortedOwners.map((owner) => (
                   <>
                     <tr key={owner.id} className="cursor-pointer hover:bg-slate-50/80" onClick={() => window.location.href = `/manager/people/owners`}>
                       <td className="cell-bold">{owner.name}</td>

@@ -225,7 +225,7 @@ const tabKeys = FINANCE_TABS.map((t) => t.key);
                         <>
                           {/* Mobile card list — md:hidden (financial table needs more width) */}
                           <div className="md:hidden overflow-hidden rounded-lg border border-table-border divide-y divide-table-divider">
-                            {(buildingsExpanded ? p.buildings : p.buildings.slice(0, 5)).map((b) => (
+                            {(buildingsExpanded ? sortedBuildings : sortedBuildings.slice(0, 5)).map((b) => (
                               <div
                                 key={b.buildingId}
                                 className="table-card cursor-pointer hover:bg-slate-50/80 transition-colors"
