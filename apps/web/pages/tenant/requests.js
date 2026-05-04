@@ -6,11 +6,12 @@ import PageHeader from "../../components/layout/PageHeader";
 import PageContent from "../../components/layout/PageContent";
 import Panel from "../../components/layout/Panel.jsx";
 import { formatDateTime } from "../../lib/format";
-import { tenantFetch, tenantHeaders } from "../../lib/api";
+import { tenantFetch } from "../../lib/api";
 import TenantPicker from "../../components/TenantPicker";
 import ErrorBanner from "../../components/ui/ErrorBanner";
 import Badge from "../../components/ui/Badge";
 import { requestVariant } from "../../lib/statusVariants";
+import ChatWidget from "../../components/ChatWidget";
 
 import { cn } from "../../lib/utils";
 import { QRCodeSVG } from "qrcode.react";
@@ -1244,6 +1245,7 @@ export default function TenantRequestsPage() {
 
   return (
     <AppShell role="TENANT">
+      <ChatWidget />
       <PageShell>
         <TenantPicker onSelect={handleTenantSwitch} />
         <PageHeader
