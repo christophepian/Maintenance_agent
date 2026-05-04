@@ -168,7 +168,7 @@ function OwnersTab({ showAddForm, onAddFormClose }) {
         <>
           {/* Mobile card list */}
           <div className="sm:hidden overflow-hidden rounded-lg border border-table-border divide-y divide-table-divider">
-            {owners.map((owner) => (
+            {sortedOwners.map((owner) => (
               <div key={owner.id}>
                 <div
                   className="table-card cursor-pointer hover:bg-slate-50/80 transition-colors"
