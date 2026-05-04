@@ -84,6 +84,7 @@ function buildRequestColumns({ assigningId, setAssigningId, selectedContractorId
       id: "requestNumber",
       label: "#",
       sortable: true,
+      sortField: "number",
       alwaysVisible: true,
       className: "w-16",
       render: (r) => (
@@ -184,6 +185,7 @@ function buildRequestColumns({ assigningId, setAssigningId, selectedContractorId
       id: "estimatedCost",
       label: "Est. Cost",
       sortable: true,
+      sortField: "cost",
       defaultVisible: false,
       className: "text-right",
       render: (r) => (
@@ -227,6 +229,7 @@ function buildRequestColumns({ assigningId, setAssigningId, selectedContractorId
       id: "createdAt",
       label: "Created",
       sortable: true,
+      sortField: "date",
       defaultVisible: true,
       className: "hidden sm:table-cell",
       render: (r) => (
@@ -1149,9 +1152,13 @@ export default function ManagerRequestsPage() {
   const [sortKey, setSortKey] = useState("date");
   const [sortDir, setSortDir] = useState("desc");
   const handleSort = useCallback((field, dir) => {
+    setSortDir((prevDir) => {
+      if (dir !== undefined) return dir;
+      // header click: toggle direction when same field, default desc for new field
+      return (field === sortKey ? (prevDir === "asc" ? "desc" : "asc") : "desc");
+    });
     setSortKey(field);
-    setSortDir(dir || "desc");
-  }, []);
+  }, [sortKey]);
 
   const [search, setSearch]             = useState("");
   const [filterUrgency, setFilterUrgency] = useState("");
@@ -1495,9 +1502,9 @@ export default function ManagerRequestsPage() {
                 columns={requestColumns}
                 data={paginatedRequests}
                 rowKey={(r) => r.id}
-                sortField={null}
+                sortField={sortKey}
                 sortDir={sortDir}
-                onSort={null}
+                onSort={handleSort}
                 onRowClick={(r) => router.push(r.rfpId ? `/manager/rfps/${r.rfpId}` : `/manager/requests/${r.id}`)}
                 emptyState={<p className="text-sm text-slate-500">No requests match this filter.</p>}
                 mobileCard={(r) => {
