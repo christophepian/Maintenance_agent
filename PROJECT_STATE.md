@@ -669,9 +669,9 @@ Maintenance_Agent/
 │   │   └── src/
 │   │       ├── server.ts     # Raw HTTP entry point (port 3001)
 │   │       ├── routes/       # Thin HTTP handlers (28 route modules)
-│   │       ├── workflows/    # Orchestration layer (28 workflows + transitions)
+│   │       ├── workflows/    # Orchestration layer (29 workflows + transitions)
 │   │       ├── services/     # Domain logic
-│   │       ├── repositories/ # Canonical Prisma access (27 repos)
+│   │       ├── repositories/ # Canonical Prisma access (29 repos)
 │   │       ├── events/       # Domain event bus
 │   │       ├── governance/   # Org scope resolvers
 │   │       ├── validation/   # Zod schemas
@@ -702,7 +702,7 @@ Maintenance_Agent/
 
 > **Full schema reference:** See [SCHEMA_REFERENCE.md](SCHEMA_REFERENCE.md) for the complete models table (68 models), enums (61), schema gotchas, and Request.orgId migration path.
 >
-> **Status:** 82 migrations. 68 models · 62 enums. Last verified: 2026-04-24.
+> **Status:** 85 migrations. 70 models · 64 enums. Last verified: 2026-05-04.
 >
 > **Quick gotchas (always check SCHEMA_REFERENCE.md for full list):**
 > - `Request.orgId` FK to `Org` is now enforced — direct column filter replaces FK-chain traversal
@@ -718,8 +718,8 @@ Maintenance_Agent/
 > Architecture, backend layers, frontend layout, and styling rules → [PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md).
 > Route module index, domain file maps, repository index → [ARCHITECTURE_LOW_CONTEXT_GUIDE.md](apps/api/src/ARCHITECTURE_LOW_CONTEXT_GUIDE.md).
 
-* **Backend:** 28 route modules · 28 workflows · 27 repositories · 291 operations (225 URL paths) · `apps/api/openapi.yaml`
-* **Frontend:** 288 pages (88 UI + 200 API proxies) · 200/200 proxies conforming (`proxyToBackend()`)
+* **Backend:** 28 route modules · 29 workflows · 29 repositories · 293 operations (227 URL paths) · `apps/api/openapi.yaml`
+* **Frontend:** 290 pages (82 UI + 208 API proxies) · 208/208 proxies conforming (`proxyToBackend()`)
 * **Styling:** Tailwind `@apply` single source of truth in `globals.css` · Semantic tokens via `@theme {}` · Design spec: `docs/design-system.html`
 * **Infra:** PostgreSQL via Docker (`infra/docker-compose.yml`) · Dev DB `maint_agent` · Test DB `maint_agent_test` · CI: 6-gate pipeline (G1–G15)
 
@@ -904,12 +904,12 @@ JWT-based. Production boot guard enforced (F1). All routes auth-gated. `AUTH_OPT
 
 | Field | Value | Source |
 |-------|-------|--------|
-| Models | 69 | prisma/schema.prisma — derived |
-| Enums | 61 | prisma/schema.prisma — derived |
-| Migrations | 75 | prisma/migrations/ — derived |
-| Workflows | 31 | src/workflows/ — derived |
-| Repositories | 27 | src/repositories/ — derived (excl. index.ts) |
-| Route modules | 27 | src/routes/ — derived (excl. helpers.ts utility) |
+| Models | 70 | prisma/schema.prisma — derived |
+| Enums | 64 | prisma/schema.prisma — derived |
+| Migrations | 85 | prisma/migrations/ — derived |
+| Workflows | 29 | src/workflows/ — derived |
+| Repositories | 29 | src/repositories/ — derived (excl. index.ts) |
+| Route modules | 28 | src/routes/ — derived (excl. helpers.ts utility) |
 | Backend LOC | ~62k | src/ (incl. tests) — derived |
 | Frontend LOC | ~42k | apps/web/ — derived |
 | Frontend pages | 288 | apps/web/pages/ — derived (88 UI + 200 API) |

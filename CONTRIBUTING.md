@@ -100,8 +100,9 @@ ports causes `EADDRINUSE` failures.
 | 3221 | captureSession.test.ts |
 | 3222 | invoiceIngest.test.ts |
 | 3223 | assetHealthForecast.test.ts |
+| 3224 | tenantConversation.test.ts |
 
-**Next available: 3224.** Claim the next port and add it to this table in the same PR.
+**Next available: 3225.** Claim the next port and add it to this table in the same PR.
 
 ---
 

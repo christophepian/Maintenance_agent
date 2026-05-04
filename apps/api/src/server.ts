@@ -39,6 +39,7 @@ import { registerRentAdjustmentRoutes } from "./routes/rentAdjustments";
 import { registerContractorBillingRoutes } from "./routes/contractorBillingSchedules";
 import { registerStrategyRoutes } from "./routes/strategy";
 import { registerRecommendationRoutes } from "./routes/recommendations";
+import { registerTenantConversationRoutes } from "./routes/tenantConversation";
 import { registerEventHandlers } from "./events";
 import {
   processSelectionTimeouts,
@@ -106,6 +107,7 @@ registerRentAdjustmentRoutes(router);
 registerContractorBillingRoutes(router);
 registerStrategyRoutes(router);
 registerRecommendationRoutes(router);
+registerTenantConversationRoutes(router);
 
 /* ── Dev-only: background job trigger route ─────────────────── */
 router.post("/__dev/rental/run-jobs", async ({ res }) => {

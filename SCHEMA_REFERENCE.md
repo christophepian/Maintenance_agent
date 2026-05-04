@@ -5,11 +5,11 @@
 
 ## Database Schema (Prisma)
 
-**Status: ACTIVE AND IN USE — 72 migrations** (shadow DB replay verified clean 2026-03-30)
+**Status: ACTIVE AND IN USE — 85 migrations** (shadow DB replay verified clean 2026-03-30)
 
-**Last verified:** 2026-04-03
+**Last verified:** 2026-05-04
 
-### Models (64 total)
+### Models (70 total)
 
 | Model | Key Fields | Relations |
 |-------|-----------|-----------|
@@ -77,8 +77,10 @@
 | **ChargeReconciliation** | orgId, leaseId, fiscalYear, status (ChargeReconciliationStatus), totalAcompteCents?, totalActualCents?, balanceCents?, settledAt? | → Org, Lease, ChargeReconciliationLine[] |
 | **ChargeReconciliationLine** | reconciliationId, expenseTypeId?, description, acompteCents, actualCents | → ChargeReconciliation, ExpenseType? |
 | **ContractorBillingSchedule** | orgId, contractorId, status (BillingScheduleStatus), description, frequency (BillingFrequency), anchorDay, nextPeriodStart, lastGeneratedPeriod?, amountCents, vatRate, buildingId?, completedAt?, completionReason? | → Org, Contractor, Building?, Invoice[] |
+| **ConversationThread** | orgId, tenantId, channel (ConversationChannel, default IN_APP), createdAt, updatedAt; @@unique([tenantId, channel]), @@index([orgId]) | → Tenant, ConversationMessage[] |
+| **ConversationMessage** | threadId, role (ConversationRole), content (Text), intent (String?), createdAt; @@index([threadId, createdAt]) | → ConversationThread |
 
-### Key Enums (55 total) <!-- 49 prior + BillingScheduleStatus + IndexClauseType + RentAdjustmentType + RentAdjustmentStatus + ChargeReconciliationStatus + BillingFrequency -->
+### Key Enums (64 total) <!-- 55 prior + ConversationChannel + ConversationRole + (existing 7 BillingScheduleStatus/IndexClauseType/RentAdjustmentType/RentAdjustmentStatus/ChargeReconciliationStatus/BillingFrequency counted separately) -->
 - `RequestStatus`: PENDING_REVIEW, AUTO_APPROVED, APPROVED, **RFP_PENDING**, ASSIGNED, IN_PROGRESS, COMPLETED, PENDING_OWNER_APPROVAL, **OWNER_REJECTED**
 - `ApprovalSource`: SYSTEM_AUTO, OWNER_APPROVED, OWNER_REJECTED, LEGAL_OBLIGATION
 - `PayingParty`: LANDLORD, TENANT
@@ -134,6 +136,8 @@
 - `RentAdjustmentStatus`: DRAFT, APPROVED, APPLIED, REJECTED
 - `ChargeReconciliationStatus`: DRAFT, FINALIZED, SETTLED
 - `BillingFrequency`: MONTHLY, QUARTERLY, SEMI_ANNUAL, ANNUAL
+- `ConversationChannel`: IN_APP, WHATSAPP, VOICE
+- `ConversationRole`: TENANT, ASSISTANT
 
 ### ⚠️ Schema Gotchas (fields that DON'T exist where you'd expect)
 - **`Job` has NO `description`** — use `Request.description` via the relation

@@ -8824,3 +8824,65 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
+  /tenant/conversation:
+    post:
+      tags: [TenantConversation]
+      summary: Send a message to the tenant AI assistant
+      operationId: sendTenantConversationMessage
+      security:
+        - tenantSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [message]
+              properties:
+                message:
+                  type: string
+                  maxLength: 2000
+      responses:
+        '200':
+          description: AI reply
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      replyText: { type: string }
+                      intent: { type: string }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /tenant/conversation/history:
+    get:
+      tags: [TenantConversation]
+      summary: Get the tenant's in-app conversation history
+      operationId: getTenantConversationHistory
+      security:
+        - tenantSession: []
+      responses:
+        '200':
+          description: Last 20 conversation messages
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        role: { type: string, enum: [TENANT, ASSISTANT] }
+                        content: { type: string }
+                        intent: { type: string, nullable: true }
+                        createdAt: { type: string, format: date-time }
+        '401':
+          $ref: '#/components/responses/Unauthorized'

@@ -26,7 +26,7 @@ async function fetchWithRole(path: string, role: string) {
 }
 
 // ── Helper: check that an object has all expected keys ──
-function expectKeys(obj: Record<string, any>, keys: string[], label: string) {
+function expectKeys(obj: Record<string, any>, keys: string[], _label: string) {
   for (const key of keys) {
     expect(obj).toHaveProperty(key);
   }
@@ -705,6 +705,66 @@ describe('G10: API Contract Tests', () => {
       expect(res.status).toBe(200);
       const body = await res.json();
       expect(body.profile).toBeNull();
+    });
+  });
+
+  // ── Tenant Conversation ──
+  describe('POST /tenant/conversation — validation', () => {
+    it('returns 400 when message is empty', async () => {
+      const tenantToken = createTenantToken();
+      const res = await fetch(`${API_BASE}/tenant/conversation`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', ...getAuthHeaders(tenantToken) },
+        body: JSON.stringify({ message: '' }),
+      });
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.error.code).toBe('VALIDATION_ERROR');
+    });
+
+    it('returns 400 when message exceeds 2000 characters', async () => {
+      const tenantToken = createTenantToken();
+      const res = await fetch(`${API_BASE}/tenant/conversation`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', ...getAuthHeaders(tenantToken) },
+        body: JSON.stringify({ message: 'x'.repeat(2001) }),
+      });
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.error.code).toBe('VALIDATION_ERROR');
+    });
+
+    it('returns 401 without auth token', async () => {
+      const res = await fetch(`${API_BASE}/tenant/conversation`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ message: 'hello' }),
+      });
+      expect(res.status).toBe(401);
+    });
+  });
+
+  describe('GET /tenant/conversation/history', () => {
+    it('returns data envelope with messages array', async () => {
+      const tenantToken = createTenantToken();
+      const res = await fetch(`${API_BASE}/tenant/conversation/history`, {
+        headers: getAuthHeaders(tenantToken),
+      });
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body).toHaveProperty('data');
+      expect(Array.isArray(body.data)).toBe(true);
+
+      if (body.data.length > 0) {
+        const msg = body.data[0];
+        expectKeys(msg, ['role', 'content', 'createdAt'], 'ConversationMessage');
+        expect(['TENANT', 'ASSISTANT']).toContain(msg.role);
+      }
+    });
+
+    it('returns 401 without auth token', async () => {
+      const res = await fetch(`${API_BASE}/tenant/conversation/history`);
+      expect(res.status).toBe(401);
     });
   });
 });

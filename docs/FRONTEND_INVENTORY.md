@@ -1,6 +1,6 @@
 # Frontend Page Inventory
 
-Updated: 2026-04-03 (recurring invoices epic)
+Updated: 2026-05-04 (tenant conversation slice)
 
 ---
 
@@ -10,7 +10,7 @@ Updated: 2026-04-03 (recurring invoices epic)
 |---------|-----------|-----------------|-----------------|-------------------|
 | manager | 42 | ~78 | Y | Y |
 | contractor | 6 | 4 | Y | Y |
-| tenant | 8 | ~12 | Y | Y |
+| tenant | 8 | ~14 | Y | Y |
 | owner | 8 | ~6 | Y | Y |
 | public | 2 | 2 | Y | Y |
 | shared/api | 8 | ~35 | — | — |

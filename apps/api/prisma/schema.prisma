@@ -326,9 +326,10 @@ model Tenant {
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
   isActive    Boolean     @default(true)
-  occupancies Occupancy[]
-  requests    Request[]
-  org         Org         @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  occupancies           Occupancy[]
+  requests              Request[]
+  conversationThreads   ConversationThread[]
+  org                   Org         @relation(fields: [orgId], references: [id], onDelete: Cascade)
 
   @@unique([orgId, phone])
   @@index([orgId, phone])
@@ -2389,4 +2390,45 @@ model RecommendationResult {
   @@index([orgId])
   @@index([opportunityId])
   @@index([buildingProfileId])
+}
+
+// ─── Tenant Conversation ───────────────────────────────────────────────────────
+
+enum ConversationChannel {
+  IN_APP
+  WHATSAPP
+  VOICE
+}
+
+enum ConversationRole {
+  TENANT
+  ASSISTANT
+}
+
+model ConversationThread {
+  id           String              @id @default(uuid())
+  orgId        String
+  tenantId     String
+  channel      ConversationChannel @default(IN_APP)
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+
+  tenant   Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  messages ConversationMessage[]
+
+  @@unique([tenantId, channel])
+  @@index([orgId])
+}
+
+model ConversationMessage {
+  id        String              @id @default(uuid())
+  threadId  String
+  role      ConversationRole
+  content   String              @db.Text
+  intent    String?
+  createdAt DateTime            @default(now())
+
+  thread ConversationThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  @@index([threadId, createdAt])
 }

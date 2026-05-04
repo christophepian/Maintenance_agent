@@ -4,7 +4,7 @@
 > For guardrails, rules, and task routing → **[PROJECT_OVERVIEW.md](../../../PROJECT_OVERVIEW.md)**.
 > For auth helpers, security rules, boot guards → same file.
 
-**Codebase:** 68 models · 62 enums · 82 migrations · 28 workflows · 27 repositories · ~73k backend LOC · ~48k frontend LOC · 291 API operations (225 URL paths)
+**Codebase:** 70 models · 64 enums · 85 migrations · 29 workflows · 29 repositories · ~73k backend LOC · ~48k frontend LOC · 293 API operations (227 URL paths)
 
 **Layer order (never skip):** routes → workflows → services → repositories → Prisma
 
@@ -88,6 +88,16 @@
 | Repo | `repositories/assetRepository.ts` | AssetModel data access |
 | Note | `Appliance` has no `category` — lives on `AssetModel` | Depreciation: `replacedAt ?? installedAt` as clock start, caps at 100% |
 
+### Tenant Conversation (AI intake — alternative path alongside structured form)
+| Layer | File | Key exports |
+|-------|------|-------------|
+| Route | `routes/tenantConversation.ts` | `POST /tenant/conversation`, `GET /tenant/conversation/history` |
+| Workflow | `workflows/conversationWorkflow.ts` | `processTurnWorkflow` |
+| Service | `services/conversationService.ts` | `handleTurn` — Claude API call + intent resolution + action execution |
+| Service | `services/conversationPrompts.ts` | `buildSystemPrompt` |
+| Repo | `repositories/conversationRepository.ts` | `findOrCreateThread`, `getRecentMessages`, `addMessage`, `getThreadHistory` |
+| Note | Chat is an alternative intake path — does NOT replace the structured form. `reportIssue` calls `createRequestWorkflow`. | Channel: `IN_APP` \| `WHATSAPP` \| `VOICE` |
+
 ### Auth & Tenants
 | Layer | File | Key exports |
 |-------|------|-------------|
@@ -163,7 +173,7 @@
 
 ---
 
-## 3 · Route Module Index (25 files)
+## 3 · Route Module Index (28 files)
 
 | File | Domain |
 |------|--------|
@@ -190,10 +200,11 @@
 | `routes/requests.ts` | Maintenance requests |
 | `routes/scheduling.ts` | Scheduling |
 | `routes/strategy.ts` | Strategy engine — owner/building profiles |
+| `routes/tenantConversation.ts` | Tenant AI conversation (chat intake) |
 | `routes/tenants.ts` | Tenant portal |
 | `routes/users.ts` | (future) User management |
 
-## 4 · Repository Index (21 files)
+## 4 · Repository Index (29 files)
 
 | File | Include constant | Entity |
 |------|-----------------|--------|
@@ -218,8 +229,9 @@
 | `taxRuleRepository.ts` | — | TaxRule / TaxRuleVersion |
 | `strategyProfileRepository.ts` | — | OwnerStrategyProfile / BuildingStrategyProfile |
 | `userRepository.ts` | `USER_PROFILE_SELECT` | User (profile read/write) |
+| `conversationRepository.ts` | `THREAD_WITH_MESSAGES_INCLUDE` | ConversationThread / ConversationMessage |
 
-## 5 · Workflow Index (29 workflows)
+## 5 · Workflow Index (30 workflows)
 
 | Workflow | Entity | Transition |
 |----------|--------|------------|
@@ -252,6 +264,7 @@
 | `strategyProfileWorkflow` | OwnerStrategyProfile | (upsert) |
 | `recommendationWorkflow` | RecommendationResult | (evaluate + patch decision) |
 | `captureDecisionOptionWorkflow` | DecisionOption | (upsert) |
+| `conversationWorkflow` | ConversationThread | (process tenant turn — call Claude, persist, emit event) |
 
 Support files: `workflows/transitions.ts` (guards), `workflows/context.ts` (WorkflowContext type)
 
