@@ -7,8 +7,13 @@
 ## Start Everything
 
 ```bash
-cd /Users/christophepian/Documents/Maintenance_Agent/apps/web && npx next dev -p 3000
+cd /Users/christophepian/Documents/Maintenance_Agent/apps/web && npm run dev
 ```
+
+> ⚠️  **NODE_ENV pitfall:** The `dev` script in `apps/web/package.json` forces `NODE_ENV=development`.
+> Never run `set -a && source .env.staging` in the same terminal you use for Next.js dev —
+> it will set `NODE_ENV=production` which causes React to load its production build and breaks
+> `jsx-dev-runtime` (`jsxDEV is not a function`). Use a **separate terminal** for API/staging work.
 
 Or from root using the npm scripts:
 
@@ -277,6 +282,24 @@ node scripts/roadmap-ticket.js
 # Validate a ticket
 node scripts/roadmap-ticket.js validate T-001
 ```
+
+---
+
+## NODE_ENV Isolation Rule
+
+**Never run API/staging env commands in the same terminal as the Next.js dev server.**
+
+```bash
+# ❌ WRONG — poisons NODE_ENV for the current shell session
+set -a && source apps/api/.env.staging && set +a
+# Then running `npx next dev` in the same terminal → jsxDEV is not a function
+
+# ✅ CORRECT — open a separate terminal for API/staging work
+# Terminal 1: Next.js dev  →  npm run dev:web
+# Terminal 2: API + staging env  →  set -a && source .env.staging ...
+```
+
+If you land in a broken state: open a **new terminal** and run `npm run dev:web`.
 
 ---
 
