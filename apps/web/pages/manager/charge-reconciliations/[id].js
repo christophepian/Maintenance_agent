@@ -188,25 +188,25 @@ export default function ChargeReconciliationDetailPage() {
               <table className="inline-table">
                 <thead>
                   <tr>
-                    <th className="py-2 pr-4">Expense</th>
-                    <th className="py-2 pr-4">Mode</th>
-                    <th className="py-2 pr-4 text-right">ACOMPTE Paid</th>
-                    <th className="py-2 pr-4 text-right">Actual Cost</th>
-                    <th className="py-2 pr-4 text-right">Balance</th>
-                    {isDraft && <th className="py-2 text-right">Action</th>}
+                    <th>Expense</th>
+                    <th>Mode</th>
+                    <th className="text-right">ACOMPTE Paid</th>
+                    <th className="text-right">Actual Cost</th>
+                    <th className="text-right">Balance</th>
+                    {isDraft && <th className="text-right">Action</th>}
                   </tr>
                 </thead>
                 <tbody>
                   {recon.lineItems.map((line) => (
                     <tr key={line.id} className="border-b last:border-0">
-                      <td className="py-2 pr-4 font-medium">{line.description}</td>
-                      <td className="py-2 pr-4">
+                      <td className="font-medium">{line.description}</td>
+                      <td>
                         <Badge variant={line.chargeMode === "ACOMPTE" ? "info" : "muted"} size="sm">
                           {line.chargeMode}
                         </Badge>
                       </td>
-                      <td className="py-2 pr-4 text-right tabular-nums">{formatChfCents(line.acomptePaidCents)}</td>
-                      <td className="py-2 pr-4 text-right">
+                      <td className="text-right tabular-nums">{formatChfCents(line.acomptePaidCents)}</td>
+                      <td className="text-right">
                         {isDraft && line.chargeMode === "ACOMPTE" ? (
                           <input
                             type="number"
@@ -223,7 +223,7 @@ export default function ChargeReconciliationDetailPage() {
                           <span className="tabular-nums">{formatChfCents(line.actualCostCents)}</span>
                         )}
                       </td>
-                      <td className={cn("py-2 pr-4 text-right tabular-nums", line.balanceCents > 0 ? "text-red-600" : line.balanceCents < 0 ? "text-green-600" : "")}>
+                      <td className={cn("text-right tabular-nums", line.balanceCents > 0 ? "text-red-600" : line.balanceCents < 0 ? "text-green-600" : "")}>
                         {line.chargeMode === "ACOMPTE" ? (
                           <>{line.balanceCents > 0 ? "+" : ""}{formatChfCents(line.balanceCents)}</>
                         ) : (
@@ -231,7 +231,7 @@ export default function ChargeReconciliationDetailPage() {
                         )}
                       </td>
                       {isDraft && (
-                        <td className="py-2 text-right">
+                        <td className="text-right">
                           {line.chargeMode === "ACOMPTE" && (
                             <Button
                               variant="primary" size="xs"

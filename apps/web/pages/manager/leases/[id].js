@@ -1011,25 +1011,25 @@ export default function LeaseEditorPage() {
                       <table className="inline-table">
                         <thead>
                           <tr>
-                            <th className="py-2 pr-4">Year</th>
-                            <th className="py-2 pr-4">Status</th>
-                            <th className="py-2 pr-4 text-right">ACOMPTE</th>
-                            <th className="py-2 pr-4 text-right">Actual</th>
-                            <th className="py-2 pr-4 text-right">Balance</th>
-                            <th className="py-2 text-right">Action</th>
+                            <th>Year</th>
+                            <th>Status</th>
+                            <th className="text-right">ACOMPTE</th>
+                            <th className="text-right">Actual</th>
+                            <th className="text-right">Balance</th>
+                            <th className="text-right">Action</th>
                           </tr>
                         </thead>
                         <tbody>
                           {reconciliations.map((r) => (
                             <tr key={r.id} className="border-b last:border-0">
-                              <td className="py-2 pr-4 font-medium">{r.fiscalYear}</td>
-                              <td className="py-2 pr-4">
+                              <td className="font-medium">{r.fiscalYear}</td>
+                              <td>
                                 <Badge variant={reconciliationVariant(r.status)} size="sm">{r.status}</Badge>
                               </td>
-                              <td className="py-2 pr-4 text-right tabular-nums">{(r.totalAcomptePaidCents / 100).toFixed(2)}</td>
-                              <td className="py-2 pr-4 text-right tabular-nums">{(r.totalActualCostsCents / 100).toFixed(2)}</td>
-                              <td className={cn("py-2 pr-4 text-right tabular-nums", r.balanceCents > 0 ? "text-red-600" : r.balanceCents < 0 ? "text-green-600" : "")}>{r.balanceCents > 0 ? "+" : ""}{(r.balanceCents / 100).toFixed(2)}</td>
-                              <td className="py-2 text-right">
+                              <td className="text-right tabular-nums">{(r.totalAcomptePaidCents / 100).toFixed(2)}</td>
+                              <td className="text-right tabular-nums">{(r.totalActualCostsCents / 100).toFixed(2)}</td>
+                              <td className={cn("text-right tabular-nums", r.balanceCents > 0 ? "text-red-600" : r.balanceCents < 0 ? "text-green-600" : "")}>{r.balanceCents > 0 ? "+" : ""}{(r.balanceCents / 100).toFixed(2)}</td>
+                              <td className="text-right">
                                 <a href={`/manager/charge-reconciliations/${r.id}`}
                                   className="px-3 py-1 text-xs bg-brand text-white rounded hover:bg-brand-dark">
                                   {r.status === "DRAFT" ? "Edit" : "View"}
@@ -1083,30 +1083,30 @@ export default function LeaseEditorPage() {
                     <table className="inline-table">
                       <thead>
                         <tr>
-                          <th className="px-3 py-2 text-left font-medium text-slate-500">Type</th>
-                          <th className="px-3 py-2 text-left font-medium text-slate-500">Effective</th>
-                          <th className="px-3 py-2 text-left font-medium text-slate-500">Status</th>
-                          <th className="px-3 py-2 text-right font-medium text-slate-500">Old</th>
-                          <th className="px-3 py-2 text-right font-medium text-slate-500">New</th>
-                          <th className="px-3 py-2 text-right font-medium text-slate-500">Change</th>
-                          <th className="px-3 py-2 text-left font-medium text-slate-500"></th>
+                          <th>Type</th>
+                          <th>Effective</th>
+                          <th>Status</th>
+                          <th className="text-right">Old</th>
+                          <th className="text-right">New</th>
+                          <th className="text-right">Change</th>
+                          <th></th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100">
                         {rentAdjustments.map((a) => {
                           return (
                             <tr key={a.id} className="hover:bg-slate-50">
-                              <td className="px-3 py-2">{a.adjustmentType === "CPI_INDEXATION" ? "CPI" : a.adjustmentType === "MANUAL" ? "Manual" : a.adjustmentType}</td>
-                              <td className="px-3 py-2">{fmtD(a.effectiveDate)}</td>
-                              <td className="px-3 py-2">
+                              <td>{a.adjustmentType === "CPI_INDEXATION" ? "CPI" : a.adjustmentType === "MANUAL" ? "Manual" : a.adjustmentType}</td>
+                              <td>{fmtD(a.effectiveDate)}</td>
+                              <td>
                                 <Badge variant={rentAdjustmentVariant(a.status)} size="sm">{a.status}</Badge>
                               </td>
-                              <td className="px-3 py-2 text-right">{formatChfCents(a.previousRentCents)}</td>
-                              <td className="px-3 py-2 text-right font-semibold">{formatChfCents(a.newRentCents)}</td>
-                              <td className={cn("px-3 py-2 text-right", a.adjustmentCents > 0 ? "text-red-600" : a.adjustmentCents < 0 ? "text-green-600" : "")}>
+                              <td className="text-right">{formatChfCents(a.previousRentCents)}</td>
+                              <td className="text-right font-semibold">{formatChfCents(a.newRentCents)}</td>
+                              <td className={cn("text-right", a.adjustmentCents > 0 ? "text-red-600" : a.adjustmentCents < 0 ? "text-green-600" : "")}>
                                 {a.adjustmentCents > 0 ? "+" : ""}{formatChfCents(a.adjustmentCents)}
                               </td>
-                              <td className="px-3 py-2">
+                              <td>
                                 <a href={`/manager/rent-adjustments/${a.id}`} className="cell-link text-sm">
                                   {a.status === "DRAFT" ? "Edit" : "View"}
                                 </a>

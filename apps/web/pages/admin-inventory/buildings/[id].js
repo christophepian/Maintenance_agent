@@ -1236,12 +1236,12 @@ export default function BuildingDetail() {
                 <table className="hidden sm:table inline-table">
                   <thead>
                     <tr>
-                      <th className="py-2 font-medium text-slate-600">Name</th>
-                      <th className="py-2 font-medium text-slate-600">Unit</th>
-                      <th className="py-2 font-medium text-slate-600">Phone</th>
-                      <th className="py-2 font-medium text-slate-600">Email</th>
-                      <th className="py-2 font-medium text-slate-600">Move-in</th>
-                      <th className="py-2 font-medium text-slate-600">Source</th>
+                      <th>Name</th>
+                      <th>Unit</th>
+                      <th>Phone</th>
+                      <th>Email</th>
+                      <th>Move-in</th>
+                      <th>Source</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1254,12 +1254,12 @@ export default function BuildingDetail() {
                           : "muted";
                       return (
                         <tr key={t.tenantId || idx} className="border-b border-slate-100">
-                          <td className="py-2 text-slate-900 font-medium">{t.name}</td>
-                          <td className="py-2 text-slate-700">{t.unitNumber}</td>
-                          <td className="py-2 text-slate-700">{t.phone || "—"}</td>
-                          <td className="py-2 text-slate-700">{t.email || "—"}</td>
-                          <td className="py-2 text-slate-700">{t.moveInDate ? displayDate(t.moveInDate) : "—"}</td>
-                          <td className="py-2">
+                          <td className="text-slate-900 font-medium">{t.name}</td>
+                          <td className="text-slate-700">{t.unitNumber}</td>
+                          <td className="text-slate-700">{t.phone || "—"}</td>
+                          <td className="text-slate-700">{t.email || "—"}</td>
+                          <td className="text-slate-700">{t.moveInDate ? displayDate(t.moveInDate) : "—"}</td>
+                          <td>
                             <Badge variant={badgeVariant} size="sm">
                               {t.source === "BOTH" ? "Both" : t.source === "LEASE" ? "Lease" : "Directory"}
                             </Badge>
@@ -1695,27 +1695,27 @@ export default function BuildingDetail() {
                   </div>
                   {/* Desktop table */}
                   <div className="hidden sm:block overflow-x-auto">
-                    <table className="w-full text-sm">
+                    <table className="inline-table w-full">
                       <thead>
-                        <tr className="border-b border-slate-200 text-left">
-                          <th className="pb-2 pr-4 text-xs font-medium uppercase tracking-wide text-slate-400">#</th>
-                          <th className="pb-2 pr-4 text-xs font-medium uppercase tracking-wide text-slate-400">Status</th>
-                          <th className="pb-2 pr-4 text-xs font-medium uppercase tracking-wide text-slate-400">Category</th>
-                          <th className="pb-2 pr-4 text-xs font-medium uppercase tracking-wide text-slate-400">Unit</th>
-                          <th className="pb-2 pr-4 text-xs font-medium uppercase tracking-wide text-slate-400">Urgency</th>
-                          <th className="pb-2 pr-4 text-xs font-medium uppercase tracking-wide text-slate-400">Contractor</th>
-                          <th className="pb-2 text-xs font-medium uppercase tracking-wide text-slate-400">Date</th>
+                        <tr>
+                          <th>#</th>
+                          <th>Status</th>
+                          <th>Category</th>
+                          <th>Unit</th>
+                          <th>Urgency</th>
+                          <th>Contractor</th>
+                          <th>Date</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-100">
+                      <tbody>
                         {buildingRequests.map((r) => (
                           <tr
                             key={r.id}
                             className="cursor-pointer hover:bg-slate-50"
                             onClick={() => router.push(`/manager/requests?id=${r.id}`)}
                           >
-                            <td className="py-2 pr-4 font-mono text-slate-600">#{r.requestNumber}</td>
-                            <td className="py-2 pr-4">
+                            <td className="font-mono text-slate-600">#{r.requestNumber}</td>
+                            <td>
                               <Badge variant={
                                 r.status === "COMPLETED" ? "success" :
                                 r.status === "REJECTED" ? "destructive" :
@@ -1725,11 +1725,11 @@ export default function BuildingDetail() {
                                 {r.status.replace(/_/g, " ")}
                               </Badge>
                             </td>
-                            <td className="py-2 pr-4 text-slate-700">{r.category || "—"}</td>
-                            <td className="py-2 pr-4 text-slate-600">{r.unit?.unitNumber || "—"}</td>
-                            <td className="py-2 pr-4 text-slate-600">{r.urgency || "—"}</td>
-                            <td className="py-2 pr-4 text-slate-600">{r.assignedContractor?.name || "—"}</td>
-                            <td className="py-2 text-slate-400">
+                            <td className="text-slate-700">{r.category || "—"}</td>
+                            <td className="text-slate-600">{r.unit?.unitNumber || "—"}</td>
+                            <td className="text-slate-600">{r.urgency || "—"}</td>
+                            <td className="text-slate-600">{r.assignedContractor?.name || "—"}</td>
+                            <td className="text-slate-400">
                               {r.createdAt ? new Date(r.createdAt).toLocaleDateString("de-CH") : "—"}
                             </td>
                           </tr>

@@ -1044,24 +1044,24 @@ export default function UnitDetail() {
                     {unitReconciliations.length > 0 && (
                       <Panel title="Nebenkosten Summary">
                         <div className="overflow-x-auto">
-                          <table className="data-table w-full text-sm">
+                          <table className="inline-table w-full">
                             <thead>
                               <tr>
-                                <th className="text-left px-3 py-2">Year</th>
-                                <th className="text-left px-3 py-2">Status</th>
-                                <th className="text-right px-3 py-2">Acompte Paid</th>
-                                <th className="text-right px-3 py-2">Actual Costs</th>
-                                <th className="text-right px-3 py-2">Balance</th>
+                                <th>Year</th>
+                                <th>Status</th>
+                                <th className="text-right">Acompte Paid</th>
+                                <th className="text-right">Actual Costs</th>
+                                <th className="text-right">Balance</th>
                               </tr>
                             </thead>
                             <tbody>
                               {unitReconciliations.map((r) => (
                                 <tr key={r.id} className="border-t border-slate-100 hover:bg-slate-50 cursor-pointer" onClick={() => router.push(`/manager/charge-reconciliations/${r.id}`)}>
-                                  <td className="px-3 py-2 tabular-nums">{r.fiscalYear}</td>
-                                  <td className="px-3 py-2"><Badge variant={reconciliationVariant(r.status)} size="sm">{r.status}</Badge></td>
-                                  <td className="px-3 py-2 text-right tabular-nums">{formatChfCents(r.totalAcomptePaidCents)}</td>
-                                  <td className="px-3 py-2 text-right tabular-nums">{formatChfCents(r.totalActualCostsCents)}</td>
-                                  <td className={cn("px-3 py-2 text-right tabular-nums", r.balanceCents > 0 ? "text-red-600" : r.balanceCents < 0 ? "text-green-600" : "")}>
+                                  <td className="tabular-nums">{r.fiscalYear}</td>
+                                  <td><Badge variant={reconciliationVariant(r.status)} size="sm">{r.status}</Badge></td>
+                                  <td className="text-right tabular-nums">{formatChfCents(r.totalAcomptePaidCents)}</td>
+                                  <td className="text-right tabular-nums">{formatChfCents(r.totalActualCostsCents)}</td>
+                                  <td className={cn("text-right tabular-nums", r.balanceCents > 0 ? "text-red-600" : r.balanceCents < 0 ? "text-green-600" : "")}>
                                     {r.balanceCents > 0 ? "+" : ""}{formatChfCents(r.balanceCents)}
                                   </td>
                                 </tr>
@@ -1081,34 +1081,34 @@ export default function UnitDetail() {
                     <div className="empty-state-text py-6 text-center italic">No charge reconciliations for this unit.</div>
                   ) : (
                     <div className="overflow-x-auto">
-                      <table className="data-table w-full text-sm">
+                      <table className="inline-table w-full">
                         <thead>
                           <tr>
-                            <th className="text-left px-3 py-2">Tenant</th>
-                            <th className="text-left px-3 py-2">Year</th>
-                            <th className="text-left px-3 py-2">Status</th>
-                            <th className="text-right px-3 py-2">Acompte Paid</th>
-                            <th className="text-right px-3 py-2">Actual Costs</th>
-                            <th className="text-right px-3 py-2">Balance</th>
-                            <th className="text-right px-3 py-2">Action</th>
+                            <th>Tenant</th>
+                            <th>Year</th>
+                            <th>Status</th>
+                            <th className="text-right">Acompte Paid</th>
+                            <th className="text-right">Actual Costs</th>
+                            <th className="text-right">Balance</th>
+                            <th className="text-right">Action</th>
                           </tr>
                         </thead>
                         <tbody>
                           {unitReconciliations.map((r) => (
                             <tr key={r.id} className="border-t border-slate-100 hover:bg-slate-50">
-                              <td className="px-3 py-2">
+                              <td>
                                 <Link href={`/manager/charge-reconciliations/${r.id}`} className="cell-link">
                                   {r.lease?.tenantName || "—"}
                                 </Link>
                               </td>
-                              <td className="px-3 py-2 tabular-nums">{r.fiscalYear}</td>
-                              <td className="px-3 py-2"><Badge variant={reconciliationVariant(r.status)} size="sm">{r.status}</Badge></td>
-                              <td className="px-3 py-2 text-right tabular-nums">{formatChfCents(r.totalAcomptePaidCents)}</td>
-                              <td className="px-3 py-2 text-right tabular-nums">{formatChfCents(r.totalActualCostsCents)}</td>
-                              <td className={cn("px-3 py-2 text-right tabular-nums", r.balanceCents > 0 ? "text-red-600" : r.balanceCents < 0 ? "text-green-600" : "")}>
+                              <td className="tabular-nums">{r.fiscalYear}</td>
+                              <td><Badge variant={reconciliationVariant(r.status)} size="sm">{r.status}</Badge></td>
+                              <td className="text-right tabular-nums">{formatChfCents(r.totalAcomptePaidCents)}</td>
+                              <td className="text-right tabular-nums">{formatChfCents(r.totalActualCostsCents)}</td>
+                              <td className={cn("text-right tabular-nums", r.balanceCents > 0 ? "text-red-600" : r.balanceCents < 0 ? "text-green-600" : "")}>
                                 {r.balanceCents > 0 ? "+" : ""}{formatChfCents(r.balanceCents)}
                               </td>
-                              <td className="px-3 py-2 text-right">
+                              <td className="text-right">
                                 <Link href={`/manager/charge-reconciliations/${r.id}`} className="cell-link">
                                   {r.status === "DRAFT" ? "Edit" : "View"}
                                 </Link>
@@ -1140,23 +1140,23 @@ export default function UnitDetail() {
                         ))}
                       </div>
                       <div className="hidden sm:block overflow-x-auto">
-                        <table className="data-table w-full text-sm">
+                        <table className="inline-table w-full">
                           <thead>
                             <tr>
-                              <th className="text-left px-3 py-2">Status</th>
-                              <th className="text-left px-3 py-2">Invoice #</th>
-                              <th className="text-left px-3 py-2">Description</th>
-                              <th className="text-right px-3 py-2">Amount</th>
-                              <th className="text-left px-3 py-2">Period</th>
-                              <th className="text-left px-3 py-2">Due Date</th>
-                              <th className="text-left px-3 py-2">Created</th>
+                              <th>Status</th>
+                              <th>Invoice #</th>
+                              <th>Description</th>
+                              <th className="text-right">Amount</th>
+                              <th>Period</th>
+                              <th>Due Date</th>
+                              <th>Created</th>
                             </tr>
                           </thead>
                           <tbody>
                             {unitInvoices.map((inv) => (
                               <tr key={inv.id} className="border-t border-slate-100 hover:bg-slate-50">
-                                <td className="px-3 py-2"><Badge variant={invoiceVariant(inv.status)}>{inv.status}</Badge></td>
-                                <td className="px-3 py-2">
+                                <td><Badge variant={invoiceVariant(inv.status)}>{inv.status}</Badge></td>
+                                <td>
                                   {isOwner ? (
                                     <span>{inv.invoiceNumber || "—"}</span>
                                   ) : (
@@ -1165,15 +1165,15 @@ export default function UnitDetail() {
                                     </Link>
                                   )}
                                 </td>
-                                <td className="px-3 py-2 max-w-[200px] truncate">{inv.description || "—"}</td>
-                                <td className="px-3 py-2 text-right font-medium">{formatChf(inv.totalAmount)}</td>
-                                <td className="px-3 py-2 whitespace-nowrap">
+                                <td className="max-w-[200px] truncate">{inv.description || "—"}</td>
+                                <td className="text-right font-medium">{formatChf(inv.totalAmount)}</td>
+                                <td className="whitespace-nowrap">
                                   {inv.billingPeriodStart && inv.billingPeriodEnd
                                     ? `${formatDate(inv.billingPeriodStart)} – ${formatDate(inv.billingPeriodEnd)}`
                                     : "—"}
                                 </td>
-                                <td className="px-3 py-2 whitespace-nowrap">{inv.dueDate ? formatDate(inv.dueDate) : "—"}</td>
-                                <td className="px-3 py-2 whitespace-nowrap">{formatDate(inv.createdAt)}</td>
+                                <td className="whitespace-nowrap">{inv.dueDate ? formatDate(inv.dueDate) : "—"}</td>
+                                <td className="whitespace-nowrap">{formatDate(inv.createdAt)}</td>
                               </tr>
                             ))}
                           </tbody>
@@ -1212,26 +1212,26 @@ export default function UnitDetail() {
               </div>
               {/* Desktop: table */}
               <div className="hidden sm:block overflow-x-auto">
-                <table className="data-table w-full text-sm">
+                <table className="inline-table w-full">
                   <thead>
                     <tr>
-                      <th className="text-left px-3 py-2">Status</th>
-                      <th className="text-left px-3 py-2">Tenant</th>
-                      <th className="text-right px-3 py-2">Net Rent</th>
-                      <th className="text-right px-3 py-2">Total</th>
-                      <th className="text-left px-3 py-2">Start</th>
-                      <th className="text-left px-3 py-2">End</th>
-                      <th className="text-left px-3 py-2">Notice</th>
-                      <th className="text-left px-3 py-2">Created</th>
+                      <th>Status</th>
+                      <th>Tenant</th>
+                      <th className="text-right">Net Rent</th>
+                      <th className="text-right">Total</th>
+                      <th>Start</th>
+                      <th>End</th>
+                      <th>Notice</th>
+                      <th>Created</th>
                     </tr>
                   </thead>
                   <tbody>
                     {unitLeases.map((lease) => (
                       <tr key={lease.id} className="border-t border-slate-100 hover:bg-slate-50">
-                        <td className="px-3 py-2">
+                        <td>
                           <Badge variant={leaseVariant(lease.status)}>{lease.status}</Badge>
                         </td>
-                        <td className="px-3 py-2">
+                        <td>
                           {isOwner ? (
                             <span>{lease.tenantName || "—"}</span>
                           ) : (
@@ -1240,12 +1240,12 @@ export default function UnitDetail() {
                             </Link>
                           )}
                         </td>
-                        <td className="px-3 py-2 text-right font-medium">{formatChf(lease.netRentChf)}</td>
-                        <td className="px-3 py-2 text-right">{lease.rentTotalChf != null ? formatChf(lease.rentTotalChf) : "—"}</td>
-                        <td className="px-3 py-2 whitespace-nowrap">{formatDate(lease.startDate)}</td>
-                        <td className="px-3 py-2 whitespace-nowrap">{lease.endDate ? formatDate(lease.endDate) : "Open-ended"}</td>
-                        <td className="px-3 py-2 whitespace-nowrap">{lease.noticeRule || "—"}</td>
-                        <td className="px-3 py-2 whitespace-nowrap">{formatDate(lease.createdAt)}</td>
+                        <td className="text-right font-medium">{formatChf(lease.netRentChf)}</td>
+                        <td className="text-right">{lease.rentTotalChf != null ? formatChf(lease.rentTotalChf) : "—"}</td>
+                        <td className="whitespace-nowrap">{formatDate(lease.startDate)}</td>
+                        <td className="whitespace-nowrap">{lease.endDate ? formatDate(lease.endDate) : "Open-ended"}</td>
+                        <td className="whitespace-nowrap">{lease.noticeRule || "—"}</td>
+                        <td className="whitespace-nowrap">{formatDate(lease.createdAt)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -1263,16 +1263,16 @@ export default function UnitDetail() {
             <div className="empty-state-text py-6 text-center italic">No open requests for this unit.</div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="data-table w-full text-sm">
+              <table className="inline-table w-full">
                 <thead>
                   <tr>
-                    <th className="text-left px-3 py-2">#</th>
-                    <th className="text-left px-3 py-2">Status</th>
-                    <th className="text-left px-3 py-2">Category</th>
-                    <th className="text-left px-3 py-2">Description</th>
-                    <th className="text-left px-3 py-2">Urgency</th>
-                    <th className="text-left px-3 py-2">Contractor</th>
-                    <th className="text-left px-3 py-2">Date</th>
+                    <th>#</th>
+                    <th>Status</th>
+                    <th>Category</th>
+                    <th>Description</th>
+                    <th>Urgency</th>
+                    <th>Contractor</th>
+                    <th>Date</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1282,13 +1282,13 @@ export default function UnitDetail() {
                       className="border-t border-slate-100 hover:bg-slate-50 cursor-pointer"
                       onClick={() => router.push(`/manager/requests/${r.id}?from=/admin-inventory/units/${id}`)}
                     >
-                      <td className="px-3 py-2 tabular-nums font-medium">#{r.requestNumber}</td>
-                      <td className="px-3 py-2"><Badge variant="muted" size="sm">{r.status?.replace(/_/g, " ")}</Badge></td>
-                      <td className="px-3 py-2">{r.category || "—"}</td>
-                      <td className="px-3 py-2 max-w-[200px] truncate">{r.description || "—"}</td>
-                      <td className="px-3 py-2">{r.urgency || "—"}</td>
-                      <td className="px-3 py-2">{r.assignedContractor?.name || "—"}</td>
-                      <td className="px-3 py-2 whitespace-nowrap">{formatDate(r.createdAt)}</td>
+                      <td className="tabular-nums font-medium">#{r.requestNumber}</td>
+                      <td><Badge variant="muted" size="sm">{r.status?.replace(/_/g, " ")}</Badge></td>
+                      <td>{r.category || "—"}</td>
+                      <td className="max-w-[200px] truncate">{r.description || "—"}</td>
+                      <td>{r.urgency || "—"}</td>
+                      <td>{r.assignedContractor?.name || "—"}</td>
+                      <td className="whitespace-nowrap">{formatDate(r.createdAt)}</td>
                     </tr>
                   ))}
                 </tbody>

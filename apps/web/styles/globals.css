@@ -280,7 +280,7 @@ h1, h2 {
     @apply overflow-x-auto rounded-lg border border-table-border;
   }
   .inline-table th {
-    @apply px-3 py-1.5 text-left font-medium text-[11px] uppercase tracking-wider;
+    @apply px-3 py-2.5 text-left font-medium text-[11px] uppercase tracking-wider;
     @apply text-slate-400 bg-transparent border-b-2 border-slate-200;
   }
   .inline-table td {

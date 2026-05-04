@@ -393,35 +393,35 @@ export default function LedgerPage() {
 
                   {/* Wide table — hidden sm:block */}
                   <div className="hidden sm:block overflow-x-auto">
-                    <table className="w-full text-sm">
+                    <table className="inline-table w-full">
                       <thead>
-                        <tr className="border-b border-slate-200 text-left text-xs text-slate-500">
-                          <th className="pb-2 pr-3">Date</th>
-                          <th className="pb-2 pr-3">Account</th>
-                          <th className="pb-2 pr-3">Event</th>
-                          <th className="pb-2 pr-3">Description</th>
-                          <th className="pb-2 pr-3">Reference</th>
-                          <th className="pb-2 pr-3 text-right">Debit CHF</th>
-                          <th className="pb-2 text-right">Credit CHF</th>
+                        <tr>
+                          <th>Date</th>
+                          <th>Account</th>
+                          <th>Event</th>
+                          <th>Description</th>
+                          <th>Reference</th>
+                          <th className="text-right">Debit CHF</th>
+                          <th className="text-right">Credit CHF</th>
                         </tr>
                       </thead>
                       <tbody>
                         {entries.map((e) => (
-                          <tr key={e.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-                            <td className="py-2 pr-3 whitespace-nowrap text-slate-600">{formatDate(e.date)}</td>
-                            <td className="py-2 pr-3">
+                          <tr key={e.id} className="hover:bg-slate-50 transition-colors">
+                            <td className="whitespace-nowrap text-slate-600">{formatDate(e.date)}</td>
+                            <td>
                               <span className="font-mono text-xs text-slate-400 mr-1">{e.accountCode}</span>
                               <span className="text-slate-800">{e.accountName}</span>
                             </td>
-                            <td className="py-2 pr-3 text-xs text-slate-500 whitespace-nowrap">
+                            <td className="text-xs text-slate-500 whitespace-nowrap">
                               {SOURCE_TYPE_LABELS[e.sourceType] || e.sourceType || "—"}
                             </td>
-                            <td className="py-2 pr-3 text-slate-700 max-w-xs truncate">{e.description}</td>
-                            <td className="py-2 pr-3 font-mono text-xs text-slate-400">{e.reference || "—"}</td>
-                            <td className="py-2 pr-3 text-right font-mono">
+                            <td className="text-slate-700 max-w-xs truncate">{e.description}</td>
+                            <td className="font-mono text-xs text-slate-400">{e.reference || "—"}</td>
+                            <td className="text-right font-mono">
                               {e.debitCents > 0 ? <span className="text-slate-900">{formatChfCents(e.debitCents)}</span> : <span className="text-slate-200">—</span>}
                             </td>
-                            <td className="py-2 text-right font-mono">
+                            <td className="text-right font-mono">
                               {e.creditCents > 0 ? <span className="text-slate-900">{formatChfCents(e.creditCents)}</span> : <span className="text-slate-200">—</span>}
                             </td>
                           </tr>
@@ -508,26 +508,26 @@ export default function LedgerPage() {
 
                           {/* Wide table — hidden sm:block */}
                           <div className="hidden sm:block overflow-x-auto border border-slate-200 rounded-b">
-                            <table className="w-full text-sm">
+                            <table className="inline-table w-full">
                               <thead>
-                                <tr className="border-b border-slate-200 text-left text-xs text-slate-500 bg-slate-50">
-                                  <th className="px-3 py-2">Code</th>
-                                  <th className="px-3 py-2">Account</th>
-                                  <th className="px-3 py-2 text-right">Debit CHF</th>
-                                  <th className="px-3 py-2 text-right">Credit CHF</th>
-                                  <th className="px-3 py-2 text-right">Balance CHF</th>
+                                <tr className="bg-slate-50">
+                                  <th>Code</th>
+                                  <th>Account</th>
+                                  <th className="text-right">Debit CHF</th>
+                                  <th className="text-right">Credit CHF</th>
+                                  <th className="text-right">Balance CHF</th>
                                 </tr>
                               </thead>
                               <tbody>
                                 {rows.map((b) => {
                                   const isDebitBal = b.balanceCents >= 0;
                                   return (
-                                    <tr key={b.accountId} className="border-b border-slate-100 hover:bg-slate-50">
-                                      <td className="px-3 py-2 font-mono text-xs text-slate-400">{b.accountCode || "—"}</td>
-                                      <td className="px-3 py-2 text-slate-800">{b.accountName}</td>
-                                      <td className="px-3 py-2 text-right font-mono text-slate-700">{formatChfCents(b.debitCents)}</td>
-                                      <td className="px-3 py-2 text-right font-mono text-slate-700">{formatChfCents(b.creditCents)}</td>
-                                      <td className={cn("px-3 py-2 text-right font-mono font-semibold", isDebitBal ? "text-slate-900" : "text-blue-700")}>
+                                    <tr key={b.accountId} className="hover:bg-slate-50">
+                                      <td className="font-mono text-xs text-slate-400">{b.accountCode || "—"}</td>
+                                      <td className="text-slate-800">{b.accountName}</td>
+                                      <td className="text-right font-mono text-slate-700">{formatChfCents(b.debitCents)}</td>
+                                      <td className="text-right font-mono text-slate-700">{formatChfCents(b.creditCents)}</td>
+                                      <td className={cn("text-right font-mono font-semibold", isDebitBal ? "text-slate-900" : "text-blue-700")}>
                                         {isDebitBal ? "" : "("}
                                         {formatChfCents(Math.abs(b.balanceCents))}
                                         {isDebitBal ? "" : ")"}
@@ -538,9 +538,9 @@ export default function LedgerPage() {
                               </tbody>
                               <tfoot>
                                 <tr className="border-t border-slate-300 bg-slate-50 text-xs font-semibold">
-                                  <td colSpan={2} className="px-3 py-1.5 text-slate-600">Subtotal</td>
-                                  <td className="px-3 py-1.5 text-right font-mono">{formatChfCents(typeDebit)}</td>
-                                  <td className="px-3 py-1.5 text-right font-mono">{formatChfCents(typeCredit)}</td>
+                                  <td colSpan={2} className="text-slate-600">Subtotal</td>
+                                  <td className="text-right font-mono">{formatChfCents(typeDebit)}</td>
+                                  <td className="text-right font-mono">{formatChfCents(typeCredit)}</td>
                                   <td />
                                 </tr>
                               </tfoot>
