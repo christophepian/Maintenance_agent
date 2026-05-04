@@ -47,7 +47,7 @@ const path = require("path");
 
 const ROOT = path.resolve(__dirname, "..");
 const ROADMAP_PATH = path.join(ROOT, "ROADMAP.json");
-const OUTPUT_PATH = path.join(ROOT, "docs", "roadmap.html");
+const OUTPUT_PATH = path.join(ROOT, "apps", "web", "public", "docs", "roadmap.html");
 const SCHEMA_PATH = path.join(ROOT, "apps/api/prisma/schema.prisma");
 const WORKFLOWS_DIR = path.join(ROOT, "apps/api/src/workflows");
 const ROUTES_DIR = path.join(ROOT, "apps/api/src/routes");
@@ -3380,8 +3380,12 @@ function generateHtml(roadmap, signals, git) {
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${esc(project.name || "Maintenance Agent")} \u2014 Roadmap</title>
 <style>${CSS}</style>
+<style>body{padding-top:36px}</style>
 </head>
 <body>
+<style>#hub-bar{position:fixed;top:0;left:0;right:0;z-index:9000;height:36px;background:#0f172a;display:flex;align-items:center;padding:0 20px;font-family:'Inter',-apple-system,sans-serif;font-size:12px;font-weight:500;border-bottom:1px solid rgba(255,255,255,.08)}#hub-bar a{color:rgba(255,255,255,.5);text-decoration:none;padding:0 8px;height:36px;display:flex;align-items:center;transition:color .12s}#hub-bar a:hover,#hub-bar a.hub-active{color:#fff}#hub-bar .hub-brand{color:rgba(255,255,255,.9)!important;font-weight:700;padding-right:14px;margin-right:6px;border-right:1px solid rgba(255,255,255,.15)}#hub-bar .hub-open{margin-left:auto;background:#4f46e5;color:#fff!important;padding:0 12px;height:24px;border-radius:4px;font-size:11px;font-weight:600}#hub-bar .hub-open:hover{background:#4338ca!important}</style>
+<div id="hub-bar"><a href="index.html" class="hub-brand">MA Docs</a><a href="wiki.html">Wiki</a><a href="blueprint.html">Blueprint</a><a href="product-overview.html">Product</a><a href="roadmap.html">Roadmap</a><a href="design-system.html">Design</a><a href="https://maintenance-agent-59fv2xwsq-christophepians-projects.vercel.app" target="_blank" class="hub-open">Open App →</a></div>
+<script>(function(){var c=window.location.pathname.split('/').pop()||'index.html';document.querySelectorAll('#hub-bar a[href]').forEach(function(a){if(a.getAttribute('href')===c)a.classList.add('hub-active');});})()<\/script>
 <!-- Server status banner — shown when roadmap-server.js is NOT running -->
 <div id="server-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:#7f1d1d;color:#fecaca;font-family:system-ui,sans-serif;font-size:0.85rem;padding:10px 20px;text-align:center;box-shadow:0 -2px 8px rgba(0,0,0,.4);">
   &#9888;&nbsp; Server offline &mdash; buttons disabled.&nbsp; Run: <code style="background:rgba(255,255,255,.15);padding:2px 6px;border-radius:3px;">node scripts/roadmap-server.js</code>

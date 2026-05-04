@@ -1,7 +1,0 @@
-{
-  "framework": null,
-  "installCommand": "echo skip",
-  "buildCommand": "mkdir -p .vercel/output/static && cp *.html .vercel/output/static/ && printf '{\"version\":3}' > .vercel/output/config.json",
-  "cleanUrls": true,
-  "trailingSlash": false
-}
