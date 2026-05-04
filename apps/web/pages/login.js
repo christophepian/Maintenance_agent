@@ -43,13 +43,17 @@ export default function LoginPage() {
       }
 
       const token = data?.data?.token;
+      const userRole = data?.data?.user?.role;
       if (token) {
+        // Write to both the generic key (used by manager/contractor portals)
+        // and the role-specific key (used by ownerAuthHeaders / tenantAuthHeaders)
         localStorage.setItem("authToken", token);
         localStorage.setItem("authUser", JSON.stringify(data.data.user));
+        if (userRole === "OWNER") localStorage.setItem("ownerToken", token);
+        if (userRole === "TENANT") localStorage.setItem("tenantToken", token);
       }
 
       // Redirect to role-specific home page
-      const userRole = data?.data?.user?.role;
       const target = ROLE_HOME[userRole] || "/manager";
       router.push(target);
     } catch (e2) {

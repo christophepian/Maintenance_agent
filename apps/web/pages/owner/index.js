@@ -112,7 +112,7 @@ export default function OwnerDashboard() {
       const fetchJson = async (path) => {
         const res = await fetch(path, { headers: ownerAuthHeaders() });
         const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data?.error || data?.message || "Request failed");
+        if (!res.ok) throw new Error(data?.error?.message || data?.message || data?.error || "Request failed");
         return data;
       };
       const [approvalsRes, invoicesRes, leasesRes, unitsRes, rfpsRes] = await Promise.all([

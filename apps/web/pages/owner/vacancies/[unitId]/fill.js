@@ -47,7 +47,7 @@ export default function FillVacancyWizard() {
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      throw new Error(data?.error || data?.message || "Request failed");
+      throw new Error(data?.error?.message || data?.message || data?.error || "Request failed");
     }
     return data;
   }
