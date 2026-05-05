@@ -3,6 +3,7 @@ import { useRouter } from "next/router";
 
 import { cn } from "../lib/utils";
 import { withTranslations } from "../lib/i18n";
+import { useTranslation } from "next-i18next";
 const ROLE_HOME = {
   MANAGER: "/manager",
   CONTRACTOR: "/contractor",
@@ -11,6 +12,7 @@ const ROLE_HOME = {
 };
 
 export default function LoginPage() {
+  const { t } = useTranslation("tenant");
   const router = useRouter();
   const [mode, setMode] = useState("login"); // login | register
   const [email, setEmail] = useState("");
@@ -102,7 +104,7 @@ export default function LoginPage() {
               className="input"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Your name"
+              placeholder={t("tenant:index.placeholder.yourName")}
             />
           </label>
         ) : null}
@@ -114,7 +116,7 @@ export default function LoginPage() {
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@example.com"
+            placeholder={t("tenant:index.placeholder.youExampleCom")}
             required
           />
         </label>
@@ -126,7 +128,7 @@ export default function LoginPage() {
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="Minimum 8 characters"
+            placeholder={t("tenant:index.placeholder.minimum8Characters")}
             required
           />
         </label>

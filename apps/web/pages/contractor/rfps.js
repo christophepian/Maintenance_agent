@@ -11,6 +11,7 @@ import { authHeaders } from "../../lib/api";
 import ConfigurableTable from "../../components/ConfigurableTable";
 import { useTableSort, clientSort } from "../../lib/tableUtils";
 import { withTranslations } from "../../lib/i18n";
+import { useTranslation } from "next-i18next";
 
 const STATUS_TABS = [
   { key: "ALL", label: "All" },
@@ -119,6 +120,7 @@ const CRFP_COLUMNS = [
 ];
 
 export default function ContractorRfpsPage() {
+  const { t } = useTranslation("contractor");
   const router = useRouter();
   const [rfps, setRfps] = useState([]);
   const [total, setTotal] = useState(0);
@@ -165,7 +167,7 @@ export default function ContractorRfpsPage() {
   return (
     <AppShell role="CONTRACTOR">
       <div className="max-w-[1200px]">
-        <h1 className="mt-0 mb-6">Available RFPs</h1>
+        <h1 className="mt-0 mb-6">{t("contractor:rfps.heading.availableRfps")}</h1>
 
         <ContractorPicker onSelect={() => loadData()} />
 

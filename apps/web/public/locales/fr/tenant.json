@@ -21,17 +21,121 @@
     "closeLabel": "Fermer le chat",
     "inputLabel": "Saisie du message",
     "sendLabel": "Envoyer le message",
-    "askAi": "Demander \u00e0 l'IA",
+    "askAi": "Demander à l'IA",
     "assistantName": "Assistant de maintenance",
     "assistantTagline": "Posez-moi vos questions sur votre logement",
-    "loading": "Chargement\u2026",
-    "greeting": "Bonjour\u00a0! Je suis votre assistant de maintenance.",
-    "greetingHint": "D\u00e9crivez un probl\u00e8me dans votre logement ou renseignez-vous sur l'\u00e9tat d'une demande.",
+    "loading": "Chargement…",
+    "greeting": "Bonjour ! Je suis votre assistant de maintenance.",
+    "greetingHint": "Décrivez un problème dans votre logement ou renseignez-vous sur l'état d'une demande.",
     "suggestion1": "Mon robinet fuit",
-    "suggestion2": "Afficher les d\u00e9tails de mon bail",
+    "suggestion2": "Afficher les détails de mon bail",
     "suggestion3": "Afficher mes factures",
-    "placeholder": "D\u00e9crivez un probl\u00e8me ou posez une question\u2026",
-    "enterHint": "Entr\u00e9e pour envoyer \u00b7 Maj+Entr\u00e9e pour nouvelle ligne",
-    "error": "Une erreur s'est produite. Veuillez r\u00e9essayer."
+    "placeholder": "Décrivez un problème ou posez une question…",
+    "enterHint": "Entrée pour envoyer · Maj+Entrée pour nouvelle ligne",
+    "error": "Une erreur s'est produite. Veuillez réessayer."
+  },
+  "index": {
+    "heading": {
+      "rentalApplication": "Rental Application [FR]",
+      "selectUnitsToApplyFor": "Select units to apply for [FR]",
+      "uploadYourDocuments": "Upload your documents [FR]",
+      "applicantDetails": "Applicant Details [FR]",
+      "currentHousingHousehold": "Current Housing & Household [FR]",
+      "reviewSubmit": "Review & Submit [FR]",
+      "unitsAppliedFor": "Units Applied For [FR]",
+      "applicants": "Applicants [FR]",
+      "documents": "Documents [FR]",
+      "electronicSignature": "Electronic Signature [FR]",
+      "applicationSubmitted": "Application Submitted [FR]",
+      "maintenanceAgentNdashUiLauncher": "Maintenance Agent &ndash; UI Launcher [FR]",
+      "rentalListings": "Rental Listings [FR]",
+      "findYourNextHome": "Find your next home [FR]",
+      "maintenanceHelp": "Maintenance help [FR]",
+      "quickFixes": "Quick fixes [FR]",
+      "tenantRequestByPhone": "Tenant request (by phone) [FR]",
+      "requestContext": "Request context [FR]",
+      "tenantSignIn": "Tenant sign-in [FR]"
+    },
+    "placeholder": {
+      "eGChFrDe": "e.g. CH, FR, DE [FR]",
+      "eGJeanDupont": "e.g. Jean Dupont [FR]",
+      "searchByAddressBuildingNameOrUnit": "Search by address, building name, or unit… [FR]",
+      "yourName": "Your name [FR]",
+      "youExampleCom": "you@example.com [FR]",
+      "minimum8Characters": "Minimum 8 characters [FR]",
+      "eGTheOvenIsOverheating": "e.g., The oven is overheating [FR]",
+      "41791234567": "+41 79 123 45 67 [FR]",
+      "describeTheIssueU2026": "Describe the issue\\u2026 [FR]",
+      "eG150": "e.g. 150 [FR]"
+    },
+    "title": {
+      "showExtractionDebugInfo": "Show extraction debug info [FR]"
+    },
+    "ariaLabel": {
+      "removeDocument": "Remove document [FR]"
+    }
+  },
+  "token": {
+    "heading": {
+      "invoiceCapture": "Invoice Capture [FR]",
+      "thisLinkHasExpired": "This link has expired [FR]",
+      "somethingWentWrong": "Something went wrong [FR]",
+      "takePhotosOfYourInvoice": "Take photos of your invoice [FR]",
+      "uploading": "Uploading… [FR]",
+      "photosSubmitted": "Photos submitted! [FR]"
+    }
+  },
+  "assets": {
+    "heading": {
+      "myUnitAmpAssets": "My Unit &amp; Assets [FR]",
+      "unitAmpAssetDetails": "Unit &amp; Asset Details [FR]"
+    }
+  },
+  "inbox": {
+    "title": {
+      "inbox": "Inbox [FR]",
+      "unread": "Unread [FR]",
+      "dismiss": "Dismiss [FR]"
+    }
+  },
+  "invoices": {
+    "heading": {
+      "myInvoices": "My Invoices [FR]"
+    }
+  },
+  "invoicesId": {
+    "heading": {
+      "paymentQrCode": "Payment QR Code [FR]"
+    }
+  },
+  "leasesId": {
+    "heading": {
+      "leaseAgreement": "Lease Agreement [FR]",
+      "signatureStatus": "Signature Status [FR]"
+    }
+  },
+  "leasesIndex": {
+    "heading": {
+      "myLeases": "My Leases [FR]"
+    }
+  },
+  "requests": {
+    "heading": {
+      "newMaintenanceRequest": "New Maintenance Request [FR]"
+    },
+    "placeholder": {
+      "commentOptional": "Comment (optional) [FR]",
+      "describeTheIssueInDetailEGTheKitchenFaucetIsDripping": "Describe the issue in detail (e.g. the kitchen faucet is dripping) [FR]",
+      "41791234567": "+41 79 123 45 67 [FR]"
+    },
+    "title": {
+      "myRequests": "My Requests [FR]",
+      "myMaintenanceRequests": "My Maintenance Requests [FR]"
+    },
+    "ariaLabel": {
+      "captureWithPhone": "Capture with phone [FR]",
+      "attachPhotosOrDocuments": "Attach photos or documents [FR]",
+      "capturePhotosWithPhoneViaQrCode": "Capture photos with phone via QR code [FR]"
+    }
   }
 }

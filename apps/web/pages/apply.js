@@ -5,6 +5,7 @@ import ErrorBanner from "../components/ui/ErrorBanner";
 
 import { cn } from "../lib/utils";
 import { withTranslations } from "../lib/i18n";
+import { useTranslation } from "next-i18next";
 /**
  * Public Rental Application Wizard
  *
@@ -57,6 +58,7 @@ function normalizeBirthdate(raw) {
 }
 
 export default function ApplyPage() {
+  const { t } = useTranslation("tenant");
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [error, setError] = useState("");
@@ -519,7 +521,7 @@ export default function ApplyPage() {
         {/* Header */}
         <header className="border-b border-slate-200 bg-white px-4 py-4 sm:px-6">
           <div className="mx-auto max-w-3xl">
-            <h1 className="text-xl font-semibold text-slate-900">Rental Application</h1>
+            <h1 className="text-xl font-semibold text-slate-900">{t("tenant:index.heading.rentalApplication")}</h1>
             <p className="text-sm text-slate-500 mt-1">
               {step <= TOTAL_STEPS ? `Step ${step} of ${TOTAL_STEPS}` : "Complete"}
             </p>
@@ -543,7 +545,7 @@ export default function ApplyPage() {
             <div className="space-y-8">
               {/* Unit selection */}
               <section>
-                <h2 className="text-lg font-semibold text-slate-900">Select units to apply for</h2>
+                <h2 className="text-lg font-semibold text-slate-900">{t("tenant:index.heading.selectUnitsToApplyFor")}</h2>
                 <p className="text-sm text-slate-600 mt-1">
                   You can apply to multiple units with a single dossier.
                 </p>
@@ -667,7 +669,7 @@ export default function ApplyPage() {
 
               {/* Document upload zone */}
               <section>
-                <h2 className="text-lg font-semibold text-slate-900">Upload your documents</h2>
+                <h2 className="text-lg font-semibold text-slate-900">{t("tenant:index.heading.uploadYourDocuments")}</h2>
                 <p className="text-sm text-slate-600 mt-1">
                   Drop your files here — we'll scan them automatically and pre-fill your application.
                   You can also upload them one-by-one to a specific category.
@@ -759,7 +761,7 @@ export default function ApplyPage() {
           {step === 2 && (
             <div className="space-y-6">
               <div>
-                <h2 className="text-lg font-semibold text-slate-900">Applicant Details</h2>
+                <h2 className="text-lg font-semibold text-slate-900">{t("tenant:index.heading.applicantDetails")}</h2>
                 <p className="text-sm text-slate-600 mt-1">
                   {extractedFieldCount > 0
                     ? "We've pre-filled some fields from your documents. Please review and complete the rest."
@@ -786,7 +788,7 @@ export default function ApplyPage() {
                     <AutoField label="First name *" value={applicant.firstName} onChange={(v) => updateApplicant(idx, "firstName", v)} autoFilled={idx === 0 && !!(scanResults.IDENTITY?.fields?.firstName || scanResults.SALARY_PROOF?.fields?.firstName)} showMissing={validationAttempted} />
                     <AutoField label="Last name *" value={applicant.lastName} onChange={(v) => updateApplicant(idx, "lastName", v)} autoFilled={idx === 0 && !!(scanResults.IDENTITY?.fields?.lastName || scanResults.SALARY_PROOF?.fields?.lastName)} showMissing={validationAttempted} />
                     <AutoField label="Date of birth" type="date" value={applicant.dateOfBirth} onChange={(v) => updateApplicant(idx, "dateOfBirth", v)} autoFilled={idx === 0 && !!scanResults.IDENTITY?.fields?.dateOfBirth} />
-                    <AutoField label="Nationality" value={applicant.nationality} onChange={(v) => updateApplicant(idx, "nationality", v)} autoFilled={idx === 0 && !!scanResults.IDENTITY?.fields?.nationality} placeholder="e.g. CH, FR, DE" />
+                    <AutoField label="Nationality" value={applicant.nationality} onChange={(v) => updateApplicant(idx, "nationality", v)} autoFilled={idx === 0 && !!scanResults.IDENTITY?.fields?.nationality} placeholder={t("tenant:index.placeholder.eGChFrDe")} />
                     <SelectField label="Civil status" value={applicant.civilStatus} options={CIVIL_STATUSES} onChange={(v) => updateApplicant(idx, "civilStatus", v)} />
                     <Field label="Phone *" type="tel" value={applicant.phone} onChange={(v) => updateApplicant(idx, "phone", v)} showMissing={validationAttempted} />
                     <Field label="Email *" type="email" value={applicant.email} onChange={(v) => updateApplicant(idx, "email", v)} className="sm:col-span-2" showMissing={validationAttempted} />
@@ -825,7 +827,7 @@ export default function ApplyPage() {
               {/* Household & current housing */}
               <div className="rounded-xl border border-slate-200 bg-white">
                 <div className="border-b border-slate-100 px-4 py-3">
-                  <h3 className="text-sm font-semibold text-slate-900">Current Housing & Household</h3>
+                  <h3 className="text-sm font-semibold text-slate-900">{t("tenant:index.heading.currentHousingHousehold")}</h3>
                 </div>
                 <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2">
                   <Field label="Current landlord name *" value={household.currentLandlordName} onChange={(v) => setHousehold((h) => ({ ...h, currentLandlordName: v }))} showMissing={validationAttempted} />
@@ -891,7 +893,7 @@ export default function ApplyPage() {
           {step === 3 && (
             <div className="space-y-6">
               <div>
-                <h2 className="text-lg font-semibold text-slate-900">Review & Submit</h2>
+                <h2 className="text-lg font-semibold text-slate-900">{t("tenant:index.heading.reviewSubmit")}</h2>
                 <p className="text-sm text-slate-600 mt-1">
                   Please review your application and sign below.
                 </p>
@@ -900,7 +902,7 @@ export default function ApplyPage() {
               {/* Summary */}
               <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-4">
                 <div>
-                  <h3 className="text-sm font-semibold text-slate-900">Units Applied For</h3>
+                  <h3 className="text-sm font-semibold text-slate-900">{t("tenant:index.heading.unitsAppliedFor")}</h3>
                   <ul className="mt-1 space-y-1">
                     {selectedUnitIds.map((id) => {
                       const u = vacantUnits.find((u) => u.id === id);
@@ -914,7 +916,7 @@ export default function ApplyPage() {
                 </div>
 
                 <div>
-                  <h3 className="text-sm font-semibold text-slate-900">Applicants</h3>
+                  <h3 className="text-sm font-semibold text-slate-900">{t("tenant:index.heading.applicants")}</h3>
                   <ul className="mt-1 space-y-1">
                     {applicants.map((a, i) => (
                       <li key={i} className="text-sm text-slate-600">
@@ -926,7 +928,7 @@ export default function ApplyPage() {
                 </div>
 
                 <div>
-                  <h3 className="text-sm font-semibold text-slate-900">Documents</h3>
+                  <h3 className="text-sm font-semibold text-slate-900">{t("tenant:index.heading.documents")}</h3>
                   <p className="text-sm text-slate-600 mt-1">
                     {docUploads.filter((d) => d.status === "scanned").length} document(s) uploaded & scanned
                   </p>
@@ -940,7 +942,7 @@ export default function ApplyPage() {
 
               {/* Signature */}
               <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-4">
-                <h3 className="text-sm font-semibold text-slate-900">Electronic Signature</h3>
+                <h3 className="text-sm font-semibold text-slate-900">{t("tenant:index.heading.electronicSignature")}</h3>
                 <div>
                   <label className="mb-1 block text-xs font-medium text-slate-700">
                     Type your full legal name *
@@ -949,7 +951,7 @@ export default function ApplyPage() {
                     type="text"
                     value={signedName}
                     onChange={(e) => setSignedName(e.target.value)}
-                    placeholder="e.g. Jean Dupont"
+                    placeholder={t("tenant:index.placeholder.eGJeanDupont")}
                     className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-serif italic"
                   />
                 </div>
@@ -986,7 +988,7 @@ export default function ApplyPage() {
           {step === 4 && (
             <div className="text-center space-y-4 py-12">
               <div className="text-5xl">✅</div>
-              <h2 className="text-xl font-semibold text-slate-900">Application Submitted</h2>
+              <h2 className="text-xl font-semibold text-slate-900">{t("tenant:index.heading.applicationSubmitted")}</h2>
               <p className="text-sm text-slate-600 max-w-md mx-auto">{success}</p>
               <button
                 onClick={() => router.push("/listings")}
@@ -1082,6 +1084,7 @@ function DropZone({ onFiles }) {
 /* ── Document type slot (per-category upload) ──────────── */
 
 function DocTypeSlot({ docType, upload, onUpload, onRemove }) {
+  const { t } = useTranslation("tenant");
   const isUploaded = upload?.status === "scanned";
   const isScanning = upload?.status === "scanning";
 
@@ -1110,7 +1113,7 @@ function DocTypeSlot({ docType, upload, onUpload, onRemove }) {
       </div>
       <div className="flex-shrink-0 flex items-center gap-1">
         {isUploaded && onRemove && (
-          <button onClick={onRemove} className="text-xs text-red-500 hover:text-red-700 px-1" aria-label="Remove document">✕</button>
+          <button onClick={onRemove} className="text-xs text-red-500 hover:text-red-700 px-1" aria-label={t("tenant:index.ariaLabel.removeDocument")}>✕</button>
         )}
         {!isScanning && (
           <label className="cursor-pointer rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100">
@@ -1135,6 +1138,7 @@ function DocTypeSlot({ docType, upload, onUpload, onRemove }) {
 /* ── Uploaded document row ─────────────────────────────── */
 
 function UploadedDocRow({ doc, onRemove }) {
+  const { t } = useTranslation("tenant");
   const [showDebug, setShowDebug] = useState(false);
   const docLabel = DOC_TYPES.find((dt) => dt.value === doc.detectedDocType)?.label || doc.detectedDocType || "Unknown";
   const fields = doc.scanResult?.fields || {};
@@ -1198,7 +1202,7 @@ function UploadedDocRow({ doc, onRemove }) {
           <button
             onClick={() => setShowDebug((v) => !v)}
             className="text-xs text-indigo-500 hover:text-indigo-700 flex-shrink-0 px-1 font-medium"
-            title="Show extraction debug info"
+            title={t("tenant:index.title.showExtractionDebugInfo")}
           >
             {showDebug ? "▼ Debug" : "► Debug"}
           </button>

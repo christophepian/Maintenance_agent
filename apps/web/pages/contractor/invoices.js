@@ -14,6 +14,7 @@ import { formatDate } from "../../lib/format";
 import { authHeaders } from "../../lib/api";
 import ScrollableTabs from "../../components/mobile/ScrollableTabs";
 import { withTranslations } from "../../lib/i18n";
+import { useTranslation } from "next-i18next";
 
 const STATUS_TABS = [
   { key: "ALL", label: "All" },
@@ -99,6 +100,7 @@ function getInvoiceTotal(invoice) {
 }
 
 export default function ContractorInvoices() {
+  const { t } = useTranslation("contractor");
   const router = useRouter();
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -260,7 +262,7 @@ export default function ContractorInvoices() {
     <AppShell role="CONTRACTOR">
       <PageShell>
         <PageHeader
-          title="My Invoices"
+          title={t("contractor:invoices.title.myInvoices")}
           actions={
             <div className="flex items-center gap-2">
               <ContractorPicker onSelect={() => fetchInvoices()} />
@@ -325,7 +327,7 @@ export default function ContractorInvoices() {
         {showCreateForm && (
           <div className="mb-6 rounded-lg border-2 border-indigo-200 bg-white p-5">
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-slate-900">Create Invoice</h3>
+              <h3 className="text-lg font-semibold text-slate-900">{t("contractor:invoices.heading.createInvoice")}</h3>
               <button
                 onClick={() => { setShowCreateForm(false); setFormError(""); setFormSuccess(""); }}
                 className="text-sm text-slate-400 hover:text-slate-600"
@@ -385,7 +387,7 @@ export default function ContractorInvoices() {
                   type="text"
                   value={formDescription}
                   onChange={(e) => setFormDescription(e.target.value)}
-                  placeholder="Brief description of work performed"
+                  placeholder={t("contractor:invoices.placeholder.briefDescriptionOfWorkPerformed")}
                   maxLength={500}
                   className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />

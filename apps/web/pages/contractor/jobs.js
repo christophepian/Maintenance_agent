@@ -16,6 +16,7 @@ import { authHeaders } from "../../lib/api";
 import { cn } from "../../lib/utils";
 import ScrollableTabs from "../../components/mobile/ScrollableTabs";
 import { withTranslations } from "../../lib/i18n";
+import { useTranslation } from "next-i18next";
 /* ── Tab config (F-UI1) ────────────────────────────────── */
 const TABS = [
   { key: "upcoming", label: "Upcoming" },
@@ -89,6 +90,7 @@ function shortLocation(job) {
 /* ═══════════════════════════════════════════════════════════ */
 
 export default function ContractorJobs() {
+  const { t } = useTranslation("contractor");
   const router = useRouter();
 
   /* ── Tab state (URL-persisted, F-UI1) ── */
@@ -194,7 +196,7 @@ export default function ContractorJobs() {
     <AppShell role="CONTRACTOR">
       <PageShell>
         <PageHeader
-          title="My Jobs"
+          title={t("contractor:jobs.title.myJobs")}
           actions={<ContractorPicker onSelect={() => fetchJobs()} />}
         />
 
@@ -306,6 +308,7 @@ function JobCard({
   onStartJob,
   onCompleteJob,
 }) {
+  const { t } = useTranslation("contractor");
   const req = job.request;
   const category = req?.category || req?.asset?.category || null;
   const loc = shortLocation(job);
@@ -468,7 +471,7 @@ function JobCard({
               <div className="flex items-center gap-2">
                 <input
                   type="number"
-                  placeholder="Actual cost (CHF)"
+                  placeholder={t("contractor:jobs.placeholder.actualCostChf")}
                   value={actualCost}
                   onChange={(e) => setActualCost(e.target.value)}
                   className="w-40 px-3 py-2 border border-slate-300 rounded-lg text-sm"

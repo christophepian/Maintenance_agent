@@ -9,8 +9,10 @@ import { tenantFetch } from "../../lib/api";
 import TenantPicker from "../../components/TenantPicker";
 import { cn } from "../../lib/utils";
 import { withTranslations } from "../../lib/i18n";
+import { useTranslation } from "next-i18next";
 
 export default function TenantInvoicesPage() {
+  const { t } = useTranslation("tenant");
   const router = useRouter();
   const [session, setSession] = useState(null);
   const [invoices, setInvoices] = useState([]);
@@ -79,7 +81,7 @@ export default function TenantInvoicesPage() {
       <div className="main-container">
         <TenantPicker onSelect={handleTenantSwitch} />
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold">My Invoices</h1>
+          <h1 className="text-2xl font-bold">{t("tenant:invoices.heading.myInvoices")}</h1>
           <span className="text-sm text-slate-500">
             Unit {session.unit?.unitNumber}
             {session.building ? ` \u00b7 ${session.building.address}` : ""}

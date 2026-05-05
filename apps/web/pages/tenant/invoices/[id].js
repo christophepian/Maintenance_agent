@@ -8,8 +8,10 @@ import { formatDate, formatChf } from "../../../lib/format";
 import { tenantFetch } from "../../../lib/api";
 import { cn } from "../../../lib/utils";
 import { withServerTranslations } from "../../../lib/i18n";
+import { useTranslation } from "next-i18next";
 
 export default function TenantInvoiceDetailPage() {
+  const { t } = useTranslation("tenant");
   const router = useRouter();
   const { id } = router.query;
   const [session, setSession] = useState(null);
@@ -174,7 +176,7 @@ export default function TenantInvoiceDetailPage() {
 
             {/* QR-Bill payment slip */}
             <div className="card p-6">
-              <h2 className="text-lg font-semibold mb-4">Payment QR Code</h2>
+              <h2 className="text-lg font-semibold mb-4">{t("tenant:invoicesId.heading.paymentQrCode")}</h2>
 
               {qrLoading ? (
                 <div className="text-center py-8 text-slate-500">

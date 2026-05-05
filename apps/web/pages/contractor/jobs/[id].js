@@ -17,6 +17,7 @@ import { cn } from "../../../lib/utils";
 import Badge from "../../../components/ui/Badge";
 import { jobVariant, slotVariant } from "../../../lib/statusVariants";
 import { withServerTranslations } from "../../../lib/i18n";
+import { useTranslation } from "next-i18next";
 
 function fmtTime(iso) {
   const d = new Date(iso);
@@ -51,6 +52,7 @@ function StarRow({ value, onChange, disabled }) {
 }
 
 function RatingModal({ jobId, contractorId, onClose, onDone }) {
+  const { t } = useTranslation("contractor");
   const [scores, setScores] = useState({ scorePunctuality: 0, scoreAccuracy: 0, scoreCourtesy: 0 });
   const [comment, setComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -82,8 +84,8 @@ function RatingModal({ jobId, contractorId, onClose, onDone }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <div className="w-full max-w-md rounded-2xl bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
-          <h2 className="text-base font-semibold text-slate-900">Rate the tenant</h2>
-          <button onClick={onClose} className="rounded-full p-1 text-slate-400 hover:bg-slate-100" aria-label="Close">
+          <h2 className="text-base font-semibold text-slate-900">{t("contractor:jobsId.heading.rateTheTenant")}</h2>
+          <button onClick={onClose} className="rounded-full p-1 text-slate-400 hover:bg-slate-100" aria-label={t("contractor:jobsId.ariaLabel.close")}>
             <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
               <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
             </svg>
@@ -127,6 +129,7 @@ function RatingModal({ jobId, contractorId, onClose, onDone }) {
  * to add new slots for the tenant to choose from.
  */
 function SlotPanel({ jobId, contractorId, jobStatus, onRefresh }) {
+  const { t } = useTranslation("contractor");
   const [slots, setSlots] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [rows, setRows] = useState([{ date: "", startHour: "09", startMin: "00", durationH: "2" }]);
@@ -253,7 +256,7 @@ function SlotPanel({ jobId, contractorId, jobStatus, onRefresh }) {
                     {["1", "1.5", "2", "3", "4"].map((d) => <option key={d} value={d}>{d}h</option>)}
                   </select>
                   {rows.length > 1 && (
-                    <button type="button" onClick={() => removeRow(i)} className="text-xs text-red-500 hover:text-red-700" aria-label="Remove schedule row">✕</button>
+                    <button type="button" onClick={() => removeRow(i)} className="text-xs text-red-500 hover:text-red-700" aria-label={t("contractor:jobsId.ariaLabel.removeScheduleRow")}>✕</button>
                   )}
                 </div>
               ))}
@@ -277,6 +280,7 @@ function SlotPanel({ jobId, contractorId, jobStatus, onRefresh }) {
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 export default function ContractorJobDetail() {
+  const { t } = useTranslation("contractor");
   const router = useRouter();
   const { id } = router.query;
   const { data: job, loading, error, refresh: loadJob } = useDetailResource(

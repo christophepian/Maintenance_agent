@@ -11,6 +11,7 @@ import { getNotificationLink } from "../../lib/notificationLinks";
 import TenantPicker from "../../components/TenantPicker";
 import Badge from "../../components/ui/Badge";
 import { withTranslations } from "../../lib/i18n";
+import { useTranslation } from "next-i18next";
 
 const EVENT_ICONS = {
   LEASE_READY_TO_SIGN: "📝",
@@ -36,6 +37,7 @@ const EVENT_ICONS = {
 };
 
 export default function TenantInboxPage() {
+  const { t } = useTranslation("tenant");
   const router = useRouter();
   const [session, setSession] = useState(null);
   const [notifications, setNotifications] = useState([]);
@@ -175,7 +177,7 @@ export default function TenantInboxPage() {
     return (
       <AppShell role="TENANT">
         <PageShell>
-          <PageHeader title="Inbox" />
+          <PageHeader title={t("tenant:inbox.title.inbox")} />
           <PageContent>
             <Panel>
               <div className="empty-state">
@@ -274,7 +276,7 @@ export default function TenantInboxPage() {
                 </div>
                 <div className="flex items-center gap-1 flex-shrink-0">
                   {!n.readAt && (
-                    <span className="w-2.5 h-2.5 rounded-full bg-blue-500" title="Unread" />
+                    <span className="w-2.5 h-2.5 rounded-full bg-blue-500" title={t("tenant:inbox.title.unread")} />
                   )}
                   <button
                     onClick={(e) => {
@@ -282,7 +284,7 @@ export default function TenantInboxPage() {
                       dismissNotification(n.id);
                     }}
                     className="text-slate-300 hover:text-slate-500 ml-1"
-                    title="Dismiss"
+                    title={t("tenant:inbox.title.dismiss")}
                   >
                     ✕
                   </button>

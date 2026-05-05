@@ -16,6 +16,7 @@ import ChatWidget from "../../components/ChatWidget";
 import { cn } from "../../lib/utils";
 import { QRCodeSVG } from "qrcode.react";
 import { withTranslations } from "../../lib/i18n";
+import { useTranslation } from "next-i18next";
 // ---------------------------------------------------------------------------
 // Scheduling Slots Panel (Tenant — accept / decline)
 // ---------------------------------------------------------------------------
@@ -298,6 +299,7 @@ function TenantCaptureSessionModal({ requestId, onClose, onComplete }) {
 // ---------------------------------------------------------------------------
 
 function TenantPhotosPanel({ requestId }) {
+  const { t } = useTranslation("tenant");
   const [attachments, setAttachments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [previewUrl, setPreviewUrl] = useState(null);
@@ -413,7 +415,7 @@ function TenantPhotosPanel({ requestId }) {
               Upload photo
               <input type="file" multiple accept="image/*,.pdf" className="hidden" onChange={handleUpload} />
             </label>
-            <button onClick={() => setShowCapture(true)} className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50" aria-label="Capture with phone">
+            <button onClick={() => setShowCapture(true)} className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50" aria-label={t("tenant:requests.ariaLabel.captureWithPhone")}>
               📷 Capture with phone
             </button>
           </div>
@@ -446,7 +448,7 @@ function TenantPhotosPanel({ requestId }) {
               + Upload more
               <input type="file" multiple accept="image/*,.pdf" className="hidden" onChange={handleUpload} />
             </label>
-            <button onClick={() => setShowCapture(true)} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50" aria-label="Capture with phone">
+            <button onClick={() => setShowCapture(true)} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50" aria-label={t("tenant:requests.ariaLabel.captureWithPhone")}>
               📷 Phone
             </button>
           </div>
@@ -505,6 +507,7 @@ function StarRow({ value, onChange, disabled }) {
 }
 
 function TenantJobReviewPanel({ job, onRefresh }) {
+  const { t } = useTranslation("tenant");
   const [confirming, setConfirming] = useState(false);
   const [showRating, setShowRating] = useState(false);
   const [scores, setScores] = useState({ scorePunctuality: 0, scoreAccuracy: 0, scoreCourtesy: 0 });
@@ -609,7 +612,7 @@ function TenantJobReviewPanel({ job, onRefresh }) {
             <textarea
               value={comment}
               onChange={(e) => setComment(e.target.value)}
-              placeholder="Comment (optional)"
+              placeholder={t("tenant:requests.placeholder.commentOptional")}
               rows={2}
               className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs placeholder-slate-400 focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400"
             />
@@ -914,6 +917,7 @@ function TenantClaimAnalysisPanel({ requestId }) {
 }
 
 function NewRequestModal({ onClose, onCreated }) {
+  const { t } = useTranslation("tenant");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
   const [contactPhone, setContactPhone] = useState("");
@@ -998,7 +1002,7 @@ function NewRequestModal({ onClose, onCreated }) {
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-4">
       <div className="w-full max-w-lg rounded-2xl bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
-          <h2 className="text-base font-semibold text-slate-900">New Maintenance Request</h2>
+          <h2 className="text-base font-semibold text-slate-900">{t("tenant:requests.heading.newMaintenanceRequest")}</h2>
           <button onClick={onClose} className="rounded-full p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600">
             <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
@@ -1023,7 +1027,7 @@ function NewRequestModal({ onClose, onCreated }) {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               disabled={!!createdRequestId}
-              placeholder="Describe the issue in detail (e.g. the kitchen faucet is dripping)"
+              placeholder={t("tenant:requests.placeholder.describeTheIssueInDetailEGTheKitchenFaucetIsDripping")}
               rows={4}
               required
               className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm placeholder-slate-400 focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400 disabled:bg-slate-50 disabled:text-slate-500"
@@ -1053,7 +1057,7 @@ function NewRequestModal({ onClose, onCreated }) {
               value={contactPhone}
               onChange={(e) => setContactPhone(e.target.value)}
               disabled={!!createdRequestId}
-              placeholder="+41 79 123 45 67"
+              placeholder={t("tenant:requests.placeholder.41791234567")}
               className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm placeholder-slate-400 focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400 disabled:bg-slate-50 disabled:text-slate-500"
             />
           </div>
@@ -1064,7 +1068,7 @@ function NewRequestModal({ onClose, onCreated }) {
               type="file"
               multiple
               accept="image/*,.pdf"
-              aria-label="Attach photos or documents"
+              aria-label={t("tenant:requests.ariaLabel.attachPhotosOrDocuments")}
               onChange={(e) => {
                 const files = Array.from(e.target.files || []);
                 const valid = [];
@@ -1113,7 +1117,7 @@ function NewRequestModal({ onClose, onCreated }) {
               onClick={handleCaptureClick}
               disabled={submitting}
               className="mt-2 inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-              aria-label="Capture photos with phone via QR code"
+              aria-label={t("tenant:requests.ariaLabel.capturePhotosWithPhoneViaQrCode")}
             >
               📷 Capture with phone
             </button>
@@ -1153,6 +1157,7 @@ function NewRequestModal({ onClose, onCreated }) {
 }
 
 export default function TenantRequestsPage() {
+  const { t } = useTranslation("tenant");
   const router = useRouter();
   const [session, setSession] = useState(null);
   const [requests, setRequests] = useState([]);
@@ -1218,7 +1223,7 @@ export default function TenantRequestsPage() {
     return (
       <AppShell role="TENANT">
         <PageShell>
-          <PageHeader title="My Requests" />
+          <PageHeader title={t("tenant:requests.title.myRequests")} />
           <PageContent>
             <Panel>
               <div className="empty-state">
@@ -1250,7 +1255,7 @@ export default function TenantRequestsPage() {
       <PageShell>
         <TenantPicker onSelect={handleTenantSwitch} />
         <PageHeader
-          title="My Maintenance Requests"
+          title={t("tenant:requests.title.myMaintenanceRequests")}
           actions={
             <button
               onClick={() => setShowNewRequest(true)}

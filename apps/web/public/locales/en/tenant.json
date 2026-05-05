@@ -24,14 +24,118 @@
     "askAi": "Ask AI",
     "assistantName": "Maintenance Assistant",
     "assistantTagline": "Ask me anything about your home",
-    "loading": "Loading\u2026",
-    "greeting": "Hi! I\u2019m your maintenance assistant.",
+    "loading": "Loading…",
+    "greeting": "Hi! I’m your maintenance assistant.",
     "greetingHint": "Tell me about an issue in your home or ask about the status of a request.",
     "suggestion1": "My faucet is leaking",
     "suggestion2": "Show my lease details",
     "suggestion3": "Show my invoices",
-    "placeholder": "Describe an issue or ask a question\u2026",
-    "enterHint": "Press Enter to send \u00b7 Shift+Enter for new line",
+    "placeholder": "Describe an issue or ask a question…",
+    "enterHint": "Press Enter to send · Shift+Enter for new line",
     "error": "Something went wrong. Please try again."
+  },
+  "index": {
+    "heading": {
+      "rentalApplication": "Rental Application",
+      "selectUnitsToApplyFor": "Select units to apply for",
+      "uploadYourDocuments": "Upload your documents",
+      "applicantDetails": "Applicant Details",
+      "currentHousingHousehold": "Current Housing & Household",
+      "reviewSubmit": "Review & Submit",
+      "unitsAppliedFor": "Units Applied For",
+      "applicants": "Applicants",
+      "documents": "Documents",
+      "electronicSignature": "Electronic Signature",
+      "applicationSubmitted": "Application Submitted",
+      "maintenanceAgentNdashUiLauncher": "Maintenance Agent &ndash; UI Launcher",
+      "rentalListings": "Rental Listings",
+      "findYourNextHome": "Find your next home",
+      "maintenanceHelp": "Maintenance help",
+      "quickFixes": "Quick fixes",
+      "tenantRequestByPhone": "Tenant request (by phone)",
+      "requestContext": "Request context",
+      "tenantSignIn": "Tenant sign-in"
+    },
+    "placeholder": {
+      "eGChFrDe": "e.g. CH, FR, DE",
+      "eGJeanDupont": "e.g. Jean Dupont",
+      "searchByAddressBuildingNameOrUnit": "Search by address, building name, or unit…",
+      "yourName": "Your name",
+      "youExampleCom": "you@example.com",
+      "minimum8Characters": "Minimum 8 characters",
+      "eGTheOvenIsOverheating": "e.g., The oven is overheating",
+      "41791234567": "+41 79 123 45 67",
+      "describeTheIssueU2026": "Describe the issue\\u2026",
+      "eG150": "e.g. 150"
+    },
+    "title": {
+      "showExtractionDebugInfo": "Show extraction debug info"
+    },
+    "ariaLabel": {
+      "removeDocument": "Remove document"
+    }
+  },
+  "token": {
+    "heading": {
+      "invoiceCapture": "Invoice Capture",
+      "thisLinkHasExpired": "This link has expired",
+      "somethingWentWrong": "Something went wrong",
+      "takePhotosOfYourInvoice": "Take photos of your invoice",
+      "uploading": "Uploading…",
+      "photosSubmitted": "Photos submitted!"
+    }
+  },
+  "assets": {
+    "heading": {
+      "myUnitAmpAssets": "My Unit &amp; Assets",
+      "unitAmpAssetDetails": "Unit &amp; Asset Details"
+    }
+  },
+  "inbox": {
+    "title": {
+      "inbox": "Inbox",
+      "unread": "Unread",
+      "dismiss": "Dismiss"
+    }
+  },
+  "invoices": {
+    "heading": {
+      "myInvoices": "My Invoices"
+    }
+  },
+  "invoicesId": {
+    "heading": {
+      "paymentQrCode": "Payment QR Code"
+    }
+  },
+  "leasesId": {
+    "heading": {
+      "leaseAgreement": "Lease Agreement",
+      "signatureStatus": "Signature Status"
+    }
+  },
+  "leasesIndex": {
+    "heading": {
+      "myLeases": "My Leases"
+    }
+  },
+  "requests": {
+    "heading": {
+      "newMaintenanceRequest": "New Maintenance Request"
+    },
+    "placeholder": {
+      "commentOptional": "Comment (optional)",
+      "describeTheIssueInDetailEGTheKitchenFaucetIsDripping": "Describe the issue in detail (e.g. the kitchen faucet is dripping)",
+      "41791234567": "+41 79 123 45 67"
+    },
+    "title": {
+      "myRequests": "My Requests",
+      "myMaintenanceRequests": "My Maintenance Requests"
+    },
+    "ariaLabel": {
+      "captureWithPhone": "Capture with phone",
+      "attachPhotosOrDocuments": "Attach photos or documents",
+      "capturePhotosWithPhoneViaQrCode": "Capture photos with phone via QR code"
+    }
   }
 }

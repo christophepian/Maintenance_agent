@@ -2,6 +2,7 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/router";
 import Head from "next/head";
 import { withServerTranslations } from "../../lib/i18n";
+import { useTranslation } from "next-i18next";
 
 /* ─── Constants ───────────────────────────────────────────── */
 
@@ -14,6 +15,7 @@ const MAX_PHOTOS = 5;
 /* ─── Main Page ───────────────────────────────────────────── */
 
 export default function MobileCapturePage() {
+  const { t } = useTranslation("tenant");
   const router = useRouter();
   const { token: sessionIdOrToken } = router.query;
 
@@ -190,7 +192,7 @@ export default function MobileCapturePage() {
         {/* Header */}
         <header className="bg-blue-700 text-white px-4 py-3 flex items-center gap-3 shadow-md">
           <span className="text-xl">📷</span>
-          <h1 className="text-base font-semibold m-0">Invoice Capture</h1>
+          <h1 className="text-base font-semibold m-0">{t("tenant:token.heading.invoiceCapture")}</h1>
         </header>
 
         {/* Content */}
@@ -207,7 +209,7 @@ export default function MobileCapturePage() {
           {state === "EXPIRED" && (
             <div className="text-center max-w-xs">
               <div className="text-4xl mb-3">⏰</div>
-              <h2 className="text-lg font-semibold text-slate-800 mt-0 mb-2">This link has expired</h2>
+              <h2 className="text-lg font-semibold text-slate-800 mt-0 mb-2">{t("tenant:token.heading.thisLinkHasExpired")}</h2>
               <p className="text-sm text-slate-500 m-0">
                 Capture sessions are valid for 15 minutes. Please scan a new QR code from the invoice hub.
               </p>
@@ -218,7 +220,7 @@ export default function MobileCapturePage() {
           {state === "ERROR" && (
             <div className="text-center max-w-xs">
               <div className="text-4xl mb-3">❌</div>
-              <h2 className="text-lg font-semibold text-slate-800 mt-0 mb-2">Something went wrong</h2>
+              <h2 className="text-lg font-semibold text-slate-800 mt-0 mb-2">{t("tenant:token.heading.somethingWentWrong")}</h2>
               <p className="text-sm text-red-600 m-0">{errorMsg}</p>
             </div>
           )}
@@ -227,7 +229,7 @@ export default function MobileCapturePage() {
           {state === "READY" && (
             <div className="w-full max-w-md">
               <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-4">
-                <h2 className="text-base font-semibold text-slate-800 mt-0 mb-1">Take photos of your invoice</h2>
+                <h2 className="text-base font-semibold text-slate-800 mt-0 mb-1">{t("tenant:token.heading.takePhotosOfYourInvoice")}</h2>
                 <p className="text-xs text-slate-500 mt-0 mb-4">
                   Capture up to {MAX_PHOTOS} photos. Make sure the text is clear and well-lit.
                 </p>
@@ -311,7 +313,7 @@ export default function MobileCapturePage() {
           {state === "UPLOADING" && (
             <div className="w-full max-w-xs text-center">
               <div className="w-10 h-10 border-4 border-green-200 border-t-green-600 rounded-full animate-spin mx-auto mb-4" />
-              <h2 className="text-base font-semibold text-slate-800 mt-0 mb-2">Uploading…</h2>
+              <h2 className="text-base font-semibold text-slate-800 mt-0 mb-2">{t("tenant:token.heading.uploading")}</h2>
               <p className="text-sm text-slate-500 mb-3">
                 {uploadProgress} of {photos.length} {photos.length === 1 ? "photo" : "photos"}
               </p>
@@ -329,7 +331,7 @@ export default function MobileCapturePage() {
           {state === "SUCCESS" && (
             <div className="text-center max-w-xs">
               <div className="text-5xl mb-3">✅</div>
-              <h2 className="text-lg font-semibold text-green-700 mt-0 mb-2">Photos submitted!</h2>
+              <h2 className="text-lg font-semibold text-green-700 mt-0 mb-2">{t("tenant:token.heading.photosSubmitted")}</h2>
               <p className="text-sm text-slate-500 m-0">
                 Your invoice is being processed. You can close this page now.
               </p>

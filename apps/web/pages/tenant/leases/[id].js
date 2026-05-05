@@ -8,6 +8,7 @@ import { cn } from "../../../lib/utils";
 import Badge from "../../../components/ui/Badge";
 import { leaseVariant, signerVariant } from "../../../lib/statusVariants";
 import { withServerTranslations } from "../../../lib/i18n";
+import { useTranslation } from "next-i18next";
 const STATUS_LABELS = {
   DRAFT: "Draft",
   READY_TO_SIGN: "Ready to Sign",
@@ -24,6 +25,7 @@ const NOTICE_RULES = {
 };
 
 export default function TenantLeaseDetailPage() {
+  const { t } = useTranslation("tenant");
   const router = useRouter();
   const { id: leaseId } = router.query;
 
@@ -158,7 +160,7 @@ export default function TenantLeaseDetailPage() {
             {/* Header */}
             <div className="flex items-start justify-between mb-6">
               <div>
-                <h1 className="text-2xl font-bold">Lease Agreement</h1>
+                <h1 className="text-2xl font-bold">{t("tenant:leasesId.heading.leaseAgreement")}</h1>
                 <p className="text-slate-500 text-sm mt-1">
                   {lease.unit?.building?.name} — Unit {lease.unit?.unitNumber}
                 </p>
@@ -339,7 +341,7 @@ export default function TenantLeaseDetailPage() {
             {/* Signature Status */}
             {lease.signatureStatus && (
               <section className="card p-5 mb-4">
-                <h2 className="text-lg font-semibold mb-3 border-b pb-2">Signature Status</h2>
+                <h2 className="text-lg font-semibold mb-3 border-b pb-2">{t("tenant:leasesId.heading.signatureStatus")}</h2>
                 <div className="flex items-center gap-2">
                   <Badge variant={signerVariant(lease.signatureStatus)} size="sm">
                     {lease.signatureStatus.toLowerCase().replace(/_/g, " ")}

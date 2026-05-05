@@ -326,10 +326,22 @@ GENERIC_PATTERNS = [
 def page_scope(rel_path):
     """Convert 'pages/manager/finance/invoices.js' → 'financeInvoices'"""
     p = Path(rel_path)
-    parts = list(p.parts[2:])  # strip 'pages/manager' or 'pages/owner'
+    # strip up to and including the namespace folder (pages/manager, pages/owner, pages/contractor, pages/tenant)
+    parts = list(p.parts)
+    # drop 'pages' and the namespace folder
+    ns_idx = next((i for i, v in enumerate(parts) if v in ("manager","owner","contractor","tenant","admin-inventory")), 1)
+    parts = parts[ns_idx+1:]  # subpath within namespace
+    if not parts:
+        return "index"
     parts[-1] = parts[-1].replace(".js", "").replace("[", "").replace("]", "")
+    if not parts[-1]:
+        parts = parts[:-1]
+    if not parts:
+        return "index"
     combined = "_".join(parts)
     words = re.split(r'[_\-]', combined)
+    if not words or not words[0]:
+        return "index"
     return words[0] + ''.join(w.capitalize() for w in words[1:])
 
 def namespace_for(rel_path):
@@ -341,7 +353,6 @@ def namespace_for(rel_path):
         return "contractor"
     return "tenant"
 
-# ---------- main processing ----------
 
 def process_file(rel_path, src, locale_en, locale_fr):
     """Apply all transformations to src, update locale dicts, return new src."""
@@ -443,7 +454,7 @@ def main():
             full = Path(root) / f
             rel = str(full.relative_to(WEB))
             ns = namespace_for(rel)
-            if ns not in ["manager", "owner"]: continue
+            if ns not in ["contractor", "tenant"]: continue
             if "api/" in rel: continue
             targets.append((rel, full))
 

@@ -10,5 +10,67 @@
     "title": "Tableau de bord prestataire",
     "activeJobs": "Interventions actives",
     "pendingRfps": "Appels d'offres en attente"
+  },
+  "estimates": {
+    "heading": {
+      "estimates": "Estimates [FR]"
+    }
+  },
+  "index": {
+    "title": {
+      "contractorDashboard": "Contractor Dashboard [FR]",
+      "quickLinks": "Quick Links [FR]",
+      "todayActionRequired": "Today / Action Required [FR]",
+      "pipelineOverview": "Pipeline Overview [FR]"
+    }
+  },
+  "invoices": {
+    "heading": {
+      "createInvoice": "Create Invoice [FR]"
+    },
+    "placeholder": {
+      "briefDescriptionOfWorkPerformed": "Brief description of work performed [FR]"
+    },
+    "title": {
+      "myInvoices": "My Invoices [FR]"
+    }
+  },
+  "jobs": {
+    "placeholder": {
+      "actualCostChf": "Actual cost (CHF) [FR]"
+    },
+    "title": {
+      "myJobs": "My Jobs [FR]"
+    }
+  },
+  "jobsId": {
+    "heading": {
+      "rateTheTenant": "Rate the tenant [FR]"
+    },
+    "ariaLabel": {
+      "close": "Fermer",
+      "removeScheduleRow": "Remove schedule row [FR]"
+    }
+  },
+  "rfps": {
+    "heading": {
+      "availableRfps": "Available RFPs [FR]"
+    }
+  },
+  "rfpsId": {
+    "heading": {
+      "submitYourQuote": "Submit Your Quote [FR]",
+      "appointmentConfirmed": "Appointment Confirmed [FR]",
+      "rFPDetails": "RFP Details [FR]",
+      "workDescription": "Work Description [FR]"
+    },
+    "placeholder": {
+      "eG150000": "e.g. 1500.00 [FR]",
+      "eG5": "e.g. 5 [FR]",
+      "describeTheProposedWorkPlanMethodsAndTimeline": "Describe the proposed work plan, methods, and timeline… [FR]",
+      "anyAssumptionsExclusionsOrConditions": "Any assumptions, exclusions, or conditions… [FR]",
+      "anyOtherInformationForTheManager": "Any other information for the manager… [FR]",
+      "description": "Description"
+    }
   }
 }

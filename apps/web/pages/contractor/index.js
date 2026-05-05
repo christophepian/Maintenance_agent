@@ -11,7 +11,9 @@ import { formatChf as formatCurrency, formatDate } from "../../lib/format";
 import { authHeaders } from "../../lib/api";
 import { cn } from "../../lib/utils";
 import { withTranslations } from "../../lib/i18n";
+import { useTranslation } from "next-i18next";
 export default function ContractorDashboard() {
+  const { t } = useTranslation("contractor");
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -113,7 +115,7 @@ export default function ContractorDashboard() {
     return (
       <AppShell role="CONTRACTOR">
         <PageShell>
-          <PageHeader title="Contractor Dashboard" />
+          <PageHeader title={t("contractor:index.title.contractorDashboard")} />
           <PageContent>
             <p>Loading dashboard...</p>
           </PageContent>
@@ -125,12 +127,12 @@ export default function ContractorDashboard() {
   return (
     <AppShell role="CONTRACTOR">
       <PageShell>
-        <PageHeader title="Contractor Dashboard" />
+        <PageHeader title={t("contractor:index.title.contractorDashboard")} />
         <PageContent>
           <ContractorPicker onSelect={() => loadDashboardData()} />
 
           {/* Quick Links Section */}
-          <Section title="Quick Links">
+          <Section title={t("contractor:index.title.quickLinks")}>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <button className="button-primary" onClick={() => router.push("/contractor/jobs")}>
                 🔧 All Jobs
@@ -154,7 +156,7 @@ export default function ContractorDashboard() {
           )}
 
           {/* Action Required Section */}
-          <Section title="Today / Action Required">
+          <Section title={t("contractor:index.title.todayActionRequired")}>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                 <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Pending Jobs</div>
@@ -206,7 +208,7 @@ export default function ContractorDashboard() {
           </Section>
 
           {/* Pipeline KPIs Section */}
-          <Section title="Pipeline Overview">
+          <Section title={t("contractor:index.title.pipelineOverview")}>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                 <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Open Jobs</div>

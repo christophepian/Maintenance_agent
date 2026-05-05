@@ -7,6 +7,7 @@ import { leaseVariant } from "../../../lib/statusVariants";
 
 import { cn } from "../../../lib/utils";
 import { withTranslations } from "../../../lib/i18n";
+import { useTranslation } from "next-i18next";
 const STATUS_LABELS = {
   DRAFT: "Draft",
   READY_TO_SIGN: "Ready to Sign",
@@ -17,6 +18,7 @@ const STATUS_LABELS = {
 };
 
 export default function TenantLeasesPage() {
+  const { t } = useTranslation("tenant");
   const router = useRouter();
   const [leases, setLeases] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -105,7 +107,7 @@ export default function TenantLeasesPage() {
     <AppShell role="TENANT">
       <div className="main-container">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold">My Leases</h1>
+          <h1 className="text-2xl font-bold">{t("tenant:leasesIndex.heading.myLeases")}</h1>
           <span className="text-sm text-slate-500">
             Unit {session.unit?.unitNumber}
             {session.building ? ` · ${session.building.address}` : ""}

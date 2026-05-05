@@ -4,7 +4,9 @@ import AppShell from "../components/AppShell";
 
 import { cn } from "../lib/utils";
 import { withTranslations } from "../lib/i18n";
+import { useTranslation } from "next-i18next";
 export default function TenantPhone() {
+  const { t } = useTranslation("tenant");
   const router = useRouter();
   const [phone, setPhone] = useState("");
   const [notice, setNotice] = useState(null);
@@ -57,7 +59,7 @@ export default function TenantPhone() {
   return (
     <AppShell role="TENANT">
       <div className="main-container">
-      <h1>Tenant sign-in</h1>
+      <h1>{t("tenant:index.heading.tenantSignIn")}</h1>
       <div className="subtle">Enter your phone number to continue.</div>
 
       {notice ? (
@@ -72,7 +74,7 @@ export default function TenantPhone() {
           className="input"
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
-          placeholder="+41 79 123 45 67"
+          placeholder={t("tenant:index.placeholder.41791234567")}
         />
         <button className="button-primary" type="submit" disabled={loading}>
           {loading ? "Checking…" : "Continue"}

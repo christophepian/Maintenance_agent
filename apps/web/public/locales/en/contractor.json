@@ -10,5 +10,67 @@
     "title": "Contractor Dashboard",
     "activeJobs": "Active Jobs",
     "pendingRfps": "Pending RFPs"
+  },
+  "estimates": {
+    "heading": {
+      "estimates": "Estimates"
+    }
+  },
+  "index": {
+    "title": {
+      "contractorDashboard": "Contractor Dashboard",
+      "quickLinks": "Quick Links",
+      "todayActionRequired": "Today / Action Required",
+      "pipelineOverview": "Pipeline Overview"
+    }
+  },
+  "invoices": {
+    "heading": {
+      "createInvoice": "Create Invoice"
+    },
+    "placeholder": {
+      "briefDescriptionOfWorkPerformed": "Brief description of work performed"
+    },
+    "title": {
+      "myInvoices": "My Invoices"
+    }
+  },
+  "jobs": {
+    "placeholder": {
+      "actualCostChf": "Actual cost (CHF)"
+    },
+    "title": {
+      "myJobs": "My Jobs"
+    }
+  },
+  "jobsId": {
+    "heading": {
+      "rateTheTenant": "Rate the tenant"
+    },
+    "ariaLabel": {
+      "close": "Close",
+      "removeScheduleRow": "Remove schedule row"
+    }
+  },
+  "rfps": {
+    "heading": {
+      "availableRfps": "Available RFPs"
+    }
+  },
+  "rfpsId": {
+    "heading": {
+      "submitYourQuote": "Submit Your Quote",
+      "appointmentConfirmed": "Appointment Confirmed",
+      "rFPDetails": "RFP Details",
+      "workDescription": "Work Description"
+    },
+    "placeholder": {
+      "eG150000": "e.g. 1500.00",
+      "eG5": "e.g. 5",
+      "describeTheProposedWorkPlanMethodsAndTimeline": "Describe the proposed work plan, methods, and timeline…",
+      "anyAssumptionsExclusionsOrConditions": "Any assumptions, exclusions, or conditions…",
+      "anyOtherInformationForTheManager": "Any other information for the manager…",
+      "description": "Description"
+    }
   }
 }

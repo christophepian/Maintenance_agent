@@ -5,6 +5,7 @@ import { ALLOWED_CATEGORIES } from "../lib/categories";
 
 import { cn } from "../lib/utils";
 import { withTranslations } from "../lib/i18n";
+import { useTranslation } from "next-i18next";
 /**
  * Tenant Form (Slice 4)
  * - Phone-based tenant identity
@@ -15,6 +16,7 @@ import { withTranslations } from "../lib/i18n";
 
 
 export default function TenantForm() {
+  const { t } = useTranslation("tenant");
   const API_PROXY = "/api";
 
   const [phone, setPhone] = useState("");
@@ -196,7 +198,7 @@ export default function TenantForm() {
   return (
     <AppShell role="TENANT">
       <div className="main-container">
-      <h1>Tenant request (by phone)</h1>
+      <h1>{t("tenant:index.heading.tenantRequestByPhone")}</h1>
       <div className="subtle">
         Backend: <code className="code">{apiBase || "\u2026"}</code>
       </div>
@@ -212,7 +214,7 @@ export default function TenantForm() {
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
           onBlur={lookupTenant}
-          placeholder="+41 79 123 45 67"
+          placeholder={t("tenant:index.placeholder.41791234567")}
         />
         <div className="row">
           <button
@@ -245,7 +247,7 @@ export default function TenantForm() {
         </div>
       </div>
       <form onSubmit={submitRequest} className="card">
-        <h2>Request context</h2>
+        <h2>{t("tenant:index.heading.requestContext")}</h2>
         <label className="label">Building</label>
         <select
           className="input"
@@ -302,7 +304,7 @@ export default function TenantForm() {
           className="input textarea"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          placeholder="Describe the issue\u2026"
+          placeholder={t("tenant:index.placeholder.describeTheIssueU2026")}
         />
         <label className="label">Estimated cost (CHF)</label>
         <input
@@ -310,7 +312,7 @@ export default function TenantForm() {
           type="number"
           value={estimatedCost}
           onChange={(e) => setEstimatedCost(e.target.value)}
-          placeholder="e.g. 150"
+          placeholder={t("tenant:index.placeholder.eG150")}
         />
         <button className="button-primary" type="submit">
           Submit request

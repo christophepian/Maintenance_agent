@@ -12,10 +12,12 @@ import { rfpVariant, slotVariant } from "../../../lib/statusVariants";
 
 import { cn } from "../../../lib/utils";
 import { withServerTranslations } from "../../../lib/i18n";
+import { useTranslation } from "next-i18next";
 
 /* ── Quote Submission Form ─────────────────────────────────────── */
 
 function QuoteForm({ rfpId, onSubmitted }) {
+  const { t } = useTranslation("contractor");
   const [form, setForm] = useState({
     amountCents: "",
     workPlan: "",
@@ -106,7 +108,7 @@ function QuoteForm({ rfpId, onSubmitted }) {
 
   return (
     <form onSubmit={handleSubmit} className="bg-white border border-slate-200 rounded-lg p-6 mb-4">
-      <h2 className="text-base font-semibold text-slate-900 mb-4">Submit Your Quote</h2>
+      <h2 className="text-base font-semibold text-slate-900 mb-4">{t("contractor:rfpsId.heading.submitYourQuote")}</h2>
 
       <ErrorBanner error={error} className="mb-4 text-sm" />
 
@@ -124,7 +126,7 @@ function QuoteForm({ rfpId, onSubmitted }) {
             onChange={handleChange}
             required
             className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-            placeholder="e.g. 1500.00"
+            placeholder={t("contractor:rfpsId.placeholder.eG150000")}
           />
         </div>
         <div className="flex items-end gap-4">
@@ -150,7 +152,7 @@ function QuoteForm({ rfpId, onSubmitted }) {
             value={form.estimatedDurationDays}
             onChange={handleChange}
             className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-            placeholder="e.g. 5"
+            placeholder={t("contractor:rfpsId.placeholder.eG5")}
           />
         </div>
         <div>
@@ -190,7 +192,7 @@ function QuoteForm({ rfpId, onSubmitted }) {
           required
           rows={4}
           className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-          placeholder="Describe the proposed work plan, methods, and timeline…"
+          placeholder={t("contractor:rfpsId.placeholder.describeTheProposedWorkPlanMethodsAndTimeline")}
         />
       </div>
 
@@ -204,7 +206,7 @@ function QuoteForm({ rfpId, onSubmitted }) {
           onChange={handleChange}
           rows={2}
           className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-          placeholder="Any assumptions, exclusions, or conditions…"
+          placeholder={t("contractor:rfpsId.placeholder.anyAssumptionsExclusionsOrConditions")}
         />
       </div>
 
@@ -218,7 +220,7 @@ function QuoteForm({ rfpId, onSubmitted }) {
           onChange={handleChange}
           rows={2}
           className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-          placeholder="Any other information for the manager…"
+          placeholder={t("contractor:rfpsId.placeholder.anyOtherInformationForTheManager")}
         />
       </div>
 
@@ -243,7 +245,7 @@ function QuoteForm({ rfpId, onSubmitted }) {
               value={item.description}
               onChange={(e) => updateLineItem(idx, "description", e.target.value)}
               className="flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
-              placeholder="Description"
+              placeholder={t("contractor:rfpsId.placeholder.description")}
             />
             <input
               type="number"
@@ -438,6 +440,7 @@ function formatSlotTime(iso) {
 }
 
 function ExistingSlotsPanel({ slots }) {
+  const { t } = useTranslation("contractor");
   if (!slots || slots.length === 0) return null;
 
   const accepted = slots.find((s) => s.status === "ACCEPTED");
@@ -448,9 +451,7 @@ function ExistingSlotsPanel({ slots }) {
         <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
           <div className="flex items-center gap-2 mb-1">
             <span className="text-green-700 text-lg">✓</span>
-            <h3 className="text-sm font-semibold text-green-900">
-              Appointment Confirmed
-            </h3>
+            <h3 className="text-sm font-semibold text-green-900">{t("contractor:rfpsId.heading.appointmentConfirmed")}</h3>
           </div>
           <p className="text-sm text-green-700">
             {formatSlotTime(accepted.startTime)} – {formatSlotTime(accepted.endTime)}
@@ -670,6 +671,7 @@ function QuoteSummary({ quote }) {
 }
 
 export default function ContractorRfpDetailPage() {
+  const { t } = useTranslation("contractor");
   const router = useRouter();
   const { id } = router.query;
 
@@ -716,7 +718,7 @@ export default function ContractorRfpDetailPage() {
           <>
             {/* RFP Metadata */}
             <div className="bg-white border border-slate-200 rounded-lg p-6 mb-4">
-              <h2 className="text-base font-semibold text-slate-900 mb-4">RFP Details</h2>
+              <h2 className="text-base font-semibold text-slate-900 mb-4">{t("contractor:rfpsId.heading.rFPDetails")}</h2>
               <dl className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
                 <div>
                   <dt className="text-sm font-medium text-slate-500">Status</dt>
@@ -768,7 +770,7 @@ export default function ContractorRfpDetailPage() {
             {/* Linked Request — contractor-safe (no tenant identity, no full address) */}
             {rfp.request && (
               <div className="bg-white border border-slate-200 rounded-lg p-6 mb-4">
-                <h2 className="text-base font-semibold text-slate-900 mb-4">Work Description</h2>
+                <h2 className="text-base font-semibold text-slate-900 mb-4">{t("contractor:rfpsId.heading.workDescription")}</h2>
                 <dl className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
                   <div>
                     <dt className="text-sm font-medium text-slate-500">Request #</dt>
@@ -785,7 +787,7 @@ export default function ContractorRfpDetailPage() {
                     <dd className="mt-1 text-sm text-slate-900">{formatDate(rfp.request.createdAt)}</dd>
                   </div>
                   <div className="sm:col-span-2 lg:col-span-3">
-                    <dt className="text-sm font-medium text-slate-500">Description</dt>
+                    <dt className="text-sm font-medium text-slate-500">{t("contractor:rfpsId.placeholder.description")}</dt>
                     <dd className="mt-1 text-sm text-slate-900 whitespace-pre-line">
                       {rfp.request.description || "—"}
                     </dd>
