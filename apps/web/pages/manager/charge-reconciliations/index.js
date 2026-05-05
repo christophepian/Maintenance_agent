@@ -18,10 +18,10 @@ import { withTranslations } from "../../../lib/i18n";
 import { useTranslation } from "next-i18next";
 
 const TABS = [
-  { key: "DRAFT",     label: "Draft" },
-  { key: "FINALIZED", label: "Finalized" },
-  { key: "SETTLED",   label: "Settled" },
-  { key: "ALL",       label: "All" },
+  { key: "DRAFT" },
+  { key: "FINALIZED" },
+  { key: "SETTLED" },
+  { key: "ALL" },
 ];
 
 const TAB_KEYS = ["draft", "finalized", "settled", "all"];
@@ -40,10 +40,11 @@ function reconFieldExtractor(r, field) {
   }
 }
 
-const RECON_COLUMNS = [
+function buildReconColumns(t) {
+  return [
   {
     id: "tenant",
-    label: "Tenant",
+    label: t("manager:chargeRecons.col.tenant"),
     sortable: true,
     alwaysVisible: true,
     render: (r) => (
@@ -54,21 +55,21 @@ const RECON_COLUMNS = [
   },
   {
     id: "year",
-    label: "Year",
+    label: t("manager:chargeRecons.col.year"),
     sortable: true,
     defaultVisible: true,
     render: (r) => <span className="tabular-nums">{r.fiscalYear}</span>,
   },
   {
     id: "status",
-    label: "Status",
+    label: t("manager:chargeRecons.col.status"),
     sortable: true,
     defaultVisible: true,
     render: (r) => <Badge variant={reconciliationVariant(r.status)} size="sm">{r.status}</Badge>,
   },
   {
     id: "acompte",
-    label: "Acompte Paid",
+    label: t("manager:chargeRecons.col.acomptePaid"),
     sortable: true,
     defaultVisible: true,
     className: "text-right",
@@ -76,7 +77,7 @@ const RECON_COLUMNS = [
   },
   {
     id: "actual",
-    label: "Actual Costs",
+    label: t("manager:chargeRecons.col.actualCosts"),
     sortable: true,
     defaultVisible: true,
     className: "text-right",
@@ -84,7 +85,7 @@ const RECON_COLUMNS = [
   },
   {
     id: "balance",
-    label: "Balance",
+    label: t("manager:chargeRecons.col.balance"),
     sortable: true,
     defaultVisible: true,
     className: "text-right",
@@ -106,9 +107,11 @@ const RECON_COLUMNS = [
     ),
   },
 ];
+}
 
 export default function ChargeReconciliationsPage() {
   const { t } = useTranslation("manager");
+  const reconColumns = useMemo(() => buildReconColumns(t), [t]);
   const router = useRouter();
   const activeTab = router.isReady ? Math.max(0, TAB_KEYS.indexOf(router.query.tab)) || 0 : 0;
   const setActiveTab = useCallback((index) => {
@@ -156,7 +159,7 @@ export default function ChargeReconciliationsPage() {
                 onClick={() => setActiveTab(i)}
                 className={i === activeTab ? "pill-tab-active" : "pill-tab"}
               >
-                {tab.label}
+                {t(`manager:chargeReconciliations.tabs.${tab.key.toLowerCase()}`)}
               </button>
             ))}
           </ScrollableTabs>
@@ -165,7 +168,7 @@ export default function ChargeReconciliationsPage() {
           {!loading && !error && (
             <ConfigurableTable
                 tableId="manager-charge-reconciliations"
-                columns={RECON_COLUMNS}
+                columns={reconColumns}
                 data={sortedItems}
                 rowKey={(r) => r.id}
                 sortField={sortField}

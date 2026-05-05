@@ -24,11 +24,11 @@ const TYPE_LABELS = {
 };
 
 const TABS = [
-  { key: "ALL", label: "All" },
-  { key: "DRAFT", label: "Draft" },
-  { key: "APPROVED", label: "Approved" },
-  { key: "APPLIED", label: "Applied" },
-  { key: "REJECTED", label: "Rejected" },
+  { key: "ALL" },
+  { key: "DRAFT" },
+  { key: "APPROVED" },
+  { key: "APPLIED" },
+  { key: "REJECTED" },
 ];
 const TAB_KEYS = TABS.map((t) => t.key.toLowerCase());
 
@@ -46,10 +46,11 @@ function raFieldExtractor(adj, field) {
   }
 }
 
-const RA_COLUMNS = [
+function buildRaColumns(t) {
+  return [
   {
     id: "tenant",
-    label: "Tenant",
+    label: t("manager:rentAdjustments.col.tenant"),
     sortable: true,
     alwaysVisible: true,
     render: (adj) => (
@@ -60,35 +61,35 @@ const RA_COLUMNS = [
   },
   {
     id: "type",
-    label: "Type",
+    label: t("manager:rentAdjustments.col.type"),
     sortable: true,
     defaultVisible: true,
     render: (adj) => TYPE_LABELS[adj.adjustmentType] || adj.adjustmentType,
   },
   {
     id: "effectiveDate",
-    label: "Effective",
+    label: t("manager:rentAdjustments.col.effective"),
     sortable: true,
     defaultVisible: true,
     render: (adj) => formatDate(adj.effectiveDate),
   },
   {
     id: "status",
-    label: "Status",
+    label: t("manager:rentAdjustments.col.status"),
     sortable: true,
     defaultVisible: true,
     render: (adj) => <Badge variant={rentAdjustmentVariant(adj.status)}>{adj.status}</Badge>,
   },
   {
     id: "oldRent",
-    label: "Old Rent",
+    label: t("manager:rentAdjustments.col.oldRent"),
     defaultVisible: true,
     className: "text-right",
     render: (adj) => <span className="tabular-nums">{formatChfCents(adj.previousRentCents)}</span>,
   },
   {
     id: "newRent",
-    label: "New Rent",
+    label: t("manager:rentAdjustments.col.newRent"),
     sortable: true,
     defaultVisible: true,
     className: "text-right",
@@ -96,7 +97,7 @@ const RA_COLUMNS = [
   },
   {
     id: "change",
-    label: "Change",
+    label: t("manager:rentAdjustments.col.change"),
     sortable: true,
     defaultVisible: true,
     className: "text-right",
@@ -122,9 +123,11 @@ const RA_COLUMNS = [
     ),
   },
 ];
+}
 
 export default function RentAdjustmentsList() {
   const { t } = useTranslation("manager");
+  const raColumns = useMemo(() => buildRaColumns(t), [t]);
   const router = useRouter();
   const activeTab = router.isReady
     ? Math.max(0, TAB_KEYS.indexOf(router.query.tab)) || 0
@@ -175,13 +178,13 @@ export default function RentAdjustmentsList() {
         />
         <PageContent>
           <ScrollableTabs activeIndex={activeTab}>
-            {TABS.map((t, i) => (
+            {TABS.map((tab, i) => (
               <button
-                key={t.key}
+                key={tab.key}
                 onClick={() => setActiveTab(i)}
                 className={activeTab === i ? "pill-tab-active" : "pill-tab"}
               >
-                {t.label}
+                {t(`manager:rentAdjustments.tabs.${tab.key.toLowerCase()}`)}
               </button>
             ))}
           </ScrollableTabs>
@@ -191,7 +194,7 @@ export default function RentAdjustmentsList() {
           ) : (
             <ConfigurableTable
                 tableId="manager-rent-adjustments"
-                columns={RA_COLUMNS}
+                columns={raColumns}
                 data={sortedAdjustments}
                 rowKey={(adj) => adj.id}
                 sortField={sortField}

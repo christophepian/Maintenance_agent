@@ -27,22 +27,22 @@ import { useTranslation } from "next-i18next";
    ═══════════════════════════════════════════════════════════════ */
 
 const FINANCE_TABS = [
-  { key: "overview", label: "Overview" },
-  { key: "invoices", label: "Invoices" },
-  { key: "planning", label: "Planning" },
+  { key: "overview" },
+  { key: "invoices" },
+  { key: "planning" },
 ];
 
 const STATUS_TABS = [
-  { key: "ALL",      label: "All" },
-  { key: "ISSUED",   label: "Issued" },
-  { key: "APPROVED", label: "Approved" },
-  { key: "PAID",     label: "Paid" },
-  { key: "DISPUTED", label: "Disputed" },
+  { key: "ALL" },
+  { key: "ISSUED" },
+  { key: "APPROVED" },
+  { key: "PAID" },
+  { key: "DISPUTED" },
 ];
 
 const DIRECTION_TABS = [
-  { key: "incoming", label: "Incoming", icon: "📥" },
-  { key: "outgoing", label: "Outgoing", icon: "📤" },
+  { key: "incoming", icon: "📥" },
+  { key: "outgoing", icon: "📤" },
 ];
 
 const INGESTION_LABEL = {
@@ -446,7 +446,7 @@ function InvoicesTab() {
   const invoiceColumns = useMemo(() => [
     {
       id: "status",
-      label: "Status",
+      label: t("owner:finance.col.status"),
       sortable: true,
       defaultVisible: true,
       render: (inv) => (
@@ -459,7 +459,7 @@ function InvoicesTab() {
     },
     {
       id: "invoiceNumber",
-      label: "Invoice #",
+      label: t("owner:finance.col.invoice"),
       sortable: true,
       defaultVisible: true,
       className: "cell-bold",
@@ -467,21 +467,21 @@ function InvoicesTab() {
     },
     {
       id: "issuerOrRecipient",
-      label: isOutgoing ? "Tenant" : "Issuer",
+      label: isOutgoing ? t("owner:finance.col.tenant") : t("owner:finance.col.issuer"),
       sortable: false,
       defaultVisible: true,
       render: (inv) => (isOutgoing ? inv.recipientName : inv.issuerName) || <span className="text-slate-400">—</span>,
     },
     {
       id: "createdAt",
-      label: "Date",
+      label: t("owner:finance.col.date"),
       sortable: true,
       defaultVisible: true,
       render: (inv) => formatDate(inv.createdAt),
     },
     {
       id: "amount",
-      label: "Amount",
+      label: t("owner:finance.col.amount"),
       sortable: true,
       defaultVisible: true,
       render: (inv) => formatChf(getInvoiceTotal(inv)),
@@ -677,7 +677,7 @@ export default function OwnerFinance() {
                   onClick={() => setActiveTabKey(tab.key)}
                   className={activeTabKey === tab.key ? "tab-btn-active" : "tab-btn"}
                 >
-                  {tab.label}
+                  {t(`owner:finance.tabs.${tab.key.toLowerCase()}`)}
                 </button>
               ))}
             </ScrollableTabs>

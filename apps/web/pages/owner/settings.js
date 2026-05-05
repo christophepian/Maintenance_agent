@@ -20,12 +20,12 @@ import { withTranslations } from "../../lib/i18n";
 import { useTranslation } from "next-i18next";
 
 const SETTINGS_TABS = [
-  { key: "ACCOUNT", label: "Account" },
-  { key: "RISK_PROFILE", label: "Risk Profile" },
-  { key: "NOTIFICATIONS", label: "Notifications" },
-  { key: "INTEGRATIONS", label: "Integrations" },
-  { key: "LEGAL", label: "Legal Sources" },
-  { key: "STANDARDS", label: "Standards" },
+  { key: "ACCOUNT" },
+  { key: "RISK_PROFILE" },
+  { key: "NOTIFICATIONS" },
+  { key: "INTEGRATIONS" },
+  { key: "LEGAL" },
+  { key: "STANDARDS" },
 ];
 const TAB_KEYS = ["account", "risk-profile", "notifications", "integrations", "legal", "standards"];
 
@@ -186,7 +186,7 @@ export default function OwnerSettingsPage() {
                 onClick={() => setActiveTab(i)}
                 className={activeTab === i ? "tab-btn-active" : "tab-btn"}
               >
-                {tab.label}
+                {t(`owner:settings.tabs.${tab.key.toLowerCase()}`)}
               </button>
             ))}
           </ScrollableTabs>
@@ -555,7 +555,7 @@ function LegalScopeFilterBar({ sources, activeFilter, onFilter }) {
               : "bg-slate-100 text-slate-600 hover:bg-slate-200"
           )}
         >
-          {tab.label}
+          {t(`owner:settings.tabs.${tab.key.toLowerCase()}`)}
         </button>
       ))}
     </div>

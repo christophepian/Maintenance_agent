@@ -19,8 +19,8 @@ function formatCurrency(chf) {
 }
 
 const VIEW_TABS = [
-  { key: "SUMMARY", label: "Summary" },
-  { key: "ITEMIZED", label: "Itemized" },
+  { key: "SUMMARY" },
+  { key: "ITEMIZED" },
 ];
 
 export default function ManagerChargesPage() {

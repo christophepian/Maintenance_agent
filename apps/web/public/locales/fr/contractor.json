@@ -60,6 +60,14 @@
       "prefilledFromJobDetailPage": "Pre-filled from job detail page",
       "loadingInvoices": "Chargement des factures…",
       "noInvoicesMatchThisFilter": "No invoices match this filter"
+    },
+    "tabs": {
+      "all": "Tous",
+      "draft": "Brouillon",
+      "issued": "Émise",
+      "approved": "Approuvé",
+      "paid": "Payé",
+      "disputed": "Contestée"
     }
   },
   "jobs": {
@@ -78,6 +86,10 @@
       "appointment": "📅 Appointment",
       "asset": "🔧 Actif",
       "scope": "📋 Périmètre"
+    },
+    "tabs": {
+      "upcoming": "À venir",
+      "history": "Historique"
     }
   },
   "jobsId": {
@@ -122,6 +134,22 @@
       "view": "Voir",
       "loadingRfps": "Loading RFPs...",
       "rFPsMatchingYourServiceCategoriesWillAppearHere": "RFPs matching your service categories will appear here."
+    },
+    "tabs": {
+      "all": "Tous",
+      "open": "Ouvert",
+      "awarded": "Attribué",
+      "cancelled": "Annulé"
+    },
+    "col": {
+      "request": "Demande",
+      "category": "Catégorie",
+      "location": "Localisation",
+      "status": "Statut",
+      "myQuote": "Mon offre",
+      "invited": "Invité(s)",
+      "quotes": "Offres",
+      "created": "Créé le"
     }
   },
   "rfpsId": {

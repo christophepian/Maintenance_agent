@@ -24,23 +24,24 @@ function paymentFieldExtractor(p, field) {
   }
 }
 
-const PAYMENT_COLUMNS = [
+function buildPaymentColumns(t) {
+  return [
   {
     id: "invoiceNumber",
-    label: "Invoice #",
+    label: t("manager:financePayments.col.invoice"),
     sortable: true,
     alwaysVisible: true,
     render: (p) => p.invoiceNumber || p.id.slice(0, 8),
   },
   {
     id: "description",
-    label: "Description",
+    label: t("manager:financePayments.col.description"),
     defaultVisible: true,
     render: (p) => p.description || "\u2014",
   },
   {
     id: "amount",
-    label: "Amount (CHF)",
+    label: t("manager:financePayments.col.amountChf"),
     sortable: true,
     defaultVisible: true,
     className: "text-right",
@@ -48,29 +49,31 @@ const PAYMENT_COLUMNS = [
   },
   {
     id: "paidAt",
-    label: "Paid on",
+    label: t("manager:financePayments.col.paidOn"),
     sortable: true,
     defaultVisible: true,
     render: (p) => formatDate(p.paidAt),
   },
   {
     id: "reference",
-    label: "Payment reference",
+    label: t("manager:financePayments.col.paymentReference"),
     defaultVisible: true,
     render: (p) => p.paymentReference || "\u2014",
   },
   {
     id: "actions",
-    label: "Actions",
+    label: t("manager:financePayments.col.actions"),
     alwaysVisible: true,
     render: () => (
       <a href="/manager/finance/invoices" className="action-btn-brand no-underline inline-block">{t("manager:financePayments.text.viewInvoice")}</a>
     ),
   },
 ];
+}
 
 export default function ManagerPaymentsPage() {
   const { t } = useTranslation("manager");
+  const paymentColumns = useMemo(() => buildPaymentColumns(t), [t]);
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -184,7 +187,7 @@ export default function ManagerPaymentsPage() {
           ) : (
             <ConfigurableTable
                 tableId="manager-payments"
-                columns={PAYMENT_COLUMNS}
+                columns={paymentColumns}
                 data={sortedPayments}
                 rowKey={(p) => p.id}
                 sortField={sortField}

@@ -19,10 +19,10 @@ import { withTranslations } from "../../lib/i18n";
 import { useTranslation } from "next-i18next";
 
 const TABS = [
-  { key: "ACTIVE",    label: "Active" },
-  { key: "PAUSED",    label: "Paused" },
-  { key: "COMPLETED", label: "Completed" },
-  { key: "ALL",       label: "All" },
+  { key: "ACTIVE" },
+  { key: "PAUSED" },
+  { key: "COMPLETED" },
+  { key: "ALL" },
 ];
 
 const TAB_KEYS = ["active", "paused", "completed", "all"];
@@ -125,7 +125,7 @@ export default function BillingSchedulesPage() {
                 onClick={() => setActiveTab(i)}
                 className={activeTab === i ? "pill-tab-active" : "pill-tab"}
               >
-                {tab.label}
+                {t(`manager:billingSchedules.tabs.${tab.key.toLowerCase()}`)}
               </button>
             ))}
           </ScrollableTabs>

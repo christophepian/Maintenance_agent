@@ -17,9 +17,9 @@ import { useTranslation } from "next-i18next";
 /* ─── Tabs ─────────────────────────────────────────────── */
 
 const TABS = [
-  { key: "EXPENSE_TYPES", label: "Expense Types" },
-  { key: "ACCOUNTS", label: "Accounts" },
-  { key: "MAPPINGS", label: "Mappings" },
+  { key: "EXPENSE_TYPES" },
+  { key: "ACCOUNTS" },
+  { key: "MAPPINGS" },
 ];
 const TAB_KEYS = ["expense_types", "accounts", "mappings"];
 
@@ -281,7 +281,7 @@ export default function ChartOfAccountsPage() {
                 onClick={() => setActiveTab(i)}
                 className={activeTab === i ? "tab-btn-active" : "tab-btn"}
               >
-                {tab.label}
+                {t(`manager:financeChartOfAccounts.tabs.${tab.key.toLowerCase()}`)}
                 <span className="ml-1.5 text-xs opacity-60">
                   {i === 0 ? expenseTypes.length : i === 1 ? accounts.length : mappings.length}
                 </span>

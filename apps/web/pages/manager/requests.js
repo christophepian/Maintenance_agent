@@ -22,22 +22,21 @@ import { useTranslation } from "next-i18next";
 // ---------------------------------------------------------------------------
 
 const STATUS_TABS = [
-  { key: "ALL",            label: "Overview",                statuses: null },
-  { key: "PENDING",        label: "Pending Review",          statuses: ["PENDING_REVIEW"] },
-  { key: "RFP_OPEN",       label: "RFP Open",                statuses: ["RFP_PENDING"] },
-  { key: "OWNER_APPROVAL", label: "Pending Owner Approval",  statuses: ["PENDING_OWNER_APPROVAL"] },
-  { key: "IN_PROGRESS",    label: "In Progress",             statuses: ["APPROVED", "ASSIGNED"] },
+  { key: "ALL",                statuses: null },
+  { key: "PENDING",          statuses: ["PENDING_REVIEW"] },
+  { key: "RFP_OPEN",                statuses: ["RFP_PENDING"] },
+  { key: "OWNER_APPROVAL",  statuses: ["PENDING_OWNER_APPROVAL"] },
+  { key: "IN_PROGRESS",             statuses: ["APPROVED", "ASSIGNED"] },
   {
     key: "DONE",
-    label: "Done",
     statuses: ["COMPLETED"],
     // Belt-and-suspenders: catch ASSIGNED rows where Job is COMPLETED but mirror lagged
     extraFilter: (r) =>
       r.status === "COMPLETED" ||
       (r.status === "ASSIGNED" && r.job?.status === "COMPLETED"),
   },
-  { key: "REJECTED",       label: "Rejected",                statuses: ["REJECTED"] },
-  { key: "RFPS",           label: "RFPs",                    statuses: null, href: "/manager/rfps" },
+  { key: "REJECTED",                statuses: ["REJECTED"] },
+  { key: "RFPS",                    statuses: null, href: "/manager/rfps" },
 ];
 
 // Derive TAB_KEYS from STATUS_TABS to prevent drift; preserve backward-compat aliases
@@ -80,11 +79,11 @@ function nextApproverLabel(status) {
 const REQUEST_SORT_FIELDS = ["requestNumber", "status", "building", "category", "urgency", "createdAt", "estimatedCost", "contractor", "nextApprover", "payingParty", "approvalSource"];
 
 // Column definitions for ConfigurableTable — render closures capture outer scope via page component
-function buildRequestColumns({ assigningId, setAssigningId, selectedContractorId, setSelectedContractorId, contractors, actionLoading, approveRequest, rejectRequest, doAssignContractor, doUnassignContractor, getAvailableCTAs }) {
+function buildRequestColumns({ t, assigningId, setAssigningId, selectedContractorId, setSelectedContractorId, contractors, actionLoading, approveRequest, rejectRequest, doAssignContractor, doUnassignContractor, getAvailableCTAs }) {
   return [
     {
       id: "requestNumber",
-      label: "#",
+      label: t("manager:requests.col.number"),
       sortable: true,
       sortField: "number",
       alwaysVisible: true,
@@ -97,7 +96,7 @@ function buildRequestColumns({ assigningId, setAssigningId, selectedContractorId
     },
     {
       id: "status",
-      label: "Status",
+      label: t("manager:requests.col.status"),
       sortable: true,
       defaultVisible: true,
       render: (r) => (
@@ -113,7 +112,7 @@ function buildRequestColumns({ assigningId, setAssigningId, selectedContractorId
     },
     {
       id: "building",
-      label: "Building / Unit",
+      label: t("manager:requests.col.buildingUnit"),
       sortable: true,
       defaultVisible: true,
       render: (r) => (
@@ -135,7 +134,7 @@ function buildRequestColumns({ assigningId, setAssigningId, selectedContractorId
     },
     {
       id: "category",
-      label: "Category",
+      label: t("manager:requests.col.category"),
       sortable: true,
       defaultVisible: true,
       render: (r) => (
@@ -146,7 +145,7 @@ function buildRequestColumns({ assigningId, setAssigningId, selectedContractorId
     },
     {
       id: "description",
-      label: "Description",
+      label: t("manager:requests.col.description"),
       defaultVisible: true,
       className: "max-w-[260px]",
       render: (r) => (
@@ -155,7 +154,7 @@ function buildRequestColumns({ assigningId, setAssigningId, selectedContractorId
     },
     {
       id: "urgency",
-      label: "Emergency",
+      label: t("manager:requests.col.emergency"),
       sortable: true,
       defaultVisible: true,
       className: "w-24 text-center",
@@ -174,7 +173,7 @@ function buildRequestColumns({ assigningId, setAssigningId, selectedContractorId
     },
     {
       id: "contractor",
-      label: "Contractor",
+      label: t("manager:requests.col.contractor"),
       sortable: true,
       defaultVisible: false,
       render: (r) => (
@@ -185,7 +184,7 @@ function buildRequestColumns({ assigningId, setAssigningId, selectedContractorId
     },
     {
       id: "estimatedCost",
-      label: "Est. Cost",
+      label: t("manager:requests.col.estCost"),
       sortable: true,
       sortField: "cost",
       defaultVisible: false,
@@ -196,7 +195,7 @@ function buildRequestColumns({ assigningId, setAssigningId, selectedContractorId
     },
     {
       id: "nextApprover",
-      label: "Next Approver",
+      label: t("manager:requests.col.nextApprover"),
       sortable: true,
       defaultVisible: false,
       render: (r) => (
@@ -205,7 +204,7 @@ function buildRequestColumns({ assigningId, setAssigningId, selectedContractorId
     },
     {
       id: "payingParty",
-      label: "Paying Party",
+      label: t("manager:requests.col.payingParty"),
       sortable: true,
       defaultVisible: false,
       render: (r) => (
@@ -218,7 +217,7 @@ function buildRequestColumns({ assigningId, setAssigningId, selectedContractorId
     },
     {
       id: "approvalSource",
-      label: "Approval Source",
+      label: t("manager:requests.col.approvalSource"),
       sortable: true,
       defaultVisible: false,
       render: (r) => (
@@ -229,7 +228,7 @@ function buildRequestColumns({ assigningId, setAssigningId, selectedContractorId
     },
     {
       id: "createdAt",
-      label: "Created",
+      label: t("manager:requests.col.created"),
       sortable: true,
       sortField: "date",
       defaultVisible: true,
@@ -240,7 +239,7 @@ function buildRequestColumns({ assigningId, setAssigningId, selectedContractorId
     },
     {
       id: "actions",
-      label: "Actions",
+      label: t("manager:requests.col.actions"),
       alwaysVisible: true,
       render: (r) => {
         const ctaList = getAvailableCTAs(r, assigningId);
@@ -1371,7 +1370,7 @@ export default function ManagerRequestsPage() {
 
   const requestColumns = useMemo(
     () => buildRequestColumns({
-      assigningId, setAssigningId, selectedContractorId, setSelectedContractorId,
+      t, assigningId, setAssigningId, selectedContractorId, setSelectedContractorId,
       contractors, actionLoading,
       approveRequest, rejectRequest, doAssignContractor, doUnassignContractor,
       getAvailableCTAs,
@@ -1402,7 +1401,7 @@ export default function ManagerRequestsPage() {
               if (tab.href) {
                 return (
                   <Link key={tab.key} href={tab.href} className="tab-btn">
-                    {tab.label}
+                    {t(`manager:requests.tabs.${tab.key.toLowerCase()}`)}
                   </Link>
                 );
               }
@@ -1418,7 +1417,7 @@ export default function ManagerRequestsPage() {
                   onClick={() => setActiveTab(i)}
                   className={active ? "tab-btn-active" : "tab-btn"}
                 >
-                  {tab.label} ({count})
+                  {t(`manager:requests.tabs.${tab.key.toLowerCase()}`)} ({count})
                 </button>
               );
             })}

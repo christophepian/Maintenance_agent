@@ -332,9 +332,9 @@ function OwnersTab({ showAddForm, onAddFormClose }) {
   );
 }
 const PEOPLE_TABS = [
-  { key: "TENANTS", label: "Tenants" },
-  { key: "VENDORS", label: "Vendors" },
-  { key: "OWNERS", label: "Owners" },
+  { key: "TENANTS" },
+  { key: "VENDORS" },
+  { key: "OWNERS" },
 ];
 
 const TAB_KEYS = ['tenants', 'vendors', 'owners'];
@@ -418,7 +418,7 @@ export default function ManagerPeoplePage() {
                 onClick={() => setActiveTab(i)}
                 className={activeTab === i ? "tab-btn-active" : "tab-btn"}
               >
-                {tab.label}
+                {t(`manager:peopleTabs.tabs.${tab.key.toLowerCase()}`)}
               </button>
             ))}
           </ScrollableTabs>

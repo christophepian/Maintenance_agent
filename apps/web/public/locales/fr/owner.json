@@ -248,6 +248,26 @@
       "net": "Net",
       "collection": "Recouvrement",
       "portfolioSummaryInvoicesAndCashflowPlanning": "Portefeuille summary, invoices, and cashflow planning"
+    },
+    "tabs": {
+      "overview": "Vue d'ensemble",
+      "invoices": "Factures",
+      "planning": "Planification",
+      "all": "Tous",
+      "issued": "Émise",
+      "approved": "Approuvé",
+      "paid": "Payé",
+      "disputed": "Contestée",
+      "incoming": "Entrant",
+      "outgoing": "Sortant"
+    },
+    "col": {
+      "status": "Statut",
+      "invoice": "N° de facture",
+      "date": "Date",
+      "amount": "Montant",
+      "tenant": "Locataire",
+      "issuer": "Émetteur"
     }
   },
   "financeInvoicesId": {
@@ -356,6 +376,26 @@
       "reviewApproveAndManageInvoicePayments": "Révision, approve, and manage invoice payments",
       "from": "De",
       "to": "À"
+    },
+    "tabs": {
+      "all": "Tous",
+      "issued": "Émise",
+      "approved": "Approuvé",
+      "paid": "Payé",
+      "disputed": "Contestée"
+    },
+    "col": {
+      "status": "Statut",
+      "invoice": "N° de facture",
+      "date": "Date",
+      "amount": "Montant",
+      "actions": "Actions",
+      "Approve": "✓ Approve",
+      "MarkAsPaid": "💰 Mark as Paid",
+      "DownloadPdf": "📄 Download PDF",
+      "Dispute": "⚠ Dispute",
+      "tenant": "Locataire",
+      "issuer": "Émetteur"
     }
   },
   "jobs": {
@@ -413,6 +453,13 @@
       "avgRentUnit": "Avg rent / unit",
       "collection": "Recouvrement",
       "buildingsAndUnitsInYourPortfolio": "Immeubles and units in your portfolio"
+    },
+    "col": {
+      "building": "Bâtiment",
+      "address": "Adresse",
+      "units": "Unités",
+      "status": "Statut",
+      "canton": "Canton"
     }
   },
   "reporting": {
@@ -572,6 +619,14 @@
       "lastSynced": "Dernière synchronisation",
       "key": "Clé",
       "description": "Description"
+    },
+    "tabs": {
+      "account": "Compte",
+      "risk_profile": "Profil de risque",
+      "notifications": "Notifications",
+      "integrations": "Intégrations",
+      "legal": "Sources légales",
+      "standards": "Normes"
     }
   },
   "settingsStrategy": {
@@ -646,6 +701,24 @@
   "workRequests": {
     "title": {
       "workRequests": "Work Requests"
+    },
+    "tabs": {
+      "all": "Tous",
+      "pending": "En attente de révision",
+      "owner_approval": "Approbation propriétaire",
+      "rfp_open": "Appel d'offres ouvert",
+      "active": "Actif",
+      "done": "Terminé",
+      "rfps": "Appels d'offres"
+    },
+    "col": {
+      "col": "#",
+      "category": "Catégorie",
+      "buildingUnit": "Bâtiment / Unité",
+      "status": "Statut",
+      "estCost": "Coût estimé",
+      "contractor": "Prestataire",
+      "created": "Créé le"
     }
   },
   "vacanciesUnitidCandidates": {

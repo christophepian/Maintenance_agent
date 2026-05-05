@@ -26,46 +26,46 @@ function templateFieldExtractor(t, field) {
   }
 }
 
-function buildTemplateColumns(router, handleDeleteTemplate) {
+function buildTemplateColumns(t, router, handleDeleteTemplate) {
   return [
     {
       id: "templateName",
-      label: "Template Name",
+      label: t("manager:leasesTemplates.col.templateName"),
       sortable: true,
       alwaysVisible: true,
-      render: (t) => <span className="font-medium text-slate-900">{t.templateName || "Unnamed template"}</span>,
+      render: (tmpl) => <span className="font-medium text-slate-900">{tmpl.templateName || "Unnamed template"}</span>,
     },
     {
       id: "building",
-      label: "Building",
+      label: t("manager:leasesTemplates.col.building"),
       sortable: true,
       defaultVisible: true,
-      render: (t) => <span className="text-slate-600">{t.unit?.building?.name || "Global"}</span>,
+      render: (tmpl) => <span className="text-slate-600">{tmpl.unit?.building?.name || "Global"}</span>,
     },
     {
       id: "landlord",
-      label: "Landlord",
+      label: t("manager:leasesTemplates.col.landlord"),
       sortable: true,
       defaultVisible: true,
-      render: (t) => <span className="text-slate-600">{t.landlordName || "\u2014"}</span>,
+      render: (tmpl) => <span className="text-slate-600">{tmpl.landlordName || "\u2014"}</span>,
     },
     {
       id: "createdAt",
-      label: "Created",
+      label: t("manager:leasesTemplates.col.created"),
       sortable: true,
       defaultVisible: true,
-      render: (t) => <span className="text-slate-500 text-xs">{formatDate(t.createdAt)}</span>,
+      render: (tmpl) => <span className="text-slate-500 text-xs">{formatDate(tmpl.createdAt)}</span>,
     },
     {
       id: "actions",
       label: "",
       alwaysVisible: true,
       className: "text-right",
-      render: (t) => (
+      render: (tmpl) => (
         <div onClick={(e) => e.stopPropagation()}>
           <ActionDropdown actions={[
-            { label: "\uD83D\uDCC4 View Template", onClick: () => router.push(`/manager/leases/${t.id}`) },
-            { label: "\uD83D\uDDD1\uFE0F Delete", onClick: () => handleDeleteTemplate(t.id, t.templateName), className: "text-red-600" },
+            { label: "\uD83D\uDCC4 View Template", onClick: () => router.push(`/manager/leases/${tmpl.id}`) },
+            { label: "\uD83D\uDDD1\uFE0F Delete", onClick: () => handleDeleteTemplate(tmpl.id, tmpl.templateName), className: "text-red-600" },
           ]} />
         </div>
       ),
@@ -324,7 +324,7 @@ export default function LeaseTemplatesPage() {
     }
   }
 
-  const templateColumns = useMemo(() => buildTemplateColumns(router, handleDeleteTemplate), [router]);
+  const templateColumns = useMemo(() => buildTemplateColumns(t, router, handleDeleteTemplate), [t, router]);
 
   return (
     <AppShell role="MANAGER">

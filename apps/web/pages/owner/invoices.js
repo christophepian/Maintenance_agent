@@ -47,11 +47,11 @@ function getInvoiceTotal(invoice) {
 /* ── Status badges ───────────────────────────────────────────── */
 
 const STATUS_TABS = [
-  { key: "ALL", label: "All" },
-  { key: "ISSUED", label: "Issued" },
-  { key: "APPROVED", label: "Approved" },
-  { key: "PAID", label: "Paid" },
-  { key: "DISPUTED", label: "Disputed" },
+  { key: "ALL" },
+  { key: "ISSUED" },
+  { key: "APPROVED" },
+  { key: "PAID" },
+  { key: "DISPUTED" },
 ];
 
 /* ── Ingestion helpers (same as manager hub) ─────────────────── */
@@ -299,14 +299,14 @@ export default function OwnerInvoices() {
   const invoiceColumns = useMemo(() => [
     {
       id: "status",
-      label: "Status",
+      label: t("owner:invoices.col.status"),
       sortable: true,
       defaultVisible: true,
       render: (inv) => <Badge variant={invoiceVariant(inv.status)} size="sm">{inv.status}</Badge>,
     },
     {
       id: "invoiceNumber",
-      label: "Invoice #",
+      label: t("owner:invoices.col.invoice"),
       sortable: true,
       defaultVisible: true,
       className: "cell-bold",
@@ -320,21 +320,21 @@ export default function OwnerInvoices() {
     },
     {
       id: "recipient",
-      label: isOutgoing ? "Tenant" : "Issuer",
+      label: isOutgoing ? t("owner:invoices.col.tenant") : t("owner:invoices.col.issuer"),
       sortable: false,
       defaultVisible: true,
       render: (inv) => inv.recipientName || <span className="text-slate-400">—</span>,
     },
     {
       id: "createdAt",
-      label: "Date",
+      label: t("owner:invoices.col.date"),
       sortable: true,
       defaultVisible: true,
       render: (inv) => formatDate(inv.createdAt),
     },
     {
       id: "amount",
-      label: "Amount",
+      label: t("owner:invoices.col.amount"),
       sortable: true,
       defaultVisible: true,
       className: "font-semibold",
@@ -342,7 +342,7 @@ export default function OwnerInvoices() {
     },
     {
       id: "actions",
-      label: "Actions",
+      label: t("owner:invoices.col.actions"),
       sortable: false,
       alwaysVisible: true,
       className: "text-right",
@@ -350,10 +350,10 @@ export default function OwnerInvoices() {
       render: (inv) => (
         <div onClick={(e) => e.stopPropagation()}>
           <ActionDropdown actions={[
-            ...(!isOutgoing && (inv.status === "ISSUED" || inv.status === "DRAFT") ? [{ label: "✓ Approve", className: "text-green-700 font-semibold", onClick: () => actionRequest(inv.id, "approve") }] : []),
-            ...(!isOutgoing && inv.status === "APPROVED" ? [{ label: "💰 Mark as Paid", className: "text-green-700 font-semibold", onClick: () => actionRequest(inv.id, "mark-paid") }] : []),
-            { label: "📄 Download PDF", onClick: () => setPdfModalInvoice(inv) },
-            ...(!isOutgoing && (inv.status === "ISSUED" || inv.status === "DRAFT" || inv.status === "APPROVED") ? [{ label: "⚠ Dispute", className: "text-rose-600", onClick: () => actionRequest(inv.id, "dispute") }] : []),
+            ...(!isOutgoing && (inv.status === "ISSUED" || inv.status === "DRAFT") ? [{ label: t("owner:invoices.col.Approve"), className: "text-green-700 font-semibold", onClick: () => actionRequest(inv.id, "approve") }] : []),
+            ...(!isOutgoing && inv.status === "APPROVED" ? [{ label: t("owner:invoices.col.MarkAsPaid"), className: "text-green-700 font-semibold", onClick: () => actionRequest(inv.id, "mark-paid") }] : []),
+            { label: t("owner:invoices.col.DownloadPdf"), onClick: () => setPdfModalInvoice(inv) },
+            ...(!isOutgoing && (inv.status === "ISSUED" || inv.status === "DRAFT" || inv.status === "APPROVED") ? [{ label: t("owner:invoices.col.Dispute"), className: "text-rose-600", onClick: () => actionRequest(inv.id, "dispute") }] : []),
           ]} />
         </div>
       ),
@@ -402,7 +402,7 @@ export default function OwnerInvoices() {
                     : "text-slate-500 hover:text-slate-700")
                 }
               >
-                {tab.icon} {tab.label}
+                {tab.icon} {t(`owner:invoices.tabs.${tab.key.toLowerCase()}`)}
               </button>
             ))}
           </div>
@@ -413,7 +413,7 @@ export default function OwnerInvoices() {
               <FilterSection title={t("owner:invoices.title.status")} first>
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                   <SelectField label={t("owner:invoices.title.status")} value={activeTab} onChange={(e) => setActiveTab(e.target.value)}>
-                    {STATUS_TABS.map((tab) => <option key={tab.key} value={tab.key}>{tab.label}</option>)}
+                    {STATUS_TABS.map((tab) => <option key={tab.key} value={tab.key}>{t(`owner:invoices.tabs.${tab.key.toLowerCase()}`)}</option>)}
                   </SelectField>
                 </div>
               </FilterSection>

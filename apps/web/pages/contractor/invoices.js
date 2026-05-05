@@ -17,12 +17,12 @@ import { withTranslations } from "../../lib/i18n";
 import { useTranslation } from "next-i18next";
 
 const STATUS_TABS = [
-  { key: "ALL", label: "All" },
-  { key: "DRAFT", label: "Draft" },
-  { key: "ISSUED", label: "Issued" },
-  { key: "APPROVED", label: "Approved" },
-  { key: "PAID", label: "Paid" },
-  { key: "DISPUTED", label: "Disputed" },
+  { key: "ALL" },
+  { key: "DRAFT" },
+  { key: "ISSUED" },
+  { key: "APPROVED" },
+  { key: "PAID" },
+  { key: "DISPUTED" },
 ];
 
 /* ── Status tracking pipeline ────────────────────────────────── */
@@ -426,7 +426,7 @@ export default function ContractorInvoices() {
                   onClick={() => setActiveTab(tab.key)}
                   className={active ? "tab-btn-active" : "tab-btn"}
                 >
-                  {tab.label} ({count})
+                  {t(`contractor:invoices.tabs.${tab.key.toLowerCase()}`)} ({count})
                 </button>
               );
             })}

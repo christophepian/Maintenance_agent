@@ -67,12 +67,12 @@ function HealthDot({ health }) {
 // ─── Tab definitions ─────────────────────────────────────────────────────────
 
 const FINANCE_TABS = [
-  { key: "overview",         label: "Overview" },
-  { key: "invoices",         label: "Invoices" },
-  { key: "billing-entities", label: "Billing Entities" },
-  { key: "accounting",       label: "Accounting" },
-  { key: "planning",         label: "Planning" },
-  { key: "setup",            label: "Setup" },
+  { key: "overview" },
+  { key: "invoices" },
+  { key: "billing-entities" },
+  { key: "accounting" },
+  { key: "planning" },
+  { key: "setup" },
 ];
 
 // ─── Main Page ───────────────────────────────────────────────────────────────
@@ -149,7 +149,7 @@ const tabKeys = FINANCE_TABS.map((t) => t.key);
                   onClick={() => setActiveTabKey(tab.key)}
                   className={activeTabKey === tab.key ? "tab-btn-active" : "tab-btn"}
                 >
-                  {tab.label}
+                  {t(`manager:financeIndex.tabs.${tab.key.toLowerCase()}`)}
                 </button>
               ))}
             </ScrollableTabs>

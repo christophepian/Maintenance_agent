@@ -14,10 +14,10 @@ import { withTranslations } from "../../lib/i18n";
 import { useTranslation } from "next-i18next";
 
 const STATUS_TABS = [
-  { key: "ALL", label: "All" },
-  { key: "OPEN", label: "Open" },
-  { key: "AWARDED", label: "Awarded" },
-  { key: "CANCELLED", label: "Cancelled" },
+  { key: "ALL" },
+  { key: "OPEN" },
+  { key: "AWARDED" },
+  { key: "CANCELLED" },
 ];
 
 const CRFP_SORT_FIELDS = ["category", "status", "invites", "quotes", "createdAt"];
@@ -33,10 +33,11 @@ function crfpFieldExtractor(rfp, field) {
   }
 }
 
-const CRFP_COLUMNS = [
+function buildCrfpColumns(t) {
+  return [
   {
     id: "request",
-    label: "Request",
+    label: t("contractor:rfps.col.request"),
     alwaysVisible: true,
     render: (rfp) => rfp.request ? (
       <span className="text-sm">
@@ -47,14 +48,14 @@ const CRFP_COLUMNS = [
   },
   {
     id: "category",
-    label: "Category",
+    label: t("contractor:rfps.col.category"),
     sortable: true,
     defaultVisible: true,
     render: (rfp) => <span className="text-sm text-slate-700">{rfp.category || "\u2014"}</span>,
   },
   {
     id: "location",
-    label: "Location",
+    label: t("contractor:rfps.col.location"),
     defaultVisible: true,
     render: (rfp) => (
       <span className="text-sm text-slate-700">
@@ -66,7 +67,7 @@ const CRFP_COLUMNS = [
   },
   {
     id: "status",
-    label: "Status",
+    label: t("contractor:rfps.col.status"),
     sortable: true,
     defaultVisible: true,
     render: (rfp) => (
@@ -78,7 +79,7 @@ const CRFP_COLUMNS = [
   },
   {
     id: "myQuote",
-    label: "My Quote",
+    label: t("contractor:rfps.col.myQuote"),
     defaultVisible: true,
     render: (rfp) => rfp.myQuote ? (
       <Badge variant={quoteVariant(rfp.myQuote.status)} size="sm">
@@ -88,7 +89,7 @@ const CRFP_COLUMNS = [
   },
   {
     id: "invites",
-    label: "Invited",
+    label: t("contractor:rfps.col.invited"),
     sortable: true,
     defaultVisible: true,
     className: "text-center",
@@ -96,7 +97,7 @@ const CRFP_COLUMNS = [
   },
   {
     id: "quotes",
-    label: "Quotes",
+    label: t("contractor:rfps.col.quotes"),
     sortable: true,
     defaultVisible: true,
     className: "text-center",
@@ -104,7 +105,7 @@ const CRFP_COLUMNS = [
   },
   {
     id: "createdAt",
-    label: "Created",
+    label: t("contractor:rfps.col.created"),
     sortable: true,
     defaultVisible: true,
     render: (rfp) => <span className="text-sm text-slate-500">{formatDate(rfp.createdAt)}</span>,
@@ -118,9 +119,11 @@ const CRFP_COLUMNS = [
     ),
   },
 ];
+}
 
 export default function ContractorRfpsPage() {
   const { t } = useTranslation("contractor");
+  const crfpColumns = useMemo(() => buildCrfpColumns(t), [t]);
   const router = useRouter();
   const [rfps, setRfps] = useState([]);
   const [total, setTotal] = useState(0);
@@ -185,7 +188,7 @@ export default function ContractorRfpsPage() {
                 onClick={() => setActiveTab(tab.key)}
                 className={active ? "pill-tab pill-tab-active" : "pill-tab"}
               >
-                {tab.label} ({count})
+                {t(`contractor:rfps.tabs.${tab.key.toLowerCase()}`)} ({count})
               </button>
             );
           })}
@@ -196,7 +199,7 @@ export default function ContractorRfpsPage() {
         ) : (
           <ConfigurableTable
             tableId="contractor-rfps"
-            columns={CRFP_COLUMNS}
+            columns={crfpColumns}
             data={sortedRfps}
             rowKey={(rfp) => rfp.id}
             sortField={sortField}

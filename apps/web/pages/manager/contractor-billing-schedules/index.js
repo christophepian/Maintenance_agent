@@ -25,10 +25,10 @@ const FREQUENCY_LABELS = {
 };
 
 const TABS = [
-  { key: "ALL", label: "All" },
-  { key: "ACTIVE", label: "Active" },
-  { key: "PAUSED", label: "Paused" },
-  { key: "COMPLETED", label: "Completed" },
+  { key: "ALL" },
+  { key: "ACTIVE" },
+  { key: "PAUSED" },
+  { key: "COMPLETED" },
 ];
 const TAB_KEYS = TABS.map((t) => t.key.toLowerCase());
 
@@ -47,10 +47,11 @@ function cbsFieldExtractor(s, field) {
   }
 }
 
-const CBS_COLUMNS = [
+function buildCbsColumns(t) {
+  return [
   {
     id: "contractor",
-    label: "Contractor",
+    label: t("manager:contractorBillingSchedulesIndex.col.contractor"),
     sortable: true,
     alwaysVisible: true,
     render: (s) => (
@@ -61,21 +62,21 @@ const CBS_COLUMNS = [
   },
   {
     id: "description",
-    label: "Description",
+    label: t("manager:contractorBillingSchedulesIndex.col.description"),
     sortable: true,
     defaultVisible: true,
     render: (s) => s.description || "\u2014",
   },
   {
     id: "frequency",
-    label: "Frequency",
+    label: t("manager:contractorBillingSchedulesIndex.col.frequency"),
     sortable: true,
     defaultVisible: true,
     render: (s) => FREQUENCY_LABELS[s.frequency] || s.frequency,
   },
   {
     id: "amount",
-    label: "Amount",
+    label: t("manager:contractorBillingSchedulesIndex.col.amount"),
     sortable: true,
     defaultVisible: true,
     className: "text-right",
@@ -83,21 +84,21 @@ const CBS_COLUMNS = [
   },
   {
     id: "status",
-    label: "Status",
+    label: t("manager:contractorBillingSchedulesIndex.col.status"),
     sortable: true,
     defaultVisible: true,
     render: (s) => <Badge variant={billingScheduleVariant(s.status)}>{s.status}</Badge>,
   },
   {
     id: "nextPeriod",
-    label: "Next Period",
+    label: t("manager:contractorBillingSchedulesIndex.col.nextPeriod"),
     sortable: true,
     defaultVisible: true,
     render: (s) => formatDate(s.nextPeriodStart),
   },
   {
     id: "building",
-    label: "Building",
+    label: t("manager:contractorBillingSchedulesIndex.col.building"),
     sortable: true,
     defaultVisible: true,
     render: (s) => s.building?.name || "\u2014",
@@ -111,9 +112,11 @@ const CBS_COLUMNS = [
     ),
   },
 ];
+}
 
 export default function ContractorBillingSchedulesList() {
   const { t } = useTranslation("manager");
+  const cbsColumns = useMemo(() => buildCbsColumns(t), [t]);
   const router = useRouter();
   const activeTab = router.isReady
     ? Math.max(0, TAB_KEYS.indexOf(router.query.tab)) || 0
@@ -335,13 +338,13 @@ export default function ContractorBillingSchedulesList() {
 
           {/* Tabs */}
           <ScrollableTabs activeIndex={activeTab}>
-            {TABS.map((t, i) => (
+            {TABS.map((tab, i) => (
               <button
-                key={t.key}
+                key={tab.key}
                 onClick={() => setActiveTab(i)}
                 className={activeTab === i ? "pill-tab-active" : "pill-tab"}
               >
-                {t.label}
+                {t(`manager:contractorBillingSchedules.tabs.${tab.key.toLowerCase()}`)}
               </button>
             ))}
           </ScrollableTabs>
@@ -351,7 +354,7 @@ export default function ContractorBillingSchedulesList() {
           ) : (
             <ConfigurableTable
                 tableId="manager-contractor-billing-schedules"
-                columns={CBS_COLUMNS}
+                columns={cbsColumns}
                 data={sortedSchedules}
                 rowKey={(s) => s.id}
                 sortField={sortField}

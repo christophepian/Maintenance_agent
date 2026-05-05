@@ -24,13 +24,13 @@ import { useTranslation } from "next-i18next";
 // ---------------------------------------------------------------------------
 
 const STATUS_TABS = [
-  { key: "ALL",              label: "All",              statuses: null },
-  { key: "PENDING",          label: "Pending Review",   statuses: ["PENDING_REVIEW"] },
-  { key: "OWNER_APPROVAL",   label: "Owner Approval",   statuses: ["PENDING_OWNER_APPROVAL"] },
-  { key: "RFP_OPEN",         label: "RFP Open",         statuses: ["RFP_PENDING"] },
-  { key: "ACTIVE",           label: "Active",           statuses: ["APPROVED", "ASSIGNED"] },
-  { key: "DONE",             label: "Completed",        statuses: ["COMPLETED", "OWNER_REJECTED"] },
-  { key: "RFPS",             label: "RFPs",             statuses: null, href: "/owner/approvals?tab=rfps" },
+  { key: "ALL",              statuses: null },
+  { key: "PENDING",   statuses: ["PENDING_REVIEW"] },
+  { key: "OWNER_APPROVAL",   statuses: ["PENDING_OWNER_APPROVAL"] },
+  { key: "RFP_OPEN",         statuses: ["RFP_PENDING"] },
+  { key: "ACTIVE",           statuses: ["APPROVED", "ASSIGNED"] },
+  { key: "DONE",        statuses: ["COMPLETED", "OWNER_REJECTED"] },
+  { key: "RFPS",             statuses: null, href: "/owner/approvals?tab=rfps" },
 ];
 
 // ---------------------------------------------------------------------------
@@ -51,24 +51,25 @@ function wrFieldExtractor(r, field) {
   }
 }
 
-const WR_COLUMNS = [
+function buildWrColumns(t) {
+  return [
   {
     id: "requestNumber",
-    label: "#",
+    label: t("owner:workRequests.col.col"),
     sortable: true,
     alwaysVisible: true,
     render: (r) => <span className="font-medium text-slate-900">{r.requestNumber ? `#${r.requestNumber}` : "\u2014"}</span>,
   },
   {
     id: "category",
-    label: "Category",
+    label: t("owner:workRequests.col.category"),
     sortable: true,
     defaultVisible: true,
     render: (r) => <span className="text-sm text-slate-700">{r.category || "\u2014"}</span>,
   },
   {
     id: "building",
-    label: "Building / Unit",
+    label: t("owner:workRequests.col.buildingUnit"),
     sortable: true,
     defaultVisible: true,
     render: (r) => (
@@ -80,14 +81,14 @@ const WR_COLUMNS = [
   },
   {
     id: "status",
-    label: "Status",
+    label: t("owner:workRequests.col.status"),
     sortable: true,
     defaultVisible: true,
     render: (r) => <Badge variant={requestVariant(r.status)} size="sm">{(r.status || "").replace(/_/g, " ")}</Badge>,
   },
   {
     id: "estimatedCost",
-    label: "Est. Cost",
+    label: t("owner:workRequests.col.estCost"),
     sortable: true,
     defaultVisible: true,
     className: "text-right",
@@ -95,18 +96,19 @@ const WR_COLUMNS = [
   },
   {
     id: "contractor",
-    label: "Contractor",
+    label: t("owner:workRequests.col.contractor"),
     defaultVisible: true,
     render: (r) => <span className="text-sm text-slate-600">{r.assignedContractorName || "\u2014"}</span>,
   },
   {
     id: "createdAt",
-    label: "Created",
+    label: t("owner:workRequests.col.created"),
     sortable: true,
     defaultVisible: true,
     render: (r) => <span className="text-sm text-slate-500">{formatDate(r.createdAt)}</span>,
   },
 ];
+}
 
 // ---------------------------------------------------------------------------
 // Status badge
@@ -126,6 +128,7 @@ function StatusBadge({ status }) {
 
 export default function OwnerWorkRequestsPage() {
   const { t } = useTranslation("owner");
+  const wrColumns = useMemo(() => buildWrColumns(t), [t]);
   const router = useRouter();
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -207,7 +210,7 @@ export default function OwnerWorkRequestsPage() {
                     href={tab.href}
                     className="tab-btn"
                   >
-                    {tab.label}
+                    {t(`owner:workRequests.tabs.${tab.key.toLowerCase()}`)}
                   </Link>
                 );
               }
@@ -219,7 +222,7 @@ export default function OwnerWorkRequestsPage() {
                   onClick={() => setTab(tab.key)}
                   className={isActive ? "tab-btn-active" : "tab-btn"}
                 >
-                  {tab.label}
+                  {t(`owner:workRequests.tabs.${tab.key.toLowerCase()}`)}
                   {count > 0 && (
                     <span className={cn("ml-1.5 inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold", isActive ? "bg-indigo-100 text-indigo-700" : "bg-slate-100 text-slate-600")}>
                       {count}
@@ -278,7 +281,7 @@ export default function OwnerWorkRequestsPage() {
               <div className="hidden sm:block">
                 <ConfigurableTable
                     tableId="owner-work-requests"
-                    columns={WR_COLUMNS}
+                    columns={wrColumns}
                     data={sortedRequests}
                     rowKey={(r) => r.id}
                     sortField={sortField}

@@ -248,6 +248,26 @@
       "net": "Net",
       "collection": "Collection",
       "portfolioSummaryInvoicesAndCashflowPlanning": "Portfolio summary, invoices, and cashflow planning"
+    },
+    "tabs": {
+      "overview": "Overview",
+      "invoices": "Invoices",
+      "planning": "Planning",
+      "all": "All",
+      "issued": "Issued",
+      "approved": "Approved",
+      "paid": "Paid",
+      "disputed": "Disputed",
+      "incoming": "Incoming",
+      "outgoing": "Outgoing"
+    },
+    "col": {
+      "status": "Status",
+      "invoice": "Invoice #",
+      "date": "Date",
+      "amount": "Amount",
+      "tenant": "Tenant",
+      "issuer": "Issuer"
     }
   },
   "financeInvoicesId": {
@@ -356,6 +376,26 @@
       "reviewApproveAndManageInvoicePayments": "Review, approve, and manage invoice payments",
       "from": "From",
       "to": "To"
+    },
+    "tabs": {
+      "all": "All",
+      "issued": "Issued",
+      "approved": "Approved",
+      "paid": "Paid",
+      "disputed": "Disputed"
+    },
+    "col": {
+      "status": "Status",
+      "invoice": "Invoice #",
+      "date": "Date",
+      "amount": "Amount",
+      "actions": "Actions",
+      "Approve": "✓ Approve",
+      "MarkAsPaid": "💰 Mark as Paid",
+      "DownloadPdf": "📄 Download PDF",
+      "Dispute": "⚠ Dispute",
+      "tenant": "Tenant",
+      "issuer": "Issuer"
     }
   },
   "jobs": {
@@ -413,6 +453,13 @@
       "avgRentUnit": "Avg rent / unit",
       "collection": "Collection",
       "buildingsAndUnitsInYourPortfolio": "Buildings and units in your portfolio"
+    },
+    "col": {
+      "building": "Building",
+      "address": "Address",
+      "units": "Units",
+      "status": "Status",
+      "canton": "Canton"
     }
   },
   "reporting": {
@@ -572,6 +619,14 @@
       "lastSynced": "Last Synced",
       "key": "Key",
       "description": "Description"
+    },
+    "tabs": {
+      "account": "Account",
+      "risk_profile": "Risk Profile",
+      "notifications": "Notifications",
+      "integrations": "Integrations",
+      "legal": "Legal Sources",
+      "standards": "Standards"
     }
   },
   "settingsStrategy": {
@@ -646,6 +701,24 @@
   "workRequests": {
     "title": {
       "workRequests": "Work Requests"
+    },
+    "tabs": {
+      "all": "All",
+      "pending": "Pending Review",
+      "owner_approval": "Owner Approval",
+      "rfp_open": "RFP Open",
+      "active": "Active",
+      "done": "Completed",
+      "rfps": "RFPs"
+    },
+    "col": {
+      "col": "#",
+      "category": "Category",
+      "buildingUnit": "Building / Unit",
+      "status": "Status",
+      "estCost": "Est. Cost",
+      "contractor": "Contractor",
+      "created": "Created"
     }
   },
   "vacanciesUnitidCandidates": {

@@ -32,44 +32,45 @@ function inventoryFieldExtractor(row, field) {
   }
 }
 
-const BUILDING_COLUMNS = [
+function buildBuildingColumns(t) {
+  return [
   {
     id: "name",
-    label: "Name",
+    label: t("manager:inventory.col.name"),
     sortable: true,
     alwaysVisible: true,
     render: (b) => <span className="font-medium text-slate-900">{b.name || "Unnamed"}</span>,
   },
   {
     id: "address",
-    label: "Address",
+    label: t("manager:inventory.col.address"),
     sortable: true,
     defaultVisible: true,
     render: (b) => <span className="text-slate-600">{b.address || "\u2014"}</span>,
   },
   {
     id: "canton",
-    label: "Canton",
+    label: t("manager:inventory.col.canton"),
     sortable: true,
     defaultVisible: true,
     render: (b) => <span className="text-slate-600">{b.canton || "\u2014"}</span>,
   },
   {
     id: "id",
-    label: "Building ID",
+    label: t("manager:inventory.col.buildingId"),
     defaultVisible: true,
     render: (b) => <code className="code-small">{b.id}</code>,
   },
   {
     id: "unitCount",
-    label: "Units",
+    label: t("manager:inventory.col.units"),
     sortable: true,
     defaultVisible: false,
     render: (b) => <span className="text-slate-600">{b._count?.units ?? b.unitCount ?? "\u2014"}</span>,
   },
   {
     id: "health",
-    label: "Health",
+    label: t("manager:inventory.col.health"),
     defaultVisible: true,
     render: (b) => {
       const h = b._financial?.health;
@@ -84,7 +85,7 @@ const BUILDING_COLUMNS = [
   },
   {
     id: "netIncome",
-    label: "NOI YTD",
+    label: t("manager:inventory.col.noiYtd"),
     defaultVisible: true,
     render: (b) => {
       const n = b._financial?.netIncomeCents;
@@ -94,7 +95,7 @@ const BUILDING_COLUMNS = [
   },
   {
     id: "collectionRate",
-    label: "Collection",
+    label: t("manager:inventory.col.collection"),
     defaultVisible: true,
     render: (b) => {
       const r = b._financial?.collectionRate;
@@ -103,49 +104,52 @@ const BUILDING_COLUMNS = [
     },
   },
 ];
+}
 
-const ASSET_MODEL_COLUMNS = [
+function buildAssetModelColumns(t) {
+  return [
   {
     id: "name",
-    label: "Name",
+    label: t("manager:inventory.col.name"),
     sortable: true,
     alwaysVisible: true,
     render: (m) => <span className="font-medium text-slate-900">{m.name}</span>,
   },
   {
     id: "category",
-    label: "Category",
+    label: t("manager:inventory.col.category"),
     sortable: true,
     defaultVisible: true,
     render: (m) => <span className="text-slate-600">{m.category || "\u2014"}</span>,
   },
   {
     id: "manufacturer",
-    label: "Manufacturer",
+    label: t("manager:inventory.col.manufacturer"),
     sortable: true,
     defaultVisible: true,
     render: (m) => <span className="text-slate-600">{m.manufacturer || "\u2014"}</span>,
   },
   {
     id: "scope",
-    label: "Scope",
+    label: t("manager:inventory.col.scope"),
     sortable: true,
     defaultVisible: true,
     render: (m) => <span className="text-slate-600">{m.orgId ? "Org" : "Global"}</span>,
   },
   {
     id: "usefulLifeMonths",
-    label: "Useful Life",
+    label: t("manager:inventory.col.usefulLife"),
     defaultVisible: false,
     render: (m) => <span className="text-slate-600">{m.usefulLifeMonths ? `${Math.round(m.usefulLifeMonths / 12)}y` : "\u2014"}</span>,
   },
   {
     id: "replacementCostChf",
-    label: "Replace Cost",
+    label: t("manager:inventory.col.replaceCost"),
     defaultVisible: false,
     render: (m) => <span className="text-slate-600">{typeof m.replacementCostChf === "number" ? `CHF ${m.replacementCostChf.toLocaleString()}` : "\u2014"}</span>,
   },
 ];
+}
 
 const INVENTORY_TABS = [
   { key: "BUILDINGS", label: "Buildings" },
@@ -184,6 +188,8 @@ function clientSideVerdict(item, hypotheticalCostChf) {
 
 export default function ManagerInventoryPage() {
   const { t } = useTranslation("manager");
+  const assetModelColumns = useMemo(() => buildAssetModelColumns(t), [t]);
+  const buildingColumns = useMemo(() => buildBuildingColumns(t), [t]);
   const router = useRouter();
   const activeTab = router.isReady ? (Math.max(0, TAB_KEYS.indexOf(router.query.tab)) || 0) : 0;
   const setActiveTab = useCallback((index) => {
@@ -517,7 +523,7 @@ export default function ManagerInventoryPage() {
             ) : (
               <ConfigurableTable
                 tableId="inventory-buildings"
-                columns={BUILDING_COLUMNS}
+                columns={buildingColumns}
                 data={sortedBuildings}
                 rowKey={(b) => b.id}
                 sortField={sortField}

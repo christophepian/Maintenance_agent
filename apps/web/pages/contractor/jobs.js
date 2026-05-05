@@ -19,8 +19,8 @@ import { withTranslations } from "../../lib/i18n";
 import { useTranslation } from "next-i18next";
 /* ── Tab config (F-UI1) ────────────────────────────────── */
 const TABS = [
-  { key: "upcoming", label: "Upcoming" },
-  { key: "history", label: "History" },
+  { key: "upcoming" },
+  { key: "history" },
 ];
 const TAB_KEYS = TABS.map((t) => t.key);
 
@@ -213,7 +213,7 @@ export default function ContractorJobs() {
                   onClick={() => setActiveTab(i)}
                   className={activeTab === i ? "tab-btn-active" : "tab-btn"}
                 >
-                  {tab.label}
+                  {t(`contractor:jobs.tabs.${tab.key.toLowerCase()}`)}
                   <span className="tab-panel-count">
                     {i === 0 ? upcomingJobs.length : historyJobs.length}
                   </span>

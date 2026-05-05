@@ -60,6 +60,14 @@
       "prefilledFromJobDetailPage": "Pre-filled from job detail page",
       "loadingInvoices": "Loading invoices…",
       "noInvoicesMatchThisFilter": "No invoices match this filter"
+    },
+    "tabs": {
+      "all": "All",
+      "draft": "Draft",
+      "issued": "Issued",
+      "approved": "Approved",
+      "paid": "Paid",
+      "disputed": "Disputed"
     }
   },
   "jobs": {
@@ -78,6 +86,10 @@
       "appointment": "📅 Appointment",
       "asset": "🔧 Asset",
       "scope": "📋 Scope"
+    },
+    "tabs": {
+      "upcoming": "Upcoming",
+      "history": "History"
     }
   },
   "jobsId": {
@@ -122,6 +134,22 @@
       "view": "View",
       "loadingRfps": "Loading RFPs...",
       "rFPsMatchingYourServiceCategoriesWillAppearHere": "RFPs matching your service categories will appear here."
+    },
+    "tabs": {
+      "all": "All",
+      "open": "Open",
+      "awarded": "Awarded",
+      "cancelled": "Cancelled"
+    },
+    "col": {
+      "request": "Request",
+      "category": "Category",
+      "location": "Location",
+      "status": "Status",
+      "myQuote": "My Quote",
+      "invited": "Invited",
+      "quotes": "Quotes",
+      "created": "Created"
     }
   },
   "rfpsId": {

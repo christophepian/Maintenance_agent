@@ -17,12 +17,12 @@ import { withTranslations } from "../../lib/i18n";
 import { useTranslation } from "next-i18next";
 
 const STATUS_TABS = [
-  { key: "ALL", label: "All" },
-  { key: "DRAFT", label: "Draft" },
-  { key: "OPEN", label: "Open" },
-  { key: "EVALUATING", label: "Evaluating" },
-  { key: "AWARDED", label: "Awarded" },
-  { key: "CANCELLED", label: "Cancelled" },
+  { key: "ALL" },
+  { key: "DRAFT" },
+  { key: "OPEN" },
+  { key: "EVALUATING" },
+  { key: "AWARDED" },
+  { key: "CANCELLED" },
 ];
 
 const RFP_SORT_FIELDS = ["category", "status", "invites", "quotes", "createdAt"];
@@ -38,10 +38,11 @@ function rfpFieldExtractor(rfp, field) {
   }
 }
 
-const RFP_COLUMNS = [
+function buildRfpColumns(t) {
+  return [
   {
     id: "request",
-    label: "Request",
+    label: t("manager:rfps.col.request"),
     alwaysVisible: true,
     render: (rfp) =>
       rfp.request ? (
@@ -55,14 +56,14 @@ const RFP_COLUMNS = [
   },
   {
     id: "category",
-    label: "Category",
+    label: t("manager:rfps.col.category"),
     sortable: true,
     defaultVisible: true,
     render: (rfp) => <span className="text-sm text-slate-700">{rfp.category || "\u2014"}</span>,
   },
   {
     id: "location",
-    label: "Building / Unit",
+    label: t("manager:rfps.col.buildingUnit"),
     defaultVisible: true,
     render: (rfp) => (
       <span className="text-sm text-slate-700">
@@ -73,14 +74,14 @@ const RFP_COLUMNS = [
   },
   {
     id: "status",
-    label: "Status",
+    label: t("manager:rfps.col.status"),
     sortable: true,
     defaultVisible: true,
     render: (rfp) => <Badge variant={rfpVariant(rfp.status)} size="sm">{rfp.status}</Badge>,
   },
   {
     id: "invites",
-    label: "Invites",
+    label: t("manager:rfps.col.invites"),
     sortable: true,
     defaultVisible: true,
     className: "text-center",
@@ -88,7 +89,7 @@ const RFP_COLUMNS = [
   },
   {
     id: "quotes",
-    label: "Quotes",
+    label: t("manager:rfps.col.quotes"),
     sortable: true,
     defaultVisible: true,
     className: "text-center",
@@ -100,15 +101,17 @@ const RFP_COLUMNS = [
   },
   {
     id: "createdAt",
-    label: "Created",
+    label: t("manager:rfps.col.created"),
     sortable: true,
     defaultVisible: true,
     render: (rfp) => <span className="text-sm text-slate-500">{formatDate(rfp.createdAt)}</span>,
   },
 ];
+}
 
 export default function ManagerRfpsPage() {
   const { t } = useTranslation("manager");
+  const rfpColumns = useMemo(() => buildRfpColumns(t), [t]);
   const router = useRouter();
   const [rfps, setRfps] = useState([]);
   const [total, setTotal] = useState(0);
@@ -160,7 +163,7 @@ export default function ManagerRfpsPage() {
                 onClick={() => setActiveTab(tab.key)}
                 className={activeTab === tab.key ? "tab-btn-active" : "tab-btn"}
               >
-                {tab.label}
+                {t(`manager:rfps.tabs.${tab.key.toLowerCase()}`)}
               </button>
             ))}
           </ScrollableTabs>
@@ -170,7 +173,7 @@ export default function ManagerRfpsPage() {
           ) : (
               <ConfigurableTable
                 tableId="manager-rfps"
-                columns={RFP_COLUMNS}
+                columns={rfpColumns}
                 data={sortedRfps}
                 rowKey={(rfp) => rfp.id}
                 sortField={sortField}

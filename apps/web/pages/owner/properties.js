@@ -52,6 +52,7 @@ function StatRow({ label, value, sub, valueClass = "" }) {
 // ── Monopoly card ────────────────────────────────────────────────────────────
 function MonopolyCard({ building, fin, onClick }) {
   const { t } = useTranslation("owner");
+  const ownerBuildingColumns = useMemo(() => buildOwnerBuildingColumns(t), [t]);
   const bandColor = monopolyColor(building.name);
   const unitCount = building.unitCount ?? building._count?.units ?? fin?.activeUnitsCount;
 
@@ -192,31 +193,32 @@ function buildingFieldExtractor(row, field) {
   }
 }
 
-const OWNER_BUILDING_COLUMNS = [
+function buildOwnerBuildingColumns(t) {
+  return [
   {
     id: "name",
-    label: "Building",
+    label: t("owner:properties.col.building"),
     sortable: true,
     alwaysVisible: true,
     render: (b) => <span className="font-medium text-slate-900">{b.name}</span>,
   },
   {
     id: "address",
-    label: "Address",
+    label: t("owner:properties.col.address"),
     sortable: true,
     defaultVisible: true,
     render: (b) => <span className="text-slate-500">{b.address || "\u2014"}</span>,
   },
   {
     id: "unitCount",
-    label: "Units",
+    label: t("owner:properties.col.units"),
     sortable: true,
     defaultVisible: true,
     render: (b) => <span>{b.unitCount ?? b._count?.units ?? "\u2014"}</span>,
   },
   {
     id: "status",
-    label: "Status",
+    label: t("owner:properties.col.status"),
     sortable: true,
     defaultVisible: true,
     render: (b) => (
@@ -232,12 +234,13 @@ const OWNER_BUILDING_COLUMNS = [
   },
   {
     id: "canton",
-    label: "Canton",
+    label: t("owner:properties.col.canton"),
     sortable: true,
     defaultVisible: false,
     render: (b) => <span className="text-slate-600">{b.canton || "\u2014"}</span>,
   },
 ];
+}
 
 export default function OwnerPropertiesPage() {
   const { t } = useTranslation("owner");
@@ -444,7 +447,7 @@ function BuildingsTab({ refreshKey }) {
           <div className="hidden sm:block">
             <ConfigurableTable
                 tableId="owner-buildings"
-                columns={OWNER_BUILDING_COLUMNS}
+                columns={ownerBuildingColumns}
                 data={sortedBuildings}
                 rowKey={(b) => b.id}
                 sortField={sortField}

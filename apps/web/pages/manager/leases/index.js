@@ -20,11 +20,11 @@ import { useTranslation } from "next-i18next";
 
 // Tabs: Active (ACTIVE+SIGNED), Draft (DRAFT), Submitted (READY_TO_SIGN), Archive (CANCELLED+TERMINATED)
 const LEASE_TABS = [
-  { key: "ACTIVE",     label: "Active",    statuses: ["ACTIVE", "SIGNED"] },
-  { key: "DRAFTS",     label: "Draft",     statuses: ["DRAFT"] },
-  { key: "SUBMITTED",  label: "Submitted", statuses: ["READY_TO_SIGN"] },
-  { key: "TEMPLATES",  label: "Templates", statuses: null },
-  { key: "ARCHIVE",    label: "Archive",   statuses: ["CANCELLED", "TERMINATED"] },
+  { key: "ACTIVE",     statuses: ["ACTIVE", "SIGNED"] },
+  { key: "DRAFTS",     statuses: ["DRAFT"] },
+  { key: "SUBMITTED",  statuses: ["READY_TO_SIGN"] },
+  { key: "TEMPLATES",  statuses: null },
+  { key: "ARCHIVE",    statuses: ["CANCELLED", "TERMINATED"] },
 ];
 
 const TAB_KEYS = ["active", "drafts", "submitted", "templates", "archive"];

@@ -38,21 +38,21 @@ function invoiceFieldExtractor(inv, field) {
 }
 
 const INCOMING_STATUS_TABS = [
-  { key: "ALL", label: "All" },
-  { key: "DRAFT", label: "Draft" },
-  { key: "ISSUED", label: "Issued" },
-  { key: "APPROVED", label: "Approved" },
-  { key: "PAID", label: "Paid" },
-  { key: "DISPUTED", label: "Disputed" },
+  { key: "ALL" },
+  { key: "DRAFT" },
+  { key: "ISSUED" },
+  { key: "APPROVED" },
+  { key: "PAID" },
+  { key: "DISPUTED" },
 ];
 
 const OUTGOING_STATUS_TABS = [
-  { key: "ALL", label: "All" },
-  { key: "DRAFT", label: "Draft" },
-  { key: "ISSUED", label: "Sent" },
-  { key: "APPROVED", label: "Pending" },
-  { key: "PAID", label: "Paid" },
-  { key: "DISPUTED", label: "Disputed" },
+  { key: "ALL" },
+  { key: "DRAFT" },
+  { key: "ISSUED" },
+  { key: "APPROVED" },
+  { key: "PAID" },
+  { key: "DISPUTED" },
 ];
 
 function formatDate(iso) {
@@ -608,10 +608,10 @@ export function InvoicesContent() {
   const [tableExpanded, setTableExpanded] = useState(false);
 
   const INV_SORT_CYCLE = [
-    { field: "createdAt", label: "Date" },
+    { field: "createdAt", label: t("manager:financeInvoices.col.date") },
     { field: "amount",    label: "Amount" },
     { field: "status",    label: "Status" },
-    { field: "invoiceNumber", label: "Invoice #" },
+    { field: "invoiceNumber", label: t("manager:financeInvoices.col.invoice") },
   ];
   const [sortCycleIdx, setSortCycleIdx] = useState(0);
   const { sortField, sortDir, handleSort } = useLocalSort(
@@ -725,7 +725,7 @@ export function InvoicesContent() {
   const invoiceColumns = useMemo(() => [
     {
       id: "status",
-      label: "Status",
+      label: t("manager:financeInvoices.col.status"),
       sortable: true,
       defaultVisible: true,
       render: (inv) => (
@@ -738,7 +738,7 @@ export function InvoicesContent() {
     },
     {
       id: "invoiceNumber",
-      label: "Invoice #",
+      label: t("manager:financeInvoices.col.invoice"),
       sortable: true,
       defaultVisible: true,
       className: "cell-bold",
@@ -746,7 +746,7 @@ export function InvoicesContent() {
     },
     {
       id: "issuerOrRecipient",
-      label: isOutgoing ? "Tenant" : "Issuer",
+      label: isOutgoing ? t("manager:financeInvoices.col.tenant") : t("manager:financeInvoices.col.issuer"),
       sortable: true,
       sortField: isOutgoing ? "recipient" : "issuer",
       defaultVisible: true,
@@ -754,7 +754,7 @@ export function InvoicesContent() {
     },
     {
       id: "building",
-      label: "Building \u00b7 Unit",
+      label: t("manager:financeInvoices.col.buildingu00b7Unit"),
       sortable: true,
       defaultVisible: true,
       render: (inv) =>
@@ -764,14 +764,14 @@ export function InvoicesContent() {
     },
     {
       id: "amount",
-      label: "Amount",
+      label: t("manager:financeInvoices.col.amount"),
       sortable: true,
       defaultVisible: true,
       render: (inv) => getAmount(inv),
     },
     {
       id: "createdAt",
-      label: "Date",
+      label: t("manager:financeInvoices.col.date"),
       sortable: true,
       defaultVisible: true,
       render: (inv) => {
@@ -789,7 +789,7 @@ export function InvoicesContent() {
     },
     {
       id: "recurring",
-      label: "Recurring",
+      label: t("manager:financeInvoices.col.recurring"),
       sortable: true,
       defaultVisible: true,
       render: (inv) => {
@@ -801,7 +801,7 @@ export function InvoicesContent() {
     },
     {
       id: "category",
-      label: "Category",
+      label: t("manager:financeInvoices.col.category"),
       sortable: true,
       defaultVisible: true,
       render: (inv) =>
@@ -811,7 +811,7 @@ export function InvoicesContent() {
     },
     {
       id: "actions",
-      label: "Actions",
+      label: t("manager:financeInvoices.col.actions"),
       sortable: false,
       alwaysVisible: true,
       className: "text-right",
