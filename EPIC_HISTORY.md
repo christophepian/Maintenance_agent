@@ -2610,18 +2610,24 @@ Footer cross-links card (More tools / More views)
 ## Epic: Bilingual EN/FR i18n — Full String Extraction Pass
 
 **Date:** 2026-05-05  
-**Commits:** `92fa17a` → `3c620f1`  
-**Scope:** Complete extraction of all hardcoded UI strings into `next-i18next`; full FR translation; root-cause fix for dev-server locale cache bug.
+**Commits:** `92fa17a` → latest  
+**Scope:** Complete extraction of all hardcoded UI strings into `next-i18next`; full FR translation; root-cause fix for dev-server locale cache bug; root-cause fix for Vercel production deployment (locale JSON files excluded by `.vercelignore`).
 
 ### Problem
 
 All UI strings across 288 pages were hardcoded in English. The `next-i18next` infrastructure had been scaffolded (namespaces, config, `withTranslations` helper) but strings had not been extracted. EN locale files had `[FR]` placeholder values everywhere. Tab labels on `/fr/manager/leases`, `/fr/manager/requests`, `/fr/manager/finance`, `/fr/manager/people`, and `/fr/manager/settings` were rendering as the raw key path (e.g. `leasesIndex.tabs.active`) — causing visible `xx.xx.xx`-style fallback display.
 
-### Root Cause (locale cache)
+### Root Cause 1 — Dev locale cache
 
 `next-i18next` caches locale JSON files in memory from the moment the dev server starts. Any key added to locale files *after* server startup is never loaded into the cache — `t("key")` silently falls back to returning the key path as a string. This was the direct cause of all tab labels showing as dotted key paths despite the locale files being correctly populated.
 
 **Fix:** Added `reloadOnPrerender: process.env.NODE_ENV === 'development'` to `next-i18next.config.js`. This forces re-reading of locale JSON on every `getStaticProps` call in dev mode, with zero production impact.
+
+### Root Cause 2 — Vercel production deployment
+
+After the dev fix, production (Vercel) was still showing `xx.xx.xx`. The root `.vercelignore` had a blanket `*.json` rule (no leading `/`) which in gitignore syntax matches JSON files **at any depth** — including `apps/web/public/locales/**/*.json`. All locale files were being excluded from the Vercel build, so `next-i18next` had no data and fell back to key paths.
+
+**Fix:** Replaced `*.json` in `.vercelignore` with specific root-level exclusions (`/ROADMAP.json`, `/tsconfig.json`). Also created `apps/web/.vercelignore` (empty) as a safety net for deployments where Vercel's `rootDirectory` is set to `apps/web`.
 
 ### What Was Done
 
@@ -2670,3 +2676,5 @@ All 6 affected pages confirmed rendering correct FR tab labels via SSR HTML insp
 | `scripts/i18n-audit-missing.py` | New — static key coverage audit |
 | `scripts/i18n-audit-tabs.py` | New — template-literal tab key coverage audit |
 | `docs/FRONTEND_INVENTORY.md` | Updated last-modified dates; added dashboard-v2 entry |
+| `.vercelignore` | Replaced blanket `*.json` with specific root-level exclusions — unblocks all locale JSON files from Vercel builds |
+| `apps/web/.vercelignore` | New empty file — ensures locale files are never excluded when Vercel `rootDirectory=apps/web` |
