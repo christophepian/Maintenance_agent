@@ -167,14 +167,14 @@
   },
   "approvals": {
     "placeholder": {
-      "eG42": "e.g. 42 [FR]"
+      "eG42": "e.g. 42"
     },
     "title": {
       "approvals": "Approbations",
-      "dateRange": "Date range [FR]",
-      "scope": "Scope [FR]",
+      "dateRange": "Date range",
+      "scope": "Scope",
       "priority": "Priorité",
-      "request": "Request # [FR]",
+      "request": "Request #",
       "status": "Statut"
     },
     "text": {
@@ -189,7 +189,7 @@
       "pendingApproval": "En attente d'approbation",
       "allRfps": "Àus RFPs",
       "draft": "Brouillon",
-      "open": "Open",
+      "open": "Ouvert",
       "closed": "Fermerd",
       "awarded": "Awarded",
       "cancelled": "Annulé"
@@ -211,22 +211,22 @@
   },
   "billingEntities": {
     "title": {
-      "ownerBillingEntities": "Owner Billing Entities [FR]"
+      "ownerBillingEntities": "Owner Billing Entities"
     }
   },
   "finance": {
     "placeholder": {
-      "searchInvoices": "Search invoices… [FR]"
+      "searchInvoices": "Search invoices…"
     },
     "title": {
-      "dateRange": "Date range [FR]",
+      "dateRange": "Date range",
       "buildings": "Immeubles",
-      "direction": "Direction [FR]",
+      "direction": "Direction",
       "status": "Statut",
       "finance": "Finance"
     },
     "ariaLabel": {
-      "invoiceActions": "Invoice actions [FR]"
+      "invoiceActions": "Invoice actions"
     },
     "text": {
       "loadingPortfolioSummary": "Chargement du résumé de portefeuille…",
@@ -253,30 +253,30 @@
   "financeInvoicesId": {
     "col": {
       "description": "Description",
-      "qty": "Qty [FR]",
-      "unitPrice": "Unit Price [FR]",
-      "vAT": "VAT % [FR]",
+      "qty": "Qty",
+      "unitPrice": "Unit Price",
+      "vAT": "VAT %",
       "total": "Total"
     },
     "heading": {
-      "disputeThisInvoice": "Dispute this invoice [FR]"
+      "disputeThisInvoice": "Dispute this invoice"
     },
     "placeholder": {
-      "describeWhyYouAreDisputingThisInvoice": "Describe why you are disputing this invoice… [FR]"
+      "describeWhyYouAreDisputingThisInvoice": "Describe why you are disputing this invoice…"
     },
     "title": {
-      "invoiceDetails": "Invoice Details [FR]",
-      "recipient": "Recipient [FR]",
-      "issuer": "Issuer [FR]",
-      "lineItems": "Line Items [FR]",
-      "accounting": "Accounting [FR]",
-      "originalCapture": "Original Capture [FR]",
-      "pDFPreview": "PDF Preview [FR]",
-      "invoicePdf": "Invoice PDF [FR]",
-      "timeline": "Timeline [FR]"
+      "invoiceDetails": "Invoice Details",
+      "recipient": "Recipient",
+      "issuer": "Issuer",
+      "lineItems": "Line Items",
+      "accounting": "Accounting",
+      "originalCapture": "Original Capture",
+      "pDFPreview": "PDF Preview",
+      "invoicePdf": "Invoice PDF",
+      "timeline": "Timeline"
     },
     "ariaLabel": {
-      "disputeInvoice": "Dispute invoice [FR]"
+      "disputeInvoice": "Dispute invoice"
     },
     "text": {
       "error": "Erreur :",
@@ -307,7 +307,7 @@
   },
   "index": {
     "heading": {
-      "moreViews": "More views [FR]"
+      "moreViews": "More views"
     },
     "title": {
       "category": "Catégorie"
@@ -336,15 +336,15 @@
   },
   "invoices": {
     "heading": {
-      "downloadPdf": "Download PDF [FR]"
+      "downloadPdf": "Download PDF"
     },
     "title": {
       "invoices": "Factures",
       "status": "Statut",
-      "dateRange": "Date range [FR]"
+      "dateRange": "Date range"
     },
     "ariaLabel": {
-      "downloadPdf": "Download PDF [FR]"
+      "downloadPdf": "Download PDF"
     },
     "text": {
       "includeQrBill": "Include QR bill",
@@ -360,10 +360,10 @@
   },
   "jobs": {
     "title": {
-      "jobsOverview": "Jobs Overview [FR]",
+      "jobsOverview": "Jobs Overview",
       "status": "Statut",
-      "dateRange": "Date range [FR]",
-      "scope": "Scope [FR]",
+      "dateRange": "Date range",
+      "scope": "Scope",
       "priority": "Priorité"
     },
     "text": {
@@ -399,8 +399,8 @@
       "properties": "Propriétés"
     },
     "ariaLabel": {
-      "listView": "List view [FR]",
-      "monopolyBoardView": "Monopoly board view [FR]"
+      "listView": "List view",
+      "monopolyBoardView": "Monopoly board view"
     },
     "text": {
       "list": "List",
@@ -417,15 +417,15 @@
   },
   "reporting": {
     "heading": {
-      "whatDrovePerformance": "What drove performance [FR]",
-      "byProperty": "By property [FR]",
-      "tenantMovements": "Tenant movements [FR]",
-      "periodInsights": "Period insights [FR]",
-      "fullFinancialDetail": "Full financial detail [FR]"
+      "whatDrovePerformance": "What drove performance",
+      "byProperty": "By property",
+      "tenantMovements": "Tenant movements",
+      "periodInsights": "Period insights",
+      "fullFinancialDetail": "Full financial detail"
     },
     "ariaLabel": {
-      "previousYear": "Previous year [FR]",
-      "nextYear": "Next year [FR]"
+      "previousYear": "Previous year",
+      "nextYear": "Next year"
     },
     "text": {
       "income": "Revenus",
@@ -452,12 +452,12 @@
   },
   "requestsId": {
     "title": {
-      "legalAnalysis": "Legal Analysis [FR]",
-      "maintenanceDecision": "Maintenance Decision [FR]"
+      "legalAnalysis": "Legal Analysis",
+      "maintenanceDecision": "Maintenance Decision"
     },
     "ariaLabel": {
-      "backToApprovals": "Back to approvals [FR]",
-      "dismissError": "Dismiss error [FR]"
+      "backToApprovals": "Back to approvals",
+      "dismissError": "Dismiss error"
     },
     "text": {
       "noAssetLinkedToThisRequest": "Aucun actif lié à cette demande.",
@@ -501,7 +501,7 @@
   },
   "rfpsId": {
     "title": {
-      "rFPDetails": "RFP Details [FR]"
+      "rFPDetails": "RFP Details"
     },
     "text": {
       "loading": "Chargement…",
@@ -527,15 +527,15 @@
   },
   "settings": {
     "col": {
-      "versions": "Versions [FR]"
+      "versions": "Versions"
     },
     "heading": {
-      "legalSources": "Legal Sources [FR]",
-      "legalVariables": "Legal Variables [FR]"
+      "legalSources": "Legal Sources",
+      "legalVariables": "Legal Variables"
     },
     "placeholder": {
-      "yourName": "Your name [FR]",
-      "youExampleCom": "you@example.com [FR]"
+      "yourName": "Your name",
+      "youExampleCom": "you@example.com"
     },
     "title": {
       "settings": "Paramètres"
@@ -576,25 +576,25 @@
   },
   "settingsStrategy": {
     "title": {
-      "myStrategy": "My Strategy [FR]"
+      "myStrategy": "My Strategy"
     },
     "text": {
-      "loading": "Loading..."
+      "loading": "Chargement…"
     }
   },
   "strategy": {
     "heading": {
-      "whatThisMeansInPractice": "What this means in practice [FR]"
+      "whatThisMeansInPractice": "What this means in practice"
     },
     "placeholder": {
-      "eGRueDuLac12": "e.g. Rue du Lac 12 [FR]",
-      "eG1003Lausanne": "e.g. 1003 Lausanne [FR]",
-      "eG12": "e.g. 12 [FR]"
+      "eGRueDuLac12": "e.g. Rue du Lac 12",
+      "eG1003Lausanne": "ex. 1003 Lausanne",
+      "eG12": "e.g. 12"
     },
     "title": {
-      "yourStrategy": "Your Strategy [FR]",
-      "setUpYourProperties": "Set up your properties [FR]",
-      "strategyQuestionnaire": "Strategy Questionnaire [FR]"
+      "yourStrategy": "Your Strategy",
+      "setUpYourProperties": "Set up your properties",
+      "strategyQuestionnaire": "Strategy Questionnaire"
     },
     "prop": {
       "addTheBuildingsYouOwnOrManage": "Ajouter the buildings you own or manage"
@@ -602,7 +602,7 @@
   },
   "vacancies": {
     "title": {
-      "vacancies": "Vacancies [FR]"
+      "vacancies": "Vacancies"
     },
     "prop": {
       "vacantUnitsOpenForRentalApplications": "Vacant units open for rental applications"
@@ -610,42 +610,42 @@
   },
   "vacancies[unitid]Candidates": {
     "col": {
-      "rank": "Rank [FR]",
-      "assign": "Assign [FR]"
+      "rank": "Rank",
+      "assign": "Attribuer"
     },
     "heading": {
-      "confirmTenantSelection": "Confirm Tenant Selection [FR]",
-      "overrideDisqualification": "Override Disqualification [FR]"
+      "confirmTenantSelection": "Confirm Tenant Selection",
+      "overrideDisqualification": "Override Disqualification"
     },
     "placeholder": {
-      "eGVerifiedIncomeDirectlyWithEmployerDebtEnforcementExtractIsClear": "e.g. Verified income directly with employer; debt enforcement extract is clear… [FR]"
+      "eGVerifiedIncomeDirectlyWithEmployerDebtEnforcementExtractIsClear": "e.g. Verified income directly with employer; debt enforcement extract is clear…"
     },
     "title": {
-      "selectTenants": "Select Tenants [FR]",
-      "yourSelection": "Your Selection [FR]",
-      "clickToViewCorroborativeDocuments": "Click to view corroborative documents [FR]",
-      "overrideDisqualificationAndMakeThisCandidateEligible": "Override disqualification and make this candidate eligible [FR]"
+      "selectTenants": "Select Tenants",
+      "yourSelection": "Your Selection",
+      "clickToViewCorroborativeDocuments": "Click to view corroborative documents",
+      "overrideDisqualificationAndMakeThisCandidateEligible": "Override disqualification and make this candidate eligible"
     }
   },
   "vacancies[unitid]Fill": {
     "placeholder": {
-      "searchByNamePhoneOrEmail": "Search by name, phone, or email [FR]",
-      "tenantName": "Tenant name [FR]",
-      "phone41": "Phone (+41...) [FR]",
-      "emailOptional": "Email (optional) [FR]",
-      "eG1850": "e.g. 1850 [FR]"
+      "searchByNamePhoneOrEmail": "Search by name, phone, or email",
+      "tenantName": "Nom du locataire",
+      "phone41": "Phone (+41...)",
+      "emailOptional": "Email (optional)",
+      "eG1850": "e.g. 1850"
     },
     "title": {
-      "fillVacancy": "Fill vacancy [FR]",
-      "step1SelectOrCreateTenant": "Step 1: Select or create tenant [FR]",
-      "step2AssignTenantToUnit": "Step 2: Assign tenant to unit [FR]",
-      "step3CreateLeaseDraft": "Step 3: Create lease (DRAFT) [FR]",
-      "nextSteps": "Next steps [FR]"
+      "fillVacancy": "Fill vacancy",
+      "step1SelectOrCreateTenant": "Step 1: Select or create tenant",
+      "step2AssignTenantToUnit": "Step 2: Assign tenant to unit",
+      "step3CreateLeaseDraft": "Step 3: Create lease (DRAFT)",
+      "nextSteps": "Next steps"
     }
   },
   "workRequests": {
     "title": {
-      "workRequests": "Work Requests [FR]"
+      "workRequests": "Work Requests"
     }
   },
   "vacanciesUnitidCandidates": {

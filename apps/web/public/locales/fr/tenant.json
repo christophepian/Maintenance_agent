@@ -36,59 +36,59 @@
   },
   "index": {
     "heading": {
-      "rentalApplication": "Rental Application [FR]",
-      "selectUnitsToApplyFor": "Select units to apply for [FR]",
-      "uploadYourDocuments": "Upload your documents [FR]",
-      "applicantDetails": "Applicant Details [FR]",
-      "currentHousingHousehold": "Current Housing & Household [FR]",
-      "reviewSubmit": "Review & Submit [FR]",
-      "unitsAppliedFor": "Units Applied For [FR]",
-      "applicants": "Applicants [FR]",
-      "documents": "Documents [FR]",
-      "electronicSignature": "Electronic Signature [FR]",
-      "applicationSubmitted": "Application Submitted [FR]",
-      "maintenanceAgentNdashUiLauncher": "Maintenance Agent &ndash; UI Launcher [FR]",
-      "rentalListings": "Rental Listings [FR]",
-      "findYourNextHome": "Find your next home [FR]",
-      "maintenanceHelp": "Maintenance help [FR]",
-      "quickFixes": "Quick fixes [FR]",
-      "tenantRequestByPhone": "Tenant request (by phone) [FR]",
-      "requestContext": "Request context [FR]",
-      "tenantSignIn": "Tenant sign-in [FR]"
+      "rentalApplication": "Rental Application",
+      "selectUnitsToApplyFor": "Select units to apply for",
+      "uploadYourDocuments": "Upload your documents",
+      "applicantDetails": "Applicant Details",
+      "currentHousingHousehold": "Current Housing & Household",
+      "reviewSubmit": "Review & Submit",
+      "unitsAppliedFor": "Units Applied For",
+      "applicants": "Applicants",
+      "documents": "Documents",
+      "electronicSignature": "Electronic Signature",
+      "applicationSubmitted": "Application Submitted",
+      "maintenanceAgentNdashUiLauncher": "Maintenance Agent &ndash; UI Launcher",
+      "rentalListings": "Rental Listings",
+      "findYourNextHome": "Find your next home",
+      "maintenanceHelp": "Maintenance help",
+      "quickFixes": "Quick fixes",
+      "tenantRequestByPhone": "Tenant request (by phone)",
+      "requestContext": "Request context",
+      "tenantSignIn": "Tenant sign-in"
     },
     "placeholder": {
-      "eGChFrDe": "e.g. CH, FR, DE [FR]",
-      "eGJeanDupont": "e.g. Jean Dupont [FR]",
-      "searchByAddressBuildingNameOrUnit": "Search by address, building name, or unit… [FR]",
-      "yourName": "Your name [FR]",
-      "youExampleCom": "you@example.com [FR]",
-      "minimum8Characters": "Minimum 8 characters [FR]",
-      "eGTheOvenIsOverheating": "e.g., The oven is overheating [FR]",
-      "41791234567": "+41 79 123 45 67 [FR]",
-      "describeTheIssueU2026": "Describe the issue\\u2026 [FR]",
-      "eG150": "e.g. 150 [FR]"
+      "eGChFrDe": "e.g. CH, FR, DE",
+      "eGJeanDupont": "e.g. Jean Dupont",
+      "searchByAddressBuildingNameOrUnit": "Search by address, building name, or unit…",
+      "yourName": "Your name",
+      "youExampleCom": "you@example.com",
+      "minimum8Characters": "Minimum 8 characters",
+      "eGTheOvenIsOverheating": "e.g., The oven is overheating",
+      "41791234567": "+41 79 123 45 67",
+      "describeTheIssueU2026": "Describe the issue\\u2026",
+      "eG150": "e.g. 150"
     },
     "title": {
-      "showExtractionDebugInfo": "Show extraction debug info [FR]"
+      "showExtractionDebugInfo": "Show extraction debug info"
     },
     "ariaLabel": {
-      "removeDocument": "Remove document [FR]"
+      "removeDocument": "Remove document"
     }
   },
   "token": {
     "heading": {
-      "invoiceCapture": "Invoice Capture [FR]",
-      "thisLinkHasExpired": "This link has expired [FR]",
-      "somethingWentWrong": "Something went wrong [FR]",
-      "takePhotosOfYourInvoice": "Take photos of your invoice [FR]",
-      "uploading": "Uploading… [FR]",
-      "photosSubmitted": "Photos submitted! [FR]"
+      "invoiceCapture": "Invoice Capture",
+      "thisLinkHasExpired": "This link has expired",
+      "somethingWentWrong": "Une erreur s'est produite",
+      "takePhotosOfYourInvoice": "Take photos of your invoice",
+      "uploading": "Uploading…",
+      "photosSubmitted": "Photos submitted!"
     }
   },
   "assets": {
     "heading": {
-      "myUnitAmpAssets": "My Unit &amp; Assets [FR]",
-      "unitAmpAssetDetails": "Unit &amp; Asset Details [FR]"
+      "myUnitAmpAssets": "My Unit &amp; Assets",
+      "unitAmpAssetDetails": "Unit &amp; Asset Details"
     },
     "text": {
       "comingSoon": "Bientôt disponible"
@@ -96,9 +96,9 @@
   },
   "inbox": {
     "title": {
-      "inbox": "Inbox [FR]",
-      "unread": "Unread [FR]",
-      "dismiss": "Dismiss [FR]"
+      "inbox": "Boîte de réception",
+      "unread": "Unread",
+      "dismiss": "Ignorer"
     },
     "text": {
       "pleaseSignInToViewYourNotifications": "Please sign in to view your notifications.",
@@ -108,7 +108,7 @@
   },
   "invoices": {
     "heading": {
-      "myInvoices": "My Invoices [FR]"
+      "myInvoices": "My Invoices"
     },
     "text": {
       "loading": "Chargement…",
@@ -121,7 +121,7 @@
   },
   "invoicesId": {
     "heading": {
-      "paymentQrCode": "Payment QR Code [FR]"
+      "paymentQrCode": "Payment QR Code"
     },
     "text": {
       "loading": "Chargement…",
@@ -131,16 +131,16 @@
       "issueDate": "Date d'émission",
       "dueDate": "Date d'échéance",
       "paid": "Payé",
-      "property": "Property",
+      "property": "Bien",
       "payableTo": "Payable to",
-      "reference": "Reference",
+      "reference": "Référence",
       "referenceType": "Reference type"
     }
   },
   "leasesId": {
     "heading": {
-      "leaseAgreement": "Lease Agreement [FR]",
-      "signatureStatus": "Signature Status [FR]"
+      "leaseAgreement": "Lease Agreement",
+      "signatureStatus": "Signature Status"
     },
     "text": {
       "loading": "Chargement…",
@@ -173,7 +173,7 @@
   },
   "leasesIndex": {
     "heading": {
-      "myLeases": "My Leases [FR]"
+      "myLeases": "My Leases"
     },
     "text": {
       "loadingSession": "Loading session…",
@@ -184,21 +184,21 @@
   },
   "requests": {
     "heading": {
-      "newMaintenanceRequest": "New Maintenance Request [FR]"
+      "newMaintenanceRequest": "New Maintenance Request"
     },
     "placeholder": {
-      "commentOptional": "Comment (optional) [FR]",
-      "describeTheIssueInDetailEGTheKitchenFaucetIsDripping": "Describe the issue in detail (e.g. the kitchen faucet is dripping) [FR]",
-      "41791234567": "+41 79 123 45 67 [FR]"
+      "commentOptional": "Comment (optional)",
+      "describeTheIssueInDetailEGTheKitchenFaucetIsDripping": "Describe the issue in detail (e.g. the kitchen faucet is dripping)",
+      "41791234567": "+41 79 123 45 67"
     },
     "title": {
-      "myRequests": "My Requests [FR]",
-      "myMaintenanceRequests": "My Maintenance Requests [FR]"
+      "myRequests": "My Requests",
+      "myMaintenanceRequests": "My Maintenance Requests"
     },
     "ariaLabel": {
-      "captureWithPhone": "Capture with phone [FR]",
-      "attachPhotosOrDocuments": "Attach photos or documents [FR]",
-      "capturePhotosWithPhoneViaQrCode": "Capture photos with phone via QR code [FR]"
+      "captureWithPhone": "Capture with phone",
+      "attachPhotosOrDocuments": "Attach photos or documents",
+      "capturePhotosWithPhoneViaQrCode": "Capture photos with phone via QR code"
     },
     "text": {
       "checkingAppointments": "Checking appointments…",

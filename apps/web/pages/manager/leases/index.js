@@ -81,9 +81,10 @@ function CountdownBadge({ sentForSignatureAt }) {
   const remaining = businessDaysUntil(expiry);
 
   if (remaining < 0) {
+    const n = Math.abs(remaining);
     return (
       <span className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700">
-        Expired {Math.abs(remaining)} business day{Math.abs(remaining) !== 1 ? "s" : ""} ago
+        {t(n === 1 ? "manager:leasesIndex.text.expiredAgo" : "manager:leasesIndex.text.expiredAgo_plural", { count: n })}
       </span>
     );
   }
@@ -92,7 +93,7 @@ function CountdownBadge({ sentForSignatureAt }) {
   }
   return (
     <span className={cn("inline-block px-2 py-0.5 rounded text-xs font-medium", remaining <= 1 ? "bg-orange-100 text-orange-700" : "bg-blue-50 text-blue-700")}>
-      {remaining} business day{remaining !== 1 ? "s" : ""} left
+      {t(remaining === 1 ? "manager:leasesIndex.text.daysLeft" : "manager:leasesIndex.text.daysLeft_plural", { count: remaining })}
     </span>
   );
 }
@@ -149,22 +150,22 @@ function ActionDropdown({ actions }) {
   );
 }
 
-function buildTemplateColumns(router, handleDeleteTemplate) {
+function buildTemplateColumns(tr, router, handleDeleteTemplate) {
   return [
-    { id: "templateName", label: "Template Name", sortable: true, alwaysVisible: true,
-      render: (t) => <span className="font-medium text-slate-900">{t.templateName || "Unnamed template"}</span> },
-    { id: "building", label: "Building", sortable: true, defaultVisible: true,
-      render: (t) => <span className="text-slate-600">{t.unit?.building?.name || "Global"}</span> },
-    { id: "landlord", label: "Landlord", sortable: true, defaultVisible: true,
-      render: (t) => <span className="text-slate-600">{t.landlordName || "\u2014"}</span> },
-    { id: "createdAt", label: "Created", sortable: true, defaultVisible: true,
-      render: (t) => <span className="text-slate-500 text-xs">{formatDate(t.createdAt)}</span> },
+    { id: "templateName", label: tr("manager:leasesIndex.col.templateName"), sortable: true, alwaysVisible: true,
+      render: (tmpl) => <span className="font-medium text-slate-900">{tmpl.templateName || "Unnamed template"}</span> },
+    { id: "building", label: tr("manager:leasesIndex.col.building"), sortable: true, defaultVisible: true,
+      render: (tmpl) => <span className="text-slate-600">{tmpl.unit?.building?.name || "Global"}</span> },
+    { id: "landlord", label: tr("manager:leasesIndex.col.landlord"), sortable: true, defaultVisible: true,
+      render: (tmpl) => <span className="text-slate-600">{tmpl.landlordName || "\u2014"}</span> },
+    { id: "createdAt", label: tr("manager:leasesIndex.col.created"), sortable: true, defaultVisible: true,
+      render: (tmpl) => <span className="text-slate-500 text-xs">{formatDate(tmpl.createdAt)}</span> },
     { id: "actions", label: "", alwaysVisible: true, className: "text-right",
-      render: (t) => (
+      render: (tmpl) => (
         <div onClick={(e) => e.stopPropagation()}>
           <ActionDropdown actions={[
-            { label: "\uD83D\uDCC4 View Template", onClick: () => router.push(`/manager/leases/${t.id}`) },
-            { label: "\uD83D\uDDD1\uFE0F Delete", onClick: () => handleDeleteTemplate(t.id, t.templateName), className: "text-red-600" },
+            { label: tr("manager:leasesIndex.cta.viewTemplate"), onClick: () => router.push(`/manager/leases/${tmpl.id}`) },
+            { label: tr("manager:leasesIndex.cta.delete"), onClick: () => handleDeleteTemplate(tmpl.id, tmpl.templateName), className: "text-red-600" },
           ]} />
         </div>
       ) },
@@ -414,7 +415,7 @@ export default function LeasesPage() {
   }
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const templateColumns = useMemo(() => buildTemplateColumns(router, handleDeleteTemplate), [router]);
+  const templateColumns = useMemo(() => buildTemplateColumns(t, router, handleDeleteTemplate), [t, router]);
 
   // Derive filtered lease lists
   const searchedLeases = useMemo(() => {
@@ -563,7 +564,7 @@ export default function LeasesPage() {
                 onClick={() => setActiveTab(i)}
                 className={activeTab === i ? "tab-btn-active" : "tab-btn"}
               >
-                {tab.label}
+                {t(`leasesIndex.tabs.${tab.key.toLowerCase()}`)}
               </button>
             ))}
           </ScrollableTabs>

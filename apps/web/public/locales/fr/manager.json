@@ -360,101 +360,101 @@
   },
   "buildingsId": {
     "heading": {
-      "ownershipManagement": "Ownership & Management [FR]",
-      "managementGuidelines": "Management Guidelines [FR]",
-      "residentialUnits": "Residential Units [FR]",
-      "commonAreas": "Common Areas [FR]",
-      "leaseTemplate": "Lease Template [FR]"
+      "ownershipManagement": "Ownership & Management",
+      "managementGuidelines": "Management Guidelines",
+      "residentialUnits": "Residential Units",
+      "commonAreas": "Common Areas",
+      "leaseTemplate": "Lease Template"
     },
     "placeholder": {
-      "buildingName": "Building name [FR]",
+      "buildingName": "Building name",
       "address": "Adresse",
-      "eG1995": "e.g. 1995 [FR]",
-      "eG1013bCommonArea1": "e.g. 101, 3B, Common Area 1 [FR]",
-      "leaveBlankForOrgDefault": "Leave blank for org default [FR]",
-      "eGAutoApproveOvensChf500": "e.g., Auto-approve ovens < CHF 500 [FR]"
+      "eG1995": "e.g. 1995",
+      "eG1013bCommonArea1": "e.g. 101, 3B, Common Area 1",
+      "leaveBlankForOrgDefault": "Leave blank for org default",
+      "eGAutoApproveOvensChf500": "e.g., Auto-approve ovens < CHF 500"
     },
     "title": {
-      "buildingInformation": "Building information [FR]",
+      "buildingInformation": "Building information",
       "units": "Unités",
       "tenants": "Locataires",
-      "assetInventoryDepreciation": "Asset Inventory & Depreciation [FR]",
-      "documents": "Documents [FR]",
-      "policies": "Policies [FR]",
-      "overrides": "Overrides [FR]",
-      "requests": "Requests [FR]"
+      "assetInventoryDepreciation": "Asset Inventory & Depreciation",
+      "documents": "Documents",
+      "policies": "Policies",
+      "overrides": "Overrides",
+      "requests": "Demandes"
     },
     "ariaLabel": {
-      "backToInventory": "Back to Inventory [FR]"
+      "backToInventory": "Back to Inventory"
     }
   },
   "unitsId": {
     "col": {
-      "acomptePaid": "Acompte Paid [FR]",
-      "actualCosts": "Actual Costs [FR]",
+      "acomptePaid": "Acompte Paid",
+      "actualCosts": "Actual Costs",
       "balance": "Solde",
-      "action": "Action [FR]",
-      "invoice": "Invoice # [FR]",
-      "netRent": "Net Rent [FR]",
+      "action": "Action",
+      "invoice": "Invoice #",
+      "netRent": "Loyer net",
       "total": "Total",
-      "notice": "Notice [FR]"
+      "notice": "Notice"
     },
     "placeholder": {
-      "eGApt3b": "e.g. Apt 3B [FR]",
-      "eG3": "e.g. 3 [FR]",
-      "eG75": "e.g. 75 [FR]",
-      "eG35": "e.g. 3.5 [FR]",
-      "eG2015": "e.g. 2015 [FR]",
-      "eGJaneDoe": "e.g. Jane Doe [FR]",
-      "41791234567": "+41 79 123 45 67 [FR]",
-      "tenantExampleCom": "tenant@example.com [FR]"
+      "eGApt3b": "e.g. Apt 3B",
+      "eG3": "e.g. 3",
+      "eG75": "e.g. 75",
+      "eG35": "e.g. 3.5",
+      "eG2015": "e.g. 2015",
+      "eGJaneDoe": "e.g. Jane Doe",
+      "41791234567": "+41 79 123 45 67",
+      "tenantExampleCom": "tenant@example.com"
     },
     "title": {
       "unit": "Unité",
-      "unitDetails": "Unit Details [FR]",
-      "assetInventoryDepreciation": "Asset Inventory & Depreciation [FR]",
+      "unitDetails": "Unit Details",
+      "assetInventoryDepreciation": "Asset Inventory & Depreciation",
       "tenants": "Locataires",
-      "rentEstimate": "Rent Estimate [FR]",
-      "corroborativeDocuments": "Corroborative Documents [FR]",
-      "incomeVsExpenses": "Income vs. Expenses [FR]",
-      "nebenkostenSummary": "Nebenkosten Summary [FR]",
-      "chargeReconciliationsNebenkosten": "Charge Reconciliations (Nebenkosten) [FR]",
+      "rentEstimate": "Rent Estimate",
+      "corroborativeDocuments": "Corroborative Documents",
+      "incomeVsExpenses": "Income vs. Expenses",
+      "nebenkostenSummary": "Nebenkosten Summary",
+      "chargeReconciliationsNebenkosten": "Charge Reconciliations (Nebenkosten)",
       "invoices": "Factures",
-      "contracts": "Contracts [FR]",
-      "openRequests": "Open Requests [FR]"
+      "contracts": "Contracts",
+      "openRequests": "Open Requests"
     }
   },
   "billingSchedules": {
     "placeholder": {
-      "searchByTenant": "Search by tenant… [FR]"
+      "searchByTenant": "Search by tenant…"
     },
     "title": {
-      "billingSchedules": "Billing Schedules [FR]"
+      "billingSchedules": "Calendriers de facturation"
     },
     "ariaLabel": {
-      "sortSchedules": "Sort schedules [FR]"
+      "sortSchedules": "Sort schedules"
     }
   },
   "buildings[id]Financials": {
     "title": {
-      "buildingFinancials": "Building Financials [FR]"
+      "buildingFinancials": "Finances de l'immeuble"
     }
   },
   "cashflowId": {
     "col": {
-      "override": "Override [FR]"
+      "override": "Override"
     },
     "placeholder": {
-      "eG50000": "e.g. 50000 [FR]"
+      "eG50000": "e.g. 50000"
     },
     "title": {
-      "yearOverridden": "Year overridden [FR]",
-      "resetToBaselineYear": "Reset to baseline year [FR]",
-      "clickToEditIncomeGrowthRate": "Click to edit income growth rate [FR]",
-      "summary": "Summary [FR]",
-      "monthlyCashflow": "Monthly cashflow [FR]",
-      "scheduledCapexEvents": "Scheduled CapEx events [FR]",
-      "rFPCandidates": "RFP Candidates [FR]"
+      "yearOverridden": "Year overridden",
+      "resetToBaselineYear": "Reset to baseline year",
+      "clickToEditIncomeGrowthRate": "Click to edit income growth rate",
+      "summary": "Résumé",
+      "monthlyCashflow": "Monthly cashflow",
+      "scheduledCapexEvents": "Scheduled CapEx events",
+      "rFPCandidates": "RFP Candidates"
     },
     "text": {
       "noCashflowData": "Aucune donnée de flux.",
@@ -491,44 +491,44 @@
   },
   "chargeReconciliationsId": {
     "col": {
-      "action": "Action [FR]"
+      "action": "Action"
     },
     "title": {
-      "summary": "Summary [FR]",
-      "expenseLines": "Expense Lines [FR]",
-      "settlementInvoice": "Settlement Invoice [FR]"
+      "summary": "Résumé",
+      "expenseLines": "Expense Lines",
+      "settlementInvoice": "Settlement Invoice"
     }
   },
   "chargeReconciliationsIndex": {
     "title": {
-      "chargeReconciliations": "Charge Reconciliations [FR]"
+      "chargeReconciliations": "Réconciliation des charges"
     }
   },
   "contractorBillingSchedulesId": {
     "heading": {
-      "scheduleDetails": "Schedule Details [FR]",
+      "scheduleDetails": "Schedule Details",
       "contractor": "Prestataire",
       "actions": "Actions"
     },
     "placeholder": {
-      "eGContractEnded": "e.g. Contract ended [FR]"
+      "eGContractEnded": "e.g. Contract ended"
     }
   },
   "contractorBillingSchedulesIndex": {
     "heading": {
-      "createBillingSchedule": "Create Billing Schedule [FR]"
+      "createBillingSchedule": "Create Billing Schedule"
     },
     "placeholder": {
-      "eGMonthlyCleaningService": "e.g. Monthly cleaning service [FR]",
-      "eG50000": "e.g. 500.00 [FR]"
+      "eGMonthlyCleaningService": "e.g. Monthly cleaning service",
+      "eG50000": "e.g. 500.00"
     },
     "title": {
-      "contractorBilling": "Contractor Billing [FR]"
+      "contractorBilling": "Contractor Billing"
     }
   },
   "dashboardV2": {
     "heading": {
-      "priorityFeed": "Priority feed [FR]",
+      "priorityFeed": "Priority feed",
       "moreTools": "Plus d'outils"
     },
     "ariaLabel": {
@@ -537,7 +537,7 @@
   },
   "emails": {
     "title": {
-      "emailDetail": "Email Detail [FR]"
+      "emailDetail": "Email Detail"
     },
     "text": {
       "all": "Tous",
@@ -564,16 +564,16 @@
     "title": {
       "general": "Général",
       "address": "Adresse",
-      "banking": "Banking [FR]",
-      "invoiceSettings": "Invoice Settings [FR]"
+      "banking": "Banking",
+      "invoiceSettings": "Invoice Settings"
     },
     "ariaLabel": {
-      "dismissMessage": "Dismiss message [FR]"
+      "dismissMessage": "Dismiss message"
     }
   },
   "financeBillingEntitiesIndex": {
     "title": {
-      "billingEntities": "Billing Entities [FR]"
+      "billingEntities": "Billing Entities"
     }
   },
   "financeCharges": {
@@ -581,18 +581,18 @@
       "actions": "Actions"
     },
     "heading": {
-      "editCharges": "Edit Charges [FR]"
+      "editCharges": "Edit Charges"
     },
     "placeholder": {
-      "searchByTenantBuildingOrUnit": "Search by tenant, building or unit… [FR]",
-      "itemName": "Item name [FR]",
-      "eG30062027": "e.g., 30.06.2027 [FR]"
+      "searchByTenantBuildingOrUnit": "Rechercher par locataire, immeuble ou unité…",
+      "itemName": "Item name",
+      "eG30062027": "e.g., 30.06.2027"
     },
     "title": {
       "charges": "Frais"
     },
     "ariaLabel": {
-      "sortCharges": "Sort charges [FR]"
+      "sortCharges": "Sort charges"
     },
     "text": {
       "error": "Erreur :",
@@ -618,24 +618,24 @@
   },
   "financeChartOfAccounts": {
     "placeholder": {
-      "eGElevatorMaintenance": "e.g. Elevator Maintenance [FR]",
-      "eGLiftM": "e.g. LIFT-M [FR]",
-      "optionalDescription": "Optional description [FR]",
-      "eGOwnerCharges": "e.g. Owner Charges [FR]",
-      "eG5000": "e.g. 5000 [FR]"
+      "eGElevatorMaintenance": "e.g. Elevator Maintenance",
+      "eGLiftM": "e.g. LIFT-M",
+      "optionalDescription": "Optional description",
+      "eGOwnerCharges": "e.g. Owner Charges",
+      "eG5000": "e.g. 5000"
     },
     "title": {
-      "chartOfAccounts": "Chart of Accounts [FR]"
+      "chartOfAccounts": "Chart of Accounts"
     }
   },
   "financeExpenses": {
     "placeholder": {
-      "searchExpenses": "Search expenses… [FR]"
+      "searchExpenses": "Search expenses…"
     },
     "title": {
       "expenses": "Dépenses",
       "category": "Catégorie",
-      "scope": "Scope [FR]"
+      "scope": "Scope"
     },
     "text": {
       "uncategorised": "Non catégorisé",
@@ -656,12 +656,12 @@
   },
   "financeIndex": {
     "title": {
-      "finances": "Finances [FR]",
-      "dateRange": "Date range [FR]",
+      "finances": "Finances",
+      "dateRange": "Date range",
       "buildings": "Immeubles"
     },
     "ariaLabel": {
-      "viewBuildingFinancials": "View building financials [FR]"
+      "viewBuildingFinancials": "View building financials"
     },
     "text": {
       "loadingPortfolioSummary": "Chargement du résumé de portefeuille…",
@@ -684,17 +684,17 @@
   },
   "financeInvoices": {
     "heading": {
-      "disputeInvoice": "Dispute Invoice [FR]",
-      "uploadInvoice": "Upload Invoice [FR]"
+      "disputeInvoice": "Dispute Invoice",
+      "uploadInvoice": "Upload Invoice"
     },
     "placeholder": {
-      "reasonForDispute": "Reason for dispute… [FR]",
-      "searchInvoices": "Search invoices… [FR]"
+      "reasonForDispute": "Reason for dispute…",
+      "searchInvoices": "Search invoices…"
     },
     "title": {
-      "invoicePdf": "Invoice PDF [FR]",
-      "cycleSortField": "Cycle sort field [FR]",
-      "direction": "Direction [FR]",
+      "invoicePdf": "Invoice PDF",
+      "cycleSortField": "Cycle sort field",
+      "direction": "Direction",
       "status": "Statut",
       "category": "Catégorie",
       "invoices": "Factures"
@@ -720,29 +720,29 @@
   "financeInvoicesId": {
     "col": {
       "description": "Description",
-      "qty": "Qty [FR]",
-      "unitPrice": "Unit Price [FR]",
-      "vAT": "VAT % [FR]",
+      "qty": "Qty",
+      "unitPrice": "Unit Price",
+      "vAT": "VAT %",
       "total": "Total"
     },
     "placeholder": {
-      "companyName": "Company name [FR]",
-      "streetNumber": "Street & number [FR]",
-      "lausanne": "Lausanne [FR]",
-      "cH": "CH... [FR]",
-      "cHE": "CHE-... [FR]"
+      "companyName": "Company name",
+      "streetNumber": "Street & number",
+      "lausanne": "Lausanne",
+      "cH": "CH...",
+      "cHE": "CHE-..."
     },
     "title": {
-      "invoiceDetails": "Invoice Details [FR]",
-      "recipient": "Recipient [FR]",
-      "issuerBillingEntity": "Issuer (Billing Entity) [FR]",
-      "lineItems": "Line Items [FR]",
-      "linkedRecords": "Linked Records [FR]",
-      "accounting": "Accounting [FR]",
-      "originalCapture": "Original Capture [FR]",
-      "pDFPreview": "PDF Preview [FR]",
-      "invoicePdf": "Invoice PDF [FR]",
-      "timeline": "Timeline [FR]"
+      "invoiceDetails": "Invoice Details",
+      "recipient": "Recipient",
+      "issuerBillingEntity": "Issuer (Billing Entity)",
+      "lineItems": "Line Items",
+      "linkedRecords": "Linked Records",
+      "accounting": "Accounting",
+      "originalCapture": "Original Capture",
+      "pDFPreview": "PDF Preview",
+      "invoicePdf": "Invoice PDF",
+      "timeline": "Timeline"
     },
     "text": {
       "error": "Erreur :",
@@ -790,14 +790,14 @@
   },
   "financeInvoicesNew": {
     "placeholder": {
-      "itemDescription": "Item description [FR]"
+      "itemDescription": "Item description"
     },
     "title": {
-      "newInvoice": "New Invoice [FR]",
-      "recipient": "Recipient [FR]",
-      "invoiceDetails": "Invoice Details [FR]",
-      "linkToRecordOptional": "Link to Record (optional) [FR]",
-      "lineItems": "Line Items [FR]"
+      "newInvoice": "Nouvelle facture",
+      "recipient": "Recipient",
+      "invoiceDetails": "Invoice Details",
+      "linkToRecordOptional": "Link to Record (optional)",
+      "lineItems": "Line Items"
     },
     "text": {
       "error": "Erreur :",
@@ -823,18 +823,18 @@
     "col": {
       "date": "Date",
       "account": "Compte",
-      "event": "Event [FR]",
+      "event": "Event",
       "description": "Description",
       "reference": "Référence",
-      "debitChf": "Debit CHF [FR]",
-      "creditChf": "Credit CHF [FR]",
-      "code": "Code [FR]",
-      "balanceChf": "Balance CHF [FR]"
+      "debitChf": "Debit CHF",
+      "creditChf": "Credit CHF",
+      "code": "Code",
+      "balanceChf": "Balance CHF"
     },
     "title": {
-      "generalLedger": "General Ledger [FR]",
-      "dateRange": "Date range [FR]",
-      "scope": "Scope [FR]"
+      "generalLedger": "General Ledger",
+      "dateRange": "Date range",
+      "scope": "Scope"
     },
     "text": {
       "chartOfAccountsNotSetUp": "Plan comptable not set up",
@@ -859,12 +859,12 @@
   },
   "financePayments": {
     "placeholder": {
-      "searchPayments": "Search payments… [FR]"
+      "searchPayments": "Search payments…"
     },
     "title": {
       "payments": "Paiements",
-      "scope": "Scope [FR]",
-      "dateRange": "Date range [FR]"
+      "scope": "Scope",
+      "dateRange": "Date range"
     },
     "text": {
       "viewInvoice": "Voir Invoice",
@@ -896,20 +896,20 @@
   },
   "inventory": {
     "placeholder": {
-      "eGBahnhofstrasse12": "e.g. Bahnhofstrasse 12 [FR]",
-      "eG8001": "e.g. 8001 [FR]",
-      "eGZRich": "e.g. Zürich [FR]",
-      "eGSwitzerland": "e.g. Switzerland [FR]",
-      "searchBuildings": "Search buildings… [FR]"
+      "eGBahnhofstrasse12": "e.g. Bahnhofstrasse 12",
+      "eG8001": "e.g. 8001",
+      "eGZRich": "e.g. Zürich",
+      "eGSwitzerland": "e.g. Switzerland",
+      "searchBuildings": "Search buildings…"
     },
     "title": {
       "properties": "Propriétés"
     },
     "ariaLabel": {
-      "filterBuildings": "Filter buildings [FR]",
-      "filterByCanton": "Filter by canton [FR]",
-      "sortBuildings": "Sort buildings [FR]",
-      "hypotheticalNextRepairCostInChf": "Hypothetical next repair cost in CHF [FR]"
+      "filterBuildings": "Filter buildings",
+      "filterByCanton": "Filter by canton",
+      "sortBuildings": "Sort buildings",
+      "hypotheticalNextRepairCostInChf": "Hypothetical next repair cost in CHF"
     },
     "text": {
       "address": "Adresse",
@@ -950,40 +950,40 @@
   },
   "leasesId": {
     "col": {
-      "signers": "Signers [FR]",
-      "action": "Action [FR]",
-      "actual": "Actual [FR]",
+      "signers": "Signers",
+      "action": "Action",
+      "actual": "Réel",
       "balance": "Solde",
-      "old": "Old [FR]",
-      "new": "New [FR]",
-      "change": "Change [FR]"
+      "old": "Old",
+      "new": "New",
+      "change": "Change"
     },
     "heading": {
-      "signatureRequests": "Signature Requests [FR]"
+      "signatureRequests": "Signature Requests"
     },
     "placeholder": {
-      "cH": "CH... [FR]",
-      "eG1085": "e.g. 108.5 [FR]",
-      "eG3MonthsNoticeFrom01042026": "e.g. 3 months notice from 01.04.2026 [FR]",
-      "eGDepositForLeaseStarting01042026": "e.g. Deposit for lease starting 01.04.2026 [FR]"
+      "cH": "CH...",
+      "eG1085": "e.g. 108.5",
+      "eG3MonthsNoticeFrom01042026": "e.g. 3 months notice from 01.04.2026",
+      "eGDepositForLeaseStarting01042026": "e.g. Deposit for lease starting 01.04.2026"
     },
     "title": {
-      "leaseContract": "Lease Contract [FR]",
-      "pDFArtifacts": "PDF Artifacts [FR]",
-      "sendForSignature": "Send for Signature [FR]",
-      "terminateLease": "Terminate Lease [FR]",
-      "createLeaseInvoice": "Create Lease Invoice [FR]"
+      "leaseContract": "Lease Contract",
+      "pDFArtifacts": "PDF Artifacts",
+      "sendForSignature": "Envoyer pour signature",
+      "terminateLease": "Terminate Lease",
+      "createLeaseInvoice": "Create Lease Invoice"
     },
     "ariaLabel": {
-      "leaseActionsMenu": "Lease actions menu [FR]"
+      "leaseActionsMenu": "Lease actions menu"
     },
     "text": {
       "edit": "✏️ Modifier",
       "cancel": "Annuler",
       "sendForSignature": "✍️ Envoyer pour signature",
-      "terminate": "📋 Terminate",
-      "archive": "📦 Archive",
-      "invoice": "💰 Invoice",
+      "terminate": "📋 Résilier",
+      "archive": "📦 Archiver",
+      "invoice": "💰 Facture",
       "loadingLease": "Chargement du bail…",
       "backToLeases": "← Retour to leases",
       "11BailleresseBailleur": "§1.1 Bailleresse / Bailleur",
@@ -1004,7 +1004,7 @@
       "draftPdf": "📄 Brouillon PDF",
       "signedPdf": "✅ Signé PDF",
       "deposit": "Dépôt de garantie :",
-      "pAID": "✅ PAID",
+      "pAID": "✅ Payant",
       "activated": "⚡ Activated:",
       "terminated": "📋 Résilié:",
       "archived": "📦 Archived:",
@@ -1032,7 +1032,7 @@
       "landlordNotice": "Propriétaire notice",
       "endOfFixedTerm": "End de fixed term",
       "breachOfContract": "Breach de contract",
-      "other": "Other",
+      "other": "Autre",
       "invoiceType": "Invoice Type",
       "deposit2": "Dépôt de garantie",
       "rent": "Loyer",
@@ -1077,7 +1077,7 @@
       "lifecycle": "📋 Lifecycle",
       "recurringBilling": "🔄 Récurrent Billing",
       "chargeReconciliations": "📊 Réconciliations des charges",
-      "year": "Year",
+      "year": "Année",
       "rentAdjustments": "📈 Ajustements de loyer",
       "type": "Type",
       "effective": "Effective",
@@ -1089,28 +1089,38 @@
   },
   "leasesIndex": {
     "col": {
-      "deadline": "Deadline [FR]",
+      "deadline": "Échéance",
       "actions": "Actions",
       "charges": "Frais",
-      "totalMo": "Total/mo [FR]",
-      "tag": "Tag [FR]"
+      "totalMo": "Total/mois",
+      "tag": "Étiquette",
+      "templateName": "Nom du modèle",
+      "building": "Immeuble",
+      "landlord": "Bailleur",
+      "created": "Créé le",
+      "tenantName": "Locataire",
+      "unit": "Unité",
+      "rent": "Loyer",
+      "startDate": "Date de début",
+      "endDate": "Date de fin",
+      "status": "Statut"
     },
     "placeholder": {
-      "jeanDupont": "Jean Dupont [FR]",
-      "jeanExampleCom": "jean@example.com [FR]",
-      "searchByTenantBuildingOrUnit": "Search by tenant, building or unit… [FR]",
-      "selectABuildingToAutoFill": "Select a building to auto-fill [FR]",
-      "eGRGieDuLacSa": "e.g. Régie du Lac SA [FR]",
-      "eGRueDuLac15": "e.g. Rue du Lac 15 [FR]",
-      "eG1003Lausanne": "e.g. 1003 Lausanne [FR]",
-      "4121": "+41 21 ... [FR]",
-      "regieExampleCh": "regie@example.ch [FR]",
-      "cH9300762011623852957": "CH93 0076 2011 6238 5295 7 [FR]",
-      "eGStandard3RoomApartment": "e.g. Standard 3-room apartment [FR]"
+      "jeanDupont": "Jean Dupont",
+      "jeanExampleCom": "jean@example.com",
+      "searchByTenantBuildingOrUnit": "Rechercher par locataire, immeuble ou unité…",
+      "selectABuildingToAutoFill": "Sélectionner un immeuble pour auto-remplir",
+      "eGRGieDuLacSa": "ex. Régie du Lac SA",
+      "eGRueDuLac15": "ex. Rue du Lac 15",
+      "eG1003Lausanne": "ex. 1003 Lausanne",
+      "4121": "+41 21 …",
+      "regieExampleCh": "regie@example.ch",
+      "cH9300762011623852957": "CH93 0076 2011 6238 5295 7",
+      "eGStandard3RoomApartment": "ex. Appartement 3 pièces standard"
     },
     "title": {
       "leases": "Baux",
-      "createNewLease": "Create New Lease [FR]"
+      "createNewLease": "Créer un nouveau bail"
     },
     "text": {
       "sentDateUnavailable": "Envoyé date unavailable",
@@ -1155,7 +1165,11 @@
       "leasesSentToCandidatesForSignatureAppearHere": "Bails sent to candidates for signature appear here.",
       "loadingLeases": "Loading leases...",
       "noLeasesFound": "Aucun bail trouvé",
-      "readyForReview": "Ready for review"
+      "readyForReview": "Ready for review",
+      "expiredAgo": "Expiré il y a {{count}} jour ouvrable",
+      "expiredAgo_plural": "Expiré il y a {{count}} jours ouvrables",
+      "daysLeft": "{{count}} jour ouvrable restant",
+      "daysLeft_plural": "{{count}} jours ouvrables restants"
     },
     "prop": {
       "manageRentalContracts": "Manage rental contracts",
@@ -1165,24 +1179,42 @@
       "rent": "Loyer",
       "sent": "Envoyé",
       "netRent": "Loyer net",
-      "start": "Start",
+      "start": "Démarrer",
       "status": "Statut"
+    },
+    "tabs": {
+      "active": "Actif",
+      "drafts": "Brouillon",
+      "submitted": "Soumis",
+      "templates": "Modèles",
+      "archive": "Archive"
+    },
+    "cta": {
+      "newLease": "Nouveau bail",
+      "newTemplate": "Nouveau modèle",
+      "actions": "Actions ▾",
+      "viewTemplate": "📄 Voir le modèle",
+      "delete": "🗑️ Supprimer",
+      "sendForSignature": "Envoyer pour signature",
+      "terminate": "📋 Résilier",
+      "archive": "📦 Archiver",
+      "invoice": "💰 Facturer"
     }
   },
   "leasesTemplates": {
     "placeholder": {
-      "selectABuildingToAutoFill": "Select a building to auto-fill [FR]",
-      "eGRGieDuLacSa": "e.g. Régie du Lac SA [FR]",
-      "eGRueDuLac15": "e.g. Rue du Lac 15 [FR]",
-      "eG1003Lausanne": "e.g. 1003 Lausanne [FR]",
-      "4121": "+41 21 ... [FR]",
-      "regieExampleCh": "regie@example.ch [FR]",
-      "cH9300762011623852957": "CH93 0076 2011 6238 5295 7 [FR]",
-      "eGStandard3RoomApartment": "e.g. Standard 3-room apartment [FR]"
+      "selectABuildingToAutoFill": "Sélectionner un immeuble pour auto-remplir",
+      "eGRGieDuLacSa": "ex. Régie du Lac SA",
+      "eGRueDuLac15": "ex. Rue du Lac 15",
+      "eG1003Lausanne": "ex. 1003 Lausanne",
+      "4121": "+41 21 …",
+      "regieExampleCh": "regie@example.ch",
+      "cH9300762011623852957": "CH93 0076 2011 6238 5295 7",
+      "eGStandard3RoomApartment": "ex. Appartement 3 pièces standard"
     },
     "title": {
-      "leaseTemplates": "Lease Templates [FR]",
-      "createNewTemplate": "Create New Template [FR]"
+      "leaseTemplates": "Modèles de bail",
+      "createNewTemplate": "Create New Template"
     },
     "text": {
       "building": "Immeuble *",
@@ -1219,21 +1251,21 @@
   },
   "peopleIndex": {
     "placeholder": {
-      "jeanDupont": "Jean Dupont [FR]",
-      "jeanExampleCom": "jean@example.com [FR]",
-      "temporaryPassword": "Temporary password [FR]",
-      "rueDeLaPaix1": "Rue de la Paix 1 [FR]",
-      "genVe": "Genève [FR]",
-      "cH5604835012345678009": "CH56 0483 5012 3456 7800 9 [FR]",
-      "cHE123456789": "CHE-123.456.789 [FR]"
+      "jeanDupont": "Jean Dupont",
+      "jeanExampleCom": "jean@example.com",
+      "temporaryPassword": "Temporary password",
+      "rueDeLaPaix1": "Rue de la Paix 1",
+      "genVe": "Genève",
+      "cH5604835012345678009": "CH56 0483 5012 3456 7800 9",
+      "cHE123456789": "CHE-123.456.789"
     },
     "title": {
-      "contacts": "Contacts [FR]"
+      "contacts": "Contacts"
     },
     "ariaLabel": {
-      "dismiss": "Dismiss [FR]",
-      "viewTenant": "View tenant [FR]",
-      "viewVendor": "View vendor [FR]"
+      "dismiss": "Ignorer",
+      "viewTenant": "View tenant",
+      "viewVendor": "View vendor"
     },
     "text": {
       "newOwner": "Nouveau owner",
@@ -1266,25 +1298,25 @@
   },
   "peopleOwners": {
     "placeholder": {
-      "searchByNameEmailOrBillingEntity": "Search by name, email, or billing entity… [FR]"
+      "searchByNameEmailOrBillingEntity": "Search by name, email, or billing entity…"
     },
     "title": {
       "owners": "Propriétaires"
     },
     "ariaLabel": {
-      "searchOwners": "Search owners [FR]",
-      "sortOwners": "Sort owners [FR]"
+      "searchOwners": "Search owners",
+      "sortOwners": "Sort owners"
     }
   },
   "peopleTenants": {
     "placeholder": {
-      "searchByNameEmailPhoneOrUnit": "Search by name, email, phone, or unit… [FR]"
+      "searchByNameEmailPhoneOrUnit": "Search by name, email, phone, or unit…"
     },
     "title": {
       "tenants": "Locataires"
     },
     "ariaLabel": {
-      "sortTenants": "Sort tenants [FR]"
+      "sortTenants": "Sort tenants"
     },
     "text": {
       "loading": "Chargement…",
@@ -1293,15 +1325,15 @@
   },
   "peopleTenantsId": {
     "placeholder": {
-      "tenantName": "Tenant name [FR]",
-      "41XxXxxXxxx": "+41 XX XXX XXXX [FR]",
-      "tenantExampleCom": "tenant@example.com [FR]"
+      "tenantName": "Nom du locataire",
+      "41XxXxxXxxx": "+41 XX XXX XXXX",
+      "tenantExampleCom": "tenant@example.com"
     },
     "title": {
-      "personalInformation": "Personal information [FR]",
-      "professional": "Professional [FR]",
-      "corroborativeDocuments": "Corroborative Documents [FR]",
-      "contracts": "Contracts [FR]",
+      "personalInformation": "Personal information",
+      "professional": "Professional",
+      "corroborativeDocuments": "Corroborative Documents",
+      "contracts": "Contracts",
       "invoices": "Factures"
     },
     "text": {
@@ -1341,13 +1373,13 @@
   },
   "peopleVendors": {
     "placeholder": {
-      "searchByNameEmailOrPhone": "Search by name, email, or phone… [FR]"
+      "searchByNameEmailOrPhone": "Search by name, email, or phone…"
     },
     "title": {
-      "contractors": "Contractors [FR]"
+      "contractors": "Prestataires"
     },
     "ariaLabel": {
-      "sortContractors": "Sort contractors [FR]"
+      "sortContractors": "Sort contractors"
     },
     "text": {
       "loading": "Chargement…",
@@ -1356,18 +1388,18 @@
   },
   "peopleVendorsId": {
     "placeholder": {
-      "contractorName": "Contractor name [FR]",
-      "41XxXxxXxxx": "+41 XX XXX XXXX [FR]",
-      "contractorExampleCom": "contractor@example.com [FR]",
-      "streetAndNumber": "Street and number [FR]",
-      "suiteFloorEtc": "Suite, floor, etc. [FR]",
-      "cH9300762011623852957": "CH93 0076 2011 6238 5295 7 [FR]",
-      "cHE123456789": "CHE-123.456.789 [FR]"
+      "contractorName": "Contractor name",
+      "41XxXxxXxxx": "+41 XX XXX XXXX",
+      "contractorExampleCom": "contractor@example.com",
+      "streetAndNumber": "Street and number",
+      "suiteFloorEtc": "Suite, floor, etc.",
+      "cH9300762011623852957": "CH93 0076 2011 6238 5295 7",
+      "cHE123456789": "CHE-123.456.789"
     },
     "title": {
-      "personalInformation": "Personal information [FR]",
-      "serviceDetails": "Service details [FR]",
-      "contracts": "Contracts [FR]",
+      "personalInformation": "Personal information",
+      "serviceDetails": "Service details",
+      "contracts": "Contracts",
       "invoices": "Factures"
     },
     "text": {
@@ -1408,42 +1440,42 @@
   },
   "rentAdjustmentsId": {
     "placeholder": {
-      "enterReason": "Enter reason… [FR]"
+      "enterReason": "Enter reason…"
     },
     "title": {
-      "summary": "Summary [FR]",
-      "rentChange": "Rent Change [FR]",
-      "indexationDetails": "Indexation Details [FR]",
-      "rejection": "Rejection [FR]",
-      "application": "Application [FR]",
-      "leaseIndexSettings": "Lease Index Settings [FR]"
+      "summary": "Résumé",
+      "rentChange": "Rent Change",
+      "indexationDetails": "Indexation Details",
+      "rejection": "Rejection",
+      "application": "Application",
+      "leaseIndexSettings": "Lease Index Settings"
     }
   },
   "rentAdjustmentsIndex": {
     "title": {
-      "rentAdjustments": "Rent Adjustments [FR]"
+      "rentAdjustments": "Révisions de loyer"
     }
   },
   "rentalApplicationsApplicationid": {
     "title": {
-      "applicationDetail": "Application Detail [FR]",
-      "applicants": "Applicants [FR]",
-      "householdCurrentHousing": "Household & Current Housing [FR]",
-      "unitEvaluations": "Unit Evaluations [FR]",
-      "signature": "Signature [FR]"
+      "applicationDetail": "Application Detail",
+      "applicants": "Applicants",
+      "householdCurrentHousing": "Household & Current Housing",
+      "unitEvaluations": "Unit Evaluations",
+      "signature": "Signature"
     }
   },
   "requests": {
     "placeholder": {
-      "descriptionBuildingUnitContractor": "#, description, building, unit, contractor… [FR]"
+      "descriptionBuildingUnitContractor": "#, description, building, unit, contractor…"
     },
     "title": {
-      "requestsInbox": "Requests Inbox [FR]",
+      "requestsInbox": "Boîte des demandes",
       "priority": "Priorité",
-      "scope": "Scope [FR]"
+      "scope": "Scope"
     },
     "ariaLabel": {
-      "searchRequests": "Search requests [FR]"
+      "searchRequests": "Search requests"
     },
     "text": {
       "assetDepreciation": "Dépréciation des actifs",
@@ -1485,11 +1517,11 @@
   },
   "requestsId": {
     "title": {
-      "legalAnalysis": "Legal Analysis [FR]",
-      "maintenanceDecision": "Maintenance Decision [FR]"
+      "legalAnalysis": "Legal Analysis",
+      "maintenanceDecision": "Maintenance Decision"
     },
     "ariaLabel": {
-      "selectAssetToLink": "Select asset to link [FR]"
+      "selectAssetToLink": "Select asset to link"
     },
     "text": {
       "failedToLoadAssetAnalysis": "Échec du chargement asset analysis.",
@@ -1532,7 +1564,7 @@
   },
   "rfps": {
     "title": {
-      "requestsForProposal": "Requests for Proposal [FR]"
+      "requestsForProposal": "Requests for Proposal"
     },
     "text": {
       "noRequestLinked": "No request linked",
@@ -1544,9 +1576,9 @@
   },
   "rfpsId": {
     "title": {
-      "rFPDetails": "RFP Details [FR]",
-      "linkedMaintenanceRequest": "Linked Maintenance Request [FR]",
-      "fallbackActions": "Fallback Actions [FR]"
+      "rFPDetails": "RFP Details",
+      "linkedMaintenanceRequest": "Linked Maintenance Request",
+      "fallbackActions": "Fallback Actions"
     },
     "text": {
       "loading": "Chargement…",
@@ -1563,7 +1595,7 @@
       "requestStatus": "Request Statut",
       "requestCategory": "Request Catégorie",
       "description": "Description",
-      "attachments": "Attachments",
+      "attachments": "Pièces jointes",
       "requestCreated": "Request Créé",
       "exclVat": "HT",
       "duration": "Durée",
@@ -1592,23 +1624,23 @@
   "settings": {
     "col": {
       "actions": "Actions",
-      "versions": "Versions [FR]"
+      "versions": "Versions"
     },
     "heading": {
-      "legalSources": "Legal Sources [FR]",
-      "legalVariables": "Legal Variables [FR]"
+      "legalSources": "Legal Sources",
+      "legalVariables": "Legal Variables"
     },
     "placeholder": {
-      "swissReferenceRate": "Swiss Reference Rate [FR]",
-      "eGReferenceRateCpi": "e.g. REFERENCE_RATE, CPI [FR]",
-      "optional": "Optional [FR]",
-      "eGDailyMonthly": "e.g. daily, monthly [FR]"
+      "swissReferenceRate": "Swiss Reference Rate",
+      "eGReferenceRateCpi": "e.g. REFERENCE_RATE, CPI",
+      "optional": "Optionnel",
+      "eGDailyMonthly": "e.g. daily, monthly"
     },
     "title": {
       "settings": "Paramètres"
     },
     "ariaLabel": {
-      "configureBuilding": "Configure building [FR]"
+      "configureBuilding": "Configure building"
     },
     "text": {
       "error": "Erreur :",
@@ -1622,7 +1654,7 @@
       "setTo": "Set to",
       "requestsWithEstimatedCostThisValueAutoapprove": "Requests with estimated cost ≤ this value auto-approve.",
       "invoiceLeadTime": "Invoice lead time",
-      "generate": "Generate",
+      "generate": "Générer",
       "daysBeforeBillingPeriod": "days before billing period",
       "recurringInvoicesAreGeneratedThisManyDaysBeforeTheBillingPeriodStarts": "Récurrent invoices are generated this many days before the billing period starts.",
       "loadingBuildings": "Chargement des immeubles…",
@@ -1633,8 +1665,8 @@
       "loadingSources": "Chargement des sources…",
       "noLegalSourcesConfiguredSourcesAreAutocreatedOnServerStartup": "No legal sources configured. Sources are auto-created on server startup.",
       "edit": "Modifier",
-      "deactivate": "Deactivate",
-      "activate": "Activate",
+      "deactivate": "Désactiver",
+      "activate": "Activer",
       "delete": "Supprimer",
       "name": "Nom *",
       "jurisdiction": "Jurisdiction",
@@ -1661,32 +1693,32 @@
   },
   "vacancies[unitid]Applications": {
     "col": {
-      "rank": "Rank [FR]",
+      "rank": "Rank",
       "actions": "Actions"
     },
     "heading": {
-      "overrideDisqualification": "Override Disqualification [FR]",
-      "adjustScore": "Adjust Score [FR]"
+      "overrideDisqualification": "Override Disqualification",
+      "adjustScore": "Adjust Score"
     },
     "placeholder": {
-      "eGVerifiedIncomeDirectlyWithEmployerDebtEnforcementExtractIsClear": "e.g. Verified income directly with employer; debt enforcement extract is clear… [FR]",
-      "reasonForAdjustmentMin3Chars": "Reason for adjustment (min 3 chars) [FR]"
+      "eGVerifiedIncomeDirectlyWithEmployerDebtEnforcementExtractIsClear": "e.g. Verified income directly with employer; debt enforcement extract is clear…",
+      "reasonForAdjustmentMin3Chars": "Reason for adjustment (min 3 chars)"
     },
     "title": {
-      "rentalApplications": "Rental Applications [FR]",
-      "clickToViewCorroborativeDocuments": "Click to view corroborative documents [FR]"
+      "rentalApplications": "Candidatures locatives",
+      "clickToViewCorroborativeDocuments": "Click to view corroborative documents"
     }
   },
   "vacanciesIndex": {
     "col": {
-      "applications": "Applications [FR]",
-      "action": "Action [FR]"
+      "applications": "Applications",
+      "action": "Action"
     },
     "heading": {
-      "vacantUnitsOpenForApplications": "Vacant Units — Open for Applications [FR]"
+      "vacantUnitsOpenForApplications": "Vacant Units — Open for Applications"
     },
     "title": {
-      "inventory": "Inventory [FR]"
+      "inventory": "Inventory"
     },
     "text": {
       "noLeaseTemplateReady": "No lease — template ready",
@@ -1808,7 +1840,7 @@
       "spendMtd": "Spend MTD",
       "avgDaysDone": "Avg days done",
       "collectionRate": "Taux de recouvrement",
-      "nOIYtd": "NOI YTD",
+      "nOIYtd": "RNE CDA",
       "buildingsInRed": "Immeubles in red",
       "portfolio": "Portefeuille",
       "openRequests": "Demandes ouvertes",
@@ -1851,7 +1883,7 @@
       "code": "Code",
       "description": "Description",
       "type": "Type",
-      "remove": "Remove",
+      "remove": "Retirer",
       "expenseType": "Type de dépense *",
       "account": "Compte *"
     },

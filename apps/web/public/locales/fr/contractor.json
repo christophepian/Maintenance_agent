@@ -13,7 +13,7 @@
   },
   "estimates": {
     "heading": {
-      "estimates": "Estimates [FR]"
+      "estimates": "Estimates"
     },
     "text": {
       "comingSoonEstimateDraftingAndApproval": "Bientôt disponible: estimate drafting and approval."
@@ -21,10 +21,10 @@
   },
   "index": {
     "title": {
-      "contractorDashboard": "Contractor Dashboard [FR]",
-      "quickLinks": "Quick Links [FR]",
-      "todayActionRequired": "Today / Action Required [FR]",
-      "pipelineOverview": "Pipeline Overview [FR]"
+      "contractorDashboard": "Contractor Dashboard",
+      "quickLinks": "Quick Links",
+      "todayActionRequired": "Today / Action Required",
+      "pipelineOverview": "Pipeline Overview"
     },
     "text": {
       "loadingDashboard": "Loading dashboard...",
@@ -45,13 +45,13 @@
   },
   "invoices": {
     "heading": {
-      "createInvoice": "Create Invoice [FR]"
+      "createInvoice": "Create Invoice"
     },
     "placeholder": {
-      "briefDescriptionOfWorkPerformed": "Brief description of work performed [FR]"
+      "briefDescriptionOfWorkPerformed": "Brief description of work performed"
     },
     "title": {
-      "myInvoices": "My Invoices [FR]"
+      "myInvoices": "My Invoices"
     },
     "text": {
       "dISPUTED": "⚠ DISPUTED",
@@ -64,10 +64,10 @@
   },
   "jobs": {
     "placeholder": {
-      "actualCostChf": "Actual cost (CHF) [FR]"
+      "actualCostChf": "Actual cost (CHF)"
     },
     "title": {
-      "myJobs": "My Jobs [FR]"
+      "myJobs": "My Jobs"
     },
     "text": {
       "loadingJobs": "Chargement des interventions…",
@@ -82,11 +82,11 @@
   },
   "jobsId": {
     "heading": {
-      "rateTheTenant": "Rate the tenant [FR]"
+      "rateTheTenant": "Rate the tenant"
     },
     "ariaLabel": {
       "close": "Fermer",
-      "removeScheduleRow": "Remove schedule row [FR]"
+      "removeScheduleRow": "Remove schedule row"
     },
     "text": {
       "noSlotsProposedYetProposeTimesForTheTenantToChooseFrom": "No slots proposed yet. Propose times for the tenant to choose from.",
@@ -115,7 +115,7 @@
   },
   "rfps": {
     "heading": {
-      "availableRfps": "Available RFPs [FR]"
+      "availableRfps": "Available RFPs"
     },
     "text": {
       "invited": "Invité",
@@ -126,17 +126,17 @@
   },
   "rfpsId": {
     "heading": {
-      "submitYourQuote": "Submit Your Quote [FR]",
-      "appointmentConfirmed": "Appointment Confirmed [FR]",
-      "rFPDetails": "RFP Details [FR]",
-      "workDescription": "Work Description [FR]"
+      "submitYourQuote": "Submit Your Quote",
+      "appointmentConfirmed": "Appointment Confirmed",
+      "rFPDetails": "RFP Details",
+      "workDescription": "Work Description"
     },
     "placeholder": {
-      "eG150000": "e.g. 1500.00 [FR]",
-      "eG5": "e.g. 5 [FR]",
-      "describeTheProposedWorkPlanMethodsAndTimeline": "Describe the proposed work plan, methods, and timeline… [FR]",
-      "anyAssumptionsExclusionsOrConditions": "Any assumptions, exclusions, or conditions… [FR]",
-      "anyOtherInformationForTheManager": "Any other information for the manager… [FR]",
+      "eG150000": "e.g. 1500.00",
+      "eG5": "e.g. 5",
+      "describeTheProposedWorkPlanMethodsAndTimeline": "Describe the proposed work plan, methods, and timeline…",
+      "anyAssumptionsExclusionsOrConditions": "Any assumptions, exclusions, or conditions…",
+      "anyOtherInformationForTheManager": "Any other information for the manager…",
       "description": "Description"
     },
     "text": {

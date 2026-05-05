@@ -1093,7 +1093,17 @@
       "actions": "Actions",
       "charges": "Charges",
       "totalMo": "Total/mo",
-      "tag": "Tag"
+      "tag": "Tag",
+      "templateName": "Template Name",
+      "building": "Building",
+      "landlord": "Landlord",
+      "created": "Created",
+      "tenantName": "Tenant",
+      "unit": "Unit",
+      "rent": "Rent",
+      "startDate": "Start Date",
+      "endDate": "End Date",
+      "status": "Status"
     },
     "placeholder": {
       "jeanDupont": "Jean Dupont",
@@ -1155,7 +1165,11 @@
       "leasesSentToCandidatesForSignatureAppearHere": "Leases sent to candidates for signature appear here.",
       "loadingLeases": "Loading leases...",
       "noLeasesFound": "No leases found",
-      "readyForReview": "Ready for review"
+      "readyForReview": "Ready for review",
+      "expiredAgo": "Expired {{count}} business day ago",
+      "expiredAgo_plural": "Expired {{count}} business days ago",
+      "daysLeft": "{{count}} business day left",
+      "daysLeft_plural": "{{count}} business days left"
     },
     "prop": {
       "manageRentalContracts": "Manage rental contracts",
@@ -1167,6 +1181,24 @@
       "netRent": "Net Rent",
       "start": "Start",
       "status": "Status"
+    },
+    "tabs": {
+      "active": "Active",
+      "drafts": "Draft",
+      "submitted": "Submitted",
+      "templates": "Templates",
+      "archive": "Archive"
+    },
+    "cta": {
+      "newLease": "New Lease",
+      "newTemplate": "New Template",
+      "actions": "Actions ▾",
+      "viewTemplate": "📄 View Template",
+      "delete": "🗑️ Delete",
+      "sendForSignature": "Send for Signature",
+      "terminate": "📋 Terminate",
+      "archive": "📦 Archive",
+      "invoice": "💰 Invoice"
     }
   },
   "leasesTemplates": {
