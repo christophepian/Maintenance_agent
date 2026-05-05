@@ -4,8 +4,8 @@ module.exports = {
     // Extend this array when DE / IT are ready: ['en', 'fr', 'de', 'it']
     locales: ['en', 'fr'],
     defaultLocale: 'en',
-    localeDetection: true,       // use Accept-Language on first visit
-    localeCookie: 'NEXT_LOCALE', // remember choice across sessions
+    // localeDetection: Next.js reads the NEXT_LOCALE cookie automatically.
+    // Set to false to disable Accept-Language auto-detection (opt-in only).
   },
   defaultNS: 'common',
   ns: ['common', 'manager', 'owner', 'contractor', 'tenant'],
