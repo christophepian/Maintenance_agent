@@ -3,8 +3,7 @@
   "private": true,
   "scripts": {
     "dev": "NODE_ENV=development next dev -p 3000 -H 0.0.0.0",
-    "build": "next build",
-    "postinstall": "node -e \"const fs=require('fs'),path=require('path'),root=path.resolve(__dirname,'../../node_modules'),local=path.resolve(__dirname,'node_modules');['react','react-dom','react-i18next'].forEach(p=>{const src=path.join(root,p),d=path.join(local,p);if(!fs.existsSync(d)&&fs.existsSync(src))fs.symlinkSync(src,d,'dir');});\""
+    "build": "next build"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.15",
