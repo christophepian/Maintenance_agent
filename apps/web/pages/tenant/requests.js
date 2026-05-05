@@ -36,6 +36,7 @@ function formatSlotTime(iso) {
 }
 
 function TenantSchedulingPanel({ requestId }) {
+  const { t } = useTranslation("tenant");
   const [slots, setSlots] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -88,7 +89,7 @@ function TenantSchedulingPanel({ requestId }) {
     }
   }
 
-  if (loading) return <p className="text-xs text-slate-400 mt-2">Checking appointments…</p>;
+  if (loading) return <p className="text-xs text-slate-400 mt-2">{t("tenant:requests.text.checkingAppointments")}</p>;
   if (slots.length === 0) return null;
 
   const accepted = slots.find((s) => s.status === "ACCEPTED");
@@ -168,7 +169,7 @@ function TenantSchedulingPanel({ requestId }) {
                     <p className="text-xs text-slate-500 line-through">
                       {formatSlotTime(slot.startTime)} – {formatSlotTime(slot.endTime)}
                     </p>
-                    <span className="text-xs text-red-600">Declined</span>
+                    <span className="text-xs text-red-600">{t("tenant:requests.text.declined")}</span>
                   </div>
                 ))}
             </div>
@@ -188,6 +189,7 @@ function TenantSchedulingPanel({ requestId }) {
 // ---------------------------------------------------------------------------
 
 function TenantCaptureSessionModal({ requestId, onClose, onComplete }) {
+  const { t } = useTranslation("tenant");
   const [session, setSession] = useState(null);
   const [creating, setCreating] = useState(true);
   const [createError, setCreateError] = useState("");
@@ -254,20 +256,20 @@ function TenantCaptureSessionModal({ requestId, onClose, onComplete }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={onClose}>
       <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-xl shadow-2xl w-full max-w-sm mx-4 p-6">
-        <h3 className="text-lg font-semibold text-slate-900 mt-0 mb-1">📷 Capture with Phone</h3>
+        <h3 className="text-lg font-semibold text-slate-900 mt-0 mb-1">{t("tenant:requests.text.captureWithPhone")}</h3>
         {creating ? (
-          <p className="text-sm text-slate-500">Creating capture session…</p>
+          <p className="text-sm text-slate-500">{t("tenant:requests.text.creatingCaptureSession")}</p>
         ) : createError ? (
           <div>
             <p className="text-sm text-red-600 mb-3">{createError}</p>
-            <button onClick={onClose} className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition">Close</button>
+            <button onClick={onClose} className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition">{t("tenant:requests.text.close")}</button>
           </div>
         ) : completed ? (
           <div className="text-center py-4">
             <p className="text-2xl mb-2">✅</p>
-            <p className="text-sm font-medium text-green-700 mb-1">Photos received!</p>
-            <p className="text-xs text-slate-500 mb-4">Your photos have been attached to the request.</p>
-            <button onClick={onClose} className="button-primary text-sm">Done</button>
+            <p className="text-sm font-medium text-green-700 mb-1">{t("tenant:requests.text.photosReceived")}</p>
+            <p className="text-xs text-slate-500 mb-4">{t("tenant:requests.text.yourPhotosHaveBeenAttachedToTheRequest")}</p>
+            <button onClick={onClose} className="button-primary text-sm">{t("tenant:requests.text.done")}</button>
           </div>
         ) : (
           <div>
@@ -278,14 +280,14 @@ function TenantCaptureSessionModal({ requestId, onClose, onComplete }) {
               <QRCodeSVG value={mobileUrl} size={300} level="L" />
             </div>
             <div className="bg-slate-50 rounded-lg p-2 mb-3">
-              <p className="text-[10px] text-slate-400 uppercase tracking-wide mb-0.5">Mobile link</p>
+              <p className="text-[10px] text-slate-400 uppercase tracking-wide mb-0.5">{t("tenant:requests.text.mobileLink")}</p>
               <p className="text-xs text-slate-600 break-all font-mono select-all m-0">{mobileUrl}</p>
             </div>
             <p className="text-[10px] text-slate-400 text-center mb-3">
               Session expires in 15 minutes. Waiting for photos…
             </p>
             <div className="flex justify-end">
-              <button onClick={onClose} className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition">Cancel</button>
+              <button onClick={onClose} className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition">{t("tenant:requests.text.cancel")}</button>
             </div>
           </div>
         )}
@@ -400,7 +402,7 @@ function TenantPhotosPanel({ requestId }) {
     return blobUrls[a.id] || downloadUrl(a);
   }
 
-  if (loading) return <p className="text-xs text-slate-400 mt-2">Loading photos…</p>;
+  if (loading) return <p className="text-xs text-slate-400 mt-2">{t("tenant:requests.text.loadingPhotos")}</p>;
 
   const images = attachments.filter((a) => isImage(a.filename));
   const fileList = attachments.filter((a) => !isImage(a.filename));
@@ -409,7 +411,7 @@ function TenantPhotosPanel({ requestId }) {
     <div className="mt-3">
       {attachments.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-slate-200 bg-slate-50 px-4 py-4 text-center">
-          <p className="text-xs text-slate-400 mb-2">No photos yet</p>
+          <p className="text-xs text-slate-400 mb-2">{t("tenant:requests.text.noPhotosYet")}</p>
           <div className="flex gap-2">
             <label className="cursor-pointer rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700">
               Upload photo
@@ -563,7 +565,7 @@ function TenantJobReviewPanel({ job, onRefresh }) {
 
   return (
     <div className="mt-3 rounded-lg border border-green-100 bg-green-50/50 p-4">
-      <h3 className="text-sm font-semibold text-green-900 mb-2">✅ Job Completed</h3>
+      <h3 className="text-sm font-semibold text-green-900 mb-2">{t("tenant:requests.text.jobCompleted")}</h3>
 
       <ErrorBanner error={error} className="mb-2 text-xs" />
 
@@ -637,7 +639,7 @@ function TenantJobReviewPanel({ job, onRefresh }) {
       )}
 
       {job.tenantRated && (
-        <p className="text-xs text-green-700 font-medium">Thank you — your rating has been submitted.</p>
+        <p className="text-xs text-green-700 font-medium">{t("tenant:requests.text.thankYouYourRatingHasBeenSubmitted")}</p>
       )}
     </div>
   );
@@ -659,6 +661,7 @@ const OBLIGATION_BADGE = {
 };
 
 function TenantClaimAnalysisPanel({ requestId }) {
+  const { t } = useTranslation("tenant");
   const [analysis, setAnalysis] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -687,7 +690,7 @@ function TenantClaimAnalysisPanel({ requestId }) {
       <div className="mt-3 rounded-lg border border-violet-100 bg-violet-50/50 p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h3 className="text-sm font-semibold text-violet-900">⚖️ Legal Analysis</h3>
+            <h3 className="text-sm font-semibold text-violet-900">{t("tenant:requests.text.legalAnalysis")}</h3>
             <p className="text-xs text-violet-700 mt-0.5">
               Get a detailed analysis of your legal rights for this issue.
             </p>
@@ -708,7 +711,7 @@ function TenantClaimAnalysisPanel({ requestId }) {
       <div className="mt-3 rounded-lg border border-violet-100 bg-violet-50/50 p-4">
         <div className="flex items-center gap-2">
           <div className="h-4 w-4 animate-spin rounded-full border-2 border-violet-400 border-t-transparent" />
-          <p className="text-xs text-violet-700">Analysing your claim…</p>
+          <p className="text-xs text-violet-700">{t("tenant:requests.text.analysingYourClaim")}</p>
         </div>
       </div>
     );
@@ -735,7 +738,7 @@ function TenantClaimAnalysisPanel({ requestId }) {
     <div className="mt-3 rounded-lg border border-violet-100 bg-violet-50/30 p-4 space-y-3">
       {/* Header */}
       <div className="flex items-start justify-between">
-        <h3 className="text-sm font-semibold text-violet-900">⚖️ Legal Analysis</h3>
+        <h3 className="text-sm font-semibold text-violet-900">{t("tenant:requests.text.legalAnalysis")}</h3>
         <button
           onClick={runAnalysis}
           disabled={loading}
@@ -764,7 +767,7 @@ function TenantClaimAnalysisPanel({ requestId }) {
           <p className="text-xs font-medium text-slate-800 mb-1">{a.tenantGuidance.summary}</p>
           {a.tenantGuidance.nextSteps?.length > 0 && (
             <div className="mt-2">
-              <p className="text-xs font-semibold text-slate-600 mb-1">Next steps:</p>
+              <p className="text-xs font-semibold text-slate-600 mb-1">{t("tenant:requests.text.nextSteps")}</p>
               <ol className="list-decimal list-inside space-y-0.5">
                 {a.tenantGuidance.nextSteps.map((step, i) => (
                   <li key={i} className="text-xs text-slate-700">{step}</li>
@@ -858,7 +861,7 @@ function TenantClaimAnalysisPanel({ requestId }) {
           {/* Legal basis */}
           {a.legalBasis?.length > 0 && (
             <div>
-              <p className="text-xs font-semibold text-slate-700 mb-1">Legal basis</p>
+              <p className="text-xs font-semibold text-slate-700 mb-1">{t("tenant:requests.text.legalBasis")}</p>
               <div className="space-y-1">
                 {a.legalBasis.map((b, i) => (
                   <div key={i} className="text-xs text-slate-600">
@@ -906,7 +909,7 @@ function TenantClaimAnalysisPanel({ requestId }) {
           {/* Escalation */}
           {a.tenantGuidance?.escalation && (
             <div className="rounded-lg bg-red-50 border border-red-200 p-2.5">
-              <p className="text-xs font-semibold text-red-700">Escalation</p>
+              <p className="text-xs font-semibold text-red-700">{t("tenant:requests.text.escalation")}</p>
               <p className="text-xs text-red-700">{a.tenantGuidance.escalation}</p>
             </div>
           )}
@@ -1036,7 +1039,7 @@ function NewRequestModal({ onClose, onCreated }) {
           </div>
 
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-slate-700">Category</label>
+            <label className="mb-1.5 block text-sm font-medium text-slate-700">{t("tenant:requests.text.category")}</label>
             <select
               value={category}
               onChange={(e) => setCategory(e.target.value)}
@@ -1051,7 +1054,7 @@ function NewRequestModal({ onClose, onCreated }) {
           </div>
 
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-slate-700">Contact phone</label>
+            <label className="mb-1.5 block text-sm font-medium text-slate-700">{t("tenant:requests.text.contactPhone")}</label>
             <input
               type="tel"
               value={contactPhone}
@@ -1063,7 +1066,7 @@ function NewRequestModal({ onClose, onCreated }) {
           </div>
 
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-slate-700">Photos / attachments</label>
+            <label className="mb-1.5 block text-sm font-medium text-slate-700">{t("tenant:requests.text.photosAttachments")}</label>
             <input
               type="file"
               multiple
@@ -1091,7 +1094,7 @@ function NewRequestModal({ onClose, onCreated }) {
               }}
               className="w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-100 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-slate-700 hover:file:bg-slate-200"
             />
-            <p className="mt-1 text-xs text-slate-400">Up to 5 files, max 10 MB each. Images or PDF.</p>
+            <p className="mt-1 text-xs text-slate-400">{t("tenant:requests.text.upTo5FilesMax10MbEachImagesOrPdf")}</p>
             {pendingFiles.length > 0 && (
               <ul className="mt-2 space-y-1">
                 {pendingFiles.map((f, i) => (
@@ -1227,7 +1230,7 @@ export default function TenantRequestsPage() {
           <PageContent>
             <Panel>
               <div className="empty-state">
-                <p className="empty-state-text">Please sign in to view your requests.</p>
+                <p className="empty-state-text">{t("tenant:requests.text.pleaseSignInToViewYourRequests")}</p>
                 <button
                   onClick={() => router.push("/tenant")}
                   className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700"
@@ -1277,10 +1280,10 @@ export default function TenantRequestsPage() {
 
           <div>
             {loading ? (
-              <p className="loading-text">Loading…</p>
+              <p className="loading-text">{t("tenant:requests.text.loading")}</p>
             ) : requests.length === 0 ? (
               <div className="empty-state">
-                <p className="empty-state-text">No maintenance requests yet.</p>
+                <p className="empty-state-text">{t("tenant:requests.text.noMaintenanceRequestsYet")}</p>
                 <button
                   onClick={() => setShowNewRequest(true)}
                   className="mt-3 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"

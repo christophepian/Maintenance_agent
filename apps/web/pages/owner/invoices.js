@@ -159,8 +159,8 @@ function PdfDownloadModal({ invoice, onClose }) {
             className="h-4 w-4 accent-blue-600"
           />
           <div>
-            <p className="text-sm font-medium text-slate-700">Include QR bill</p>
-            <p className="text-xs text-slate-400">Appends the Swiss QR payment slip</p>
+            <p className="text-sm font-medium text-slate-700">{t("owner:invoices.text.includeQrBill")}</p>
+            <p className="text-xs text-slate-400">{t("owner:invoices.text.appendsTheSwissQrPaymentSlip")}</p>
           </div>
         </label>
         <div className="mt-4 flex gap-3">
@@ -366,7 +366,7 @@ export default function OwnerInvoices() {
         <OwnerPicker onSelect={fetchInvoices} />
         <PageHeader
           title={t("owner:invoices.title.invoices")}
-          subtitle="Review, approve, and manage invoice payments"
+          subtitle={t("owner:invoices.prop.reviewApproveAndManageInvoicePayments")}
         />
 
         <PageContent>
@@ -378,7 +378,7 @@ export default function OwnerInvoices() {
               <span className="text-lg">⚡</span>
               <div className="flex-1">
                 <p className="text-sm font-semibold text-amber-700">{approvalCount} invoice{approvalCount !== 1 ? "s" : ""} awaiting your approval</p>
-                <p className="text-xs text-amber-600">Review issued invoices and approve or dispute them</p>
+                <p className="text-xs text-amber-600">{t("owner:invoices.text.reviewIssuedInvoicesAndApproveOrDisputeThem")}</p>
               </div>
               <button
                 onClick={() => setActiveTab("ISSUED")}
@@ -419,8 +419,8 @@ export default function OwnerInvoices() {
               </FilterSection>
               <FilterSection title={t("owner:invoices.title.dateRange")}>
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                  <DateField label="From" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
-                  <DateField label="To" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+                  <DateField label={t("owner:invoices.prop.from")} value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+                  <DateField label={t("owner:invoices.prop.to")} value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
                 </div>
               </FilterSection>
               <FilterSectionClear hasFilter={activeCount > 0} onClear={() => { setActiveTab("ALL"); setDateFrom(""); setDateTo(""); }} />
@@ -429,7 +429,7 @@ export default function OwnerInvoices() {
 
           {/* Invoice table */}
           {loading ? (
-            <p className="loading-text">Loading invoices…</p>
+            <p className="loading-text">{t("owner:invoices.text.loadingInvoices")}</p>
           ) : (
             <ConfigurableTable
               tableId="owner-invoices"

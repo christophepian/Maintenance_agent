@@ -368,16 +368,16 @@ export default function ManagerSettingsPage() {
   return (
     <AppShell role="MANAGER">
       <PageShell>
-        <PageHeader title={t("manager:settings.title.settings")} subtitle="Configure governance mode and default auto-approval settings." />
+        <PageHeader title={t("manager:settings.title.settings")} subtitle={t("manager:settings.prop.configureGovernanceModeAndDefaultAutoapprovalSettings")} />
         <PageContent>
           {error ? (
             <div className="notice notice-err mt-3">
-              <strong className="text-red-700">Error:</strong> {error}
+              <strong className="text-red-700">{t("manager:settings.text.error")}</strong> {error}
             </div>
           ) : null}
           {notice ? (
             <div className="notice notice-ok mt-3">
-              <strong className="text-green-700">OK:</strong> {notice}
+              <strong className="text-green-700">{t("manager:settings.text.oK")}</strong> {notice}
             </div>
           ) : null}
 
@@ -399,7 +399,7 @@ export default function ManagerSettingsPage() {
             {activeTab === 1 ? `${buildings.length} building${buildings.length !== 1 ? "s" : ""}` : null}
             {activeTab === 4 ? `${legalSources.length} source${legalSources.length !== 1 ? "s" : ""} · ${legalVariables.length} variable${legalVariables.length !== 1 ? "s" : ""}` : null}
           </span>
-          {activeTab === 1 && <Link href="/admin-inventory/buildings" className="full-page-link">Manage buildings →</Link>}
+          {activeTab === 1 && <Link href="/admin-inventory/buildings" className="full-page-link">{t("manager:settings.text.manageBuildings")}</Link>}
 
           {activeTab !== 5 && (
           <>
@@ -408,7 +408,7 @@ export default function ManagerSettingsPage() {
           <div className={activeTab === 0 ? "tab-panel-active" : "tab-panel"}>
             <div className="px-4 py-4">
             <div className="card grid gap-3">
-              <div className="font-bold">Org mode</div>
+              <div className="font-bold">{t("manager:settings.text.orgMode")}</div>
               <div className="flex gap-2 flex-wrap">
                 <select
                   className="input"
@@ -417,8 +417,8 @@ export default function ManagerSettingsPage() {
                   onChange={(e) => setOrgMode(e.target.value)}
                   disabled={loading}
                 >
-                  <option value="MANAGED">Managed</option>
-                  <option value="OWNER_DIRECT">Owner-direct</option>
+                  <option value="MANAGED">{t("manager:settings.text.managed")}</option>
+                  <option value="OWNER_DIRECT">{t("manager:settings.text.ownerdirect")}</option>
                 </select>
                 <button
                   className="button-primary"
@@ -427,18 +427,18 @@ export default function ManagerSettingsPage() {
                 >
                   {savingMode ? "Saving…" : "Save mode"}
                 </button>
-                <span className="help">Owner-direct restricts governance to owners only.</span>
+                <span className="help">{t("manager:settings.text.ownerdirectRestrictsGovernanceToOwnersOnly")}</span>
               </div>
             </div>
 
             <div className="card grid gap-3 mt-4">
-              <div className="font-bold">Auto-approval threshold</div>
+              <div className="font-bold">{t("manager:settings.text.autoapprovalThreshold")}</div>
               <div className="subtle">
                 Current: <strong>{autoApproveLimit == null ? "(unavailable)" : `${autoApproveLimit} CHF`}</strong>
               </div>
               <div className="flex gap-2 flex-wrap">
                 <label className="flex gap-2 items-center">
-                  <span className="text-slate-600">Set to</span>
+                  <span className="text-slate-600">{t("manager:settings.text.setTo")}</span>
                   <input
                     type="number"
                     step="1"
@@ -463,19 +463,19 @@ export default function ManagerSettingsPage() {
                     {limitValidation.error}
                   </span>
                 ) : (
-                  <span className="help">Requests with estimated cost ≤ this value auto-approve.</span>
+                  <span className="help">{t("manager:settings.text.requestsWithEstimatedCostThisValueAutoapprove")}</span>
                 )}
               </div>
             </div>
 
             <div className="card grid gap-3 mt-4">
-              <div className="font-bold">Invoice lead time</div>
+              <div className="font-bold">{t("manager:settings.text.invoiceLeadTime")}</div>
               <div className="subtle">
                 Current: <strong>{invoiceLeadTimeDays} days</strong> before period start
               </div>
               <div className="flex gap-2 flex-wrap">
                 <label className="flex gap-2 items-center">
-                  <span className="text-slate-600">Generate</span>
+                  <span className="text-slate-600">{t("manager:settings.text.generate")}</span>
                   <input
                     type="number"
                     step="1"
@@ -486,7 +486,7 @@ export default function ManagerSettingsPage() {
                     className="input w-[100px] mb-0"
                     disabled={loading}
                   />
-                  <span className="text-slate-600">days before billing period</span>
+                  <span className="text-slate-600">{t("manager:settings.text.daysBeforeBillingPeriod")}</span>
                 </label>
                 <button
                   className="button-primary"
@@ -500,7 +500,7 @@ export default function ManagerSettingsPage() {
                     {leadTimeValidation.error}
                   </span>
                 ) : (
-                  <span className="help">Recurring invoices are generated this many days before the billing period starts.</span>
+                  <span className="help">{t("manager:settings.text.recurringInvoicesAreGeneratedThisManyDaysBeforeTheBillingPeriodStarts")}</span>
                 )}
               </div>
             </div>
@@ -510,10 +510,10 @@ export default function ManagerSettingsPage() {
           {/* Buildings tab */}
           <div className={activeTab === 1 ? "tab-panel-active" : "tab-panel"}>
             {buildingsLoading ? (
-              <p className="loading-text">Loading buildings…</p>
+              <p className="loading-text">{t("manager:settings.text.loadingBuildings")}</p>
             ) : buildings.length === 0 ? (
               <div className="empty-state">
-                <p className="empty-state-text">No buildings configured yet. Per-building settings will appear once buildings are added.</p>
+                <p className="empty-state-text">{t("manager:settings.text.noBuildingsConfiguredYetPerbuildingSettingsWillAppearOnceBuildingsAreAdded")}</p>
               </div>
             ) : (
               <>
@@ -539,9 +539,9 @@ export default function ManagerSettingsPage() {
                   <table className="data-table">
                     <thead>
                       <tr>
-                        <SortableHeader label="Name" field="name" sortField={bldSF} sortDir={bldSD} onSort={handleBldSort} />
-                        <SortableHeader label="Address" field="address" sortField={bldSF} sortDir={bldSD} onSort={handleBldSort} />
-                        <SortableHeader label="Canton" field="canton" sortField={bldSF} sortDir={bldSD} onSort={handleBldSort} />
+                        <SortableHeader label={t("manager:settings.prop.name")} field="name" sortField={bldSF} sortDir={bldSD} onSort={handleBldSort} />
+                        <SortableHeader label={t("manager:settings.prop.address")} field="address" sortField={bldSF} sortDir={bldSD} onSort={handleBldSort} />
+                        <SortableHeader label={t("manager:settings.prop.canton")} field="canton" sortField={bldSF} sortDir={bldSD} onSort={handleBldSort} />
                         <th></th>
                       </tr>
                     </thead>
@@ -575,8 +575,8 @@ export default function ManagerSettingsPage() {
           <div className={activeTab === 2 ? "tab-panel-active" : "tab-panel"}>
             <div className="px-4 py-4">
             <div className="coming-soon">
-              <span className="coming-soon-badge">Coming soon</span>
-              <p className="coming-soon-title">Notification Preferences</p>
+              <span className="coming-soon-badge">{t("manager:settings.text.comingSoon")}</span>
+              <p className="coming-soon-title">{t("manager:settings.text.notificationPreferences")}</p>
               <p className="coming-soon-text">
                 Configure email and in-app notification rules per event type.
               </p>
@@ -588,8 +588,8 @@ export default function ManagerSettingsPage() {
           <div className={activeTab === 3 ? "tab-panel-active" : "tab-panel"}>
             <div className="px-4 py-4">
             <div className="coming-soon">
-              <span className="coming-soon-badge">Coming soon</span>
-              <p className="coming-soon-title">Integrations</p>
+              <span className="coming-soon-badge">{t("manager:settings.text.comingSoon")}</span>
+              <p className="coming-soon-title">{t("manager:settings.text.integrations")}</p>
               <p className="coming-soon-text">
                 Connect third-party services — accounting, calendars, and more.
               </p>
@@ -649,10 +649,10 @@ export default function ManagerSettingsPage() {
             </div>
 
             {legalLoading ? (
-              <p className="loading-text">Loading sources…</p>
+              <p className="loading-text">{t("manager:settings.text.loadingSources")}</p>
             ) : legalSources.length === 0 ? (
               <div className="empty-state">
-                <p className="empty-state-text">No legal sources configured. Sources are auto-created on server startup.</p>
+                <p className="empty-state-text">{t("manager:settings.text.noLegalSourcesConfiguredSourcesAreAutocreatedOnServerStartup")}</p>
               </div>
             ) : (
               <>
@@ -676,14 +676,14 @@ export default function ManagerSettingsPage() {
                         <span>{s.lastSuccessAt ? formatLegalDate(s.lastSuccessAt) : "Never synced"}</span>
                       </div>
                       <div className="mt-2 flex gap-3">
-                        <button className="text-xs text-blue-600 hover:underline" onClick={() => openLegalEditForm(s)}>Edit</button>
+                        <button className="text-xs text-blue-600 hover:underline" onClick={() => openLegalEditForm(s)}>{t("manager:settings.text.edit")}</button>
                         {s.status === "ACTIVE" ? (
-                          <button className="text-xs text-amber-600 hover:underline" onClick={() => toggleSourceStatus(s)}>Deactivate</button>
+                          <button className="text-xs text-amber-600 hover:underline" onClick={() => toggleSourceStatus(s)}>{t("manager:settings.text.deactivate")}</button>
                         ) : (
-                          <button className="text-xs text-green-600 hover:underline" onClick={() => toggleSourceStatus(s)}>Activate</button>
+                          <button className="text-xs text-green-600 hover:underline" onClick={() => toggleSourceStatus(s)}>{t("manager:settings.text.activate")}</button>
                         )}
                         {s.status === "INACTIVE" && (
-                          <button className="text-xs text-red-600 hover:underline" onClick={() => deleteSource(s)}>Delete</button>
+                          <button className="text-xs text-red-600 hover:underline" onClick={() => deleteSource(s)}>{t("manager:settings.text.delete")}</button>
                         )}
                       </div>
                     </div>
@@ -695,12 +695,12 @@ export default function ManagerSettingsPage() {
                   <table className="data-table">
                     <thead>
                       <tr>
-                        <SortableHeader label="Name" field="name" sortField={lsSF} sortDir={lsSD} onSort={handleLsSort} />
-                        <SortableHeader label="Type" field="type" sortField={lsSF} sortDir={lsSD} onSort={handleLsSort} />
-                        <SortableHeader label="Scope" field="scope" sortField={lsSF} sortDir={lsSD} onSort={handleLsSort} />
-                        <SortableHeader label="Frequency" field="frequency" sortField={lsSF} sortDir={lsSD} onSort={handleLsSort} />
-                        <SortableHeader label="Status" field="status" sortField={lsSF} sortDir={lsSD} onSort={handleLsSort} />
-                        <SortableHeader label="Last Synced" field="lastSynced" sortField={lsSF} sortDir={lsSD} onSort={handleLsSort} />
+                        <SortableHeader label={t("manager:settings.prop.name")} field="name" sortField={lsSF} sortDir={lsSD} onSort={handleLsSort} />
+                        <SortableHeader label={t("manager:settings.prop.type")} field="type" sortField={lsSF} sortDir={lsSD} onSort={handleLsSort} />
+                        <SortableHeader label={t("manager:settings.prop.scope")} field="scope" sortField={lsSF} sortDir={lsSD} onSort={handleLsSort} />
+                        <SortableHeader label={t("manager:settings.prop.frequency")} field="frequency" sortField={lsSF} sortDir={lsSD} onSort={handleLsSort} />
+                        <SortableHeader label={t("manager:settings.prop.status")} field="status" sortField={lsSF} sortDir={lsSD} onSort={handleLsSort} />
+                        <SortableHeader label={t("manager:settings.prop.lastSynced")} field="lastSynced" sortField={lsSF} sortDir={lsSD} onSort={handleLsSort} />
                         <th>{t("manager:settings.col.actions")}</th>
                       </tr>
                     </thead>
@@ -731,14 +731,14 @@ export default function ManagerSettingsPage() {
                           <td>{s.lastSuccessAt ? formatLegalDate(s.lastSuccessAt) : "Never"}</td>
                           <td>
                             <div className="flex gap-2">
-                              <button className="text-xs text-blue-600 hover:underline" onClick={() => openLegalEditForm(s)}>Edit</button>
+                              <button className="text-xs text-blue-600 hover:underline" onClick={() => openLegalEditForm(s)}>{t("manager:settings.text.edit")}</button>
                               {s.status === "ACTIVE" ? (
-                                <button className="text-xs text-amber-600 hover:underline" onClick={() => toggleSourceStatus(s)}>Deactivate</button>
+                                <button className="text-xs text-amber-600 hover:underline" onClick={() => toggleSourceStatus(s)}>{t("manager:settings.text.deactivate")}</button>
                               ) : (
-                                <button className="text-xs text-green-600 hover:underline" onClick={() => toggleSourceStatus(s)}>Activate</button>
+                                <button className="text-xs text-green-600 hover:underline" onClick={() => toggleSourceStatus(s)}>{t("manager:settings.text.activate")}</button>
                               )}
                               {s.status === "INACTIVE" && (
-                                <button className="text-xs text-red-600 hover:underline" onClick={() => deleteSource(s)}>Delete</button>
+                                <button className="text-xs text-red-600 hover:underline" onClick={() => deleteSource(s)}>{t("manager:settings.text.delete")}</button>
                               )}
                             </div>
                           </td>
@@ -775,8 +775,8 @@ export default function ManagerSettingsPage() {
                     <table className="data-table">
                       <thead>
                         <tr>
-                          <SortableHeader label="Key" field="key" sortField={lvSF} sortDir={lvSD} onSort={handleLvSort} />
-                          <SortableHeader label="Description" field="description" sortField={lvSF} sortDir={lvSD} onSort={handleLvSort} />
+                          <SortableHeader label={t("manager:settings.prop.key")} field="key" sortField={lvSF} sortDir={lvSD} onSort={handleLvSort} />
+                          <SortableHeader label={t("manager:settings.prop.description")} field="description" sortField={lvSF} sortDir={lvSD} onSort={handleLvSort} />
                           <th>{t("manager:settings.col.versions")}</th>
                         </tr>
                       </thead>
@@ -924,7 +924,7 @@ function LegalSourceForm({ source, saving, formError, onSubmit, onCancel }) {
       )}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div>
-          <label className={labelClass}>Name *</label>
+          <label className={labelClass}>{t("manager:settings.text.name")}</label>
           <input type="text" required value={name} onChange={(e) => setName(e.target.value)} className={inputClass} placeholder={t("manager:settings.placeholder.swissReferenceRate")} />
         </div>
         <div>
@@ -932,32 +932,32 @@ function LegalSourceForm({ source, saving, formError, onSubmit, onCancel }) {
           <input type="url" value={url} onChange={(e) => setUrl(e.target.value)} className={inputClass} placeholder="https://..." />
         </div>
         <div>
-          <label className={labelClass}>Jurisdiction</label>
+          <label className={labelClass}>{t("manager:settings.text.jurisdiction")}</label>
           <input type="text" value={jurisdiction} onChange={(e) => setJurisdiction(e.target.value)} className={inputClass} placeholder="CH" />
         </div>
         <div>
-          <label className={labelClass}>Scope</label>
+          <label className={labelClass}>{t("manager:settings.text.scope")}</label>
           <select value={scope} onChange={(e) => setScope(e.target.value)} className={inputClass}>
-            <option value="FEDERAL">Federal</option>
+            <option value="FEDERAL">{t("manager:settings.text.federal")}</option>
             {CANTON_CODES.map((c) => (
               <option key={c} value={c}>{c}</option>
             ))}
           </select>
         </div>
         <div>
-          <label className={labelClass}>Fetcher type</label>
+          <label className={labelClass}>{t("manager:settings.text.fetcherType")}</label>
           <input type="text" value={fetcherType} onChange={(e) => setFetcherType(e.target.value)} className={inputClass} placeholder={t("manager:settings.placeholder.eGReferenceRateCpi")} />
         </div>
         <div>
-          <label className={labelClass}>Parser type</label>
+          <label className={labelClass}>{t("manager:settings.text.parserType")}</label>
           <input type="text" value={parserType} onChange={(e) => setParserType(e.target.value)} className={inputClass} placeholder={t("manager:settings.placeholder.optional")} />
         </div>
         <div>
-          <label className={labelClass}>Update frequency</label>
+          <label className={labelClass}>{t("manager:settings.text.updateFrequency")}</label>
           <input type="text" value={updateFrequency} onChange={(e) => setUpdateFrequency(e.target.value)} className={inputClass} placeholder={t("manager:settings.placeholder.eGDailyMonthly")} />
         </div>
         <div>
-          <label className={labelClass}>Status</label>
+          <label className={labelClass}>{t("manager:settings.text.status")}</label>
           <select value={status} onChange={(e) => setStatus(e.target.value)} className={inputClass}>
             <option value="ACTIVE">ACTIVE</option>
             <option value="INACTIVE">INACTIVE</option>

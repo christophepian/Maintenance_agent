@@ -63,7 +63,7 @@ export default function TenantInvoicesPage() {
     return (
       <AppShell role="TENANT">
         <div className="main-container">
-          <p className="subtle">Loading…</p>
+          <p className="subtle">{t("tenant:invoices.text.loading")}</p>
         </div>
       </AppShell>
     );
@@ -94,26 +94,26 @@ export default function TenantInvoicesPage() {
         {invoices.length > 0 && (
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
             <div className="card p-4 text-center">
-              <p className="text-xs text-slate-500 uppercase tracking-wide">Total Invoices</p>
+              <p className="text-xs text-slate-500 uppercase tracking-wide">{t("tenant:invoices.text.totalInvoices")}</p>
               <p className="text-2xl font-bold mt-1">{invoices.length}</p>
             </div>
             <div className="card p-4 text-center">
-              <p className="text-xs text-slate-500 uppercase tracking-wide">Outstanding</p>
+              <p className="text-xs text-slate-500 uppercase tracking-wide">{t("tenant:invoices.text.outstanding")}</p>
               <p className="text-2xl font-bold mt-1 text-blue-700">{formatChf(totalDue)}</p>
             </div>
             <div className="card p-4 text-center">
-              <p className="text-xs text-slate-500 uppercase tracking-wide">Paid</p>
+              <p className="text-xs text-slate-500 uppercase tracking-wide">{t("tenant:invoices.text.paid")}</p>
               <p className="text-2xl font-bold mt-1 text-green-700">{formatChf(totalPaid)}</p>
             </div>
           </div>
         )}
 
         {loading ? (
-          <div className="text-center py-8 text-slate-500">Loading invoices…</div>
+          <div className="text-center py-8 text-slate-500">{t("tenant:invoices.text.loadingInvoices")}</div>
         ) : invoices.length === 0 ? (
           <div className="card p-8 text-center">
             <p className="text-slate-400 text-lg mb-2">🧾</p>
-            <p className="text-slate-500">No invoices yet</p>
+            <p className="text-slate-500">{t("tenant:invoices.text.noInvoicesYet")}</p>
             <p className="text-slate-400 text-sm mt-1">
               Invoices for rent and other charges will appear here once your lease is active.
             </p>

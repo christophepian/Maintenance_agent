@@ -78,8 +78,9 @@ function selectionStatusBadge(status) {
 }
 
 function leaseBadge(lease, hasLeaseTemplate) {
-  if (!lease && hasLeaseTemplate) return <span className="text-xs text-amber-600 font-medium">No lease — template ready</span>;
-  if (!lease) return <span className="text-xs text-red-500 font-medium">No lease template — create one first</span>;
+  const { t } = useTranslation("manager");
+  if (!lease && hasLeaseTemplate) return <span className="text-xs text-amber-600 font-medium">{t("manager:vacanciesIndex.text.noLeaseTemplateReady")}</span>;
+  if (!lease) return <span className="text-xs text-red-500 font-medium">{t("manager:vacanciesIndex.text.noLeaseTemplateCreateOneFirst")}</span>;
   const LEASE_LABELS = { DRAFT: "Draft", READY_TO_SIGN: "Ready to Sign", SIGNED: "Signed" };
   return (
     <Badge variant={leaseVariant(lease.status)} size="sm">
@@ -104,8 +105,8 @@ function VacantGroupTable({ units, onNavigate }) {
       <table className="data-table">
         <thead>
           <tr>
-            <SortableHeader label="Unit" field="unitNumber" sortField={uSF} sortDir={uSD} onSort={handleUSort} />
-            <SortableHeader label="Floor" field="floor" sortField={uSF} sortDir={uSD} onSort={handleUSort} />
+            <SortableHeader label={t("manager:vacanciesIndex.prop.unit")} field="unitNumber" sortField={uSF} sortDir={uSD} onSort={handleUSort} />
+            <SortableHeader label={t("manager:vacanciesIndex.prop.floor")} field="floor" sortField={uSF} sortDir={uSD} onSort={handleUSort} />
             <SortableHeader label="Rent (CHF)" field="monthlyRentChf" sortField={uSF} sortDir={uSD} onSort={handleUSort} />
             <SortableHeader label="Charges (CHF)" field="monthlyChargesChf" sortField={uSF} sortDir={uSD} onSort={handleUSort} />
             <th className="text-right">{t("manager:vacanciesIndex.col.applications")}</th>
@@ -255,7 +256,7 @@ export default function ManagerVacanciesPage() {
       <PageShell>
         <PageHeader
           title={t("manager:vacanciesIndex.title.inventory")}
-          subtitle="Buildings, units, assets and depreciation schedules."
+          subtitle={t("manager:vacanciesIndex.prop.buildingsUnitsAssetsAndDepreciationSchedules")}
           actions={
             <button
               onClick={() => { loadVacantUnits(); loadSelections(); }}
@@ -271,20 +272,20 @@ export default function ManagerVacanciesPage() {
 
           {/* Inventory tab strip — mirrors /manager/inventory; Vacancies is always active at index 1 */}
           <ScrollableTabs activeIndex={1}>
-            <Link href="/manager/inventory?tab=buildings" className="tab-btn">Buildings</Link>
-            <button className="tab-btn-active">Vacancies</button>
-            <Link href="/manager/inventory?tab=assets" className="tab-btn">Assets</Link>
-            <Link href="/manager/inventory?tab=decisions" className="tab-btn">Maintenance Decisions</Link>
-            <Link href="/manager/inventory?tab=depreciation" className="tab-btn">Depreciation</Link>
+            <Link href="/manager/inventory?tab=buildings" className="tab-btn">{t("manager:vacanciesIndex.text.buildings")}</Link>
+            <button className="tab-btn-active">{t("manager:vacanciesIndex.text.vacancies")}</button>
+            <Link href="/manager/inventory?tab=assets" className="tab-btn">{t("manager:vacanciesIndex.text.assets")}</Link>
+            <Link href="/manager/inventory?tab=decisions" className="tab-btn">{t("manager:vacanciesIndex.text.maintenanceDecisions")}</Link>
+            <Link href="/manager/inventory?tab=depreciation" className="tab-btn">{t("manager:vacanciesIndex.text.depreciation")}</Link>
           </ScrollableTabs>
 
           {/* ── Tenant Selections Pipeline ─────────────────── */}
           <div>
           <h2 className="mb-3 text-sm font-semibold text-slate-700">{"Tenant Selections" + (selections.length > 0 ? ` (${selections.length})` : "")}</h2>
-            {selectionsLoading && <p className="text-sm text-slate-500">Loading selections…</p>}
+            {selectionsLoading && <p className="text-sm text-slate-500">{t("manager:vacanciesIndex.text.loadingSelections")}</p>}
 
             {!selectionsLoading && selections.length === 0 && (
-              <div className="empty-state"><p className="empty-state-text">No active tenant selections.</p></div>
+              <div className="empty-state"><p className="empty-state-text">{t("manager:vacanciesIndex.text.noActiveTenantSelections")}</p></div>
             )}
 
             {!selectionsLoading && selections.length > 0 && (
@@ -333,12 +334,12 @@ export default function ManagerVacanciesPage() {
                   <table className="data-table">
                     <thead>
                       <tr>
-                        <SortableHeader label="Building" field="buildingName" sortField={selSF} sortDir={selSD} onSort={handleSelSort} />
-                        <SortableHeader label="Unit" field="unitNumber" sortField={selSF} sortDir={selSD} onSort={handleSelSort} />
-                        <SortableHeader label="Selected Tenant" field="tenantName" sortField={selSF} sortDir={selSD} onSort={handleSelSort} />
-                        <SortableHeader label="Status" field="status" sortField={selSF} sortDir={selSD} onSort={handleSelSort} />
-                        <SortableHeader label="Lease" field="lease" sortField={selSF} sortDir={selSD} onSort={handleSelSort} />
-                        <SortableHeader label="Deadline" field="deadlineAt" sortField={selSF} sortDir={selSD} onSort={handleSelSort} />
+                        <SortableHeader label={t("manager:vacanciesIndex.prop.building")} field="buildingName" sortField={selSF} sortDir={selSD} onSort={handleSelSort} />
+                        <SortableHeader label={t("manager:vacanciesIndex.prop.unit")} field="unitNumber" sortField={selSF} sortDir={selSD} onSort={handleSelSort} />
+                        <SortableHeader label={t("manager:vacanciesIndex.prop.selectedTenant")} field="tenantName" sortField={selSF} sortDir={selSD} onSort={handleSelSort} />
+                        <SortableHeader label={t("manager:vacanciesIndex.prop.status")} field="status" sortField={selSF} sortDir={selSD} onSort={handleSelSort} />
+                        <SortableHeader label={t("manager:vacanciesIndex.prop.lease")} field="lease" sortField={selSF} sortDir={selSD} onSort={handleSelSort} />
+                        <SortableHeader label={t("manager:vacanciesIndex.prop.deadline")} field="deadlineAt" sortField={selSF} sortDir={selSD} onSort={handleSelSort} />
                         <th className="text-right">{t("manager:vacanciesIndex.col.action")}</th>
                       </tr>
                     </thead>
@@ -400,10 +401,10 @@ export default function ManagerVacanciesPage() {
           {/* ── Vacant Units ─────────────────────────────────── */}
           <div>
           <h2 className="mb-3 text-sm font-semibold text-slate-700">{t("manager:vacanciesIndex.heading.vacantUnitsOpenForApplications")}</h2>
-            {loading && <p className="text-sm text-slate-500">Loading…</p>}
+            {loading && <p className="text-sm text-slate-500">{t("manager:vacanciesIndex.text.loading")}</p>}
 
             {!loading && units.length === 0 && (
-              <div className="empty-state"><p className="empty-state-text">No vacant units at this time.</p></div>
+              <div className="empty-state"><p className="empty-state-text">{t("manager:vacanciesIndex.text.noVacantUnitsAtThisTime")}</p></div>
             )}
 
             {unitsByBuilding.map((group) => (

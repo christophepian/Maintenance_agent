@@ -191,36 +191,36 @@ function RequestsTab() {
         <FilterPanelBody>
           <FilterSection title={t("owner:approvals.title.dateRange")} first>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <DateField label="From" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
-              <DateField label="To" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+              <DateField label={t("owner:approvals.prop.from")} value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+              <DateField label={t("owner:approvals.prop.to")} value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
             </div>
           </FilterSection>
           <FilterSection title={t("owner:approvals.title.scope")}>
             <div className="grid grid-cols-2 gap-3">
-              <SelectField label="Building" value={buildingFilter} onChange={(e) => { setBuildingFilter(e.target.value); setUnitFilter(""); }}>
-                <option value="">All buildings</option>
+              <SelectField label={t("owner:approvals.prop.building")} value={buildingFilter} onChange={(e) => { setBuildingFilter(e.target.value); setUnitFilter(""); }}>
+                <option value="">{t("owner:approvals.text.allBuildings")}</option>
                 {buildings.map((b) => <option key={b} value={b}>{b}</option>)}
               </SelectField>
-              <SelectField label="Unit" value={unitFilter} onChange={(e) => setUnitFilter(e.target.value)}>
-                <option value="">All units</option>
+              <SelectField label={t("owner:approvals.prop.unit")} value={unitFilter} onChange={(e) => setUnitFilter(e.target.value)}>
+                <option value="">{t("owner:approvals.text.allUnits")}</option>
                 {units.map((u) => <option key={u} value={u}>{u}</option>)}
               </SelectField>
             </div>
           </FilterSection>
           <FilterSection title={t("owner:approvals.title.priority")}>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <SelectField label="Urgency" value={urgencyFilter} onChange={(e) => setUrgencyFilter(e.target.value)}>
-                <option value="">All levels</option>
-                <option value="LOW">Low</option>
-                <option value="MEDIUM">Medium</option>
-                <option value="HIGH">High</option>
-                <option value="EMERGENCY">Emergency</option>
+              <SelectField label={t("owner:approvals.prop.urgency")} value={urgencyFilter} onChange={(e) => setUrgencyFilter(e.target.value)}>
+                <option value="">{t("owner:approvals.text.allLevels")}</option>
+                <option value="LOW">{t("owner:approvals.text.low")}</option>
+                <option value="MEDIUM">{t("owner:approvals.text.medium")}</option>
+                <option value="HIGH">{t("owner:approvals.text.high")}</option>
+                <option value="EMERGENCY">{t("owner:approvals.text.emergency")}</option>
               </SelectField>
             </div>
           </FilterSection>
           <FilterSection title={t("owner:approvals.title.request")}>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <NumberField label="Request number" value={requestNumberFilter} onChange={(e) => setRequestNumberFilter(e.target.value)} placeholder={t("owner:approvals.placeholder.eG42")} />
+              <NumberField label={t("owner:approvals.prop.requestNumber")} value={requestNumberFilter} onChange={(e) => setRequestNumberFilter(e.target.value)} placeholder={t("owner:approvals.placeholder.eG42")} />
             </div>
           </FilterSection>
           <FilterSectionClear hasFilter={hasFilter} onClear={() => { setDateFrom(""); setDateTo(""); setBuildingFilter(""); setUnitFilter(""); setUrgencyFilter(""); setRequestNumberFilter(""); }} />
@@ -240,7 +240,7 @@ function RequestsTab() {
           <SortRow
             active={sortKey === "date"}
             dir={sortKey === "date" ? sortDir : "desc"}
-            label="Request date"
+            label={t("owner:approvals.prop.requestDate")}
             descLabel="Newest first"
             ascLabel="Oldest first"
             onSelect={(dir) => handleSort("date", dir)}
@@ -248,7 +248,7 @@ function RequestsTab() {
           <SortRow
             active={sortKey === "urgency"}
             dir={sortKey === "urgency" ? sortDir : "desc"}
-            label="Urgency"
+            label={t("owner:approvals.prop.urgency")}
             descLabel="High → Low"
             ascLabel="Low → High"
             onSelect={(dir) => handleSort("urgency", dir)}
@@ -256,7 +256,7 @@ function RequestsTab() {
           <SortRow
             active={sortKey === "price"}
             dir={sortKey === "price" ? sortDir : "desc"}
-            label="Quote price"
+            label={t("owner:approvals.prop.quotePrice")}
             descLabel="High → Low"
             ascLabel="Low → High"
             onSelect={(dir) => handleSort("price", dir)}
@@ -265,7 +265,7 @@ function RequestsTab() {
       )}
 
       {loading ? (
-        <p className="loading-text">Loading…</p>
+        <p className="loading-text">{t("owner:approvals.text.loading")}</p>
       ) : sorted.length === 0 ? (
         <div className="empty-state">
           <p className="empty-state-text">
@@ -390,45 +390,45 @@ function RfpsTab() {
         <FilterPanelBody>
           <FilterSection title={t("owner:approvals.title.status")} first>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <SelectField label="Show" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-                <option value="PENDING_OWNER_APPROVAL">Pending approval</option>
-                <option value="">All RFPs</option>
-                <option value="DRAFT">Draft</option>
-                <option value="OPEN">Open</option>
-                <option value="CLOSED">Closed</option>
-                <option value="AWARDED">Awarded</option>
-                <option value="CANCELLED">Cancelled</option>
+              <SelectField label={t("owner:approvals.prop.show")} value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                <option value="PENDING_OWNER_APPROVAL">{t("owner:approvals.text.pendingApproval")}</option>
+                <option value="">{t("owner:approvals.text.allRfps")}</option>
+                <option value="DRAFT">{t("owner:approvals.text.draft")}</option>
+                <option value="OPEN">{t("owner:approvals.text.open")}</option>
+                <option value="CLOSED">{t("owner:approvals.text.closed")}</option>
+                <option value="AWARDED">{t("owner:approvals.text.awarded")}</option>
+                <option value="CANCELLED">{t("owner:approvals.text.cancelled")}</option>
               </SelectField>
             </div>
           </FilterSection>
           <FilterSection title={t("owner:approvals.title.dateRange")}>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <DateField label="From" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
-              <DateField label="To" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+              <DateField label={t("owner:approvals.prop.from")} value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+              <DateField label={t("owner:approvals.prop.to")} value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
             </div>
           </FilterSection>
           <FilterSection title={t("owner:approvals.title.scope")}>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <SelectField label="Building" value={buildingFilter} onChange={(e) => setBuildingFilter(e.target.value)}>
-                <option value="">All buildings</option>
+              <SelectField label={t("owner:approvals.prop.building")} value={buildingFilter} onChange={(e) => setBuildingFilter(e.target.value)}>
+                <option value="">{t("owner:approvals.text.allBuildings")}</option>
                 {buildings.map((b) => <option key={b} value={b}>{b}</option>)}
               </SelectField>
             </div>
           </FilterSection>
           <FilterSection title={t("owner:approvals.title.priority")}>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <SelectField label="Urgency" value={urgencyFilter} onChange={(e) => setUrgencyFilter(e.target.value)}>
-                <option value="">All levels</option>
-                <option value="LOW">Low</option>
-                <option value="MEDIUM">Medium</option>
-                <option value="HIGH">High</option>
-                <option value="EMERGENCY">Emergency</option>
+              <SelectField label={t("owner:approvals.prop.urgency")} value={urgencyFilter} onChange={(e) => setUrgencyFilter(e.target.value)}>
+                <option value="">{t("owner:approvals.text.allLevels")}</option>
+                <option value="LOW">{t("owner:approvals.text.low")}</option>
+                <option value="MEDIUM">{t("owner:approvals.text.medium")}</option>
+                <option value="HIGH">{t("owner:approvals.text.high")}</option>
+                <option value="EMERGENCY">{t("owner:approvals.text.emergency")}</option>
               </SelectField>
             </div>
           </FilterSection>
           <FilterSection title={t("owner:approvals.title.request")}>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <NumberField label="Request number" value={requestNumberFilter} onChange={(e) => setRequestNumberFilter(e.target.value)} placeholder={t("owner:approvals.placeholder.eG42")} />
+              <NumberField label={t("owner:approvals.prop.requestNumber")} value={requestNumberFilter} onChange={(e) => setRequestNumberFilter(e.target.value)} placeholder={t("owner:approvals.placeholder.eG42")} />
             </div>
           </FilterSection>
           <FilterSectionClear hasFilter={hasFilter} onClear={() => { setDateFrom(""); setDateTo(""); setBuildingFilter(""); setUrgencyFilter(""); setRequestNumberFilter(""); }} />
@@ -438,14 +438,14 @@ function RfpsTab() {
       {sortOpen && (
         <SortPanelBody>
           <SortRow active={sortKey === "number"} dir={sortKey === "number" ? sortDir : "asc"} label={t("owner:approvals.title.request")} ascLabel="Low → High" descLabel="High → Low" onSelect={(dir) => handleSort("number", dir)} />
-          <SortRow active={sortKey === "date"} dir={sortKey === "date" ? sortDir : "desc"} label="Request date" descLabel="Newest first" ascLabel="Oldest first" onSelect={(dir) => handleSort("date", dir)} />
-          <SortRow active={sortKey === "urgency"} dir={sortKey === "urgency" ? sortDir : "desc"} label="Urgency" descLabel="High → Low" ascLabel="Low → High" onSelect={(dir) => handleSort("urgency", dir)} />
-          <SortRow active={sortKey === "price"} dir={sortKey === "price" ? sortDir : "desc"} label="Quote price" descLabel="High → Low" ascLabel="Low → High" onSelect={(dir) => handleSort("price", dir)} />
+          <SortRow active={sortKey === "date"} dir={sortKey === "date" ? sortDir : "desc"} label={t("owner:approvals.prop.requestDate")} descLabel="Newest first" ascLabel="Oldest first" onSelect={(dir) => handleSort("date", dir)} />
+          <SortRow active={sortKey === "urgency"} dir={sortKey === "urgency" ? sortDir : "desc"} label={t("owner:approvals.prop.urgency")} descLabel="High → Low" ascLabel="Low → High" onSelect={(dir) => handleSort("urgency", dir)} />
+          <SortRow active={sortKey === "price"} dir={sortKey === "price" ? sortDir : "desc"} label={t("owner:approvals.prop.quotePrice")} descLabel="High → Low" ascLabel="Low → High" onSelect={(dir) => handleSort("price", dir)} />
         </SortPanelBody>
       )}
 
       {loading ? (
-        <p className="text-sm text-slate-500">Loading…</p>
+        <p className="text-sm text-slate-500">{t("owner:approvals.text.loading")}</p>
       ) : sortedFiltered.length === 0 ? (
         <div className="empty-state">
           <p className="empty-state-text">
@@ -495,11 +495,11 @@ function RfpsTab() {
               <thead>
                 <tr>
                   <th>RFP</th>
-                  <SortableHeader label="Category" field="category" sortField={rfpSF} sortDir={rfpSD} onSort={handleRfpSort} />
-                  <SortableHeader label="Building" field="building" sortField={rfpSF} sortDir={rfpSD} onSort={handleRfpSort} />
-                  <SortableHeader label="Urgency" field="urgency" sortField={rfpSF} sortDir={rfpSD} onSort={handleRfpSort} />
-                  <SortableHeader label="Quotes" field="quoteCount" sortField={rfpSF} sortDir={rfpSD} onSort={handleRfpSort} />
-                  <SortableHeader label="Created" field="createdAt" sortField={rfpSF} sortDir={rfpSD} onSort={handleRfpSort} />
+                  <SortableHeader label={t("owner:approvals.prop.category")} field="category" sortField={rfpSF} sortDir={rfpSD} onSort={handleRfpSort} />
+                  <SortableHeader label={t("owner:approvals.prop.building")} field="building" sortField={rfpSF} sortDir={rfpSD} onSort={handleRfpSort} />
+                  <SortableHeader label={t("owner:approvals.prop.urgency")} field="urgency" sortField={rfpSF} sortDir={rfpSD} onSort={handleRfpSort} />
+                  <SortableHeader label={t("owner:approvals.prop.quotes")} field="quoteCount" sortField={rfpSF} sortDir={rfpSD} onSort={handleRfpSort} />
+                  <SortableHeader label={t("owner:approvals.prop.created")} field="createdAt" sortField={rfpSF} sortDir={rfpSD} onSort={handleRfpSort} />
                   <th></th>
                 </tr>
               </thead>

@@ -578,6 +578,7 @@ function DepreciationBar({ signal }) {
 // ---------------------------------------------------------------------------
 
 function LegalRecommendationPanel({ decision, loading: isLoading, error: loadError, requestStatus }) {
+  const { t } = useTranslation("manager");
   if (isLoading) {
     return (
       <div className="flex items-center gap-3 border-t border-slate-100 bg-slate-50 px-6 py-4">
@@ -644,7 +645,7 @@ function LegalRecommendationPanel({ decision, loading: isLoading, error: loadErr
       {/* Depreciation sub-card */}
       {decision.depreciationSignal && (
         <div className="mt-3 rounded-lg border border-slate-200 bg-white p-3">
-          <p className="text-xs font-semibold text-slate-600 mb-1">Asset depreciation</p>
+          <p className="text-xs font-semibold text-slate-600 mb-1">{t("manager:requests.text.assetDepreciation")}</p>
           <DepreciationBar signal={decision.depreciationSignal} />
           {decision.depreciationSignal.fullyDepreciated && (
             <div className="mt-2 rounded-lg bg-red-50 border border-red-200 px-3 py-1.5 text-xs text-red-700 font-medium">
@@ -698,7 +699,7 @@ function LegalRecommendationPanel({ decision, loading: isLoading, error: loadErr
       {/* Rent reduction precedents from ASLOCA jurisprudence (always shown if available) */}
       {decision.matchedReductions?.length > 0 && (
         <div className="mt-3">
-          <p className="text-xs font-semibold text-slate-600 mb-1.5">Rent reduction precedents</p>
+          <p className="text-xs font-semibold text-slate-600 mb-1.5">{t("manager:requests.text.rentReductionPrecedents")}</p>
           <div className="flex flex-col gap-1.5">
             {decision.matchedReductions.slice(0, 3).map((r, i) => (
               <div key={i} className="rounded-lg border border-slate-200 bg-white px-3 py-2">
@@ -726,7 +727,7 @@ function LegalRecommendationPanel({ decision, loading: isLoading, error: loadErr
 
       {/* Rent reduction estimate (Phase B) */}
       {decision.rentReductionEstimate && (        <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3">
-          <p className="text-xs font-semibold text-amber-700 mb-1">Estimated rent reduction</p>
+          <p className="text-xs font-semibold text-amber-700 mb-1">{t("manager:requests.text.estimatedRentReduction")}</p>
           <div className="flex items-baseline gap-3 flex-wrap">
             <span className="text-lg font-bold text-amber-900">
               CHF {decision.rentReductionEstimate.totalReductionChf?.toFixed(0) ?? "—"}
@@ -737,7 +738,7 @@ function LegalRecommendationPanel({ decision, loading: isLoading, error: loadErr
             </span>
           </div>
           {decision.rentReductionEstimate.capApplied && (
-            <p className="text-[11px] text-amber-600 mt-1">Cap applied — reduction clamped to legal maximum.</p>
+            <p className="text-[11px] text-amber-600 mt-1">{t("manager:requests.text.capAppliedReductionClampedToLegalMaximum")}</p>
           )}
         </div>
       )}
@@ -770,7 +771,7 @@ function LegalRecommendationPanel({ decision, loading: isLoading, error: loadErr
 
         return (
           <div className="mt-3">
-            <p className="text-xs font-semibold text-slate-600 mb-1.5">Recommended actions</p>
+            <p className="text-xs font-semibold text-slate-600 mb-1.5">{t("manager:requests.text.recommendedActions")}</p>
             <div className="flex flex-wrap gap-1.5">
               {contextActions.map((a, i) => (
                 <span
@@ -790,20 +791,20 @@ function LegalRecommendationPanel({ decision, loading: isLoading, error: loadErr
       {/* Defect signals summary */}
       {decision.defectSignals && (decision.defectSignals.severity || decision.defectSignals.affectedArea) && (
         <div className="mt-3 rounded-lg border border-slate-200 bg-white p-3">
-          <p className="text-xs font-semibold text-slate-600 mb-1">Defect signals</p>
+          <p className="text-xs font-semibold text-slate-600 mb-1">{t("manager:requests.text.defectSignals")}</p>
           <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-slate-500">
             {decision.defectSignals.severity && (
-              <span>Severity: <span className="font-medium text-slate-700">{decision.defectSignals.severity}</span></span>
+              <span>{t("manager:requests.text.severity")} <span className="font-medium text-slate-700">{decision.defectSignals.severity}</span></span>
             )}
             {decision.defectSignals.affectedArea && (
-              <span>Area: <span className="font-medium text-slate-700">
+              <span>{t("manager:requests.text.area")} <span className="font-medium text-slate-700">
                 {typeof decision.defectSignals.affectedArea === "string"
                   ? decision.defectSignals.affectedArea
                   : (decision.defectSignals.affectedArea.rooms || []).join(", ") || "—"}
               </span></span>
             )}
             {decision.defectSignals.duration && (
-              <span>Duration: <span className="font-medium text-slate-700">
+              <span>{t("manager:requests.text.duration")} <span className="font-medium text-slate-700">
                 {typeof decision.defectSignals.duration === "string"
                   ? decision.defectSignals.duration
                   : [
@@ -840,6 +841,7 @@ const RECOMMENDATION_STYLES = {
 };
 
 function RepairReplacePanel({ state, requestCategory }) {
+  const { t } = useTranslation("manager");
   if (!state) return null;
 
   if (state.loading) {
@@ -873,7 +875,7 @@ function RepairReplacePanel({ state, requestCategory }) {
 
   return (
     <div className="px-6 py-4">
-      <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">Repair vs Replace Analysis</p>
+      <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">{t("manager:requests.text.repairVsReplaceAnalysis")}</p>
 
       <div className="space-y-2">
         {sorted.map((item) => {
@@ -932,10 +934,10 @@ function RepairReplacePanel({ state, requestCategory }) {
                   </span>
                 )}
                 {item.cumulativeRepairCostChf > 0 && (
-                  <span>Repairs: <span className="font-medium text-slate-700">CHF {item.cumulativeRepairCostChf.toLocaleString("de-CH")}</span></span>
+                  <span>{t("manager:requests.text.repairs")} <span className="font-medium text-slate-700">CHF {item.cumulativeRepairCostChf.toLocaleString("de-CH")}</span></span>
                 )}
                 {item.estimatedReplacementCostChf != null && (
-                  <span>Replace est.: <span className="font-medium text-slate-700">CHF {item.estimatedReplacementCostChf.toLocaleString("de-CH")}</span></span>
+                  <span>{t("manager:requests.text.replaceEst")} <span className="font-medium text-slate-700">CHF {item.estimatedReplacementCostChf.toLocaleString("de-CH")}</span></span>
                 )}
                 {ratioDisplay && (
                   <span>
@@ -980,6 +982,7 @@ function SectionLabel({ children }) {
 // ---------------------------------------------------------------------------
 
 function RequestPhotosPanel({ requestId }) {
+  const { t } = useTranslation("manager");
   const [attachments, setAttachments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -1040,7 +1043,7 @@ function RequestPhotosPanel({ requestId }) {
   if (loading) {
     return (
       <div className="px-6 py-4">
-        <SectionLabel>Photos / Attachments</SectionLabel>
+        <SectionLabel>{t("manager:requests.text.photosAttachments")}</SectionLabel>
         <p className="mt-2 text-xs text-slate-400">Loading&hellip;</p>
       </div>
     );
@@ -1056,7 +1059,7 @@ function RequestPhotosPanel({ requestId }) {
 
   return (
     <div className="px-6 py-4">
-      <SectionLabel>Photos / Attachments</SectionLabel>
+      <SectionLabel>{t("manager:requests.text.photosAttachments")}</SectionLabel>
 
       {attachments.length === 0 ? (
         /* Empty state */
@@ -1065,7 +1068,7 @@ function RequestPhotosPanel({ requestId }) {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
           </svg>
-          <p className="text-sm text-slate-500">No photos yet. Upload to document the issue.</p>
+          <p className="text-sm text-slate-500">{t("manager:requests.text.noPhotosYetUploadToDocumentTheIssue")}</p>
           <label className="mt-3 cursor-pointer rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700">
             Upload photo
             <input type="file" multiple accept="image/*,.pdf" className="hidden" onChange={handleUpload} />
@@ -1381,15 +1384,15 @@ export default function ManagerRequestsPage() {
       <PageShell>
         <PageHeader
           title={t("manager:requests.title.requestsInbox")}
-          subtitle="Review incoming maintenance requests. Click a row to see full details."
+          subtitle={t("manager:requests.prop.reviewIncomingMaintenanceRequestsClickARowToSeeFullDetails")}
         />
         <PageContent>
 
           {/* Error banner */}
           {error && (
             <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 flex items-center justify-between">
-              <span><strong>Error:</strong> {error}</span>
-              <button onClick={() => setError("")} className="text-xs text-red-500 hover:underline ml-4">Dismiss</button>
+              <span><strong>{t("manager:requests.text.error")}</strong> {error}</span>
+              <button onClick={() => setError("")} className="text-xs text-red-500 hover:underline ml-4">{t("manager:requests.text.dismiss")}</button>
             </div>
           )}
 
@@ -1442,12 +1445,12 @@ export default function ManagerRequestsPage() {
             <FilterPanelBody>
               <FilterSection title={t("manager:requests.title.priority")} first>
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                  <SelectField label="Urgency" value={filterUrgency} onChange={(e) => setFilterUrgency(e.target.value)}>
-                    <option value="">All urgencies</option>
-                    <option value="EMERGENCY">🚨 Emergency</option>
-                    <option value="HIGH">⚠️ High</option>
-                    <option value="NORMAL">Normal</option>
-                    <option value="LOW">Low</option>
+                  <SelectField label={t("manager:requests.prop.urgency")} value={filterUrgency} onChange={(e) => setFilterUrgency(e.target.value)}>
+                    <option value="">{t("manager:requests.text.allUrgencies")}</option>
+                    <option value="EMERGENCY">{t("manager:requests.text.emergency")}</option>
+                    <option value="HIGH">{t("manager:requests.text.high")}</option>
+                    <option value="NORMAL">{t("manager:requests.text.normal")}</option>
+                    <option value="LOW">{t("manager:requests.text.low")}</option>
                   </SelectField>
                 </div>
               </FilterSection>
@@ -1455,16 +1458,16 @@ export default function ManagerRequestsPage() {
               <FilterSection title={t("manager:requests.title.scope")}>
                 <div className="grid grid-cols-2 gap-3">
                   {buildingOptions.length > 1 && (
-                    <SelectField label="Building" value={filterBuilding} onChange={(e) => { setFilterBuilding(e.target.value); }}>
-                      <option value="">All buildings</option>
+                    <SelectField label={t("manager:requests.prop.building")} value={filterBuilding} onChange={(e) => { setFilterBuilding(e.target.value); }}>
+                      <option value="">{t("manager:requests.text.allBuildings")}</option>
                       {buildingOptions.map(([id, name]) => (
                         <option key={id} value={id}>{name}</option>
                       ))}
                     </SelectField>
                   )}
                   {categoryOptions.length > 0 && (
-                    <SelectField label="Category" value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)}>
-                      <option value="">All categories</option>
+                    <SelectField label={t("manager:requests.prop.category")} value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)}>
+                      <option value="">{t("manager:requests.text.allCategories")}</option>
                       {categoryOptions.map((c) => (
                         <option key={c} value={c}>{c}</option>
                       ))}
@@ -1480,11 +1483,11 @@ export default function ManagerRequestsPage() {
           {/* Collapsible sort panel */}
           {sortOpen && (
             <SortPanelBody>
-              <SortRow active={sortKey === "date"} dir={sortKey === "date" ? sortDir : "desc"} label="Date" descLabel="Newest first" ascLabel="Oldest first" onSelect={(dir) => handleSort("date", dir)} />
-              <SortRow active={sortKey === "number"} dir={sortKey === "number" ? sortDir : "asc"} label="Request #" ascLabel="Low → High" descLabel="High → Low" onSelect={(dir) => handleSort("number", dir)} />
-              <SortRow active={sortKey === "urgency"} dir={sortKey === "urgency" ? sortDir : "desc"} label="Urgency" descLabel="High → Low" ascLabel="Low → High" onSelect={(dir) => handleSort("urgency", dir)} />
-              <SortRow active={sortKey === "cost"} dir={sortKey === "cost" ? sortDir : "desc"} label="Est. Cost" descLabel="High → Low" ascLabel="Low → High" onSelect={(dir) => handleSort("cost", dir)} />
-              <SortRow active={sortKey === "building"} dir={sortKey === "building" ? sortDir : "asc"} label="Building" ascLabel="A → Z" descLabel="Z → A" onSelect={(dir) => handleSort("building", dir)} />
+              <SortRow active={sortKey === "date"} dir={sortKey === "date" ? sortDir : "desc"} label={t("manager:requests.prop.date")} descLabel="Newest first" ascLabel="Oldest first" onSelect={(dir) => handleSort("date", dir)} />
+              <SortRow active={sortKey === "number"} dir={sortKey === "number" ? sortDir : "asc"} label={t("manager:requests.prop.request")} ascLabel="Low → High" descLabel="High → Low" onSelect={(dir) => handleSort("number", dir)} />
+              <SortRow active={sortKey === "urgency"} dir={sortKey === "urgency" ? sortDir : "desc"} label={t("manager:requests.prop.urgency")} descLabel="High → Low" ascLabel="Low → High" onSelect={(dir) => handleSort("urgency", dir)} />
+              <SortRow active={sortKey === "cost"} dir={sortKey === "cost" ? sortDir : "desc"} label={t("manager:requests.prop.estCost")} descLabel="High → Low" ascLabel="Low → High" onSelect={(dir) => handleSort("cost", dir)} />
+              <SortRow active={sortKey === "building"} dir={sortKey === "building" ? sortDir : "asc"} label={t("manager:requests.prop.building")} ascLabel="A → Z" descLabel="Z → A" onSelect={(dir) => handleSort("building", dir)} />
             </SortPanelBody>
           )}
 
@@ -1495,7 +1498,7 @@ export default function ManagerRequestsPage() {
             <div className="px-4 py-6 text-center">
               <p className="empty-state-text">{hasActiveFilters ? "No requests match your search or filters." : "No requests match this filter."}</p>
               {hasActiveFilters && (
-                <button onClick={clearFilters} className="mt-2 text-xs text-blue-600 hover:underline">Reset filters</button>
+                <button onClick={clearFilters} className="mt-2 text-xs text-blue-600 hover:underline">{t("manager:requests.text.resetFilters")}</button>
               )}
             </div>
           ) : (
@@ -1509,7 +1512,7 @@ export default function ManagerRequestsPage() {
                 sortDir={sortDir}
                 onSort={handleSort}
                 onRowClick={(r) => router.push(r.rfpId ? `/manager/rfps/${r.rfpId}` : `/manager/requests/${r.id}`)}
-                emptyState={<p className="text-sm text-slate-500">No requests match this filter.</p>}
+                emptyState={<p className="text-sm text-slate-500">{t("manager:requests.text.noRequestsMatchThisFilter")}</p>}
                 mobileCard={(r) => {
                   const ctaList = getAvailableCTAs(r, assigningId);
                   const isAssigning = assigningId === r.id;
@@ -1563,7 +1566,7 @@ export default function ManagerRequestsPage() {
                               onChange={(e) => setSelectedContractorId(e.target.value)}
                               className="rounded border border-slate-300 px-2 py-1 text-xs flex-1 min-w-0"
                             >
-                              <option value="">Select contractor…</option>
+                              <option value="">{t("manager:requests.text.selectContractor")}</option>
                               {contractors.map((c) => (
                                 <option key={c.id} value={c.id}>{c.name || c.companyName || c.id.slice(0, 8)}</option>
                               ))}

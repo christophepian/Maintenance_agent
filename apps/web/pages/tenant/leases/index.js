@@ -97,7 +97,7 @@ export default function TenantLeasesPage() {
     return (
       <AppShell role="TENANT">
         <div className="main-container">
-          <p className="subtle">Loading session…</p>
+          <p className="subtle">{t("tenant:leasesIndex.text.loadingSession")}</p>
         </div>
       </AppShell>
     );
@@ -119,10 +119,10 @@ export default function TenantLeasesPage() {
         )}
 
         {loading ? (
-          <div className="text-center py-8 text-slate-500">Loading leases…</div>
+          <div className="text-center py-8 text-slate-500">{t("tenant:leasesIndex.text.loadingLeases")}</div>
         ) : leases.length === 0 ? (
           <div className="card p-8 text-center">
-            <p className="text-slate-500 text-lg mb-2">No leases found</p>
+            <p className="text-slate-500 text-lg mb-2">{t("tenant:leasesIndex.text.noLeasesFound")}</p>
             <p className="text-slate-400 text-sm">
               Your property manager has not yet assigned any leases to your unit.
             </p>
@@ -159,7 +159,7 @@ export default function TenantLeasesPage() {
                       {STATUS_LABELS[lease.status] || lease.status}
                     </Badge>
                     <div className="text-sm font-medium mt-2">
-                      {formatChf(lease.rentTotalChf)}<span className="text-slate-400">/mo</span>
+                      {formatChf(lease.rentTotalChf)}<span className="text-slate-400">{t("tenant:leasesIndex.text.mo")}</span>
                     </div>
                   </div>
                 </div>

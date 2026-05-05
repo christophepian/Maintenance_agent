@@ -170,8 +170,8 @@ const tabKeys = FINANCE_TABS.map((t) => t.key);
                   <FilterPanelBody>
                     <FilterSection title={t("manager:financeIndex.title.dateRange")} first>
                       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                        <DateField label="From" value={range.from} onChange={(e) => setRange((r) => ({ ...r, from: e.target.value }))} />
-                        <DateField label="To" value={range.to} onChange={(e) => setRange((r) => ({ ...r, to: e.target.value }))} />
+                        <DateField label={t("manager:financeIndex.prop.from")} value={range.from} onChange={(e) => setRange((r) => ({ ...r, from: e.target.value }))} />
+                        <DateField label={t("manager:financeIndex.prop.to")} value={range.to} onChange={(e) => setRange((r) => ({ ...r, to: e.target.value }))} />
                       </div>
                     </FilterSection>
                     <FilterSectionClear
@@ -185,7 +185,7 @@ const tabKeys = FINANCE_TABS.map((t) => t.key);
               {portfolioError && <div className="notice notice-err">{portfolioError}</div>}
 
               {portfolioLoading && !p ? (
-                <p className="loading-text">Loading portfolio summary…</p>
+                <p className="loading-text">{t("manager:financeIndex.text.loadingPortfolioSummary")}</p>
               ) : p && (
                 <>
                   <Section>
@@ -203,18 +203,18 @@ const tabKeys = FINANCE_TABS.map((t) => t.key);
                     </div>
                     {/* Desktop: card grid */}
                     <div className="hidden sm:grid grid-cols-2 md:grid-cols-5 gap-3">
-                      <SummaryCard label="Earned Income"  value={formatChfCents(p.totalEarnedIncomeCents)} accent="green" />
-                      <SummaryCard label="Total Expenses" value={formatChfCents(p.totalExpensesCents)} />
-                      <SummaryCard label="Net Result"     value={formatChfCents(p.totalNetIncomeCents)} accent={netAccent} sub="Income − Expenses" />
-                      <SummaryCard label="Receivables"    value={formatChfCents(p.totalReceivablesCents)} accent={p.totalReceivablesCents > 0 ? "amber" : ""} sub="Unpaid rent invoices" />
-                      <SummaryCard label="Payables"       value={formatChfCents(p.totalPayablesCents)} accent={p.totalPayablesCents > 0 ? "amber" : ""} sub="Unpaid supplier invoices" />
+                      <SummaryCard label={t("manager:financeIndex.prop.earnedIncome")}  value={formatChfCents(p.totalEarnedIncomeCents)} accent="green" />
+                      <SummaryCard label={t("manager:financeIndex.prop.totalExpenses")} value={formatChfCents(p.totalExpensesCents)} />
+                      <SummaryCard label={t("manager:financeIndex.prop.netResult")}     value={formatChfCents(p.totalNetIncomeCents)} accent={netAccent} sub="Income − Expenses" />
+                      <SummaryCard label={t("manager:financeIndex.prop.receivables")}    value={formatChfCents(p.totalReceivablesCents)} accent={p.totalReceivablesCents > 0 ? "amber" : ""} sub="Unpaid rent invoices" />
+                      <SummaryCard label={t("manager:financeIndex.prop.payables")}       value={formatChfCents(p.totalPayablesCents)} accent={p.totalPayablesCents > 0 ? "amber" : ""} sub="Unpaid supplier invoices" />
                     </div>
                   </Section>
 
                   <Section title={t("manager:financeIndex.title.buildings")}>
                     {/* Stats row */}
                     <div className="flex gap-4 text-xs text-slate-500">
-                      <span>Avg collection rate: <strong>{formatPercent(p.avgCollectionRate)}</strong></span>
+                      <span>{t("manager:financeIndex.text.avgCollectionRate")} <strong>{formatPercent(p.avgCollectionRate)}</strong></span>
                       {p.buildingsInRed > 0 && (
                         <span className="text-destructive-text font-medium">
                           {p.buildingsInRed} building{p.buildingsInRed !== 1 ? "s" : ""} need attention
@@ -224,7 +224,7 @@ const tabKeys = FINANCE_TABS.map((t) => t.key);
                     <div>
                       {p.buildings.length === 0 ? (
                         <div className="empty-state">
-                          <p className="empty-state-text">No buildings in this portfolio yet.</p>
+                          <p className="empty-state-text">{t("manager:financeIndex.text.noBuildingsInThisPortfolioYet")}</p>
                         </div>
                       ) : (
                         <>
@@ -259,12 +259,12 @@ const tabKeys = FINANCE_TABS.map((t) => t.key);
                             <table className="data-table">
                               <thead>
                                 <tr>
-                                  <SortableHeader label="Building" field="name" sortField={bSortField} sortDir={bSortDir} onSort={handleBuildingSort} />
-                                  <SortableHeader label="Earned Income" field="earned" sortField={bSortField} sortDir={bSortDir} onSort={handleBuildingSort} className="text-right" />
-                                  <SortableHeader label="Expenses" field="expenses" sortField={bSortField} sortDir={bSortDir} onSort={handleBuildingSort} className="text-right" />
-                                  <SortableHeader label="Net" field="net" sortField={bSortField} sortDir={bSortDir} onSort={handleBuildingSort} className="text-right" />
-                                  <SortableHeader label="Collection" field="collection" sortField={bSortField} sortDir={bSortDir} onSort={handleBuildingSort} className="text-right" />
-                                  <SortableHeader label="Receivables" field="receivables" sortField={bSortField} sortDir={bSortDir} onSort={handleBuildingSort} className="text-right" />
+                                  <SortableHeader label={t("manager:financeIndex.prop.building")} field="name" sortField={bSortField} sortDir={bSortDir} onSort={handleBuildingSort} />
+                                  <SortableHeader label={t("manager:financeIndex.prop.earnedIncome")} field="earned" sortField={bSortField} sortDir={bSortDir} onSort={handleBuildingSort} className="text-right" />
+                                  <SortableHeader label={t("manager:financeIndex.prop.expenses")} field="expenses" sortField={bSortField} sortDir={bSortDir} onSort={handleBuildingSort} className="text-right" />
+                                  <SortableHeader label={t("manager:financeIndex.prop.net")} field="net" sortField={bSortField} sortDir={bSortDir} onSort={handleBuildingSort} className="text-right" />
+                                  <SortableHeader label={t("manager:financeIndex.prop.collection")} field="collection" sortField={bSortField} sortDir={bSortDir} onSort={handleBuildingSort} className="text-right" />
+                                  <SortableHeader label={t("manager:financeIndex.prop.receivables")} field="receivables" sortField={bSortField} sortDir={bSortDir} onSort={handleBuildingSort} className="text-right" />
                                   <th></th>
                                 </tr>
                               </thead>

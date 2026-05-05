@@ -22,9 +22,11 @@
  * - Sections use grid layout: grid-cols-2 gap-3, responsive to sm:grid-cols-4
  */
 import { cn } from "../../lib/utils";
+import { useTranslation } from "next-i18next";
 
 /** Right-aligned toggle button — matches ConfigurableTable "Columns" button styling */
 export function FilterToggle({ open, onToggle, activeCount }) {
+  const { t } = useTranslation("common");
   return (
     <div className="flex items-center justify-end">
       <button
@@ -42,7 +44,7 @@ export function FilterToggle({ open, onToggle, activeCount }) {
         <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
           <path fillRule="evenodd" d="M2.628 1.601C5.028 1.206 7.49 1 10 1s4.973.206 7.372.601a.75.75 0 0 1 .628.74v2.288a2.25 2.25 0 0 1-.659 1.59l-4.682 4.683a2.25 2.25 0 0 0-.659 1.59v3.037c0 .684-.31 1.33-.844 1.757l-1.937 1.55A.75.75 0 0 1 8 18.25v-5.757a2.25 2.25 0 0 0-.659-1.591L2.659 6.22A2.25 2.25 0 0 1 2 4.629V2.34a.75.75 0 0 1 .628-.74Z" clipRule="evenodd" />
         </svg>
-        Filters
+        {t("filterPanel.filters")}
         {activeCount > 0 && (
           <span className="inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-blue-600 px-1 text-[10px] font-semibold text-white">
             {activeCount}
@@ -74,6 +76,7 @@ export function FilterSection({ title, first = false, children }) {
 
 /** "Reset filters" footer link — always visible, dimmed when nothing active */
 export function FilterSectionClear({ hasFilter, onClear }) {
+  const { t } = useTranslation("common");
   return (
     <div className="mt-4 flex justify-end border-t border-slate-100 pt-3">
       <button
@@ -86,7 +89,7 @@ export function FilterSectionClear({ hasFilter, onClear }) {
             : "text-slate-300 cursor-default"
         )}
       >
-        Reset filters
+        {t("filterPanel.resetFilters")}
       </button>
     </div>
   );
@@ -169,6 +172,7 @@ export function NumberField({ label, value, onChange, placeholder, min, classNam
  * active=true when a non-default sort is applied.
  */
 export function SortToggle({ open, onToggle, active }) {
+  const { t } = useTranslation("common");
   return (
     <button
       onClick={onToggle}
@@ -185,7 +189,7 @@ export function SortToggle({ open, onToggle, active }) {
       <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
         <path d="M3 4.5A1.5 1.5 0 0 1 4.5 3h11A1.5 1.5 0 0 1 17 4.5v1A1.5 1.5 0 0 1 15.5 7h-11A1.5 1.5 0 0 1 3 5.5v-1ZM3 10a1.5 1.5 0 0 1 1.5-1.5h7A1.5 1.5 0 0 1 13 10v1a1.5 1.5 0 0 1-1.5 1.5h-7A1.5 1.5 0 0 1 3 11v-1ZM4.5 14.5A1.5 1.5 0 0 0 3 16v1a1.5 1.5 0 0 0 1.5 1.5h4A1.5 1.5 0 0 0 10 17v-1a1.5 1.5 0 0 0-1.5-1.5h-4Z" />
       </svg>
-      Sort
+      {t("filterPanel.sort")}
       {active && (
         <span className="inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-blue-600 px-1 text-[10px] font-semibold text-white" aria-hidden="true">
           1
@@ -197,9 +201,10 @@ export function SortToggle({ open, onToggle, active }) {
 
 /** Outer card for the sort panel — same visual weight as FilterPanelBody */
 export function SortPanelBody({ children }) {
+  const { t } = useTranslation("common");
   return (
     <div className="mb-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-      <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">Sort by</p>
+      <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">{t("filterPanel.sortBy")}</p>
       <div className="space-y-1">{children}</div>
     </div>
   );

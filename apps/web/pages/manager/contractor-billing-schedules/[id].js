@@ -84,7 +84,7 @@ export default function ContractorBillingScheduleDetail() {
   return (
     <AppShell>
       <PageShell>
-        <ResourceShell loading={loading} error={error} hasData={!!schedule} emptyMessage="Schedule not found.">
+        <ResourceShell loading={loading} error={error} hasData={!!schedule} emptyMessage={t("manager:contractor_Billing_SchedulesId.prop.scheduleNotFound")}>
         {schedule && (<>
         <PageHeader
           title={schedule.description}
@@ -98,42 +98,42 @@ export default function ContractorBillingScheduleDetail() {
             <Panel>
               <h3 className="font-semibold text-slate-800 mb-3">{t("manager:contractorBillingSchedulesId.heading.scheduleDetails")}</h3>
               <DetailList>
-                <DetailRow label="Status">
+                <DetailRow label={t("manager:contractor_Billing_SchedulesId.prop.status")}>
                     <Badge variant={billingScheduleVariant(schedule.status)} size="sm">{schedule.status}</Badge>
                 </DetailRow>
-                <DetailRow label="Frequency">{FREQUENCY_LABELS[schedule.frequency] || schedule.frequency}</DetailRow>
-                <DetailRow label="Anchor Day">{schedule.anchorDay}</DetailRow>
-                <DetailRow label="Amount">
+                <DetailRow label={t("manager:contractor_Billing_SchedulesId.prop.frequency")}>{FREQUENCY_LABELS[schedule.frequency] || schedule.frequency}</DetailRow>
+                <DetailRow label={t("manager:contractor_Billing_SchedulesId.prop.anchorDay")}>{schedule.anchorDay}</DetailRow>
+                <DetailRow label={t("manager:contractor_Billing_SchedulesId.prop.amount")}>
                   <span className="font-semibold">{formatChfCents(schedule.amountCents)}</span>
                 </DetailRow>
-                <DetailRow label="VAT Rate">{schedule.vatRate}%</DetailRow>
-                <DetailRow label="Amount incl. VAT">
+                <DetailRow label={t("manager:contractor_Billing_SchedulesId.prop.vATRate")}>{schedule.vatRate}%</DetailRow>
+                <DetailRow label={t("manager:contractor_Billing_SchedulesId.prop.amountInclVat")}>
                   <span className="font-semibold">
                     {formatChfCents(Math.round(schedule.amountCents * (1 + schedule.vatRate / 100)))}
                   </span>
                 </DetailRow>
-                <DetailRow label="Next Period Start">
+                <DetailRow label={t("manager:contractor_Billing_SchedulesId.prop.nextPeriodStart")}>
                   {formatDate(schedule.nextPeriodStart)}
                 </DetailRow>
                 {schedule.lastGeneratedPeriod && (
-                  <DetailRow label="Last Generated">
+                  <DetailRow label={t("manager:contractor_Billing_SchedulesId.prop.lastGenerated")}>
                     {formatDate(schedule.lastGeneratedPeriod)}
                   </DetailRow>
                 )}
                 {schedule.building && (
-                  <DetailRow label="Building">{schedule.building.name}</DetailRow>
+                  <DetailRow label={t("manager:contractor_Billing_SchedulesId.prop.building")}>{schedule.building.name}</DetailRow>
                 )}
                 {schedule.completedAt && (
                   <>
-                    <DetailRow label="Completed At">
+                    <DetailRow label={t("manager:contractor_Billing_SchedulesId.prop.completedAt")}>
                       {formatDate(schedule.completedAt)}
                     </DetailRow>
                     {schedule.completionReason && (
-                      <DetailRow label="Reason">{schedule.completionReason}</DetailRow>
+                      <DetailRow label={t("manager:contractor_Billing_SchedulesId.prop.reason")}>{schedule.completionReason}</DetailRow>
                     )}
                   </>
                 )}
-                <DetailRow label="Created">{formatDate(schedule.createdAt)}</DetailRow>
+                <DetailRow label={t("manager:contractor_Billing_SchedulesId.prop.created")}>{formatDate(schedule.createdAt)}</DetailRow>
               </DetailList>
             </Panel>
 
@@ -142,25 +142,25 @@ export default function ContractorBillingScheduleDetail() {
               <h3 className="font-semibold text-slate-800 mb-3">{t("manager:contractorBillingSchedulesId.heading.contractor")}</h3>
               {schedule.contractor ? (
                 <DetailList>
-                  <DetailRow label="Name">{schedule.contractor.name}</DetailRow>
-                  <DetailRow label="Email">{schedule.contractor.email}</DetailRow>
-                  <DetailRow label="Phone">{schedule.contractor.phone}</DetailRow>
+                  <DetailRow label={t("manager:contractor_Billing_SchedulesId.prop.name")}>{schedule.contractor.name}</DetailRow>
+                  <DetailRow label={t("manager:contractor_Billing_SchedulesId.prop.email")}>{schedule.contractor.email}</DetailRow>
+                  <DetailRow label={t("manager:contractor_Billing_SchedulesId.prop.phone")}>{schedule.contractor.phone}</DetailRow>
                   {schedule.contractor.iban && (
                     <DetailRow label="IBAN">
                       <span className="font-mono text-xs">{schedule.contractor.iban}</span>
                     </DetailRow>
                   )}
                   {schedule.contractor.vatNumber && (
-                    <DetailRow label="VAT Number">{schedule.contractor.vatNumber}</DetailRow>
+                    <DetailRow label={t("manager:contractor_Billing_SchedulesId.prop.vATNumber")}>{schedule.contractor.vatNumber}</DetailRow>
                   )}
-                  <DetailRow label="Active">
+                  <DetailRow label={t("manager:contractor_Billing_SchedulesId.prop.active")}>
                     <Badge variant={schedule.contractor.isActive ? "success" : "destructive"} size="sm">
                       {schedule.contractor.isActive ? "Yes" : "No"}
                     </Badge>
                   </DetailRow>
                 </DetailList>
               ) : (
-                <p className="text-slate-500 text-sm">Contractor data unavailable</p>
+                <p className="text-slate-500 text-sm">{t("manager:contractor_Billing_SchedulesId.text.contractorDataUnavailable")}</p>
               )}
             </Panel>
           </div>

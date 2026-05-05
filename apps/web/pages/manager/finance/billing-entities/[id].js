@@ -206,10 +206,10 @@ export default function BillingEntityDetailPage() {
           )}
 
           {loading ? (
-            <p className="loading-text">Loading billing entity…</p>
+            <p className="loading-text">{t("manager:financeBilling_EntitiesId.text.loadingBillingEntity")}</p>
           ) : !entity ? (
             <div className="empty-state">
-              <p className="empty-state-text">Billing entity not found.</p>
+              <p className="empty-state-text">{t("manager:financeBilling_EntitiesId.text.billingEntityNotFound")}</p>
             </div>
           ) : isEditing ? (
             /* ─── Edit mode ─── */
@@ -218,12 +218,12 @@ export default function BillingEntityDetailPage() {
                 <Section title={t("manager:financeBillingEntitiesId.title.general")}>
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Type</label>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:financeBilling_EntitiesId.text.type")}</label>
                       <input value={TYPE_LABEL[entity.type] || entity.type} disabled
                         className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 text-slate-500" />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Name</label>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:financeBilling_EntitiesId.text.name")}</label>
                       <input value={form.name} onChange={(e) => setField("name", e.target.value)}
                         className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" required />
                     </div>
@@ -235,28 +235,28 @@ export default function BillingEntityDetailPage() {
                 <Section title={t("manager:financeBillingEntitiesId.title.address")}>
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Address line 1</label>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:financeBilling_EntitiesId.text.addressLine1")}</label>
                       <input value={form.addressLine1} onChange={(e) => setField("addressLine1", e.target.value)}
                         className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" required />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Address line 2</label>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:financeBilling_EntitiesId.text.addressLine2")}</label>
                       <input value={form.addressLine2} onChange={(e) => setField("addressLine2", e.target.value)}
                         className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" />
                     </div>
                     <div className="grid grid-cols-3 gap-3">
                       <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Postal code</label>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:financeBilling_EntitiesId.text.postalCode")}</label>
                         <input value={form.postalCode} onChange={(e) => setField("postalCode", e.target.value)}
                           className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" required />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">City</label>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:financeBilling_EntitiesId.text.city")}</label>
                         <input value={form.city} onChange={(e) => setField("city", e.target.value)}
                           className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" required />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Country</label>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:financeBilling_EntitiesId.text.country")}</label>
                         <input value={form.country} onChange={(e) => setField("country", e.target.value)}
                           className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" />
                       </div>
@@ -275,7 +275,7 @@ export default function BillingEntityDetailPage() {
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">VAT number</label>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:financeBilling_EntitiesId.text.vATNumber")}</label>
                         <input value={form.vatNumber} onChange={(e) => setField("vatNumber", e.target.value)}
                           className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" />
                       </div>
@@ -295,40 +295,40 @@ export default function BillingEntityDetailPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Panel>
                 <Section title={t("manager:financeBillingEntitiesId.title.general")}>
-                  <DetailRow label="Type" value={
+                  <DetailRow label={t("manager:financeBilling_EntitiesId.prop.type")} value={
                     <Badge variant={billingEntityVariant(entity.type)} size="sm">
                       {TYPE_LABEL[entity.type] || entity.type}
                     </Badge>
                   } />
-                  <DetailRow label="Name" value={entity.name} />
+                  <DetailRow label={t("manager:financeBilling_EntitiesId.prop.name")} value={entity.name} />
                   {entity.contractorId && (
-                    <DetailRow label="Linked contractor" value={entity.contractorId} />
+                    <DetailRow label={t("manager:financeBilling_EntitiesId.prop.linkedContractor")} value={entity.contractorId} />
                   )}
                 </Section>
               </Panel>
 
               <Panel>
                 <Section title={t("manager:financeBillingEntitiesId.title.address")}>
-                  <DetailRow label="Address line 1" value={entity.addressLine1} />
-                  <DetailRow label="Address line 2" value={entity.addressLine2} />
-                  <DetailRow label="Postal code" value={entity.postalCode} />
-                  <DetailRow label="City" value={entity.city} />
-                  <DetailRow label="Country" value={entity.country} />
+                  <DetailRow label={t("manager:financeBilling_EntitiesId.prop.addressLine1")} value={entity.addressLine1} />
+                  <DetailRow label={t("manager:financeBilling_EntitiesId.prop.addressLine2")} value={entity.addressLine2} />
+                  <DetailRow label={t("manager:financeBilling_EntitiesId.prop.postalCode")} value={entity.postalCode} />
+                  <DetailRow label={t("manager:financeBilling_EntitiesId.prop.city")} value={entity.city} />
+                  <DetailRow label={t("manager:financeBilling_EntitiesId.prop.country")} value={entity.country} />
                 </Section>
               </Panel>
 
               <Panel>
                 <Section title={t("manager:financeBillingEntitiesId.title.banking")}>
                   <DetailRow label="IBAN" value={entity.iban} mono />
-                  <DetailRow label="VAT number" value={entity.vatNumber} />
-                  <DetailRow label="Default VAT rate" value={entity.defaultVatRate != null ? `${entity.defaultVatRate}%` : null} />
+                  <DetailRow label={t("manager:financeBilling_EntitiesId.prop.vATNumber")} value={entity.vatNumber} />
+                  <DetailRow label={t("manager:financeBilling_EntitiesId.prop.defaultVatRate")} value={entity.defaultVatRate != null ? `${entity.defaultVatRate}%` : null} />
                 </Section>
               </Panel>
 
               <Panel>
                 <Section title={t("manager:financeBillingEntitiesId.title.invoiceSettings")}>
-                  <DetailRow label="Next invoice sequence" value={entity.nextInvoiceSequence} />
-                  <DetailRow label="Entity ID" value={entity.id} mono />
+                  <DetailRow label={t("manager:financeBilling_EntitiesId.prop.nextInvoiceSequence")} value={entity.nextInvoiceSequence} />
+                  <DetailRow label={t("manager:financeBilling_EntitiesId.prop.entityId")} value={entity.id} mono />
                 </Section>
               </Panel>
             </div>

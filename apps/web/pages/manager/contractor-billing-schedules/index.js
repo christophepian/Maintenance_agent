@@ -107,7 +107,7 @@ const CBS_COLUMNS = [
     label: "",
     alwaysVisible: true,
     render: (s) => (
-      <Link href={`/manager/contractor-billing-schedules/${s.id}`} className="cell-link" onClick={(e) => e.stopPropagation()}>View</Link>
+      <Link href={`/manager/contractor-billing-schedules/${s.id}`} className="cell-link" onClick={(e) => e.stopPropagation()}>{t("manager:contractor_Billing_SchedulesIndex.text.view")}</Link>
     ),
   },
 ];
@@ -221,7 +221,7 @@ export default function ContractorBillingSchedulesList() {
       <PageShell>
         <PageHeader
           title={t("manager:contractorBillingSchedulesIndex.title.contractorBilling")}
-          subtitle="Recurring billing schedules for contractor services"
+          subtitle={t("manager:contractor_Billing_SchedulesIndex.prop.recurringBillingSchedulesForContractorServices")}
           action={
             <Button
               variant={showCreate ? "ghost" : "primary"}
@@ -239,14 +239,14 @@ export default function ContractorBillingSchedulesList() {
               <h3 className="font-semibold text-slate-800 mb-3">{t("manager:contractorBillingSchedulesIndex.heading.createBillingSchedule")}</h3>
               <form onSubmit={handleCreate} className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Contractor *</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:contractor_Billing_SchedulesIndex.text.contractor")}</label>
                   <select
                     value={form.contractorId}
                     onChange={(e) => setForm({ ...form, contractorId: e.target.value })}
                     required
                     className="w-full border rounded px-3 py-2 text-sm"
                   >
-                    <option value="">Select contractor…</option>
+                    <option value="">{t("manager:contractor_Billing_SchedulesIndex.text.selectContractor")}</option>
                     {contractors.map((c) => (
                       <option key={c.id} value={c.id}>
                         {c.name}
@@ -255,7 +255,7 @@ export default function ContractorBillingSchedulesList() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Description *</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:contractor_Billing_SchedulesIndex.text.description")}</label>
                   <input
                     type="text"
                     value={form.description}
@@ -266,7 +266,7 @@ export default function ContractorBillingSchedulesList() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Frequency *</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:contractor_Billing_SchedulesIndex.text.frequency")}</label>
                   <select
                     value={form.frequency}
                     onChange={(e) => setForm({ ...form, frequency: e.target.value })}
@@ -290,7 +290,7 @@ export default function ContractorBillingSchedulesList() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Start Date *</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:contractor_Billing_SchedulesIndex.text.startDate")}</label>
                   <input
                     type="date"
                     value={form.nextPeriodStart}
@@ -347,7 +347,7 @@ export default function ContractorBillingSchedulesList() {
           </ScrollableTabs>
 
           {loading ? (
-            <p className="loading-text p-4">Loading…</p>
+            <p className="loading-text p-4">{t("manager:contractor_Billing_SchedulesIndex.text.loading")}</p>
           ) : (
             <ConfigurableTable
                 tableId="manager-contractor-billing-schedules"
@@ -360,7 +360,7 @@ export default function ContractorBillingSchedulesList() {
                 onRowClick={(s) => router.push(`/manager/contractor-billing-schedules/${s.id}`)}
                 emptyState={
                   <div className="empty-state">
-                    <p className="empty-state-text">No contractor billing schedules found.</p>
+                    <p className="empty-state-text">{t("manager:contractor_Billing_SchedulesIndex.text.noContractorBillingSchedulesFound")}</p>
                   </div>
                 }
                 mobileCard={(s) => (

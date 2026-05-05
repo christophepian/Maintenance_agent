@@ -193,8 +193,8 @@ export default function ManagerChargesPage() {
         <PageContent>
           {error && (
             <Panel className="bg-red-50 border-red-200">
-              <strong className="text-red-700">Error:</strong> {error}
-              <button onClick={() => setError("")} className="action-btn-dismiss">Dismiss</button>
+              <strong className="text-red-700">{t("manager:financeCharges.text.error")}</strong> {error}
+              <button onClick={() => setError("")} className="action-btn-dismiss">{t("manager:financeCharges.text.dismiss")}</button>
             </Panel>
           )}
 
@@ -203,13 +203,13 @@ export default function ManagerChargesPage() {
             <Panel>
               <div className="filter-row">
                 <div>
-                  <label className="filter-label">Expense Type</label>
+                  <label className="filter-label">{t("manager:financeCharges.text.expenseType")}</label>
                   <select
                     value={expenseTypeId}
                     onChange={(e) => setExpenseTypeId(e.target.value)}
                     className="filter-select"
                   >
-                    <option value="">All expense types</option>
+                    <option value="">{t("manager:financeCharges.text.allExpenseTypes")}</option>
                     {expenseTypes.map((et) => (
                       <option key={et.id} value={et.id}>{et.code} — {et.name}</option>
                     ))}
@@ -274,7 +274,7 @@ export default function ManagerChargesPage() {
               <h3 className="mb-3 text-base font-semibold m-0">{t("manager:financeCharges.heading.editCharges")}</h3>
 
               <div className="mb-3">
-                <label className="filter-label">Charge Items</label>
+                <label className="filter-label">{t("manager:financeCharges.text.chargeItems")}</label>
                 {editForm.chargesItems.map((item, idx) => (
                   <div key={idx} className="edit-row">
                     <input
@@ -289,8 +289,8 @@ export default function ManagerChargesPage() {
                       onChange={(e) => updateChargeItem(idx, "mode", e.target.value)}
                       className="edit-input"
                     >
-                      <option value="ACOMPTE">Acompte</option>
-                      <option value="FORFAIT">Forfait</option>
+                      <option value="ACOMPTE">{t("manager:financeCharges.text.acompte")}</option>
+                      <option value="FORFAIT">{t("manager:financeCharges.text.forfait")}</option>
                     </select>
                     <input
                       type="number"
@@ -326,7 +326,7 @@ export default function ManagerChargesPage() {
                   />
                 </div>
                 <div>
-                  <label className="filter-label">Settlement date</label>
+                  <label className="filter-label">{t("manager:financeCharges.text.settlementDate")}</label>
                   <input
                     type="text"
                     placeholder={t("manager:financeCharges.placeholder.eG30062027")}
@@ -356,7 +356,7 @@ export default function ManagerChargesPage() {
           )}
 
           {loading ? (
-            <Panel><p className="m-0">Loading charges...</p></Panel>
+            <Panel><p className="m-0">{t("manager:financeCharges.text.loadingCharges")}</p></Panel>
           ) : sortedCharges.length === 0 ? (
             <Panel>
               <p className="m-0">{chargeSearch ? "No charges match your search." : "No active leases with charge data found."}</p>
@@ -373,7 +373,7 @@ export default function ManagerChargesPage() {
                       <div className="table-card-footer">
                         <span className="font-medium">{formatCurrency(l.chargesTotalChf)}/mo</span>
                         {l.chargesSettlementDate && <span>Settlement {l.chargesSettlementDate}</span>}
-                        <button onClick={() => startEdit(l)} className="text-xs font-medium text-indigo-600 hover:text-indigo-700">Edit charges</button>
+                        <button onClick={() => startEdit(l)} className="text-xs font-medium text-indigo-600 hover:text-indigo-700">{t("manager:financeCharges.text.editCharges")}</button>
                       </div>
                     </div>
                   ))}
@@ -384,11 +384,11 @@ export default function ManagerChargesPage() {
                   <table className="data-table">
                     <thead>
                       <tr>
-                        <SortableHeader label="Tenant" field="tenant" sortField={cSortField} sortDir={cSortDir} onSort={handleChargeSort} />
-                        <SortableHeader label="Unit" field="unit" sortField={cSortField} sortDir={cSortDir} onSort={handleChargeSort} />
-                        <SortableHeader label="Building" field="building" sortField={cSortField} sortDir={cSortDir} onSort={handleChargeSort} />
+                        <SortableHeader label={t("manager:financeCharges.prop.tenant")} field="tenant" sortField={cSortField} sortDir={cSortDir} onSort={handleChargeSort} />
+                        <SortableHeader label={t("manager:financeCharges.prop.unit")} field="unit" sortField={cSortField} sortDir={cSortDir} onSort={handleChargeSort} />
+                        <SortableHeader label={t("manager:financeCharges.prop.building")} field="building" sortField={cSortField} sortDir={cSortDir} onSort={handleChargeSort} />
                         <SortableHeader label="Monthly charges (CHF)" field="chargesTotalChf" sortField={cSortField} sortDir={cSortDir} onSort={handleChargeSort} />
-                        <SortableHeader label="Settlement date" field="settlementDate" sortField={cSortField} sortDir={cSortDir} onSort={handleChargeSort} />
+                        <SortableHeader label={t("manager:financeCharges.prop.settlementDate")} field="settlementDate" sortField={cSortField} sortDir={cSortDir} onSort={handleChargeSort} />
                         <th>{t("manager:financeCharges.col.actions")}</th>
                       </tr>
                     </thead>
@@ -415,7 +415,7 @@ export default function ManagerChargesPage() {
             /* Itemized view */
             itemizedRows.length === 0 ? (
               <Panel>
-                <p className="m-0">No itemized charge data found.</p>
+                <p className="m-0">{t("manager:financeCharges.text.noItemizedChargeDataFound")}</p>
               </Panel>
             ) : (
               <>
@@ -434,7 +434,7 @@ export default function ManagerChargesPage() {
                           <button
                             onClick={() => { const lease = leases.find((l) => l.id === row.leaseId); if (lease) startEdit(lease); }}
                             className="text-xs font-medium text-indigo-600 hover:text-indigo-700"
-                          >Edit</button>
+                          >{t("manager:financeCharges.text.edit")}</button>
                         </div>
                       </div>
                     ))}
@@ -445,10 +445,10 @@ export default function ManagerChargesPage() {
                     <table className="data-table">
                       <thead>
                         <tr>
-                          <SortableHeader label="Tenant" field="tenantName" sortField={iSortField} sortDir={iSortDir} onSort={handleISort} />
-                          <SortableHeader label="Unit" field="unitNumber" sortField={iSortField} sortDir={iSortDir} onSort={handleISort} />
+                          <SortableHeader label={t("manager:financeCharges.prop.tenant")} field="tenantName" sortField={iSortField} sortDir={iSortDir} onSort={handleISort} />
+                          <SortableHeader label={t("manager:financeCharges.prop.unit")} field="unitNumber" sortField={iSortField} sortDir={iSortDir} onSort={handleISort} />
                           <SortableHeader label={t("manager:financeCharges.placeholder.itemName")} field="label" sortField={iSortField} sortDir={iSortDir} onSort={handleISort} />
-                          <SortableHeader label="Mode" field="mode" sortField={iSortField} sortDir={iSortDir} onSort={handleISort} />
+                          <SortableHeader label={t("manager:financeCharges.prop.mode")} field="mode" sortField={iSortField} sortDir={iSortDir} onSort={handleISort} />
                           <SortableHeader label="Amount (CHF)" field="amountChf" sortField={iSortField} sortDir={iSortDir} onSort={handleISort} />
                           <th>{t("manager:financeCharges.col.actions")}</th>
                         </tr>

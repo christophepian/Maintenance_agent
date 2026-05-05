@@ -169,15 +169,15 @@ export default function OwnerInvoiceDetailPage() {
         <PageContent>
           {error && (
             <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 mb-4 flex items-center justify-between">
-              <span className="text-sm text-red-700"><strong>Error:</strong> {error}</span>
-              <button onClick={() => setError("")} className="text-xs text-red-500 hover:text-red-700 ml-4">Dismiss</button>
+              <span className="text-sm text-red-700"><strong>{t("owner:financeInvoicesId.text.error")}</strong> {error}</span>
+              <button onClick={() => setError("")} className="text-xs text-red-500 hover:text-red-700 ml-4">{t("owner:financeInvoicesId.text.dismiss")}</button>
             </div>
           )}
 
           {loading ? (
-            <Panel><p className="loading-text">Loading invoice…</p></Panel>
+            <Panel><p className="loading-text">{t("owner:financeInvoicesId.text.loadingInvoice")}</p></Panel>
           ) : !inv ? (
-            <div className="empty-state"><p className="empty-state-text">Invoice not found.</p></div>
+            <div className="empty-state"><p className="empty-state-text">{t("owner:financeInvoicesId.text.invoiceNotFound")}</p></div>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Left column */}
@@ -235,16 +235,16 @@ export default function OwnerInvoiceDetailPage() {
                 {/* Invoice details */}
                 <Panel title={t("owner:financeInvoicesId.title.invoiceDetails")}>
                   <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-4">
-                    <Field label="Invoice Number" value={inv.invoiceNumber} />
-                    <Field label="Direction" value={inv.direction === "INCOMING" ? "Incoming" : "Outgoing"} />
-                    <Field label="Currency" value={inv.currency || "CHF"} />
-                    <Field label="Subtotal" value={formatChf(inv.subtotalAmount)} />
+                    <Field label={t("owner:financeInvoicesId.prop.invoiceNumber")} value={inv.invoiceNumber} />
+                    <Field label={t("owner:financeInvoicesId.prop.direction")} value={inv.direction === "INCOMING" ? "Incoming" : "Outgoing"} />
+                    <Field label={t("owner:financeInvoicesId.prop.currency")} value={inv.currency || "CHF"} />
+                    <Field label={t("owner:financeInvoicesId.prop.subtotal")} value={formatChf(inv.subtotalAmount)} />
                     <Field label="VAT" value={inv.vatRate != null ? `${inv.vatRate}% — ${formatChf(inv.vatAmount)}` : formatChf(inv.vatAmount)} />
                     <Field label={t("owner:financeInvoicesId.col.total")} value={formatChf(inv.totalAmount)} />
-                    <Field label="Issue Date" value={formatDate(inv.issueDate)} />
-                    <Field label="Due Date" value={formatDate(inv.dueDate)} />
-                    <Field label="Created" value={formatDate(inv.createdAt)} />
-                    {inv.paymentReference && <Field label="Payment Ref" value={inv.paymentReference} />}
+                    <Field label={t("owner:financeInvoicesId.prop.issueDate")} value={formatDate(inv.issueDate)} />
+                    <Field label={t("owner:financeInvoicesId.prop.dueDate")} value={formatDate(inv.dueDate)} />
+                    <Field label={t("owner:financeInvoicesId.prop.created")} value={formatDate(inv.createdAt)} />
+                    {inv.paymentReference && <Field label={t("owner:financeInvoicesId.prop.paymentRef")} value={inv.paymentReference} />}
                     {inv.iban && <Field label="IBAN" value={inv.iban} />}
                   </dl>
                 </Panel>
@@ -252,10 +252,10 @@ export default function OwnerInvoiceDetailPage() {
                 {/* Recipient */}
                 <Panel title={t("owner:financeInvoicesId.title.recipient")}>
                   <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-4">
-                    <Field label="Name" value={inv.recipientName} />
-                    <Field label="Address" value={[inv.recipientAddressLine1, inv.recipientAddressLine2].filter(Boolean).join(", ")} />
-                    <Field label="Postal Code · City" value={[inv.recipientPostalCode, inv.recipientCity].filter(Boolean).join(" ")} />
-                    <Field label="Country" value={inv.recipientCountry} />
+                    <Field label={t("owner:financeInvoicesId.prop.name")} value={inv.recipientName} />
+                    <Field label={t("owner:financeInvoicesId.prop.address")} value={[inv.recipientAddressLine1, inv.recipientAddressLine2].filter(Boolean).join(", ")} />
+                    <Field label={t("owner:financeInvoicesId.prop.postalCodeCity")} value={[inv.recipientPostalCode, inv.recipientCity].filter(Boolean).join(" ")} />
+                    <Field label={t("owner:financeInvoicesId.prop.country")} value={inv.recipientCountry} />
                   </dl>
                 </Panel>
 
@@ -263,7 +263,7 @@ export default function OwnerInvoiceDetailPage() {
                 {(inv.issuerName || inv.issuerBillingEntityId) && (
                   <Panel title={t("owner:financeInvoicesId.title.issuer")}>
                     <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-4">
-                      <Field label="Name" value={inv.issuerName} />
+                      <Field label={t("owner:financeInvoicesId.prop.name")} value={inv.issuerName} />
                     </dl>
                   </Panel>
                 )}
@@ -316,8 +316,8 @@ export default function OwnerInvoiceDetailPage() {
                 {(inv.expenseType || inv.account) && (
                   <Panel title={t("owner:financeInvoicesId.title.accounting")}>
                     <dl className="grid grid-cols-2 gap-x-6 gap-y-4">
-                      {inv.expenseType && <Field label="Expense Type" value={`${inv.expenseType.name}${inv.expenseType.code ? ` (${inv.expenseType.code})` : ""}`} />}
-                      {inv.account && <Field label="Account" value={`${inv.account.name}${inv.account.code ? ` (${inv.account.code})` : ""}`} />}
+                      {inv.expenseType && <Field label={t("owner:financeInvoicesId.prop.expenseType")} value={`${inv.expenseType.name}${inv.expenseType.code ? ` (${inv.expenseType.code})` : ""}`} />}
+                      {inv.account && <Field label={t("owner:financeInvoicesId.prop.account")} value={`${inv.account.name}${inv.account.code ? ` (${inv.account.code})` : ""}`} />}
                     </dl>
                   </Panel>
                 )}
@@ -353,10 +353,10 @@ export default function OwnerInvoiceDetailPage() {
                 {/* Timeline */}
                 <Panel title={t("owner:financeInvoicesId.title.timeline")}>
                   <div className="space-y-2 text-xs text-slate-600">
-                    <div className="flex justify-between"><span>Created</span><span>{formatDate(inv.createdAt)}</span></div>
-                    {inv.submittedAt && <div className="flex justify-between"><span>Submitted</span><span>{formatDate(inv.submittedAt)}</span></div>}
-                    {inv.approvedAt && <div className="flex justify-between"><span>Approved</span><span>{formatDate(inv.approvedAt)}</span></div>}
-                    {inv.paidAt && <div className="flex justify-between"><span>Paid</span><span>{formatDate(inv.paidAt)}</span></div>}
+                    <div className="flex justify-between"><span>{t("owner:financeInvoicesId.text.created")}</span><span>{formatDate(inv.createdAt)}</span></div>
+                    {inv.submittedAt && <div className="flex justify-between"><span>{t("owner:financeInvoicesId.text.submitted")}</span><span>{formatDate(inv.submittedAt)}</span></div>}
+                    {inv.approvedAt && <div className="flex justify-between"><span>{t("owner:financeInvoicesId.text.approved")}</span><span>{formatDate(inv.approvedAt)}</span></div>}
+                    {inv.paidAt && <div className="flex justify-between"><span>{t("owner:financeInvoicesId.text.paid")}</span><span>{formatDate(inv.paidAt)}</span></div>}
                   </div>
                 </Panel>
               </div>

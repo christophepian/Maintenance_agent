@@ -220,7 +220,7 @@ export default function LedgerPage() {
       <PageShell>
         <PageHeader
           title={t("manager:financeLedger.title.generalLedger")}
-          subtitle="Advanced audit view — double-entry journal"
+          subtitle={t("manager:financeLedger.prop.advancedAuditViewDoubleentryJournal")}
         />
         <PageContent>
 
@@ -229,7 +229,7 @@ export default function LedgerPage() {
             <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 px-5 py-4">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="text-sm font-semibold text-amber-700">Chart of Accounts not set up</p>
+                  <p className="text-sm font-semibold text-amber-700">{t("manager:financeLedger.text.chartOfAccountsNotSetUp")}</p>
                   <p className="text-xs text-amber-700 mt-1">
                     The ledger requires a Chart of Accounts to post entries. Click the button to seed the
                     Swiss Kontenplan and post historical invoice entries in one step.
@@ -300,21 +300,21 @@ export default function LedgerPage() {
             <FilterPanelBody>
               <FilterSection title={t("manager:financeLedger.title.dateRange")} first>
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                  <DateField label="From" value={from} onChange={(e) => setFrom(e.target.value)} />
-                  <DateField label="To" value={to} onChange={(e) => setTo(e.target.value)} />
+                  <DateField label={t("manager:financeLedger.prop.from")} value={from} onChange={(e) => setFrom(e.target.value)} />
+                  <DateField label={t("manager:financeLedger.prop.to")} value={to} onChange={(e) => setTo(e.target.value)} />
                 </div>
               </FilterSection>
               {tab === "journal" && (
                 <FilterSection title={t("manager:financeLedger.title.scope")}>
                   <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                    <SelectField label="Building" value={buildingId} onChange={(e) => setBuildingId(e.target.value)}>
-                      <option value="">All buildings</option>
+                    <SelectField label={t("manager:financeLedger.prop.building")} value={buildingId} onChange={(e) => setBuildingId(e.target.value)}>
+                      <option value="">{t("manager:financeLedger.text.allBuildings")}</option>
                       {buildings.map((b) => (
                         <option key={b.id} value={b.id}>{b.name}</option>
                       ))}
                     </SelectField>
                     <SelectField label={t("manager:financeLedger.col.account")} value={accountId} onChange={(e) => setAccountId(e.target.value)}>
-                      <option value="">All accounts</option>
+                      <option value="">{t("manager:financeLedger.text.allAccounts")}</option>
                       {ACCOUNT_TYPE_ORDER.map((type) => {
                         const group = accounts.filter((a) => a.accountType === type);
                         if (!group.length) return null;
@@ -329,8 +329,8 @@ export default function LedgerPage() {
                         );
                       })}
                     </SelectField>
-                    <SelectField label="Event type" value={sourceType} onChange={(e) => setSourceType(e.target.value)}>
-                      <option value="">All events</option>
+                    <SelectField label={t("manager:financeLedger.prop.eventType")} value={sourceType} onChange={(e) => setSourceType(e.target.value)}>
+                      <option value="">{t("manager:financeLedger.text.allEvents")}</option>
                       {Object.entries(SOURCE_TYPE_LABELS).map(([k, v]) => (
                         <option key={k} value={k}>{v}</option>
                       ))}
@@ -350,10 +350,10 @@ export default function LedgerPage() {
             <Panel>
               {error && <p className="text-red-600 text-sm mb-3">{error}</p>}
               {loading ? (
-                <p className="text-slate-400 text-sm">Loading…</p>
+                <p className="text-slate-400 text-sm">{t("manager:financeLedger.text.loading")}</p>
               ) : entries.length === 0 ? (
                 <div className="py-12 text-center">
-                  <p className="text-slate-500 font-medium text-sm">No journal entries found</p>
+                  <p className="text-slate-500 font-medium text-sm">{t("manager:financeLedger.text.noJournalEntriesFound")}</p>
                   <p className="text-slate-400 text-xs mt-2 max-w-md mx-auto">
                     Ledger entries are posted automatically when invoices are issued or paid.
                     {from && " Try widening the date range."}
@@ -463,11 +463,11 @@ export default function LedgerPage() {
             <Panel>
               {tbError && <p className="text-red-600 text-sm mb-3">{tbError}</p>}
               {tbLoading ? (
-                <p className="text-slate-400 text-sm">Loading…</p>
+                <p className="text-slate-400 text-sm">{t("manager:financeLedger.text.loading")}</p>
               ) : balances.length === 0 ? (
                 <div className="py-12 text-center">
-                  <p className="text-slate-500 font-medium text-sm">No entries for this period</p>
-                  <p className="text-slate-400 text-xs mt-1">Adjust the date range and apply filters above.</p>
+                  <p className="text-slate-500 font-medium text-sm">{t("manager:financeLedger.text.noEntriesForThisPeriod")}</p>
+                  <p className="text-slate-400 text-xs mt-1">{t("manager:financeLedger.text.adjustTheDateRangeAndApplyFiltersAbove")}</p>
                 </div>
               ) : (
                 <>
@@ -541,7 +541,7 @@ export default function LedgerPage() {
                               </tbody>
                               <tfoot>
                                 <tr className="border-t border-slate-300 bg-slate-50 text-xs font-semibold">
-                                  <td colSpan={2} className="text-slate-600">Subtotal</td>
+                                  <td colSpan={2} className="text-slate-600">{t("manager:financeLedger.text.subtotal")}</td>
                                   <td className="text-right font-mono">{formatChfCents(typeDebit)}</td>
                                   <td className="text-right font-mono">{formatChfCents(typeCredit)}</td>
                                   <td />
@@ -556,8 +556,8 @@ export default function LedgerPage() {
 
                   {/* Grand total */}
                   <div className="flex justify-end gap-8 text-sm font-semibold border-t-2 border-slate-300 pt-3 mt-2">
-                    <span>Grand Total Debit: <span className="font-mono">{formatChfCents(tbTotals.debit)}</span></span>
-                    <span>Grand Total Credit: <span className="font-mono">{formatChfCents(tbTotals.credit)}</span></span>
+                    <span>{t("manager:financeLedger.text.grandTotalDebit")} <span className="font-mono">{formatChfCents(tbTotals.debit)}</span></span>
+                    <span>{t("manager:financeLedger.text.grandTotalCredit")} <span className="font-mono">{formatChfCents(tbTotals.credit)}</span></span>
                     <span className={tbBalanced ? "text-green-700" : "text-red-600"}>
                       {tbBalanced ? "Balanced ✓" : `Off by CHF ${formatChfCents(Math.abs(tbTotals.debit - tbTotals.credit))}`}
                     </span>

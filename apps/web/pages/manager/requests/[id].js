@@ -308,13 +308,14 @@ function DepreciationBar({ pct }) {
 /* ── Asset recommendation (inline content, no wrapping Panel) ── */
 
 function AssetRecommendationContent({ applianceId, repairReplaceData, requestEstimate }) {
+  const { t } = useTranslation("manager");
   if (!applianceId) return null;
 
   if (!repairReplaceData || repairReplaceData.loading) {
     return <p className="text-sm text-slate-400 animate-pulse m-0">Loading asset analysis&hellip;</p>;
   }
   if (repairReplaceData.error) {
-    return <p className="text-sm text-red-500 m-0">Failed to load asset analysis.</p>;
+    return <p className="text-sm text-red-500 m-0">{t("manager:requestsId.text.failedToLoadAssetAnalysis")}</p>;
   }
 
   const items = repairReplaceData.data || [];
@@ -322,8 +323,8 @@ function AssetRecommendationContent({ applianceId, repairReplaceData, requestEst
   if (!item) {
     return (
       <div className="py-4 text-center">
-        <p className="text-sm text-slate-400 m-0">No repair-vs-replace data available for this asset.</p>
-        <p className="text-xs text-slate-300 mt-1 m-0">Asset inventory records are required for analysis.</p>
+        <p className="text-sm text-slate-400 m-0">{t("manager:requestsId.text.noRepairvsreplaceDataAvailableForThisAsset")}</p>
+        <p className="text-xs text-slate-300 mt-1 m-0">{t("manager:requestsId.text.assetInventoryRecordsAreRequiredForAnalysis")}</p>
       </div>
     );
   }
@@ -355,7 +356,7 @@ function AssetRecommendationContent({ applianceId, repairReplaceData, requestEst
       {/* Cost comparison */}
       <div className="grid grid-cols-2 gap-4 pt-3 border-t border-slate-100">
         <div>
-          <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">Est. repair</span>
+          <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">{t("manager:requestsId.text.estRepair")}</span>
           <p className="mt-0.5 text-sm font-semibold text-slate-900 m-0">
             {requestEstimate > 0
               ? formatCurrency(requestEstimate)
@@ -365,7 +366,7 @@ function AssetRecommendationContent({ applianceId, repairReplaceData, requestEst
           </p>
         </div>
         <div>
-          <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">Est. replacement</span>
+          <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">{t("manager:requestsId.text.estReplacement")}</span>
           <p className="mt-0.5 text-sm font-semibold text-slate-900 m-0">
             {item.estimatedReplacementCostChf > 0 ? formatCurrency(item.estimatedReplacementCostChf) : "\u2014"}
           </p>
@@ -417,6 +418,7 @@ const VERDICT_STYLES = {
 const CONFIDENCE_VARIANT = { high: "success", medium: "warning", low: "neutral" };
 
 function OwnerAdjustedDecision({ state }) {
+  const { t } = useTranslation("manager");
   const { loading, error, data } = state;
 
   if (loading) {
@@ -425,7 +427,7 @@ function OwnerAdjustedDecision({ state }) {
         <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
           Owner Context
         </p>
-        <p className="text-sm text-slate-400">Calculating…</p>
+        <p className="text-sm text-slate-400">{t("manager:requestsId.text.calculating")}</p>
       </div>
     );
   }
@@ -769,15 +771,15 @@ export default function RequestDetailPage() {
           {/* Error banner */}
           {error && (
             <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 mb-4 flex items-center justify-between">
-              <span className="text-sm text-red-700"><strong>Error:</strong> {error}</span>
-              <button onClick={() => setError("")} className="text-xs text-red-500 hover:text-red-700 ml-4">Dismiss</button>
+              <span className="text-sm text-red-700"><strong>{t("manager:requestsId.text.error")}</strong> {error}</span>
+              <button onClick={() => setError("")} className="text-xs text-red-500 hover:text-red-700 ml-4">{t("manager:requestsId.text.dismiss")}</button>
             </div>
           )}
 
           {loading ? (
             <Panel><p className="loading-text">Loading request&hellip;</p></Panel>
           ) : !r ? (
-            <div className="empty-state"><p className="empty-state-text">Request not found.</p></div>
+            <div className="empty-state"><p className="empty-state-text">{t("manager:requestsId.text.requestNotFound")}</p></div>
           ) : (
             <div className="space-y-6">
 
@@ -910,7 +912,7 @@ export default function RequestDetailPage() {
                   <div className="flex flex-wrap items-baseline gap-x-6 gap-y-2 mb-4">
                     {building && (
                       <div>
-                        <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">Building</span>
+                        <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">{t("manager:requestsId.text.building")}</span>
                         <Link href={`/admin-inventory/buildings/${building.id}?from=/manager/requests/${id}`} className="cell-link text-sm font-medium">
                           {building.name}
                         </Link>
@@ -919,14 +921,14 @@ export default function RequestDetailPage() {
                     )}
                     {unit && (
                       <div>
-                        <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">Unit</span>
+                        <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">{t("manager:requestsId.text.unit")}</span>
                         <span className="text-sm font-medium text-slate-900">{unit.unitNumber}</span>
                         {unit.floor != null && <span className="text-xs text-slate-400 ml-1.5">Floor {unit.floor}</span>}
                       </div>
                     )}
                     {tenant && (
                       <div>
-                        <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">Tenant</span>
+                        <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">{t("manager:requestsId.text.tenant")}</span>
                         {r.tenantId ? (
                           <Link href={`/manager/people/tenants/${r.tenantId}`} className="cell-link text-sm font-medium">
                             {tenant.name}
@@ -939,7 +941,7 @@ export default function RequestDetailPage() {
 
                   {/* Description */}
                   <div className="mb-4">
-                    <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">Description</span>
+                    <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">{t("manager:requestsId.text.description")}</span>
                     <p className="mt-1 text-sm text-slate-700 leading-relaxed whitespace-pre-wrap m-0">
                       {r.description || <span className="text-slate-400">&mdash;</span>}
                     </p>
@@ -953,29 +955,29 @@ export default function RequestDetailPage() {
                   {/* Metadata grid */}
                   <div className="border-t border-slate-100 pt-4">
                     <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3">
-                      <Field label="Created">{formatDate(r.createdAt)}</Field>
+                      <Field label={t("manager:requestsId.prop.created")}>{formatDate(r.createdAt)}</Field>
                       {r.category && (
-                        <Field label="Category">
+                        <Field label={t("manager:requestsId.prop.category")}>
                           <Badge variant="muted" size="sm">
                             {r.category}
                           </Badge>
                         </Field>
                       )}
                       {r.estimatedCost > 0 && (
-                        <Field label="Estimated Cost">
+                        <Field label={t("manager:requestsId.prop.estimatedCost")}>
                           <span className="font-semibold">{formatCurrency(r.estimatedCost)}</span>
                         </Field>
                       )}
-                      {r.contactPhone && <Field label="Contact">{r.contactPhone}</Field>}
+                      {r.contactPhone && <Field label={t("manager:requestsId.prop.contact")}>{r.contactPhone}</Field>}
                       {!isTenantFunded && (
-                        <Field label="Paying Party">
+                        <Field label={t("manager:requestsId.prop.payingParty")}>
                           <Badge variant="muted" size="sm">
                             Landlord
                           </Badge>
                         </Field>
                       )}
                       {isTenantFunded && r.rejectionReason && (
-                        <Field label="Rejection Reason">
+                        <Field label={t("manager:requestsId.prop.rejectionReason")}>
                           <span className="text-orange-700">{r.rejectionReason}</span>
                         </Field>
                       )}
@@ -985,15 +987,15 @@ export default function RequestDetailPage() {
                   {/* Contractor — only when assigned */}
                   {r.assignedContractor && (
                     <div className="border-t border-slate-100 pt-4 mt-4">
-                      <h4 className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-3">Contractor</h4>
+                      <h4 className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-3">{t("manager:requestsId.text.contractor")}</h4>
                       <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3">
-                        <Field label="Name">
+                        <Field label={t("manager:requestsId.prop.name")}>
                           <Link href={`/manager/people/vendors/${r.assignedContractor.id}`} className="cell-link font-medium text-sm">
                             {r.assignedContractor.name || r.assignedContractor.companyName || "\u2014"}
                           </Link>
                         </Field>
-                        {r.assignedContractor.phone && <Field label="Phone">{r.assignedContractor.phone}</Field>}
-                        {r.assignedContractor.email && <Field label="Email">{r.assignedContractor.email}</Field>}
+                        {r.assignedContractor.phone && <Field label={t("manager:requestsId.prop.phone")}>{r.assignedContractor.phone}</Field>}
+                        {r.assignedContractor.email && <Field label={t("manager:requestsId.prop.email")}>{r.assignedContractor.email}</Field>}
                       </dl>
                     </div>
                   )}
@@ -1001,7 +1003,7 @@ export default function RequestDetailPage() {
                   {/* Linked Asset (prefers canonical Asset, falls back to Appliance) */}
                   <div className="border-t border-slate-100 pt-4 mt-4">
                     <div className="flex items-center justify-between mb-3">
-                      <h4 className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 m-0">Asset</h4>
+                      <h4 className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 m-0">{t("manager:requestsId.text.asset")}</h4>
                       {linkedAsset && r.assetId && !assetPickerOpen && (
                         <button
                           type="button"
@@ -1025,10 +1027,10 @@ export default function RequestDetailPage() {
 
                     {linkedAsset ? (
                       <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3">
-                        <Field label="Name">{linkedAsset.name || "\u2014"}</Field>
-                        {linkedAsset.manufacturer && <Field label="Manufacturer">{linkedAsset.manufacturer}</Field>}
-                        {linkedAsset.modelNumber && <Field label="Model">{linkedAsset.modelNumber}</Field>}
-                        {linkedAsset.installDate && <Field label="Installed">{formatDate(linkedAsset.installDate)}</Field>}
+                        <Field label={t("manager:requestsId.prop.name")}>{linkedAsset.name || "\u2014"}</Field>
+                        {linkedAsset.manufacturer && <Field label={t("manager:requestsId.prop.manufacturer")}>{linkedAsset.manufacturer}</Field>}
+                        {linkedAsset.modelNumber && <Field label={t("manager:requestsId.prop.model")}>{linkedAsset.modelNumber}</Field>}
+                        {linkedAsset.installDate && <Field label={t("manager:requestsId.prop.installed")}>{formatDate(linkedAsset.installDate)}</Field>}
                       </dl>
                     ) : assetPickerOpen ? (
                       <div className="flex items-start gap-2 flex-wrap">
@@ -1047,7 +1049,7 @@ export default function RequestDetailPage() {
                             <>
                               {scored[0]?._score >= 3 && (
                                 <div className="w-full mb-2">
-                                  <p className="text-[11px] text-indigo-600 font-medium mb-1">Suggested match</p>
+                                  <p className="text-[11px] text-indigo-600 font-medium mb-1">{t("manager:requestsId.text.suggestedMatch")}</p>
                                   <button
                                     type="button"
                                     onClick={() => { setSelectedAssetId(scored[0].id); doLinkAsset && setTimeout(doLinkAsset, 0); }}
@@ -1056,7 +1058,7 @@ export default function RequestDetailPage() {
                                   >
                                     <span className="font-medium text-indigo-800">{scored[0].name || scored[0].topic}</span>
                                     {scored[0].brand && <span className="text-indigo-600 ml-2">— {scored[0].brand}</span>}
-                                    <span className="ml-2 rounded-full bg-indigo-200 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-700">Suggested</span>
+                                    <span className="ml-2 rounded-full bg-indigo-200 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-700">{t("manager:requestsId.text.suggested")}</span>
                                   </button>
                                 </div>
                               )}
@@ -1123,7 +1125,7 @@ export default function RequestDetailPage() {
                     />
                     {!legalState.loading && !legalState.data && !legalState.error && (
                       <div className="px-6 py-8 text-center">
-                        <p className="text-sm text-slate-400 m-0">No legal analysis available for this request.</p>
+                        <p className="text-sm text-slate-400 m-0">{t("manager:requestsId.text.noLegalAnalysisAvailableForThisRequest")}</p>
                       </div>
                     )}
                     {/* Route-to-RFP CTA: only when OBLIGATED + PENDING_REVIEW + no rfpId yet */}
@@ -1152,18 +1154,18 @@ export default function RequestDetailPage() {
                         {/* Linked asset summary */}
                         <div className="flex flex-wrap items-baseline gap-x-5 gap-y-1">
                           <div>
-                            <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">Asset</span>
+                            <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">{t("manager:requestsId.text.asset")}</span>
                             <span className="text-sm font-medium text-slate-900">{linkedAsset.name || "\u2014"}</span>
                           </div>
                           {linkedAsset.manufacturer && (
                             <div>
-                              <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">Manufacturer</span>
+                              <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">{t("manager:requestsId.text.manufacturer")}</span>
                               <span className="text-sm text-slate-700">{linkedAsset.manufacturer}</span>
                             </div>
                           )}
                           {linkedAsset.category && (
                             <div>
-                              <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">Category</span>
+                              <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">{t("manager:requestsId.text.category")}</span>
                               <Badge variant="muted" size="sm">
                                 {linkedAsset.category}
                               </Badge>
@@ -1171,7 +1173,7 @@ export default function RequestDetailPage() {
                           )}
                           {linkedAsset.installDate && (
                             <div>
-                              <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">Installed</span>
+                              <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">{t("manager:requestsId.text.installed")}</span>
                               <span className="text-sm text-slate-700">{formatDate(linkedAsset.installDate)}</span>
                             </div>
                           )}
@@ -1189,7 +1191,7 @@ export default function RequestDetailPage() {
                       </div>
                     ) : (
                       <div className="py-6 text-center">
-                        <p className="text-sm text-slate-400 m-0">No asset linked to this request.</p>
+                        <p className="text-sm text-slate-400 m-0">{t("manager:requestsId.text.noAssetLinkedToThisRequest")}</p>
                       </div>
                     )}
 

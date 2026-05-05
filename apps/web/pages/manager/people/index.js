@@ -121,10 +121,10 @@ function OwnersTab({ showAddForm, onAddFormClose }) {
       {/* Add owner form */}
       {showAddForm && (
         <div className="mb-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
-          <p className="text-sm font-semibold text-slate-700 mb-3">New owner</p>
+          <p className="text-sm font-semibold text-slate-700 mb-3">{t("manager:peopleIndex.text.newOwner")}</p>
           <form onSubmit={handleCreateOwner} className="flex flex-wrap gap-3 items-end">
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Name</label>
+              <label className="block text-xs font-medium text-slate-600 mb-1">{t("manager:peopleIndex.text.name")}</label>
               <input
                 required value={ownerForm.name}
                 onChange={(e) => setOwnerForm((f) => ({ ...f, name: e.target.value }))}
@@ -133,7 +133,7 @@ function OwnersTab({ showAddForm, onAddFormClose }) {
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Email</label>
+              <label className="block text-xs font-medium text-slate-600 mb-1">{t("manager:peopleIndex.text.email")}</label>
               <input
                 required type="email" value={ownerForm.email}
                 onChange={(e) => setOwnerForm((f) => ({ ...f, email: e.target.value }))}
@@ -142,7 +142,7 @@ function OwnersTab({ showAddForm, onAddFormClose }) {
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Password</label>
+              <label className="block text-xs font-medium text-slate-600 mb-1">{t("manager:peopleIndex.text.password")}</label>
               <input
                 required type="password" value={ownerForm.password}
                 onChange={(e) => setOwnerForm((f) => ({ ...f, password: e.target.value }))}
@@ -163,10 +163,10 @@ function OwnersTab({ showAddForm, onAddFormClose }) {
       )}
 
       {loading ? (
-        <p className="loading-text">Loading owners…</p>
+        <p className="loading-text">{t("manager:peopleIndex.text.loadingOwners")}</p>
       ) : owners.length === 0 && !showAddForm ? (
         <div className="empty-state">
-          <p className="empty-state-text">No owners yet. Use the "+ Add owner" button above to create one.</p>
+          <p className="empty-state-text">{t("manager:peopleIndex.text.noOwnersYetUseTheAddOwnerButtonAboveToCreateOne")}</p>
         </div>
       ) : (
         <>
@@ -181,8 +181,8 @@ function OwnersTab({ showAddForm, onAddFormClose }) {
                   <div className="flex items-start justify-between gap-2">
                     <p className="table-card-head">{owner.name}</p>
                     {owner.billingEntity
-                      ? <Badge variant="success" size="md">✓ Billing set</Badge>
-                      : <Badge variant="muted" size="md">Not set</Badge>}
+                      ? <Badge variant="success" size="md">{t("manager:peopleIndex.text.billingSet")}</Badge>
+                      : <Badge variant="muted" size="md">{t("manager:peopleIndex.text.notSet")}</Badge>}
                   </div>
                   <p className="table-card-sub">{owner.email || "—"}</p>
                   {!owner.billingEntity && (
@@ -199,19 +199,19 @@ function OwnersTab({ showAddForm, onAddFormClose }) {
                     <p className="text-xs font-semibold text-slate-600 mb-3">Billing entity for {owner.name}</p>
                     <form onSubmit={(e) => handleCreateBillingEntity(e, owner.id)} className="flex flex-wrap gap-3 items-end">
                       <div className="w-full">
-                        <label className="block text-xs font-medium text-slate-600 mb-1">Address</label>
+                        <label className="block text-xs font-medium text-slate-600 mb-1">{t("manager:peopleIndex.text.address")}</label>
                         <input required value={billingForm.addressLine1}
                           onChange={(e) => setBillingForm((f) => ({ ...f, addressLine1: e.target.value }))}
                           className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-full" placeholder={t("manager:peopleIndex.placeholder.rueDeLaPaix1")} />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-slate-600 mb-1">Postal code</label>
+                        <label className="block text-xs font-medium text-slate-600 mb-1">{t("manager:peopleIndex.text.postalCode")}</label>
                         <input required value={billingForm.postalCode}
                           onChange={(e) => setBillingForm((f) => ({ ...f, postalCode: e.target.value }))}
                           className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-24" placeholder="1200" />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-slate-600 mb-1">City</label>
+                        <label className="block text-xs font-medium text-slate-600 mb-1">{t("manager:peopleIndex.text.city")}</label>
                         <input required value={billingForm.city}
                           onChange={(e) => setBillingForm((f) => ({ ...f, city: e.target.value }))}
                           className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-32" placeholder={t("manager:peopleIndex.placeholder.genVe")} />
@@ -223,7 +223,7 @@ function OwnersTab({ showAddForm, onAddFormClose }) {
                           className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-full font-mono" placeholder={t("manager:peopleIndex.placeholder.cH5604835012345678009")} />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-slate-600 mb-1">VAT number</label>
+                        <label className="block text-xs font-medium text-slate-600 mb-1">{t("manager:peopleIndex.text.vATNumber")}</label>
                         <input value={billingForm.vatNumber}
                           onChange={(e) => setBillingForm((f) => ({ ...f, vatNumber: e.target.value }))}
                           className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-36" placeholder={t("manager:peopleIndex.placeholder.cHE123456789")} />
@@ -244,9 +244,9 @@ function OwnersTab({ showAddForm, onAddFormClose }) {
             <table className="data-table w-full">
               <thead>
                 <tr>
-                  <SortableHeader label="Name" field="name" sortField={oSortField} sortDir={oSortDir} onSort={handleOwnerSort} />
-                  <SortableHeader label="Email" field="email" sortField={oSortField} sortDir={oSortDir} onSort={handleOwnerSort} />
-                  <SortableHeader label="Billing entity" field="billingEntity" sortField={oSortField} sortDir={oSortDir} onSort={handleOwnerSort} />
+                  <SortableHeader label={t("manager:peopleIndex.prop.name")} field="name" sortField={oSortField} sortDir={oSortDir} onSort={handleOwnerSort} />
+                  <SortableHeader label={t("manager:peopleIndex.prop.email")} field="email" sortField={oSortField} sortDir={oSortDir} onSort={handleOwnerSort} />
+                  <SortableHeader label={t("manager:peopleIndex.prop.billingEntity")} field="billingEntity" sortField={oSortField} sortDir={oSortDir} onSort={handleOwnerSort} />
                   <th></th>
                 </tr>
               </thead>
@@ -284,19 +284,19 @@ function OwnersTab({ showAddForm, onAddFormClose }) {
                           <p className="text-xs font-semibold text-slate-600 mb-3">Billing entity for {owner.name}</p>
                           <form onSubmit={(e) => handleCreateBillingEntity(e, owner.id)} className="flex flex-wrap gap-3 items-end">
                             <div>
-                              <label className="block text-xs font-medium text-slate-600 mb-1">Address</label>
+                              <label className="block text-xs font-medium text-slate-600 mb-1">{t("manager:peopleIndex.text.address")}</label>
                               <input required value={billingForm.addressLine1}
                                 onChange={(e) => setBillingForm((f) => ({ ...f, addressLine1: e.target.value }))}
                                 className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-52" placeholder={t("manager:peopleIndex.placeholder.rueDeLaPaix1")} />
                             </div>
                             <div>
-                              <label className="block text-xs font-medium text-slate-600 mb-1">Postal code</label>
+                              <label className="block text-xs font-medium text-slate-600 mb-1">{t("manager:peopleIndex.text.postalCode")}</label>
                               <input required value={billingForm.postalCode}
                                 onChange={(e) => setBillingForm((f) => ({ ...f, postalCode: e.target.value }))}
                                 className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-24" placeholder="1200" />
                             </div>
                             <div>
-                              <label className="block text-xs font-medium text-slate-600 mb-1">City</label>
+                              <label className="block text-xs font-medium text-slate-600 mb-1">{t("manager:peopleIndex.text.city")}</label>
                               <input required value={billingForm.city}
                                 onChange={(e) => setBillingForm((f) => ({ ...f, city: e.target.value }))}
                                 className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-32" placeholder={t("manager:peopleIndex.placeholder.genVe")} />
@@ -308,7 +308,7 @@ function OwnersTab({ showAddForm, onAddFormClose }) {
                                 className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-52 font-mono" placeholder={t("manager:peopleIndex.placeholder.cH5604835012345678009")} />
                             </div>
                             <div>
-                              <label className="block text-xs font-medium text-slate-600 mb-1">VAT number</label>
+                              <label className="block text-xs font-medium text-slate-600 mb-1">{t("manager:peopleIndex.text.vATNumber")}</label>
                               <input value={billingForm.vatNumber}
                                 onChange={(e) => setBillingForm((f) => ({ ...f, vatNumber: e.target.value }))}
                                 className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-36" placeholder={t("manager:peopleIndex.placeholder.cHE123456789")} />
@@ -405,7 +405,7 @@ export default function ManagerPeoplePage() {
       <PageShell>
         <PageHeader
           title={t("manager:peopleIndex.title.contacts")}
-          subtitle="Contacts across tenants, vendors and owners."
+          subtitle={t("manager:peopleIndex.prop.contactsAcrossTenantsVendorsAndOwners")}
         />
         <PageContent>
           <ErrorBanner error={error} />
@@ -432,7 +432,7 @@ export default function ManagerPeoplePage() {
             </span>
             {activeTab === 2 && (
               <div className="flex items-center gap-3">
-                <Link href="/manager/people/owners" className="full-page-link">Open full page →</Link>
+                <Link href="/manager/people/owners" className="full-page-link">{t("manager:peopleIndex.text.openFullPage")}</Link>
                 <button
                   onClick={() => setShowAddOwner((v) => !v)}
                   className="button-primary text-sm"
@@ -446,10 +446,10 @@ export default function ManagerPeoplePage() {
           {/* Tenants tab */}
           <div className={activeTab === 0 ? "tab-panel-active" : "tab-panel"}>
             {loading ? (
-              <p className="loading-text">Loading tenants…</p>
+              <p className="loading-text">{t("manager:peopleIndex.text.loadingTenants")}</p>
             ) : tenants.length === 0 ? (
               <div className="empty-state">
-                <p className="empty-state-text">No tenants found.</p>
+                <p className="empty-state-text">{t("manager:peopleIndex.text.noTenantsFound")}</p>
               </div>
             ) : (
               <>
@@ -480,10 +480,10 @@ export default function ManagerPeoplePage() {
                   <table className="data-table">
                     <thead>
                       <tr>
-                        <SortableHeader label="Name" field="name" sortField={tSortField} sortDir={tSortDir} onSort={handleTenantSort} />
-                        <SortableHeader label="Phone" field="phone" sortField={tSortField} sortDir={tSortDir} onSort={handleTenantSort} />
-                        <SortableHeader label="Email" field="email" sortField={tSortField} sortDir={tSortDir} onSort={handleTenantSort} />
-                        <SortableHeader label="Unit" field="unit" sortField={tSortField} sortDir={tSortDir} onSort={handleTenantSort} />
+                        <SortableHeader label={t("manager:peopleIndex.prop.name")} field="name" sortField={tSortField} sortDir={tSortDir} onSort={handleTenantSort} />
+                        <SortableHeader label={t("manager:peopleIndex.prop.phone")} field="phone" sortField={tSortField} sortDir={tSortDir} onSort={handleTenantSort} />
+                        <SortableHeader label={t("manager:peopleIndex.prop.email")} field="email" sortField={tSortField} sortDir={tSortDir} onSort={handleTenantSort} />
+                        <SortableHeader label={t("manager:peopleIndex.prop.unit")} field="unit" sortField={tSortField} sortDir={tSortDir} onSort={handleTenantSort} />
                         <th></th>
                       </tr>
                     </thead>
@@ -520,10 +520,10 @@ export default function ManagerPeoplePage() {
           {/* Vendors tab */}
           <div className={activeTab === 1 ? "tab-panel-active" : "tab-panel"}>
             {loading ? (
-              <p className="loading-text">Loading contractors…</p>
+              <p className="loading-text">{t("manager:peopleIndex.text.loadingContractors")}</p>
             ) : contractors.length === 0 ? (
               <div className="empty-state">
-                <p className="empty-state-text">No contractors found.</p>
+                <p className="empty-state-text">{t("manager:peopleIndex.text.noContractorsFound")}</p>
               </div>
             ) : (
               <>
@@ -552,10 +552,10 @@ export default function ManagerPeoplePage() {
                   <table className="data-table">
                     <thead>
                       <tr>
-                        <SortableHeader label="Name" field="name" sortField={vSortField} sortDir={vSortDir} onSort={handleVendorSort} />
-                        <SortableHeader label="Phone" field="phone" sortField={vSortField} sortDir={vSortDir} onSort={handleVendorSort} />
-                        <SortableHeader label="Email" field="email" sortField={vSortField} sortDir={vSortDir} onSort={handleVendorSort} />
-                        <SortableHeader label="Rate" field="hourlyRate" sortField={vSortField} sortDir={vSortDir} onSort={handleVendorSort} />
+                        <SortableHeader label={t("manager:peopleIndex.prop.name")} field="name" sortField={vSortField} sortDir={vSortDir} onSort={handleVendorSort} />
+                        <SortableHeader label={t("manager:peopleIndex.prop.phone")} field="phone" sortField={vSortField} sortDir={vSortDir} onSort={handleVendorSort} />
+                        <SortableHeader label={t("manager:peopleIndex.prop.email")} field="email" sortField={vSortField} sortDir={vSortDir} onSort={handleVendorSort} />
+                        <SortableHeader label={t("manager:peopleIndex.prop.rate")} field="hourlyRate" sortField={vSortField} sortDir={vSortDir} onSort={handleVendorSort} />
                         <th></th>
                       </tr>
                     </thead>

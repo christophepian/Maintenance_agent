@@ -181,7 +181,7 @@ export default function TenantInboxPage() {
           <PageContent>
             <Panel>
               <div className="empty-state">
-                <p className="empty-state-text">Please sign in to view your notifications.</p>
+                <p className="empty-state-text">{t("tenant:inbox.text.pleaseSignInToViewYourNotifications")}</p>
                 <button
                   onClick={() => router.push("/tenant")}
                   className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700"
@@ -231,10 +231,10 @@ export default function TenantInboxPage() {
 
           <Panel bodyClassName="p-0">
             {loading ? (
-              <p className="loading-text">Loading…</p>
+              <p className="loading-text">{t("tenant:inbox.text.loading")}</p>
             ) : notifications.length === 0 ? (
               <div className="empty-state">
-                <p className="empty-state-text">No notifications yet. You will be notified here when your lease is ready to sign, invoices are created, and more.</p>
+                <p className="empty-state-text">{t("tenant:inbox.text.noNotificationsYetYouWillBeNotifiedHereWhenYourLeaseIsReadyToSignInvoicesAreCreatedAndMore")}</p>
               </div>
             ) : (
               <div className="space-y-2 p-4">

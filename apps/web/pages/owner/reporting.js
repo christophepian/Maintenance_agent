@@ -218,27 +218,28 @@ function DriverCard({ number, title, body, impact }) {
 }
 
 function BuildingRow({ name, earned, expenses, net, collectionRate }) {
+  const { t } = useTranslation("owner");
   const netPositive = net >= 0;
   return (
     <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
       <div className="text-sm font-medium text-slate-800 truncate mr-4">{name}</div>
       <div className="flex items-center gap-6 shrink-0 text-right">
         <div className="hidden sm:block">
-          <div className="text-xs text-slate-400">Income</div>
+          <div className="text-xs text-slate-400">{t("owner:reporting.text.income")}</div>
           <div className="text-sm font-medium text-slate-700">{fmtChf(earned)}</div>
         </div>
         <div className="hidden sm:block">
-          <div className="text-xs text-slate-400">Expenses</div>
+          <div className="text-xs text-slate-400">{t("owner:reporting.text.expenses")}</div>
           <div className="text-sm font-medium text-slate-700">{fmtChf(expenses)}</div>
         </div>
         <div>
-          <div className="text-xs text-slate-400">Net</div>
+          <div className="text-xs text-slate-400">{t("owner:reporting.text.net")}</div>
           <div className={cn("text-sm font-semibold", netPositive ? "text-green-700" : "text-red-600")}>
             {fmtChf(net)}
           </div>
         </div>
         <div className="hidden md:block">
-          <div className="text-xs text-slate-400">Collection</div>
+          <div className="text-xs text-slate-400">{t("owner:reporting.text.collection")}</div>
           <div className="text-sm text-slate-700">{fmtPct(collectionRate)}</div>
         </div>
       </div>
@@ -535,10 +536,10 @@ export default function OwnerReportingPage() {
               {!loading && currData && (
                 <p className="mt-3 text-sm leading-6 text-slate-600 sm:text-base">
                   {earned > 0
-                    ? <>Rent collected: <span className="font-semibold text-slate-900">{fmtChf(earned)}</span>. </>
+                    ? <>{t("owner:reporting.text.rentCollected")} <span className="font-semibold text-slate-900">{fmtChf(earned)}</span>. </>
                     : ""}
                   {expenses > 0
-                    ? <>Operating costs: <span className="font-semibold text-slate-900">{fmtChf(expenses)}</span>. </>
+                    ? <>{t("owner:reporting.text.operatingCosts")} <span className="font-semibold text-slate-900">{fmtChf(expenses)}</span>. </>
                     : ""}
                   {totalUnits > 0
                     ? <>{totalUnits} unit{totalUnits !== 1 ? "s" : ""} leased this period across {currData.buildingCount} building{currData.buildingCount !== 1 ? "s" : ""}.</>
@@ -549,7 +550,7 @@ export default function OwnerReportingPage() {
 
             <div className="grid min-w-[260px] grid-cols-2 gap-3">
               <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                <div className="text-xs text-slate-400">Net result</div>
+                <div className="text-xs text-slate-400">{t("owner:reporting.text.netResult")}</div>
                 {loading
                   ? <div className="mt-2 h-7 w-20 animate-pulse rounded bg-slate-100" />
                   : <div className="mt-2 text-2xl font-semibold text-slate-900">{fmtChf(netIncome)}</div>}
@@ -558,12 +559,12 @@ export default function OwnerReportingPage() {
                 )}
               </div>
               <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                <div className="text-xs text-slate-400">Accrued payables</div>
+                <div className="text-xs text-slate-400">{t("owner:reporting.text.accruedPayables")}</div>
                 {loading
                   ? <div className="mt-2 h-7 w-20 animate-pulse rounded bg-slate-100" />
                   : <div className="mt-2 text-2xl font-semibold text-slate-900">{fmtChf(currData?.totalPayablesCents ?? 0)}</div>}
                 {!loading && (currData?.totalPayablesCents ?? 0) > 0 && (
-                  <div className="mt-1 text-xs text-slate-400">Period-end balance</div>
+                  <div className="mt-1 text-xs text-slate-400">{t("owner:reporting.text.periodendBalance")}</div>
                 )}
               </div>
             </div>
@@ -572,17 +573,17 @@ export default function OwnerReportingPage() {
 
         {/* ── KPI ROW ──────────────────────────────────────────── */}
         <section className="kpi-grid mb-8 gap-4 xl:grid-cols-4">
-          <KpiCard label="Net Income"       value={fmtChf(netIncome)}     delta={netDelta}    isLoading={loading} />
-          <KpiCard label="Rent Collected"   value={fmtChf(earned)}        delta={earnedDelta} isLoading={loading} />
-          <KpiCard label="Total Expenses"   value={fmtChf(expenses)}      delta={expDelta}    isLoading={loading} />
-          <KpiCard label="Collection Rate"  value={fmtPct(collRate)}      delta={collDelta}   isLoading={loading} />
+          <KpiCard label={t("owner:reporting.prop.netIncome")}       value={fmtChf(netIncome)}     delta={netDelta}    isLoading={loading} />
+          <KpiCard label={t("owner:reporting.prop.rentCollected")}   value={fmtChf(earned)}        delta={earnedDelta} isLoading={loading} />
+          <KpiCard label={t("owner:reporting.prop.totalExpenses")}   value={fmtChf(expenses)}      delta={expDelta}    isLoading={loading} />
+          <KpiCard label={t("owner:reporting.prop.collectionRate")}  value={fmtPct(collRate)}      delta={collDelta}   isLoading={loading} />
         </section>
 
         {/* ── HIGHLIGHT ────────────────────────────────────────── */}
         {!loading && highlight && (
           <section className="mb-8">
             <div className="rounded-3xl border border-slate-200 bg-gradient-to-r from-green-50 via-white to-transparent p-6">
-              <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Highlight</div>
+              <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("owner:reporting.text.highlight")}</div>
               <div className="mt-2 text-xl font-semibold text-slate-900">{highlight.title}</div>
               <p className="mt-2 max-w-2xl text-sm text-slate-600">{highlight.body}</p>
             </div>
@@ -593,7 +594,7 @@ export default function OwnerReportingPage() {
         <section className="mb-8">
           <div className="mb-4">
             <h2 className="text-lg font-semibold text-slate-900">{t("owner:reporting.heading.whatDrovePerformance")}</h2>
-            <p className="text-sm text-slate-400">The main forces behind this month's numbers.</p>
+            <p className="text-sm text-slate-400">{t("owner:reporting.text.theMainForcesBehindThisMonthsNumbers")}</p>
           </div>
           {loading ? (
             <div className="space-y-3">
@@ -660,7 +661,7 @@ export default function OwnerReportingPage() {
                   </span>
                 </div>
                 {moveIns.length === 0 ? (
-                  <p className="text-sm text-slate-400">No move-ins this period.</p>
+                  <p className="text-sm text-slate-400">{t("owner:reporting.text.noMoveinsThisPeriod")}</p>
                 ) : (
                   <>
                     {(insExpanded ? moveIns : moveIns.slice(0, PREVIEW)).map((l) => (
@@ -690,7 +691,7 @@ export default function OwnerReportingPage() {
                   </span>
                 </div>
                 {moveOuts.length === 0 ? (
-                  <p className="text-sm text-slate-400">No move-outs this period.</p>
+                  <p className="text-sm text-slate-400">{t("owner:reporting.text.noMoveoutsThisPeriod")}</p>
                 ) : (
                   <>
                     {(outsExpanded ? moveOuts : moveOuts.slice(0, PREVIEW)).map((l) => (
@@ -720,7 +721,7 @@ export default function OwnerReportingPage() {
           <div className="rounded-3xl border border-slate-200 bg-white p-5">
             <div className="mb-4">
               <h2 className="text-lg font-semibold text-slate-900">{t("owner:reporting.heading.periodInsights")}</h2>
-              <p className="text-sm text-slate-400">What this period's data suggests for future planning.</p>
+              <p className="text-sm text-slate-400">{t("owner:reporting.text.whatThisPeriodsDataSuggestsForFuturePlanning")}</p>
             </div>
             {loading ? (
               <div className="space-y-3">

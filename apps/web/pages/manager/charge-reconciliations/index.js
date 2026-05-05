@@ -161,7 +161,7 @@ export default function ChargeReconciliationsPage() {
             ))}
           </ScrollableTabs>
 
-          {loading && <p className="loading-text">Loading…</p>}
+          {loading && <p className="loading-text">{t("manager:charge_ReconciliationsIndex.text.loading")}</p>}
           {!loading && !error && (
             <ConfigurableTable
                 tableId="manager-charge-reconciliations"
@@ -174,7 +174,7 @@ export default function ChargeReconciliationsPage() {
                 onRowClick={(r) => router.push(`/manager/charge-reconciliations/${r.id}`)}
                 emptyState={
                   <div className="empty-state">
-                    <p className="empty-state-text">No reconciliations found. Create one from a lease detail page.</p>
+                    <p className="empty-state-text">{t("manager:charge_ReconciliationsIndex.text.noReconciliationsFoundCreateOneFromALeaseDetailPage")}</p>
                   </div>
                 }
                 mobileCard={(r) => (

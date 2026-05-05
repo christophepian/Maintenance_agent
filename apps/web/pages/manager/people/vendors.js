@@ -154,7 +154,7 @@ export default function PeopleVendorsPage() {
             </button>
           </div>
 
-            {loading && <p className="text-sm text-slate-500">Loading…</p>}
+            {loading && <p className="text-sm text-slate-500">{t("manager:peopleVendors.text.loading")}</p>}
             {error && <p className="text-sm text-red-600">{error}</p>}
 
             {!loading && !error && filtered.length === 0 && (
@@ -173,7 +173,7 @@ export default function PeopleVendorsPage() {
                 sortDir={sortDir}
                 onSort={handleSort}
                 onRowClick={(c) => router.push(`/manager/people/vendors/${c.id}`)}
-                emptyState={<p className="text-sm text-slate-500">No contractors found.</p>}
+                emptyState={<p className="text-sm text-slate-500">{t("manager:peopleVendors.text.noContractorsFound")}</p>}
                 mobileCard={(c) => (
                   <div className="table-card cursor-pointer" onClick={() => router.push(`/manager/people/vendors/${c.id}`)}>
                     <p className="table-card-head">{c.name || "—"}</p>

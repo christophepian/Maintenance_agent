@@ -14,6 +14,9 @@
   "estimates": {
     "heading": {
       "estimates": "Estimates [FR]"
+    },
+    "text": {
+      "comingSoonEstimateDraftingAndApproval": "Bientôt disponible: estimate drafting and approval."
     }
   },
   "index": {
@@ -22,6 +25,22 @@
       "quickLinks": "Quick Links [FR]",
       "todayActionRequired": "Today / Action Required [FR]",
       "pipelineOverview": "Pipeline Overview [FR]"
+    },
+    "text": {
+      "loadingDashboard": "Loading dashboard...",
+      "error": "Erreur :",
+      "pendingJobs": "Interventions en attente",
+      "needAcceptancestart": "Need acceptance/start",
+      "staleInprogressJobs": "Stale In-Progress Interventions",
+      "completedNotInvoiced": "Terminé - Not Invoiced",
+      "readyForBilling": "Ready for billing",
+      "noItemsRequireImmediateAction": "✓ No items require immediate action",
+      "openJobs": "Open Interventions",
+      "pendingInProgress": "En attente + in progress",
+      "completedThisMonth": "Terminé This Month",
+      "jobsFinished": "Interventions finished",
+      "invoicedThisMonth": "Invoiced This Month",
+      "totalBilled": "Àtal billed"
     }
   },
   "invoices": {
@@ -33,6 +52,14 @@
     },
     "title": {
       "myInvoices": "My Invoices [FR]"
+    },
+    "text": {
+      "dISPUTED": "⚠ DISPUTED",
+      "uploadInvoice": "📤 Téléverser une facture",
+      "job": "Intervention",
+      "prefilledFromJobDetailPage": "Pre-filled from job detail page",
+      "loadingInvoices": "Chargement des factures…",
+      "noInvoicesMatchThisFilter": "No invoices match this filter"
     }
   },
   "jobs": {
@@ -41,6 +68,16 @@
     },
     "title": {
       "myJobs": "My Jobs [FR]"
+    },
+    "text": {
+      "loadingJobs": "Chargement des interventions…",
+      "noUpcomingJobs": "No upcoming jobs",
+      "noCompletedJobsYet": "No completed jobs yet",
+      "location": "📍 Emplacement",
+      "tenant": "👤 Locataire",
+      "appointment": "📅 Appointment",
+      "asset": "🔧 Actif",
+      "scope": "📋 Périmètre"
     }
   },
   "jobsId": {
@@ -50,11 +87,41 @@
     "ariaLabel": {
       "close": "Fermer",
       "removeScheduleRow": "Remove schedule row [FR]"
+    },
+    "text": {
+      "noSlotsProposedYetProposeTimesForTheTenantToChooseFrom": "No slots proposed yet. Propose times for the tenant to choose from.",
+      "appointmentConfirmedByTenant": "Appointment confirmed by tenant.",
+      "addAnotherSlot": "+ Ajouter another slot",
+      "cancel": "Annuler",
+      "myJobs": "← Mes interventions",
+      "selectYourContractorProfileToUseJobActions": "Select your contractor prdeile to use job actions:",
+      "created": "Créé :",
+      "started": "Started:",
+      "completed": "Terminé :",
+      "category": "Catégorie :",
+      "asset": "Actif :",
+      "invoiceSubmittedForThisJob": "✅ Invoice submitted for this job."
+    },
+    "prop": {
+      "appointmentSlots": "📅 Appointment Slots",
+      "jobNotFound": "Intervention not found.",
+      "location": "📍 Emplacement",
+      "dates": "📅 Dates",
+      "confirmedAppointment": "✅ Confirmeré Appointment",
+      "cost": "💰 Cost",
+      "scopeOfWork": "📋 Périmètre de Work",
+      "tenantContact": "👤 Locataire Contact"
     }
   },
   "rfps": {
     "heading": {
       "availableRfps": "Available RFPs [FR]"
+    },
+    "text": {
+      "invited": "Invité",
+      "view": "Voir",
+      "loadingRfps": "Loading RFPs...",
+      "rFPsMatchingYourServiceCategoriesWillAppearHere": "RFPs matching your service categories will appear here."
     }
   },
   "rfpsId": {
@@ -71,6 +138,34 @@
       "anyAssumptionsExclusionsOrConditions": "Any assumptions, exclusions, or conditions… [FR]",
       "anyOtherInformationForTheManager": "Any other information for the manager… [FR]",
       "description": "Description"
+    },
+    "text": {
+      "date": "Date",
+      "from": "De",
+      "to": "À",
+      "loadingSlots": "Loading slots…",
+      "amount": "Montant",
+      "estDuration": "Est. Durée",
+      "earliestAvailable": "Earliest Disponible",
+      "validUntil": "Valable jusqu'au",
+      "submitted": "Soumettreted",
+      "workPlan": "Plan de travail",
+      "assumptions": "Hypothèses",
+      "notes": "Notes",
+      "lineItems": "Lignes de détail",
+      "loading": "Chargement…",
+      "status": "Statut",
+      "category": "Catégorie",
+      "legalObligation": "Obligation légale",
+      "location": "Emplacement",
+      "unit": "Unité",
+      "quoteDeadline": "Quote Échéance",
+      "created": "Créé",
+      "quotesSubmitted": "Quotes Soumettreted",
+      "request": "Demande n°",
+      "requestDate": "Request Date",
+      "photosAttachments": "Photos / Pièces jointes",
+      "rFPNotFoundOrNotAccessible": "RFP not found or not accessible."
     }
   }
 }

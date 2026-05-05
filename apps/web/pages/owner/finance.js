@@ -222,8 +222,8 @@ function OverviewTab() {
           <FilterPanelBody>
             <FilterSection title={t("owner:finance.title.dateRange")} first>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                <DateField label="From" value={range.from} onChange={(e) => setRange((r) => ({ ...r, from: e.target.value }))} />
-                <DateField label="To"   value={range.to}   onChange={(e) => setRange((r) => ({ ...r, to: e.target.value }))} />
+                <DateField label={t("owner:finance.prop.from")} value={range.from} onChange={(e) => setRange((r) => ({ ...r, from: e.target.value }))} />
+                <DateField label={t("owner:finance.prop.to")}   value={range.to}   onChange={(e) => setRange((r) => ({ ...r, to: e.target.value }))} />
               </div>
             </FilterSection>
             <FilterSectionClear
@@ -237,7 +237,7 @@ function OverviewTab() {
       <ErrorBanner error={error} onDismiss={() => setError("")} />
 
       {loading && !p ? (
-        <p className="loading-text">Loading portfolio summary…</p>
+        <p className="loading-text">{t("owner:finance.text.loadingPortfolioSummary")}</p>
       ) : p && (
         <>
           <Section>
@@ -255,18 +255,18 @@ function OverviewTab() {
             </div>
             {/* Desktop KPI cards */}
             <div className="hidden sm:grid grid-cols-2 md:grid-cols-5 gap-3">
-              <SummaryCard label="Earned Income"  value={formatChfCents(p.totalEarnedIncomeCents)} accent="green" />
-              <SummaryCard label="Total Expenses" value={formatChfCents(p.totalExpensesCents)} />
-              <SummaryCard label="Net Result"     value={formatChfCents(p.totalNetIncomeCents)} accent={netAccent} sub="Income − Expenses" />
-              <SummaryCard label="Receivables"    value={formatChfCents(p.totalReceivablesCents)} accent={p.totalReceivablesCents > 0 ? "amber" : ""} sub="Unpaid rent invoices" />
-              <SummaryCard label="Payables"       value={formatChfCents(p.totalPayablesCents)} accent={p.totalPayablesCents > 0 ? "amber" : ""} sub="Unpaid supplier invoices" />
+              <SummaryCard label={t("owner:finance.prop.earnedIncome")}  value={formatChfCents(p.totalEarnedIncomeCents)} accent="green" />
+              <SummaryCard label={t("owner:finance.prop.totalExpenses")} value={formatChfCents(p.totalExpensesCents)} />
+              <SummaryCard label={t("owner:finance.prop.netResult")}     value={formatChfCents(p.totalNetIncomeCents)} accent={netAccent} sub="Income − Expenses" />
+              <SummaryCard label={t("owner:finance.prop.receivables")}    value={formatChfCents(p.totalReceivablesCents)} accent={p.totalReceivablesCents > 0 ? "amber" : ""} sub="Unpaid rent invoices" />
+              <SummaryCard label={t("owner:finance.prop.payables")}       value={formatChfCents(p.totalPayablesCents)} accent={p.totalPayablesCents > 0 ? "amber" : ""} sub="Unpaid supplier invoices" />
             </div>
           </Section>
 
           <Section title={t("owner:finance.title.buildings")}>
             {/* Stats row */}
             <div className="flex gap-4 text-xs text-slate-500">
-              <span>Avg collection rate: <strong>{formatPercent(p.avgCollectionRate)}</strong></span>
+              <span>{t("owner:finance.text.avgCollectionRate")} <strong>{formatPercent(p.avgCollectionRate)}</strong></span>
               {p.buildingsInRed > 0 && (
                 <span className="text-destructive-text font-medium">
                   {p.buildingsInRed} building{p.buildingsInRed !== 1 ? "s" : ""} need attention
@@ -274,7 +274,7 @@ function OverviewTab() {
               )}
             </div>
             {p.buildings.length === 0 ? (
-              <div className="empty-state"><p className="empty-state-text">No buildings in this portfolio yet.</p></div>
+              <div className="empty-state"><p className="empty-state-text">{t("owner:finance.text.noBuildingsInThisPortfolioYet")}</p></div>
             ) : (
               <>
                 {/* Mobile */}
@@ -301,12 +301,12 @@ function OverviewTab() {
                     <table className="data-table">
                       <thead>
                         <tr>
-                          <SortableHeader label="Building" field="buildingName" sortField={bSF} sortDir={bSD} onSort={handleBSort} />
-                          <SortableHeader label="Earned Income" field="earnedIncomeCents" sortField={bSF} sortDir={bSD} onSort={handleBSort} className="text-right" />
-                          <SortableHeader label="Expenses" field="expensesTotalCents" sortField={bSF} sortDir={bSD} onSort={handleBSort} className="text-right" />
-                          <SortableHeader label="Net" field="netIncomeCents" sortField={bSF} sortDir={bSD} onSort={handleBSort} className="text-right" />
-                          <SortableHeader label="Collection" field="collectionRate" sortField={bSF} sortDir={bSD} onSort={handleBSort} className="text-right" />
-                          <SortableHeader label="Receivables" field="receivablesCents" sortField={bSF} sortDir={bSD} onSort={handleBSort} className="text-right" />
+                          <SortableHeader label={t("owner:finance.prop.building")} field="buildingName" sortField={bSF} sortDir={bSD} onSort={handleBSort} />
+                          <SortableHeader label={t("owner:finance.prop.earnedIncome")} field="earnedIncomeCents" sortField={bSF} sortDir={bSD} onSort={handleBSort} className="text-right" />
+                          <SortableHeader label={t("owner:finance.prop.expenses")} field="expensesTotalCents" sortField={bSF} sortDir={bSD} onSort={handleBSort} className="text-right" />
+                          <SortableHeader label={t("owner:finance.prop.net")} field="netIncomeCents" sortField={bSF} sortDir={bSD} onSort={handleBSort} className="text-right" />
+                          <SortableHeader label={t("owner:finance.prop.collection")} field="collectionRate" sortField={bSF} sortDir={bSD} onSort={handleBSort} className="text-right" />
+                          <SortableHeader label={t("owner:finance.prop.receivables")} field="receivablesCents" sortField={bSF} sortDir={bSD} onSort={handleBSort} className="text-right" />
                         </tr>
                       </thead>
                       <tbody>
@@ -518,7 +518,7 @@ function InvoicesTab() {
             <p className="text-sm font-semibold text-amber-700">
               {approvalCount} invoice{approvalCount !== 1 ? "s" : ""} awaiting your approval
             </p>
-            <p className="text-xs text-amber-600">Review issued invoices and approve or dispute them</p>
+            <p className="text-xs text-amber-600">{t("owner:finance.text.reviewIssuedInvoicesAndApproveOrDisputeThem")}</p>
           </div>
           <button onClick={() => setStatusFilter("ISSUED")} className="rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-700 transition">
             Review now
@@ -578,7 +578,7 @@ function InvoicesTab() {
       )}
 
       {loading ? (
-        <p className="loading-text">Loading invoices…</p>
+        <p className="loading-text">{t("owner:finance.text.loadingInvoices")}</p>
       ) : filteredInvoices.length === 0 ? (
         <div className="empty-state">
           <p className="empty-state-text">{invoices.length === 0 ? "No invoices yet." : "No invoices match this filter."}</p>
@@ -666,7 +666,7 @@ export default function OwnerFinance() {
         <OwnerPicker />
         <PageHeader
           title={t("owner:finance.title.finance")}
-          subtitle="Portfolio summary, invoices, and cashflow planning"
+          subtitle={t("owner:finance.prop.portfolioSummaryInvoicesAndCashflowPlanning")}
         />
         <PageContent>
           <div>

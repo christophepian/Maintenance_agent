@@ -18,7 +18,7 @@ export default function BuildingFinancialsPage() {
       <AppShell role="MANAGER">
         <PageShell>
           <PageHeader title={t("manager:buildings[id]Financials.title.buildingFinancials")} />
-          <PageContent><p className="loading-text">Loading…</p></PageContent>
+          <PageContent><p className="loading-text">{t("manager:buildingsIdFinancials.text.loading")}</p></PageContent>
         </PageShell>
       </AppShell>
     );

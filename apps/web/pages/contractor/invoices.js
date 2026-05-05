@@ -28,6 +28,7 @@ const STATUS_TABS = [
 /* ── Status tracking pipeline ────────────────────────────────── */
 const STATUS_PIPELINE = ["DRAFT", "ISSUED", "APPROVED", "PAID"];
 function StatusPipeline({ status }) {
+  const { t } = useTranslation("contractor");
   const idx = STATUS_PIPELINE.indexOf(status);
   const isDisputed = status === "DISPUTED";
   return (
@@ -50,7 +51,7 @@ function StatusPipeline({ status }) {
         );
       })}
       {isDisputed && (
-        <span className="ml-1.5 text-[10px] font-semibold text-rose-600">⚠ DISPUTED</span>
+        <span className="ml-1.5 text-[10px] font-semibold text-rose-600">{t("contractor:invoices.text.dISPUTED")}</span>
       )}
     </div>
   );
@@ -291,7 +292,7 @@ export default function ContractorInvoices() {
         {showUpload && (
           <div className="mb-6 rounded-lg border-2 border-indigo-200 bg-white p-5">
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-slate-900">📤 Upload Invoice</h3>
+              <h3 className="text-lg font-semibold text-slate-900">{t("contractor:invoices.text.uploadInvoice")}</h3>
               <button
                 onClick={() => { setShowUpload(false); setUploadFile(null); setUploadError(""); }}
                 className="text-sm text-slate-400 hover:text-slate-600"
@@ -338,7 +339,7 @@ export default function ContractorInvoices() {
             <ErrorBanner error={formError} className="mb-3 text-sm" />
             <form onSubmit={submitInvoice} className="space-y-4">
               <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">Job</label>
+                <label className="mb-1 block text-sm font-medium text-slate-700">{t("contractor:invoices.text.job")}</label>
                 {router.query.jobId ? (
                   <input
                     type="text"
@@ -364,7 +365,7 @@ export default function ContractorInvoices() {
                   </select>
                 )}
                 {router.query.jobId && (
-                  <p className="mt-1 text-xs text-slate-500">Pre-filled from job detail page</p>
+                  <p className="mt-1 text-xs text-slate-500">{t("contractor:invoices.text.prefilledFromJobDetailPage")}</p>
                 )}
               </div>
               <div>
@@ -432,10 +433,10 @@ export default function ContractorInvoices() {
           </ScrollableTabs>
 
           {loading ? (
-            <p className="p-4 text-sm text-slate-600">Loading invoices…</p>
+            <p className="p-4 text-sm text-slate-600">{t("contractor:invoices.text.loadingInvoices")}</p>
           ) : filteredInvoices.length === 0 ? (
             <div className="p-6 text-center text-slate-500">
-              <p className="text-sm">No invoices match this filter</p>
+              <p className="text-sm">{t("contractor:invoices.text.noInvoicesMatchThisFilter")}</p>
             </div>
           ) : (
             <div className="divide-y divide-slate-100">

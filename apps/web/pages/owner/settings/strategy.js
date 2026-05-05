@@ -65,7 +65,7 @@ export default function StrategySettingsPage() {
         <PageContent>
           <ErrorBanner error={error} />
           {loading && (
-            <p className="text-sm text-slate-500">Loading...</p>
+            <p className="text-sm text-slate-500">{t("owner:settingsStrategy.text.loading")}</p>
           )}
           {!loading && !profile && (
             <Panel>

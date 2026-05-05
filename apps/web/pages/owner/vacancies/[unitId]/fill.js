@@ -203,14 +203,14 @@ export default function FillVacancyWizard() {
             </div>
           )}
 
-          {loading && <div className="text-sm text-slate-600">Loading vacancy data...</div>}
+          {loading && <div className="text-sm text-slate-600">{t("owner:vacanciesUnitidFill.text.loadingVacancyData")}</div>}
 
           {!loading && (
             <div className="space-y-6">
               <Panel title={t("owner:vacancies[unitid]Fill.title.step1SelectOrCreateTenant")}>
                 <div className="grid gap-4 lg:grid-cols-2">
                   <div className="space-y-3">
-                    <label className="text-sm font-medium text-slate-700">Search tenants</label>
+                    <label className="text-sm font-medium text-slate-700">{t("owner:vacanciesUnitidFill.text.searchTenants")}</label>
                     <input
                       value={search}
                       onChange={(e) => setSearch(e.target.value)}
@@ -219,7 +219,7 @@ export default function FillVacancyWizard() {
                     />
                     <div className="max-h-64 space-y-2 overflow-y-auto rounded-lg border border-slate-200 p-3">
                       {filteredTenants.length === 0 && (
-                        <div className="text-sm text-slate-500">No tenants found.</div>
+                        <div className="text-sm text-slate-500">{t("owner:vacanciesUnitidFill.text.noTenantsFound")}</div>
                       )}
                       {filteredTenants.map((tenant) => (
                         <button
@@ -241,7 +241,7 @@ export default function FillVacancyWizard() {
                   </div>
 
                   <div className="space-y-3">
-                    <label className="text-sm font-medium text-slate-700">Create new tenant</label>
+                    <label className="text-sm font-medium text-slate-700">{t("owner:vacanciesUnitidFill.text.createNewTenant")}</label>
                     <input
                       value={newTenant.name}
                       onChange={(e) => setNewTenant((prev) => ({ ...prev, name: e.target.value }))}
@@ -289,7 +289,7 @@ export default function FillVacancyWizard() {
               <Panel title={t("owner:vacancies[unitid]Fill.title.step3CreateLeaseDraft")}>
                 <div className="grid gap-4 lg:grid-cols-2">
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-slate-700">Lease start date</label>
+                    <label className="text-sm font-medium text-slate-700">{t("owner:vacanciesUnitidFill.text.leaseStartDate")}</label>
                     <input
                       type="date"
                       value={leaseForm.startDate}
@@ -340,7 +340,7 @@ export default function FillVacancyWizard() {
               {leaseId && (
                 <Section
                   title={t("owner:vacancies[unitid]Fill.title.nextSteps")}
-                  subtitle="Vacancy will be removed once the lease is ACTIVE."
+                  subtitle={t("owner:vacanciesUnitidFill.prop.vacancyWillBeRemovedOnceTheLeaseIsActive")}
                 >
                   <div className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700">
                     Lease created: <span className="font-semibold">{leaseId}</span>

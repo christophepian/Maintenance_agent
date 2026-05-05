@@ -354,7 +354,7 @@ export default function ManagerInventoryPage() {
   return (
     <AppShell role="MANAGER">
       <PageShell>
-        <PageHeader title={t("manager:inventory.title.properties")} subtitle="Buildings, units, assets and depreciation schedules." />
+        <PageHeader title={t("manager:inventory.title.properties")} subtitle={t("manager:inventory.prop.buildingsUnitsAssetsAndDepreciationSchedules")} />
         <PageContent>
           <ErrorBanner error={error} />
 
@@ -401,25 +401,25 @@ export default function ManagerInventoryPage() {
                 <form onSubmit={onCreateBuilding} className="rounded-xl border border-brand bg-brand-light/30 p-4 grid gap-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="col-span-full">
-                    <label className="filter-label">Address</label>
+                    <label className="filter-label">{t("manager:inventory.text.address")}</label>
                     <input className="filter-input w-full" value={buildingAddress} onChange={(e) => setBuildingAddress(e.target.value)} placeholder={t("manager:inventory.placeholder.eGBahnhofstrasse12")} />
                   </div>
                   <div>
-                    <label className="filter-label">City code</label>
+                    <label className="filter-label">{t("manager:inventory.text.cityCode")}</label>
                     <input className="filter-input w-full" value={buildingCityCode} onChange={(e) => setBuildingCityCode(e.target.value)} placeholder={t("manager:inventory.placeholder.eG8001")} />
                   </div>
                   <div>
-                    <label className="filter-label">City</label>
+                    <label className="filter-label">{t("manager:inventory.text.city")}</label>
                     <input className="filter-input w-full" value={buildingCity} onChange={(e) => setBuildingCity(e.target.value)} placeholder={t("manager:inventory.placeholder.eGZRich")} />
                   </div>
                   <div className="col-span-full">
-                    <label className="filter-label">Country</label>
+                    <label className="filter-label">{t("manager:inventory.text.country")}</label>
                     <input className="filter-input w-full" value={buildingCountry} onChange={(e) => setBuildingCountry(e.target.value)} placeholder={t("manager:inventory.placeholder.eGSwitzerland")} />
                   </div>
                 </div>
                 <div className="flex justify-end gap-2">
-                  <button type="button" className="button-secondary" onClick={() => setBuildingFormVisible(false)}>Cancel</button>
-                  <button type="submit" className="button-primary" disabled={loading}>Save building</button>
+                  <button type="button" className="button-secondary" onClick={() => setBuildingFormVisible(false)}>{t("manager:inventory.text.cancel")}</button>
+                  <button type="submit" className="button-primary" disabled={loading}>{t("manager:inventory.text.saveBuilding")}</button>
                 </div>
               </form>
               )}
@@ -447,21 +447,21 @@ export default function ManagerInventoryPage() {
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4" aria-hidden="true">
                       <path fillRule="evenodd" d="M2.628 1.601C5.028 1.206 7.49 1 10 1s4.973.206 7.372.601a.75.75 0 0 1 .628.74v2.288a2.25 2.25 0 0 1-.659 1.59l-4.682 4.683a2.25 2.25 0 0 0-.659 1.59v3.037c0 .684-.31 1.33-.844 1.757l-1.937 1.55A.75.75 0 0 1 8 18.25v-5.757a2.25 2.25 0 0 0-.659-1.591L2.659 6.22A2.25 2.25 0 0 1 2 4.629V2.34a.75.75 0 0 1 .628-.74Z" clipRule="evenodd" />
                     </svg>
-                    <span className="hidden sm:inline">Filter</span>
+                    <span className="hidden sm:inline">{t("manager:inventory.text.filter")}</span>
                     {buildingCantonFilter && <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-brand text-white text-[10px] font-bold leading-none">1</span>}
                   </button>
                 {buildingFilterOpen && (
                     <>
                     <div className="fixed inset-0 z-10" aria-hidden="true" onClick={() => setBuildingFilterOpen(false)} />
                     <div className="absolute right-0 top-full mt-1.5 z-20 w-52 rounded-xl border border-slate-200 bg-white shadow-lg p-3 space-y-2">
-                      <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Canton</p>
+                      <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">{t("manager:inventory.text.canton")}</p>
                       <select
                         className="filter-input w-full"
                         value={buildingCantonFilter}
                         onChange={(e) => setBuildingCantonFilter(e.target.value)}
                         aria-label={t("manager:inventory.ariaLabel.filterByCanton")}
                       >
-                        <option value="">All cantons</option>
+                        <option value="">{t("manager:inventory.text.allCantons")}</option>
                         {[...new Set(buildings.map((b) => b.canton).filter(Boolean))].sort().map((c) => (
                           <option key={c} value={c}>{c}</option>
                         ))}
@@ -509,10 +509,10 @@ export default function ManagerInventoryPage() {
               </div>
             </div>
             {loading ? (
-              <p className="loading-text">Loading buildings…</p>
+              <p className="loading-text">{t("manager:inventory.text.loadingBuildings")}</p>
             ) : buildings.length === 0 ? (
               <div className="empty-state">
-                <p className="empty-state-text">No buildings found.</p>
+                <p className="empty-state-text">{t("manager:inventory.text.noBuildingsFound")}</p>
               </div>
             ) : (
               <ConfigurableTable
@@ -524,7 +524,7 @@ export default function ManagerInventoryPage() {
                 sortDir={sortDir}
                 onSort={handleSort}
                 onRowClick={(b) => router.push(`/admin-inventory/buildings/${b.id}?from=/manager/inventory`)}
-                emptyState={<p className="text-sm text-slate-500">No buildings found.</p>}
+                emptyState={<p className="text-sm text-slate-500">{t("manager:inventory.text.noBuildingsFound")}</p>}
                 mobileCard={(b) => {
                   const h = b._financial?.health;
                   const dot = h ? ({ green: "bg-green-500 ring-green-200", amber: "bg-amber-500 ring-amber-200", red: "bg-red-500 ring-red-200" }[h] ?? "bg-slate-400 ring-slate-200") : null;
@@ -563,13 +563,13 @@ export default function ManagerInventoryPage() {
           {/* Decisions tab */}
           <div className={activeTab === 2 ? "tab-panel-active" : "tab-panel"}>
             <div className="p-4 border-b border-slate-100">
-              <label className="text-xs font-medium text-slate-600 mr-2">Unit</label>
+              <label className="text-xs font-medium text-slate-600 mr-2">{t("manager:inventory.text.unit")}</label>
               <select
                 value={decisionsUnitId}
                 onChange={(e) => { setDecisionsUnitId(e.target.value); setSensitivityInputs({}); }}
                 className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
               >
-                <option value="">— Select a unit —</option>
+                <option value="">{t("manager:inventory.text.selectAUnit")}</option>
                 {allUnits.map((u) => (
                   <option key={u.id} value={u.id}>
                     {u.building?.name ? `${u.building.name} · ` : ""}{u.unitNumber}
@@ -583,14 +583,14 @@ export default function ManagerInventoryPage() {
             )}
 
             {decisionsLoading ? (
-              <p className="loading-text">Analysing assets…</p>
+              <p className="loading-text">{t("manager:inventory.text.analysingAssets")}</p>
             ) : !decisionsUnitId ? (
               <div className="empty-state">
-                <p className="empty-state-text">Select a unit to see its repair vs replace analysis.</p>
+                <p className="empty-state-text">{t("manager:inventory.text.selectAUnitToSeeItsRepairVsReplaceAnalysis")}</p>
               </div>
             ) : decisionsData && decisionsData.length === 0 ? (
               <div className="empty-state">
-                <p className="empty-state-text">No assets recorded for this unit yet.</p>
+                <p className="empty-state-text">{t("manager:inventory.text.noAssetsRecordedForThisUnitYet")}</p>
               </div>
             ) : decisionsData ? (
               <>
@@ -636,7 +636,7 @@ export default function ManagerInventoryPage() {
                             onChange={(e) => setSensitivityInputs((prev) => ({ ...prev, [item.assetId]: e.target.value }))}
                             className="w-28 rounded border border-slate-200 px-2 py-1 text-xs text-right focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400"
                           />
-                          <span className="text-xs text-slate-400">If next repair CHF</span>
+                          <span className="text-xs text-slate-400">{t("manager:inventory.text.ifNextRepairChf")}</span>
                         </div>
                       )}
                     </div>
@@ -649,15 +649,15 @@ export default function ManagerInventoryPage() {
                 <table className="data-table">
                   <thead>
                     <tr>
-                      <SortableHeader label="Asset" field="assetName" sortField={decSF} sortDir={decSD} onSort={handleDecSort} />
-                      <SortableHeader label="Type" field="type" sortField={decSF} sortDir={decSD} onSort={handleDecSort} />
-                      <SortableHeader label="Age / Life" field="ageMonths" sortField={decSF} sortDir={decSD} onSort={handleDecSort} />
-                      <SortableHeader label="Depreciation" field="depreciation" sortField={decSF} sortDir={decSD} onSort={handleDecSort} />
+                      <SortableHeader label={t("manager:inventory.prop.asset")} field="assetName" sortField={decSF} sortDir={decSD} onSort={handleDecSort} />
+                      <SortableHeader label={t("manager:inventory.prop.type")} field="type" sortField={decSF} sortDir={decSD} onSort={handleDecSort} />
+                      <SortableHeader label={t("manager:inventory.prop.ageLife")} field="ageMonths" sortField={decSF} sortDir={decSD} onSort={handleDecSort} />
+                      <SortableHeader label={t("manager:inventory.prop.depreciation")} field="depreciation" sortField={decSF} sortDir={decSD} onSort={handleDecSort} />
                       <SortableHeader label="Repairs (CHF)" field="repairs" sortField={decSF} sortDir={decSD} onSort={handleDecSort} className="text-right" />
                       <SortableHeader label="Replace est. (CHF)" field="replace" sortField={decSF} sortDir={decSD} onSort={handleDecSort} className="text-right" />
-                      <SortableHeader label="Ratio" field="ratio" sortField={decSF} sortDir={decSD} onSort={handleDecSort} className="text-right" />
-                      <SortableHeader label="Break-even" field="breakEvenMonths" sortField={decSF} sortDir={decSD} onSort={handleDecSort} className="text-right" />
-                      <SortableHeader label="Recommendation" field="recommendation" sortField={decSF} sortDir={decSD} onSort={handleDecSort} />
+                      <SortableHeader label={t("manager:inventory.prop.ratio")} field="ratio" sortField={decSF} sortDir={decSD} onSort={handleDecSort} className="text-right" />
+                      <SortableHeader label={t("manager:inventory.prop.breakeven")} field="breakEvenMonths" sortField={decSF} sortDir={decSD} onSort={handleDecSort} className="text-right" />
+                      <SortableHeader label={t("manager:inventory.prop.recommendation")} field="recommendation" sortField={decSF} sortDir={decSD} onSort={handleDecSort} />
                     </tr>
                   </thead>
                   <tbody>
@@ -715,10 +715,10 @@ export default function ManagerInventoryPage() {
                                   onChange={(e) => setSensitivityInputs((prev) => ({ ...prev, [item.assetId]: e.target.value }))}
                                   className="w-24 rounded border border-slate-200 px-2 py-1 text-xs text-right focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400"
                                 />
-                                <span className="block text-xs text-slate-400 mt-0.5">If next repair CHF</span>
+                                <span className="block text-xs text-slate-400 mt-0.5">{t("manager:inventory.text.ifNextRepairChf")}</span>
                               </div>
                             ) : (
-                              <span className="block text-xs text-slate-400 mt-1">Sensitivity unavailable</span>
+                              <span className="block text-xs text-slate-400 mt-1">{t("manager:inventory.text.sensitivityUnavailable")}</span>
                             )}
                           </td>
                           <td className="text-right">
@@ -783,10 +783,10 @@ export default function ManagerInventoryPage() {
                 </table>
                 {/* Legend */}
                 <div className="px-4 py-3 border-t border-slate-100 text-xs text-slate-500 space-y-1">
-                  <p><strong>Ratio</strong> = cumulative repair cost ÷ estimated replacement cost. Above 60% → Replace.</p>
-                  <p><strong>Break-even</strong> = at current repair rate, when total repairs will exceed replacement cost.</p>
-                  <p><strong>Warranty offset</strong>: new appliances typically carry {decisionsData[0]?.warrantyOffsetMonths || 24} months warranty coverage.</p>
-                  <p className="italic">Hover a row for the recommendation reason.</p>
+                  <p><strong>{t("manager:inventory.text.ratio")}</strong> {t("manager:inventory.text.cumulativeRepairCostEstimatedReplacementCostAbove60Replace")}</p>
+                  <p><strong>{t("manager:inventory.text.breakeven")}</strong> {t("manager:inventory.text.atCurrentRepairRateWhenTotalRepairsWillExceedReplacementCost")}</p>
+                  <p><strong>{t("manager:inventory.text.warrantyOffset")}</strong>: new appliances typically carry {decisionsData[0]?.warrantyOffsetMonths || 24} months warranty coverage.</p>
+                  <p className="italic">{t("manager:inventory.text.hoverARowForTheRecommendationReason")}</p>
                 </div>
               </div>
               </>

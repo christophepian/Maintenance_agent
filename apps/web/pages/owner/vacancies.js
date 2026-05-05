@@ -18,7 +18,7 @@ export default function OwnerVacanciesPage() {
         <OwnerPicker onSelect={() => setRefreshKey((k) => k + 1)} />
         <PageHeader
           title={t("owner:vacancies.title.vacancies")}
-          subtitle="Vacant units open for rental applications"
+          subtitle={t("owner:vacancies.prop.vacantUnitsOpenForRentalApplications")}
           actions={
             <button
               onClick={() => setRefreshKey((k) => k + 1)}

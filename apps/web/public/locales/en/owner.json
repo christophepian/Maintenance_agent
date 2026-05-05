@@ -176,6 +176,37 @@
       "priority": "Priority",
       "request": "Request #",
       "status": "Status"
+    },
+    "text": {
+      "allBuildings": "All buildings",
+      "allUnits": "All units",
+      "allLevels": "All levels",
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High",
+      "emergency": "Emergency",
+      "loading": "Loading…",
+      "pendingApproval": "Pending approval",
+      "allRfps": "All RFPs",
+      "draft": "Draft",
+      "open": "Open",
+      "closed": "Closed",
+      "awarded": "Awarded",
+      "cancelled": "Cancelled"
+    },
+    "prop": {
+      "from": "From",
+      "to": "To",
+      "building": "Building",
+      "unit": "Unit",
+      "urgency": "Urgency",
+      "requestNumber": "Request number",
+      "requestDate": "Request date",
+      "quotePrice": "Quote price",
+      "show": "Show",
+      "category": "Category",
+      "quotes": "Quotes",
+      "created": "Created"
     }
   },
   "billingEntities": {
@@ -196,6 +227,27 @@
     },
     "ariaLabel": {
       "invoiceActions": "Invoice actions"
+    },
+    "text": {
+      "loadingPortfolioSummary": "Loading portfolio summary…",
+      "avgCollectionRate": "Avg collection rate:",
+      "noBuildingsInThisPortfolioYet": "No buildings in this portfolio yet.",
+      "reviewIssuedInvoicesAndApproveOrDisputeThem": "Review issued invoices and approve or dispute them",
+      "loadingInvoices": "Loading invoices…"
+    },
+    "prop": {
+      "from": "From",
+      "to": "To",
+      "earnedIncome": "Earned Income",
+      "totalExpenses": "Total Expenses",
+      "netResult": "Net Result",
+      "receivables": "Receivables",
+      "payables": "Payables",
+      "building": "Building",
+      "expenses": "Expenses",
+      "net": "Net",
+      "collection": "Collection",
+      "portfolioSummaryInvoicesAndCashflowPlanning": "Portfolio summary, invoices, and cashflow planning"
     }
   },
   "financeInvoicesId": {
@@ -225,6 +277,32 @@
     },
     "ariaLabel": {
       "disputeInvoice": "Dispute invoice"
+    },
+    "text": {
+      "error": "Error:",
+      "dismiss": "Dismiss",
+      "loadingInvoice": "Loading invoice…",
+      "invoiceNotFound": "Invoice not found.",
+      "created": "Created",
+      "submitted": "Submitted",
+      "approved": "Approved",
+      "paid": "Paid"
+    },
+    "prop": {
+      "invoiceNumber": "Invoice Number",
+      "direction": "Direction",
+      "currency": "Currency",
+      "subtotal": "Subtotal",
+      "issueDate": "Issue Date",
+      "dueDate": "Due Date",
+      "created": "Created",
+      "paymentRef": "Payment Ref",
+      "name": "Name",
+      "address": "Address",
+      "postalCodeCity": "Postal Code · City",
+      "country": "Country",
+      "expenseType": "Expense Type",
+      "account": "Account"
     }
   },
   "index": {
@@ -236,6 +314,24 @@
     },
     "ariaLabel": {
       "refreshDashboard": "Refresh dashboard"
+    },
+    "text": {
+      "portfolioSnapshot": "Portfolio snapshot",
+      "allClearNoItemsNeedYourAttention": "All clear — no items need your attention",
+      "checkBackAfterNewApprovalsOrInvoicesArrive": "Check back after new approvals or invoices arrive.",
+      "financeReportingStrategyAndLeaseManagement": "Finance reporting, strategy, and lease management.",
+      "reporting": "Reporting",
+      "leases": "Leases",
+      "allApprovals": "All approvals"
+    },
+    "prop": {
+      "monthlyRent": "Monthly rent",
+      "outstanding": "Outstanding",
+      "activeLeases": "Active leases",
+      "pendingApprovals": "Pending approvals",
+      "invoicesToReview": "Invoices to review",
+      "vacancyRate": "Vacancy rate",
+      "vacantUnits": "Vacant units"
     }
   },
   "invoices": {
@@ -249,6 +345,17 @@
     },
     "ariaLabel": {
       "downloadPdf": "Download PDF"
+    },
+    "text": {
+      "includeQrBill": "Include QR bill",
+      "appendsTheSwissQrPaymentSlip": "Appends the Swiss QR payment slip",
+      "reviewIssuedInvoicesAndApproveOrDisputeThem": "Review issued invoices and approve or dispute them",
+      "loadingInvoices": "Loading invoices…"
+    },
+    "prop": {
+      "reviewApproveAndManageInvoicePayments": "Review, approve, and manage invoice payments",
+      "from": "From",
+      "to": "To"
     }
   },
   "jobs": {
@@ -258,6 +365,33 @@
       "dateRange": "Date range",
       "scope": "Scope",
       "priority": "Priority"
+    },
+    "text": {
+      "allStatuses": "All statuses",
+      "pending": "Pending",
+      "inProgress": "In Progress",
+      "completed": "Completed",
+      "invoiced": "Invoiced",
+      "allBuildings": "All buildings",
+      "allUnits": "All units",
+      "allLevels": "All levels",
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High",
+      "emergency": "Emergency",
+      "loadingJobs": "Loading jobs...",
+      "requestDetails": "Request Details",
+      "location": "Location",
+      "tenant": "Tenant",
+      "contractor": "Contractor",
+      "asset": "Asset"
+    },
+    "prop": {
+      "from": "From",
+      "to": "To",
+      "building": "Building",
+      "unit": "Unit",
+      "urgency": "Urgency"
     }
   },
   "properties": {
@@ -267,6 +401,18 @@
     "ariaLabel": {
       "listView": "List view",
       "monopolyBoardView": "Monopoly board view"
+    },
+    "text": {
+      "list": "List",
+      "monopoly": "Monopoly",
+      "loadingProperties": "Loading properties…",
+      "noPropertiesFound": "No properties found."
+    },
+    "prop": {
+      "units": "Units",
+      "avgRentUnit": "Avg rent / unit",
+      "collection": "Collection",
+      "buildingsAndUnitsInYourPortfolio": "Buildings and units in your portfolio"
     }
   },
   "reporting": {
@@ -280,6 +426,28 @@
     "ariaLabel": {
       "previousYear": "Previous year",
       "nextYear": "Next year"
+    },
+    "text": {
+      "income": "Income",
+      "expenses": "Expenses",
+      "net": "Net",
+      "collection": "Collection",
+      "rentCollected": "Rent collected:",
+      "operatingCosts": "Operating costs:",
+      "netResult": "Net result",
+      "accruedPayables": "Accrued payables",
+      "periodendBalance": "Period-end balance",
+      "highlight": "Highlight",
+      "theMainForcesBehindThisMonthsNumbers": "The main forces behind this month's numbers.",
+      "noMoveinsThisPeriod": "No move-ins this period.",
+      "noMoveoutsThisPeriod": "No move-outs this period.",
+      "whatThisPeriodsDataSuggestsForFuturePlanning": "What this period's data suggests for future planning."
+    },
+    "prop": {
+      "netIncome": "Net Income",
+      "rentCollected": "Rent Collected",
+      "totalExpenses": "Total Expenses",
+      "collectionRate": "Collection Rate"
     }
   },
   "requestsId": {
@@ -290,11 +458,71 @@
     "ariaLabel": {
       "backToApprovals": "Back to approvals",
       "dismissError": "Dismiss error"
+    },
+    "text": {
+      "noAssetLinkedToThisRequest": "No asset linked to this request.",
+      "linkAnAssetToGetRepairReplaceRecommendations": "Link an asset to get repair / replace recommendations.",
+      "recommendation": "Recommendation",
+      "notAvailable": "Not available",
+      "estimatedPrice": "Estimated price",
+      "noRepairvsreplaceDataAvailableForThisAsset": "No repair-vs-replace data available for this asset.",
+      "estRepair": "Est. repair",
+      "estReplacement": "Est. replacement",
+      "tenantfunded": "Tenant-funded",
+      "error": "Error:",
+      "dismiss": "Dismiss",
+      "requestNotFound": "Request not found.",
+      "yourApprovalIsRequired": "Your approval is required",
+      "selectedContractor": "Selected Contractor",
+      "quoteAmount": "Quote Amount",
+      "building": "Building",
+      "unit": "Unit",
+      "tenant": "Tenant",
+      "description": "Description",
+      "contractor": "Contractor",
+      "asset": "Asset",
+      "noLegalAnalysisAvailableForThisRequest": "No legal analysis available for this request.",
+      "brand": "Brand",
+      "installed": "Installed"
+    },
+    "prop": {
+      "created": "Created",
+      "category": "Category",
+      "estimatedCost": "Estimated Cost",
+      "payingParty": "Paying Party",
+      "rejectionReason": "Rejection Reason",
+      "name": "Name",
+      "phone": "Phone",
+      "email": "Email",
+      "brand": "Brand",
+      "model": "Model",
+      "installed": "Installed"
     }
   },
   "rfpsId": {
     "title": {
       "rFPDetails": "RFP Details"
+    },
+    "text": {
+      "loading": "Loading…",
+      "yourApprovalRequired": "⚠️ Your Approval Required",
+      "status": "Status",
+      "category": "Category",
+      "legalObligation": "Legal Obligation",
+      "building": "Building",
+      "unit": "Unit",
+      "quoteDeadline": "Quote Deadline",
+      "created": "Created",
+      "awardedTo": "Awarded To",
+      "exclVat": "excl. VAT",
+      "duration": "Duration",
+      "available": "Available",
+      "validUntil": "Valid Until",
+      "submitted": "Submitted",
+      "workPlan": "Work Plan",
+      "assumptions": "Assumptions",
+      "notes": "Notes",
+      "rFPNotFound": "RFP not found."
     }
   },
   "settings": {
@@ -311,11 +539,47 @@
     },
     "title": {
       "settings": "Settings"
+    },
+    "text": {
+      "error": "Error:",
+      "oK": "OK:",
+      "profile": "Profile",
+      "loading": "Loading…",
+      "displayName": "Display name",
+      "emailAddress": "Email address",
+      "changingYourEmailAlsoChangesYourLoginCredential": "Changing your email also changes your login credential.",
+      "changePassword": "Change password",
+      "currentPassword": "Current password",
+      "newPassword": "New password",
+      "confirmNewPassword": "Confirm new password",
+      "notSetUp": "Not set up",
+      "noStrategyProfileYet": "No strategy profile yet",
+      "primaryArchetype": "Primary archetype",
+      "riskTolerance": "Risk tolerance",
+      "investmentHorizon": "Investment horizon",
+      "comingSoon": "Coming soon",
+      "notificationPreferences": "Notification Preferences",
+      "integrations": "Integrations",
+      "loadingSources": "Loading sources…",
+      "noLegalSourcesFound": "No legal sources found."
+    },
+    "prop": {
+      "manageYourAccountRiskProfileAndPreferences": "Manage your account, risk profile, and preferences.",
+      "name": "Name",
+      "scope": "Scope",
+      "frequency": "Frequency",
+      "status": "Status",
+      "lastSynced": "Last Synced",
+      "key": "Key",
+      "description": "Description"
     }
   },
   "settingsStrategy": {
     "title": {
       "myStrategy": "My Strategy"
+    },
+    "text": {
+      "loading": "Loading..."
     }
   },
   "strategy": {
@@ -331,11 +595,17 @@
       "yourStrategy": "Your Strategy",
       "setUpYourProperties": "Set up your properties",
       "strategyQuestionnaire": "Strategy Questionnaire"
+    },
+    "prop": {
+      "addTheBuildingsYouOwnOrManage": "Add the buildings you own or manage"
     }
   },
   "vacancies": {
     "title": {
       "vacancies": "Vacancies"
+    },
+    "prop": {
+      "vacantUnitsOpenForRentalApplications": "Vacant units open for rental applications"
     }
   },
   "vacancies[unitid]Candidates": {
@@ -376,6 +646,44 @@
   "workRequests": {
     "title": {
       "workRequests": "Work Requests"
+    }
+  },
+  "vacanciesUnitidCandidates": {
+    "text": {
+      "candidatesSelectedSuccessfully": "Candidates selected successfully!",
+      "loadingCandidates": "Loading candidates…",
+      "noApplicationsSubmittedForThisUnit": "No applications submitted for this unit.",
+      "disqualified": "Disqualified",
+      "override": "✓ Override",
+      "override2": "⚠ Override",
+      "disqualificationReasons": "Disqualification Reasons",
+      "docs": "▼ docs",
+      "minimum3CharactersThisWillBeRecordedForAudit": "Minimum 3 characters. This will be recorded for audit."
+    },
+    "prop": {
+      "applicant": "Applicant",
+      "score": "Score",
+      "confidence": "Confidence"
+    }
+  },
+  "vacanciesUnitidFill": {
+    "text": {
+      "loadingVacancyData": "Loading vacancy data...",
+      "searchTenants": "Search tenants",
+      "noTenantsFound": "No tenants found.",
+      "createNewTenant": "Create new tenant",
+      "leaseStartDate": "Lease start date"
+    },
+    "prop": {
+      "vacancyWillBeRemovedOnceTheLeaseIsActive": "Vacancy will be removed once the lease is ACTIVE."
+    }
+  },
+  "work_Requests": {
+    "text": {
+      "loadingRequests": "Loading requests…"
+    },
+    "prop": {
+      "allMaintenanceRequestsAcrossYourProperties": "All maintenance requests across your properties"
     }
   }
 }

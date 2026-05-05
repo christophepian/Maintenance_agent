@@ -221,15 +221,15 @@ export default function InvoiceDetailPage() {
         <PageContent>
           {error && (
             <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 mb-4 flex items-center justify-between">
-              <span className="text-sm text-red-700"><strong>Error:</strong> {error}</span>
-              <button onClick={() => setError("")} className="text-xs text-red-500 hover:text-red-700 ml-4">Dismiss</button>
+              <span className="text-sm text-red-700"><strong>{t("manager:financeInvoicesId.text.error")}</strong> {error}</span>
+              <button onClick={() => setError("")} className="text-xs text-red-500 hover:text-red-700 ml-4">{t("manager:financeInvoicesId.text.dismiss")}</button>
             </div>
           )}
 
           {loading ? (
-            <Panel><p className="loading-text">Loading invoice…</p></Panel>
+            <Panel><p className="loading-text">{t("manager:financeInvoicesId.text.loadingInvoice")}</p></Panel>
           ) : !inv ? (
-            <div className="empty-state"><p className="empty-state-text">Invoice not found.</p></div>
+            <div className="empty-state"><p className="empty-state-text">{t("manager:financeInvoicesId.text.invoiceNotFound")}</p></div>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Left column: details */}
@@ -302,7 +302,7 @@ export default function InvoiceDetailPage() {
                 {/* Pending review notice */}
                 {isPendingReview && (
                   <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
-                    <p className="text-sm font-medium text-amber-700 mt-0 mb-1">⚠ This invoice needs review</p>
+                    <p className="text-sm font-medium text-amber-700 mt-0 mb-1">{t("manager:financeInvoicesId.text.thisInvoiceNeedsReview")}</p>
                     <p className="text-xs text-amber-700 m-0">
                       This invoice was ingested via {SOURCE_LABEL[inv.sourceChannel]?.text || "scanner"} with
                       {typeof inv.ocrConfidence === "number" ? ` ${inv.ocrConfidence}% confidence` : " unknown confidence"}.
@@ -314,16 +314,16 @@ export default function InvoiceDetailPage() {
                 {/* Core details */}
                 <Panel title={t("manager:financeInvoicesId.title.invoiceDetails")}>
                   <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-4">
-                    <Field label="Invoice Number" value={inv.invoiceNumber} />
-                    <Field label="Direction" value={inv.direction === "INCOMING" ? "Incoming" : "Outgoing"} />
-                    <Field label="Currency" value={inv.currency || "CHF"} />
-                    <Field label="Subtotal" value={formatChf(inv.subtotalAmount)} />
+                    <Field label={t("manager:financeInvoicesId.prop.invoiceNumber")} value={inv.invoiceNumber} />
+                    <Field label={t("manager:financeInvoicesId.prop.direction")} value={inv.direction === "INCOMING" ? "Incoming" : "Outgoing"} />
+                    <Field label={t("manager:financeInvoicesId.prop.currency")} value={inv.currency || "CHF"} />
+                    <Field label={t("manager:financeInvoicesId.prop.subtotal")} value={formatChf(inv.subtotalAmount)} />
                     <Field label="VAT" value={inv.vatRate != null ? `${inv.vatRate}% — ${formatChf(inv.vatAmount)}` : formatChf(inv.vatAmount)} />
                     <Field label={t("manager:financeInvoicesId.col.total")} value={formatChf(inv.totalAmount)} />
-                    <Field label="Issue Date" value={formatDate(inv.issueDate)} />
-                    <Field label="Due Date" value={formatDate(inv.dueDate)} />
-                    <Field label="Created" value={formatDate(inv.createdAt)} />
-                    {inv.paymentReference && <Field label="Payment Ref" value={inv.paymentReference} />}
+                    <Field label={t("manager:financeInvoicesId.prop.issueDate")} value={formatDate(inv.issueDate)} />
+                    <Field label={t("manager:financeInvoicesId.prop.dueDate")} value={formatDate(inv.dueDate)} />
+                    <Field label={t("manager:financeInvoicesId.prop.created")} value={formatDate(inv.createdAt)} />
+                    {inv.paymentReference && <Field label={t("manager:financeInvoicesId.prop.paymentRef")} value={inv.paymentReference} />}
                     {inv.iban && <Field label="IBAN" value={inv.iban} />}
                   </dl>
                 </Panel>
@@ -331,10 +331,10 @@ export default function InvoiceDetailPage() {
                 {/* Recipient */}
                 <Panel title={t("manager:financeInvoicesId.title.recipient")}>
                   <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-4">
-                    <Field label="Name" value={inv.recipientName} />
-                    <Field label="Address" value={[inv.recipientAddressLine1, inv.recipientAddressLine2].filter(Boolean).join(", ")} />
-                    <Field label="Postal Code · City" value={[inv.recipientPostalCode, inv.recipientCity].filter(Boolean).join(" ")} />
-                    <Field label="Country" value={inv.recipientCountry} />
+                    <Field label={t("manager:financeInvoicesId.prop.name")} value={inv.recipientName} />
+                    <Field label={t("manager:financeInvoicesId.prop.address")} value={[inv.recipientAddressLine1, inv.recipientAddressLine2].filter(Boolean).join(", ")} />
+                    <Field label={t("manager:financeInvoicesId.prop.postalCodeCity")} value={[inv.recipientPostalCode, inv.recipientCity].filter(Boolean).join(" ")} />
+                    <Field label={t("manager:financeInvoicesId.prop.country")} value={inv.recipientCountry} />
                   </dl>
                 </Panel>
 
@@ -345,12 +345,12 @@ export default function InvoiceDetailPage() {
                       const linked = billingEntities.find((be) => be.id === inv.issuerBillingEntityId);
                       return linked ? (
                         <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-4">
-                          <Field label="Name" value={linked.name} />
-                          <Field label="Address" value={linked.addressLine1} />
-                          <Field label="City" value={`${linked.postalCode} ${linked.city}`} />
+                          <Field label={t("manager:financeInvoicesId.prop.name")} value={linked.name} />
+                          <Field label={t("manager:financeInvoicesId.prop.address")} value={linked.addressLine1} />
+                          <Field label={t("manager:financeInvoicesId.prop.city")} value={`${linked.postalCode} ${linked.city}`} />
                           <Field label="IBAN" value={linked.iban} />
-                          {linked.vatNumber && <Field label="VAT Number" value={linked.vatNumber} />}
-                          <Field label="Type" value={linked.type} />
+                          {linked.vatNumber && <Field label={t("manager:financeInvoicesId.prop.vATNumber")} value={linked.vatNumber} />}
+                          <Field label={t("manager:financeInvoicesId.prop.type")} value={linked.type} />
                         </dl>
                       ) : (
                         <p className="text-sm text-slate-500">Billing entity linked (ID: {inv.issuerBillingEntityId.slice(0, 8)}…)</p>
@@ -363,13 +363,13 @@ export default function InvoiceDetailPage() {
                       </p>
                       <div className="flex items-end gap-2">
                         <div className="flex-1">
-                          <label className="block text-xs font-medium text-slate-500 mb-1">Select billing entity</label>
+                          <label className="block text-xs font-medium text-slate-500 mb-1">{t("manager:financeInvoicesId.text.selectBillingEntity")}</label>
                           <select
                             value={selectedBillingEntityId}
                             onChange={(e) => setSelectedBillingEntityId(e.target.value)}
                             className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                           >
-                            <option value="">— Choose —</option>
+                            <option value="">{t("manager:financeInvoicesId.text.choose")}</option>
                             {billingEntities.map((be) => (
                               <option key={be.id} value={be.id}>
                                 {be.name} ({be.type})
@@ -395,30 +395,30 @@ export default function InvoiceDetailPage() {
                         </button>
                       ) : (
                         <div className="border border-slate-200 rounded-lg p-4 space-y-3 bg-slate-50">
-                          <p className="text-sm font-medium text-slate-700 m-0">New Billing Entity</p>
+                          <p className="text-sm font-medium text-slate-700 m-0">{t("manager:financeInvoicesId.text.newBillingEntity")}</p>
                           <div className="grid grid-cols-2 gap-3">
                             <div>
-                              <label className="block text-xs text-slate-500 mb-0.5">Name *</label>
+                              <label className="block text-xs text-slate-500 mb-0.5">{t("manager:financeInvoicesId.text.name")}</label>
                               <input value={beForm.name} onChange={(e) => setBeForm((f) => ({ ...f, name: e.target.value }))} className="filter-input" placeholder={t("manager:financeInvoicesId.placeholder.companyName")} />
                             </div>
                             <div>
-                              <label className="block text-xs text-slate-500 mb-0.5">Address *</label>
+                              <label className="block text-xs text-slate-500 mb-0.5">{t("manager:financeInvoicesId.text.address")}</label>
                               <input value={beForm.addressLine1} onChange={(e) => setBeForm((f) => ({ ...f, addressLine1: e.target.value }))} className="filter-input" placeholder={t("manager:financeInvoicesId.placeholder.streetNumber")} />
                             </div>
                             <div>
-                              <label className="block text-xs text-slate-500 mb-0.5">Postal Code *</label>
+                              <label className="block text-xs text-slate-500 mb-0.5">{t("manager:financeInvoicesId.text.postalCode")}</label>
                               <input value={beForm.postalCode} onChange={(e) => setBeForm((f) => ({ ...f, postalCode: e.target.value }))} className="filter-input" placeholder="1000" />
                             </div>
                             <div>
-                              <label className="block text-xs text-slate-500 mb-0.5">City *</label>
+                              <label className="block text-xs text-slate-500 mb-0.5">{t("manager:financeInvoicesId.text.city")}</label>
                               <input value={beForm.city} onChange={(e) => setBeForm((f) => ({ ...f, city: e.target.value }))} className="filter-input" placeholder={t("manager:financeInvoicesId.placeholder.lausanne")} />
                             </div>
                             <div>
-                              <label className="block text-xs text-slate-500 mb-0.5">IBAN *</label>
+                              <label className="block text-xs text-slate-500 mb-0.5">{t("manager:financeInvoicesId.text.iBAN")}</label>
                               <input value={beForm.iban} onChange={(e) => setBeForm((f) => ({ ...f, iban: e.target.value }))} className="filter-input" placeholder={t("manager:financeInvoicesId.placeholder.cH")} />
                             </div>
                             <div>
-                              <label className="block text-xs text-slate-500 mb-0.5">VAT Number</label>
+                              <label className="block text-xs text-slate-500 mb-0.5">{t("manager:financeInvoicesId.text.vATNumber")}</label>
                               <input value={beForm.vatNumber} onChange={(e) => setBeForm((f) => ({ ...f, vatNumber: e.target.value }))} className="filter-input" placeholder={t("manager:financeInvoicesId.placeholder.cHE")} />
                             </div>
                           </div>
@@ -441,7 +441,7 @@ export default function InvoiceDetailPage() {
                       )}
                     </div>
                   ) : (
-                    <p className="text-sm text-slate-500">No billing entity linked.</p>
+                    <p className="text-sm text-slate-500">{t("manager:financeInvoicesId.text.noBillingEntityLinked")}</p>
                   )}
                 </Panel>
 
@@ -497,7 +497,7 @@ export default function InvoiceDetailPage() {
                     <dl className="grid grid-cols-2 gap-x-6 gap-y-4">
                       {(inv.jobId || inv.matchedJobId) && (
                         <Field
-                          label="Job"
+                          label={t("manager:financeInvoicesId.prop.job")}
                           value={
                             inv.requestId ? (
                               <Link
@@ -519,7 +519,7 @@ export default function InvoiceDetailPage() {
                       )}
                       {inv.matchedLeaseId && (
                         <Field
-                          label="Lease"
+                          label={t("manager:financeInvoicesId.prop.lease")}
                           value={
                             <Link href={`/manager/leases/${inv.matchedLeaseId}`} className="text-blue-600 hover:text-blue-700 text-sm font-medium">
                               View lease →
@@ -535,8 +535,8 @@ export default function InvoiceDetailPage() {
                 {(inv.expenseType || inv.account) && (
                   <Panel title={t("manager:financeInvoicesId.title.accounting")}>
                     <dl className="grid grid-cols-2 gap-x-6 gap-y-4">
-                      {inv.expenseType && <Field label="Expense Type" value={`${inv.expenseType.name}${inv.expenseType.code ? ` (${inv.expenseType.code})` : ""}`} />}
-                      {inv.account && <Field label="Account" value={`${inv.account.name}${inv.account.code ? ` (${inv.account.code})` : ""}`} />}
+                      {inv.expenseType && <Field label={t("manager:financeInvoicesId.prop.expenseType")} value={`${inv.expenseType.name}${inv.expenseType.code ? ` (${inv.expenseType.code})` : ""}`} />}
+                      {inv.account && <Field label={t("manager:financeInvoicesId.prop.account")} value={`${inv.account.name}${inv.account.code ? ` (${inv.account.code})` : ""}`} />}
                     </dl>
                   </Panel>
                 )}
@@ -576,11 +576,11 @@ export default function InvoiceDetailPage() {
                 {/* Timeline */}
                 <Panel title={t("manager:financeInvoicesId.title.timeline")}>
                   <div className="space-y-2 text-xs text-slate-600">
-                    <div className="flex justify-between"><span>Created</span><span>{formatDate(inv.createdAt)}</span></div>
-                    {inv.submittedAt && <div className="flex justify-between"><span>Submitted</span><span>{formatDate(inv.submittedAt)}</span></div>}
-                    {inv.lockedAt && <div className="flex justify-between"><span>Locked</span><span>{formatDate(inv.lockedAt)}</span></div>}
-                    {inv.approvedAt && <div className="flex justify-between"><span>Approved</span><span>{formatDate(inv.approvedAt)}</span></div>}
-                    {inv.paidAt && <div className="flex justify-between"><span>Paid</span><span>{formatDate(inv.paidAt)}</span></div>}
+                    <div className="flex justify-between"><span>{t("manager:financeInvoicesId.text.created")}</span><span>{formatDate(inv.createdAt)}</span></div>
+                    {inv.submittedAt && <div className="flex justify-between"><span>{t("manager:financeInvoicesId.text.submitted")}</span><span>{formatDate(inv.submittedAt)}</span></div>}
+                    {inv.lockedAt && <div className="flex justify-between"><span>{t("manager:financeInvoicesId.text.locked")}</span><span>{formatDate(inv.lockedAt)}</span></div>}
+                    {inv.approvedAt && <div className="flex justify-between"><span>{t("manager:financeInvoicesId.text.approved")}</span><span>{formatDate(inv.approvedAt)}</span></div>}
+                    {inv.paidAt && <div className="flex justify-between"><span>{t("manager:financeInvoicesId.text.paid")}</span><span>{formatDate(inv.paidAt)}</span></div>}
                   </div>
                 </Panel>
               </div>

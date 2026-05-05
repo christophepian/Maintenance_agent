@@ -236,7 +236,7 @@ export default function OwnerDashboard() {
         <div className="mb-8">
           {/* Portfolio snapshot */}
           <div className="mb-5 flex items-center gap-3">
-            <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Portfolio snapshot</span>
+            <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">{t("owner:index.text.portfolioSnapshot")}</span>
             <div className="flex-1 border-t border-slate-300" />
             <button onClick={loadDashboard} className="shrink-0 rounded-lg border border-slate-300 bg-transparent p-2 text-slate-400 hover:bg-slate-50 hover:text-slate-700 transition-colors" aria-label={t("owner:index.ariaLabel.refreshDashboard")}>
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
@@ -246,24 +246,24 @@ export default function OwnerDashboard() {
           </div>
           {/* Financial KPIs */}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <InfoStat label="Monthly rent" value={formatChf(expectedMonthlyRentChf)} tone="good" />
+            <InfoStat label={t("owner:index.prop.monthlyRent")} value={formatChf(expectedMonthlyRentChf)} tone="good" />
             <InfoStat
-              label="Outstanding"
+              label={t("owner:index.prop.outstanding")}
               value={formatChf(outstandingLiabilitiesChf)}
               tone={outstandingLiabilitiesChf > 0 ? "warn" : "good"}
             />
             <InfoStat
-              label="Active leases"
+              label={t("owner:index.prop.activeLeases")}
               value={String(activeLeases.length)}
             />
           </div>
 
           {/* Operational KPIs */}
           <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <ActionStat label="Pending approvals" value={pendingApprovalCount} href="/owner/approvals" tone={pendingApprovalCount > 0 ? "warn" : "good"} />
-            <ActionStat label="Invoices to review" value={pendingInvoiceCount} href="/owner/invoices" tone={pendingInvoiceCount > 0 ? "warn" : "good"} />
-            <ActionStat label="Vacancy rate" value={`${vacantUnits.length} / ${residentialUnits.length}`} href="/owner/vacancies" tone={vacantUnits.length === 0 ? "good" : vacancyRate > 0.1 ? "bad" : "warn"} />
-            <ActionStat label="Vacant units" value={vacantUnits.length} href="/owner/vacancies" tone={vacantUnits.length > 0 ? "bad" : "good"} />
+            <ActionStat label={t("owner:index.prop.pendingApprovals")} value={pendingApprovalCount} href="/owner/approvals" tone={pendingApprovalCount > 0 ? "warn" : "good"} />
+            <ActionStat label={t("owner:index.prop.invoicesToReview")} value={pendingInvoiceCount} href="/owner/invoices" tone={pendingInvoiceCount > 0 ? "warn" : "good"} />
+            <ActionStat label={t("owner:index.prop.vacancyRate")} value={`${vacantUnits.length} / ${residentialUnits.length}`} href="/owner/vacancies" tone={vacantUnits.length === 0 ? "good" : vacancyRate > 0.1 ? "bad" : "warn"} />
+            <ActionStat label={t("owner:index.prop.vacantUnits")} value={vacantUnits.length} href="/owner/vacancies" tone={vacantUnits.length > 0 ? "bad" : "good"} />
           </div>
 
           <div className="mt-6 mb-5 border-t border-slate-200" />
@@ -318,8 +318,8 @@ export default function OwnerDashboard() {
           {totalActions === 0 ? (
             <div className="rounded-2xl border border-green-200 bg-green-50 px-5 py-8 text-center">
               <div className="text-2xl mb-2">✓</div>
-              <div className="text-sm font-semibold text-green-800">All clear — no items need your attention</div>
-              <div className="mt-1 text-xs text-green-600">Check back after new approvals or invoices arrive.</div>
+              <div className="text-sm font-semibold text-green-800">{t("owner:index.text.allClearNoItemsNeedYourAttention")}</div>
+              <div className="mt-1 text-xs text-green-600">{t("owner:index.text.checkBackAfterNewApprovalsOrInvoicesArrive")}</div>
             </div>
           ) : displayFeed.length === 0 ? (
             <div className="rounded-2xl border border-slate-200 bg-slate-50 px-5 py-8 text-center">
@@ -342,13 +342,13 @@ export default function OwnerDashboard() {
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="text-base font-semibold text-slate-900">{t("owner:index.heading.moreViews")}</h2>
-              <p className="mt-1 text-sm text-slate-500">Finance reporting, strategy, and lease management.</p>
+              <p className="mt-1 text-sm text-slate-500">{t("owner:index.text.financeReportingStrategyAndLeaseManagement")}</p>
             </div>
             <div className="flex flex-wrap gap-2 shrink-0">
-              <Link href="/owner/reporting" className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors no-underline">Reporting</Link>
+              <Link href="/owner/reporting" className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors no-underline">{t("owner:index.text.reporting")}</Link>
               <Link href="/owner/finance" className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors no-underline">{t("owner:dashboard.moreTools.finance")}</Link>
-              <Link href="/owner/leases" className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors no-underline">Leases</Link>
-              <Link href="/owner/approvals" className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition-colors no-underline">All approvals</Link>
+              <Link href="/owner/leases" className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors no-underline">{t("owner:index.text.leases")}</Link>
+              <Link href="/owner/approvals" className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition-colors no-underline">{t("owner:index.text.allApprovals")}</Link>
             </div>
           </div>
         </section>

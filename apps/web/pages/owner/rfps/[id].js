@@ -97,13 +97,13 @@ export default function OwnerRfpDetailPage() {
           <ErrorBanner error={error} className="text-sm" />
 
           {loading ? (
-            <p className="text-sm text-slate-500">Loading…</p>
+            <p className="text-sm text-slate-500">{t("owner:rfpsId.text.loading")}</p>
           ) : rfp ? (
             <>
               {/* Owner Approval Banner */}
               {rfp.status === "PENDING_OWNER_APPROVAL" && (
                 <div className="rounded-lg border-2 border-amber-300 bg-amber-50 px-6 py-4 text-sm text-amber-900">
-                  <p className="font-semibold text-base mb-1">⚠️ Your Approval Required</p>
+                  <p className="font-semibold text-base mb-1">{t("owner:rfpsId.text.yourApprovalRequired")}</p>
                   <p>
                     The manager has selected a quote that exceeds the building's auto-approval
                     threshold. Please review the quotes below and approve the award.
@@ -115,21 +115,21 @@ export default function OwnerRfpDetailPage() {
               <Panel title={t("owner:rfpsId.title.rFPDetails")}>
                 <dl className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
                   <div>
-                    <dt className="text-sm font-medium text-slate-500">Status</dt>
+                    <dt className="text-sm font-medium text-slate-500">{t("owner:rfpsId.text.status")}</dt>
                     <dd className="mt-1">
                       <Badge variant={rfpVariant(rfp.status)}>{rfp.status?.replace(/_/g, " ") || "—"}</Badge>
                     </dd>
                   </div>
                   <div>
-                    <dt className="text-sm font-medium text-slate-500">Category</dt>
+                    <dt className="text-sm font-medium text-slate-500">{t("owner:rfpsId.text.category")}</dt>
                     <dd className="mt-1 text-sm text-slate-900">{rfp.category || "—"}</dd>
                   </div>
                   <div>
-                    <dt className="text-sm font-medium text-slate-500">Legal Obligation</dt>
+                    <dt className="text-sm font-medium text-slate-500">{t("owner:rfpsId.text.legalObligation")}</dt>
                     <dd className="mt-1 text-sm text-slate-900">{rfp.legalObligation || "—"}</dd>
                   </div>
                   <div>
-                    <dt className="text-sm font-medium text-slate-500">Building</dt>
+                    <dt className="text-sm font-medium text-slate-500">{t("owner:rfpsId.text.building")}</dt>
                     <dd className="mt-1 text-sm text-slate-900">
                       {rfp.building?.name || "—"}
                       {rfp.building?.address && (
@@ -138,20 +138,20 @@ export default function OwnerRfpDetailPage() {
                     </dd>
                   </div>
                   <div>
-                    <dt className="text-sm font-medium text-slate-500">Unit</dt>
+                    <dt className="text-sm font-medium text-slate-500">{t("owner:rfpsId.text.unit")}</dt>
                     <dd className="mt-1 text-sm text-slate-900">{rfp.unit?.unitNumber || "—"}</dd>
                   </div>
                   <div>
-                    <dt className="text-sm font-medium text-slate-500">Quote Deadline</dt>
+                    <dt className="text-sm font-medium text-slate-500">{t("owner:rfpsId.text.quoteDeadline")}</dt>
                     <dd className="mt-1 text-sm text-slate-900">{formatDate(rfp.deadlineAt)}</dd>
                   </div>
                   <div>
-                    <dt className="text-sm font-medium text-slate-500">Created</dt>
+                    <dt className="text-sm font-medium text-slate-500">{t("owner:rfpsId.text.created")}</dt>
                     <dd className="mt-1 text-sm text-slate-900">{formatDate(rfp.createdAt)}</dd>
                   </div>
                   {rfp.awardedContractor && (
                     <div>
-                      <dt className="text-sm font-medium text-slate-500">Awarded To</dt>
+                      <dt className="text-sm font-medium text-slate-500">{t("owner:rfpsId.text.awardedTo")}</dt>
                       <dd className="mt-1 text-sm text-green-700 font-medium">
                         {rfp.awardedContractor.name}
                       </dd>
@@ -194,7 +194,7 @@ export default function OwnerRfpDetailPage() {
                             <span className="text-base font-semibold text-slate-900 font-mono shrink-0">
                               {formatChfCents(q.amountCents)}
                               {q.vatIncluded === false && (
-                                <span className="text-xs font-normal text-slate-400 ml-1">excl. VAT</span>
+                                <span className="text-xs font-normal text-slate-400 ml-1">{t("owner:rfpsId.text.exclVat")}</span>
                               )}
                             </span>
                           </div>
@@ -203,24 +203,24 @@ export default function OwnerRfpDetailPage() {
                           <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
                             {q.estimatedDurationDays && (
                               <div>
-                                <dt className="text-xs text-slate-500">Duration</dt>
+                                <dt className="text-xs text-slate-500">{t("owner:rfpsId.text.duration")}</dt>
                                 <dd className="text-slate-900">{q.estimatedDurationDays} day{q.estimatedDurationDays !== 1 ? "s" : ""}</dd>
                               </div>
                             )}
                             {q.earliestAvailability && (
                               <div>
-                                <dt className="text-xs text-slate-500">Available</dt>
+                                <dt className="text-xs text-slate-500">{t("owner:rfpsId.text.available")}</dt>
                                 <dd className="text-slate-900">{formatDate(q.earliestAvailability)}</dd>
                               </div>
                             )}
                             {q.validUntil && (
                               <div>
-                                <dt className="text-xs text-slate-500">Valid Until</dt>
+                                <dt className="text-xs text-slate-500">{t("owner:rfpsId.text.validUntil")}</dt>
                                 <dd className="text-slate-900">{formatDate(q.validUntil)}</dd>
                               </div>
                             )}
                             <div>
-                              <dt className="text-xs text-slate-500">Submitted</dt>
+                              <dt className="text-xs text-slate-500">{t("owner:rfpsId.text.submitted")}</dt>
                               <dd className="text-slate-900">{formatDate(q.submittedAt)}</dd>
                             </div>
                           </dl>
@@ -228,19 +228,19 @@ export default function OwnerRfpDetailPage() {
                           {/* Text fields */}
                           {q.workPlan && (
                             <div>
-                              <p className="text-xs font-medium text-slate-500">Work Plan</p>
+                              <p className="text-xs font-medium text-slate-500">{t("owner:rfpsId.text.workPlan")}</p>
                               <p className="mt-0.5 text-sm text-slate-700 whitespace-pre-line">{q.workPlan}</p>
                             </div>
                           )}
                           {q.assumptions && (
                             <div>
-                              <p className="text-xs font-medium text-slate-500">Assumptions</p>
+                              <p className="text-xs font-medium text-slate-500">{t("owner:rfpsId.text.assumptions")}</p>
                               <p className="mt-0.5 text-sm text-slate-500 whitespace-pre-line">{q.assumptions}</p>
                             </div>
                           )}
                           {q.notes && (
                             <div>
-                              <p className="text-xs font-medium text-slate-500">Notes</p>
+                              <p className="text-xs font-medium text-slate-500">{t("owner:rfpsId.text.notes")}</p>
                               <p className="mt-0.5 text-sm text-slate-500">{q.notes}</p>
                             </div>
                           )}
@@ -267,7 +267,7 @@ export default function OwnerRfpDetailPage() {
               </Panel>
             </>
           ) : (
-            <p className="text-sm text-slate-500">RFP not found.</p>
+            <p className="text-sm text-slate-500">{t("owner:rfpsId.text.rFPNotFound")}</p>
           )}
         </PageContent>
       </PageShell>

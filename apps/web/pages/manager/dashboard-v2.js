@@ -342,43 +342,43 @@ export default function ManagerDashboardV2() {
         <div className="mb-8">
           {/* ─ Portfolio overview ─ */}
           <div className="mb-5 flex items-center gap-3">
-            <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Portfolio overview</span>
+            <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">{t("manager:dashboard_V2.text.portfolioOverview")}</span>
             <div className="flex-1 border-t border-slate-300" />
           </div>
 
           {/* ─ Informational KPIs ─ */}
           <div className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-4">
             <InfoStat
-              label="Spend MTD"
+              label={t("manager:dashboard_V2.prop.spendMtd")}
               value={formatChf(spendThisMonth)}
             />
             <InfoStat
-              label="Avg days done"
+              label={t("manager:dashboard_V2.prop.avgDaysDone")}
               value={avgDaysToComplete ?? "—"}
               tone={avgDaysToComplete != null && avgDaysToComplete > 14 ? "warn" : undefined}
             />
             {portfolio ? (
               <>
                 <InfoStat
-                  label="Collection rate"
+                  label={t("manager:dashboard_V2.prop.collectionRate")}
                   value={formatPercent(portfolio.avgCollectionRate)}
                   tone={portfolio.avgCollectionRate >= 0.95 ? "good" : portfolio.avgCollectionRate >= 0.8 ? "warn" : "bad"}
                 />
                 <InfoStat
-                  label="NOI YTD"
+                  label={t("manager:dashboard_V2.prop.nOIYtd")}
                   value={formatChfCents(portfolio.totalNetIncomeCents)}
                   tone={portfolio.totalNetIncomeCents >= 0 ? "good" : "bad"}
                 />
                 {portfolio.buildingsInRed > 0 && (
                   <InfoStat
-                    label="Buildings in red"
+                    label={t("manager:dashboard_V2.prop.buildingsInRed")}
                     value={`${portfolio.buildingsInRed} / ${portfolio.buildingCount}`}
                     tone="bad"
                   />
                 )}
               </>
             ) : (
-              <InfoStat label="Portfolio" value={portfolioLoading ? "…" : "—"} />
+              <InfoStat label={t("manager:dashboard_V2.prop.portfolio")} value={portfolioLoading ? "…" : "—"} />
             )}
           </div>
 
@@ -389,8 +389,8 @@ export default function ManagerDashboardV2() {
           <div className="flex items-start justify-between gap-4 mb-5">
             <div>
               <div className="mb-1 flex items-center gap-2">
-                <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">Manager Dashboard</span>
-                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-500">v2 preview</span>
+                <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">{t("manager:dashboard_V2.text.managerDashboard")}</span>
+                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-500">{t("manager:dashboard_V2.text.v2Preview")}</span>
               </div>
               <h1 className="text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
                 {heroHeadline(totalActions, openRequestsCount)}
@@ -410,19 +410,19 @@ export default function ManagerDashboardV2() {
           {/* ─ Actionable KPIs ─ */}
           <div className="grid grid-cols-3 gap-3">
             <ActionStat
-              label="Open requests"
+              label={t("manager:dashboard_V2.prop.openRequests")}
               value={openRequestsCount}
               href="/manager/requests"
               tone={openRequestsCount > 20 ? "warn" : openRequestsCount > 0 ? "warn" : "good"}
             />
             <ActionStat
-              label="Open jobs"
+              label={t("manager:dashboard_V2.prop.openJobs")}
               value={openJobsCount}
               href="/manager/requests?tab=active"
               tone={openJobsCount > 15 ? "warn" : openJobsCount > 0 ? "warn" : "good"}
             />
             <ActionStat
-              label="Pending invoices"
+              label={t("manager:dashboard_V2.prop.pendingInvoices")}
               value={pendingInvoicesCount}
               href="/manager/finance/invoices"
               tone={pendingInvoicesCount > 0 ? "warn" : "good"}
@@ -435,7 +435,7 @@ export default function ManagerDashboardV2() {
           <div className="mb-3 flex items-baseline justify-between">
             <div>
               <h2 className="text-base font-semibold text-slate-900">{t("manager:dashboardV2.heading.priorityFeed")}</h2>
-              <p className="text-xs text-slate-400">All items requiring action, sorted by urgency.</p>
+              <p className="text-xs text-slate-400">{t("manager:dashboard_V2.text.allItemsRequiringActionSortedByUrgency")}</p>
             </div>
             {totalActions > 0 && (
               <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600">
@@ -447,8 +447,8 @@ export default function ManagerDashboardV2() {
           {totalActions === 0 ? (
             <div className="rounded-2xl border border-green-200 bg-green-50 px-5 py-8 text-center">
               <div className="text-2xl mb-2">✓</div>
-              <div className="text-sm font-semibold text-green-800">All clear — no items need action</div>
-              <div className="mt-1 text-xs text-green-600">Check back after new requests or invoices arrive.</div>
+              <div className="text-sm font-semibold text-green-800">{t("manager:dashboard_V2.text.allClearNoItemsNeedAction")}</div>
+              <div className="mt-1 text-xs text-green-600">{t("manager:dashboard_V2.text.checkBackAfterNewRequestsOrInvoicesArrive")}</div>
             </div>
           ) : (
             <div className="space-y-2">
@@ -499,7 +499,7 @@ export default function ManagerDashboardV2() {
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="text-base font-semibold text-slate-900">{t("manager:dashboardV2.heading.moreTools")}</h2>
-              <p className="mt-1 text-sm text-slate-500">Deeper views for finance, strategy, and tenant portal.</p>
+              <p className="mt-1 text-sm text-slate-500">{t("manager:dashboard_V2.text.deeperViewsForFinanceStrategyAndTenantPortal")}</p>
             </div>
             <div className="flex flex-wrap gap-2 shrink-0">
               <Link href="/manager/finance" className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors no-underline">

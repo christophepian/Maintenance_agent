@@ -176,7 +176,7 @@ export default function TenantDetailPage() {
         </div>
         <PageHeader
           title={tenant?.name || "Tenant"}
-          subtitle="Tenant profile and contact details."
+          subtitle={t("manager:peopleTenantsId.prop.tenantProfileAndContactDetails")}
         />
         <PageContent>
           {message ? (
@@ -185,7 +185,7 @@ export default function TenantDetailPage() {
           <ErrorBanner error={error} onDismiss={() => setError("")} />
 
           {loading ? (
-            <p className="loading-text">Loading tenant…</p>
+            <p className="loading-text">{t("manager:peopleTenantsId.text.loadingTenant")}</p>
           ) : tenant ? (
             <div className="grid gap-4">
               <ScrollableTabs activeIndex={["Personal information", "Unit", "Documents", "Contracts", "Invoices"].indexOf(activeTab)}>
@@ -207,17 +207,17 @@ export default function TenantDetailPage() {
                   actions={
                     isEditing ? (
                       <div className="flex items-center gap-2">
-                        <button type="button" className="button-secondary text-sm" onClick={handleCancel} disabled={saving}>Cancel</button>
+                        <button type="button" className="button-secondary text-sm" onClick={handleCancel} disabled={saving}>{t("manager:peopleTenantsId.text.cancel")}</button>
                         <button type="button" className="button-primary text-sm" onClick={handleSave} disabled={saving}>{saving ? "Saving…" : "Save"}</button>
                       </div>
                     ) : (
-                      <button type="button" className="button-primary text-sm" onClick={() => setIsEditing(true)} disabled={loading || !tenant}>Edit</button>
+                      <button type="button" className="button-primary text-sm" onClick={() => setIsEditing(true)} disabled={loading || !tenant}>{t("manager:peopleTenantsId.text.edit")}</button>
                     )
                   }
                 >
                   <div className="grid gap-4 sm:grid-cols-2">
                     <label className="grid gap-2">
-                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Name</span>
+                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleTenantsId.text.name")}</span>
                       {isEditing ? (
                         <input
                           className="input text-sm text-slate-700"
@@ -231,7 +231,7 @@ export default function TenantDetailPage() {
                       )}
                     </label>
                     <label className="grid gap-2">
-                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Phone</span>
+                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleTenantsId.text.phone")}</span>
                       {isEditing ? (
                         <input
                           className="input text-sm text-slate-700"
@@ -245,7 +245,7 @@ export default function TenantDetailPage() {
                       )}
                     </label>
                     <label className="grid gap-2 sm:col-span-2">
-                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Email</span>
+                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleTenantsId.text.email")}</span>
                       {isEditing ? (
                         <input
                           className="input text-sm text-slate-700"
@@ -262,21 +262,21 @@ export default function TenantDetailPage() {
 
                   <div className="mt-6 grid gap-4 sm:grid-cols-2">
                     <div className="min-w-0">
-                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Tenant ID</div>
+                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleTenantsId.text.tenantId")}</div>
                       <div className="text-sm text-slate-700 mt-1 break-all">{tenant?.id}</div>
                     </div>
                     <div className="min-w-0">
-                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Org ID</div>
+                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleTenantsId.text.orgId")}</div>
                       <div className="text-sm text-slate-700 mt-1 break-all">{tenant?.orgId || "—"}</div>
                     </div>
                     <div>
-                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Created</div>
+                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleTenantsId.text.created")}</div>
                       <div className="text-sm text-slate-700 mt-1">
                         {tenant?.createdAt ? formatDateTime(tenant.createdAt) : "—"}
                       </div>
                     </div>
                     <div>
-                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Updated</div>
+                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleTenantsId.text.updated")}</div>
                       <div className="text-sm text-slate-700 mt-1">
                         {tenant?.updatedAt ? formatDateTime(tenant.updatedAt) : "—"}
                       </div>
@@ -289,11 +289,11 @@ export default function TenantDetailPage() {
                 <Panel title={t("manager:peopleTenantsId.title.professional")}>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div>
-                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Unit</div>
+                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleTenantsId.text.unit")}</div>
                       <div className="text-sm text-slate-700 mt-1">{unitLabel}</div>
                     </div>
                     <div className="min-w-0">
-                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Building ID</div>
+                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleTenantsId.text.buildingId")}</div>
                       <div className="text-sm text-slate-700 mt-1 break-all">
                         {tenant?.unit?.buildingId ? (
                           <Link href={`/manager/buildings/${tenant.unit.buildingId}/financials`} className="cell-link">
@@ -303,7 +303,7 @@ export default function TenantDetailPage() {
                       </div>
                     </div>
                     <div className="min-w-0">
-                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Unit ID</div>
+                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleTenantsId.text.unitId")}</div>
                       <div className="text-sm text-slate-700 mt-1 break-all">
                         {(tenant?.unit?.id || tenant?.unitId) ? (
                           <Link href={`/admin-inventory/units/${tenant?.unit?.id || tenant?.unitId}`} className="cell-link">
@@ -313,7 +313,7 @@ export default function TenantDetailPage() {
                       </div>
                     </div>
                     <div>
-                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Floor</div>
+                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleTenantsId.text.floor")}</div>
                       <div className="text-sm text-slate-700 mt-1">{tenant?.unit?.floor || "—"}</div>
                     </div>
                   </div>
@@ -335,9 +335,9 @@ export default function TenantDetailPage() {
               {activeTab === "Contracts" && (
                 <Panel title={t("manager:peopleTenantsId.title.contracts")} bodyClassName="p-0">
                   {leasesLoading ? (
-                    <p className="px-4 py-3 text-sm text-slate-600">Loading leases…</p>
+                    <p className="px-4 py-3 text-sm text-slate-600">{t("manager:peopleTenantsId.text.loadingLeases")}</p>
                   ) : leases.length === 0 ? (
-                    <p className="px-4 py-3 text-sm text-slate-500">No leases found for this tenant.</p>
+                    <p className="px-4 py-3 text-sm text-slate-500">{t("manager:peopleTenantsId.text.noLeasesFoundForThisTenant")}</p>
                   ) : (
                     <>
                       {/* Mobile cards */}
@@ -363,12 +363,12 @@ export default function TenantDetailPage() {
                         <table className="data-table">
                           <thead>
                             <tr>
-                              <SortableHeader label="Unit" field="unit" sortField={lSortField} sortDir={lSortDir} onSort={handleLeaseSort} />
-                              <SortableHeader label="Building" field="building" sortField={lSortField} sortDir={lSortDir} onSort={handleLeaseSort} />
-                              <SortableHeader label="Start date" field="startDate" sortField={lSortField} sortDir={lSortDir} onSort={handleLeaseSort} />
-                              <SortableHeader label="End date" field="endDate" sortField={lSortField} sortDir={lSortDir} onSort={handleLeaseSort} />
-                              <SortableHeader label="Status" field="status" sortField={lSortField} sortDir={lSortDir} onSort={handleLeaseSort} />
-                              <SortableHeader label="Monthly rent" field="rent" sortField={lSortField} sortDir={lSortDir} onSort={handleLeaseSort} className="text-right" />
+                              <SortableHeader label={t("manager:peopleTenantsId.prop.unit")} field="unit" sortField={lSortField} sortDir={lSortDir} onSort={handleLeaseSort} />
+                              <SortableHeader label={t("manager:peopleTenantsId.prop.building")} field="building" sortField={lSortField} sortDir={lSortDir} onSort={handleLeaseSort} />
+                              <SortableHeader label={t("manager:peopleTenantsId.prop.startDate")} field="startDate" sortField={lSortField} sortDir={lSortDir} onSort={handleLeaseSort} />
+                              <SortableHeader label={t("manager:peopleTenantsId.prop.endDate")} field="endDate" sortField={lSortField} sortDir={lSortDir} onSort={handleLeaseSort} />
+                              <SortableHeader label={t("manager:peopleTenantsId.prop.status")} field="status" sortField={lSortField} sortDir={lSortDir} onSort={handleLeaseSort} />
+                              <SortableHeader label={t("manager:peopleTenantsId.prop.monthlyRent")} field="rent" sortField={lSortField} sortDir={lSortDir} onSort={handleLeaseSort} className="text-right" />
                             </tr>
                           </thead>
                           <tbody>
@@ -403,9 +403,9 @@ export default function TenantDetailPage() {
               {activeTab === "Invoices" && (
                 <Panel title={t("manager:peopleTenantsId.title.invoices")} bodyClassName="p-0">
                   {invoicesLoading ? (
-                    <p className="px-4 py-3 text-sm text-slate-600">Loading invoices…</p>
+                    <p className="px-4 py-3 text-sm text-slate-600">{t("manager:peopleTenantsId.text.loadingInvoices")}</p>
                   ) : leaseInvoices.length === 0 ? (
-                    <p className="px-4 py-3 text-sm text-slate-500">No invoices found for this tenant.</p>
+                    <p className="px-4 py-3 text-sm text-slate-500">{t("manager:peopleTenantsId.text.noInvoicesFoundForThisTenant")}</p>
                   ) : (
                     <>
                       {/* Mobile cards */}
@@ -431,11 +431,11 @@ export default function TenantDetailPage() {
                         <table className="data-table">
                           <thead>
                             <tr>
-                              <SortableHeader label="Invoice #" field="invoiceNumber" sortField={iSortField} sortDir={iSortDir} onSort={handleInvSort} />
-                              <SortableHeader label="Description" field="description" sortField={iSortField} sortDir={iSortDir} onSort={handleInvSort} />
-                              <SortableHeader label="Amount" field="amount" sortField={iSortField} sortDir={iSortDir} onSort={handleInvSort} className="text-right" />
-                              <SortableHeader label="Due date" field="dueDate" sortField={iSortField} sortDir={iSortDir} onSort={handleInvSort} />
-                              <SortableHeader label="Status" field="status" sortField={iSortField} sortDir={iSortDir} onSort={handleInvSort} />
+                              <SortableHeader label={t("manager:peopleTenantsId.prop.invoice")} field="invoiceNumber" sortField={iSortField} sortDir={iSortDir} onSort={handleInvSort} />
+                              <SortableHeader label={t("manager:peopleTenantsId.prop.description")} field="description" sortField={iSortField} sortDir={iSortDir} onSort={handleInvSort} />
+                              <SortableHeader label={t("manager:peopleTenantsId.prop.amount")} field="amount" sortField={iSortField} sortDir={iSortDir} onSort={handleInvSort} className="text-right" />
+                              <SortableHeader label={t("manager:peopleTenantsId.prop.dueDate")} field="dueDate" sortField={iSortField} sortDir={iSortDir} onSort={handleInvSort} />
+                              <SortableHeader label={t("manager:peopleTenantsId.prop.status")} field="status" sortField={iSortField} sortDir={iSortDir} onSort={handleInvSort} />
                             </tr>
                           </thead>
                           <tbody>
@@ -464,7 +464,7 @@ export default function TenantDetailPage() {
             </div>
           ) : (
             <Panel>
-              <p className="text-sm text-slate-600">Tenant not found.</p>
+              <p className="text-sm text-slate-600">{t("manager:peopleTenantsId.text.tenantNotFound")}</p>
               <div className="mt-3">
                 <button type="button" className="button-secondary" onClick={() => router.back()}>
                   Go back

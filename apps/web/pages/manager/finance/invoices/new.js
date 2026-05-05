@@ -164,8 +164,8 @@ export default function NewInvoicePage() {
         <PageContent>
           {error && (
             <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 mb-4 flex items-center justify-between">
-              <span className="text-sm text-red-700"><strong>Error:</strong> {error}</span>
-              <button onClick={() => setError("")} className="text-xs text-red-500 hover:text-red-700 ml-4">Dismiss</button>
+              <span className="text-sm text-red-700"><strong>{t("manager:financeInvoicesNew.text.error")}</strong> {error}</span>
+              <button onClick={() => setError("")} className="text-xs text-red-500 hover:text-red-700 ml-4">{t("manager:financeInvoicesNew.text.dismiss")}</button>
             </div>
           )}
 
@@ -174,7 +174,7 @@ export default function NewInvoicePage() {
             <Panel title={t("manager:financeInvoicesNew.title.recipient")}>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="sm:col-span-2">
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Recipient Name *</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:financeInvoicesNew.text.recipientName")}</label>
                   <input
                     type="text"
                     value={recipientName}
@@ -184,7 +184,7 @@ export default function NewInvoicePage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Address Line 1 *</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:financeInvoicesNew.text.addressLine1")}</label>
                   <input
                     type="text"
                     value={recipientAddressLine1}
@@ -194,7 +194,7 @@ export default function NewInvoicePage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Address Line 2</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:financeInvoicesNew.text.addressLine2")}</label>
                   <input
                     type="text"
                     value={recipientAddressLine2}
@@ -203,7 +203,7 @@ export default function NewInvoicePage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Postal Code *</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:financeInvoicesNew.text.postalCode")}</label>
                   <input
                     type="text"
                     value={recipientPostalCode}
@@ -213,7 +213,7 @@ export default function NewInvoicePage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">City *</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:financeInvoicesNew.text.city")}</label>
                   <input
                     type="text"
                     value={recipientCity}
@@ -223,7 +223,7 @@ export default function NewInvoicePage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Country</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:financeInvoicesNew.text.country")}</label>
                   <input
                     type="text"
                     value={recipientCountry}
@@ -238,7 +238,7 @@ export default function NewInvoicePage() {
             <Panel title={t("manager:financeInvoicesNew.title.invoiceDetails")}>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Issue Date</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:financeInvoicesNew.text.issueDate")}</label>
                   <input
                     type="date"
                     value={issueDate}
@@ -247,7 +247,7 @@ export default function NewInvoicePage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Due Date</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:financeInvoicesNew.text.dueDate")}</label>
                   <input
                     type="date"
                     value={dueDate}
@@ -268,7 +268,7 @@ export default function NewInvoicePage() {
                   />
                 </div>
                 <div className="sm:col-span-3">
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:financeInvoicesNew.text.description")}</label>
                   <textarea
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
@@ -283,13 +283,13 @@ export default function NewInvoicePage() {
             <Panel title={t("manager:financeInvoicesNew.title.linkToRecordOptional")}>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Job</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:financeInvoicesNew.text.job")}</label>
                   <select
                     value={selectedJobId}
                     onChange={(e) => setSelectedJobId(e.target.value)}
                     className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   >
-                    <option value="">— None —</option>
+                    <option value="">{t("manager:financeInvoicesNew.text.none")}</option>
                     {jobs.map((j) => (
                       <option key={j.id} value={j.id}>
                         #{j.id?.slice(0, 8)} — {j.description || j.request?.description || "Untitled"}
@@ -298,13 +298,13 @@ export default function NewInvoicePage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Billing Entity</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:financeInvoicesNew.text.billingEntity")}</label>
                   <select
                     value={selectedBillingEntityId}
                     onChange={(e) => setSelectedBillingEntityId(e.target.value)}
                     className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   >
-                    <option value="">— None —</option>
+                    <option value="">{t("manager:financeInvoicesNew.text.none")}</option>
                     {billingEntities.map((be) => (
                       <option key={be.id} value={be.id}>
                         {be.name} ({be.type})
@@ -321,7 +321,7 @@ export default function NewInvoicePage() {
                 {lineItems.map((li, idx) => (
                   <div key={idx} className="grid grid-cols-12 gap-2 items-end">
                     <div className="col-span-5">
-                      {idx === 0 && <label className="block text-xs font-medium text-slate-500 mb-1">Description</label>}
+                      {idx === 0 && <label className="block text-xs font-medium text-slate-500 mb-1">{t("manager:financeInvoicesNew.text.description")}</label>}
                       <input
                         type="text"
                         placeholder={t("manager:financeInvoicesNew.placeholder.itemDescription")}
@@ -332,7 +332,7 @@ export default function NewInvoicePage() {
                       />
                     </div>
                     <div className="col-span-2">
-                      {idx === 0 && <label className="block text-xs font-medium text-slate-500 mb-1">Qty</label>}
+                      {idx === 0 && <label className="block text-xs font-medium text-slate-500 mb-1">{t("manager:financeInvoicesNew.text.qty")}</label>}
                       <input
                         type="number"
                         min="1"
@@ -381,7 +381,7 @@ export default function NewInvoicePage() {
                 <div className="flex justify-end">
                   <div className="w-64 space-y-1 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-slate-500">Subtotal</span>
+                      <span className="text-slate-500">{t("manager:financeInvoicesNew.text.subtotal")}</span>
                       <span className="font-medium text-slate-900">{formatChf(computedTotal)}</span>
                     </div>
                     <div className="flex justify-between">
@@ -389,7 +389,7 @@ export default function NewInvoicePage() {
                       <span className="font-medium text-slate-900">{formatChf(computedVat)}</span>
                     </div>
                     <div className="flex justify-between border-t border-slate-200 pt-1">
-                      <span className="font-semibold text-slate-900">Total</span>
+                      <span className="font-semibold text-slate-900">{t("manager:financeInvoicesNew.text.total")}</span>
                       <span className="font-bold text-slate-900">{formatChf(computedTotal + computedVat)}</span>
                     </div>
                   </div>

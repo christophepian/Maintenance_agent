@@ -455,6 +455,38 @@
       "monthlyCashflow": "Monthly cashflow [FR]",
       "scheduledCapexEvents": "Scheduled CapEx events [FR]",
       "rFPCandidates": "RFP Candidates [FR]"
+    },
+    "text": {
+      "noCashflowData": "Aucune donnée de flux.",
+      "income": "Revenus",
+      "opEx": "OpEx",
+      "capEx": "CapEx",
+      "net": "Net",
+      "cumulativeBalance": "Solde cumulé",
+      "historicalProjected": "Historique / projeté",
+      "noScheduledCapexEventsInTheProjectionHorizon": "Aucun événement CapEx planifié dans l'horizon de projection.",
+      "shiftYear": "Décaler l'année…",
+      "bundled": "Groupé",
+      "incomeGrowth": "Croissance des revenus :",
+      "year": "% / an",
+      "saving": "Enregistrement…",
+      "rFPCreated": "Appel d'offres créé",
+      "loadingRfpCandidates": "Chargement des candidats d'appel d'offres…",
+      "noCapexItemsScheduledWithinThePlanHorizon": "Aucun investissement planifié dans l'horizon du plan.",
+      "loadingCashflowPlan": "Chargement du plan de trésorerie…",
+      "12moProjectedIncome": "Revenu projeté sur 12 mois",
+      "next12ProjectedMonths": "12 prochains mois projetés",
+      "totalProjectedCapex": "CapEx total projeté",
+      "peakMonthlyCapex": "CapEx mensuel maximal",
+      "lowestCumulativeBalance": "Solde cumulé le plus bas",
+      "setOpeningBalanceToSee": "Définir le solde d'ouverture pour afficher"
+    },
+    "prop": {
+      "asset": "Actif",
+      "scheduled": "Planifié",
+      "estimatedCost": "Coût estimé",
+      "tradeGroup": "Groupe de métier",
+      "bundle": "Grouper"
     }
   },
   "chargeReconciliationsId": {
@@ -506,6 +538,26 @@
   "emails": {
     "title": {
       "emailDetail": "Email Detail [FR]"
+    },
+    "text": {
+      "all": "Tous",
+      "pending": "En attente",
+      "sent": "Envoyé",
+      "failed": "Échoué",
+      "loading": "Chargement…",
+      "noEmailsInOutbox": "Aucun e-mail dans la boîte d'envoi.",
+      "status": "Statut",
+      "template": "Modèle",
+      "to": "À",
+      "subject": "Objet",
+      "body": "Corps",
+      "payload": "Données",
+      "created": "Créé",
+      "sentAt": "Envoyé At",
+      "error": "Erreur"
+    },
+    "prop": {
+      "viewQueuedAndSentEmailsDevelopmentModeOnly": "Voir queued and sent emails — development mode only"
     }
   },
   "financeBillingEntitiesId": {
@@ -541,6 +593,27 @@
     },
     "ariaLabel": {
       "sortCharges": "Sort charges [FR]"
+    },
+    "text": {
+      "error": "Erreur :",
+      "dismiss": "Ignorer",
+      "expenseType": "Type de dépense",
+      "allExpenseTypes": "Tous les types de dépenses",
+      "chargeItems": "Éléments de charge",
+      "acompte": "Acompte",
+      "forfait": "Forfait",
+      "settlementDate": "Date de règlement",
+      "loadingCharges": "Chargement des charges…",
+      "editCharges": "Modifier charges",
+      "noItemizedChargeDataFound": "Aucune donnée de charge détaillée.",
+      "edit": "Modifier"
+    },
+    "prop": {
+      "tenant": "Locataire",
+      "unit": "Unité",
+      "building": "Immeuble",
+      "settlementDate": "Date de règlement",
+      "mode": "Mode"
     }
   },
   "financeChartOfAccounts": {
@@ -563,6 +636,22 @@
       "expenses": "Dépenses",
       "category": "Catégorie",
       "scope": "Scope [FR]"
+    },
+    "text": {
+      "uncategorised": "Non catégorisé",
+      "error": "Erreur :",
+      "dismiss": "Ignorer",
+      "allCategories": "Toutes les catégories",
+      "allBuildings": "Tous les immeubles",
+      "allExpenseTypes": "Tous les types de dépenses",
+      "allAccounts": "Tous les comptes",
+      "loadingExpenses": "Chargement des dépenses…",
+      "noExpensesFoundTagInvoicesWithAnExpenseCategoryToTrackThemHere": "Aucune dépense found. Tag invoices with an expense category to track them here."
+    },
+    "prop": {
+      "building": "Immeuble",
+      "expenseType": "Type de dépense",
+      "account": "Compte"
     }
   },
   "financeIndex": {
@@ -573,6 +662,24 @@
     },
     "ariaLabel": {
       "viewBuildingFinancials": "View building financials [FR]"
+    },
+    "text": {
+      "loadingPortfolioSummary": "Chargement du résumé de portefeuille…",
+      "avgCollectionRate": "Taux de recouvrement moy. :",
+      "noBuildingsInThisPortfolioYet": "Aucun immeuble dans ce portefeuille."
+    },
+    "prop": {
+      "from": "De",
+      "to": "À",
+      "earnedIncome": "Revenu encaissé",
+      "totalExpenses": "Total des dépenses",
+      "netResult": "Résultat net",
+      "receivables": "Créances",
+      "payables": "Dettes fournisseurs",
+      "building": "Immeuble",
+      "expenses": "Dépenses",
+      "net": "Net",
+      "collection": "Recouvrement"
     }
   },
   "financeInvoices": {
@@ -591,6 +698,23 @@
       "status": "Statut",
       "category": "Catégorie",
       "invoices": "Factures"
+    },
+    "text": {
+      "loadingPdf": "Chargement du PDF…",
+      "cancel": "Annuler",
+      "captureWithPhone": "📷 Capture with Téléphone",
+      "creatingCaptureSession": "Création de la session de capture…",
+      "close": "Fermer",
+      "photosReceived": "Photos reçues !",
+      "theInvoiceIsBeingProcessed": "La facture est en cours de traitement.",
+      "done": "Terminé",
+      "mobileLink": "Lien mobile",
+      "recurring": "Récurrent",
+      "error": "Erreur :",
+      "dismiss": "Ignorer",
+      "all": "Tous",
+      "loadingInvoices": "Chargement des factures…",
+      "noInvoicesMatchThisFilter": "Aucune facture ne correspond à ce filtre."
     }
   },
   "financeInvoicesId": {
@@ -619,6 +743,49 @@
       "pDFPreview": "PDF Preview [FR]",
       "invoicePdf": "Invoice PDF [FR]",
       "timeline": "Timeline [FR]"
+    },
+    "text": {
+      "error": "Erreur :",
+      "dismiss": "Ignorer",
+      "loadingInvoice": "Chargement de la facture…",
+      "invoiceNotFound": "Facture introuvable.",
+      "thisInvoiceNeedsReview": "⚠ Cette facture nécessite une révision",
+      "selectBillingEntity": "Sélectionner une entité de facturation",
+      "choose": "— Choose —",
+      "newBillingEntity": "New Entité de facturation",
+      "name": "Nom *",
+      "address": "Adresse *",
+      "postalCode": "Code postal *",
+      "city": "Ville *",
+      "iBAN": "IBAN *",
+      "vATNumber": "Numéro TVA",
+      "noBillingEntityLinked": "Aucune entité de facturation liée.",
+      "created": "Créé",
+      "submitted": "Soumettreted",
+      "locked": "Verrouillé",
+      "approved": "Approuvé",
+      "paid": "Payé"
+    },
+    "prop": {
+      "invoiceNumber": "Numéro de facture",
+      "direction": "Direction",
+      "currency": "Devise",
+      "subtotal": "Sous-total",
+      "issueDate": "Date d'émission",
+      "dueDate": "Date d'échéance",
+      "created": "Créé",
+      "paymentRef": "Réf. paiement",
+      "name": "Nom",
+      "address": "Adresse",
+      "postalCodeCity": "Code postal · Ville",
+      "country": "Pays",
+      "city": "Ville",
+      "vATNumber": "Numéro TVA",
+      "type": "Type",
+      "job": "Intervention",
+      "lease": "Bail",
+      "expenseType": "Type de dépense",
+      "account": "Compte"
     }
   },
   "financeInvoicesNew": {
@@ -631,6 +798,25 @@
       "invoiceDetails": "Invoice Details [FR]",
       "linkToRecordOptional": "Link to Record (optional) [FR]",
       "lineItems": "Line Items [FR]"
+    },
+    "text": {
+      "error": "Erreur :",
+      "dismiss": "Ignorer",
+      "recipientName": "Destinataire Nom *",
+      "addressLine1": "Adresse Line 1 *",
+      "addressLine2": "Adresse Line 2",
+      "postalCode": "Code postal *",
+      "city": "Ville *",
+      "country": "Pays",
+      "issueDate": "Date d'émission",
+      "dueDate": "Date d'échéance",
+      "description": "Description",
+      "job": "Intervention",
+      "none": "— None —",
+      "billingEntity": "Entité de facturation",
+      "qty": "Qté",
+      "subtotal": "Sous-total",
+      "total": "Total"
     }
   },
   "financeLedger": {
@@ -649,6 +835,26 @@
       "generalLedger": "General Ledger [FR]",
       "dateRange": "Date range [FR]",
       "scope": "Scope [FR]"
+    },
+    "text": {
+      "chartOfAccountsNotSetUp": "Plan comptable not set up",
+      "allBuildings": "Tous les immeubles",
+      "allAccounts": "Tous les comptes",
+      "allEvents": "Àus events",
+      "loading": "Chargement…",
+      "noJournalEntriesFound": "Aucune écriture comptable trouvée",
+      "noEntriesForThisPeriod": "Aucune écriture pour cette période",
+      "adjustTheDateRangeAndApplyFiltersAbove": "Ajustez la plage de dates et appliquez les filtres ci-dessus.",
+      "subtotal": "Sous-total",
+      "grandTotalDebit": "Grand Àtal Debit:",
+      "grandTotalCredit": "Grand Àtal Credit:"
+    },
+    "prop": {
+      "advancedAuditViewDoubleentryJournal": "Avancé audit view — double-entry journal",
+      "from": "De",
+      "to": "À",
+      "building": "Immeuble",
+      "eventType": "Type d'événement"
     }
   },
   "financePayments": {
@@ -659,6 +865,19 @@
       "payments": "Paiements",
       "scope": "Scope [FR]",
       "dateRange": "Date range [FR]"
+    },
+    "text": {
+      "viewInvoice": "Voir Invoice",
+      "error": "Erreur :",
+      "dismiss": "Ignorer",
+      "allBuildings": "Tous les immeubles",
+      "loadingPayments": "Chargement des paiements…",
+      "noPaymentsFoundForTheSelectedFilters": "Aucun paiement trouvé pour les filtres sélectionnés."
+    },
+    "prop": {
+      "building": "Immeuble",
+      "paidAfter": "Payé after",
+      "paidBefore": "Payé before"
     }
   },
   "index": {
@@ -670,6 +889,9 @@
     },
     "ariaLabel": {
       "refreshDashboard": "Actualiser le tableau de bord"
+    },
+    "prop": {
+      "portfolio": "Portefeuille"
     }
   },
   "inventory": {
@@ -688,6 +910,42 @@
       "filterByCanton": "Filter by canton [FR]",
       "sortBuildings": "Sort buildings [FR]",
       "hypotheticalNextRepairCostInChf": "Hypothetical next repair cost in CHF [FR]"
+    },
+    "text": {
+      "address": "Adresse",
+      "cityCode": "Ville code",
+      "city": "Ville",
+      "country": "Pays",
+      "cancel": "Annuler",
+      "saveBuilding": "Enregistrer building",
+      "filter": "Filtrer",
+      "canton": "Canton",
+      "allCantons": "Àus cantons",
+      "loadingBuildings": "Chargement des immeubles…",
+      "noBuildingsFound": "Aucun immeuble trouvé.",
+      "unit": "Unité",
+      "selectAUnit": "— Select a unit —",
+      "analysingAssets": "Analyse des actifs…",
+      "selectAUnitToSeeItsRepairVsReplaceAnalysis": "Sélectionnez une unité pour voir l'analyse réparation/remplacement.",
+      "noAssetsRecordedForThisUnitYet": "Aucun actif enregistré pour cette unité.",
+      "ifNextRepairChf": "Si la prochaine réparation CHF",
+      "sensitivityUnavailable": "Sensibilité indisponible",
+      "ratio": "Ratio",
+      "cumulativeRepairCostEstimatedReplacementCostAbove60Replace": "= cumulative repair cost ÷ estimated replacement cost. Above 60% → Remplacement.",
+      "breakeven": "Seuil de rentabilité",
+      "atCurrentRepairRateWhenTotalRepairsWillExceedReplacementCost": "= at current repair rate, when total repairs will exceed replacement cost.",
+      "warrantyOffset": "Warranty defset",
+      "hoverARowForTheRecommendationReason": "Survolez une ligne pour voir la raison de la recommandation."
+    },
+    "prop": {
+      "buildingsUnitsAssetsAndDepreciationSchedules": "Immeubles, units, assets and depreciation schedules.",
+      "asset": "Actif",
+      "type": "Type",
+      "ageLife": "Âge / Durée de vie",
+      "depreciation": "Dépréciation",
+      "ratio": "Ratio",
+      "breakeven": "Seuil de rentabilité",
+      "recommendation": "Recommandation"
     }
   },
   "leasesId": {
@@ -718,6 +976,115 @@
     },
     "ariaLabel": {
       "leaseActionsMenu": "Lease actions menu [FR]"
+    },
+    "text": {
+      "edit": "✏️ Modifier",
+      "cancel": "Annuler",
+      "sendForSignature": "✍️ Envoyer pour signature",
+      "terminate": "📋 Terminate",
+      "archive": "📦 Archive",
+      "invoice": "💰 Invoice",
+      "loadingLease": "Chargement du bail…",
+      "backToLeases": "← Retour to leases",
+      "11BailleresseBailleur": "§1.1 Bailleresse / Bailleur",
+      "12Locataire": "§1.2 Locataire",
+      "appartement": "Appartement",
+      "maison": "Maison",
+      "chambreMeuble": "Chambre meublée",
+      "indtermine": "Indéterminée",
+      "dtermine": "Déterminée",
+      "3Mois": "3 mois",
+      "prolong": "Prolongé",
+      "2Semaines": "2 semaines",
+      "finDeMoisSauf3112": "Fin de mois, sauf 31.12",
+      "datesLocales": "Dates locales",
+      "laSignature": "À la signature",
+      "auDbutDuBail": "Au début du bail",
+      "uneDatePrcise": "À une date précise",
+      "draftPdf": "📄 Brouillon PDF",
+      "signedPdf": "✅ Signé PDF",
+      "deposit": "Dépôt de garantie :",
+      "pAID": "✅ PAID",
+      "activated": "⚡ Activated:",
+      "terminated": "📋 Résilié:",
+      "archived": "📦 Archived:",
+      "loading": "Chargement…",
+      "noRecurringBillingScheduleForThisLease": "No recurring billing schedule for this lease.",
+      "baseRent": "Base rent",
+      "charges": "Charges",
+      "nextPeriod": "Suivant period",
+      "lastGenerated": "Last generated",
+      "noChargeReconciliationsForThisLeaseYet": "No charge reconciliations for this lease yet.",
+      "fiscalYear": "Fiscal year:",
+      "newReconciliation": "+ Nouveau Reconciliation",
+      "noRentAdjustmentsForThisLeaseYet": "No rent adjustments for this lease yet.",
+      "currentCpi": "Current CPI",
+      "effectiveDate": "Date d'effet",
+      "computeCpiIndexation": "+ Compute CPI Indexation",
+      "noInvoicesLinkedToThisLeaseYet": "No invoices linked to this lease yet.",
+      "signatureLevel": "Signature Level",
+      "sESSimpleElectronicSignature": "SES — Simple Electronic Signature",
+      "aESAdvancedElectronicSignature": "AES — Avancé Electronic Signature",
+      "qESQualifiedElectronicSignature": "QES — Qualified Electronic Signature",
+      "reason": "Motif",
+      "mutualAgreement": "Mutual agreement",
+      "tenantNotice": "Locataire notice",
+      "landlordNotice": "Propriétaire notice",
+      "endOfFixedTerm": "End de fixed term",
+      "breachOfContract": "Breach de contract",
+      "other": "Other",
+      "invoiceType": "Invoice Type",
+      "deposit2": "Dépôt de garantie",
+      "rent": "Loyer",
+      "repair": "Réparation"
+    },
+    "prop": {
+      "nomRaisonSociale": "Nom / Raison sociale",
+      "adresse": "Adresse",
+      "nPALocalit": "NPA / Localité",
+      "tlphone": "Téléphone",
+      "email": "E-mail",
+      "nom": "Nom *",
+      "colocataire": "Co-locataire",
+      "2ObjetDuBail": "§2 — Objet du bail",
+      "typeDobjet": "Type d'objet",
+      "nombreDePices": "Nombre de pièces",
+      "tage": "Étage",
+      "adresseImmeuble": "Adresse immeuble",
+      "dbutDuBail": "Début du bail *",
+      "dureDtermine": "Durée déterminée",
+      "finDuBail": "Fin du bail",
+      "premierTermeDeRsiliation": "Premier terme de résiliation",
+      "dlaiDeRsiliation": "Délai de résiliation",
+      "termesDeRsiliation": "Termes de résiliation",
+      "6Paiement": "§6 — Paiement",
+      "jourDchance": "Jour d'échéance",
+      "bnficiaire": "Bénéficiaire",
+      "institutFinancier": "Institut financier",
+      "nDeCompte": "N° de compte",
+      "tauxDeRfrence": "Taux de référence",
+      "7Garantie": "§7 — Garantie",
+      "exigibilit": "Exigibilité",
+      "dateDchance": "Date d'échéance",
+      "autresAnnexes": "Autres annexes",
+      "dispositionsParticulires": "Dispositions particulières",
+      "provider": "Provider",
+      "level": "Level",
+      "status": "Statut",
+      "sent": "Envoyé",
+      "created": "Créé",
+      "depositTracking": "💰 Dépôt de garantie Tracking",
+      "lifecycle": "📋 Lifecycle",
+      "recurringBilling": "🔄 Récurrent Billing",
+      "chargeReconciliations": "📊 Réconciliations des charges",
+      "year": "Year",
+      "rentAdjustments": "📈 Ajustements de loyer",
+      "type": "Type",
+      "effective": "Effective",
+      "description": "Description",
+      "amount": "Montant",
+      "thisWillSendTheLeaseForSignatureAndCreateASignatureRequestTheLeaseWillNoLongerBeEditable": "This will send the lease for signature and create a signature request. The lease will no longer be editable.",
+      "thisWillTerminateTheActiveLeasePleaseProvideAReason": "This will terminate the active lease. Please provide a reason."
     }
   },
   "leasesIndex": {
@@ -744,6 +1111,62 @@
     "title": {
       "leases": "Baux",
       "createNewLease": "Create New Lease [FR]"
+    },
+    "text": {
+      "sentDateUnavailable": "Envoyé date unavailable",
+      "dueToday": "Due today",
+      "building": "Immeuble",
+      "selectBuilding": "Select building...",
+      "unit": "Unité *",
+      "selectUnit": "Select unit...",
+      "tenantName": "Locataire Nom *",
+      "tenantEmail": "Locataire E-mail",
+      "startDate": "Date de début *",
+      "building2": "Immeuble *",
+      "selectABuilding": "Sélectionner un immeuble…",
+      "allBuildingsAlreadyHaveATemplate": "Tous les immeubles already have a template.",
+      "templateName": "Template Nom",
+      "1LandlordRgie": "§1 Propriétaire / Régie",
+      "landlordName": "Propriétaire Nom *",
+      "address": "Adresse *",
+      "zipCity": "CP / Ville *",
+      "phone": "Téléphone",
+      "email": "E-mail",
+      "noticeRule": "Préavis Rule",
+      "3Months": "3 mois",
+      "2Weeks": "2 semaines",
+      "depositDue": "Dépôt dû",
+      "atSignature": "À la signature",
+      "byLeaseStart": "Au début du bail",
+      "bySpecificDate": "À une date précise",
+      "6Payment": "§6 Payment",
+      "paymentDueDay": "Jour d'échéance du paiement",
+      "paymentIban": "IBAN de paiement",
+      "referenceRate": "Taux de référence %",
+      "includesHouseRules": "Inclut le règlement intérieur",
+      "templateName2": "Template Nom *",
+      "sourceLease": "Source Bail *",
+      "selectALeaseToCopyFrom": "Sélectionner un bail à copier…",
+      "loadingTemplates": "Chargement des modèles…",
+      "noTemplatesYet": "No templates yet",
+      "noTemplatesMatchThisFilter": "No templates match this filter.",
+      "loading": "Chargement…",
+      "noSubmittedLeases": "No submitted leases",
+      "leasesSentToCandidatesForSignatureAppearHere": "Bails sent to candidates for signature appear here.",
+      "loadingLeases": "Loading leases...",
+      "noLeasesFound": "Aucun bail trouvé",
+      "readyForReview": "Ready for review"
+    },
+    "prop": {
+      "manageRentalContracts": "Manage rental contracts",
+      "tenant": "Locataire",
+      "unit": "Unité",
+      "building": "Immeuble",
+      "rent": "Loyer",
+      "sent": "Envoyé",
+      "netRent": "Loyer net",
+      "start": "Start",
+      "status": "Statut"
     }
   },
   "leasesTemplates": {
@@ -760,6 +1183,38 @@
     "title": {
       "leaseTemplates": "Lease Templates [FR]",
       "createNewTemplate": "Create New Template [FR]"
+    },
+    "text": {
+      "building": "Immeuble *",
+      "selectABuilding": "Sélectionner un immeuble…",
+      "allBuildingsAlreadyHaveATemplate": "Tous les immeubles already have a template.",
+      "1LandlordRgie": "§1 Propriétaire / Régie",
+      "landlordName": "Propriétaire Nom *",
+      "address": "Adresse *",
+      "zipCity": "CP / Ville *",
+      "phone": "Téléphone",
+      "email": "E-mail",
+      "noticeRule": "Préavis Rule",
+      "3Months": "3 mois",
+      "2Weeks": "2 semaines",
+      "depositDue": "Dépôt dû",
+      "atSignature": "À la signature",
+      "byLeaseStart": "Au début du bail",
+      "bySpecificDate": "À une date précise",
+      "6Payment": "§6 Payment",
+      "paymentDueDay": "Jour d'échéance du paiement",
+      "paymentIban": "IBAN de paiement",
+      "referenceRate": "Taux de référence %",
+      "includesHouseRules": "Inclut le règlement intérieur",
+      "templateName": "Template Nom *",
+      "sourceLease": "Source Bail *",
+      "selectALeaseToCopyFrom": "Sélectionner un bail à copier…",
+      "allBuildings": "Tous les immeubles",
+      "loadingTemplates": "Chargement des modèles…",
+      "noLeaseTemplatesFound": "No lease templates found."
+    },
+    "prop": {
+      "reusableLeaseTemplatesForTheRentalPipeline": "Reusable lease templates for the rental pipeline"
     }
   },
   "peopleIndex": {
@@ -779,6 +1234,34 @@
       "dismiss": "Dismiss [FR]",
       "viewTenant": "View tenant [FR]",
       "viewVendor": "View vendor [FR]"
+    },
+    "text": {
+      "newOwner": "Nouveau owner",
+      "name": "Nom",
+      "email": "E-mail",
+      "password": "Password",
+      "loadingOwners": "Loading owners…",
+      "noOwnersYetUseTheAddOwnerButtonAboveToCreateOne": "No owners yet. Use the \"+ Ajouter owner\" button above to create one.",
+      "billingSet": "✓ Billing set",
+      "notSet": "Not set",
+      "address": "Adresse",
+      "postalCode": "Code postal",
+      "city": "Ville",
+      "vATNumber": "Numéro TVA",
+      "openFullPage": "Open full page →",
+      "loadingTenants": "Loading tenants…",
+      "noTenantsFound": "Aucun locataire trouvé.",
+      "loadingContractors": "Loading contractors…",
+      "noContractorsFound": "Aucun prestataire trouvé."
+    },
+    "prop": {
+      "name": "Nom",
+      "email": "E-mail",
+      "billingEntity": "Entité de facturation",
+      "contactsAcrossTenantsVendorsAndOwners": "Contacts across tenants, vendors and owners.",
+      "phone": "Téléphone",
+      "unit": "Unité",
+      "rate": "Rate"
     }
   },
   "peopleOwners": {
@@ -802,6 +1285,10 @@
     },
     "ariaLabel": {
       "sortTenants": "Sort tenants [FR]"
+    },
+    "text": {
+      "loading": "Chargement…",
+      "noTenantsFound": "Aucun locataire trouvé."
     }
   },
   "peopleTenantsId": {
@@ -816,6 +1303,40 @@
       "corroborativeDocuments": "Corroborative Documents [FR]",
       "contracts": "Contracts [FR]",
       "invoices": "Factures"
+    },
+    "text": {
+      "loadingTenant": "Loading tenant…",
+      "cancel": "Annuler",
+      "edit": "Modifier",
+      "name": "Nom",
+      "phone": "Téléphone",
+      "email": "E-mail",
+      "tenantId": "Locataire ID",
+      "orgId": "ID Organisation",
+      "created": "Créé",
+      "updated": "Mis à jour",
+      "unit": "Unité",
+      "buildingId": "Immeuble ID",
+      "unitId": "Unité ID",
+      "floor": "Étage",
+      "loadingLeases": "Chargement des baux…",
+      "noLeasesFoundForThisTenant": "Aucun bail trouvé for this tenant.",
+      "loadingInvoices": "Chargement des factures…",
+      "noInvoicesFoundForThisTenant": "No invoices found for this tenant.",
+      "tenantNotFound": "Locataire not found."
+    },
+    "prop": {
+      "tenantProfileAndContactDetails": "Locataire prdeile and contact details.",
+      "unit": "Unité",
+      "building": "Immeuble",
+      "startDate": "Date de début",
+      "endDate": "Date de fin",
+      "status": "Statut",
+      "monthlyRent": "Loyer mensuel",
+      "invoice": "Facture n°",
+      "description": "Description",
+      "amount": "Montant",
+      "dueDate": "Date d'échéance"
     }
   },
   "peopleVendors": {
@@ -827,6 +1348,10 @@
     },
     "ariaLabel": {
       "sortContractors": "Sort contractors [FR]"
+    },
+    "text": {
+      "loading": "Chargement…",
+      "noContractorsFound": "Aucun prestataire trouvé."
     }
   },
   "peopleVendorsId": {
@@ -844,6 +1369,41 @@
       "serviceDetails": "Service details [FR]",
       "contracts": "Contracts [FR]",
       "invoices": "Factures"
+    },
+    "text": {
+      "loadingContractor": "Loading contractor…",
+      "name": "Nom",
+      "phone": "Téléphone",
+      "email": "E-mail",
+      "addressLine1": "Adresse line 1",
+      "addressLine2": "Adresse line 2",
+      "postalCode": "Code postal",
+      "city": "Ville",
+      "country": "Pays",
+      "vATNumber": "Numéro TVA",
+      "contractorId": "Prestataire ID",
+      "orgId": "ID Organisation",
+      "created": "Créé",
+      "updated": "Mis à jour",
+      "hourlyRate": "Hourly rate",
+      "status": "Statut",
+      "serviceCategories": "Service categories",
+      "loadingJobs": "Chargement des interventions…",
+      "noJobsFoundForThisContractor": "No jobs found for this contractor.",
+      "loadingInvoices": "Chargement des factures…",
+      "noInvoicesFoundForThisContractor": "No invoices found for this contractor.",
+      "contractorNotFound": "Prestataire not found."
+    },
+    "prop": {
+      "contractorProfileAndServiceDetails": "Prestataire prdeile and service details.",
+      "job": "Intervention #",
+      "requestTitle": "Request title",
+      "building": "Immeuble",
+      "status": "Statut",
+      "createdDate": "Créé date",
+      "invoice": "Facture n°",
+      "amount": "Montant",
+      "submittedDate": "Soumettreted date"
     }
   },
   "rentAdjustmentsId": {
@@ -884,6 +1444,43 @@
     },
     "ariaLabel": {
       "searchRequests": "Search requests [FR]"
+    },
+    "text": {
+      "assetDepreciation": "Dépréciation des actifs",
+      "rentReductionPrecedents": "Précédents de réduction de loyer",
+      "estimatedRentReduction": "Réduction de loyer estimée",
+      "capAppliedReductionClampedToLegalMaximum": "Plafond appliqué — réduction limitée au maximum légal.",
+      "recommendedActions": "Actions recommandées",
+      "defectSignals": "Signaux de défaut",
+      "severity": "Gravité :",
+      "area": "Zone :",
+      "duration": "Durée :",
+      "repairVsReplaceAnalysis": "Analyse réparation vs remplacement",
+      "repairs": "Réparations :",
+      "replaceEst": "Remplacement est. :",
+      "photosAttachments": "Photos / Pièces jointes",
+      "noPhotosYetUploadToDocumentTheIssue": "Aucune photo pour l'instant. Téléversez pour documenter le problème.",
+      "error": "Erreur :",
+      "dismiss": "Ignorer",
+      "allUrgencies": "Toutes les urgences",
+      "emergency": "🚨 Urgence",
+      "high": "⚠️ Élevée",
+      "normal": "Normal",
+      "low": "Basse",
+      "allBuildings": "Tous les immeubles",
+      "allCategories": "Toutes les catégories",
+      "resetFilters": "Réinitialiser les filtres",
+      "noRequestsMatchThisFilter": "Aucune demande ne correspond à ce filtre.",
+      "selectContractor": "Sélectionner un prestataire…"
+    },
+    "prop": {
+      "reviewIncomingMaintenanceRequestsClickARowToSeeFullDetails": "Révision incoming maintenance requests. Click a row to see full details.",
+      "urgency": "Urgence",
+      "building": "Immeuble",
+      "category": "Catégorie",
+      "date": "Date",
+      "request": "Demande n°",
+      "estCost": "Est. Cost"
     }
   },
   "requestsId": {
@@ -893,11 +1490,56 @@
     },
     "ariaLabel": {
       "selectAssetToLink": "Select asset to link [FR]"
+    },
+    "text": {
+      "failedToLoadAssetAnalysis": "Échec du chargement asset analysis.",
+      "noRepairvsreplaceDataAvailableForThisAsset": "Aucune donnée réparation/remplacement disponible.",
+      "assetInventoryRecordsAreRequiredForAnalysis": "Actif inventory records are required for analysis.",
+      "estRepair": "Réparation est.",
+      "estReplacement": "Remplacement est.",
+      "calculating": "Calculating…",
+      "error": "Erreur :",
+      "dismiss": "Ignorer",
+      "requestNotFound": "Demande introuvable.",
+      "building": "Immeuble",
+      "unit": "Unité",
+      "tenant": "Locataire",
+      "description": "Description",
+      "contractor": "Prestataire",
+      "asset": "Actif",
+      "suggestedMatch": "Suggested match",
+      "suggested": "Suggested",
+      "noLegalAnalysisAvailableForThisRequest": "Aucune analyse juridique disponible pour cette demande.",
+      "manufacturer": "Fabricant",
+      "category": "Catégorie",
+      "installed": "Installé",
+      "noAssetLinkedToThisRequest": "Aucun actif lié à cette demande."
+    },
+    "prop": {
+      "created": "Créé",
+      "category": "Catégorie",
+      "estimatedCost": "Coût estimé",
+      "contact": "Contact",
+      "payingParty": "Partie payante",
+      "rejectionReason": "Rejet Reason",
+      "name": "Nom",
+      "phone": "Téléphone",
+      "email": "E-mail",
+      "manufacturer": "Fabricant",
+      "model": "Modèle",
+      "installed": "Installé"
     }
   },
   "rfps": {
     "title": {
       "requestsForProposal": "Requests for Proposal [FR]"
+    },
+    "text": {
+      "noRequestLinked": "No request linked",
+      "loading": "Chargement…"
+    },
+    "prop": {
+      "manageRfpsGeneratedByTheLegalDecisionEngine": "Manage RFPs generated by the legal decision engine"
     }
   },
   "rfpsId": {
@@ -905,6 +1547,46 @@
       "rFPDetails": "RFP Details [FR]",
       "linkedMaintenanceRequest": "Linked Maintenance Request [FR]",
       "fallbackActions": "Fallback Actions [FR]"
+    },
+    "text": {
+      "loading": "Chargement…",
+      "status": "Statut",
+      "category": "Catégorie",
+      "legalObligation": "Obligation légale",
+      "building": "Immeuble",
+      "unit": "Unité",
+      "targetInvites": "Target Invites",
+      "quoteDeadline": "Quote Échéance",
+      "created": "Créé",
+      "awardedTo": "Awarded À",
+      "request": "Demande n°",
+      "requestStatus": "Request Statut",
+      "requestCategory": "Request Catégorie",
+      "description": "Description",
+      "attachments": "Attachments",
+      "requestCreated": "Request Créé",
+      "exclVat": "HT",
+      "duration": "Durée",
+      "available": "Disponible",
+      "validUntil": "Valable jusqu'au",
+      "submitted": "Soumettreted",
+      "workPlan": "Plan de travail",
+      "assumptions": "Hypothèses",
+      "notes": "Notes",
+      "lineItems": "Lignes de détail",
+      "reinviteContractors": "Re-invite Prestataires",
+      "selectContractorsToInvite": "Sélectionner un prestataires to invite",
+      "directAssignContractor": "Direct Assign Prestataire",
+      "selectContractor": "Sélectionner un prestataire",
+      "chooseContractor": "— choose contractor —",
+      "rFPNotFound": "Appel d'offres introuvable."
+    },
+    "prop": {
+      "contractor": "Prestataire",
+      "email": "E-mail",
+      "phone": "Téléphone",
+      "status": "Statut",
+      "invited": "Invité"
     }
   },
   "settings": {
@@ -927,6 +1609,54 @@
     },
     "ariaLabel": {
       "configureBuilding": "Configure building [FR]"
+    },
+    "text": {
+      "error": "Erreur :",
+      "oK": "OK :",
+      "manageBuildings": "Manage buildings →",
+      "orgMode": "Org mode",
+      "managed": "Managed",
+      "ownerdirect": "Propriétaire-direct",
+      "ownerdirectRestrictsGovernanceToOwnersOnly": "Propriétaire-direct restricts governance to owners only.",
+      "autoapprovalThreshold": "Auto-approval threshold",
+      "setTo": "Set to",
+      "requestsWithEstimatedCostThisValueAutoapprove": "Requests with estimated cost ≤ this value auto-approve.",
+      "invoiceLeadTime": "Invoice lead time",
+      "generate": "Generate",
+      "daysBeforeBillingPeriod": "days before billing period",
+      "recurringInvoicesAreGeneratedThisManyDaysBeforeTheBillingPeriodStarts": "Récurrent invoices are generated this many days before the billing period starts.",
+      "loadingBuildings": "Chargement des immeubles…",
+      "noBuildingsConfiguredYetPerbuildingSettingsWillAppearOnceBuildingsAreAdded": "No buildings configured yet. Per-building settings will appear once buildings are added.",
+      "comingSoon": "Bientôt disponible",
+      "notificationPreferences": "Préférences de notification",
+      "integrations": "Intégrations",
+      "loadingSources": "Chargement des sources…",
+      "noLegalSourcesConfiguredSourcesAreAutocreatedOnServerStartup": "No legal sources configured. Sources are auto-created on server startup.",
+      "edit": "Modifier",
+      "deactivate": "Deactivate",
+      "activate": "Activate",
+      "delete": "Supprimer",
+      "name": "Nom *",
+      "jurisdiction": "Jurisdiction",
+      "scope": "Périmètre",
+      "federal": "Federal",
+      "fetcherType": "Fetcher type",
+      "parserType": "Parser type",
+      "updateFrequency": "Update frequency",
+      "status": "Statut"
+    },
+    "prop": {
+      "configureGovernanceModeAndDefaultAutoapprovalSettings": "Configure governance mode and default auto-approval settings.",
+      "name": "Nom",
+      "address": "Adresse",
+      "canton": "Canton",
+      "type": "Type",
+      "scope": "Périmètre",
+      "frequency": "Fréquence",
+      "status": "Statut",
+      "lastSynced": "Dernière synchronisation",
+      "key": "Clé",
+      "description": "Description"
     }
   },
   "vacancies[unitid]Applications": {
@@ -957,6 +1687,276 @@
     },
     "title": {
       "inventory": "Inventory [FR]"
+    },
+    "text": {
+      "noLeaseTemplateReady": "No lease — template ready",
+      "noLeaseTemplateCreateOneFirst": "No lease template — create one first",
+      "buildings": "Immeubles",
+      "vacancies": "Vacancies",
+      "assets": "Actifs",
+      "maintenanceDecisions": "Décision de maintenances",
+      "depreciation": "Dépréciation",
+      "loadingSelections": "Loading selections…",
+      "noActiveTenantSelections": "No active tenant selections.",
+      "loading": "Chargement…",
+      "noVacantUnitsAtThisTime": "No vacant units at this time."
+    },
+    "prop": {
+      "unit": "Unité",
+      "floor": "Étage",
+      "buildingsUnitsAssetsAndDepreciationSchedules": "Immeubles, units, assets and depreciation schedules.",
+      "building": "Immeuble",
+      "selectedTenant": "Selected Locataire",
+      "status": "Statut",
+      "lease": "Bail",
+      "deadline": "Échéance"
+    }
+  },
+  "billing_Schedules": {
+    "text": {
+      "error": "Erreur :",
+      "loadingSchedules": "Loading schedules…"
+    },
+    "prop": {
+      "recurringInvoicesGeneratedAutomaticallyForActiveLeases": "Récurrent invoices generated automatically for active leases."
+    }
+  },
+  "buildingsIdFinancials": {
+    "text": {
+      "loading": "Chargement…"
+    }
+  },
+  "charge_ReconciliationsId": {
+    "text": {
+      "invoice": "Invoice:",
+      "status": "Statut :",
+      "amount": "Montant :",
+      "description": "Description :"
+    },
+    "prop": {
+      "reconciliationNotFound": "Reconciliation not found.",
+      "tenant": "Locataire",
+      "fiscalYear": "Fiscal Year",
+      "status": "Statut",
+      "balance": "Solde",
+      "totalAcomptePaid": "Àtal ACOMPTE Payé",
+      "totalActualCosts": "Total Coûts réels",
+      "difference": "Difference",
+      "expense": "Expense",
+      "mode": "Mode",
+      "aCOMPTEPaid": "Acompte versé",
+      "actualCost": "Réel Cost"
+    }
+  },
+  "charge_ReconciliationsIndex": {
+    "text": {
+      "loading": "Chargement…",
+      "noReconciliationsFoundCreateOneFromALeaseDetailPage": "No reconciliations found. Créer one from a lease detail page."
+    }
+  },
+  "contractor_Billing_SchedulesId": {
+    "text": {
+      "contractorDataUnavailable": "Prestataire data unavailable"
+    },
+    "prop": {
+      "scheduleNotFound": "Schedule not found.",
+      "status": "Statut",
+      "frequency": "Fréquence",
+      "anchorDay": "Anchor Day",
+      "amount": "Montant",
+      "vATRate": "VAT Rate",
+      "amountInclVat": "Montant incl. VAT",
+      "nextPeriodStart": "Suivant Period Start",
+      "lastGenerated": "Last Generated",
+      "building": "Immeuble",
+      "completedAt": "Terminé At",
+      "reason": "Motif",
+      "created": "Créé",
+      "name": "Nom",
+      "email": "E-mail",
+      "phone": "Téléphone",
+      "vATNumber": "Numéro TVA",
+      "active": "Actif"
+    }
+  },
+  "contractor_Billing_SchedulesIndex": {
+    "text": {
+      "view": "Voir",
+      "contractor": "Prestataire *",
+      "selectContractor": "Sélectionner un prestataire…",
+      "description": "Description *",
+      "frequency": "Fréquence *",
+      "startDate": "Date de début *",
+      "loading": "Chargement…",
+      "noContractorBillingSchedulesFound": "No contractor billing schedules found."
+    },
+    "prop": {
+      "recurringBillingSchedulesForContractorServices": "Récurrent billing schedules for contractor services"
+    }
+  },
+  "dashboard_V2": {
+    "text": {
+      "portfolioOverview": "Portefeuille overview",
+      "managerDashboard": "Manager Dashboard",
+      "v2Preview": "v2 preview",
+      "allItemsRequiringActionSortedByUrgency": "Àus items requiring action, sorted by urgency.",
+      "allClearNoItemsNeedAction": "Tout est en ordre — no items need action",
+      "checkBackAfterNewRequestsOrInvoicesArrive": "Check back after new requests or invoices arrive.",
+      "deeperViewsForFinanceStrategyAndTenantPortal": "Deeper views for finance, strategy, and tenant portal."
+    },
+    "prop": {
+      "spendMtd": "Spend MTD",
+      "avgDaysDone": "Avg days done",
+      "collectionRate": "Taux de recouvrement",
+      "nOIYtd": "NOI YTD",
+      "buildingsInRed": "Immeubles in red",
+      "portfolio": "Portefeuille",
+      "openRequests": "Demandes ouvertes",
+      "openJobs": "Open jobs",
+      "pendingInvoices": "Factures en attente"
+    }
+  },
+  "financeBilling_EntitiesId": {
+    "text": {
+      "loadingBillingEntity": "Loading billing entity…",
+      "billingEntityNotFound": "Billing entity not found.",
+      "type": "Type",
+      "name": "Nom",
+      "addressLine1": "Adresse line 1",
+      "addressLine2": "Adresse line 2",
+      "postalCode": "Code postal",
+      "city": "Ville",
+      "country": "Pays",
+      "vATNumber": "Numéro TVA"
+    },
+    "prop": {
+      "type": "Type",
+      "name": "Nom",
+      "linkedContractor": "Linked contractor",
+      "addressLine1": "Adresse line 1",
+      "addressLine2": "Adresse line 2",
+      "postalCode": "Code postal",
+      "city": "Ville",
+      "country": "Pays",
+      "vATNumber": "Numéro TVA",
+      "defaultVatRate": "Default VAT rate",
+      "nextInvoiceSequence": "Suivant invoice sequence",
+      "entityId": "Entity ID"
+    }
+  },
+  "financeChart_Of_Accounts": {
+    "text": {
+      "seedSwissTaxonomy": "Seed Swiss Taxonomy",
+      "name": "Nom *",
+      "code": "Code",
+      "description": "Description",
+      "type": "Type",
+      "remove": "Remove",
+      "expenseType": "Type de dépense *",
+      "account": "Compte *"
+    },
+    "prop": {
+      "manageExpenseTypesAccountsAndExpensetoaccountMappings": "Manage expense types, accounts, and expense-to-account mappings",
+      "name": "Nom",
+      "code": "Code",
+      "description": "Description",
+      "status": "Statut",
+      "type": "Type",
+      "expenseType": "Type de dépense",
+      "account": "Compte",
+      "scope": "Périmètre"
+    }
+  },
+  "rent_AdjustmentsId": {
+    "text": {
+      "previousRent": "Précédent Rent",
+      "month": "/month",
+      "newRent": "→ Nouveau Loyer",
+      "change": "Modification",
+      "calculationBreakdown": "Calculation breakdown"
+    },
+    "prop": {
+      "rentAdjustmentNotFound": "Loyer adjustment not found.",
+      "status": "Statut",
+      "type": "Type",
+      "effectiveDate": "Date d'effet",
+      "lease": "Bail",
+      "cPIBase": "CPI Base",
+      "cPICurrent": "CPI Current",
+      "cPIRatio": "CPI Ratio",
+      "indexClause": "Index Clause",
+      "cPIBaseIndex": "CPI Base Index",
+      "initialRent": "Initial Loyer",
+      "lastIndexation": "Last Indexation"
+    }
+  },
+  "rent_AdjustmentsIndex": {
+    "text": {
+      "loading": "Chargement…"
+    },
+    "prop": {
+      "cPIindexedAndManualRentAdjustments": "CPI-indexed and manual rent adjustments"
+    }
+  },
+  "rental_ApplicationsApplicationid": {
+    "text": {
+      "loading": "Chargement…",
+      "applicationNotFound": "Candidature not found.",
+      "reasons": "Motifs:"
+    },
+    "prop": {
+      "email": "E-mail",
+      "phone": "Téléphone",
+      "dateOfBirth": "Date de birth",
+      "nationality": "Nationality",
+      "civilStatus": "Civil status",
+      "employer": "Employer",
+      "jobTitle": "Intervention title",
+      "workLocation": "Work location",
+      "employedSince": "Employed since",
+      "netMonthlyIncome": "Net monthly income",
+      "permitType": "Permit type",
+      "debtEnforcement": "Debt enforcement",
+      "currentLandlord": "Current landlord",
+      "landlordAddress": "Propriétaire address",
+      "landlordPhone": "Propriétaire phone",
+      "reasonForLeaving": "Motif for leaving",
+      "desiredMovein": "Desired move-in",
+      "householdSize": "Household size",
+      "pets": "Pets",
+      "rCInsurance": "RC insurance",
+      "vehicle": "Vehicle",
+      "needsParking": "Needs parking",
+      "remarks": "Remarks",
+      "confidence": "Confiance",
+      "status": "Statut",
+      "managerDelta": "Manager delta"
+    }
+  },
+  "vacanciesUnitidApplications": {
+    "text": {
+      "vacancies": "← Vacancies",
+      "summary": "Résumé",
+      "fullDetail": "Full Detail",
+      "loading": "Chargement…",
+      "noApplicationsForThisUnitYet": "No applications for this unit yet.",
+      "disqualified": "Disqualifié",
+      "override": "✓ Remplacement",
+      "view": "Voir",
+      "adjust": "Adjust",
+      "override2": "⚠ Remplacement",
+      "disqualificationReasons": "Disqualification Motifs",
+      "docs": "▼ docs",
+      "minimum3CharactersThisWillBeRecordedForAudit": "Minimum 3 caractères. Ceci sera enregistré pour audit.",
+      "addOrSubtractPointsWithAReason": "Ajouter or subtract points with a reason.",
+      "scoreAdjustment": "Score adjustment",
+      "reason": "Motif *"
+    },
+    "prop": {
+      "applicant": "Candidat",
+      "score": "Score",
+      "confidence": "Confiance",
+      "status": "Statut"
     }
   }
 }

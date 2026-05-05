@@ -212,7 +212,7 @@ export default function ContractorDetailPage() {
         </div>
         <PageHeader
           title={contractor?.name || "Contractor"}
-          subtitle="Contractor profile and service details."
+          subtitle={t("manager:peopleVendorsId.prop.contractorProfileAndServiceDetails")}
           actions={(
             <div className="flex items-center gap-2">
               {isEditing ? (
@@ -254,7 +254,7 @@ export default function ContractorDetailPage() {
           <ErrorBanner error={error} onDismiss={() => setError("")} />
 
           {loading ? (
-            <p className="loading-text">Loading contractor…</p>
+            <p className="loading-text">{t("manager:peopleVendorsId.text.loadingContractor")}</p>
           ) : contractor ? (
             <div className="grid gap-4">
               <ScrollableTabs activeIndex={["Personal information", "Service details", "Contracts", "Invoices"].indexOf(activeTab)}>
@@ -274,7 +274,7 @@ export default function ContractorDetailPage() {
                 <Panel title={t("manager:peopleVendorsId.title.personalInformation")}>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <label className="grid gap-2">
-                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Name</span>
+                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleVendorsId.text.name")}</span>
                       {isEditing ? (
                         <input
                           className="input text-sm text-slate-700"
@@ -288,7 +288,7 @@ export default function ContractorDetailPage() {
                       )}
                     </label>
                     <label className="grid gap-2">
-                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Phone</span>
+                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleVendorsId.text.phone")}</span>
                       {isEditing ? (
                         <input
                           className="input text-sm text-slate-700"
@@ -302,7 +302,7 @@ export default function ContractorDetailPage() {
                       )}
                     </label>
                     <label className="grid gap-2 sm:col-span-2">
-                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Email</span>
+                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleVendorsId.text.email")}</span>
                       {isEditing ? (
                         <input
                           className="input text-sm text-slate-700"
@@ -316,7 +316,7 @@ export default function ContractorDetailPage() {
                       )}
                     </label>
                     <label className="grid gap-2 sm:col-span-2">
-                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Address line 1</span>
+                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleVendorsId.text.addressLine1")}</span>
                       {isEditing ? (
                         <input
                           className="input text-sm text-slate-700"
@@ -330,7 +330,7 @@ export default function ContractorDetailPage() {
                       )}
                     </label>
                     <label className="grid gap-2 sm:col-span-2">
-                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Address line 2</span>
+                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleVendorsId.text.addressLine2")}</span>
                       {isEditing ? (
                         <input
                           className="input text-sm text-slate-700"
@@ -344,7 +344,7 @@ export default function ContractorDetailPage() {
                       )}
                     </label>
                     <label className="grid gap-2">
-                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Postal code</span>
+                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleVendorsId.text.postalCode")}</span>
                       {isEditing ? (
                         <input
                           className="input text-sm text-slate-700"
@@ -357,7 +357,7 @@ export default function ContractorDetailPage() {
                       )}
                     </label>
                     <label className="grid gap-2">
-                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">City</span>
+                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleVendorsId.text.city")}</span>
                       {isEditing ? (
                         <input
                           className="input text-sm text-slate-700"
@@ -370,7 +370,7 @@ export default function ContractorDetailPage() {
                       )}
                     </label>
                     <label className="grid gap-2">
-                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Country</span>
+                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleVendorsId.text.country")}</span>
                       {isEditing ? (
                         <input
                           className="input text-sm text-slate-700"
@@ -397,7 +397,7 @@ export default function ContractorDetailPage() {
                       )}
                     </label>
                     <label className="grid gap-2">
-                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">VAT number</span>
+                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleVendorsId.text.vATNumber")}</span>
                       {isEditing ? (
                         <input
                           className="input text-sm text-slate-700"
@@ -428,21 +428,21 @@ export default function ContractorDetailPage() {
 
                   <div className="mt-6 grid gap-4 sm:grid-cols-2">
                     <div>
-                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Contractor ID</div>
+                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleVendorsId.text.contractorId")}</div>
                       <div className="text-sm text-slate-700 mt-1">{contractor?.id}</div>
                     </div>
                     <div>
-                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Org ID</div>
+                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleVendorsId.text.orgId")}</div>
                       <div className="text-sm text-slate-700 mt-1">{contractor?.orgId || "—"}</div>
                     </div>
                     <div>
-                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Created</div>
+                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleVendorsId.text.created")}</div>
                       <div className="text-sm text-slate-700 mt-1">
                         {contractor?.createdAt ? formatDateTime(contractor.createdAt) : "—"}
                       </div>
                     </div>
                     <div>
-                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Updated</div>
+                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleVendorsId.text.updated")}</div>
                       <div className="text-sm text-slate-700 mt-1">
                         {contractor?.updatedAt ? formatDateTime(contractor.updatedAt) : "—"}
                       </div>
@@ -455,7 +455,7 @@ export default function ContractorDetailPage() {
                 <Panel title={t("manager:peopleVendorsId.title.serviceDetails")}>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div>
-                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Hourly rate</div>
+                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleVendorsId.text.hourlyRate")}</div>
                       {isEditing ? (
                         <input
                           className="input text-sm text-slate-700 mt-2"
@@ -475,11 +475,11 @@ export default function ContractorDetailPage() {
                       )}
                     </div>
                     <div>
-                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Status</div>
+                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleVendorsId.text.status")}</div>
                       <div className="text-sm text-slate-700 mt-1">{statusLabel}</div>
                     </div>
                     <div className="sm:col-span-2">
-                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Service categories</div>
+                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleVendorsId.text.serviceCategories")}</div>
                       {isEditing ? (
                         <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
                           {ALLOWED_CATEGORIES.map((cat) => (
@@ -508,19 +508,19 @@ export default function ContractorDetailPage() {
               {activeTab === "Contracts" && (
                 <Panel title={t("manager:peopleVendorsId.title.contracts")}>
                   {jobsLoading ? (
-                    <p className="text-sm text-slate-600">Loading jobs…</p>
+                    <p className="text-sm text-slate-600">{t("manager:peopleVendorsId.text.loadingJobs")}</p>
                   ) : jobs.length === 0 ? (
-                    <p className="text-sm text-slate-500">No jobs found for this contractor.</p>
+                    <p className="text-sm text-slate-500">{t("manager:peopleVendorsId.text.noJobsFoundForThisContractor")}</p>
                   ) : (
                     <div className="overflow-x-auto rounded-lg border border-table-border">
                       <table className="data-table">
                         <thead>
                           <tr>
-                            <SortableHeader label="Job #" field="jobId" sortField={jSortField} sortDir={jSortDir} onSort={handleJobSort} />
-                            <SortableHeader label="Request title" field="request" sortField={jSortField} sortDir={jSortDir} onSort={handleJobSort} />
-                            <SortableHeader label="Building" field="building" sortField={jSortField} sortDir={jSortDir} onSort={handleJobSort} />
-                            <SortableHeader label="Status" field="status" sortField={jSortField} sortDir={jSortDir} onSort={handleJobSort} />
-                            <SortableHeader label="Created date" field="createdAt" sortField={jSortField} sortDir={jSortDir} onSort={handleJobSort} />
+                            <SortableHeader label={t("manager:peopleVendorsId.prop.job")} field="jobId" sortField={jSortField} sortDir={jSortDir} onSort={handleJobSort} />
+                            <SortableHeader label={t("manager:peopleVendorsId.prop.requestTitle")} field="request" sortField={jSortField} sortDir={jSortDir} onSort={handleJobSort} />
+                            <SortableHeader label={t("manager:peopleVendorsId.prop.building")} field="building" sortField={jSortField} sortDir={jSortDir} onSort={handleJobSort} />
+                            <SortableHeader label={t("manager:peopleVendorsId.prop.status")} field="status" sortField={jSortField} sortDir={jSortDir} onSort={handleJobSort} />
+                            <SortableHeader label={t("manager:peopleVendorsId.prop.createdDate")} field="createdAt" sortField={jSortField} sortDir={jSortDir} onSort={handleJobSort} />
                           </tr>
                         </thead>
                         <tbody>
@@ -558,19 +558,19 @@ export default function ContractorDetailPage() {
               {activeTab === "Invoices" && (
                 <Panel title={t("manager:peopleVendorsId.title.invoices")}>
                   {invoicesLoading ? (
-                    <p className="text-sm text-slate-600">Loading invoices…</p>
+                    <p className="text-sm text-slate-600">{t("manager:peopleVendorsId.text.loadingInvoices")}</p>
                   ) : contractorInvoices.length === 0 ? (
-                    <p className="text-sm text-slate-500">No invoices found for this contractor.</p>
+                    <p className="text-sm text-slate-500">{t("manager:peopleVendorsId.text.noInvoicesFoundForThisContractor")}</p>
                   ) : (
                     <div className="overflow-x-auto rounded-lg border border-table-border">
                       <table className="data-table">
                         <thead>
                           <tr>
-                            <SortableHeader label="Invoice #" field="invoiceNumber" sortField={invSortField} sortDir={invSortDir} onSort={handleInvSort} />
-                            <SortableHeader label="Job #" field="jobId" sortField={invSortField} sortDir={invSortDir} onSort={handleInvSort} />
-                            <SortableHeader label="Amount" field="amount" sortField={invSortField} sortDir={invSortDir} onSort={handleInvSort} className="text-right" />
-                            <SortableHeader label="Status" field="status" sortField={invSortField} sortDir={invSortDir} onSort={handleInvSort} />
-                            <SortableHeader label="Submitted date" field="submittedAt" sortField={invSortField} sortDir={invSortDir} onSort={handleInvSort} />
+                            <SortableHeader label={t("manager:peopleVendorsId.prop.invoice")} field="invoiceNumber" sortField={invSortField} sortDir={invSortDir} onSort={handleInvSort} />
+                            <SortableHeader label={t("manager:peopleVendorsId.prop.job")} field="jobId" sortField={invSortField} sortDir={invSortDir} onSort={handleInvSort} />
+                            <SortableHeader label={t("manager:peopleVendorsId.prop.amount")} field="amount" sortField={invSortField} sortDir={invSortDir} onSort={handleInvSort} className="text-right" />
+                            <SortableHeader label={t("manager:peopleVendorsId.prop.status")} field="status" sortField={invSortField} sortDir={invSortDir} onSort={handleInvSort} />
+                            <SortableHeader label={t("manager:peopleVendorsId.prop.submittedDate")} field="submittedAt" sortField={invSortField} sortDir={invSortDir} onSort={handleInvSort} />
                           </tr>
                         </thead>
                         <tbody>
@@ -610,7 +610,7 @@ export default function ContractorDetailPage() {
             </div>
           ) : (
             <Panel>
-              <p className="text-sm text-slate-600">Contractor not found.</p>
+              <p className="text-sm text-slate-600">{t("manager:peopleVendorsId.text.contractorNotFound")}</p>
               <div className="mt-3">
                 <button type="button" className="button-secondary" onClick={() => router.back()}>
                   Go back

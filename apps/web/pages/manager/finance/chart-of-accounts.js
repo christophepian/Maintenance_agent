@@ -261,7 +261,7 @@ export default function ChartOfAccountsPage() {
       <PageShell>
         <PageHeader
           title={t("manager:financeChartOfAccounts.title.chartOfAccounts")}
-          subtitle="Manage expense types, accounts, and expense-to-account mappings"
+          subtitle={t("manager:financeChart_Of_Accounts.prop.manageExpenseTypesAccountsAndExpensetoaccountMappings")}
           actions={seedButton}
         />
         <PageContent>
@@ -298,7 +298,7 @@ export default function ChartOfAccountsPage() {
                   {expenseTypes.length === 0 ? (
                     <div className="empty-state">
                       <p className="empty-state-text">
-                        No expense types yet. Click <strong>Seed Swiss Taxonomy</strong> to get started with 12 standard expense types and 4 accounts.
+                        No expense types yet. Click <strong>{t("manager:financeChart_Of_Accounts.text.seedSwissTaxonomy")}</strong> to get started with 12 standard expense types and 4 accounts.
                       </p>
                     </div>
                   ) : (
@@ -324,10 +324,10 @@ export default function ChartOfAccountsPage() {
                         <table className="data-table">
                           <thead>
                             <tr>
-                              <SortableHeader label="Name" field="name" sortField={etSortField} sortDir={etSortDir} onSort={handleETSort} />
-                              <SortableHeader label="Code" field="code" sortField={etSortField} sortDir={etSortDir} onSort={handleETSort} />
-                              <SortableHeader label="Description" field="description" sortField={etSortField} sortDir={etSortDir} onSort={handleETSort} />
-                              <SortableHeader label="Status" field="status" sortField={etSortField} sortDir={etSortDir} onSort={handleETSort} />
+                              <SortableHeader label={t("manager:financeChart_Of_Accounts.prop.name")} field="name" sortField={etSortField} sortDir={etSortDir} onSort={handleETSort} />
+                              <SortableHeader label={t("manager:financeChart_Of_Accounts.prop.code")} field="code" sortField={etSortField} sortDir={etSortDir} onSort={handleETSort} />
+                              <SortableHeader label={t("manager:financeChart_Of_Accounts.prop.description")} field="description" sortField={etSortField} sortDir={etSortDir} onSort={handleETSort} />
+                              <SortableHeader label={t("manager:financeChart_Of_Accounts.prop.status")} field="status" sortField={etSortField} sortDir={etSortDir} onSort={handleETSort} />
                             </tr>
                           </thead>
                           <tbody>
@@ -348,7 +348,7 @@ export default function ChartOfAccountsPage() {
                   {/* Inline create form */}
                   <form onSubmit={handleCreateET} className="flex items-end gap-3 border-t border-slate-200 p-4">
                     <div className="flex-[2]">
-                      <label className="mb-1 block text-xs font-medium text-slate-500">Name *</label>
+                      <label className="mb-1 block text-xs font-medium text-slate-500">{t("manager:financeChart_Of_Accounts.text.name")}</label>
                       <input
                         className="input"
                         value={newET.name}
@@ -357,7 +357,7 @@ export default function ChartOfAccountsPage() {
                       />
                     </div>
                     <div className="flex-1">
-                      <label className="mb-1 block text-xs font-medium text-slate-500">Code</label>
+                      <label className="mb-1 block text-xs font-medium text-slate-500">{t("manager:financeChart_Of_Accounts.text.code")}</label>
                       <input
                         className="input"
                         value={newET.code}
@@ -366,7 +366,7 @@ export default function ChartOfAccountsPage() {
                       />
                     </div>
                     <div className="flex-[2]">
-                      <label className="mb-1 block text-xs font-medium text-slate-500">Description</label>
+                      <label className="mb-1 block text-xs font-medium text-slate-500">{t("manager:financeChart_Of_Accounts.text.description")}</label>
                       <input
                         className="input"
                         value={newET.description}
@@ -389,7 +389,7 @@ export default function ChartOfAccountsPage() {
                   {accounts.length === 0 ? (
                     <div className="empty-state">
                       <p className="empty-state-text">
-                        No accounts yet. Click <strong>Seed Swiss Taxonomy</strong> to get started.
+                        No accounts yet. Click <strong>{t("manager:financeChart_Of_Accounts.text.seedSwissTaxonomy")}</strong> to get started.
                       </p>
                     </div>
                   ) : (
@@ -415,10 +415,10 @@ export default function ChartOfAccountsPage() {
                         <table className="data-table">
                           <thead>
                             <tr>
-                              <SortableHeader label="Name" field="name" sortField={accSortField} sortDir={accSortDir} onSort={handleAccSort} />
-                              <SortableHeader label="Code" field="code" sortField={accSortField} sortDir={accSortDir} onSort={handleAccSort} />
-                              <SortableHeader label="Type" field="type" sortField={accSortField} sortDir={accSortDir} onSort={handleAccSort} />
-                              <SortableHeader label="Status" field="status" sortField={accSortField} sortDir={accSortDir} onSort={handleAccSort} />
+                              <SortableHeader label={t("manager:financeChart_Of_Accounts.prop.name")} field="name" sortField={accSortField} sortDir={accSortDir} onSort={handleAccSort} />
+                              <SortableHeader label={t("manager:financeChart_Of_Accounts.prop.code")} field="code" sortField={accSortField} sortDir={accSortDir} onSort={handleAccSort} />
+                              <SortableHeader label={t("manager:financeChart_Of_Accounts.prop.type")} field="type" sortField={accSortField} sortDir={accSortDir} onSort={handleAccSort} />
+                              <SortableHeader label={t("manager:financeChart_Of_Accounts.prop.status")} field="status" sortField={accSortField} sortDir={accSortDir} onSort={handleAccSort} />
                             </tr>
                           </thead>
                           <tbody>
@@ -439,7 +439,7 @@ export default function ChartOfAccountsPage() {
                   {/* Inline create form */}
                   <form onSubmit={handleCreateAcc} className="flex items-end gap-3 border-t border-slate-200 p-4">
                     <div className="flex-[2]">
-                      <label className="mb-1 block text-xs font-medium text-slate-500">Name *</label>
+                      <label className="mb-1 block text-xs font-medium text-slate-500">{t("manager:financeChart_Of_Accounts.text.name")}</label>
                       <input
                         className="input"
                         value={newAcc.name}
@@ -448,7 +448,7 @@ export default function ChartOfAccountsPage() {
                       />
                     </div>
                     <div className="flex-1">
-                      <label className="mb-1 block text-xs font-medium text-slate-500">Code</label>
+                      <label className="mb-1 block text-xs font-medium text-slate-500">{t("manager:financeChart_Of_Accounts.text.code")}</label>
                       <input
                         className="input"
                         value={newAcc.code}
@@ -457,7 +457,7 @@ export default function ChartOfAccountsPage() {
                       />
                     </div>
                     <div className="flex-1">
-                      <label className="mb-1 block text-xs font-medium text-slate-500">Type</label>
+                      <label className="mb-1 block text-xs font-medium text-slate-500">{t("manager:financeChart_Of_Accounts.text.type")}</label>
                       <select
                         className="input"
                         value={newAcc.accountType}
@@ -505,7 +505,7 @@ export default function ChartOfAccountsPage() {
                                 onClick={() => handleDeleteMapping(m.id)}
                                 disabled={actionLoading}
                                 className="text-xs font-medium text-red-600 hover:text-red-700 disabled:opacity-50"
-                              >Remove</button>
+                              >{t("manager:financeChart_Of_Accounts.text.remove")}</button>
                             </div>
                           </div>
                         ))}
@@ -516,10 +516,10 @@ export default function ChartOfAccountsPage() {
                         <table className="data-table">
                           <thead>
                             <tr>
-                              <SortableHeader label="Expense Type" field="expenseType" sortField={mapSF} sortDir={mapSD} onSort={handleMapSort} />
+                              <SortableHeader label={t("manager:financeChart_Of_Accounts.prop.expenseType")} field="expenseType" sortField={mapSF} sortDir={mapSD} onSort={handleMapSort} />
                               <th></th>
-                              <SortableHeader label="Account" field="account" sortField={mapSF} sortDir={mapSD} onSort={handleMapSort} />
-                              <SortableHeader label="Scope" field="scope" sortField={mapSF} sortDir={mapSD} onSort={handleMapSort} />
+                              <SortableHeader label={t("manager:financeChart_Of_Accounts.prop.account")} field="account" sortField={mapSF} sortDir={mapSD} onSort={handleMapSort} />
+                              <SortableHeader label={t("manager:financeChart_Of_Accounts.prop.scope")} field="scope" sortField={mapSF} sortDir={mapSD} onSort={handleMapSort} />
                               <th></th>
                             </tr>
                           </thead>
@@ -554,7 +554,7 @@ export default function ChartOfAccountsPage() {
                   {/* Inline create form */}
                   <form onSubmit={handleCreateMapping} className="flex items-end gap-3 border-t border-slate-200 p-4">
                     <div className="flex-[2]">
-                      <label className="mb-1 block text-xs font-medium text-slate-500">Expense Type *</label>
+                      <label className="mb-1 block text-xs font-medium text-slate-500">{t("manager:financeChart_Of_Accounts.text.expenseType")}</label>
                       <select
                         className="input"
                         value={newMapping.expenseTypeId}
@@ -567,7 +567,7 @@ export default function ChartOfAccountsPage() {
                       </select>
                     </div>
                     <div className="flex-[2]">
-                      <label className="mb-1 block text-xs font-medium text-slate-500">Account *</label>
+                      <label className="mb-1 block text-xs font-medium text-slate-500">{t("manager:financeChart_Of_Accounts.text.account")}</label>
                       <select
                         className="input"
                         value={newMapping.accountId}

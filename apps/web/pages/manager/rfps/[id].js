@@ -186,28 +186,28 @@ export default function RfpDetailPage() {
           <ErrorBanner error={error} className="text-sm" />
 
           {loading ? (
-            <p className="text-sm text-slate-500">Loading…</p>
+            <p className="text-sm text-slate-500">{t("manager:rfpsId.text.loading")}</p>
           ) : rfp ? (
             <>
               {/* RFP Metadata */}
               <Panel title={t("manager:rfpsId.title.rFPDetails")}>
                 <dl className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
                   <div>
-                    <dt className="text-sm font-medium text-slate-500">Status</dt>
+                    <dt className="text-sm font-medium text-slate-500">{t("manager:rfpsId.text.status")}</dt>
                     <dd className="mt-1">
                       <Badge variant={rfpVariant(rfp.status)}>{rfp.status}</Badge>
                     </dd>
                   </div>
                   <div>
-                    <dt className="text-sm font-medium text-slate-500">Category</dt>
+                    <dt className="text-sm font-medium text-slate-500">{t("manager:rfpsId.text.category")}</dt>
                     <dd className="mt-1 text-sm text-slate-900">{rfp.category || "—"}</dd>
                   </div>
                   <div>
-                    <dt className="text-sm font-medium text-slate-500">Legal Obligation</dt>
+                    <dt className="text-sm font-medium text-slate-500">{t("manager:rfpsId.text.legalObligation")}</dt>
                     <dd className="mt-1 text-sm text-slate-900">{rfp.legalObligation || "—"}</dd>
                   </div>
                   <div>
-                    <dt className="text-sm font-medium text-slate-500">Building</dt>
+                    <dt className="text-sm font-medium text-slate-500">{t("manager:rfpsId.text.building")}</dt>
                     <dd className="mt-1 text-sm text-slate-900">
                       {rfp.building?.name || "—"}
                       {rfp.building?.address && (
@@ -216,24 +216,24 @@ export default function RfpDetailPage() {
                     </dd>
                   </div>
                   <div>
-                    <dt className="text-sm font-medium text-slate-500">Unit</dt>
+                    <dt className="text-sm font-medium text-slate-500">{t("manager:rfpsId.text.unit")}</dt>
                     <dd className="mt-1 text-sm text-slate-900">{rfp.unit?.unitNumber || "—"}</dd>
                   </div>
                   <div>
-                    <dt className="text-sm font-medium text-slate-500">Target Invites</dt>
+                    <dt className="text-sm font-medium text-slate-500">{t("manager:rfpsId.text.targetInvites")}</dt>
                     <dd className="mt-1 text-sm text-slate-900">{rfp.inviteCount ?? "—"}</dd>
                   </div>
                   <div>
-                    <dt className="text-sm font-medium text-slate-500">Quote Deadline</dt>
+                    <dt className="text-sm font-medium text-slate-500">{t("manager:rfpsId.text.quoteDeadline")}</dt>
                     <dd className="mt-1 text-sm text-slate-900">{formatDate(rfp.deadlineAt)}</dd>
                   </div>
                   <div>
-                    <dt className="text-sm font-medium text-slate-500">Created</dt>
+                    <dt className="text-sm font-medium text-slate-500">{t("manager:rfpsId.text.created")}</dt>
                     <dd className="mt-1 text-sm text-slate-900">{formatDate(rfp.createdAt)}</dd>
                   </div>
                   {rfp.awardedContractor && (
                     <div>
-                      <dt className="text-sm font-medium text-slate-500">Awarded To</dt>
+                      <dt className="text-sm font-medium text-slate-500">{t("manager:rfpsId.text.awardedTo")}</dt>
                       <dd className="mt-1 text-sm text-green-700 font-medium">
                         {rfp.awardedContractor.name}
                       </dd>
@@ -247,7 +247,7 @@ export default function RfpDetailPage() {
                 <Panel title={t("manager:rfpsId.title.linkedMaintenanceRequest")}>
                   <dl className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
                     <div>
-                      <dt className="text-sm font-medium text-slate-500">Request #</dt>
+                      <dt className="text-sm font-medium text-slate-500">{t("manager:rfpsId.text.request")}</dt>
                       <dd className="mt-1 text-sm">
                         <Link
                           href={`/manager/requests?highlight=${rfp.request.id}`}
@@ -258,29 +258,29 @@ export default function RfpDetailPage() {
                       </dd>
                     </div>
                     <div>
-                      <dt className="text-sm font-medium text-slate-500">Request Status</dt>
+                      <dt className="text-sm font-medium text-slate-500">{t("manager:rfpsId.text.requestStatus")}</dt>
                       <dd className="mt-1 text-sm text-slate-900">{rfp.request.status}</dd>
                     </div>
                     <div>
-                      <dt className="text-sm font-medium text-slate-500">Request Category</dt>
+                      <dt className="text-sm font-medium text-slate-500">{t("manager:rfpsId.text.requestCategory")}</dt>
                       <dd className="mt-1 text-sm text-slate-900">{rfp.request.category || "—"}</dd>
                     </div>
                     <div className="sm:col-span-2 lg:col-span-3">
-                      <dt className="text-sm font-medium text-slate-500">Description</dt>
+                      <dt className="text-sm font-medium text-slate-500">{t("manager:rfpsId.text.description")}</dt>
                       <dd className="mt-1 text-sm text-slate-900 whitespace-pre-line">
                         {rfp.request.description || "—"}
                       </dd>
                     </div>
                     {rfp.request.attachmentCount > 0 && (
                       <div>
-                        <dt className="text-sm font-medium text-slate-500">Attachments</dt>
+                        <dt className="text-sm font-medium text-slate-500">{t("manager:rfpsId.text.attachments")}</dt>
                         <dd className="mt-1 text-sm text-slate-900">
                           {rfp.request.attachmentCount} file{rfp.request.attachmentCount !== 1 ? "s" : ""}
                         </dd>
                       </div>
                     )}
                     <div>
-                      <dt className="text-sm font-medium text-slate-500">Request Created</dt>
+                      <dt className="text-sm font-medium text-slate-500">{t("manager:rfpsId.text.requestCreated")}</dt>
                       <dd className="mt-1 text-sm text-slate-900">{formatDate(rfp.request.createdAt)}</dd>
                     </div>
                   </dl>
@@ -317,11 +317,11 @@ export default function RfpDetailPage() {
                       <table className="data-table">
                         <thead>
                           <tr>
-                            <SortableHeader label="Contractor" field="contractor" sortField={invSF} sortDir={invSD} onSort={handleInvSort} />
-                            <SortableHeader label="Email" field="email" sortField={invSF} sortDir={invSD} onSort={handleInvSort} />
-                            <SortableHeader label="Phone" field="phone" sortField={invSF} sortDir={invSD} onSort={handleInvSort} />
-                            <SortableHeader label="Status" field="status" sortField={invSF} sortDir={invSD} onSort={handleInvSort} />
-                            <SortableHeader label="Invited" field="invited" sortField={invSF} sortDir={invSD} onSort={handleInvSort} />
+                            <SortableHeader label={t("manager:rfpsId.prop.contractor")} field="contractor" sortField={invSF} sortDir={invSD} onSort={handleInvSort} />
+                            <SortableHeader label={t("manager:rfpsId.prop.email")} field="email" sortField={invSF} sortDir={invSD} onSort={handleInvSort} />
+                            <SortableHeader label={t("manager:rfpsId.prop.phone")} field="phone" sortField={invSF} sortDir={invSD} onSort={handleInvSort} />
+                            <SortableHeader label={t("manager:rfpsId.prop.status")} field="status" sortField={invSF} sortDir={invSD} onSort={handleInvSort} />
+                            <SortableHeader label={t("manager:rfpsId.prop.invited")} field="invited" sortField={invSF} sortDir={invSD} onSort={handleInvSort} />
                           </tr>
                         </thead>
                         <tbody>
@@ -395,7 +395,7 @@ export default function RfpDetailPage() {
                             <span className="text-base font-semibold text-slate-900 font-mono">
                               {formatChfCents(q.amountCents)}
                               {q.vatIncluded === false && (
-                                <span className="text-xs text-slate-400 ml-1">excl. VAT</span>
+                                <span className="text-xs text-slate-400 ml-1">{t("manager:rfpsId.text.exclVat")}</span>
                               )}
                             </span>
                             {(rfp.status === "OPEN" || rfp.status === "PENDING_OWNER_APPROVAL") &&
@@ -413,48 +413,48 @@ export default function RfpDetailPage() {
                         <dl className="grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-4 text-sm mb-2">
                           {q.estimatedDurationDays && (
                             <div>
-                              <dt className="text-xs text-slate-500">Duration</dt>
+                              <dt className="text-xs text-slate-500">{t("manager:rfpsId.text.duration")}</dt>
                               <dd className="text-slate-900">{q.estimatedDurationDays} day{q.estimatedDurationDays !== 1 ? "s" : ""}</dd>
                             </div>
                           )}
                           {q.earliestAvailability && (
                             <div>
-                              <dt className="text-xs text-slate-500">Available</dt>
+                              <dt className="text-xs text-slate-500">{t("manager:rfpsId.text.available")}</dt>
                               <dd className="text-slate-900">{formatDate(q.earliestAvailability)}</dd>
                             </div>
                           )}
                           {q.validUntil && (
                             <div>
-                              <dt className="text-xs text-slate-500">Valid Until</dt>
+                              <dt className="text-xs text-slate-500">{t("manager:rfpsId.text.validUntil")}</dt>
                               <dd className="text-slate-900">{formatDate(q.validUntil)}</dd>
                             </div>
                           )}
                           <div>
-                            <dt className="text-xs text-slate-500">Submitted</dt>
+                            <dt className="text-xs text-slate-500">{t("manager:rfpsId.text.submitted")}</dt>
                             <dd className="text-slate-900">{formatDate(q.submittedAt)}</dd>
                           </div>
                         </dl>
                         {q.workPlan && (
                           <div className="mt-2">
-                            <dt className="text-xs font-medium text-slate-500">Work Plan</dt>
+                            <dt className="text-xs font-medium text-slate-500">{t("manager:rfpsId.text.workPlan")}</dt>
                             <dd className="mt-0.5 text-sm text-slate-700 whitespace-pre-line">{q.workPlan}</dd>
                           </div>
                         )}
                         {q.assumptions && (
                           <div className="mt-2">
-                            <dt className="text-xs font-medium text-slate-500">Assumptions</dt>
+                            <dt className="text-xs font-medium text-slate-500">{t("manager:rfpsId.text.assumptions")}</dt>
                             <dd className="mt-0.5 text-sm text-slate-500 whitespace-pre-line">{q.assumptions}</dd>
                           </div>
                         )}
                         {q.notes && (
                           <div className="mt-2">
-                            <dt className="text-xs font-medium text-slate-500">Notes</dt>
+                            <dt className="text-xs font-medium text-slate-500">{t("manager:rfpsId.text.notes")}</dt>
                             <dd className="mt-0.5 text-sm text-slate-500">{q.notes}</dd>
                           </div>
                         )}
                         {q.lineItems && q.lineItems.length > 0 && (
                           <div className="mt-2">
-                            <dt className="text-xs font-medium text-slate-500 mb-1">Line Items</dt>
+                            <dt className="text-xs font-medium text-slate-500 mb-1">{t("manager:rfpsId.text.lineItems")}</dt>
                             <dd>
                               {/* Mobile list */}
                               <div className="sm:hidden divide-y divide-slate-100">
@@ -501,10 +501,10 @@ export default function RfpDetailPage() {
 
                   {/* ── Re-invite contractors ──────────────────────── */}
                   <div className="mb-6">
-                    <h4 className="text-sm font-semibold text-slate-700 mb-2">Re-invite Contractors</h4>
+                    <h4 className="text-sm font-semibold text-slate-700 mb-2">{t("manager:rfpsId.text.reinviteContractors")}</h4>
                     <div className="flex flex-wrap items-end gap-3">
                       <div className="flex-1 min-w-[200px]">
-                        <label className="block text-xs text-slate-500 mb-1">Select contractors to invite</label>
+                        <label className="block text-xs text-slate-500 mb-1">{t("manager:rfpsId.text.selectContractorsToInvite")}</label>
                         <select
                           multiple
                           value={selectedReinviteIds}
@@ -548,20 +548,20 @@ export default function RfpDetailPage() {
 
                   {/* ── Direct-assign contractor ──────────────────── */}
                   <div>
-                    <h4 className="text-sm font-semibold text-slate-700 mb-2">Direct Assign Contractor</h4>
+                    <h4 className="text-sm font-semibold text-slate-700 mb-2">{t("manager:rfpsId.text.directAssignContractor")}</h4>
                     <p className="text-xs text-slate-400 mb-2">
                       This will close the RFP, reject all submitted quotes, and assign the selected
                       contractor to the linked maintenance request.
                     </p>
                     <div className="flex flex-wrap items-end gap-3">
                       <div className="flex-1 min-w-[200px]">
-                        <label className="block text-xs text-slate-500 mb-1">Select contractor</label>
+                        <label className="block text-xs text-slate-500 mb-1">{t("manager:rfpsId.text.selectContractor")}</label>
                         <select
                           value={directAssignId}
                           onChange={(e) => setDirectAssignId(e.target.value)}
                           className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:border-blue-400 focus:ring-1 focus:ring-blue-300"
                         >
-                          <option value="">— choose contractor —</option>
+                          <option value="">{t("manager:rfpsId.text.chooseContractor")}</option>
                           {contractors.map((c) => (
                             <option key={c.id} value={c.id}>
                               {c.name} {c.email ? `(${c.email})` : ""}
@@ -587,7 +587,7 @@ export default function RfpDetailPage() {
               )}
             </>
           ) : (
-            <p className="text-sm text-slate-500">RFP not found.</p>
+            <p className="text-sm text-slate-500">{t("manager:rfpsId.text.rFPNotFound")}</p>
           )}
         </PageContent>
       </PageShell>

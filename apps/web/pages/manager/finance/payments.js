@@ -64,7 +64,7 @@ const PAYMENT_COLUMNS = [
     label: "Actions",
     alwaysVisible: true,
     render: () => (
-      <a href="/manager/finance/invoices" className="action-btn-brand no-underline inline-block">View Invoice</a>
+      <a href="/manager/finance/invoices" className="action-btn-brand no-underline inline-block">{t("manager:financePayments.text.viewInvoice")}</a>
     ),
   },
 ];
@@ -144,8 +144,8 @@ export default function ManagerPaymentsPage() {
         <PageContent>
           {error && (
             <Panel className="bg-red-50 border-red-200">
-              <strong className="text-red-700">Error:</strong> {error}
-              <button onClick={() => setError("")} className="action-btn-dismiss">Dismiss</button>
+              <strong className="text-red-700">{t("manager:financePayments.text.error")}</strong> {error}
+              <button onClick={() => setError("")} className="action-btn-dismiss">{t("manager:financePayments.text.dismiss")}</button>
             </Panel>
           )}
 
@@ -163,16 +163,16 @@ export default function ManagerPaymentsPage() {
             <FilterPanelBody>
               <FilterSection title={t("manager:financePayments.title.scope")} first>
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                  <SelectField label="Building" value={buildingId} onChange={(e) => setBuildingId(e.target.value)}>
-                    <option value="">All buildings</option>
+                  <SelectField label={t("manager:financePayments.prop.building")} value={buildingId} onChange={(e) => setBuildingId(e.target.value)}>
+                    <option value="">{t("manager:financePayments.text.allBuildings")}</option>
                     {buildings.map((b) => <option key={b.id} value={b.id}>{b.name || b.address}</option>)}
                   </SelectField>
                 </div>
               </FilterSection>
               <FilterSection title={t("manager:financePayments.title.dateRange")}>
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                  <DateField label="Paid after" value={paidAfter} onChange={(e) => setPaidAfter(e.target.value)} />
-                  <DateField label="Paid before" value={paidBefore} onChange={(e) => setPaidBefore(e.target.value)} />
+                  <DateField label={t("manager:financePayments.prop.paidAfter")} value={paidAfter} onChange={(e) => setPaidAfter(e.target.value)} />
+                  <DateField label={t("manager:financePayments.prop.paidBefore")} value={paidBefore} onChange={(e) => setPaidBefore(e.target.value)} />
                 </div>
               </FilterSection>
               <FilterSectionClear hasFilter={hasFilters} onClear={clearFilters} />
@@ -180,7 +180,7 @@ export default function ManagerPaymentsPage() {
           )}
 
           {loading ? (
-            <Panel><p className="m-0">Loading payments...</p></Panel>
+            <Panel><p className="m-0">{t("manager:financePayments.text.loadingPayments")}</p></Panel>
           ) : (
             <ConfigurableTable
                 tableId="manager-payments"
@@ -191,7 +191,7 @@ export default function ManagerPaymentsPage() {
                 sortDir={sortDir}
                 onSort={handleSort}
                 emptyState={
-                  <p className="px-4 py-8 text-center text-sm text-slate-400">No payments found for the selected filters.</p>
+                  <p className="px-4 py-8 text-center text-sm text-slate-400">{t("manager:financePayments.text.noPaymentsFoundForTheSelectedFilters")}</p>
                 }
                 mobileCard={(p) => (
                   <div className="table-card">

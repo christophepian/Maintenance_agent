@@ -89,6 +89,9 @@
     "heading": {
       "myUnitAmpAssets": "My Unit &amp; Assets [FR]",
       "unitAmpAssetDetails": "Unit &amp; Asset Details [FR]"
+    },
+    "text": {
+      "comingSoon": "Bientôt disponible"
     }
   },
   "inbox": {
@@ -96,27 +99,87 @@
       "inbox": "Inbox [FR]",
       "unread": "Unread [FR]",
       "dismiss": "Dismiss [FR]"
+    },
+    "text": {
+      "pleaseSignInToViewYourNotifications": "Please sign in to view your notifications.",
+      "loading": "Chargement…",
+      "noNotificationsYetYouWillBeNotifiedHereWhenYourLeaseIsReadyToSignInvoicesAreCreatedAndMore": "Aucune notification yet. You will be notified here when your lease is ready to sign, invoices are created, and more."
     }
   },
   "invoices": {
     "heading": {
       "myInvoices": "My Invoices [FR]"
+    },
+    "text": {
+      "loading": "Chargement…",
+      "totalInvoices": "Total Factures",
+      "outstanding": "En suspens",
+      "paid": "Payé",
+      "loadingInvoices": "Chargement des factures…",
+      "noInvoicesYet": "No invoices yet"
     }
   },
   "invoicesId": {
     "heading": {
       "paymentQrCode": "Payment QR Code [FR]"
+    },
+    "text": {
+      "loading": "Chargement…",
+      "loadingInvoice": "Chargement de la facture…",
+      "amount": "Montant",
+      "currency": "Devise",
+      "issueDate": "Date d'émission",
+      "dueDate": "Date d'échéance",
+      "paid": "Payé",
+      "property": "Property",
+      "payableTo": "Payable to",
+      "reference": "Reference",
+      "referenceType": "Reference type"
     }
   },
   "leasesId": {
     "heading": {
       "leaseAgreement": "Lease Agreement [FR]",
       "signatureStatus": "Signature Status [FR]"
+    },
+    "text": {
+      "loading": "Chargement…",
+      "loadingLeaseDetails": "Loading lease details…",
+      "leaseNotFoundOrNotAccessible": "Bail not found or not accessible.",
+      "1Parties": "§ 1 — Parties",
+      "landlord": "Propriétaire",
+      "tenant": "Locataire",
+      "2Object": "§ 2 — Object",
+      "type": "Type",
+      "rooms": "Rooms",
+      "floor": "Étage",
+      "address": "Adresse",
+      "startDate": "Date de début",
+      "term": "Term",
+      "endDate": "Date de fin",
+      "noticePeriod": "Préavis Period",
+      "netRent": "Loyer net",
+      "garageParking": "Garage / parking",
+      "otherServices": "Other services",
+      "totalMonthly": "Àtal monthly",
+      "7Deposit": "§ 7 — Dépôt de garantie",
+      "securityDeposit": "Security deposit",
+      "15OtherStipulations": "§ 15 — Other Stipulations",
+      "leaseTerminated": "📋 Lease Résilié",
+      "terminatedOn": "Résilié on:",
+      "reason": "Motif :",
+      "notice": "Préavis :"
     }
   },
   "leasesIndex": {
     "heading": {
       "myLeases": "My Leases [FR]"
+    },
+    "text": {
+      "loadingSession": "Loading session…",
+      "loadingLeases": "Chargement des baux…",
+      "noLeasesFound": "Aucun bail trouvé",
+      "mo": "/mo"
     }
   },
   "requests": {
@@ -136,6 +199,34 @@
       "captureWithPhone": "Capture with phone [FR]",
       "attachPhotosOrDocuments": "Attach photos or documents [FR]",
       "capturePhotosWithPhoneViaQrCode": "Capture photos with phone via QR code [FR]"
+    },
+    "text": {
+      "checkingAppointments": "Checking appointments…",
+      "declined": "Declined",
+      "captureWithPhone": "📷 Capture with Téléphone",
+      "creatingCaptureSession": "Création de la session de capture…",
+      "close": "Fermer",
+      "photosReceived": "Photos reçues !",
+      "yourPhotosHaveBeenAttachedToTheRequest": "Your photos have been attached to the request.",
+      "done": "Terminé",
+      "mobileLink": "Lien mobile",
+      "cancel": "Annuler",
+      "loadingPhotos": "Loading photos…",
+      "noPhotosYet": "Aucune photo pour l'instant",
+      "jobCompleted": "✅ Job Terminé",
+      "thankYouYourRatingHasBeenSubmitted": "Thank you — your rating has been submitted.",
+      "legalAnalysis": "⚖️ Analyse juridique",
+      "analysingYourClaim": "Analysing your claim…",
+      "nextSteps": "Suivant steps:",
+      "legalBasis": "Legal basis",
+      "escalation": "Escalation",
+      "category": "Catégorie",
+      "contactPhone": "Contact phone",
+      "photosAttachments": "Photos / Pièces jointes",
+      "upTo5FilesMax10MbEachImagesOrPdf": "Up to 5 files, max 10 MB each. Images or PDF.",
+      "pleaseSignInToViewYourRequests": "Please sign in to view your requests.",
+      "loading": "Chargement…",
+      "noMaintenanceRequestsYet": "No maintenance requests yet."
     }
   }
 }

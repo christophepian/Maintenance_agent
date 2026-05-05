@@ -388,7 +388,7 @@ export default function ManagerDashboard() {
                   label={t("manager:dashboard.kpi.spendMtd")}
                   value={formatChf(spendThisMonth)}
                 />
-                <InfoStat label="Portfolio" value={portfolioLoading ? "…" : "—"} />
+                <InfoStat label={t("manager:index.prop.portfolio")} value={portfolioLoading ? "…" : "—"} />
               </>
             )}
           </div>

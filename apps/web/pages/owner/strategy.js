@@ -434,7 +434,7 @@ export default function StrategyPage() {
     return (
       <AppShell role="OWNER">
         <PageShell>
-          <PageHeader title={t("owner:strategy.title.setUpYourProperties")} subtitle="Add the buildings you own or manage" />
+          <PageHeader title={t("owner:strategy.title.setUpYourProperties")} subtitle={t("owner:strategy.prop.addTheBuildingsYouOwnOrManage")} />
           <PageContent>
             <ErrorBanner error={error} />
 

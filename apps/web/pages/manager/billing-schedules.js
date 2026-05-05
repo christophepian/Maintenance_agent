@@ -108,12 +108,12 @@ export default function BillingSchedulesPage() {
       <PageShell>
         <PageHeader
           title={t("manager:billingSchedules.title.billingSchedules")}
-          subtitle="Recurring invoices generated automatically for active leases."
+          subtitle={t("manager:billing_Schedules.prop.recurringInvoicesGeneratedAutomaticallyForActiveLeases")}
         />
         <PageContent>
           {error && (
             <div className="notice notice-err mt-3">
-              <strong className="text-red-700">Error:</strong> {error}
+              <strong className="text-red-700">{t("manager:billing_Schedules.text.error")}</strong> {error}
             </div>
           )}
 
@@ -160,7 +160,7 @@ export default function BillingSchedulesPage() {
           </div>
 
           {loading ? (
-            <p className="loading-text p-4">Loading schedules…</p>
+            <p className="loading-text p-4">{t("manager:billing_Schedules.text.loadingSchedules")}</p>
           ) : (
             <ConfigurableTable
                 tableId="manager-billing-schedules"

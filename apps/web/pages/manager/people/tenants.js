@@ -159,7 +159,7 @@ export default function PeopleTenantsPage() {
             </button>
           </div>
 
-            {loading && <p className="text-sm text-slate-500">Loading…</p>}
+            {loading && <p className="text-sm text-slate-500">{t("manager:peopleTenants.text.loading")}</p>}
             {error && <p className="text-sm text-red-600">{error}</p>}
 
             {!loading && !error && filtered.length === 0 && (
@@ -178,7 +178,7 @@ export default function PeopleTenantsPage() {
                 sortDir={sortDir}
                 onSort={handleSort}
                 onRowClick={(t) => router.push(`/manager/people/tenants/${t.id}`)}
-                emptyState={<p className="text-sm text-slate-500">No tenants found.</p>}
+                emptyState={<p className="text-sm text-slate-500">{t("manager:peopleTenants.text.noTenantsFound")}</p>}
                 mobileCard={(t) => (
                   <div className="table-card cursor-pointer" onClick={() => router.push(`/manager/people/tenants/${t.id}`)}>
                     <p className="table-card-head">{t.name || "—"}</p>

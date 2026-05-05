@@ -72,7 +72,7 @@ const CRFP_COLUMNS = [
     render: (rfp) => (
       <>
         <Badge variant={rfpVariant(rfp.status)} size="sm">{rfp.status}</Badge>
-        {rfp.isInvited && <Badge variant="brand" size="sm" className="ml-1">Invited</Badge>}
+        {rfp.isInvited && <Badge variant="brand" size="sm" className="ml-1">{t("contractor:rfps.text.invited")}</Badge>}
       </>
     ),
   },
@@ -114,7 +114,7 @@ const CRFP_COLUMNS = [
     label: "",
     alwaysVisible: true,
     render: (rfp) => (
-      <Link href={`/contractor/rfps/${rfp.id}`} className="cell-link text-xs font-medium" onClick={(e) => e.stopPropagation()}>View</Link>
+      <Link href={`/contractor/rfps/${rfp.id}`} className="cell-link text-xs font-medium" onClick={(e) => e.stopPropagation()}>{t("contractor:rfps.text.view")}</Link>
     ),
   },
 ];
@@ -192,7 +192,7 @@ export default function ContractorRfpsPage() {
         </div>
 
         {loading ? (
-          <p className="text-slate-600">Loading RFPs...</p>
+          <p className="text-slate-600">{t("contractor:rfps.text.loadingRfps")}</p>
         ) : (
           <ConfigurableTable
             tableId="contractor-rfps"
@@ -206,7 +206,7 @@ export default function ContractorRfpsPage() {
             emptyState={
               <div className="bg-slate-50 border border-slate-200 rounded p-8 text-center">
                 <p className="text-slate-600">No RFPs available{activeTab !== "ALL" ? ` with status ${activeTab}` : ""}.</p>
-                <p className="text-slate-400 text-sm mt-2">RFPs matching your service categories will appear here.</p>
+                <p className="text-slate-400 text-sm mt-2">{t("contractor:rfps.text.rFPsMatchingYourServiceCategoriesWillAppearHere")}</p>
               </div>
             }
             mobileCard={(rfp) => (
@@ -215,7 +215,7 @@ export default function ContractorRfpsPage() {
                   <span className="font-medium text-slate-900 text-sm">#{rfp.request?.requestNumber}</span>
                   <div className="flex gap-1">
                     <Badge variant={rfpVariant(rfp.status)} size="sm">{rfp.status}</Badge>
-                    {rfp.isInvited && <Badge variant="brand" size="sm">Invited</Badge>}
+                    {rfp.isInvited && <Badge variant="brand" size="sm">{t("contractor:rfps.text.invited")}</Badge>}
                   </div>
                 </div>
                 <p className="table-card-sub">{rfp.request?.description ? rfp.request.description.slice(0, 80) : "—"}</p>

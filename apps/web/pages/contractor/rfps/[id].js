@@ -283,6 +283,7 @@ function QuoteForm({ rfpId, onSubmitted }) {
 /* ── Slot Proposal Form ────────────────────────────────────────── */
 
 function SlotProposalForm({ jobId, onProposed }) {
+  const { t } = useTranslation("contractor");
   const [slots, setSlots] = useState([{ date: "", startTime: "", endTime: "" }]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -358,7 +359,7 @@ function SlotProposalForm({ jobId, onProposed }) {
       {slots.map((slot, idx) => (
         <div key={idx} className="flex items-end gap-2 flex-wrap">
           <div>
-            <label className="block text-xs font-medium text-slate-500 mb-1">Date</label>
+            <label className="block text-xs font-medium text-slate-500 mb-1">{t("contractor:rfpsId.text.date")}</label>
             <input
               type="date"
               value={slot.date}
@@ -368,7 +369,7 @@ function SlotProposalForm({ jobId, onProposed }) {
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-500 mb-1">From</label>
+            <label className="block text-xs font-medium text-slate-500 mb-1">{t("contractor:rfpsId.text.from")}</label>
             <input
               type="time"
               value={slot.startTime}
@@ -378,7 +379,7 @@ function SlotProposalForm({ jobId, onProposed }) {
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-500 mb-1">To</label>
+            <label className="block text-xs font-medium text-slate-500 mb-1">{t("contractor:rfpsId.text.to")}</label>
             <input
               type="time"
               value={slot.endTime}
@@ -483,6 +484,7 @@ function ExistingSlotsPanel({ slots }) {
 /* ── Scheduling Section (Contractor) ──────────────────────────── */
 
 function SchedulingSection({ jobId }) {
+  const { t } = useTranslation("contractor");
   const [slots, setSlots] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -529,7 +531,7 @@ function SchedulingSection({ jobId }) {
       <ErrorBanner error={error} className="mb-4 text-sm" />
 
       {loading ? (
-        <p className="text-sm text-slate-400">Loading slots…</p>
+        <p className="text-sm text-slate-400">{t("contractor:rfpsId.text.loadingSlots")}</p>
       ) : (
         <>
           <ExistingSlotsPanel slots={slots} />
@@ -585,6 +587,7 @@ const QUOTE_STATUS_CONFIG = {
 };
 
 function QuoteSummary({ quote }) {
+  const { t } = useTranslation("contractor");
   const status = quote.status || "SUBMITTED";
   const cfg = QUOTE_STATUS_CONFIG[status] || QUOTE_STATUS_CONFIG.SUBMITTED;
 
@@ -601,7 +604,7 @@ function QuoteSummary({ quote }) {
       )}
       <dl className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
         <div>
-          <dt className={cn("text-sm font-medium", cfg.labelColor)}>Amount</dt>
+          <dt className={cn("text-sm font-medium", cfg.labelColor)}>{t("contractor:rfpsId.text.amount")}</dt>
           <dd className={cn("mt-1 text-sm font-semibold", cfg.valueColor)}>{formatChfCents(quote.amountCents)}</dd>
         </div>
         <div>
@@ -610,48 +613,48 @@ function QuoteSummary({ quote }) {
         </div>
         {quote.estimatedDurationDays && (
           <div>
-            <dt className={cn("text-sm font-medium", cfg.labelColor)}>Est. Duration</dt>
+            <dt className={cn("text-sm font-medium", cfg.labelColor)}>{t("contractor:rfpsId.text.estDuration")}</dt>
             <dd className={cn("mt-1 text-sm", cfg.valueColor)}>{quote.estimatedDurationDays} day{quote.estimatedDurationDays !== 1 ? "s" : ""}</dd>
           </div>
         )}
         {quote.earliestAvailability && (
           <div>
-            <dt className={cn("text-sm font-medium", cfg.labelColor)}>Earliest Available</dt>
+            <dt className={cn("text-sm font-medium", cfg.labelColor)}>{t("contractor:rfpsId.text.earliestAvailable")}</dt>
             <dd className={cn("mt-1 text-sm", cfg.valueColor)}>{formatDate(quote.earliestAvailability)}</dd>
           </div>
         )}
         {quote.validUntil && (
           <div>
-            <dt className={cn("text-sm font-medium", cfg.labelColor)}>Valid Until</dt>
+            <dt className={cn("text-sm font-medium", cfg.labelColor)}>{t("contractor:rfpsId.text.validUntil")}</dt>
             <dd className={cn("mt-1 text-sm", cfg.valueColor)}>{formatDate(quote.validUntil)}</dd>
           </div>
         )}
         <div>
-          <dt className={cn("text-sm font-medium", cfg.labelColor)}>Submitted</dt>
+          <dt className={cn("text-sm font-medium", cfg.labelColor)}>{t("contractor:rfpsId.text.submitted")}</dt>
           <dd className={cn("mt-1 text-sm", cfg.valueColor)}>{formatDate(quote.submittedAt)}</dd>
         </div>
       </dl>
       {quote.workPlan && (
         <div className="mt-3">
-          <dt className={cn("text-sm font-medium", cfg.labelColor)}>Work Plan</dt>
+          <dt className={cn("text-sm font-medium", cfg.labelColor)}>{t("contractor:rfpsId.text.workPlan")}</dt>
           <dd className={cn("mt-1 text-sm", cfg.valueColor, "whitespace-pre-line")}>{quote.workPlan}</dd>
         </div>
       )}
       {quote.assumptions && (
         <div className="mt-3">
-          <dt className={cn("text-sm font-medium", cfg.labelColor)}>Assumptions</dt>
+          <dt className={cn("text-sm font-medium", cfg.labelColor)}>{t("contractor:rfpsId.text.assumptions")}</dt>
           <dd className={cn("mt-1 text-sm", cfg.valueColor, "whitespace-pre-line")}>{quote.assumptions}</dd>
         </div>
       )}
       {quote.notes && (
         <div className="mt-3">
-          <dt className={cn("text-sm font-medium", cfg.labelColor)}>Notes</dt>
+          <dt className={cn("text-sm font-medium", cfg.labelColor)}>{t("contractor:rfpsId.text.notes")}</dt>
           <dd className={cn("mt-1 text-sm", cfg.valueColor, "whitespace-pre-line")}>{quote.notes}</dd>
         </div>
       )}
       {quote.lineItems && quote.lineItems.length > 0 && (
         <div className="mt-3">
-          <dt className={cn("text-sm font-medium", cfg.labelColor, "mb-1")}>Line Items</dt>
+          <dt className={cn("text-sm font-medium", cfg.labelColor, "mb-1")}>{t("contractor:rfpsId.text.lineItems")}</dt>
           <dd className="mt-1">
             <table className="data-table">
               <tbody>
@@ -713,7 +716,7 @@ export default function ContractorRfpDetailPage() {
         <ErrorBanner error={noContractor ? "No contractor selected. Please select a contractor first." : error} className="mb-4" />
 
         {loading ? (
-          <p className="text-sm text-slate-500">Loading…</p>
+          <p className="text-sm text-slate-500">{t("contractor:rfpsId.text.loading")}</p>
         ) : rfp ? (
           <>
             {/* RFP Metadata */}
@@ -721,7 +724,7 @@ export default function ContractorRfpDetailPage() {
               <h2 className="text-base font-semibold text-slate-900 mb-4">{t("contractor:rfpsId.heading.rFPDetails")}</h2>
               <dl className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
                 <div>
-                  <dt className="text-sm font-medium text-slate-500">Status</dt>
+                  <dt className="text-sm font-medium text-slate-500">{t("contractor:rfpsId.text.status")}</dt>
                   <dd className="mt-1">
                     <Badge variant={rfpVariant(rfp.status)}>{rfp.status}</Badge>
                     {rfp.isInvited && (
@@ -732,15 +735,15 @@ export default function ContractorRfpDetailPage() {
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-sm font-medium text-slate-500">Category</dt>
+                  <dt className="text-sm font-medium text-slate-500">{t("contractor:rfpsId.text.category")}</dt>
                   <dd className="mt-1 text-sm text-slate-900">{rfp.category || "—"}</dd>
                 </div>
                 <div>
-                  <dt className="text-sm font-medium text-slate-500">Legal Obligation</dt>
+                  <dt className="text-sm font-medium text-slate-500">{t("contractor:rfpsId.text.legalObligation")}</dt>
                   <dd className="mt-1 text-sm text-slate-900">{rfp.legalObligation || "—"}</dd>
                 </div>
                 <div>
-                  <dt className="text-sm font-medium text-slate-500">Location</dt>
+                  <dt className="text-sm font-medium text-slate-500">{t("contractor:rfpsId.text.location")}</dt>
                   <dd className="mt-1 text-sm text-slate-900">
                     {rfp.buildingName || "—"}
                     {rfp.postalCode && (
@@ -749,19 +752,19 @@ export default function ContractorRfpDetailPage() {
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-sm font-medium text-slate-500">Unit</dt>
+                  <dt className="text-sm font-medium text-slate-500">{t("contractor:rfpsId.text.unit")}</dt>
                   <dd className="mt-1 text-sm text-slate-900">{rfp.unitNumber || "—"}</dd>
                 </div>
                 <div>
-                  <dt className="text-sm font-medium text-slate-500">Quote Deadline</dt>
+                  <dt className="text-sm font-medium text-slate-500">{t("contractor:rfpsId.text.quoteDeadline")}</dt>
                   <dd className="mt-1 text-sm text-slate-900">{formatDate(rfp.deadlineAt)}</dd>
                 </div>
                 <div>
-                  <dt className="text-sm font-medium text-slate-500">Created</dt>
+                  <dt className="text-sm font-medium text-slate-500">{t("contractor:rfpsId.text.created")}</dt>
                   <dd className="mt-1 text-sm text-slate-900">{formatDate(rfp.createdAt)}</dd>
                 </div>
                 <div>
-                  <dt className="text-sm font-medium text-slate-500">Quotes Submitted</dt>
+                  <dt className="text-sm font-medium text-slate-500">{t("contractor:rfpsId.text.quotesSubmitted")}</dt>
                   <dd className="mt-1 text-sm text-slate-900">{rfp.quoteCount}</dd>
                 </div>
               </dl>
@@ -773,17 +776,17 @@ export default function ContractorRfpDetailPage() {
                 <h2 className="text-base font-semibold text-slate-900 mb-4">{t("contractor:rfpsId.heading.workDescription")}</h2>
                 <dl className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
                   <div>
-                    <dt className="text-sm font-medium text-slate-500">Request #</dt>
+                    <dt className="text-sm font-medium text-slate-500">{t("contractor:rfpsId.text.request")}</dt>
                     <dd className="mt-1 text-sm font-medium text-slate-900">
                       #{rfp.request.requestNumber}
                     </dd>
                   </div>
                   <div>
-                    <dt className="text-sm font-medium text-slate-500">Category</dt>
+                    <dt className="text-sm font-medium text-slate-500">{t("contractor:rfpsId.text.category")}</dt>
                     <dd className="mt-1 text-sm text-slate-900">{rfp.request.category || "—"}</dd>
                   </div>
                   <div>
-                    <dt className="text-sm font-medium text-slate-500">Request Date</dt>
+                    <dt className="text-sm font-medium text-slate-500">{t("contractor:rfpsId.text.requestDate")}</dt>
                     <dd className="mt-1 text-sm text-slate-900">{formatDate(rfp.request.createdAt)}</dd>
                   </div>
                   <div className="sm:col-span-2 lg:col-span-3">
@@ -794,7 +797,7 @@ export default function ContractorRfpDetailPage() {
                   </div>
                   {rfp.request.attachmentCount > 0 && (
                     <div>
-                      <dt className="text-sm font-medium text-slate-500">Photos / Attachments</dt>
+                      <dt className="text-sm font-medium text-slate-500">{t("contractor:rfpsId.text.photosAttachments")}</dt>
                       <dd className="mt-1 text-sm text-slate-900">
                         {rfp.request.attachmentCount} file{rfp.request.attachmentCount !== 1 ? "s" : ""}
                         <span className="text-xs text-slate-400 ml-1">(available after award)</span>
@@ -825,7 +828,7 @@ export default function ContractorRfpDetailPage() {
           </>
         ) : (
           <div className="bg-slate-50 border border-slate-200 rounded p-8 text-center">
-            <p className="text-slate-600">RFP not found or not accessible.</p>
+            <p className="text-slate-600">{t("contractor:rfpsId.text.rFPNotFoundOrNotAccessible")}</p>
           </div>
         )}
       </div>

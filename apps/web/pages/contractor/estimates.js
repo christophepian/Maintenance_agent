@@ -8,7 +8,7 @@ export default function ContractorEstimatesPlaceholder() {
     <AppShell role="CONTRACTOR">
       <div className="max-w-[900px]">
         <h1 className="mt-0">{t("contractor:estimates.heading.estimates")}</h1>
-        <p className="text-slate-500">Coming soon: estimate drafting and approval.</p>
+        <p className="text-slate-500">{t("contractor:estimates.text.comingSoonEstimateDraftingAndApproval")}</p>
       </div>
     </AppShell>
   );

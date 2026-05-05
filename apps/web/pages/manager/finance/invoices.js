@@ -237,7 +237,7 @@ function InvoiceOverlay({ invoiceId, onClose }) {
             />
           ) : (
             <div className="flex items-center justify-center h-full">
-              <p className="text-slate-400">Loading PDF…</p>
+              <p className="text-slate-400">{t("manager:financeInvoices.text.loadingPdf")}</p>
             </div>
           )}
         </div>
@@ -374,7 +374,7 @@ function UploadInvoiceModal({ onClose, onSuccess }) {
           <p className="text-sm text-red-600 mt-2">{uploadError}</p>
         )}
         <div className="flex justify-end gap-2 mt-4">
-          <button type="button" onClick={onClose} className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition">Cancel</button>
+          <button type="button" onClick={onClose} className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition">{t("manager:financeInvoices.text.cancel")}</button>
           <button type="submit" disabled={!file || uploading} className="button-primary text-sm disabled:opacity-50">
             {uploading ? "Scanning…" : "Upload & Scan"}
           </button>
@@ -454,20 +454,20 @@ function CaptureSessionModal({ onClose, onComplete }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={onClose}>
       <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-xl shadow-2xl w-full max-w-sm mx-4 p-6">
-        <h3 className="text-lg font-semibold text-slate-900 mt-0 mb-1">📷 Capture with Phone</h3>
+        <h3 className="text-lg font-semibold text-slate-900 mt-0 mb-1">{t("manager:financeInvoices.text.captureWithPhone")}</h3>
         {creating ? (
-          <p className="text-sm text-slate-500">Creating capture session…</p>
+          <p className="text-sm text-slate-500">{t("manager:financeInvoices.text.creatingCaptureSession")}</p>
         ) : createError ? (
           <div>
             <p className="text-sm text-red-600 mb-3">{createError}</p>
-            <button onClick={onClose} className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition">Close</button>
+            <button onClick={onClose} className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition">{t("manager:financeInvoices.text.close")}</button>
           </div>
         ) : completed ? (
           <div className="text-center py-4">
             <p className="text-2xl mb-2">✅</p>
-            <p className="text-sm font-medium text-green-700 mb-1">Photos received!</p>
-            <p className="text-xs text-slate-500 mb-4">The invoice is being processed.</p>
-            <button onClick={onClose} className="button-primary text-sm">Done</button>
+            <p className="text-sm font-medium text-green-700 mb-1">{t("manager:financeInvoices.text.photosReceived")}</p>
+            <p className="text-xs text-slate-500 mb-4">{t("manager:financeInvoices.text.theInvoiceIsBeingProcessed")}</p>
+            <button onClick={onClose} className="button-primary text-sm">{t("manager:financeInvoices.text.done")}</button>
           </div>
         ) : (
           <div>
@@ -478,14 +478,14 @@ function CaptureSessionModal({ onClose, onComplete }) {
               <QRCodeSVG value={mobileUrl} size={300} level="L" />
             </div>
             <div className="bg-slate-50 rounded-lg p-2 mb-3">
-              <p className="text-[10px] text-slate-400 uppercase tracking-wide mb-0.5">Mobile link</p>
+              <p className="text-[10px] text-slate-400 uppercase tracking-wide mb-0.5">{t("manager:financeInvoices.text.mobileLink")}</p>
               <p className="text-xs text-slate-600 break-all font-mono select-all m-0">{mobileUrl}</p>
             </div>
             <p className="text-[10px] text-slate-400 text-center mb-3">
               Session expires in 15 minutes. Waiting for photos…
             </p>
             <div className="flex justify-end">
-              <button onClick={onClose} className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition">Cancel</button>
+              <button onClick={onClose} className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition">{t("manager:financeInvoices.text.cancel")}</button>
             </div>
           </div>
         )}
@@ -795,7 +795,7 @@ export function InvoicesContent() {
       render: (inv) => {
         const isRecurring = !!(inv.billingScheduleId || inv.contractorBillingScheduleId);
         return isRecurring
-          ? <span className="inline-flex items-center rounded-full bg-indigo-50 text-indigo-700 px-2 py-0.5 text-[10px] font-semibold">Recurring</span>
+          ? <span className="inline-flex items-center rounded-full bg-indigo-50 text-indigo-700 px-2 py-0.5 text-[10px] font-semibold">{t("manager:financeInvoices.text.recurring")}</span>
           : <span className="text-slate-300 text-xs">\u2014</span>;
       },
     },
@@ -824,8 +824,8 @@ export function InvoicesContent() {
     <>
       {error && (
         <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 mb-4 flex items-center justify-between">
-          <span className="text-sm text-red-700"><strong>Error:</strong> {error}</span>
-          <button onClick={() => setError("")} className="text-xs text-red-500 hover:text-red-700 ml-4">Dismiss</button>
+          <span className="text-sm text-red-700"><strong>{t("manager:financeInvoices.text.error")}</strong> {error}</span>
+          <button onClick={() => setError("")} className="text-xs text-red-500 hover:text-red-700 ml-4">{t("manager:financeInvoices.text.dismiss")}</button>
         </div>
       )}
 
@@ -956,7 +956,7 @@ export function InvoicesContent() {
                       ? "bg-brand text-white border-brand"
                       : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
                   )}
-                >All</button>
+                >{t("manager:financeInvoices.text.all")}</button>
                 {availableCategories.map((cat) => (
                   <button
                     key={cat}
@@ -982,9 +982,9 @@ export function InvoicesContent() {
       )}
 
       {loading ? (
-        <Panel><p className="loading-text">Loading invoices…</p></Panel>
+        <Panel><p className="loading-text">{t("manager:financeInvoices.text.loadingInvoices")}</p></Panel>
       ) : filteredInvoices.length === 0 ? (
-        <div className="empty-state"><p className="empty-state-text">No invoices match this filter.</p></div>
+        <div className="empty-state"><p className="empty-state-text">{t("manager:financeInvoices.text.noInvoicesMatchThisFilter")}</p></div>
       ) : (
         <>
           {/* Mobile: clean card list (no Panel wrapper) */}

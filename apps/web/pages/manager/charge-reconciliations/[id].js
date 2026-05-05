@@ -114,7 +114,7 @@ export default function ChargeReconciliationDetailPage() {
   return (
     <AppShell>
       <PageShell>
-        <ResourceShell loading={loading} error={error} hasData={!!recon} emptyMessage="Reconciliation not found.">
+        <ResourceShell loading={loading} error={error} hasData={!!recon} emptyMessage={t("manager:charge_ReconciliationsId.prop.reconciliationNotFound")}>
         {recon && (<>
         <PageHeader
           title={`Charge Reconciliation — ${recon.fiscalYear}`}
@@ -127,18 +127,18 @@ export default function ChargeReconciliationDetailPage() {
           {/* Summary */}
           <Panel title={t("manager:chargeReconciliationsId.title.summary")}>
             <DetailGrid>
-              <DetailItem label="Tenant">
+              <DetailItem label={t("manager:charge_ReconciliationsId.prop.tenant")}>
                 <Link href={`/manager/leases/${recon.leaseId}`} className="text-blue-600 hover:underline font-medium">
                   {recon.lease?.tenantName || "—"}
                 </Link>
               </DetailItem>
-              <DetailItem label="Fiscal Year">{recon.fiscalYear}</DetailItem>
-              <DetailItem label="Status">
+              <DetailItem label={t("manager:charge_ReconciliationsId.prop.fiscalYear")}>{recon.fiscalYear}</DetailItem>
+              <DetailItem label={t("manager:charge_ReconciliationsId.prop.status")}>
                 <Badge variant={reconciliationVariant(recon.status)} size="sm">
                   {recon.status}
                 </Badge>
               </DetailItem>
-              <DetailItem label="Balance" valueClassName={cn(recon.balanceCents > 0 ? "text-red-600" : recon.balanceCents < 0 ? "text-green-600" : "")}>
+              <DetailItem label={t("manager:charge_ReconciliationsId.prop.balance")} valueClassName={cn(recon.balanceCents > 0 ? "text-red-600" : recon.balanceCents < 0 ? "text-green-600" : "")}>
                 {recon.balanceCents > 0 ? "+" : ""}{formatChfCents(recon.balanceCents)}
                 {recon.balanceCents !== 0 && (
                   <span className="text-xs text-muted-foreground block">
@@ -149,9 +149,9 @@ export default function ChargeReconciliationDetailPage() {
             </DetailGrid>
             {/* Totals */}
             <DetailGrid cols="grid-cols-3" className="mt-4 pt-4 border-t">
-              <DetailItem label="Total ACOMPTE Paid">{formatChfCents(recon.totalAcomptePaidCents)}</DetailItem>
-              <DetailItem label="Total Actual Costs">{formatChfCents(recon.totalActualCostsCents)}</DetailItem>
-              <DetailItem label="Difference">{recon.balanceCents > 0 ? "+" : ""}{formatChfCents(recon.balanceCents)}</DetailItem>
+              <DetailItem label={t("manager:charge_ReconciliationsId.prop.totalAcomptePaid")}>{formatChfCents(recon.totalAcomptePaidCents)}</DetailItem>
+              <DetailItem label={t("manager:charge_ReconciliationsId.prop.totalActualCosts")}>{formatChfCents(recon.totalActualCostsCents)}</DetailItem>
+              <DetailItem label={t("manager:charge_ReconciliationsId.prop.difference")}>{recon.balanceCents > 0 ? "+" : ""}{formatChfCents(recon.balanceCents)}</DetailItem>
             </DetailGrid>
           </Panel>
 
@@ -207,11 +207,11 @@ export default function ChargeReconciliationDetailPage() {
               <table className="data-table">
                 <thead>
                   <tr>
-                    <SortableHeader label="Expense" field="description" sortField={liSF} sortDir={liSD} onSort={handleLineSort} />
-                    <SortableHeader label="Mode" field="mode" sortField={liSF} sortDir={liSD} onSort={handleLineSort} />
-                    <SortableHeader label="ACOMPTE Paid" field="acompte" sortField={liSF} sortDir={liSD} onSort={handleLineSort} className="text-right" />
-                    <SortableHeader label="Actual Cost" field="actual" sortField={liSF} sortDir={liSD} onSort={handleLineSort} className="text-right" />
-                    <SortableHeader label="Balance" field="balance" sortField={liSF} sortDir={liSD} onSort={handleLineSort} className="text-right" />
+                    <SortableHeader label={t("manager:charge_ReconciliationsId.prop.expense")} field="description" sortField={liSF} sortDir={liSD} onSort={handleLineSort} />
+                    <SortableHeader label={t("manager:charge_ReconciliationsId.prop.mode")} field="mode" sortField={liSF} sortDir={liSD} onSort={handleLineSort} />
+                    <SortableHeader label={t("manager:charge_ReconciliationsId.prop.aCOMPTEPaid")} field="acompte" sortField={liSF} sortDir={liSD} onSort={handleLineSort} className="text-right" />
+                    <SortableHeader label={t("manager:charge_ReconciliationsId.prop.actualCost")} field="actual" sortField={liSF} sortDir={liSD} onSort={handleLineSort} className="text-right" />
+                    <SortableHeader label={t("manager:charge_ReconciliationsId.prop.balance")} field="balance" sortField={liSF} sortDir={liSD} onSort={handleLineSort} className="text-right" />
                     {isDraft && <th className="text-right">{t("manager:chargeReconciliationsId.col.action")}</th>}
                   </tr>
                 </thead>
@@ -274,21 +274,21 @@ export default function ChargeReconciliationDetailPage() {
             <Panel title={t("manager:chargeReconciliationsId.title.settlementInvoice")} className="mt-6">
               <div className="text-sm space-y-2">
                 <div className="flex gap-4">
-                  <span className="text-muted-foreground">Invoice:</span>
+                  <span className="text-muted-foreground">{t("manager:charge_ReconciliationsId.text.invoice")}</span>
                   <Link href={`/manager/finance/invoices/${recon.settlementInvoice.id}`} className="text-blue-600 hover:underline">
                     {recon.settlementInvoice.invoiceNumber || recon.settlementInvoice.id.slice(0, 8)}
                   </Link>
                 </div>
                 <div className="flex gap-4">
-                  <span className="text-muted-foreground">Status:</span>
+                  <span className="text-muted-foreground">{t("manager:charge_ReconciliationsId.text.status")}</span>
                   <span>{recon.settlementInvoice.status}</span>
                 </div>
                 <div className="flex gap-4">
-                  <span className="text-muted-foreground">Amount:</span>
+                  <span className="text-muted-foreground">{t("manager:charge_ReconciliationsId.text.amount")}</span>
                   <span className="font-medium">{formatChfCents(recon.settlementInvoice.totalAmount)}</span>
                 </div>
                 <div className="flex gap-4">
-                  <span className="text-muted-foreground">Description:</span>
+                  <span className="text-muted-foreground">{t("manager:charge_ReconciliationsId.text.description")}</span>
                   <span>{recon.settlementInvoice.description}</span>
                 </div>
               </div>

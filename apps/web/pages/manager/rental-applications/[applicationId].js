@@ -48,7 +48,7 @@ export default function ApplicationDetailPage() {
     return (
       <AppShell role="MANAGER">
         <PageShell>
-          <PageContent><p className="text-sm text-slate-500">Loading…</p></PageContent>
+          <PageContent><p className="text-sm text-slate-500">{t("manager:rental_ApplicationsApplicationid.text.loading")}</p></PageContent>
         </PageShell>
       </AppShell>
     );
@@ -60,7 +60,7 @@ export default function ApplicationDetailPage() {
         <PageShell>
           <PageContent>
             <ErrorBanner error={error} className="text-sm" />
-            <p className="text-sm text-slate-500">Application not found.</p>
+            <p className="text-sm text-slate-500">{t("manager:rental_ApplicationsApplicationid.text.applicationNotFound")}</p>
           </PageContent>
         </PageShell>
       </AppShell>
@@ -100,18 +100,18 @@ export default function ApplicationDetailPage() {
                     </Badge>
                   </div>
                   <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-slate-600 sm:grid-cols-3">
-                    <Detail label="Email" value={a.email} />
-                    <Detail label="Phone" value={a.phone} />
-                    <Detail label="Date of birth" value={a.dateOfBirth} />
-                    <Detail label="Nationality" value={a.nationality} />
-                    <Detail label="Civil status" value={a.civilStatus?.replace(/_/g, " ")} />
-                    <Detail label="Employer" value={a.employer} />
-                    <Detail label="Job title" value={a.jobTitle} />
-                    <Detail label="Work location" value={a.workLocation} />
-                    <Detail label="Employed since" value={a.employedSince} />
-                    <Detail label="Net monthly income" value={a.netMonthlyIncome ? `CHF ${a.netMonthlyIncome}` : "—"} />
-                    <Detail label="Permit type" value={a.permitType} />
-                    <Detail label="Debt enforcement" value={a.hasDebtEnforcement ? "Yes ⚠️" : "No"} />
+                    <Detail label={t("manager:rental_ApplicationsApplicationid.prop.email")} value={a.email} />
+                    <Detail label={t("manager:rental_ApplicationsApplicationid.prop.phone")} value={a.phone} />
+                    <Detail label={t("manager:rental_ApplicationsApplicationid.prop.dateOfBirth")} value={a.dateOfBirth} />
+                    <Detail label={t("manager:rental_ApplicationsApplicationid.prop.nationality")} value={a.nationality} />
+                    <Detail label={t("manager:rental_ApplicationsApplicationid.prop.civilStatus")} value={a.civilStatus?.replace(/_/g, " ")} />
+                    <Detail label={t("manager:rental_ApplicationsApplicationid.prop.employer")} value={a.employer} />
+                    <Detail label={t("manager:rental_ApplicationsApplicationid.prop.jobTitle")} value={a.jobTitle} />
+                    <Detail label={t("manager:rental_ApplicationsApplicationid.prop.workLocation")} value={a.workLocation} />
+                    <Detail label={t("manager:rental_ApplicationsApplicationid.prop.employedSince")} value={a.employedSince} />
+                    <Detail label={t("manager:rental_ApplicationsApplicationid.prop.netMonthlyIncome")} value={a.netMonthlyIncome ? `CHF ${a.netMonthlyIncome}` : "—"} />
+                    <Detail label={t("manager:rental_ApplicationsApplicationid.prop.permitType")} value={a.permitType} />
+                    <Detail label={t("manager:rental_ApplicationsApplicationid.prop.debtEnforcement")} value={a.hasDebtEnforcement ? "Yes ⚠️" : "No"} />
                   </div>
                 </div>
               ))}
@@ -121,17 +121,17 @@ export default function ApplicationDetailPage() {
           {/* Household Info */}
           <Panel title={t("manager:rentalApplicationsApplicationid.title.householdCurrentHousing")}>
             <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-slate-600 sm:grid-cols-3">
-              <Detail label="Current landlord" value={app.currentLandlordName} />
-              <Detail label="Landlord address" value={app.currentLandlordAddress} />
-              <Detail label="Landlord phone" value={app.currentLandlordPhone} />
-              <Detail label="Reason for leaving" value={app.reasonForLeaving} />
-              <Detail label="Desired move-in" value={app.desiredMoveInDate} />
-              <Detail label="Household size" value={app.householdSize} />
-              <Detail label="Pets" value={app.hasPets ? (app.petsDescription || "Yes") : "No"} />
-              <Detail label="RC insurance" value={app.hasRcInsurance ? (app.rcInsuranceCompany || "Yes") : "No"} />
-              <Detail label="Vehicle" value={app.hasVehicle ? (app.vehicleDescription || "Yes") : "No"} />
-              <Detail label="Needs parking" value={app.needsParking ? "Yes" : "No"} />
-              {app.remarks && <div className="col-span-full mt-2"><Detail label="Remarks" value={app.remarks} /></div>}
+              <Detail label={t("manager:rental_ApplicationsApplicationid.prop.currentLandlord")} value={app.currentLandlordName} />
+              <Detail label={t("manager:rental_ApplicationsApplicationid.prop.landlordAddress")} value={app.currentLandlordAddress} />
+              <Detail label={t("manager:rental_ApplicationsApplicationid.prop.landlordPhone")} value={app.currentLandlordPhone} />
+              <Detail label={t("manager:rental_ApplicationsApplicationid.prop.reasonForLeaving")} value={app.reasonForLeaving} />
+              <Detail label={t("manager:rental_ApplicationsApplicationid.prop.desiredMovein")} value={app.desiredMoveInDate} />
+              <Detail label={t("manager:rental_ApplicationsApplicationid.prop.householdSize")} value={app.householdSize} />
+              <Detail label={t("manager:rental_ApplicationsApplicationid.prop.pets")} value={app.hasPets ? (app.petsDescription || "Yes") : "No"} />
+              <Detail label={t("manager:rental_ApplicationsApplicationid.prop.rCInsurance")} value={app.hasRcInsurance ? (app.rcInsuranceCompany || "Yes") : "No"} />
+              <Detail label={t("manager:rental_ApplicationsApplicationid.prop.vehicle")} value={app.hasVehicle ? (app.vehicleDescription || "Yes") : "No"} />
+              <Detail label={t("manager:rental_ApplicationsApplicationid.prop.needsParking")} value={app.needsParking ? "Yes" : "No"} />
+              {app.remarks && <div className="col-span-full mt-2"><Detail label={t("manager:rental_ApplicationsApplicationid.prop.remarks")} value={app.remarks} /></div>}
             </div>
           </Panel>
 
@@ -166,13 +166,13 @@ export default function ApplicationDetailPage() {
                       </div>
                     </div>
                     <div className="mt-2 grid grid-cols-3 gap-2 text-xs text-slate-600">
-                      <Detail label="Confidence" value={`${au.confidenceScore ?? 0}%`} />
-                      <Detail label="Status" value={(au.status || "").replace(/_/g, " ")} />
-                      <Detail label="Manager delta" value={au.managerScoreDelta || 0} />
+                      <Detail label={t("manager:rental_ApplicationsApplicationid.prop.confidence")} value={`${au.confidenceScore ?? 0}%`} />
+                      <Detail label={t("manager:rental_ApplicationsApplicationid.prop.status")} value={(au.status || "").replace(/_/g, " ")} />
+                      <Detail label={t("manager:rental_ApplicationsApplicationid.prop.managerDelta")} value={au.managerScoreDelta || 0} />
                     </div>
                     {au.disqualifiedReasons?.length > 0 && (
                       <div className="mt-2">
-                        <span className="text-xs font-medium text-red-700">Reasons: </span>
+                        <span className="text-xs font-medium text-red-700">{t("manager:rental_ApplicationsApplicationid.text.reasons")} </span>
                         <span className="text-xs text-red-600">{au.disqualifiedReasons.join(", ")}</span>
                       </div>
                     )}

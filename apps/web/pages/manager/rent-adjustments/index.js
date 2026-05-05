@@ -171,7 +171,7 @@ export default function RentAdjustmentsList() {
       <PageShell>
         <PageHeader
           title={t("manager:rentAdjustmentsIndex.title.rentAdjustments")}
-          subtitle="CPI-indexed and manual rent adjustments"
+          subtitle={t("manager:rent_AdjustmentsIndex.prop.cPIindexedAndManualRentAdjustments")}
         />
         <PageContent>
           <ScrollableTabs activeIndex={activeTab}>
@@ -187,7 +187,7 @@ export default function RentAdjustmentsList() {
           </ScrollableTabs>
 
           {loading ? (
-            <p className="loading-text p-4">Loading…</p>
+            <p className="loading-text p-4">{t("manager:rent_AdjustmentsIndex.text.loading")}</p>
           ) : (
             <ConfigurableTable
                 tableId="manager-rent-adjustments"

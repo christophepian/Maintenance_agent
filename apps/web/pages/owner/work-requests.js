@@ -194,7 +194,7 @@ export default function OwnerWorkRequestsPage() {
         <OwnerPicker onSelect={() => router.replace(router.asPath)} />
         <PageHeader
           title={t("owner:workRequests.title.workRequests")}
-          subtitle="All maintenance requests across your properties"
+          subtitle={t("owner:work_Requests.prop.allMaintenanceRequestsAcrossYourProperties")}
         />
         <PageContent>
           {/* ── Tab strip (F-UI1) ── */}
@@ -235,7 +235,7 @@ export default function OwnerWorkRequestsPage() {
 
           {/* ── Loading ── */}
           {loading && (
-            <p className="text-sm text-slate-500">Loading requests…</p>
+            <p className="text-sm text-slate-500">{t("owner:work_Requests.text.loadingRequests")}</p>
           )}
 
           {/* ── Empty ── */}

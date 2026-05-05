@@ -209,5 +209,12 @@
     "compact": "Compact",
     "reset": "Réinitialiser",
     "dragToReorder": "Glisser pour réordonner"
+  },
+  "filterPanel": {
+    "filters": "Filtres",
+    "sort": "Trier",
+    "sortBy": "Trier par",
+    "resetFilters": "Réinitialiser les filtres",
+    "noOptions": "Aucune option disponible"
   }
 }
