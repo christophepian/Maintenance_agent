@@ -2,40 +2,50 @@ import { useRouter } from 'next/router';
 import { cn } from '../lib/utils';
 
 /**
- * Locale switcher dropdown.
- * Extend LOCALE_LABELS when DE / IT are added to next-i18next.config.js —
- * no other change needed.
+ * Compact locale toggle — globe icon + current locale code.
+ * Cycles through LOCALES on each click.
+ * Add entries to LOCALES when DE / IT are added to next-i18next.config.js.
  */
-const LOCALE_LABELS = {
-  en: 'English',
-  fr: 'Français',
-  // de: 'Deutsch',
-  // it: 'Italiano',
-};
+const LOCALES = ['en', 'fr'];
+// const LOCALES = ['en', 'fr', 'de', 'it'];
 
 export default function LocaleSwitcher() {
   const router = useRouter();
+  const current = router.locale || 'en';
 
-  function handleChange(e) {
-    router.push(router.asPath, undefined, { locale: e.target.value });
+  function handleClick() {
+    const next = LOCALES[(LOCALES.indexOf(current) + 1) % LOCALES.length];
+    router.push(router.asPath, undefined, { locale: next });
   }
 
   return (
-    <select
-      value={router.locale || 'en'}
-      onChange={handleChange}
-      aria-label="Select language"
+    <button
+      onClick={handleClick}
+      aria-label={`Switch language, current: ${current.toUpperCase()}`}
       className={cn(
-        'text-sm bg-transparent border border-slate-300 rounded px-2 py-1',
-        'cursor-pointer focus-visible:ring focus-visible:ring-blue-500',
-        'text-slate-700 hover:border-slate-400 transition-colors'
+        'flex items-center gap-1 rounded-full px-2 py-1',
+        'text-xs font-semibold text-slate-500 hover:text-slate-800',
+        'hover:bg-slate-100 transition-colors focus-visible:ring focus-visible:ring-blue-500'
       )}
     >
-      {Object.entries(LOCALE_LABELS).map(([code, label]) => (
-        <option key={code} value={code}>
-          {label}
-        </option>
-      ))}
-    </select>
+      {/* Globe icon */}
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={1.75}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className="h-4 w-4"
+        aria-hidden="true"
+      >
+        <circle cx="12" cy="12" r="10" />
+        <path d="M12 2a14.5 14.5 0 0 0 0 20A14.5 14.5 0 0 0 12 2z" />
+        <path d="M2 12h20" />
+      </svg>
+      <span>{current.toUpperCase()}</span>
+    </button>
   );
 }
+
