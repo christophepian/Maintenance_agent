@@ -254,7 +254,7 @@ export default function ChatWidget() {
                     Tell me about an issue in your home or ask about the status of a request.
                   </p>
                   <div className="flex flex-wrap justify-center gap-2 mt-1">
-                    {["My faucet is leaking", "Check my request status", "What can you help with?"].map((s) => (
+                    {["My faucet is leaking", "Show my lease details", "Show my invoices"].map((s) => (
                       <button
                         key={s}
                         onClick={() => { setInput(s); inputRef.current?.focus(); }}

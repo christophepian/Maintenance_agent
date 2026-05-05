@@ -21,6 +21,10 @@ import {
 import { buildSystemPrompt } from "./conversationPrompts";
 import {
   findTenantUnitId,
+  findTenantUnitIds,
+  findLeasesByUnitIds,
+  findJobInvoicesByTenant,
+  findInvoicesByLeaseIds,
   findTenantRequests,
 } from "../repositories/tenantPortalRepository";
 import { createRequestWorkflow } from "../workflows/createRequestWorkflow";
@@ -33,6 +37,8 @@ export type { ConversationChannel };
 export type ConversationIntent =
   | "reportIssue"
   | "checkStatus"
+  | "checkLease"
+  | "checkInvoices"
   | "generalAnswer"
   | "unknown";
 
@@ -114,6 +120,36 @@ const CONVERSATION_TOOLS: Anthropic.Tool[] = [
       required: ["replyToTenant"],
     },
   },
+  {
+    name: "checkLease",
+    description:
+      "Look up the tenant's current lease details: start and end date, monthly rent and charges, and lease status. Use when the tenant asks about their rental contract, lease terms, rent amount, or move-out date.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        replyToTenant: {
+          type: "string",
+          description: "Introductory message before the lease details are shown.",
+        },
+      },
+      required: ["replyToTenant"],
+    },
+  },
+  {
+    name: "checkInvoices",
+    description:
+      "Look up the tenant's recent invoices: rent invoices, maintenance job invoices, and their payment status. Use when the tenant asks about bills, payments, outstanding amounts, or invoice history.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        replyToTenant: {
+          type: "string",
+          description: "Introductory message before the invoice list is shown.",
+        },
+      },
+      required: ["replyToTenant"],
+    },
+  },
 ];
 
 // ─── Service ───────────────────────────────────────────────────────────────────
@@ -172,6 +208,12 @@ export async function handleTurn(
       actionTaken = true;
     } else if (intent === "checkStatus") {
       replyText = await executeCheckStatus(prisma, tenantId, toolInput);
+      actionTaken = true;
+    } else if (intent === "checkLease") {
+      replyText = await executeCheckLease(prisma, { tenantId, orgId }, toolInput);
+      actionTaken = true;
+    } else if (intent === "checkInvoices") {
+      replyText = await executeCheckInvoices(prisma, { tenantId, orgId }, toolInput);
       actionTaken = true;
     } else {
       // generalAnswer
@@ -234,8 +276,6 @@ async function executeCheckStatus(
       return "You don't have any open maintenance requests at the moment.";
     }
 
-    // The LLM already composed the status reply from its training data knowledge
-    // of what statuses mean. Return its reply enriched with actual data.
     const openRequests = requests.filter(
       (r) => r.status !== "COMPLETED" && r.status !== "REJECTED"
     );
@@ -244,8 +284,6 @@ async function executeCheckStatus(
       return "All your previous maintenance requests have been resolved.";
     }
 
-    // Use the LLM's reply as a base; it already has the right tone.
-    // Append a factual list of open requests.
     const lines = openRequests.slice(0, 3).map((r) => {
       const status = r.status.replace(/_/g, " ").toLowerCase();
       const desc = r.description.slice(0, 60);
@@ -260,5 +298,98 @@ async function executeCheckStatus(
   } catch (err) {
     console.error("[conversationService] findTenantRequests failed:", err);
     return toolInput.replyToTenant ?? "I couldn't retrieve your request status right now. Please try again shortly.";
+  }
+}
+
+async function executeCheckLease(
+  prisma: PrismaClient,
+  ctx: { tenantId: string; orgId: string },
+  toolInput: Record<string, string>
+): Promise<string> {
+  try {
+    const unitIds = await findTenantUnitIds(prisma, ctx.tenantId);
+    if (unitIds.length === 0) {
+      return "I couldn't find an active occupancy linked to your account. Please contact your property manager.";
+    }
+
+    const leases = await findLeasesByUnitIds(prisma, ctx.orgId, unitIds);
+    const active = leases.find((l) => l.status === "ACTIVE") ?? leases[0];
+
+    if (!active) {
+      return "No lease was found linked to your account. Please contact your property manager.";
+    }
+
+    const fmt = (iso: string | null | undefined) =>
+      iso ? new Date(iso).toLocaleDateString("en-CH", { day: "numeric", month: "long", year: "numeric" }) : "—";
+
+    const rentChf = active.netRentChf != null ? `CHF ${Number(active.netRentChf).toLocaleString("de-CH")}` : "—";
+    const chargesChf = active.chargesTotalChf != null ? `CHF ${Number(active.chargesTotalChf).toLocaleString("de-CH")}` : "—";
+    const totalChf =
+      active.netRentChf != null && active.chargesTotalChf != null
+        ? `CHF ${(Number(active.netRentChf) + Number(active.chargesTotalChf)).toLocaleString("de-CH")}`
+        : rentChf;
+
+    const header = toolInput.replyToTenant ? `${toolInput.replyToTenant}\n\n` : "Here are your lease details:\n\n";
+    const lines = [
+      `Status: ${active.status}`,
+      `Start date: ${fmt(active.startDate?.toString())}`,
+      `End date: ${active.endDate ? fmt(active.endDate.toString()) : "Open-ended"}`,
+      `Net rent: ${rentChf}/month`,
+      `Charges: ${chargesChf}/month`,
+      `Total: ${totalChf}/month`,
+    ];
+
+    return `${header}${lines.join("\n")}`;
+  } catch (err) {
+    console.error("[conversationService] executeCheckLease failed:", err);
+    return toolInput.replyToTenant ?? "I couldn't retrieve your lease details right now. Please try again shortly.";
+  }
+}
+
+async function executeCheckInvoices(
+  prisma: PrismaClient,
+  ctx: { tenantId: string; orgId: string },
+  toolInput: Record<string, string>
+): Promise<string> {
+  try {
+    // Fetch both job-based invoices (maintenance work) and lease-based invoices (rent)
+    const [jobInvoices, leaseInvoices] = await Promise.all([
+      findJobInvoicesByTenant(prisma, ctx.orgId, ctx.tenantId),
+      (async () => {
+        const unitIds = await findTenantUnitIds(prisma, ctx.tenantId);
+        if (unitIds.length === 0) return [];
+        const leases = await findLeasesByUnitIds(prisma, ctx.orgId, unitIds);
+        if (leases.length === 0) return [];
+        return findInvoicesByLeaseIds(prisma, ctx.orgId, leases.map((l) => l.id));
+      })(),
+    ]);
+
+    // Merge and sort by most recent, deduplicate by id
+    const seen = new Set<string>();
+    const all = [...jobInvoices, ...leaseInvoices]
+      .filter((inv) => { if (seen.has(inv.id)) return false; seen.add(inv.id); return true; })
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, 5);
+
+    if (all.length === 0) {
+      return "You have no invoices on file yet.";
+    }
+
+    const fmt = (iso: Date | string) =>
+      new Date(iso).toLocaleDateString("en-CH", { day: "numeric", month: "short", year: "numeric" });
+
+    const lines = all.map((inv) => {
+      const amount = inv.totalAmount != null
+        ? `CHF ${(inv.totalAmount / 100).toLocaleString("de-CH", { minimumFractionDigits: 2 })}`
+        : "—";
+      const label = inv.invoiceNumber ?? inv.id.slice(0, 8).toUpperCase();
+      return `• #${label} — ${amount} — ${inv.status} (${fmt(inv.createdAt)})`;
+    });
+
+    const header = toolInput.replyToTenant ? `${toolInput.replyToTenant}\n\n` : "Here are your recent invoices:\n\n";
+    return `${header}${lines.join("\n")}`;
+  } catch (err) {
+    console.error("[conversationService] executeCheckInvoices failed:", err);
+    return toolInput.replyToTenant ?? "I couldn't retrieve your invoices right now. Please try again shortly.";
   }
 }
