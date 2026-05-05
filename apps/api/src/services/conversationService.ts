@@ -181,12 +181,15 @@ export async function handleTurn(
   claudeMessages.push({ role: "user", content: messageText });
 
   // 4. Call Claude API with tool use
+  // tool_choice "any" forces Claude to always select one of the defined tools,
+  // preventing plain-text refusals. generalAnswer handles open-ended replies.
   const client = getAnthropicClient();
   const response = await client.messages.create({
     model: "claude-haiku-4-5-20251001",
     max_tokens: 1024,
     system: buildSystemPrompt(orgId, tenantId),
     tools: CONVERSATION_TOOLS,
+    tool_choice: { type: "any" },
     messages: claudeMessages,
   });
 

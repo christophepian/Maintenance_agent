@@ -8,6 +8,7 @@ import Panel from "../../../../components/layout/Panel";
 import { authHeaders } from "../../../../lib/api";
 import { formatChf } from "../../../../lib/format";
 import { withTranslations } from "../../../../lib/i18n";
+import { useTranslation } from "next-i18next";
 
 /* ─── Helpers ─────────────────────────────────────────────── */
 
@@ -29,6 +30,7 @@ function toDatetimeIso(dateStr) {
 /* ─── Main Page ───────────────────────────────────────────── */
 
 export default function NewInvoicePage() {
+  const { t } = useTranslation("manager");
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -153,7 +155,7 @@ export default function NewInvoicePage() {
     <AppShell role="MANAGER">
       <PageShell>
         <PageHeader
-          title="New Invoice"
+          title={t("manager:financeInvoicesNew.title.newInvoice")}
           breadcrumbs={[
             { label: "Finance", href: "/manager/finance" },
             { label: "Invoices", href: "/manager/finance/invoices" },
@@ -169,7 +171,7 @@ export default function NewInvoicePage() {
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Recipient */}
-            <Panel title="Recipient">
+            <Panel title={t("manager:financeInvoicesNew.title.recipient")}>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="sm:col-span-2">
                   <label className="block text-sm font-medium text-slate-700 mb-1">Recipient Name *</label>
@@ -233,7 +235,7 @@ export default function NewInvoicePage() {
             </Panel>
 
             {/* Invoice details */}
-            <Panel title="Invoice Details">
+            <Panel title={t("manager:financeInvoicesNew.title.invoiceDetails")}>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Issue Date</label>
@@ -278,7 +280,7 @@ export default function NewInvoicePage() {
             </Panel>
 
             {/* Linking */}
-            <Panel title="Link to Record (optional)">
+            <Panel title={t("manager:financeInvoicesNew.title.linkToRecordOptional")}>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Job</label>
@@ -314,7 +316,7 @@ export default function NewInvoicePage() {
             </Panel>
 
             {/* Line items */}
-            <Panel title="Line Items">
+            <Panel title={t("manager:financeInvoicesNew.title.lineItems")}>
               <div className="space-y-3">
                 {lineItems.map((li, idx) => (
                   <div key={idx} className="grid grid-cols-12 gap-2 items-end">
@@ -322,7 +324,7 @@ export default function NewInvoicePage() {
                       {idx === 0 && <label className="block text-xs font-medium text-slate-500 mb-1">Description</label>}
                       <input
                         type="text"
-                        placeholder="Item description"
+                        placeholder={t("manager:financeInvoicesNew.placeholder.itemDescription")}
                         value={li.description}
                         onChange={(e) => updateLineItem(idx, "description", e.target.value)}
                         className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"

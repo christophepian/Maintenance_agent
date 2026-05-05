@@ -17,6 +17,7 @@ import Button from "../../../components/ui/Button";
 import { Modal, ModalFooter } from "../../../components/ui/Modal";
 import { leaseVariant, invoiceVariant, signerVariant, reconciliationVariant, rentAdjustmentVariant, billingScheduleVariant } from "../../../lib/statusVariants";
 import { withServerTranslations } from "../../../lib/i18n";
+import { useTranslation } from "next-i18next";
 
 function Field({ label, children, span }) {
   return (
@@ -62,6 +63,7 @@ function LeaseActions({
   onEdit, onSave, onCancelEdit, onGeneratePDF, onSendForSignature,
   onResend, onActivate, onTerminate, onArchive, onInvoice, onCancel,
 }) {
+  const { t } = useTranslation("manager");
   const [open, setOpen] = useState(false);
   const [dropPos, setDropPos] = useState({ top: 0, left: 0 });
   const ref = useRef(null);
@@ -158,7 +160,7 @@ function LeaseActions({
         <button
           ref={triggerRef}
           onClick={() => setOpen(v => !v)}
-          aria-label="Lease actions menu"
+          aria-label={t("manager:leasesId.ariaLabel.leaseActionsMenu")}
           aria-expanded={open}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-white border border-slate-200 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 active:bg-slate-100"
         >
@@ -187,6 +189,7 @@ function LeaseActions({
 }
 
 export default function LeaseEditorPage() {
+  const { t } = useTranslation("manager");
   const router = useRouter();
   const { id } = router.query;
 
@@ -707,7 +710,7 @@ export default function LeaseEditorPage() {
         {success && <p className="mt-4 text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-4 py-2">{success}</p>}
 
         <PageContent>
-          <Panel title="Lease Contract" bodyClassName="space-y-3">
+          <Panel title={t("manager:leasesId.title.leaseContract")} bodyClassName="space-y-3">
           {/* §1 — Parties */}
           <AccordionSection title="§1 — Parties (Bailleur & Locataire)" open={openSections.parties} onToggle={() => toggle("parties")}>
             <div className="space-y-4">
@@ -807,7 +810,7 @@ export default function LeaseEditorPage() {
               <Field label="Bénéficiaire"><Input value={lease.paymentRecipient} onChange={v => updateField("paymentRecipient", v)} disabled={!editMode} /></Field>
               <Field label="Institut financier"><Input value={lease.paymentInstitution} onChange={v => updateField("paymentInstitution", v)} disabled={!editMode} /></Field>
               <Field label="N° de compte"><Input value={lease.paymentAccountNumber} onChange={v => updateField("paymentAccountNumber", v)} disabled={!editMode} /></Field>
-              <Field label="IBAN"><Input value={lease.paymentIban} onChange={v => updateField("paymentIban", v)} placeholder="CH..." disabled={!editMode} /></Field>
+              <Field label="IBAN"><Input value={lease.paymentIban} onChange={v => updateField("paymentIban", v)} placeholder={t("manager:leasesId.placeholder.cH")} disabled={!editMode} /></Field>
               <Field label="Taux de référence"><Input value={lease.referenceRatePercent} onChange={v => updateField("referenceRatePercent", v)} placeholder="1.75" disabled={!editMode} /></Field>
             </div>
           </AccordionSection>
@@ -856,7 +859,7 @@ export default function LeaseEditorPage() {
           {/* Signature Requests */}
           {sigRequests.length > 0 && (
             <div>
-              <h2 className="mb-3 text-sm font-semibold text-slate-700">Signature Requests</h2>
+              <h2 className="mb-3 text-sm font-semibold text-slate-700">{t("manager:leasesId.heading.signatureRequests")}</h2>
               <div className="overflow-x-auto rounded-lg border border-table-border">
                 <table className="data-table">
                   <thead>
@@ -864,10 +867,10 @@ export default function LeaseEditorPage() {
                       <SortableHeader label="Provider" field="provider" sortField={srSF} sortDir={srSD} onSort={handleSrSort} />
                       <SortableHeader label="Level" field="level" sortField={srSF} sortDir={srSD} onSort={handleSrSort} />
                       <SortableHeader label="Status" field="status" sortField={srSF} sortDir={srSD} onSort={handleSrSort} />
-                      <th>Signers</th>
+                      <th>{t("manager:leasesId.col.signers")}</th>
                       <SortableHeader label="Sent" field="sentAt" sortField={srSF} sortDir={srSD} onSort={handleSrSort} />
                       <SortableHeader label="Created" field="createdAt" sortField={srSF} sortDir={srSD} onSort={handleSrSort} />
-                      <th>Action</th>
+                      <th>{t("manager:leasesId.col.action")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -902,7 +905,7 @@ export default function LeaseEditorPage() {
 
           {/* PDF Artifact */}
           {(lease.draftPdfStorageKey || lease.signedPdfStorageKey) && (
-            <Panel title="PDF Artifacts">
+            <Panel title={t("manager:leasesId.title.pDFArtifacts")}>
               <div className="space-y-3">
                 {lease.draftPdfStorageKey && (
                   <div>
@@ -1052,9 +1055,9 @@ export default function LeaseEditorPage() {
                             <SortableHeader label="Year" field="year" sortField={recSF} sortDir={recSD} onSort={handleRecSort} />
                             <SortableHeader label="Status" field="status" sortField={recSF} sortDir={recSD} onSort={handleRecSort} />
                             <th className="text-right">ACOMPTE</th>
-                            <th className="text-right">Actual</th>
-                            <th className="text-right">Balance</th>
-                            <th className="text-right">Action</th>
+                            <th className="text-right">{t("manager:leasesId.col.actual")}</th>
+                            <th className="text-right">{t("manager:leasesId.col.balance")}</th>
+                            <th className="text-right">{t("manager:leasesId.col.action")}</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -1124,9 +1127,9 @@ export default function LeaseEditorPage() {
                           <SortableHeader label="Type" field="type" sortField={raSF} sortDir={raSD} onSort={handleRaSort} />
                           <SortableHeader label="Effective" field="effectiveDate" sortField={raSF} sortDir={raSD} onSort={handleRaSort} />
                           <SortableHeader label="Status" field="status" sortField={raSF} sortDir={raSD} onSort={handleRaSort} />
-                          <th className="text-right">Old</th>
-                          <th className="text-right">New</th>
-                          <th className="text-right">Change</th>
+                          <th className="text-right">{t("manager:leasesId.col.old")}</th>
+                          <th className="text-right">{t("manager:leasesId.col.new")}</th>
+                          <th className="text-right">{t("manager:leasesId.col.change")}</th>
                           <th></th>
                         </tr>
                       </thead>
@@ -1173,7 +1176,7 @@ export default function LeaseEditorPage() {
                           value={adjCpiNew}
                           onChange={(e) => setAdjCpiNew(e.target.value)}
                           className="w-28 border rounded px-2 py-1 text-sm"
-                          placeholder="e.g. 108.5"
+                          placeholder={t("manager:leasesId.placeholder.eG1085")}
                         />
                       </div>
                       <div>
@@ -1254,7 +1257,7 @@ export default function LeaseEditorPage() {
 
         {/* Ready to Sign Modal */}
         {showSignModal && (
-          <Modal title="Send for Signature" description="This will send the lease for signature and create a signature request. The lease will no longer be editable." onClose={() => setShowSignModal(false)}>
+          <Modal title={t("manager:leasesId.title.sendForSignature")} description="This will send the lease for signature and create a signature request. The lease will no longer be editable." onClose={() => setShowSignModal(false)}>
               <div className="mb-4">
                 <label className="block text-sm font-medium text-slate-700 mb-1">Signature Level</label>
                 <select value={signLevel} onChange={e => setSignLevel(e.target.value)}
@@ -1277,7 +1280,7 @@ export default function LeaseEditorPage() {
 
         {/* Terminate Lease Modal */}
         {showTerminateModal && (
-          <Modal title="Terminate Lease" description="This will terminate the active lease. Please provide a reason." onClose={() => setShowTerminateModal(false)}>
+          <Modal title={t("manager:leasesId.title.terminateLease")} description="This will terminate the active lease. Please provide a reason." onClose={() => setShowTerminateModal(false)}>
               <div className="mb-4">
                 <label className="block text-sm font-medium text-slate-700 mb-1">Reason</label>
                 <select value={terminateReason} onChange={e => setTerminateReason(e.target.value)}
@@ -1293,7 +1296,7 @@ export default function LeaseEditorPage() {
               <div className="mb-4">
                 <label className="block text-sm font-medium text-slate-700 mb-1">Notice period / notes (optional)</label>
                 <textarea value={terminateNotice} onChange={e => setTerminateNotice(e.target.value)}
-                  rows={3} placeholder="e.g. 3 months notice from 01.04.2026"
+                  rows={3} placeholder={t("manager:leasesId.placeholder.eG3MonthsNoticeFrom01042026")}
                   className="w-full border rounded-lg px-3 py-2 text-sm" />
               </div>
               <ModalFooter>
@@ -1309,7 +1312,7 @@ export default function LeaseEditorPage() {
 
         {/* Create Invoice Modal */}
         {showInvoiceModal && (
-          <Modal title="Create Lease Invoice" onClose={() => setShowInvoiceModal(false)}>
+          <Modal title={t("manager:leasesId.title.createLeaseInvoice")} onClose={() => setShowInvoiceModal(false)}>
               <div className="mb-4">
                 <label className="block text-sm font-medium text-slate-700 mb-1">Invoice Type</label>
                 <select value={invoiceType} onChange={e => setInvoiceType(e.target.value)}
@@ -1330,7 +1333,7 @@ export default function LeaseEditorPage() {
               <div className="mb-4">
                 <label className="block text-sm font-medium text-slate-700 mb-1">Description (optional)</label>
                 <input type="text" value={invoiceDesc} onChange={e => setInvoiceDesc(e.target.value)}
-                  placeholder="e.g. Deposit for lease starting 01.04.2026"
+                  placeholder={t("manager:leasesId.placeholder.eGDepositForLeaseStarting01042026")}
                   className="w-full border rounded-lg px-3 py-2 text-sm" />
               </div>
               <ModalFooter>

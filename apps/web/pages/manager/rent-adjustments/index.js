@@ -15,6 +15,7 @@ import { rentAdjustmentVariant } from "../../../lib/statusVariants";
 import { cn } from "../../../lib/utils";
 import ScrollableTabs from "../../../components/mobile/ScrollableTabs";
 import { withTranslations } from "../../../lib/i18n";
+import { useTranslation } from "next-i18next";
 
 const TYPE_LABELS = {
   CPI_INDEXATION: "CPI Indexation",
@@ -123,6 +124,7 @@ const RA_COLUMNS = [
 ];
 
 export default function RentAdjustmentsList() {
+  const { t } = useTranslation("manager");
   const router = useRouter();
   const activeTab = router.isReady
     ? Math.max(0, TAB_KEYS.indexOf(router.query.tab)) || 0
@@ -168,7 +170,7 @@ export default function RentAdjustmentsList() {
     <AppShell>
       <PageShell>
         <PageHeader
-          title="Rent Adjustments"
+          title={t("manager:rentAdjustmentsIndex.title.rentAdjustments")}
           subtitle="CPI-indexed and manual rent adjustments"
         />
         <PageContent>

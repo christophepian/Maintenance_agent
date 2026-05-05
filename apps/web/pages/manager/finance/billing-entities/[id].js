@@ -14,6 +14,7 @@ import { authHeaders } from "../../../../lib/api";
 
 import { cn } from "../../../../lib/utils";
 import { withServerTranslations } from "../../../../lib/i18n";
+import { useTranslation } from "next-i18next";
 const TYPE_LABEL = { ORG: "Organization", CONTRACTOR: "Contractor", OWNER: "Owner" };
 const TYPE_CLS = {
   ORG: "bg-blue-100 text-blue-700",
@@ -31,6 +32,7 @@ function DetailRow({ label, value, mono }) {
 }
 
 export default function BillingEntityDetailPage() {
+  const { t } = useTranslation("manager");
   const router = useRouter();
   const { id } = router.query;
   const [entity, setEntity] = useState(null);
@@ -199,7 +201,7 @@ export default function BillingEntityDetailPage() {
           {message && (
             <div className="mb-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
               {message}
-              <button onClick={() => setMessage("")} className="ml-3 opacity-60 hover:opacity-100" aria-label="Dismiss message">✕</button>
+              <button onClick={() => setMessage("")} className="ml-3 opacity-60 hover:opacity-100" aria-label={t("manager:financeBillingEntitiesId.ariaLabel.dismissMessage")}>✕</button>
             </div>
           )}
 
@@ -213,7 +215,7 @@ export default function BillingEntityDetailPage() {
             /* ─── Edit mode ─── */
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Panel>
-                <Section title="General">
+                <Section title={t("manager:financeBillingEntitiesId.title.general")}>
                   <div className="space-y-4">
                     <div>
                       <label className="block text-sm font-medium text-slate-700 mb-1">Type</label>
@@ -230,7 +232,7 @@ export default function BillingEntityDetailPage() {
               </Panel>
 
               <Panel>
-                <Section title="Address">
+                <Section title={t("manager:financeBillingEntitiesId.title.address")}>
                   <div className="space-y-4">
                     <div>
                       <label className="block text-sm font-medium text-slate-700 mb-1">Address line 1</label>
@@ -264,7 +266,7 @@ export default function BillingEntityDetailPage() {
               </Panel>
 
               <Panel>
-                <Section title="Banking">
+                <Section title={t("manager:financeBillingEntitiesId.title.banking")}>
                   <div className="space-y-4">
                     <div>
                       <label className="block text-sm font-medium text-slate-700 mb-1">IBAN</label>
@@ -292,7 +294,7 @@ export default function BillingEntityDetailPage() {
             /* ─── Read-only mode ─── */
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Panel>
-                <Section title="General">
+                <Section title={t("manager:financeBillingEntitiesId.title.general")}>
                   <DetailRow label="Type" value={
                     <Badge variant={billingEntityVariant(entity.type)} size="sm">
                       {TYPE_LABEL[entity.type] || entity.type}
@@ -306,7 +308,7 @@ export default function BillingEntityDetailPage() {
               </Panel>
 
               <Panel>
-                <Section title="Address">
+                <Section title={t("manager:financeBillingEntitiesId.title.address")}>
                   <DetailRow label="Address line 1" value={entity.addressLine1} />
                   <DetailRow label="Address line 2" value={entity.addressLine2} />
                   <DetailRow label="Postal code" value={entity.postalCode} />
@@ -316,7 +318,7 @@ export default function BillingEntityDetailPage() {
               </Panel>
 
               <Panel>
-                <Section title="Banking">
+                <Section title={t("manager:financeBillingEntitiesId.title.banking")}>
                   <DetailRow label="IBAN" value={entity.iban} mono />
                   <DetailRow label="VAT number" value={entity.vatNumber} />
                   <DetailRow label="Default VAT rate" value={entity.defaultVatRate != null ? `${entity.defaultVatRate}%` : null} />
@@ -324,7 +326,7 @@ export default function BillingEntityDetailPage() {
               </Panel>
 
               <Panel>
-                <Section title="Invoice Settings">
+                <Section title={t("manager:financeBillingEntitiesId.title.invoiceSettings")}>
                   <DetailRow label="Next invoice sequence" value={entity.nextInvoiceSequence} />
                   <DetailRow label="Entity ID" value={entity.id} mono />
                 </Section>

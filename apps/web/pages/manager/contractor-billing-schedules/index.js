@@ -15,6 +15,7 @@ import { formatChfCents, formatDate } from "../../../lib/format";
 import ScrollableTabs from "../../../components/mobile/ScrollableTabs";
 import { billingScheduleVariant } from "../../../lib/statusVariants";
 import { withTranslations } from "../../../lib/i18n";
+import { useTranslation } from "next-i18next";
 
 const FREQUENCY_LABELS = {
   MONTHLY: "Monthly",
@@ -112,6 +113,7 @@ const CBS_COLUMNS = [
 ];
 
 export default function ContractorBillingSchedulesList() {
+  const { t } = useTranslation("manager");
   const router = useRouter();
   const activeTab = router.isReady
     ? Math.max(0, TAB_KEYS.indexOf(router.query.tab)) || 0
@@ -218,7 +220,7 @@ export default function ContractorBillingSchedulesList() {
     <AppShell>
       <PageShell>
         <PageHeader
-          title="Contractor Billing"
+          title={t("manager:contractorBillingSchedulesIndex.title.contractorBilling")}
           subtitle="Recurring billing schedules for contractor services"
           action={
             <Button
@@ -234,7 +236,7 @@ export default function ContractorBillingSchedulesList() {
           {/* Create form */}
           {showCreate && (
             <Panel className="mb-4">
-              <h3 className="font-semibold text-slate-800 mb-3">Create Billing Schedule</h3>
+              <h3 className="font-semibold text-slate-800 mb-3">{t("manager:contractorBillingSchedulesIndex.heading.createBillingSchedule")}</h3>
               <form onSubmit={handleCreate} className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Contractor *</label>
@@ -259,7 +261,7 @@ export default function ContractorBillingSchedulesList() {
                     value={form.description}
                     onChange={(e) => setForm({ ...form, description: e.target.value })}
                     required
-                    placeholder="e.g. Monthly cleaning service"
+                    placeholder={t("manager:contractorBillingSchedulesIndex.placeholder.eGMonthlyCleaningService")}
                     className="w-full border rounded px-3 py-2 text-sm"
                   />
                 </div>
@@ -306,7 +308,7 @@ export default function ContractorBillingSchedulesList() {
                     value={form.amountCents}
                     onChange={(e) => setForm({ ...form, amountCents: e.target.value })}
                     required
-                    placeholder="e.g. 500.00"
+                    placeholder={t("manager:contractorBillingSchedulesIndex.placeholder.eG50000")}
                     className="w-full border rounded px-3 py-2 text-sm"
                   />
                 </div>

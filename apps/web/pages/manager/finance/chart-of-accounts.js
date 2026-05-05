@@ -12,6 +12,7 @@ import { accountTypeVariant } from "../../../lib/statusVariants";
 import { authHeaders } from "../../../lib/api";
 import ScrollableTabs from "../../../components/mobile/ScrollableTabs";
 import { withTranslations } from "../../../lib/i18n";
+import { useTranslation } from "next-i18next";
 
 /* ─── Tabs ─────────────────────────────────────────────── */
 
@@ -43,6 +44,7 @@ function AccountTypeBadge({ type }) {
 /* ─── Page ─────────────────────────────────────────────── */
 
 export default function ChartOfAccountsPage() {
+  const { t } = useTranslation("manager");
   const router = useRouter();
 
   /* Tab state — driven by URL query param for deep-linkability */
@@ -258,7 +260,7 @@ export default function ChartOfAccountsPage() {
     <AppShell role="MANAGER">
       <PageShell>
         <PageHeader
-          title="Chart of Accounts"
+          title={t("manager:financeChartOfAccounts.title.chartOfAccounts")}
           subtitle="Manage expense types, accounts, and expense-to-account mappings"
           actions={seedButton}
         />
@@ -351,7 +353,7 @@ export default function ChartOfAccountsPage() {
                         className="input"
                         value={newET.name}
                         onChange={(e) => setNewET({ ...newET, name: e.target.value })}
-                        placeholder="e.g. Elevator Maintenance"
+                        placeholder={t("manager:financeChartOfAccounts.placeholder.eGElevatorMaintenance")}
                       />
                     </div>
                     <div className="flex-1">
@@ -360,7 +362,7 @@ export default function ChartOfAccountsPage() {
                         className="input"
                         value={newET.code}
                         onChange={(e) => setNewET({ ...newET, code: e.target.value })}
-                        placeholder="e.g. LIFT-M"
+                        placeholder={t("manager:financeChartOfAccounts.placeholder.eGLiftM")}
                       />
                     </div>
                     <div className="flex-[2]">
@@ -369,7 +371,7 @@ export default function ChartOfAccountsPage() {
                         className="input"
                         value={newET.description}
                         onChange={(e) => setNewET({ ...newET, description: e.target.value })}
-                        placeholder="Optional description"
+                        placeholder={t("manager:financeChartOfAccounts.placeholder.optionalDescription")}
                       />
                     </div>
                     <button
@@ -442,7 +444,7 @@ export default function ChartOfAccountsPage() {
                         className="input"
                         value={newAcc.name}
                         onChange={(e) => setNewAcc({ ...newAcc, name: e.target.value })}
-                        placeholder="e.g. Owner Charges"
+                        placeholder={t("manager:financeChartOfAccounts.placeholder.eGOwnerCharges")}
                       />
                     </div>
                     <div className="flex-1">
@@ -451,7 +453,7 @@ export default function ChartOfAccountsPage() {
                         className="input"
                         value={newAcc.code}
                         onChange={(e) => setNewAcc({ ...newAcc, code: e.target.value })}
-                        placeholder="e.g. 5000"
+                        placeholder={t("manager:financeChartOfAccounts.placeholder.eG5000")}
                       />
                     </div>
                     <div className="flex-1">

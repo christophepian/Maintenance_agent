@@ -10,6 +10,7 @@ import { cn } from "../../lib/utils";
 import { ownerAuthHeaders } from "../../lib/api";
 import OwnerPicker from "../../components/OwnerPicker";
 import { withTranslations } from "../../lib/i18n";
+import { useTranslation } from "next-i18next";
 
 /* ─── Constants ─────────────────────────────────────────────── */
 
@@ -221,6 +222,7 @@ function RadioGroup({ options, value, onChange, name }) {
 /* ─── Main Component ────────────────────────────────────────── */
 
 export default function StrategyPage() {
+  const { t } = useTranslation("owner");
   const router = useRouter();
   const [step, setStep] = useState(0); // 0-4 = questions, 5 = display, 6 = building setup
   const [answers, setAnswers] = useState({});
@@ -343,7 +345,7 @@ export default function StrategyPage() {
       <AppShell role="OWNER">
         <PageShell>
           <OwnerPicker onSelect={() => router.replace(router.asPath)} />
-          <PageHeader title="Your Strategy" />
+          <PageHeader title={t("owner:strategy.title.yourStrategy")} />
           <PageContent>
             <Panel>
               <div className="space-y-6">
@@ -370,9 +372,7 @@ export default function StrategyPage() {
 
                 {/* What this means in practice */}
                 <div>
-                  <h3 className="text-sm font-semibold text-slate-900 mb-2">
-                    What this means in practice
-                  </h3>
+                  <h3 className="text-sm font-semibold text-slate-900 mb-2">{t("owner:strategy.heading.whatThisMeansInPractice")}</h3>
                   <ul className="space-y-2">
                     {(BULLETS[archetype] || []).map((bullet, i) => (
                       <li
@@ -434,7 +434,7 @@ export default function StrategyPage() {
     return (
       <AppShell role="OWNER">
         <PageShell>
-          <PageHeader title="Set up your properties" subtitle="Add the buildings you own or manage" />
+          <PageHeader title={t("owner:strategy.title.setUpYourProperties")} subtitle="Add the buildings you own or manage" />
           <PageContent>
             <ErrorBanner error={error} />
 
@@ -467,7 +467,7 @@ export default function StrategyPage() {
                         type="text"
                         value={entry.name}
                         onChange={(e) => updateBuildingEntry(idx, "name", e.target.value)}
-                        placeholder="e.g. Rue du Lac 12"
+                        placeholder={t("owner:strategy.placeholder.eGRueDuLac12")}
                         className="block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
                       />
                     </div>
@@ -480,7 +480,7 @@ export default function StrategyPage() {
                         type="text"
                         value={entry.address}
                         onChange={(e) => updateBuildingEntry(idx, "address", e.target.value)}
-                        placeholder="e.g. 1003 Lausanne"
+                        placeholder={t("owner:strategy.placeholder.eG1003Lausanne")}
                         className="block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
                       />
                     </div>
@@ -510,7 +510,7 @@ export default function StrategyPage() {
                       min="1"
                       value={entry.approxUnits}
                       onChange={(e) => updateBuildingEntry(idx, "approxUnits", e.target.value)}
-                      placeholder="e.g. 12"
+                      placeholder={t("owner:strategy.placeholder.eG12")}
                       className="block w-full max-w-[120px] rounded-lg border border-slate-300 px-3 py-2 text-sm"
                     />
                   </div>
@@ -621,7 +621,7 @@ export default function StrategyPage() {
       <PageShell>
         <OwnerPicker onSelect={() => router.replace(router.asPath)} />
         <PageHeader
-          title="Strategy Questionnaire"
+          title={t("owner:strategy.title.strategyQuestionnaire")}
           subtitle={`Question ${step + 1} of ${totalQuestions}`}
         />
         <PageContent>

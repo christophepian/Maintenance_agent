@@ -6,8 +6,10 @@ import PageHeader from "../../../../components/layout/PageHeader";
 import PageContent from "../../../../components/layout/PageContent";
 import BuildingFinancialsView from "../../../../components/BuildingFinancialsView";
 import { withServerTranslations } from "../../../../lib/i18n";
+import { useTranslation } from "next-i18next";
 
 export default function BuildingFinancialsPage() {
+  const { t } = useTranslation("manager");
   const router = useRouter();
   const { id } = router.query;
 
@@ -15,7 +17,7 @@ export default function BuildingFinancialsPage() {
     return (
       <AppShell role="MANAGER">
         <PageShell>
-          <PageHeader title="Building Financials" />
+          <PageHeader title={t("manager:buildings[id]Financials.title.buildingFinancials")} />
           <PageContent><p className="loading-text">Loading…</p></PageContent>
         </PageShell>
       </AppShell>
@@ -25,7 +27,7 @@ export default function BuildingFinancialsPage() {
   return (
     <AppShell role="MANAGER">
       <PageShell>
-        <PageHeader title="Building Financials" />
+        <PageHeader title={t("manager:buildings[id]Financials.title.buildingFinancials")} />
         <PageContent>
           <Link href="/manager/finance" className="text-sm text-blue-600 hover:text-blue-700 mb-4 inline-block">
             ← Back to Finance Dashboard

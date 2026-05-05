@@ -15,6 +15,7 @@ import DepreciationStandards from "../../components/DepreciationStandards";
 import SortableHeader from "../../components/SortableHeader";
 import { useLocalSort, clientSort } from "../../lib/tableUtils";
 import { withTranslations } from "../../lib/i18n";
+import { useTranslation } from "next-i18next";
 
 const SETTINGS_TABS = [
   { key: "ORG", label: "Organisation" },
@@ -28,6 +29,7 @@ const SETTINGS_TABS = [
 const TAB_KEYS = ['organisation', 'buildings', 'notifications', 'integrations', 'legal', 'depreciation'];
 
 export default function ManagerSettingsPage() {
+  const { t } = useTranslation("manager");
   const [loading, setLoading] = useState(true);
   const [savingMode, setSavingMode] = useState(false);
   const [savingLimit, setSavingLimit] = useState(false);
@@ -366,7 +368,7 @@ export default function ManagerSettingsPage() {
   return (
     <AppShell role="MANAGER">
       <PageShell>
-        <PageHeader title="Settings" subtitle="Configure governance mode and default auto-approval settings." />
+        <PageHeader title={t("manager:settings.title.settings")} subtitle="Configure governance mode and default auto-approval settings." />
         <PageContent>
           {error ? (
             <div className="notice notice-err mt-3">
@@ -551,7 +553,7 @@ export default function ManagerSettingsPage() {
                           <td>{b.canton || "—"}</td>
                           <td>
                             <button
-                              aria-label="Configure building"
+                              aria-label={t("manager:settings.ariaLabel.configureBuilding")}
                               onClick={(e) => { e.stopPropagation(); router.push(`/admin-inventory/buildings/${b.id}`); }}
                               className="inline-flex items-center justify-center rounded p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
                             >
@@ -600,7 +602,7 @@ export default function ManagerSettingsPage() {
             <div className="px-4 py-4">
               <div className="flex items-center justify-between mb-3">
                 <div>
-                  <h3 className="text-sm font-semibold text-slate-800">Legal Sources</h3>
+                  <h3 className="text-sm font-semibold text-slate-800">{t("manager:settings.heading.legalSources")}</h3>
                   <p className="text-xs text-slate-500 mt-0.5">
                     Swiss tenancy law data sources — reference rates, CPI, ASLOCA depreciation, and legislation.
                   </p>
@@ -699,7 +701,7 @@ export default function ManagerSettingsPage() {
                         <SortableHeader label="Frequency" field="frequency" sortField={lsSF} sortDir={lsSD} onSort={handleLsSort} />
                         <SortableHeader label="Status" field="status" sortField={lsSF} sortDir={lsSD} onSort={handleLsSort} />
                         <SortableHeader label="Last Synced" field="lastSynced" sortField={lsSF} sortDir={lsSD} onSort={handleLsSort} />
-                        <th>Actions</th>
+                        <th>{t("manager:settings.col.actions")}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -751,7 +753,7 @@ export default function ManagerSettingsPage() {
             {!legalLoading && legalVariables.length > 0 && (
               <>
                 <div className="px-4 py-3 border-t border-slate-100">
-                  <h3 className="text-sm font-semibold text-slate-800">Legal Variables</h3>
+                  <h3 className="text-sm font-semibold text-slate-800">{t("manager:settings.heading.legalVariables")}</h3>
                   <p className="text-xs text-slate-500 mt-0.5">{legalVariables.length} variable{legalVariables.length !== 1 ? "s" : ""} tracked</p>
                 </div>
                 <>
@@ -775,7 +777,7 @@ export default function ManagerSettingsPage() {
                         <tr>
                           <SortableHeader label="Key" field="key" sortField={lvSF} sortDir={lvSD} onSort={handleLvSort} />
                           <SortableHeader label="Description" field="description" sortField={lvSF} sortDir={lvSD} onSort={handleLvSort} />
-                          <th>Versions</th>
+                          <th>{t("manager:settings.col.versions")}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -882,6 +884,7 @@ function LegalScopeFilterBar({ sources, activeFilter, onFilter }) {
 }
 
 function LegalSourceForm({ source, saving, formError, onSubmit, onCancel }) {
+  const { t } = useTranslation("manager");
   const isEdit = !!source;
   const [name, setName] = useState(source?.name || "");
   const [url, setUrl] = useState(source?.url || "");
@@ -922,7 +925,7 @@ function LegalSourceForm({ source, saving, formError, onSubmit, onCancel }) {
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div>
           <label className={labelClass}>Name *</label>
-          <input type="text" required value={name} onChange={(e) => setName(e.target.value)} className={inputClass} placeholder="Swiss Reference Rate" />
+          <input type="text" required value={name} onChange={(e) => setName(e.target.value)} className={inputClass} placeholder={t("manager:settings.placeholder.swissReferenceRate")} />
         </div>
         <div>
           <label className={labelClass}>URL</label>
@@ -943,15 +946,15 @@ function LegalSourceForm({ source, saving, formError, onSubmit, onCancel }) {
         </div>
         <div>
           <label className={labelClass}>Fetcher type</label>
-          <input type="text" value={fetcherType} onChange={(e) => setFetcherType(e.target.value)} className={inputClass} placeholder="e.g. REFERENCE_RATE, CPI" />
+          <input type="text" value={fetcherType} onChange={(e) => setFetcherType(e.target.value)} className={inputClass} placeholder={t("manager:settings.placeholder.eGReferenceRateCpi")} />
         </div>
         <div>
           <label className={labelClass}>Parser type</label>
-          <input type="text" value={parserType} onChange={(e) => setParserType(e.target.value)} className={inputClass} placeholder="Optional" />
+          <input type="text" value={parserType} onChange={(e) => setParserType(e.target.value)} className={inputClass} placeholder={t("manager:settings.placeholder.optional")} />
         </div>
         <div>
           <label className={labelClass}>Update frequency</label>
-          <input type="text" value={updateFrequency} onChange={(e) => setUpdateFrequency(e.target.value)} className={inputClass} placeholder="e.g. daily, monthly" />
+          <input type="text" value={updateFrequency} onChange={(e) => setUpdateFrequency(e.target.value)} className={inputClass} placeholder={t("manager:settings.placeholder.eGDailyMonthly")} />
         </div>
         <div>
           <label className={labelClass}>Status</label>

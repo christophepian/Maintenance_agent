@@ -12,6 +12,7 @@ import ConfigurableTable from "../../../components/ConfigurableTable";
 import { useTableSort, clientSort } from "../../../lib/tableUtils";
 import Badge from "../../../components/ui/Badge";
 import { withTranslations } from "../../../lib/i18n";
+import { useTranslation } from "next-i18next";
 
 const EXPENSE_CATEGORIES = [
   "MAINTENANCE", "UTILITIES", "CLEANING", "INSURANCE", "TAX", "ADMIN", "CAPEX", "OTHER",
@@ -50,6 +51,7 @@ function expenseFieldExtractor(inv, field) {
 }
 
 export default function ManagerExpensesPage() {
+  const { t } = useTranslation("manager");
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -155,7 +157,7 @@ export default function ManagerExpensesPage() {
   return (
     <AppShell role="MANAGER">
       <PageShell>
-        <PageHeader title="Expenses" />
+        <PageHeader title={t("manager:financeExpenses.title.expenses")} />
         <PageContent>
           {error && (
             <Panel className="bg-red-50 border-red-200">
@@ -167,7 +169,7 @@ export default function ManagerExpensesPage() {
           <div className="flex items-center gap-2 mb-3">
             <input
               type="search"
-              placeholder="Search expenses…"
+              placeholder={t("manager:financeExpenses.placeholder.searchExpenses")}
               value={expSearch}
               onChange={(e) => setExpSearch(e.target.value)}
               className="filter-input flex-1 min-w-0 mb-0"
@@ -176,15 +178,15 @@ export default function ManagerExpensesPage() {
           </div>
           {filterOpen && (
             <FilterPanelBody>
-              <FilterSection title="Category" first>
+              <FilterSection title={t("manager:financeExpenses.title.category")} first>
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                  <SelectField label="Category" value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
+                  <SelectField label={t("manager:financeExpenses.title.category")} value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
                     <option value="">All categories</option>
                     {EXPENSE_CATEGORIES.map((cat) => <option key={cat} value={cat}>{cat}</option>)}
                   </SelectField>
                 </div>
               </FilterSection>
-              <FilterSection title="Scope">
+              <FilterSection title={t("manager:financeExpenses.title.scope")}>
                 <div className="grid grid-cols-2 gap-3">
                   <SelectField label="Building" value={buildingId} onChange={(e) => setBuildingId(e.target.value)}>
                     <option value="">All buildings</option>

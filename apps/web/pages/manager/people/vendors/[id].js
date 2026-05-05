@@ -17,8 +17,10 @@ import ScrollableTabs from "../../../../components/mobile/ScrollableTabs";
 import SortableHeader from "../../../../components/SortableHeader";
 import { useLocalSort, clientSort } from "../../../../lib/tableUtils";
 import { withServerTranslations } from "../../../../lib/i18n";
+import { useTranslation } from "next-i18next";
 
 export default function ContractorDetailPage() {
+  const { t } = useTranslation("manager");
   const router = useRouter();
   const { id } = router.query;
   const [contractor, setContractor] = useState(null);
@@ -269,7 +271,7 @@ export default function ContractorDetailPage() {
               </ScrollableTabs>
 
               {activeTab === "Personal information" && (
-                <Panel title="Personal information">
+                <Panel title={t("manager:peopleVendorsId.title.personalInformation")}>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <label className="grid gap-2">
                       <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Name</span>
@@ -279,7 +281,7 @@ export default function ContractorDetailPage() {
                           type="text"
                           value={formData.name}
                           onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
-                          placeholder="Contractor name"
+                          placeholder={t("manager:peopleVendorsId.placeholder.contractorName")}
                         />
                       ) : (
                         <div className="text-sm text-slate-700">{formData.name || "—"}</div>
@@ -293,7 +295,7 @@ export default function ContractorDetailPage() {
                           type="tel"
                           value={formData.phone}
                           onChange={(e) => setFormData((prev) => ({ ...prev, phone: e.target.value }))}
-                          placeholder="+41 XX XXX XXXX"
+                          placeholder={t("manager:peopleVendorsId.placeholder.41XxXxxXxxx")}
                         />
                       ) : (
                         <div className="text-sm text-slate-700">{formData.phone || "—"}</div>
@@ -307,7 +309,7 @@ export default function ContractorDetailPage() {
                           type="email"
                           value={formData.email}
                           onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
-                          placeholder="contractor@example.com"
+                          placeholder={t("manager:peopleVendorsId.placeholder.contractorExampleCom")}
                         />
                       ) : (
                         <div className="text-sm text-slate-700">{formData.email || "—"}</div>
@@ -321,7 +323,7 @@ export default function ContractorDetailPage() {
                           type="text"
                           value={formData.addressLine1}
                           onChange={(e) => setFormData((prev) => ({ ...prev, addressLine1: e.target.value }))}
-                          placeholder="Street and number"
+                          placeholder={t("manager:peopleVendorsId.placeholder.streetAndNumber")}
                         />
                       ) : (
                         <div className="text-sm text-slate-700">{formData.addressLine1 || "—"}</div>
@@ -335,7 +337,7 @@ export default function ContractorDetailPage() {
                           type="text"
                           value={formData.addressLine2}
                           onChange={(e) => setFormData((prev) => ({ ...prev, addressLine2: e.target.value }))}
-                          placeholder="Suite, floor, etc."
+                          placeholder={t("manager:peopleVendorsId.placeholder.suiteFloorEtc")}
                         />
                       ) : (
                         <div className="text-sm text-slate-700">{formData.addressLine2 || "—"}</div>
@@ -388,7 +390,7 @@ export default function ContractorDetailPage() {
                           type="text"
                           value={formData.iban}
                           onChange={(e) => setFormData((prev) => ({ ...prev, iban: e.target.value }))}
-                          placeholder="CH93 0076 2011 6238 5295 7"
+                          placeholder={t("manager:peopleVendorsId.placeholder.cH9300762011623852957")}
                         />
                       ) : (
                         <div className="text-sm text-slate-700">{formData.iban || "—"}</div>
@@ -402,7 +404,7 @@ export default function ContractorDetailPage() {
                           type="text"
                           value={formData.vatNumber}
                           onChange={(e) => setFormData((prev) => ({ ...prev, vatNumber: e.target.value }))}
-                          placeholder="CHE-123.456.789"
+                          placeholder={t("manager:peopleVendorsId.placeholder.cHE123456789")}
                         />
                       ) : (
                         <div className="text-sm text-slate-700">{formData.vatNumber || "—"}</div>
@@ -450,7 +452,7 @@ export default function ContractorDetailPage() {
               )}
 
               {activeTab === "Service details" && (
-                <Panel title="Service details">
+                <Panel title={t("manager:peopleVendorsId.title.serviceDetails")}>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div>
                       <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Hourly rate</div>
@@ -504,7 +506,7 @@ export default function ContractorDetailPage() {
               )}
 
               {activeTab === "Contracts" && (
-                <Panel title="Contracts">
+                <Panel title={t("manager:peopleVendorsId.title.contracts")}>
                   {jobsLoading ? (
                     <p className="text-sm text-slate-600">Loading jobs…</p>
                   ) : jobs.length === 0 ? (
@@ -554,7 +556,7 @@ export default function ContractorDetailPage() {
               )}
 
               {activeTab === "Invoices" && (
-                <Panel title="Invoices">
+                <Panel title={t("manager:peopleVendorsId.title.invoices")}>
                   {invoicesLoading ? (
                     <p className="text-sm text-slate-600">Loading invoices…</p>
                   ) : contractorInvoices.length === 0 ? (

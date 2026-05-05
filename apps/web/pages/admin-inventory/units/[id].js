@@ -19,7 +19,9 @@ import ScrollableTabs from "../../../components/mobile/ScrollableTabs";
 import SortableHeader from "../../../components/SortableHeader";
 import { useLocalSort, clientSort } from "../../../lib/tableUtils";
 import { withServerTranslations } from "../../../lib/i18n";
+import { useTranslation } from "next-i18next";
 export default function UnitDetail() {
+  const { t } = useTranslation("manager");
   const router = useRouter();
   const { id, role } = router.query;
   const isOwner = role === "owner";
@@ -487,7 +489,7 @@ export default function UnitDetail() {
     return (
       <AppShell role={isOwner ? "OWNER" : "MANAGER"}>
         <PageShell variant="embedded">
-          <PageHeader title="Unit" />
+          <PageHeader title={t("manager:unitsId.title.unit")} />
           <PageContent><p className="loading-text">Loading unit…</p></PageContent>
         </PageShell>
       </AppShell>
@@ -524,7 +526,7 @@ export default function UnitDetail() {
           </ScrollableTabs>
 
           {activeTab === "Details" && (
-          <Panel title="Unit Details" actions={editMode ? (
+          <Panel title={t("manager:unitsId.title.unitDetails")} actions={editMode ? (
               <>
                 <button type="button" className="button-primary text-sm" onClick={onSaveUnit} disabled={loading}>
                   {loading ? "Saving…" : "Save changes"}
@@ -560,11 +562,11 @@ export default function UnitDetail() {
                 <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-1.5">
                 <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Unit number</span>
-                <input className="filter-input w-full" value={editNumber} onChange={(e) => setEditNumber(e.target.value)} placeholder="e.g. Apt 3B" />
+                <input className="filter-input w-full" value={editNumber} onChange={(e) => setEditNumber(e.target.value)} placeholder={t("manager:unitsId.placeholder.eGApt3b")} />
               </div>
               <div className="grid gap-1.5">
                 <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Floor</span>
-                <input className="filter-input w-full" value={editFloor} onChange={(e) => setEditFloor(e.target.value)} placeholder="e.g. 3" />
+                <input className="filter-input w-full" value={editFloor} onChange={(e) => setEditFloor(e.target.value)} placeholder={t("manager:unitsId.placeholder.eG3")} />
               </div>
               <div className="grid gap-1.5">
                 <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Type</span>
@@ -576,11 +578,11 @@ export default function UnitDetail() {
               </div>
               <div className="grid gap-1.5">
                 <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Living area (m²)</span>
-                <input className="filter-input w-full" type="number" step="0.1" min="0" value={editLivingArea} onChange={(e) => setEditLivingArea(e.target.value)} placeholder="e.g. 75" />
+                <input className="filter-input w-full" type="number" step="0.1" min="0" value={editLivingArea} onChange={(e) => setEditLivingArea(e.target.value)} placeholder={t("manager:unitsId.placeholder.eG75")} />
               </div>
               <div className="grid gap-1.5">
                 <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Rooms</span>
-                <input className="filter-input w-full" type="number" step="0.5" min="0" value={editRooms} onChange={(e) => setEditRooms(e.target.value)} placeholder="e.g. 3.5" />
+                <input className="filter-input w-full" type="number" step="0.5" min="0" value={editRooms} onChange={(e) => setEditRooms(e.target.value)} placeholder={t("manager:unitsId.placeholder.eG35")} />
               </div>
               <div className="grid gap-1.5">
                 <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Location segment</span>
@@ -593,7 +595,7 @@ export default function UnitDetail() {
               </div>
               <div className="grid gap-1.5">
                 <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Last renovation year</span>
-                <input className="filter-input w-full" type="number" min="1900" max="2099" value={editLastRenovation} onChange={(e) => setEditLastRenovation(e.target.value)} placeholder="e.g. 2015" />
+                <input className="filter-input w-full" type="number" min="1900" max="2099" value={editLastRenovation} onChange={(e) => setEditLastRenovation(e.target.value)} placeholder={t("manager:unitsId.placeholder.eG2015")} />
               </div>
               <div className="grid gap-1.5">
                 <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Energy label</span>
@@ -720,7 +722,7 @@ export default function UnitDetail() {
           )}
 
           {activeTab === "Assets" && (
-        <Panel title="Asset Inventory & Depreciation" actions={
+        <Panel title={t("manager:unitsId.title.assetInventoryDepreciation")} actions={
             showAssetAddForm ? (
               <button type="button" className="button-cancel text-sm" onClick={() => setShowAssetAddForm(false)}>Cancel</button>
             ) : (
@@ -744,7 +746,7 @@ export default function UnitDetail() {
           )}
 
           {activeTab === "Tenants" && (
-        <Panel title="Tenants" actions={
+        <Panel title={t("manager:unitsId.title.tenants")} actions={
             tenantAction ? (
               <button type="button" className="button-cancel text-sm" onClick={() => setTenantAction(null)}>Close</button>
             ) : (
@@ -907,7 +909,7 @@ export default function UnitDetail() {
                       className="filter-input w-full"
                       value={createTenantName}
                       onChange={(e) => setCreateTenantName(e.target.value)}
-                      placeholder="e.g. Jane Doe"
+                      placeholder={t("manager:unitsId.placeholder.eGJaneDoe")}
                     />
                   </div>
                   <div className="min-w-[240px]">
@@ -916,7 +918,7 @@ export default function UnitDetail() {
                       className="filter-input w-full"
                       value={createTenantPhone}
                       onChange={(e) => setCreateTenantPhone(e.target.value)}
-                      placeholder="+41 79 123 45 67"
+                      placeholder={t("manager:unitsId.placeholder.41791234567")}
                     />
                   </div>
                   <div className="min-w-[240px]">
@@ -925,7 +927,7 @@ export default function UnitDetail() {
                       className="filter-input w-full"
                       value={createTenantEmail}
                       onChange={(e) => setCreateTenantEmail(e.target.value)}
-                      placeholder="tenant@example.com"
+                      placeholder={t("manager:unitsId.placeholder.tenantExampleCom")}
                     />
                   </div>
                   <button type="submit" className="button-primary" disabled={creatingTenant}>
@@ -940,7 +942,7 @@ export default function UnitDetail() {
           )}
 
           {activeTab === "Rent Estimate" && (
-        <Panel title="Rent Estimate" actions={unit?.livingAreaSqm ? (
+        <Panel title={t("manager:unitsId.title.rentEstimate")} actions={unit?.livingAreaSqm ? (
               <button
                 type="button"
                 className="button-primary text-sm"
@@ -965,7 +967,7 @@ export default function UnitDetail() {
                   {/* Main figures */}
                   <div className="grid grid-cols-3 gap-4 mb-5">
                     <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
-                      <div className="text-xs font-semibold uppercase text-green-700">Net Rent</div>
+                      <div className="text-xs font-semibold uppercase text-green-700">{t("manager:unitsId.col.netRent")}</div>
                       <div className="text-2xl font-bold text-green-800">CHF {rentEstimate.netRentChfMonthly}</div>
                       <div className="text-sm text-slate-500">per month</div>
                     </div>
@@ -1027,7 +1029,7 @@ export default function UnitDetail() {
           )}
 
           {activeTab === "Documents" && (
-        <Panel title="Corroborative Documents">
+        <Panel title={t("manager:unitsId.title.corroborativeDocuments")}>
           {applicationIds.length === 0 ? (
             <div className="empty-state-text py-6 text-center italic">No rental application linked to this unit.</div>
           ) : (
@@ -1072,7 +1074,7 @@ export default function UnitDetail() {
                 const net = totalIncome - totalExpenses;
                 return (
                   <div className="space-y-6">
-                    <Panel title="Income vs. Expenses">
+                    <Panel title={t("manager:unitsId.title.incomeVsExpenses")}>
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
                           <div className="text-xs font-medium uppercase tracking-wide text-green-700">Income (tenant invoices)</div>
@@ -1091,16 +1093,16 @@ export default function UnitDetail() {
                       </div>
                     </Panel>
                     {unitReconciliations.length > 0 && (
-                      <Panel title="Nebenkosten Summary">
+                      <Panel title={t("manager:unitsId.title.nebenkostenSummary")}>
                         <div className="overflow-x-auto">
                           <table className="data-table w-full">
                             <thead>
                               <tr>
                                 <SortableHeader label="Year" field="year" sortField={reconSF} sortDir={reconSD} onSort={handleReconSort} />
                                 <SortableHeader label="Status" field="status" sortField={reconSF} sortDir={reconSD} onSort={handleReconSort} />
-                                <th className="text-right">Acompte Paid</th>
-                                <th className="text-right">Actual Costs</th>
-                                <th className="text-right">Balance</th>
+                                <th className="text-right">{t("manager:unitsId.col.acomptePaid")}</th>
+                                <th className="text-right">{t("manager:unitsId.col.actualCosts")}</th>
+                                <th className="text-right">{t("manager:unitsId.col.balance")}</th>
                               </tr>
                             </thead>
                             <tbody>
@@ -1125,7 +1127,7 @@ export default function UnitDetail() {
               })()}
 
               {financialsSubTab === "reconciliations" && (
-                <Panel title="Charge Reconciliations (Nebenkosten)">
+                <Panel title={t("manager:unitsId.title.chargeReconciliationsNebenkosten")}>
                   {unitReconciliations.length === 0 ? (
                     <div className="empty-state-text py-6 text-center italic">No charge reconciliations for this unit.</div>
                   ) : (
@@ -1136,10 +1138,10 @@ export default function UnitDetail() {
                             <SortableHeader label="Tenant" field="tenant" sortField={tReconSF} sortDir={tReconSD} onSort={handleTReconSort} />
                             <SortableHeader label="Year" field="year" sortField={tReconSF} sortDir={tReconSD} onSort={handleTReconSort} />
                             <SortableHeader label="Status" field="status" sortField={tReconSF} sortDir={tReconSD} onSort={handleTReconSort} />
-                            <th className="text-right">Acompte Paid</th>
-                            <th className="text-right">Actual Costs</th>
-                            <th className="text-right">Balance</th>
-                            <th className="text-right">Action</th>
+                            <th className="text-right">{t("manager:unitsId.col.acomptePaid")}</th>
+                            <th className="text-right">{t("manager:unitsId.col.actualCosts")}</th>
+                            <th className="text-right">{t("manager:unitsId.col.balance")}</th>
+                            <th className="text-right">{t("manager:unitsId.col.action")}</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -1172,7 +1174,7 @@ export default function UnitDetail() {
               )}
 
               {financialsSubTab === "invoices" && (
-                <Panel title="Invoices">
+                <Panel title={t("manager:unitsId.title.invoices")}>
                   {unitInvoices.length === 0 ? (
                     <div className="empty-state-text py-6 text-center italic">No invoices linked to this unit.</div>
                   ) : (
@@ -1193,7 +1195,7 @@ export default function UnitDetail() {
                           <thead>
                             <tr>
                               <SortableHeader label="Status" field="status" sortField={invSF} sortDir={invSD} onSort={handleInvSort} />
-                              <th>Invoice #</th>
+                              <th>{t("manager:unitsId.col.invoice")}</th>
                               <SortableHeader label="Description" field="description" sortField={invSF} sortDir={invSD} onSort={handleInvSort} />
                               <SortableHeader label="Amount" field="amount" sortField={invSF} sortDir={invSD} onSort={handleInvSort} className="text-right" />
                               <SortableHeader label="Period" field="period" sortField={invSF} sortDir={invSD} onSort={handleInvSort} />
@@ -1238,7 +1240,7 @@ export default function UnitDetail() {
           )}
 
           {activeTab === "Contracts" && (
-        <Panel title="Contracts">
+        <Panel title={t("manager:unitsId.title.contracts")}>
           {leasesLoading ? (
             <div className="py-6 text-center text-sm text-slate-500">Loading leases…</div>
           ) : unitLeases.length === 0 ? (
@@ -1266,11 +1268,11 @@ export default function UnitDetail() {
                     <tr>
                       <SortableHeader label="Status" field="status" sortField={lsSF} sortDir={lsSD} onSort={handleLsSort} />
                       <SortableHeader label="Tenant" field="tenant" sortField={lsSF} sortDir={lsSD} onSort={handleLsSort} />
-                      <th className="text-right">Net Rent</th>
-                      <th className="text-right">Total</th>
+                      <th className="text-right">{t("manager:unitsId.col.netRent")}</th>
+                      <th className="text-right">{t("manager:unitsId.col.total")}</th>
                       <SortableHeader label="Start" field="startDate" sortField={lsSF} sortDir={lsSD} onSort={handleLsSort} />
                       <SortableHeader label="End" field="endDate" sortField={lsSF} sortDir={lsSD} onSort={handleLsSort} />
-                      <th>Notice</th>
+                      <th>{t("manager:unitsId.col.notice")}</th>
                       <SortableHeader label="Created" field="createdAt" sortField={lsSF} sortDir={lsSD} onSort={handleLsSort} />
                     </tr>
                   </thead>
@@ -1305,7 +1307,7 @@ export default function UnitDetail() {
         </Panel>
           )}
           {activeTab === "Requests" && (
-        <Panel title="Open Requests">
+        <Panel title={t("manager:unitsId.title.openRequests")}>
           {requestsLoading ? (
             <div className="py-6 text-center text-sm text-slate-500">Loading requests…</div>
           ) : unitRequests.length === 0 ? (

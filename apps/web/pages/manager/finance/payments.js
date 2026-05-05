@@ -11,6 +11,7 @@ import { formatDate, formatChf } from "../../../lib/format";
 import ConfigurableTable from "../../../components/ConfigurableTable";
 import { useTableSort, clientSort } from "../../../lib/tableUtils";
 import { withTranslations } from "../../../lib/i18n";
+import { useTranslation } from "next-i18next";
 
 const PAYMENT_SORT_FIELDS = ["invoiceNumber", "amount", "paidAt"];
 
@@ -69,6 +70,7 @@ const PAYMENT_COLUMNS = [
 ];
 
 export default function ManagerPaymentsPage() {
+  const { t } = useTranslation("manager");
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -138,7 +140,7 @@ export default function ManagerPaymentsPage() {
   return (
     <AppShell role="MANAGER">
       <PageShell>
-        <PageHeader title="Payments" />
+        <PageHeader title={t("manager:financePayments.title.payments")} />
         <PageContent>
           {error && (
             <Panel className="bg-red-50 border-red-200">
@@ -150,7 +152,7 @@ export default function ManagerPaymentsPage() {
           <div className="flex items-center gap-2 mb-3">
             <input
               type="search"
-              placeholder="Search payments…"
+              placeholder={t("manager:financePayments.placeholder.searchPayments")}
               value={paySearch}
               onChange={(e) => setPaySearch(e.target.value)}
               className="filter-input flex-1 min-w-0 mb-0"
@@ -159,7 +161,7 @@ export default function ManagerPaymentsPage() {
           </div>
           {filterOpen && (
             <FilterPanelBody>
-              <FilterSection title="Scope" first>
+              <FilterSection title={t("manager:financePayments.title.scope")} first>
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                   <SelectField label="Building" value={buildingId} onChange={(e) => setBuildingId(e.target.value)}>
                     <option value="">All buildings</option>
@@ -167,7 +169,7 @@ export default function ManagerPaymentsPage() {
                   </SelectField>
                 </div>
               </FilterSection>
-              <FilterSection title="Date range">
+              <FilterSection title={t("manager:financePayments.title.dateRange")}>
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                   <DateField label="Paid after" value={paidAfter} onChange={(e) => setPaidAfter(e.target.value)} />
                   <DateField label="Paid before" value={paidBefore} onChange={(e) => setPaidBefore(e.target.value)} />

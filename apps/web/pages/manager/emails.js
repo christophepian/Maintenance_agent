@@ -10,6 +10,7 @@ import Badge from "../../components/ui/Badge";
 import { authHeaders } from "../../lib/api";
 import { cn } from "../../lib/utils";
 import { withTranslations } from "../../lib/i18n";
+import { useTranslation } from "next-i18next";
 const EMAIL_VARIANT = {
   PENDING: "warning",
   SENT: "success",
@@ -27,6 +28,7 @@ function formatDate(isoStr) {
 }
 
 export default function DevEmailsPage() {
+  const { t } = useTranslation("manager");
   const [emails, setEmails] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -141,7 +143,7 @@ export default function DevEmailsPage() {
 
             {/* Detail panel */}
             <div>
-              <Panel title="Email Detail">
+              <Panel title={t("manager:emails.title.emailDetail")}>
                 {!selectedEmail && (
                   <p className="py-8 text-center text-sm text-slate-400">
                     Select an email to view details

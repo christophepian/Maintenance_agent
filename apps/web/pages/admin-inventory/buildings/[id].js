@@ -20,6 +20,7 @@ import { cn } from "../../../lib/utils";
 import { ARCHETYPE_LABELS, ARCHETYPE_EXPLANATION_COPY } from "../../../lib/archetypes";
 import KpiInlineGrid from "../../../components/ui/KpiInlineGrid";
 import { withServerTranslations } from "../../../lib/i18n";
+import { useTranslation } from "next-i18next";
 function displayDate(iso) {
   if (!iso) return "—";
   const d = new Date(iso);
@@ -30,6 +31,7 @@ function displayDate(iso) {
 }
 
 export default function BuildingDetail() {
+  const { t } = useTranslation("manager");
   const router = useRouter();
   const { id, from, role } = router.query;
   const isOwner = role === "owner";
@@ -620,7 +622,7 @@ export default function BuildingDetail() {
             <button
               onClick={() => router.push(backHref)}
               className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-900 hover:bg-slate-100"
-              aria-label="Back to Inventory"
+              aria-label={t("manager:buildingsId.ariaLabel.backToInventory")}
             >
               <ChevronLeft className="h-5 w-5" />
             </button>
@@ -740,7 +742,7 @@ export default function BuildingDetail() {
               </div>{/* end desktop grid */}
 
             <Panel
-              title="Building information"
+              title={t("manager:buildingsId.title.buildingInformation")}
               actions={!isOwner && editMode ? (
                 <>
                   <button
@@ -796,17 +798,17 @@ export default function BuildingDetail() {
                         type="text"
                         value={editName}
                         onChange={(e) => setEditName(e.target.value)}
-                        placeholder="Building name"
+                        placeholder={t("manager:buildingsId.placeholder.buildingName")}
                       />
                     </label>
                     <label className="grid gap-2">
-                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Address</span>
+                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:buildingsId.placeholder.address")}</span>
                       <input
                         className="input text-sm text-slate-700"
                         type="text"
                         value={editAddress}
                         onChange={(e) => setEditAddress(e.target.value)}
-                        placeholder="Address"
+                        placeholder={t("manager:buildingsId.placeholder.address")}
                       />
                     </label>
                     <label className="grid gap-2">
@@ -818,7 +820,7 @@ export default function BuildingDetail() {
                         max={new Date().getFullYear()}
                         value={editYearBuilt}
                         onChange={(e) => setEditYearBuilt(e.target.value)}
-                        placeholder="e.g. 1995"
+                        placeholder={t("manager:buildingsId.placeholder.eG1995")}
                       />
                     </label>
                     <label className="grid gap-2">
@@ -858,7 +860,7 @@ export default function BuildingDetail() {
                       <div className="text-sm text-slate-700 mt-1">{building?.name}</div>
                     </div>
                     <div>
-                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Address</div>
+                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:buildingsId.placeholder.address")}</div>
                       <div className="text-sm text-slate-700 mt-1">{building?.address || "—"}</div>
                     </div>
                     <div>
@@ -880,7 +882,7 @@ export default function BuildingDetail() {
               {/* Ownership & Management — always visible regardless of edit mode */}
               <div className="mt-6 pt-4 border-t border-slate-200">
                     <div className="flex items-center justify-between mb-3">
-                      <h3 className="text-sm font-semibold text-slate-900">Ownership & Management</h3>
+                      <h3 className="text-sm font-semibold text-slate-900">{t("manager:buildingsId.heading.ownershipManagement")}</h3>
                     </div>
 
                     {/* Managed Since — inline date input when editing */}
@@ -1036,7 +1038,7 @@ export default function BuildingDetail() {
                 return (
                   <div className="mt-6 pt-4 border-t border-slate-200">
                     <div className="flex items-center justify-between mb-3">
-                      <h3 className="text-sm font-semibold text-slate-900">Management Guidelines</h3>
+                      <h3 className="text-sm font-semibold text-slate-900">{t("manager:buildingsId.heading.managementGuidelines")}</h3>
                       <div className="flex items-center gap-1.5">
                         {archLabel && <Badge variant="brand" size="sm">{archLabel}</Badge>}
                         {secLabel && <Badge variant="info" size="sm">{secLabel}</Badge>}
@@ -1079,7 +1081,7 @@ export default function BuildingDetail() {
           {/* Units tab */}
           {activeTab === "Units" && (
             <Panel
-              title="Units"
+              title={t("manager:buildingsId.title.units")}
               actions={(
                 <button
                   type="button"
@@ -1099,7 +1101,7 @@ export default function BuildingDetail() {
                         className="input text-sm text-slate-700"
                         value={createUnitName}
                         onChange={(e) => setCreateUnitName(e.target.value)}
-                        placeholder="e.g. 101, 3B, Common Area 1"
+                        placeholder={t("manager:buildingsId.placeholder.eG1013bCommonArea1")}
                       />
                     </label>
                     <label className="grid gap-2">
@@ -1151,7 +1153,7 @@ export default function BuildingDetail() {
 
               {filteredResidential.length > 0 && (
                 <>
-                  <h3 className="font-semibold text-slate-900 mt-4 mb-3">Residential Units</h3>
+                  <h3 className="font-semibold text-slate-900 mt-4 mb-3">{t("manager:buildingsId.heading.residentialUnits")}</h3>
                   <div className="space-y-2 mb-4">
                     {filteredResidential.map((u) => (
                       <Link key={u.id} href={`/admin-inventory/units/${u.id}${isOwner ? "?role=owner" : ""}`} className="block border border-slate-200 rounded-lg p-3 hover:bg-slate-50 transition">
@@ -1208,7 +1210,7 @@ export default function BuildingDetail() {
 
               {filteredCommon.length > 0 && (
                 <>
-                  <h3 className="font-semibold text-slate-900 mt-4 mb-3">Common Areas</h3>
+                  <h3 className="font-semibold text-slate-900 mt-4 mb-3">{t("manager:buildingsId.heading.commonAreas")}</h3>
                   <div className="space-y-2 mb-4">
                     {filteredCommon.map((u) => (
                       <Link key={u.id} href={`/admin-inventory/units/${u.id}${isOwner ? "?role=owner" : ""}`} className="block border border-slate-200 rounded-lg p-3 hover:bg-slate-50 transition">
@@ -1244,7 +1246,7 @@ export default function BuildingDetail() {
 
           {/* Tenants tab */}
           {activeTab === "Tenants" && (
-            <Panel title="Tenants">
+            <Panel title={t("manager:buildingsId.title.tenants")}>
               {building?.tenants && building.tenants.length > 0 ? (
                 <>
                 {/* Mobile: card list */}
@@ -1303,7 +1305,7 @@ export default function BuildingDetail() {
           {/* Assets tab */}
           {activeTab === "Assets" && (
             <Panel
-              title="Asset Inventory & Depreciation"
+              title={t("manager:buildingsId.title.assetInventoryDepreciation")}
               actions={!assetInventoryLoading && (
                 <button
                   type="button"
@@ -1332,8 +1334,8 @@ export default function BuildingDetail() {
 
           {/* Documents tab */}
           {activeTab === "Documents" && (
-            <Panel title="Documents">
-              <h3 className="font-semibold text-slate-900 mb-3">Lease Template</h3>
+            <Panel title={t("manager:buildingsId.title.documents")}>
+              <h3 className="font-semibold text-slate-900 mb-3">{t("manager:buildingsId.heading.leaseTemplate")}</h3>
               {leaseTemplates.length > 0 ? (
                 <div className="space-y-2">
                   {leaseTemplates.map((tpl) => (
@@ -1400,7 +1402,7 @@ export default function BuildingDetail() {
           {activeTab === "Policies" && (
             <>
               <Panel
-                title="Policies"
+                title={t("manager:buildingsId.title.policies")}
                 actions={configMode === "edit" ? (
                   <button
                     type="button"
@@ -1430,7 +1432,7 @@ export default function BuildingDetail() {
                           className="input text-sm text-slate-700"
                           value={configAutoApprove}
                           onChange={(e) => setConfigAutoApprove(e.target.value)}
-                          placeholder="Leave blank for org default"
+                          placeholder={t("manager:buildingsId.placeholder.leaveBlankForOrgDefault")}
                         />
                         <span className="text-xs text-slate-500">(blank = use org default)</span>
                       </label>
@@ -1441,7 +1443,7 @@ export default function BuildingDetail() {
                           className="input text-sm text-slate-700"
                           value={configOwnerThreshold}
                           onChange={(e) => setConfigOwnerThreshold(e.target.value)}
-                          placeholder="Leave blank for org default"
+                          placeholder={t("manager:buildingsId.placeholder.leaveBlankForOrgDefault")}
                         />
                         <span className="text-xs text-slate-500">(blank = use org default)</span>
                       </label>
@@ -1486,7 +1488,7 @@ export default function BuildingDetail() {
               </Panel>
 
               <Panel
-                title="Overrides"
+                title={t("manager:buildingsId.title.overrides")}
                 actions={createRuleMode ? (
                   <button
                     type="button"
@@ -1521,7 +1523,7 @@ export default function BuildingDetail() {
                       className="input text-sm text-slate-700 w-full"
                       value={newRuleName}
                       onChange={(e) => setNewRuleName(e.target.value)}
-                      placeholder="e.g., Auto-approve ovens < CHF 500"
+                      placeholder={t("manager:buildingsId.placeholder.eGAutoApproveOvensChf500")}
                     />
                   </div>
 
@@ -1678,7 +1680,7 @@ export default function BuildingDetail() {
 
           {/* Requests tab */}
           {activeTab === "Requests" && (
-            <Panel title="Requests">
+            <Panel title={t("manager:buildingsId.title.requests")}>
               {requestsLoading ? (
                 <p className="text-sm text-slate-500 py-4">Loading requests…</p>
               ) : buildingRequests.length === 0 ? (

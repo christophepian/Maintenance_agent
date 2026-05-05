@@ -18,6 +18,7 @@ import ActionBar from "../../../components/ui/ActionBar";
 import ResourceShell from "../../../components/ui/ResourceShell";
 import { billingScheduleVariant } from "../../../lib/statusVariants";
 import { withServerTranslations } from "../../../lib/i18n";
+import { useTranslation } from "next-i18next";
 
 const FREQUENCY_LABELS = {
   MONTHLY: "Monthly",
@@ -27,6 +28,7 @@ const FREQUENCY_LABELS = {
 };
 
 export default function ContractorBillingScheduleDetail() {
+  const { t } = useTranslation("manager");
   const router = useRouter();
   const { id } = router.query;
   const { data: schedule, setData: setSchedule, loading, error, refresh } = useDetailResource(
@@ -94,7 +96,7 @@ export default function ContractorBillingScheduleDetail() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Schedule Info */}
             <Panel>
-              <h3 className="font-semibold text-slate-800 mb-3">Schedule Details</h3>
+              <h3 className="font-semibold text-slate-800 mb-3">{t("manager:contractorBillingSchedulesId.heading.scheduleDetails")}</h3>
               <DetailList>
                 <DetailRow label="Status">
                     <Badge variant={billingScheduleVariant(schedule.status)} size="sm">{schedule.status}</Badge>
@@ -137,7 +139,7 @@ export default function ContractorBillingScheduleDetail() {
 
             {/* Contractor Info */}
             <Panel>
-              <h3 className="font-semibold text-slate-800 mb-3">Contractor</h3>
+              <h3 className="font-semibold text-slate-800 mb-3">{t("manager:contractorBillingSchedulesId.heading.contractor")}</h3>
               {schedule.contractor ? (
                 <DetailList>
                   <DetailRow label="Name">{schedule.contractor.name}</DetailRow>
@@ -166,7 +168,7 @@ export default function ContractorBillingScheduleDetail() {
           {/* Actions */}
           {schedule.status !== "COMPLETED" && (
             <Panel className="mt-6">
-              <h3 className="font-semibold text-slate-800 mb-3">Actions</h3>
+              <h3 className="font-semibold text-slate-800 mb-3">{t("manager:contractorBillingSchedulesId.heading.actions")}</h3>
               <ActionBar className="mt-0">
                 {schedule.status === "ACTIVE" && (
                   <>
@@ -222,7 +224,7 @@ export default function ContractorBillingScheduleDetail() {
                       type="text"
                       value={stopReason}
                       onChange={(e) => setStopReason(e.target.value)}
-                      placeholder="e.g. Contract ended"
+                      placeholder={t("manager:contractorBillingSchedulesId.placeholder.eGContractEnded")}
                       className="w-full border rounded px-3 py-2 text-sm"
                     />
                   </div>

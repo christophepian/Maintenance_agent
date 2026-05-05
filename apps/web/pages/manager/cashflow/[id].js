@@ -15,6 +15,7 @@ import { useLocalSort, clientSort } from "../../../lib/tableUtils";
 
 import { cn } from "../../../lib/utils";
 import { withServerTranslations } from "../../../lib/i18n";
+import { useTranslation } from "next-i18next";
 
 // ─── Strategy alignment helpers ──────────────────────────────────────────────
 
@@ -311,6 +312,7 @@ function StrategyOverlayPanel({ overlay }) {
 // ─── CapEx Event Table (interactive for DRAFT) ────────────────────────────────
 
 function CapexEventTable({ buckets, overrides, timingRecommendations, planId, isDraft, onRefresh, alignmentMap }) {
+  const { t } = useTranslation("manager");
   // Build override lookup: assetId → override record
   const overrideByAsset = {};
   for (const ov of (overrides || [])) {
@@ -384,7 +386,7 @@ function CapexEventTable({ buckets, overrides, timingRecommendations, planId, is
               <SortableHeader label="Estimated cost" field="estimatedCost" sortField={evSF} sortDir={evSD} onSort={handleEvSort} className="text-right" />
               <SortableHeader label="Trade group" field="tradeGroup" sortField={evSF} sortDir={evSD} onSort={handleEvSort} />
               <SortableHeader label="Bundle" field="bundle" sortField={evSF} sortDir={evSD} onSort={handleEvSort} />
-              {isDraft && <th>Override</th>}
+              {isDraft && <th>{t("manager:cashflowId.col.override")}</th>}
             </tr>
           </thead>
           <tbody>
@@ -512,6 +514,7 @@ function CapexMobileCard({ ev, ov, rec, planId, isDraft, onRefresh, alignmentMap
 }
 
 function CapexEventRow({ ev, ov, rec, planId, isDraft, onRefresh, alignmentMap }) {
+  const { t } = useTranslation("manager");
   const currentYear = new Date().getFullYear();
   const [shifting, setShifting] = useState(false);
   const [removing, setRemoving] = useState(false);
@@ -575,7 +578,7 @@ function CapexEventRow({ ev, ov, rec, planId, isDraft, onRefresh, alignmentMap }
     <tr className={rowClass}>
       <td className="cell-bold">
         {isOverridden && (
-          <span className="mr-1 text-amber-500 text-xs" title="Year overridden">⟳</span>
+          <span className="mr-1 text-amber-500 text-xs" title={t("manager:cashflowId.title.yearOverridden")}>⟳</span>
         )}
         {ev.assetName}
         {alignmentMap?.[ev.assetId] && (
@@ -630,7 +633,7 @@ function CapexEventRow({ ev, ov, rec, planId, isDraft, onRefresh, alignmentMap }
                   onClick={handleRemoveOverride}
                   disabled={removing}
                   className="text-xs text-slate-400 hover:text-red-500 disabled:opacity-50"
-                  title="Reset to baseline year"
+                  title={t("manager:cashflowId.title.resetToBaselineYear")}
                 >
                   {removing ? "…" : "Reset"}
                 </button>
@@ -647,6 +650,7 @@ function CapexEventRow({ ev, ov, rec, planId, isDraft, onRefresh, alignmentMap }
 // ─── Income Growth Rate Inline Editor ─────────────────────────────────────────
 
 function IncomeGrowthRateEditor({ planId, currentRate, onUpdated }) {
+  const { t } = useTranslation("manager");
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(String(currentRate ?? 0));
   const [saving, setSaving] = useState(false);
@@ -696,7 +700,7 @@ function IncomeGrowthRateEditor({ planId, currentRate, onUpdated }) {
       <button
         onClick={startEdit}
         className="text-sm text-slate-600 hover:text-blue-600 underline underline-offset-2 tabular-nums"
-        title="Click to edit income growth rate"
+        title={t("manager:cashflowId.title.clickToEditIncomeGrowthRate")}
       >
         Income growth: <span className="font-semibold">{currentRate ?? 0}%</span> / year
       </button>
@@ -729,6 +733,7 @@ function IncomeGrowthRateEditor({ planId, currentRate, onUpdated }) {
 // ─── Opening Balance Banner ───────────────────────────────────────────────────
 
 function OpeningBalanceBanner({ planId, onUpdated }) {
+  const { t } = useTranslation("manager");
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState("");
   const [saving, setSaving] = useState(false);
@@ -772,7 +777,7 @@ function OpeningBalanceBanner({ planId, onUpdated }) {
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-sm font-medium text-amber-700">CHF</span>
           <input
-            type="number" min="0" step="100" placeholder="e.g. 50000"
+            type="number" min="0" step="100" placeholder={t("manager:cashflowId.placeholder.eG50000")}
             value={value} onChange={(e) => setValue(e.target.value)}
             className="border border-amber-300 rounded px-2 py-1 text-sm w-32"
             autoFocus
@@ -915,6 +920,7 @@ function RfpCandidatesPanel({ planId }) {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function CashflowPlanDetailPage() {
+  const { t } = useTranslation("manager");
   const router = useRouter();
   const { id } = router.query;
 
@@ -1068,7 +1074,7 @@ export default function CashflowPlanDetailPage() {
           )}
 
           {/* Stat cards */}
-          <Section title="Summary">
+          <Section title={t("manager:cashflowId.title.summary")}>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <div className="card p-4 flex flex-col gap-1">
                 <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">12-mo projected income</span>
@@ -1109,13 +1115,13 @@ export default function CashflowPlanDetailPage() {
           </Section>
 
           {/* Cashflow chart */}
-          <Panel title="Monthly cashflow">
+          <Panel title={t("manager:cashflowId.title.monthlyCashflow")}>
             <CashflowChart buckets={buckets} hasOpeningBalance={hasOpeningBalance} />
           </Panel>
 
           {/* CapEx event list — interactive in DRAFT, read-only otherwise */}
           <Panel
-            title="Scheduled CapEx events"
+            title={t("manager:cashflowId.title.scheduledCapexEvents")}
             bodyClassName="p-0"
             actions={
               isDraft && timingRecommendations.length > 0 && (
@@ -1169,7 +1175,7 @@ export default function CashflowPlanDetailPage() {
 
           {/* RFP candidates — APPROVED plans only */}
           {plan.status === "APPROVED" && (
-            <Panel title="RFP Candidates">
+            <Panel title={t("manager:cashflowId.title.rFPCandidates")}>
               <RfpCandidatesPanel planId={plan.id} />
             </Panel>
           )}

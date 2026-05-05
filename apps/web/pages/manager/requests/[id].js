@@ -21,6 +21,7 @@ import {
 } from "../requests";
 import ScrollableTabs from "../../../components/mobile/ScrollableTabs";
 import { withServerTranslations } from "../../../lib/i18n";
+import { useTranslation } from "next-i18next";
 
 /* ═══════════════════════════════════════════════════════════════
    Constants
@@ -503,6 +504,7 @@ function OwnerAdjustedDecision({ state }) {
    ═══════════════════════════════════════════════════════════════ */
 
 export default function RequestDetailPage() {
+  const { t } = useTranslation("manager");
   const router = useRouter();
   const { id, from } = router.query;
 
@@ -1062,7 +1064,7 @@ export default function RequestDetailPage() {
                                 value={selectedAssetId}
                                 onChange={(e) => setSelectedAssetId(e.target.value)}
                                 className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                                aria-label="Select asset to link"
+                                aria-label={t("manager:requestsId.ariaLabel.selectAssetToLink")}
                               >
                                 <option value="">Select asset&hellip;</option>
                                 {scored.map((a) => (
@@ -1112,7 +1114,7 @@ export default function RequestDetailPage() {
               {activeTab === "advisory" && (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {/* Column 1 — Legal Engine */}
-                  <Panel title="Legal Analysis" bodyClassName="p-0">
+                  <Panel title={t("manager:requestsId.title.legalAnalysis")} bodyClassName="p-0">
                     <LegalRecommendationPanel
                       decision={legalState.data}
                       loading={legalState.loading}
@@ -1144,7 +1146,7 @@ export default function RequestDetailPage() {
                   </Panel>
 
                   {/* Column 2 — Maintenance Decision (Repair vs Replace) */}
-                  <Panel title="Maintenance Decision">
+                  <Panel title={t("manager:requestsId.title.maintenanceDecision")}>
                     {linkedAsset ? (
                       <div className="space-y-4">
                         {/* Linked asset summary */}

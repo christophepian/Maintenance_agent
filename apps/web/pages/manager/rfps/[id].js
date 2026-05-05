@@ -16,8 +16,10 @@ import { rfpVariant, quoteVariant, inviteVariant } from "../../../lib/statusVari
 import { cn } from "../../../lib/utils";
 import { formatDate, formatChfCents } from "../../../lib/format";
 import { withServerTranslations } from "../../../lib/i18n";
+import { useTranslation } from "next-i18next";
 
 export default function RfpDetailPage() {
+  const { t } = useTranslation("manager");
   const router = useRouter();
   const { id } = router.query;
 
@@ -188,7 +190,7 @@ export default function RfpDetailPage() {
           ) : rfp ? (
             <>
               {/* RFP Metadata */}
-              <Panel title="RFP Details">
+              <Panel title={t("manager:rfpsId.title.rFPDetails")}>
                 <dl className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
                   <div>
                     <dt className="text-sm font-medium text-slate-500">Status</dt>
@@ -242,7 +244,7 @@ export default function RfpDetailPage() {
 
               {/* Linked Request */}
               {rfp.request && (
-                <Panel title="Linked Maintenance Request">
+                <Panel title={t("manager:rfpsId.title.linkedMaintenanceRequest")}>
                   <dl className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
                     <div>
                       <dt className="text-sm font-medium text-slate-500">Request #</dt>
@@ -491,7 +493,7 @@ export default function RfpDetailPage() {
 
               {/* Fallback Actions — only for OPEN RFPs */}
               {rfp.status === "OPEN" && (
-                <Panel title="Fallback Actions">
+                <Panel title={t("manager:rfpsId.title.fallbackActions")}>
                   <p className="text-sm text-slate-500 mb-4">
                     If submitted quotes are insufficient, you can re-invite more contractors or bypass
                     quote collection entirely and directly assign a contractor.

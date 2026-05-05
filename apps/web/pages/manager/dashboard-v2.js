@@ -24,6 +24,7 @@ import {
 import { authHeaders } from "../../lib/api";
 import { cn } from "../../lib/utils";
 import { withTranslations } from "../../lib/i18n";
+import { useTranslation } from "next-i18next";
 
 /* ─── YTD date range ─── */
 function ytdRange() {
@@ -144,6 +145,7 @@ function heroHeadline(totalActions, openRequests) {
    Main page
    ────────────────────────────────────────────────────────────── */
 export default function ManagerDashboardV2() {
+  const { t } = useTranslation("manager");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [requests, setRequests] = useState([]);
@@ -397,7 +399,7 @@ export default function ManagerDashboardV2() {
             <button
               onClick={() => { loadDashboardData(); loadPortfolio(); }}
               className="rounded-lg border border-slate-300 bg-transparent p-2 text-slate-400 hover:bg-slate-50 hover:text-slate-700 transition-colors"
-              aria-label="Refresh dashboard"
+              aria-label={t("manager:dashboardV2.ariaLabel.refreshDashboard")}
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -432,7 +434,7 @@ export default function ManagerDashboardV2() {
         <section className="mb-6">
           <div className="mb-3 flex items-baseline justify-between">
             <div>
-              <h2 className="text-base font-semibold text-slate-900">Priority feed</h2>
+              <h2 className="text-base font-semibold text-slate-900">{t("manager:dashboardV2.heading.priorityFeed")}</h2>
               <p className="text-xs text-slate-400">All items requiring action, sorted by urgency.</p>
             </div>
             {totalActions > 0 && (
@@ -496,7 +498,7 @@ export default function ManagerDashboardV2() {
         <section className="rounded-3xl border border-slate-200 bg-white p-5">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h2 className="text-base font-semibold text-slate-900">More tools</h2>
+              <h2 className="text-base font-semibold text-slate-900">{t("manager:dashboardV2.heading.moreTools")}</h2>
               <p className="mt-1 text-sm text-slate-500">Deeper views for finance, strategy, and tenant portal.</p>
             </div>
             <div className="flex flex-wrap gap-2 shrink-0">

@@ -15,6 +15,7 @@ import { formatChfCents } from "../../../lib/format";
 import { cn } from "../../../lib/utils";
 import ScrollableTabs from "../../../components/mobile/ScrollableTabs";
 import { withTranslations } from "../../../lib/i18n";
+import { useTranslation } from "next-i18next";
 
 const TABS = [
   { key: "DRAFT",     label: "Draft" },
@@ -107,6 +108,7 @@ const RECON_COLUMNS = [
 ];
 
 export default function ChargeReconciliationsPage() {
+  const { t } = useTranslation("manager");
   const router = useRouter();
   const activeTab = router.isReady ? Math.max(0, TAB_KEYS.indexOf(router.query.tab)) || 0 : 0;
   const setActiveTab = useCallback((index) => {
@@ -143,7 +145,7 @@ export default function ChargeReconciliationsPage() {
   return (
     <AppShell>
       <PageShell>
-        <PageHeader title="Charge Reconciliations" />
+        <PageHeader title={t("manager:chargeReconciliationsIndex.title.chargeReconciliations")} />
         <PageContent>
           {error && <p className="error-banner">{error}</p>}
           {/* Tab strip */}

@@ -26,7 +26,56 @@
     "openRequests": "Demandes ouvertes",
     "activeJobs": "Interventions actives",
     "pendingInvoices": "Factures en attente",
-    "expiringLeases": "Baux arrivant à échéance"
+    "expiringLeases": "Baux arrivant à échéance",
+    "portfolioOverview": "Apercu du portefeuille",
+    "kpi": {
+      "noiYtd": "RNE (cumul annuel)",
+      "spendMtd": "Depenses du mois",
+      "collectionRate": "Taux de recouvrement",
+      "buildingsInRed": "Immeubles en deficit",
+      "openRequests": "Demandes ouvertes",
+      "openJobs": "Travaux en cours",
+      "jobAvgDuration": "Duree moy. des travaux",
+      "pendingInvoices": "Factures en attente"
+    },
+    "feed": {
+      "allClearTitle": "Tout est en ordre",
+      "allClearSub": "Revenez apres l'arrivee de nouvelles demandes ou factures.",
+      "noMatch": "Aucun element ne correspond au filtre selectionne.",
+      "showLess": "Afficher moins haut",
+      "inProgressStale": "En cours depuis plus de 7 jours"
+    },
+    "filter": {
+      "all": "Tous",
+      "disputed": "Conteste",
+      "stale": "Travaux en retard",
+      "rfps": "Appels d'offres"
+    },
+    "sort": {
+      "urgency": "Urgence",
+      "building": "Immeuble",
+      "date": "Date",
+      "category": "Categorie"
+    },
+    "moreTools": {
+      "title": "Plus d'outils",
+      "sub": "Vues detaillees pour la finance, la strategie et le portail locataire.",
+      "finance": "Apercu financier",
+      "settings": "Parametres",
+      "allRequests": "Toutes les demandes"
+    },
+    "chip": {
+      "review": "En attente de revision",
+      "approval": "Approbation du proprietaire",
+      "disputed": "Facture contestee",
+      "stale": "Travail en retard",
+      "rfp": "Appel d'offres transmis"
+    },
+    "hero": {
+      "allClear": "Tout va bien — aucun element ne necessite d'attention.",
+      "one": "1 element necessite votre attention aujourd'hui.",
+      "many": "{{count}} elements necessitent votre attention aujourd'hui."
+    }
   },
   "request": {
     "singular": "Demande",
@@ -121,84 +170,84 @@
   },
   "categoryMappings": {
     "topic": {
-      "STOVE_COOKTOP": "Cuisini\u00e8re & plaque",
+      "STOVE_COOKTOP": "Cuisinière & plaque",
       "OVEN_APPLIANCE": "Four",
       "DISHWASHER": "Lave-vaisselle",
       "BATHROOM_PLUMBING": "Salle de bain & plomberie",
-      "LIGHTING_ELECTRICAL": "\u00c9clairage & \u00e9lectricit\u00e9",
+      "LIGHTING_ELECTRICAL": "Éclairage & électricité",
       "PLUMBING_WATER": "Plomberie & eau",
-      "GENERAL_MAINTENANCE": "Entretien g\u00e9n\u00e9ral"
+      "GENERAL_MAINTENANCE": "Entretien général"
     },
     "statusBanner": {
-      "allMapped": "Les {{count}} cat\u00e9gories sont connect\u00e9es au droit suisse",
-      "allMappedDesc": "Lorsqu\u2019un locataire soumet une demande, le moteur juridique recherche automatiquement les normes d\u2019amortissement et les r\u00e8gles de r\u00e9duction de loyer.",
-      "unmapped_one": "{{unmapped}} des {{total}} cat\u00e9gories n\u2019est pas encore connect\u00e9e au droit suisse",
-      "unmapped_other": "{{unmapped}} des {{total}} cat\u00e9gories ne sont pas encore connect\u00e9es au droit suisse",
-      "unmappedDesc": "Le moteur juridique ne peut pas trouver les normes d\u2019amortissement ou les r\u00e8gles pour les cat\u00e9gories non connect\u00e9es. Faites d\u00e9filer pour les configurer."
+      "allMapped": "Les {{count}} catégories sont connectées au droit suisse",
+      "allMappedDesc": "Lorsqu’un locataire soumet une demande, le moteur juridique recherche automatiquement les normes d’amortissement et les règles de réduction de loyer.",
+      "unmapped_one": "{{unmapped}} des {{total}} catégories n’est pas encore connectée au droit suisse",
+      "unmapped_other": "{{unmapped}} des {{total}} catégories ne sont pas encore connectées au droit suisse",
+      "unmappedDesc": "Le moteur juridique ne peut pas trouver les normes d’amortissement ou les règles pour les catégories non connectées. Faites défiler pour les configurer."
     },
     "howItWorks": {
-      "title": "Qu\u2019est-ce qu\u2019un mappage\u00a0?",
-      "description": "Chaque mappage relie une cat\u00e9gorie de maintenance (ce que voit le locataire) \u00e0 un sujet juridique (ce que le moteur recherche). Quand un locataire signale un probl\u00e8me \u2014 par ex. un lave-vaisselle cass\u00e9 \u2014 le moteur utilise le mappage pour trouver deux choses\u00a0:",
-      "deprecTitle": "Normes d\u2019amortissement",
-      "deprecDesc": "Quel est l\u2019\u00e2ge de l\u2019\u00e9quipement et quelle est sa dur\u00e9e de vie pr\u00e9vue\u00a0? Cela d\u00e9termine qui paie les r\u00e9parations \u2014 le locataire ou le propri\u00e9taire.",
-      "rentTitle": "R\u00e8gles de r\u00e9duction de loyer",
-      "rentDesc": "Le locataire a-t-il droit \u00e0 une r\u00e9duction de loyer tant que le probl\u00e8me n\u2019est pas r\u00e9solu\u00a0? Le droit suisse d\u00e9finit des pourcentages sp\u00e9cifiques par type de d\u00e9faut."
+      "title": "Qu’est-ce qu’un mappage ?",
+      "description": "Chaque mappage relie une catégorie de maintenance (ce que voit le locataire) à un sujet juridique (ce que le moteur recherche). Quand un locataire signale un problème — par ex. un lave-vaisselle cassé — le moteur utilise le mappage pour trouver deux choses :",
+      "deprecTitle": "Normes d’amortissement",
+      "deprecDesc": "Quel est l’âge de l’équipement et quelle est sa durée de vie prévue ? Cela détermine qui paie les réparations — le locataire ou le propriétaire.",
+      "rentTitle": "Règles de réduction de loyer",
+      "rentDesc": "Le locataire a-t-il droit à une réduction de loyer tant que le problème n’est pas résolu ? Le droit suisse définit des pourcentages spécifiques par type de défaut."
     },
     "card": {
-      "notConnected": "Non connect\u00e9 \u2014 le moteur ne peut pas trouver les r\u00e9f\u00e9rences juridiques pour cette cat\u00e9gorie.",
-      "customOverride": "Surcharge personnalis\u00e9e",
-      "disabled": "D\u00e9sactiv\u00e9",
-      "connectedTo": "Connect\u00e9 \u00e0",
-      "reset": "R\u00e9initialiser",
-      "resetTitle": "Supprimer votre surcharge et utiliser le param\u00e8tre syst\u00e8me",
-      "editTitle": "Modifier le sujet juridique pour cette cat\u00e9gorie",
-      "activeTitle": "Actif \u2014 le moteur utilise ce mappage. Cliquer pour d\u00e9sactiver.",
-      "inactiveTitle": "D\u00e9sactiv\u00e9 \u2014 le moteur ignore ce mappage. Cliquer pour r\u00e9activer.",
-      "changeHint": "Modifier ce que le moteur recherche quand un locataire signale un probl\u00e8me \u00ab\u00a0{{label}}\u00a0\u00bb\u00a0:",
-      "saving": "Enregistrement\u2026",
+      "notConnected": "Non connecté — le moteur ne peut pas trouver les références juridiques pour cette catégorie.",
+      "customOverride": "Surcharge personnalisée",
+      "disabled": "Désactivé",
+      "connectedTo": "Connecté à",
+      "reset": "Réinitialiser",
+      "resetTitle": "Supprimer votre surcharge et utiliser le paramètre système",
+      "editTitle": "Modifier le sujet juridique pour cette catégorie",
+      "activeTitle": "Actif — le moteur utilise ce mappage. Cliquer pour désactiver.",
+      "inactiveTitle": "Désactivé — le moteur ignore ce mappage. Cliquer pour réactiver.",
+      "changeHint": "Modifier ce que le moteur recherche quand un locataire signale un problème « {{label}} » :",
+      "saving": "Enregistrement…",
       "save": "Enregistrer",
       "cancel": "Annuler",
-      "checkHint": "Quand un locataire signale un probl\u00e8me de type {{label}}, le moteur v\u00e9rifie\u00a0:",
-      "showTechnical": "\u25b8 Afficher les d\u00e9tails techniques",
-      "hideTechnical": "\u25be Masquer les d\u00e9tails techniques"
+      "checkHint": "Quand un locataire signale un problème de type {{label}}, le moteur vérifie :",
+      "showTechnical": "▸ Afficher les détails techniques",
+      "hideTechnical": "▾ Masquer les détails techniques"
     },
     "deprecBox": {
       "title": "Amortissement",
-      "coversItems": "Couvre des \u00e9quipements comme {{assets}}",
+      "coversItems": "Couvre des équipements comme {{assets}}",
       "andMore": "et {{count}} de plus",
-      "lifespans": "Dur\u00e9es de vie pr\u00e9vues\u00a0: {{range}}.",
-      "whoPaysSub": "\u2192 D\u00e9termine qui paie\u00a0: propri\u00e9taire (si dur\u00e9e d\u00e9pass\u00e9e) ou co\u00fbt partag\u00e9",
-      "noData": "Aucune donn\u00e9e d\u2019amortissement pour ce sujet. Le partage des co\u00fbts ne peut pas \u00eatre calcul\u00e9 automatiquement.",
-      "item_one": "{{count}} \u00e9l\u00e9ment",
-      "item_other": "{{count}} \u00e9l\u00e9ments"
+      "lifespans": "Durées de vie prévues : {{range}}.",
+      "whoPaysSub": "→ Détermine qui paie : propriétaire (si durée dépassée) ou coût partagé",
+      "noData": "Aucune donnée d’amortissement pour ce sujet. Le partage des coûts ne peut pas être calculé automatiquement.",
+      "item_one": "{{count}} élément",
+      "item_other": "{{count}} éléments"
     },
     "rentBox": {
-      "title": "R\u00e9duction de loyer",
-      "rulesFor": "R\u00e8gles pour\u00a0: {{rules}}",
+      "title": "Réduction de loyer",
+      "rulesFor": "Règles pour : {{rules}}",
       "andMore": "et {{count}} de plus",
-      "claimSub": "\u2192 Indique si le locataire peut demander une r\u00e9duction de loyer",
-      "noRules": "Aucune r\u00e8gle sp\u00e9cifique. Le locataire ne peut pas demander de r\u00e9duction automatiquement.",
-      "rule_one": "{{count}} r\u00e8gle",
-      "rule_other": "{{count}} r\u00e8gles"
+      "claimSub": "→ Indique si le locataire peut demander une réduction de loyer",
+      "noRules": "Aucune règle spécifique. Le locataire ne peut pas demander de réduction automatiquement.",
+      "rule_one": "{{count}} règle",
+      "rule_other": "{{count}} règles"
     },
     "technical": {
-      "deprecStandards": "Normes d\u2019amortissement ({{count}})",
-      "rentRules": "R\u00e8gles de r\u00e9duction de loyer ({{count}})",
+      "deprecStandards": "Normes d’amortissement ({{count}})",
+      "rentRules": "Règles de réduction de loyer ({{count}})",
       "moreItems": "+ {{count}} de plus"
     },
     "addSection": {
-      "needsMapping_one": "{{count}} cat\u00e9gorie n\u00e9cessite un mappage",
-      "needsMapping_other": "{{count}} cat\u00e9gories n\u00e9cessitent un mappage",
+      "needsMapping_one": "{{count}} catégorie nécessite un mappage",
+      "needsMapping_other": "{{count}} catégories nécessitent un mappage",
       "cancel": "Annuler",
       "setUp": "Configurer le mappage",
-      "categoryLabel": "Cat\u00e9gorie",
-      "select": "S\u00e9lectionner\u2026",
+      "categoryLabel": "Catégorie",
+      "select": "Sélectionner…",
       "connectTo": "Connecter au sujet juridique",
-      "creating": "Cr\u00e9ation\u2026",
-      "create": "Cr\u00e9er le mappage"
+      "creating": "Création…",
+      "create": "Créer le mappage"
     },
-    "loading": "Chargement des cat\u00e9gories\u2026",
-    "empty": "Aucune cat\u00e9gorie trouv\u00e9e. D\u00e8s que les locataires soumettront des demandes, leurs cat\u00e9gories appara\u00eetront ici."
+    "loading": "Chargement des catégories…",
+    "empty": "Aucune catégorie trouvée. Dès que les locataires soumettront des demandes, leurs catégories apparaîtront ici."
   },
   "buildingFinancials": {
     "dateRange": "Plage de dates",
@@ -307,6 +356,607 @@
       "noExpenses": "Aucune dépense catégorisée sur cette période.",
       "activeUnits_one": "{{count}} unité active",
       "activeUnits_other": "{{count}} unités actives"
+    }
+  },
+  "buildingsId": {
+    "heading": {
+      "ownershipManagement": "Ownership & Management [FR]",
+      "managementGuidelines": "Management Guidelines [FR]",
+      "residentialUnits": "Residential Units [FR]",
+      "commonAreas": "Common Areas [FR]",
+      "leaseTemplate": "Lease Template [FR]"
+    },
+    "placeholder": {
+      "buildingName": "Building name [FR]",
+      "address": "Adresse",
+      "eG1995": "e.g. 1995 [FR]",
+      "eG1013bCommonArea1": "e.g. 101, 3B, Common Area 1 [FR]",
+      "leaveBlankForOrgDefault": "Leave blank for org default [FR]",
+      "eGAutoApproveOvensChf500": "e.g., Auto-approve ovens < CHF 500 [FR]"
+    },
+    "title": {
+      "buildingInformation": "Building information [FR]",
+      "units": "Unités",
+      "tenants": "Locataires",
+      "assetInventoryDepreciation": "Asset Inventory & Depreciation [FR]",
+      "documents": "Documents [FR]",
+      "policies": "Policies [FR]",
+      "overrides": "Overrides [FR]",
+      "requests": "Requests [FR]"
+    },
+    "ariaLabel": {
+      "backToInventory": "Back to Inventory [FR]"
+    }
+  },
+  "unitsId": {
+    "col": {
+      "acomptePaid": "Acompte Paid [FR]",
+      "actualCosts": "Actual Costs [FR]",
+      "balance": "Solde",
+      "action": "Action [FR]",
+      "invoice": "Invoice # [FR]",
+      "netRent": "Net Rent [FR]",
+      "total": "Total",
+      "notice": "Notice [FR]"
+    },
+    "placeholder": {
+      "eGApt3b": "e.g. Apt 3B [FR]",
+      "eG3": "e.g. 3 [FR]",
+      "eG75": "e.g. 75 [FR]",
+      "eG35": "e.g. 3.5 [FR]",
+      "eG2015": "e.g. 2015 [FR]",
+      "eGJaneDoe": "e.g. Jane Doe [FR]",
+      "41791234567": "+41 79 123 45 67 [FR]",
+      "tenantExampleCom": "tenant@example.com [FR]"
+    },
+    "title": {
+      "unit": "Unité",
+      "unitDetails": "Unit Details [FR]",
+      "assetInventoryDepreciation": "Asset Inventory & Depreciation [FR]",
+      "tenants": "Locataires",
+      "rentEstimate": "Rent Estimate [FR]",
+      "corroborativeDocuments": "Corroborative Documents [FR]",
+      "incomeVsExpenses": "Income vs. Expenses [FR]",
+      "nebenkostenSummary": "Nebenkosten Summary [FR]",
+      "chargeReconciliationsNebenkosten": "Charge Reconciliations (Nebenkosten) [FR]",
+      "invoices": "Factures",
+      "contracts": "Contracts [FR]",
+      "openRequests": "Open Requests [FR]"
+    }
+  },
+  "billingSchedules": {
+    "placeholder": {
+      "searchByTenant": "Search by tenant… [FR]"
+    },
+    "title": {
+      "billingSchedules": "Billing Schedules [FR]"
+    },
+    "ariaLabel": {
+      "sortSchedules": "Sort schedules [FR]"
+    }
+  },
+  "buildings[id]Financials": {
+    "title": {
+      "buildingFinancials": "Building Financials [FR]"
+    }
+  },
+  "cashflowId": {
+    "col": {
+      "override": "Override [FR]"
+    },
+    "placeholder": {
+      "eG50000": "e.g. 50000 [FR]"
+    },
+    "title": {
+      "yearOverridden": "Year overridden [FR]",
+      "resetToBaselineYear": "Reset to baseline year [FR]",
+      "clickToEditIncomeGrowthRate": "Click to edit income growth rate [FR]",
+      "summary": "Summary [FR]",
+      "monthlyCashflow": "Monthly cashflow [FR]",
+      "scheduledCapexEvents": "Scheduled CapEx events [FR]",
+      "rFPCandidates": "RFP Candidates [FR]"
+    }
+  },
+  "chargeReconciliationsId": {
+    "col": {
+      "action": "Action [FR]"
+    },
+    "title": {
+      "summary": "Summary [FR]",
+      "expenseLines": "Expense Lines [FR]",
+      "settlementInvoice": "Settlement Invoice [FR]"
+    }
+  },
+  "chargeReconciliationsIndex": {
+    "title": {
+      "chargeReconciliations": "Charge Reconciliations [FR]"
+    }
+  },
+  "contractorBillingSchedulesId": {
+    "heading": {
+      "scheduleDetails": "Schedule Details [FR]",
+      "contractor": "Prestataire",
+      "actions": "Actions"
+    },
+    "placeholder": {
+      "eGContractEnded": "e.g. Contract ended [FR]"
+    }
+  },
+  "contractorBillingSchedulesIndex": {
+    "heading": {
+      "createBillingSchedule": "Create Billing Schedule [FR]"
+    },
+    "placeholder": {
+      "eGMonthlyCleaningService": "e.g. Monthly cleaning service [FR]",
+      "eG50000": "e.g. 500.00 [FR]"
+    },
+    "title": {
+      "contractorBilling": "Contractor Billing [FR]"
+    }
+  },
+  "dashboardV2": {
+    "heading": {
+      "priorityFeed": "Priority feed [FR]",
+      "moreTools": "Plus d'outils"
+    },
+    "ariaLabel": {
+      "refreshDashboard": "Actualiser le tableau de bord"
+    }
+  },
+  "emails": {
+    "title": {
+      "emailDetail": "Email Detail [FR]"
+    }
+  },
+  "financeBillingEntitiesId": {
+    "title": {
+      "general": "Général",
+      "address": "Adresse",
+      "banking": "Banking [FR]",
+      "invoiceSettings": "Invoice Settings [FR]"
+    },
+    "ariaLabel": {
+      "dismissMessage": "Dismiss message [FR]"
+    }
+  },
+  "financeBillingEntitiesIndex": {
+    "title": {
+      "billingEntities": "Billing Entities [FR]"
+    }
+  },
+  "financeCharges": {
+    "col": {
+      "actions": "Actions"
+    },
+    "heading": {
+      "editCharges": "Edit Charges [FR]"
+    },
+    "placeholder": {
+      "searchByTenantBuildingOrUnit": "Search by tenant, building or unit… [FR]",
+      "itemName": "Item name [FR]",
+      "eG30062027": "e.g., 30.06.2027 [FR]"
+    },
+    "title": {
+      "charges": "Frais"
+    },
+    "ariaLabel": {
+      "sortCharges": "Sort charges [FR]"
+    }
+  },
+  "financeChartOfAccounts": {
+    "placeholder": {
+      "eGElevatorMaintenance": "e.g. Elevator Maintenance [FR]",
+      "eGLiftM": "e.g. LIFT-M [FR]",
+      "optionalDescription": "Optional description [FR]",
+      "eGOwnerCharges": "e.g. Owner Charges [FR]",
+      "eG5000": "e.g. 5000 [FR]"
+    },
+    "title": {
+      "chartOfAccounts": "Chart of Accounts [FR]"
+    }
+  },
+  "financeExpenses": {
+    "placeholder": {
+      "searchExpenses": "Search expenses… [FR]"
+    },
+    "title": {
+      "expenses": "Dépenses",
+      "category": "Catégorie",
+      "scope": "Scope [FR]"
+    }
+  },
+  "financeIndex": {
+    "title": {
+      "finances": "Finances [FR]",
+      "dateRange": "Date range [FR]",
+      "buildings": "Immeubles"
+    },
+    "ariaLabel": {
+      "viewBuildingFinancials": "View building financials [FR]"
+    }
+  },
+  "financeInvoices": {
+    "heading": {
+      "disputeInvoice": "Dispute Invoice [FR]",
+      "uploadInvoice": "Upload Invoice [FR]"
+    },
+    "placeholder": {
+      "reasonForDispute": "Reason for dispute… [FR]",
+      "searchInvoices": "Search invoices… [FR]"
+    },
+    "title": {
+      "invoicePdf": "Invoice PDF [FR]",
+      "cycleSortField": "Cycle sort field [FR]",
+      "direction": "Direction [FR]",
+      "status": "Statut",
+      "category": "Catégorie",
+      "invoices": "Factures"
+    }
+  },
+  "financeInvoicesId": {
+    "col": {
+      "description": "Description",
+      "qty": "Qty [FR]",
+      "unitPrice": "Unit Price [FR]",
+      "vAT": "VAT % [FR]",
+      "total": "Total"
+    },
+    "placeholder": {
+      "companyName": "Company name [FR]",
+      "streetNumber": "Street & number [FR]",
+      "lausanne": "Lausanne [FR]",
+      "cH": "CH... [FR]",
+      "cHE": "CHE-... [FR]"
+    },
+    "title": {
+      "invoiceDetails": "Invoice Details [FR]",
+      "recipient": "Recipient [FR]",
+      "issuerBillingEntity": "Issuer (Billing Entity) [FR]",
+      "lineItems": "Line Items [FR]",
+      "linkedRecords": "Linked Records [FR]",
+      "accounting": "Accounting [FR]",
+      "originalCapture": "Original Capture [FR]",
+      "pDFPreview": "PDF Preview [FR]",
+      "invoicePdf": "Invoice PDF [FR]",
+      "timeline": "Timeline [FR]"
+    }
+  },
+  "financeInvoicesNew": {
+    "placeholder": {
+      "itemDescription": "Item description [FR]"
+    },
+    "title": {
+      "newInvoice": "New Invoice [FR]",
+      "recipient": "Recipient [FR]",
+      "invoiceDetails": "Invoice Details [FR]",
+      "linkToRecordOptional": "Link to Record (optional) [FR]",
+      "lineItems": "Line Items [FR]"
+    }
+  },
+  "financeLedger": {
+    "col": {
+      "date": "Date",
+      "account": "Compte",
+      "event": "Event [FR]",
+      "description": "Description",
+      "reference": "Référence",
+      "debitChf": "Debit CHF [FR]",
+      "creditChf": "Credit CHF [FR]",
+      "code": "Code [FR]",
+      "balanceChf": "Balance CHF [FR]"
+    },
+    "title": {
+      "generalLedger": "General Ledger [FR]",
+      "dateRange": "Date range [FR]",
+      "scope": "Scope [FR]"
+    }
+  },
+  "financePayments": {
+    "placeholder": {
+      "searchPayments": "Search payments… [FR]"
+    },
+    "title": {
+      "payments": "Paiements",
+      "scope": "Scope [FR]",
+      "dateRange": "Date range [FR]"
+    }
+  },
+  "index": {
+    "heading": {
+      "moreTools": "Plus d'outils"
+    },
+    "title": {
+      "category": "Catégorie"
+    },
+    "ariaLabel": {
+      "refreshDashboard": "Actualiser le tableau de bord"
+    }
+  },
+  "inventory": {
+    "placeholder": {
+      "eGBahnhofstrasse12": "e.g. Bahnhofstrasse 12 [FR]",
+      "eG8001": "e.g. 8001 [FR]",
+      "eGZRich": "e.g. Zürich [FR]",
+      "eGSwitzerland": "e.g. Switzerland [FR]",
+      "searchBuildings": "Search buildings… [FR]"
+    },
+    "title": {
+      "properties": "Propriétés"
+    },
+    "ariaLabel": {
+      "filterBuildings": "Filter buildings [FR]",
+      "filterByCanton": "Filter by canton [FR]",
+      "sortBuildings": "Sort buildings [FR]",
+      "hypotheticalNextRepairCostInChf": "Hypothetical next repair cost in CHF [FR]"
+    }
+  },
+  "leasesId": {
+    "col": {
+      "signers": "Signers [FR]",
+      "action": "Action [FR]",
+      "actual": "Actual [FR]",
+      "balance": "Solde",
+      "old": "Old [FR]",
+      "new": "New [FR]",
+      "change": "Change [FR]"
+    },
+    "heading": {
+      "signatureRequests": "Signature Requests [FR]"
+    },
+    "placeholder": {
+      "cH": "CH... [FR]",
+      "eG1085": "e.g. 108.5 [FR]",
+      "eG3MonthsNoticeFrom01042026": "e.g. 3 months notice from 01.04.2026 [FR]",
+      "eGDepositForLeaseStarting01042026": "e.g. Deposit for lease starting 01.04.2026 [FR]"
+    },
+    "title": {
+      "leaseContract": "Lease Contract [FR]",
+      "pDFArtifacts": "PDF Artifacts [FR]",
+      "sendForSignature": "Send for Signature [FR]",
+      "terminateLease": "Terminate Lease [FR]",
+      "createLeaseInvoice": "Create Lease Invoice [FR]"
+    },
+    "ariaLabel": {
+      "leaseActionsMenu": "Lease actions menu [FR]"
+    }
+  },
+  "leasesIndex": {
+    "col": {
+      "deadline": "Deadline [FR]",
+      "actions": "Actions",
+      "charges": "Frais",
+      "totalMo": "Total/mo [FR]",
+      "tag": "Tag [FR]"
+    },
+    "placeholder": {
+      "jeanDupont": "Jean Dupont [FR]",
+      "jeanExampleCom": "jean@example.com [FR]",
+      "searchByTenantBuildingOrUnit": "Search by tenant, building or unit… [FR]",
+      "selectABuildingToAutoFill": "Select a building to auto-fill [FR]",
+      "eGRGieDuLacSa": "e.g. Régie du Lac SA [FR]",
+      "eGRueDuLac15": "e.g. Rue du Lac 15 [FR]",
+      "eG1003Lausanne": "e.g. 1003 Lausanne [FR]",
+      "4121": "+41 21 ... [FR]",
+      "regieExampleCh": "regie@example.ch [FR]",
+      "cH9300762011623852957": "CH93 0076 2011 6238 5295 7 [FR]",
+      "eGStandard3RoomApartment": "e.g. Standard 3-room apartment [FR]"
+    },
+    "title": {
+      "leases": "Baux",
+      "createNewLease": "Create New Lease [FR]"
+    }
+  },
+  "leasesTemplates": {
+    "placeholder": {
+      "selectABuildingToAutoFill": "Select a building to auto-fill [FR]",
+      "eGRGieDuLacSa": "e.g. Régie du Lac SA [FR]",
+      "eGRueDuLac15": "e.g. Rue du Lac 15 [FR]",
+      "eG1003Lausanne": "e.g. 1003 Lausanne [FR]",
+      "4121": "+41 21 ... [FR]",
+      "regieExampleCh": "regie@example.ch [FR]",
+      "cH9300762011623852957": "CH93 0076 2011 6238 5295 7 [FR]",
+      "eGStandard3RoomApartment": "e.g. Standard 3-room apartment [FR]"
+    },
+    "title": {
+      "leaseTemplates": "Lease Templates [FR]",
+      "createNewTemplate": "Create New Template [FR]"
+    }
+  },
+  "peopleIndex": {
+    "placeholder": {
+      "jeanDupont": "Jean Dupont [FR]",
+      "jeanExampleCom": "jean@example.com [FR]",
+      "temporaryPassword": "Temporary password [FR]",
+      "rueDeLaPaix1": "Rue de la Paix 1 [FR]",
+      "genVe": "Genève [FR]",
+      "cH5604835012345678009": "CH56 0483 5012 3456 7800 9 [FR]",
+      "cHE123456789": "CHE-123.456.789 [FR]"
+    },
+    "title": {
+      "contacts": "Contacts [FR]"
+    },
+    "ariaLabel": {
+      "dismiss": "Dismiss [FR]",
+      "viewTenant": "View tenant [FR]",
+      "viewVendor": "View vendor [FR]"
+    }
+  },
+  "peopleOwners": {
+    "placeholder": {
+      "searchByNameEmailOrBillingEntity": "Search by name, email, or billing entity… [FR]"
+    },
+    "title": {
+      "owners": "Propriétaires"
+    },
+    "ariaLabel": {
+      "searchOwners": "Search owners [FR]",
+      "sortOwners": "Sort owners [FR]"
+    }
+  },
+  "peopleTenants": {
+    "placeholder": {
+      "searchByNameEmailPhoneOrUnit": "Search by name, email, phone, or unit… [FR]"
+    },
+    "title": {
+      "tenants": "Locataires"
+    },
+    "ariaLabel": {
+      "sortTenants": "Sort tenants [FR]"
+    }
+  },
+  "peopleTenantsId": {
+    "placeholder": {
+      "tenantName": "Tenant name [FR]",
+      "41XxXxxXxxx": "+41 XX XXX XXXX [FR]",
+      "tenantExampleCom": "tenant@example.com [FR]"
+    },
+    "title": {
+      "personalInformation": "Personal information [FR]",
+      "professional": "Professional [FR]",
+      "corroborativeDocuments": "Corroborative Documents [FR]",
+      "contracts": "Contracts [FR]",
+      "invoices": "Factures"
+    }
+  },
+  "peopleVendors": {
+    "placeholder": {
+      "searchByNameEmailOrPhone": "Search by name, email, or phone… [FR]"
+    },
+    "title": {
+      "contractors": "Contractors [FR]"
+    },
+    "ariaLabel": {
+      "sortContractors": "Sort contractors [FR]"
+    }
+  },
+  "peopleVendorsId": {
+    "placeholder": {
+      "contractorName": "Contractor name [FR]",
+      "41XxXxxXxxx": "+41 XX XXX XXXX [FR]",
+      "contractorExampleCom": "contractor@example.com [FR]",
+      "streetAndNumber": "Street and number [FR]",
+      "suiteFloorEtc": "Suite, floor, etc. [FR]",
+      "cH9300762011623852957": "CH93 0076 2011 6238 5295 7 [FR]",
+      "cHE123456789": "CHE-123.456.789 [FR]"
+    },
+    "title": {
+      "personalInformation": "Personal information [FR]",
+      "serviceDetails": "Service details [FR]",
+      "contracts": "Contracts [FR]",
+      "invoices": "Factures"
+    }
+  },
+  "rentAdjustmentsId": {
+    "placeholder": {
+      "enterReason": "Enter reason… [FR]"
+    },
+    "title": {
+      "summary": "Summary [FR]",
+      "rentChange": "Rent Change [FR]",
+      "indexationDetails": "Indexation Details [FR]",
+      "rejection": "Rejection [FR]",
+      "application": "Application [FR]",
+      "leaseIndexSettings": "Lease Index Settings [FR]"
+    }
+  },
+  "rentAdjustmentsIndex": {
+    "title": {
+      "rentAdjustments": "Rent Adjustments [FR]"
+    }
+  },
+  "rentalApplicationsApplicationid": {
+    "title": {
+      "applicationDetail": "Application Detail [FR]",
+      "applicants": "Applicants [FR]",
+      "householdCurrentHousing": "Household & Current Housing [FR]",
+      "unitEvaluations": "Unit Evaluations [FR]",
+      "signature": "Signature [FR]"
+    }
+  },
+  "requests": {
+    "placeholder": {
+      "descriptionBuildingUnitContractor": "#, description, building, unit, contractor… [FR]"
+    },
+    "title": {
+      "requestsInbox": "Requests Inbox [FR]",
+      "priority": "Priorité",
+      "scope": "Scope [FR]"
+    },
+    "ariaLabel": {
+      "searchRequests": "Search requests [FR]"
+    }
+  },
+  "requestsId": {
+    "title": {
+      "legalAnalysis": "Legal Analysis [FR]",
+      "maintenanceDecision": "Maintenance Decision [FR]"
+    },
+    "ariaLabel": {
+      "selectAssetToLink": "Select asset to link [FR]"
+    }
+  },
+  "rfps": {
+    "title": {
+      "requestsForProposal": "Requests for Proposal [FR]"
+    }
+  },
+  "rfpsId": {
+    "title": {
+      "rFPDetails": "RFP Details [FR]",
+      "linkedMaintenanceRequest": "Linked Maintenance Request [FR]",
+      "fallbackActions": "Fallback Actions [FR]"
+    }
+  },
+  "settings": {
+    "col": {
+      "actions": "Actions",
+      "versions": "Versions [FR]"
+    },
+    "heading": {
+      "legalSources": "Legal Sources [FR]",
+      "legalVariables": "Legal Variables [FR]"
+    },
+    "placeholder": {
+      "swissReferenceRate": "Swiss Reference Rate [FR]",
+      "eGReferenceRateCpi": "e.g. REFERENCE_RATE, CPI [FR]",
+      "optional": "Optional [FR]",
+      "eGDailyMonthly": "e.g. daily, monthly [FR]"
+    },
+    "title": {
+      "settings": "Paramètres"
+    },
+    "ariaLabel": {
+      "configureBuilding": "Configure building [FR]"
+    }
+  },
+  "vacancies[unitid]Applications": {
+    "col": {
+      "rank": "Rank [FR]",
+      "actions": "Actions"
+    },
+    "heading": {
+      "overrideDisqualification": "Override Disqualification [FR]",
+      "adjustScore": "Adjust Score [FR]"
+    },
+    "placeholder": {
+      "eGVerifiedIncomeDirectlyWithEmployerDebtEnforcementExtractIsClear": "e.g. Verified income directly with employer; debt enforcement extract is clear… [FR]",
+      "reasonForAdjustmentMin3Chars": "Reason for adjustment (min 3 chars) [FR]"
+    },
+    "title": {
+      "rentalApplications": "Rental Applications [FR]",
+      "clickToViewCorroborativeDocuments": "Click to view corroborative documents [FR]"
+    }
+  },
+  "vacanciesIndex": {
+    "col": {
+      "applications": "Applications [FR]",
+      "action": "Action [FR]"
+    },
+    "heading": {
+      "vacantUnitsOpenForApplications": "Vacant Units — Open for Applications [FR]"
+    },
+    "title": {
+      "inventory": "Inventory [FR]"
     }
   }
 }

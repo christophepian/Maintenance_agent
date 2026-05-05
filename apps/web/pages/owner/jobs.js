@@ -13,6 +13,7 @@ import { urgencyVariant, jobVariant } from "../../lib/statusVariants";
 
 import { cn } from "../../lib/utils";
 import { withTranslations } from "../../lib/i18n";
+import { useTranslation } from "next-i18next";
 function UrgencyPill({ urgency }) {
   if (!urgency) return null;
   return (
@@ -23,6 +24,7 @@ function UrgencyPill({ urgency }) {
 }
 
 export default function OwnerJobs() {
+  const { t } = useTranslation("owner");
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -81,7 +83,7 @@ export default function OwnerJobs() {
     <AppShell role="OWNER">
       <PageShell>
         <OwnerPicker onSelect={fetchJobs} />
-        <PageHeader title="Jobs Overview" />
+        <PageHeader title={t("owner:jobs.title.jobsOverview")} />
 
         <PageContent>
           <ErrorBanner error={error} className="text-sm" />
@@ -89,9 +91,9 @@ export default function OwnerJobs() {
           <FilterToggle open={filterOpen} onToggle={() => setFilterOpen((v) => !v)} activeCount={activeCount} />
           {filterOpen && (
             <FilterPanelBody>
-              <FilterSection title="Status" first>
+              <FilterSection title={t("owner:jobs.title.status")} first>
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                  <SelectField label="Status" value={filter} onChange={(e) => setFilter(e.target.value)}>
+                  <SelectField label={t("owner:jobs.title.status")} value={filter} onChange={(e) => setFilter(e.target.value)}>
                     <option value="ALL">All statuses</option>
                     <option value="PENDING">Pending</option>
                     <option value="IN_PROGRESS">In Progress</option>
@@ -100,13 +102,13 @@ export default function OwnerJobs() {
                   </SelectField>
                 </div>
               </FilterSection>
-              <FilterSection title="Date range">
+              <FilterSection title={t("owner:jobs.title.dateRange")}>
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                   <DateField label="From" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
                   <DateField label="To" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
                 </div>
               </FilterSection>
-              <FilterSection title="Scope">
+              <FilterSection title={t("owner:jobs.title.scope")}>
                 <div className="grid grid-cols-2 gap-3">
                   <SelectField label="Building" value={buildingFilter} onChange={(e) => { setBuildingFilter(e.target.value); setUnitFilter(""); }}>
                     <option value="">All buildings</option>
@@ -118,7 +120,7 @@ export default function OwnerJobs() {
                   </SelectField>
                 </div>
               </FilterSection>
-              <FilterSection title="Priority">
+              <FilterSection title={t("owner:jobs.title.priority")}>
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                   <SelectField label="Urgency" value={urgencyFilter} onChange={(e) => setUrgencyFilter(e.target.value)}>
                     <option value="">All levels</option>

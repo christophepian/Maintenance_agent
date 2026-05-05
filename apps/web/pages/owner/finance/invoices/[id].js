@@ -10,6 +10,7 @@ import { invoiceVariant, ingestionVariant } from "../../../../lib/statusVariants
 import { formatChf, formatDate } from "../../../../lib/format";
 import { ownerAuthHeaders } from "../../../../lib/api";
 import { withServerTranslations } from "../../../../lib/i18n";
+import { useTranslation } from "next-i18next";
 
 /* ─── Badge helpers ────────────────────────────────────────── */
 
@@ -50,12 +51,13 @@ function Field({ label, value }) {
 /* ─── Dispute modal ────────────────────────────────────────── */
 
 function DisputeModal({ onConfirm, onCancel }) {
+  const { t } = useTranslation("owner");
   const [reason, setReason] = useState("");
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" role="dialog" aria-modal="true" aria-label="Dispute invoice">
+    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" role="dialog" aria-modal="true" aria-label={t("owner:financeInvoicesId.ariaLabel.disputeInvoice")}>
       <div className="absolute inset-0 bg-black/40" onClick={onCancel} />
       <div className="relative w-full max-w-sm rounded-t-2xl sm:rounded-2xl bg-white p-6 shadow-xl space-y-4">
-        <h2 className="text-base font-semibold text-slate-800">Dispute this invoice</h2>
+        <h2 className="text-base font-semibold text-slate-800">{t("owner:financeInvoicesId.heading.disputeThisInvoice")}</h2>
         <div>
           <label htmlFor="dispute-reason" className="block text-sm font-medium text-slate-700 mb-1">
             Reason <span className="text-slate-400 font-normal">(required)</span>
@@ -65,7 +67,7 @@ function DisputeModal({ onConfirm, onCancel }) {
             rows={4}
             value={reason}
             onChange={(e) => setReason(e.target.value)}
-            placeholder="Describe why you are disputing this invoice…"
+            placeholder={t("owner:financeInvoicesId.placeholder.describeWhyYouAreDisputingThisInvoice")}
             className="filter-input resize-none"
           />
         </div>
@@ -89,6 +91,7 @@ function DisputeModal({ onConfirm, onCancel }) {
 /* ─── Main Page ────────────────────────────────────────────── */
 
 export default function OwnerInvoiceDetailPage() {
+  const { t } = useTranslation("owner");
   const router = useRouter();
   const { id } = router.query;
   const [invoice, setInvoice] = useState(null);
@@ -230,14 +233,14 @@ export default function OwnerInvoiceDetailPage() {
                 </Panel>
 
                 {/* Invoice details */}
-                <Panel title="Invoice Details">
+                <Panel title={t("owner:financeInvoicesId.title.invoiceDetails")}>
                   <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-4">
                     <Field label="Invoice Number" value={inv.invoiceNumber} />
                     <Field label="Direction" value={inv.direction === "INCOMING" ? "Incoming" : "Outgoing"} />
                     <Field label="Currency" value={inv.currency || "CHF"} />
                     <Field label="Subtotal" value={formatChf(inv.subtotalAmount)} />
                     <Field label="VAT" value={inv.vatRate != null ? `${inv.vatRate}% — ${formatChf(inv.vatAmount)}` : formatChf(inv.vatAmount)} />
-                    <Field label="Total" value={formatChf(inv.totalAmount)} />
+                    <Field label={t("owner:financeInvoicesId.col.total")} value={formatChf(inv.totalAmount)} />
                     <Field label="Issue Date" value={formatDate(inv.issueDate)} />
                     <Field label="Due Date" value={formatDate(inv.dueDate)} />
                     <Field label="Created" value={formatDate(inv.createdAt)} />
@@ -247,7 +250,7 @@ export default function OwnerInvoiceDetailPage() {
                 </Panel>
 
                 {/* Recipient */}
-                <Panel title="Recipient">
+                <Panel title={t("owner:financeInvoicesId.title.recipient")}>
                   <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-4">
                     <Field label="Name" value={inv.recipientName} />
                     <Field label="Address" value={[inv.recipientAddressLine1, inv.recipientAddressLine2].filter(Boolean).join(", ")} />
@@ -258,7 +261,7 @@ export default function OwnerInvoiceDetailPage() {
 
                 {/* Issuer */}
                 {(inv.issuerName || inv.issuerBillingEntityId) && (
-                  <Panel title="Issuer">
+                  <Panel title={t("owner:financeInvoicesId.title.issuer")}>
                     <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-4">
                       <Field label="Name" value={inv.issuerName} />
                     </dl>
@@ -267,7 +270,7 @@ export default function OwnerInvoiceDetailPage() {
 
                 {/* Line items */}
                 {inv.lineItems?.length > 0 && (
-                  <Panel title="Line Items" bodyClassName="p-0">
+                  <Panel title={t("owner:financeInvoicesId.title.lineItems")} bodyClassName="p-0">
                     <div className="sm:hidden divide-y divide-slate-100">
                       {inv.lineItems.map((li, i) => (
                         <div key={i} className="px-4 py-3 flex flex-col gap-0.5">
@@ -286,11 +289,11 @@ export default function OwnerInvoiceDetailPage() {
                       <table className="data-table">
                         <thead>
                           <tr>
-                            <th>Description</th>
-                            <th className="text-right">Qty</th>
-                            <th className="text-right">Unit Price</th>
-                            <th className="text-right">VAT %</th>
-                            <th className="text-right">Total</th>
+                            <th>{t("owner:financeInvoicesId.col.description")}</th>
+                            <th className="text-right">{t("owner:financeInvoicesId.col.qty")}</th>
+                            <th className="text-right">{t("owner:financeInvoicesId.col.unitPrice")}</th>
+                            <th className="text-right">{t("owner:financeInvoicesId.col.vAT")}</th>
+                            <th className="text-right">{t("owner:financeInvoicesId.col.total")}</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -311,7 +314,7 @@ export default function OwnerInvoiceDetailPage() {
 
                 {/* Accounting */}
                 {(inv.expenseType || inv.account) && (
-                  <Panel title="Accounting">
+                  <Panel title={t("owner:financeInvoicesId.title.accounting")}>
                     <dl className="grid grid-cols-2 gap-x-6 gap-y-4">
                       {inv.expenseType && <Field label="Expense Type" value={`${inv.expenseType.name}${inv.expenseType.code ? ` (${inv.expenseType.code})` : ""}`} />}
                       {inv.account && <Field label="Account" value={`${inv.account.name}${inv.account.code ? ` (${inv.account.code})` : ""}`} />}
@@ -324,7 +327,7 @@ export default function OwnerInvoiceDetailPage() {
               <div className="space-y-6">
                 {/* Original capture (image sources) */}
                 {inv.sourceFileUrl && inv.sourceChannel !== "MANUAL" && inv.sourceFileUrl.match(/\.(jpg|jpeg|png|webp)$/i) && (
-                  <Panel title="Original Capture">
+                  <Panel title={t("owner:financeInvoicesId.title.originalCapture")}>
                     <div className="space-y-3">
                       <img
                         src={`/api/invoices/${id}/source-file`}
@@ -339,16 +342,16 @@ export default function OwnerInvoiceDetailPage() {
                 )}
 
                 {/* PDF preview */}
-                <Panel title="PDF Preview">
+                <Panel title={t("owner:financeInvoicesId.title.pDFPreview")}>
                   <iframe
                     src={`/api/invoices/${id}/pdf`}
-                    title="Invoice PDF"
+                    title={t("owner:financeInvoicesId.title.invoicePdf")}
                     className="w-full rounded-lg border-0 h-[500px]"
                   />
                 </Panel>
 
                 {/* Timeline */}
-                <Panel title="Timeline">
+                <Panel title={t("owner:financeInvoicesId.title.timeline")}>
                   <div className="space-y-2 text-xs text-slate-600">
                     <div className="flex justify-between"><span>Created</span><span>{formatDate(inv.createdAt)}</span></div>
                     {inv.submittedAt && <div className="flex justify-between"><span>Submitted</span><span>{formatDate(inv.submittedAt)}</span></div>}

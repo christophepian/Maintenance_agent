@@ -15,6 +15,7 @@ import { invoiceVariant, ingestionVariant } from "../../lib/statusVariants";
 import { formatChf, formatDate as formatDateLib } from "../../lib/format";
 import { useTableSort, clientSort } from "../../lib/tableUtils";
 import { withTranslations } from "../../lib/i18n";
+import { useTranslation } from "next-i18next";
 
 // Re-evaluated on every Fast Refresh hot reload (module-level code always re-runs).
 // Used to detect that a reload happened and suppress stale modal state.
@@ -139,13 +140,14 @@ const DIRECTION_TABS = [
 /* ── PDF Download Modal ──────────────────────────────────────── */
 
 function PdfDownloadModal({ invoice, onClose }) {
+  const { t } = useTranslation("owner");
   const [includeQr, setIncludeQr] = useState(true);
   if (!invoice) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" role="dialog" aria-modal="true" aria-label="Download PDF">
+    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" role="dialog" aria-modal="true" aria-label={t("owner:invoices.heading.downloadPdf")}>
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
       <div className="relative w-full max-w-sm rounded-t-2xl sm:rounded-2xl bg-white p-6 shadow-xl">
-        <h2 className="text-base font-semibold text-slate-800 mb-1">Download PDF</h2>
+        <h2 className="text-base font-semibold text-slate-800 mb-1">{t("owner:invoices.heading.downloadPdf")}</h2>
         <p className="text-xs text-slate-500 mb-4">
           {invoice.reference || invoice.invoiceNumber || invoice.id?.slice(0, 8)}
         </p>
@@ -187,6 +189,7 @@ function PdfDownloadModal({ invoice, onClose }) {
 /* ── Main Component ──────────────────────────────────────────── */
 
 export default function OwnerInvoices() {
+  const { t } = useTranslation("owner");
   const router = useRouter();
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -362,7 +365,7 @@ export default function OwnerInvoices() {
       <PageShell>
         <OwnerPicker onSelect={fetchInvoices} />
         <PageHeader
-          title="Invoices"
+          title={t("owner:invoices.title.invoices")}
           subtitle="Review, approve, and manage invoice payments"
         />
 
@@ -407,14 +410,14 @@ export default function OwnerInvoices() {
           <FilterToggle open={filterOpen} onToggle={() => setFilterOpen((v) => !v)} activeCount={activeCount} />
           {filterOpen && (
             <FilterPanelBody>
-              <FilterSection title="Status" first>
+              <FilterSection title={t("owner:invoices.title.status")} first>
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                  <SelectField label="Status" value={activeTab} onChange={(e) => setActiveTab(e.target.value)}>
+                  <SelectField label={t("owner:invoices.title.status")} value={activeTab} onChange={(e) => setActiveTab(e.target.value)}>
                     {STATUS_TABS.map((t) => <option key={t.key} value={t.key}>{t.label}</option>)}
                   </SelectField>
                 </div>
               </FilterSection>
-              <FilterSection title="Date range">
+              <FilterSection title={t("owner:invoices.title.dateRange")}>
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                   <DateField label="From" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
                   <DateField label="To" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />

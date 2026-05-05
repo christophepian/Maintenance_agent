@@ -16,6 +16,7 @@ import { leaseVariant } from "../../../lib/statusVariants";
 import { cn } from "../../../lib/utils";
 import ScrollableTabs from "../../../components/mobile/ScrollableTabs";
 import { withTranslations } from "../../../lib/i18n";
+import { useTranslation } from "next-i18next";
 
 // Tabs: Active (ACTIVE+SIGNED), Draft (DRAFT), Submitted (READY_TO_SIGN), Archive (CANCELLED+TERMINATED)
 const LEASE_TABS = [
@@ -170,6 +171,7 @@ function buildTemplateColumns(router, handleDeleteTemplate) {
 }
 
 export default function LeasesPage() {
+  const { t } = useTranslation("manager");
   const router = useRouter();
   const [leases, setLeases] = useState([]);
   const [templates, setTemplates] = useState([]);
@@ -450,13 +452,13 @@ export default function LeasesPage() {
     <AppShell role="MANAGER">
       <PageShell>
         <PageHeader
-          title="Leases"
+          title={t("manager:leasesIndex.title.leases")}
           subtitle="Manage rental contracts"
         />
         <PageContent>
           {/* Create lease form */}
           {showCreate && (
-            <Section title="Create New Lease">
+            <Section title={t("manager:leasesIndex.title.createNewLease")}>
               <form onSubmit={handleCreate} className="bg-white rounded-lg border p-6 space-y-4 max-w-2xl">
                 {createError && <p className="text-sm text-red-600">{createError}</p>}
 
@@ -494,7 +496,7 @@ export default function LeasesPage() {
                       value={createForm.tenantName}
                       onChange={e => setCreateForm(f => ({ ...f, tenantName: e.target.value }))}
                       className="w-full border rounded-lg px-3 py-2 text-sm"
-                      placeholder="Jean Dupont"
+                      placeholder={t("manager:leasesIndex.placeholder.jeanDupont")}
                     />
                   </div>
                   <div>
@@ -504,7 +506,7 @@ export default function LeasesPage() {
                       value={createForm.tenantEmail}
                       onChange={e => setCreateForm(f => ({ ...f, tenantEmail: e.target.value }))}
                       className="w-full border rounded-lg px-3 py-2 text-sm"
-                      placeholder="jean@example.com"
+                      placeholder={t("manager:leasesIndex.placeholder.jeanExampleCom")}
                     />
                   </div>
                 </div>
@@ -576,7 +578,7 @@ export default function LeasesPage() {
           <div className="flex items-center gap-2">
             <input
               type="search"
-              placeholder="Search by tenant, building or unit…"
+              placeholder={t("manager:leasesIndex.placeholder.searchByTenantBuildingOrUnit")}
               value={leaseSearch}
               onChange={(e) => setLeaseSearch(e.target.value)}
               className="filter-input flex-1 min-w-0 mb-0"
@@ -620,7 +622,7 @@ export default function LeasesPage() {
                         </div>
                         <div className="col-span-2">
                           <label className="block text-sm font-medium text-slate-700 mb-1">Template Name <span className="ml-2 text-xs font-normal text-slate-400">(auto-derived from building)</span></label>
-                          <input type="text" value={scratchForm.templateName} onChange={(e) => setScratchForm((f) => ({ ...f, templateName: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="Select a building to auto-fill" />
+                          <input type="text" value={scratchForm.templateName} onChange={(e) => setScratchForm((f) => ({ ...f, templateName: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm" placeholder={t("manager:leasesIndex.placeholder.selectABuildingToAutoFill")} />
                         </div>
                       </div>
                       <div className="border-t pt-4">
@@ -628,23 +630,23 @@ export default function LeasesPage() {
                         <div className="grid grid-cols-2 gap-4">
                           <div className="col-span-2">
                             <label className="block text-sm font-medium text-slate-700 mb-1">Landlord Name *</label>
-                            <input type="text" value={scratchForm.landlordName} onChange={(e) => setScratchForm((f) => ({ ...f, landlordName: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="e.g. Régie du Lac SA" />
+                            <input type="text" value={scratchForm.landlordName} onChange={(e) => setScratchForm((f) => ({ ...f, landlordName: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm" placeholder={t("manager:leasesIndex.placeholder.eGRGieDuLacSa")} />
                           </div>
                           <div>
                             <label className="block text-sm font-medium text-slate-700 mb-1">Address *</label>
-                            <input type="text" value={scratchForm.landlordAddress} onChange={(e) => setScratchForm((f) => ({ ...f, landlordAddress: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="e.g. Rue du Lac 15" />
+                            <input type="text" value={scratchForm.landlordAddress} onChange={(e) => setScratchForm((f) => ({ ...f, landlordAddress: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm" placeholder={t("manager:leasesIndex.placeholder.eGRueDuLac15")} />
                           </div>
                           <div>
                             <label className="block text-sm font-medium text-slate-700 mb-1">Zip / City *</label>
-                            <input type="text" value={scratchForm.landlordZipCity} onChange={(e) => setScratchForm((f) => ({ ...f, landlordZipCity: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="e.g. 1003 Lausanne" />
+                            <input type="text" value={scratchForm.landlordZipCity} onChange={(e) => setScratchForm((f) => ({ ...f, landlordZipCity: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm" placeholder={t("manager:leasesIndex.placeholder.eG1003Lausanne")} />
                           </div>
                           <div>
                             <label className="block text-sm font-medium text-slate-700 mb-1">Phone</label>
-                            <input type="text" value={scratchForm.landlordPhone} onChange={(e) => setScratchForm((f) => ({ ...f, landlordPhone: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="+41 21 ..." />
+                            <input type="text" value={scratchForm.landlordPhone} onChange={(e) => setScratchForm((f) => ({ ...f, landlordPhone: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm" placeholder={t("manager:leasesIndex.placeholder.4121")} />
                           </div>
                           <div>
                             <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
-                            <input type="text" value={scratchForm.landlordEmail} onChange={(e) => setScratchForm((f) => ({ ...f, landlordEmail: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="regie@example.ch" />
+                            <input type="text" value={scratchForm.landlordEmail} onChange={(e) => setScratchForm((f) => ({ ...f, landlordEmail: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm" placeholder={t("manager:leasesIndex.placeholder.regieExampleCh")} />
                           </div>
                         </div>
                       </div>
@@ -678,7 +680,7 @@ export default function LeasesPage() {
                           </div>
                           <div>
                             <label className="block text-sm font-medium text-slate-700 mb-1">Payment IBAN</label>
-                            <input type="text" value={scratchForm.paymentIban} onChange={(e) => setScratchForm((f) => ({ ...f, paymentIban: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="CH93 0076 2011 6238 5295 7" />
+                            <input type="text" value={scratchForm.paymentIban} onChange={(e) => setScratchForm((f) => ({ ...f, paymentIban: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm" placeholder={t("manager:leasesIndex.placeholder.cH9300762011623852957")} />
                           </div>
                           <div>
                             <label className="block text-sm font-medium text-slate-700 mb-1">Reference Rate %</label>
@@ -699,7 +701,7 @@ export default function LeasesPage() {
                     <form onSubmit={handleCreateFromLease} className="bg-white rounded-lg border p-6 space-y-4 max-w-2xl mb-6">
                       <div>
                         <label className="block text-sm font-medium text-slate-700 mb-1">Template Name *</label>
-                        <input type="text" value={leaseFormTmpl.templateName} onChange={(e) => setLeaseFormTmpl((f) => ({ ...f, templateName: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="e.g. Standard 3-room apartment" />
+                        <input type="text" value={leaseFormTmpl.templateName} onChange={(e) => setLeaseFormTmpl((f) => ({ ...f, templateName: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm" placeholder={t("manager:leasesIndex.placeholder.eGStandard3RoomApartment")} />
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-slate-700 mb-1">Source Lease *</label>
@@ -819,8 +821,8 @@ export default function LeasesPage() {
                             <SortableHeader label="Building" field="building" sortField={subSF} sortDir={subSD} onSort={handleSubSort} />
                             <SortableHeader label="Rent" field="rent" sortField={subSF} sortDir={subSD} onSort={handleSubSort} />
                             <SortableHeader label="Sent" field="sentForSignatureAt" sortField={subSF} sortDir={subSD} onSort={handleSubSort} />
-                            <th>Deadline</th>
-                            <th>Actions</th>
+                            <th>{t("manager:leasesIndex.col.deadline")}</th>
+                            <th>{t("manager:leasesIndex.col.actions")}</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -929,12 +931,12 @@ export default function LeasesPage() {
                               <SortableHeader label="Unit" field="unit" sortField={lsSF} sortDir={lsSD} onSort={handleLsSort} />
                               <SortableHeader label="Building" field="building" sortField={lsSF} sortDir={lsSD} onSort={handleLsSort} />
                               <SortableHeader label="Net Rent" field="netRentChf" sortField={lsSF} sortDir={lsSD} onSort={handleLsSort} />
-                              {tabIndex === 0 && <th>Charges</th>}
-                              {tabIndex === 0 && <th>Total/mo</th>}
+                              {tabIndex === 0 && <th>{t("manager:leasesIndex.col.charges")}</th>}
+                              {tabIndex === 0 && <th>{t("manager:leasesIndex.col.totalMo")}</th>}
                               <SortableHeader label="Start" field="startDate" sortField={lsSF} sortDir={lsSD} onSort={handleLsSort} />
                               <SortableHeader label="Status" field="status" sortField={lsSF} sortDir={lsSD} onSort={handleLsSort} />
-                              {tabIndex === 1 && <th>Tag</th>}
-                              <th>Actions</th>
+                              {tabIndex === 1 && <th>{t("manager:leasesIndex.col.tag")}</th>}
+                              <th>{t("manager:leasesIndex.col.actions")}</th>
                             </tr>
                           </thead>
                           <tbody>

@@ -16,6 +16,7 @@ import { cn } from "../../lib/utils";
 import { formatChfCents, formatPercent } from "../../lib/format";
 import ScrollableTabs from "../../components/mobile/ScrollableTabs";
 import { withTranslations } from "../../lib/i18n";
+import { useTranslation } from "next-i18next";
 const INVENTORY_SORT_FIELDS = ["name", "address", "canton", "unitCount", "category", "manufacturer", "scope"];
 
 function inventoryFieldExtractor(row, field) {
@@ -182,6 +183,7 @@ function clientSideVerdict(item, hypotheticalCostChf) {
 }
 
 export default function ManagerInventoryPage() {
+  const { t } = useTranslation("manager");
   const router = useRouter();
   const activeTab = router.isReady ? (Math.max(0, TAB_KEYS.indexOf(router.query.tab)) || 0) : 0;
   const setActiveTab = useCallback((index) => {
@@ -352,7 +354,7 @@ export default function ManagerInventoryPage() {
   return (
     <AppShell role="MANAGER">
       <PageShell>
-        <PageHeader title="Properties" subtitle="Buildings, units, assets and depreciation schedules." />
+        <PageHeader title={t("manager:inventory.title.properties")} subtitle="Buildings, units, assets and depreciation schedules." />
         <PageContent>
           <ErrorBanner error={error} />
 
@@ -400,19 +402,19 @@ export default function ManagerInventoryPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="col-span-full">
                     <label className="filter-label">Address</label>
-                    <input className="filter-input w-full" value={buildingAddress} onChange={(e) => setBuildingAddress(e.target.value)} placeholder="e.g. Bahnhofstrasse 12" />
+                    <input className="filter-input w-full" value={buildingAddress} onChange={(e) => setBuildingAddress(e.target.value)} placeholder={t("manager:inventory.placeholder.eGBahnhofstrasse12")} />
                   </div>
                   <div>
                     <label className="filter-label">City code</label>
-                    <input className="filter-input w-full" value={buildingCityCode} onChange={(e) => setBuildingCityCode(e.target.value)} placeholder="e.g. 8001" />
+                    <input className="filter-input w-full" value={buildingCityCode} onChange={(e) => setBuildingCityCode(e.target.value)} placeholder={t("manager:inventory.placeholder.eG8001")} />
                   </div>
                   <div>
                     <label className="filter-label">City</label>
-                    <input className="filter-input w-full" value={buildingCity} onChange={(e) => setBuildingCity(e.target.value)} placeholder="e.g. Zürich" />
+                    <input className="filter-input w-full" value={buildingCity} onChange={(e) => setBuildingCity(e.target.value)} placeholder={t("manager:inventory.placeholder.eGZRich")} />
                   </div>
                   <div className="col-span-full">
                     <label className="filter-label">Country</label>
-                    <input className="filter-input w-full" value={buildingCountry} onChange={(e) => setBuildingCountry(e.target.value)} placeholder="e.g. Switzerland" />
+                    <input className="filter-input w-full" value={buildingCountry} onChange={(e) => setBuildingCountry(e.target.value)} placeholder={t("manager:inventory.placeholder.eGSwitzerland")} />
                   </div>
                 </div>
                 <div className="flex justify-end gap-2">
@@ -424,7 +426,7 @@ export default function ManagerInventoryPage() {
               <div className="flex items-center gap-2">
                 <input
                   type="search"
-                  placeholder="Search buildings…"
+                  placeholder={t("manager:inventory.placeholder.searchBuildings")}
                   value={buildingSearch}
                   onChange={(e) => setBuildingSearch(e.target.value)}
                   className="filter-input flex-1 min-w-0 mb-0"
@@ -433,7 +435,7 @@ export default function ManagerInventoryPage() {
                 <div className="relative shrink-0">
                   <button
                     type="button"
-                    aria-label="Filter buildings"
+                    aria-label={t("manager:inventory.ariaLabel.filterBuildings")}
                     onClick={() => setBuildingFilterOpen((v) => !v)}
                     className={cn(
                       "flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
@@ -457,7 +459,7 @@ export default function ManagerInventoryPage() {
                         className="filter-input w-full"
                         value={buildingCantonFilter}
                         onChange={(e) => setBuildingCantonFilter(e.target.value)}
-                        aria-label="Filter by canton"
+                        aria-label={t("manager:inventory.ariaLabel.filterByCanton")}
                       >
                         <option value="">All cantons</option>
                         {[...new Set(buildings.map((b) => b.canton).filter(Boolean))].sort().map((c) => (
@@ -480,7 +482,7 @@ export default function ManagerInventoryPage() {
                 {/* Sort button — cycles: name → unitCount → canton */}
                 <button
                   type="button"
-                  aria-label="Sort buildings"
+                  aria-label={t("manager:inventory.ariaLabel.sortBuildings")}
                   onClick={() => {
                     const cycle = ["name", "unitCount", "canton"];
                     const next = cycle[(cycle.indexOf(sortField) + 1) % cycle.length];
@@ -629,7 +631,7 @@ export default function ManagerInventoryPage() {
                           <input
                             type="number" min="0" step="100"
                             placeholder="0"
-                            aria-label="Hypothetical next repair cost in CHF"
+                            aria-label={t("manager:inventory.ariaLabel.hypotheticalNextRepairCostInChf")}
                             value={sensitivityInputs[item.assetId] ?? ""}
                             onChange={(e) => setSensitivityInputs((prev) => ({ ...prev, [item.assetId]: e.target.value }))}
                             className="w-28 rounded border border-slate-200 px-2 py-1 text-xs text-right focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400"
@@ -708,7 +710,7 @@ export default function ManagerInventoryPage() {
                                   min="0"
                                   step="100"
                                   placeholder="0"
-                                  aria-label="Hypothetical next repair cost in CHF"
+                                  aria-label={t("manager:inventory.ariaLabel.hypotheticalNextRepairCostInChf")}
                                   value={sensitivityInputs[item.assetId] ?? ""}
                                   onChange={(e) => setSensitivityInputs((prev) => ({ ...prev, [item.assetId]: e.target.value }))}
                                   className="w-24 rounded border border-slate-200 px-2 py-1 text-xs text-right focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400"

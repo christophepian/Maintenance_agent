@@ -10,11 +10,13 @@ import ErrorBanner from "../../../../components/ui/ErrorBanner";
 import { ownerAuthHeaders } from "../../../../lib/api";
 import { cn } from "../../../../lib/utils";
 import { withServerTranslations } from "../../../../lib/i18n";
+import { useTranslation } from "next-i18next";
 function todayIso() {
   return new Date().toISOString().slice(0, 10);
 }
 
 export default function FillVacancyWizard() {
+  const { t } = useTranslation("owner");
   const router = useRouter();
   const { unitId } = router.query;
 
@@ -189,7 +191,7 @@ export default function FillVacancyWizard() {
     <AppShell role="OWNER">
       <PageShell>
         <PageHeader
-          title="Fill vacancy"
+          title={t("owner:vacancies[unitid]Fill.title.fillVacancy")}
           subtitle={unit ? `Unit ${unit.unitNumber || "—"}` : ""}
         />
 
@@ -205,7 +207,7 @@ export default function FillVacancyWizard() {
 
           {!loading && (
             <div className="space-y-6">
-              <Panel title="Step 1: Select or create tenant">
+              <Panel title={t("owner:vacancies[unitid]Fill.title.step1SelectOrCreateTenant")}>
                 <div className="grid gap-4 lg:grid-cols-2">
                   <div className="space-y-3">
                     <label className="text-sm font-medium text-slate-700">Search tenants</label>
@@ -213,7 +215,7 @@ export default function FillVacancyWizard() {
                       value={search}
                       onChange={(e) => setSearch(e.target.value)}
                       className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                      placeholder="Search by name, phone, or email"
+                      placeholder={t("owner:vacancies[unitid]Fill.placeholder.searchByNamePhoneOrEmail")}
                     />
                     <div className="max-h-64 space-y-2 overflow-y-auto rounded-lg border border-slate-200 p-3">
                       {filteredTenants.length === 0 && (
@@ -244,19 +246,19 @@ export default function FillVacancyWizard() {
                       value={newTenant.name}
                       onChange={(e) => setNewTenant((prev) => ({ ...prev, name: e.target.value }))}
                       className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                      placeholder="Tenant name"
+                      placeholder={t("owner:vacancies[unitid]Fill.placeholder.tenantName")}
                     />
                     <input
                       value={newTenant.phone}
                       onChange={(e) => setNewTenant((prev) => ({ ...prev, phone: e.target.value }))}
                       className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                      placeholder="Phone (+41...)"
+                      placeholder={t("owner:vacancies[unitid]Fill.placeholder.phone41")}
                     />
                     <input
                       value={newTenant.email}
                       onChange={(e) => setNewTenant((prev) => ({ ...prev, email: e.target.value }))}
                       className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                      placeholder="Email (optional)"
+                      placeholder={t("owner:vacancies[unitid]Fill.placeholder.emailOptional")}
                     />
                     <button
                       onClick={handleCreateTenant}
@@ -269,7 +271,7 @@ export default function FillVacancyWizard() {
                 </div>
               </Panel>
 
-              <Panel title="Step 2: Assign tenant to unit">
+              <Panel title={t("owner:vacancies[unitid]Fill.title.step2AssignTenantToUnit")}>
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="text-sm text-slate-700">
                     Selected tenant: {selectedTenant?.name || "None"}
@@ -284,7 +286,7 @@ export default function FillVacancyWizard() {
                 </div>
               </Panel>
 
-              <Panel title="Step 3: Create lease (DRAFT)">
+              <Panel title={t("owner:vacancies[unitid]Fill.title.step3CreateLeaseDraft")}>
                 <div className="grid gap-4 lg:grid-cols-2">
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-slate-700">Lease start date</label>
@@ -302,7 +304,7 @@ export default function FillVacancyWizard() {
                       value={leaseForm.netRentChf}
                       onChange={(e) => setLeaseForm((prev) => ({ ...prev, netRentChf: e.target.value }))}
                       className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                      placeholder="e.g. 1850"
+                      placeholder={t("owner:vacancies[unitid]Fill.placeholder.eG1850")}
                     />
                   </div>
                 </div>
@@ -337,7 +339,7 @@ export default function FillVacancyWizard() {
 
               {leaseId && (
                 <Section
-                  title="Next steps"
+                  title={t("owner:vacancies[unitid]Fill.title.nextSteps")}
                   subtitle="Vacancy will be removed once the lease is ACTIVE."
                 >
                   <div className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700">

@@ -19,6 +19,7 @@ import {
 } from "../../manager/requests";
 import ScrollableTabs from "../../../components/mobile/ScrollableTabs";
 import { withServerTranslations } from "../../../lib/i18n";
+import { useTranslation } from "next-i18next";
 
 /* ═══════════════════════════════════════════════════════════════
    Constants
@@ -372,6 +373,7 @@ function AssetRecommendationContent({ assetId, repairReplaceData, requestEstimat
    ═══════════════════════════════════════════════════════════════ */
 
 export default function OwnerRequestDetailPage() {
+  const { t } = useTranslation("owner");
   const router = useRouter();
   const { id } = router.query;
 
@@ -504,7 +506,7 @@ export default function OwnerRequestDetailPage() {
             <button
               onClick={() => router.push("/owner/approvals")}
               className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-500 hover:bg-slate-50 transition mr-1"
-              aria-label="Back to approvals"
+              aria-label={t("owner:requestsId.ariaLabel.backToApprovals")}
             >
               &larr;
             </button>
@@ -522,7 +524,7 @@ export default function OwnerRequestDetailPage() {
           {error && (
             <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 mb-4 flex items-center justify-between" role="alert">
               <span className="text-sm text-red-700"><strong>Error:</strong> {error}</span>
-              <button onClick={() => setError("")} className="text-xs text-red-500 hover:text-red-700 ml-4" aria-label="Dismiss error">Dismiss</button>
+              <button onClick={() => setError("")} className="text-xs text-red-500 hover:text-red-700 ml-4" aria-label={t("owner:requestsId.ariaLabel.dismissError")}>Dismiss</button>
             </div>
           )}
 
@@ -718,7 +720,7 @@ export default function OwnerRequestDetailPage() {
               {/* 4. Advisory tab */}
               {activeTab === "advisory" && (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <Panel title="Legal Analysis" bodyClassName="p-0">
+                  <Panel title={t("owner:requestsId.title.legalAnalysis")} bodyClassName="p-0">
                     <LegalRecommendationPanel
                       decision={legalState.data}
                       loading={legalState.loading}
@@ -731,7 +733,7 @@ export default function OwnerRequestDetailPage() {
                     )}
                   </Panel>
 
-                  <Panel title="Maintenance Decision">
+                  <Panel title={t("owner:requestsId.title.maintenanceDecision")}>
                     {asset ? (
                       <div className="space-y-4">
                         <div className="flex flex-wrap items-baseline gap-x-5 gap-y-1">

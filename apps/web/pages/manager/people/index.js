@@ -14,12 +14,14 @@ import { authHeaders } from "../../../lib/api";
 import { cn } from "../../../lib/utils";
 import ScrollableTabs from "../../../components/mobile/ScrollableTabs";
 import { withTranslations } from "../../../lib/i18n";
+import { useTranslation } from "next-i18next";
 /* ─── Owner create form ──────────────────────────────────── */
 
 const OWNER_FORM_DEFAULT = { name: "", email: "", password: "" };
 const BILLING_FORM_DEFAULT = { addressLine1: "", addressLine2: "", postalCode: "", city: "", country: "CH", iban: "", vatNumber: "", defaultVatRate: "0" };
 
 function OwnersTab({ showAddForm, onAddFormClose }) {
+  const { t } = useTranslation("manager");
   const [owners, setOwners] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -112,7 +114,7 @@ function OwnersTab({ showAddForm, onAddFormClose }) {
       {(error || notice) && (
         <div className={cn("mb-3 rounded-lg border px-4 py-2.5 text-sm", error ? "border-red-200 bg-red-50 text-red-700" : "border-green-200 bg-green-50 text-green-700")}>
           {error || notice}
-          <button onClick={() => { setError(""); setNotice(""); }} className="ml-3 opacity-60 hover:opacity-100" aria-label="Dismiss">✕</button>
+          <button onClick={() => { setError(""); setNotice(""); }} className="ml-3 opacity-60 hover:opacity-100" aria-label={t("manager:peopleIndex.ariaLabel.dismiss")}>✕</button>
         </div>
       )}
 
@@ -127,7 +129,7 @@ function OwnersTab({ showAddForm, onAddFormClose }) {
                 required value={ownerForm.name}
                 onChange={(e) => setOwnerForm((f) => ({ ...f, name: e.target.value }))}
                 className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-44"
-                placeholder="Jean Dupont"
+                placeholder={t("manager:peopleIndex.placeholder.jeanDupont")}
               />
             </div>
             <div>
@@ -136,7 +138,7 @@ function OwnersTab({ showAddForm, onAddFormClose }) {
                 required type="email" value={ownerForm.email}
                 onChange={(e) => setOwnerForm((f) => ({ ...f, email: e.target.value }))}
                 className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-52"
-                placeholder="jean@example.com"
+                placeholder={t("manager:peopleIndex.placeholder.jeanExampleCom")}
               />
             </div>
             <div>
@@ -145,7 +147,7 @@ function OwnersTab({ showAddForm, onAddFormClose }) {
                 required type="password" value={ownerForm.password}
                 onChange={(e) => setOwnerForm((f) => ({ ...f, password: e.target.value }))}
                 className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-40"
-                placeholder="Temporary password"
+                placeholder={t("manager:peopleIndex.placeholder.temporaryPassword")}
               />
             </div>
             <button type="submit" disabled={ownerSubmitting}
@@ -200,7 +202,7 @@ function OwnersTab({ showAddForm, onAddFormClose }) {
                         <label className="block text-xs font-medium text-slate-600 mb-1">Address</label>
                         <input required value={billingForm.addressLine1}
                           onChange={(e) => setBillingForm((f) => ({ ...f, addressLine1: e.target.value }))}
-                          className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-full" placeholder="Rue de la Paix 1" />
+                          className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-full" placeholder={t("manager:peopleIndex.placeholder.rueDeLaPaix1")} />
                       </div>
                       <div>
                         <label className="block text-xs font-medium text-slate-600 mb-1">Postal code</label>
@@ -212,19 +214,19 @@ function OwnersTab({ showAddForm, onAddFormClose }) {
                         <label className="block text-xs font-medium text-slate-600 mb-1">City</label>
                         <input required value={billingForm.city}
                           onChange={(e) => setBillingForm((f) => ({ ...f, city: e.target.value }))}
-                          className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-32" placeholder="Genève" />
+                          className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-32" placeholder={t("manager:peopleIndex.placeholder.genVe")} />
                       </div>
                       <div className="w-full">
                         <label className="block text-xs font-medium text-slate-600 mb-1">IBAN</label>
                         <input required value={billingForm.iban}
                           onChange={(e) => setBillingForm((f) => ({ ...f, iban: e.target.value }))}
-                          className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-full font-mono" placeholder="CH56 0483 5012 3456 7800 9" />
+                          className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-full font-mono" placeholder={t("manager:peopleIndex.placeholder.cH5604835012345678009")} />
                       </div>
                       <div>
                         <label className="block text-xs font-medium text-slate-600 mb-1">VAT number</label>
                         <input value={billingForm.vatNumber}
                           onChange={(e) => setBillingForm((f) => ({ ...f, vatNumber: e.target.value }))}
-                          className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-36" placeholder="CHE-123.456.789" />
+                          className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-36" placeholder={t("manager:peopleIndex.placeholder.cHE123456789")} />
                       </div>
                       <button type="submit" disabled={billingSubmitting}
                         className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">
@@ -285,7 +287,7 @@ function OwnersTab({ showAddForm, onAddFormClose }) {
                               <label className="block text-xs font-medium text-slate-600 mb-1">Address</label>
                               <input required value={billingForm.addressLine1}
                                 onChange={(e) => setBillingForm((f) => ({ ...f, addressLine1: e.target.value }))}
-                                className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-52" placeholder="Rue de la Paix 1" />
+                                className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-52" placeholder={t("manager:peopleIndex.placeholder.rueDeLaPaix1")} />
                             </div>
                             <div>
                               <label className="block text-xs font-medium text-slate-600 mb-1">Postal code</label>
@@ -297,19 +299,19 @@ function OwnersTab({ showAddForm, onAddFormClose }) {
                               <label className="block text-xs font-medium text-slate-600 mb-1">City</label>
                               <input required value={billingForm.city}
                                 onChange={(e) => setBillingForm((f) => ({ ...f, city: e.target.value }))}
-                                className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-32" placeholder="Genève" />
+                                className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-32" placeholder={t("manager:peopleIndex.placeholder.genVe")} />
                             </div>
                             <div>
                               <label className="block text-xs font-medium text-slate-600 mb-1">IBAN</label>
                               <input required value={billingForm.iban}
                                 onChange={(e) => setBillingForm((f) => ({ ...f, iban: e.target.value }))}
-                                className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-52 font-mono" placeholder="CH56 0483 5012 3456 7800 9" />
+                                className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-52 font-mono" placeholder={t("manager:peopleIndex.placeholder.cH5604835012345678009")} />
                             </div>
                             <div>
                               <label className="block text-xs font-medium text-slate-600 mb-1">VAT number</label>
                               <input value={billingForm.vatNumber}
                                 onChange={(e) => setBillingForm((f) => ({ ...f, vatNumber: e.target.value }))}
-                                className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-36" placeholder="CHE-123.456.789" />
+                                className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-36" placeholder={t("manager:peopleIndex.placeholder.cHE123456789")} />
                             </div>
                             <button type="submit" disabled={billingSubmitting}
                               className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">
@@ -338,6 +340,7 @@ const PEOPLE_TABS = [
 const TAB_KEYS = ['tenants', 'vendors', 'owners'];
 
 export default function ManagerPeoplePage() {
+  const { t } = useTranslation("manager");
   const router = useRouter();
   const activeTab = router.isReady ? (Math.max(0, TAB_KEYS.indexOf(router.query.tab)) || 0) : 0;
   const setActiveTab = useCallback((index) => {
@@ -401,7 +404,7 @@ export default function ManagerPeoplePage() {
     <AppShell role="MANAGER">
       <PageShell>
         <PageHeader
-          title="Contacts"
+          title={t("manager:peopleIndex.title.contacts")}
           subtitle="Contacts across tenants, vendors and owners."
         />
         <PageContent>
@@ -495,7 +498,7 @@ export default function ManagerPeoplePage() {
                           </td>
                           <td>
                             <button
-                              aria-label="View tenant"
+                              aria-label={t("manager:peopleIndex.ariaLabel.viewTenant")}
                               onClick={(e) => { e.stopPropagation(); router.push(`/manager/people/tenants/${t.id}`); }}
                               className="inline-flex items-center justify-center rounded p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
                             >
@@ -565,7 +568,7 @@ export default function ManagerPeoplePage() {
                           <td>{c.hourlyRate != null ? `CHF ${c.hourlyRate}/h` : "—"}</td>
                           <td>
                             <button
-                              aria-label="View vendor"
+                              aria-label={t("manager:peopleIndex.ariaLabel.viewVendor")}
                               onClick={(e) => { e.stopPropagation(); router.push(`/manager/people/vendors/${c.id}`); }}
                               className="inline-flex items-center justify-center rounded p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
                             >

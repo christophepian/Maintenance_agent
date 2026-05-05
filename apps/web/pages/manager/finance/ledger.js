@@ -13,6 +13,7 @@ import { cn } from "../../../lib/utils";
 import { FilterToggle, FilterPanelBody, FilterSection, FilterSectionClear, SelectField, DateField } from "../../../components/ui/FilterPanel";
 import ScrollableTabs from "../../../components/mobile/ScrollableTabs";
 import { withTranslations } from "../../../lib/i18n";
+import { useTranslation } from "next-i18next";
 /* ── Constants ─────────────────────────────────────────────── */
 
 const SOURCE_TYPE_LABELS = {
@@ -63,6 +64,7 @@ function AccountTypeBadge({ type }) {
 /* ── Page ───────────────────────────────────────────────────── */
 
 export default function LedgerPage() {
+  const { t } = useTranslation("manager");
   // Tab: journal | trial-balance
   const [tab, setTab] = useState("journal");
 
@@ -217,7 +219,7 @@ export default function LedgerPage() {
     <AppShell role="MANAGER">
       <PageShell>
         <PageHeader
-          title="General Ledger"
+          title={t("manager:financeLedger.title.generalLedger")}
           subtitle="Advanced audit view — double-entry journal"
         />
         <PageContent>
@@ -296,14 +298,14 @@ export default function LedgerPage() {
           <FilterToggle open={filterOpen} onToggle={() => setFilterOpen((v) => !v)} activeCount={activeCount} />
           {filterOpen && (
             <FilterPanelBody>
-              <FilterSection title="Date range" first>
+              <FilterSection title={t("manager:financeLedger.title.dateRange")} first>
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                   <DateField label="From" value={from} onChange={(e) => setFrom(e.target.value)} />
                   <DateField label="To" value={to} onChange={(e) => setTo(e.target.value)} />
                 </div>
               </FilterSection>
               {tab === "journal" && (
-                <FilterSection title="Scope">
+                <FilterSection title={t("manager:financeLedger.title.scope")}>
                   <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                     <SelectField label="Building" value={buildingId} onChange={(e) => setBuildingId(e.target.value)}>
                       <option value="">All buildings</option>
@@ -311,7 +313,7 @@ export default function LedgerPage() {
                         <option key={b.id} value={b.id}>{b.name}</option>
                       ))}
                     </SelectField>
-                    <SelectField label="Account" value={accountId} onChange={(e) => setAccountId(e.target.value)}>
+                    <SelectField label={t("manager:financeLedger.col.account")} value={accountId} onChange={(e) => setAccountId(e.target.value)}>
                       <option value="">All accounts</option>
                       {ACCOUNT_TYPE_ORDER.map((type) => {
                         const group = accounts.filter((a) => a.accountType === type);
@@ -397,13 +399,13 @@ export default function LedgerPage() {
                     <table className="data-table w-full">
                       <thead>
                         <tr>
-                          <th>Date</th>
-                          <th>Account</th>
-                          <th>Event</th>
-                          <th>Description</th>
-                          <th>Reference</th>
-                          <th className="text-right">Debit CHF</th>
-                          <th className="text-right">Credit CHF</th>
+                          <th>{t("manager:financeLedger.col.date")}</th>
+                          <th>{t("manager:financeLedger.col.account")}</th>
+                          <th>{t("manager:financeLedger.col.event")}</th>
+                          <th>{t("manager:financeLedger.col.description")}</th>
+                          <th>{t("manager:financeLedger.col.reference")}</th>
+                          <th className="text-right">{t("manager:financeLedger.col.debitChf")}</th>
+                          <th className="text-right">{t("manager:financeLedger.col.creditChf")}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -512,11 +514,11 @@ export default function LedgerPage() {
                             <table className="data-table w-full">
                               <thead>
                                 <tr className="bg-slate-50">
-                                  <th>Code</th>
-                                  <th>Account</th>
-                                  <th className="text-right">Debit CHF</th>
-                                  <th className="text-right">Credit CHF</th>
-                                  <th className="text-right">Balance CHF</th>
+                                  <th>{t("manager:financeLedger.col.code")}</th>
+                                  <th>{t("manager:financeLedger.col.account")}</th>
+                                  <th className="text-right">{t("manager:financeLedger.col.debitChf")}</th>
+                                  <th className="text-right">{t("manager:financeLedger.col.creditChf")}</th>
+                                  <th className="text-right">{t("manager:financeLedger.col.balanceChf")}</th>
                                 </tr>
                               </thead>
                               <tbody>

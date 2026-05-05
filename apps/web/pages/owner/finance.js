@@ -20,6 +20,7 @@ import { useTableSort, useLocalSort, clientSort } from "../../lib/tableUtils";
 import SortableHeader from "../../components/SortableHeader";
 import { cn } from "../../lib/utils";
 import { withTranslations } from "../../lib/i18n";
+import { useTranslation } from "next-i18next";
 
 /* ═══════════════════════════════════════════════════════════════
    Constants
@@ -126,6 +127,7 @@ function SourceChannelIcon({ channel }) {
 }
 
 function ActionDropdown({ actions }) {
+  const { t } = useTranslation("owner");
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   useEffect(() => {
@@ -143,7 +145,7 @@ function ActionDropdown({ actions }) {
         type="button"
         onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }}
         className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition"
-        aria-label="Invoice actions"
+        aria-label={t("owner:finance.ariaLabel.invoiceActions")}
       >
         Actions ▾
       </button>
@@ -173,6 +175,7 @@ function ActionDropdown({ actions }) {
    ═══════════════════════════════════════════════════════════════ */
 
 function OverviewTab() {
+  const { t } = useTranslation("owner");
   const [range, setRange] = useState(defaultRange);
   const [portfolio, setPortfolio] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -214,10 +217,10 @@ function OverviewTab() {
   return (
     <div className="space-y-6">
       <div>
-        <FilterToggle open={filterOpen} onToggle={() => setFilterOpen((v) => !v)} activeCount={0} label="Date range" />
+        <FilterToggle open={filterOpen} onToggle={() => setFilterOpen((v) => !v)} activeCount={0} label={t("owner:finance.title.dateRange")} />
         {filterOpen && (
           <FilterPanelBody>
-            <FilterSection title="Date range" first>
+            <FilterSection title={t("owner:finance.title.dateRange")} first>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                 <DateField label="From" value={range.from} onChange={(e) => setRange((r) => ({ ...r, from: e.target.value }))} />
                 <DateField label="To"   value={range.to}   onChange={(e) => setRange((r) => ({ ...r, to: e.target.value }))} />
@@ -260,7 +263,7 @@ function OverviewTab() {
             </div>
           </Section>
 
-          <Section title="Buildings">
+          <Section title={t("owner:finance.title.buildings")}>
             {/* Stats row */}
             <div className="flex gap-4 text-xs text-slate-500">
               <span>Avg collection rate: <strong>{formatPercent(p.avgCollectionRate)}</strong></span>
@@ -357,6 +360,7 @@ function OverviewTab() {
 
 
 function InvoicesTab() {
+  const { t } = useTranslation("owner");
   const router = useRouter();
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -526,7 +530,7 @@ function InvoicesTab() {
       <div className="flex items-center gap-2">
         <input
           type="search"
-          placeholder="Search invoices…"
+          placeholder={t("owner:finance.placeholder.searchInvoices")}
           value={invSearch}
           onChange={(e) => { setInvSearch(e.target.value); setTableExpanded(false); }}
           className="filter-input flex-1 min-w-0 mb-0"
@@ -537,7 +541,7 @@ function InvoicesTab() {
       {/* Filter panel */}
       {filterOpen && (
         <FilterPanelBody>
-          <FilterSection title="Direction" first>
+          <FilterSection title={t("owner:finance.title.direction")} first>
             <div className="flex flex-wrap gap-2">
               {[{ key: "incoming", label: "📥 Incoming" }, { key: "outgoing", label: "📤 Outgoing" }].map(({ key, label }) => (
                 <button
@@ -553,7 +557,7 @@ function InvoicesTab() {
               ))}
             </div>
           </FilterSection>
-          <FilterSection title="Status">
+          <FilterSection title={t("owner:finance.title.status")}>
             <div className="flex flex-wrap gap-2">
               {STATUS_TABS.map(({ key, label }) => (
                 <button
@@ -642,6 +646,7 @@ function InvoicesTab() {
    ═══════════════════════════════════════════════════════════════ */
 
 export default function OwnerFinance() {
+  const { t } = useTranslation("owner");
   const router = useRouter();
 
   const tabKeys = FINANCE_TABS.map((t) => t.key);
@@ -660,7 +665,7 @@ export default function OwnerFinance() {
       <PageShell>
         <OwnerPicker />
         <PageHeader
-          title="Finance"
+          title={t("owner:finance.title.finance")}
           subtitle="Portfolio summary, invoices, and cashflow planning"
         />
         <PageContent>

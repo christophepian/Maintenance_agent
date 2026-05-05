@@ -18,6 +18,7 @@ import ActionBar from "../../../components/ui/ActionBar";
 import ResourceShell from "../../../components/ui/ResourceShell";
 import { rentAdjustmentVariant } from "../../../lib/statusVariants";
 import { withServerTranslations } from "../../../lib/i18n";
+import { useTranslation } from "next-i18next";
 
 const TYPE_LABELS = {
   CPI_INDEXATION: "CPI Indexation",
@@ -26,6 +27,7 @@ const TYPE_LABELS = {
 };
 
 export default function RentAdjustmentDetail() {
+  const { t } = useTranslation("manager");
   const router = useRouter();
   const { id } = router.query;
   const { data: adj, setData: setAdj, loading, error } = useDetailResource(
@@ -78,7 +80,7 @@ export default function RentAdjustmentDetail() {
         />
         <PageContent>
           {/* Summary Panel */}
-          <Panel title="Summary">
+          <Panel title={t("manager:rentAdjustmentsId.title.summary")}>
             <DetailGrid>
               <DetailItem label="Status">
                 <Badge variant={rentAdjustmentVariant(adj.status)} size="sm">{adj.status}</Badge>
@@ -94,7 +96,7 @@ export default function RentAdjustmentDetail() {
           </Panel>
 
           {/* Rent Change Panel */}
-          <Panel title="Rent Change" className="mt-4">
+          <Panel title={t("manager:rentAdjustmentsId.title.rentChange")} className="mt-4">
             <div className="grid grid-cols-3 gap-6 text-center">
               <div>
                 <span className="text-slate-500 text-sm block">Previous Rent</span>
@@ -118,7 +120,7 @@ export default function RentAdjustmentDetail() {
 
           {/* CPI / Calculation Details */}
           {(adj.cpiOldIndex || adj.cpiNewIndex) && (
-            <Panel title="Indexation Details" className="mt-4">
+            <Panel title={t("manager:rentAdjustmentsId.title.indexationDetails")} className="mt-4">
               <DetailGrid>
                 <DetailItem label="CPI Base">{adj.cpiOldIndex ?? "—"}</DetailItem>
                 <DetailItem label="CPI Current">{adj.cpiNewIndex ?? "—"}</DetailItem>
@@ -144,7 +146,7 @@ export default function RentAdjustmentDetail() {
 
           {/* Rejection info */}
           {adj.status === "REJECTED" && (
-            <Panel title="Rejection" className="mt-4">
+            <Panel title={t("manager:rentAdjustmentsId.title.rejection")} className="mt-4">
               <p className="text-red-600 text-sm">
                 Rejected on {formatDate(adj.rejectedAt)}
                 {adj.rejectionReason && <> — {adj.rejectionReason}</>}
@@ -154,7 +156,7 @@ export default function RentAdjustmentDetail() {
 
           {/* Application info */}
           {adj.status === "APPLIED" && (
-            <Panel title="Application" className="mt-4">
+            <Panel title={t("manager:rentAdjustmentsId.title.application")} className="mt-4">
               <p className="text-green-700 text-sm">
                 ✅ Applied on {formatDate(adj.appliedAt)}.
                 Lease rent updated to {formatChfCents(adj.newRentCents)}/month.
@@ -164,7 +166,7 @@ export default function RentAdjustmentDetail() {
 
           {/* Lease Index Settings */}
           {adj.lease && (
-            <Panel title="Lease Index Settings" className="mt-4">
+            <Panel title={t("manager:rentAdjustmentsId.title.leaseIndexSettings")} className="mt-4">
               <DetailGrid>
                 <DetailItem label="Index Clause">{adj.lease.indexClauseType || "NONE"}</DetailItem>
                 <DetailItem label="CPI Base Index">{adj.lease.cpiBaseIndex ?? "—"}</DetailItem>
@@ -231,7 +233,7 @@ export default function RentAdjustmentDetail() {
                 onChange={(e) => setRejectReason(e.target.value)}
                 className="w-full border rounded p-2 text-sm"
                 rows={2}
-                placeholder="Enter reason…"
+                placeholder={t("manager:rentAdjustmentsId.placeholder.enterReason")}
               />
               <div className="mt-2 flex gap-2">
                 <Button

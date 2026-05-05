@@ -14,8 +14,10 @@ import { rfpVariant, quoteVariant } from "../../../lib/statusVariants";
 import { cn } from "../../../lib/utils";
 import { formatDate, formatChfCents } from "../../../lib/format";
 import { withServerTranslations } from "../../../lib/i18n";
+import { useTranslation } from "next-i18next";
 
 export default function OwnerRfpDetailPage() {
+  const { t } = useTranslation("owner");
   const router = useRouter();
   const { id } = router.query;
 
@@ -110,7 +112,7 @@ export default function OwnerRfpDetailPage() {
               )}
 
               {/* RFP Metadata */}
-              <Panel title="RFP Details">
+              <Panel title={t("owner:rfpsId.title.rFPDetails")}>
                 <dl className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
                   <div>
                     <dt className="text-sm font-medium text-slate-500">Status</dt>

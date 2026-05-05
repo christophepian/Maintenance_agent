@@ -20,6 +20,7 @@ import { FilterToggle, FilterPanelBody, FilterSection, FilterSectionClear, DateF
 import ScrollableTabs from "../../../components/mobile/ScrollableTabs";
 import KpiInlineGrid from "../../../components/ui/KpiInlineGrid";
 import { withTranslations } from "../../../lib/i18n";
+import { useTranslation } from "next-i18next";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -77,6 +78,7 @@ const FINANCE_TABS = [
 // ─── Main Page ───────────────────────────────────────────────────────────────
 
 export default function ManagerFinanceHome() {
+  const { t } = useTranslation("manager");
   const router = useRouter();
 const tabKeys = FINANCE_TABS.map((t) => t.key);
   const activeTabKey = router.isReady && tabKeys.includes(router.query.tab) ? router.query.tab : "overview";
@@ -130,7 +132,7 @@ const tabKeys = FINANCE_TABS.map((t) => t.key);
     <AppShell role="MANAGER">
       <PageShell>
         <PageHeader
-          title="Finances"
+          title={t("manager:financeIndex.title.finances")}
 
         />
         <PageContent>
@@ -163,10 +165,10 @@ const tabKeys = FINANCE_TABS.map((t) => t.key);
             // space-y-6 spaces: filter panel → error/loading → portfolio section → buildings section
             <div className="space-y-6">
               <div>
-                <FilterToggle open={filterOpen} onToggle={() => setFilterOpen((v) => !v)} activeCount={0} label="Date range" />
+                <FilterToggle open={filterOpen} onToggle={() => setFilterOpen((v) => !v)} activeCount={0} label={t("manager:financeIndex.title.dateRange")} />
                 {filterOpen && (
                   <FilterPanelBody>
-                    <FilterSection title="Date range" first>
+                    <FilterSection title={t("manager:financeIndex.title.dateRange")} first>
                       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                         <DateField label="From" value={range.from} onChange={(e) => setRange((r) => ({ ...r, from: e.target.value }))} />
                         <DateField label="To" value={range.to} onChange={(e) => setRange((r) => ({ ...r, to: e.target.value }))} />
@@ -209,7 +211,7 @@ const tabKeys = FINANCE_TABS.map((t) => t.key);
                     </div>
                   </Section>
 
-                  <Section title="Buildings">
+                  <Section title={t("manager:financeIndex.title.buildings")}>
                     {/* Stats row */}
                     <div className="flex gap-4 text-xs text-slate-500">
                       <span>Avg collection rate: <strong>{formatPercent(p.avgCollectionRate)}</strong></span>
@@ -288,7 +290,7 @@ const tabKeys = FINANCE_TABS.map((t) => t.key);
                                     </td>
                                     <td className="text-right">
                                       <button
-                                        aria-label="View building financials"
+                                        aria-label={t("manager:financeIndex.ariaLabel.viewBuildingFinancials")}
                                         onClick={(e) => { e.stopPropagation(); router.push(`/manager/buildings/${b.buildingId}/financials`); }}
                                         className="icon-btn"
                                       >

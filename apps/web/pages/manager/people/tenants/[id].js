@@ -17,8 +17,10 @@ import ScrollableTabs from "../../../../components/mobile/ScrollableTabs";
 import SortableHeader from "../../../../components/SortableHeader";
 import { useLocalSort, clientSort } from "../../../../lib/tableUtils";
 import { withServerTranslations } from "../../../../lib/i18n";
+import { useTranslation } from "next-i18next";
 
 export default function TenantDetailPage() {
+  const { t } = useTranslation("manager");
   const router = useRouter();
   const { id } = router.query;
   const [tenant, setTenant] = useState(null);
@@ -201,7 +203,7 @@ export default function TenantDetailPage() {
 
               {activeTab === "Personal information" && (
                 <Panel
-                  title="Personal information"
+                  title={t("manager:peopleTenantsId.title.personalInformation")}
                   actions={
                     isEditing ? (
                       <div className="flex items-center gap-2">
@@ -222,7 +224,7 @@ export default function TenantDetailPage() {
                           type="text"
                           value={formData.name}
                           onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
-                          placeholder="Tenant name"
+                          placeholder={t("manager:peopleTenantsId.placeholder.tenantName")}
                         />
                       ) : (
                         <div className="text-sm text-slate-700">{formData.name || "—"}</div>
@@ -236,7 +238,7 @@ export default function TenantDetailPage() {
                           type="tel"
                           value={formData.phone}
                           onChange={(e) => setFormData((prev) => ({ ...prev, phone: e.target.value }))}
-                          placeholder="+41 XX XXX XXXX"
+                          placeholder={t("manager:peopleTenantsId.placeholder.41XxXxxXxxx")}
                         />
                       ) : (
                         <div className="text-sm text-slate-700">{formData.phone || "—"}</div>
@@ -250,7 +252,7 @@ export default function TenantDetailPage() {
                           type="email"
                           value={formData.email}
                           onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
-                          placeholder="tenant@example.com"
+                          placeholder={t("manager:peopleTenantsId.placeholder.tenantExampleCom")}
                         />
                       ) : (
                         <div className="text-sm text-slate-700">{formData.email || "—"}</div>
@@ -284,7 +286,7 @@ export default function TenantDetailPage() {
               )}
 
               {activeTab === "Unit" && (
-                <Panel title="Professional">
+                <Panel title={t("manager:peopleTenantsId.title.professional")}>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div>
                       <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Unit</div>
@@ -320,9 +322,9 @@ export default function TenantDetailPage() {
 
               {activeTab === "Documents" && (
                 applicationId ? (
-                  <DocumentsPanel applicationId={applicationId} title="Corroborative Documents" />
+                  <DocumentsPanel applicationId={applicationId} title={t("manager:peopleTenantsId.title.corroborativeDocuments")} />
                 ) : (
-                  <Panel title="Corroborative Documents">
+                  <Panel title={t("manager:peopleTenantsId.title.corroborativeDocuments")}>
                     <p className="text-sm text-slate-500 py-2">
                       No rental application linked to this tenant.
                     </p>
@@ -331,7 +333,7 @@ export default function TenantDetailPage() {
               )}
 
               {activeTab === "Contracts" && (
-                <Panel title="Contracts" bodyClassName="p-0">
+                <Panel title={t("manager:peopleTenantsId.title.contracts")} bodyClassName="p-0">
                   {leasesLoading ? (
                     <p className="px-4 py-3 text-sm text-slate-600">Loading leases…</p>
                   ) : leases.length === 0 ? (
@@ -399,7 +401,7 @@ export default function TenantDetailPage() {
               )}
 
               {activeTab === "Invoices" && (
-                <Panel title="Invoices" bodyClassName="p-0">
+                <Panel title={t("manager:peopleTenantsId.title.invoices")} bodyClassName="p-0">
                   {invoicesLoading ? (
                     <p className="px-4 py-3 text-sm text-slate-600">Loading invoices…</p>
                   ) : leaseInvoices.length === 0 ? (

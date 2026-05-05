@@ -17,6 +17,7 @@ import { invoiceVariant, ingestionVariant } from "../../../lib/statusVariants";
 
 import { cn } from "../../../lib/utils";
 import { withTranslations } from "../../../lib/i18n";
+import { useTranslation } from "next-i18next";
 /* ─── Helpers ─────────────────────────────────────────────── */
 
 const INVOICE_SORT_FIELDS = ["status", "invoiceNumber", "amount", "createdAt", "issuer", "recipient", "building", "recurring", "category"];
@@ -158,6 +159,7 @@ function ActionDropdown({ actions }) {
 /* ─── Invoice PDF Overlay ─────────────────────────────────── */
 
 function InvoiceOverlay({ invoiceId, onClose }) {
+  const { t } = useTranslation("manager");
   const [pdfUrl, setPdfUrl] = useState(null);
   const [detail, setDetail] = useState(null);
 
@@ -230,7 +232,7 @@ function InvoiceOverlay({ invoiceId, onClose }) {
           {pdfUrl ? (
             <iframe
               src={pdfUrl}
-              title="Invoice PDF"
+              title={t("manager:financeInvoices.title.invoicePdf")}
               className="w-full h-full border-0"
             />
           ) : (
@@ -247,6 +249,7 @@ function InvoiceOverlay({ invoiceId, onClose }) {
 /* ─── Dispute Justification Modal ─────────────────────────── */
 
 function DisputeModal({ invoiceId, onConfirm, onCancel }) {
+  const { t } = useTranslation("manager");
   const [reason, setReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -274,14 +277,14 @@ function DisputeModal({ invoiceId, onConfirm, onCancel }) {
         onClick={(e) => e.stopPropagation()}
         className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 p-6"
       >
-        <h3 className="text-lg font-semibold text-slate-900 mt-0 mb-1">Dispute Invoice</h3>
+        <h3 className="text-lg font-semibold text-slate-900 mt-0 mb-1">{t("manager:financeInvoices.heading.disputeInvoice")}</h3>
         <p className="text-sm text-slate-500 mt-0 mb-4">
           Provide a justification for disputing this invoice. The contractor will be notified.
         </p>
         <textarea
           className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
           rows={4}
-          placeholder="Reason for dispute…"
+          placeholder={t("manager:financeInvoices.placeholder.reasonForDispute")}
           value={reason}
           onChange={(e) => setReason(e.target.value)}
           autoFocus
@@ -311,6 +314,7 @@ function DisputeModal({ invoiceId, onConfirm, onCancel }) {
 /* ─── Upload Invoice Modal ────────────────────────────────── */
 
 function UploadInvoiceModal({ onClose, onSuccess }) {
+  const { t } = useTranslation("manager");
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
@@ -356,7 +360,7 @@ function UploadInvoiceModal({ onClose, onSuccess }) {
         onClick={(e) => e.stopPropagation()}
         className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 p-6"
       >
-        <h3 className="text-lg font-semibold text-slate-900 mt-0 mb-1">Upload Invoice</h3>
+        <h3 className="text-lg font-semibold text-slate-900 mt-0 mb-1">{t("manager:financeInvoices.heading.uploadInvoice")}</h3>
         <p className="text-sm text-slate-500 mt-0 mb-4">
           Upload a PDF or image of an invoice. It will be scanned and pre-filled automatically.
         </p>
@@ -383,6 +387,7 @@ function UploadInvoiceModal({ onClose, onSuccess }) {
 /* ─── Capture Session (QR) Modal ──────────────────────────── */
 
 function CaptureSessionModal({ onClose, onComplete }) {
+  const { t } = useTranslation("manager");
   const [session, setSession] = useState(null);
   const [creating, setCreating] = useState(true);
   const [createError, setCreateError] = useState("");
@@ -492,6 +497,7 @@ function CaptureSessionModal({ onClose, onComplete }) {
 /* ─── Embeddable invoices content ─────────────────────────── */
 
 export function InvoicesContent() {
+  const { t } = useTranslation("manager");
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -827,7 +833,7 @@ export function InvoicesContent() {
       <div className="flex items-center gap-2 mb-3">
         <input
           type="search"
-          placeholder="Search invoices…"
+          placeholder={t("manager:financeInvoices.placeholder.searchInvoices")}
           value={invSearch}
           onChange={(e) => { setInvSearch(e.target.value); setTableExpanded(false); }}
           className="filter-input flex-1 min-w-0 mb-0"
@@ -838,7 +844,7 @@ export function InvoicesContent() {
         <button
           onClick={cycleSort}
           className="flex shrink-0 items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors"
-          title="Cycle sort field"
+          title={t("manager:financeInvoices.title.cycleSortField")}
         >
           {INV_SORT_CYCLE[sortCycleIdx].label}
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"
@@ -878,9 +884,7 @@ export function InvoicesContent() {
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75} aria-hidden="true">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
-                      </svg>
-                      Upload Invoice
-                    </button>
+                      </svg>{t("manager:financeInvoices.heading.uploadInvoice")}</button>
                     <button
                       onClick={() => { setActionsOpen(false); setShowCaptureModal(true); }}
                       className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 text-left"
@@ -901,7 +905,7 @@ export function InvoicesContent() {
 
       {filterOpen && (
         <FilterPanelBody>
-          <FilterSection title="Direction" first>
+          <FilterSection title={t("manager:financeInvoices.title.direction")} first>
             <div className="flex flex-wrap gap-2">
               {[
                 { key: "incoming", label: "Incoming" },
@@ -923,7 +927,7 @@ export function InvoicesContent() {
               ))}
             </div>
           </FilterSection>
-          <FilterSection title="Status">
+          <FilterSection title={t("manager:financeInvoices.title.status")}>
             <div className="flex flex-wrap gap-2">
               {(isOutgoing ? OUTGOING_STATUS_TABS : INCOMING_STATUS_TABS).map(({ key, label }) => (
                 <button
@@ -942,7 +946,7 @@ export function InvoicesContent() {
             </div>
           </FilterSection>
           {availableCategories.length > 0 && (
-            <FilterSection title="Category">
+            <FilterSection title={t("manager:financeInvoices.title.category")}>
               <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => { setCategoryFilter(""); setTableExpanded(false); }}
@@ -1095,10 +1099,11 @@ export function InvoicesContent() {
 /* ─── Main Page ───────────────────────────────────────────── */
 
 export default function ManagerInvoicesPage() {
+  const { t } = useTranslation("manager");
   return (
     <AppShell role="MANAGER">
       <PageShell>
-        <PageHeader title="Invoices" />
+        <PageHeader title={t("manager:financeInvoices.title.invoices")} />
         <PageContent>
           <InvoicesContent />
         </PageContent>

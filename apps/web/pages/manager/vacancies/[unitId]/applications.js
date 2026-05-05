@@ -16,6 +16,7 @@ import { cn } from "../../../../lib/utils";
 import SortableHeader from "../../../../components/SortableHeader";
 import { useLocalSort, clientSort } from "../../../../lib/tableUtils";
 import { withServerTranslations } from "../../../../lib/i18n";
+import { useTranslation } from "next-i18next";
 function scoreColor(score) {
   if (score >= 700) return "text-green-700 bg-green-50";
   if (score >= 400) return "text-amber-700 bg-amber-50";
@@ -29,6 +30,7 @@ function confidenceBadge(confidence) {
 }
 
 export default function UnitApplicationsPage() {
+  const { t } = useTranslation("manager");
   const router = useRouter();
   const { unitId } = router.query;
 
@@ -189,7 +191,7 @@ export default function UnitApplicationsPage() {
           <Link href="/manager/vacancies" className="text-sm text-blue-600 hover:text-blue-700">← Vacancies</Link>
         </div>
         <PageHeader
-          title="Rental Applications"
+          title={t("manager:vacancies[unitid]Applications.title.rentalApplications")}
           subtitle={unitLabel}
           actions={
             <div className="flex items-center gap-2">
@@ -296,13 +298,13 @@ export default function UnitApplicationsPage() {
                   <table className="data-table">
                     <thead>
                       <tr>
-                        <th>Rank</th>
+                        <th>{t("manager:vacancies[unitid]Applications.col.rank")}</th>
                         <SortableHeader label="Applicant" field="name" sortField={appSF} sortDir={appSD} onSort={handleAppSort} />
                         <SortableHeader label="Income (CHF)" field="income" sortField={appSF} sortDir={appSD} onSort={handleAppSort} />
                         <SortableHeader label="Score" field="score" sortField={appSF} sortDir={appSD} onSort={handleAppSort} />
                         <SortableHeader label="Confidence" field="confidence" sortField={appSF} sortDir={appSD} onSort={handleAppSort} />
                         <SortableHeader label="Status" field="status" sortField={appSF} sortDir={appSD} onSort={handleAppSort} />
-                        <th className="text-right">Actions</th>
+                        <th className="text-right">{t("manager:vacancies[unitid]Applications.col.actions")}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -325,7 +327,7 @@ export default function UnitApplicationsPage() {
                                   className={cn("font-medium underline decoration-dotted underline-offset-2 transition-colors", isDocExpanded
                                       ? "text-indigo-700"
                                       : "text-slate-900 hover:text-indigo-600")}
-                                  title="Click to view corroborative documents"
+                                  title={t("manager:vacancies[unitid]Applications.title.clickToViewCorroborativeDocuments")}
                                 >
                                   {row.name}
                                 </button>
@@ -422,7 +424,7 @@ export default function UnitApplicationsPage() {
         {overrideTarget && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setOverrideTarget(null)}>
             <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
-              <h3 className="text-lg font-bold text-slate-900">Override Disqualification</h3>
+              <h3 className="text-lg font-bold text-slate-900">{t("manager:vacancies[unitid]Applications.heading.overrideDisqualification")}</h3>
               <p className="mt-2 text-sm text-slate-600">
                 You are about to override the automatic disqualification for <strong>{overrideTarget.name}</strong>.
                 This candidate will become eligible for selection.
@@ -434,7 +436,7 @@ export default function UnitApplicationsPage() {
                 <textarea
                   className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                   rows={3}
-                  placeholder="e.g. Verified income directly with employer; debt enforcement extract is clear…"
+                  placeholder={t("manager:vacancies[unitid]Applications.placeholder.eGVerifiedIncomeDirectlyWithEmployerDebtEnforcementExtractIsClear")}
                   value={overrideReason}
                   onChange={(e) => setOverrideReason(e.target.value)}
                 />
@@ -463,7 +465,7 @@ export default function UnitApplicationsPage() {
         {adjustTarget && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
             <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
-              <h3 className="text-lg font-semibold text-slate-900">Adjust Score</h3>
+              <h3 className="text-lg font-semibold text-slate-900">{t("manager:vacancies[unitid]Applications.heading.adjustScore")}</h3>
               <p className="text-sm text-slate-600 mt-1">Add or subtract points with a reason.</p>
               <div className="mt-4 space-y-3">
                 <div>
@@ -483,7 +485,7 @@ export default function UnitApplicationsPage() {
                     onChange={(e) => setAdjustReason(e.target.value)}
                     rows={3}
                     className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                    placeholder="Reason for adjustment (min 3 chars)"
+                    placeholder={t("manager:vacancies[unitid]Applications.placeholder.reasonForAdjustmentMin3Chars")}
                   />
                 </div>
               </div>

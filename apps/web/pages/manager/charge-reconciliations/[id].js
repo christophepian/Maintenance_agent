@@ -20,8 +20,10 @@ import { formatChfCents } from "../../../lib/format";
 import SortableHeader from "../../../components/SortableHeader";
 import { useLocalSort, clientSort } from "../../../lib/tableUtils";
 import { withServerTranslations } from "../../../lib/i18n";
+import { useTranslation } from "next-i18next";
 
 export default function ChargeReconciliationDetailPage() {
+  const { t } = useTranslation("manager");
   const router = useRouter();
   const { id } = router.query;
   const { data: recon, setData: setRecon, loading, error, refresh } = useDetailResource(
@@ -123,7 +125,7 @@ export default function ChargeReconciliationDetailPage() {
         />
         <PageContent>
           {/* Summary */}
-          <Panel title="Summary">
+          <Panel title={t("manager:chargeReconciliationsId.title.summary")}>
             <DetailGrid>
               <DetailItem label="Tenant">
                 <Link href={`/manager/leases/${recon.leaseId}`} className="text-blue-600 hover:underline font-medium">
@@ -154,7 +156,7 @@ export default function ChargeReconciliationDetailPage() {
           </Panel>
 
           {/* Line Items */}
-          <Panel title="Expense Lines" className="mt-6">
+          <Panel title={t("manager:chargeReconciliationsId.title.expenseLines")} className="mt-6">
             {/* Mobile cards */}
             <div className="sm:hidden divide-y divide-slate-100">
               {sortedLineItems.map((line) => (
@@ -210,7 +212,7 @@ export default function ChargeReconciliationDetailPage() {
                     <SortableHeader label="ACOMPTE Paid" field="acompte" sortField={liSF} sortDir={liSD} onSort={handleLineSort} className="text-right" />
                     <SortableHeader label="Actual Cost" field="actual" sortField={liSF} sortDir={liSD} onSort={handleLineSort} className="text-right" />
                     <SortableHeader label="Balance" field="balance" sortField={liSF} sortDir={liSD} onSort={handleLineSort} className="text-right" />
-                    {isDraft && <th className="text-right">Action</th>}
+                    {isDraft && <th className="text-right">{t("manager:chargeReconciliationsId.col.action")}</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -269,7 +271,7 @@ export default function ChargeReconciliationDetailPage() {
 
           {/* Settlement Invoice */}
           {isSettled && recon.settlementInvoice && (
-            <Panel title="Settlement Invoice" className="mt-6">
+            <Panel title={t("manager:chargeReconciliationsId.title.settlementInvoice")} className="mt-6">
               <div className="text-sm space-y-2">
                 <div className="flex gap-4">
                   <span className="text-muted-foreground">Invoice:</span>

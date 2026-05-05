@@ -18,6 +18,7 @@ import { requestVariant } from "../../lib/statusVariants";
 import { cn } from "../../lib/utils";
 import ScrollableTabs from "../../components/mobile/ScrollableTabs";
 import { withTranslations } from "../../lib/i18n";
+import { useTranslation } from "next-i18next";
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
@@ -124,6 +125,7 @@ function StatusBadge({ status }) {
 // ---------------------------------------------------------------------------
 
 export default function OwnerWorkRequestsPage() {
+  const { t } = useTranslation("owner");
   const router = useRouter();
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -191,7 +193,7 @@ export default function OwnerWorkRequestsPage() {
       <PageShell>
         <OwnerPicker onSelect={() => router.replace(router.asPath)} />
         <PageHeader
-          title="Work Requests"
+          title={t("owner:workRequests.title.workRequests")}
           subtitle="All maintenance requests across your properties"
         />
         <PageContent>

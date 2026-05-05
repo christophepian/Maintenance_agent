@@ -15,6 +15,7 @@ import ScrollableTabs from "../../../components/mobile/ScrollableTabs";
 import SortableHeader from "../../../components/SortableHeader";
 import { useLocalSort, clientSort } from "../../../lib/tableUtils";
 import { withTranslations } from "../../../lib/i18n";
+import { useTranslation } from "next-i18next";
 /**
  * Reusable action dropdown button — renders a "⋯" pill that opens
  * a positioned dropdown with a list of actions.
@@ -88,6 +89,7 @@ function leaseBadge(lease, hasLeaseTemplate) {
 }
 
 function VacantGroupTable({ units, onNavigate }) {
+  const { t } = useTranslation("manager");
   const router = useRouter();
   const { sortField: uSF, sortDir: uSD, handleSort: handleUSort } = useLocalSort("unitNumber", "asc");
   const sorted = useMemo(() => clientSort(units, uSF, uSD, (u, f) => {
@@ -106,7 +108,7 @@ function VacantGroupTable({ units, onNavigate }) {
             <SortableHeader label="Floor" field="floor" sortField={uSF} sortDir={uSD} onSort={handleUSort} />
             <SortableHeader label="Rent (CHF)" field="monthlyRentChf" sortField={uSF} sortDir={uSD} onSort={handleUSort} />
             <SortableHeader label="Charges (CHF)" field="monthlyChargesChf" sortField={uSF} sortDir={uSD} onSort={handleUSort} />
-            <th className="text-right">Applications</th>
+            <th className="text-right">{t("manager:vacanciesIndex.col.applications")}</th>
           </tr>
         </thead>
         <tbody>
@@ -146,6 +148,7 @@ function VacantGroupTable({ units, onNavigate }) {
 }
 
 export default function ManagerVacanciesPage() {
+  const { t } = useTranslation("manager");
   const router = useRouter();
   const [units, setUnits] = useState([]);
   const [selections, setSelections] = useState([]);
@@ -251,7 +254,7 @@ export default function ManagerVacanciesPage() {
     <AppShell role="MANAGER">
       <PageShell>
         <PageHeader
-          title="Inventory"
+          title={t("manager:vacanciesIndex.title.inventory")}
           subtitle="Buildings, units, assets and depreciation schedules."
           actions={
             <button
@@ -336,7 +339,7 @@ export default function ManagerVacanciesPage() {
                         <SortableHeader label="Status" field="status" sortField={selSF} sortDir={selSD} onSort={handleSelSort} />
                         <SortableHeader label="Lease" field="lease" sortField={selSF} sortDir={selSD} onSort={handleSelSort} />
                         <SortableHeader label="Deadline" field="deadlineAt" sortField={selSF} sortDir={selSD} onSort={handleSelSort} />
-                        <th className="text-right">Action</th>
+                        <th className="text-right">{t("manager:vacanciesIndex.col.action")}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -396,7 +399,7 @@ export default function ManagerVacanciesPage() {
 
           {/* ── Vacant Units ─────────────────────────────────── */}
           <div>
-          <h2 className="mb-3 text-sm font-semibold text-slate-700">Vacant Units — Open for Applications</h2>
+          <h2 className="mb-3 text-sm font-semibold text-slate-700">{t("manager:vacanciesIndex.heading.vacantUnitsOpenForApplications")}</h2>
             {loading && <p className="text-sm text-slate-500">Loading…</p>}
 
             {!loading && units.length === 0 && (

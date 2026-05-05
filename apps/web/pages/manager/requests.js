@@ -16,6 +16,7 @@ import ScrollableTabs from "../../components/mobile/ScrollableTabs";
 import SwipeableCard from "../../components/mobile/SwipeableCard";
 import { FilterToggle, FilterPanelBody, FilterSection, FilterSectionClear, SelectField, NumberField, SortToggle, SortPanelBody, SortRow } from "../../components/ui/FilterPanel";
 import { withTranslations } from "../../lib/i18n";
+import { useTranslation } from "next-i18next";
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
@@ -1129,6 +1130,7 @@ function RequestPhotosPanel({ requestId }) {
 // ---------------------------------------------------------------------------
 
 export default function ManagerRequestsPage() {
+  const { t } = useTranslation("manager");
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -1378,7 +1380,7 @@ export default function ManagerRequestsPage() {
     <AppShell role="MANAGER">
       <PageShell>
         <PageHeader
-          title="Requests Inbox"
+          title={t("manager:requests.title.requestsInbox")}
           subtitle="Review incoming maintenance requests. Click a row to see full details."
         />
         <PageContent>
@@ -1424,8 +1426,8 @@ export default function ManagerRequestsPage() {
             <div className="flex items-center gap-2">
               <input
                 type="search"
-                aria-label="Search requests"
-                placeholder="#, description, building, unit, contractor…"
+                aria-label={t("manager:requests.ariaLabel.searchRequests")}
+                placeholder={t("manager:requests.placeholder.descriptionBuildingUnitContractor")}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="filter-input flex-1 min-w-0 mb-0"
@@ -1438,7 +1440,7 @@ export default function ManagerRequestsPage() {
           {/* Collapsible filter panel */}
           {filterOpen && (
             <FilterPanelBody>
-              <FilterSection title="Priority" first>
+              <FilterSection title={t("manager:requests.title.priority")} first>
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                   <SelectField label="Urgency" value={filterUrgency} onChange={(e) => setFilterUrgency(e.target.value)}>
                     <option value="">All urgencies</option>
@@ -1450,7 +1452,7 @@ export default function ManagerRequestsPage() {
                 </div>
               </FilterSection>
 
-              <FilterSection title="Scope">
+              <FilterSection title={t("manager:requests.title.scope")}>
                 <div className="grid grid-cols-2 gap-3">
                   {buildingOptions.length > 1 && (
                     <SelectField label="Building" value={filterBuilding} onChange={(e) => { setFilterBuilding(e.target.value); }}>

@@ -15,6 +15,7 @@ import { cn } from "../../lib/utils";
 import OwnerPicker from "../../components/OwnerPicker";
 import { formatChf, formatChfCents, formatDate } from "../../lib/format";
 import { withTranslations } from "../../lib/i18n";
+import { useTranslation } from "next-i18next";
 
 // ── Monopoly palette: deterministic top-band colour from building name ──────
 // Colours are kept fun/bold (the Monopoly identity), but the rest of the
@@ -238,6 +239,7 @@ const OWNER_BUILDING_COLUMNS = [
 ];
 
 export default function OwnerPropertiesPage() {
+  const { t } = useTranslation("owner");
   const [tab, setTab] = useState("buildings");
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -246,7 +248,7 @@ export default function OwnerPropertiesPage() {
       <PageShell>
         <OwnerPicker onSelect={() => setRefreshKey((k) => k + 1)} />
         <PageHeader
-          title="Properties"
+          title={t("owner:properties.title.properties")}
           subtitle="Buildings and units in your portfolio"
           actions={
             <button
@@ -292,6 +294,7 @@ function trailingYear() {
 }
 
 function BuildingsTab({ refreshKey }) {
+  const { t } = useTranslation("owner");
   const router = useRouter();
   const [buildings, setBuildings] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -353,7 +356,7 @@ function BuildingsTab({ refreshKey }) {
             <button
               type="button"
               onClick={() => setViewMode("list")}
-              aria-label="List view"
+              aria-label={t("owner:properties.ariaLabel.listView")}
               className={cn(
                 "px-3 py-1.5 text-sm flex items-center gap-1.5 transition-colors",
                 viewMode === "list"
@@ -372,7 +375,7 @@ function BuildingsTab({ refreshKey }) {
             <button
               type="button"
               onClick={() => setViewMode("monopoly")}
-              aria-label="Monopoly board view"
+              aria-label={t("owner:properties.ariaLabel.monopolyBoardView")}
               className={cn(
                 "px-3 py-1.5 text-sm flex items-center gap-1.5 transition-colors border-l border-slate-200",
                 viewMode === "monopoly"

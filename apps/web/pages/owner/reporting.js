@@ -5,6 +5,7 @@ import { authHeaders } from "../../lib/api";
 
 import { cn } from "../../lib/utils";
 import { withTranslations } from "../../lib/i18n";
+import { useTranslation } from "next-i18next";
 /* ─── Constants ──────────────────────────────────────────────── */
 
 const PREVIEW = 3; // rows shown before expand
@@ -69,6 +70,7 @@ function ExpandToggle({ expanded, total, onToggle }) {
 /* ─── Timeline header ────────────────────────────────────────── */
 
 function TimelineHeader({ year, month, mode, onSelect, onYearNav, onModeToggle }) {
+  const { t } = useTranslation("owner");
   const scrollRef = useRef(null);
 
   // Auto-scroll selected month into view
@@ -95,7 +97,7 @@ function TimelineHeader({ year, month, mode, onSelect, onYearNav, onModeToggle }
               <button
                 onClick={() => onYearNav(-1)}
                 className="flex h-7 w-7 items-center justify-center rounded-full hover:bg-slate-100 text-slate-500 transition-colors text-sm"
-                aria-label="Previous year"
+                aria-label={t("owner:reporting.ariaLabel.previousYear")}
               >
                 ‹
               </button>
@@ -108,7 +110,7 @@ function TimelineHeader({ year, month, mode, onSelect, onYearNav, onModeToggle }
               <button
                 onClick={() => onYearNav(1)}
                 className="flex h-7 w-7 items-center justify-center rounded-full hover:bg-slate-100 text-slate-500 transition-colors text-sm"
-                aria-label="Next year"
+                aria-label={t("owner:reporting.ariaLabel.nextYear")}
               >
                 ›
               </button>
@@ -400,6 +402,7 @@ function buildInsights(curr, prev, moveIns, moveOuts) {
 /* ─── Main page ──────────────────────────────────────────────── */
 
 export default function OwnerReportingPage() {
+  const { t } = useTranslation("owner");
   const today = new Date();
   const [tlMode, setTlMode]   = useState("month");
   const [selYear, setSelYear]  = useState(today.getFullYear());
@@ -589,7 +592,7 @@ export default function OwnerReportingPage() {
         {/* ── PERFORMANCE DRIVERS ──────────────────────────────── */}
         <section className="mb-8">
           <div className="mb-4">
-            <h2 className="text-lg font-semibold text-slate-900">What drove performance</h2>
+            <h2 className="text-lg font-semibold text-slate-900">{t("owner:reporting.heading.whatDrovePerformance")}</h2>
             <p className="text-sm text-slate-400">The main forces behind this month's numbers.</p>
           </div>
           {loading ? (
@@ -616,7 +619,7 @@ export default function OwnerReportingPage() {
           return (
             <section className="mb-8">
               <div className="mb-4">
-                <h2 className="text-lg font-semibold text-slate-900">By property</h2>
+                <h2 className="text-lg font-semibold text-slate-900">{t("owner:reporting.heading.byProperty")}</h2>
                 <p className="text-sm text-slate-400">Net result per building for {periodLabel}.</p>
               </div>
               <div className="space-y-2">
@@ -644,7 +647,7 @@ export default function OwnerReportingPage() {
         {!loading && (moveIns.length > 0 || moveOuts.length > 0) && (
           <section className="mb-8">
             <div className="mb-4">
-              <h2 className="text-lg font-semibold text-slate-900">Tenant movements</h2>
+              <h2 className="text-lg font-semibold text-slate-900">{t("owner:reporting.heading.tenantMovements")}</h2>
               <p className="text-sm text-slate-400">Move-ins and move-outs in {periodLabel}.</p>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
@@ -716,7 +719,7 @@ export default function OwnerReportingPage() {
         <section className="mb-8">
           <div className="rounded-3xl border border-slate-200 bg-white p-5">
             <div className="mb-4">
-              <h2 className="text-lg font-semibold text-slate-900">Period insights</h2>
+              <h2 className="text-lg font-semibold text-slate-900">{t("owner:reporting.heading.periodInsights")}</h2>
               <p className="text-sm text-slate-400">What this period's data suggests for future planning.</p>
             </div>
             {loading ? (
@@ -737,7 +740,7 @@ export default function OwnerReportingPage() {
         <section className="rounded-3xl border border-slate-200 bg-white p-5">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h2 className="text-base font-semibold text-slate-900">Full financial detail</h2>
+              <h2 className="text-base font-semibold text-slate-900">{t("owner:reporting.heading.fullFinancialDetail")}</h2>
               <p className="mt-1 text-sm text-slate-500">
                 Drill into ledger entries, trial balance, and per-building financials in the Finance section.
               </p>

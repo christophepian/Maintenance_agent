@@ -17,6 +17,7 @@ import { ownerAuthHeaders } from "../../lib/api";
 import { cn } from "../../lib/utils";
 import OwnerPicker from "../../components/OwnerPicker";
 import { withTranslations } from "../../lib/i18n";
+import { useTranslation } from "next-i18next";
 
 function ActionStat({ label, value, href, tone }) {
   const valueColor = { warn: "text-amber-700", bad: "text-red-600", good: "text-green-700" }[tone] ?? "text-slate-900";
@@ -38,11 +39,12 @@ function InfoStat({ label, value, tone }) {
   );
 }
 
+// Labels are translated at render time via t(`owner:dashboard.chip.${category}`)
 const CATEGORY_CHIP = {
-  approval: { label: "Needs approval",    cls: "bg-amber-100 text-amber-700" },
-  invoice:  { label: "Invoice pending",   cls: "bg-blue-100 text-blue-700" },
-  rfp:      { label: "RFP to review",     cls: "bg-indigo-100 text-indigo-700" },
-  vacancy:  { label: "Vacant unit",       cls: "bg-red-100 text-red-700" },
+  approval: { cls: "bg-amber-100 text-amber-700" },
+  invoice:  { cls: "bg-blue-100 text-blue-700" },
+  rfp:      { cls: "bg-indigo-100 text-indigo-700" },
+  vacancy:  { cls: "bg-red-100 text-red-700" },
 };
 const CARD_STYLE = {
   approval: "border-amber-200 bg-amber-50 hover:bg-amber-100",
@@ -52,11 +54,12 @@ const CARD_STYLE = {
 };
 
 function ActionRow({ category, title, sub, building, date, href }) {
+  const { t } = useTranslation("owner");
   const chip = CATEGORY_CHIP[category];
   return (
     <Link href={href} className="block no-underline">
       <div className={cn("flex items-center gap-3 rounded-xl border px-4 py-3 transition-colors", CARD_STYLE[category])}>
-        <span className={cn("shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold", chip.cls)}>{chip.label}</span>
+        <span className={cn("shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold", chip.cls)}>{t(`owner:dashboard.chip.${category}`)}</span>
         <div className="min-w-0 flex-1">
           <div className="truncate text-sm font-semibold text-slate-900">{title}</div>
           <div className="mt-0.5 flex min-w-0 items-center gap-1.5">
@@ -75,10 +78,10 @@ function ActionRow({ category, title, sub, building, date, href }) {
   );
 }
 
-function heroHeadline(n) {
-  if (n === 0) return "Everything looks good — no items need attention right now.";
-  if (n === 1) return "1 item needs your attention today.";
-  return `${n} items need your attention today.`;
+function heroHeadline(t, n) {
+  if (n === 0) return t("owner:dashboard.hero.allClear");
+  if (n === 1) return t("owner:dashboard.hero.one");
+  return t("owner:dashboard.hero.many", { count: n });
 }
 
 function getLeaseRentTotal(lease) {
@@ -92,6 +95,7 @@ function getInvoiceTotal(inv) {
 }
 
 export default function OwnerDashboard() {
+  const { t } = useTranslation("owner");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [approvals, setApprovals] = useState([]);
@@ -234,7 +238,7 @@ export default function OwnerDashboard() {
           <div className="mb-5 flex items-center gap-3">
             <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Portfolio snapshot</span>
             <div className="flex-1 border-t border-slate-300" />
-            <button onClick={loadDashboard} className="shrink-0 rounded-lg border border-slate-300 bg-transparent p-2 text-slate-400 hover:bg-slate-50 hover:text-slate-700 transition-colors" aria-label="Refresh dashboard">
+            <button onClick={loadDashboard} className="shrink-0 rounded-lg border border-slate-300 bg-transparent p-2 text-slate-400 hover:bg-slate-50 hover:text-slate-700 transition-colors" aria-label={t("owner:index.ariaLabel.refreshDashboard")}>
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
@@ -264,7 +268,7 @@ export default function OwnerDashboard() {
 
           <div className="mt-6 mb-5 border-t border-slate-200" />
 
-          <h1 className="mb-5 text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">{heroHeadline(totalActions)}</h1>
+          <h1 className="mb-5 text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">{heroHeadline(t, totalActions)}</h1>
 
         </div>
 
@@ -281,9 +285,9 @@ export default function OwnerDashboard() {
           {/* Collapsible filter panel */}
           {filterOpen && (
             <FilterPanelBody>
-              <FilterSection title="Category" first>
+              <FilterSection title={t("owner:dashboard.sort.category")} first>
                 <div className="flex flex-wrap gap-1.5">
-                  {[["all","All"],["approval","Needs approval"],["invoice","Invoice pending"],["rfp","RFP to review"],["vacancy","Vacant unit"]].map(([key, lbl]) => (
+                  {[["all",t("owner:dashboard.filter.all")],["approval","Needs approval"],["invoice","Invoice pending"],["rfp","RFP to review"],["vacancy","Vacant unit"]].map(([key, lbl]) => (
                     <button
                       key={key}
                       onClick={() => { setFilterBy(key); setFeedExpanded(false); }}
@@ -306,9 +310,9 @@ export default function OwnerDashboard() {
           {/* Collapsible sort panel */}
           {sortOpen && (
             <SortPanelBody>
-              <SortRow active={sortBy === "urgency"} dir="asc" label="Urgency" ascLabel="High → Low" descLabel="Low → High" onSelect={() => setSortBy("urgency")} />
-              <SortRow active={sortBy === "building"} dir="asc" label="Building" ascLabel="A → Z" descLabel="Z → A" onSelect={() => setSortBy("building")} />
-              <SortRow active={sortBy === "date"} dir="desc" label="Date" descLabel="Newest first" ascLabel="Oldest first" onSelect={() => setSortBy("date")} />
+              <SortRow active={sortBy === "urgency"} dir="asc" label={t("owner:dashboard.sort.urgency")} ascLabel="High → Low" descLabel="Low → High" onSelect={() => setSortBy("urgency")} />
+              <SortRow active={sortBy === "building"} dir="asc" label={t("owner:dashboard.sort.building")} ascLabel="A → Z" descLabel="Z → A" onSelect={() => setSortBy("building")} />
+              <SortRow active={sortBy === "date"} dir="desc" label={t("owner:dashboard.sort.date")} descLabel="Newest first" ascLabel="Oldest first" onSelect={() => setSortBy("date")} />
             </SortPanelBody>
           )}
           {totalActions === 0 ? (
@@ -319,14 +323,14 @@ export default function OwnerDashboard() {
             </div>
           ) : displayFeed.length === 0 ? (
             <div className="rounded-2xl border border-slate-200 bg-slate-50 px-5 py-8 text-center">
-              <div className="text-sm text-slate-500">No items match the selected filter.</div>
+              <div className="text-sm text-slate-500">{t("owner:dashboard.feed.noMatch")}</div>
             </div>
           ) : (
             <div className="space-y-2">
               {visibleFeed.map((item, i) => <ActionRow key={i} {...item} />)}
               {displayFeed.length > FEED_PREVIEW && (
                 <button onClick={() => setFeedExpanded((x) => !x)} className="mt-1 w-full rounded-xl border border-slate-100 py-2 text-xs font-medium text-slate-500 hover:bg-slate-50 transition-colors">
-                  {feedExpanded ? "Show less ↑" : `Show ${displayFeed.length - FEED_PREVIEW} more items ↓`}
+                  {feedExpanded ? t("owner:dashboard.feed.showLess") : `Show ${displayFeed.length - FEED_PREVIEW} more items ↓`}
                 </button>
               )}
             </div>
@@ -337,12 +341,12 @@ export default function OwnerDashboard() {
         <section className="rounded-3xl border border-slate-200 bg-white p-5">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h2 className="text-base font-semibold text-slate-900">More views</h2>
+              <h2 className="text-base font-semibold text-slate-900">{t("owner:index.heading.moreViews")}</h2>
               <p className="mt-1 text-sm text-slate-500">Finance reporting, strategy, and lease management.</p>
             </div>
             <div className="flex flex-wrap gap-2 shrink-0">
               <Link href="/owner/reporting" className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors no-underline">Reporting</Link>
-              <Link href="/owner/finance" className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors no-underline">Finance</Link>
+              <Link href="/owner/finance" className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors no-underline">{t("owner:dashboard.moreTools.finance")}</Link>
               <Link href="/owner/leases" className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors no-underline">Leases</Link>
               <Link href="/owner/approvals" className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition-colors no-underline">All approvals</Link>
             </div>

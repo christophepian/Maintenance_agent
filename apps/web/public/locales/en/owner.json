@@ -16,7 +16,46 @@
     "portfolio": "Portfolio",
     "properties": "Properties",
     "openRequests": "Open Requests",
-    "pendingInvoices": "Pending Invoices"
+    "pendingInvoices": "Pending Invoices",
+    "feed": {
+      "noMatch": "No items match the selected filter.",
+      "showLess": "Show less"
+    },
+    "filter": {
+      "all": "All",
+      "approval": "Approvals",
+      "invoice": "Invoices"
+    },
+    "sort": {
+      "urgency": "Urgency",
+      "building": "Building",
+      "date": "Date",
+      "category": "Category"
+    },
+    "moreTools": {
+      "finance": "Finance",
+      "title": "More tools",
+      "properties": "Properties",
+      "settings": "Settings"
+    },
+    "chip": {
+      "approval": "Needs approval",
+      "invoice": "Invoice pending",
+      "rfp": "RFP to review",
+      "vacancy": "Vacant unit"
+    },
+    "hero": {
+      "allClear": "Everything looks good — no items need attention right now.",
+      "one": "1 item needs your attention today.",
+      "many": "{{count}} items need your attention today."
+    },
+    "kpi": {
+      "title": "Portfolio summary",
+      "netIncomeYtd": "Net income YTD",
+      "occupancy": "Occupancy",
+      "vacancies": "Vacancies",
+      "buildings": "Buildings"
+    }
   },
   "strategyBanner": {
     "title": "Set your property strategy",
@@ -124,6 +163,219 @@
       "timingGuidanceLabel": "Timing guidance",
       "notesLabel": "Notes",
       "assetLinkable": "Can be linked to inventory assets"
+    }
+  },
+  "approvals": {
+    "placeholder": {
+      "eG42": "e.g. 42"
+    },
+    "title": {
+      "approvals": "Approvals",
+      "dateRange": "Date range",
+      "scope": "Scope",
+      "priority": "Priority",
+      "request": "Request #",
+      "status": "Status"
+    }
+  },
+  "billingEntities": {
+    "title": {
+      "ownerBillingEntities": "Owner Billing Entities"
+    }
+  },
+  "finance": {
+    "placeholder": {
+      "searchInvoices": "Search invoices…"
+    },
+    "title": {
+      "dateRange": "Date range",
+      "buildings": "Buildings",
+      "direction": "Direction",
+      "status": "Status",
+      "finance": "Finance"
+    },
+    "ariaLabel": {
+      "invoiceActions": "Invoice actions"
+    }
+  },
+  "financeInvoicesId": {
+    "col": {
+      "description": "Description",
+      "qty": "Qty",
+      "unitPrice": "Unit Price",
+      "vAT": "VAT %",
+      "total": "Total"
+    },
+    "heading": {
+      "disputeThisInvoice": "Dispute this invoice"
+    },
+    "placeholder": {
+      "describeWhyYouAreDisputingThisInvoice": "Describe why you are disputing this invoice…"
+    },
+    "title": {
+      "invoiceDetails": "Invoice Details",
+      "recipient": "Recipient",
+      "issuer": "Issuer",
+      "lineItems": "Line Items",
+      "accounting": "Accounting",
+      "originalCapture": "Original Capture",
+      "pDFPreview": "PDF Preview",
+      "invoicePdf": "Invoice PDF",
+      "timeline": "Timeline"
+    },
+    "ariaLabel": {
+      "disputeInvoice": "Dispute invoice"
+    }
+  },
+  "index": {
+    "heading": {
+      "moreViews": "More views"
+    },
+    "title": {
+      "category": "Category"
+    },
+    "ariaLabel": {
+      "refreshDashboard": "Refresh dashboard"
+    }
+  },
+  "invoices": {
+    "heading": {
+      "downloadPdf": "Download PDF"
+    },
+    "title": {
+      "invoices": "Invoices",
+      "status": "Status",
+      "dateRange": "Date range"
+    },
+    "ariaLabel": {
+      "downloadPdf": "Download PDF"
+    }
+  },
+  "jobs": {
+    "title": {
+      "jobsOverview": "Jobs Overview",
+      "status": "Status",
+      "dateRange": "Date range",
+      "scope": "Scope",
+      "priority": "Priority"
+    }
+  },
+  "properties": {
+    "title": {
+      "properties": "Properties"
+    },
+    "ariaLabel": {
+      "listView": "List view",
+      "monopolyBoardView": "Monopoly board view"
+    }
+  },
+  "reporting": {
+    "heading": {
+      "whatDrovePerformance": "What drove performance",
+      "byProperty": "By property",
+      "tenantMovements": "Tenant movements",
+      "periodInsights": "Period insights",
+      "fullFinancialDetail": "Full financial detail"
+    },
+    "ariaLabel": {
+      "previousYear": "Previous year",
+      "nextYear": "Next year"
+    }
+  },
+  "requestsId": {
+    "title": {
+      "legalAnalysis": "Legal Analysis",
+      "maintenanceDecision": "Maintenance Decision"
+    },
+    "ariaLabel": {
+      "backToApprovals": "Back to approvals",
+      "dismissError": "Dismiss error"
+    }
+  },
+  "rfpsId": {
+    "title": {
+      "rFPDetails": "RFP Details"
+    }
+  },
+  "settings": {
+    "col": {
+      "versions": "Versions"
+    },
+    "heading": {
+      "legalSources": "Legal Sources",
+      "legalVariables": "Legal Variables"
+    },
+    "placeholder": {
+      "yourName": "Your name",
+      "youExampleCom": "you@example.com"
+    },
+    "title": {
+      "settings": "Settings"
+    }
+  },
+  "settingsStrategy": {
+    "title": {
+      "myStrategy": "My Strategy"
+    }
+  },
+  "strategy": {
+    "heading": {
+      "whatThisMeansInPractice": "What this means in practice"
+    },
+    "placeholder": {
+      "eGRueDuLac12": "e.g. Rue du Lac 12",
+      "eG1003Lausanne": "e.g. 1003 Lausanne",
+      "eG12": "e.g. 12"
+    },
+    "title": {
+      "yourStrategy": "Your Strategy",
+      "setUpYourProperties": "Set up your properties",
+      "strategyQuestionnaire": "Strategy Questionnaire"
+    }
+  },
+  "vacancies": {
+    "title": {
+      "vacancies": "Vacancies"
+    }
+  },
+  "vacancies[unitid]Candidates": {
+    "col": {
+      "rank": "Rank",
+      "assign": "Assign"
+    },
+    "heading": {
+      "confirmTenantSelection": "Confirm Tenant Selection",
+      "overrideDisqualification": "Override Disqualification"
+    },
+    "placeholder": {
+      "eGVerifiedIncomeDirectlyWithEmployerDebtEnforcementExtractIsClear": "e.g. Verified income directly with employer; debt enforcement extract is clear…"
+    },
+    "title": {
+      "selectTenants": "Select Tenants",
+      "yourSelection": "Your Selection",
+      "clickToViewCorroborativeDocuments": "Click to view corroborative documents",
+      "overrideDisqualificationAndMakeThisCandidateEligible": "Override disqualification and make this candidate eligible"
+    }
+  },
+  "vacancies[unitid]Fill": {
+    "placeholder": {
+      "searchByNamePhoneOrEmail": "Search by name, phone, or email",
+      "tenantName": "Tenant name",
+      "phone41": "Phone (+41...)",
+      "emailOptional": "Email (optional)",
+      "eG1850": "e.g. 1850"
+    },
+    "title": {
+      "fillVacancy": "Fill vacancy",
+      "step1SelectOrCreateTenant": "Step 1: Select or create tenant",
+      "step2AssignTenantToUnit": "Step 2: Assign tenant to unit",
+      "step3CreateLeaseDraft": "Step 3: Create lease (DRAFT)",
+      "nextSteps": "Next steps"
+    }
+  },
+  "workRequests": {
+    "title": {
+      "workRequests": "Work Requests"
     }
   }
 }

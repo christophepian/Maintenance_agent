@@ -13,6 +13,7 @@ import {
 import { authHeaders } from "../../lib/api";
 import { cn } from "../../lib/utils";
 import { withTranslations } from "../../lib/i18n";
+import { useTranslation } from "next-i18next";
 
 /* ─── YTD date range ─── */
 function ytdRange() {
@@ -54,12 +55,13 @@ function InfoStat({ label, value, tone }) {
 }
 
 /* ─── Category chip used in the priority feed ─── */
+// Labels are translated at render time via t(`manager:dashboard.chip.${category}`)
 const CATEGORY_CHIP = {
-  review:    { label: "Pending review",    cls: "bg-blue-100 text-blue-700" },
-  approval:  { label: "Owner approval",    cls: "bg-amber-100 text-amber-700" },
-  disputed:  { label: "Disputed invoice",  cls: "bg-red-100 text-red-700" },
-  stale:     { label: "Stale job",         cls: "bg-amber-100 text-amber-700" },
-  rfp:       { label: "RFP routed",        cls: "bg-indigo-100 text-indigo-700" },
+  review:    { cls: "bg-blue-100 text-blue-700" },
+  approval:  { cls: "bg-amber-100 text-amber-700" },
+  disputed:  { cls: "bg-red-100 text-red-700" },
+  stale:     { cls: "bg-amber-100 text-amber-700" },
+  rfp:       { cls: "bg-indigo-100 text-indigo-700" },
 };
 
 const CARD_STYLE = {
@@ -72,6 +74,7 @@ const CARD_STYLE = {
 
 /* ─── Single action item row ─── */
 function ActionRow({ category, title, sub, building, date, href }) {
+  const { t } = useTranslation("manager");
   const chip = CATEGORY_CHIP[category];
 
   const cardBody = (
@@ -80,7 +83,7 @@ function ActionRow({ category, title, sub, building, date, href }) {
       CARD_STYLE[category],
     )}>
       <span className={cn("shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold", chip.cls)}>
-        {chip.label}
+        {t(`manager:dashboard.chip.${category}`)}
       </span>
       <div className="min-w-0 flex-1">
         <div className="truncate text-sm font-semibold text-slate-900">{title}</div>
@@ -116,16 +119,17 @@ function ActionRow({ category, title, sub, building, date, href }) {
 }
 
 /* ─── Hero urgency headline ─── */
-function heroHeadline(totalActions, openRequests) {
-  if (totalActions === 0) return "Everything looks good — no items need attention right now.";
-  if (totalActions === 1) return "1 item needs your attention today.";
-  return `${totalActions} items need your attention today.`;
+function heroHeadline(t, totalActions) {
+  if (totalActions === 0) return t("manager:dashboard.hero.allClear");
+  if (totalActions === 1) return t("manager:dashboard.hero.one");
+  return t("manager:dashboard.hero.many", { count: totalActions });
 }
 
 /* ──────────────────────────────────────────────────────────────
    Main page
    ────────────────────────────────────────────────────────────── */
 export default function ManagerDashboard() {
+  const { t } = useTranslation("manager");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [requests, setRequests] = useState([]);
@@ -265,7 +269,7 @@ export default function ManagerDashboard() {
         title: j.requestDescription || `Job #${j.id?.slice(0, 8)}`,
         building: [j.buildingName, j.unitNumber ? `Unit ${j.unitNumber}` : null].filter(Boolean).join(" · ") || null,
         date: j.createdAt,
-        sub: "In progress > 7 days",
+        sub: t("manager:dashboard.feed.inProgressStale"),
         href: j.requestId ? `/manager/requests/${j.requestId}` : "/manager/requests?tab=active",
         sortOrder: 2,
       })
@@ -339,12 +343,12 @@ export default function ManagerDashboard() {
         <div className="mb-8">
           {/* ─ Portfolio overview ─ */}
           <div className="mb-5 flex items-center gap-3">
-            <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Portfolio overview</span>
+            <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">{t("manager:dashboard.portfolioOverview")}</span>
             <div className="flex-1 border-t border-slate-300" />
             <button
               onClick={() => { loadDashboardData(); loadPortfolio(); }}
               className="shrink-0 rounded-lg border border-slate-300 bg-transparent p-2 text-slate-400 hover:bg-slate-50 hover:text-slate-700 transition-colors"
-              aria-label="Refresh dashboard"
+              aria-label={t("manager:index.ariaLabel.refreshDashboard")}
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -357,22 +361,22 @@ export default function ManagerDashboard() {
             {portfolio ? (
               <>
                 <InfoStat
-                  label="NOI YTD"
+                  label={t("manager:dashboard.kpi.noiYtd")}
                   value={formatChfCents(portfolio.totalNetIncomeCents)}
                   tone={portfolio.totalNetIncomeCents >= 0 ? "good" : "bad"}
                 />
                 <InfoStat
-                  label="Spend MTD"
+                  label={t("manager:dashboard.kpi.spendMtd")}
                   value={formatChf(spendThisMonth)}
                 />
                 <InfoStat
-                  label="Collection rate"
+                  label={t("manager:dashboard.kpi.collectionRate")}
                   value={formatPercent(portfolio.avgCollectionRate)}
                   tone={portfolio.avgCollectionRate >= 0.95 ? "good" : portfolio.avgCollectionRate >= 0.8 ? "warn" : "bad"}
                 />
                 {portfolio.buildingsInRed > 0 && (
                   <InfoStat
-                    label="Buildings in red"
+                    label={t("manager:dashboard.kpi.buildingsInRed")}
                     value={`${portfolio.buildingsInRed} / ${portfolio.buildingCount}`}
                     tone="bad"
                   />
@@ -381,7 +385,7 @@ export default function ManagerDashboard() {
             ) : (
               <>
                 <InfoStat
-                  label="Spend MTD"
+                  label={t("manager:dashboard.kpi.spendMtd")}
                   value={formatChf(spendThisMonth)}
                 />
                 <InfoStat label="Portfolio" value={portfolioLoading ? "…" : "—"} />
@@ -392,24 +396,24 @@ export default function ManagerDashboard() {
           {/* ─ Operational KPIs ─ */}
           <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
             <ActionStat
-              label="Open requests"
+              label={t("manager:dashboard.kpi.openRequests")}
               value={openRequestsCount}
               href="/manager/requests"
               tone={openRequestsCount > 0 ? "warn" : "good"}
             />
             <ActionStat
-              label="Open jobs"
+              label={t("manager:dashboard.kpi.openJobs")}
               value={openJobsCount}
               href="/manager/requests?tab=active"
               tone={openJobsCount > 0 ? "warn" : "good"}
             />
             <InfoStat
-              label="Job avg. duration"
+              label={t("manager:dashboard.kpi.jobAvgDuration")}
               value={avgDaysToComplete != null ? `${avgDaysToComplete}d` : "—"}
               tone={avgDaysToComplete != null && avgDaysToComplete > 14 ? "warn" : undefined}
             />
             <ActionStat
-              label="Pending invoices"
+              label={t("manager:dashboard.kpi.pendingInvoices")}
               value={pendingInvoicesCount}
               href="/manager/finance/invoices"
               tone={pendingInvoicesCount > 0 ? "warn" : "good"}
@@ -420,7 +424,7 @@ export default function ManagerDashboard() {
           <div className="mt-6 mb-5 border-t border-slate-200" />
 
           <h1 className="mb-5 text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
-            {heroHeadline(totalActions, openRequestsCount)}
+            {heroHeadline(t, totalActions)}
           </h1>
 
         </div>
@@ -438,9 +442,9 @@ export default function ManagerDashboard() {
           {/* Collapsible filter panel */}
           {filterOpen && (
             <FilterPanelBody>
-              <FilterSection title="Category" first>
+              <FilterSection title={t("manager:dashboard.sort.category")} first>
                 <div className="flex flex-wrap gap-1.5">
-                  {[["all","All"],["approval","Owner approval"],["disputed","Disputed"],["stale","Stale jobs"],["review","Pending review"],["rfp","RFPs"]].map(([key, lbl]) => (
+                  {[["all",t("manager:dashboard.filter.all")],["approval","Owner approval"],["disputed",t("manager:dashboard.filter.disputed")],["stale",t("manager:dashboard.filter.stale")],["review","Pending review"],["rfp",t("manager:dashboard.filter.rfps")]].map(([key, lbl]) => (
                     <button
                       key={key}
                       onClick={() => { setFilterBy(key); setFeedExpanded(false); }}
@@ -463,20 +467,20 @@ export default function ManagerDashboard() {
           {/* Collapsible sort panel */}
           {sortOpen && (
             <SortPanelBody>
-              <SortRow active={sortBy === "urgency"} dir="asc" label="Urgency" ascLabel="High → Low" descLabel="Low → High" onSelect={() => setSortBy("urgency")} />
-              <SortRow active={sortBy === "building"} dir="asc" label="Building" ascLabel="A → Z" descLabel="Z → A" onSelect={() => setSortBy("building")} />
-              <SortRow active={sortBy === "date"} dir="desc" label="Date" descLabel="Newest first" ascLabel="Oldest first" onSelect={() => setSortBy("date")} />
+              <SortRow active={sortBy === "urgency"} dir="asc" label={t("manager:dashboard.sort.urgency")} ascLabel="High → Low" descLabel="Low → High" onSelect={() => setSortBy("urgency")} />
+              <SortRow active={sortBy === "building"} dir="asc" label={t("manager:dashboard.sort.building")} ascLabel="A → Z" descLabel="Z → A" onSelect={() => setSortBy("building")} />
+              <SortRow active={sortBy === "date"} dir="desc" label={t("manager:dashboard.sort.date")} descLabel="Newest first" ascLabel="Oldest first" onSelect={() => setSortBy("date")} />
             </SortPanelBody>
           )}
           {totalActions === 0 ? (
             <div className="rounded-2xl border border-green-200 bg-green-50 px-5 py-8 text-center">
               <div className="text-2xl mb-2">✓</div>
-              <div className="text-sm font-semibold text-green-800">All clear — no items need action</div>
-              <div className="mt-1 text-xs text-green-600">Check back after new requests or invoices arrive.</div>
+              <div className="text-sm font-semibold text-green-800">{t("manager:dashboard.feed.allClearTitle")}</div>
+              <div className="mt-1 text-xs text-green-600">{t("manager:dashboard.feed.allClearSub")}</div>
             </div>
           ) : displayFeed.length === 0 ? (
             <div className="rounded-2xl border border-slate-200 bg-slate-50 px-5 py-8 text-center">
-              <div className="text-sm text-slate-500">No items match the selected filter.</div>
+              <div className="text-sm text-slate-500">{t("manager:dashboard.feed.noMatch")}</div>
             </div>
           ) : (
             <div className="space-y-2">
@@ -490,7 +494,7 @@ export default function ManagerDashboard() {
                   className="mt-1 w-full rounded-xl border border-slate-100 py-2 text-xs font-medium text-slate-500 hover:bg-slate-50 transition-colors"
                 >
                   {feedExpanded
-                    ? "Show less ↑"
+                    ? t("manager:dashboard.feed.showLess")
                     : `Show ${displayFeed.length - FEED_PREVIEW} more items ↓`}
                 </button>
               )}
@@ -526,22 +530,16 @@ export default function ManagerDashboard() {
         <section className="rounded-3xl border border-slate-200 bg-white p-5">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h2 className="text-base font-semibold text-slate-900">More tools</h2>
-              <p className="mt-1 text-sm text-slate-500">Deeper views for finance, strategy, and tenant portal.</p>
+              <h2 className="text-base font-semibold text-slate-900">{t("manager:dashboard.moreTools.title")}</h2>
+              <p className="mt-1 text-sm text-slate-500">{t("manager:dashboard.moreTools.sub")}</p>
             </div>
             <div className="flex flex-wrap gap-2 shrink-0">
-              <Link href="/manager/finance" className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors no-underline">
-                Finance overview
-              </Link>
+              <Link href="/manager/finance" className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors no-underline">{t("manager:dashboard.moreTools.finance")}</Link>
               <Link href="/manager/finance/ledger" className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors no-underline">
                 Ledger
               </Link>
-              <Link href="/manager/settings" className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors no-underline">
-                Settings
-              </Link>
-              <Link href="/manager/requests" className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition-colors no-underline">
-                All requests
-              </Link>
+              <Link href="/manager/settings" className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors no-underline">{t("manager:dashboard.moreTools.settings")}</Link>
+              <Link href="/manager/requests" className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition-colors no-underline">{t("manager:dashboard.moreTools.allRequests")}</Link>
             </div>
           </div>
         </section>

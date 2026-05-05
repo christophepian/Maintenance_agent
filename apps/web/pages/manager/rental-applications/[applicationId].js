@@ -12,7 +12,9 @@ import ErrorBanner from "../../../components/ui/ErrorBanner";
 import Badge from "../../../components/ui/Badge";
 import { authHeaders } from "../../../lib/api";
 import { withServerTranslations } from "../../../lib/i18n";
+import { useTranslation } from "next-i18next";
 export default function ApplicationDetailPage() {
+  const { t } = useTranslation("manager");
   const router = useRouter();
   const { applicationId } = router.query;
 
@@ -69,7 +71,7 @@ export default function ApplicationDetailPage() {
     <AppShell role="MANAGER">
       <PageShell>
         <PageHeader
-          title="Application Detail"
+          title={t("manager:rentalApplicationsApplicationid.title.applicationDetail")}
           subtitle={`ID: ${app.id?.slice(0, 8)}… — Status: ${app.status}`}
           actions={
             <button
@@ -85,7 +87,7 @@ export default function ApplicationDetailPage() {
           <ErrorBanner error={error} className="text-sm" />
 
           {/* Applicants */}
-          <Panel title="Applicants">
+          <Panel title={t("manager:rentalApplicationsApplicationid.title.applicants")}>
             <div className="space-y-4">
               {(app.applicants || []).map((a) => (
                 <div key={a.id} className="rounded-lg border border-slate-100 p-4">
@@ -117,7 +119,7 @@ export default function ApplicationDetailPage() {
           </Panel>
 
           {/* Household Info */}
-          <Panel title="Household & Current Housing">
+          <Panel title={t("manager:rentalApplicationsApplicationid.title.householdCurrentHousing")}>
             <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-slate-600 sm:grid-cols-3">
               <Detail label="Current landlord" value={app.currentLandlordName} />
               <Detail label="Landlord address" value={app.currentLandlordAddress} />
@@ -135,7 +137,7 @@ export default function ApplicationDetailPage() {
 
           {/* Unit Evaluations */}
           {app.applicationUnits?.length > 0 && (
-            <Panel title="Unit Evaluations">
+            <Panel title={t("manager:rentalApplicationsApplicationid.title.unitEvaluations")}>
               <div className="space-y-3">
                 {app.applicationUnits.map((au) => (
                   <div key={au.id} className="rounded-lg border border-slate-100 p-4">
@@ -182,7 +184,7 @@ export default function ApplicationDetailPage() {
 
           {/* Signature */}
           {app.signedName && (
-            <Panel title="Signature">
+            <Panel title={t("manager:rentalApplicationsApplicationid.title.signature")}>
               <div className="text-sm text-slate-700">
                 <span className="font-serif italic text-lg">{app.signedName}</span>
                 {app.signedAt && <span className="ml-4 text-xs text-slate-500">Signed {formatDate(app.signedAt)}</span>}

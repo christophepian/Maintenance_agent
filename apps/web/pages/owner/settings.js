@@ -17,6 +17,7 @@ import OwnerPicker from "../../components/OwnerPicker";
 import SortableHeader from "../../components/SortableHeader";
 import { useLocalSort } from "../../lib/tableUtils";
 import { withTranslations } from "../../lib/i18n";
+import { useTranslation } from "next-i18next";
 
 const SETTINGS_TABS = [
   { key: "ACCOUNT", label: "Account" },
@@ -37,6 +38,7 @@ const USER_LABELS = {
 };
 
 export default function OwnerSettingsPage() {
+  const { t } = useTranslation("owner");
   const router = useRouter();
   const activeTab = router.isReady ? (Math.max(0, TAB_KEYS.indexOf(router.query.tab)) || 0) : 0;
   const setActiveTab = useCallback((index) => {
@@ -172,7 +174,7 @@ export default function OwnerSettingsPage() {
   return (
     <AppShell role="OWNER">
       <PageShell>
-        <PageHeader title="Settings" subtitle="Manage your account, risk profile, and preferences." />
+        <PageHeader title={t("owner:settings.title.settings")} subtitle="Manage your account, risk profile, and preferences." />
         <PageContent>
           <OwnerPicker onSelect={() => { setUser(null); setStratProfile(undefined); setLegalSources([]); }} />
 
@@ -224,7 +226,7 @@ export default function OwnerSettingsPage() {
                             value={nameDraft}
                             onChange={(e) => setNameDraft(e.target.value)}
                             className="input"
-                            placeholder="Your name"
+                            placeholder={t("owner:settings.placeholder.yourName")}
                           />
                         </label>
                         <label className="flex flex-col gap-1">
@@ -234,7 +236,7 @@ export default function OwnerSettingsPage() {
                             value={emailDraft}
                             onChange={(e) => setEmailDraft(e.target.value)}
                             className="input"
-                            placeholder="you@example.com"
+                            placeholder={t("owner:settings.placeholder.youExampleCom")}
                           />
                           <span className="text-xs text-slate-400">Changing your email also changes your login credential.</span>
                         </label>
@@ -381,7 +383,7 @@ export default function OwnerSettingsPage() {
               <div className={activeTab === 4 ? "tab-panel-active" : "tab-panel"}>
                 <div className="px-4 py-4">
                   <div>
-                    <h3 className="text-sm font-semibold text-slate-800">Legal Sources</h3>
+                    <h3 className="text-sm font-semibold text-slate-800">{t("owner:settings.heading.legalSources")}</h3>
                     <p className="text-xs text-slate-500 mt-0.5">
                       Swiss tenancy law data sources — reference rates, CPI, ASLOCA depreciation, and legislation.
                     </p>
@@ -476,7 +478,7 @@ export default function OwnerSettingsPage() {
                 {!legalLoading && legalVariables.length > 0 && (
                   <>
                     <div className="px-4 py-3 border-t border-slate-100">
-                      <h3 className="text-sm font-semibold text-slate-800">Legal Variables</h3>
+                      <h3 className="text-sm font-semibold text-slate-800">{t("owner:settings.heading.legalVariables")}</h3>
                       <p className="text-xs text-slate-500 mt-0.5">{legalVariables.length} variable{legalVariables.length !== 1 ? "s" : ""} tracked</p>
                     </div>
                     <div className="hidden sm:block data-table-wrap">
@@ -485,7 +487,7 @@ export default function OwnerSettingsPage() {
                           <tr>
                             <SortableHeader label="Key" field="key" sortField={lvSF} sortDir={lvSD} onSort={handleLvSort} />
                             <SortableHeader label="Description" field="description" sortField={lvSF} sortDir={lvSD} onSort={handleLvSort} />
-                            <th>Versions</th>
+                            <th>{t("owner:settings.col.versions")}</th>
                           </tr>
                         </thead>
                         <tbody>

@@ -11,6 +11,7 @@ import { useTableSort, clientSort } from "../../../lib/tableUtils";
 import { authHeaders } from "../../../lib/api";
 import { cn } from "../../../lib/utils";
 import { withTranslations } from "../../../lib/i18n";
+import { useTranslation } from "next-i18next";
 
 const TENANT_SORT_FIELDS = ["name", "phone", "email", "unit", "building", "floor"];
 
@@ -86,6 +87,7 @@ const TENANT_COLUMNS = [
   },
 ];
 export default function PeopleTenantsPage() {
+  const { t } = useTranslation("manager");
   const router = useRouter();
   const [tenants, setTenants] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -129,21 +131,21 @@ export default function PeopleTenantsPage() {
     <AppShell role="MANAGER">
       <PageShell variant="embedded">
         <PageHeader
-          title="Tenants"
+          title={t("manager:peopleTenants.title.tenants")}
           subtitle={`${tenants.length} tenant${tenants.length !== 1 ? "s" : ""}`}
         />
         <PageContent>
           <div className="flex items-center gap-2 mb-4">
             <input
               type="search"
-              placeholder="Search by name, email, phone, or unit…"
+              placeholder={t("manager:peopleTenants.placeholder.searchByNameEmailPhoneOrUnit")}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="filter-input flex-1 min-w-0 mb-0"
             />
             <button
               type="button"
-              aria-label="Sort tenants"
+              aria-label={t("manager:peopleTenants.ariaLabel.sortTenants")}
               onClick={() => {
                 const cycle = ["name", "building", "email"];
                 const next = cycle[(cycle.indexOf(sortField) + 1) % cycle.length];

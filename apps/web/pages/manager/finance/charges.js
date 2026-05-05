@@ -9,6 +9,7 @@ import { useLocalSort, clientSort } from "../../../lib/tableUtils";
 import { cn } from "../../../lib/utils";
 import SortableHeader from "../../../components/SortableHeader";
 import { withTranslations } from "../../../lib/i18n";
+import { useTranslation } from "next-i18next";
 
 function formatCurrency(chf) {
   if (typeof chf !== "number") return "—";
@@ -23,6 +24,7 @@ const VIEW_TABS = [
 ];
 
 export default function ManagerChargesPage() {
+  const { t } = useTranslation("manager");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [leases, setLeases] = useState([]);
@@ -187,7 +189,7 @@ export default function ManagerChargesPage() {
   return (
     <AppShell role="MANAGER">
       <PageShell>
-        <PageHeader title="Charges" />
+        <PageHeader title={t("manager:financeCharges.title.charges")} />
         <PageContent>
           {error && (
             <Panel className="bg-red-50 border-red-200">
@@ -245,14 +247,14 @@ export default function ManagerChargesPage() {
           <div className="flex items-center gap-2">
             <input
               type="search"
-              placeholder="Search by tenant, building or unit…"
+              placeholder={t("manager:financeCharges.placeholder.searchByTenantBuildingOrUnit")}
               value={chargeSearch}
               onChange={(e) => setChargeSearch(e.target.value)}
               className="filter-input flex-1 min-w-0 mb-0"
             />
             <button
               type="button"
-              aria-label="Sort charges"
+              aria-label={t("manager:financeCharges.ariaLabel.sortCharges")}
               onClick={() => {
                 const cycle = ["tenant", "building", "chargesTotalChf"];
                 const next = cycle[(cycle.indexOf(cSortField) + 1) % cycle.length];
@@ -269,7 +271,7 @@ export default function ManagerChargesPage() {
           {/* Edit Modal (inline panel) */}
           {editingLeaseId && (
             <Panel className="edit-panel">
-              <h3 className="mb-3 text-base font-semibold m-0">Edit Charges</h3>
+              <h3 className="mb-3 text-base font-semibold m-0">{t("manager:financeCharges.heading.editCharges")}</h3>
 
               <div className="mb-3">
                 <label className="filter-label">Charge Items</label>
@@ -277,7 +279,7 @@ export default function ManagerChargesPage() {
                   <div key={idx} className="edit-row">
                     <input
                       type="text"
-                      placeholder="Item name"
+                      placeholder={t("manager:financeCharges.placeholder.itemName")}
                       value={item.label}
                       onChange={(e) => updateChargeItem(idx, "label", e.target.value)}
                       className="edit-input flex-1"
@@ -327,7 +329,7 @@ export default function ManagerChargesPage() {
                   <label className="filter-label">Settlement date</label>
                   <input
                     type="text"
-                    placeholder="e.g., 30.06.2027"
+                    placeholder={t("manager:financeCharges.placeholder.eG30062027")}
                     value={editForm.chargesSettlementDate}
                     onChange={(e) => setEditForm((prev) => ({ ...prev, chargesSettlementDate: e.target.value }))}
                     className="edit-input w-[150px]"
@@ -387,7 +389,7 @@ export default function ManagerChargesPage() {
                         <SortableHeader label="Building" field="building" sortField={cSortField} sortDir={cSortDir} onSort={handleChargeSort} />
                         <SortableHeader label="Monthly charges (CHF)" field="chargesTotalChf" sortField={cSortField} sortDir={cSortDir} onSort={handleChargeSort} />
                         <SortableHeader label="Settlement date" field="settlementDate" sortField={cSortField} sortDir={cSortDir} onSort={handleChargeSort} />
-                        <th>Actions</th>
+                        <th>{t("manager:financeCharges.col.actions")}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -445,10 +447,10 @@ export default function ManagerChargesPage() {
                         <tr>
                           <SortableHeader label="Tenant" field="tenantName" sortField={iSortField} sortDir={iSortDir} onSort={handleISort} />
                           <SortableHeader label="Unit" field="unitNumber" sortField={iSortField} sortDir={iSortDir} onSort={handleISort} />
-                          <SortableHeader label="Item name" field="label" sortField={iSortField} sortDir={iSortDir} onSort={handleISort} />
+                          <SortableHeader label={t("manager:financeCharges.placeholder.itemName")} field="label" sortField={iSortField} sortDir={iSortDir} onSort={handleISort} />
                           <SortableHeader label="Mode" field="mode" sortField={iSortField} sortDir={iSortDir} onSort={handleISort} />
                           <SortableHeader label="Amount (CHF)" field="amountChf" sortField={iSortField} sortDir={iSortDir} onSort={handleISort} />
-                          <th>Actions</th>
+                          <th>{t("manager:financeCharges.col.actions")}</th>
                         </tr>
                       </thead>
                       <tbody>
