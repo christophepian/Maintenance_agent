@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "next-i18next";
 import Panel from "./layout/Panel";
 import { Dialog, DialogContent } from "./ui/Dialog";
 
@@ -61,6 +62,7 @@ function mimeIcon(mime) {
 }
 
 export default function DocumentsPanel({ applicationId, title, compact }) {
+  const { t } = useTranslation("common");
   const [applicants, setApplicants] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -109,8 +111,8 @@ export default function DocumentsPanel({ applicationId, title, compact }) {
 
   return (
     <>
-      <Panel title={title || `Corroborative Documents${totalDocs > 0 ? ` (${totalDocs})` : ""}`}>
-        {loading && <p className="text-sm text-slate-500">Loading documents…</p>}
+      <Panel title={title || `${t("documents.title")}${totalDocs > 0 ? ` (${totalDocs})` : ""}`}>
+        {loading && <p className="text-sm text-slate-500">{t("documents.loading")}</p>}
 
         {error && (
           <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
@@ -120,7 +122,7 @@ export default function DocumentsPanel({ applicationId, title, compact }) {
 
         {!loading && !error && totalDocs === 0 && (
           <div className="text-sm text-slate-500 py-2">
-            No documents uploaded for this application.
+            {t("documents.empty")}
           </div>
         )}
 
@@ -158,7 +160,7 @@ export default function DocumentsPanel({ applicationId, title, compact }) {
                           className="rounded px-2 py-1 text-xs font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100 transition-colors"
                           title="Preview"
                         >
-                          {att.mimeType?.includes("pdf") || att.mimeType?.includes("image") ? "👁 View" : "⬇ Download"}
+                          {att.mimeType?.includes("pdf") || att.mimeType?.includes("image") ? `👁 ${t("action.view")}` : `⬇ ${t("action.download")}`}
                         </button>
                         <a
                           href={`/api/rental-attachments/${att.id}/download`}
@@ -189,13 +191,13 @@ export default function DocumentsPanel({ applicationId, title, compact }) {
                 download={previewName}
                 className="rounded px-3 py-1.5 text-xs font-medium text-slate-600 bg-slate-100 hover:bg-slate-200"
               >
-                ⬇ Download
+                ⬇ {t("action.download")}
               </a>
               <button
                 onClick={closePreview}
                 className="rounded px-3 py-1.5 text-xs font-medium text-slate-600 bg-slate-100 hover:bg-slate-200"
               >
-                ✕ Close
+                ✕ {t("action.close")}
               </button>
             </div>
           </div>
@@ -216,9 +218,9 @@ export default function DocumentsPanel({ applicationId, title, compact }) {
               </div>
             ) : (
               <div className="p-8 text-center text-slate-500">
-                <p>Preview not available for this file type.</p>
+                <p>{t("documents.previewUnavailable")}</p>
                 <a href={previewUrl} download={previewName} className="text-indigo-600 hover:underline mt-2 inline-block">
-                  Download instead
+                  {t("documents.downloadInstead")}
                 </a>
               </div>
             )}

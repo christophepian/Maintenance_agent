@@ -9,6 +9,7 @@ import Badge from "../../../../components/ui/Badge";
 import { invoiceVariant, ingestionVariant } from "../../../../lib/statusVariants";
 import { formatChf, formatDate } from "../../../../lib/format";
 import { ownerAuthHeaders } from "../../../../lib/api";
+import { withServerTranslations } from "../../../../lib/i18n";
 
 /* ─── Badge helpers ────────────────────────────────────────── */
 
@@ -370,3 +371,5 @@ export default function OwnerInvoiceDetailPage() {
     </AppShell>
   );
 }
+
+export const getServerSideProps = withServerTranslations(["common","owner"]);

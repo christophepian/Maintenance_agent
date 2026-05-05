@@ -7,7 +7,9 @@
     "leases": "Leases",
     "jobs": "Jobs",
     "requests": "Requests",
-    "reporting": "Reporting"
+    "reporting": "Reporting",
+    "approvals": "Approvals",
+    "settings": "Settings"
   },
   "dashboard": {
     "title": "Owner Dashboard",
@@ -15,5 +17,113 @@
     "properties": "Properties",
     "openRequests": "Open Requests",
     "pendingInvoices": "Pending Invoices"
+  },
+  "strategyBanner": {
+    "title": "Set your property strategy",
+    "description": "Get tailored recommendations on maintenance, cashflow, and repair decisions. Takes under 2 minutes.",
+    "cta": "Set my strategy",
+    "dismiss": "Remind me later"
+  },
+  "recommendation": {
+    "title": "Strategy Recommendation",
+    "feedbackPlaceholder": "Any comments on this recommendation…",
+    "acceptAriaLabel": "Accept recommendation",
+    "deferAriaLabel": "Defer recommendation",
+    "rejectAriaLabel": "Reject recommendation",
+    "decision": {
+      "accepted": "Accepted",
+      "rejected": "Rejected",
+      "deferred": "Deferred",
+      "pending": "Pending"
+    },
+    "optionType": {
+      "replace_full": "Full Replacement",
+      "replace_component": "Component Replacement",
+      "repair": "Repair",
+      "defer": "Defer",
+      "upgrade": "Upgrade"
+    }
+  },
+  "renovation": {
+    "taxCategory": {
+      "WERTERHALTEND": "Value preserving",
+      "WERTVERMEHREND": "Value enhancing",
+      "MIXED": "Mixed",
+      "ENERGY_ENVIRONMENT": "Energy / environment"
+    },
+    "deductibility": {
+      "IMMEDIATE_DEDUCTION": "Usually expensed in current year",
+      "CAPITALIZED": "Usually capitalized over useful life",
+      "SPLIT": "Usually split between maintenance and improvement",
+      "ENERGY_DEDUCTION": "Usually deductible as energy/environment measure"
+    },
+    "timingSensitivity": {
+      "HIGH": "Timing likely matters a lot",
+      "MODERATE": "Timing likely matters moderately",
+      "LOW": "Timing likely matters little"
+    },
+    "buildingSystem": {
+      "FACADE": "Facade",
+      "WINDOWS": "Windows",
+      "ROOF": "Roof / Terrace",
+      "INTERIOR": "Interior",
+      "COMMON_AREAS": "Common Areas",
+      "BATHROOM": "Bathroom",
+      "KITCHEN": "Kitchen",
+      "APPLIANCES": "Appliances",
+      "MEP": "MEP / Utilities",
+      "EXTERIOR": "Exterior / Grounds",
+      "LAUNDRY": "Laundry"
+    },
+    "capex": {
+      "title": "CapEx Outlook",
+      "subtitle": "Portfolio-level projection from asset depreciation standards. Full scenario planning and actionable timing recommendations are available in cashflow plans.",
+      "viewPlans": "View cashflow plans →",
+      "loading": "Loading CapEx projection…",
+      "openPlanning": "Open Planning tab →",
+      "totalCapex": "Total projected CapEx",
+      "acrossBuildings": "Across all buildings",
+      "bundlingOpps": "Bundling opportunities",
+      "bundlingNone": "None identified",
+      "bundlingGroups": "Groups that can save on mobilisation",
+      "timingOpps": "Timing opportunities",
+      "timingNone": "None identified",
+      "timingShifts": "Scheduling shifts could save tax",
+      "nearestYear": "Nearest replacement year",
+      "firstYear": "First year with projected spend",
+      "bundlingRecs": "Bundling Recommendations",
+      "suggestion_one": "{{count}} suggestion",
+      "suggestion_other": "{{count}} suggestions"
+    },
+    "catalog": {
+      "disclaimer": "Decision-support guidance only — classifications show usual Swiss tax treatment for privately owned rental buildings. This is not legal or tax advice. Consult a qualified advisor for your specific situation.",
+      "valuePreserving": "Value Preserving",
+      "valuePreservingNote": "Usually immediately deductible",
+      "valueEnhancing": "Value Enhancing",
+      "valueEnhancingNote": "Usually capitalized",
+      "mixed": "Mixed",
+      "mixedNote": "Usually split",
+      "energyEnv": "Energy / Environment",
+      "energyEnvNote": "Usually deductible",
+      "buildingSystemLabel": "Building System",
+      "allSystems": "All systems",
+      "taxCategoryLabel": "Tax Category",
+      "allCategories": "All categories",
+      "searchLabel": "Search",
+      "searchPlaceholder": "Search renovation jobs…",
+      "clearFilters": "Clear filters",
+      "count_one": "{{count}} renovation job",
+      "count_other": "{{count}} renovation jobs",
+      "countOf": "(of {{total}} total)",
+      "loading": "Loading classification catalog…",
+      "empty": "No renovation jobs match your filters.",
+      "showLess": "Show less",
+      "showAll": "Show all {{count}} jobs",
+      "deductibilityLabel": "Deductibility",
+      "deductiblePortion": "Deductible portion",
+      "timingGuidanceLabel": "Timing guidance",
+      "notesLabel": "Notes",
+      "assetLinkable": "Can be linked to inventory assets"
+    }
   }
 }

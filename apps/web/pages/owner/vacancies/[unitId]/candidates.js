@@ -15,6 +15,7 @@ import { ownerAuthHeaders } from "../../../../lib/api";
 import { cn } from "../../../../lib/utils";
 import SortableHeader from "../../../../components/SortableHeader";
 import { useLocalSort, clientSort } from "../../../../lib/tableUtils";
+import { withServerTranslations } from "../../../../lib/i18n";
 function scoreColor(score) {
   if (score >= 700) return "text-green-700 bg-green-50";
   if (score >= 400) return "text-amber-700 bg-amber-50";
@@ -573,3 +574,5 @@ export default function OwnerCandidatesPage() {
     </AppShell>
   );
 }
+
+export const getServerSideProps = withServerTranslations(["common","owner"]);

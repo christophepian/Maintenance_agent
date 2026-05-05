@@ -9,6 +9,7 @@ import ConfigurableTable from "../../../components/ConfigurableTable";
 import { useTableSort, clientSort } from "../../../lib/tableUtils";
 import { authHeaders } from "../../../lib/api";
 import { cn } from "../../../lib/utils";
+import { withTranslations } from "../../../lib/i18n";
 
 const OWNER_SORT_FIELDS = ["name", "email", "billingEntity"];
 
@@ -150,3 +151,5 @@ export default function PeopleOwnersPage() {
     </AppShell>
   );
 }
+
+export const getStaticProps = withTranslations(["common","manager"]);

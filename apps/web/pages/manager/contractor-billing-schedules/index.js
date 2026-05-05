@@ -14,6 +14,7 @@ import { useTableSort, clientSort } from "../../../lib/tableUtils";
 import { formatChfCents, formatDate } from "../../../lib/format";
 import ScrollableTabs from "../../../components/mobile/ScrollableTabs";
 import { billingScheduleVariant } from "../../../lib/statusVariants";
+import { withTranslations } from "../../../lib/i18n";
 
 const FREQUENCY_LABELS = {
   MONTHLY: "Monthly",
@@ -380,3 +381,5 @@ export default function ContractorBillingSchedulesList() {
     </AppShell>
   );
 }
+
+export const getStaticProps = withTranslations(["common","manager"]);

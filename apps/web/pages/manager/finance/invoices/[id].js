@@ -9,6 +9,7 @@ import Panel from "../../../../components/layout/Panel";
 import Badge from "../../../../components/ui/Badge";
 import { invoiceVariant, ingestionVariant } from "../../../../lib/statusVariants";
 import { authHeaders } from "../../../../lib/api";
+import { withServerTranslations } from "../../../../lib/i18n";
 
 /* ─── Helpers ─────────────────────────────────────────────── */
 
@@ -588,3 +589,5 @@ export default function InvoiceDetailPage() {
     </AppShell>
   );
 }
+
+export const getServerSideProps = withServerTranslations(["common","manager"]);

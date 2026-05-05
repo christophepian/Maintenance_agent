@@ -1,4 +1,5 @@
 import { useRef, useEffect, useState, Children, cloneElement, useCallback } from 'react';
+import { useTranslation } from 'next-i18next';
 import { cn } from '../../lib/utils';
 import BottomSheet from './BottomSheet';
 
@@ -9,6 +10,7 @@ import BottomSheet from './BottomSheet';
  * hiddenRef   — off-screen row that measures each tab's natural width.
  */
 export default function ScrollableTabs({ children, activeIndex, className }) {
+  const { t } = useTranslation('common');
   const wrapperRef  = useRef(null);
   const hiddenRef   = useRef(null);
   const stripRef    = useRef(null);
@@ -107,7 +109,7 @@ export default function ScrollableTabs({ children, activeIndex, className }) {
       </div>
 
       {hasOverflow && (
-        <BottomSheet open={moreOpen} onClose={closeMore} title="More">
+        <BottomSheet open={moreOpen} onClose={closeMore} title={t('action.more', { defaultValue: 'More' })}>
           <div className="divide-y divide-slate-100">
             {overflowIndexes.map((i) => {
               const tab = tabs[i];

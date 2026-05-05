@@ -1,15 +1,37 @@
 {
   "nav": {
+    "dashboard": "Dashboard",
     "inbox": "Inbox",
     "requests": "Requests",
     "leases": "Leases",
     "invoices": "Invoices",
-    "assets": "Assets"
+    "assets": "Assets",
+    "myHome": "My Home",
+    "apply": "Apply"
   },
   "dashboard": {
     "title": "Tenant Portal",
     "yourLease": "Your Lease",
     "openRequests": "Open Requests",
     "pendingInvoices": "Pending Invoices"
+  },
+  "chatWidget": {
+    "openLabel": "Open maintenance assistant chat",
+    "dialogLabel": "Maintenance assistant chat",
+    "closeLabel": "Close chat",
+    "inputLabel": "Message input",
+    "sendLabel": "Send message",
+    "askAi": "Ask AI",
+    "assistantName": "Maintenance Assistant",
+    "assistantTagline": "Ask me anything about your home",
+    "loading": "Loading\u2026",
+    "greeting": "Hi! I\u2019m your maintenance assistant.",
+    "greetingHint": "Tell me about an issue in your home or ask about the status of a request.",
+    "suggestion1": "My faucet is leaking",
+    "suggestion2": "Show my lease details",
+    "suggestion3": "Show my invoices",
+    "placeholder": "Describe an issue or ask a question\u2026",
+    "enterHint": "Press Enter to send \u00b7 Shift+Enter for new line",
+    "error": "Something went wrong. Please try again."
   }
 }

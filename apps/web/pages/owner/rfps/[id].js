@@ -13,6 +13,7 @@ import { rfpVariant, quoteVariant } from "../../../lib/statusVariants";
 
 import { cn } from "../../../lib/utils";
 import { formatDate, formatChfCents } from "../../../lib/format";
+import { withServerTranslations } from "../../../lib/i18n";
 
 export default function OwnerRfpDetailPage() {
   const router = useRouter();
@@ -271,3 +272,5 @@ export default function OwnerRfpDetailPage() {
     </AppShell>
   );
 }
+
+export const getServerSideProps = withServerTranslations(["common","owner"]);

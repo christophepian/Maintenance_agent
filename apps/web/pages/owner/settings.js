@@ -16,6 +16,7 @@ import DepreciationStandards from "../../components/DepreciationStandards";
 import OwnerPicker from "../../components/OwnerPicker";
 import SortableHeader from "../../components/SortableHeader";
 import { useLocalSort } from "../../lib/tableUtils";
+import { withTranslations } from "../../lib/i18n";
 
 const SETTINGS_TABS = [
   { key: "ACCOUNT", label: "Account" },
@@ -558,3 +559,5 @@ function LegalScopeFilterBar({ sources, activeFilter, onFilter }) {
     </div>
   );
 }
+
+export const getStaticProps = withTranslations(["common","owner"]);

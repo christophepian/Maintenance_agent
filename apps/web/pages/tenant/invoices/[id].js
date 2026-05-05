@@ -7,6 +7,7 @@ import { invoiceVariant } from "../../../lib/statusVariants";
 import { formatDate, formatChf } from "../../../lib/format";
 import { tenantFetch } from "../../../lib/api";
 import { cn } from "../../../lib/utils";
+import { withServerTranslations } from "../../../lib/i18n";
 
 export default function TenantInvoiceDetailPage() {
   const router = useRouter();
@@ -234,3 +235,5 @@ export default function TenantInvoiceDetailPage() {
     </AppShell>
   );
 }
+
+export const getServerSideProps = withServerTranslations(["common","tenant"]);

@@ -1,4 +1,5 @@
 import AppShell from "../../components/AppShell";
+import { withTranslations } from "../../lib/i18n";
 
 export default function ContractorEstimatesPlaceholder() {
   return (
@@ -10,3 +11,5 @@ export default function ContractorEstimatesPlaceholder() {
     </AppShell>
   );
 }
+
+export const getStaticProps = withTranslations(["common","contractor"]);

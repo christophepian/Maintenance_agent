@@ -14,6 +14,7 @@ import { ownerAuthHeaders } from "../../lib/api";
 import { cn } from "../../lib/utils";
 import OwnerPicker from "../../components/OwnerPicker";
 import { formatChf, formatChfCents, formatDate } from "../../lib/format";
+import { withTranslations } from "../../lib/i18n";
 
 // ── Monopoly palette: deterministic top-band colour from building name ──────
 // Colours are kept fun/bold (the Monopoly identity), but the rest of the
@@ -454,3 +455,5 @@ function BuildingsTab({ refreshKey }) {
     </>
   );
 }
+
+export const getStaticProps = withTranslations(["common","owner"]);

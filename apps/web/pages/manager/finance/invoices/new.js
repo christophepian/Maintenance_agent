@@ -7,6 +7,7 @@ import PageContent from "../../../../components/layout/PageContent";
 import Panel from "../../../../components/layout/Panel";
 import { authHeaders } from "../../../../lib/api";
 import { formatChf } from "../../../../lib/format";
+import { withTranslations } from "../../../../lib/i18n";
 
 /* ─── Helpers ─────────────────────────────────────────────── */
 
@@ -417,3 +418,5 @@ export default function NewInvoicePage() {
     </AppShell>
   );
 }
+
+export const getStaticProps = withTranslations(["common","manager"]);

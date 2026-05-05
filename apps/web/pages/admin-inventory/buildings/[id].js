@@ -19,6 +19,7 @@ import { formatDate, formatChfCents, formatPercent } from "../../../lib/format";
 import { cn } from "../../../lib/utils";
 import { ARCHETYPE_LABELS, ARCHETYPE_EXPLANATION_COPY } from "../../../lib/archetypes";
 import KpiInlineGrid from "../../../components/ui/KpiInlineGrid";
+import { withServerTranslations } from "../../../lib/i18n";
 function displayDate(iso) {
   if (!iso) return "—";
   const d = new Date(iso);
@@ -1775,3 +1776,5 @@ export default function BuildingDetail() {
     </AppShell>
   );
 }
+
+export const getServerSideProps = withServerTranslations(["common","manager"]);

@@ -11,6 +11,7 @@
  * live inside cashflow plan detail pages (/manager/cashflow/[id]).
  */
 import { useState, useEffect, useMemo } from "react";
+import { useTranslation } from "next-i18next";
 import Link from "next/link";
 import Panel from "./layout/Panel";
 import Section from "./layout/Section";
@@ -23,40 +24,22 @@ import KpiInlineGrid from "./ui/KpiInlineGrid";
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 const TAX_CATEGORY_STYLES = {
-  WERTERHALTEND:      { label: "Value preserving" },
-  WERTVERMEHREND:     { label: "Value enhancing" },
-  MIXED:              { label: "Mixed" },
-  ENERGY_ENVIRONMENT: { label: "Energy / environment" },
+  WERTERHALTEND:      {},
+  WERTVERMEHREND:     {},
+  MIXED:              {},
+  ENERGY_ENVIRONMENT: {},
 };
 
-const ACCOUNTING_LABELS = {
-  IMMEDIATE_DEDUCTION: "Usually expensed in current year",
-  CAPITALIZED: "Usually capitalized over useful life",
-  SPLIT: "Usually split between maintenance and improvement",
-  ENERGY_DEDUCTION: "Usually deductible as energy/environment measure",
-};
+const BUILDING_SYSTEM_KEYS = [
+  "FACADE","WINDOWS","ROOF","INTERIOR","COMMON_AREAS",
+  "BATHROOM","KITCHEN","APPLIANCES","MEP","EXTERIOR","LAUNDRY",
+];
 
-const TIMING_LABELS = {
-  HIGH: "Timing likely matters a lot",
-  MODERATE: "Timing likely matters moderately",
-  LOW: "Timing likely matters little",
+const TIMING_VARIANT = {
+  HIGH: "warning",
+  MODERATE: "default",
+  LOW: "muted",
 };
-
-const TIMING_GUIDANCE = {
-  FACADE: "Facade",
-  WINDOWS: "Windows",
-  ROOF: "Roof / Terrace",
-  INTERIOR: "Interior",
-  COMMON_AREAS: "Common Areas",
-  BATHROOM: "Bathroom",
-  KITCHEN: "Kitchen",
-  APPLIANCES: "Appliances",
-  MEP: "MEP / Utilities",
-  EXTERIOR: "Exterior / Grounds",
-  LAUNDRY: "Laundry",
-};
-
-const SYSTEM_LABELS = TIMING_GUIDANCE;
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -68,24 +51,19 @@ function fmtChf(v) {
 // ─── Badge helpers ────────────────────────────────────────────────────────────
 
 function TaxBadge({ category }) {
-  const style = TAX_CATEGORY_STYLES[category] || TAX_CATEGORY_STYLES.MIXED;
+  const { t } = useTranslation("owner");
   return (
     <Badge variant={taxVariant(category)} size="sm">
-      {style.label}
+      {t(`renovation.taxCategory.${category}`, { defaultValue: category })}
     </Badge>
   );
 }
 
-const TIMING_VARIANT = {
-  HIGH: "warning",
-  MODERATE: "default",
-  LOW: "muted",
-};
 function TimingBadge({ sensitivity }) {
-  const label = TIMING_LABELS[sensitivity] || sensitivity;
+  const { t } = useTranslation("owner");
   return (
     <Badge variant={TIMING_VARIANT[sensitivity] || "muted"} size="sm">
-      {label}
+      {t(`renovation.timingSensitivity.${sensitivity}`, { defaultValue: sensitivity })}
     </Badge>
   );
 }
@@ -93,6 +71,7 @@ function TimingBadge({ sensitivity }) {
 // ─── CapEx Summary Bridge ─────────────────────────────────────────────────────
 
 export function CapExSummaryBridge() {
+  const { t } = useTranslation("owner");
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -104,9 +83,9 @@ export function CapExSummaryBridge() {
       .then((r) => r.json())
       .then((json) => {
         if (json?.data) setData(json.data);
-        else setError("No projection data available.");
+        else setError(t("renovation.capex.loading"));
       })
-      .catch(() => setError("Could not load CapEx projection."))
+      .catch(() => setError(t("renovation.capex.loading")))
       .finally(() => setLoading(false));
   }, []);
 
@@ -125,30 +104,28 @@ export function CapExSummaryBridge() {
     <div className="flex flex-col gap-3">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h3 className="text-sm font-semibold text-slate-800">CapEx Outlook</h3>
+            <h3 className="text-sm font-semibold text-slate-800">{t("renovation.capex.title")}</h3>
             <p className="text-xs text-slate-500 mt-0.5">
-              Portfolio-level projection from asset depreciation standards.
-              Full scenario planning and actionable timing recommendations are
-              available in cashflow plans.
+              {t("renovation.capex.subtitle")}
             </p>
           </div>
           <Link
             href="/manager/finance?tab=planning"
             className="shrink-0 button-secondary text-xs"
           >
-            View cashflow plans →
+            {t("renovation.capex.viewPlans")}
           </Link>
         </div>
 
         {loading && (
-          <p className="loading-text text-xs">Loading CapEx projection…</p>
+          <p className="loading-text text-xs">{t("renovation.capex.loading")}</p>
         )}
 
         {!loading && error && (
           <div className="flex items-center justify-between gap-3">
             <p className="text-xs text-slate-400">{error}</p>
             <Link href="/manager/finance?tab=planning" className="text-xs text-brand hover:underline">
-              Open Planning tab →
+              {t("renovation.capex.openPlanning")}
             </Link>
           </div>
         )}
@@ -159,41 +136,41 @@ export function CapExSummaryBridge() {
             <div className="sm:hidden mb-3">
               <KpiInlineGrid
                 items={[
-                  { label: "Total CapEx",      value: fmtChf(data.totalProjectedChf), tone: "warn" },
-                  { label: "Bundling opps",    value: String(bundlingAdvice.length), tone: bundlingAdvice.length > 0 ? "good" : undefined },
-                  { label: "Timing opps",      value: String(timingCount), tone: timingCount > 0 ? "good" : undefined },
+                  { label: t("renovation.capex.totalCapex"),    value: fmtChf(data.totalProjectedChf), tone: "warn" },
+                  { label: t("renovation.capex.bundlingOpps"),  value: String(bundlingAdvice.length), tone: bundlingAdvice.length > 0 ? "good" : undefined },
+                  { label: t("renovation.capex.timingOpps"),    value: String(timingCount), tone: timingCount > 0 ? "good" : undefined },
                 ]}
               />
             </div>
             {/* Desktop: card grid */}
             <div className="hidden sm:grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div className="card mb-0 flex flex-col gap-1">
-                <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Total projected CapEx</span>
+                <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">{t("renovation.capex.totalCapex")}</span>
                 <span className="text-lg font-bold text-amber-700">{fmtChf(data.totalProjectedChf)}</span>
-                <span className="text-xs text-slate-400">Across all buildings</span>
+                <span className="text-xs text-slate-400">{t("renovation.capex.acrossBuildings")}</span>
               </div>
               <div className="card mb-0 flex flex-col gap-1">
-                <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Bundling opportunities</span>
+                <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">{t("renovation.capex.bundlingOpps")}</span>
                 <span className={cn("text-lg font-bold", bundlingAdvice.length > 0 ? "text-green-700" : "text-slate-400")}>
                   {bundlingAdvice.length}
                 </span>
                 <span className="text-xs text-slate-400">
-                  {bundlingAdvice.length > 0 ? "Groups that can save on mobilisation" : "None identified"}
+                  {bundlingAdvice.length > 0 ? t("renovation.capex.bundlingGroups") : t("renovation.capex.bundlingNone")}
                 </span>
               </div>
               <div className="card mb-0 flex flex-col gap-1">
-                <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Timing opportunities</span>
+                <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">{t("renovation.capex.timingOpps")}</span>
                 <span className={cn("text-lg font-bold", timingCount > 0 ? "text-brand" : "text-slate-400")}>
                   {timingCount}
                 </span>
                 <span className="text-xs text-slate-400">
-                  {timingCount > 0 ? "Scheduling shifts could save tax" : "None identified"}
+                  {timingCount > 0 ? t("renovation.capex.timingShifts") : t("renovation.capex.timingNone")}
                 </span>
               </div>
               <div className="card mb-0 flex flex-col gap-1">
-                <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Nearest replacement year</span>
+                <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">{t("renovation.capex.nearestYear")}</span>
                 <span className="text-lg font-bold text-slate-800">{nearestYear ?? "—"}</span>
-                <span className="text-xs text-slate-400">First year with projected spend</span>
+                <span className="text-xs text-slate-400">{t("renovation.capex.firstYear")}</span>
               </div>
             </div>
 
@@ -206,9 +183,9 @@ export function CapExSummaryBridge() {
                   aria-expanded={bundlingExpanded}
                 >
                   <span>
-                    Bundling Recommendations
+                    {t("renovation.capex.bundlingRecs")}
                     <span className="ml-2 text-xs font-normal text-slate-400">
-                      {bundlingAdvice.length} suggestion{bundlingAdvice.length !== 1 ? "s" : ""}
+                      {t(bundlingAdvice.length === 1 ? "renovation.capex.suggestion_one" : "renovation.capex.suggestion_other", { count: bundlingAdvice.length })}
                     </span>
                   </span>
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"
@@ -261,6 +238,7 @@ export function CapExSummaryBridge() {
  * Used standalone in Settings → Standards tab.
  */
 export function RenovationCatalog() {
+  const { t } = useTranslation("owner");
   const [catalog, setCatalog] = useState([]);
   const [catalogLoading, setCatalogLoading] = useState(true);
   const [catalogFilter, setCatalogFilter] = useState({ system: "", taxCategory: "", search: "" });
@@ -314,8 +292,7 @@ export function RenovationCatalog() {
       {/* Disclaimer */}
       <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
         <p className="text-xs text-amber-700">
-          <strong>Decision-support guidance only</strong> — classifications show usual Swiss tax treatment for privately owned rental buildings.
-          This is not legal or tax advice. Consult a qualified advisor for your specific situation.
+          <strong>Decision-support guidance only</strong> — {t("renovation.catalog.disclaimer")}
         </p>
       </div>
 
@@ -324,34 +301,34 @@ export function RenovationCatalog() {
       <div className="sm:hidden mb-3">
         <KpiInlineGrid
           items={[
-            { label: "Value Preserving", value: String(categoryCounts.WERTERHALTEND),    tone: "good" },
-            { label: "Value Enhancing",  value: String(categoryCounts.WERTVERMEHREND),   tone: "warn" },
-            { label: "Mixed",            value: String(categoryCounts.MIXED),            tone: categoryCounts.MIXED > 0 ? "warn" : undefined },
-            { label: "Energy / Env",     value: String(categoryCounts.ENERGY_ENVIRONMENT) },
+            { label: t("renovation.catalog.valuePreserving"), value: String(categoryCounts.WERTERHALTEND),    tone: "good" },
+            { label: t("renovation.catalog.valueEnhancing"),  value: String(categoryCounts.WERTVERMEHREND),   tone: "warn" },
+            { label: t("renovation.catalog.mixed"),            value: String(categoryCounts.MIXED),            tone: categoryCounts.MIXED > 0 ? "warn" : undefined },
+            { label: t("renovation.catalog.energyEnv"),       value: String(categoryCounts.ENERGY_ENVIRONMENT) },
           ]}
         />
       </div>
       {/* Desktop: card grid */}
       <div className="hidden sm:grid grid-cols-2 md:grid-cols-4 gap-3">
         <div className="card mb-0 flex flex-col gap-1">
-          <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Value Preserving</span>
+          <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">{t("renovation.catalog.valuePreserving")}</span>
           <span className="text-xl font-bold text-green-700">{categoryCounts.WERTERHALTEND}</span>
-          <span className="text-xs text-slate-400">Usually immediately deductible</span>
+          <span className="text-xs text-slate-400">{t("renovation.catalog.valuePreservingNote")}</span>
         </div>
         <div className="card mb-0 flex flex-col gap-1">
-          <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Value Enhancing</span>
+          <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">{t("renovation.catalog.valueEnhancing")}</span>
           <span className="text-xl font-bold text-red-600">{categoryCounts.WERTVERMEHREND}</span>
-          <span className="text-xs text-slate-400">Usually capitalized</span>
+          <span className="text-xs text-slate-400">{t("renovation.catalog.valueEnhancingNote")}</span>
         </div>
         <div className="card mb-0 flex flex-col gap-1">
-          <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Mixed</span>
+          <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">{t("renovation.catalog.mixed")}</span>
           <span className="text-xl font-bold text-amber-700">{categoryCounts.MIXED}</span>
-          <span className="text-xs text-slate-400">Usually split</span>
+          <span className="text-xs text-slate-400">{t("renovation.catalog.mixedNote")}</span>
         </div>
         <div className="card mb-0 flex flex-col gap-1">
-          <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Energy / Environment</span>
+          <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">{t("renovation.catalog.energyEnv")}</span>
           <span className="text-xl font-bold text-blue-700">{categoryCounts.ENERGY_ENVIRONMENT}</span>
-          <span className="text-xs text-slate-400">Usually deductible</span>
+          <span className="text-xs text-slate-400">{t("renovation.catalog.energyEnvNote")}</span>
         </div>
       </div>
 
@@ -359,38 +336,38 @@ export function RenovationCatalog() {
       <Panel>
         <div className="grid grid-cols-1 sm:flex sm:flex-wrap sm:items-end gap-3">
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-slate-600">Building System</label>
+            <label className="text-xs font-medium text-slate-600">{t("renovation.catalog.buildingSystemLabel")}</label>
             <select
               value={catalogFilter.system}
               onChange={(e) => setCatalogFilter((f) => ({ ...f, system: e.target.value }))}
               className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-full sm:w-auto"
             >
-              <option value="">All systems</option>
-              {Object.entries(SYSTEM_LABELS).map(([k, v]) => (
-                <option key={k} value={k}>{v}</option>
+              <option value="">{t("renovation.catalog.allSystems")}</option>
+              {BUILDING_SYSTEM_KEYS.map((k) => (
+                <option key={k} value={k}>{t(`renovation.buildingSystem.${k}`, { defaultValue: k })}</option>
               ))}
             </select>
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-slate-600">Tax Category</label>
+            <label className="text-xs font-medium text-slate-600">{t("renovation.catalog.taxCategoryLabel")}</label>
             <select
               value={catalogFilter.taxCategory}
               onChange={(e) => setCatalogFilter((f) => ({ ...f, taxCategory: e.target.value }))}
               className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-full sm:w-auto"
             >
-              <option value="">All categories</option>
-              {Object.entries(TAX_CATEGORY_STYLES).map(([k, v]) => (
-                <option key={k} value={k}>{v.label}</option>
+              <option value="">{t("renovation.catalog.allCategories")}</option>
+              {Object.keys(TAX_CATEGORY_STYLES).map((k) => (
+                <option key={k} value={k}>{t(`renovation.taxCategory.${k}`, { defaultValue: k })}</option>
               ))}
             </select>
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-slate-600">Search</label>
+            <label className="text-xs font-medium text-slate-600">{t("renovation.catalog.searchLabel")}</label>
             <input
               type="text"
               value={catalogFilter.search}
               onChange={(e) => setCatalogFilter((f) => ({ ...f, search: e.target.value }))}
-              placeholder="Search renovation jobs…"
+              placeholder={t("renovation.catalog.searchPlaceholder")}
               className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-full sm:w-56"
             />
           </div>
@@ -399,24 +376,24 @@ export function RenovationCatalog() {
               onClick={() => setCatalogFilter({ system: "", taxCategory: "", search: "" })}
               className="text-xs text-brand hover:underline sm:pb-2"
             >
-              Clear filters
+              {t("renovation.catalog.clearFilters")}
             </button>
           )}
         </div>
       </Panel>
 
       <span className="tab-panel-count">
-        {filteredCatalog.length} renovation job{filteredCatalog.length !== 1 ? "s" : ""}
-        {filteredCatalog.length !== catalog.length ? ` (of ${catalog.length} total)` : ""}
+        {t(filteredCatalog.length === 1 ? "renovation.catalog.count_one" : "renovation.catalog.count_other", { count: filteredCatalog.length })}
+        {filteredCatalog.length !== catalog.length ? ` ${t("renovation.catalog.countOf", { total: catalog.length })}` : ""}
       </span>
 
       {/* Grouped catalog */}
       {catalogLoading ? (
-        <p className="loading-text">Loading classification catalog…</p>
+        <p className="loading-text">{t("renovation.catalog.loading")}</p>
       ) : Object.keys(groupedCatalog).length === 0 ? (
         <Panel>
           <div className="empty-state">
-            <p className="empty-state-text">No renovation jobs match your filters.</p>
+            <p className="empty-state-text">{t("renovation.catalog.empty")}</p>
           </div>
         </Panel>
       ) : (
@@ -434,8 +411,9 @@ export default RenovationCatalog;
 // ─── Catalog System Group ─────────────────────────────────────────────────────
 
 function CatalogSystemGroup({ system, entries }) {
+  const { t } = useTranslation("owner");
   const [expanded, setExpanded] = useState(false);
-  const label = SYSTEM_LABELS[system] || system;
+  const label = t(`renovation.buildingSystem.${system}`, { defaultValue: system });
   const preview = expanded ? entries : entries.slice(0, 3);
   const hasMore = entries.length > 3;
 
@@ -456,7 +434,7 @@ function CatalogSystemGroup({ system, entries }) {
               className={cn("w-4 h-4 transition-transform duration-200", expanded ? "rotate-180" : "")}>
               <path fillRule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
             </svg>
-            {expanded ? "Show less" : `Show all ${entries.length} jobs`}
+            {expanded ? t("renovation.catalog.showLess") : t("renovation.catalog.showAll", { count: entries.length })}
           </div>
         )}
       </Panel>
@@ -467,8 +445,9 @@ function CatalogSystemGroup({ system, entries }) {
 // ─── Catalog Entry Row ────────────────────────────────────────────────────────
 
 function CatalogEntryRow({ entry }) {
+  const { t } = useTranslation("owner");
   const [open, setOpen] = useState(false);
-  const accounting = ACCOUNTING_LABELS[entry.accountingTreatment] || entry.accountingTreatment;
+  const accounting = t(`renovation.deductibility.${entry.accountingTreatment}`, { defaultValue: entry.accountingTreatment });
 
   return (
     <div>
@@ -496,27 +475,27 @@ function CatalogEntryRow({ entry }) {
         <div className="px-4 pb-4 pt-1 border-t border-slate-50 bg-slate-50/50">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
             <div>
-              <span className="font-medium text-slate-600">Deductibility</span>
+              <span className="font-medium text-slate-600">{t("renovation.catalog.deductibilityLabel")}</span>
               <p className="text-slate-500 mt-0.5">{entry.typicalDeductibility}</p>
             </div>
             <div>
-              <span className="font-medium text-slate-600">Deductible portion</span>
+              <span className="font-medium text-slate-600">{t("renovation.catalog.deductiblePortion")}</span>
               <p className="text-slate-500 mt-0.5">{entry.deductiblePct}%</p>
             </div>
             <div>
-              <span className="font-medium text-slate-600">Timing guidance</span>
+              <span className="font-medium text-slate-600">{t("renovation.catalog.timingGuidanceLabel")}</span>
               <p className="text-slate-500 mt-0.5">
-                {TIMING_GUIDANCE[entry.timingSensitivity] || "—"}
+                {t(`renovation.buildingSystem.${entry.timingSensitivity}`, { defaultValue: "—" })}
               </p>
             </div>
             <div>
-              <span className="font-medium text-slate-600">Notes</span>
+              <span className="font-medium text-slate-600">{t("renovation.catalog.notesLabel")}</span>
               <p className="text-slate-500 mt-0.5">{entry.notes || "—"}</p>
             </div>
             {entry.assetLinkable && (
               <div className="col-span-full">
                 <Badge variant="brand" size="sm">
-                  Can be linked to inventory assets
+                  {t("renovation.catalog.assetLinkable")}
                 </Badge>
               </div>
             )}

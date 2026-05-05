@@ -12,6 +12,7 @@ import ConfigurableTable from "../../../components/ConfigurableTable";
 import { useTableSort, clientSort } from "../../../lib/tableUtils";
 
 import { cn } from "../../../lib/utils";
+import { withTranslations } from "../../../lib/i18n";
 const TEMPLATE_SORT_FIELDS = ["templateName", "building", "landlord", "createdAt"];
 
 function templateFieldExtractor(t, field) {
@@ -601,3 +602,5 @@ export default function LeaseTemplatesPage() {
     </AppShell>
   );
 }
+
+export const getStaticProps = withTranslations(["common","manager"]);

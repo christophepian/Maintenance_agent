@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import { useMemo } from "react";
+import { withTranslations } from "../lib/i18n";
 
 export default function Home() {
   const router = useRouter();
@@ -127,3 +128,5 @@ export default function Home() {
     </div>
   );
 }
+
+export const getStaticProps = withTranslations(["common"]);

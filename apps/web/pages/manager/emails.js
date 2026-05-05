@@ -9,6 +9,7 @@ import ErrorBanner from "../../components/ui/ErrorBanner";
 import Badge from "../../components/ui/Badge";
 import { authHeaders } from "../../lib/api";
 import { cn } from "../../lib/utils";
+import { withTranslations } from "../../lib/i18n";
 const EMAIL_VARIANT = {
   PENDING: "warning",
   SENT: "success",
@@ -225,3 +226,5 @@ export default function DevEmailsPage() {
     </AppShell>
   );
 }
+
+export const getStaticProps = withTranslations(["common","manager"]);

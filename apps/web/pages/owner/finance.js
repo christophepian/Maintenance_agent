@@ -19,6 +19,7 @@ import { ownerAuthHeaders } from "../../lib/api";
 import { useTableSort, useLocalSort, clientSort } from "../../lib/tableUtils";
 import SortableHeader from "../../components/SortableHeader";
 import { cn } from "../../lib/utils";
+import { withTranslations } from "../../lib/i18n";
 
 /* ═══════════════════════════════════════════════════════════════
    Constants
@@ -686,3 +687,5 @@ export default function OwnerFinance() {
     </AppShell>
   );
 }
+
+export const getStaticProps = withTranslations(["common","owner"]);

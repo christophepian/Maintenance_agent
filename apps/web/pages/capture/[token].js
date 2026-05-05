@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/router";
 import Head from "next/head";
+import { withServerTranslations } from "../../lib/i18n";
 
 /* ─── Constants ───────────────────────────────────────────── */
 
@@ -344,3 +345,5 @@ export default function MobileCapturePage() {
     </>
   );
 }
+
+export const getServerSideProps = withServerTranslations(["common"]);

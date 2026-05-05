@@ -10,6 +10,7 @@ import ConfigurableTable from "../../../components/ConfigurableTable";
 import { useTableSort, clientSort } from "../../../lib/tableUtils";
 import { authHeaders } from "../../../lib/api";
 import { cn } from "../../../lib/utils";
+import { withTranslations } from "../../../lib/i18n";
 
 const VENDOR_SORT_FIELDS = ["name", "phone", "email", "hourlyRate", "companyName", "specialty"];
 
@@ -188,3 +189,5 @@ export default function PeopleVendorsPage() {
     </AppShell>
   );
 }
+
+export const getStaticProps = withTranslations(["common","manager"]);

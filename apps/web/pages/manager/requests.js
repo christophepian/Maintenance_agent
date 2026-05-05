@@ -15,6 +15,7 @@ import { cn } from "../../lib/utils";
 import ScrollableTabs from "../../components/mobile/ScrollableTabs";
 import SwipeableCard from "../../components/mobile/SwipeableCard";
 import { FilterToggle, FilterPanelBody, FilterSection, FilterSectionClear, SelectField, NumberField, SortToggle, SortPanelBody, SortRow } from "../../components/ui/FilterPanel";
+import { withTranslations } from "../../lib/i18n";
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
@@ -1615,3 +1616,5 @@ export {
   formatDate as requestFormatDate,
   formatCurrency,
 };
+
+export const getStaticProps = withTranslations(["common","manager"]);

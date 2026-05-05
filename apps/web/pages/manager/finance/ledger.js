@@ -12,6 +12,7 @@ import { formatChfCents, formatDate } from "../../../lib/format";
 import { cn } from "../../../lib/utils";
 import { FilterToggle, FilterPanelBody, FilterSection, FilterSectionClear, SelectField, DateField } from "../../../components/ui/FilterPanel";
 import ScrollableTabs from "../../../components/mobile/ScrollableTabs";
+import { withTranslations } from "../../../lib/i18n";
 /* ── Constants ─────────────────────────────────────────────── */
 
 const SOURCE_TYPE_LABELS = {
@@ -569,3 +570,5 @@ export default function LedgerPage() {
     </AppShell>
   );
 }
+
+export const getStaticProps = withTranslations(["common","manager"]);

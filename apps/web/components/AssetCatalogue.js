@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useTranslation } from "next-i18next";
 import Panel from "./layout/Panel";
 import Badge from "./ui/Badge";
 import ErrorBanner from "./ui/ErrorBanner";
@@ -21,6 +22,7 @@ function StatCard({ label, value, sublabel }) {
 }
 
 function CategorySection({ category, items, collapsed, onToggle }) {
+  const { t } = useTranslation("manager");
   return (
     <div className="rounded-lg border border-slate-100 bg-white shadow-sm">
       <button
@@ -28,10 +30,10 @@ function CategorySection({ category, items, collapsed, onToggle }) {
         onClick={onToggle}
         className="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-slate-50"
       >
-        <span className="text-sm font-semibold text-slate-800 capitalize">{category || "Uncategorised"}</span>
+        <span className="text-sm font-semibold text-slate-800 capitalize">{category || t("assetCatalogue.uncategorised")}</span>
         <div className="flex items-center gap-2">
           <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-500">
-            {items.length} {items.length === 1 ? "model" : "models"}
+            {t(items.length === 1 ? "assetCatalogue.model_one" : "assetCatalogue.model_other", { count: items.length })}
           </span>
           <svg
             className={cn("h-4 w-4 text-slate-400 transition-transform", collapsed ? "" : "rotate-180")}
@@ -47,12 +49,12 @@ function CategorySection({ category, items, collapsed, onToggle }) {
           <table className="data-table">
             <thead>
               <tr>
-                <th>Name</th>
-                <th>Manufacturer</th>
-                <th>Model ref.</th>
-                <th>Scope</th>
-                <th>Useful Life</th>
-                <th>Replace Cost</th>
+                <th>{t("assetCatalogue.nameLabel")}</th>
+                <th>{t("assetCatalogue.manufacturer")}</th>
+                <th>{t("assetCatalogue.modelRef")}</th>
+                <th>{t("assetCatalogue.scope")}</th>
+                <th>{t("assetCatalogue.usefulLife")}</th>
+                <th>{t("assetCatalogue.replaceCost")}</th>
               </tr>
             </thead>
             <tbody>
@@ -63,7 +65,7 @@ function CategorySection({ category, items, collapsed, onToggle }) {
                   <td className="font-mono text-xs">{m.model || "—"}</td>
                   <td>
                     <Badge variant={m.orgId ? "brand" : "muted"} size="sm">
-                      {m.orgId ? "Org" : "Global"}
+                      {m.orgId ? t("assetCatalogue.org") : t("assetCatalogue.global")}
                     </Badge>
                   </td>
                   <td>{m.usefulLifeMonths ? `${Math.round(m.usefulLifeMonths / 12)} yr` : "—"}</td>
@@ -83,6 +85,7 @@ function CategorySection({ category, items, collapsed, onToggle }) {
 // ---------------------------------------------------------------------------
 
 export default function AssetCatalogue({ models = [], loading = false, onRefresh }) {
+  const { t } = useTranslation("manager");
   const [search, setSearch] = useState("");
   const [scopeFilter, setScopeFilter] = useState("ALL");
   const [collapsedCats, setCollapsedCats] = useState({});
@@ -98,8 +101,8 @@ export default function AssetCatalogue({ models = [], loading = false, onRefresh
 
   async function onCreateModel(e) {
     e.preventDefault();
-    if (!createName.trim()) return setCreateError("Name is required.");
-    if (!createCategory) return setCreateError("Category is required.");
+    if (!createName.trim()) return setCreateError(t("assetCatalogue.nameRequired"));
+    if (!createCategory) return setCreateError(t("assetCatalogue.categoryRequired"));
     setCreating(true);
     setCreateError("");
     try {
@@ -175,7 +178,7 @@ export default function AssetCatalogue({ models = [], loading = false, onRefresh
   const categoryCount = new Set(models.map((m) => m.category || "uncategorised")).size;
 
   if (loading) {
-    return <Panel><p className="loading-text">Loading asset models…</p></Panel>;
+    return <Panel><p className="loading-text">{t("assetCatalogue.loading")}</p></Panel>;
   }
 
   return (
@@ -183,9 +186,9 @@ export default function AssetCatalogue({ models = [], loading = false, onRefresh
       {/* ── Stats ── */}
       {models.length > 0 && (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-          <StatCard label="Total Models" value={models.length} sublabel={`${categoryCount} categories`} />
-          <StatCard label="Org-Private" value={orgCount} sublabel="Editable by your org" />
-          <StatCard label="Global Library" value={globalCount} sublabel="Shared read-only models" />
+          <StatCard label={t("assetCatalogue.totalModels")} value={models.length} sublabel={t("assetCatalogue.categoriesCount", { count: categoryCount })} />
+          <StatCard label={t("assetCatalogue.orgPrivate")} value={orgCount} sublabel={t("assetCatalogue.editableByOrg")} />
+          <StatCard label={t("assetCatalogue.globalLibrary")} value={globalCount} sublabel={t("assetCatalogue.sharedReadonly")} />
         </div>
       )}
 
@@ -198,7 +201,7 @@ export default function AssetCatalogue({ models = [], loading = false, onRefresh
             </svg>
             <input
               type="text"
-              placeholder="Search models… (e.g. Bosch, dishwasher)"
+              placeholder={t("assetCatalogue.searchPlaceholder")}
               className="w-full rounded-lg border border-slate-200 py-2 pl-10 pr-3 text-sm focus:border-brand-ring focus:outline-none focus:ring-1 focus:ring-brand-ring"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -209,23 +212,23 @@ export default function AssetCatalogue({ models = [], loading = false, onRefresh
             value={scopeFilter}
             onChange={(e) => setScopeFilter(e.target.value)}
           >
-            <option value="ALL">All scopes</option>
-            <option value="ORG">Org-private</option>
-            <option value="GLOBAL">Global library</option>
+            <option value="ALL">{t("assetCatalogue.allScopes")}</option>
+            <option value="ORG">{t("assetCatalogue.orgPrivateFilter")}</option>
+            <option value="GLOBAL">{t("assetCatalogue.globalFilter")}</option>
           </select>
           <div className="flex gap-1">
-            <button type="button" onClick={expandAll} className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs text-slate-600 hover:bg-slate-50">Expand All</button>
-            <button type="button" onClick={collapseAll} className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs text-slate-600 hover:bg-slate-50">Collapse All</button>
+            <button type="button" onClick={expandAll} className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs text-slate-600 hover:bg-slate-50">{t("assetCatalogue.expandAll")}</button>
+            <button type="button" onClick={collapseAll} className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs text-slate-600 hover:bg-slate-50">{t("assetCatalogue.collapseAll")}</button>
           </div>
           {(search || scopeFilter !== "ALL") && (
-            <span className="text-xs text-slate-400">Showing {filtered.length} of {models.length}</span>
+            <span className="text-xs text-slate-400">{t("assetCatalogue.showingOf", { count: filtered.length, total: models.length })}</span>
           )}
           <button
             type="button"
             className="button-primary ml-auto shrink-0"
             onClick={() => { setFormVisible((v) => !v); setCreateError(""); }}
           >
-            {formVisible ? "Cancel" : "Add"}
+            {formVisible ? t("assetCatalogue.cancel") : t("assetCatalogue.add")}
           </button>
         </div>
 
@@ -235,17 +238,17 @@ export default function AssetCatalogue({ models = [], loading = false, onRefresh
             <ErrorBanner error={createError} className="mb-3 text-sm" />
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="filter-label">Name</label>
+                <label className="filter-label">{t("assetCatalogue.nameLabel")}</label>
                 <input
                   className="filter-input w-full"
                   value={createName}
                   onChange={(e) => setCreateName(e.target.value)}
-                  placeholder="e.g. Bosch Serie 6"
+                  placeholder={t("assetCatalogue.namePlaceholder")}
                   required
                 />
               </div>
               <div>
-                <label className="filter-label">Category</label>
+                <label className="filter-label">{t("assetCatalogue.categoryLabel")}</label>
                 <select
                   className="filter-input w-full"
                   value={createCategory}
@@ -257,28 +260,28 @@ export default function AssetCatalogue({ models = [], loading = false, onRefresh
                 </select>
               </div>
               <div>
-                <label className="filter-label">Manufacturer <span className="font-normal text-slate-400">(optional)</span></label>
+                <label className="filter-label">{t("assetCatalogue.manufacturerLabel")} <span className="font-normal text-slate-400">{t("assetCatalogue.optional")}</span></label>
                 <input
                   className="filter-input w-full"
                   value={createManufacturer}
                   onChange={(e) => setCreateManufacturer(e.target.value)}
-                  placeholder="e.g. Bosch"
+                  placeholder={t("assetCatalogue.manufacturerPlaceholder")}
                 />
               </div>
               <div>
-                <label className="filter-label">Model ref. <span className="font-normal text-slate-400">(optional)</span></label>
+                <label className="filter-label">{t("assetCatalogue.modelRef")} <span className="font-normal text-slate-400">{t("assetCatalogue.optional")}</span></label>
                 <input
                   className="filter-input w-full"
                   value={createModel}
                   onChange={(e) => setCreateModel(e.target.value)}
-                  placeholder="e.g. SME88TD00Z"
+                  placeholder={t("assetCatalogue.modelRefPlaceholder")}
                 />
               </div>
             </div>
             <div className="flex justify-end gap-2 mt-3">
-              <button type="button" className="button-secondary" onClick={() => setFormVisible(false)}>Cancel</button>
+              <button type="button" className="button-secondary" onClick={() => setFormVisible(false)}>{t("assetCatalogue.cancel")}</button>
               <button type="submit" className="button-primary" disabled={creating}>
-                {creating ? "Saving…" : "Save model"}
+                {creating ? t("assetCatalogue.saving") : t("assetCatalogue.saveModel")}
               </button>
             </div>
           </form>
@@ -289,11 +292,11 @@ export default function AssetCatalogue({ models = [], loading = false, onRefresh
       {models.length === 0 ? (
         <Panel>
           <div className="empty-state">
-            <p className="empty-state-text">No equipment models yet. Use the Add button above to catalog a reusable appliance or fixture model.</p>
+            <p className="empty-state-text">{t("assetCatalogue.emptyFirst")}</p>
           </div>
         </Panel>
       ) : grouped.length === 0 ? (
-        <Panel><p className="empty-state-text">No models match your search. Try adjusting filters.</p></Panel>
+        <Panel><p className="empty-state-text">{t("assetCatalogue.emptySearch")}</p></Panel>
       ) : (
         <div className="flex flex-col gap-2">
           {grouped.map(({ category, items }) => (

@@ -3,6 +3,7 @@ import PageShell from "../../../../components/layout/PageShell";
 import PageHeader from "../../../../components/layout/PageHeader";
 import PageContent from "../../../../components/layout/PageContent";
 import BillingEntityManager from "../../../../components/BillingEntityManager";
+import { withTranslations } from "../../../../lib/i18n";
 
 export default function ManagerBillingEntities() {
   return (
@@ -16,3 +17,5 @@ export default function ManagerBillingEntities() {
     </AppShell>
   );
 }
+
+export const getStaticProps = withTranslations(["common","manager"]);

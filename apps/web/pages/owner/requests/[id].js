@@ -18,6 +18,7 @@ import {
   formatCurrency,
 } from "../../manager/requests";
 import ScrollableTabs from "../../../components/mobile/ScrollableTabs";
+import { withServerTranslations } from "../../../lib/i18n";
 
 /* ═══════════════════════════════════════════════════════════════
    Constants
@@ -781,3 +782,5 @@ export default function OwnerRequestDetailPage() {
     </AppShell>
   );
 }
+
+export const getServerSideProps = withServerTranslations(["common","owner"]);

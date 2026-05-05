@@ -16,6 +16,7 @@ import { formatChf, formatPercent, formatDate } from "../../lib/format";
 import { ownerAuthHeaders } from "../../lib/api";
 import { cn } from "../../lib/utils";
 import OwnerPicker from "../../components/OwnerPicker";
+import { withTranslations } from "../../lib/i18n";
 
 function ActionStat({ label, value, href, tone }) {
   const valueColor = { warn: "text-amber-700", bad: "text-red-600", good: "text-green-700" }[tone] ?? "text-slate-900";
@@ -351,3 +352,5 @@ export default function OwnerDashboard() {
     </AppShell>
   );
 }
+
+export const getStaticProps = withTranslations(["common","owner"]);

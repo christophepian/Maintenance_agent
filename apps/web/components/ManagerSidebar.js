@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
+import { useTranslation } from "next-i18next";
 import {
   LayoutDashboard,
   Wrench,
@@ -16,18 +17,19 @@ import {
  * Sub-sections live as in-page tab strips on each page.
  */
 const MANAGER_NAV = [
-  { label: "Dashboard", icon: LayoutDashboard, href: "/manager" },
-  { label: "Properties", icon: Building2, href: "/manager/inventory" },
-  { label: "Requests",  icon: Wrench,    href: "/manager/requests" },
-  { label: "Leases",    icon: KeyRound,  href: "/manager/leases" },
-  { label: "Finances",  icon: Wallet,    href: "/manager/finance" },
-  { label: "Contacts",   icon: Users,     href: "/manager/people" },
-  { label: "Settings",  icon: Settings,  href: "/manager/settings" },
+  { id: "dashboard", icon: LayoutDashboard, href: "/manager" },
+  { id: "properties", icon: Building2, href: "/manager/inventory" },
+  { id: "requests",  icon: Wrench,    href: "/manager/requests" },
+  { id: "leases",    icon: KeyRound,  href: "/manager/leases" },
+  { id: "finances",  icon: Wallet,    href: "/manager/finance" },
+  { id: "contacts",  icon: Users,     href: "/manager/people" },
+  { id: "settings",  icon: Settings,  href: "/manager/settings" },
 ];
 
 export default function ManagerSidebar() {
   const router = useRouter();
   const pathname = router.asPath.split("?")[0];
+  const { t } = useTranslation("manager");
 
   const activeIndex = useMemo(() => {
     // Check longest-prefix first so /manager doesn't shadow /manager/requests etc.
@@ -45,7 +47,7 @@ export default function ManagerSidebar() {
         const isActive = index === activeIndex;
         return (
           <Link
-            key={item.label}
+            key={item.id}
             href={item.href}
             className={[
               "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
@@ -56,7 +58,7 @@ export default function ManagerSidebar() {
             ].join(" ")}
           >
             <Icon size={18} className="shrink-0" />
-            <span>{item.label}</span>
+            <span>{t(`nav.${item.id}`)}</span>
           </Link>
         );
       })}

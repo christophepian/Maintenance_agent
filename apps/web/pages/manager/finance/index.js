@@ -19,6 +19,7 @@ import { cn } from "../../../lib/utils";
 import { FilterToggle, FilterPanelBody, FilterSection, FilterSectionClear, DateField } from "../../../components/ui/FilterPanel";
 import ScrollableTabs from "../../../components/mobile/ScrollableTabs";
 import KpiInlineGrid from "../../../components/ui/KpiInlineGrid";
+import { withTranslations } from "../../../lib/i18n";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -373,3 +374,5 @@ const tabKeys = FINANCE_TABS.map((t) => t.key);
     </AppShell>
   );
 }
+
+export const getStaticProps = withTranslations(["common","manager"]);

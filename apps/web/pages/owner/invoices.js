@@ -14,6 +14,7 @@ import OwnerPicker from "../../components/OwnerPicker";
 import { invoiceVariant, ingestionVariant } from "../../lib/statusVariants";
 import { formatChf, formatDate as formatDateLib } from "../../lib/format";
 import { useTableSort, clientSort } from "../../lib/tableUtils";
+import { withTranslations } from "../../lib/i18n";
 
 // Re-evaluated on every Fast Refresh hot reload (module-level code always re-runs).
 // Used to detect that a reload happened and suppress stale modal state.
@@ -473,3 +474,5 @@ export default function OwnerInvoices() {
     </AppShell>
   );
 }
+
+export const getStaticProps = withTranslations(["common","owner"]);

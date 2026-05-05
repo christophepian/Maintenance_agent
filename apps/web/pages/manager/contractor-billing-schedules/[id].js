@@ -17,6 +17,7 @@ import { DetailList, DetailRow } from "../../../components/ui/DetailList";
 import ActionBar from "../../../components/ui/ActionBar";
 import ResourceShell from "../../../components/ui/ResourceShell";
 import { billingScheduleVariant } from "../../../lib/statusVariants";
+import { withServerTranslations } from "../../../lib/i18n";
 
 const FREQUENCY_LABELS = {
   MONTHLY: "Monthly",
@@ -250,3 +251,5 @@ export default function ContractorBillingScheduleDetail() {
     </AppShell>
   );
 }
+
+export const getServerSideProps = withServerTranslations(["common","manager"]);

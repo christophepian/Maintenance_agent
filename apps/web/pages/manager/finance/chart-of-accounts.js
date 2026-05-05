@@ -11,6 +11,7 @@ import Badge from "../../../components/ui/Badge";
 import { accountTypeVariant } from "../../../lib/statusVariants";
 import { authHeaders } from "../../../lib/api";
 import ScrollableTabs from "../../../components/mobile/ScrollableTabs";
+import { withTranslations } from "../../../lib/i18n";
 
 /* ─── Tabs ─────────────────────────────────────────────── */
 
@@ -592,3 +593,5 @@ export default function ChartOfAccountsPage() {
     </AppShell>
   );
 }
+
+export const getStaticProps = withTranslations(["common","manager"]);

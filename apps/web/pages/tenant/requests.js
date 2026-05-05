@@ -15,6 +15,7 @@ import ChatWidget from "../../components/ChatWidget";
 
 import { cn } from "../../lib/utils";
 import { QRCodeSVG } from "qrcode.react";
+import { withTranslations } from "../../lib/i18n";
 // ---------------------------------------------------------------------------
 // Scheduling Slots Panel (Tenant — accept / decline)
 // ---------------------------------------------------------------------------
@@ -1376,3 +1377,5 @@ export default function TenantRequestsPage() {
     </AppShell>
   );
 }
+
+export const getStaticProps = withTranslations(["common","tenant"]);

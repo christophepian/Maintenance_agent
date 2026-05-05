@@ -15,6 +15,7 @@ import { authHeaders } from "../../lib/api";
 import { cn } from "../../lib/utils";
 import { formatChfCents, formatPercent } from "../../lib/format";
 import ScrollableTabs from "../../components/mobile/ScrollableTabs";
+import { withTranslations } from "../../lib/i18n";
 const INVENTORY_SORT_FIELDS = ["name", "address", "canton", "unitCount", "category", "manufacturer", "scope"];
 
 function inventoryFieldExtractor(row, field) {
@@ -795,3 +796,5 @@ export default function ManagerInventoryPage() {
     </AppShell>
   );
 }
+
+export const getStaticProps = withTranslations(["common","manager"]);

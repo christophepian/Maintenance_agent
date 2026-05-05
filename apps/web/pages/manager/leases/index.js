@@ -15,6 +15,7 @@ import Badge from "../../../components/ui/Badge";
 import { leaseVariant } from "../../../lib/statusVariants";
 import { cn } from "../../../lib/utils";
 import ScrollableTabs from "../../../components/mobile/ScrollableTabs";
+import { withTranslations } from "../../../lib/i18n";
 
 // Tabs: Active (ACTIVE+SIGNED), Draft (DRAFT), Submitted (READY_TO_SIGN), Archive (CANCELLED+TERMINATED)
 const LEASE_TABS = [
@@ -989,3 +990,5 @@ export default function LeasesPage() {
     </AppShell>
   );
 }
+
+export const getStaticProps = withTranslations(["common","manager"]);

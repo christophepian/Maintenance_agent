@@ -19,6 +19,7 @@ import { reconciliationVariant } from "../../../lib/statusVariants";
 import { formatChfCents } from "../../../lib/format";
 import SortableHeader from "../../../components/SortableHeader";
 import { useLocalSort, clientSort } from "../../../lib/tableUtils";
+import { withServerTranslations } from "../../../lib/i18n";
 
 export default function ChargeReconciliationDetailPage() {
   const router = useRouter();
@@ -338,3 +339,5 @@ export default function ChargeReconciliationDetailPage() {
     </AppShell>
   );
 }
+
+export const getServerSideProps = withServerTranslations(["common","manager"]);

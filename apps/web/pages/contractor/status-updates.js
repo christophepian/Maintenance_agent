@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useRouter } from "next/router";
+import { withTranslations } from "../../lib/i18n";
 
 /**
  * status-updates.js was an identical clone of jobs.js.
@@ -12,3 +13,5 @@ export default function ContractorStatusUpdatesRedirect() {
   }, [router]);
   return null;
 }
+
+export const getStaticProps = withTranslations(["common","contractor"]);

@@ -13,6 +13,7 @@ import { authHeaders } from "../../../lib/api";
 
 import { cn } from "../../../lib/utils";
 import ScrollableTabs from "../../../components/mobile/ScrollableTabs";
+import { withTranslations } from "../../../lib/i18n";
 /* ─── Owner create form ──────────────────────────────────── */
 
 const OWNER_FORM_DEFAULT = { name: "", email: "", password: "" };
@@ -592,3 +593,5 @@ export default function ManagerPeoplePage() {
     </AppShell>
   );
 }
+
+export const getStaticProps = withTranslations(["common","manager"]);

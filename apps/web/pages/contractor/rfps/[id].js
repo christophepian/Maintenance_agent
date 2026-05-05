@@ -11,6 +11,7 @@ import Badge from "../../../components/ui/Badge";
 import { rfpVariant, slotVariant } from "../../../lib/statusVariants";
 
 import { cn } from "../../../lib/utils";
+import { withServerTranslations } from "../../../lib/i18n";
 
 /* ── Quote Submission Form ─────────────────────────────────────── */
 
@@ -829,3 +830,5 @@ export default function ContractorRfpDetailPage() {
     </AppShell>
   );
 }
+
+export const getServerSideProps = withServerTranslations(["common","contractor"]);

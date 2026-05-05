@@ -6,6 +6,7 @@ import Badge from "../../../components/ui/Badge";
 import { leaseVariant } from "../../../lib/statusVariants";
 
 import { cn } from "../../../lib/utils";
+import { withTranslations } from "../../../lib/i18n";
 const STATUS_LABELS = {
   DRAFT: "Draft",
   READY_TO_SIGN: "Ready to Sign",
@@ -176,3 +177,5 @@ export default function TenantLeasesPage() {
     </AppShell>
   );
 }
+
+export const getStaticProps = withTranslations(["common","tenant"]);

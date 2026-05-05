@@ -3,6 +3,7 @@ import { useRouter } from "next/router";
 import AppShell from "../components/AppShell";
 
 import { cn } from "../lib/utils";
+import { withTranslations } from "../lib/i18n";
 export default function TenantPhone() {
   const router = useRouter();
   const [phone, setPhone] = useState("");
@@ -81,3 +82,5 @@ export default function TenantPhone() {
     </AppShell>
   );
 }
+
+export const getStaticProps = withTranslations(["common","tenant"]);

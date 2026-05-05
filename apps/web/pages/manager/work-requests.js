@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useRouter } from "next/router";
+import { withTranslations } from "../../lib/i18n";
 
 /**
  * /manager/work-requests redirects to /manager/requests (canonical location).
@@ -13,3 +14,5 @@ export default function ManagerWorkRequestsRedirect() {
   }, [router]);
   return <p>Redirecting…</p>;
 }
+
+export const getStaticProps = withTranslations(["common","manager"]);

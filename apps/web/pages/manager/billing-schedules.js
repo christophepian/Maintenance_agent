@@ -15,6 +15,7 @@ import { formatChfCents, formatDate } from "../../lib/format";
 import { billingScheduleVariant } from "../../lib/statusVariants";
 import ScrollableTabs from "../../components/mobile/ScrollableTabs";
 import { cn } from "../../lib/utils";
+import { withTranslations } from "../../lib/i18n";
 
 const TABS = [
   { key: "ACTIVE",    label: "Active" },
@@ -268,3 +269,5 @@ export default function BillingSchedulesPage() {
     </AppShell>
   );
 }
+
+export const getStaticProps = withTranslations(["common","manager"]);

@@ -14,6 +14,7 @@ import { authHeaders } from "../../../lib/api";
 import { formatChfCents } from "../../../lib/format";
 import { cn } from "../../../lib/utils";
 import ScrollableTabs from "../../../components/mobile/ScrollableTabs";
+import { withTranslations } from "../../../lib/i18n";
 
 const TABS = [
   { key: "DRAFT",     label: "Draft" },
@@ -195,3 +196,5 @@ export default function ChargeReconciliationsPage() {
     </AppShell>
   );
 }
+
+export const getStaticProps = withTranslations(["common","manager"]);

@@ -1,4 +1,5 @@
 import AppShell from "../../components/AppShell";
+import { withTranslations } from "../../lib/i18n";
 
 export default function TenantAssetsPage() {
   return (
@@ -17,3 +18,5 @@ export default function TenantAssetsPage() {
     </AppShell>
   );
 }
+
+export const getStaticProps = withTranslations(["common","tenant"]);

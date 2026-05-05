@@ -8,6 +8,7 @@ import { formatDate, formatChf } from "../../lib/format";
 import { tenantFetch } from "../../lib/api";
 import TenantPicker from "../../components/TenantPicker";
 import { cn } from "../../lib/utils";
+import { withTranslations } from "../../lib/i18n";
 
 export default function TenantInvoicesPage() {
   const router = useRouter();
@@ -173,3 +174,5 @@ export default function TenantInvoicesPage() {
     </AppShell>
   );
 }
+
+export const getStaticProps = withTranslations(["common","tenant"]);

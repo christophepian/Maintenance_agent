@@ -11,6 +11,7 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useTranslation } from "next-i18next";
 import { tenantFetch } from "../lib/api";
 import { cn } from "../lib/utils";
 
@@ -73,6 +74,7 @@ function ChatIcon({ className }) {
 // ─── Main widget ──────────────────────────────────────────────────────────────
 
 export default function ChatWidget() {
+  const { t } = useTranslation("tenant");
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState(null); // null = not yet loaded
   const [input, setInput] = useState("");
@@ -155,7 +157,7 @@ export default function ChatWidget() {
         { role: "ASSISTANT", content: reply, createdAt: new Date().toISOString() },
       ]);
     } catch (err) {
-      setError(err.message || "Something went wrong. Please try again.");
+        setError(err.message || t("chatWidget.error", { defaultValue: "Something went wrong. Please try again." }));
       // Remove the optimistic tenant message on failure so they can retry
       setMessages((prev) => prev?.slice(0, -1) ?? []);
       setInput(text);
@@ -189,11 +191,11 @@ export default function ChatWidget() {
       {!isOpen && (
         <button
           onClick={handleOpen}
-          aria-label="Open maintenance assistant chat"
+          aria-label={t("chatWidget.openLabel")}
           className="fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-indigo-600 text-white shadow-lg hover:bg-indigo-700 focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 transition-transform hover:scale-105 sm:h-14 sm:w-auto sm:rounded-full sm:px-4 sm:gap-2"
         >
           <ChatIcon className="h-6 w-6 shrink-0" />
-          <span className="hidden sm:inline text-sm font-medium">Ask AI</span>
+          <span className="hidden sm:inline text-sm font-medium">{t("chatWidget.askAi")}</span>
         </button>
       )}
 
@@ -209,7 +211,7 @@ export default function ChatWidget() {
 
           <div
             role="dialog"
-            aria-label="Maintenance assistant chat"
+            aria-label={t("chatWidget.dialogLabel")}
             className={cn(
               "fixed z-50 flex flex-col overflow-hidden bg-white shadow-2xl",
               // Mobile: full-width sheet from bottom
@@ -225,13 +227,13 @@ export default function ChatWidget() {
                   <ChatIcon className="h-4 w-4 text-indigo-600" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-slate-900 leading-tight">Maintenance Assistant</p>
-                  <p className="text-xs text-slate-400 leading-tight">Ask me anything about your home</p>
+                  <p className="text-sm font-semibold text-slate-900 leading-tight">{t("chatWidget.assistantName")}</p>
+                  <p className="text-xs text-slate-400 leading-tight">{t("chatWidget.assistantTagline")}</p>
                 </div>
               </div>
               <button
                 onClick={handleClose}
-                aria-label="Close chat"
+                aria-label={t("chatWidget.closeLabel")}
                 className="flex h-8 w-8 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-600 focus-visible:ring-2 focus-visible:ring-slate-300"
               >
                 <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
@@ -243,18 +245,18 @@ export default function ChatWidget() {
             {/* Message list */}
             <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
               {messages === null ? (
-                <p className="text-xs text-slate-400 text-center pt-8">Loading…</p>
+                <p className="text-xs text-slate-400 text-center pt-8">{t("chatWidget.loading")}</p>
               ) : messages.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full gap-3 text-center px-4">
                   <div className="flex h-12 w-12 items-center justify-center rounded-full bg-indigo-50">
                     <ChatIcon className="h-6 w-6 text-indigo-400" />
                   </div>
-                  <p className="text-sm font-medium text-slate-700">Hi! I&apos;m your maintenance assistant.</p>
+                  <p className="text-sm font-medium text-slate-700">{t("chatWidget.greeting")}</p>
                   <p className="text-xs text-slate-400">
-                    Tell me about an issue in your home or ask about the status of a request.
+                    {t("chatWidget.greetingHint")}
                   </p>
                   <div className="flex flex-wrap justify-center gap-2 mt-1">
-                    {["My faucet is leaking", "Show my lease details", "Show my invoices"].map((s) => (
+                    {[t("chatWidget.suggestion1"), t("chatWidget.suggestion2"), t("chatWidget.suggestion3")].map((s) => (
                       <button
                         key={s}
                         onClick={() => { setInput(s); inputRef.current?.focus(); }}
@@ -288,16 +290,16 @@ export default function ChatWidget() {
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
                   disabled={sending}
-                  placeholder="Describe an issue or ask a question…"
+                  placeholder={t("chatWidget.placeholder")}
                   rows={1}
-                  aria-label="Message input"
+                  aria-label={t("chatWidget.inputLabel")}
                   className="flex-1 resize-none rounded-xl border border-slate-200 px-3 py-2 text-sm placeholder-slate-400 focus:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-400 disabled:opacity-60 max-h-24 overflow-y-auto"
                   style={{ fieldSizing: "content" }}
                 />
                 <button
                   type="submit"
                   disabled={!input.trim() || sending}
-                  aria-label="Send message"
+                  aria-label={t("chatWidget.sendLabel")}
                   className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-indigo-500 transition"
                 >
                   <svg className="h-4 w-4 -rotate-90" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">

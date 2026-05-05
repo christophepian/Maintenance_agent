@@ -13,6 +13,7 @@ import { formatDate } from "../../lib/format";
 import ConfigurableTable from "../../components/ConfigurableTable";
 import { useTableSort, clientSort } from "../../lib/tableUtils";
 import ScrollableTabs from "../../components/mobile/ScrollableTabs";
+import { withTranslations } from "../../lib/i18n";
 
 const STATUS_TABS = [
   { key: "ALL", label: "All" },
@@ -200,3 +201,5 @@ export default function ManagerRfpsPage() {
     </AppShell>
   );
 }
+
+export const getStaticProps = withTranslations(["common","manager"]);

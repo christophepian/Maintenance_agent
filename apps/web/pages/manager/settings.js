@@ -14,6 +14,7 @@ import ScrollableTabs from "../../components/mobile/ScrollableTabs";
 import DepreciationStandards from "../../components/DepreciationStandards";
 import SortableHeader from "../../components/SortableHeader";
 import { useLocalSort, clientSort } from "../../lib/tableUtils";
+import { withTranslations } from "../../lib/i18n";
 
 const SETTINGS_TABS = [
   { key: "ORG", label: "Organisation" },
@@ -979,3 +980,5 @@ function LegalSourceForm({ source, saving, formError, onSubmit, onCancel }) {
     </form>
   );
 }
+
+export const getStaticProps = withTranslations(["common","manager"]);

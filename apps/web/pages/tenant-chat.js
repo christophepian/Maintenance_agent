@@ -3,6 +3,7 @@ import { useRouter } from "next/router";
 import AppShell from "../components/AppShell";
 
 import { cn } from "../lib/utils";
+import { withTranslations } from "../lib/i18n";
 export default function TenantChat() {
   const router = useRouter();
   const [session, setSession] = useState(null);
@@ -208,3 +209,5 @@ export default function TenantChat() {
     </AppShell>
   );
 }
+
+export const getStaticProps = withTranslations(["common","tenant"]);

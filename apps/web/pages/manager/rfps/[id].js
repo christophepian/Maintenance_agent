@@ -15,6 +15,7 @@ import { rfpVariant, quoteVariant, inviteVariant } from "../../../lib/statusVari
 
 import { cn } from "../../../lib/utils";
 import { formatDate, formatChfCents } from "../../../lib/format";
+import { withServerTranslations } from "../../../lib/i18n";
 
 export default function RfpDetailPage() {
   const router = useRouter();
@@ -591,3 +592,5 @@ export default function RfpDetailPage() {
     </AppShell>
   );
 }
+
+export const getServerSideProps = withServerTranslations(["common","manager"]);

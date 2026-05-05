@@ -20,6 +20,7 @@ import {
   formatCurrency,
 } from "../requests";
 import ScrollableTabs from "../../../components/mobile/ScrollableTabs";
+import { withServerTranslations } from "../../../lib/i18n";
 
 /* ═══════════════════════════════════════════════════════════════
    Constants
@@ -1202,3 +1203,5 @@ export default function RequestDetailPage() {
     </AppShell>
   );
 }
+
+export const getServerSideProps = withServerTranslations(["common","manager"]);

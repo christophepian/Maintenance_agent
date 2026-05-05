@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { useRouter } from "next/router";
+import { useTranslation } from "next-i18next";
 import Panel from "./layout/Panel";
 import Badge from "./ui/Badge";
 import { billingEntityVariant } from "../lib/statusVariants";
@@ -21,7 +22,7 @@ const DEFAULT_FORM = {
   defaultVatRate: "7.7",
 };
 
-const TYPE_LABEL = { ORG: "Organization", CONTRACTOR: "Contractor", OWNER: "Owner" };
+const TYPE_LABEL = {}; // kept for backwards compat — actual labels from i18n in components
 const TYPE_CLS = {
   ORG: "bg-blue-100 text-blue-700",
   CONTRACTOR: "bg-amber-100 text-amber-700",
@@ -31,6 +32,7 @@ const TYPE_CLS = {
 /* ─── Modal ──────────────────────────────────────────────── */
 
 function BillingEntityModal({ isOpen, onClose, editEntity, contractors, onSaved }) {
+  const { t } = useTranslation("common");
   const [form, setForm] = useState(DEFAULT_FORM);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -108,7 +110,7 @@ function BillingEntityModal({ isOpen, onClose, editEntity, contractors, onSaved 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent>
-        <DialogHeader title={isEditing ? "Edit billing entity" : "New billing entity"} />
+        <DialogHeader title={t(isEditing ? "billingEntity.edit" : "billingEntity.new")} />
 
         {error && (
           <div className="mx-6 mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-700">
@@ -128,9 +130,9 @@ function BillingEntityModal({ isOpen, onClose, editEntity, contractors, onSaved 
               disabled={isEditing}
               className="w-full border border-slate-300 rounded-lg px-3 py-2 bg-white text-sm"
             >
-              <option value="ORG">Organization</option>
-              <option value="CONTRACTOR">Contractor</option>
-              <option value="OWNER">Owner</option>
+              <option value="ORG">{t("billingEntity.typeLabel.ORG")}</option>
+              <option value="CONTRACTOR">{t("billingEntity.typeLabel.CONTRACTOR")}</option>
+              <option value="OWNER">{t("billingEntity.typeLabel.OWNER")}</option>
             </select>
           </div>
 
@@ -158,7 +160,7 @@ function BillingEntityModal({ isOpen, onClose, editEntity, contractors, onSaved 
                 }}
                 className="w-full border border-slate-300 rounded-lg px-3 py-2 bg-white text-sm"
               >
-                <option value="">Select contractor</option>
+                <option value="">{t("billingEntity.selectContractor")}</option>
                 {contractors.map((c) => (
                   <option key={c.id} value={c.id}>{c.name} ({c.phone})</option>
                 ))}
@@ -230,7 +232,7 @@ function BillingEntityModal({ isOpen, onClose, editEntity, contractors, onSaved 
             </button>
             <button type="submit" disabled={submitting}
               className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">
-              {submitting ? "Saving…" : isEditing ? "Save changes" : "Create"}
+              {submitting ? t("billingEntity.saving") : isEditing ? t("billingEntity.saveChanges") : t("action.create")}
             </button>
           </div>
         </form>
@@ -242,6 +244,7 @@ function BillingEntityModal({ isOpen, onClose, editEntity, contractors, onSaved 
 /* ─── Main component ─────────────────────────────────────── */
 
 export default function BillingEntityManager() {
+  const { t } = useTranslation("common");
   const router = useRouter();
   const [entities, setEntities] = useState([]);
   const [contractors, setContractors] = useState([]);
@@ -286,7 +289,7 @@ export default function BillingEntityManager() {
 
   async function handleDelete(entityId, e) {
     e.stopPropagation();
-    if (!confirm("Delete this billing entity?")) return;
+    if (!confirm(t("billingEntity.delete"))) return;
     setError("");
     setNotice("");
     try {
@@ -298,7 +301,7 @@ export default function BillingEntityManager() {
         const data = await res.json().catch(() => ({}));
         throw new Error(data?.error?.message || `Failed to delete (${res.status})`);
       }
-      setNotice("Billing entity deleted.");
+      setNotice(t("billingEntity.deleted"));
       await loadData();
     } catch (err) {
       setError(err.message);
@@ -364,7 +367,7 @@ export default function BillingEntityManager() {
                     <td className="cell-bold">{entity.name}</td>
                     <td>
                       <Badge variant={billingEntityVariant(entity.type)} size="sm">
-                        {TYPE_LABEL[entity.type] || entity.type}
+                        {t(`billingEntity.typeLabel.${entity.type}`) || entity.type}
                       </Badge>
                     </td>
                     <td className="text-slate-500">{entity.city ? `${entity.postalCode} ${entity.city}` : "—"}</td>

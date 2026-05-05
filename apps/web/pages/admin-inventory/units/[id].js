@@ -18,6 +18,7 @@ import { authHeaders } from "../../../lib/api";
 import ScrollableTabs from "../../../components/mobile/ScrollableTabs";
 import SortableHeader from "../../../components/SortableHeader";
 import { useLocalSort, clientSort } from "../../../lib/tableUtils";
+import { withServerTranslations } from "../../../lib/i18n";
 export default function UnitDetail() {
   const router = useRouter();
   const { id, role } = router.query;
@@ -1351,3 +1352,5 @@ export default function UnitDetail() {
     </AppShell>
   );
 }
+
+export const getServerSideProps = withServerTranslations(["common","manager"]);

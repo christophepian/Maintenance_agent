@@ -12,6 +12,7 @@ import {
 } from "../../lib/format";
 import { authHeaders } from "../../lib/api";
 import { cn } from "../../lib/utils";
+import { withTranslations } from "../../lib/i18n";
 
 /* ─── YTD date range ─── */
 function ytdRange() {
@@ -549,3 +550,5 @@ export default function ManagerDashboard() {
     </AppShell>
   );
 }
+
+export const getStaticProps = withTranslations(["common","manager"]);

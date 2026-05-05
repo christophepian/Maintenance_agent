@@ -6,27 +6,21 @@
  */
 
 import { useState, useEffect, useCallback } from "react";
+import { useTranslation } from "next-i18next";
 import Panel from "./layout/Panel";
 import Badge from "./ui/Badge";
 import { cn } from "../lib/utils";
 import { ownerAuthHeaders } from "../lib/api";
 
-const DECISION_LABELS = {
-  accepted: { label: "Accepted", variant: "success" },
-  rejected: { label: "Rejected", variant: "destructive" },
-  deferred: { label: "Deferred", variant: "warning" },
-  pending: { label: "Pending", variant: "secondary" },
-};
-
-const OPTION_TYPE_LABELS = {
-  replace_full: "Full Replacement",
-  replace_component: "Component Replacement",
-  repair: "Repair",
-  defer: "Defer",
-  upgrade: "Upgrade",
+const DECISION_VARIANTS = {
+  accepted: "success",
+  rejected: "destructive",
+  deferred: "warning",
+  pending: "secondary",
 };
 
 export default function RecommendationPanel({ requestId }) {
+  const { t } = useTranslation("owner");
   const [recommendations, setRecommendations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -83,15 +77,15 @@ export default function RecommendationPanel({ requestId }) {
 
   if (loading) {
     return (
-      <Panel title="Strategy Recommendation">
-        <p className="text-sm text-slate-400 m-0 animate-pulse">Loading recommendations…</p>
+      <Panel title={t("recommendation.title")}>
+        <p className="text-sm text-slate-400 m-0 animate-pulse">{t("label.loading", { ns: "common" })}</p>
       </Panel>
     );
   }
 
   if (error) {
     return (
-      <Panel title="Strategy Recommendation">
+      <Panel title={t("recommendation.title")}>
         <p className="text-sm text-red-500 m-0">Error: {error}</p>
       </Panel>
     );
@@ -99,8 +93,8 @@ export default function RecommendationPanel({ requestId }) {
 
   if (recommendations.length === 0) {
     return (
-      <Panel title="Strategy Recommendation">
-        <p className="text-sm text-slate-400 m-0">No recommendation yet.</p>
+      <Panel title={t("recommendation.title")}>
+        <p className="text-sm text-slate-400 m-0">{t("empty.noData", { ns: "common" })}</p>
       </Panel>
     );
   }
@@ -115,10 +109,11 @@ export default function RecommendationPanel({ requestId }) {
     /* ignore parse errors */
   }
 
-  const decisionInfo = DECISION_LABELS[rec.userDecision] || DECISION_LABELS.pending;
+  const decisionKey = rec.userDecision || "pending";
+  const decisionVariant = DECISION_VARIANTS[decisionKey] || "secondary";
 
   return (
-    <Panel title="Strategy Recommendation">
+    <Panel title={t("recommendation.title")}>
       <div className="space-y-4">
         {/* Summary */}
         {explanation?.summary && (
@@ -127,8 +122,8 @@ export default function RecommendationPanel({ requestId }) {
 
         {/* Decision status */}
         <div className="flex items-center gap-2">
-          <span className="text-xs font-medium text-slate-500">Decision:</span>
-          <Badge variant={decisionInfo.variant}>{decisionInfo.label}</Badge>
+          <span className="text-xs font-medium text-slate-500">{t("label.status", { ns: "common" })}:</span>
+          <Badge variant={decisionVariant}>{t(`recommendation.decision.${decisionKey}`)}</Badge>
         </div>
 
         {/* Ranked options */}
@@ -152,7 +147,7 @@ export default function RecommendationPanel({ requestId }) {
                       </span>
                     )}
                     <span className="text-sm font-medium">
-                      {OPTION_TYPE_LABELS[opt.optionType] || opt.optionType}
+                      {t(`recommendation.optionType.${opt.optionType}`, { defaultValue: opt.optionType })}
                     </span>
                   </div>
                   <span
@@ -204,7 +199,7 @@ export default function RecommendationPanel({ requestId }) {
         {rec.userDecision === "pending" && (
           <div className="space-y-3 border-t border-slate-200 pt-3">
             <label htmlFor="rec-feedback" className="text-xs font-medium text-slate-500">
-              Feedback (optional)
+              {t("label.notes", { ns: "common" })} (optional)
             </label>
             <textarea
               id="rec-feedback"
@@ -212,32 +207,32 @@ export default function RecommendationPanel({ requestId }) {
               onChange={(e) => setFeedback(e.target.value)}
               className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
               rows={2}
-              placeholder="Any comments on this recommendation…"
+              placeholder={t("recommendation.feedbackPlaceholder")}
             />
             <div className="flex gap-2">
               <button
                 onClick={() => handleDecision(rec.id, "accepted")}
                 disabled={deciding}
                 className="rounded-md bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700 focus-visible:ring-2 focus-visible:ring-green-500 disabled:opacity-50"
-                aria-label="Accept recommendation"
+                aria-label={t("recommendation.acceptAriaLabel")}
               >
-                Accept
+                {t("recommendation.decision.accepted")}
               </button>
               <button
                 onClick={() => handleDecision(rec.id, "deferred")}
                 disabled={deciding}
                 className="rounded-md bg-amber-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-600 focus-visible:ring-2 focus-visible:ring-amber-500 disabled:opacity-50"
-                aria-label="Defer recommendation"
+                aria-label={t("recommendation.deferAriaLabel")}
               >
-                Defer
+                {t("recommendation.decision.deferred")}
               </button>
               <button
                 onClick={() => handleDecision(rec.id, "rejected")}
                 disabled={deciding}
                 className="rounded-md bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700 focus-visible:ring-2 focus-visible:ring-red-500 disabled:opacity-50"
-                aria-label="Reject recommendation"
+                aria-label={t("recommendation.rejectAriaLabel")}
               >
-                Reject
+                {t("recommendation.decision.rejected")}
               </button>
             </div>
           </div>

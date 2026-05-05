@@ -17,6 +17,7 @@ import { DetailGrid, DetailItem } from "../../../components/ui/DetailGrid";
 import ActionBar from "../../../components/ui/ActionBar";
 import ResourceShell from "../../../components/ui/ResourceShell";
 import { rentAdjustmentVariant } from "../../../lib/statusVariants";
+import { withServerTranslations } from "../../../lib/i18n";
 
 const TYPE_LABELS = {
   CPI_INDEXATION: "CPI Indexation",
@@ -256,3 +257,5 @@ export default function RentAdjustmentDetail() {
     </AppShell>
   );
 }
+
+export const getServerSideProps = withServerTranslations(["common","manager"]);

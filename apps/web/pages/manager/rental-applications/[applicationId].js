@@ -11,6 +11,7 @@ import Section from "../../../components/layout/Section";
 import ErrorBanner from "../../../components/ui/ErrorBanner";
 import Badge from "../../../components/ui/Badge";
 import { authHeaders } from "../../../lib/api";
+import { withServerTranslations } from "../../../lib/i18n";
 export default function ApplicationDetailPage() {
   const router = useRouter();
   const { applicationId } = router.query;
@@ -202,3 +203,5 @@ function Detail({ label, value }) {
     </div>
   );
 }
+
+export const getServerSideProps = withServerTranslations(["common","manager"]);

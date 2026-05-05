@@ -10,6 +10,7 @@ import ContractorPicker from "../../components/ContractorPicker";
 import { formatChf as formatCurrency, formatDate } from "../../lib/format";
 import { authHeaders } from "../../lib/api";
 import { cn } from "../../lib/utils";
+import { withTranslations } from "../../lib/i18n";
 export default function ContractorDashboard() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -238,3 +239,5 @@ export default function ContractorDashboard() {
     </AppShell>
   );
 }
+
+export const getStaticProps = withTranslations(["common","contractor"]);

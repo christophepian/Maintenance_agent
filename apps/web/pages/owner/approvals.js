@@ -18,6 +18,7 @@ import { formatDate, formatDateTime } from "../../lib/format";
 import ScrollableTabs from "../../components/mobile/ScrollableTabs";
 import SortableHeader from "../../components/SortableHeader";
 import { useLocalSort, clientSort } from "../../lib/tableUtils";
+import { withTranslations } from "../../lib/i18n";
 // ─── Shared ────────────────────────────────────────────────────
 
 /** RAG left-border: green=LOW, neutral=MEDIUM, amber=HIGH, red=EMERGENCY */
@@ -529,3 +530,5 @@ function RfpsTab() {
     </>
   );
 }
+
+export const getStaticProps = withTranslations(["common","owner"]);

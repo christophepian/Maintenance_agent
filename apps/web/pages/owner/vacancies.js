@@ -5,6 +5,7 @@ import PageShell from "../../components/layout/PageShell";
 import PageHeader from "../../components/layout/PageHeader";
 import PageContent from "../../components/layout/PageContent";
 import VacanciesPanel from "../../components/VacanciesPanel";
+import { withTranslations } from "../../lib/i18n";
 
 export default function OwnerVacanciesPage() {
   const [refreshKey, setRefreshKey] = useState(0);
@@ -34,3 +35,5 @@ export default function OwnerVacanciesPage() {
   );
 }
 
+
+export const getStaticProps = withTranslations(["common","owner"]);

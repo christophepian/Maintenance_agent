@@ -1,15 +1,37 @@
 {
   "nav": {
+    "dashboard": "Tableau de bord",
     "inbox": "Boîte de réception",
     "requests": "Demandes",
     "leases": "Baux",
     "invoices": "Factures",
-    "assets": "Équipements"
+    "assets": "Équipements",
+    "myHome": "Mon logement",
+    "apply": "Candidater"
   },
   "dashboard": {
     "title": "Espace locataire",
     "yourLease": "Votre bail",
     "openRequests": "Demandes ouvertes",
     "pendingInvoices": "Factures en attente"
+  },
+  "chatWidget": {
+    "openLabel": "Ouvrir l'assistant de maintenance",
+    "dialogLabel": "Chat assistant de maintenance",
+    "closeLabel": "Fermer le chat",
+    "inputLabel": "Saisie du message",
+    "sendLabel": "Envoyer le message",
+    "askAi": "Demander \u00e0 l'IA",
+    "assistantName": "Assistant de maintenance",
+    "assistantTagline": "Posez-moi vos questions sur votre logement",
+    "loading": "Chargement\u2026",
+    "greeting": "Bonjour\u00a0! Je suis votre assistant de maintenance.",
+    "greetingHint": "D\u00e9crivez un probl\u00e8me dans votre logement ou renseignez-vous sur l'\u00e9tat d'une demande.",
+    "suggestion1": "Mon robinet fuit",
+    "suggestion2": "Afficher les d\u00e9tails de mon bail",
+    "suggestion3": "Afficher mes factures",
+    "placeholder": "D\u00e9crivez un probl\u00e8me ou posez une question\u2026",
+    "enterHint": "Entr\u00e9e pour envoyer \u00b7 Maj+Entr\u00e9e pour nouvelle ligne",
+    "error": "Une erreur s'est produite. Veuillez r\u00e9essayer."
   }
 }

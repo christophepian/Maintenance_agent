@@ -12,6 +12,7 @@ import Badge from "../../components/ui/Badge";
 import { urgencyVariant, jobVariant } from "../../lib/statusVariants";
 
 import { cn } from "../../lib/utils";
+import { withTranslations } from "../../lib/i18n";
 function UrgencyPill({ urgency }) {
   if (!urgency) return null;
   return (
@@ -241,3 +242,5 @@ export default function OwnerJobs() {
     </AppShell>
   );
 }
+
+export const getStaticProps = withTranslations(["common","owner"]);

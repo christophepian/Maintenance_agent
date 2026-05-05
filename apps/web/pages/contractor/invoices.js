@@ -13,6 +13,7 @@ import { invoiceVariant, ingestionVariant } from "../../lib/statusVariants";
 import { formatDate } from "../../lib/format";
 import { authHeaders } from "../../lib/api";
 import ScrollableTabs from "../../components/mobile/ScrollableTabs";
+import { withTranslations } from "../../lib/i18n";
 
 const STATUS_TABS = [
   { key: "ALL", label: "All" },
@@ -508,3 +509,5 @@ export default function ContractorInvoices() {
     </AppShell>
   );
 }
+
+export const getStaticProps = withTranslations(["common","contractor"]);

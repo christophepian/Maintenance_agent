@@ -16,6 +16,7 @@ import { leaseVariant, invoiceVariant } from "../../../../lib/statusVariants";
 import ScrollableTabs from "../../../../components/mobile/ScrollableTabs";
 import SortableHeader from "../../../../components/SortableHeader";
 import { useLocalSort, clientSort } from "../../../../lib/tableUtils";
+import { withServerTranslations } from "../../../../lib/i18n";
 
 export default function TenantDetailPage() {
   const router = useRouter();
@@ -474,3 +475,5 @@ export default function TenantDetailPage() {
     </AppShell>
   );
 }
+
+export const getServerSideProps = withServerTranslations(["common","manager"]);

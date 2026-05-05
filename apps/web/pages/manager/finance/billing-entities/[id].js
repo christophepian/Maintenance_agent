@@ -13,6 +13,7 @@ import { billingEntityVariant } from "../../../../lib/statusVariants";
 import { authHeaders } from "../../../../lib/api";
 
 import { cn } from "../../../../lib/utils";
+import { withServerTranslations } from "../../../../lib/i18n";
 const TYPE_LABEL = { ORG: "Organization", CONTRACTOR: "Contractor", OWNER: "Owner" };
 const TYPE_CLS = {
   ORG: "bg-blue-100 text-blue-700",
@@ -335,3 +336,5 @@ export default function BillingEntityDetailPage() {
     </AppShell>
   );
 }
+
+export const getServerSideProps = withServerTranslations(["common","manager"]);

@@ -4,6 +4,7 @@ import AppShell from "../components/AppShell";
 import { ALLOWED_CATEGORIES } from "../lib/categories";
 
 import { cn } from "../lib/utils";
+import { withTranslations } from "../lib/i18n";
 /**
  * Tenant Form (Slice 4)
  * - Phone-based tenant identity
@@ -323,3 +324,5 @@ export default function TenantForm() {
     </AppShell>
   );
 }
+
+export const getStaticProps = withTranslations(["common","tenant"]);

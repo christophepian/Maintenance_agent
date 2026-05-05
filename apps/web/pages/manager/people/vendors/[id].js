@@ -16,6 +16,7 @@ import { jobVariant, invoiceVariant } from "../../../../lib/statusVariants";
 import ScrollableTabs from "../../../../components/mobile/ScrollableTabs";
 import SortableHeader from "../../../../components/SortableHeader";
 import { useLocalSort, clientSort } from "../../../../lib/tableUtils";
+import { withServerTranslations } from "../../../../lib/i18n";
 
 export default function ContractorDetailPage() {
   const router = useRouter();
@@ -620,3 +621,5 @@ export default function ContractorDetailPage() {
     </AppShell>
   );
 }
+
+export const getServerSideProps = withServerTranslations(["common","manager"]);

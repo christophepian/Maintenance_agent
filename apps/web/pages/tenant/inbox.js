@@ -10,6 +10,7 @@ import { tenantFetch } from "../../lib/api";
 import { getNotificationLink } from "../../lib/notificationLinks";
 import TenantPicker from "../../components/TenantPicker";
 import Badge from "../../components/ui/Badge";
+import { withTranslations } from "../../lib/i18n";
 
 const EVENT_ICONS = {
   LEASE_READY_TO_SIGN: "📝",
@@ -296,3 +297,5 @@ export default function TenantInboxPage() {
     </AppShell>
   );
 }
+
+export const getStaticProps = withTranslations(["common","tenant"]);

@@ -1,4 +1,5 @@
 import ErrorBanner from "./ErrorBanner";
+import { useTranslation } from "next-i18next";
 
 /**
  * ResourceShell — standardizes loading / error / not-found guards for detail pages.
@@ -34,12 +35,16 @@ export default function ResourceShell({
   loading,
   error,
   hasData,
-  loadingText = "Loading…",
-  emptyMessage = "Record not found.",
+  loadingText,
+  emptyMessage,
   children,
 }) {
+  const { t } = useTranslation("common");
+  const resolvedLoadingText = loadingText ?? t("label.loading");
+  const resolvedEmptyMessage = emptyMessage ?? t("error.notFound");
+
   if (loading) {
-    return <p className="loading-text">{loadingText}</p>;
+    return <p className="loading-text">{resolvedLoadingText}</p>;
   }
 
   if (error) {
@@ -47,7 +52,7 @@ export default function ResourceShell({
   }
 
   if (!hasData) {
-    return <ErrorBanner error={emptyMessage} />;
+    return <ErrorBanner error={resolvedEmptyMessage} />;
   }
 
   return typeof children === "function" ? children() : children;

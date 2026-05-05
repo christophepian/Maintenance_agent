@@ -4,6 +4,7 @@ import Head from "next/head";
 import ErrorBanner from "../components/ui/ErrorBanner";
 
 import { cn } from "../lib/utils";
+import { withTranslations } from "../lib/i18n";
 /**
  * Public Rental Application Wizard
  *
@@ -1340,3 +1341,5 @@ function SelectField({ label, value, options, onChange, className = "" }) {
     </div>
   );
 }
+
+export const getStaticProps = withTranslations(["common"]);

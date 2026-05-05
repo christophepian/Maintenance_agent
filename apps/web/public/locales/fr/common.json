@@ -22,7 +22,13 @@
     "search": "Rechercher",
     "filter": "Filtrer",
     "export": "Exporter",
-    "viewAll": "Voir tout"
+    "viewAll": "Voir tout",
+    "view": "Voir",
+    "download": "Télécharger",
+    "preview": "Aperçu",
+    "undo": "Annuler",
+    "more": "Plus",
+    "dismiss": "Fermer"
   },
   "status": {
     "open": "Ouvert",
@@ -66,5 +72,142 @@
     "OWNER": "Propriétaire",
     "CONTRACTOR": "Prestataire",
     "TENANT": "Locataire"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "markAllRead": "Tout marquer comme lu",
+    "empty": "Aucune notification",
+    "unread": "Non lu"
+  },
+  "pagination": {
+    "showing": "{{from}}–{{to}} sur {{total}}",
+    "page": "Page {{current}} sur {{total}}",
+    "previous": "← Précédent",
+    "next": "Suivant →"
+  },
+  "docType": {
+    "LEASE_AGREEMENT": "Contrat de bail",
+    "ADDENDUM": "Avenant",
+    "INSPECTION_REPORT": "État des lieux",
+    "INVOICE": "Facture",
+    "INSURANCE": "Assurance",
+    "ID_DOCUMENT": "Pièce d'identité / Passeport",
+    "PROOF_OF_INCOME": "Justificatif de revenus",
+    "REFERENCES": "Références",
+    "OTHER": "Autre",
+    "PHOTO": "Photo"
+  },
+  "assetType": {
+    "APPLIANCE": "Appareil",
+    "FIXTURE": "Équipement fixe",
+    "FINISH": "Revêtement / Surface",
+    "STRUCTURAL": "Structurel",
+    "SYSTEM": "Installation / Système",
+    "OTHER": "Autre"
+  },
+  "categoryMapping": {
+    "stove": "Cuisinière & plaques",
+    "oven": "Four",
+    "dishwasher": "Lave-vaisselle",
+    "bathroom": "Salle de bains",
+    "lighting": "Éclairage",
+    "plumbing": "Plomberie",
+    "other": "Autre / Général"
+  },
+  "selection": {
+    "REVIEWING": "En cours d'examen",
+    "SHORTLISTED": "Présélectionné",
+    "OFFERED": "Proposition faite",
+    "REJECTED": "Refusé",
+    "WITHDRAWN": "Retiré",
+    "AWAITING_SIGNATURE": "En attente de signature",
+    "FALLBACK_1": "Fallback 1 actif",
+    "FALLBACK_2": "Fallback 2 actif"
+  },
+  "leaseStatus": {
+    "DRAFT": "Brouillon",
+    "PENDING_SIGNATURE": "En attente de signature",
+    "READY_TO_SIGN": "Prêt à signer",
+    "SIGNED": "Signé",
+    "ACTIVE": "Actif",
+    "EXPIRED": "Expiré",
+    "TERMINATED": "Résilié"
+  },
+  "vacancies": {
+    "noLease": "Pas encore de bail",
+    "tabCandidates": "Sélection des candidats",
+    "tabSignature": "En attente de signature",
+    "emptySignature": "Aucune unité en attente de signature"
+  },
+  "documents": {
+    "title": "Documents justificatifs",
+    "loading": "Chargement des documents…",
+    "empty": "Aucun document téléversé.",
+    "previewUnavailable": "Aperçu non disponible pour ce type de fichier.",
+    "downloadInstead": "Télécharger à la place"
+  },
+  "billingEntity": {
+    "typeLabel": {
+      "ORG": "Organisation",
+      "CONTRACTOR": "Prestataire",
+      "OWNER": "Propriétaire"
+    },
+    "new": "Nouvelle entité de facturation",
+    "edit": "Modifier l'entité de facturation",
+    "delete": "Supprimer cette entité de facturation ?",
+    "deleted": "Entité de facturation supprimée.",
+    "saving": "Enregistrement…",
+    "saveChanges": "Enregistrer les modifications",
+    "selectContractor": "Sélectionner un prestataire"
+  },
+  "assetInventory": {
+    "fullyDepreciated": "Totalement amorti",
+    "installUnknown": "Date d'installation inconnue",
+    "noStandard": "Aucun standard d'amortissement",
+    "loading": "Chargement des actifs…",
+    "empty": "Aucun actif enregistré.",
+    "addAsset": "+ Ajouter un actif",
+    "cancel": "Annuler",
+    "adding": "Ajout…",
+    "saving": "Enregistrement…",
+    "saveChanges": "Enregistrer les modifications",
+    "removing": "Suppression…",
+    "confirmRemove": "Confirmer la suppression",
+    "searchPlaceholder": "Rechercher… (ex. Lave-vaisselle)",
+    "unlinkedJobs_one": "{{count}} intervention terminée sans actif lié",
+    "unlinkedJobs_other": "{{count}} interventions terminées sans actif lié"
+  },
+  "depreciationStandards": {
+    "totalItems": "Total des éléments",
+    "fromAsloca": "{{count}} issus de l'ASLOCA/FRI",
+    "categories": "Catégories",
+    "sectionsFrom": "Sections du tableau officiel",
+    "avgLifespan": "Durée de vie moy.",
+    "acrossAll": "Sur tous les éléments",
+    "source": "Source",
+    "sourceNote": "Tableau paritaire d'amortissements, 2007",
+    "cancel": "Annuler",
+    "addStandard": "+ Ajouter un standard",
+    "searchPlaceholder": "Rechercher… (ex. lave-vaisselle, parquet, radiateur)",
+    "allTypes": "Tous les types",
+    "expandAll": "Tout développer",
+    "collapseAll": "Tout réduire",
+    "showingOf": "{{count}} sur {{total}}",
+    "loading": "Chargement des standards d'amortissement…",
+    "empty": "Aucun standard d'amortissement.",
+    "noMatch": "Aucun élément ne correspond à votre recherche.",
+    "creating": "Création…",
+    "createStandard": "Créer le standard",
+    "lifespanLegend": "Légende des durées de vie",
+    "items_one": "{{count}} élément",
+    "items_other": "{{count}} éléments"
+  },
+  "configurableTable": {
+    "columns": "Colonnes",
+    "density": "Densité",
+    "comfortable": "Confortable",
+    "compact": "Compact",
+    "reset": "Réinitialiser",
+    "dragToReorder": "Glisser pour réordonner"
   }
 }

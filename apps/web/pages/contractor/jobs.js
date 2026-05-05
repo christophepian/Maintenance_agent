@@ -15,6 +15,7 @@ import { authHeaders } from "../../lib/api";
 
 import { cn } from "../../lib/utils";
 import ScrollableTabs from "../../components/mobile/ScrollableTabs";
+import { withTranslations } from "../../lib/i18n";
 /* ── Tab config (F-UI1) ────────────────────────────────── */
 const TABS = [
   { key: "upcoming", label: "Upcoming" },
@@ -521,3 +522,5 @@ function JobCard({
     </div>
   );
 }
+
+export const getStaticProps = withTranslations(["common","contractor"]);

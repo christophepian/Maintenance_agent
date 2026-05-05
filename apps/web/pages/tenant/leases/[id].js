@@ -7,6 +7,7 @@ import { formatDate, formatChf } from "../../../lib/format";
 import { cn } from "../../../lib/utils";
 import Badge from "../../../components/ui/Badge";
 import { leaseVariant, signerVariant } from "../../../lib/statusVariants";
+import { withServerTranslations } from "../../../lib/i18n";
 const STATUS_LABELS = {
   DRAFT: "Draft",
   READY_TO_SIGN: "Ready to Sign",
@@ -436,3 +437,5 @@ export default function TenantLeaseDetailPage() {
     </AppShell>
   );
 }
+
+export const getServerSideProps = withServerTranslations(["common","tenant"]);

@@ -9,6 +9,7 @@ import Section from "../../../../components/layout/Section";
 import ErrorBanner from "../../../../components/ui/ErrorBanner";
 import { ownerAuthHeaders } from "../../../../lib/api";
 import { cn } from "../../../../lib/utils";
+import { withServerTranslations } from "../../../../lib/i18n";
 function todayIso() {
   return new Date().toISOString().slice(0, 10);
 }
@@ -351,3 +352,5 @@ export default function FillVacancyWizard() {
     </AppShell>
   );
 }
+
+export const getServerSideProps = withServerTranslations(["common","owner"]);

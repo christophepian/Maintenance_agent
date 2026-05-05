@@ -16,6 +16,7 @@ import Badge from "../../../components/ui/Badge";
 import { invoiceVariant, ingestionVariant } from "../../../lib/statusVariants";
 
 import { cn } from "../../../lib/utils";
+import { withTranslations } from "../../../lib/i18n";
 /* ─── Helpers ─────────────────────────────────────────────── */
 
 const INVOICE_SORT_FIELDS = ["status", "invoiceNumber", "amount", "createdAt", "issuer", "recipient", "building", "recurring", "category"];
@@ -1105,3 +1106,5 @@ export default function ManagerInvoicesPage() {
     </AppShell>
   );
 }
+
+export const getStaticProps = withTranslations(["common","manager"]);

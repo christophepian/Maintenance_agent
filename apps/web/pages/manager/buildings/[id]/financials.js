@@ -5,6 +5,7 @@ import PageShell from "../../../../components/layout/PageShell";
 import PageHeader from "../../../../components/layout/PageHeader";
 import PageContent from "../../../../components/layout/PageContent";
 import BuildingFinancialsView from "../../../../components/BuildingFinancialsView";
+import { withServerTranslations } from "../../../../lib/i18n";
 
 export default function BuildingFinancialsPage() {
   const router = useRouter();
@@ -35,3 +36,5 @@ export default function BuildingFinancialsPage() {
     </AppShell>
   );
 }
+
+export const getServerSideProps = withServerTranslations(["common","manager"]);

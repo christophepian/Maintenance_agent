@@ -9,6 +9,7 @@
  */
 import { useState, useEffect, useCallback, useMemo, forwardRef, useImperativeHandle } from "react";
 import { useRouter } from "next/router";
+import { useTranslation } from "next-i18next";
 import ConfigurableTable from "./ConfigurableTable";
 import { useLocalSort, clientSort } from "../lib/tableUtils";
 import Badge from "./ui/Badge";
@@ -48,6 +49,7 @@ function planFieldExtractor(plan, field) {
 // ─── Create Plan Modal ────────────────────────────────────────────────────────
 
 function CreatePlanModal({ buildings, onClose, onCreate }) {
+  const { t } = useTranslation("manager");
   const [form, setForm] = useState({
     name: "",
     buildingId: "",
@@ -64,7 +66,7 @@ function CreatePlanModal({ buildings, onClose, onCreate }) {
 
   async function handleSubmit(e) {
     e.preventDefault();
-    if (!form.name.trim()) { setError("Plan name is required."); return; }
+    if (!form.name.trim()) { setError(t("cashflowPlan.nameRequired")); return; }
     setSubmitting(true);
     setError("");
     try {
@@ -105,10 +107,10 @@ function CreatePlanModal({ buildings, onClose, onCreate }) {
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-slate-600">Plan name *</label>
+            <label className="text-xs font-medium text-slate-600">{t("label.name", { ns: "common" })} *</label>
             <input
               className="edit-input"
-              placeholder="e.g. 2026–2030 CapEx plan"
+              placeholder={t("cashflowPlan.namePlaceholder")}
               value={form.name}
               onChange={(e) => set("name", e.target.value)}
             />
@@ -121,7 +123,7 @@ function CreatePlanModal({ buildings, onClose, onCreate }) {
               value={form.buildingId}
               onChange={(e) => set("buildingId", e.target.value)}
             >
-              <option value="">— Portfolio level —</option>
+              <option value="">— {t("cashflowPlan.portfolio")} —</option>
               {buildings.map((b) => (
                 <option key={b.id} value={b.id}>{b.name}</option>
               ))}
@@ -178,7 +180,7 @@ function CreatePlanModal({ buildings, onClose, onCreate }) {
               disabled={submitting}
               className="button-primary text-sm disabled:opacity-50"
             >
-              {submitting ? "Creating…" : "Create plan"}
+              {submitting ? t("cashflowPlan.creating") : t("cashflowPlan.create")}
             </button>
           </div>
         </form>
@@ -190,6 +192,7 @@ function CreatePlanModal({ buildings, onClose, onCreate }) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 const CashflowPlansList = forwardRef(function CashflowPlansList({ ownerMode = false }, ref) {
+  const { t } = useTranslation("manager");
   const router = useRouter();
   const hdrs = ownerMode ? ownerAuthHeaders : authHeaders;
   const [plans, setPlans] = useState([]);
@@ -300,7 +303,7 @@ const CashflowPlansList = forwardRef(function CashflowPlansList({ ownerMode = fa
       defaultVisible: true,
       render: (p) => (
         <span className="text-slate-600">
-          {p.buildingId ? (buildingMap[p.buildingId] || "Building") : "Portfolio"}
+          {p.buildingId ? (buildingMap[p.buildingId] || t("cashflowPlan.building")) : t("cashflowPlan.portfolio")}
         </span>
       ),
     },
@@ -440,7 +443,7 @@ const CashflowPlansList = forwardRef(function CashflowPlansList({ ownerMode = fa
                     <Badge variant={planVariant(p.status)}>{p.status}</Badge>
                   </div>
                   <p className="text-xs text-slate-500 mt-1">
-                    {p.buildingId ? (buildingMap[p.buildingId] || "Building") : "Portfolio"}
+                    {p.buildingId ? (buildingMap[p.buildingId] || t("cashflowPlan.building")) : t("cashflowPlan.portfolio")}
                     {" · "}{p.horizonMonths} mo
                     {p.incomeGrowthRatePct != null && ` · ${p.incomeGrowthRatePct}% growth`}
                   </p>

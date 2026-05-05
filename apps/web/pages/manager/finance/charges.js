@@ -8,6 +8,7 @@ import { authHeaders } from "../../../lib/api";
 import { useLocalSort, clientSort } from "../../../lib/tableUtils";
 import { cn } from "../../../lib/utils";
 import SortableHeader from "../../../components/SortableHeader";
+import { withTranslations } from "../../../lib/i18n";
 
 function formatCurrency(chf) {
   if (typeof chf !== "number") return "—";
@@ -489,3 +490,5 @@ export default function ManagerChargesPage() {
     </AppShell>
   );
 }
+
+export const getStaticProps = withTranslations(["common","manager"]);

@@ -12,6 +12,7 @@
  */
 
 import { useState, useRef, Fragment } from "react";
+import { useTranslation } from "next-i18next";
 import SortableHeader from "./SortableHeader";
 import useTablePreferences from "../lib/useTablePreferences";
 import { Popover, PopoverTrigger, PopoverContent } from "./ui/Popover";
@@ -29,6 +30,7 @@ const DENSITY = {
 // Gear Popover
 // ---------------------------------------------------------------------------
 function ColumnConfigPopover({ orderedColumns, visibility, density, onToggle, onReorder, onDensityChange, onReset }) {
+  const { t } = useTranslation("common");
   const dragItem = useRef(null);
   const dragOver = useRef(null);
 
@@ -62,7 +64,7 @@ function ColumnConfigPopover({ orderedColumns, visibility, density, onToggle, on
     <div>
       {/* Header */}
       <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2">
-        <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Columns</span>
+        <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">{t("configurableTable.columns")}</span>
       </div>
 
       {/* Column list — draggable */}
@@ -78,7 +80,7 @@ function ColumnConfigPopover({ orderedColumns, visibility, density, onToggle, on
             className="flex items-center gap-2 px-3 py-1.5 hover:bg-slate-50 cursor-grab active:cursor-grabbing select-none"
           >
             {/* Drag handle */}
-            <span className="text-slate-300 text-xs leading-none" title="Drag to reorder">⠿</span>
+            <span className="text-slate-300 text-xs leading-none" title={t("configurableTable.dragToReorder")}>⠿</span>
             {/* Checkbox */}
             <label className="flex items-center gap-2 flex-1 cursor-pointer">
               <input
@@ -95,7 +97,7 @@ function ColumnConfigPopover({ orderedColumns, visibility, density, onToggle, on
 
       {/* Density toggle */}
       <div className="border-t border-slate-100 px-3 py-2">
-        <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Density</p>
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5">{t("configurableTable.density")}</p>
         <div className="flex gap-1">
           {["comfortable", "compact"].map((d) => (
             <button
@@ -105,7 +107,7 @@ function ColumnConfigPopover({ orderedColumns, visibility, density, onToggle, on
                   ? "bg-blue-50 text-blue-700 border border-blue-200"
                   : "bg-white text-slate-500 border border-slate-200 hover:bg-slate-50")}
             >
-              {d.charAt(0).toUpperCase() + d.slice(1)}
+              {t(`configurableTable.${d}`)}
             </button>
           ))}
         </div>
@@ -117,7 +119,7 @@ function ColumnConfigPopover({ orderedColumns, visibility, density, onToggle, on
           onClick={onReset}
           className="text-[11px] text-slate-400 hover:text-red-500 transition-colors"
         >
-          Reset to defaults
+          {t("configurableTable.reset")}
         </button>
       </div>
     </div>

@@ -14,6 +14,7 @@ import { formatChfCents, formatDate } from "../../../lib/format";
 import { rentAdjustmentVariant } from "../../../lib/statusVariants";
 import { cn } from "../../../lib/utils";
 import ScrollableTabs from "../../../components/mobile/ScrollableTabs";
+import { withTranslations } from "../../../lib/i18n";
 
 const TYPE_LABELS = {
   CPI_INDEXATION: "CPI Indexation",
@@ -224,3 +225,5 @@ export default function RentAdjustmentsList() {
     </AppShell>
   );
 }
+
+export const getStaticProps = withTranslations(["common","manager"]);

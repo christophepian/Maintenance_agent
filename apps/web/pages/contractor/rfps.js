@@ -10,6 +10,7 @@ import { formatDate } from "../../lib/format";
 import { authHeaders } from "../../lib/api";
 import ConfigurableTable from "../../components/ConfigurableTable";
 import { useTableSort, clientSort } from "../../lib/tableUtils";
+import { withTranslations } from "../../lib/i18n";
 
 const STATUS_TABS = [
   { key: "ALL", label: "All" },
@@ -231,3 +232,5 @@ export default function ContractorRfpsPage() {
     </AppShell>
   );
 }
+
+export const getStaticProps = withTranslations(["common","contractor"]);

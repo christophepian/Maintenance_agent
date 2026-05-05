@@ -1,5 +1,6 @@
 import { useState } from "react";
 import Link from "next/link";
+import { useTranslation } from "next-i18next";
 import { cn } from "../lib/utils";
 
 /**
@@ -8,6 +9,7 @@ import { cn } from "../lib/utils";
  * Persists dismissal in sessionStorage so it reappears on next login.
  */
 export default function StrategyProfileBanner() {
+  const { t } = useTranslation("owner");
   const [dismissed, setDismissed] = useState(() => {
     if (typeof window === "undefined") return false;
     return sessionStorage.getItem("strategyBannerDismissed") === "true";
@@ -27,10 +29,10 @@ export default function StrategyProfileBanner() {
     )}>
       <div className="min-w-0">
         <p className="text-sm font-semibold text-indigo-900">
-          Set your property strategy
+          {t("strategyBanner.title")}
         </p>
         <p className="mt-1 text-sm text-indigo-700">
-          Get tailored recommendations on maintenance, cashflow, and repair decisions. Takes under 2 minutes.
+          {t("strategyBanner.description")}
         </p>
       </div>
       <div className="flex items-center gap-3 shrink-0">
@@ -38,14 +40,14 @@ export default function StrategyProfileBanner() {
           href="/owner/strategy"
           className="inline-flex items-center rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition-colors no-underline"
         >
-          Set my strategy
+          {t("strategyBanner.cta")}
         </Link>
         <button
           onClick={handleDismiss}
           className="text-sm font-medium text-indigo-600 hover:text-indigo-800 transition-colors"
-          aria-label="Dismiss strategy banner"
+          aria-label={t("strategyBanner.dismiss")}
         >
-          Remind me later
+          {t("strategyBanner.dismiss")}
         </button>
       </div>
     </div>

@@ -11,6 +11,7 @@ import PageContent from "../../components/layout/PageContent";
 import Panel from "../../components/layout/Panel";
 import ErrorBanner from "../../components/ui/ErrorBanner";
 import { authHeaders } from "../../lib/api";
+import { withTranslations } from "../../lib/i18n";
 
 export default function TemplateDetailPage() {
   const router = useRouter();
@@ -127,3 +128,5 @@ export default function TemplateDetailPage() {
     </AppShell>
   );
 }
+
+export const getStaticProps = withTranslations(["common", "manager"]);

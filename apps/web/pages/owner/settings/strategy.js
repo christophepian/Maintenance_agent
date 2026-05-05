@@ -7,6 +7,7 @@ import PageContent from "../../../components/layout/PageContent";
 import Panel from "../../../components/layout/Panel";
 import ErrorBanner from "../../../components/ui/ErrorBanner";
 import { ownerAuthHeaders } from "../../../lib/api";
+import { withTranslations } from "../../../lib/i18n";
 
 const USER_LABELS = {
   exit_optimizer: "Prepare for sale",
@@ -113,3 +114,5 @@ export default function StrategySettingsPage() {
     </AppShell>
   );
 }
+
+export const getStaticProps = withTranslations(["common","owner"]);

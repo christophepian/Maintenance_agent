@@ -16,6 +16,7 @@ import Badge from "../../../components/ui/Badge";
 import Button from "../../../components/ui/Button";
 import { Modal, ModalFooter } from "../../../components/ui/Modal";
 import { leaseVariant, invoiceVariant, signerVariant, reconciliationVariant, rentAdjustmentVariant, billingScheduleVariant } from "../../../lib/statusVariants";
+import { withServerTranslations } from "../../../lib/i18n";
 
 function Field({ label, children, span }) {
   return (
@@ -1346,3 +1347,5 @@ export default function LeaseEditorPage() {
     </AppShell>
   );
 }
+
+export const getServerSideProps = withServerTranslations(["common","manager"]);

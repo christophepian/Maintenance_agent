@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useRouter } from "next/router";
 
 import { cn } from "../lib/utils";
+import { withTranslations } from "../lib/i18n";
 const ROLE_HOME = {
   MANAGER: "/manager",
   CONTRACTOR: "/contractor",
@@ -148,3 +149,5 @@ export default function LoginPage() {
     </div>
   );
 }
+
+export const getStaticProps = withTranslations(["common"]);

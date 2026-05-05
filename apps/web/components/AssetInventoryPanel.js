@@ -13,6 +13,7 @@
  *   - units?: { id, unitNumber }[] — required when scope="building" (for unit picker)
  */
 import { useState, useEffect, useRef, useMemo } from "react";
+import { useTranslation } from "next-i18next";
 import { authHeaders } from "../lib/api";
 
 import { cn } from "../lib/utils";
@@ -27,7 +28,6 @@ const TYPE_LABELS = {
   SYSTEM: "System / Installation",
   OTHER: "Other",
 };
-const INTERVENTION_TYPES = ["REPAIR", "REPLACEMENT"];
 
 /**
  * assetCategory = business grouping (EQUIPMENT vs COMPONENT)
@@ -67,11 +67,12 @@ function isModelEligible(type) {
 }
 
 function DepreciationBar({ depreciation, installedAt }) {
+  const { t } = useTranslation("common");
   if (!depreciation && !installedAt) {
-    return <span className="text-xs text-slate-400 italic">Install date unknown</span>;
+    return <span className="text-xs text-slate-400 italic">{t("assetInventory.installUnknown")}</span>;
   }
   if (!depreciation) {
-    return <span className="text-xs text-slate-400 italic">No depreciation standard</span>;
+    return <span className="text-xs text-slate-400 italic">{t("assetInventory.noStandard")}</span>;
   }
   const { residualPct, ageMonths, usefulLifeMonths, depreciationPct } = depreciation;
   const isFullyDepreciated = depreciationPct >= 100;
@@ -89,7 +90,7 @@ function DepreciationBar({ depreciation, installedAt }) {
     <div className="flex items-center gap-2 min-w-[220px]">
       {isFullyDepreciated && (
         <span className="text-[10px] font-semibold uppercase tracking-wide bg-red-100 text-red-700 border border-red-200 px-1.5 py-0.5 rounded-full whitespace-nowrap">
-          Fully depreciated
+          {t("assetInventory.fullyDepreciated")}
         </span>
       )}
       <div className="flex-1 h-2.5 bg-slate-200 rounded-full overflow-hidden" title={`${ageYears} / ${lifeYears} years used — ${residualPct}% residual value`}>
@@ -215,6 +216,7 @@ function formatDate(iso) {
 // topicLabel(key) → English display name, imported from ../lib/topicLabels
 
 function AddAssetForm({ scope, parentId, unitId, units, onDone }) {
+  const { t } = useTranslation("common");
   const [form, setForm] = useState({
     type: "APPLIANCE",
     topic: "",
@@ -372,7 +374,7 @@ function AddAssetForm({ scope, parentId, unitId, units, onDone }) {
                 value={topicSearch}
                 onChange={(e) => { setTopicSearch(e.target.value); setTopicDropdownOpen(true); }}
                 onFocus={() => setTopicDropdownOpen(true)}
-                placeholder="Search items… (e.g. Dishwasher)"
+                placeholder={t("assetInventory.searchPlaceholder")}
                 className="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-lg"
                 autoComplete="off"
                 required={!form.topic}
@@ -534,7 +536,7 @@ function AddAssetForm({ scope, parentId, unitId, units, onDone }) {
         disabled={submitting || !form.topic || !form.name}
         className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50"
       >
-        {submitting ? "Adding…" : "Add Asset"}
+        {submitting ? t("assetInventory.adding") : t("assetInventory.addAsset")}
       </button>
     </form>
   );
@@ -625,6 +627,7 @@ function AddInterventionForm({ assetId, onDone }) {
 }
 
 function EditAssetForm({ asset, onDone, onRefresh }) {
+  const { t } = useTranslation("common");
   const [form, setForm] = useState({
     name: asset.name || "",
     installedAt: asset.installedAt ? asset.installedAt.slice(0, 10) : "",
@@ -747,7 +750,7 @@ function EditAssetForm({ asset, onDone, onRefresh }) {
           disabled={submitting || !form.name.trim()}
           className="button-primary text-sm disabled:opacity-50"
         >
-          {submitting ? "Saving…" : "Save changes"}
+          {submitting ? t("assetInventory.saving") : t("assetInventory.saveChanges")}
         </button>
         <button type="button" onClick={onDone} className="button-cancel text-sm">
           Cancel
@@ -758,6 +761,8 @@ function EditAssetForm({ asset, onDone, onRefresh }) {
 }
 
 export default function AssetInventoryPanel({ assets, onRefresh, scope, parentId, unitId, units, showAddForm: controlledShowAdd, setShowAddForm: setControlledShowAdd }) {
+  const { t } = useTranslation("common");
+  const typeLabel = (key) => t(`assetType.${key}`, { defaultValue: TYPE_LABELS[key] || key });
   const [showAddFormInternal, setShowAddFormInternal] = useState(false);
   const isControlled = setControlledShowAdd !== undefined;
   const showAddForm = isControlled ? (controlledShowAdd ?? false) : showAddFormInternal;
@@ -813,11 +818,10 @@ export default function AssetInventoryPanel({ assets, onRefresh, scope, parentId
           className="ml-auto px-2 py-1 text-xs border border-slate-300 rounded-lg"
         >
           <option value="">All types</option>
-          {ASSET_TYPES.map((t) => {
-            const count = assets.filter((a) => a.type === t).length;
+          {ASSET_TYPES.map((tk) => {
+            const count = assets.filter((a) => a.type === tk).length;
             if (count === 0) return null;
-            const label = TYPE_LABELS[t] || t;
-            return <option key={t} value={t}>{label} ({count})</option>;
+            return <option key={tk} value={tk}>{typeLabel(tk)} ({count})</option>;
           })}
         </select>
 
@@ -826,7 +830,7 @@ export default function AssetInventoryPanel({ assets, onRefresh, scope, parentId
             onClick={() => setShowAddForm(!showAddForm)}
             className="px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700"
           >
-            {showAddForm ? "Cancel" : "+ Add Asset"}
+            {showAddForm ? t("assetInventory.cancel") : t("assetInventory.addAsset")}
           </button>
         )}
       </div>
@@ -839,7 +843,7 @@ export default function AssetInventoryPanel({ assets, onRefresh, scope, parentId
           </svg>
           <div>
             <p className="text-sm font-semibold text-amber-700 m-0">
-              {unlinkedJobs.length} completed job{unlinkedJobs.length !== 1 ? "s" : ""} with no asset linked
+              {t(unlinkedJobs.length === 1 ? "assetInventory.unlinkedJobs_one" : "assetInventory.unlinkedJobs_other", { count: unlinkedJobs.length })}
             </p>
             <p className="text-xs text-amber-600 mt-0.5 m-0">
               These interventions are not tracked against any asset. Open the request and use &ldquo;Link asset&rdquo; to associate them.
@@ -873,7 +877,7 @@ export default function AssetInventoryPanel({ assets, onRefresh, scope, parentId
 
       {/* Asset list by type group */}
       {totalAssets === 0 && !showAddForm && (
-        <p className="text-sm text-slate-400 italic text-center py-8">No assets registered yet — equipment, fixtures, finishes, and structural components can all be tracked here. Click "+ Add Asset" to begin.</p>
+        <p className="text-sm text-slate-400 italic text-center py-8">{t("assetInventory.empty")}</p>
       )}
 
       {Object.entries(grouped).map(([type, items]) => {
@@ -881,7 +885,7 @@ export default function AssetInventoryPanel({ assets, onRefresh, scope, parentId
         return (
         <div key={type} className="space-y-1">
           <h4 className="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wider pt-2">
-            <span className={cn("px-2 py-0.5 rounded-full text-[10px]", TYPE_COLORS[type] || TYPE_COLORS.OTHER)}>{TYPE_LABELS[type] || type}</span>
+            <span className={cn("px-2 py-0.5 rounded-full text-[10px]", TYPE_COLORS[type] || TYPE_COLORS.OTHER)}>{typeLabel(type)}</span>
             <span className={cn("px-1.5 py-0.5 rounded border text-[9px] font-medium", CATEGORY_COLORS[category] || CATEGORY_COLORS.EQUIPMENT)}>{category}</span>
             <span>({items.length})</span>
           </h4>
@@ -978,7 +982,7 @@ export default function AssetInventoryPanel({ assets, onRefresh, scope, parentId
                                   }}
                                   className="button-danger text-xs py-1 px-2"
                                 >
-                                  {deleteSubmitting ? "Removing…" : "Confirm remove"}
+                                  {deleteSubmitting ? t("assetInventory.removing") : t("assetInventory.confirmRemove")}
                                 </button>
                                 <button
                                   type="button"

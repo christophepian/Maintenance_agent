@@ -11,6 +11,7 @@ import { formatDate, formatChf } from "../../../lib/format";
 import ConfigurableTable from "../../../components/ConfigurableTable";
 import { useTableSort, clientSort } from "../../../lib/tableUtils";
 import Badge from "../../../components/ui/Badge";
+import { withTranslations } from "../../../lib/i18n";
 
 const EXPENSE_CATEGORIES = [
   "MAINTENANCE", "UTILITIES", "CLEANING", "INSURANCE", "TAX", "ADMIN", "CAPEX", "OTHER",
@@ -301,3 +302,5 @@ export default function ManagerExpensesPage() {
     </AppShell>
   );
 }
+
+export const getStaticProps = withTranslations(["common","manager"]);

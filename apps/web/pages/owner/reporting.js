@@ -4,6 +4,7 @@ import Badge from "../../components/ui/Badge";
 import { authHeaders } from "../../lib/api";
 
 import { cn } from "../../lib/utils";
+import { withTranslations } from "../../lib/i18n";
 /* ─── Constants ──────────────────────────────────────────────── */
 
 const PREVIEW = 3; // rows shown before expand
@@ -762,3 +763,5 @@ export default function OwnerReportingPage() {
     </AppShell>
   );
 }
+
+export const getStaticProps = withTranslations(["common","owner"]);

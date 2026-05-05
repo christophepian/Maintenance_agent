@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import Head from "next/head";
 import { formatChf, formatDate } from "../lib/format";
+import { withTranslations } from "../lib/i18n";
 
 /**
  * Public Rental Listings Page
@@ -243,3 +244,5 @@ function ListingCard({ unit }) {
     </div>
   );
 }
+
+export const getStaticProps = withTranslations(["common"]);

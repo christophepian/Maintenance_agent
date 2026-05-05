@@ -1,53 +1,37 @@
 import { useEffect, useState, useCallback } from "react";
+import { useTranslation } from "next-i18next";
 import Panel from "./layout/Panel";
 import ErrorBanner from "./ui/ErrorBanner";
 import Link from "next/link";
 import { authHeaders } from "../lib/api";
 
 import { cn } from "../lib/utils";
-// ── Plain-language labels ─────────────────────────────────────
+// ── Metadata (icons only — labels via i18n) ──────────────────
 
-const CATEGORY_META = {
-  stove:       { icon: "\u{1F525}", label: "Stove & Cooktop" },
-  oven:        { icon: "\u{1F373}", label: "Oven" },
-  dishwasher:  { icon: "\u{1FAE7}", label: "Dishwasher" },
-  bathroom:    { icon: "\u{1F6BF}", label: "Bathroom" },
-  lighting:    { icon: "\u{1F4A1}", label: "Lighting" },
-  plumbing:    { icon: "\u{1F527}", label: "Plumbing" },
-  other:       { icon: "\u{1F4CB}", label: "Other / General" },
+const CATEGORY_ICONS = {
+  stove:       "🔥",
+  oven:        "🍳",
+  dishwasher:  "🫧",
+  bathroom:    "🚿",
+  lighting:    "💡",
+  plumbing:    "🔧",
+  other:       "📋",
 };
 
-function meta(cat) {
-  return CATEGORY_META[cat] || { icon: "\u{1F4CB}", label: cat };
-}
-
-const TOPIC_FRIENDLY = {
-  STOVE_COOKTOP: "Stove & Cooktop",
-  OVEN_APPLIANCE: "Oven Appliance",
-  DISHWASHER: "Dishwasher",
-  BATHROOM_PLUMBING: "Bathroom & Plumbing",
-  LIGHTING_ELECTRICAL: "Lighting & Electrical",
-  PLUMBING_WATER: "Plumbing & Water Systems",
-  GENERAL_MAINTENANCE: "General Maintenance",
-};
-
-function friendlyTopic(topic) {
-  return TOPIC_FRIENDLY[topic] || topic?.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, c => c.toUpperCase()) || "\u2014";
-}
-
-const CURATED_TOPICS = [
-  { value: "STOVE_COOKTOP", label: "Stove & Cooktop" },
-  { value: "OVEN_APPLIANCE", label: "Oven Appliance" },
-  { value: "DISHWASHER", label: "Dishwasher" },
-  { value: "BATHROOM_PLUMBING", label: "Bathroom & Plumbing" },
-  { value: "LIGHTING_ELECTRICAL", label: "Lighting & Electrical" },
-  { value: "PLUMBING_WATER", label: "Plumbing & Water Systems" },
-  { value: "GENERAL_MAINTENANCE", label: "General Maintenance" },
+const TOPIC_KEYS = [
+  "STOVE_COOKTOP",
+  "OVEN_APPLIANCE",
+  "DISHWASHER",
+  "BATHROOM_PLUMBING",
+  "LIGHTING_ELECTRICAL",
+  "PLUMBING_WATER",
+  "GENERAL_MAINTENANCE",
 ];
 
 // ── Main Component ────────────────────────────────────────────
 
 export default function CategoryMappings() {
+  const { t } = useTranslation("manager");
   const [coverage, setCoverage] = useState([]);
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -104,7 +88,7 @@ export default function CategoryMappings() {
   }
 
   async function resetToDefault(mappingId, category) {
-    if (!confirm(`Reset "${meta(category).label}" to the system default? Your custom override will be removed.`)) return;
+    if (!confirm(`Reset "${t(`common:categoryMapping.${category}`, { defaultValue: category })}" to the system default? Your custom override will be removed.`)) return;
     try {
       const res = await fetch(`/api/legal/category-mappings/${mappingId}`, {
         method: "DELETE",
@@ -146,13 +130,13 @@ export default function CategoryMappings() {
       {loading ? (
         <div className="flex items-center justify-center py-12">
           <div className="h-6 w-6 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
-          <span className="ml-3 text-sm text-slate-500">Loading categories&hellip;</span>
+          <span className="ml-3 text-sm text-slate-500">{t("categoryMappings.loading")}</span>
         </div>
       ) : coverage.length === 0 ? (
         <Panel>
           <div className="empty-state">
             <p className="empty-state-text">
-              No categories found yet. Once tenants start submitting maintenance requests, their categories will appear here.
+              {t("categoryMappings.empty")}
             </p>
           </div>
         </Panel>
@@ -192,12 +176,13 @@ export default function CategoryMappings() {
 // ── Status Banner ─────────────────────────────────────────────
 
 function StatusBanner({ allMapped, mappedCount, totalCount }) {
+  const { t } = useTranslation("manager");
   if (allMapped) {
     return (
       <div className="flex items-start gap-3 rounded-xl border border-green-200 bg-green-50 p-4">
         <span className="mt-0.5 text-xl">&#x2705;</span>
         <div>
-          <p className="text-sm font-semibold text-green-700">All {totalCount} categories are connected to Swiss law</p>
+          <p className="text-sm font-semibold text-green-700">{t("categoryMappings.statusBanner.allMapped", { count: totalCount })}</p>
           <p className="mt-0.5 text-xs text-green-700">
             When a tenant submits a maintenance request, the legal engine will automatically look up
             depreciation standards and rent reduction rules for every category.
@@ -226,29 +211,29 @@ function StatusBanner({ allMapped, mappedCount, totalCount }) {
 // ── How It Works ──────────────────────────────────────────────
 
 function HowItWorks() {
+  const { t } = useTranslation("manager");
   return (
     <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-5">
-      <h3 className="mb-3 text-sm font-semibold text-slate-700">What does a mapping do?</h3>
+      <h3 className="mb-3 text-sm font-semibold text-slate-700">{t("categoryMappings.howItWorks.title")}</h3>
       <p className="mb-4 text-xs leading-relaxed text-slate-600">
-        Each mapping connects a <strong>maintenance category</strong> (what the tenant sees) to a <strong>legal topic</strong> (what the engine searches).
-        When a tenant reports an issue &mdash; say, a broken dishwasher &mdash; the engine uses the mapping to find two things:
+        {t("categoryMappings.howItWorks.description")}
       </p>
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="flex gap-3 rounded-lg border border-slate-100 bg-white p-3">
           <span className="text-lg">&#x1F4CA;</span>
           <div>
-            <p className="text-xs font-semibold text-slate-700">Depreciation standards</p>
+            <p className="text-xs font-semibold text-slate-700">{t("categoryMappings.howItWorks.deprecTitle")}</p>
             <p className="text-[11px] leading-relaxed text-slate-500">
-              How old is the item and what&apos;s its expected lifespan? This determines who pays for repairs &mdash; the tenant or the landlord.
+              {t("categoryMappings.howItWorks.deprecDesc")}
             </p>
           </div>
         </div>
         <div className="flex gap-3 rounded-lg border border-slate-100 bg-white p-3">
           <span className="text-lg">&#x2696;&#xFE0F;</span>
           <div>
-            <p className="text-xs font-semibold text-slate-700">Rent reduction rules</p>
+            <p className="text-xs font-semibold text-slate-700">{t("categoryMappings.howItWorks.rentTitle")}</p>
             <p className="text-[11px] leading-relaxed text-slate-500">
-              Is the tenant entitled to a rent reduction while the issue isn&apos;t fixed? Swiss law defines specific percentages per defect type.
+              {t("categoryMappings.howItWorks.rentDesc")}
             </p>
           </div>
         </div>
@@ -265,9 +250,12 @@ function CategoryCard({
   onStartEdit, onCancelEdit, onChangeTopic, onSaveEdit,
   onToggle, onReset,
 }) {
-  const { icon, label } = meta(c.category);
+  const { t } = useTranslation("manager");
+  const icon = CATEGORY_ICONS[c.category] || "📋";
+  const label = t(`common:categoryMapping.${c.category}`, { defaultValue: c.category });
   const [expanded, setExpanded] = useState(false);
   const isOrgOverride = c.scope === "org";
+  const friendlyTopic = (topic) => t(`categoryMappings.topic.${topic}`, { defaultValue: topic?.replace(/_/g, " ") || "—" });
 
   if (!c.mapped) {
     return (
@@ -277,7 +265,7 @@ function CategoryCard({
           <div>
             <p className="text-sm font-semibold text-slate-700">{label}</p>
             <p className="text-xs text-slate-500">
-              Not connected &mdash; the engine can&apos;t look up legal references for this category yet.
+              {t("categoryMappings.card.notConnected")}
             </p>
           </div>
         </div>
@@ -299,30 +287,30 @@ function CategoryCard({
               <h3 className="text-sm font-bold text-slate-800">{label}</h3>
               {isOrgOverride && (
                 <span className="rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-semibold text-violet-600">
-                  Custom override
+                  {t("categoryMappings.card.customOverride")}
                 </span>
               )}
               {isDisabled && (
                 <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-semibold text-slate-500">
-                  Disabled
+                  {t("categoryMappings.card.disabled")}
                 </span>
               )}
             </div>
             <p className="mt-0.5 text-xs text-slate-500">
-              Connected to <span className="font-medium text-slate-700">{friendlyTopic(c.legalTopic)}</span>
+              {t("categoryMappings.card.connectedTo")} <span className="font-medium text-slate-700">{friendlyTopic(c.legalTopic)}</span>
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-1">
           {isOrgOverride && (
-            <button onClick={onReset} className="rounded-lg px-2 py-1 text-[11px] font-medium text-slate-400 hover:bg-slate-50 hover:text-slate-600" title="Remove your override and use the system default">Reset</button>
+            <button onClick={onReset} className="rounded-lg px-2 py-1 text-[11px] font-medium text-slate-400 hover:bg-slate-50 hover:text-slate-600" title={t("categoryMappings.card.resetTitle")}>{t("categoryMappings.card.reset")}</button>
           )}
-          <button onClick={onStartEdit} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600" title="Change the legal topic for this category"><PencilIcon /></button>
+          <button onClick={onStartEdit} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600" title={t("categoryMappings.card.editTitle")}><PencilIcon /></button>
           <button
             onClick={onToggle}
             className={cn("rounded-lg p-1.5 transition-colors", c.isActive ? "text-green-500 hover:bg-green-50 hover:text-green-700" : "text-slate-300 hover:bg-slate-100 hover:text-slate-500")}
-            title={c.isActive ? "Active \u2014 the engine uses this mapping. Click to disable." : "Disabled \u2014 the engine skips this mapping. Click to re-enable."}
+            title={c.isActive ? t("categoryMappings.card.activeTitle") : t("categoryMappings.card.inactiveTitle")}
           >
             <ToggleIcon active={c.isActive} />
           </button>
@@ -332,21 +320,21 @@ function CategoryCard({
       {isEditing && (
         <div className="mx-5 mt-3 rounded-lg border border-blue-200 bg-blue-50/50 p-3">
           <p className="mb-2 text-xs font-medium text-blue-700">
-            Change what the engine searches when a tenant reports a &ldquo;{label.toLowerCase()}&rdquo; issue:
+            {t("categoryMappings.card.changeHint", { label: label.toLowerCase() })}
           </p>
           <div className="flex gap-2">
             <select className="filter-select flex-1 py-1.5" value={editTopic} onChange={(e) => onChangeTopic(e.target.value)}>
-              {CURATED_TOPICS.map(t => (<option key={t.value} value={t.value}>{t.label}</option>))}
+              {TOPIC_KEYS.map(key => (<option key={key} value={key}>{t(`categoryMappings.topic.${key}`)}</option>))}
             </select>
-            <button onClick={onSaveEdit} disabled={saving} className="button-primary text-xs px-3 py-1.5 disabled:opacity-50">{saving ? "Saving\u2026" : "Save"}</button>
-            <button onClick={onCancelEdit} className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-500 hover:bg-slate-50">Cancel</button>
+            <button onClick={onSaveEdit} disabled={saving} className="button-primary text-xs px-3 py-1.5 disabled:opacity-50">{saving ? t("categoryMappings.card.saving") : t("categoryMappings.card.save")}</button>
+            <button onClick={onCancelEdit} className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-500 hover:bg-slate-50">{t("categoryMappings.card.cancel")}</button>
           </div>
         </div>
       )}
 
       <div className="p-5 pt-3">
         <p className="mb-3 text-xs leading-relaxed text-slate-500">
-          When a tenant reports a <strong className="text-slate-700">{label.toLowerCase()}</strong> issue, the engine checks:
+          {t("categoryMappings.card.checkHint", { label: label.toLowerCase() })}
         </p>
 
         <div className="grid gap-3 sm:grid-cols-2">
@@ -366,64 +354,67 @@ function CategoryCard({
 }
 
 function DepreciationBox({ c, hasDepreciation }) {
+  const { t } = useTranslation("manager");
   return (
     <div className={cn("rounded-lg border p-3", hasDepreciation ? "border-green-100 bg-green-50/50" : "border-slate-100 bg-slate-50/50")}>
       <div className="flex items-center gap-2">
         <span className="text-sm">&#x1F4CA;</span>
-        <span className={cn("text-xs font-semibold", hasDepreciation ? "text-green-700" : "text-slate-500")}>Depreciation</span>
+        <span className={cn("text-xs font-semibold", hasDepreciation ? "text-green-700" : "text-slate-500")}>{t("categoryMappings.deprecBox.title")}</span>
         <span className={cn("ml-auto rounded-full px-2 py-0.5 text-[10px] font-bold", hasDepreciation ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-400")}>
-          {c.depreciationCount} {c.depreciationCount === 1 ? "item" : "items"}
+          {t("categoryMappings.deprecBox.item", { count: c.depreciationCount })}
         </span>
       </div>
       {hasDepreciation ? (
         <div className="mt-2">
           <p className="text-[11px] leading-relaxed text-green-700">
-            Covers items like <strong>{c.readableAssets?.slice(0, 3).join(", ")}</strong>
-            {c.readableAssets?.length > 3 && <span> and {c.readableAssets.length - 3} more</span>}.
-            {c.lifespanRange && (<> Expected lifespans: <strong>{c.lifespanRange}</strong>.</>)}
+            {t("categoryMappings.deprecBox.coversItems", { assets: c.readableAssets?.slice(0, 3).join(", ") })}
+            {c.readableAssets?.length > 3 && <span> {t("categoryMappings.deprecBox.andMore", { count: c.readableAssets.length - 3 })}</span>}.
+            {c.lifespanRange && (<> {t("categoryMappings.deprecBox.lifespans", { range: c.lifespanRange })}</>)}
           </p>
-          <p className="mt-1 text-[10px] text-green-600">&rarr; Determines who pays: landlord (if past lifespan) or shared cost</p>
+          <p className="mt-1 text-[10px] text-green-600">{t("categoryMappings.deprecBox.whoPaysSub")}</p>
         </div>
       ) : (
-        <p className="mt-2 text-[11px] text-slate-400">No depreciation data for this topic. Cost-sharing can&apos;t be calculated automatically.</p>
+        <p className="mt-2 text-[11px] text-slate-400">{t("categoryMappings.deprecBox.noData")}</p>
       )}
     </div>
   );
 }
 
 function RentReductionBox({ c, hasRules }) {
+  const { t } = useTranslation("manager");
   return (
     <div className={cn("rounded-lg border p-3", hasRules ? "border-blue-100 bg-blue-50/50" : "border-slate-100 bg-slate-50/50")}>
       <div className="flex items-center gap-2">
         <span className="text-sm">&#x2696;&#xFE0F;</span>
-        <span className={cn("text-xs font-semibold", hasRules ? "text-blue-700" : "text-slate-500")}>Rent Reduction</span>
+        <span className={cn("text-xs font-semibold", hasRules ? "text-blue-700" : "text-slate-500")}>{t("categoryMappings.rentBox.title")}</span>
         <span className={cn("ml-auto rounded-full px-2 py-0.5 text-[10px] font-bold", hasRules ? "bg-blue-100 text-blue-700" : "bg-slate-100 text-slate-400")}>
-          {c.ruleCount} {c.ruleCount === 1 ? "rule" : "rules"}
+          {t("categoryMappings.rentBox.rule", { count: c.ruleCount })}
         </span>
       </div>
       {hasRules ? (
         <div className="mt-2">
           <p className="text-[11px] leading-relaxed text-blue-700">
-            Rules for: <strong>{c.readableRules?.slice(0, 3).join(", ")}</strong>
-            {c.readableRules?.length > 3 && <span> and {c.readableRules.length - 3} more</span>}.
+            {t("categoryMappings.rentBox.rulesFor", { rules: c.readableRules?.slice(0, 3).join(", ") })}
+            {c.readableRules?.length > 3 && <span> {t("categoryMappings.rentBox.andMore", { count: c.readableRules.length - 3 })}</span>}.
           </p>
-          <p className="mt-1 text-[10px] text-blue-600">&rarr; Tells you if the tenant can claim a rent reduction while unfixed</p>
+          <p className="mt-1 text-[10px] text-blue-600">{t("categoryMappings.rentBox.claimSub")}</p>
         </div>
       ) : (
-        <p className="mt-2 text-[11px] text-slate-400">No specific rent reduction rules. The tenant can&apos;t auto-claim a reduction for this type.</p>
+        <p className="mt-2 text-[11px] text-slate-400">{t("categoryMappings.rentBox.noRules")}</p>
       )}
     </div>
   );
 }
 
 function TechnicalDetails({ c }) {
+  const { t } = useTranslation("manager");
   return (
     <div className="mt-2 rounded-lg border border-slate-100 bg-slate-50 p-3">
       <div className="grid gap-4 sm:grid-cols-2">
         {c.depreciationSamples?.length > 0 && (
           <div>
             <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
-              Depreciation Standards ({c.depreciationCount})
+              {t("categoryMappings.technical.deprecStandards", { count: c.depreciationCount })}
             </p>
             {c.depreciationSamples.map((d, i) => (
               <div key={i} className="flex items-center justify-between py-0.5 text-[11px] text-slate-600">
@@ -432,14 +423,14 @@ function TechnicalDetails({ c }) {
               </div>
             ))}
             {c.depreciationCount > c.depreciationSamples.length && (
-              <p className="mt-1 text-[10px] text-slate-400">+ {c.depreciationCount - c.depreciationSamples.length} more</p>
+              <p className="mt-1 text-[10px] text-slate-400">{t("categoryMappings.technical.moreItems", { count: c.depreciationCount - c.depreciationSamples.length })}</p>
             )}
           </div>
         )}
         {c.ruleSamples?.length > 0 && (
           <div>
             <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
-              Rent Reduction Rules ({c.ruleCount})
+              {t("categoryMappings.technical.rentRules", { count: c.ruleCount })}
             </p>
             {c.ruleSamples.map((key, i) => (
               <div key={i} className="py-0.5 text-[11px] text-slate-600">
@@ -447,7 +438,7 @@ function TechnicalDetails({ c }) {
               </div>
             ))}
             {c.ruleCount > c.ruleSamples.length && (
-              <p className="mt-1 text-[10px] text-slate-400">+ {c.ruleCount - c.ruleSamples.length} more</p>
+              <p className="mt-1 text-[10px] text-slate-400">{t("categoryMappings.technical.moreItems", { count: c.ruleCount - c.ruleSamples.length })}</p>
             )}
           </div>
         )}
@@ -459,6 +450,7 @@ function TechnicalDetails({ c }) {
 // ── Add Category Section ──────────────────────────────────────
 
 function AddCategorySection({ unmapped, showForm, onToggleForm, onCreate, onError }) {
+  const { t } = useTranslation("manager");
   const [selectedCat, setSelectedCat] = useState("");
   const [selectedTopic, setSelectedTopic] = useState("");
   const [saving, setSaving] = useState(false);
@@ -486,36 +478,40 @@ function AddCategorySection({ unmapped, showForm, onToggleForm, onCreate, onErro
           <span className="text-lg">&#x1F517;</span>
           <div>
             <p className="text-sm font-semibold text-amber-700">
-              {unmapped.length} {unmapped.length === 1 ? "category needs" : "categories need"} a mapping
+              {t("categoryMappings.addSection.needsMapping", { count: unmapped.length })}
             </p>
             <p className="text-xs text-amber-700">
-              {unmapped.map(u => meta(u.category).label).join(", ")}
+              {unmapped.map(u => t(`common:categoryMapping.${u.category}`, { defaultValue: u.category })).join(", ")}
             </p>
           </div>
         </div>
         <button onClick={onToggleForm} className="rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-700">
-          {showForm ? "Cancel" : "Set up mapping"}
+          {showForm ? t("categoryMappings.addSection.cancel") : t("categoryMappings.addSection.setUp")}
         </button>
       </div>
 
       {showForm && (
         <form onSubmit={handleCreate} className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end">
           <label className="flex-1">
-            <span className="text-xs font-medium text-slate-600">Category</span>
+            <span className="text-xs font-medium text-slate-600">{t("categoryMappings.addSection.categoryLabel")}</span>
             <select className="filter-select mt-1 block" value={selectedCat} onChange={e => setSelectedCat(e.target.value)} required>
-              <option value="">Select&hellip;</option>
-              {unmapped.map(u => (<option key={u.category} value={u.category}>{meta(u.category).icon} {meta(u.category).label}</option>))}
+              <option value="">{t("categoryMappings.addSection.select")}</option>
+              {unmapped.map(u => (
+                <option key={u.category} value={u.category}>
+                  {CATEGORY_ICONS[u.category] || "📋"} {t(`common:categoryMapping.${u.category}`, { defaultValue: u.category })}
+                </option>
+              ))}
             </select>
           </label>
           <label className="flex-1">
-            <span className="text-xs font-medium text-slate-600">Connect to legal topic</span>
+            <span className="text-xs font-medium text-slate-600">{t("categoryMappings.addSection.connectTo")}</span>
             <select className="filter-select mt-1 block" value={selectedTopic} onChange={e => setSelectedTopic(e.target.value)} required>
-              <option value="">Select&hellip;</option>
-              {CURATED_TOPICS.map(t => (<option key={t.value} value={t.value}>{t.label}</option>))}
+              <option value="">{t("categoryMappings.addSection.select")}</option>
+              {TOPIC_KEYS.map(key => (<option key={key} value={key}>{t(`categoryMappings.topic.${key}`)}</option>))}
             </select>
           </label>
           <button type="submit" disabled={saving || !selectedCat || !selectedTopic} className="button-primary text-sm disabled:opacity-50">
-            {saving ? "Creating\u2026" : "Create mapping"}
+            {saving ? t("categoryMappings.addSection.creating") : t("categoryMappings.addSection.create")}
           </button>
         </form>
       )}

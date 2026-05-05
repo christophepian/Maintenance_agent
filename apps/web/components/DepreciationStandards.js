@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
+import { useTranslation } from "next-i18next";
 import Panel from "./layout/Panel";
 import ErrorBanner from "./ui/ErrorBanner";
 import { authHeaders } from "../lib/api";
@@ -100,7 +101,8 @@ const ASSET_TYPE_VARIANT = {
   OTHER: "muted",
 };
 function AssetTypePill({ type }) {
-  const label = ASSET_TYPE_LABELS[type] || type;
+  const { t } = useTranslation("common");
+  const label = t(`assetType.${type}`, { defaultValue: ASSET_TYPE_LABELS[type] || type });
   return (
     <Badge variant={ASSET_TYPE_VARIANT[type] || "muted"} size="sm">
       {label}
@@ -139,6 +141,7 @@ function StatCard({ label, value, sublabel }) {
 }
 
 function CategorySection({ category, items, collapsed, onToggle }) {
+  const { t } = useTranslation("common");
   const num = CATEGORY_NUMBERS[category] || "–";
   const subtitle = CATEGORY_SUBTITLES[category] || "";
   return (
@@ -158,7 +161,7 @@ function CategorySection({ category, items, collapsed, onToggle }) {
         </div>
         <div className="flex items-center gap-2">
           <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-500">
-            {items.length} items
+            {t(items.length === 1 ? "depreciationStandards.items_one" : "depreciationStandards.items_other", { count: items.length })}
           </span>
           <svg
             className={cn("h-4 w-4 text-slate-400 transition-transform", collapsed ? "" : "rotate-180")}
@@ -174,9 +177,9 @@ function CategorySection({ category, items, collapsed, onToggle }) {
           <table className="data-table">
             <thead>
               <tr>
-                <th>Item</th>
+                <th>{t("depreciationStandards.totalItems")}</th>
                 <th>Type</th>
-                <th>Useful Life</th>
+                <th>{t("assetInventory.usefulLife", { defaultValue: "Useful Life" })}</th>
                 <th className="hidden lg:table-cell">Topic Key</th>
               </tr>
             </thead>
@@ -203,6 +206,7 @@ function CategorySection({ category, items, collapsed, onToggle }) {
 }
 
 function CreateStandardForm({ onCreated, onError }) {
+  const { t } = useTranslation("common");
   const [form, setForm] = useState({
     assetType: "APPLIANCE",
     topic: "",
@@ -240,12 +244,12 @@ function CreateStandardForm({ onCreated, onError }) {
         <label className="block">
           <span className="text-xs font-medium text-slate-600">Asset Type</span>
           <select className="mt-1 block w-full rounded border border-slate-300 px-3 py-2 text-sm" value={form.assetType} onChange={(e) => setForm({ ...form, assetType: e.target.value })}>
-            <option value="APPLIANCE">Appliance</option>
-            <option value="FIXTURE">Fixture</option>
-            <option value="FINISH">Finish / Surface</option>
-            <option value="SYSTEM">System / Installation</option>
-            <option value="STRUCTURAL">Structural</option>
-            <option value="OTHER">Other</option>
+              <option value="APPLIANCE">{t("assetType.APPLIANCE")}</option>
+            <option value="FIXTURE">{t("assetType.FIXTURE")}</option>
+            <option value="FINISH">{t("assetType.FINISH")}</option>
+            <option value="SYSTEM">{t("assetType.SYSTEM")}</option>
+            <option value="STRUCTURAL">{t("assetType.STRUCTURAL")}</option>
+            <option value="OTHER">{t("assetType.OTHER")}</option>
           </select>
         </label>
         <label className="block">
@@ -258,7 +262,7 @@ function CreateStandardForm({ onCreated, onError }) {
         </label>
         <div className="flex items-end">
           <button type="submit" disabled={saving} className="button-primary text-sm disabled:opacity-50">
-            {saving ? "Creating…" : "Create Standard"}
+            {saving ? t("depreciationStandards.creating") : t("depreciationStandards.createStandard")}
           </button>
         </div>
       </form>
@@ -271,6 +275,7 @@ function CreateStandardForm({ onCreated, onError }) {
 // ---------------------------------------------------------------------------
 
 export default function DepreciationStandards() {
+  const { t } = useTranslation("common");
   const [segment, setSegment] = useState("depreciation");
 
   return (
@@ -321,6 +326,7 @@ export default function DepreciationStandards() {
 // ---------------------------------------------------------------------------
 
 function DepreciationContent() {
+  const { t } = useTranslation("common");
   const [standards, setStandards] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -420,10 +426,10 @@ function DepreciationContent() {
       {/* ── Stats cards ── */}
       {!loading && standards.length > 0 && (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <StatCard label="Total Items" value={enriched.length} sublabel={`${aslocaCount} from ASLOCA/FRI`} />
-          <StatCard label="Categories" value={categoryCount} sublabel="Sections from official table" />
-          <StatCard label="Avg. Lifespan" value={`${avgLifeYears} yr`} sublabel="Across all items" />
-          <StatCard label="Source" value="ASLOCA/FRI" sublabel="Joint depreciation table, 2007" />
+          <StatCard label={t("depreciationStandards.totalItems")} value={enriched.length} sublabel={t("depreciationStandards.fromAsloca", { count: aslocaCount })} />
+          <StatCard label={t("depreciationStandards.categories")} value={categoryCount} sublabel={t("depreciationStandards.sectionsFrom")} />
+          <StatCard label={t("depreciationStandards.avgLifespan")} value={`${avgLifeYears} yr`} sublabel={t("depreciationStandards.acrossAll")} />
+          <StatCard label={t("depreciationStandards.source")} value="ASLOCA/FRI" sublabel={t("depreciationStandards.sourceNote")} />
         </div>
       )}
 
@@ -434,7 +440,7 @@ function DepreciationContent() {
             className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
             onClick={() => setShowCreate(!showCreate)}
           >
-            {showCreate ? "Cancel" : "+ Add Standard"}
+            {showCreate ? t("depreciationStandards.cancel") : t("depreciationStandards.addStandard")}
           </button>
         </div>
       )}
@@ -453,7 +459,7 @@ function DepreciationContent() {
               </svg>
               <input
                 type="text"
-                placeholder="Search items… (e.g. dishwasher, parquet, radiator)"
+                placeholder={t("depreciationStandards.searchPlaceholder")}
                 className="w-full rounded-lg border border-slate-200 py-2 pl-10 pr-3 text-sm focus:border-blue-300 focus:outline-none focus:ring-1 focus:ring-blue-300"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -464,17 +470,17 @@ function DepreciationContent() {
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value)}
             >
-              <option value="ALL">All Types</option>
-              {assetTypes.map((t) => (
-                <option key={t} value={t}>{ASSET_TYPE_LABELS[t] || t}</option>
+              <option value="ALL">{t("depreciationStandards.allTypes")}</option>
+              {assetTypes.map((ty) => (
+                <option key={ty} value={ty}>{t(`assetType.${ty}`, { defaultValue: ASSET_TYPE_LABELS[ty] || ty })}</option>
               ))}
             </select>
             <div className="flex gap-1">
-              <button onClick={expandAll} className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs text-slate-600 hover:bg-slate-50">Expand All</button>
-              <button onClick={collapseAll} className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs text-slate-600 hover:bg-slate-50">Collapse All</button>
+              <button onClick={expandAll} className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs text-slate-600 hover:bg-slate-50">{t("depreciationStandards.expandAll")}</button>
+              <button onClick={collapseAll} className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs text-slate-600 hover:bg-slate-50">{t("depreciationStandards.collapseAll")}</button>
             </div>
             {(search || typeFilter !== "ALL") && (
-              <span className="text-xs text-slate-400">Showing {filtered.length} of {enriched.length}</span>
+              <span className="text-xs text-slate-400">{t("depreciationStandards.showingOf", { count: filtered.length, total: enriched.length })}</span>
             )}
           </div>
         </Panel>
@@ -482,16 +488,15 @@ function DepreciationContent() {
 
       {/* ── Main content ── */}
       {loading ? (
-        <Panel><p className="text-sm text-slate-500">Loading depreciation standards…</p></Panel>
+        <Panel><p className="text-sm text-slate-500">{t("depreciationStandards.loading")}</p></Panel>
       ) : standards.length === 0 ? (
         <Panel>
           <p className="empty-state-text">
-            No depreciation standards yet. Click <strong>"Sync Sources"</strong> on the{" "}
-            <a href="/manager/settings?tab=legal" className="text-blue-600 underline">Legal Sources settings tab</a> to import the ASLOCA/FRI table.
+            {t("depreciationStandards.empty")}
           </p>
         </Panel>
       ) : filtered.length === 0 ? (
-        <Panel><p className="empty-state-text">No items match your search. Try adjusting filters.</p></Panel>
+        <Panel><p className="empty-state-text">{t("depreciationStandards.noMatch")}</p></Panel>
       ) : (
         <div className="flex flex-col gap-2">
           {grouped.map(({ category, items }) => (
@@ -509,7 +514,7 @@ function DepreciationContent() {
       {/* ── Legend ── */}
       {!loading && standards.length > 0 && (
         <div className="rounded-lg border border-slate-100 bg-slate-50 px-4 py-3">
-          <p className="mb-2 text-xs font-semibold text-slate-500">Lifespan Legend</p>
+          <p className="mb-2 text-xs font-semibold text-slate-500">{t("depreciationStandards.lifespanLegend")}</p>
           <div className="flex flex-wrap gap-4 text-[11px] text-slate-500">
             <span className="flex items-center gap-1"><span className="inline-block h-2 w-4 rounded-full bg-red-400" /> ≤ 10 years</span>
             <span className="flex items-center gap-1"><span className="inline-block h-2 w-4 rounded-full bg-amber-400" /> 11–20 years</span>

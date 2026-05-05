@@ -1,5 +1,6 @@
 import AppShell from "../../components/AppShell";
 import BillingEntityManager from "../../components/BillingEntityManager";
+import { withTranslations } from "../../lib/i18n";
 
 export default function OwnerBillingEntities() {
   return (
@@ -8,3 +9,5 @@ export default function OwnerBillingEntities() {
     </AppShell>
   );
 }
+
+export const getStaticProps = withTranslations(["common","owner"]);

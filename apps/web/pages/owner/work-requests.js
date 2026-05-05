@@ -17,6 +17,7 @@ import { requestVariant } from "../../lib/statusVariants";
 
 import { cn } from "../../lib/utils";
 import ScrollableTabs from "../../components/mobile/ScrollableTabs";
+import { withTranslations } from "../../lib/i18n";
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
@@ -291,3 +292,5 @@ export default function OwnerWorkRequestsPage() {
     </AppShell>
   );
 }
+
+export const getStaticProps = withTranslations(["common","owner"]);

@@ -16,6 +16,7 @@ import { formatDate, formatDateLong } from "../../../lib/format";
 import { cn } from "../../../lib/utils";
 import Badge from "../../../components/ui/Badge";
 import { jobVariant, slotVariant } from "../../../lib/statusVariants";
+import { withServerTranslations } from "../../../lib/i18n";
 
 function fmtTime(iso) {
   const d = new Date(iso);
@@ -471,3 +472,5 @@ export default function ContractorJobDetail() {
     </AppShell>
   );
 }
+
+export const getServerSideProps = withServerTranslations(["common","contractor"]);

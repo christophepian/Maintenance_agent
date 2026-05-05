@@ -14,6 +14,7 @@ import SortableHeader from "../../../components/SortableHeader";
 import { useLocalSort, clientSort } from "../../../lib/tableUtils";
 
 import { cn } from "../../../lib/utils";
+import { withServerTranslations } from "../../../lib/i18n";
 
 // ─── Strategy alignment helpers ──────────────────────────────────────────────
 
@@ -1178,3 +1179,5 @@ export default function CashflowPlanDetailPage() {
     </AppShell>
   );
 }
+
+export const getServerSideProps = withServerTranslations(["common","manager"]);

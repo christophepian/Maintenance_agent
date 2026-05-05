@@ -7,7 +7,9 @@
     "leases": "Baux",
     "jobs": "Interventions",
     "requests": "Demandes",
-    "reporting": "Rapports"
+    "reporting": "Rapports",
+    "approvals": "Approbations",
+    "settings": "Paramètres"
   },
   "dashboard": {
     "title": "Tableau de bord propriétaire",
@@ -15,5 +17,113 @@
     "properties": "Biens",
     "openRequests": "Demandes ouvertes",
     "pendingInvoices": "Factures en attente"
+  },
+  "strategyBanner": {
+    "title": "Définir votre stratégie immobilière",
+    "description": "Obtenez des recommandations personnalisées sur l'entretien, la trésorerie et les décisions de réparation. Moins de 2 minutes.",
+    "cta": "Définir ma stratégie",
+    "dismiss": "Me le rappeler plus tard"
+  },
+  "recommendation": {
+    "title": "Recommandation stratégique",
+    "feedbackPlaceholder": "Vos commentaires sur cette recommandation…",
+    "acceptAriaLabel": "Accepter la recommandation",
+    "deferAriaLabel": "Reporter la recommandation",
+    "rejectAriaLabel": "Refuser la recommandation",
+    "decision": {
+      "accepted": "Accepté",
+      "rejected": "Refusé",
+      "deferred": "Reporté",
+      "pending": "En attente"
+    },
+    "optionType": {
+      "replace_full": "Remplacement complet",
+      "replace_component": "Remplacement de composant",
+      "repair": "Réparation",
+      "defer": "Reporter",
+      "upgrade": "Mise à niveau"
+    }
+  },
+  "renovation": {
+    "taxCategory": {
+      "WERTERHALTEND": "Conservation de valeur",
+      "WERTVERMEHREND": "Augmentation de valeur",
+      "MIXED": "Mixte",
+      "ENERGY_ENVIRONMENT": "Énergie / environnement"
+    },
+    "deductibility": {
+      "IMMEDIATE_DEDUCTION": "Généralement déduit en année courante",
+      "CAPITALIZED": "Généralement amorti sur la durée de vie utile",
+      "SPLIT": "Généralement réparti entre entretien et amélioration",
+      "ENERGY_DEDUCTION": "Généralement déductible comme mesure énergétique"
+    },
+    "timingSensitivity": {
+      "HIGH": "Le timing importe beaucoup",
+      "MODERATE": "Le timing importe modérément",
+      "LOW": "Le timing importe peu"
+    },
+    "buildingSystem": {
+      "FACADE": "Façade",
+      "WINDOWS": "Fenêtres",
+      "ROOF": "Toit / Terrasse",
+      "INTERIOR": "Intérieur",
+      "COMMON_AREAS": "Parties communes",
+      "BATHROOM": "Salle de bain",
+      "KITCHEN": "Cuisine",
+      "APPLIANCES": "Appareils",
+      "MEP": "CVC / Utilités",
+      "EXTERIOR": "Extérieur / Terrain",
+      "LAUNDRY": "Buanderie"
+    },
+    "capex": {
+      "title": "Perspectives CapEx",
+      "subtitle": "Projection au niveau du portefeuille basée sur les standards d'amortissement. La planification de scénarios et les recommandations de timing sont disponibles dans les plans de trésorerie.",
+      "viewPlans": "Voir les plans de trésorerie →",
+      "loading": "Chargement de la projection CapEx…",
+      "openPlanning": "Ouvrir l'onglet Planification →",
+      "totalCapex": "CapEx total projeté",
+      "acrossBuildings": "Sur tous les immeubles",
+      "bundlingOpps": "Opportunités de regroupement",
+      "bundlingNone": "Aucune identifiée",
+      "bundlingGroups": "Groupes permettant des économies sur la mobilisation",
+      "timingOpps": "Opportunités de timing",
+      "timingNone": "Aucune identifiée",
+      "timingShifts": "Des décalages de calendrier pourraient économiser de l'impôt",
+      "nearestYear": "Année de remplacement la plus proche",
+      "firstYear": "Première année avec dépenses projetées",
+      "bundlingRecs": "Recommandations de regroupement",
+      "suggestion_one": "{{count}} suggestion",
+      "suggestion_other": "{{count}} suggestions"
+    },
+    "catalog": {
+      "disclaimer": "Aide à la décision uniquement — les classifications indiquent le traitement fiscal suisse habituel pour les immeubles locatifs privés. Ce n'est pas un conseil juridique ou fiscal. Consultez un conseiller qualifié pour votre situation.",
+      "valuePreserving": "Conservation de valeur",
+      "valuePreservingNote": "Généralement immédiatement déductible",
+      "valueEnhancing": "Augmentation de valeur",
+      "valueEnhancingNote": "Généralement amorti",
+      "mixed": "Mixte",
+      "mixedNote": "Généralement réparti",
+      "energyEnv": "Énergie / Environnement",
+      "energyEnvNote": "Généralement déductible",
+      "buildingSystemLabel": "Système de bâtiment",
+      "allSystems": "Tous les systèmes",
+      "taxCategoryLabel": "Catégorie fiscale",
+      "allCategories": "Toutes les catégories",
+      "searchLabel": "Rechercher",
+      "searchPlaceholder": "Rechercher des travaux…",
+      "clearFilters": "Effacer les filtres",
+      "count_one": "{{count}} travail de rénovation",
+      "count_other": "{{count}} travaux de rénovation",
+      "countOf": "(sur {{total}} au total)",
+      "loading": "Chargement du catalogue de classification…",
+      "empty": "Aucun travail de rénovation ne correspond à vos filtres.",
+      "showLess": "Afficher moins",
+      "showAll": "Tout afficher ({{count}} travaux)",
+      "deductibilityLabel": "Déductibilité",
+      "deductiblePortion": "Part déductible",
+      "timingGuidanceLabel": "Guide de timing",
+      "notesLabel": "Notes",
+      "assetLinkable": "Peut être lié aux actifs de l'inventaire"
+    }
   }
 }
