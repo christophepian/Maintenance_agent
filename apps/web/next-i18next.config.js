@@ -10,4 +10,5 @@ module.exports = {
   defaultNS: 'common',
   ns: ['common', 'manager', 'owner', 'contractor', 'tenant'],
   fallbackLng: 'en',            // missing FR keys silently fall back to EN
+  reloadOnPrerender: process.env.NODE_ENV === 'development', // always re-read locale files in dev
 };
