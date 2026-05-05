@@ -183,7 +183,10 @@ Maintenance_Agent/
 - Do not define component variants without CVA — use `components/ui/` primitives (Button, Badge, StatusPill, etc.)
 - Do not change `maybeRequireManager` to allow writes — use `requireRole('MANAGER')` for mutations
 - Do not accept `tenantId` as a query param on tenant-portal routes — use `requireTenantSession()`
-- Do not add non-English labels, seed data, or UI text — English only until i18n epic lands (F-UI7)
+- Do not add hardcoded UI strings — all text must use `t()` from `next-i18next`. Five namespaces: `common`, `manager`, `owner`, `contractor`, `tenant`. EN/FR bilingual is live (F-UI7 complete). DE/IT on roadmap.
+- When adding a new tab array rendered via `` t(`ns:section.tabs.${key}`) `` — the runtime-generated key **must** exist in both `en/<ns>.json` and `fr/<ns>.json`. Run `python3 scripts/i18n-audit-tabs.py` to verify 0 missing tab keys before committing.
+- When adding any `t("ns:section.key")` static call — run `python3 scripts/i18n-audit-missing.py` to verify 0 missing static keys.
+- `reloadOnPrerender: true` in `next-i18next.config.js` means locale file changes do NOT require a dev server restart.
 - See `PROJECT_STATE.md` §F-UI8 for shared hooks & presentational components (useDetailResource, useAction, ResourceShell, DetailGrid, Modal, ActionBar, lib/format.js)
 - Do not skip contract test updates when changing DTOs
 - Do not run `docker-compose down -v` or `prisma migrate reset` without explicit approval
