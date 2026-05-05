@@ -382,7 +382,9 @@
       "issued": "Émise",
       "approved": "Approuvé",
       "paid": "Payé",
-      "disputed": "Contestée"
+      "disputed": "Contestée",
+      "incoming": "Entrant",
+      "outgoing": "Sortant"
     },
     "col": {
       "status": "Statut",

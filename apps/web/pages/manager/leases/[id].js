@@ -107,7 +107,7 @@ function LeaseActions({
     isActive && !isTemplate && { label: "📋 Terminate", action: onTerminate },
     !isTemplate && !lease.archivedAt && ["SIGNED","ACTIVE","TERMINATED","CANCELLED"].includes(lease.status) && { label: "📦 Archive", action: onArchive, disabled: !!actionLoading },
     !isTemplate && { label: "💰 Invoice", action: onInvoice },
-    !isTemplate && !["SIGNED","ACTIVE","TERMINATED","CANCELLED"].includes(lease.status) && { label: "Cancel Lease", action: onCancel, danger: true },
+    !isTemplate && !["SIGNED","ACTIVE","TERMINATED","CANCELLED"].includes(lease.status) && { label: t("leasesId.btn.cancelLease"), action: onCancel, danger: true },
   ].filter(Boolean);
 
   return (

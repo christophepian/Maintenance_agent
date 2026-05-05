@@ -1156,6 +1156,9 @@
       "amount": "Amount",
       "thisWillSendTheLeaseForSignatureAndCreateASignatureRequestTheLeaseWillNoLongerBeEditable": "This will send the lease for signature and create a signature request. The lease will no longer be editable.",
       "thisWillTerminateTheActiveLeasePleaseProvideAReason": "This will terminate the active lease. Please provide a reason."
+    },
+    "btn": {
+      "cancelLease": "Cancel Lease"
     }
   },
   "leasesIndex": {
@@ -1598,7 +1601,8 @@
       "owner_approval": "Pending Owner Approval",
       "in_progress": "In Progress",
       "rejected": "Rejected",
-      "rfps": "RFPs"
+      "rfps": "RFPs",
+      "done": "Done"
     },
     "col": {
       "status": "Status",
@@ -1614,6 +1618,14 @@
       "created": "Created",
       "actions": "Actions",
       "number": "#"
+    },
+    "btn": {
+      "approve": "Approve",
+      "reject": "Reject",
+      "assign": "Assign",
+      "unassign": "Unassign",
+      "viewRfp": "View RFP",
+      "ok": "OK"
     }
   },
   "requestsId": {

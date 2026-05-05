@@ -251,20 +251,20 @@ function buildRequestColumns({ t, assigningId, setAssigningId, selectedContracto
                   return (
                     <button key="approve" onClick={() => approveRequest(r.id)} disabled={actionLoading === r.id}
                       className="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-50">
-                      {actionLoading === r.id ? "\u2026" : "Approve"}
+                      {actionLoading === r.id ? "\u2026" : t("manager:requests.btn.approve")}
                     </button>
                   );
                 case 'reject':
                   return (
                     <button key="reject" onClick={() => rejectRequest(r.id)} disabled={actionLoading === r.id}
                       className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50">
-                      {actionLoading === r.id ? "\u2026" : "Reject"}
+                      {actionLoading === r.id ? "\u2026" : t("manager:requests.btn.reject")}
                     </button>
                   );
                 case 'view_rfp':
                   return (
                     <a key="view_rfp" href={r.rfpId ? `/manager/rfps/${r.rfpId}` : "/manager/rfps"} className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-700">
-                      View RFP
+                      {t("manager:requests.btn.viewRfp")}
                     </a>
                   );
                 case 'assign':
@@ -279,7 +279,7 @@ function buildRequestColumns({ t, assigningId, setAssigningId, selectedContracto
                       </select>
                       <button onClick={() => doAssignContractor(r.id)} disabled={!selectedContractorId || actionLoading === r.id}
                         className="rounded-lg bg-blue-600 px-2 py-1 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50">
-                        {actionLoading === r.id ? "\u2026" : "OK"}
+                        {actionLoading === r.id ? "\u2026" : t("manager:requests.btn.ok")}
                       </button>
                       <button onClick={() => { setAssigningId(null); setSelectedContractorId(""); }}
                         className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-500 hover:bg-slate-50">
@@ -289,14 +289,14 @@ function buildRequestColumns({ t, assigningId, setAssigningId, selectedContracto
                   ) : (
                     <button key="assign" onClick={() => setAssigningId(r.id)}
                       className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700">
-                      Assign
+                      {t("manager:requests.btn.assign")}
                     </button>
                   );
                 case 'unassign':
                   return (
                     <button key="unassign" onClick={() => doUnassignContractor(r.id)} disabled={actionLoading === r.id}
                       className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700 disabled:opacity-50">
-                      {actionLoading === r.id ? "\u2026" : "Unassign"}
+                      {actionLoading === r.id ? "\u2026" : t("manager:requests.btn.unassign")}
                     </button>
                   );
                 default:
@@ -1521,15 +1521,15 @@ export default function ManagerRequestsPage() {
                   const swipeActions = isAssigning ? [] : ctaList.map((cta) => {
                     switch (cta) {
                       case 'approve':
-                        return { label: "Approve", variant: "green",  loading: isLoading, onClick: () => approveRequest(r.id) };
+                        return { label: t("manager:requests.btn.approve"), variant: "green",  loading: isLoading, onClick: () => approveRequest(r.id) };
                       case 'reject':
-                        return { label: "Reject",  variant: "slate",  loading: isLoading, onClick: () => rejectRequest(r.id) };
+                        return { label: t("manager:requests.btn.reject"),  variant: "slate",  loading: isLoading, onClick: () => rejectRequest(r.id) };
                       case 'view_rfp':
-                        return { label: "RFP",     variant: "indigo", onClick: () => router.push(r.rfpId ? `/manager/rfps/${r.rfpId}` : "/manager/rfps") };
+                        return { label: t("manager:requests.btn.viewRfp"), variant: "indigo", onClick: () => router.push(r.rfpId ? `/manager/rfps/${r.rfpId}` : "/manager/rfps") };
                       case 'assign':
-                        return { label: "Assign",  variant: "blue",   onClick: () => setAssigningId(r.id) };
+                        return { label: t("manager:requests.btn.assign"),  variant: "blue",   onClick: () => setAssigningId(r.id) };
                       case 'unassign':
-                        return { label: "Unassign",variant: "red",    loading: isLoading, onClick: () => doUnassignContractor(r.id) };
+                        return { label: t("manager:requests.btn.unassign"),variant: "red",    loading: isLoading, onClick: () => doUnassignContractor(r.id) };
                       default:
                         return null;
                     }

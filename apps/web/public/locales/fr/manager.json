@@ -1156,6 +1156,9 @@
       "amount": "Montant",
       "thisWillSendTheLeaseForSignatureAndCreateASignatureRequestTheLeaseWillNoLongerBeEditable": "This will send the lease for signature and create a signature request. The lease will no longer be editable.",
       "thisWillTerminateTheActiveLeasePleaseProvideAReason": "This will terminate the active lease. Please provide a reason."
+    },
+    "btn": {
+      "cancelLease": "Annuler le bail"
     }
   },
   "leasesIndex": {
@@ -1598,7 +1601,8 @@
       "owner_approval": "Approbation propriétaire en attente",
       "in_progress": "En cours",
       "rejected": "Rejeté",
-      "rfps": "Appels d'offres"
+      "rfps": "Appels d'offres",
+      "done": "Terminé"
     },
     "col": {
       "status": "Statut",
@@ -1614,6 +1618,14 @@
       "created": "Créé le",
       "actions": "Actions",
       "number": "#"
+    },
+    "btn": {
+      "approve": "Approuver",
+      "reject": "Rejeter",
+      "assign": "Attribuer",
+      "unassign": "Désattribuer",
+      "viewRfp": "Voir AAO",
+      "ok": "OK"
     }
   },
   "requestsId": {
