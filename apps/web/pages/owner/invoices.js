@@ -413,7 +413,7 @@ export default function OwnerInvoices() {
               <FilterSection title={t("owner:invoices.title.status")} first>
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                   <SelectField label={t("owner:invoices.title.status")} value={activeTab} onChange={(e) => setActiveTab(e.target.value)}>
-                    {STATUS_TABS.map((t) => <option key={t.key} value={t.key}>{t.label}</option>)}
+                    {STATUS_TABS.map((tab) => <option key={tab.key} value={tab.key}>{tab.label}</option>)}
                   </SelectField>
                 </div>
               </FilterSection>

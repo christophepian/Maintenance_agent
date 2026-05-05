@@ -478,7 +478,7 @@ export default function UnitDetail() {
     }
   }
 
-  const assignedTenantIds = new Set(tenants.map((t) => t.id));
+  const assignedTenantIds = new Set(tenants.map((tenant) => tenant.id));
   const hasActiveLease = (unit?.leases ?? []).length > 0;
   const occupancyStatus = hasActiveLease ? "OCCUPIED" : unit?.isVacant ? "LISTED" : "VACANT";
   const occupancyLabel = occupancyStatus === "OCCUPIED" ? "Occupied" : occupancyStatus === "LISTED" ? "Listed" : "Vacant";
@@ -879,10 +879,10 @@ export default function UnitDetail() {
                       disabled={assigningTenant}
                     >
                       <option value="">— Select tenant —</option>
-                      {allTenants.map((t) => (
-                        <option key={t.id} value={t.id} disabled={assignedTenantIds.has(t.id)}>
-                          {t.name || "Tenant"} • {t.phone || "no phone"}
-                          {assignedTenantIds.has(t.id) ? " (assigned)" : ""}
+                      {allTenants.map((tenant) => (
+                        <option key={tenant.id} value={tenant.id} disabled={assignedTenantIds.has(tenant.id)}>
+                          {tenant.name || "Tenant"} • {tenant.phone || "no phone"}
+                          {assignedTenantIds.has(tenant.id) ? " (assigned)" : ""}
                         </option>
                       ))}
                     </select>

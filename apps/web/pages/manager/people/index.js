@@ -383,11 +383,11 @@ export default function ManagerPeoplePage() {
   useEffect(() => { loadData(); }, [loadData]);
 
   const { sortField: tSortField, sortDir: tSortDir, handleSort: handleTenantSort } = useLocalSort("name", "asc");
-  const sortedTenants = useMemo(() => clientSort(tenants, tSortField, tSortDir, (t, f) => {
-    if (f === "name") return (t.name || "").toLowerCase();
-    if (f === "email") return (t.email || "").toLowerCase();
-    if (f === "phone") return (t.phone || "").toLowerCase();
-    if (f === "unit") return (t.unit?.unitNumber || "").toLowerCase();
+  const sortedTenants = useMemo(() => clientSort(tenants, tSortField, tSortDir, (tenant, f) => {
+    if (f === "name") return (tenant.name || "").toLowerCase();
+    if (f === "email") return (tenant.email || "").toLowerCase();
+    if (f === "phone") return (tenant.phone || "").toLowerCase();
+    if (f === "unit") return (tenant.unit?.unitNumber || "").toLowerCase();
     return "";
   }), [tenants, tSortField, tSortDir]);
 
@@ -455,21 +455,21 @@ export default function ManagerPeoplePage() {
               <>
                 {/* Mobile card list */}
                 <div className="sm:hidden overflow-hidden rounded-lg border border-table-border divide-y divide-table-divider">
-                  {tenants.slice(0, 200).map((t) => (
+                  {tenants.slice(0, 200).map((tenant) => (
                     <div
-                      key={t.id}
+                      key={tenant.id}
                       className="table-card cursor-pointer hover:bg-slate-50/80 transition-colors"
-                      onClick={() => router.push(`/manager/people/tenants/${t.id}`)}
+                      onClick={() => router.push(`/manager/people/tenants/${tenant.id}`)}
                     >
-                      <p className="table-card-head">{t.name || "—"}</p>
-                      {t.unit && (
+                      <p className="table-card-head">{tenant.name || "—"}</p>
+                      {tenant.unit && (
                         <p className="table-card-sub">
-                          {t.unit.unitNumber}{t.unit.floor ? ` · Floor ${t.unit.floor}` : ""}
+                          {tenant.unit.unitNumber}{tenant.unit.floor ? ` · Floor ${tenant.unit.floor}` : ""}
                         </p>
                       )}
                       <div className="table-card-footer">
-                        {t.email && <span>{t.email}</span>}
-                        {t.phone && <span>{t.phone}</span>}
+                        {tenant.email && <span>{tenant.email}</span>}
+                        {tenant.phone && <span>{tenant.phone}</span>}
                       </div>
                     </div>
                   ))}
@@ -488,18 +488,18 @@ export default function ManagerPeoplePage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {sortedTenants.slice(0, 200).map((t) => (
-                        <tr key={t.id} className="cursor-pointer hover:bg-slate-50/80" onClick={() => router.push(`/manager/people/tenants/${t.id}`)}>
-                          <td className="cell-bold">{t.name || "—"}</td>
-                          <td>{t.phone || "—"}</td>
-                          <td>{t.email || "—"}</td>
+                      {sortedTenants.slice(0, 200).map((tenant) => (
+                        <tr key={tenant.id} className="cursor-pointer hover:bg-slate-50/80" onClick={() => router.push(`/manager/people/tenants/${tenant.id}`)}>
+                          <td className="cell-bold">{tenant.name || "—"}</td>
+                          <td>{tenant.phone || "—"}</td>
+                          <td>{tenant.email || "—"}</td>
                           <td>
-                            {t.unit ? `${t.unit.unitNumber}${t.unit.floor ? ` (Floor ${t.unit.floor})` : ""}` : "—"}
+                            {tenant.unit ? `${tenant.unit.unitNumber}${tenant.unit.floor ? ` (Floor ${tenant.unit.floor})` : ""}` : "—"}
                           </td>
                           <td>
                             <button
                               aria-label={t("manager:peopleIndex.ariaLabel.viewTenant")}
-                              onClick={(e) => { e.stopPropagation(); router.push(`/manager/people/tenants/${t.id}`); }}
+                              onClick={(e) => { e.stopPropagation(); router.push(`/manager/people/tenants/${tenant.id}`); }}
                               className="inline-flex items-center justify-center rounded p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
                             >
                               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">

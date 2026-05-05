@@ -283,13 +283,13 @@ export default function LedgerPage() {
             {[
               { key: "journal",       label: "Journal" },
               { key: "trial-balance", label: "Trial Balance" },
-            ].map((t) => (
+            ].map((tabItem) => (
               <button
-                key={t.key}
-                onClick={() => setTab(t.key)}
-                className={tab === t.key ? "tab-btn-active" : "tab-btn"}
+                key={tabItem.key}
+                onClick={() => setTab(tabItem.key)}
+                className={tab === tabItem.key ? "tab-btn-active" : "tab-btn"}
               >
-                {t.label}
+                {tabItem.label}
               </button>
             ))}
           </ScrollableTabs>
