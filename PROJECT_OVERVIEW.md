@@ -283,7 +283,7 @@ npx prisma migrate diff \
 - **Push directly to `main` for non-trivial changes** — always use a feature branch, run `cd apps/web && npm run build` locally first, verify the Vercel Preview URL, then merge. See G17 in `PROJECT_STATE.md`.
 - Change `maybeRequireManager` to allow writes — use `requireRole('MANAGER')`
 - Accept `tenantId` as a query param on tenant-portal routes — use `requireTenantSession()`
-- Add non-English labels, seed data, or UI text — English only (F-UI7)
+- Add non-English labels, seed data, or UI text without using `t()` from `next-i18next` — all UI strings must go through the i18n system (F-UI7 lifted; bilingual EN/FR live; DE/IT on roadmap)
 - Skip contract test updates when changing DTOs
 - Run `docker-compose down -v` or `prisma migrate reset` without explicit approval
 - Define per-file `STATUS_COLORS` / `URGENCY_COLORS` / color-map objects — use `statusVariants.js` mappers with `<Badge>`

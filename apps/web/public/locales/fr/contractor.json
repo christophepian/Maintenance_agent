@@ -1,0 +1,14 @@
+{
+  "nav": {
+    "dashboard": "Tableau de bord",
+    "jobs": "Interventions",
+    "invoices": "Factures",
+    "rfps": "Appels d'offres",
+    "statusUpdates": "Mises à jour"
+  },
+  "dashboard": {
+    "title": "Tableau de bord prestataire",
+    "activeJobs": "Interventions actives",
+    "pendingRfps": "Appels d'offres en attente"
+  }
+}

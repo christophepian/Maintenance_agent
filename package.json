@@ -5,6 +5,10 @@
     "apps/*",
     "packages/*"
   ],
+  "overrides": {
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5"
+  },
   "scripts": {
     "dev": "echo \"Run 'npm run dev:api' and 'npm run dev:web' in separate terminals\"",
     "dev:api": "cd apps/api && npm run start:dev",

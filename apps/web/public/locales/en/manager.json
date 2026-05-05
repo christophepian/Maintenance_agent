@@ -1,0 +1,68 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "requests": "Requests",
+    "jobs": "Jobs",
+    "leases": "Leases",
+    "invoices": "Invoices",
+    "people": "People",
+    "finance": "Finance",
+    "inventory": "Inventory",
+    "buildings": "Buildings",
+    "properties": "Properties",
+    "contractors": "Contractors",
+    "tenants": "Tenants",
+    "owners": "Owners",
+    "rentalApplications": "Rental Applications",
+    "chargeReconciliations": "Charge Reconciliations",
+    "cashflow": "Cash Flow",
+    "emails": "Emails"
+  },
+  "dashboard": {
+    "title": "Manager Dashboard",
+    "openRequests": "Open Requests",
+    "activeJobs": "Active Jobs",
+    "pendingInvoices": "Pending Invoices",
+    "expiringLeases": "Expiring Leases"
+  },
+  "request": {
+    "singular": "Request",
+    "plural": "Requests",
+    "new": "New Request",
+    "title": "Title",
+    "urgency": "Urgency",
+    "unit": "Unit",
+    "building": "Building",
+    "assignedTo": "Assigned To",
+    "createdBy": "Created By"
+  },
+  "job": {
+    "singular": "Job",
+    "plural": "Jobs",
+    "new": "New Job",
+    "contractor": "Contractor",
+    "scheduledDate": "Scheduled Date",
+    "completedDate": "Completed Date",
+    "billingSchedule": "Billing Schedule"
+  },
+  "lease": {
+    "singular": "Lease",
+    "plural": "Leases",
+    "new": "New Lease",
+    "tenant": "Tenant",
+    "startDate": "Start Date",
+    "endDate": "End Date",
+    "monthlyRent": "Monthly Rent",
+    "deposit": "Deposit",
+    "signedAt": "Signed At"
+  },
+  "invoice": {
+    "singular": "Invoice",
+    "plural": "Invoices",
+    "new": "New Invoice",
+    "dueDate": "Due Date",
+    "issuedAt": "Issued At",
+    "paidAt": "Paid At",
+    "totalAmount": "Total Amount"
+  }
+}

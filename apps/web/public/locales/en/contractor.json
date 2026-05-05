@@ -1,0 +1,14 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "jobs": "Jobs",
+    "invoices": "Invoices",
+    "rfps": "RFPs",
+    "statusUpdates": "Status Updates"
+  },
+  "dashboard": {
+    "title": "Contractor Dashboard",
+    "activeJobs": "Active Jobs",
+    "pendingRfps": "Pending RFPs"
+  }
+}

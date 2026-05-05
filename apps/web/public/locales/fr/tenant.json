@@ -1,0 +1,15 @@
+{
+  "nav": {
+    "inbox": "Boîte de réception",
+    "requests": "Demandes",
+    "leases": "Baux",
+    "invoices": "Factures",
+    "assets": "Équipements"
+  },
+  "dashboard": {
+    "title": "Espace locataire",
+    "yourLease": "Votre bail",
+    "openRequests": "Demandes ouvertes",
+    "pendingInvoices": "Factures en attente"
+  }
+}

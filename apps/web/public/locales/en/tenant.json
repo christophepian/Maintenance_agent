@@ -1,0 +1,15 @@
+{
+  "nav": {
+    "inbox": "Inbox",
+    "requests": "Requests",
+    "leases": "Leases",
+    "invoices": "Invoices",
+    "assets": "Assets"
+  },
+  "dashboard": {
+    "title": "Tenant Portal",
+    "yourLease": "Your Lease",
+    "openRequests": "Open Requests",
+    "pendingInvoices": "Pending Invoices"
+  }
+}

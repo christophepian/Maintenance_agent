@@ -1,0 +1,19 @@
+{
+  "nav": {
+    "dashboard": "Tableau de bord",
+    "properties": "Biens",
+    "finance": "Finance",
+    "invoices": "Factures",
+    "leases": "Baux",
+    "jobs": "Interventions",
+    "requests": "Demandes",
+    "reporting": "Rapports"
+  },
+  "dashboard": {
+    "title": "Tableau de bord propriétaire",
+    "portfolio": "Portefeuille",
+    "properties": "Biens",
+    "openRequests": "Demandes ouvertes",
+    "pendingInvoices": "Factures en attente"
+  }
+}

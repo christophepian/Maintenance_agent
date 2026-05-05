@@ -1,0 +1,70 @@
+{
+  "nav": {
+    "dashboard": "Tableau de bord",
+    "requests": "Demandes",
+    "jobs": "Interventions",
+    "leases": "Baux",
+    "invoices": "Factures",
+    "buildings": "Immeubles",
+    "settings": "Paramètres"
+  },
+  "action": {
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "submit": "Soumettre",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "close": "Fermer",
+    "back": "Retour",
+    "confirm": "Confirmer",
+    "create": "Créer",
+    "add": "Ajouter",
+    "search": "Rechercher",
+    "filter": "Filtrer",
+    "export": "Exporter",
+    "viewAll": "Voir tout"
+  },
+  "status": {
+    "open": "Ouvert",
+    "pending": "En attente",
+    "inProgress": "En cours",
+    "completed": "Terminé",
+    "cancelled": "Annulé",
+    "approved": "Validé",
+    "rejected": "Refusé",
+    "active": "Actif",
+    "inactive": "Inactif"
+  },
+  "empty": {
+    "noResults": "Aucun résultat trouvé.",
+    "noData": "Aucune donnée disponible.",
+    "noItems": "Aucun élément à afficher."
+  },
+  "error": {
+    "generic": "Une erreur est survenue. Veuillez réessayer.",
+    "notFound": "Introuvable.",
+    "unauthorized": "Vous n'êtes pas autorisé à consulter cette page.",
+    "loadFailed": "Échec du chargement des données."
+  },
+  "label": {
+    "name": "Nom",
+    "description": "Description",
+    "date": "Date",
+    "amount": "Montant",
+    "status": "Statut",
+    "type": "Type",
+    "notes": "Notes",
+    "address": "Adresse",
+    "phone": "Téléphone",
+    "email": "E-mail",
+    "createdAt": "Créé le",
+    "updatedAt": "Modifié le",
+    "loading": "Chargement…"
+  },
+  "role": {
+    "MANAGER": "Gérant",
+    "OWNER": "Propriétaire",
+    "CONTRACTOR": "Prestataire",
+    "TENANT": "Locataire"
+  }
+}

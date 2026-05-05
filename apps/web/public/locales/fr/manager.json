@@ -1,0 +1,68 @@
+{
+  "nav": {
+    "dashboard": "Tableau de bord",
+    "requests": "Demandes",
+    "jobs": "Interventions",
+    "leases": "Baux",
+    "invoices": "Factures",
+    "people": "Personnes",
+    "finance": "Finance",
+    "inventory": "Inventaire",
+    "buildings": "Immeubles",
+    "properties": "Biens",
+    "contractors": "Prestataires",
+    "tenants": "Locataires",
+    "owners": "Propriétaires",
+    "rentalApplications": "Candidatures locatives",
+    "chargeReconciliations": "Réconciliation des charges",
+    "cashflow": "Flux de trésorerie",
+    "emails": "E-mails"
+  },
+  "dashboard": {
+    "title": "Tableau de bord gérant",
+    "openRequests": "Demandes ouvertes",
+    "activeJobs": "Interventions actives",
+    "pendingInvoices": "Factures en attente",
+    "expiringLeases": "Baux arrivant à échéance"
+  },
+  "request": {
+    "singular": "Demande",
+    "plural": "Demandes",
+    "new": "Nouvelle demande",
+    "title": "Titre",
+    "urgency": "Urgence",
+    "unit": "Unité",
+    "building": "Immeuble",
+    "assignedTo": "Attribué à",
+    "createdBy": "Créé par"
+  },
+  "job": {
+    "singular": "Intervention",
+    "plural": "Interventions",
+    "new": "Nouvelle intervention",
+    "contractor": "Prestataire",
+    "scheduledDate": "Date planifiée",
+    "completedDate": "Date de réalisation",
+    "billingSchedule": "Calendrier de facturation"
+  },
+  "lease": {
+    "singular": "Bail",
+    "plural": "Baux",
+    "new": "Nouveau bail",
+    "tenant": "Locataire",
+    "startDate": "Date de début",
+    "endDate": "Date de fin",
+    "monthlyRent": "Loyer mensuel",
+    "deposit": "Dépôt de garantie",
+    "signedAt": "Signé le"
+  },
+  "invoice": {
+    "singular": "Facture",
+    "plural": "Factures",
+    "new": "Nouvelle facture",
+    "dueDate": "Date d'échéance",
+    "issuedAt": "Émise le",
+    "paidAt": "Payée le",
+    "totalAmount": "Montant total"
+  }
+}

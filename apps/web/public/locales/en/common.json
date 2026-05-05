@@ -1,0 +1,70 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "requests": "Requests",
+    "jobs": "Jobs",
+    "leases": "Leases",
+    "invoices": "Invoices",
+    "buildings": "Buildings",
+    "settings": "Settings"
+  },
+  "action": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "submit": "Submit",
+    "delete": "Delete",
+    "edit": "Edit",
+    "close": "Close",
+    "back": "Back",
+    "confirm": "Confirm",
+    "create": "Create",
+    "add": "Add",
+    "search": "Search",
+    "filter": "Filter",
+    "export": "Export",
+    "viewAll": "View all"
+  },
+  "status": {
+    "open": "Open",
+    "pending": "Pending",
+    "inProgress": "In progress",
+    "completed": "Completed",
+    "cancelled": "Cancelled",
+    "approved": "Approved",
+    "rejected": "Rejected",
+    "active": "Active",
+    "inactive": "Inactive"
+  },
+  "empty": {
+    "noResults": "No results found.",
+    "noData": "No data available.",
+    "noItems": "No items to display."
+  },
+  "error": {
+    "generic": "Something went wrong. Please try again.",
+    "notFound": "Not found.",
+    "unauthorized": "You are not authorised to view this page.",
+    "loadFailed": "Failed to load data."
+  },
+  "label": {
+    "name": "Name",
+    "description": "Description",
+    "date": "Date",
+    "amount": "Amount",
+    "status": "Status",
+    "type": "Type",
+    "notes": "Notes",
+    "address": "Address",
+    "phone": "Phone",
+    "email": "Email",
+    "createdAt": "Created",
+    "updatedAt": "Updated",
+    "loading": "Loading…"
+  },
+  "role": {
+    "MANAGER": "Manager",
+    "OWNER": "Owner",
+    "CONTRACTOR": "Contractor",
+    "TENANT": "Tenant"
+  }
+}

@@ -55,12 +55,19 @@ const MONTHS_SHORT = [
   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
 ];
 
+// Swiss French abbreviated month names — avoids Intl dependency for SSR safety
+const MONTHS_SHORT_FR = [
+  "jan.", "fév.", "mar.", "avr.", "mai", "juin",
+  "juil.", "août", "sep.", "oct.", "nov.", "déc.",
+];
+
 /**
  * Format an ISO date string as "dd.MM.yyyy".
+ * The numeric format is locale-neutral (same for EN, FR, DE, IT).
  *   formatDate("2026-01-15T10:00:00Z") → "15.01.2026"
  *   formatDate(null)                    → "—"
  */
-export function formatDate(iso) {
+export function formatDate(iso, _locale = 'en') {
   if (!iso) return "—";
   const d = new Date(iso);
   if (isNaN(d.getTime())) return "—";
@@ -72,9 +79,10 @@ export function formatDate(iso) {
 
 /**
  * Format an ISO date string as "dd.MM.yyyy HH:mm".
+ * The numeric format is locale-neutral (same for EN, FR, DE, IT).
  *   formatDateTime("2026-01-15T14:30:00Z") → "15.01.2026 15:30" (local TZ)
  */
-export function formatDateTime(iso) {
+export function formatDateTime(iso, _locale = 'en') {
   if (!iso) return "—";
   const d = new Date(iso);
   if (isNaN(d.getTime())) return "—";
@@ -87,14 +95,16 @@ export function formatDateTime(iso) {
 }
 
 /**
- * Format an ISO date string as "15 Jan 2026" (long human-readable).
- *   formatDateLong("2026-01-15T10:00:00Z") → "15 Jan 2026"
+ * Format an ISO date string as "15 Jan 2026" (EN) or "15 jan. 2026" (FR).
+ *   formatDateLong("2026-01-15T10:00:00Z")        → "15 Jan 2026"
+ *   formatDateLong("2026-01-15T10:00:00Z", 'fr')  → "15 jan. 2026"
  */
-export function formatDateLong(iso) {
+export function formatDateLong(iso, locale = 'en') {
   if (!iso) return "—";
   const d = new Date(iso);
   if (isNaN(d.getTime())) return "—";
-  return `${d.getDate()} ${MONTHS_SHORT[d.getMonth()]} ${d.getFullYear()}`;
+  const months = locale === 'fr' ? MONTHS_SHORT_FR : MONTHS_SHORT;
+  return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
 }
 
 /**

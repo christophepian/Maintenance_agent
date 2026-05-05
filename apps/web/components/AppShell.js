@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import NotificationBell from "./NotificationBell";
+import LocaleSwitcher from "./LocaleSwitcher";
 import ManagerSidebar from "./ManagerSidebar";
 import OwnerSidebar from "./OwnerSidebar";
 import ContractorSidebar from "./ContractorSidebar";
@@ -168,7 +169,8 @@ export default function AppShell({ role: roleProp, children }) {
       <main id="main-content" className="min-w-0 overflow-x-hidden px-3 py-6 pb-24 md:px-6 md:pb-6">
         {/* Header with notification bell */}
         {(role === "MANAGER" || role === "OWNER" || role === "TENANT" || role === "CONTRACTOR") && (
-          <div className="flex justify-end mb-4 pr-2">
+          <div className="flex justify-end items-center gap-3 mb-4 pr-2">
+            <LocaleSwitcher />
             <NotificationBell role={role} />
           </div>
         )}

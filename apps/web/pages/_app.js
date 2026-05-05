@@ -1,5 +1,7 @@
 import '../styles/globals.css';
 import { useEffect } from 'react';
+import { appWithTranslation } from 'next-i18next';
+import nextI18NextConfig from '../next-i18next.config';
 import ErrorBoundary from '../components/ErrorBoundary';
 import { ToastProvider } from '../components/ui/UndoToast';
 
@@ -31,7 +33,7 @@ const DEV_TOKENS = {
   contractor: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJkZXYtY29udHJhY3RvciIsIm9yZ0lkIjoiZGVmYXVsdC1vcmciLCJlbWFpbCI6ImNvbnRyYWN0b3JAbG9jYWwuZGV2Iiwicm9sZSI6IkNPTlRSQUNUT1IiLCJpYXQiOjE3NzM3NDUyMDYsImV4cCI6MTgwNTI4MTIwNn0.Lab9qMNqGaVHt98pDt7FwSDL6hfBut3Zc7X8_-gmHu8',
 };
 
-export default function MyApp({ Component, pageProps }) {
+function MyApp({ Component, pageProps }) {
   useEffect(() => {
     if (process.env.NODE_ENV === 'production') return;
 
@@ -59,3 +61,5 @@ export default function MyApp({ Component, pageProps }) {
     </ErrorBoundary>
   );
 }
+
+export default appWithTranslation(MyApp, nextI18NextConfig);

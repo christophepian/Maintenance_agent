@@ -1,0 +1,19 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "properties": "Properties",
+    "finance": "Finance",
+    "invoices": "Invoices",
+    "leases": "Leases",
+    "jobs": "Jobs",
+    "requests": "Requests",
+    "reporting": "Reporting"
+  },
+  "dashboard": {
+    "title": "Owner Dashboard",
+    "portfolio": "Portfolio",
+    "properties": "Properties",
+    "openRequests": "Open Requests",
+    "pendingInvoices": "Pending Invoices"
+  }
+}
