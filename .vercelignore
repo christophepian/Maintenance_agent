@@ -6,5 +6,5 @@ infra/
 backups/
 _archive/
 *.md
-*.json
-!package.json
+/ROADMAP.json
+/tsconfig.json
