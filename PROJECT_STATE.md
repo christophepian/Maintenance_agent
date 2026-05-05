@@ -26,6 +26,8 @@ Safe to:
 
 ✅ **Tenant AI Chat + Agentic Asset Matching (2026-05-04).** ChatWidget fully wired end-to-end: tenant phone login → Claude conversation → `reportIssue` tool creates request with correct urgency. Three bugs fixed in session: (1) error display hidden on empty message list; (2) `urgency` field missing from Zod schema / repo / workflow — now flows from AI tool call through to DB; (3) asset auto-link was matching `SHOWER_CABIN_GLASS` via generic token "glass" for a window crack report. Replaced keyword scorer with AI-powered `resolveAssetWithAI()` (claude-3-5-haiku, ~$0.0005/call) — keyword fallback retained when AI unavailable or unit has ≤1 asset. New files: `services/aiClient.ts` (shared Anthropic client), `services/assetMatcher.ts` (asset resolution tool-use).
 
+✅ **Bilingual EN/FR i18n — full string extraction pass (2026-05-05).** All UI strings extracted through `next-i18next`. Five namespaces: `common`, `manager`, `owner`, `contractor`, `tenant`. All `[FR]` placeholders stripped. Tab labels rendered via `t(\`ns:section.tabs.${key}\`)` template literals. Action buttons in `requests.js` / `leases/[id].js` wired to `t()`. Root-cause fix: `reloadOnPrerender: true` added to `next-i18next.config.js` — prevents stale in-memory locale cache in dev (was causing all newly-added keys to fall back to key-path display). Two audit scripts added: `scripts/i18n-audit-missing.py` (static key coverage), `scripts/i18n-audit-tabs.py` (template-literal tab key coverage). See [EPIC_HISTORY.md](EPIC_HISTORY.md) for full narrative.
+
 
 ## 13. Authentication & Testing
 

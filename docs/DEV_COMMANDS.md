@@ -325,3 +325,5 @@ If you land in a broken state: open a **new terminal** and run `npm run dev:web`
 | Regen roadmap | `node scripts/generate-roadmap.js` |
 | Open roadmap | `open http://localhost:8111` |
 | Blueprint | `cd apps/api && npm run blueprint` |
+| i18n: check static keys | `python3 scripts/i18n-audit-missing.py` |
+| i18n: check tab keys | `python3 scripts/i18n-audit-tabs.py` |
