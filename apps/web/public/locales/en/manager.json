@@ -1645,6 +1645,12 @@
       "cH9300762011623852957": "CH93 0076 2011 6238 5295 7",
       "cHE123456789": "CHE-123.456.789"
     },
+    "tab": {
+      "personalInformation": "Personal information",
+      "serviceDetails": "Service details",
+      "contracts": "Contracts",
+      "invoices": "Invoices"
+    },
     "title": {
       "personalInformation": "Personal information",
       "serviceDetails": "Service details",
@@ -1652,7 +1658,12 @@
       "invoices": "Invoices"
     },
     "text": {
+      "back": "← Back",
       "loadingContractor": "Loading contractor…",
+      "cancel": "Cancel",
+      "edit": "Edit",
+      "save": "Save",
+      "saving": "Saving…",
       "name": "Name",
       "phone": "Phone",
       "email": "Email",
@@ -1661,6 +1672,8 @@
       "postalCode": "Postal code",
       "city": "City",
       "country": "Country",
+      "iban": "IBAN",
+      "defaultVatRate": "Default VAT rate (%)",
       "vATNumber": "VAT number",
       "contractorId": "Contractor ID",
       "orgId": "Org ID",
@@ -1673,7 +1686,8 @@
       "noJobsFoundForThisContractor": "No jobs found for this contractor.",
       "loadingInvoices": "Loading invoices…",
       "noInvoicesFoundForThisContractor": "No invoices found for this contractor.",
-      "contractorNotFound": "Contractor not found."
+      "contractorNotFound": "Contractor not found.",
+      "goBack": "Go back"
     },
     "prop": {
       "contractorProfileAndServiceDetails": "Contractor profile and service details.",

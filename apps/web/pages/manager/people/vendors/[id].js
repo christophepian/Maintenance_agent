@@ -47,7 +47,13 @@ export default function ContractorDetailPage() {
   const { sortField: jSortField, sortDir: jSortDir, handleSort: handleJobSort } = useLocalSort("createdAt", "desc");
   const { sortField: invSortField, sortDir: invSortDir, handleSort: handleInvSort } = useLocalSort("submittedAt", "desc");
   const [isEditing, setIsEditing] = useState(false);
-  const [activeTab, setActiveTab] = useState("Personal information");
+  const [activeTab, setActiveTab] = useState("personal");
+  const TABS = [
+    { id: "personal",  label: t("manager:peopleVendorsId.tab.personalInformation") },
+    { id: "service",   label: t("manager:peopleVendorsId.tab.serviceDetails") },
+    { id: "contracts", label: t("manager:peopleVendorsId.tab.contracts") },
+    { id: "invoices",  label: t("manager:peopleVendorsId.tab.invoices") },
+  ];
   const [jobs, setJobs] = useState([]);
   const [jobsLoading, setJobsLoading] = useState(false);
   const [contractorInvoices, setContractorInvoices] = useState([]);
@@ -207,7 +213,7 @@ export default function ContractorDetailPage() {
             className="text-sm font-medium text-slate-600 hover:text-slate-900"
             onClick={() => router.back()}
           >
-            ← Back
+            {t("manager:peopleVendorsId.text.back")}
           </button>
         </div>
         <PageHeader
@@ -223,7 +229,7 @@ export default function ContractorDetailPage() {
                     onClick={handleCancel}
                     disabled={saving}
                   >
-                    Cancel
+                    {t("manager:peopleVendorsId.text.cancel")}
                   </button>
                   <button
                     type="button"
@@ -231,7 +237,7 @@ export default function ContractorDetailPage() {
                     onClick={handleSave}
                     disabled={saving}
                   >
-                    {saving ? "Saving…" : "Save"}
+                    {saving ? t("manager:peopleVendorsId.text.saving") : t("manager:peopleVendorsId.text.save")}
                   </button>
                 </>
               ) : (
@@ -241,7 +247,7 @@ export default function ContractorDetailPage() {
                   onClick={() => setIsEditing(true)}
                   disabled={loading || !contractor}
                 >
-                  Edit
+                  {t("manager:peopleVendorsId.text.edit")}
                 </button>
               )}
             </div>
@@ -257,20 +263,20 @@ export default function ContractorDetailPage() {
             <p className="loading-text">{t("manager:peopleVendorsId.text.loadingContractor")}</p>
           ) : contractor ? (
             <div className="grid gap-4">
-              <ScrollableTabs activeIndex={["Personal information", "Service details", "Contracts", "Invoices"].indexOf(activeTab)}>
-                {["Personal information", "Service details", "Contracts", "Invoices"].map((tab) => (
+              <ScrollableTabs activeIndex={TABS.findIndex((tab) => tab.id === activeTab)}>
+                {TABS.map((tab) => (
                   <button
-                    key={tab}
+                    key={tab.id}
                     type="button"
-                    className={activeTab === tab ? "tab-btn-active" : "tab-btn"}
-                    onClick={() => setActiveTab(tab)}
+                    className={activeTab === tab.id ? "tab-btn-active" : "tab-btn"}
+                    onClick={() => setActiveTab(tab.id)}
                   >
-                    {tab}
+                    {tab.label}
                   </button>
                 ))}
               </ScrollableTabs>
 
-              {activeTab === "Personal information" && (
+              {activeTab === "personal" && (
                 <Panel title={t("manager:peopleVendorsId.title.personalInformation")}>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <label className="grid gap-2">
@@ -383,7 +389,7 @@ export default function ContractorDetailPage() {
                       )}
                     </label>
                     <label className="grid gap-2 sm:col-span-2">
-                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">IBAN</span>
+                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleVendorsId.text.iban")}</span>
                       {isEditing ? (
                         <input
                           className="input text-sm text-slate-700"
@@ -411,7 +417,7 @@ export default function ContractorDetailPage() {
                       )}
                     </label>
                     <label className="grid gap-2">
-                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Default VAT rate (%)</span>
+                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleVendorsId.text.defaultVatRate")}</span>
                       {isEditing ? (
                         <input
                           className="input text-sm text-slate-700"
@@ -451,7 +457,7 @@ export default function ContractorDetailPage() {
                 </Panel>
               )}
 
-              {activeTab === "Service details" && (
+              {activeTab === "service" && (
                 <Panel title={t("manager:peopleVendorsId.title.serviceDetails")}>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div>
@@ -505,7 +511,7 @@ export default function ContractorDetailPage() {
                 </Panel>
               )}
 
-              {activeTab === "Contracts" && (
+              {activeTab === "contracts" && (
                 <Panel title={t("manager:peopleVendorsId.title.contracts")}>
                   {jobsLoading ? (
                     <p className="text-sm text-slate-600">{t("manager:peopleVendorsId.text.loadingJobs")}</p>
@@ -555,7 +561,7 @@ export default function ContractorDetailPage() {
                 </Panel>
               )}
 
-              {activeTab === "Invoices" && (
+              {activeTab === "invoices" && (
                 <Panel title={t("manager:peopleVendorsId.title.invoices")}>
                   {invoicesLoading ? (
                     <p className="text-sm text-slate-600">{t("manager:peopleVendorsId.text.loadingInvoices")}</p>
@@ -613,7 +619,7 @@ export default function ContractorDetailPage() {
               <p className="text-sm text-slate-600">{t("manager:peopleVendorsId.text.contractorNotFound")}</p>
               <div className="mt-3">
                 <button type="button" className="button-secondary" onClick={() => router.back()}>
-                  Go back
+                  {t("manager:peopleVendorsId.text.goBack")}
                 </button>
               </div>
             </Panel>
