@@ -30,6 +30,8 @@ Safe to:
 
 ✅ **Full project audit + remediation (2026-05-06).** 67 test suites · 1009 tests, 0 TS errors. Three root-cause fixes: (1) `jose@6` ESM-only package caused 31 integration test suites to fail with parse error — downgraded to `jose@5` (CJS+ESM); (2) `server.ts` Supabase JWT pre-resolve was assigning `req.user = null` on verification failure (no `SUPABASE_URL`), silently blocking the legacy `decodeToken` fallback and causing all integration tests to receive 401 — fixed to only assign `req.user` on non-null Supabase result; (3) test DB missing 86 migrations (`add_conversation_thread`, `add_supabase_auth`) — deployed via `prisma migrate deploy`. Additionally: 3 unsorted `<th>` columns converted to `<SortableHeader>` (units/[id], leases/[id], approvals); 6 `style={{}}` inline layout props in `login.js` replaced with Tailwind classes. `docs/AUDIT.md` metadata updated to 2026-05-06 codebase state.
 
+✅ **ARCH-1 epic complete — service layer fully decoupled from Prisma (2026-05-06).** All 5 slices (DT-120–DT-124) delivered. ~80 direct `prisma.*` calls eliminated from the service layer across 11 service files. No service file may call Prisma directly — all DB access routes through the repository layer. New repos: `notificationRepository`, `financialsRepository`, `ledgerEntryRepository`. Extended: `legalSourceRepository` (+19 fns), `invoiceRepository` (+9 fns), `accountRepository` (+3 fns), `legalSourceRepository`, `leaseRepository`, `jobRepository`, `billingEntityRepository`, `requestRepository`. tsc: 0 errors · 1007/1009 tests (2 pre-existing legalEngine timeout flakes). Commits: `ef8cbaf` (DT-123) · `4c8882c` (DT-124).
+
 
 ## 13. Authentication & Testing
 
