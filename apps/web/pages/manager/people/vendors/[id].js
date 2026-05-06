@@ -437,7 +437,19 @@ export default function ContractorDetailPage() {
               )}
 
               {activeTab === "service" && (
-                <Panel title={t("manager:peopleVendorsId.title.serviceDetails")}>
+                <Panel
+                  title={t("manager:peopleVendorsId.title.serviceDetails")}
+                  actions={
+                    isEditing ? (
+                      <div className="flex items-center gap-2">
+                        <button type="button" className="button-secondary text-sm" onClick={handleCancel} disabled={saving}>{t("manager:peopleVendorsId.text.cancel")}</button>
+                        <button type="button" className="button-primary text-sm" onClick={handleSave} disabled={saving}>{saving ? t("manager:peopleVendorsId.text.saving") : t("manager:peopleVendorsId.text.save")}</button>
+                      </div>
+                    ) : (
+                      <button type="button" className="button-primary text-sm" onClick={() => setIsEditing(true)} disabled={loading || !contractor}>{t("manager:peopleVendorsId.text.edit")}</button>
+                    )
+                  }
+                >
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div>
                       <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleVendorsId.text.hourlyRate")}</div>
