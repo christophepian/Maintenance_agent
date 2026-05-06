@@ -369,6 +369,7 @@ function RfpsTab() {
   const URGENCY_RANK = { LOW: 1, MEDIUM: 2, HIGH: 3, EMERGENCY: 4 };
   const { sortField: rfpSF, sortDir: rfpSD, handleSort: handleRfpSort } = useLocalSort("createdAt", "desc");
   const sortedFiltered = useMemo(() => clientSort(filtered, rfpSF, rfpSD, (r, f) => {
+    if (f === "id") return (r.id || "").toLowerCase();
     if (f === "category") return (r.category || "").toLowerCase();
     if (f === "building") return (r.building?.name || "").toLowerCase();
     if (f === "urgency") return URGENCY_RANK[r.request?.urgency] ?? 0;
@@ -494,7 +495,7 @@ function RfpsTab() {
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>RFP</th>
+                  <SortableHeader label="RFP" field="id" sortField={rfpSF} sortDir={rfpSD} onSort={handleRfpSort} />
                   <SortableHeader label={t("owner:approvals.prop.category")} field="category" sortField={rfpSF} sortDir={rfpSD} onSort={handleRfpSort} />
                   <SortableHeader label={t("owner:approvals.prop.building")} field="building" sortField={rfpSF} sortDir={rfpSD} onSort={handleRfpSort} />
                   <SortableHeader label={t("owner:approvals.prop.urgency")} field="urgency" sortField={rfpSF} sortDir={rfpSD} onSort={handleRfpSort} />

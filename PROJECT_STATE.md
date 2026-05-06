@@ -28,6 +28,8 @@ Safe to:
 
 ✅ **Bilingual EN/FR i18n — full string extraction pass (2026-05-05).** All UI strings extracted through `next-i18next`. Five namespaces: `common`, `manager`, `owner`, `contractor`, `tenant`. All `[FR]` placeholders stripped. Tab labels rendered via `t(\`ns:section.tabs.${key}\`)` template literals. Action buttons in `requests.js` / `leases/[id].js` wired to `t()`. Two root-cause fixes: (1) `reloadOnPrerender: true` in `next-i18next.config.js` — prevents stale in-memory locale cache in dev; (2) `.vercelignore` blanket `*.json` rule replaced with specific exclusions — was silently blocking all locale JSON files from Vercel builds, causing production to show `xx.xx.xx` key paths. `apps/web/.vercelignore` (empty) added as safety net. Two audit scripts: `scripts/i18n-audit-missing.py`, `scripts/i18n-audit-tabs.py`. See [EPIC_HISTORY.md](EPIC_HISTORY.md) for full narrative.
 
+✅ **Full project audit + remediation (2026-05-06).** 67 test suites · 1009 tests, 0 TS errors. Three root-cause fixes: (1) `jose@6` ESM-only package caused 31 integration test suites to fail with parse error — downgraded to `jose@5` (CJS+ESM); (2) `server.ts` Supabase JWT pre-resolve was assigning `req.user = null` on verification failure (no `SUPABASE_URL`), silently blocking the legacy `decodeToken` fallback and causing all integration tests to receive 401 — fixed to only assign `req.user` on non-null Supabase result; (3) test DB missing 2 migrations (`add_conversation_thread`, `add_supabase_auth`) — deployed via `prisma migrate deploy`. Additionally: 3 unsorted `<th>` columns converted to `<SortableHeader>` (units/[id], leases/[id], approvals); 6 `style={{}}` inline layout props in `login.js` replaced with Tailwind classes. `docs/AUDIT.md` metadata updated to 2026-05-06 codebase state.
+
 
 ## 13. Authentication & Testing
 
@@ -55,7 +57,7 @@ JWT-based. Production boot guard enforced (F1). All routes auth-gated. `AUTH_OPT
 |-------|-------|--------|
 | Models | 70 | prisma/schema.prisma — derived |
 | Enums | 64 | prisma/schema.prisma — derived |
-| Migrations | 85 | prisma/migrations/ — derived |
+| Migrations | 86 | prisma/migrations/ — derived |
 | Workflows | 29 | src/workflows/ — derived |
 | Repositories | 29 | src/repositories/ — derived (excl. index.ts) |
 | Route modules | 28 | src/routes/ — derived (excl. helpers.ts utility) |
@@ -64,13 +66,13 @@ JWT-based. Production boot guard enforced (F1). All routes auth-gated. `AUTH_OPT
 | Frontend pages | 288 | apps/web/pages/ — derived (88 UI + 200 API) |
 | API operations | 291 | openapi.yaml operationId count — derived |
 | URL paths | 225 | openapi.yaml unique paths — derived |
-| Tests | 65 suites (pre-existing test interaction failures, see TC-11) | jest — derived |
+| Tests | 67 suites · 1009 tests (pre-existing test interaction TC-11 resolved) | jest — derived |
 | Proxy conformance | 197 / 197 | apps/web/pages/api/ — derived |
 | Transition maps | 8 | src/workflows/transitions.ts — derived |
 | Audit findings open | 3 (SI-2/3/4: legal model orgId doc drift) | docs/AUDIT.md — manual |
 | Audit findings resolved | 91 | docs/AUDIT.md — manual |
-| Last auto-sync | 2026-04-03 | blueprint.js |
-| Last manual review | 2026-04-27 | human |
+| Last auto-sync | 2026-05-06 | blueprint.js |
+| Last manual review | 2026-05-06 | human |
 
 > Derived fields are auto-updated by `npm run blueprint`. Manual fields must be updated at the end of each slice.
 

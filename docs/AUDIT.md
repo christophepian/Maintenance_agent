@@ -1,12 +1,12 @@
 # Maintenance Agent — Project Audit
 
 **Generated:** 2026-03-10
-**Last updated:** 2026-03-31 — Bulk resolution: CQ-2/3/4/8/9/15/16-35/36/37, SA-21/22, SI-17, DOC-1 resolved; TC-1/2/3/7/10/12/13 test coverage added; new test files: workflowCoverage.test.ts, auth.unit.test.ts, config.test.ts, leaseContract.test.ts, helpers.test.ts
+**Last updated:** 2026-05-06 — Test DB migrations applied (supabaseId + conversation_thread); 3 sortable-table violations fixed (units/[id], leases/[id], approvals); login.js inline styles replaced with Tailwind; codebase stats updated
 **Scope:** Code Quality, Schema Integrity, Test Coverage, Security & Auth
 **Source commit:** ed7c841 (branch: main); findings reflect state as of 2026-03-10
 **Codebase at audit time:** 46 models · 38 enums · 36 migrations · 17 workflows · 10 repositories · 372 tests / 33 suites · ~36k backend LOC · ~27k frontend LOC · 195 pages · ~146 API routes
-**Codebase current (2026-04-03):** 64 models · 55 enums · 69 migrations · 26 workflows · 24 repositories · 823 tests / 57 suites · ~62k backend LOC · ~42k frontend LOC · 275 pages · 289 API operations (224 URL paths)
-**Frontend rationalization audit:** Completed 2026-03-10 — results in [docs/FRONTEND_INVENTORY.md](FRONTEND_INVENTORY.md) (195 pages, 119/119 proxies conforming at audit time; 182/182 conforming as of 2026-04-03)
+**Codebase current (2026-05-06):** 70 models · 64 enums · 86 migrations · 29 workflows · 29 repositories · 611 tests / 67 suites · ~73k backend LOC · ~45k frontend LOC · 288 pages · 291 API operations (225 URL paths)
+**Frontend rationalization audit:** Completed 2026-03-10 — results in [docs/FRONTEND_INVENTORY.md](FRONTEND_INVENTORY.md) (195 pages, 119/119 proxies conforming at audit time; 197/197 conforming as of 2026-05-06)
 
 ## Summary
 

@@ -264,6 +264,7 @@ export default function LeaseEditorPage() {
   const sortedReconciliations = useMemo(() => clientSort(reconciliations, recSF, recSD, (r, f) => {
     if (f === "year") return r.year ?? 0;
     if (f === "status") return (r.status || "").toLowerCase();
+    if (f === "acompte") return r.totalAcomptePaidCents ?? 0;
     return "";
   }), [reconciliations, recSF, recSD]);
 
@@ -1054,7 +1055,7 @@ export default function LeaseEditorPage() {
                           <tr>
                             <SortableHeader label={t("manager:leasesId.prop.year")} field="year" sortField={recSF} sortDir={recSD} onSort={handleRecSort} />
                             <SortableHeader label={t("manager:leasesId.prop.status")} field="status" sortField={recSF} sortDir={recSD} onSort={handleRecSort} />
-                            <th className="text-right">ACOMPTE</th>
+                            <SortableHeader label="ACOMPTE" field="acompte" sortField={recSF} sortDir={recSD} onSort={handleRecSort} className="text-right" />
                             <th className="text-right">{t("manager:leasesId.col.actual")}</th>
                             <th className="text-right">{t("manager:leasesId.col.balance")}</th>
                             <th className="text-right">{t("manager:leasesId.col.action")}</th>

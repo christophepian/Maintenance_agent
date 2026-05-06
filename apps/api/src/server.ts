@@ -225,7 +225,11 @@ const server = http.createServer(async (req: AuthedRequest, res) => {
     if (!req.user) {
       const token = extractToken(req.headers["authorization"] as string | undefined);
       if (token) {
-        req.user = await resolveSupabaseToken(token);
+        // Only assign req.user if Supabase verification succeeds.
+        // If it returns null (no SUPABASE_URL or invalid token), leave req.user
+        // undefined so getAuthUser() in authz.ts can fall back to decodeToken().
+        const supabaseUser = await resolveSupabaseToken(token);
+        if (supabaseUser) req.user = supabaseUser;
       }
     }
 

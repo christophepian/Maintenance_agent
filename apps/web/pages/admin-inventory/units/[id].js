@@ -127,6 +127,7 @@ export default function UnitDetail() {
   }), [unitLeases, lsSF, lsSD]);
 
   const sortedUnitRequests = useMemo(() => clientSort(unitRequests, reqSF, reqSD, (r, f) => {
+    if (f === "requestNumber") return r.requestNumber ?? 0;
     if (f === "status") return (r.status || "").toLowerCase();
     if (f === "category") return (r.category || "").toLowerCase();
     if (f === "description") return (r.description || "").toLowerCase();
@@ -1317,7 +1318,7 @@ export default function UnitDetail() {
               <table className="data-table w-full">
                 <thead>
                   <tr>
-                    <th>#</th>
+                    <SortableHeader label="#" field="requestNumber" sortField={reqSF} sortDir={reqSD} onSort={handleReqSort} />
                     <SortableHeader label="Status" field="status" sortField={reqSF} sortDir={reqSD} onSort={handleReqSort} />
                     <SortableHeader label="Category" field="category" sortField={reqSF} sortDir={reqSD} onSort={handleReqSort} />
                     <SortableHeader label="Description" field="description" sortField={reqSF} sortDir={reqSD} onSort={handleReqSort} />
