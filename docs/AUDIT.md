@@ -1,7 +1,7 @@
 # Maintenance Agent — Project Audit
 
 **Generated:** 2026-03-10
-**Last updated:** 2026-05-06 — Test DB migrations applied (supabaseId + conversation_thread); 3 sortable-table violations fixed (units/[id], leases/[id], approvals); login.js inline styles replaced with Tailwind; codebase stats updated; ARCH-1 (service layer Prisma bypass) and ARCH-2 (repository any-types) added as tracked findings with roadmap tickets DT-120–DT-125
+**Last updated:** 2026-05-06 — Test DB migrations applied (supabaseId + conversation_thread); 3 sortable-table violations fixed (units/[id], leases/[id], approvals); login.js inline styles replaced with Tailwind; codebase stats updated; ARCH-1 (service layer Prisma bypass) tracked as DT-120–DT-124; ARCH-2 (repository any-types) resolved — 22 instances across 8 files (commit 91fc71a)
 **Scope:** Code Quality, Schema Integrity, Test Coverage, Security & Auth
 **Source commit:** ed7c841 (branch: main); findings reflect state as of 2026-03-10
 **Codebase at audit time:** 46 models · 38 enums · 36 migrations · 17 workflows · 10 repositories · 372 tests / 33 suites · ~36k backend LOC · ~27k frontend LOC · 195 pages · ~146 API routes
@@ -12,11 +12,11 @@
 
 | Area | Findings | Critical | High | Medium | Low | Resolved | Open |
 |------|----------|----------|------|--------|-----|----------|------|
-| Code Quality & Architecture | 39 | 0 | 7 | 13 | 19 | 37 | 2 |
+| Code Quality & Architecture | 39 | 0 | 7 | 13 | 19 | 38 | 1 |
 | Schema & Data Integrity | 18 | 0 | 1 | 8 | 9 | 16 | 2 |
 | Test Coverage Gaps | 17 | 0 | 7 | 9 | 1 | 16 | 1 |
 | Security & Auth | 22 | 1 | 8 | 10 | 3 | 22 | 0 |
-| **Total** | **96** | **1** | **23** | **40** | **32** | **91** | **5** |
+| **Total** | **96** | **1** | **23** | **40** | **32** | **92** | **4** |
 
 ---
 
@@ -713,4 +713,4 @@ These findings were surfaced by an external audit review of PROJECT_STATE.md. Fi
 - **Description:** 22 meaningful `: any` instances. By file: `invoiceRepository.ts` (1 — `where: any`), `leaseRepository.ts` (4 — `data: any`), `rentalApplicationRepository.ts` (3 — `data: any`), `rfpRepository.ts` (1 — `lineItems?: any`), `recommendationRepository.ts` (1 — `userDecision: any`), `rentAdjustmentRepository.ts` (1 — `calculationDetails?: any`), `strategyProfileRepository.ts` (9 — enum fields typed as any), `taxRuleRepository.ts` (2 — `citationsJson?: any`).
 - **Impact:** Bypasses Prisma generated input type validation; silent type mismatches can corrupt persisted data without compile-time detection. Violates G2/G3 (typed DTO mappers).
 - **Fix:** Replace with `Prisma.LeaseUpdateInput`, `Prisma.JsonValue`, enum literals from `@prisma/client`, etc. Self-contained one-session pass (no schema changes needed).
-- **Status:** Open — tracked as DT-125 in ROADMAP.json
+- **Status:** Resolved 2026-05-06 — DT-125 implemented. All 22 instances replaced with proper Prisma types (commit 91fc71a). tsc 0 errors, 67/67 suites, 1009/1009 tests.
