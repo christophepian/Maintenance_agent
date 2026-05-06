@@ -1,8 +1,5 @@
-const path = require('path');
-
 /** @type {import('next-i18next').UserConfig} */
 module.exports = {
-  localePath: path.resolve(__dirname, './public/locales'),
   i18n: {
     // Extend this array when DE / IT are ready: ['en', 'fr', 'de', 'it']
     locales: ['en', 'fr'],
