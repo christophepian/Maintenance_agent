@@ -9,7 +9,7 @@
  * G9: canonical include constants live here (delegated to rentalIncludes).
  */
 
-import { PrismaClient, LeaseStatus, ApplicantRole } from "@prisma/client";
+import { PrismaClient, LeaseStatus, ApplicantRole, Prisma } from "@prisma/client";
 import {
   RENTAL_APPLICATION_INCLUDE,
   RENTAL_APPLICATION_UNIT_INCLUDE,
@@ -130,7 +130,7 @@ export async function findVacantUnits(
 export async function updateApplication(
   prisma: PrismaClient,
   id: string,
-  data: any,
+  data: Prisma.RentalApplicationUpdateInput,
 ) {
   return prisma.rentalApplication.update({
     where: { id },
@@ -142,7 +142,7 @@ export async function updateApplication(
 export async function updateApplicationUnit(
   prisma: PrismaClient,
   id: string,
-  data: any,
+  data: Prisma.RentalApplicationUnitUpdateInput,
 ) {
   return prisma.rentalApplicationUnit.update({
     where: { id },
@@ -154,7 +154,7 @@ export async function updateApplicationUnit(
 export async function updateApplicationUnitWithInclude(
   prisma: PrismaClient,
   id: string,
-  data: any,
+  data: Prisma.RentalApplicationUnitUpdateInput,
 ) {
   return prisma.rentalApplicationUnit.update({
     where: { id },

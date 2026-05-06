@@ -8,7 +8,7 @@
  * G9: canonical include constants live here.
  */
 
-import { PrismaClient, AssetType, TaxClassification } from "@prisma/client";
+import { PrismaClient, AssetType, TaxClassification, Prisma } from "@prisma/client";
 import { normalizeTopicKey } from "../utils/topicKey";
 
 // ─── Canonical Includes (G9) ───────────────────────────────────
@@ -47,7 +47,7 @@ export interface CreateTaxRuleVersionInput {
   deductiblePct?: number;
   confidence?: number;
   notes?: string | null;
-  citationsJson?: any;
+  citationsJson?: Prisma.JsonValue;
 }
 
 export interface CreateReplacementBenchmarkInput {
@@ -109,8 +109,7 @@ export async function findAllTaxRules(
   prisma: PrismaClient,
   filters: { canton?: string; assetType?: AssetType } = {},
 ) {
-  const where: any = { isActive: true };
-  if (filters.canton !== undefined) where.canton = filters.canton;
+  const where: Prisma.TaxRuleWhereInput = { isActive: true };
   if (filters.assetType !== undefined) where.assetType = filters.assetType;
 
   return prisma.taxRule.findMany({
@@ -218,8 +217,7 @@ export async function findAllBenchmarks(
   prisma: PrismaClient,
   filters: { assetType?: AssetType } = {},
 ) {
-  const where: any = { isActive: true };
-  if (filters.assetType) where.assetType = filters.assetType;
+  const where: Prisma.ReplacementBenchmarkWhereInput = { isActive: true };
 
   return prisma.replacementBenchmark.findMany({
     where,
@@ -275,7 +273,7 @@ export type TaxRuleWithLatestVersion = {
     deductiblePct: number;
     confidence: number;
     notes: string | null;
-    citationsJson: any;
+    citationsJson: Prisma.JsonValue | null;
     createdAt: Date;
   }>;
 };

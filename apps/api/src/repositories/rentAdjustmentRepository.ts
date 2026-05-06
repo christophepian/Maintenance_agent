@@ -88,7 +88,7 @@ export async function createRentAdjustment(
     cpiNewIndex?: number;
     referenceRateOld?: string;
     referenceRateNew?: string;
-    calculationDetails?: any;
+    calculationDetails?: Prisma.JsonValue;
   },
 ): Promise<RentAdjustmentWithLease> {
   return prisma.rentAdjustment.create({

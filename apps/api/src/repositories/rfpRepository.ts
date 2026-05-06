@@ -222,7 +222,7 @@ export interface CreateQuoteData {
   vatIncluded: boolean;
   estimatedDurationDays?: number | null;
   earliestAvailability?: Date | null;
-  lineItems?: any;
+  lineItems?: Prisma.JsonValue;
   workPlan?: string | null;
   assumptions?: string | null;
   validUntil?: Date | null;

@@ -9,7 +9,7 @@
  * G9: canonical include constants live here.
  */
 
-import { PrismaClient, InvoiceStatus } from "@prisma/client";
+import { PrismaClient, InvoiceStatus, Prisma, ExpenseCategory } from "@prisma/client";
 
 // ─── Canonical Includes ────────────────────────────────────────
 
@@ -95,15 +95,15 @@ export interface ListInvoiceOpts {
 export async function findInvoicesByOrg(prisma: PrismaClient, opts: ListInvoiceOpts) {
   const useSummary = opts.view === "summary";
 
-  const where: any = {
+  const where: Prisma.InvoiceWhereInput = {
     orgId: opts.orgId,
     ...(opts.jobId && { jobId: opts.jobId }),
-    ...(opts.status && { status: opts.status }),
-    ...(opts.expenseCategory && { expenseCategory: opts.expenseCategory }),
+    ...(opts.status && { status: opts.status as InvoiceStatus }),
+    ...(opts.expenseCategory && { expenseCategory: opts.expenseCategory as ExpenseCategory }),
   };
 
   // Contractor and building filters both traverse the job relation
-  const jobFilter: any = {};
+  const jobFilter: Prisma.JobWhereInput = {};
   if (opts.contractorId) jobFilter.contractorId = opts.contractorId;
   if (opts.buildingId) {
     jobFilter.request = { unit: { buildingId: opts.buildingId } };
