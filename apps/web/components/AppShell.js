@@ -66,20 +66,22 @@ export default function AppShell({ role: roleProp, children }) {
         setAuthToken(session.access_token);
         const meta = session.user?.app_metadata ?? {};
         setIsAdmin(meta.accessLevel === "ADMIN");
+        // Only use appRole as the default when nothing is stored locally.
+        // Once the user has switched roles via the switcher, localStorage wins.
+        if (!getStoredRole() && meta.appRole) {
+          setRole(meta.appRole);
+          localStorage.setItem("role", meta.appRole);
+        }
       }
     });
 
-    // Subscribe to Supabase auth state changes to keep the localStorage token
-    // fresh whenever Supabase silently refreshes the access_token.
+    // Subscribe to Supabase auth state changes to keep the token fresh on
+    // silent refreshes. Never overwrite the role — the switcher owns that.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         if (session) {
           setAuthToken(session.access_token);
           const meta = session.user?.app_metadata ?? {};
-          if (meta.appRole) {
-            setRole(meta.appRole);
-            localStorage.setItem("role", meta.appRole);
-          }
           setIsAdmin(meta.accessLevel === "ADMIN");
         } else {
           // Session ended — clear token but keep role in state so the UI
