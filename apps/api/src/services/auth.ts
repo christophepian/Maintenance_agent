@@ -37,6 +37,9 @@ function getJwks() {
       new URL(`${SUPABASE_URL}/auth/v1/.well-known/jwks.json`)
     );
   }
+  if (!_jwks) {
+    console.error("[auth] SUPABASE_URL is not set — cannot verify Supabase JWTs");
+  }
   return _jwks;
 }
 
@@ -61,7 +64,8 @@ export async function resolveSupabaseToken(token: string): Promise<TokenPayload 
       supabaseId: payload.sub,
       accessLevel: meta.accessLevel,
     };
-  } catch {
+  } catch (err) {
+    console.error("[auth] resolveSupabaseToken failed:", err instanceof Error ? err.message : String(err));
     return null;
   }
 }
