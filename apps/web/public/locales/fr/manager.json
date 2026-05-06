@@ -1017,6 +1017,12 @@
       "scope": "Portée",
       "usefulLife": "Durée de vie",
       "replaceCost": "Coût de remplacement"
+    },
+    "tabs": {
+      "buildings": "Immeubles",
+      "vacancies": "Vacances",
+      "assets": "Équipements",
+      "decisions": "Décisions de maintenance"
     }
   },
   "leasesId": {

@@ -151,12 +151,14 @@ function buildAssetModelColumns(t) {
 ];
 }
 
-const INVENTORY_TABS = [
-  { key: "BUILDINGS", label: "Buildings" },
-  { key: "VACANCIES", label: "Vacancies", href: "/manager/vacancies" },
-  { key: "ASSETS", label: "Assets" },
-  { key: "DECISIONS", label: "Maintenance Decisions" },
-];
+function buildInventoryTabs(t) {
+  return [
+    { key: "BUILDINGS", label: t("manager:inventory.tabs.buildings") },
+    { key: "VACANCIES", label: t("manager:inventory.tabs.vacancies"), href: "/manager/vacancies" },
+    { key: "ASSETS", label: t("manager:inventory.tabs.assets") },
+    { key: "DECISIONS", label: t("manager:inventory.tabs.decisions") },
+  ];
+}
 
 const TAB_KEYS = ['buildings', 'assets', 'decisions'];
 
@@ -190,6 +192,7 @@ export default function ManagerInventoryPage() {
   const { t } = useTranslation("manager");
   const assetModelColumns = useMemo(() => buildAssetModelColumns(t), [t]);
   const buildingColumns = useMemo(() => buildBuildingColumns(t), [t]);
+  const INVENTORY_TABS = useMemo(() => buildInventoryTabs(t), [t]);
   const router = useRouter();
   const activeTab = router.isReady ? (Math.max(0, TAB_KEYS.indexOf(router.query.tab)) || 0) : 0;
   const setActiveTab = useCallback((index) => {

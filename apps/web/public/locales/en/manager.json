@@ -1017,6 +1017,12 @@
       "scope": "Scope",
       "usefulLife": "Useful Life",
       "replaceCost": "Replace Cost"
+    },
+    "tabs": {
+      "buildings": "Buildings",
+      "vacancies": "Vacancies",
+      "assets": "Assets",
+      "decisions": "Maintenance Decisions"
     }
   },
   "leasesId": {
