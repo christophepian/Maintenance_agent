@@ -24,6 +24,7 @@ import {
 } from "../repositories/captureSessionRepository";
 import type { CaptureSessionWithInclude } from "../repositories/captureSessionRepository";
 import { CaptureSessionStatus } from "@prisma/client";
+import { createAttachment } from "../repositories/maintenanceAttachmentRepo";
 
 /* ──────────────────────────────────────────────────────────
    Helpers
@@ -329,14 +330,13 @@ export async function completeAndIngest(
             : fileName.match(/\.png$/i) ? "image/png"
             : "image/jpeg";
 
-          await prisma.maintenanceAttachment.create({
-            data: {
-              requestId: payload.requestId,
-              fileName,
-              mimeType,
-              sizeBytes: fileBuffer.length,
-              storageKey: fileUrl,
-            },
+          await createAttachment(prisma, {
+            requestId: payload.requestId,
+            fileName,
+            mimeType,
+            storageKey: fileUrl,
+            sizeBytes: fileBuffer.length,
+            uploadedBy: null,
           });
         } catch (attachErr: any) {
           console.error(`[CAPTURE-SESSION] Attach failed for ${fileUrl}:`, attachErr.message);

@@ -19,6 +19,10 @@ import { createInvoice, type CreateInvoiceParams, type InvoiceDTO } from "./invo
 import { storage } from "../storage/attachments";
 import type { ScanResult } from "./documentScanner";
 import * as crypto from "crypto";
+import {
+  findBillingEntitiesByOrg,
+  findOrgBillingEntity,
+} from "../repositories/billingEntityRepository";
 
 /* ──────────────────────────────────────────────────────────
    Public interface
@@ -238,10 +242,7 @@ async function matchBillingEntity(
   // 1. If we have a vendor name, try to find a billing entity with a matching name
   if (vendorName && vendorName.trim()) {
     const normalised = vendorName.trim().toLowerCase();
-    const allEntities = await prisma.billingEntity.findMany({
-      where: { orgId },
-      select: { id: true, name: true, type: true },
-    });
+    const allEntities = await findBillingEntitiesByOrg(prisma, orgId);
 
     // Exact match first
     const exact = allEntities.find(
@@ -259,10 +260,7 @@ async function matchBillingEntity(
   }
 
   // 2. Fallback: use the ORG-type billing entity
-  const orgEntity = await prisma.billingEntity.findFirst({
-    where: { orgId, type: "ORG" },
-    select: { id: true },
-  });
+  const orgEntity = await findOrgBillingEntity(prisma, orgId);
   return orgEntity?.id;
 }
 

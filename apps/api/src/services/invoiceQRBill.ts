@@ -1,4 +1,5 @@
 import prisma from './prismaClient';
+import { findInvoiceWithIssuerAndJob } from '../repositories/invoiceRepository';
 import {
   SwissQRBillPayload,
   ReferenceType,
@@ -28,13 +29,7 @@ export interface InvoiceQRBillDTO {
  */
 export async function generateInvoiceQRBill(invoiceId: string, orgId: string): Promise<InvoiceQRBillDTO> {
   // Fetch invoice with relationships
-  const invoice = await prisma.invoice.findUnique({
-    where: { id: invoiceId },
-    include: {
-      issuer: true,
-      job: true,
-    },
-  });
+  const invoice = await findInvoiceWithIssuerAndJob(prisma, invoiceId);
 
   if (!invoice) {
     throw new Error(`Invoice ${invoiceId} not found`);

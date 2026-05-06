@@ -278,3 +278,91 @@ export async function listInvoicesByLease(
     orderBy: { createdAt: "desc" },
   });
 }
+
+// ─── Rent Reduction / Legal Engine Lease Lookups ──────────────
+
+/** Select fields needed for rent reduction calculation. */
+const LEASE_RENT_SELECT = {
+  id: true,
+  status: true,
+  netRentChf: true,
+  startDate: true,
+  endDate: true,
+} as const;
+
+/**
+ * Load a lease by ID with only the fields needed for rent reduction.
+ */
+export async function findLeaseForRentReduction(
+  prisma: PrismaClient,
+  leaseId: string,
+) {
+  return prisma.lease.findUnique({
+    where: { id: leaseId },
+    select: LEASE_RENT_SELECT,
+  });
+}
+
+/**
+ * Find the most recent active/signed lease for a unit.
+ * Returns only the lease id.
+ */
+export async function findActiveLeaseForUnit(
+  prisma: PrismaClient,
+  unitId: string,
+) {
+  return prisma.lease.findFirst({
+    where: { unitId, status: { in: ["ACTIVE", "SIGNED"] } },
+    orderBy: { startDate: "desc" },
+    select: { id: true },
+  });
+}
+
+/**
+ * Find active leases for a building (via unit relation).
+ * Returns rentTotalChf for income projection fallback.
+ */
+export async function findActiveLeasesByBuilding(
+  prisma: PrismaClient,
+  buildingId: string,
+) {
+  return prisma.lease.findMany({
+    where: { unit: { buildingId }, status: "ACTIVE" },
+    select: { rentTotalChf: true },
+  });
+}
+
+// ─── Tenant lookup with occupancies (tenant portal) ───────────
+
+/** Include for tenant session — occupancies with unit → building + assets. */
+export const TENANT_SESSION_INCLUDE = {
+  occupancies: {
+    include: {
+      unit: {
+        include: {
+          building: true,
+          assets: {
+            include: {
+              assetModel: true,
+            },
+          },
+        },
+      },
+    },
+  },
+} as const;
+
+/**
+ * Find a tenant by org + phone with full occupancy context for portal session.
+ */
+export async function findTenantByPhoneWithOccupancies(
+  prisma: PrismaClient,
+  orgId: string,
+  phone: string,
+) {
+  return prisma.tenant.findUnique({
+    where: { orgId_phone: { orgId, phone } },
+    include: TENANT_SESSION_INCLUDE,
+  });
+}
+

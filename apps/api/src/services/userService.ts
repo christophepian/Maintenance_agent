@@ -9,6 +9,7 @@
 import * as bcrypt from "bcryptjs";
 import { PrismaClient, Role } from "@prisma/client";
 import { encodeToken } from "./auth";
+import { createUser, findUserByOrgEmail } from "../repositories/userRepository";
 
 // ─── DTOs ──────────────────────────────────────────────────────
 
@@ -33,14 +34,12 @@ export async function registerUser(
   input: { email: string; password: string; name: string; role?: string },
 ): Promise<AuthResult> {
   const passwordHash = await bcrypt.hash(input.password, 10);
-  const user = await prisma.user.create({
-    data: {
-      orgId,
-      email: input.email,
-      name: input.name,
-      passwordHash,
-      role: (input.role || "TENANT") as Role,
-    },
+  const user = await createUser(prisma, {
+    orgId,
+    email: input.email,
+    name: input.name,
+    passwordHash,
+    role: (input.role || "TENANT") as Role,
   });
 
   const token = encodeToken({
@@ -69,9 +68,7 @@ export async function authenticateUser(
   orgId: string,
   input: { email: string; password: string },
 ): Promise<AuthResult | null> {
-  const user = await prisma.user.findUnique({
-    where: { user_org_email_unique: { orgId, email: input.email } },
-  });
+  const user = await findUserByOrgEmail(prisma, orgId, input.email);
 
   if (!user || !user.passwordHash) return null;
 

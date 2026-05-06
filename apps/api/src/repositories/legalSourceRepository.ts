@@ -8,7 +8,7 @@
  * G9: canonical include constants live here.
  */
 
-import { PrismaClient, LegalSourceStatus, LegalSourceScope } from "@prisma/client";
+import { PrismaClient, LegalSourceStatus, LegalSourceScope, Prisma } from "@prisma/client";
 
 // ─── Canonical Includes (G9) ───────────────────────────────────
 
@@ -141,3 +141,65 @@ export async function hasLinkedData(
   ]);
   return varCount > 0 || depCount > 0;
 }
+
+// ─── LegalRule lookups (defect matcher) ───────────────────────
+
+/** Include for rent-reduction rule queries — latest active version. */
+export const LEGAL_RULE_ACTIVE_VERSION_INCLUDE = {
+  versions: {
+    where: {
+      effectiveFrom: { lte: new Date() },
+      OR: [{ effectiveTo: null }, { effectiveTo: { gte: new Date() } }],
+    },
+    orderBy: { effectiveFrom: "desc" as const },
+    take: 1,
+  },
+} as const;
+
+/**
+ * Find active legal rules for rent-reduction evaluation.
+ * Filters by authority, jurisdiction, optional canton.
+ */
+export async function findRentReductionRules(
+  prisma: PrismaClient,
+  now: Date,
+  canton?: string | null,
+) {
+  return prisma.legalRule.findMany({
+    where: {
+      isActive: true,
+      authority: "INDUSTRY_STANDARD",
+      jurisdiction: "CH",
+      OR: [
+        { canton: null },
+        ...(canton ? [{ canton }] : []),
+      ],
+    },
+    include: {
+      versions: {
+        where: {
+          effectiveFrom: { lte: now },
+          OR: [
+            { effectiveTo: null },
+            { effectiveTo: { gte: now } },
+          ],
+        },
+        orderBy: { effectiveFrom: "desc" as const },
+        take: 1,
+      },
+    },
+  });
+}
+
+// ─── LegalEvaluationLog ───────────────────────────────────────
+
+/**
+ * Create a new legal evaluation log entry.
+ */
+export async function createLegalEvaluationLog(
+  prisma: PrismaClient,
+  data: Prisma.LegalEvaluationLogUncheckedCreateInput,
+) {
+  return prisma.legalEvaluationLog.create({ data });
+}
+

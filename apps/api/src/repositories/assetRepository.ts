@@ -406,3 +406,37 @@ export async function createAssetSimple(
     include: ASSET_FULL_INCLUDE,
   });
 }
+
+// ─── Additional lookups ────────────────────────────────────────
+
+/**
+ * Count assets linked to an asset model.
+ */
+export async function countAssetsByModel(
+  prisma: PrismaClient,
+  assetModelId: string,
+): Promise<number> {
+  return prisma.asset.count({ where: { assetModelId } });
+}
+
+/**
+ * Find REPLACEMENT interventions for a given asset type + topic within an org.
+ * Used by replacementCostService to derive historical cost ranges.
+ */
+export async function findReplacementInterventionsByTypeAndTopic(
+  prisma: PrismaClient,
+  orgId: string,
+  assetType: AssetType,
+  topicKey: string,
+) {
+  return prisma.assetIntervention.findMany({
+    where: {
+      type: "REPLACEMENT",
+      costChf: { not: null },
+      asset: { orgId, type: assetType, topic: topicKey },
+    },
+    select: { costChf: true },
+    orderBy: { costChf: "asc" },
+  });
+}
+

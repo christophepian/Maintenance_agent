@@ -25,6 +25,8 @@ import {
 import {
   computeTimingPairSavings,
 } from "./swissTaxBrackets";
+import { findSnapshotsByBuildingAndPeriod } from "../repositories/buildingFinancialSnapshotRepository";
+import { findActiveLeasesByBuilding } from "../repositories/leaseRepository";
 
 // ─── Types ─────────────────────────────────────────────────────
 
@@ -472,16 +474,13 @@ async function computeTimingRecommendations(
     const effectiveRate = ownerRate ?? DEFAULT_MARGINAL_TAX_RATE_PCT;
 
     // Get projected income per year for this building from financial snapshots
-    const snapshots = await prisma.buildingFinancialSnapshot.findMany({
-      where: {
-        orgId,
-        buildingId: bp.buildingId,
-        periodStart: { gte: new Date(`${fromYear}-01-01`) },
-        periodEnd: { lte: new Date(`${toYear + 1}-01-01`) },
-      },
-      select: { periodStart: true, projectedIncomeCents: true },
-      orderBy: { periodStart: "asc" },
-    });
+    const snapshots = await findSnapshotsByBuildingAndPeriod(
+      prisma,
+      orgId,
+      bp.buildingId,
+      new Date(`${fromYear}-01-01`),
+      new Date(`${toYear + 1}-01-01`),
+    );
 
     // Aggregate projected income per year
     const yearlyIncome = new Map<number, number>();
@@ -492,13 +491,7 @@ async function computeTimingRecommendations(
 
     // If no income data at all, use current leases as proxy
     if (yearlyIncome.size === 0) {
-      const leases = await prisma.lease.findMany({
-        where: {
-          unit: { buildingId: bp.buildingId },
-          status: "ACTIVE",
-        },
-        select: { rentTotalChf: true },
-      });
+      const leases = await findActiveLeasesByBuilding(prisma, bp.buildingId);
       const annualRent = leases.reduce((s, l) => s + (l.rentTotalChf || 0) * 12 * 100, 0);
       if (annualRent > 0) {
         for (let y = fromYear; y <= toYear; y++) {

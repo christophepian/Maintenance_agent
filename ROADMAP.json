@@ -7019,7 +7019,7 @@
       "goal": "Eliminate direct prisma.* calls from 15 small service files by routing each call through an existing or new repository function. These files each have only 1-2 raw Prisma calls making them fast, low-risk wins that establish the pattern for subsequent slices.",
       "phase": "P0",
       "order": 120,
-      "status": "ready",
+      "status": "done",
       "product_area": "architecture",
       "parent_feature_id": null,
       "depends_on": [],

@@ -380,3 +380,100 @@ export async function findRequestForMaintenanceDecision(
     select: REQUEST_MAINTENANCE_DECISION_SELECT,
   });
 }
+
+// ─── RFP / Legal Engine Includes ──────────────────────────────
+
+/** Include for RFP auto-routing: unit → building → config. */
+export const REQUEST_WITH_UNIT_BUILDING_CONFIG_INCLUDE = {
+  unit: {
+    include: {
+      building: {
+        include: { config: true },
+      },
+    },
+  },
+} as const;
+
+/** Include for legal decision engine analysis. */
+export const REQUEST_LEGAL_DECISION_INCLUDE = {
+  unit: {
+    select: {
+      id: true,
+      unitNumber: true,
+      buildingId: true,
+      orgId: true,
+      building: {
+        select: {
+          id: true,
+          name: true,
+          address: true,
+          canton: true,
+          cantonDerivedAt: true,
+          orgId: true,
+          config: {
+            select: {
+              rfpDefaultInviteCount: true,
+            },
+          },
+        },
+      },
+    },
+  },
+  asset: {
+    select: {
+      id: true,
+      name: true,
+      type: true,
+      category: true,
+      topic: true,
+      serialNumber: true,
+      brand: true,
+      modelNumber: true,
+      installedAt: true,
+      notes: true,
+      isActive: true,
+      lastRenovatedAt: true,
+      assetModel: {
+        select: {
+          id: true,
+          manufacturer: true,
+          model: true,
+          category: true,
+        },
+      },
+    },
+  },
+  tenant: {
+    select: {
+      id: true,
+      name: true,
+      orgId: true,
+    },
+  },
+} as const;
+
+/**
+ * Load a request with unit → building → config for RFP auto-routing.
+ */
+export async function findRequestWithUnitBuildingConfig(
+  prisma: PrismaClient,
+  id: string,
+) {
+  return prisma.request.findUnique({
+    where: { id },
+    include: REQUEST_WITH_UNIT_BUILDING_CONFIG_INCLUDE,
+  });
+}
+
+/**
+ * Load a request with full legal decision context.
+ */
+export async function findRequestForLegalDecision(
+  prisma: PrismaClient,
+  id: string,
+) {
+  return prisma.request.findUnique({
+    where: { id },
+    include: REQUEST_LEGAL_DECISION_INCLUDE,
+  });
+}

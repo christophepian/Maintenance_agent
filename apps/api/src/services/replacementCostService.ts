@@ -13,6 +13,7 @@
 import { PrismaClient, AssetType } from "@prisma/client";
 import { normalizeTopicKey } from "../utils/topicKey";
 import * as taxRuleRepo from "../repositories/taxRuleRepository";
+import { findReplacementInterventionsByTypeAndTopic } from "../repositories/assetRepository";
 
 // ─── Types ─────────────────────────────────────────────────────
 
@@ -48,19 +49,9 @@ async function getHistoricalReplacementCosts(
   const topicKey = normalizeTopicKey(topic);
 
   // Find all REPLACEMENT interventions for this asset type+topic in the org
-  const interventions = await prisma.assetIntervention.findMany({
-    where: {
-      type: "REPLACEMENT",
-      costChf: { not: null },
-      asset: {
-        orgId,
-        type: assetType,
-        topic: topicKey,
-      },
-    },
-    select: { costChf: true },
-    orderBy: { costChf: "asc" },
-  });
+  const interventions = await findReplacementInterventionsByTypeAndTopic(
+    prisma, orgId, assetType, topicKey,
+  );
 
   if (interventions.length === 0) return null;
 

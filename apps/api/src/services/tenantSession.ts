@@ -1,5 +1,6 @@
 import type { PrismaClient } from "@prisma/client";
 import { normalizePhoneToE164 } from "../utils/phoneNormalization";
+import { findTenantByPhoneWithOccupancies } from "../repositories/leaseRepository";
 
 export type TenantSessionResult = {
   tenant: {
@@ -45,30 +46,7 @@ export async function getTenantSession(
     throw new Error("Invalid phone number format");
   }
 
-  const tenant = await prisma.tenant.findUnique({
-    where: {
-      orgId_phone: {
-        orgId,
-        phone: normalizedPhone,
-      },
-    },
-    include: {
-      occupancies: {
-        include: {
-          unit: {
-            include: {
-              building: true,
-              assets: {
-                include: {
-                  assetModel: true,
-                },
-              },
-            },
-          },
-        },
-      },
-    },
-  });
+  const tenant = await findTenantByPhoneWithOccupancies(prisma, orgId, normalizedPhone);
 
   if (!tenant) return null;
 

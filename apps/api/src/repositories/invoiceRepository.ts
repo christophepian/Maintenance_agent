@@ -125,3 +125,84 @@ export async function findInvoicesByOrg(prisma: PrismaClient, opts: ListInvoiceO
     include: useSummary ? INVOICE_SUMMARY_INCLUDE : INVOICE_FULL_INCLUDE,
   });
 }
+
+// ─── Overdue + PDF / QR Lookups ───────────────────────────────
+
+/** Select for overdue invoice scanning — includes nested lease/unit/building. */
+export const INVOICE_OVERDUE_SELECT = {
+  id: true,
+  orgId: true,
+  invoiceNumber: true,
+  amount: true,
+  totalAmount: true,
+  dueDate: true,
+  recipientName: true,
+  lease: {
+    select: {
+      id: true,
+      tenantName: true,
+      tenantEmail: true,
+      unit: {
+        select: {
+          unitNumber: true,
+          building: { select: { id: true, name: true } },
+        },
+      },
+    },
+  },
+} as const;
+
+/** Include for QR-bill generation — issuer + job. */
+export const INVOICE_QR_INCLUDE = {
+  issuer: true,
+  job: true,
+} as const;
+
+/** Include for PDF generation — line items + issuer. */
+export const INVOICE_PDF_INCLUDE = {
+  lineItems: true,
+  issuer: true,
+} as const;
+
+/**
+ * Find invoices overdue by a given cutoff date.
+ */
+export async function findOverdueInvoices(
+  prisma: PrismaClient,
+  cutoff: Date,
+) {
+  return prisma.invoice.findMany({
+    where: {
+      dueDate: { lt: cutoff },
+      status: { in: ["ISSUED", "APPROVED"] },
+    },
+    select: INVOICE_OVERDUE_SELECT,
+  });
+}
+
+/**
+ * Fetch invoice with issuer and job for QR-bill generation.
+ */
+export async function findInvoiceWithIssuerAndJob(
+  prisma: PrismaClient,
+  id: string,
+) {
+  return prisma.invoice.findUnique({
+    where: { id },
+    include: INVOICE_QR_INCLUDE,
+  });
+}
+
+/**
+ * Fetch invoice with line items and issuer for PDF generation.
+ */
+export async function findInvoiceWithLineItemsAndIssuer(
+  prisma: PrismaClient,
+  id: string,
+) {
+  return prisma.invoice.findUnique({
+    where: { id },
+    include: INVOICE_PDF_INCLUDE,
+  });
+}
+
