@@ -35,6 +35,12 @@ _archive
 !_archive/audits/**
 !_archive/docs/
 !_archive/docs/**
+!_archive/docs-legacy/
+!_archive/docs-legacy/**
+!_archive/implementation-plans/
+!_archive/implementation-plans/**
+!_archive/ocr-assets/
+!_archive/ocr-assets/**
 !_archive/scripts/
 !_archive/scripts/**
 !_archive/test-pages/
