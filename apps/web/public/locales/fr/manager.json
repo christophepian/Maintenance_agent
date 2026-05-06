@@ -1170,7 +1170,7 @@
     },
     "tabs": {
       "buildings": "Immeubles",
-      "vacancies": "Vacances",
+      "vacancies": "Postes vacants",
       "assets": "Équipements",
       "decisions": "Décisions de maintenance"
     }
@@ -2102,34 +2102,33 @@
   },
   "vacanciesIndex": {
     "col": {
-      "applications": "Applications",
+      "applications": "Candidatures",
       "action": "Action"
     },
     "heading": {
-      "vacantUnitsOpenForApplications": "Vacant Units — Open for Applications"
+      "vacantUnitsOpenForApplications": "Unités vacantes — Ouvertes aux candidatures"
     },
     "title": {
-      "inventory": "Inventory"
+      "inventory": "Inventaire"
     },
     "text": {
-      "noLeaseTemplateReady": "No lease — template ready",
-      "noLeaseTemplateCreateOneFirst": "No lease template — create one first",
+      "noLeaseTemplateReady": "Pas de bail — modèle prêt",
+      "noLeaseTemplateCreateOneFirst": "Pas de modèle de bail — créez-en un d'abord",
       "buildings": "Immeubles",
-      "vacancies": "Vacancies",
+      "vacancies": "Postes vacants",
       "assets": "Actifs",
-      "maintenanceDecisions": "Décision de maintenances",
-      "depreciation": "Dépréciation",
-      "loadingSelections": "Loading selections…",
-      "noActiveTenantSelections": "No active tenant selections.",
+      "maintenanceDecisions": "Décisions de maintenance",
+      "loadingSelections": "Chargement des sélections…",
+      "noActiveTenantSelections": "Aucune sélection de locataire active.",
       "loading": "Chargement…",
-      "noVacantUnitsAtThisTime": "No vacant units at this time."
+      "noVacantUnitsAtThisTime": "Aucune unité vacante pour le moment."
     },
     "prop": {
       "unit": "Unité",
       "floor": "Étage",
-      "buildingsUnitsAssetsAndDepreciationSchedules": "Immeubles, units, assets and depreciation schedules.",
+      "buildingsUnitsAssetsAndDepreciationSchedules": "Immeubles, unités, actifs et programmes d'amortissement.",
       "building": "Immeuble",
-      "selectedTenant": "Selected Locataire",
+      "selectedTenant": "Locataire sélectionné",
       "status": "Statut",
       "lease": "Bail",
       "deadline": "Échéance"
@@ -2358,11 +2357,11 @@
   },
   "vacanciesUnitidApplications": {
     "text": {
-      "vacancies": "← Vacancies",
+      "vacancies": "← Postes vacants",
       "summary": "Résumé",
-      "fullDetail": "Full Detail",
+      "fullDetail": "Détail complet",
       "loading": "Chargement…",
-      "noApplicationsForThisUnitYet": "No applications for this unit yet.",
+      "noApplicationsForThisUnitYet": "Aucune candidature pour cette unité pour le moment.",
       "disqualified": "Disqualifié",
       "override": "✓ Remplacement",
       "view": "Voir",
