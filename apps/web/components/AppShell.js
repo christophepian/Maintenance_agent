@@ -108,17 +108,18 @@ export default function AppShell({ role: roleProp, children }) {
   const showHubBar = role === "MANAGER";
 
   return (
-    <div
-      className="min-h-screen md:grid md:grid-cols-[260px_1fr] bg-white text-slate-900 font-sans overflow-hidden"
-      style={showHubBar ? { paddingTop: 36 } : undefined}
-    >
+    <>
       {showHubBar && <HubBar />}
-      <a
-        href="#main-content"
-        className="sr-only focus:not-sr-only focus:fixed focus:top-10 focus:left-2 focus:z-50 focus:rounded focus:bg-white focus:px-4 focus:py-2 focus:shadow-lg focus:ring-2 focus:ring-blue-500"
+      <div
+        className="min-h-screen md:grid md:grid-cols-[260px_1fr] bg-white text-slate-900 font-sans overflow-hidden"
+        style={showHubBar ? { paddingTop: 36 } : undefined}
       >
-        Skip to main content
-      </a>
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-10 focus:left-2 focus:z-50 focus:rounded focus:bg-white focus:px-4 focus:py-2 focus:shadow-lg focus:ring-2 focus:ring-blue-500"
+        >
+          Skip to main content
+        </a>
 
       <aside
         className="hidden md:flex md:flex-col border-r border-slate-200 px-4 py-5 bg-slate-100"
@@ -192,5 +193,6 @@ export default function AppShell({ role: roleProp, children }) {
       {/* Mobile bottom navigation */}
       <BottomNav role={role} />
     </div>
+    </>
   );
 }
