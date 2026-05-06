@@ -203,3 +203,101 @@ export async function createLegalEvaluationLog(
   return prisma.legalEvaluationLog.create({ data });
 }
 
+// ─── DepreciationStandard ─────────────────────────────────────
+
+/** Find a single depreciation standard by composite fields. */
+export async function findDepreciationStandard(
+  prisma: PrismaClient,
+  where: Prisma.DepreciationStandardWhereInput,
+) {
+  return prisma.depreciationStandard.findFirst({ where });
+}
+
+/** Update a depreciation standard by ID. */
+export async function updateDepreciationStandardById(
+  prisma: PrismaClient,
+  id: string,
+  data: Prisma.DepreciationStandardUncheckedUpdateInput,
+) {
+  return prisma.depreciationStandard.update({ where: { id }, data });
+}
+
+/** Create a new depreciation standard record. */
+export async function createDepreciationStandardRecord(
+  prisma: PrismaClient,
+  data: Prisma.DepreciationStandardUncheckedCreateInput,
+) {
+  return prisma.depreciationStandard.create({ data });
+}
+
+// ─── LegalRule ────────────────────────────────────────────────
+
+/** Upsert a legal rule by unique key. */
+export async function upsertLegalRule(
+  prisma: PrismaClient,
+  key: string,
+  create: Prisma.LegalRuleUncheckedCreateInput,
+  update: Prisma.LegalRuleUncheckedUpdateInput,
+) {
+  return prisma.legalRule.upsert({ where: { key }, create, update });
+}
+
+/** Find a single legal rule version by composite fields. */
+export async function findLegalRuleVersion(
+  prisma: PrismaClient,
+  where: Prisma.LegalRuleVersionWhereInput,
+) {
+  return prisma.legalRuleVersion.findFirst({ where });
+}
+
+/** Create a new legal rule version record. */
+export async function createLegalRuleVersionRecord(
+  prisma: PrismaClient,
+  data: Prisma.LegalRuleVersionUncheckedCreateInput,
+) {
+  return prisma.legalRuleVersion.create({ data });
+}
+
+// ─── LegalVariable / LegalVariableVersion ────────────────────
+
+/** Find a single legal variable by key+jurisdiction. */
+export async function findLegalVariable(
+  prisma: PrismaClient,
+  where: Prisma.LegalVariableWhereInput,
+) {
+  return prisma.legalVariable.findFirst({ where });
+}
+
+/** Create a new legal variable record. */
+export async function createLegalVariableRecord(
+  prisma: PrismaClient,
+  data: Prisma.LegalVariableUncheckedCreateInput,
+) {
+  return prisma.legalVariable.create({ data });
+}
+
+/** Find a single legal variable version by variableId+effectiveFrom. */
+export async function findLegalVariableVersion(
+  prisma: PrismaClient,
+  where: Prisma.LegalVariableVersionWhereInput,
+) {
+  return prisma.legalVariableVersion.findFirst({ where });
+}
+
+/** Create a new legal variable version record. */
+export async function createLegalVariableVersionRecord(
+  prisma: PrismaClient,
+  data: Prisma.LegalVariableVersionUncheckedCreateInput,
+) {
+  return prisma.legalVariableVersion.create({ data });
+}
+
+/** Update a legal source status by ID. */
+export async function updateLegalSourceById(
+  prisma: PrismaClient,
+  id: string,
+  data: Prisma.LegalSourceUncheckedUpdateInput,
+) {
+  return prisma.legalSource.update({ where: { id }, data });
+}
+

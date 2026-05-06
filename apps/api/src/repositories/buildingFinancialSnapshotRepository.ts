@@ -18,6 +18,66 @@ export const BUILDING_FINANCIAL_SNAPSHOT_INCLUDE = {} as const;
  * Find financial snapshots for a building within a date range.
  * Used by capex projection for income estimation.
  */
+/** Find a single snapshot by exact period key. */
+export async function findBuildingFinancialSnapshotByPeriod(
+  prisma: PrismaClient,
+  orgId: string,
+  buildingId: string,
+  periodStart: Date,
+  periodEnd: Date,
+) {
+  return prisma.buildingFinancialSnapshot.findUnique({
+    where: {
+      orgId_buildingId_periodStart_periodEnd: {
+        orgId,
+        buildingId,
+        periodStart,
+        periodEnd,
+      },
+    },
+  });
+}
+
+/** Upsert a building financial snapshot. */
+export async function upsertBuildingFinancialSnapshot(
+  prisma: PrismaClient,
+  orgId: string,
+  buildingId: string,
+  periodStart: Date,
+  periodEnd: Date,
+  data: {
+    earnedIncomeCents: number;
+    projectedIncomeCents: number;
+    expensesTotalCents: number;
+    maintenanceTotalCents: number;
+    capexTotalCents: number;
+    operatingTotalCents: number;
+    netIncomeCents: number;
+    netOperatingIncomeCents: number;
+    activeUnitsCount: number;
+    computedAt: Date;
+  },
+) {
+  return prisma.buildingFinancialSnapshot.upsert({
+    where: {
+      orgId_buildingId_periodStart_periodEnd: {
+        orgId,
+        buildingId,
+        periodStart,
+        periodEnd,
+      },
+    },
+    update: data,
+    create: {
+      orgId,
+      buildingId,
+      periodStart,
+      periodEnd,
+      ...data,
+    },
+  });
+}
+
 export async function findSnapshotsByBuildingAndPeriod(
   prisma: PrismaClient,
   orgId: string,

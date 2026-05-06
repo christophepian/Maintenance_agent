@@ -642,6 +642,19 @@ export async function findUnitForRentEstimate(
   return (prisma.unit.findFirst as any)({ where: { id: unitId, orgId }, select });
 }
 
+/** Find IDs of all active units for a building (for financial aggregations). */
+export async function findActiveUnitIdsByBuilding(
+  prisma: PrismaClient,
+  orgId: string,
+  buildingId: string,
+) {
+  const units = await prisma.unit.findMany({
+    where: { buildingId, orgId, isActive: true },
+    select: { id: true },
+  });
+  return units.map((u) => u.id);
+}
+
 /** Find a building config by building ID. */
 export async function findBuildingConfigById(
   prisma: PrismaClient,

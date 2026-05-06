@@ -75,8 +75,9 @@ export async function findBillingEntityByOrgAndId(
 export async function findBillingEntityByContractor(
   prisma: PrismaClient,
   contractorId: string,
+  orgId?: string,
 ) {
-  return prisma.billingEntity.findFirst({ where: { contractorId } });
+  return prisma.billingEntity.findFirst({ where: { contractorId, ...(orgId ? { orgId } : {}) } });
 }
 
 /**

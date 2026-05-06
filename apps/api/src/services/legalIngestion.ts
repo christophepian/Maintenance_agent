@@ -626,37 +626,30 @@ const aslocaDepreciationFetcher: Fetcher = async (source) => {
   for (const entry of ASLOCA_DEPRECIATION_TABLE) {
     // Prisma composite unique doesn't support null canton in where,
     // so we use findFirst + create/update instead.
-    const existing = await prisma.depreciationStandard.findFirst({
-      where: {
+    const existing = await legalSourceRepo.findDepreciationStandard(prisma, {
+      jurisdiction: "CH",
+      canton: null,
+      assetType: entry.assetType,
+      topic: entry.topic,
+    });
+
+    if (existing) {
+      await legalSourceRepo.updateDepreciationStandardById(prisma, existing.id, {
+        usefulLifeMonths: entry.lifeYears * 12,
+        notes: `${entry.item} (${entry.category}) — ASLOCA/FRI 2007`,
+        authority: "INDUSTRY_STANDARD",
+        sourceId: source.id,
+      });
+    } else {
+      await legalSourceRepo.createDepreciationStandardRecord(prisma, {
         jurisdiction: "CH",
         canton: null,
         assetType: entry.assetType,
         topic: entry.topic,
-      },
-    });
-
-    if (existing) {
-      await prisma.depreciationStandard.update({
-        where: { id: existing.id },
-        data: {
-          usefulLifeMonths: entry.lifeYears * 12,
-          notes: `${entry.item} (${entry.category}) — ASLOCA/FRI 2007`,
-          authority: "INDUSTRY_STANDARD",
-          sourceId: source.id,
-        },
-      });
-    } else {
-      await prisma.depreciationStandard.create({
-        data: {
-          jurisdiction: "CH",
-          canton: null,
-          assetType: entry.assetType,
-          topic: entry.topic,
-          usefulLifeMonths: entry.lifeYears * 12,
-          notes: `${entry.item} (${entry.category}) — ASLOCA/FRI 2007`,
-          authority: "INDUSTRY_STANDARD",
-          sourceId: source.id,
-        },
+        usefulLifeMonths: entry.lifeYears * 12,
+        notes: `${entry.item} (${entry.category}) — ASLOCA/FRI 2007`,
+        authority: "INDUSTRY_STANDARD",
+        sourceId: source.id,
       });
     }
     upsertCount++;
@@ -799,54 +792,51 @@ const aslocaRentReductionFetcher: Fetcher = async (source) => {
   let upsertCount = 0;
   for (const entry of ASLOCA_RENT_REDUCTIONS) {
     // Upsert the rule
-    const rule = await prisma.legalRule.upsert({
-      where: { key: entry.ruleKey },
-      update: {
-        ruleType: "MAINTENANCE_OBLIGATION",
-        authority: "INDUSTRY_STANDARD",
-        jurisdiction: "CH",
-        isActive: true,
-        updatedAt: new Date(),
-      },
-      create: {
+    const rule = await legalSourceRepo.upsertLegalRule(
+      prisma,
+      entry.ruleKey,
+      {
         key: entry.ruleKey,
         ruleType: "MAINTENANCE_OBLIGATION",
         authority: "INDUSTRY_STANDARD",
         jurisdiction: "CH",
         isActive: true,
       },
-    });
+      {
+        ruleType: "MAINTENANCE_OBLIGATION",
+        authority: "INDUSTRY_STANDARD",
+        jurisdiction: "CH",
+        isActive: true,
+        updatedAt: new Date(),
+      },
+    );
 
     // Check if a version already exists for this effective date
     const effectiveFrom = new Date("2007-03-01"); // ASLOCA table date
-    const existing = await prisma.legalRuleVersion.findFirst({
-      where: { ruleId: rule.id, effectiveFrom },
-    });
+    const existing = await legalSourceRepo.findLegalRuleVersion(prisma, { ruleId: rule.id, effectiveFrom });
 
     if (!existing) {
-      await prisma.legalRuleVersion.create({
-        data: {
-          ruleId: rule.id,
-          effectiveFrom,
-          effectiveTo: null,
-          dslJson: {
-            type: "RENT_REDUCTION",
-            defect: entry.defect,
-            category: entry.category,
-            reductionPercent: entry.reductionPercent,
-            ...(entry.reductionMax ? { reductionMax: entry.reductionMax } : {}),
-            basis: "jurisprudence",
-            source: "ASLOCA/Lachat",
-          },
-          citationsJson: [
-            {
-              article: "CO 259d",
-              text: "Réduction proportionnelle du loyer en cas de défaut",
-            },
-          ],
-          summary: `${entry.defect}: réduction de ${entry.reductionPercent}%${entry.reductionMax ? `–${entry.reductionMax}%` : ""} du loyer`,
+      await legalSourceRepo.createLegalRuleVersionRecord(prisma, {
+        ruleId: rule.id,
+        effectiveFrom,
+        effectiveTo: null,
+        dslJson: {
+          type: "RENT_REDUCTION",
+          defect: entry.defect,
+          category: entry.category,
+          reductionPercent: entry.reductionPercent,
+          ...(entry.reductionMax ? { reductionMax: entry.reductionMax } : {}),
+          basis: "jurisprudence",
+          source: "ASLOCA/Lachat",
         },
-      });
+        citationsJson: [
+          {
+            article: "CO 259d",
+            text: "Réduction proportionnelle du loyer en cas de défaut",
+          },
+        ],
+        summary: `${entry.defect}: réduction de ${entry.reductionPercent}%${entry.reductionMax ? `–${entry.reductionMax}%` : ""} du loyer`,
+      } as any);
     }
 
     upsertCount++;
@@ -988,9 +978,7 @@ export interface IngestionResult {
 export async function ingestSource(
   sourceId: string,
 ): Promise<IngestionResult> {
-  const source = await prisma.legalSource.findUnique({
-    where: { id: sourceId },
-  });
+  const source = await legalSourceRepo.findById(prisma, sourceId);
 
   if (!source) {
     return {
@@ -1013,13 +1001,10 @@ export async function ingestSource(
 
   const fetcher = getFetcher(source.fetcherType ?? "");
   if (!fetcher) {
-    await prisma.legalSource.update({
-      where: { id: sourceId },
-      data: {
-        status: "ERROR",
-        lastCheckedAt: new Date(),
-        lastError: `No fetcher registered for type: ${source.fetcherType}`,
-      },
+    await legalSourceRepo.updateLegalSourceById(prisma, sourceId, {
+      status: "ERROR",
+      lastCheckedAt: new Date(),
+      lastError: `No fetcher registered for type: ${source.fetcherType}`,
     });
     return {
       sourceId,
@@ -1042,52 +1027,41 @@ export async function ingestSource(
 
     for (const result of results) {
       // Find or create the variable
-      let variable = await prisma.legalVariable.findFirst({
-        where: { key: result.key, jurisdiction: "CH" },
-      });
+      let variable = await legalSourceRepo.findLegalVariable(prisma, { key: result.key, jurisdiction: "CH" });
 
       if (!variable) {
-        variable = await prisma.legalVariable.create({
-          data: {
-            key: result.key,
-            jurisdiction: "CH",
-            description: `Auto-created by ingestion from ${source.name}`,
-          },
+        variable = await legalSourceRepo.createLegalVariableRecord(prisma, {
+          key: result.key,
+          jurisdiction: "CH",
+          description: `Auto-created by ingestion from ${source.name}`,
         });
       }
 
       // Check if this exact version already exists
-      const existingVersion = await prisma.legalVariableVersion.findFirst({
-        where: {
-          variableId: variable.id,
-          effectiveFrom: result.effectiveFrom,
-        },
+      const existingVersion = await legalSourceRepo.findLegalVariableVersion(prisma, {
+        variableId: variable.id,
+        effectiveFrom: result.effectiveFrom,
       });
 
       if (!existingVersion) {
-        await prisma.legalVariableVersion.create({
-          data: {
-            variableId: variable.id,
-            effectiveFrom: result.effectiveFrom,
-            effectiveTo: result.effectiveTo ?? null,
-            valueJson: result.value,
-            sourceId: source.id,
-            fetchedAt: new Date(),
-          },
-        });
+        await legalSourceRepo.createLegalVariableVersionRecord(prisma, {
+          variableId: variable.id,
+          effectiveFrom: result.effectiveFrom,
+          effectiveTo: result.effectiveTo ?? null,
+          valueJson: result.value,
+          sourceId: source.id,
+          fetchedAt: new Date(),
+        } as any);
         variablesUpdated++;
       }
     }
 
     // Update source status
-    await prisma.legalSource.update({
-      where: { id: sourceId },
-      data: {
-        status: "ACTIVE",
-        lastCheckedAt: new Date(),
-        lastSuccessAt: new Date(),
-        lastError: null,
-      },
+    await legalSourceRepo.updateLegalSourceById(prisma, sourceId, {
+      status: "ACTIVE",
+      lastCheckedAt: new Date(),
+      lastSuccessAt: new Date(),
+      lastError: null,
     });
 
     return {
@@ -1097,13 +1071,10 @@ export async function ingestSource(
       variablesUpdated,
     };
   } catch (err: any) {
-    await prisma.legalSource.update({
-      where: { id: sourceId },
-      data: {
-        status: "ERROR",
-        lastCheckedAt: new Date(),
-        lastError: err.message ?? String(err),
-      },
+    await legalSourceRepo.updateLegalSourceById(prisma, sourceId, {
+      status: "ERROR",
+      lastCheckedAt: new Date(),
+      lastError: err.message ?? String(err),
     });
 
     return {

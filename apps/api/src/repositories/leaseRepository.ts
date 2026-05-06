@@ -533,3 +533,32 @@ export async function deleteLeaseExpenseItemRecord(prisma: PrismaClient, id: str
   return prisma.leaseExpenseItem.delete({ where: { id } });
 }
 
+/** Find active leases for projected income calculation (prorated). */
+export async function findActiveLeasesForProjection(
+  prisma: PrismaClient,
+  orgId: string,
+  unitIds: string[],
+  from: Date,
+  to: Date,
+) {
+  if (unitIds.length === 0) return [];
+  return prisma.lease.findMany({
+    where: {
+      orgId,
+      unitId: { in: unitIds },
+      status: { in: ["ACTIVE", "SIGNED"] },
+      startDate: { lt: to },
+      OR: [{ endDate: null }, { endDate: { gte: from } }],
+      deletedAt: null,
+    },
+    select: {
+      netRentChf: true,
+      garageRentChf: true,
+      otherServiceRentChf: true,
+      chargesTotalChf: true,
+      startDate: true,
+      endDate: true,
+    },
+  });
+}
+

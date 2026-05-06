@@ -7219,7 +7219,7 @@
       "goal": "Migrate 8 high-call services. These services often have complex multi-model queries and transaction chains; extraction will likely require new repository modules and careful DTO alignment.",
       "phase": "P1",
       "order": 123,
-      "status": "capture",
+      "status": "done",
       "product_area": "architecture",
       "depends_on": [
         "DT-122"
@@ -7600,7 +7600,7 @@
       "goal": "Migrate 8 high-call services. These services often have complex multi-model queries and transaction chains; extraction will likely require new repository modules and careful DTO alignment.",
       "phase": "P1",
       "order": 123,
-      "status": "capture",
+      "status": "done",
       "product_area": "architecture",
       "depends_on": [
         "DT-122"

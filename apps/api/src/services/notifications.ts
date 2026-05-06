@@ -1,4 +1,6 @@
 import prisma from './prismaClient';
+import * as notifRepo from '../repositories/notificationRepository';
+import * as userRepo from '../repositories/userRepository';
 import {
   CreateNotificationInput,
   NotificationDTO,
@@ -15,27 +17,23 @@ export async function createNotification(
 ): Promise<NotificationDTO> {
   // First, try to delete any existing notification with the same unique key
   // This ensures we always get a fresh timestamp
-  await prisma.notification.deleteMany({
-    where: {
-      orgId: input.orgId,
-      userId: input.userId,
-      entityType: input.entityType,
-      entityId: input.entityId,
-      eventType: input.eventType,
-    },
+  await notifRepo.deleteMatchingNotifications(prisma, {
+    orgId: input.orgId,
+    userId: input.userId,
+    entityType: input.entityType,
+    entityId: input.entityId,
+    eventType: input.eventType,
   });
 
-  const notification = await prisma.notification.create({
-    data: {
-      orgId: input.orgId,
-      userId: input.userId,
-      buildingId: input.buildingId || null,
-      entityType: input.entityType,
-      entityId: input.entityId,
-      eventType: input.eventType,
-      message: input.message || null,
-      readAt: null,
-    },
+  const notification = await notifRepo.createNotificationRecord(prisma, {
+    orgId: input.orgId,
+    userId: input.userId,
+    buildingId: input.buildingId || null,
+    entityType: input.entityType,
+    entityId: input.entityId,
+    eventType: input.eventType,
+    message: input.message || null,
+    readAt: null,
   });
 
   return mapNotificationToDTO(notification);
@@ -57,15 +55,7 @@ export async function getUserNotifications(
     ...(unreadOnly && { readAt: null }),
   };
 
-  const [notifications, total] = await Promise.all([
-    prisma.notification.findMany({
-      where,
-      orderBy: { createdAt: 'desc' },
-      take: limit,
-      skip: offset,
-    }),
-    prisma.notification.count({ where }),
-  ]);
+  const [notifications, total] = await notifRepo.findNotificationsWithCount(prisma, where, limit, offset);
 
   return {
     notifications: notifications.map(mapNotificationToDTO),
@@ -80,10 +70,7 @@ export async function markNotificationAsRead(
   notificationId: string,
   orgId: string
 ): Promise<NotificationDTO> {
-  const notification = await prisma.notification.update({
-    where: { id: notificationId },
-    data: { readAt: new Date() },
-  });
+  const notification = await notifRepo.updateNotificationRecord(prisma, notificationId, { readAt: new Date() });
 
   // Verify org ownership
   if (notification.orgId !== orgId) {
@@ -100,16 +87,8 @@ export async function markAllNotificationsAsRead(
   orgId: string,
   userId: string
 ): Promise<number> {
-  const result = await prisma.notification.updateMany({
-    where: {
-      orgId,
-      userId,
-      readAt: null,
-    },
-    data: { readAt: new Date() },
-  });
-
-  return result.count;
+  const count = await notifRepo.markAllNotificationsAsRead(prisma, orgId, userId);
+  return count;
 }
 
 /**
@@ -119,18 +98,14 @@ export async function deleteNotification(
   notificationId: string,
   orgId: string
 ): Promise<void> {
-  const notification = await prisma.notification.findUniqueOrThrow({
-    where: { id: notificationId },
-  });
+  const notification = await notifRepo.findNotificationByIdOrThrow(prisma, notificationId);
 
   // Verify org ownership
   if (notification.orgId !== orgId) {
     throw new Error('Notification does not belong to this org');
   }
 
-  await prisma.notification.delete({
-    where: { id: notificationId },
-  });
+  await notifRepo.deleteNotificationRecord(prisma, notificationId);
 }
 
 /**
@@ -140,13 +115,7 @@ export async function getUnreadNotificationCount(
   orgId: string,
   userId: string
 ): Promise<number> {
-  return prisma.notification.count({
-    where: {
-      orgId,
-      userId,
-      readAt: null,
-    },
-  });
+  return notifRepo.countNotifications(prisma, { orgId, userId, readAt: null });
 }
 
 /**
@@ -479,10 +448,7 @@ export async function notifyApplicationSubmitted(
     : `units ${unitNumbers.join(', ')}`;
 
   // Notify all managers
-  const managers = await prisma.user.findMany({
-    where: { orgId, role: 'MANAGER' },
-    select: { id: true },
-  });
+  const managers = await userRepo.findManagersByOrg(prisma, orgId);
   for (const mgr of managers) {
     await createNotification({
       orgId,
@@ -496,10 +462,7 @@ export async function notifyApplicationSubmitted(
   }
 
   // Notify all owners
-  const owners = await prisma.user.findMany({
-    where: { orgId, role: 'OWNER' },
-    select: { id: true },
-  });
+  const owners = await userRepo.findOwnersByOrg(prisma, orgId);
   for (const owner of owners) {
     await createNotification({
       orgId,

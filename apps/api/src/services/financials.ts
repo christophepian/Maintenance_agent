@@ -1,5 +1,11 @@
 import { ExpenseCategory } from "@prisma/client";
 import prisma from "./prismaClient";
+import * as invoiceRepo from "../repositories/invoiceRepository";
+import * as inventoryRepo from "../repositories/inventoryRepository";
+import * as leaseRepo from "../repositories/leaseRepository";
+import * as snapshotRepo from "../repositories/buildingFinancialSnapshotRepository";
+import * as financialsRepo from "../repositories/financialsRepository";
+import type { ExpenseLedgerRow } from "../repositories/financialsRepository";
 
 // ==========================================
 // DTOs
@@ -76,13 +82,6 @@ function safeDivide(numerator: number, denominator: number): number {
 // Ledger-based queries (Option B — single source of truth)
 // ==========================================
 
-interface ExpenseLedgerRow {
-  debitCents: number;
-  sourceId: string | null;
-  accountId: string;
-  account: { name: string; code: string | null };
-}
-
 /**
  * Return all INVOICE_ISSUED expense-account debit entries for this building
  * in [from, endOfDay(to)].  Each row = one leg of a cost invoice journal entry.
@@ -93,23 +92,7 @@ async function getExpenseLedgerEntries(
   from: Date,
   to: Date,
 ): Promise<ExpenseLedgerRow[]> {
-  const rows = await prisma.ledgerEntry.findMany({
-    where: {
-      orgId,
-      buildingId,
-      sourceType: "INVOICE_ISSUED",
-      date: { gte: from, lte: endOfDayUTC(to) },
-      debitCents: { gt: 0 },
-      account: { accountType: "EXPENSE" },
-    },
-    select: {
-      debitCents: true,
-      sourceId: true,
-      accountId: true,
-      account: { select: { name: true, code: true } },
-    },
-  });
-  return rows as ExpenseLedgerRow[];
+  return financialsRepo.findExpenseLedgerEntries(prisma, orgId, buildingId, from, to);
 }
 
 /**
@@ -124,18 +107,7 @@ async function getEarnedIncomeFromLedger(
   from: Date,
   to: Date,
 ): Promise<number> {
-  const agg = await prisma.ledgerEntry.aggregate({
-    where: {
-      orgId,
-      buildingId,
-      sourceType: "INVOICE_PAID",
-      date: { gte: from, lte: endOfDayUTC(to) },
-      debitCents: { gt: 0 },
-      account: { code: "1020" },
-    },
-    _sum: { debitCents: true },
-  });
-  return agg._sum.debitCents ?? 0;
+  return financialsRepo.aggregateLedgerIncome(prisma, orgId, buildingId, from, to);
 }
 
 // ==========================================
@@ -152,24 +124,7 @@ async function getProjectedIncome(
     return { projectedIncomeCents: 0, rentalIncomeCents: 0, serviceChargeIncomeCents: 0 };
   }
 
-  const activeLeases = await prisma.lease.findMany({
-    where: {
-      orgId,
-      unitId: { in: unitIds },
-      status: { in: ["ACTIVE", "SIGNED"] },
-      startDate: { lt: to },
-      OR: [{ endDate: null }, { endDate: { gte: from } }],
-      deletedAt: null,
-    },
-    select: {
-      netRentChf: true,
-      garageRentChf: true,
-      otherServiceRentChf: true,
-      chargesTotalChf: true,
-      startDate: true,
-      endDate: true,
-    },
-  });
+  const activeLeases = await leaseRepo.findActiveLeasesForProjection(prisma, orgId, unitIds, from, to);
 
   const periodDays = (to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24);
   let rentalIncomeCents = 0;
@@ -205,39 +160,17 @@ async function getProjectedIncome(
 // ==========================================
 
 async function getReceivables(orgId: string, buildingId: string): Promise<number> {
-  const units = await prisma.unit.findMany({
-    where: { buildingId, orgId, isActive: true },
-    select: { id: true },
-  });
-  const unitIds = units.map((u) => u.id);
+  const unitIds = await inventoryRepo.findActiveUnitIdsByBuilding(prisma, orgId, buildingId);
   if (unitIds.length === 0) return 0;
 
-  const result = await prisma.invoice.aggregate({
-    where: { orgId, status: "ISSUED", lease: { unitId: { in: unitIds } } },
-    _sum: { totalAmount: true },
-  });
-  // totalAmount is stored in cents in the DB
-  return result._sum.totalAmount ?? 0;
+  return invoiceRepo.aggregateIssuedInvoicesForUnits(prisma, orgId, unitIds);
 }
 
 async function getPayables(orgId: string, buildingId: string): Promise<number> {
-  const units = await prisma.unit.findMany({
-    where: { buildingId, orgId, isActive: true },
-    select: { id: true },
-  });
-  const unitIds = units.map((u) => u.id);
+  const unitIds = await inventoryRepo.findActiveUnitIdsByBuilding(prisma, orgId, buildingId);
   if (unitIds.length === 0) return 0;
 
-  const result = await prisma.invoice.aggregate({
-    where: {
-      orgId,
-      status: { in: ["ISSUED", "APPROVED"] },
-      job: { request: { unitId: { in: unitIds } } },
-    },
-    _sum: { totalAmount: true },
-  });
-  // totalAmount is stored in cents in the DB
-  return result._sum.totalAmount ?? 0;
+  return invoiceRepo.aggregatePayableInvoicesForUnits(prisma, orgId, unitIds);
 }
 
 // ==========================================
@@ -250,10 +183,7 @@ export async function getBuildingFinancials(
   params: { from: string; to: string; forceRefresh?: boolean; groupByAccount?: boolean },
 ): Promise<BuildingFinancialsDTO> {
   // 1. Validate building exists and belongs to org
-  const building = await prisma.building.findFirst({
-    where: { id: buildingId, orgId },
-    select: { id: true, name: true },
-  });
+  const building = await inventoryRepo.findBuildingByIdAndOrg(prisma, buildingId, orgId);
   if (!building) throw new NotFoundError(`Building ${buildingId} not found`);
 
   // 2. Parse dates — from = start of day, to comparison uses endOfDayUTC in queries
@@ -266,16 +196,7 @@ export async function getBuildingFinancials(
 
   // 2b. Check snapshot cache (unless forceRefresh or groupByAccount)
   if (!params.forceRefresh && !params.groupByAccount) {
-    const cached = await prisma.buildingFinancialSnapshot.findUnique({
-      where: {
-        orgId_buildingId_periodStart_periodEnd: {
-          orgId,
-          buildingId,
-          periodStart: from,
-          periodEnd: to,
-        },
-      },
-    });
+    const cached = await snapshotRepo.findBuildingFinancialSnapshotByPeriod(prisma, orgId, buildingId, from, to);
     if (cached) {
       return {
         buildingId,
@@ -304,12 +225,7 @@ export async function getBuildingFinancials(
     }
   }
 
-  // 3. Active units (for count + receivables/payables)
-  const units = await prisma.unit.findMany({
-    where: { buildingId, orgId, isActive: true },
-    select: { id: true },
-  });
-  const unitIds = units.map((u) => u.id);
+  const unitIds = await inventoryRepo.findActiveUnitIdsByBuilding(prisma, orgId, buildingId);
   const activeUnitsCount = unitIds.length;
 
   // 4. Expense ledger entries — INVOICE_ISSUED debit legs on EXPENSE accounts
@@ -353,19 +269,7 @@ export async function getBuildingFinancials(
       invoiceAmounts.set(entry.sourceId, (invoiceAmounts.get(entry.sourceId) ?? 0) + entry.debitCents);
     }
 
-    const invoices = await prisma.invoice.findMany({
-      where: { id: { in: invoiceIds }, orgId },
-      select: {
-        id: true,
-        expenseCategory: true,
-        job: {
-          select: {
-            contractorId: true,
-            contractor: { select: { id: true, name: true } },
-          },
-        },
-      },
-    });
+    const invoices = await invoiceRepo.findInvoicesForExpenseBreakdown(prisma, orgId, invoiceIds);
 
     for (const inv of invoices) {
       const amountCents = invoiceAmounts.get(inv.id) ?? 0;
@@ -438,43 +342,17 @@ export async function getBuildingFinancials(
     : undefined;
 
   // 12. Persist snapshot (upsert keyed on org+building+period)
-  await prisma.buildingFinancialSnapshot.upsert({
-    where: {
-      orgId_buildingId_periodStart_periodEnd: {
-        orgId,
-        buildingId,
-        periodStart: from,
-        periodEnd: to,
-      },
-    },
-    update: {
-      earnedIncomeCents,
-      projectedIncomeCents: incomeBreakdown.projectedIncomeCents,
-      expensesTotalCents,
-      maintenanceTotalCents,
-      capexTotalCents,
-      operatingTotalCents,
-      netIncomeCents,
-      netOperatingIncomeCents,
-      activeUnitsCount,
-      computedAt: new Date(),
-    },
-    create: {
-      orgId,
-      buildingId,
-      periodStart: from,
-      periodEnd: to,
-      earnedIncomeCents,
-      projectedIncomeCents: incomeBreakdown.projectedIncomeCents,
-      expensesTotalCents,
-      maintenanceTotalCents,
-      capexTotalCents,
-      operatingTotalCents,
-      netIncomeCents,
-      netOperatingIncomeCents,
-      activeUnitsCount,
-      computedAt: new Date(),
-    },
+  await snapshotRepo.upsertBuildingFinancialSnapshot(prisma, orgId, buildingId, from, to, {
+    earnedIncomeCents,
+    projectedIncomeCents: incomeBreakdown.projectedIncomeCents,
+    expensesTotalCents,
+    maintenanceTotalCents,
+    capexTotalCents,
+    operatingTotalCents,
+    netIncomeCents,
+    netOperatingIncomeCents,
+    activeUnitsCount,
+    computedAt: new Date(),
   });
 
   return {
@@ -548,11 +426,7 @@ export async function getPortfolioSummary(
   orgId: string,
   params: { from: string; to: string },
 ): Promise<PortfolioSummaryDTO> {
-  const buildings = await prisma.building.findMany({
-    where: { orgId },
-    select: { id: true, name: true },
-    orderBy: { name: "asc" },
-  });
+  const buildings = await inventoryRepo.listBuildings(prisma, orgId);
 
   const summaries: BuildingSummaryDTO[] = [];
   for (const building of buildings) {
@@ -615,10 +489,7 @@ export async function setInvoiceExpenseCategory(
   orgId: string,
   category: ExpenseCategory,
 ): Promise<{ id: string; expenseCategory: ExpenseCategory }> {
-  const invoice = await prisma.invoice.findFirst({
-    where: { id: invoiceId, orgId },
-    select: { id: true, jobId: true, expenseCategory: true, job: { select: { requestId: true } } },
-  });
+  const invoice = await invoiceRepo.findInvoiceByIdAndOrg(prisma, orgId, invoiceId);
   if (!invoice) throw new NotFoundError(`Invoice ${invoiceId} not found`);
 
   if (invoice.job?.requestId) {
@@ -627,11 +498,7 @@ export async function setInvoiceExpenseCategory(
     );
   }
 
-  const updated = await prisma.invoice.update({
-    where: { id: invoiceId },
-    data: { expenseCategory: category },
-    select: { id: true, expenseCategory: true },
-  });
+  const updated = await invoiceRepo.updateInvoiceExpenseCategory(prisma, invoiceId, category);
 
   return { id: updated.id, expenseCategory: updated.expenseCategory! };
 }

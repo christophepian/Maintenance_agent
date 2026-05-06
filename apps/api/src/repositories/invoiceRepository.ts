@@ -217,3 +217,116 @@ export async function createInvoiceRecord(
   return prisma.invoice.create({ data });
 }
 
+/** Create an invoice and return it with full include (for invoices.ts createInvoice). */
+export async function createInvoiceWithInclude(
+  prisma: PrismaClient,
+  data: Prisma.InvoiceCreateInput,
+) {
+  return prisma.invoice.create({ data, include: INVOICE_FULL_INCLUDE });
+}
+
+/** Find a job with recipient context (request+tenant+unit+building) for invoice creation. */
+export async function findJobWithRecipientContext(
+  prisma: PrismaClient,
+  jobId: string,
+) {
+  return prisma.job.findUnique({
+    where: { id: jobId },
+    include: {
+      request: {
+        include: {
+          tenant: true,
+          unit: { include: { building: true } },
+        },
+      },
+    },
+  });
+}
+
+/** Find an invoice with full include + job for approveInvoice. */
+export async function findInvoiceWithJob(
+  prisma: PrismaClient,
+  id: string,
+) {
+  return prisma.invoice.findUnique({
+    where: { id },
+    include: { ...INVOICE_FULL_INCLUDE, job: true },
+  });
+}
+
+/** Find invoices by IDs for expense breakdown (financials service). */
+export async function findInvoicesForExpenseBreakdown(
+  prisma: PrismaClient,
+  orgId: string,
+  invoiceIds: string[],
+) {
+  return prisma.invoice.findMany({
+    where: { id: { in: invoiceIds }, orgId },
+    select: {
+      id: true,
+      expenseCategory: true,
+      job: {
+        select: {
+          contractorId: true,
+          contractor: { select: { id: true, name: true } },
+        },
+      },
+    },
+  });
+}
+
+/** Find a single invoice by ID and orgId (for setInvoiceExpenseCategory). */
+export async function findInvoiceByIdAndOrg(
+  prisma: PrismaClient,
+  orgId: string,
+  id: string,
+) {
+  return prisma.invoice.findFirst({
+    where: { id, orgId },
+    select: { id: true, jobId: true, expenseCategory: true, job: { select: { requestId: true } } },
+  });
+}
+
+/** Update the expenseCategory field on an invoice. */
+export async function updateInvoiceExpenseCategory(
+  prisma: PrismaClient,
+  id: string,
+  category: ExpenseCategory,
+) {
+  return prisma.invoice.update({
+    where: { id },
+    data: { expenseCategory: category },
+    select: { id: true, expenseCategory: true },
+  });
+}
+
+/** Aggregate total of ISSUED invoices for a set of unit IDs (receivables). */
+export async function aggregateIssuedInvoicesForUnits(
+  prisma: PrismaClient,
+  orgId: string,
+  unitIds: string[],
+) {
+  const result = await prisma.invoice.aggregate({
+    where: { orgId, status: "ISSUED", lease: { unitId: { in: unitIds } } },
+    _sum: { totalAmount: true },
+  });
+  return result._sum.totalAmount ?? 0;
+}
+
+/** Aggregate total of ISSUED/APPROVED job invoices for a set of unit IDs (payables). */
+export async function aggregatePayableInvoicesForUnits(
+  prisma: PrismaClient,
+  orgId: string,
+  unitIds: string[],
+) {
+  const result = await prisma.invoice.aggregate({
+    where: {
+      orgId,
+      status: { in: ["ISSUED", "APPROVED"] },
+      job: { request: { unitId: { in: unitIds } } },
+    },
+    _sum: { totalAmount: true },
+  });
+  return result._sum.totalAmount ?? 0;
+}
+

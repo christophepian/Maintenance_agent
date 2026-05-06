@@ -1,6 +1,9 @@
 import { InvoiceStatus, BillingEntityType, Prisma, InvoiceDirection, InvoiceSourceChannel, IngestionStatus } from '@prisma/client';
 import prisma from './prismaClient';
 import { INVOICE_FULL_INCLUDE, INVOICE_SUMMARY_INCLUDE } from '../repositories/invoiceRepository';
+import * as invoiceRepo from '../repositories/invoiceRepository';
+import * as billingEntityRepo from '../repositories/billingEntityRepository';
+import * as orgConfigRepo from '../repositories/orgConfigRepository';
 
 /** Compile-time type for an Invoice row loaded with INVOICE_FULL_INCLUDE. */
 type InvoiceWithFullInclude = Prisma.InvoiceGetPayload<{ include: typeof INVOICE_FULL_INCLUDE }>;
@@ -264,19 +267,9 @@ function summarizeTotals(lineItems: ReturnType<typeof normalizeLineItems>) {
 }
 
 async function resolveRecipientDetails(orgId: string, jobId: string) {
-  const job = await prisma.job.findUnique({
-    where: { id: jobId },
-    include: {
-      request: {
-        include: {
-          tenant: true,
-          unit: { include: { building: true } },
-        },
-      },
-    },
-  });
+  const job = await invoiceRepo.findJobWithRecipientContext(prisma, jobId);
 
-  const org = await prisma.org.findUnique({ where: { id: orgId } });
+  const org = await orgConfigRepo.findOrgById(prisma, orgId);
   const building = job?.request?.unit?.building;
   const parsedAddress = parseAddress(building?.address);
 
@@ -297,15 +290,11 @@ async function resolveIssuerBillingEntityId(
   preferOrg?: boolean,
 ) {
   if (!preferOrg && contractorId) {
-    const contractorEntity = await prisma.billingEntity.findFirst({
-      where: { orgId, contractorId },
-    });
+    const contractorEntity = await billingEntityRepo.findBillingEntityByContractor(prisma, contractorId, orgId);
     if (contractorEntity) return contractorEntity.id;
   }
 
-  const orgEntity = await prisma.billingEntity.findFirst({
-    where: { orgId, type: BillingEntityType.ORG },
-  });
+  const orgEntity = await billingEntityRepo.findOrgBillingEntity(prisma, orgId);
 
   return orgEntity?.id || undefined;
 }
@@ -377,12 +366,9 @@ export async function createInvoice(params: CreateInvoiceParams): Promise<Invoic
   const { orgId, jobId, amount, description } = params;
 
   // Resolve job-related context when a job is linked
-  let job: Awaited<ReturnType<typeof prisma.job.findUnique>> & { request?: any } | null = null;
+  let job: Awaited<ReturnType<typeof invoiceRepo.findJobWithRecipientContext>> | null = null;
   if (jobId) {
-    job = await prisma.job.findUnique({
-      where: { id: jobId },
-      include: { request: { include: { tenant: true, unit: { include: { building: true } } } } },
-    });
+    job = await invoiceRepo.findJobWithRecipientContext(prisma, jobId);
 
     if (!job || job.orgId !== orgId) {
       throw new Error(`Job not found or doesn't belong to org: ${jobId}`);
@@ -423,9 +409,8 @@ export async function createInvoice(params: CreateInvoiceParams): Promise<Invoic
     params.issuerBillingEntityId ||
     (job ? await resolveIssuerBillingEntityId(orgId, job.contractorId) : undefined);
 
-  const invoice = await prisma.invoice.create({
-    data: {
-      org: { connect: { id: orgId } },
+  const invoice = await invoiceRepo.createInvoiceWithInclude(prisma, {
+    org: { connect: { id: orgId } },
       ...(jobId ? { job: { connect: { id: jobId } } } : {}),
       issuer: issuerBillingEntityId ? { connect: { id: issuerBillingEntityId } } : undefined,
       classifiedExpenseType: params.expenseTypeId ? { connect: { id: params.expenseTypeId } } : undefined,
@@ -473,8 +458,6 @@ export async function createInvoice(params: CreateInvoiceParams): Promise<Invoic
             create: normalizedLineItems,
           }
         : undefined,
-    },
-    include: INVOICE_INCLUDE,
   });
 
   return mapInvoiceToDTO(invoice);
@@ -484,11 +467,7 @@ export async function createInvoice(params: CreateInvoiceParams): Promise<Invoic
  * Get invoice by ID.
  */
 export async function getInvoice(invoiceId: string): Promise<InvoiceDTO | null> {
-  const invoice = await prisma.invoice.findUnique({
-    where: { id: invoiceId },
-    include: INVOICE_INCLUDE,
-  });
-
+  const invoice = await invoiceRepo.findInvoiceById(prisma, invoiceId);
   return invoice ? mapInvoiceToDTO(invoice) : null;
 }
 
@@ -581,10 +560,7 @@ export async function updateInvoice(
   invoiceId: string,
   params: UpdateInvoiceParams
 ): Promise<InvoiceDTO> {
-  const existing = await prisma.invoice.findUnique({
-    where: { id: invoiceId },
-    include: INVOICE_INCLUDE,
-  });
+  const existing = await invoiceRepo.findInvoiceById(prisma, invoiceId);
 
   if (!existing) {
     throw new Error('INVOICE_NOT_FOUND');
@@ -686,10 +662,7 @@ export async function updateInvoice(
  * Approve invoice by owner.
  */
 export async function approveInvoice(invoiceId: string): Promise<InvoiceDTO> {
-  const invoice = await prisma.invoice.findUnique({
-    where: { id: invoiceId },
-    include: { ...INVOICE_INCLUDE, job: true },
-  });
+  const invoice = await invoiceRepo.findInvoiceWithJob(prisma, invoiceId);
 
   if (!invoice) throw new Error('INVOICE_NOT_FOUND');
 
@@ -740,10 +713,7 @@ export async function getOrCreateInvoiceForJob(
   amount: number
 ): Promise<InvoiceDTO> {
   // Check if invoice already exists
-  const existing = await prisma.invoice.findFirst({
-    where: { jobId },
-    include: INVOICE_INCLUDE,
-  });
+  const existing = await invoiceRepo.findInvoiceByJobId(prisma, jobId);
 
   if (existing) {
     return mapInvoiceToDTO(existing);
