@@ -538,3 +538,11 @@ export async function findRequestWithContractor(
     include: REQUEST_WITH_CONTRACTOR_INCLUDE,
   });
 }
+
+/** Return distinct categories used across all requests (for legal coverage audit). */
+export async function findDistinctRequestCategories(prisma: PrismaClient) {
+  return prisma.request.findMany({
+    select: { category: true },
+    distinct: ["category"],
+  });
+}

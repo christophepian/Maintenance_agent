@@ -196,3 +196,19 @@ export async function findUnlinkedJobsByUnit(
   });
 }
 
+/** Minimal lookup for ledger attribution: job → request → unit → building. */
+export async function findJobRequestUnitBuilding(
+  prisma: PrismaClient,
+  id: string | null | undefined,
+) {
+  if (!id) return null;
+  return prisma.job.findUnique({
+    where: { id },
+    select: {
+      request: {
+        select: { unitId: true, unit: { select: { buildingId: true } } },
+      },
+    },
+  });
+}
+

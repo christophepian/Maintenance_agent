@@ -16,6 +16,8 @@
  */
 
 import prisma from "./prismaClient";
+import * as legalSourceRepo from "../repositories/legalSourceRepository";
+import * as requestRepo from "../repositories/requestRepository";
 import {
   LEGAL_VARIABLE_INCLUDE,
   LEGAL_RULE_INCLUDE,
@@ -50,43 +52,30 @@ export class LegalForbiddenError extends Error {
 // ── Legal Variables ──────────────────────────────────────────
 
 export async function listVariables() {
-  return prisma.legalVariable.findMany({
-    include: LEGAL_VARIABLE_INCLUDE,
-    orderBy: { key: "asc" },
-  });
+  return legalSourceRepo.findAllLegalVariables(prisma);
 }
 
 // ── Legal Rules ──────────────────────────────────────────────
 
 export async function listRules() {
-  return prisma.legalRule.findMany({
-    include: LEGAL_RULE_INCLUDE,
-    orderBy: [{ priority: "desc" }, { key: "asc" }],
-  });
+  return legalSourceRepo.findAllLegalRules(prisma);
 }
 
 export async function createRule(data: CreateLegalRuleBody) {
   const { dslJson, citationsJson, summary, effectiveFrom, ...ruleData } = data;
   try {
-    return await prisma.legalRule.create({
-      data: {
-        key: ruleData.key,
-        ruleType: ruleData.ruleType,
-        authority: ruleData.authority,
-        jurisdiction: ruleData.jurisdiction,
-        canton: ruleData.canton ?? null,
-        priority: ruleData.priority,
-        isActive: ruleData.isActive,
-        versions: {
-          create: {
-            effectiveFrom,
-            dslJson: dslJson as any,
-            citationsJson: (citationsJson as any) ?? null,
-            summary: summary ?? null,
-          },
-        },
-      },
-      include: LEGAL_RULE_WITH_VERSIONS_INCLUDE,
+    return await legalSourceRepo.createLegalRuleWithVersion(prisma, {
+      key: ruleData.key,
+      ruleType: ruleData.ruleType,
+      authority: ruleData.authority,
+      jurisdiction: ruleData.jurisdiction,
+      canton: ruleData.canton ?? null,
+      priority: ruleData.priority,
+      isActive: ruleData.isActive,
+      effectiveFrom,
+      dslJson,
+      citationsJson: citationsJson ?? null,
+      summary: summary ?? null,
     });
   } catch (e: any) {
     if (e.code === "P2002") throw new LegalConflictError("Rule key already exists");
@@ -97,10 +86,7 @@ export async function createRule(data: CreateLegalRuleBody) {
 // ── Category Mappings ────────────────────────────────────────
 
 export async function listCategoryMappings(orgId: string) {
-  return prisma.legalCategoryMapping.findMany({
-    where: { OR: [{ orgId }, { orgId: null }] },
-    orderBy: [{ orgId: "desc" }, { requestCategory: "asc" }],
-  });
+  return legalSourceRepo.findCategoryMappingsByOrg(prisma, orgId);
 }
 
 export interface CreateCategoryMappingData {
@@ -112,7 +98,7 @@ export interface CreateCategoryMappingData {
 
 export async function createCategoryMapping(orgId: string, data: CreateCategoryMappingData) {
   try {
-    return await prisma.legalCategoryMapping.create({ data: { orgId, ...data } });
+    return await legalSourceRepo.createCategoryMappingRecord(prisma, orgId, data);
   } catch (e: any) {
     if (e.code === "P2002") throw new LegalConflictError("Mapping for this category already exists in this org");
     throw e;
@@ -120,17 +106,17 @@ export async function createCategoryMapping(orgId: string, data: CreateCategoryM
 }
 
 export async function updateCategoryMapping(id: string, orgId: string, data: Partial<CreateCategoryMappingData>) {
-  const existing = await prisma.legalCategoryMapping.findUnique({ where: { id } });
+  const existing = await legalSourceRepo.findCategoryMappingById(prisma, id);
   if (!existing) throw new LegalNotFoundError("Mapping not found");
   if (existing.orgId && existing.orgId !== orgId) throw new LegalForbiddenError("Mapping belongs to another org");
-  return prisma.legalCategoryMapping.update({ where: { id }, data });
+  return legalSourceRepo.updateCategoryMappingById(prisma, id, data);
 }
 
 export async function deleteCategoryMapping(id: string, orgId: string) {
-  const existing = await prisma.legalCategoryMapping.findUnique({ where: { id } });
+  const existing = await legalSourceRepo.findCategoryMappingById(prisma, id);
   if (!existing) throw new LegalNotFoundError("Mapping not found");
   if (existing.orgId && existing.orgId !== orgId) throw new LegalForbiddenError("Mapping belongs to another org");
-  await prisma.legalCategoryMapping.delete({ where: { id } });
+  await legalSourceRepo.deleteCategoryMappingById(prisma, id);
 }
 
 // ── Category Mapping Coverage ────────────────────────────────
@@ -146,24 +132,13 @@ const TOPIC_KEYWORDS: Record<string, string[]> = {
 };
 
 export async function getMappingCoverage(orgId: string) {
-  const requests = await prisma.request.findMany({
-    select: { category: true },
-    distinct: ["category"],
-  });
+  const requests = await requestRepo.findDistinctRequestCategories(prisma);
   const usedCategories = requests.map((r) => r.category).filter(Boolean) as string[];
 
-  const mappings = await prisma.legalCategoryMapping.findMany({
-    where: { OR: [{ orgId }, { orgId: null }], isActive: true },
-    orderBy: [{ orgId: "desc" }, { requestCategory: "asc" }],
-  });
+  const mappings = await legalSourceRepo.findActiveCategoryMappings(prisma, orgId);
 
-  const allDeps = await prisma.depreciationStandard.findMany({
-    select: { topic: true, assetType: true, usefulLifeMonths: true },
-  });
-  const allRules = await prisma.legalRule.findMany({
-    where: { key: { startsWith: "CH_RENT_RED" }, isActive: true },
-    select: { key: true, id: true },
-  });
+  const allDeps = await legalSourceRepo.findDepreciationStandardsForCoverage(prisma);
+  const allRules = await legalSourceRepo.findRentReductionRuleKeys(prisma);
 
   const knownCategories = ["stove", "oven", "dishwasher", "bathroom", "lighting", "plumbing", "other"];
   const allCategories = [...new Set([...knownCategories, ...usedCategories])];
@@ -243,15 +218,7 @@ export async function listEvaluations(params: ListEvaluationsParams) {
   const where: any = { orgId };
   if (requestIdFilter) where.requestId = requestIdFilter;
 
-  const [rows, total] = await Promise.all([
-    prisma.legalEvaluationLog.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-      take: limit,
-      skip: offset,
-    }),
-    prisma.legalEvaluationLog.count({ where }),
-  ]);
+  const [rows, total] = await legalSourceRepo.findEvaluationLogsWithCount(prisma, where, limit, offset);
 
   // ── Resolve building names, unit numbers, request descriptions ──
   const buildingIds = [...new Set(rows.map((r: any) => r.buildingId).filter(Boolean))] as string[];
@@ -259,15 +226,9 @@ export async function listEvaluations(params: ListEvaluationsParams) {
   const requestIds = [...new Set(rows.map((r: any) => r.requestId).filter(Boolean))] as string[];
 
   const [buildings, units, requests] = await Promise.all([
-    buildingIds.length
-      ? prisma.building.findMany({ where: { id: { in: buildingIds } }, select: { id: true, name: true, address: true } })
-      : [],
-    unitIds.length
-      ? prisma.unit.findMany({ where: { id: { in: unitIds } }, select: { id: true, unitNumber: true } })
-      : [],
-    requestIds.length
-      ? prisma.request.findMany({ where: { id: { in: requestIds } }, select: { id: true, requestNumber: true, description: true, category: true } })
-      : [],
+    buildingIds.length ? legalSourceRepo.findBuildingNamesByIds(prisma, buildingIds) : [],
+    unitIds.length ? legalSourceRepo.findUnitNumbersByIds(prisma, unitIds) : [],
+    requestIds.length ? legalSourceRepo.findRequestSummariesByIds(prisma, requestIds) : [],
   ]);
 
   const buildingMap = new Map(buildings.map((b: any) => [b.id, b] as const));
@@ -316,10 +277,7 @@ export async function listEvaluations(params: ListEvaluationsParams) {
 // ── Depreciation Standards ───────────────────────────────────
 
 export async function listDepreciationStandards() {
-  return prisma.depreciationStandard.findMany({
-    include: DEPRECIATION_STANDARD_INCLUDE,
-    orderBy: [{ assetType: "asc" }, { topic: "asc" }],
-  });
+  return legalSourceRepo.findAllDepreciationStandards(prisma);
 }
 
 export interface CreateDepreciationStandardData {
@@ -332,7 +290,7 @@ export interface CreateDepreciationStandardData {
 
 export async function createDepreciationStandard(data: CreateDepreciationStandardData) {
   try {
-    return await prisma.depreciationStandard.create({ data: data as any });
+    return await legalSourceRepo.createDepreciationStandardFull(prisma, data);
   } catch (e: any) {
     if (e.code === "P2002") throw new LegalConflictError("Depreciation standard for this asset/topic/jurisdiction already exists");
     throw e;

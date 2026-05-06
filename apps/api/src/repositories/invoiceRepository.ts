@@ -330,3 +330,17 @@ export async function aggregatePayableInvoicesForUnits(
   return result._sum.totalAmount ?? 0;
 }
 
+/** Return ids of invoices matching the given statuses (for backfill helpers). */
+export async function findInvoiceIdsByStatuses(
+  prisma: PrismaClient,
+  orgId: string,
+  statuses: string[],
+): Promise<string[]> {
+  const rows = await prisma.invoice.findMany({
+    where: { orgId, status: { in: statuses as any } },
+    select: { id: true },
+    orderBy: { createdAt: "asc" },
+  });
+  return rows.map((r) => r.id);
+}
+

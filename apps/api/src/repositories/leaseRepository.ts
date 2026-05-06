@@ -562,3 +562,14 @@ export async function findActiveLeasesForProjection(
   });
 }
 
+/** Minimal lookup for ledger attribution: lease → unit → building. */
+export async function findLeaseUnitAndBuilding(
+  prisma: PrismaClient,
+  id: string,
+) {
+  return prisma.lease.findUnique({
+    where: { id },
+    select: { unitId: true, unit: { select: { buildingId: true } } },
+  });
+}
+

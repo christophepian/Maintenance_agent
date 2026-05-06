@@ -301,3 +301,163 @@ export async function updateLegalSourceById(
   return prisma.legalSource.update({ where: { id }, data });
 }
 
+// ── Legal Variables list ──────────────────────────────────────
+
+export async function findAllLegalVariables(prisma: PrismaClient) {
+  return prisma.legalVariable.findMany({
+    include: LEGAL_VARIABLE_INCLUDE,
+    orderBy: { key: "asc" },
+  });
+}
+
+// ── Legal Rules list + create ─────────────────────────────────
+
+export async function findAllLegalRules(prisma: PrismaClient) {
+  return prisma.legalRule.findMany({
+    include: LEGAL_RULE_INCLUDE,
+    orderBy: [{ priority: "desc" }, { key: "asc" }],
+  });
+}
+
+export async function createLegalRuleWithVersion(
+  prisma: PrismaClient,
+  data: {
+    key: string;
+    ruleType: string;
+    authority: string;
+    jurisdiction: string;
+    canton?: string | null;
+    priority: number;
+    isActive: boolean;
+    effectiveFrom: string | Date;
+    dslJson: unknown;
+    citationsJson?: unknown;
+    summary?: string | null;
+  },
+) {
+  const { effectiveFrom, dslJson, citationsJson, summary, ...ruleData } = data;
+  return prisma.legalRule.create({
+    data: {
+      ...ruleData,
+      versions: {
+        create: {
+          effectiveFrom,
+          dslJson: dslJson as any,
+          citationsJson: (citationsJson as any) ?? null,
+          summary: summary ?? null,
+        },
+      },
+    } as any,
+    include: LEGAL_RULE_WITH_VERSIONS_INCLUDE,
+  });
+}
+
+// ── Category Mappings ─────────────────────────────────────────
+
+export async function findCategoryMappingsByOrg(prisma: PrismaClient, orgId: string) {
+  return prisma.legalCategoryMapping.findMany({
+    where: { OR: [{ orgId }, { orgId: null }] },
+    orderBy: [{ orgId: "desc" }, { requestCategory: "asc" }],
+  });
+}
+
+export async function createCategoryMappingRecord(
+  prisma: PrismaClient,
+  orgId: string,
+  data: Record<string, unknown>,
+) {
+  return prisma.legalCategoryMapping.create({ data: { orgId, ...data } as any });
+}
+
+export async function findCategoryMappingById(prisma: PrismaClient, id: string) {
+  return prisma.legalCategoryMapping.findUnique({ where: { id } });
+}
+
+export async function updateCategoryMappingById(
+  prisma: PrismaClient,
+  id: string,
+  data: Record<string, unknown>,
+) {
+  return prisma.legalCategoryMapping.update({ where: { id }, data: data as any });
+}
+
+export async function deleteCategoryMappingById(prisma: PrismaClient, id: string) {
+  return prisma.legalCategoryMapping.delete({ where: { id } });
+}
+
+export async function findActiveCategoryMappings(prisma: PrismaClient, orgId: string) {
+  return prisma.legalCategoryMapping.findMany({
+    where: { OR: [{ orgId }, { orgId: null }], isActive: true },
+    orderBy: [{ orgId: "desc" }, { requestCategory: "asc" }],
+  });
+}
+
+export async function findDepreciationStandardsForCoverage(prisma: PrismaClient) {
+  return prisma.depreciationStandard.findMany({
+    select: { topic: true, assetType: true, usefulLifeMonths: true },
+  });
+}
+
+export async function findRentReductionRuleKeys(prisma: PrismaClient) {
+  return prisma.legalRule.findMany({
+    where: { key: { startsWith: "CH_RENT_RED" }, isActive: true },
+    select: { key: true, id: true },
+  });
+}
+
+// ── Evaluation Logs ───────────────────────────────────────────
+
+export async function findEvaluationLogsWithCount(
+  prisma: PrismaClient,
+  where: any,
+  limit: number,
+  offset: number,
+) {
+  return Promise.all([
+    prisma.legalEvaluationLog.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      take: limit,
+      skip: offset,
+    }),
+    prisma.legalEvaluationLog.count({ where }),
+  ]);
+}
+
+export async function findBuildingNamesByIds(prisma: PrismaClient, ids: string[]) {
+  return prisma.building.findMany({
+    where: { id: { in: ids } },
+    select: { id: true, name: true, address: true },
+  });
+}
+
+export async function findUnitNumbersByIds(prisma: PrismaClient, ids: string[]) {
+  return prisma.unit.findMany({
+    where: { id: { in: ids } },
+    select: { id: true, unitNumber: true },
+  });
+}
+
+export async function findRequestSummariesByIds(prisma: PrismaClient, ids: string[]) {
+  return prisma.request.findMany({
+    where: { id: { in: ids } },
+    select: { id: true, requestNumber: true, description: true, category: true },
+  });
+}
+
+// ── Depreciation Standards ────────────────────────────────────
+
+export async function findAllDepreciationStandards(prisma: PrismaClient) {
+  return prisma.depreciationStandard.findMany({
+    include: DEPRECIATION_STANDARD_INCLUDE,
+    orderBy: [{ assetType: "asc" }, { topic: "asc" }],
+  });
+}
+
+export async function createDepreciationStandardFull(
+  prisma: PrismaClient,
+  data: unknown,
+) {
+  return prisma.depreciationStandard.create({ data: data as any });
+}
+

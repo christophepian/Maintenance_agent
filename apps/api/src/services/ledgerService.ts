@@ -21,6 +21,11 @@
 import { v4 as uuidv4 } from "uuid";
 import { PrismaClient } from "@prisma/client";
 import type { InvoiceDTO } from "./invoices";
+import * as accountRepo from "../repositories/accountRepository";
+import * as leaseRepo from "../repositories/leaseRepository";
+import * as jobRepo from "../repositories/jobRepository";
+import * as invoiceRepo from "../repositories/invoiceRepository";
+import * as ledgerRepo from "../repositories/ledgerEntryRepository";
 
 /* ── Types ─────────────────────────────────────────────────────── */
 
@@ -79,10 +84,7 @@ async function resolveInvoiceAttribution(
   if (invoice.leaseId) {
     // Rent invoice: resolve from lease → unit → building
     try {
-      const lease = await prisma.lease.findUnique({
-        where: { id: invoice.leaseId },
-        select: { unitId: true, unit: { select: { buildingId: true } } },
-      });
+      const lease = await leaseRepo.findLeaseUnitAndBuilding(prisma, invoice.leaseId);
       return {
         unitId: lease?.unitId ?? null,
         buildingId: lease?.unit?.buildingId ?? null,
@@ -92,10 +94,7 @@ async function resolveInvoiceAttribution(
 
   // Cost invoice: resolve from job → request → unit → building
   try {
-    const job = await prisma.job.findUnique({
-      where: { id: invoice.jobId },
-      select: { request: { select: { unitId: true, unit: { select: { buildingId: true } } } } },
-    });
+    const job = await jobRepo.findJobRequestUnitBuilding(prisma, invoice.jobId);
     const req = (job?.request as any);
     return {
       unitId: req?.unitId ?? null,
@@ -109,9 +108,7 @@ async function findAccountByCode(
   orgId: string,
   code: string,
 ) {
-  return prisma.account.findFirst({
-    where: { orgId, code, isActive: true },
-  });
+  return accountRepo.findAccountByOrgAndCode(prisma, orgId, code);
 }
 
 function toCents(chf: number): number {
@@ -196,7 +193,7 @@ export async function postInvoiceIssued(
 
   // Cost invoice — use assigned account or fall back to 4200
   const expenseAcc = invoice.accountId
-    ? await prisma.account.findFirst({ where: { id: invoice.accountId, orgId } })
+    ? await accountRepo.findAccountByIdAndOrg(prisma, invoice.accountId, orgId)
     : await findAccountByCode(prisma, orgId, "4200");
   const payableAcc = await findAccountByCode(prisma, orgId, "2000");
 
@@ -291,16 +288,12 @@ export async function listLedgerEntries(
     };
   }
 
-  const [entries, total] = await Promise.all([
-    prisma.ledgerEntry.findMany({
-      where,
-      include: { account: true },
-      orderBy: [{ date: "desc" }, { createdAt: "desc" }],
-      take: filters.limit ?? 50,
-      skip: filters.offset ?? 0,
-    }),
-    prisma.ledgerEntry.count({ where }),
-  ]);
+  const [entries, total] = await ledgerRepo.findLedgerEntriesWithCount(
+    prisma,
+    where,
+    filters.limit ?? 50,
+    filters.offset ?? 0,
+  );
 
   return { data: entries.map(mapEntryToDTO), total };
 }
@@ -324,7 +317,7 @@ export async function getAccountBalance(
   accountId: string,
   periodFilter?: { from?: Date; to?: Date },
 ): Promise<AccountBalance | null> {
-  const account = await prisma.account.findFirst({ where: { id: accountId, orgId } });
+  const account = await accountRepo.findAccountByIdAndOrg(prisma, accountId, orgId);
   if (!account) return null;
 
   const where: any = { orgId, accountId };
@@ -336,10 +329,7 @@ export async function getAccountBalance(
     };
   }
 
-  const agg = await prisma.ledgerEntry.aggregate({
-    where,
-    _sum: { debitCents: true, creditCents: true },
-  });
+  const agg = await ledgerRepo.aggregateLedgerBalance(prisma, where);
 
   const debitCents = agg._sum.debitCents ?? 0;
   const creditCents = agg._sum.creditCents ?? 0;
@@ -362,10 +352,7 @@ export async function getTrialBalance(
   orgId: string,
   periodFilter?: { from?: Date; to?: Date },
 ): Promise<AccountBalance[]> {
-  const accounts = await prisma.account.findMany({
-    where: { orgId, isActive: true },
-    orderBy: { code: "asc" },
-  });
+  const accounts = await accountRepo.findActiveAccountsByOrg(prisma, orgId);
 
   const results = await Promise.all(
     accounts.map((a) => getAccountBalance(prisma, orgId, a.id, periodFilter)),
@@ -413,19 +400,12 @@ export async function getUnpostedIssuedInvoiceIds(
   orgId: string,
 ): Promise<string[]> {
   const postedIds = new Set(
-    (await prisma.ledgerEntry.findMany({
-      where: { orgId, sourceType: "INVOICE_ISSUED" },
-      select: { sourceId: true },
-    })).map((e) => e.sourceId).filter(Boolean) as string[],
+    await ledgerRepo.findLedgerSourceIds(prisma, orgId, "INVOICE_ISSUED"),
   );
 
-  const candidates = await prisma.invoice.findMany({
-    where: { orgId, status: { in: ["ISSUED", "APPROVED", "PAID"] } },
-    select: { id: true },
-    orderBy: { createdAt: "asc" },
-  });
+  const ids = await invoiceRepo.findInvoiceIdsByStatuses(prisma, orgId, ["ISSUED", "APPROVED", "PAID"]);
 
-  return candidates.filter((i) => !postedIds.has(i.id)).map((i) => i.id);
+  return ids.filter((id) => !postedIds.has(id));
 }
 
 /**
@@ -437,19 +417,12 @@ export async function getUnpostedPaidInvoiceIds(
   orgId: string,
 ): Promise<string[]> {
   const postedIds = new Set(
-    (await prisma.ledgerEntry.findMany({
-      where: { orgId, sourceType: "INVOICE_PAID" },
-      select: { sourceId: true },
-    })).map((e) => e.sourceId).filter(Boolean) as string[],
+    await ledgerRepo.findLedgerSourceIds(prisma, orgId, "INVOICE_PAID"),
   );
 
-  const candidates = await prisma.invoice.findMany({
-    where: { orgId, status: "PAID" },
-    select: { id: true },
-    orderBy: { createdAt: "asc" },
-  });
+  const ids = await invoiceRepo.findInvoiceIdsByStatuses(prisma, orgId, ["PAID"]);
 
-  return candidates.filter((i) => !postedIds.has(i.id)).map((i) => i.id);
+  return ids.filter((id) => !postedIds.has(id));
 }
 
 /**
@@ -459,9 +432,5 @@ export async function getDraftInvoiceIds(
   prisma: PrismaClient,
   orgId: string,
 ): Promise<string[]> {
-  const drafts = await prisma.invoice.findMany({
-    where: { orgId, status: "DRAFT" },
-    select: { id: true },
-  });
-  return drafts.map((i) => i.id);
+  return invoiceRepo.findInvoiceIdsByStatuses(prisma, orgId, ["DRAFT"]);
 }

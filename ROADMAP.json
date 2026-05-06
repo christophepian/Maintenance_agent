@@ -7279,7 +7279,7 @@
       "goal": "Final ARCH-1 slice. Migrates the three largest offenders: leases.ts (31 calls), legalService.ts (20), ledgerService.ts (16). Completing this slice achieves 0 direct prisma.* calls in all service files — full architecture compliance.",
       "phase": "P1",
       "order": 124,
-      "status": "capture",
+      "status": "done",
       "product_area": "architecture",
       "depends_on": [
         "DT-123"
@@ -7660,7 +7660,7 @@
       "goal": "Final ARCH-1 slice. Migrates the three largest offenders: leases.ts (31 calls), legalService.ts (20), ledgerService.ts (16). Completing this slice achieves 0 direct prisma.* calls in all service files — full architecture compliance.",
       "phase": "P1",
       "order": 124,
-      "status": "capture",
+      "status": "done",
       "product_area": "architecture",
       "depends_on": [
         "DT-123"

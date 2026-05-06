@@ -102,3 +102,29 @@ export async function upsertAccount(
     include: ACCOUNT_INCLUDE,
   });
 }
+
+/** Find an account by org + account code (for ledger auto-posting). */
+export async function findAccountByOrgAndCode(
+  prisma: PrismaClient,
+  orgId: string,
+  code: string,
+) {
+  return prisma.account.findFirst({ where: { orgId, code, isActive: true } });
+}
+
+/** Find an account by id scoped to org. */
+export async function findAccountByIdAndOrg(
+  prisma: PrismaClient,
+  id: string,
+  orgId: string,
+) {
+  return prisma.account.findFirst({ where: { id, orgId } });
+}
+
+/** All active accounts for org ordered by code. */
+export async function findActiveAccountsByOrg(
+  prisma: PrismaClient,
+  orgId: string,
+) {
+  return prisma.account.findMany({ where: { orgId, isActive: true }, orderBy: { code: "asc" } });
+}
