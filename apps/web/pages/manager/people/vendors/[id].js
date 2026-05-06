@@ -219,39 +219,6 @@ export default function ContractorDetailPage() {
         <PageHeader
           title={contractor?.name || "Contractor"}
           subtitle={t("manager:peopleVendorsId.prop.contractorProfileAndServiceDetails")}
-          actions={(
-            <div className="flex items-center gap-2">
-              {isEditing ? (
-                <>
-                  <button
-                    type="button"
-                    className="button-secondary"
-                    onClick={handleCancel}
-                    disabled={saving}
-                  >
-                    {t("manager:peopleVendorsId.text.cancel")}
-                  </button>
-                  <button
-                    type="button"
-                    className="button-primary"
-                    onClick={handleSave}
-                    disabled={saving}
-                  >
-                    {saving ? t("manager:peopleVendorsId.text.saving") : t("manager:peopleVendorsId.text.save")}
-                  </button>
-                </>
-              ) : (
-                <button
-                  type="button"
-                  className="button-primary"
-                  onClick={() => setIsEditing(true)}
-                  disabled={loading || !contractor}
-                >
-                  {t("manager:peopleVendorsId.text.edit")}
-                </button>
-              )}
-            </div>
-          )}
         />
         <PageContent>
           {message ? (
@@ -277,7 +244,19 @@ export default function ContractorDetailPage() {
               </ScrollableTabs>
 
               {activeTab === "personal" && (
-                <Panel title={t("manager:peopleVendorsId.title.personalInformation")}>
+                <Panel
+                  title={t("manager:peopleVendorsId.title.personalInformation")}
+                  actions={
+                    isEditing ? (
+                      <div className="flex items-center gap-2">
+                        <button type="button" className="button-secondary text-sm" onClick={handleCancel} disabled={saving}>{t("manager:peopleVendorsId.text.cancel")}</button>
+                        <button type="button" className="button-primary text-sm" onClick={handleSave} disabled={saving}>{saving ? t("manager:peopleVendorsId.text.saving") : t("manager:peopleVendorsId.text.save")}</button>
+                      </div>
+                    ) : (
+                      <button type="button" className="button-primary text-sm" onClick={() => setIsEditing(true)} disabled={loading || !contractor}>{t("manager:peopleVendorsId.text.edit")}</button>
+                    )
+                  }
+                >
                   <div className="grid gap-4 sm:grid-cols-2">
                     <label className="grid gap-2">
                       <span className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleVendorsId.text.name")}</span>
