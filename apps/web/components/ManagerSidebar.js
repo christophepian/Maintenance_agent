@@ -18,7 +18,7 @@ import {
  */
 const MANAGER_NAV = [
   { id: "dashboard", icon: LayoutDashboard, href: "/manager" },
-  { id: "properties", icon: Building2, href: "/manager/inventory" },
+  { id: "properties", icon: Building2, href: "/manager/inventory", aliases: ["/manager/vacancies"] },
   { id: "requests",  icon: Wrench,    href: "/manager/requests" },
   { id: "leases",    icon: KeyRound,  href: "/manager/leases" },
   { id: "finances",  icon: Wallet,    href: "/manager/finance" },
@@ -35,7 +35,9 @@ export default function ManagerSidebar() {
     // Check longest-prefix first so /manager doesn't shadow /manager/requests etc.
     for (let i = MANAGER_NAV.length - 1; i >= 0; i--) {
       const h = MANAGER_NAV[i].href;
+      const aliases = MANAGER_NAV[i].aliases || [];
       if (pathname === h || pathname.startsWith(h + "/")) return i;
+      if (aliases.some((a) => pathname === a || pathname.startsWith(a + "/"))) return i;
     }
     return -1;
   }, [pathname]);

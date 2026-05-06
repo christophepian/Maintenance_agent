@@ -276,7 +276,6 @@ export default function ManagerVacanciesPage() {
             <button className="tab-btn-active">{t("manager:vacanciesIndex.text.vacancies")}</button>
             <Link href="/manager/inventory?tab=assets" className="tab-btn">{t("manager:vacanciesIndex.text.assets")}</Link>
             <Link href="/manager/inventory?tab=decisions" className="tab-btn">{t("manager:vacanciesIndex.text.maintenanceDecisions")}</Link>
-            <Link href="/manager/inventory?tab=depreciation" className="tab-btn">{t("manager:vacanciesIndex.text.depreciation")}</Link>
           </ScrollableTabs>
 
           {/* ── Tenant Selections Pipeline ─────────────────── */}
