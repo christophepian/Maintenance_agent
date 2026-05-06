@@ -7,6 +7,9 @@ import { RENTAL_OWNER_SELECTION_INCLUDE } from "./rentalIncludes";
 import { OwnerSelectionInput } from "../validation/rentalApplications";
 import { enqueueEmail } from "./emailOutbox";
 import { listLeaseTemplates, createLeaseFromTemplate, createLeaseInvoice } from "./leases";
+import * as rentalAppRepo from '../repositories/rentalApplicationRepository';
+import * as inventoryRepo from '../repositories/inventoryRepository';
+import * as userRepo from '../repositories/userRepository';
 
 /* ══════════════════════════════════════════════════════════════
    Owner Selection Service
@@ -65,10 +68,7 @@ export async function ownerSelectCandidates(
   input: OwnerSelectionInput,
 ): Promise<RentalOwnerSelectionDTO> {
   // Validate unit exists and belongs to this org
-  const unit = await prisma.unit.findFirst({
-    where: { id: unitId, building: { orgId }, isVacant: true },
-    include: { building: { include: { config: true } } },
-  });
+  const unit = await inventoryRepo.findVacantUnitWithBuildingConfig(prisma, unitId, orgId);
   if (!unit) throw new Error("UNIT_NOT_FOUND_OR_NOT_VACANT");
 
   // Validate all referenced application-units exist for this unit
@@ -78,16 +78,7 @@ export async function ownerSelectCandidates(
     input.backup2ApplicationUnitId,
   ].filter(Boolean) as string[];
 
-  const applicationUnits = await prisma.rentalApplicationUnit.findMany({
-    where: { id: { in: auIds }, unitId },
-    include: {
-      application: {
-        include: {
-          applicants: { where: { role: "PRIMARY" }, take: 1 },
-        },
-      },
-    },
-  });
+  const applicationUnits = await rentalAppRepo.findApplicationUnitsByIds(prisma, auIds, unitId);
 
   const foundIds = new Set(applicationUnits.map((au) => au.id));
   for (const id of auIds) {
@@ -103,71 +94,17 @@ export async function ownerSelectCandidates(
   deadlineAt.setDate(deadlineAt.getDate() + deadlineDays);
 
   // Transaction: create selection + update statuses + reject others
-  const selection = await prisma.$transaction(async (tx) => {
-    // 1. Create the selection record
-    const sel = await tx.rentalOwnerSelection.create({
-      data: {
-        unitId,
-        decidedAt: new Date(),
-        deadlineAt,
-        primaryApplicationUnitId: input.primaryApplicationUnitId,
-        backup1ApplicationUnitId: input.backup1ApplicationUnitId || null,
-        backup2ApplicationUnitId: input.backup2ApplicationUnitId || null,
-        status: "AWAITING_SIGNATURE",
-      },
-    });
-
-    // 2. Update selected application-unit statuses
-    await tx.rentalApplicationUnit.update({
-      where: { id: input.primaryApplicationUnitId },
-      data: { status: "SELECTED_PRIMARY" },
-    });
-    if (input.backup1ApplicationUnitId) {
-      await tx.rentalApplicationUnit.update({
-        where: { id: input.backup1ApplicationUnitId },
-        data: { status: "SELECTED_BACKUP_1" },
-      });
-    }
-    if (input.backup2ApplicationUnitId) {
-      await tx.rentalApplicationUnit.update({
-        where: { id: input.backup2ApplicationUnitId },
-        data: { status: "SELECTED_BACKUP_2" },
-      });
-    }
-
-    // 3. Reject all other application-units for this unit
-    const selectedIds = new Set(auIds);
-    await tx.rentalApplicationUnit.updateMany({
-      where: {
-        unitId,
-        id: { notIn: Array.from(selectedIds) },
-        status: "SUBMITTED",
-      },
-      data: {
-        status: "REJECTED",
-      },
-    });
-
-    // 4. Mark unit as no longer vacant
-    await tx.unit.update({
-      where: { id: unitId },
-      data: { isVacant: false },
-    });
-
-    return sel;
+  const selection = await rentalAppRepo.createOwnerSelectionTransaction(prisma, {
+    unitId,
+    deadlineAt,
+    primaryApplicationUnitId: input.primaryApplicationUnitId,
+    backup1ApplicationUnitId: input.backup1ApplicationUnitId,
+    backup2ApplicationUnitId: input.backup2ApplicationUnitId,
+    auIds,
   });
 
   // Enqueue rejection emails (outside transaction — non-critical)
-  const rejectedAus = await prisma.rentalApplicationUnit.findMany({
-    where: { unitId, status: "REJECTED" },
-    include: {
-      application: {
-        include: {
-          applicants: { where: { role: "PRIMARY" }, take: 1 },
-        },
-      },
-    },
-  });
+  const rejectedAus = await rentalAppRepo.findRejectedApplicationUnitsForUnit(prisma, unitId);
 
   for (const rau of rejectedAus) {
     const primary = rau.application.applicants[0];
@@ -184,14 +121,11 @@ export async function ownerSelectCandidates(
       });
 
       // Set retention delete date (+30 days) for rejected attachments
-      await prisma.rentalAttachment.updateMany({
-        where: { applicationId: rau.applicationId },
-        data: {
-          retentionDeleteAt: new Date(
-            Date.now() + 30 * 24 * 60 * 60 * 1000,
-          ),
-        },
-      });
+      await rentalAppRepo.updateAttachmentRetention(
+        prisma,
+        rau.applicationId,
+        new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      );
     }
   }
 
@@ -296,10 +230,7 @@ export async function ownerSelectCandidates(
 
   try {
     // Find all manager users for this org
-    const managers = await prisma.user.findMany({
-      where: { orgId, role: "MANAGER" },
-      select: { id: true, email: true },
-    });
+    const managers = await userRepo.findManagersByOrg(prisma, orgId);
 
     const { notifyManagerTenantSelected, notifyOwnerTenantSelected } = await import("./notifications");
 
@@ -352,10 +283,7 @@ export async function ownerSelectCandidates(
     }
 
     // Also notify the owner(s) as a confirmation of their selection
-    const owners = await prisma.user.findMany({
-      where: { orgId, role: "OWNER" },
-      select: { id: true },
-    });
+    const owners = await userRepo.findOwnersByOrg(prisma, orgId);
     for (const owner of owners) {
       await notifyOwnerTenantSelected(
         selection.id,
@@ -382,77 +310,41 @@ export async function processSelectionTimeouts(
   now: Date = new Date(),
 ): Promise<number> {
   // Find selections past deadline that are still awaiting signature
-  const expired = await prisma.rentalOwnerSelection.findMany({
-    where: {
-      status: "AWAITING_SIGNATURE",
-      deadlineAt: { lte: now },
-    },
-    include: RENTAL_OWNER_SELECTION_INCLUDE,
-  });
+  const expired = await rentalAppRepo.findExpiredSelectionsWithFullInclude(
+    prisma, now, RENTAL_OWNER_SELECTION_INCLUDE,
+  );
 
   let processed = 0;
 
   for (const sel of expired) {
     const orgId = (sel as any).unit?.building?.orgId || "";
 
-    await prisma.$transaction(async (tx) => {
-      // Void the primary
-      await tx.rentalApplicationUnit.update({
-        where: { id: sel.primaryApplicationUnitId },
-        data: { status: "VOIDED" },
-      });
+    await rentalAppRepo.processSelectionTimeoutTransaction(prisma, {
+      id: sel.id,
+      unitId: sel.unitId,
+      primaryApplicationUnitId: sel.primaryApplicationUnitId,
+      backup1ApplicationUnitId: sel.backup1ApplicationUnitId,
+      backup2ApplicationUnitId: sel.backup2ApplicationUnitId,
+    });
 
-      // Try to promote backup 1
-      if (sel.backup1ApplicationUnitId) {
-        await tx.rentalApplicationUnit.update({
-          where: { id: sel.backup1ApplicationUnitId },
-          data: { status: "SELECTED_PRIMARY" },
-        });
-
-        const newDeadline = new Date();
-        newDeadline.setDate(newDeadline.getDate() + 7);
-
-        await tx.rentalOwnerSelection.update({
-          where: { id: sel.id },
-          data: {
-            status: "FALLBACK_1",
-            primaryApplicationUnitId: sel.backup1ApplicationUnitId,
-            backup1ApplicationUnitId: sel.backup2ApplicationUnitId,
-            backup2ApplicationUnitId: null,
-            deadlineAt: newDeadline,
+    // Enqueue email to new primary if backup1 was promoted
+    if (sel.backup1ApplicationUnitId) {
+      const backup1 = (sel as any).backup1Selection;
+      const applicant = backup1?.application?.applicants?.[0];
+      if (applicant?.email) {
+        await enqueueEmail(orgId, {
+          toEmail: applicant.email,
+          template: "SELECTED_LEASE_LINK",
+          subject: "You have been selected! Review your lease",
+          bodyText: `You have been moved up to primary selection for this unit. Please review and sign your lease within 7 days.`,
+          metaJson: {
+            applicationId: backup1.applicationId,
+            unitId: sel.unitId,
+            selectionId: sel.id,
           },
         });
-
-        // Enqueue email to new primary
-        const backup1 = (sel as any).backup1Selection;
-        const applicant = backup1?.application?.applicants?.[0];
-        if (applicant?.email) {
-          await enqueueEmail(orgId, {
-            toEmail: applicant.email,
-            template: "SELECTED_LEASE_LINK",
-            subject: "You have been selected! Review your lease",
-            bodyText: `You have been moved up to primary selection for this unit. Please review and sign your lease within 7 days.`,
-            metaJson: {
-              applicationId: backup1.applicationId,
-              unitId: sel.unitId,
-              selectionId: sel.id,
-            },
-          });
-        }
-      } else {
-        // No backups left — mark exhausted
-        await tx.rentalOwnerSelection.update({
-          where: { id: sel.id },
-          data: { status: "EXHAUSTED" },
-        });
-
-        // Re-open the unit as vacant
-        await tx.unit.update({
-          where: { id: sel.unitId },
-          data: { isVacant: true },
-        });
       }
-    });
+    }
 
     processed++;
   }
@@ -468,17 +360,13 @@ export async function processAttachmentRetention(
 ): Promise<number> {
   const { storage } = await import("../storage/attachments");
 
-  const expired = await prisma.rentalAttachment.findMany({
-    where: {
-      retentionDeleteAt: { lte: now },
-    },
-  });
+  const expired = await rentalAppRepo.findExpiredAttachments(prisma, now);
 
   let deleted = 0;
   for (const att of expired) {
     try {
       await storage.delete(att.storageKey);
-      await prisma.rentalAttachment.delete({ where: { id: att.id } });
+      await rentalAppRepo.deleteAttachmentRecord(prisma, att.id);
       deleted++;
     } catch (err) {
       console.error(

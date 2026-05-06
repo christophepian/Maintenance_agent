@@ -8,6 +8,8 @@ import {
   UnitType,
 } from "@prisma/client";
 import prisma from "./prismaClient";
+import * as rentalAppRepo from '../repositories/rentalApplicationRepository';
+import * as inventoryRepo from '../repositories/inventoryRepository';
 import {
   RENTAL_APPLICATION_INCLUDE,
   RENTAL_APPLICATION_UNIT_INCLUDE,
@@ -330,10 +332,7 @@ export async function createRentalApplicationDraft(
   input: CreateRentalApplicationInput,
 ): Promise<RentalApplicationDTO> {
   // Verify all selected units exist, are listing-eligible, and belong to this org
-  const units = await prisma.unit.findMany({
-    where: listingEligibleUnitWhere(orgId, input.unitIds),
-    select: { id: true },
-  });
+  const units = await rentalAppRepo.findVacantUnits(prisma, orgId, input.unitIds);
 
   const foundIds = new Set(units.map((u) => u.id));
   const missing = input.unitIds.filter((id) => !foundIds.has(id));
@@ -342,7 +341,7 @@ export async function createRentalApplicationDraft(
   }
 
   // Create application + applicants in a transaction
-  const app = await prisma.$transaction(async (tx) => {
+  const app = await prisma.$transaction(async (tx: any) => {
     const application = await tx.rentalApplication.create({
       data: {
         orgId,
@@ -414,10 +413,7 @@ export async function submitRentalApplication(
   meta: { ip?: string; userAgent?: string },
 ): Promise<RentalApplicationDTO> {
   // Fetch the full application
-  const app = await prisma.rentalApplication.findUnique({
-    where: { id: applicationId },
-    include: RENTAL_APPLICATION_INCLUDE,
-  });
+  const app = await rentalAppRepo.findApplicationForSubmit(prisma, applicationId);
 
   if (!app) throw new Error("APPLICATION_NOT_FOUND");
   if (app.status !== "DRAFT") throw new Error("APPLICATION_ALREADY_SUBMITTED");
@@ -466,9 +462,7 @@ export async function submitRentalApplication(
 
     // Load building config for rental policy
     const config = building
-      ? await prisma.buildingConfig.findUnique({
-          where: { buildingId: building.id },
-        })
+      ? await inventoryRepo.findBuildingConfigById(prisma, building.id)
       : null;
 
     const evalResult = evaluate({
@@ -492,7 +486,7 @@ export async function submitRentalApplication(
   }
 
   // Transaction: update application + all unit evaluations
-  const updated = await prisma.$transaction(async (tx) => {
+  const updated = await prisma.$transaction(async (tx: any) => {
     // Mark submitted
     const updatedApp = await tx.rentalApplication.update({
       where: { id: applicationId },
@@ -577,11 +571,7 @@ export async function submitRentalApplication(
   }
 
   // Re-fetch with full includes for the response
-  const result = await prisma.rentalApplication.findUnique({
-    where: { id: applicationId },
-    include: RENTAL_APPLICATION_INCLUDE,
-  });
-
+  const result = await rentalAppRepo.findApplicationById(prisma, applicationId);
   return mapApplicationToDTO(result!);
 }
 
@@ -599,10 +589,7 @@ export async function uploadRentalAttachment(
   }
 
   // Verify application and applicant exist
-  const app = await prisma.rentalApplication.findUnique({
-    where: { id: applicationId },
-    include: { applicants: { where: { id: applicantId } } },
-  });
+  const app = await rentalAppRepo.findApplicationWithApplicants(prisma, applicationId, applicantId);
 
   if (!app) throw new Error("APPLICATION_NOT_FOUND");
   if (!app.applicants || app.applicants.length === 0) {
@@ -619,17 +606,15 @@ export async function uploadRentalAttachment(
   });
 
   // Create DB record
-  const attachment = await prisma.rentalAttachment.create({
-    data: {
-      applicationId,
-      applicantId,
-      docType,
-      fileName: file.fileName,
-      fileSizeBytes: saved.size,
-      mimeType: saved.mimeType,
-      storageKey: saved.key,
-      sha256: saved.sha256,
-    },
+  const attachment = await rentalAppRepo.createAttachment(prisma, {
+    applicationId,
+    applicantId,
+    docType,
+    fileName: file.fileName,
+    fileSizeBytes: saved.size,
+    mimeType: saved.mimeType,
+    storageKey: saved.key,
+    sha256: saved.sha256,
   });
 
   return mapAttachmentToDTO(attachment);
@@ -641,11 +626,7 @@ export async function uploadRentalAttachment(
 export async function getApplication(
   applicationId: string,
 ): Promise<RentalApplicationDTO | null> {
-  const app = await prisma.rentalApplication.findUnique({
-    where: { id: applicationId },
-    include: RENTAL_APPLICATION_INCLUDE,
-  });
-
+  const app = await rentalAppRepo.findApplicationById(prisma, applicationId);
   return app ? mapApplicationToDTO(app) : null;
 }
 
@@ -659,48 +640,7 @@ export async function listApplicationsForUnit(
   view: "summary" | "full" = "summary",
 ): Promise<RentalApplicationSummaryDTO[] | RentalApplicationDTO[]> {
   // Find all application-unit links for this unit (only submitted applications)
-  const applicationUnits = await prisma.rentalApplicationUnit.findMany({
-    where: {
-      unitId,
-      application: { orgId, status: "SUBMITTED" },
-    },
-    include: {
-      application: {
-        include:
-          view === "full"
-            ? RENTAL_APPLICATION_INCLUDE
-            : {
-                applicants: {
-                  select: {
-                    id: true,
-                    role: true,
-                    firstName: true,
-                    lastName: true,
-                    netMonthlyIncome: true,
-                  },
-                  orderBy: { createdAt: "asc" as const },
-                },
-                applicationUnits: {
-                  select: {
-                    id: true,
-                    unitId: true,
-                    status: true,
-                    scoreTotal: true,
-                    confidenceScore: true,
-                    disqualified: true,
-                    disqualifiedReasons: true,
-                    managerOverrideReason: true,
-                    rank: true,
-                  },
-                },
-              },
-      },
-    },
-    orderBy: [
-      { disqualified: "asc" }, // non-disqualified first
-      { scoreTotal: "desc" },
-    ],
-  });
+  const applicationUnits = await rentalAppRepo.findApplicationUnitsForUnit(prisma, unitId, orgId, view);
 
   const apps = applicationUnits.map((au) => au.application);
 
@@ -717,28 +657,17 @@ export async function adjustEvaluation(
   applicationUnitId: string,
   input: AdjustScoreInput,
 ): Promise<RentalApplicationUnitDTO> {
-  const au = await prisma.rentalApplicationUnit.findUnique({
-    where: { id: applicationUnitId },
-    include: {
-      unit: { include: { building: true } },
-    },
-  });
+  const au = await rentalAppRepo.findApplicationUnitById(prisma, applicationUnitId);
 
   if (!au) throw new Error("APPLICATION_UNIT_NOT_FOUND");
 
   const newScore = (au.scoreTotal || 0) + input.scoreDelta;
 
-  const updated = await prisma.rentalApplicationUnit.update({
-    where: { id: applicationUnitId },
-    data: {
-      scoreTotal: newScore,
-      managerScoreDelta: (au.managerScoreDelta || 0) + input.scoreDelta,
-      managerOverrideReason: input.reason,
-      managerOverrideJson: (input.overrideJson as any) || undefined,
-    },
-    include: {
-      unit: { include: { building: true } },
-    },
+  const updated = await rentalAppRepo.updateApplicationUnitWithInclude(prisma, applicationUnitId, {
+    scoreTotal: newScore,
+    managerScoreDelta: ((au as any).managerScoreDelta || 0) + input.scoreDelta,
+    managerOverrideReason: input.reason,
+    managerOverrideJson: (input.overrideJson as any) || undefined,
   });
 
   return mapApplicationUnitToDTO(updated);
@@ -752,27 +681,20 @@ export async function overrideDisqualification(
   applicationUnitId: string,
   reason: string,
 ): Promise<RentalApplicationUnitDTO> {
-  const au = await prisma.rentalApplicationUnit.findUnique({
-    where: { id: applicationUnitId },
-    include: { unit: { include: { building: true } } },
-  });
+  const au = await rentalAppRepo.findApplicationUnitById(prisma, applicationUnitId);
 
   if (!au) throw new Error("APPLICATION_UNIT_NOT_FOUND");
   if (!au.disqualified) throw new Error("NOT_DISQUALIFIED");
 
-  const updated = await prisma.rentalApplicationUnit.update({
-    where: { id: applicationUnitId },
-    data: {
-      disqualified: false,
-      managerOverrideReason: reason,
-      managerOverrideJson: {
-        type: "disqualification_override",
-        previousReasons: au.disqualifiedReasons,
-        overriddenAt: new Date().toISOString(),
-        reason,
-      },
+  const updated = await rentalAppRepo.updateApplicationUnitWithInclude(prisma, applicationUnitId, {
+    disqualified: false,
+    managerOverrideReason: reason,
+    managerOverrideJson: {
+      type: "disqualification_override",
+      previousReasons: au.disqualifiedReasons,
+      overriddenAt: new Date().toISOString(),
+      reason,
     },
-    include: { unit: { include: { building: true } } },
   });
 
   return mapApplicationUnitToDTO(updated);
@@ -782,28 +704,7 @@ export async function overrideDisqualification(
  * List vacant units (public endpoint).
  */
 export async function listVacantUnits(orgId: string) {
-  const units = await prisma.unit.findMany({
-    where: listingEligibleUnitWhere(orgId),
-    include: {
-      building: {
-        select: {
-          id: true,
-          name: true,
-          address: true,
-          city: true,
-          postalCode: true,
-        },
-      },
-      leases: {
-        where: { status: { in: ["TERMINATED", "SIGNED"] } },
-        orderBy: { endDate: "desc" },
-        take: 1,
-        select: { endDate: true, terminatedAt: true },
-      },
-      _count: { select: { rentalApplicationUnits: true } },
-    },
-    orderBy: [{ building: { name: "asc" } }, { unitNumber: "asc" }],
-  });
+  const units = await rentalAppRepo.findVacantUnits(prisma, orgId);
 
   return units.map((u) => ({
     id: u.id,

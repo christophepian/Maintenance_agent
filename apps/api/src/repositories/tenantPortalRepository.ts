@@ -171,3 +171,91 @@ export async function createContractorUser(
   });
   return { userId: user.id, contractorId: contractor.id };
 }
+
+// ─── Tenant Portal Lease / Occupancy Helpers ──────────────────
+
+/** Verify a specific occupancy for a tenant + unit. */
+export async function findOccupancyForTenantAndUnit(
+  prisma: PrismaClient,
+  tenantId: string,
+  unitId: string,
+) {
+  return prisma.occupancy.findFirst({ where: { tenantId, unitId } });
+}
+
+/** Get all unitIds a tenant occupies (select only). */
+export async function findTenantOccupancyUnitIds(
+  prisma: PrismaClient,
+  tenantId: string,
+) {
+  return prisma.occupancy.findMany({
+    where: { tenantId },
+    select: { unitId: true },
+  });
+}
+
+/** Find leases visible to tenant across their units, with sig requests. */
+export async function findLeasesByUnitsForTenant(
+  prisma: PrismaClient,
+  orgId: string,
+  unitIds: string[],
+  statuses: string[],
+) {
+  return prisma.lease.findMany({
+    where: { orgId, unitId: { in: unitIds }, status: { in: statuses as any[] } },
+    include: {
+      unit: { include: { building: true } },
+      signatureRequests: {
+        where: { entityType: "LEASE" },
+        orderBy: { createdAt: "desc" as const },
+        take: 1,
+      },
+    },
+    orderBy: { createdAt: "desc" as const },
+  });
+}
+
+/** Find a single lease with unit+building and latest sig request. */
+export async function findLeaseWithSignatureRequests(
+  prisma: PrismaClient,
+  leaseId: string,
+) {
+  return prisma.lease.findUnique({
+    where: { id: leaseId },
+    include: {
+      unit: { include: { building: true } },
+      signatureRequests: {
+        where: { entityType: "LEASE" },
+        orderBy: { createdAt: "desc" as const },
+      },
+    },
+  });
+}
+
+/** Mark a signature request as SIGNED. */
+export async function updateSignatureRequestSigned(
+  prisma: PrismaClient,
+  id: string,
+  signedAt: Date,
+) {
+  return prisma.signatureRequest.update({
+    where: { id },
+    data: { status: "SIGNED" as any, signedAt },
+  });
+}
+
+/** Update a lease to ACTIVE status with full include (returns updatedLease for DTO mapping). */
+export async function updateLeaseToActive(prisma: PrismaClient, leaseId: string) {
+  return prisma.lease.update({
+    where: { id: leaseId },
+    data: { status: "ACTIVE" as any, activatedAt: new Date() },
+    include: {
+      unit: { include: { building: true } },
+      signatureRequests: {
+        where: { entityType: "LEASE" },
+        orderBy: { createdAt: "desc" as const },
+        take: 1,
+      },
+    },
+  });
+}

@@ -6,6 +6,9 @@
  */
 import { LeaseStatus, SignatureRequestStatus } from '@prisma/client';
 import prisma from './prismaClient';
+import * as tenantPortalRepo from '../repositories/tenantPortalRepository';
+import * as userRepo from '../repositories/userRepository';
+import * as rentalAppRepo from '../repositories/rentalApplicationRepository';
 
 // ==========================================
 // DTOs — Tenant-facing (subset of full LeaseDTO)
@@ -136,40 +139,22 @@ export async function listTenantLeases(
   // Otherwise, get ALL units this tenant occupies
   let unitIds: string[];
   if (unitId) {
-    const occupancy = await prisma.occupancy.findFirst({
-      where: { tenantId, unitId },
-    });
+    const occupancy = await tenantPortalRepo.findOccupancyForTenantAndUnit(prisma, tenantId, unitId);
     if (!occupancy) {
       throw new Error('Tenant does not occupy this unit');
     }
     unitIds = [unitId];
   } else {
-    const occupancies = await prisma.occupancy.findMany({
-      where: { tenantId },
-      select: { unitId: true },
-    });
+    const occupancies = await tenantPortalRepo.findTenantOccupancyUnitIds(prisma, tenantId);
     unitIds = occupancies.map((o) => o.unitId);
     if (unitIds.length === 0) {
       return [];
     }
   }
 
-  const leases = await prisma.lease.findMany({
-    where: {
-      orgId,
-      unitId: { in: unitIds },
-      status: { in: TENANT_VISIBLE_STATUSES },
-    },
-    include: {
-      unit: { include: { building: true } },
-      signatureRequests: {
-        where: { entityType: 'LEASE' },
-        orderBy: { createdAt: 'desc' },
-        take: 1,
-      },
-    },
-    orderBy: { createdAt: 'desc' },
-  });
+  const leases = await tenantPortalRepo.findLeasesByUnitsForTenant(
+    prisma, orgId, unitIds, TENANT_VISIBLE_STATUSES as string[],
+  );
 
   return leases.map((l) =>
     mapToTenantLeaseDTO(l, l.signatureRequests?.[0] || undefined),
@@ -184,26 +169,14 @@ export async function getTenantLease(
   tenantId: string,
   orgId: string,
 ): Promise<TenantLeaseDTO | null> {
-  const lease = await prisma.lease.findUnique({
-    where: { id: leaseId },
-    include: {
-      unit: { include: { building: true } },
-      signatureRequests: {
-        where: { entityType: 'LEASE' },
-        orderBy: { createdAt: 'desc' },
-        take: 1,
-      },
-    },
-  });
+  const lease = await tenantPortalRepo.findLeaseWithSignatureRequests(prisma, leaseId);
 
   if (!lease) return null;
   if (lease.orgId !== orgId) return null;
   if (!TENANT_VISIBLE_STATUSES.includes(lease.status)) return null;
 
   // Verify tenant occupies the lease's unit
-  const occupancy = await prisma.occupancy.findFirst({
-    where: { tenantId, unitId: lease.unitId },
-  });
+  const occupancy = await tenantPortalRepo.findOccupancyForTenantAndUnit(prisma, tenantId, lease.unitId);
   if (!occupancy) return null;
 
   return mapToTenantLeaseDTO(lease, lease.signatureRequests?.[0] || undefined);
@@ -227,24 +200,13 @@ export async function tenantAcceptLease(
   orgId: string,
 ): Promise<TenantAcceptResult> {
   // Load lease
-  const lease = await prisma.lease.findUnique({
-    where: { id: leaseId },
-    include: {
-      unit: { include: { building: true } },
-      signatureRequests: {
-        where: { entityType: 'LEASE' },
-        orderBy: { createdAt: 'desc' },
-      },
-    },
-  });
+  const lease = await tenantPortalRepo.findLeaseWithSignatureRequests(prisma, leaseId);
 
   if (!lease) throw new Error('Lease not found');
   if (lease.orgId !== orgId) throw new Error('Lease not found');
 
   // Verify tenant occupies the lease's unit
-  const occupancy = await prisma.occupancy.findFirst({
-    where: { tenantId, unitId: lease.unitId },
-  });
+  const occupancy = await tenantPortalRepo.findOccupancyForTenantAndUnit(prisma, tenantId, lease.unitId);
   if (!occupancy) throw new Error('Tenant does not occupy this unit');
   if (lease.status !== LeaseStatus.READY_TO_SIGN) {
     throw new Error('Only READY_TO_SIGN leases can be accepted');
@@ -260,30 +222,10 @@ export async function tenantAcceptLease(
   }
 
   // Mark signature request as SIGNED (stub — real e-sign would go through provider)
-  const updatedSigReq = await prisma.signatureRequest.update({
-    where: { id: sigReq.id },
-    data: {
-      status: SignatureRequestStatus.SIGNED,
-      signedAt: new Date(),
-    },
-  });
+  const updatedSigReq = await tenantPortalRepo.updateSignatureRequestSigned(prisma, sigReq.id, new Date());
 
   // Auto-activate: READY_TO_SIGN → SIGNED → ACTIVE in one step
-  const updatedLease = await prisma.lease.update({
-    where: { id: leaseId },
-    data: {
-      status: LeaseStatus.ACTIVE,
-      activatedAt: new Date(),
-    },
-    include: {
-      unit: { include: { building: true } },
-      signatureRequests: {
-        where: { entityType: 'LEASE' },
-        orderBy: { createdAt: 'desc' },
-        take: 1,
-      },
-    },
-  });
+  const updatedLease = await tenantPortalRepo.updateLeaseToActive(prisma, leaseId);
 
   // Auto-issue all DRAFT invoices; create first-rent invoice if none exist yet
   try {
@@ -296,14 +238,9 @@ export async function tenantAcceptLease(
   // Mark the RentalOwnerSelection as SIGNED (removes from "Awaiting Signature" pipeline)
   try {
     const unitId = updatedLease.unitId;
-    const sel = await prisma.rentalOwnerSelection.findFirst({
-      where: { unitId, status: 'AWAITING_SIGNATURE' },
-    });
+    const sel = await rentalAppRepo.findOwnerSelectionByUnitStatus(prisma, unitId, 'AWAITING_SIGNATURE');
     if (sel) {
-      await prisma.rentalOwnerSelection.update({
-        where: { id: sel.id },
-        data: { status: 'SIGNED' },
-      });
+      await rentalAppRepo.updateOwnerSelectionRecord(prisma, sel.id, { status: 'SIGNED' } as any);
       console.log(`[LEASE] Updated selection ${sel.id} → SIGNED for unit ${unitId}`);
     }
   } catch (selErr) {
@@ -313,10 +250,7 @@ export async function tenantAcceptLease(
   // Notify managers that the tenant has signed
   try {
     const { notifyManagerLeaseSigned } = await import('./notifications');
-    const managers = await prisma.user.findMany({
-      where: { orgId, role: 'MANAGER' },
-      select: { id: true },
-    });
+    const managers = await userRepo.findManagersByOrg(prisma, orgId);
     const unitNumber = updatedLease.unit?.unitNumber || 'unknown';
     const buildingId = updatedLease.unit?.building?.id;
     for (const mgr of managers) {
@@ -332,10 +266,7 @@ export async function tenantAcceptLease(
   // Notify owners that the tenant has signed
   try {
     const { notifyOwnerLeaseSigned } = await import('./notifications');
-    const owners = await prisma.user.findMany({
-      where: { orgId, role: 'OWNER' },
-      select: { id: true },
-    });
+    const owners = await userRepo.findOwnersByOrg(prisma, orgId);
     const unitNumber = updatedLease.unit?.unitNumber || 'unknown';
     const buildingId = updatedLease.unit?.building?.id;
     for (const owner of owners) {

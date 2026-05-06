@@ -164,3 +164,69 @@ export async function deleteRentAdjustment(
 ): Promise<void> {
   await prisma.rentAdjustment.delete({ where: { id } });
 }
+
+// ─── Lease lookup helpers for rent adjustment service ─────────
+
+/** Find lease with billingSchedule for indexation computations. */
+export async function findLeaseForAdjustmentWithSchedule(
+  prisma: PrismaClient,
+  leaseId: string,
+  orgId: string,
+) {
+  return prisma.lease.findFirst({
+    where: { id: leaseId, orgId },
+    include: { billingSchedule: true },
+  });
+}
+
+/** Find lease (bare) for manual adjustment current-rent read. */
+export async function findLeaseForAdjustment(
+  prisma: PrismaClient,
+  leaseId: string,
+  orgId: string,
+) {
+  return prisma.lease.findFirst({ where: { id: leaseId, orgId } });
+}
+
+/**
+ * Apply rent adjustment in an atomic transaction:
+ * 1. Update lease netRentChf + lastIndexationDate (+ initialNetRentChf if first)
+ * 2. Update RecurringBillingSchedule.baseRentCents if ACTIVE
+ * 3. Mark adjustment as APPLIED
+ */
+export async function applyAdjustmentTransaction(
+  prisma: PrismaClient,
+  adj: {
+    id: string;
+    leaseId: string;
+    newRentCents: number;
+    effectiveDate: Date;
+    lease: { initialNetRentChf: number | null; netRentChf: number };
+  },
+) {
+  const newRentChf = Math.round(adj.newRentCents / 100);
+  return prisma.$transaction(async (tx: any) => {
+    await tx.lease.update({
+      where: { id: adj.leaseId },
+      data: {
+        netRentChf: newRentChf,
+        lastIndexationDate: adj.effectiveDate,
+        initialNetRentChf: adj.lease.initialNetRentChf ?? adj.lease.netRentChf,
+      },
+    });
+    const schedule = await tx.recurringBillingSchedule.findUnique({
+      where: { leaseId: adj.leaseId },
+    });
+    if (schedule && schedule.status === "ACTIVE") {
+      await tx.recurringBillingSchedule.update({
+        where: { id: schedule.id },
+        data: { baseRentCents: adj.newRentCents },
+      });
+    }
+    return tx.rentAdjustment.update({
+      where: { id: adj.id },
+      data: { status: "APPLIED", appliedAt: new Date() },
+      include: RENT_ADJUSTMENT_INCLUDE,
+    });
+  });
+}

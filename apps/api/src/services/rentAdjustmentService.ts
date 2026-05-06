@@ -90,10 +90,7 @@ export async function computeIndexation(
   },
 ) {
   // Fetch the lease
-  const lease = await prisma.lease.findFirst({
-    where: { id: input.leaseId, orgId },
-    include: { billingSchedule: true },
-  });
+  const lease = await rentAdjustmentRepo.findLeaseForAdjustmentWithSchedule(prisma, input.leaseId, orgId);
   if (!lease) throw new Error("Lease not found");
   if (lease.indexClauseType === "NONE") {
     throw new Error("Lease has no index clause — cannot compute indexation");
@@ -189,9 +186,7 @@ export async function createManualAdjustment(
     reason?: string;
   },
 ) {
-  const lease = await prisma.lease.findFirst({
-    where: { id: input.leaseId, orgId },
-  });
+  const lease = await rentAdjustmentRepo.findLeaseForAdjustment(prisma, input.leaseId, orgId);
   if (!lease) throw new Error("Lease not found");
 
   const currentRentCents = lease.netRentChf * 100;
@@ -262,39 +257,7 @@ export async function applyAdjustment(
   const newRentChf = Math.round(adj.newRentCents / 100);
 
   // Use a transaction to ensure atomicity
-  return prisma.$transaction(async (tx: any) => {
-    // 1. Update lease rent
-    await tx.lease.update({
-      where: { id: adj.leaseId },
-      data: {
-        netRentChf: newRentChf,
-        lastIndexationDate: adj.effectiveDate,
-        // If this is the first adjustment, save the original rent
-        initialNetRentChf: adj.lease.initialNetRentChf ?? adj.lease.netRentChf,
-      },
-    });
-
-    // 2. Update billing schedule if exists
-    const schedule = await tx.recurringBillingSchedule.findUnique({
-      where: { leaseId: adj.leaseId },
-    });
-    if (schedule && schedule.status === "ACTIVE") {
-      await tx.recurringBillingSchedule.update({
-        where: { id: schedule.id },
-        data: { baseRentCents: adj.newRentCents },
-      });
-    }
-
-    // 3. Mark adjustment as applied
-    return tx.rentAdjustment.update({
-      where: { id: adjustmentId },
-      data: {
-        status: "APPLIED",
-        appliedAt: new Date(),
-      },
-      include: rentAdjustmentRepo.RENT_ADJUSTMENT_INCLUDE,
-    });
-  });
+  return rentAdjustmentRepo.applyAdjustmentTransaction(prisma, adj);
 }
 
 /**

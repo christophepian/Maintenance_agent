@@ -366,3 +366,170 @@ export async function findTenantByPhoneWithOccupancies(
   });
 }
 
+// ─── Lease Expiry / Signature Request Helpers ─────────────────
+
+/** Find the latest signature request sentAt for a lease, used to compute 5-day window. */
+export async function findLeaseExpirySignatureRequest(prisma: PrismaClient, leaseId: string) {
+  return prisma.signatureRequest.findFirst({
+    where: { entityId: leaseId, entityType: "LEASE" },
+    orderBy: { createdAt: "desc" },
+    select: { sentAt: true },
+  });
+}
+
+/** Batch-load sentAt for READY_TO_SIGN leases (list view). */
+export async function findSignatureRequestsSentAt(
+  prisma: PrismaClient,
+  leaseIds: string[],
+) {
+  return prisma.signatureRequest.findMany({
+    where: { entityId: { in: leaseIds }, entityType: "LEASE" },
+    select: { entityId: true, sentAt: true },
+    orderBy: { createdAt: "desc" },
+  });
+}
+
+/** Update a signature request record. */
+export async function updateSignatureRequest(
+  prisma: PrismaClient,
+  id: string,
+  data: Prisma.SignatureRequestUpdateInput,
+) {
+  return prisma.signatureRequest.update({ where: { id }, data });
+}
+
+// ─── Unit vacancy helpers ──────────────────────────────────────
+
+/** Mark a single unit as vacant (no org scope). Used by cancelLease. */
+export async function setUnitVacant(prisma: PrismaClient, unitId: string) {
+  return prisma.unit.update({ where: { id: unitId }, data: { isVacant: true } });
+}
+
+/** Mark a unit as vacant scoped to org (updateMany). */
+export async function setUnitVacantByOrg(prisma: PrismaClient, unitId: string, orgId: string) {
+  return prisma.unit.updateMany({ where: { id: unitId, orgId }, data: { isVacant: true } });
+}
+
+/** Find unit with building include. */
+export async function findUnitWithBuilding(prisma: PrismaClient, unitId: string) {
+  return prisma.unit.findUnique({ where: { id: unitId }, include: { building: true } });
+}
+
+/**
+ * Find a unit with nested owners → billingEntity for invoice issuer resolution.
+ */
+export async function findUnitWithOwnersBillingEntity(prisma: PrismaClient, unitId: string) {
+  return prisma.unit.findUnique({
+    where: { id: unitId },
+    select: {
+      building: {
+        select: {
+          owners: {
+            include: { user: { select: { billingEntity: { select: { id: true } } } } },
+            take: 1,
+          },
+        },
+      },
+    },
+  });
+}
+
+// ─── Invoice helpers ───────────────────────────────────────────
+
+/** Find all DRAFT invoices for a lease (used in autoActivateLeaseInvoices). */
+export async function findDraftInvoicesByLease(
+  prisma: PrismaClient,
+  leaseId: string,
+  orgId: string,
+) {
+  return prisma.invoice.findMany({ where: { leaseId, orgId, status: "DRAFT" } });
+}
+
+/** Find any invoice for a lease — existence check. */
+export async function findAnyInvoiceForLease(
+  prisma: PrismaClient,
+  leaseId: string,
+  orgId: string,
+) {
+  return prisma.invoice.findFirst({ where: { leaseId, orgId } });
+}
+
+/** Find monthly rent invoice (idempotency check in generateMonthlyRentInvoices). */
+export async function findMonthlyRentInvoice(
+  prisma: PrismaClient,
+  leaseId: string,
+  orgId: string,
+  monthStart: Date,
+  monthEnd: Date,
+) {
+  return prisma.invoice.findFirst({
+    where: {
+      leaseId,
+      orgId,
+      createdAt: { gte: monthStart, lt: monthEnd },
+      description: { contains: "Loyer mensuel" },
+    },
+  });
+}
+
+/** Find all ACTIVE non-template leases for monthly invoicing. */
+export async function findActiveLeasesForInvoicing(prisma: PrismaClient, orgId: string) {
+  return prisma.lease.findMany({
+    where: { orgId, status: LeaseStatus.ACTIVE, isTemplate: false },
+    select: {
+      id: true,
+      tenantName: true,
+      netRentChf: true,
+      rentTotalChf: true,
+      startDate: true,
+      endDate: true,
+    },
+  });
+}
+
+// ─── Lease Expense Item helpers ────────────────────────────────
+
+const EXPENSE_ITEM_REPO_INCLUDE = { expenseType: true, account: true } as const;
+
+/** Find a lease (raw) for expense-item validation. */
+export async function findLeaseForExpenseItem(prisma: PrismaClient, leaseId: string) {
+  return prisma.lease.findUnique({ where: { id: leaseId } });
+}
+
+/** Find an expense type by id. */
+export async function findExpenseType(prisma: PrismaClient, id: string) {
+  return prisma.expenseType.findUnique({ where: { id } });
+}
+
+/** Find an account by id. */
+export async function findAccount(prisma: PrismaClient, id: string) {
+  return prisma.account.findUnique({ where: { id } });
+}
+
+/** Find a lease expense item by id. */
+export async function findLeaseExpenseItem(prisma: PrismaClient, id: string) {
+  return prisma.leaseExpenseItem.findUnique({ where: { id } });
+}
+
+/** Create a lease expense item. */
+export async function createLeaseExpenseItemRecord(
+  prisma: PrismaClient,
+  data: Prisma.LeaseExpenseItemCreateInput,
+) {
+  return prisma.leaseExpenseItem.create({ data, include: EXPENSE_ITEM_REPO_INCLUDE });
+}
+
+/** Update a lease expense item. */
+export async function updateLeaseExpenseItemRecord(
+  prisma: PrismaClient,
+  id: string,
+  data: Prisma.LeaseExpenseItemUpdateInput,
+) {
+  return prisma.leaseExpenseItem.update({ where: { id }, data, include: EXPENSE_ITEM_REPO_INCLUDE });
+}
+
+/** Delete a lease expense item. */
+export async function deleteLeaseExpenseItemRecord(prisma: PrismaClient, id: string) {
+  return prisma.leaseExpenseItem.delete({ where: { id } });
+}
+

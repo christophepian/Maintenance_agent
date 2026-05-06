@@ -1,4 +1,5 @@
 import prisma from './prismaClient';
+import * as tenantRepo from '../repositories/tenantRepository';
 import { normalizePhoneToE164 } from "../utils/phoneNormalization";
 import {
   CreateTenantInput,
@@ -102,72 +103,25 @@ export async function createOrGetTenant(
   }
 
   // Check if tenant already exists by phone in this org
-  const existingTenant = await prisma.tenant.findUnique({
-    where: {
-      orgId_phone: {
-        orgId: validated.orgId,
-        phone: normalizedPhone,
-      },
-    },
-    include: {
-      occupancies: {
-        include: {
-          unit: {
-            include: {
-              assets: {
-                include: {
-                  assetModel: true,
-                },
-              },
-            },
-          },
-        },
-      },
-    },
-  });
+  const existingTenant = await tenantRepo.findTenantByOrgPhone(prisma, validated.orgId, normalizedPhone);
 
   if (existingTenant) {
     return tenantToDTO(existingTenant);
   }
 
   // Create new tenant
-  const newTenant = await prisma.tenant.create({
-    data: {
-      orgId: validated.orgId,
-      phone: normalizedPhone,
-      name: validated.name || null,
-      email: validated.email || null,
-    },
+  const newTenant = await tenantRepo.createTenantRecord(prisma, {
+    orgId: validated.orgId,
+    phone: normalizedPhone,
+    name: validated.name || null,
+    email: validated.email || null,
   });
 
   if (validated.unitId) {
-    await prisma.occupancy.create({
-      data: {
-        tenantId: newTenant.id,
-        unitId: validated.unitId,
-      },
-    });
+    await tenantRepo.createOccupancyRecord(prisma, newTenant.id, validated.unitId);
   }
 
-  const loadedTenant = await prisma.tenant.findUnique({
-    where: { id: newTenant.id },
-    include: {
-      occupancies: {
-        include: {
-          unit: {
-            include: {
-              assets: {
-                include: {
-                  assetModel: true,
-                },
-              },
-            },
-          },
-        },
-      },
-    },
-  });
-
+  const loadedTenant = await tenantRepo.findTenantByIdFull(prisma, newTenant.id);
   if (!loadedTenant) throw new Error("Failed to load tenant");
   return tenantToDTO(loadedTenant);
 }
@@ -186,30 +140,7 @@ export async function getTenantByPhone(
     throw new Error("Invalid phone number format");
   }
 
-  const tenant = await prisma.tenant.findUnique({
-    where: {
-      orgId_phone: {
-        orgId: validated.orgId,
-        phone: normalizedPhone,
-      },
-    },
-    include: {
-      occupancies: {
-        include: {
-          unit: {
-            include: {
-              assets: {
-                include: {
-                  assetModel: true,
-                },
-              },
-            },
-          },
-        },
-      },
-    },
-  });
-
+  const tenant = await tenantRepo.findTenantByOrgPhone(prisma, validated.orgId, normalizedPhone);
   return tenant ? tenantToDTO(tenant) : null;
 }
 
@@ -217,25 +148,7 @@ export async function getTenantByPhone(
  * Get tenant by ID
  */
 export async function getTenantById(id: string): Promise<TenantDTO | null> {
-  const tenant = await prisma.tenant.findUnique({
-    where: { id },
-    include: {
-      occupancies: {
-        include: {
-          unit: {
-            include: {
-              assets: {
-                include: {
-                  assetModel: true,
-                },
-              },
-            },
-          },
-        },
-      },
-    },
-  });
-
+  const tenant = await tenantRepo.findTenantByIdFull(prisma, id);
   return tenant ? tenantToDTO(tenant) : null;
 }
 
@@ -249,55 +162,22 @@ export async function updateTenant(
 ): Promise<TenantDTO> {
   const validated = updateTenantSchema.parse(input);
 
-  const existing = await prisma.tenant.findFirst({ where: { id, orgId } });
+  const existing = await tenantRepo.findTenantByOrgAndId(prisma, id, orgId);
   if (!existing) {
     throw new Error("Tenant not found");
   }
 
-  const tenant = await prisma.tenant.update({
-    where: { id },
-    data: {
-      name: validated.name !== undefined ? validated.name : undefined,
-      phone: validated.phone !== undefined ? validated.phone : undefined,
-      email: validated.email !== undefined ? validated.email : undefined,
-    },
+  const tenant = await tenantRepo.updateTenantRecord(prisma, id, {
+    name: validated.name !== undefined ? validated.name : undefined,
+    phone: validated.phone !== undefined ? validated.phone : undefined,
+    email: validated.email !== undefined ? validated.email : undefined,
   });
 
   if (validated.unitId) {
-    await prisma.occupancy.upsert({
-      where: {
-        tenantId_unitId: {
-          tenantId: tenant.id,
-          unitId: validated.unitId,
-        },
-      },
-      update: {},
-      create: {
-        tenantId: tenant.id,
-        unitId: validated.unitId,
-      },
-    });
+    await tenantRepo.upsertOccupancy(prisma, tenant.id, validated.unitId);
   }
 
-  const loadedTenant = await prisma.tenant.findUnique({
-    where: { id: tenant.id },
-    include: {
-      occupancies: {
-        include: {
-          unit: {
-            include: {
-              assets: {
-                include: {
-                  assetModel: true,
-                },
-              },
-            },
-          },
-        },
-      },
-    },
-  });
-
+  const loadedTenant = await tenantRepo.findTenantByIdFull(prisma, tenant.id);
   if (!loadedTenant) throw new Error("Failed to load tenant");
   return tenantToDTO(loadedTenant);
 }
@@ -306,47 +186,20 @@ export async function updateTenant(
  * List tenants in org
  */
 export async function listTenants(orgId: string, includeInactive?: boolean): Promise<{ data: TenantDTO[]; total: number }> {
-  const where = { orgId, ...(includeInactive ? {} : { isActive: true }) };
-
-  const [tenants, total] = await Promise.all([
-    prisma.tenant.findMany({
-      where,
-      include: {
-        occupancies: {
-          include: {
-            unit: {
-              include: {
-                assets: {
-                  include: {
-                    assetModel: true,
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-      orderBy: { createdAt: "desc" },
-    }),
-    prisma.tenant.count({ where }),
-  ]);
-
+  const { tenants, total } = await tenantRepo.listTenantsWithCount(prisma, orgId, includeInactive);
   return { data: tenants.map(tenantToDTO), total };
 }
 
 export async function deactivateTenant(orgId: string, tenantId: string) {
-  const existing = await prisma.tenant.findFirst({ where: { id: tenantId, orgId } });
+  const existing = await tenantRepo.findTenantByOrgAndId(prisma, tenantId, orgId);
   if (!existing) return { success: false, reason: "NOT_FOUND" };
 
-  const occupancyCount = await prisma.occupancy.count({ where: { tenantId } });
+  const occupancyCount = await tenantRepo.countTenantOccupancies(prisma, tenantId);
   if (occupancyCount > 0) {
     return { success: false, reason: "HAS_OCCUPANCIES" };
   }
 
-  await prisma.tenant.update({
-    where: { id: tenantId },
-    data: { isActive: false },
-  });
+  await tenantRepo.updateTenantRecord(prisma, tenantId, { isActive: false });
 
   return { success: true };
 }

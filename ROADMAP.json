@@ -7160,7 +7160,7 @@
       "goal": "Migrate 9 service files with 7-11 Prisma calls each. These files may require creating new repository modules or significant extensions to existing ones.",
       "phase": "P1",
       "order": 122,
-      "status": "capture",
+      "status": "done",
       "product_area": "architecture",
       "depends_on": [
         "DT-121"
@@ -7541,7 +7541,7 @@
       "goal": "Migrate 9 service files with 7-11 Prisma calls each. These files may require creating new repository modules or significant extensions to existing ones.",
       "phase": "P1",
       "order": 122,
-      "status": "capture",
+      "status": "done",
       "product_area": "architecture",
       "depends_on": [
         "DT-121"

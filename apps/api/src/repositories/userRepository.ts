@@ -103,3 +103,16 @@ export async function findManagersByOrg(
   });
 }
 
+/**
+ * Find all owner users for an org.
+ */
+export async function findOwnersByOrg(
+  prisma: PrismaClient,
+  orgId: string,
+) {
+  return prisma.user.findMany({
+    where: { orgId, role: "OWNER" },
+    select: { id: true },
+  });
+}
+

@@ -569,3 +569,96 @@ export async function findAssetTopicSuggestions(
   });
 }
 
+// ─── Helpers for lease / rent-estimation services ──────────────
+
+/** Find a unit by id with parent building (no org scope — caller validates). */
+export async function findUnitWithBuilding(prisma: PrismaClient, unitId: string) {
+  return prisma.unit.findUnique({ where: { id: unitId }, include: { building: true } });
+}
+
+/** Find a unit with deep owners → billingEntity for invoice issuer resolution. */
+export async function findUnitWithOwnersBillingEntity(prisma: PrismaClient, unitId: string) {
+  return prisma.unit.findUnique({
+    where: { id: unitId },
+    select: {
+      building: {
+        select: {
+          owners: {
+            include: { user: { select: { billingEntity: { select: { id: true } } } } },
+            take: 1,
+          },
+        },
+      },
+    },
+  });
+}
+
+/** Mark a single unit as vacant (no org scope). */
+export async function setUnitVacant(prisma: PrismaClient, unitId: string) {
+  return prisma.unit.update({ where: { id: unitId }, data: { isVacant: true } });
+}
+
+/** Mark a unit as vacant scoped to org (updateMany). */
+export async function setUnitVacantByOrg(prisma: PrismaClient, unitId: string, orgId: string) {
+  return prisma.unit.updateMany({ where: { id: unitId, orgId }, data: { isVacant: true } });
+}
+
+/** Find a building by id (bare, no includes). */
+export async function findBuildingById(prisma: PrismaClient, buildingId: string) {
+  return prisma.building.findUnique({ where: { id: buildingId } });
+}
+
+/** Find the first unit in a building (template placeholder selection). */
+export async function findFirstUnitInBuilding(
+  prisma: PrismaClient,
+  buildingId: string,
+  orgId: string,
+) {
+  return prisma.unit.findFirst({
+    where: { buildingId, orgId },
+    orderBy: { unitNumber: "asc" },
+  });
+}
+
+/**
+ * Find units for bulk rent estimate.
+ * The select constant must come from the caller (rentEstimation service).
+ */
+export async function findUnitsForRentEstimate(
+  prisma: PrismaClient,
+  where: Record<string, unknown>,
+  select: Record<string, unknown>,
+) {
+  return (prisma.unit.findMany as any)({ where, select });
+}
+
+/** Find a single unit for rent estimate using caller-supplied select. */
+export async function findUnitForRentEstimate(
+  prisma: PrismaClient,
+  unitId: string,
+  orgId: string,
+  select: Record<string, unknown>,
+) {
+  return (prisma.unit.findFirst as any)({ where: { id: unitId, orgId }, select });
+}
+
+/** Find a building config by building ID. */
+export async function findBuildingConfigById(
+  prisma: PrismaClient,
+  buildingId: string,
+) {
+  return prisma.buildingConfig.findUnique({ where: { buildingId } });
+}
+
+/** Find a vacant unit for owner selection, with building + config include. */
+export async function findVacantUnitWithBuildingConfig(
+  prisma: PrismaClient,
+  unitId: string,
+  orgId: string,
+) {
+  return prisma.unit.findFirst({
+    where: { id: unitId, building: { orgId }, isVacant: true },
+    include: { building: { include: { config: true } } },
+  });
+}
+

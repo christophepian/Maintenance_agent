@@ -11,6 +11,8 @@
 
 import { PrismaClient, Prisma, LocationSegment, EnergyLabel, HeatingType } from "@prisma/client";
 import prisma from "./prismaClient";
+import * as rentEstimationRepo from '../repositories/rentEstimationRepository';
+import * as inventoryRepo from '../repositories/inventoryRepository';
 
 /* ══════════════════════════════════════════════════════════════
    DTOs
@@ -316,22 +318,16 @@ export async function getEffectiveRentEstimationConfig(
 ): Promise<RentEstimationConfigDTO> {
   // Try canton-specific first
   if (canton) {
-    const cantonConfig = await prisma.rentEstimationConfig.findUnique({
-      where: { orgId_canton: { orgId, canton } },
-    });
+    const cantonConfig = await rentEstimationRepo.findRentEstimationConfigByCanton(prisma, orgId, canton);
     if (cantonConfig) return mapConfigToDTO(cantonConfig);
   }
 
   // Fall back to org default (canton = null)
-  const defaultConfig = await prisma.rentEstimationConfig.findFirst({
-    where: { orgId, canton: null },
-  });
+  const defaultConfig = await rentEstimationRepo.findDefaultRentEstimationConfig(prisma, orgId);
   if (defaultConfig) return mapConfigToDTO(defaultConfig);
 
   // Auto-create default config if none exists
-  const created = await prisma.rentEstimationConfig.create({
-    data: { orgId, canton: null },
-  });
+  const created = await rentEstimationRepo.createRentEstimationConfig(prisma, { orgId, canton: null });
   return mapConfigToDTO(created);
 }
 
@@ -352,30 +348,19 @@ export async function upsertRentEstimationConfig(
 
   if (canton) {
     // Canton is non-null → composite unique works
-    const config = await prisma.rentEstimationConfig.upsert({
-      where: { orgId_canton: { orgId, canton } },
-      create: { orgId, canton, ...data },
-      update: data,
-    });
+    const config = await rentEstimationRepo.upsertRentEstimationConfigByCanton(prisma, orgId, canton, { orgId, canton, ...data }, data);
     return mapConfigToDTO(config);
   }
 
   // Canton is null → use findFirst + create/update
-  const existing = await prisma.rentEstimationConfig.findFirst({
-    where: { orgId, canton: null },
-  });
+  const existing = await rentEstimationRepo.findRentEstimationConfigByOrgNullCanton(prisma, orgId);
 
   if (existing) {
-    const config = await prisma.rentEstimationConfig.update({
-      where: { id: existing.id },
-      data,
-    });
+    const config = await rentEstimationRepo.updateRentEstimationConfig(prisma, existing.id, data);
     return mapConfigToDTO(config);
   }
 
-  const config = await prisma.rentEstimationConfig.create({
-    data: { orgId, canton: null, ...data },
-  });
+  const config = await rentEstimationRepo.createRentEstimationConfig(prisma, { orgId, canton: null, ...data });
   return mapConfigToDTO(config);
 }
 
@@ -387,10 +372,7 @@ export async function estimateRentForUnit(
   orgId: string,
   unitId: string,
 ): Promise<RentEstimateDTO> {
-  const unit = await prisma.unit.findFirst({
-    where: { id: unitId, orgId },
-    select: UNIT_RENT_ESTIMATE_SELECT,
-  });
+  const unit = await inventoryRepo.findUnitForRentEstimate(prisma, unitId, orgId, UNIT_RENT_ESTIMATE_SELECT);
 
   if (!unit) throw new Error("UNIT_NOT_FOUND");
   if (!unit.livingAreaSqm) throw new Error("MISSING_LIVING_AREA");
@@ -428,10 +410,7 @@ export async function bulkEstimateRent(
     throw new Error("Provide unitIds or buildingId");
   }
 
-  const units = await prisma.unit.findMany({
-    where,
-    select: UNIT_RENT_ESTIMATE_SELECT,
-  });
+  const units = await inventoryRepo.findUnitsForRentEstimate(prisma, where, UNIT_RENT_ESTIMATE_SELECT);
 
   const config = await getEffectiveRentEstimationConfig(orgId);
   const results: RentEstimateDTO[] = [];
