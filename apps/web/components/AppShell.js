@@ -57,9 +57,20 @@ export default function AppShell({ role: roleProp, children }) {
       setRole(getStoredRole());
     }
 
+    const supabase = createClient();
+
+    // Read the current session immediately so isAdmin is set on first render,
+    // without waiting for onAuthStateChange to fire asynchronously.
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        setAuthToken(session.access_token);
+        const meta = session.user?.app_metadata ?? {};
+        setIsAdmin(meta.accessLevel === "ADMIN");
+      }
+    });
+
     // Subscribe to Supabase auth state changes to keep the localStorage token
     // fresh whenever Supabase silently refreshes the access_token.
-    const supabase = createClient();
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         if (session) {
