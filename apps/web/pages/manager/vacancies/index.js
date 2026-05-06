@@ -12,6 +12,10 @@ import Badge from "../../../components/ui/Badge";
 import { selectionVariant, leaseVariant } from "../../../lib/statusVariants";
 import { cn } from "../../../lib/utils";
 import ScrollableTabs from "../../../components/mobile/ScrollableTabs";
+import SortableHeader from "../../../components/SortableHeader";
+import { useLocalSort, clientSort } from "../../../lib/tableUtils";
+import { withTranslations } from "../../../lib/i18n";
+import { useTranslation } from "next-i18next";
 /**
  * Reusable action dropdown button — renders a "⋯" pill that opens
  * a positioned dropdown with a list of actions.
@@ -74,8 +78,9 @@ function selectionStatusBadge(status) {
 }
 
 function leaseBadge(lease, hasLeaseTemplate) {
-  if (!lease && hasLeaseTemplate) return <span className="text-xs text-amber-600 font-medium">No lease — template ready</span>;
-  if (!lease) return <span className="text-xs text-red-500 font-medium">No lease template — create one first</span>;
+  const { t } = useTranslation("manager");
+  if (!lease && hasLeaseTemplate) return <span className="text-xs text-amber-600 font-medium">{t("manager:vacanciesIndex.text.noLeaseTemplateReady")}</span>;
+  if (!lease) return <span className="text-xs text-red-500 font-medium">{t("manager:vacanciesIndex.text.noLeaseTemplateCreateOneFirst")}</span>;
   const LEASE_LABELS = { DRAFT: "Draft", READY_TO_SIGN: "Ready to Sign", SIGNED: "Signed" };
   return (
     <Badge variant={leaseVariant(lease.status)} size="sm">
@@ -84,13 +89,74 @@ function leaseBadge(lease, hasLeaseTemplate) {
   );
 }
 
+function VacantGroupTable({ units, onNavigate }) {
+  const { t } = useTranslation("manager");
+  const router = useRouter();
+  const { sortField: uSF, sortDir: uSD, handleSort: handleUSort } = useLocalSort("unitNumber", "asc");
+  const sorted = useMemo(() => clientSort(units, uSF, uSD, (u, f) => {
+    if (f === "unitNumber") return (u.unitNumber || "").toLowerCase();
+    if (f === "floor") return u.floor ?? 0;
+    if (f === "monthlyRentChf") return u.monthlyRentChf ?? 0;
+    if (f === "monthlyChargesChf") return u.monthlyChargesChf ?? 0;
+    return "";
+  }), [units, uSF, uSD]);
+  return (
+    <div className="hidden sm:block overflow-x-auto rounded-lg border border-table-border">
+      <table className="data-table">
+        <thead>
+          <tr>
+            <SortableHeader label={t("manager:vacanciesIndex.prop.unit")} field="unitNumber" sortField={uSF} sortDir={uSD} onSort={handleUSort} />
+            <SortableHeader label={t("manager:vacanciesIndex.prop.floor")} field="floor" sortField={uSF} sortDir={uSD} onSort={handleUSort} />
+            <SortableHeader label="Rent (CHF)" field="monthlyRentChf" sortField={uSF} sortDir={uSD} onSort={handleUSort} />
+            <SortableHeader label="Charges (CHF)" field="monthlyChargesChf" sortField={uSF} sortDir={uSD} onSort={handleUSort} />
+            <th className="text-right">{t("manager:vacanciesIndex.col.applications")}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {sorted.map((u) => (
+            <tr key={u.id}>
+              <td className="cell-bold">
+                {u.unitNumber || "—"}
+                <div className="text-xs text-slate-400 font-normal mt-0.5">
+                  Empty since: {u.vacantSince ? formatDate(u.vacantSince) : "unknown"}
+                </div>
+              </td>
+              <td>{u.floor || "—"}</td>
+              <td>{u.monthlyRentChf ?? "—"}</td>
+              <td>{u.monthlyChargesChf ?? "—"}</td>
+              <td className="text-right">
+                <ActionDropdown actions={[
+                  {
+                    label: u.applicationCount > 0 ? "📋 View Applications" : "📋 View Applications (none yet)",
+                    onClick: u.applicationCount > 0 ? () => router.push("/manager/vacancies/" + u.id + "/applications") : undefined,
+                    className: u.applicationCount === 0 ? "opacity-50 cursor-not-allowed text-slate-400" : "text-slate-700",
+                    title: u.applicationCount === 0 ? "No applications yet" : undefined,
+                  },
+                  ...(u.building?.id ? [
+                    { label: "🏢 View Building", onClick: () => router.push("/admin-inventory/buildings/" + u.building.id) },
+                  ] : []),
+                  ...(u.id ? [
+                    { label: "🔧 View Unit", onClick: () => router.push("/admin-inventory/units/" + u.id) },
+                  ] : []),
+                ]} />
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 export default function ManagerVacanciesPage() {
+  const { t } = useTranslation("manager");
   const router = useRouter();
   const [units, setUnits] = useState([]);
   const [selections, setSelections] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectionsLoading, setSelectionsLoading] = useState(true);
   const [error, setError] = useState("");
+  const { sortField: selSF, sortDir: selSD, handleSort: handleSelSort } = useLocalSort("buildingName", "asc");
 
   useEffect(() => {
     loadVacantUnits();
@@ -175,12 +241,22 @@ export default function ManagerVacanciesPage() {
     return Array.from(map.values());
   }, [units]);
 
+  const sortedSelections = useMemo(() => clientSort(selections, selSF, selSD, (sel, f) => {
+    if (f === "buildingName") return (sel.buildingName || "").toLowerCase();
+    if (f === "unitNumber") return (sel.unitNumber || "").toLowerCase();
+    if (f === "tenantName") return (sel.primaryCandidate?.name || "").toLowerCase();
+    if (f === "status") return (sel.status || "").toLowerCase();
+    if (f === "deadlineAt") return sel.deadlineAt || "";
+    if (f === "lease") return sel.lease ? 0 : sel.hasLeaseTemplate ? 1 : 2;
+    return "";
+  }), [selections, selSF, selSD]);
+
   return (
     <AppShell role="MANAGER">
       <PageShell>
         <PageHeader
-          title="Inventory"
-          subtitle="Buildings, units, assets and depreciation schedules."
+          title={t("manager:vacanciesIndex.title.inventory")}
+          subtitle={t("manager:vacanciesIndex.prop.buildingsUnitsAssetsAndDepreciationSchedules")}
           actions={
             <button
               onClick={() => { loadVacantUnits(); loadSelections(); }}
@@ -196,27 +272,26 @@ export default function ManagerVacanciesPage() {
 
           {/* Inventory tab strip — mirrors /manager/inventory; Vacancies is always active at index 1 */}
           <ScrollableTabs activeIndex={1}>
-            <Link href="/manager/inventory?tab=buildings" className="tab-btn">Buildings</Link>
-            <button className="tab-btn-active">Vacancies</button>
-            <Link href="/manager/inventory?tab=assets" className="tab-btn">Assets</Link>
-            <Link href="/manager/inventory?tab=decisions" className="tab-btn">Maintenance Decisions</Link>
-            <Link href="/manager/inventory?tab=depreciation" className="tab-btn">Depreciation</Link>
+            <Link href="/manager/inventory?tab=buildings" className="tab-btn">{t("manager:vacanciesIndex.text.buildings")}</Link>
+            <button className="tab-btn-active">{t("manager:vacanciesIndex.text.vacancies")}</button>
+            <Link href="/manager/inventory?tab=assets" className="tab-btn">{t("manager:vacanciesIndex.text.assets")}</Link>
+            <Link href="/manager/inventory?tab=decisions" className="tab-btn">{t("manager:vacanciesIndex.text.maintenanceDecisions")}</Link>
           </ScrollableTabs>
 
           {/* ── Tenant Selections Pipeline ─────────────────── */}
           <div>
           <h2 className="mb-3 text-sm font-semibold text-slate-700">{"Tenant Selections" + (selections.length > 0 ? ` (${selections.length})` : "")}</h2>
-            {selectionsLoading && <p className="text-sm text-slate-500">Loading selections…</p>}
+            {selectionsLoading && <p className="text-sm text-slate-500">{t("manager:vacanciesIndex.text.loadingSelections")}</p>}
 
             {!selectionsLoading && selections.length === 0 && (
-              <div className="empty-state"><p className="empty-state-text">No active tenant selections.</p></div>
+              <div className="empty-state"><p className="empty-state-text">{t("manager:vacanciesIndex.text.noActiveTenantSelections")}</p></div>
             )}
 
             {!selectionsLoading && selections.length > 0 && (
               <>
                 {/* Mobile card list — sm:hidden */}
                 <div className="sm:hidden rounded-lg border border-table-border divide-y divide-table-divider">
-                  {selections.map((sel) => (
+                  {sortedSelections.map((sel) => (
                     <div key={sel.id} className={cn("table-card", !sel.lease ? "bg-amber-50/50" : "")}>
                       <div className="flex items-start justify-between gap-2">
                         <div>
@@ -255,20 +330,20 @@ export default function ManagerVacanciesPage() {
 
                 {/* Wide table — hidden sm:block */}
                 <div className="hidden sm:block overflow-x-auto rounded-lg border border-table-border">
-                  <table className="inline-table">
+                  <table className="data-table">
                     <thead>
                       <tr>
-                        <th>Building</th>
-                        <th>Unit</th>
-                        <th>Selected Tenant</th>
-                        <th>Status</th>
-                        <th>Lease</th>
-                        <th>Deadline</th>
-                        <th className="text-right">Action</th>
+                        <SortableHeader label={t("manager:vacanciesIndex.prop.building")} field="buildingName" sortField={selSF} sortDir={selSD} onSort={handleSelSort} />
+                        <SortableHeader label={t("manager:vacanciesIndex.prop.unit")} field="unitNumber" sortField={selSF} sortDir={selSD} onSort={handleSelSort} />
+                        <SortableHeader label={t("manager:vacanciesIndex.prop.selectedTenant")} field="tenantName" sortField={selSF} sortDir={selSD} onSort={handleSelSort} />
+                        <SortableHeader label={t("manager:vacanciesIndex.prop.status")} field="status" sortField={selSF} sortDir={selSD} onSort={handleSelSort} />
+                        <SortableHeader label={t("manager:vacanciesIndex.prop.lease")} field="lease" sortField={selSF} sortDir={selSD} onSort={handleSelSort} />
+                        <SortableHeader label={t("manager:vacanciesIndex.prop.deadline")} field="deadlineAt" sortField={selSF} sortDir={selSD} onSort={handleSelSort} />
+                        <th className="text-right">{t("manager:vacanciesIndex.col.action")}</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {selections.map((sel) => (
+                      {sortedSelections.map((sel) => (
                         <tr key={sel.id} className={!sel.lease ? "bg-amber-50/50" : ""}>
                           <td>{sel.buildingName || "—"}</td>
                           <td>{sel.unitNumber || "—"}</td>
@@ -324,11 +399,11 @@ export default function ManagerVacanciesPage() {
 
           {/* ── Vacant Units ─────────────────────────────────── */}
           <div>
-          <h2 className="mb-3 text-sm font-semibold text-slate-700">Vacant Units — Open for Applications</h2>
-            {loading && <p className="text-sm text-slate-500">Loading…</p>}
+          <h2 className="mb-3 text-sm font-semibold text-slate-700">{t("manager:vacanciesIndex.heading.vacantUnitsOpenForApplications")}</h2>
+            {loading && <p className="text-sm text-slate-500">{t("manager:vacanciesIndex.text.loading")}</p>}
 
             {!loading && units.length === 0 && (
-              <div className="empty-state"><p className="empty-state-text">No vacant units at this time.</p></div>
+              <div className="empty-state"><p className="empty-state-text">{t("manager:vacanciesIndex.text.noVacantUnitsAtThisTime")}</p></div>
             )}
 
             {unitsByBuilding.map((group) => (
@@ -373,52 +448,7 @@ export default function ManagerVacanciesPage() {
                 </div>
 
                 {/* Wide table — hidden sm:block */}
-                <div className="hidden sm:block overflow-x-auto rounded-lg border border-table-border">
-                  <table className="inline-table">
-                    <thead>
-                      <tr>
-                        <th>Unit</th>
-                        <th>Floor</th>
-                        <th>Rent (CHF)</th>
-                        <th>Charges (CHF)</th>
-                        <th className="text-right">Applications</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {group.units.map((u) => (
-                        <tr key={u.id}>
-                          <td className="cell-bold">
-                            {u.unitNumber || "—"}
-                            <div className="text-xs text-slate-400 font-normal mt-0.5">
-                              Empty since: {u.vacantSince
-                                ? formatDate(u.vacantSince)
-                                : "unknown"}
-                            </div>
-                          </td>
-                          <td>{u.floor || "—"}</td>
-                          <td>{u.monthlyRentChf ?? "—"}</td>
-                          <td>{u.monthlyChargesChf ?? "—"}</td>
-                          <td className="text-right">
-                            <ActionDropdown actions={[
-                              {
-                                label: u.applicationCount > 0 ? "📋 View Applications" : "📋 View Applications (none yet)",
-                                onClick: u.applicationCount > 0 ? () => router.push("/manager/vacancies/" + u.id + "/applications") : undefined,
-                                className: u.applicationCount === 0 ? "opacity-50 cursor-not-allowed text-slate-400" : "text-slate-700",
-                                title: u.applicationCount === 0 ? "No applications yet" : undefined,
-                              },
-                              ...(u.building?.id ? [
-                                { label: "🏢 View Building", onClick: () => router.push("/admin-inventory/buildings/" + u.building.id) },
-                              ] : []),
-                              ...(u.id ? [
-                                { label: "🔧 View Unit", onClick: () => router.push("/admin-inventory/units/" + u.id) },
-                              ] : []),
-                            ]} />
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                <VacantGroupTable units={group.units} />
               </div>
             ))}
           </div>
@@ -427,3 +457,5 @@ export default function ManagerVacanciesPage() {
     </AppShell>
   );
 }
+
+export const getStaticProps = withTranslations(["common","manager"]);

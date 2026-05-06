@@ -3,6 +3,7 @@ import Link from "next/link";
 import AppShell from "../../components/AppShell";
 import Badge from "../../components/ui/Badge";
 import ErrorBanner from "../../components/ui/ErrorBanner";
+import { FilterToggle, FilterPanelBody, FilterSection, FilterSectionClear, SelectField, SortToggle, SortPanelBody, SortRow } from "../../components/ui/FilterPanel";
 import {
   formatChf,
   formatChfCents,
@@ -11,6 +12,8 @@ import {
 } from "../../lib/format";
 import { authHeaders } from "../../lib/api";
 import { cn } from "../../lib/utils";
+import { withTranslations } from "../../lib/i18n";
+import { useTranslation } from "next-i18next";
 
 /* ─── YTD date range ─── */
 function ytdRange() {
@@ -21,24 +24,17 @@ function ytdRange() {
   };
 }
 
-/* ─── Actionable KPI: clickable chip with count + label + arrow ─── */
+/* ─── Actionable KPI: same flat layout as InfoStat but clickable ─── */
 function ActionStat({ label, value, href, tone }) {
-  const countColor = {
+  const valueColor = {
     warn: "text-amber-700",
     bad:  "text-red-600",
     good: "text-green-700",
   }[tone] ?? "text-slate-900";
   return (
-    <Link href={href} className="no-underline group">
-      <div className="flex h-full flex-col justify-between rounded-xl bg-white px-4 py-3 ring-1 ring-slate-300 transition-all hover:shadow-sm hover:ring-indigo-300 active:scale-[0.98]">
-        <span className="text-xs font-medium uppercase tracking-wide text-slate-400">{label}</span>
-        <div className="mt-2 flex items-end justify-between gap-1">
-          <span className={cn("text-2xl font-semibold tabular-nums leading-none", countColor)}>{value}</span>
-          <svg className="mb-0.5 h-4 w-4 shrink-0 text-slate-300 transition-colors group-hover:text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-          </svg>
-        </div>
-      </div>
+    <Link href={href} className="no-underline group flex flex-col justify-between">
+      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">{label}</span>
+      <span className={cn("mt-2 text-xl font-semibold tabular-nums leading-none underline-offset-2 group-hover:underline", valueColor)}>{value}</span>
     </Link>
   );
 }
@@ -59,24 +55,26 @@ function InfoStat({ label, value, tone }) {
 }
 
 /* ─── Category chip used in the priority feed ─── */
+// Labels are translated at render time via t(`manager:dashboard.chip.${category}`)
 const CATEGORY_CHIP = {
-  review:    { label: "Pending review",    cls: "bg-slate-100 text-slate-600" },
-  approval:  { label: "Owner approval",    cls: "bg-amber-100 text-amber-700" },
-  disputed:  { label: "Disputed invoice",  cls: "bg-red-100 text-red-700" },
-  stale:     { label: "Stale job",         cls: "bg-amber-100 text-amber-700" },
-  rfp:       { label: "RFP routed",        cls: "bg-indigo-100 text-indigo-700" },
+  review:    { cls: "bg-blue-100 text-blue-700" },
+  approval:  { cls: "bg-amber-100 text-amber-700" },
+  disputed:  { cls: "bg-red-100 text-red-700" },
+  stale:     { cls: "bg-amber-100 text-amber-700" },
+  rfp:       { cls: "bg-indigo-100 text-indigo-700" },
 };
 
 const CARD_STYLE = {
-  review:   "border-slate-200 bg-white hover:bg-slate-50",
+  review:   "border-blue-200 bg-blue-50 hover:bg-blue-100",
   approval: "border-amber-200 bg-amber-50 hover:bg-amber-100",
   disputed: "border-red-200 bg-red-50 hover:bg-red-100",
   stale:    "border-amber-200 bg-amber-50 hover:bg-amber-100",
-  rfp:      "border-slate-200 bg-white hover:bg-slate-50",
+  rfp:      "border-indigo-200 bg-indigo-50 hover:bg-indigo-100",
 };
 
 /* ─── Single action item row ─── */
 function ActionRow({ category, title, sub, building, date, href }) {
+  const { t } = useTranslation("manager");
   const chip = CATEGORY_CHIP[category];
 
   const cardBody = (
@@ -85,7 +83,7 @@ function ActionRow({ category, title, sub, building, date, href }) {
       CARD_STYLE[category],
     )}>
       <span className={cn("shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold", chip.cls)}>
-        {chip.label}
+        {t(`manager:dashboard.chip.${category}`)}
       </span>
       <div className="min-w-0 flex-1">
         <div className="truncate text-sm font-semibold text-slate-900">{title}</div>
@@ -121,16 +119,17 @@ function ActionRow({ category, title, sub, building, date, href }) {
 }
 
 /* ─── Hero urgency headline ─── */
-function heroHeadline(totalActions, openRequests) {
-  if (totalActions === 0) return "Everything looks good — no items need attention right now.";
-  if (totalActions === 1) return "1 item needs your attention today.";
-  return `${totalActions} items need your attention today.`;
+function heroHeadline(t, totalActions) {
+  if (totalActions === 0) return t("manager:dashboard.hero.allClear");
+  if (totalActions === 1) return t("manager:dashboard.hero.one");
+  return t("manager:dashboard.hero.many", { count: totalActions });
 }
 
 /* ──────────────────────────────────────────────────────────────
    Main page
    ────────────────────────────────────────────────────────────── */
 export default function ManagerDashboard() {
+  const { t } = useTranslation("manager");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [requests, setRequests] = useState([]);
@@ -270,7 +269,7 @@ export default function ManagerDashboard() {
         title: j.requestDescription || `Job #${j.id?.slice(0, 8)}`,
         building: [j.buildingName, j.unitNumber ? `Unit ${j.unitNumber}` : null].filter(Boolean).join(" · ") || null,
         date: j.createdAt,
-        sub: "In progress > 7 days",
+        sub: t("manager:dashboard.feed.inProgressStale"),
         href: j.requestId ? `/manager/requests/${j.requestId}` : "/manager/requests?tab=active",
         sortOrder: 2,
       })
@@ -301,8 +300,25 @@ export default function ManagerDashboard() {
   }, [pendingOwnerApprovalRequests, disputedInvoices, staleJobs, pendingReviewRequests, rfpPendingRequests]);
 
   const [feedExpanded, setFeedExpanded] = useState(false);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [sortOpen, setSortOpen] = useState(false);
+  const [filterBy, setFilterBy] = useState("all"); // "all" | category key
+  const [sortBy, setSortBy] = useState("urgency"); // "urgency" | "building" | "date"
+
   const FEED_PREVIEW = 7;
-  const visibleFeed = feedExpanded ? actionFeed : actionFeed.slice(0, FEED_PREVIEW);
+
+  const displayFeed = useMemo(() => {
+    let items = filterBy === "all" ? actionFeed : actionFeed.filter((i) => i.category === filterBy);
+    if (sortBy === "building") {
+      items = [...items].sort((a, b) => (a.building || "").localeCompare(b.building || ""));
+    } else if (sortBy === "date") {
+      items = [...items].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+    }
+    // "urgency" keeps the existing sortOrder from actionFeed
+    return items;
+  }, [actionFeed, sortBy, filterBy]);
+
+  const visibleFeed = feedExpanded ? displayFeed : displayFeed.slice(0, FEED_PREVIEW);
 
   const totalActions = actionFeed.length;
 
@@ -327,63 +343,12 @@ export default function ManagerDashboard() {
         <div className="mb-8">
           {/* ─ Portfolio overview ─ */}
           <div className="mb-5 flex items-center gap-3">
-            <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Portfolio overview</span>
+            <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">{t("manager:dashboard.portfolioOverview")}</span>
             <div className="flex-1 border-t border-slate-300" />
-          </div>
-
-          {/* ─ Informational KPIs ─ */}
-          <div className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-4">
-            <InfoStat
-              label="Spend MTD"
-              value={formatChf(spendThisMonth)}
-            />
-            <InfoStat
-              label="Avg days done"
-              value={avgDaysToComplete ?? "—"}
-              tone={avgDaysToComplete != null && avgDaysToComplete > 14 ? "warn" : undefined}
-            />
-            {portfolio ? (
-              <>
-                <InfoStat
-                  label="Collection rate"
-                  value={formatPercent(portfolio.avgCollectionRate)}
-                  tone={portfolio.avgCollectionRate >= 0.95 ? "good" : portfolio.avgCollectionRate >= 0.8 ? "warn" : "bad"}
-                />
-                <InfoStat
-                  label="NOI YTD"
-                  value={formatChfCents(portfolio.totalNetIncomeCents)}
-                  tone={portfolio.totalNetIncomeCents >= 0 ? "good" : "bad"}
-                />
-                {portfolio.buildingsInRed > 0 && (
-                  <InfoStat
-                    label="Buildings in red"
-                    value={`${portfolio.buildingsInRed} / ${portfolio.buildingCount}`}
-                    tone="bad"
-                  />
-                )}
-              </>
-            ) : (
-              <InfoStat label="Portfolio" value={portfolioLoading ? "…" : "—"} />
-            )}
-          </div>
-
-          {/* ─ Divider ─ */}
-          <div className="mt-6 mb-5 border-t border-slate-200" />
-
-          {/* Top row: eyebrow + refresh */}
-          <div className="flex items-start justify-between gap-4 mb-5">
-            <div>
-              <div className="mb-1 flex items-center gap-2">
-                <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">Manager Dashboard</span>
-              </div>
-              <h1 className="text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
-                {heroHeadline(totalActions, openRequestsCount)}
-              </h1>
-            </div>
             <button
               onClick={() => { loadDashboardData(); loadPortfolio(); }}
-              className="rounded-lg border border-slate-300 bg-transparent p-2 text-slate-400 hover:bg-slate-50 hover:text-slate-700 transition-colors"
-              aria-label="Refresh dashboard"
+              className="shrink-0 rounded-lg border border-slate-300 bg-transparent p-2 text-slate-400 hover:bg-slate-50 hover:text-slate-700 transition-colors"
+              aria-label={t("manager:index.ariaLabel.refreshDashboard")}
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -391,48 +356,131 @@ export default function ManagerDashboard() {
             </button>
           </div>
 
-          {/* ─ Actionable KPIs ─ */}
-          <div className="grid grid-cols-3 gap-3">
+          {/* ─ Financial KPIs ─ */}
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {portfolio ? (
+              <>
+                <InfoStat
+                  label={t("manager:dashboard.kpi.noiYtd")}
+                  value={formatChfCents(portfolio.totalNetIncomeCents)}
+                  tone={portfolio.totalNetIncomeCents >= 0 ? "good" : "bad"}
+                />
+                <InfoStat
+                  label={t("manager:dashboard.kpi.spendMtd")}
+                  value={formatChf(spendThisMonth)}
+                />
+                <InfoStat
+                  label={t("manager:dashboard.kpi.collectionRate")}
+                  value={formatPercent(portfolio.avgCollectionRate)}
+                  tone={portfolio.avgCollectionRate >= 0.95 ? "good" : portfolio.avgCollectionRate >= 0.8 ? "warn" : "bad"}
+                />
+                {portfolio.buildingsInRed > 0 && (
+                  <InfoStat
+                    label={t("manager:dashboard.kpi.buildingsInRed")}
+                    value={`${portfolio.buildingsInRed} / ${portfolio.buildingCount}`}
+                    tone="bad"
+                  />
+                )}
+              </>
+            ) : (
+              <>
+                <InfoStat
+                  label={t("manager:dashboard.kpi.spendMtd")}
+                  value={formatChf(spendThisMonth)}
+                />
+                <InfoStat label={t("manager:index.prop.portfolio")} value={portfolioLoading ? "…" : "—"} />
+              </>
+            )}
+          </div>
+
+          {/* ─ Operational KPIs ─ */}
+          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
             <ActionStat
-              label="Open requests"
+              label={t("manager:dashboard.kpi.openRequests")}
               value={openRequestsCount}
               href="/manager/requests"
-              tone={openRequestsCount > 20 ? "warn" : openRequestsCount > 0 ? "warn" : "good"}
+              tone={openRequestsCount > 0 ? "warn" : "good"}
             />
             <ActionStat
-              label="Open jobs"
+              label={t("manager:dashboard.kpi.openJobs")}
               value={openJobsCount}
               href="/manager/requests?tab=active"
-              tone={openJobsCount > 15 ? "warn" : openJobsCount > 0 ? "warn" : "good"}
+              tone={openJobsCount > 0 ? "warn" : "good"}
+            />
+            <InfoStat
+              label={t("manager:dashboard.kpi.jobAvgDuration")}
+              value={avgDaysToComplete != null ? `${avgDaysToComplete}d` : "—"}
+              tone={avgDaysToComplete != null && avgDaysToComplete > 14 ? "warn" : undefined}
             />
             <ActionStat
-              label="Pending invoices"
+              label={t("manager:dashboard.kpi.pendingInvoices")}
               value={pendingInvoicesCount}
               href="/manager/finance/invoices"
               tone={pendingInvoicesCount > 0 ? "warn" : "good"}
             />
           </div>
+
+          {/* ─ Divider ─ */}
+          <div className="mt-6 mb-5 border-t border-slate-200" />
+
+          <h1 className="mb-5 text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
+            {heroHeadline(t, totalActions)}
+          </h1>
+
         </div>
 
         {/* ── PRIORITY FEED (full width) ───────────────────────── */}
         <section className="mb-6">
-          <div className="mb-3 flex items-baseline justify-between">
-            <div>
-              <h2 className="text-base font-semibold text-slate-900">Priority feed</h2>
-              <p className="text-xs text-slate-400">All items requiring action, sorted by urgency.</p>
+          {/* Toolbar */}
+          {totalActions > 0 && (
+            <div className="mb-1 flex items-center justify-end gap-2">
+              <FilterToggle open={filterOpen} onToggle={() => { setFilterOpen((v) => !v); setSortOpen(false); }} activeCount={filterBy !== "all" ? 1 : 0} />
+              <SortToggle open={sortOpen} onToggle={() => { setSortOpen((v) => !v); setFilterOpen(false); }} active={sortBy !== "urgency"} />
             </div>
-            {totalActions > 0 && (
-              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600">
-                {totalActions} item{totalActions !== 1 ? "s" : ""}
-              </span>
-            )}
-          </div>
+          )}
 
+          {/* Collapsible filter panel */}
+          {filterOpen && (
+            <FilterPanelBody>
+              <FilterSection title={t("manager:dashboard.sort.category")} first>
+                <div className="flex flex-wrap gap-1.5">
+                  {[["all",t("manager:dashboard.filter.all")],["approval","Owner approval"],["disputed",t("manager:dashboard.filter.disputed")],["stale",t("manager:dashboard.filter.stale")],["review","Pending review"],["rfp",t("manager:dashboard.filter.rfps")]].map(([key, lbl]) => (
+                    <button
+                      key={key}
+                      onClick={() => { setFilterBy(key); setFeedExpanded(false); }}
+                      className={cn(
+                        "rounded-full px-3 py-1 text-xs font-medium transition-colors",
+                        filterBy === key
+                          ? "bg-slate-800 text-white"
+                          : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                      )}
+                    >
+                      {lbl}
+                    </button>
+                  ))}
+                </div>
+              </FilterSection>
+              <FilterSectionClear hasFilter={filterBy !== "all"} onClear={() => { setFilterBy("all"); setFeedExpanded(false); }} />
+            </FilterPanelBody>
+          )}
+
+          {/* Collapsible sort panel */}
+          {sortOpen && (
+            <SortPanelBody>
+              <SortRow active={sortBy === "urgency"} dir="asc" label={t("manager:dashboard.sort.urgency")} ascLabel="High → Low" descLabel="Low → High" onSelect={() => setSortBy("urgency")} />
+              <SortRow active={sortBy === "building"} dir="asc" label={t("manager:dashboard.sort.building")} ascLabel="A → Z" descLabel="Z → A" onSelect={() => setSortBy("building")} />
+              <SortRow active={sortBy === "date"} dir="desc" label={t("manager:dashboard.sort.date")} descLabel="Newest first" ascLabel="Oldest first" onSelect={() => setSortBy("date")} />
+            </SortPanelBody>
+          )}
           {totalActions === 0 ? (
             <div className="rounded-2xl border border-green-200 bg-green-50 px-5 py-8 text-center">
               <div className="text-2xl mb-2">✓</div>
-              <div className="text-sm font-semibold text-green-800">All clear — no items need action</div>
-              <div className="mt-1 text-xs text-green-600">Check back after new requests or invoices arrive.</div>
+              <div className="text-sm font-semibold text-green-800">{t("manager:dashboard.feed.allClearTitle")}</div>
+              <div className="mt-1 text-xs text-green-600">{t("manager:dashboard.feed.allClearSub")}</div>
+            </div>
+          ) : displayFeed.length === 0 ? (
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-5 py-8 text-center">
+              <div className="text-sm text-slate-500">{t("manager:dashboard.feed.noMatch")}</div>
             </div>
           ) : (
             <div className="space-y-2">
@@ -440,14 +488,14 @@ export default function ManagerDashboard() {
                 <ActionRow key={i} {...item} />
               ))}
 
-              {actionFeed.length > FEED_PREVIEW && (
+              {displayFeed.length > FEED_PREVIEW && (
                 <button
                   onClick={() => setFeedExpanded((x) => !x)}
                   className="mt-1 w-full rounded-xl border border-slate-100 py-2 text-xs font-medium text-slate-500 hover:bg-slate-50 transition-colors"
                 >
                   {feedExpanded
-                    ? "Show less ↑"
-                    : `Show ${actionFeed.length - FEED_PREVIEW} more items ↓`}
+                    ? t("manager:dashboard.feed.showLess")
+                    : `Show ${displayFeed.length - FEED_PREVIEW} more items ↓`}
                 </button>
               )}
 
@@ -482,22 +530,16 @@ export default function ManagerDashboard() {
         <section className="rounded-3xl border border-slate-200 bg-white p-5">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h2 className="text-base font-semibold text-slate-900">More tools</h2>
-              <p className="mt-1 text-sm text-slate-500">Deeper views for finance, strategy, and tenant portal.</p>
+              <h2 className="text-base font-semibold text-slate-900">{t("manager:dashboard.moreTools.title")}</h2>
+              <p className="mt-1 text-sm text-slate-500">{t("manager:dashboard.moreTools.sub")}</p>
             </div>
             <div className="flex flex-wrap gap-2 shrink-0">
-              <Link href="/manager/finance" className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors no-underline">
-                Finance overview
-              </Link>
+              <Link href="/manager/finance" className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors no-underline">{t("manager:dashboard.moreTools.finance")}</Link>
               <Link href="/manager/finance/ledger" className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors no-underline">
                 Ledger
               </Link>
-              <Link href="/manager/settings" className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors no-underline">
-                Settings
-              </Link>
-              <Link href="/manager/requests" className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition-colors no-underline">
-                All requests
-              </Link>
+              <Link href="/manager/settings" className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors no-underline">{t("manager:dashboard.moreTools.settings")}</Link>
+              <Link href="/manager/requests" className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition-colors no-underline">{t("manager:dashboard.moreTools.allRequests")}</Link>
             </div>
           </div>
         </section>
@@ -506,3 +548,5 @@ export default function ManagerDashboard() {
     </AppShell>
   );
 }
+
+export const getStaticProps = withTranslations(["common","manager"]);

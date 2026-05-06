@@ -52,6 +52,7 @@ export async function proxyToBackend(req, res, path, options = {}) {
   const url = `${API_BASE_URL}${path}${queryString ? `?${queryString}` : ""}`;
 
   try {
+    console.log("[proxy]", method, url, "auth:", forwardHeaders.authorization ? "present" : "MISSING");
     const fetchOptions = {
       method,
       headers: forwardHeaders,
@@ -81,10 +82,14 @@ export async function proxyToBackend(req, res, path, options = {}) {
     const backendRes = await fetch(url, fetchOptions);
 
     // H3: Forward status code as-is
+    console.log("[proxy] response", backendRes.status, url);
     res.status(backendRes.status);
 
     // H3: Forward all response headers
     backendRes.headers.forEach((value, key) => {
+      // Drop hop-by-hop and encoding headers — fetch() already decoded the body,
+      // so forwarding content-encoding/transfer-encoding would corrupt the response.
+      if (["content-encoding", "transfer-encoding"].includes(key.toLowerCase())) return;
       res.setHeader(key, value);
     });
 

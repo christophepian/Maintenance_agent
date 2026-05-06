@@ -12,6 +12,8 @@ import ConfigurableTable from "../../../components/ConfigurableTable";
 import { useTableSort, clientSort } from "../../../lib/tableUtils";
 
 import { cn } from "../../../lib/utils";
+import { withTranslations } from "../../../lib/i18n";
+import { useTranslation } from "next-i18next";
 const TEMPLATE_SORT_FIELDS = ["templateName", "building", "landlord", "createdAt"];
 
 function templateFieldExtractor(t, field) {
@@ -24,46 +26,46 @@ function templateFieldExtractor(t, field) {
   }
 }
 
-function buildTemplateColumns(router, handleDeleteTemplate) {
+function buildTemplateColumns(t, router, handleDeleteTemplate) {
   return [
     {
       id: "templateName",
-      label: "Template Name",
+      label: t("manager:leasesTemplates.col.templateName"),
       sortable: true,
       alwaysVisible: true,
-      render: (t) => <span className="font-medium text-slate-900">{t.templateName || "Unnamed template"}</span>,
+      render: (tmpl) => <span className="font-medium text-slate-900">{tmpl.templateName || "Unnamed template"}</span>,
     },
     {
       id: "building",
-      label: "Building",
+      label: t("manager:leasesTemplates.col.building"),
       sortable: true,
       defaultVisible: true,
-      render: (t) => <span className="text-slate-600">{t.unit?.building?.name || "Global"}</span>,
+      render: (tmpl) => <span className="text-slate-600">{tmpl.unit?.building?.name || "Global"}</span>,
     },
     {
       id: "landlord",
-      label: "Landlord",
+      label: t("manager:leasesTemplates.col.landlord"),
       sortable: true,
       defaultVisible: true,
-      render: (t) => <span className="text-slate-600">{t.landlordName || "\u2014"}</span>,
+      render: (tmpl) => <span className="text-slate-600">{tmpl.landlordName || "\u2014"}</span>,
     },
     {
       id: "createdAt",
-      label: "Created",
+      label: t("manager:leasesTemplates.col.created"),
       sortable: true,
       defaultVisible: true,
-      render: (t) => <span className="text-slate-500 text-xs">{formatDate(t.createdAt)}</span>,
+      render: (tmpl) => <span className="text-slate-500 text-xs">{formatDate(tmpl.createdAt)}</span>,
     },
     {
       id: "actions",
       label: "",
       alwaysVisible: true,
       className: "text-right",
-      render: (t) => (
+      render: (tmpl) => (
         <div onClick={(e) => e.stopPropagation()}>
           <ActionDropdown actions={[
-            { label: "\uD83D\uDCC4 View Template", onClick: () => router.push(`/manager/leases/${t.id}`) },
-            { label: "\uD83D\uDDD1\uFE0F Delete", onClick: () => handleDeleteTemplate(t.id, t.templateName), className: "text-red-600" },
+            { label: "\uD83D\uDCC4 View Template", onClick: () => router.push(`/manager/leases/${tmpl.id}`) },
+            { label: "\uD83D\uDDD1\uFE0F Delete", onClick: () => handleDeleteTemplate(tmpl.id, tmpl.templateName), className: "text-red-600" },
           ]} />
         </div>
       ),
@@ -117,6 +119,7 @@ function ActionDropdown({ actions }) {
 }
 
 export default function LeaseTemplatesPage() {
+  const { t } = useTranslation("manager");
   const router = useRouter();
   const [templates, setTemplates] = useState([]);
   const [buildings, setBuildings] = useState([]);
@@ -321,14 +324,14 @@ export default function LeaseTemplatesPage() {
     }
   }
 
-  const templateColumns = useMemo(() => buildTemplateColumns(router, handleDeleteTemplate), [router]);
+  const templateColumns = useMemo(() => buildTemplateColumns(t, router, handleDeleteTemplate), [t, router]);
 
   return (
     <AppShell role="MANAGER">
       <PageShell>
         <PageHeader
-          title="Lease Templates"
-          subtitle="Reusable lease templates for the rental pipeline"
+          title={t("manager:leasesTemplates.title.leaseTemplates")}
+          subtitle={t("manager:leasesTemplates.prop.reusableLeaseTemplatesForTheRentalPipeline")}
           actions={
             <button
               onClick={() => setShowCreate(!showCreate)}
@@ -341,7 +344,7 @@ export default function LeaseTemplatesPage() {
         <PageContent>
           {/* Create template panel */}
           {showCreate && (
-            <Section title="Create New Template">
+            <Section title={t("manager:leasesTemplates.title.createNewTemplate")}>
               {/* Tab selector */}
               <div className="flex gap-2 mb-4">
                 <button
@@ -369,17 +372,17 @@ export default function LeaseTemplatesPage() {
                 <form onSubmit={handleCreateFromScratch} className="bg-white rounded-lg border p-6 space-y-4 max-w-2xl">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="col-span-2">
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Building *</label>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:leasesTemplates.text.building")}</label>
                       <select value={scratchForm.buildingId}
                         onChange={(e) => onScratchBuildingChange(e.target.value)}
                         className="w-full border rounded-lg px-3 py-2 text-sm">
-                        <option value="">Select a building...</option>
+                        <option value="">{t("manager:leasesTemplates.text.selectABuilding")}</option>
                         {availableBuildings.map((b) => (
                           <option key={b.id} value={b.id}>{b.name} — {b.address}</option>
                         ))}
                       </select>
                       {availableBuildings.length === 0 && buildings.length > 0 && (
-                        <p className="text-xs text-amber-600 mt-1">All buildings already have a template.</p>
+                        <p className="text-xs text-amber-600 mt-1">{t("manager:leasesTemplates.text.allBuildingsAlreadyHaveATemplate")}</p>
                       )}
                     </div>
                     <div className="col-span-2">
@@ -390,47 +393,47 @@ export default function LeaseTemplatesPage() {
                       <input type="text" value={scratchForm.templateName}
                         onChange={(e) => setScratchForm((f) => ({ ...f, templateName: e.target.value }))}
                         className="w-full border rounded-lg px-3 py-2 text-sm"
-                        placeholder="Select a building to auto-fill" />
+                        placeholder={t("manager:leasesTemplates.placeholder.selectABuildingToAutoFill")} />
                     </div>
                   </div>
 
                   <div className="border-t pt-4">
-                    <h4 className="text-sm font-semibold text-slate-800 mb-3">§1 Landlord / Régie</h4>
+                    <h4 className="text-sm font-semibold text-slate-800 mb-3">{t("manager:leasesTemplates.text.1LandlordRgie")}</h4>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="col-span-2">
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Landlord Name *</label>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:leasesTemplates.text.landlordName")}</label>
                         <input type="text" value={scratchForm.landlordName}
                           onChange={(e) => setScratchForm((f) => ({ ...f, landlordName: e.target.value }))}
                           className="w-full border rounded-lg px-3 py-2 text-sm"
-                          placeholder="e.g. Régie du Lac SA" />
+                          placeholder={t("manager:leasesTemplates.placeholder.eGRGieDuLacSa")} />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Address *</label>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:leasesTemplates.text.address")}</label>
                         <input type="text" value={scratchForm.landlordAddress}
                           onChange={(e) => setScratchForm((f) => ({ ...f, landlordAddress: e.target.value }))}
                           className="w-full border rounded-lg px-3 py-2 text-sm"
-                          placeholder="e.g. Rue du Lac 15" />
+                          placeholder={t("manager:leasesTemplates.placeholder.eGRueDuLac15")} />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Zip / City *</label>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:leasesTemplates.text.zipCity")}</label>
                         <input type="text" value={scratchForm.landlordZipCity}
                           onChange={(e) => setScratchForm((f) => ({ ...f, landlordZipCity: e.target.value }))}
                           className="w-full border rounded-lg px-3 py-2 text-sm"
-                          placeholder="e.g. 1003 Lausanne" />
+                          placeholder={t("manager:leasesTemplates.placeholder.eG1003Lausanne")} />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Phone</label>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:leasesTemplates.text.phone")}</label>
                         <input type="text" value={scratchForm.landlordPhone}
                           onChange={(e) => setScratchForm((f) => ({ ...f, landlordPhone: e.target.value }))}
                           className="w-full border rounded-lg px-3 py-2 text-sm"
-                          placeholder="+41 21 ..." />
+                          placeholder={t("manager:leasesTemplates.placeholder.4121")} />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:leasesTemplates.text.email")}</label>
                         <input type="text" value={scratchForm.landlordEmail}
                           onChange={(e) => setScratchForm((f) => ({ ...f, landlordEmail: e.target.value }))}
                           className="w-full border rounded-lg px-3 py-2 text-sm"
-                          placeholder="regie@example.ch" />
+                          placeholder={t("manager:leasesTemplates.placeholder.regieExampleCh")} />
                       </div>
                     </div>
                   </div>
@@ -439,46 +442,46 @@ export default function LeaseTemplatesPage() {
                     <h4 className="text-sm font-semibold text-slate-800 mb-3">§3–4 Termination & Deposit</h4>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Notice Rule</label>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:leasesTemplates.text.noticeRule")}</label>
                         <select value={scratchForm.noticeRule}
                           onChange={(e) => setScratchForm((f) => ({ ...f, noticeRule: e.target.value }))}
                           className="w-full border rounded-lg px-3 py-2 text-sm">
-                          <option value="3_MONTHS">3 months</option>
+                          <option value="3_MONTHS">{t("manager:leasesTemplates.text.3Months")}</option>
                           <option value="EXTENDED">Extended (custom)</option>
-                          <option value="2_WEEKS">2 weeks</option>
+                          <option value="2_WEEKS">{t("manager:leasesTemplates.text.2Weeks")}</option>
                         </select>
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Deposit Due</label>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:leasesTemplates.text.depositDue")}</label>
                         <select value={scratchForm.depositDueRule}
                           onChange={(e) => setScratchForm((f) => ({ ...f, depositDueRule: e.target.value }))}
                           className="w-full border rounded-lg px-3 py-2 text-sm">
-                          <option value="AT_SIGNATURE">At signature</option>
-                          <option value="BY_START">By lease start</option>
-                          <option value="BY_DATE">By specific date</option>
+                          <option value="AT_SIGNATURE">{t("manager:leasesTemplates.text.atSignature")}</option>
+                          <option value="BY_START">{t("manager:leasesTemplates.text.byLeaseStart")}</option>
+                          <option value="BY_DATE">{t("manager:leasesTemplates.text.bySpecificDate")}</option>
                         </select>
                       </div>
                     </div>
                   </div>
 
                   <div className="border-t pt-4">
-                    <h4 className="text-sm font-semibold text-slate-800 mb-3">§6 Payment</h4>
+                    <h4 className="text-sm font-semibold text-slate-800 mb-3">{t("manager:leasesTemplates.text.6Payment")}</h4>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Payment Due Day</label>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:leasesTemplates.text.paymentDueDay")}</label>
                         <input type="number" min="1" max="28" value={scratchForm.paymentDueDayOfMonth}
                           onChange={(e) => setScratchForm((f) => ({ ...f, paymentDueDayOfMonth: e.target.value }))}
                           className="w-full border rounded-lg px-3 py-2 text-sm" />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Payment IBAN</label>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:leasesTemplates.text.paymentIban")}</label>
                         <input type="text" value={scratchForm.paymentIban}
                           onChange={(e) => setScratchForm((f) => ({ ...f, paymentIban: e.target.value }))}
                           className="w-full border rounded-lg px-3 py-2 text-sm"
-                          placeholder="CH93 0076 2011 6238 5295 7" />
+                          placeholder={t("manager:leasesTemplates.placeholder.cH9300762011623852957")} />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Reference Rate %</label>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:leasesTemplates.text.referenceRate")}</label>
                         <input type="text" value={scratchForm.referenceRatePercent}
                           onChange={(e) => setScratchForm((f) => ({ ...f, referenceRatePercent: e.target.value }))}
                           className="w-full border rounded-lg px-3 py-2 text-sm" />
@@ -487,7 +490,7 @@ export default function LeaseTemplatesPage() {
                         <input type="checkbox" id="houseRules" checked={scratchForm.includesHouseRules}
                           onChange={(e) => setScratchForm((f) => ({ ...f, includesHouseRules: e.target.checked }))}
                           className="rounded" />
-                        <label htmlFor="houseRules" className="text-sm text-slate-700">Includes house rules</label>
+                        <label htmlFor="houseRules" className="text-sm text-slate-700">{t("manager:leasesTemplates.text.includesHouseRules")}</label>
                       </div>
                     </div>
                   </div>
@@ -503,18 +506,18 @@ export default function LeaseTemplatesPage() {
               {createMode === "lease" && (
                 <form onSubmit={handleCreateFromLease} className="bg-white rounded-lg border p-6 space-y-4 max-w-2xl">
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Template Name *</label>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:leasesTemplates.text.templateName")}</label>
                     <input type="text" value={leaseForm.templateName}
                       onChange={(e) => setLeaseForm((f) => ({ ...f, templateName: e.target.value }))}
                       className="w-full border rounded-lg px-3 py-2 text-sm"
-                      placeholder="e.g. Standard 3-room apartment" />
+                      placeholder={t("manager:leasesTemplates.placeholder.eGStandard3RoomApartment")} />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Source Lease *</label>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:leasesTemplates.text.sourceLease")}</label>
                     <select value={leaseForm.leaseId}
                       onChange={(e) => setLeaseForm((f) => ({ ...f, leaseId: e.target.value }))}
                       className="w-full border rounded-lg px-3 py-2 text-sm">
-                      <option value="">Select a lease to copy from...</option>
+                      <option value="">{t("manager:leasesTemplates.text.selectALeaseToCopyFrom")}</option>
                       {leases.map((l) => (
                         <option key={l.id} value={l.id}>
                           {l.tenantName} — {l.unit?.unitNumber || "?"} @ {l.unit?.building?.name || "?"} ({l.status})
@@ -536,7 +539,7 @@ export default function LeaseTemplatesPage() {
                       ))}
                     </select>
                     {availableBuildings.length === 0 && buildings.length > 0 && (
-                      <p className="text-xs text-amber-600 mt-1">All buildings already have a template.</p>
+                      <p className="text-xs text-amber-600 mt-1">{t("manager:leasesTemplates.text.allBuildingsAlreadyHaveATemplate")}</p>
                     )}
                   </div>
                   <button type="submit" disabled={creating}
@@ -557,7 +560,7 @@ export default function LeaseTemplatesPage() {
                 onChange={(e) => setSelectedBuildingId(e.target.value)}
                 className="border border-slate-200 rounded-lg px-3 py-1.5 text-sm text-slate-700"
               >
-                <option value="">All buildings</option>
+                <option value="">{t("manager:leasesTemplates.text.allBuildings")}</option>
                 {buildings.map((b) => (
                   <option key={b.id} value={b.id}>
                     {b.name}
@@ -567,7 +570,7 @@ export default function LeaseTemplatesPage() {
             }
           >
             {loading ? (
-              <p className="text-sm text-slate-500">Loading templates…</p>
+              <p className="text-sm text-slate-500">{t("manager:leasesTemplates.text.loadingTemplates")}</p>
             ) : error ? (
               <p className="text-sm text-red-600">{error}</p>
             ) : templates.length === 0 ? (
@@ -582,7 +585,7 @@ export default function LeaseTemplatesPage() {
                 sortDir={sortDir}
                 onSort={handleSort}
                 onRowClick={(t) => router.push(`/manager/leases/${t.id}`)}
-                emptyState={<p className="text-sm text-slate-500">No lease templates found.</p>}
+                emptyState={<p className="text-sm text-slate-500">{t("manager:leasesTemplates.text.noLeaseTemplatesFound")}</p>}
                 mobileCard={(t) => (
                   <div className="table-card">
                     <p className="table-card-head">{t.templateName || "Untitled"}</p>
@@ -601,3 +604,5 @@ export default function LeaseTemplatesPage() {
     </AppShell>
   );
 }
+
+export const getStaticProps = withTranslations(["common","manager"]);

@@ -471,9 +471,13 @@ export function registerAuthRoutes(router: Router) {
       if (!parsed.success) return sendError(res, 400, "VALIDATION_ERROR", "Invalid registration input", parsed.error.flatten());
 
       const { email, password, name, role } = parsed.data;
-      if (role === "OWNER") {
-        const allowOwner = process.env.NODE_ENV !== "production" && process.env.ALLOW_OWNER_REGISTRATION === "true";
-        if (!allowOwner) return sendError(res, 403, "FORBIDDEN", "OWNER registration disabled");
+      // All privileged roles (MANAGER, CONTRACTOR, OWNER) require the
+      // ALLOW_PUBLIC_REGISTRATION flag. On staging/production this flag is
+      // removed after seeding, locking down self-registration entirely.
+      // TENANT users are never created via this endpoint (use POST /units/:id/tenants).
+      if (role !== "TENANT") {
+        const allowed = process.env.ALLOW_PUBLIC_REGISTRATION === "true";
+        if (!allowed) return sendError(res, 403, "FORBIDDEN", "Registration is not open");
       }
 
       const result = await registerUser(prisma, orgId, { email, password, name, role });

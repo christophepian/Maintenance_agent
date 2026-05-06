@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import AppShell from "../../../components/AppShell";
@@ -10,8 +10,12 @@ import Section from "../../../components/layout/Section";
 import { authHeaders } from "../../../lib/api";
 import { formatChfCents, formatDate, formatChf } from "../../../lib/format";
 import Badge from "../../../components/ui/Badge";
+import SortableHeader from "../../../components/SortableHeader";
+import { useLocalSort, clientSort } from "../../../lib/tableUtils";
 
 import { cn } from "../../../lib/utils";
+import { withServerTranslations } from "../../../lib/i18n";
+import { useTranslation } from "next-i18next";
 
 // ─── Strategy alignment helpers ──────────────────────────────────────────────
 
@@ -58,10 +62,11 @@ function statCards(buckets, hasOpeningBalance) {
 // ─── SVG Cashflow Chart ───────────────────────────────────────────────────────
 
 function CashflowChart({ buckets, hasOpeningBalance }) {
+  const { t } = useTranslation("manager");
   const [hovered, setHovered] = useState(null);
 
   if (!buckets || buckets.length === 0) {
-    return <p className="loading-text">No cashflow data.</p>;
+    return <p className="loading-text">{t("manager:cashflowId.text.noCashflowData")}</p>;
   }
 
   const W = 900, H = 280;
@@ -166,18 +171,18 @@ function CashflowChart({ buckets, hasOpeningBalance }) {
             <span className="ml-2 font-normal text-slate-400">{hovB.isActual ? "Actual" : "Projected"}</span>
           </div>
           <div className="flex justify-between gap-4 text-green-700">
-            <span>Income</span><span className="font-mono">{formatChfCents(hovB.projectedIncomeCents)}</span>
+            <span>{t("manager:cashflowId.text.income")}</span><span className="font-mono">{formatChfCents(hovB.projectedIncomeCents)}</span>
           </div>
           <div className="flex justify-between gap-4 text-red-600">
-            <span>OpEx</span><span className="font-mono">{formatChfCents(hovB.projectedOpexCents)}</span>
+            <span>{t("manager:cashflowId.text.opEx")}</span><span className="font-mono">{formatChfCents(hovB.projectedOpexCents)}</span>
           </div>
           {hovB.scheduledCapexCents > 0 && (
             <div className="flex justify-between gap-4 text-amber-600">
-              <span>CapEx</span><span className="font-mono">{formatChfCents(hovB.scheduledCapexCents)}</span>
+              <span>{t("manager:cashflowId.text.capEx")}</span><span className="font-mono">{formatChfCents(hovB.scheduledCapexCents)}</span>
             </div>
           )}
           <div className="border-t border-slate-100 mt-1.5 pt-1.5 flex justify-between gap-4 font-semibold">
-            <span className={hovB.netCents >= 0 ? "text-green-700" : "text-red-600"}>Net</span>
+            <span className={hovB.netCents >= 0 ? "text-green-700" : "text-red-600"}>{t("manager:cashflowId.text.net")}</span>
             <span className={cn("font-mono", hovB.netCents >= 0 ? "text-green-700" : "text-red-600")}>
               {formatChfCents(hovB.netCents)}
             </span>
@@ -202,9 +207,9 @@ function CashflowChart({ buckets, hasOpeningBalance }) {
         <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded-sm bg-green-300" />Income (projected)</span>
         <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded-sm bg-red-500" />OpEx (actual)</span>
         <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded-sm bg-red-300" />OpEx (projected)</span>
-        <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded-sm bg-amber-400" />CapEx</span>
-        {hasOpeningBalance && <span className="flex items-center gap-1.5"><span className="inline-block w-5 h-0.5 bg-blue-500" />Cumulative balance</span>}
-        {lastActualIdx >= 0 && <span className="flex items-center gap-1.5"><span className="inline-block w-5 h-px border-t border-dashed border-slate-400" />Historical / projected</span>}
+        <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded-sm bg-amber-400" />{t("manager:cashflowId.text.capEx")}</span>
+        {hasOpeningBalance && <span className="flex items-center gap-1.5"><span className="inline-block w-5 h-0.5 bg-blue-500" />{t("manager:cashflowId.text.cumulativeBalance")}</span>}
+        {lastActualIdx >= 0 && <span className="flex items-center gap-1.5"><span className="inline-block w-5 h-px border-t border-dashed border-slate-400" />{t("manager:cashflowId.text.historicalProjected")}</span>}
       </div>
     </div>
   );
@@ -308,6 +313,7 @@ function StrategyOverlayPanel({ overlay }) {
 // ─── CapEx Event Table (interactive for DRAFT) ────────────────────────────────
 
 function CapexEventTable({ buckets, overrides, timingRecommendations, planId, isDraft, onRefresh, alignmentMap }) {
+  const { t } = useTranslation("manager");
   // Build override lookup: assetId → override record
   const overrideByAsset = {};
   for (const ov of (overrides || [])) {
@@ -330,12 +336,22 @@ function CapexEventTable({ buckets, overrides, timingRecommendations, planId, is
       }
     }
   }
-  events.sort((a, b) => a.year !== b.year ? a.year - b.year : a.month - b.month);
 
-  if (events.length === 0) {
+  const { sortField: evSF, sortDir: evSD, handleSort: handleEvSort } = useLocalSort("scheduled", "asc");
+  const sortedEvents = useMemo(() => clientSort(events, evSF, evSD, (ev, f) => {
+    if (f === "asset") return (ev.assetName || "").toLowerCase();
+    if (f === "scheduled") return ev.year * 100 + (ev.month ?? 0);
+    if (f === "estimatedCost") return ev.estimatedCostCents ?? 0;
+    if (f === "tradeGroup") return (ev.tradeGroup || "").toLowerCase();
+    if (f === "bundle") return (ev.bundle || "").toLowerCase();
+    return "";
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [events, evSF, evSD]);
+
+  if (sortedEvents.length === 0) {
     return (
       <div className="empty-state">
-        <p className="empty-state-text">No scheduled CapEx events in the projection horizon.</p>
+        <p className="empty-state-text">{t("manager:cashflowId.text.noScheduledCapexEventsInTheProjectionHorizon")}</p>
       </div>
     );
   }
@@ -344,7 +360,7 @@ function CapexEventTable({ buckets, overrides, timingRecommendations, planId, is
     <>
       {/* Mobile cards */}
       <div className="sm:hidden divide-y divide-slate-100">
-        {events.map((ev, i) => {
+        {sortedEvents.map((ev, i) => {
           const ov = overrideByAsset[ev.assetId];
           const rec = recByAsset[ev.assetId];
           return (
@@ -362,20 +378,20 @@ function CapexEventTable({ buckets, overrides, timingRecommendations, planId, is
         })}
       </div>
       {/* Desktop table */}
-      <div className="hidden sm:block inline-table-wrap">
-        <table className="inline-table">
+      <div className="hidden sm:block data-table-wrap">
+        <table className="data-table">
           <thead>
             <tr>
-              <th>Asset</th>
-              <th>Scheduled</th>
-              <th className="text-right">Estimated cost</th>
-              <th>Trade group</th>
-              <th>Bundle</th>
-              {isDraft && <th>Override</th>}
+              <SortableHeader label={t("manager:cashflowId.prop.asset")} field="asset" sortField={evSF} sortDir={evSD} onSort={handleEvSort} />
+              <SortableHeader label={t("manager:cashflowId.prop.scheduled")} field="scheduled" sortField={evSF} sortDir={evSD} onSort={handleEvSort} />
+              <SortableHeader label={t("manager:cashflowId.prop.estimatedCost")} field="estimatedCost" sortField={evSF} sortDir={evSD} onSort={handleEvSort} className="text-right" />
+              <SortableHeader label={t("manager:cashflowId.prop.tradeGroup")} field="tradeGroup" sortField={evSF} sortDir={evSD} onSort={handleEvSort} />
+              <SortableHeader label={t("manager:cashflowId.prop.bundle")} field="bundle" sortField={evSF} sortDir={evSD} onSort={handleEvSort} />
+              {isDraft && <th>{t("manager:cashflowId.col.override")}</th>}
             </tr>
           </thead>
           <tbody>
-            {events.map((ev, i) => {
+            {sortedEvents.map((ev, i) => {
               const ov = overrideByAsset[ev.assetId];
               const rec = recByAsset[ev.assetId];
               return (
@@ -399,6 +415,7 @@ function CapexEventTable({ buckets, overrides, timingRecommendations, planId, is
 }
 
 function CapexMobileCard({ ev, ov, rec, planId, isDraft, onRefresh, alignmentMap }) {
+  const { t } = useTranslation("manager");
   const currentYear = new Date().getFullYear();
   const [shifting, setShifting] = useState(false);
   const [removing, setRemoving] = useState(false);
@@ -477,7 +494,7 @@ function CapexMobileCard({ ev, ov, rec, planId, isDraft, onRefresh, alignmentMap
             disabled={shifting}
             className="border border-slate-200 rounded px-1.5 py-0.5 text-xs text-slate-600 disabled:opacity-50"
           >
-            <option value="">Shift year…</option>
+            <option value="">{t("manager:cashflowId.text.shiftYear")}</option>
             {yearOptions.map((y) => (
               <option key={y} value={y}>{y}</option>
             ))}
@@ -499,6 +516,7 @@ function CapexMobileCard({ ev, ov, rec, planId, isDraft, onRefresh, alignmentMap
 }
 
 function CapexEventRow({ ev, ov, rec, planId, isDraft, onRefresh, alignmentMap }) {
+  const { t } = useTranslation("manager");
   const currentYear = new Date().getFullYear();
   const [shifting, setShifting] = useState(false);
   const [removing, setRemoving] = useState(false);
@@ -562,7 +580,7 @@ function CapexEventRow({ ev, ov, rec, planId, isDraft, onRefresh, alignmentMap }
     <tr className={rowClass}>
       <td className="cell-bold">
         {isOverridden && (
-          <span className="mr-1 text-amber-500 text-xs" title="Year overridden">⟳</span>
+          <span className="mr-1 text-amber-500 text-xs" title={t("manager:cashflowId.title.yearOverridden")}>⟳</span>
         )}
         {ev.assetName}
         {alignmentMap?.[ev.assetId] && (
@@ -581,7 +599,7 @@ function CapexEventRow({ ev, ov, rec, planId, isDraft, onRefresh, alignmentMap }
       </td>
       <td className="text-right font-mono">{formatChfCents(ev.costCents)}</td>
       <td>{ev.tradeGroup || "—"}</td>
-      <td>{ev.bundleId ? <span className="status-pill bg-blue-50 text-blue-700">Bundled</span> : <span className="text-slate-400 text-xs">—</span>}</td>
+      <td>{ev.bundleId ? <span className="status-pill bg-blue-50 text-blue-700">{t("manager:cashflowId.text.bundled")}</span> : <span className="text-slate-400 text-xs">—</span>}</td>
       {isDraft && (
         <td>
           <div className="flex flex-col gap-1 min-w-48">
@@ -607,7 +625,7 @@ function CapexEventRow({ ev, ov, rec, planId, isDraft, onRefresh, alignmentMap }
                 disabled={shifting}
                 className="border border-slate-200 rounded px-1.5 py-0.5 text-xs text-slate-600 disabled:opacity-50"
               >
-                <option value="">Shift year…</option>
+                <option value="">{t("manager:cashflowId.text.shiftYear")}</option>
                 {yearOptions.map((y) => (
                   <option key={y} value={y}>{y}</option>
                 ))}
@@ -617,7 +635,7 @@ function CapexEventRow({ ev, ov, rec, planId, isDraft, onRefresh, alignmentMap }
                   onClick={handleRemoveOverride}
                   disabled={removing}
                   className="text-xs text-slate-400 hover:text-red-500 disabled:opacity-50"
-                  title="Reset to baseline year"
+                  title={t("manager:cashflowId.title.resetToBaselineYear")}
                 >
                   {removing ? "…" : "Reset"}
                 </button>
@@ -634,6 +652,7 @@ function CapexEventRow({ ev, ov, rec, planId, isDraft, onRefresh, alignmentMap }
 // ─── Income Growth Rate Inline Editor ─────────────────────────────────────────
 
 function IncomeGrowthRateEditor({ planId, currentRate, onUpdated }) {
+  const { t } = useTranslation("manager");
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(String(currentRate ?? 0));
   const [saving, setSaving] = useState(false);
@@ -683,7 +702,7 @@ function IncomeGrowthRateEditor({ planId, currentRate, onUpdated }) {
       <button
         onClick={startEdit}
         className="text-sm text-slate-600 hover:text-blue-600 underline underline-offset-2 tabular-nums"
-        title="Click to edit income growth rate"
+        title={t("manager:cashflowId.title.clickToEditIncomeGrowthRate")}
       >
         Income growth: <span className="font-semibold">{currentRate ?? 0}%</span> / year
       </button>
@@ -692,7 +711,7 @@ function IncomeGrowthRateEditor({ planId, currentRate, onUpdated }) {
 
   return (
     <div className="flex items-center gap-2">
-      <span className="text-sm text-slate-600">Income growth:</span>
+      <span className="text-sm text-slate-600">{t("manager:cashflowId.text.incomeGrowth")}</span>
       <input
         ref={inputRef}
         type="number"
@@ -706,8 +725,8 @@ function IncomeGrowthRateEditor({ planId, currentRate, onUpdated }) {
         className="border border-blue-300 rounded px-2 py-0.5 text-sm w-20 tabular-nums"
         autoFocus
       />
-      <span className="text-sm text-slate-500">% / year</span>
-      {saving && <span className="text-xs text-slate-400">Saving…</span>}
+      <span className="text-sm text-slate-500">{t("manager:cashflowId.text.year")}</span>
+      {saving && <span className="text-xs text-slate-400">{t("manager:cashflowId.text.saving")}</span>}
       {error && <span className="text-xs text-red-600">{error}</span>}
     </div>
   );
@@ -716,6 +735,7 @@ function IncomeGrowthRateEditor({ planId, currentRate, onUpdated }) {
 // ─── Opening Balance Banner ───────────────────────────────────────────────────
 
 function OpeningBalanceBanner({ planId, onUpdated }) {
+  const { t } = useTranslation("manager");
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState("");
   const [saving, setSaving] = useState(false);
@@ -759,7 +779,7 @@ function OpeningBalanceBanner({ planId, onUpdated }) {
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-sm font-medium text-amber-700">CHF</span>
           <input
-            type="number" min="0" step="100" placeholder="e.g. 50000"
+            type="number" min="0" step="100" placeholder={t("manager:cashflowId.placeholder.eG50000")}
             value={value} onChange={(e) => setValue(e.target.value)}
             className="border border-amber-300 rounded px-2 py-1 text-sm w-32"
             autoFocus
@@ -783,6 +803,7 @@ function OpeningBalanceBanner({ planId, onUpdated }) {
 // ─── RFP Candidate Panel (APPROVED plans only) ────────────────────────────────
 
 function RfpCandidateCard({ planId, candidate }) {
+  const { t } = useTranslation("manager");
   const [status, setStatus] = useState("idle"); // idle | creating | done | error
   const [rfpId, setRfpId] = useState(null);
   const [errorMsg, setErrorMsg] = useState("");
@@ -845,7 +866,7 @@ function RfpCandidateCard({ planId, candidate }) {
 
       {status === "done" || rfpId ? (
         <div className="flex items-center gap-2">
-          <span className="status-pill bg-green-100 text-green-700">RFP created</span>
+          <span className="status-pill bg-green-100 text-green-700">{t("manager:cashflowId.text.rFPCreated")}</span>
           <Link href={`/manager/rfps/${rfpId}`} className="text-xs text-blue-600 hover:underline">
             View RFP →
           </Link>
@@ -864,6 +885,7 @@ function RfpCandidateCard({ planId, candidate }) {
 }
 
 function RfpCandidatesPanel({ planId }) {
+  const { t } = useTranslation("manager");
   const [candidates, setCandidates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -880,12 +902,12 @@ function RfpCandidatesPanel({ planId }) {
       .finally(() => setLoading(false));
   }, [planId]);
 
-  if (loading) return <p className="loading-text">Loading RFP candidates…</p>;
+  if (loading) return <p className="loading-text">{t("manager:cashflowId.text.loadingRfpCandidates")}</p>;
   if (error) return <div className="notice notice-err text-sm">{error}</div>;
   if (candidates.length === 0) {
     return (
       <div className="empty-state">
-        <p className="empty-state-text">No CapEx items scheduled within the plan horizon.</p>
+        <p className="empty-state-text">{t("manager:cashflowId.text.noCapexItemsScheduledWithinThePlanHorizon")}</p>
       </div>
     );
   }
@@ -902,6 +924,7 @@ function RfpCandidatesPanel({ planId }) {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function CashflowPlanDetailPage() {
+  const { t } = useTranslation("manager");
   const router = useRouter();
   const { id } = router.query;
 
@@ -952,7 +975,7 @@ export default function CashflowPlanDetailPage() {
     return (
       <AppShell role="MANAGER">
         <PageShell>
-          <PageContent><p className="loading-text">Loading cashflow plan…</p></PageContent>
+          <PageContent><p className="loading-text">{t("manager:cashflowId.text.loadingCashflowPlan")}</p></PageContent>
         </PageShell>
       </AppShell>
     );
@@ -1055,27 +1078,27 @@ export default function CashflowPlanDetailPage() {
           )}
 
           {/* Stat cards */}
-          <Section title="Summary">
+          <Section title={t("manager:cashflowId.title.summary")}>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <div className="card p-4 flex flex-col gap-1">
-                <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">12-mo projected income</span>
+                <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">{t("manager:cashflowId.text.12moProjectedIncome")}</span>
                 <span className="text-xl font-bold text-green-700">{formatChfCents(stats.totalIncome)}</span>
-                <span className="text-xs text-slate-400">Next 12 projected months</span>
+                <span className="text-xs text-slate-400">{t("manager:cashflowId.text.next12ProjectedMonths")}</span>
               </div>
               <div className="card p-4 flex flex-col gap-1">
-                <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Total projected CapEx</span>
+                <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">{t("manager:cashflowId.text.totalProjectedCapex")}</span>
                 <span className="text-xl font-bold text-amber-700">{formatChfCents(stats.totalCapex)}</span>
                 <span className="text-xs text-slate-400">Over {plan.horizonMonths}-month horizon</span>
               </div>
               <div className="card p-4 flex flex-col gap-1">
-                <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Peak monthly CapEx</span>
+                <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">{t("manager:cashflowId.text.peakMonthlyCapex")}</span>
                 <span className="text-xl font-bold text-amber-700">{formatChfCents(stats.peakCapex?.v)}</span>
                 <span className="text-xs text-slate-400">
                   {stats.peakCapex?.b ? fmtMonth(stats.peakCapex.b.year, stats.peakCapex.b.month) : "—"}
                 </span>
               </div>
               <div className="card p-4 flex flex-col gap-1">
-                <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Lowest cumulative balance</span>
+                <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">{t("manager:cashflowId.text.lowestCumulativeBalance")}</span>
                 {hasOpeningBalance ? (
                   <>
                     <span className={cn("text-xl font-bold", (stats.lowestBal?.v ?? 0) < 0 ? "text-red-600" : "text-slate-800")}>
@@ -1088,7 +1111,7 @@ export default function CashflowPlanDetailPage() {
                 ) : (
                   <>
                     <span className="text-xl font-bold text-slate-300">—</span>
-                    <span className="text-xs text-slate-400">Set opening balance to see</span>
+                    <span className="text-xs text-slate-400">{t("manager:cashflowId.text.setOpeningBalanceToSee")}</span>
                   </>
                 )}
               </div>
@@ -1096,13 +1119,13 @@ export default function CashflowPlanDetailPage() {
           </Section>
 
           {/* Cashflow chart */}
-          <Panel title="Monthly cashflow">
+          <Panel title={t("manager:cashflowId.title.monthlyCashflow")}>
             <CashflowChart buckets={buckets} hasOpeningBalance={hasOpeningBalance} />
           </Panel>
 
           {/* CapEx event list — interactive in DRAFT, read-only otherwise */}
           <Panel
-            title="Scheduled CapEx events"
+            title={t("manager:cashflowId.title.scheduledCapexEvents")}
             bodyClassName="p-0"
             actions={
               isDraft && timingRecommendations.length > 0 && (
@@ -1156,7 +1179,7 @@ export default function CashflowPlanDetailPage() {
 
           {/* RFP candidates — APPROVED plans only */}
           {plan.status === "APPROVED" && (
-            <Panel title="RFP Candidates">
+            <Panel title={t("manager:cashflowId.title.rFPCandidates")}>
               <RfpCandidatesPanel planId={plan.id} />
             </Panel>
           )}
@@ -1166,3 +1189,5 @@ export default function CashflowPlanDetailPage() {
     </AppShell>
   );
 }
+
+export const getServerSideProps = withServerTranslations(["common","manager"]);

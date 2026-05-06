@@ -5,7 +5,8 @@ import PageShell from "../../components/layout/PageShell";
 import PageHeader from "../../components/layout/PageHeader";
 import PageContent from "../../components/layout/PageContent";
 import ConfigurableTable from "../../components/ConfigurableTable";
-import { useTableSort, clientSort } from "../../lib/tableUtils";
+import { useTableSort, useLocalSort, clientSort } from "../../lib/tableUtils";
+import SortableHeader from "../../components/SortableHeader";
 import AssetCatalogue from "../../components/AssetCatalogue";
 import Link from "next/link";
 import ErrorBanner from "../../components/ui/ErrorBanner";
@@ -14,6 +15,8 @@ import { authHeaders } from "../../lib/api";
 import { cn } from "../../lib/utils";
 import { formatChfCents, formatPercent } from "../../lib/format";
 import ScrollableTabs from "../../components/mobile/ScrollableTabs";
+import { withTranslations } from "../../lib/i18n";
+import { useTranslation } from "next-i18next";
 const INVENTORY_SORT_FIELDS = ["name", "address", "canton", "unitCount", "category", "manufacturer", "scope"];
 
 function inventoryFieldExtractor(row, field) {
@@ -29,44 +32,45 @@ function inventoryFieldExtractor(row, field) {
   }
 }
 
-const BUILDING_COLUMNS = [
+function buildBuildingColumns(t) {
+  return [
   {
     id: "name",
-    label: "Name",
+    label: t("manager:inventory.col.name"),
     sortable: true,
     alwaysVisible: true,
     render: (b) => <span className="font-medium text-slate-900">{b.name || "Unnamed"}</span>,
   },
   {
     id: "address",
-    label: "Address",
+    label: t("manager:inventory.col.address"),
     sortable: true,
     defaultVisible: true,
     render: (b) => <span className="text-slate-600">{b.address || "\u2014"}</span>,
   },
   {
     id: "canton",
-    label: "Canton",
+    label: t("manager:inventory.col.canton"),
     sortable: true,
     defaultVisible: true,
     render: (b) => <span className="text-slate-600">{b.canton || "\u2014"}</span>,
   },
   {
     id: "id",
-    label: "Building ID",
+    label: t("manager:inventory.col.buildingId"),
     defaultVisible: true,
     render: (b) => <code className="code-small">{b.id}</code>,
   },
   {
     id: "unitCount",
-    label: "Units",
+    label: t("manager:inventory.col.units"),
     sortable: true,
     defaultVisible: false,
     render: (b) => <span className="text-slate-600">{b._count?.units ?? b.unitCount ?? "\u2014"}</span>,
   },
   {
     id: "health",
-    label: "Health",
+    label: t("manager:inventory.col.health"),
     defaultVisible: true,
     render: (b) => {
       const h = b._financial?.health;
@@ -81,7 +85,7 @@ const BUILDING_COLUMNS = [
   },
   {
     id: "netIncome",
-    label: "NOI YTD",
+    label: t("manager:inventory.col.noiYtd"),
     defaultVisible: true,
     render: (b) => {
       const n = b._financial?.netIncomeCents;
@@ -91,7 +95,7 @@ const BUILDING_COLUMNS = [
   },
   {
     id: "collectionRate",
-    label: "Collection",
+    label: t("manager:inventory.col.collection"),
     defaultVisible: true,
     render: (b) => {
       const r = b._financial?.collectionRate;
@@ -100,56 +104,61 @@ const BUILDING_COLUMNS = [
     },
   },
 ];
+}
 
-const ASSET_MODEL_COLUMNS = [
+function buildAssetModelColumns(t) {
+  return [
   {
     id: "name",
-    label: "Name",
+    label: t("manager:inventory.col.name"),
     sortable: true,
     alwaysVisible: true,
     render: (m) => <span className="font-medium text-slate-900">{m.name}</span>,
   },
   {
     id: "category",
-    label: "Category",
+    label: t("manager:inventory.col.category"),
     sortable: true,
     defaultVisible: true,
     render: (m) => <span className="text-slate-600">{m.category || "\u2014"}</span>,
   },
   {
     id: "manufacturer",
-    label: "Manufacturer",
+    label: t("manager:inventory.col.manufacturer"),
     sortable: true,
     defaultVisible: true,
     render: (m) => <span className="text-slate-600">{m.manufacturer || "\u2014"}</span>,
   },
   {
     id: "scope",
-    label: "Scope",
+    label: t("manager:inventory.col.scope"),
     sortable: true,
     defaultVisible: true,
     render: (m) => <span className="text-slate-600">{m.orgId ? "Org" : "Global"}</span>,
   },
   {
     id: "usefulLifeMonths",
-    label: "Useful Life",
+    label: t("manager:inventory.col.usefulLife"),
     defaultVisible: false,
     render: (m) => <span className="text-slate-600">{m.usefulLifeMonths ? `${Math.round(m.usefulLifeMonths / 12)}y` : "\u2014"}</span>,
   },
   {
     id: "replacementCostChf",
-    label: "Replace Cost",
+    label: t("manager:inventory.col.replaceCost"),
     defaultVisible: false,
     render: (m) => <span className="text-slate-600">{typeof m.replacementCostChf === "number" ? `CHF ${m.replacementCostChf.toLocaleString()}` : "\u2014"}</span>,
   },
 ];
+}
 
-const INVENTORY_TABS = [
-  { key: "BUILDINGS", label: "Buildings" },
-  { key: "VACANCIES", label: "Vacancies", href: "/manager/vacancies" },
-  { key: "ASSETS", label: "Assets" },
-  { key: "DECISIONS", label: "Maintenance Decisions" },
-];
+function buildInventoryTabs(t) {
+  return [
+    { key: "BUILDINGS", label: t("manager:inventory.tabs.buildings") },
+    { key: "VACANCIES", label: t("manager:inventory.tabs.vacancies"), href: "/manager/vacancies" },
+    { key: "ASSETS", label: t("manager:inventory.tabs.assets") },
+    { key: "DECISIONS", label: t("manager:inventory.tabs.decisions") },
+  ];
+}
 
 const TAB_KEYS = ['buildings', 'assets', 'decisions'];
 
@@ -180,6 +189,10 @@ function clientSideVerdict(item, hypotheticalCostChf) {
 }
 
 export default function ManagerInventoryPage() {
+  const { t } = useTranslation("manager");
+  const assetModelColumns = useMemo(() => buildAssetModelColumns(t), [t]);
+  const buildingColumns = useMemo(() => buildBuildingColumns(t), [t]);
+  const INVENTORY_TABS = useMemo(() => buildInventoryTabs(t), [t]);
   const router = useRouter();
   const activeTab = router.isReady ? (Math.max(0, TAB_KEYS.indexOf(router.query.tab)) || 0) : 0;
   const setActiveTab = useCallback((index) => {
@@ -201,6 +214,23 @@ export default function ManagerInventoryPage() {
   const [decisionsLoading, setDecisionsLoading] = useState(false);
   const [decisionsError, setDecisionsError] = useState("");
   const [sensitivityInputs, setSensitivityInputs] = useState({});
+
+  const { sortField: decSF, sortDir: decSD, handleSort: handleDecSort } = useLocalSort("assetName", "asc");
+  const sortedDecisions = useMemo(() => {
+    if (!decisionsData) return [];
+    return clientSort(decisionsData, decSF, decSD, (item, f) => {
+      if (f === "assetName") return (item.assetName || "").toLowerCase();
+      if (f === "type") return (item.topic || "").toLowerCase();
+      if (f === "depreciation") return item.depreciationPct ?? 0;
+      if (f === "repairs") return item.cumulativeRepairCostChf ?? 0;
+      if (f === "replace") return item.estimatedReplacementCostChf ?? 0;
+      if (f === "ratio") return item.repairToReplacementRatio ?? 0;
+      if (f === "recommendation") return item.recommendation || "";
+      if (f === "ageMonths") return item.ageMonths ?? 0;
+      if (f === "breakEvenMonths") return item.breakEvenMonths ?? 9999;
+      return "";
+    });
+  }, [decisionsData, decSF, decSD]);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -333,7 +363,7 @@ export default function ManagerInventoryPage() {
   return (
     <AppShell role="MANAGER">
       <PageShell>
-        <PageHeader title="Inventory" subtitle="Buildings, units, assets and depreciation schedules." />
+        <PageHeader title={t("manager:inventory.title.properties")} subtitle={t("manager:inventory.prop.buildingsUnitsAssetsAndDepreciationSchedules")} />
         <PageContent>
           <ErrorBanner error={error} />
 
@@ -380,32 +410,32 @@ export default function ManagerInventoryPage() {
                 <form onSubmit={onCreateBuilding} className="rounded-xl border border-brand bg-brand-light/30 p-4 grid gap-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="col-span-full">
-                    <label className="filter-label">Address</label>
-                    <input className="filter-input w-full" value={buildingAddress} onChange={(e) => setBuildingAddress(e.target.value)} placeholder="e.g. Bahnhofstrasse 12" />
+                    <label className="filter-label">{t("manager:inventory.text.address")}</label>
+                    <input className="filter-input w-full" value={buildingAddress} onChange={(e) => setBuildingAddress(e.target.value)} placeholder={t("manager:inventory.placeholder.eGBahnhofstrasse12")} />
                   </div>
                   <div>
-                    <label className="filter-label">City code</label>
-                    <input className="filter-input w-full" value={buildingCityCode} onChange={(e) => setBuildingCityCode(e.target.value)} placeholder="e.g. 8001" />
+                    <label className="filter-label">{t("manager:inventory.text.cityCode")}</label>
+                    <input className="filter-input w-full" value={buildingCityCode} onChange={(e) => setBuildingCityCode(e.target.value)} placeholder={t("manager:inventory.placeholder.eG8001")} />
                   </div>
                   <div>
-                    <label className="filter-label">City</label>
-                    <input className="filter-input w-full" value={buildingCity} onChange={(e) => setBuildingCity(e.target.value)} placeholder="e.g. Zürich" />
+                    <label className="filter-label">{t("manager:inventory.text.city")}</label>
+                    <input className="filter-input w-full" value={buildingCity} onChange={(e) => setBuildingCity(e.target.value)} placeholder={t("manager:inventory.placeholder.eGZRich")} />
                   </div>
                   <div className="col-span-full">
-                    <label className="filter-label">Country</label>
-                    <input className="filter-input w-full" value={buildingCountry} onChange={(e) => setBuildingCountry(e.target.value)} placeholder="e.g. Switzerland" />
+                    <label className="filter-label">{t("manager:inventory.text.country")}</label>
+                    <input className="filter-input w-full" value={buildingCountry} onChange={(e) => setBuildingCountry(e.target.value)} placeholder={t("manager:inventory.placeholder.eGSwitzerland")} />
                   </div>
                 </div>
                 <div className="flex justify-end gap-2">
-                  <button type="button" className="button-secondary" onClick={() => setBuildingFormVisible(false)}>Cancel</button>
-                  <button type="submit" className="button-primary" disabled={loading}>Save building</button>
+                  <button type="button" className="button-secondary" onClick={() => setBuildingFormVisible(false)}>{t("manager:inventory.text.cancel")}</button>
+                  <button type="submit" className="button-primary" disabled={loading}>{t("manager:inventory.text.saveBuilding")}</button>
                 </div>
               </form>
               )}
               <div className="flex items-center gap-2">
                 <input
                   type="search"
-                  placeholder="Search buildings…"
+                  placeholder={t("manager:inventory.placeholder.searchBuildings")}
                   value={buildingSearch}
                   onChange={(e) => setBuildingSearch(e.target.value)}
                   className="filter-input flex-1 min-w-0 mb-0"
@@ -414,7 +444,7 @@ export default function ManagerInventoryPage() {
                 <div className="relative shrink-0">
                   <button
                     type="button"
-                    aria-label="Filter buildings"
+                    aria-label={t("manager:inventory.ariaLabel.filterBuildings")}
                     onClick={() => setBuildingFilterOpen((v) => !v)}
                     className={cn(
                       "flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
@@ -426,21 +456,21 @@ export default function ManagerInventoryPage() {
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4" aria-hidden="true">
                       <path fillRule="evenodd" d="M2.628 1.601C5.028 1.206 7.49 1 10 1s4.973.206 7.372.601a.75.75 0 0 1 .628.74v2.288a2.25 2.25 0 0 1-.659 1.59l-4.682 4.683a2.25 2.25 0 0 0-.659 1.59v3.037c0 .684-.31 1.33-.844 1.757l-1.937 1.55A.75.75 0 0 1 8 18.25v-5.757a2.25 2.25 0 0 0-.659-1.591L2.659 6.22A2.25 2.25 0 0 1 2 4.629V2.34a.75.75 0 0 1 .628-.74Z" clipRule="evenodd" />
                     </svg>
-                    <span className="hidden sm:inline">Filter</span>
+                    <span className="hidden sm:inline">{t("manager:inventory.text.filter")}</span>
                     {buildingCantonFilter && <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-brand text-white text-[10px] font-bold leading-none">1</span>}
                   </button>
                 {buildingFilterOpen && (
                     <>
                     <div className="fixed inset-0 z-10" aria-hidden="true" onClick={() => setBuildingFilterOpen(false)} />
                     <div className="absolute right-0 top-full mt-1.5 z-20 w-52 rounded-xl border border-slate-200 bg-white shadow-lg p-3 space-y-2">
-                      <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Canton</p>
+                      <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">{t("manager:inventory.text.canton")}</p>
                       <select
                         className="filter-input w-full"
                         value={buildingCantonFilter}
                         onChange={(e) => setBuildingCantonFilter(e.target.value)}
-                        aria-label="Filter by canton"
+                        aria-label={t("manager:inventory.ariaLabel.filterByCanton")}
                       >
-                        <option value="">All cantons</option>
+                        <option value="">{t("manager:inventory.text.allCantons")}</option>
                         {[...new Set(buildings.map((b) => b.canton).filter(Boolean))].sort().map((c) => (
                           <option key={c} value={c}>{c}</option>
                         ))}
@@ -461,7 +491,7 @@ export default function ManagerInventoryPage() {
                 {/* Sort button — cycles: name → unitCount → canton */}
                 <button
                   type="button"
-                  aria-label="Sort buildings"
+                  aria-label={t("manager:inventory.ariaLabel.sortBuildings")}
                   onClick={() => {
                     const cycle = ["name", "unitCount", "canton"];
                     const next = cycle[(cycle.indexOf(sortField) + 1) % cycle.length];
@@ -488,22 +518,22 @@ export default function ManagerInventoryPage() {
               </div>
             </div>
             {loading ? (
-              <p className="loading-text">Loading buildings…</p>
+              <p className="loading-text">{t("manager:inventory.text.loadingBuildings")}</p>
             ) : buildings.length === 0 ? (
               <div className="empty-state">
-                <p className="empty-state-text">No buildings found.</p>
+                <p className="empty-state-text">{t("manager:inventory.text.noBuildingsFound")}</p>
               </div>
             ) : (
               <ConfigurableTable
                 tableId="inventory-buildings"
-                columns={BUILDING_COLUMNS}
+                columns={buildingColumns}
                 data={sortedBuildings}
                 rowKey={(b) => b.id}
                 sortField={sortField}
                 sortDir={sortDir}
                 onSort={handleSort}
                 onRowClick={(b) => router.push(`/admin-inventory/buildings/${b.id}?from=/manager/inventory`)}
-                emptyState={<p className="text-sm text-slate-500">No buildings found.</p>}
+                emptyState={<p className="text-sm text-slate-500">{t("manager:inventory.text.noBuildingsFound")}</p>}
                 mobileCard={(b) => {
                   const h = b._financial?.health;
                   const dot = h ? ({ green: "bg-green-500 ring-green-200", amber: "bg-amber-500 ring-amber-200", red: "bg-red-500 ring-red-200" }[h] ?? "bg-slate-400 ring-slate-200") : null;
@@ -542,13 +572,13 @@ export default function ManagerInventoryPage() {
           {/* Decisions tab */}
           <div className={activeTab === 2 ? "tab-panel-active" : "tab-panel"}>
             <div className="p-4 border-b border-slate-100">
-              <label className="text-xs font-medium text-slate-600 mr-2">Unit</label>
+              <label className="text-xs font-medium text-slate-600 mr-2">{t("manager:inventory.text.unit")}</label>
               <select
                 value={decisionsUnitId}
                 onChange={(e) => { setDecisionsUnitId(e.target.value); setSensitivityInputs({}); }}
                 className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
               >
-                <option value="">— Select a unit —</option>
+                <option value="">{t("manager:inventory.text.selectAUnit")}</option>
                 {allUnits.map((u) => (
                   <option key={u.id} value={u.id}>
                     {u.building?.name ? `${u.building.name} · ` : ""}{u.unitNumber}
@@ -562,14 +592,14 @@ export default function ManagerInventoryPage() {
             )}
 
             {decisionsLoading ? (
-              <p className="loading-text">Analysing assets…</p>
+              <p className="loading-text">{t("manager:inventory.text.analysingAssets")}</p>
             ) : !decisionsUnitId ? (
               <div className="empty-state">
-                <p className="empty-state-text">Select a unit to see its repair vs replace analysis.</p>
+                <p className="empty-state-text">{t("manager:inventory.text.selectAUnitToSeeItsRepairVsReplaceAnalysis")}</p>
               </div>
             ) : decisionsData && decisionsData.length === 0 ? (
               <div className="empty-state">
-                <p className="empty-state-text">No assets recorded for this unit yet.</p>
+                <p className="empty-state-text">{t("manager:inventory.text.noAssetsRecordedForThisUnitYet")}</p>
               </div>
             ) : decisionsData ? (
               <>
@@ -610,12 +640,12 @@ export default function ManagerInventoryPage() {
                           <input
                             type="number" min="0" step="100"
                             placeholder="0"
-                            aria-label="Hypothetical next repair cost in CHF"
+                            aria-label={t("manager:inventory.ariaLabel.hypotheticalNextRepairCostInChf")}
                             value={sensitivityInputs[item.assetId] ?? ""}
                             onChange={(e) => setSensitivityInputs((prev) => ({ ...prev, [item.assetId]: e.target.value }))}
                             className="w-28 rounded border border-slate-200 px-2 py-1 text-xs text-right focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400"
                           />
-                          <span className="text-xs text-slate-400">If next repair CHF</span>
+                          <span className="text-xs text-slate-400">{t("manager:inventory.text.ifNextRepairChf")}</span>
                         </div>
                       )}
                     </div>
@@ -625,22 +655,22 @@ export default function ManagerInventoryPage() {
 
               {/* Wide table — hidden md:block */}
               <div className="hidden md:block overflow-x-auto">
-                <table className="inline-table">
+                <table className="data-table">
                   <thead>
                     <tr>
-                      <th>Asset</th>
-                      <th>Type</th>
-                      <th>Age / Life</th>
-                      <th>Depreciation</th>
-                      <th className="text-right">Repairs (CHF)</th>
-                      <th className="text-right">Replace est. (CHF)</th>
-                      <th className="text-right">Ratio</th>
-                      <th className="text-right">Break-even</th>
-                      <th>Recommendation</th>
+                      <SortableHeader label={t("manager:inventory.prop.asset")} field="assetName" sortField={decSF} sortDir={decSD} onSort={handleDecSort} />
+                      <SortableHeader label={t("manager:inventory.prop.type")} field="type" sortField={decSF} sortDir={decSD} onSort={handleDecSort} />
+                      <SortableHeader label={t("manager:inventory.prop.ageLife")} field="ageMonths" sortField={decSF} sortDir={decSD} onSort={handleDecSort} />
+                      <SortableHeader label={t("manager:inventory.prop.depreciation")} field="depreciation" sortField={decSF} sortDir={decSD} onSort={handleDecSort} />
+                      <SortableHeader label="Repairs (CHF)" field="repairs" sortField={decSF} sortDir={decSD} onSort={handleDecSort} className="text-right" />
+                      <SortableHeader label="Replace est. (CHF)" field="replace" sortField={decSF} sortDir={decSD} onSort={handleDecSort} className="text-right" />
+                      <SortableHeader label={t("manager:inventory.prop.ratio")} field="ratio" sortField={decSF} sortDir={decSD} onSort={handleDecSort} className="text-right" />
+                      <SortableHeader label={t("manager:inventory.prop.breakeven")} field="breakEvenMonths" sortField={decSF} sortDir={decSD} onSort={handleDecSort} className="text-right" />
+                      <SortableHeader label={t("manager:inventory.prop.recommendation")} field="recommendation" sortField={decSF} sortDir={decSD} onSort={handleDecSort} />
                     </tr>
                   </thead>
                   <tbody>
-                    {decisionsData.map((item) => {
+                    {sortedDecisions.map((item) => {
                       const ageYears = item.ageMonths != null ? (item.ageMonths / 12).toFixed(1) : "—";
                       const lifeYears = item.usefulLifeMonths != null ? (item.usefulLifeMonths / 12).toFixed(0) : null;
                       const remainYears = item.remainingLifeMonths != null ? (item.remainingLifeMonths / 12).toFixed(1) : null;
@@ -689,15 +719,15 @@ export default function ManagerInventoryPage() {
                                   min="0"
                                   step="100"
                                   placeholder="0"
-                                  aria-label="Hypothetical next repair cost in CHF"
+                                  aria-label={t("manager:inventory.ariaLabel.hypotheticalNextRepairCostInChf")}
                                   value={sensitivityInputs[item.assetId] ?? ""}
                                   onChange={(e) => setSensitivityInputs((prev) => ({ ...prev, [item.assetId]: e.target.value }))}
                                   className="w-24 rounded border border-slate-200 px-2 py-1 text-xs text-right focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400"
                                 />
-                                <span className="block text-xs text-slate-400 mt-0.5">If next repair CHF</span>
+                                <span className="block text-xs text-slate-400 mt-0.5">{t("manager:inventory.text.ifNextRepairChf")}</span>
                               </div>
                             ) : (
-                              <span className="block text-xs text-slate-400 mt-1">Sensitivity unavailable</span>
+                              <span className="block text-xs text-slate-400 mt-1">{t("manager:inventory.text.sensitivityUnavailable")}</span>
                             )}
                           </td>
                           <td className="text-right">
@@ -762,10 +792,10 @@ export default function ManagerInventoryPage() {
                 </table>
                 {/* Legend */}
                 <div className="px-4 py-3 border-t border-slate-100 text-xs text-slate-500 space-y-1">
-                  <p><strong>Ratio</strong> = cumulative repair cost ÷ estimated replacement cost. Above 60% → Replace.</p>
-                  <p><strong>Break-even</strong> = at current repair rate, when total repairs will exceed replacement cost.</p>
-                  <p><strong>Warranty offset</strong>: new appliances typically carry {decisionsData[0]?.warrantyOffsetMonths || 24} months warranty coverage.</p>
-                  <p className="italic">Hover a row for the recommendation reason.</p>
+                  <p><strong>{t("manager:inventory.text.ratio")}</strong> {t("manager:inventory.text.cumulativeRepairCostEstimatedReplacementCostAbove60Replace")}</p>
+                  <p><strong>{t("manager:inventory.text.breakeven")}</strong> {t("manager:inventory.text.atCurrentRepairRateWhenTotalRepairsWillExceedReplacementCost")}</p>
+                  <p><strong>{t("manager:inventory.text.warrantyOffset")}</strong>: new appliances typically carry {decisionsData[0]?.warrantyOffsetMonths || 24} months warranty coverage.</p>
+                  <p className="italic">{t("manager:inventory.text.hoverARowForTheRecommendationReason")}</p>
                 </div>
               </div>
               </>
@@ -777,3 +807,5 @@ export default function ManagerInventoryPage() {
     </AppShell>
   );
 }
+
+export const getStaticProps = withTranslations(["common","manager"]);

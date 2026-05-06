@@ -1,5 +1,14 @@
 import { PrismaClient, RuleAction, RequestStatus } from "@prisma/client";
 import { RuleCondition, RuleConditionField, RuleConditionOperator } from "../types/approvalRules";
+import {
+  findApprovalRulesByOrg,
+  findApprovalRuleByOrgAndId,
+  findBuildingForRuleValidation,
+  createApprovalRuleRecord,
+  updateApprovalRuleRecord,
+  deleteApprovalRuleRecord,
+  findApprovalRulesForEvaluation,
+} from "../repositories/approvalRuleRepository";
 
 export type ApprovalRuleDTO = {
   id: string;
@@ -47,11 +56,7 @@ export async function listApprovalRules(
   orgId: string,
   buildingId?: string
 ): Promise<ApprovalRuleDTO[]> {
-  const where = buildingId ? { orgId, buildingId } : { orgId };
-  const rules = await prisma.approvalRule.findMany({
-    where,
-    orderBy: [{ priority: "desc" }, { createdAt: "asc" }],
-  });
+  const rules = await findApprovalRulesByOrg(prisma, orgId, buildingId);
   return rules.map(toDTO);
 }
 
@@ -63,9 +68,7 @@ export async function getApprovalRule(
   orgId: string,
   ruleId: string
 ): Promise<ApprovalRuleDTO | null> {
-  const rule = await prisma.approvalRule.findFirst({
-    where: { id: ruleId, orgId },
-  });
+  const rule = await findApprovalRuleByOrgAndId(prisma, orgId, ruleId);
   return rule ? toDTO(rule) : null;
 }
 
@@ -85,21 +88,17 @@ export async function createApprovalRule(
 ): Promise<ApprovalRuleDTO> {
   // Validate building exists if buildingId provided
   if (payload.buildingId) {
-    const building = await prisma.building.findFirst({
-      where: { id: payload.buildingId, orgId },
-    });
+    const building = await findBuildingForRuleValidation(prisma, orgId, payload.buildingId);
     if (!building) throw new Error("BUILDING_NOT_FOUND");
   }
 
-  const rule = await prisma.approvalRule.create({
-    data: {
-      orgId,
-      buildingId: payload.buildingId ?? null,
-      name: payload.name,
-      priority: payload.priority ?? 0,
-      conditions: JSON.stringify(payload.conditions),
-      action: payload.action,
-    },
+  const rule = await createApprovalRuleRecord(prisma, {
+    orgId,
+    buildingId: payload.buildingId ?? null,
+    name: payload.name,
+    priority: payload.priority ?? 0,
+    conditions: JSON.stringify(payload.conditions),
+    action: payload.action,
   });
   return toDTO(rule);
 }
@@ -119,20 +118,15 @@ export async function updateApprovalRule(
     action?: RuleAction;
   }
 ): Promise<ApprovalRuleDTO | null> {
-  const existing = await prisma.approvalRule.findFirst({
-    where: { id: ruleId, orgId },
-  });
+  const existing = await findApprovalRuleByOrgAndId(prisma, orgId, ruleId);
   if (!existing) return null;
 
-  const rule = await prisma.approvalRule.update({
-    where: { id: ruleId },
-    data: {
-      name: payload.name !== undefined ? payload.name : undefined,
-      priority: payload.priority !== undefined ? payload.priority : undefined,
-      isActive: payload.isActive !== undefined ? payload.isActive : undefined,
-      conditions: payload.conditions !== undefined ? JSON.stringify(payload.conditions) : undefined,
-      action: payload.action !== undefined ? payload.action : undefined,
-    },
+  const rule = await updateApprovalRuleRecord(prisma, ruleId, {
+    name: payload.name !== undefined ? payload.name : undefined,
+    priority: payload.priority !== undefined ? payload.priority : undefined,
+    isActive: payload.isActive !== undefined ? payload.isActive : undefined,
+    conditions: payload.conditions !== undefined ? JSON.stringify(payload.conditions) : undefined,
+    action: payload.action !== undefined ? payload.action : undefined,
   });
   return toDTO(rule);
 }
@@ -145,12 +139,10 @@ export async function deleteApprovalRule(
   orgId: string,
   ruleId: string
 ): Promise<boolean> {
-  const existing = await prisma.approvalRule.findFirst({
-    where: { id: ruleId, orgId },
-  });
+  const existing = await findApprovalRuleByOrgAndId(prisma, orgId, ruleId);
   if (!existing) return false;
 
-  await prisma.approvalRule.delete({ where: { id: ruleId } });
+  await deleteApprovalRuleRecord(prisma, ruleId);
   return true;
 }
 
@@ -209,18 +201,11 @@ export async function evaluateRules(
   buildingId?: string
 ): Promise<{ action: RuleAction; matchedRule?: ApprovalRuleDTO } | null> {
   // Fetch org-level and building-level rules
-  const [orgRules, buildingRules] = await Promise.all([
-    prisma.approvalRule.findMany({
-      where: { orgId, buildingId: null, isActive: true },
-      orderBy: [{ priority: "desc" }, { createdAt: "asc" }],
-    }),
-    buildingId
-      ? prisma.approvalRule.findMany({
-          where: { orgId, buildingId, isActive: true },
-          orderBy: [{ priority: "desc" }, { createdAt: "asc" }],
-        })
-      : Promise.resolve([]),
-  ]);
+  const { orgRules, buildingRules } = await findApprovalRulesForEvaluation(
+    prisma,
+    orgId,
+    buildingId,
+  );
 
   // Combine and sort: building rules take precedence over org rules at same priority
   const allRules = [...buildingRules, ...orgRules];

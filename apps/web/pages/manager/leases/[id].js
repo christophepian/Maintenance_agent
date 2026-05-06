@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import AppShell from "../../../components/AppShell";
@@ -8,12 +8,16 @@ import PageHeader from "../../../components/layout/PageHeader";
 import PageContent from "../../../components/layout/PageContent";
 import Panel from "../../../components/layout/Panel";
 import { authHeaders } from "../../../lib/api";
+import SortableHeader from "../../../components/SortableHeader";
+import { useLocalSort, clientSort } from "../../../lib/tableUtils";
 
 import { cn } from "../../../lib/utils";
 import Badge from "../../../components/ui/Badge";
 import Button from "../../../components/ui/Button";
 import { Modal, ModalFooter } from "../../../components/ui/Modal";
 import { leaseVariant, invoiceVariant, signerVariant, reconciliationVariant, rentAdjustmentVariant, billingScheduleVariant } from "../../../lib/statusVariants";
+import { withServerTranslations } from "../../../lib/i18n";
+import { useTranslation } from "next-i18next";
 
 function Field({ label, children, span }) {
   return (
@@ -59,6 +63,7 @@ function LeaseActions({
   onEdit, onSave, onCancelEdit, onGeneratePDF, onSendForSignature,
   onResend, onActivate, onTerminate, onArchive, onInvoice, onCancel,
 }) {
+  const { t } = useTranslation("manager");
   const [open, setOpen] = useState(false);
   const [dropPos, setDropPos] = useState({ top: 0, left: 0 });
   const ref = useRef(null);
@@ -102,7 +107,7 @@ function LeaseActions({
     isActive && !isTemplate && { label: "📋 Terminate", action: onTerminate },
     !isTemplate && !lease.archivedAt && ["SIGNED","ACTIVE","TERMINATED","CANCELLED"].includes(lease.status) && { label: "📦 Archive", action: onArchive, disabled: !!actionLoading },
     !isTemplate && { label: "💰 Invoice", action: onInvoice },
-    !isTemplate && !["SIGNED","ACTIVE","TERMINATED","CANCELLED"].includes(lease.status) && { label: "Cancel Lease", action: onCancel, danger: true },
+    !isTemplate && !["SIGNED","ACTIVE","TERMINATED","CANCELLED"].includes(lease.status) && { label: t("leasesId.btn.cancelLease"), action: onCancel, danger: true },
   ].filter(Boolean);
 
   return (
@@ -110,21 +115,21 @@ function LeaseActions({
       {/* Desktop: full button row */}
       <div className="hidden sm:flex items-center gap-2 flex-wrap">
         {(isDraft || isTemplate) && !editMode && (
-          <Button variant="secondary" size="sm" onClick={onEdit}>✏️ Edit</Button>
+          <Button variant="secondary" size="sm" onClick={onEdit}>{t("manager:leasesId.text.edit")}</Button>
         )}
         {(isDraft || isTemplate) && editMode && (
           <>
             <Button variant="primary" size="sm" onClick={onSave} disabled={saving}>
               {saving ? "Saving..." : "Save"}
             </Button>
-            <Button variant="secondary" size="sm" onClick={onCancelEdit}>Cancel</Button>
+            <Button variant="secondary" size="sm" onClick={onCancelEdit}>{t("manager:leasesId.text.cancel")}</Button>
           </>
         )}
         <Button variant="neutral" size="sm" onClick={onGeneratePDF} disabled={pdfGenerating}>
           {pdfGenerating ? "Generating..." : "📄 Generate PDF"}
         </Button>
         {isDraft && !isTemplate && (
-          <Button variant="success" size="sm" onClick={onSendForSignature}>✍️ Send for Signature</Button>
+          <Button variant="success" size="sm" onClick={onSendForSignature}>{t("manager:leasesId.text.sendForSignature")}</Button>
         )}
         {needsResend && (
           <Button variant="warning" size="sm" onClick={onResend} disabled={resendingForSignature}>
@@ -137,16 +142,16 @@ function LeaseActions({
           </Button>
         )}
         {isActive && !isTemplate && (
-          <Button variant="warning" size="sm" onClick={onTerminate}>📋 Terminate</Button>
+          <Button variant="warning" size="sm" onClick={onTerminate}>{t("manager:leasesId.text.terminate")}</Button>
         )}
         {!isTemplate && !lease.archivedAt && ["SIGNED","ACTIVE","TERMINATED","CANCELLED"].includes(lease.status) && (
-          <Button variant="secondary" size="sm" onClick={onArchive} disabled={!!actionLoading}>📦 Archive</Button>
+          <Button variant="secondary" size="sm" onClick={onArchive} disabled={!!actionLoading}>{t("manager:leasesId.text.archive")}</Button>
         )}
         {!isTemplate && (
-          <Button variant="ghost" size="sm" className="text-brand hover:bg-brand-light" onClick={onInvoice}>💰 Invoice</Button>
+          <Button variant="ghost" size="sm" className="text-brand hover:bg-brand-light" onClick={onInvoice}>{t("manager:leasesId.text.invoice")}</Button>
         )}
         {!isTemplate && !["SIGNED","ACTIVE","TERMINATED","CANCELLED"].includes(lease.status) && (
-          <Button variant="destructiveGhost" size="sm" onClick={onCancel}>Cancel</Button>
+          <Button variant="destructiveGhost" size="sm" onClick={onCancel}>{t("manager:leasesId.text.cancel")}</Button>
         )}
       </div>
 
@@ -155,7 +160,7 @@ function LeaseActions({
         <button
           ref={triggerRef}
           onClick={() => setOpen(v => !v)}
-          aria-label="Lease actions menu"
+          aria-label={t("manager:leasesId.ariaLabel.leaseActionsMenu")}
           aria-expanded={open}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-white border border-slate-200 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 active:bg-slate-100"
         >
@@ -184,6 +189,7 @@ function LeaseActions({
 }
 
 export default function LeaseEditorPage() {
+  const { t } = useTranslation("manager");
   const router = useRouter();
   const { id } = router.query;
 
@@ -240,6 +246,42 @@ export default function LeaseEditorPage() {
   const [adjCpiNew, setAdjCpiNew] = useState("");
   const [adjEffective, setAdjEffective] = useState("");
   const [adjComputing, setAdjComputing] = useState(false);
+
+  const { sortField: srSF, sortDir: srSD, handleSort: handleSrSort } = useLocalSort("createdAt", "desc");
+  const { sortField: recSF, sortDir: recSD, handleSort: handleRecSort } = useLocalSort("year", "desc");
+  const { sortField: raSF, sortDir: raSD, handleSort: handleRaSort } = useLocalSort("effectiveDate", "desc");
+  const { sortField: invSF, sortDir: invSD, handleSort: handleInvSort } = useLocalSort("createdAt", "desc");
+
+  const sortedSigRequests = useMemo(() => clientSort(sigRequests, srSF, srSD, (sr, f) => {
+    if (f === "provider") return (sr.provider || "").toLowerCase();
+    if (f === "level") return (sr.level || "").toLowerCase();
+    if (f === "status") return (sr.status || "").toLowerCase();
+    if (f === "sentAt") return sr.sentAt || "";
+    if (f === "createdAt") return sr.createdAt || "";
+    return "";
+  }), [sigRequests, srSF, srSD]);
+
+  const sortedReconciliations = useMemo(() => clientSort(reconciliations, recSF, recSD, (r, f) => {
+    if (f === "year") return r.year ?? 0;
+    if (f === "status") return (r.status || "").toLowerCase();
+    if (f === "acompte") return r.totalAcomptePaidCents ?? 0;
+    return "";
+  }), [reconciliations, recSF, recSD]);
+
+  const sortedRentAdjustments = useMemo(() => clientSort(rentAdjustments, raSF, raSD, (ra, f) => {
+    if (f === "type") return (ra.type || "").toLowerCase();
+    if (f === "effectiveDate") return ra.effectiveDate || "";
+    if (f === "status") return (ra.status || "").toLowerCase();
+    return "";
+  }), [rentAdjustments, raSF, raSD]);
+
+  const sortedInvoices = useMemo(() => clientSort(invoices, invSF, invSD, (inv, f) => {
+    if (f === "description") return (inv.description || "").toLowerCase();
+    if (f === "amount") return inv.totalCents ?? inv.amountCents ?? 0;
+    if (f === "status") return (inv.status || "").toLowerCase();
+    if (f === "createdAt") return inv.createdAt || "";
+    return "";
+  }), [invoices, invSF, invSD]);
 
   const isDraft = lease?.status === "DRAFT";
   const isReadyToSign = lease?.status === "READY_TO_SIGN";
@@ -606,7 +648,7 @@ export default function LeaseEditorPage() {
   if (loading) {
     return (
       <AppShell role="MANAGER">
-        <PageShell><p className="text-sm text-slate-500 p-6">Loading lease...</p></PageShell>
+        <PageShell><p className="text-sm text-slate-500 p-6">{t("manager:leasesId.text.loadingLease")}</p></PageShell>
       </AppShell>
     );
   }
@@ -616,7 +658,7 @@ export default function LeaseEditorPage() {
       <AppShell role="MANAGER">
         <PageShell>
           <p className="text-sm text-red-600 p-6">{error}</p>
-          <Link href="/manager/leases" className="text-blue-600 text-sm ml-6">← Back to leases</Link>
+          <Link href="/manager/leases" className="text-blue-600 text-sm ml-6">{t("manager:leasesId.text.backToLeases")}</Link>
         </PageShell>
       </AppShell>
     );
@@ -669,46 +711,46 @@ export default function LeaseEditorPage() {
         {success && <p className="mt-4 text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-4 py-2">{success}</p>}
 
         <PageContent>
-          <Panel title="Lease Contract" bodyClassName="space-y-3">
+          <Panel title={t("manager:leasesId.title.leaseContract")} bodyClassName="space-y-3">
           {/* §1 — Parties */}
           <AccordionSection title="§1 — Parties (Bailleur & Locataire)" open={openSections.parties} onToggle={() => toggle("parties")}>
             <div className="space-y-4">
-              <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wide">§1.1 Bailleresse / Bailleur</h4>
+              <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{t("manager:leasesId.text.11BailleresseBailleur")}</h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <Field label="Nom / Raison sociale"><Input value={lease.landlordName} onChange={v => updateField("landlordName", v)} disabled={!editMode} /></Field>
-                <Field label="Adresse"><Input value={lease.landlordAddress} onChange={v => updateField("landlordAddress", v)} disabled={!editMode} /></Field>
-                <Field label="NPA / Localité"><Input value={lease.landlordZipCity} onChange={v => updateField("landlordZipCity", v)} disabled={!editMode} /></Field>
-                <Field label="Téléphone"><Input value={lease.landlordPhone} onChange={v => updateField("landlordPhone", v)} disabled={!editMode} /></Field>
-                <Field label="E-mail"><Input value={lease.landlordEmail} onChange={v => updateField("landlordEmail", v)} disabled={!editMode} /></Field>
+                <Field label={t("manager:leasesId.prop.nomRaisonSociale")}><Input value={lease.landlordName} onChange={v => updateField("landlordName", v)} disabled={!editMode} /></Field>
+                <Field label={t("manager:leasesId.prop.adresse")}><Input value={lease.landlordAddress} onChange={v => updateField("landlordAddress", v)} disabled={!editMode} /></Field>
+                <Field label={t("manager:leasesId.prop.nPALocalit")}><Input value={lease.landlordZipCity} onChange={v => updateField("landlordZipCity", v)} disabled={!editMode} /></Field>
+                <Field label={t("manager:leasesId.prop.tlphone")}><Input value={lease.landlordPhone} onChange={v => updateField("landlordPhone", v)} disabled={!editMode} /></Field>
+                <Field label={t("manager:leasesId.prop.email")}><Input value={lease.landlordEmail} onChange={v => updateField("landlordEmail", v)} disabled={!editMode} /></Field>
                 <Field label="Représenté(e) par"><Input value={lease.landlordRepresentedBy} onChange={v => updateField("landlordRepresentedBy", v)} disabled={!editMode} /></Field>
               </div>
 
-              <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mt-6">§1.2 Locataire</h4>
+              <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mt-6">{t("manager:leasesId.text.12Locataire")}</h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <Field label="Nom *"><Input value={lease.tenantName} onChange={v => updateField("tenantName", v)} disabled={!editMode} /></Field>
-                <Field label="Adresse"><Input value={lease.tenantAddress} onChange={v => updateField("tenantAddress", v)} disabled={!editMode} /></Field>
-                <Field label="NPA / Localité"><Input value={lease.tenantZipCity} onChange={v => updateField("tenantZipCity", v)} disabled={!editMode} /></Field>
-                <Field label="Téléphone"><Input value={lease.tenantPhone} onChange={v => updateField("tenantPhone", v)} disabled={!editMode} /></Field>
-                <Field label="E-mail"><Input value={lease.tenantEmail} onChange={v => updateField("tenantEmail", v)} disabled={!editMode} /></Field>
-                <Field label="Co-locataire"><Input value={lease.coTenantName} onChange={v => updateField("coTenantName", v)} disabled={!editMode} /></Field>
+                <Field label={t("manager:leasesId.prop.nom")}><Input value={lease.tenantName} onChange={v => updateField("tenantName", v)} disabled={!editMode} /></Field>
+                <Field label={t("manager:leasesId.prop.adresse")}><Input value={lease.tenantAddress} onChange={v => updateField("tenantAddress", v)} disabled={!editMode} /></Field>
+                <Field label={t("manager:leasesId.prop.nPALocalit")}><Input value={lease.tenantZipCity} onChange={v => updateField("tenantZipCity", v)} disabled={!editMode} /></Field>
+                <Field label={t("manager:leasesId.prop.tlphone")}><Input value={lease.tenantPhone} onChange={v => updateField("tenantPhone", v)} disabled={!editMode} /></Field>
+                <Field label={t("manager:leasesId.prop.email")}><Input value={lease.tenantEmail} onChange={v => updateField("tenantEmail", v)} disabled={!editMode} /></Field>
+                <Field label={t("manager:leasesId.prop.colocataire")}><Input value={lease.coTenantName} onChange={v => updateField("coTenantName", v)} disabled={!editMode} /></Field>
               </div>
             </div>
           </AccordionSection>
 
           {/* §2 — Object */}
-          <AccordionSection title="§2 — Objet du bail" open={openSections.object} onToggle={() => toggle("object")}>
+          <AccordionSection title={t("manager:leasesId.prop.2ObjetDuBail")} open={openSections.object} onToggle={() => toggle("object")}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <Field label="Type d'objet">
+              <Field label={t("manager:leasesId.prop.typeDobjet")}>
                 <select value={lease.objectType || "APPARTEMENT"} onChange={e => updateField("objectType", e.target.value)} disabled={!editMode}
                   className="w-full border rounded-lg px-3 py-1.5 text-sm disabled:bg-slate-100">
-                  <option value="APPARTEMENT">Appartement</option>
-                  <option value="MAISON">Maison</option>
-                  <option value="CHAMBRE_MEUBLEE">Chambre meublée</option>
+                  <option value="APPARTEMENT">{t("manager:leasesId.text.appartement")}</option>
+                  <option value="MAISON">{t("manager:leasesId.text.maison")}</option>
+                  <option value="CHAMBRE_MEUBLEE">{t("manager:leasesId.text.chambreMeuble")}</option>
                 </select>
               </Field>
-              <Field label="Nombre de pièces"><Input value={lease.roomsCount} onChange={v => updateField("roomsCount", v)} placeholder="3.5" disabled={!editMode} /></Field>
-              <Field label="Étage"><Input value={lease.floor} onChange={v => updateField("floor", v)} disabled={!editMode} /></Field>
-              <Field label="Adresse immeuble">
+              <Field label={t("manager:leasesId.prop.nombreDePices")}><Input value={lease.roomsCount} onChange={v => updateField("roomsCount", v)} placeholder="3.5" disabled={!editMode} /></Field>
+              <Field label={t("manager:leasesId.prop.tage")}><Input value={lease.floor} onChange={v => updateField("floor", v)} disabled={!editMode} /></Field>
+              <Field label={t("manager:leasesId.prop.adresseImmeuble")}>
                 <Input value={lease.buildingAddressLines?.join(", ")} disabled={true} />
               </Field>
             </div>
@@ -717,31 +759,31 @@ export default function LeaseEditorPage() {
           {/* §3–4 — Dates & Termination */}
           <AccordionSection title="§3–4 — Durée & Résiliation" open={openSections.dates} onToggle={() => toggle("dates")}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <Field label="Début du bail *"><Input type="date" value={lease.startDate?.split("T")[0]} onChange={v => updateField("startDate", v)} disabled={!editMode} /></Field>
-              <Field label="Durée déterminée">
+              <Field label={t("manager:leasesId.prop.dbutDuBail")}><Input type="date" value={lease.startDate?.split("T")[0]} onChange={v => updateField("startDate", v)} disabled={!editMode} /></Field>
+              <Field label={t("manager:leasesId.prop.dureDtermine")}>
                 <select value={lease.isFixedTerm ? "true" : "false"} onChange={e => updateField("isFixedTerm", e.target.value === "true")} disabled={!editMode}
                   className="w-full border rounded-lg px-3 py-1.5 text-sm disabled:bg-slate-100">
-                  <option value="false">Indéterminée</option>
-                  <option value="true">Déterminée</option>
+                  <option value="false">{t("manager:leasesId.text.indtermine")}</option>
+                  <option value="true">{t("manager:leasesId.text.dtermine")}</option>
                 </select>
               </Field>
               {lease.isFixedTerm && (
-                <Field label="Fin du bail"><Input type="date" value={lease.endDate?.split("T")[0]} onChange={v => updateField("endDate", v)} disabled={!editMode} /></Field>
+                <Field label={t("manager:leasesId.prop.finDuBail")}><Input type="date" value={lease.endDate?.split("T")[0]} onChange={v => updateField("endDate", v)} disabled={!editMode} /></Field>
               )}
-              <Field label="Premier terme de résiliation"><Input type="date" value={lease.firstTerminationDate?.split("T")[0]} onChange={v => updateField("firstTerminationDate", v)} disabled={!editMode} /></Field>
-              <Field label="Délai de résiliation">
+              <Field label={t("manager:leasesId.prop.premierTermeDeRsiliation")}><Input type="date" value={lease.firstTerminationDate?.split("T")[0]} onChange={v => updateField("firstTerminationDate", v)} disabled={!editMode} /></Field>
+              <Field label={t("manager:leasesId.prop.dlaiDeRsiliation")}>
                 <select value={lease.noticeRule || "3_MONTHS"} onChange={e => updateField("noticeRule", e.target.value)} disabled={!editMode}
                   className="w-full border rounded-lg px-3 py-1.5 text-sm disabled:bg-slate-100">
-                  <option value="3_MONTHS">3 mois</option>
-                  <option value="EXTENDED">Prolongé</option>
-                  <option value="2_WEEKS">2 semaines</option>
+                  <option value="3_MONTHS">{t("manager:leasesId.text.3Mois")}</option>
+                  <option value="EXTENDED">{t("manager:leasesId.text.prolong")}</option>
+                  <option value="2_WEEKS">{t("manager:leasesId.text.2Semaines")}</option>
                 </select>
               </Field>
-              <Field label="Termes de résiliation">
+              <Field label={t("manager:leasesId.prop.termesDeRsiliation")}>
                 <select value={lease.terminationDatesRule || "END_OF_MONTH_EXCEPT_31_12"} onChange={e => updateField("terminationDatesRule", e.target.value)} disabled={!editMode}
                   className="w-full border rounded-lg px-3 py-1.5 text-sm disabled:bg-slate-100">
-                  <option value="END_OF_MONTH_EXCEPT_31_12">Fin de mois, sauf 31.12</option>
-                  <option value="CUSTOM">Dates locales</option>
+                  <option value="END_OF_MONTH_EXCEPT_31_12">{t("manager:leasesId.text.finDeMoisSauf3112")}</option>
+                  <option value="CUSTOM">{t("manager:leasesId.text.datesLocales")}</option>
                 </select>
               </Field>
             </div>
@@ -763,31 +805,31 @@ export default function LeaseEditorPage() {
           </AccordionSection>
 
           {/* §6 — Payment */}
-          <AccordionSection title="§6 — Paiement" open={openSections.payment} onToggle={() => toggle("payment")}>
+          <AccordionSection title={t("manager:leasesId.prop.6Paiement")} open={openSections.payment} onToggle={() => toggle("payment")}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <Field label="Jour d'échéance"><Input type="number" value={lease.paymentDueDayOfMonth} onChange={v => updateField("paymentDueDayOfMonth", v)} placeholder="1" disabled={!editMode} /></Field>
-              <Field label="Bénéficiaire"><Input value={lease.paymentRecipient} onChange={v => updateField("paymentRecipient", v)} disabled={!editMode} /></Field>
-              <Field label="Institut financier"><Input value={lease.paymentInstitution} onChange={v => updateField("paymentInstitution", v)} disabled={!editMode} /></Field>
-              <Field label="N° de compte"><Input value={lease.paymentAccountNumber} onChange={v => updateField("paymentAccountNumber", v)} disabled={!editMode} /></Field>
-              <Field label="IBAN"><Input value={lease.paymentIban} onChange={v => updateField("paymentIban", v)} placeholder="CH..." disabled={!editMode} /></Field>
-              <Field label="Taux de référence"><Input value={lease.referenceRatePercent} onChange={v => updateField("referenceRatePercent", v)} placeholder="1.75" disabled={!editMode} /></Field>
+              <Field label={t("manager:leasesId.prop.jourDchance")}><Input type="number" value={lease.paymentDueDayOfMonth} onChange={v => updateField("paymentDueDayOfMonth", v)} placeholder="1" disabled={!editMode} /></Field>
+              <Field label={t("manager:leasesId.prop.bnficiaire")}><Input value={lease.paymentRecipient} onChange={v => updateField("paymentRecipient", v)} disabled={!editMode} /></Field>
+              <Field label={t("manager:leasesId.prop.institutFinancier")}><Input value={lease.paymentInstitution} onChange={v => updateField("paymentInstitution", v)} disabled={!editMode} /></Field>
+              <Field label={t("manager:leasesId.prop.nDeCompte")}><Input value={lease.paymentAccountNumber} onChange={v => updateField("paymentAccountNumber", v)} disabled={!editMode} /></Field>
+              <Field label="IBAN"><Input value={lease.paymentIban} onChange={v => updateField("paymentIban", v)} placeholder={t("manager:leasesId.placeholder.cH")} disabled={!editMode} /></Field>
+              <Field label={t("manager:leasesId.prop.tauxDeRfrence")}><Input value={lease.referenceRatePercent} onChange={v => updateField("referenceRatePercent", v)} placeholder="1.75" disabled={!editMode} /></Field>
             </div>
           </AccordionSection>
 
           {/* §7 — Deposit */}
-          <AccordionSection title="§7 — Garantie" open={openSections.deposit} onToggle={() => toggle("deposit")}>
+          <AccordionSection title={t("manager:leasesId.prop.7Garantie")} open={openSections.deposit} onToggle={() => toggle("deposit")}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Field label="Montant de la garantie (CHF)"><Input type="number" value={lease.depositChf} onChange={v => updateField("depositChf", v)} disabled={!editMode} /></Field>
-              <Field label="Exigibilité">
+              <Field label={t("manager:leasesId.prop.exigibilit")}>
                 <select value={lease.depositDueRule || "AT_SIGNATURE"} onChange={e => updateField("depositDueRule", e.target.value)} disabled={!editMode}
                   className="w-full border rounded-lg px-3 py-1.5 text-sm disabled:bg-slate-100">
-                  <option value="AT_SIGNATURE">À la signature</option>
-                  <option value="BY_START">Au début du bail</option>
-                  <option value="BY_DATE">À une date précise</option>
+                  <option value="AT_SIGNATURE">{t("manager:leasesId.text.laSignature")}</option>
+                  <option value="BY_START">{t("manager:leasesId.text.auDbutDuBail")}</option>
+                  <option value="BY_DATE">{t("manager:leasesId.text.uneDatePrcise")}</option>
                 </select>
               </Field>
               {lease.depositDueRule === "BY_DATE" && (
-                <Field label="Date d'échéance"><Input type="date" value={lease.depositDueDate?.split("T")[0]} onChange={v => updateField("depositDueDate", v)} disabled={!editMode} /></Field>
+                <Field label={t("manager:leasesId.prop.dateDchance")}><Input type="date" value={lease.depositDueDate?.split("T")[0]} onChange={v => updateField("depositDueDate", v)} disabled={!editMode} /></Field>
               )}
             </div>
           </AccordionSection>
@@ -799,10 +841,10 @@ export default function LeaseEditorPage() {
                 <input type="checkbox" checked={lease.includesHouseRules || false} onChange={e => updateField("includesHouseRules", e.target.checked)} disabled={!editMode} />
                 Règlement de la maison joint en annexe
               </label>
-              <Field label="Autres annexes" span={2}>
+              <Field label={t("manager:leasesId.prop.autresAnnexes")} span={2}>
                 <Input value={lease.otherAnnexesText} onChange={v => updateField("otherAnnexesText", v)} disabled={!editMode} />
               </Field>
-              <Field label="Dispositions particulières" span={2}>
+              <Field label={t("manager:leasesId.prop.dispositionsParticulires")} span={2}>
                 <textarea
                   value={lease.otherStipulations ?? ""}
                   onChange={e => updateField("otherStipulations", e.target.value)}
@@ -818,22 +860,22 @@ export default function LeaseEditorPage() {
           {/* Signature Requests */}
           {sigRequests.length > 0 && (
             <div>
-              <h2 className="mb-3 text-sm font-semibold text-slate-700">Signature Requests</h2>
+              <h2 className="mb-3 text-sm font-semibold text-slate-700">{t("manager:leasesId.heading.signatureRequests")}</h2>
               <div className="overflow-x-auto rounded-lg border border-table-border">
-                <table className="inline-table">
+                <table className="data-table">
                   <thead>
                     <tr>
-                      <th>Provider</th>
-                      <th>Level</th>
-                      <th>Status</th>
-                      <th>Signers</th>
-                      <th>Sent</th>
-                      <th>Created</th>
-                      <th>Action</th>
+                      <SortableHeader label={t("manager:leasesId.prop.provider")} field="provider" sortField={srSF} sortDir={srSD} onSort={handleSrSort} />
+                      <SortableHeader label={t("manager:leasesId.prop.level")} field="level" sortField={srSF} sortDir={srSD} onSort={handleSrSort} />
+                      <SortableHeader label={t("manager:leasesId.prop.status")} field="status" sortField={srSF} sortDir={srSD} onSort={handleSrSort} />
+                      <th>{t("manager:leasesId.col.signers")}</th>
+                      <SortableHeader label={t("manager:leasesId.prop.sent")} field="sentAt" sortField={srSF} sortDir={srSD} onSort={handleSrSort} />
+                      <SortableHeader label={t("manager:leasesId.prop.created")} field="createdAt" sortField={srSF} sortDir={srSD} onSort={handleSrSort} />
+                      <th>{t("manager:leasesId.col.action")}</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {sigRequests.map(sr => (
+                    {sortedSigRequests.map(sr => (
                       <tr key={sr.id}>
                         <td>{sr.provider}</td>
                         <td>{sr.level}</td>
@@ -862,13 +904,13 @@ export default function LeaseEditorPage() {
             </div>
           )}
 
-          {/* PDF Artifact */}}
+          {/* PDF Artifact */}
           {(lease.draftPdfStorageKey || lease.signedPdfStorageKey) && (
-            <Panel title="PDF Artifacts">
+            <Panel title={t("manager:leasesId.title.pDFArtifacts")}>
               <div className="space-y-3">
                 {lease.draftPdfStorageKey && (
                   <div>
-                    <p className="text-sm font-medium text-slate-700">📄 Draft PDF</p>
+                    <p className="text-sm font-medium text-slate-700">{t("manager:leasesId.text.draftPdf")}</p>
                     <a
                       href={`/api/leases/${id}/generate-pdf`}
                       target="_blank"
@@ -882,7 +924,7 @@ export default function LeaseEditorPage() {
                 )}
                 {lease.signedPdfStorageKey && (
                   <div>
-                    <p className="text-sm font-medium text-green-700">✅ Signed PDF</p>
+                    <p className="text-sm font-medium text-green-700">{t("manager:leasesId.text.signedPdf")}</p>
                     <a
                       href={`/api/leases/${id}/generate-pdf`}
                       target="_blank"
@@ -900,15 +942,15 @@ export default function LeaseEditorPage() {
 
           {/* Deposit Tracking */}
           {lease.depositChf > 0 && (
-            <Panel title="💰 Deposit Tracking">
+            <Panel title={t("manager:leasesId.prop.depositTracking")}>
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-slate-600">Deposit: <span className="font-semibold">CHF {lease.depositChf}.-</span></p>
+                    <p className="text-sm text-slate-600">{t("manager:leasesId.text.deposit")} <span className="font-semibold">CHF {lease.depositChf}.-</span></p>
                     <p className="text-xs text-slate-400">Due: {lease.depositDueRule === "AT_SIGNATURE" ? "At signature" : lease.depositDueRule === "BY_START" ? "By lease start" : lease.depositDueDate?.split("T")[0] || "—"}</p>
                   </div>
                   {lease.depositPaidAt ? (
                     <div className="text-right">
-                      <Badge variant="success" size="sm">✅ PAID</Badge>
+                      <Badge variant="success" size="sm">{t("manager:leasesId.text.pAID")}</Badge>
                       <p className="text-xs text-slate-400 mt-1">{fmtD(lease.depositPaidAt)}</p>
                       {lease.depositConfirmedBy && <p className="text-xs text-slate-400">By: {lease.depositConfirmedBy}</p>}
                       {lease.depositBankRef && <p className="text-xs text-slate-400">Ref: {lease.depositBankRef}</p>}
@@ -924,20 +966,20 @@ export default function LeaseEditorPage() {
 
           {/* Lifecycle Info */}
           {(lease.activatedAt || lease.terminatedAt || lease.archivedAt) && (
-            <Panel title="📋 Lifecycle">
+            <Panel title={t("manager:leasesId.prop.lifecycle")}>
               <div className="space-y-2">
                 {lease.activatedAt && (
-                  <p className="text-sm"><span className="text-green-600 font-medium">⚡ Activated:</span> {fmtD(lease.activatedAt)}</p>
+                  <p className="text-sm"><span className="text-green-600 font-medium">{t("manager:leasesId.text.activated")}</span> {fmtD(lease.activatedAt)}</p>
                 )}
                 {lease.terminatedAt && (
                   <div>
-                    <p className="text-sm"><span className="text-orange-600 font-medium">📋 Terminated:</span> {fmtD(lease.terminatedAt)}</p>
+                    <p className="text-sm"><span className="text-orange-600 font-medium">{t("manager:leasesId.text.terminated")}</span> {fmtD(lease.terminatedAt)}</p>
                     {lease.terminationReason && <p className="text-xs text-slate-500 ml-6">Reason: {lease.terminationReason}</p>}
                     {lease.terminationNotice && <p className="text-xs text-slate-500 ml-6">Notice: {lease.terminationNotice}</p>}
                   </div>
                 )}
                 {lease.archivedAt && (
-                  <p className="text-sm"><span className="text-slate-600 font-medium">📦 Archived:</span> {fmtD(lease.archivedAt)}</p>
+                  <p className="text-sm"><span className="text-slate-600 font-medium">{t("manager:leasesId.text.archived")}</span> {fmtD(lease.archivedAt)}</p>
                 )}
               </div>
             </Panel>
@@ -945,11 +987,11 @@ export default function LeaseEditorPage() {
 
           {/* Billing Schedule */}
           {(billingSchedule || (isActive && !billingScheduleLoading)) && (
-            <Panel title="🔄 Recurring Billing">
+            <Panel title={t("manager:leasesId.prop.recurringBilling")}>
               {billingScheduleLoading ? (
-                <p className="text-sm text-slate-500">Loading…</p>
+                <p className="text-sm text-slate-500">{t("manager:leasesId.text.loading")}</p>
               ) : !billingSchedule ? (
-                <p className="text-sm text-slate-500">No recurring billing schedule for this lease.</p>
+                <p className="text-sm text-slate-500">{t("manager:leasesId.text.noRecurringBillingScheduleForThisLease")}</p>
               ) : (
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
@@ -972,19 +1014,19 @@ export default function LeaseEditorPage() {
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
                     <div>
-                      <p className="text-xs text-slate-500">Base rent</p>
+                      <p className="text-xs text-slate-500">{t("manager:leasesId.text.baseRent")}</p>
                       <p className="font-medium">{formatChfCents(billingSchedule.baseRentCents)}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-slate-500">Charges</p>
+                      <p className="text-xs text-slate-500">{t("manager:leasesId.text.charges")}</p>
                       <p className="font-medium">{formatChfCents(billingSchedule.totalChargesCents)}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-slate-500">Next period</p>
+                      <p className="text-xs text-slate-500">{t("manager:leasesId.text.nextPeriod")}</p>
                       <p className="font-medium">{fmtD(billingSchedule.nextPeriodStart)}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-slate-500">Last generated</p>
+                      <p className="text-xs text-slate-500">{t("manager:leasesId.text.lastGenerated")}</p>
                       <p className="font-medium">{fmtD(billingSchedule.lastGeneratedPeriod)}</p>
                     </div>
                   </div>
@@ -1001,35 +1043,35 @@ export default function LeaseEditorPage() {
 
           {/* Charge Reconciliations */}
           {(lease.status === "ACTIVE" || lease.status === "TERMINATED" || reconciliations.length > 0) && (
-            <Panel title="📊 Charge Reconciliations">
+            <Panel title={t("manager:leasesId.prop.chargeReconciliations")}>
               {reconLoading ? (
-                <p className="text-sm text-slate-500">Loading…</p>
+                <p className="text-sm text-slate-500">{t("manager:leasesId.text.loading")}</p>
               ) : (
                 <div>
                   {reconciliations.length > 0 && (
                     <div className="overflow-x-auto rounded-lg border border-table-border mb-4">
-                      <table className="inline-table">
+                      <table className="data-table">
                         <thead>
                           <tr>
-                            <th className="py-2 pr-4">Year</th>
-                            <th className="py-2 pr-4">Status</th>
-                            <th className="py-2 pr-4 text-right">ACOMPTE</th>
-                            <th className="py-2 pr-4 text-right">Actual</th>
-                            <th className="py-2 pr-4 text-right">Balance</th>
-                            <th className="py-2 text-right">Action</th>
+                            <SortableHeader label={t("manager:leasesId.prop.year")} field="year" sortField={recSF} sortDir={recSD} onSort={handleRecSort} />
+                            <SortableHeader label={t("manager:leasesId.prop.status")} field="status" sortField={recSF} sortDir={recSD} onSort={handleRecSort} />
+                            <SortableHeader label="ACOMPTE" field="acompte" sortField={recSF} sortDir={recSD} onSort={handleRecSort} className="text-right" />
+                            <th className="text-right">{t("manager:leasesId.col.actual")}</th>
+                            <th className="text-right">{t("manager:leasesId.col.balance")}</th>
+                            <th className="text-right">{t("manager:leasesId.col.action")}</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {reconciliations.map((r) => (
+                          {sortedReconciliations.map((r) => (
                             <tr key={r.id} className="border-b last:border-0">
-                              <td className="py-2 pr-4 font-medium">{r.fiscalYear}</td>
-                              <td className="py-2 pr-4">
+                              <td className="font-medium">{r.fiscalYear}</td>
+                              <td>
                                 <Badge variant={reconciliationVariant(r.status)} size="sm">{r.status}</Badge>
                               </td>
-                              <td className="py-2 pr-4 text-right tabular-nums">{(r.totalAcomptePaidCents / 100).toFixed(2)}</td>
-                              <td className="py-2 pr-4 text-right tabular-nums">{(r.totalActualCostsCents / 100).toFixed(2)}</td>
-                              <td className={cn("py-2 pr-4 text-right tabular-nums", r.balanceCents > 0 ? "text-red-600" : r.balanceCents < 0 ? "text-green-600" : "")}>{r.balanceCents > 0 ? "+" : ""}{(r.balanceCents / 100).toFixed(2)}</td>
-                              <td className="py-2 text-right">
+                              <td className="text-right tabular-nums">{(r.totalAcomptePaidCents / 100).toFixed(2)}</td>
+                              <td className="text-right tabular-nums">{(r.totalActualCostsCents / 100).toFixed(2)}</td>
+                              <td className={cn("text-right tabular-nums", r.balanceCents > 0 ? "text-red-600" : r.balanceCents < 0 ? "text-green-600" : "")}>{r.balanceCents > 0 ? "+" : ""}{(r.balanceCents / 100).toFixed(2)}</td>
+                              <td className="text-right">
                                 <a href={`/manager/charge-reconciliations/${r.id}`}
                                   className="px-3 py-1 text-xs bg-brand text-white rounded hover:bg-brand-dark">
                                   {r.status === "DRAFT" ? "Edit" : "View"}
@@ -1042,11 +1084,11 @@ export default function LeaseEditorPage() {
                     </div>
                   )}
                   {reconciliations.length === 0 && !showCreateRecon && (
-                    <p className="text-sm text-slate-500 mb-3">No charge reconciliations for this lease yet.</p>
+                    <p className="text-sm text-slate-500 mb-3">{t("manager:leasesId.text.noChargeReconciliationsForThisLeaseYet")}</p>
                   )}
                   {showCreateRecon ? (
                     <div className="flex items-center gap-3">
-                      <label className="text-sm font-medium">Fiscal year:</label>
+                      <label className="text-sm font-medium">{t("manager:leasesId.text.fiscalYear")}</label>
                       <input
                         type="number"
                         className="w-24 border rounded px-2 py-1 text-sm"
@@ -1061,13 +1103,13 @@ export default function LeaseEditorPage() {
                       <Button
                         variant="secondary" size="xs"
                         onClick={() => setShowCreateRecon(false)}
-                      >Cancel</Button>
+                      >{t("manager:leasesId.text.cancel")}</Button>
                     </div>
                   ) : (
                     <Button
                       variant="primary" size="xs"
                       onClick={() => setShowCreateRecon(true)}
-                    >+ New Reconciliation</Button>
+                    >{t("manager:leasesId.text.newReconciliation")}</Button>
                   )}
                 </div>
               )}
@@ -1076,37 +1118,37 @@ export default function LeaseEditorPage() {
 
           {/* Rent Adjustments */}
           {(lease.status === "ACTIVE" || rentAdjustments.length > 0) && (
-            <Panel title="📈 Rent Adjustments">
+            <Panel title={t("manager:leasesId.prop.rentAdjustments")}>
               <div className="space-y-3">
                 {rentAdjustments.length > 0 && (
                   <div className="overflow-x-auto rounded-lg border border-table-border">
-                    <table className="inline-table">
+                    <table className="data-table">
                       <thead>
                         <tr>
-                          <th className="px-3 py-2 text-left font-medium text-slate-500">Type</th>
-                          <th className="px-3 py-2 text-left font-medium text-slate-500">Effective</th>
-                          <th className="px-3 py-2 text-left font-medium text-slate-500">Status</th>
-                          <th className="px-3 py-2 text-right font-medium text-slate-500">Old</th>
-                          <th className="px-3 py-2 text-right font-medium text-slate-500">New</th>
-                          <th className="px-3 py-2 text-right font-medium text-slate-500">Change</th>
-                          <th className="px-3 py-2 text-left font-medium text-slate-500"></th>
+                          <SortableHeader label={t("manager:leasesId.prop.type")} field="type" sortField={raSF} sortDir={raSD} onSort={handleRaSort} />
+                          <SortableHeader label={t("manager:leasesId.prop.effective")} field="effectiveDate" sortField={raSF} sortDir={raSD} onSort={handleRaSort} />
+                          <SortableHeader label={t("manager:leasesId.prop.status")} field="status" sortField={raSF} sortDir={raSD} onSort={handleRaSort} />
+                          <th className="text-right">{t("manager:leasesId.col.old")}</th>
+                          <th className="text-right">{t("manager:leasesId.col.new")}</th>
+                          <th className="text-right">{t("manager:leasesId.col.change")}</th>
+                          <th></th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100">
-                        {rentAdjustments.map((a) => {
+                        {sortedRentAdjustments.map((a) => {
                           return (
                             <tr key={a.id} className="hover:bg-slate-50">
-                              <td className="px-3 py-2">{a.adjustmentType === "CPI_INDEXATION" ? "CPI" : a.adjustmentType === "MANUAL" ? "Manual" : a.adjustmentType}</td>
-                              <td className="px-3 py-2">{fmtD(a.effectiveDate)}</td>
-                              <td className="px-3 py-2">
+                              <td>{a.adjustmentType === "CPI_INDEXATION" ? "CPI" : a.adjustmentType === "MANUAL" ? "Manual" : a.adjustmentType}</td>
+                              <td>{fmtD(a.effectiveDate)}</td>
+                              <td>
                                 <Badge variant={rentAdjustmentVariant(a.status)} size="sm">{a.status}</Badge>
                               </td>
-                              <td className="px-3 py-2 text-right">{formatChfCents(a.previousRentCents)}</td>
-                              <td className="px-3 py-2 text-right font-semibold">{formatChfCents(a.newRentCents)}</td>
-                              <td className={cn("px-3 py-2 text-right", a.adjustmentCents > 0 ? "text-red-600" : a.adjustmentCents < 0 ? "text-green-600" : "")}>
+                              <td className="text-right">{formatChfCents(a.previousRentCents)}</td>
+                              <td className="text-right font-semibold">{formatChfCents(a.newRentCents)}</td>
+                              <td className={cn("text-right", a.adjustmentCents > 0 ? "text-red-600" : a.adjustmentCents < 0 ? "text-green-600" : "")}>
                                 {a.adjustmentCents > 0 ? "+" : ""}{formatChfCents(a.adjustmentCents)}
                               </td>
-                              <td className="px-3 py-2">
+                              <td>
                                 <a href={`/manager/rent-adjustments/${a.id}`} className="cell-link text-sm">
                                   {a.status === "DRAFT" ? "Edit" : "View"}
                                 </a>
@@ -1120,7 +1162,7 @@ export default function LeaseEditorPage() {
                 )}
 
                 {rentAdjustments.length === 0 && !showComputeAdj && (
-                  <p className="text-sm text-slate-500 mb-3">No rent adjustments for this lease yet.</p>
+                  <p className="text-sm text-slate-500 mb-3">{t("manager:leasesId.text.noRentAdjustmentsForThisLeaseYet")}</p>
                 )}
 
                 {/* Compute CPI Indexation form */}
@@ -1128,18 +1170,18 @@ export default function LeaseEditorPage() {
                   showComputeAdj ? (
                     <div className="flex gap-2 items-end flex-wrap">
                       <div>
-                        <label className="text-xs text-slate-500 block">Current CPI</label>
+                        <label className="text-xs text-slate-500 block">{t("manager:leasesId.text.currentCpi")}</label>
                         <input
                           type="number"
                           step="0.1"
                           value={adjCpiNew}
                           onChange={(e) => setAdjCpiNew(e.target.value)}
                           className="w-28 border rounded px-2 py-1 text-sm"
-                          placeholder="e.g. 108.5"
+                          placeholder={t("manager:leasesId.placeholder.eG1085")}
                         />
                       </div>
                       <div>
-                        <label className="text-xs text-slate-500 block">Effective Date</label>
+                        <label className="text-xs text-slate-500 block">{t("manager:leasesId.text.effectiveDate")}</label>
                         <input
                           type="date"
                           value={adjEffective}
@@ -1157,13 +1199,13 @@ export default function LeaseEditorPage() {
                       <Button
                         variant="secondary" size="xs"
                         onClick={() => setShowComputeAdj(false)}
-                      >Cancel</Button>
+                      >{t("manager:leasesId.text.cancel")}</Button>
                     </div>
                   ) : (
                     <Button
                       variant="primary" size="xs"
                       onClick={() => setShowComputeAdj(true)}
-                    >+ Compute CPI Indexation</Button>
+                    >{t("manager:leasesId.text.computeCpiIndexation")}</Button>
                   )
                 ) : (
                   <p className="text-xs text-slate-400">
@@ -1179,20 +1221,20 @@ export default function LeaseEditorPage() {
             <div>
               <h2 className="mb-3 text-sm font-semibold text-slate-700">{`💰 Invoices (${invoices.length})`}</h2>
               {invoices.length === 0 ? (
-                <p className="text-sm text-slate-500">No invoices linked to this lease yet.</p>
+                <p className="text-sm text-slate-500">{t("manager:leasesId.text.noInvoicesLinkedToThisLeaseYet")}</p>
               ) : (
                   <div className="overflow-x-auto rounded-lg border border-table-border">
-                  <table className="inline-table">
+                  <table className="data-table">
                     <thead>
                       <tr>
-                        <th>Description</th>
-                        <th>Amount</th>
-                        <th>Status</th>
-                        <th>Created</th>
+                        <SortableHeader label={t("manager:leasesId.prop.description")} field="description" sortField={invSF} sortDir={invSD} onSort={handleInvSort} />
+                        <SortableHeader label={t("manager:leasesId.prop.amount")} field="amount" sortField={invSF} sortDir={invSD} onSort={handleInvSort} />
+                        <SortableHeader label={t("manager:leasesId.prop.status")} field="status" sortField={invSF} sortDir={invSD} onSort={handleInvSort} />
+                        <SortableHeader label={t("manager:leasesId.prop.created")} field="createdAt" sortField={invSF} sortDir={invSD} onSort={handleInvSort} />
                       </tr>
                     </thead>
                     <tbody>
-                      {invoices.map(inv => (
+                      {sortedInvoices.map(inv => (
                         <tr key={inv.id}>
                           <td>
                             <Link href={`/manager/finance/invoices/${inv.id}`} className="cell-link">
@@ -1216,14 +1258,14 @@ export default function LeaseEditorPage() {
 
         {/* Ready to Sign Modal */}
         {showSignModal && (
-          <Modal title="Send for Signature" description="This will send the lease for signature and create a signature request. The lease will no longer be editable." onClose={() => setShowSignModal(false)}>
+          <Modal title={t("manager:leasesId.title.sendForSignature")} description={t("manager:leasesId.prop.thisWillSendTheLeaseForSignatureAndCreateASignatureRequestTheLeaseWillNoLongerBeEditable")} onClose={() => setShowSignModal(false)}>
               <div className="mb-4">
-                <label className="block text-sm font-medium text-slate-700 mb-1">Signature Level</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:leasesId.text.signatureLevel")}</label>
                 <select value={signLevel} onChange={e => setSignLevel(e.target.value)}
                   className="w-full border rounded-lg px-3 py-2 text-sm">
-                  <option value="SES">SES — Simple Electronic Signature</option>
-                  <option value="AES">AES — Advanced Electronic Signature</option>
-                  <option value="QES">QES — Qualified Electronic Signature</option>
+                  <option value="SES">{t("manager:leasesId.text.sESSimpleElectronicSignature")}</option>
+                  <option value="AES">{t("manager:leasesId.text.aESAdvancedElectronicSignature")}</option>
+                  <option value="QES">{t("manager:leasesId.text.qESQualifiedElectronicSignature")}</option>
                 </select>
               </div>
               <ModalFooter>
@@ -1239,23 +1281,23 @@ export default function LeaseEditorPage() {
 
         {/* Terminate Lease Modal */}
         {showTerminateModal && (
-          <Modal title="Terminate Lease" description="This will terminate the active lease. Please provide a reason." onClose={() => setShowTerminateModal(false)}>
+          <Modal title={t("manager:leasesId.title.terminateLease")} description={t("manager:leasesId.prop.thisWillTerminateTheActiveLeasePleaseProvideAReason")} onClose={() => setShowTerminateModal(false)}>
               <div className="mb-4">
-                <label className="block text-sm font-medium text-slate-700 mb-1">Reason</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:leasesId.text.reason")}</label>
                 <select value={terminateReason} onChange={e => setTerminateReason(e.target.value)}
                   className="w-full border rounded-lg px-3 py-2 text-sm">
-                  <option value="MUTUAL">Mutual agreement</option>
-                  <option value="TENANT_NOTICE">Tenant notice</option>
-                  <option value="LANDLORD_NOTICE">Landlord notice</option>
-                  <option value="END_OF_TERM">End of fixed term</option>
-                  <option value="BREACH">Breach of contract</option>
-                  <option value="OTHER">Other</option>
+                  <option value="MUTUAL">{t("manager:leasesId.text.mutualAgreement")}</option>
+                  <option value="TENANT_NOTICE">{t("manager:leasesId.text.tenantNotice")}</option>
+                  <option value="LANDLORD_NOTICE">{t("manager:leasesId.text.landlordNotice")}</option>
+                  <option value="END_OF_TERM">{t("manager:leasesId.text.endOfFixedTerm")}</option>
+                  <option value="BREACH">{t("manager:leasesId.text.breachOfContract")}</option>
+                  <option value="OTHER">{t("manager:leasesId.text.other")}</option>
                 </select>
               </div>
               <div className="mb-4">
                 <label className="block text-sm font-medium text-slate-700 mb-1">Notice period / notes (optional)</label>
                 <textarea value={terminateNotice} onChange={e => setTerminateNotice(e.target.value)}
-                  rows={3} placeholder="e.g. 3 months notice from 01.04.2026"
+                  rows={3} placeholder={t("manager:leasesId.placeholder.eG3MonthsNoticeFrom01042026")}
                   className="w-full border rounded-lg px-3 py-2 text-sm" />
               </div>
               <ModalFooter>
@@ -1271,16 +1313,16 @@ export default function LeaseEditorPage() {
 
         {/* Create Invoice Modal */}
         {showInvoiceModal && (
-          <Modal title="Create Lease Invoice" onClose={() => setShowInvoiceModal(false)}>
+          <Modal title={t("manager:leasesId.title.createLeaseInvoice")} onClose={() => setShowInvoiceModal(false)}>
               <div className="mb-4">
-                <label className="block text-sm font-medium text-slate-700 mb-1">Invoice Type</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:leasesId.text.invoiceType")}</label>
                 <select value={invoiceType} onChange={e => setInvoiceType(e.target.value)}
                   className="w-full border rounded-lg px-3 py-2 text-sm">
-                  <option value="DEPOSIT">Deposit</option>
-                  <option value="RENT">Rent</option>
-                  <option value="CHARGES">Charges</option>
-                  <option value="REPAIR">Repair</option>
-                  <option value="OTHER">Other</option>
+                  <option value="DEPOSIT">{t("manager:leasesId.text.deposit2")}</option>
+                  <option value="RENT">{t("manager:leasesId.text.rent")}</option>
+                  <option value="CHARGES">{t("manager:leasesId.text.charges")}</option>
+                  <option value="REPAIR">{t("manager:leasesId.text.repair")}</option>
+                  <option value="OTHER">{t("manager:leasesId.text.other")}</option>
                 </select>
               </div>
               <div className="mb-4">
@@ -1292,7 +1334,7 @@ export default function LeaseEditorPage() {
               <div className="mb-4">
                 <label className="block text-sm font-medium text-slate-700 mb-1">Description (optional)</label>
                 <input type="text" value={invoiceDesc} onChange={e => setInvoiceDesc(e.target.value)}
-                  placeholder="e.g. Deposit for lease starting 01.04.2026"
+                  placeholder={t("manager:leasesId.placeholder.eGDepositForLeaseStarting01042026")}
                   className="w-full border rounded-lg px-3 py-2 text-sm" />
               </div>
               <ModalFooter>
@@ -1309,3 +1351,5 @@ export default function LeaseEditorPage() {
     </AppShell>
   );
 }
+
+export const getServerSideProps = withServerTranslations(["common","manager"]);

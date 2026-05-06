@@ -13,6 +13,10 @@ import ErrorBanner from "../../../../components/ui/ErrorBanner";
 import Badge from "../../../../components/ui/Badge";
 import { ownerAuthHeaders } from "../../../../lib/api";
 import { cn } from "../../../../lib/utils";
+import SortableHeader from "../../../../components/SortableHeader";
+import { useLocalSort, clientSort } from "../../../../lib/tableUtils";
+import { withServerTranslations } from "../../../../lib/i18n";
+import { useTranslation } from "next-i18next";
 function scoreColor(score) {
   if (score >= 700) return "text-green-700 bg-green-50";
   if (score >= 400) return "text-amber-700 bg-amber-50";
@@ -37,6 +41,7 @@ const ROLES = [
 ];
 
 export default function OwnerCandidatesPage() {
+  const { t } = useTranslation("owner");
   const router = useRouter();
   const { unitId } = router.query;
 
@@ -113,6 +118,15 @@ export default function OwnerCandidatesPage() {
 
   // Eligible candidates (not disqualified)
   const eligible = useMemo(() => rows.filter((r) => !r.disqualified), [rows]);
+
+  const { sortField: candSF, sortDir: candSD, handleSort: handleCandSort } = useLocalSort("score", "desc");
+  const sortedRows = useMemo(() => clientSort(rows, candSF, candSD, (r, f) => {
+    if (f === "name") return (r.name || "").toLowerCase();
+    if (f === "income") return r.income ?? 0;
+    if (f === "score") return r.score ?? 0;
+    if (f === "confidence") return r.confidence ?? 0;
+    return 0;
+  }), [rows, candSF, candSD]);
 
   function isSelected(auId) {
     return Object.values(selection).includes(auId);
@@ -210,7 +224,7 @@ export default function OwnerCandidatesPage() {
     <AppShell role="OWNER">
       <PageShell>
         <PageHeader
-          title="Select Tenants"
+          title={t("owner:vacancies[unitid]Candidates.title.selectTenants")}
           subtitle={unitLabel ? `Choose primary and backup candidates for unit ${unitLabel}…` : "Select tenant candidates"}
           actions={
             <Link
@@ -226,7 +240,7 @@ export default function OwnerCandidatesPage() {
           <ErrorBanner error={error} className="text-sm" />
           {success && (
             <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
-              <p className="font-semibold">Candidates selected successfully!</p>
+              <p className="font-semibold">{t("owner:vacanciesUnitidCandidates.text.candidatesSelectedSuccessfully")}</p>
               <p className="mt-1">
                 The primary candidate has been notified and is awaiting lease signature.
                 You can track progress on the vacancies page.
@@ -241,7 +255,7 @@ export default function OwnerCandidatesPage() {
 
           {/* Selection summary */}
           {!success && (
-            <Panel title="Your Selection">
+            <Panel title={t("owner:vacancies[unitid]Candidates.title.yourSelection")}>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 {selectionSummary.map((s) => (
                   <div
@@ -298,7 +312,7 @@ export default function OwnerCandidatesPage() {
           {showConfirm && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
               <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
-                <h3 className="text-lg font-bold text-slate-900">Confirm Tenant Selection</h3>
+                <h3 className="text-lg font-bold text-slate-900">{t("owner:vacancies[unitid]Candidates.heading.confirmTenantSelection")}</h3>
                 <p className="mt-2 text-sm text-slate-600">
                   This will notify the selected candidates and reject all others. This action cannot be undone.
                 </p>
@@ -337,10 +351,10 @@ export default function OwnerCandidatesPage() {
           {/* Candidates table */}
           {!success && (
             <Panel title={`${rows.length} Candidate${rows.length !== 1 ? "s" : ""}`}>
-              {loading && <p className="text-sm text-slate-500">Loading candidates…</p>}
+              {loading && <p className="text-sm text-slate-500">{t("owner:vacanciesUnitidCandidates.text.loadingCandidates")}</p>}
 
               {!loading && rows.length === 0 && (
-                <p className="text-sm text-slate-500 py-4 text-center">No applications submitted for this unit.</p>
+                <p className="text-sm text-slate-500 py-4 text-center">{t("owner:vacanciesUnitidCandidates.text.noApplicationsSubmittedForThisUnit")}</p>
               )}
 
               {!loading && rows.length > 0 && (
@@ -366,8 +380,8 @@ export default function OwnerCandidatesPage() {
                                 onClick={() => setExpandedDocApp(isDocExpanded ? null : row.id)}
                                 className={cn("table-card-head underline decoration-dotted underline-offset-2", isDocExpanded ? "text-indigo-700" : "text-slate-900")}
                               >{row.name}</button>
-                              {row.disqualified && <span className="rounded bg-red-100 px-1.5 py-0.5 text-xs text-red-700">Disqualified</span>}
-                              {row.overrideReason && !row.disqualified && <span className="rounded bg-amber-100 px-1.5 py-0.5 text-xs text-amber-700">✓ Override</span>}
+                              {row.disqualified && <span className="rounded bg-red-100 px-1.5 py-0.5 text-xs text-red-700">{t("owner:vacanciesUnitidCandidates.text.disqualified")}</span>}
+                              {row.overrideReason && !row.disqualified && <span className="rounded bg-amber-100 px-1.5 py-0.5 text-xs text-amber-700">{t("owner:vacanciesUnitidCandidates.text.override")}</span>}
                               {roleInfo && <span className={cn("rounded px-1.5 py-0.5 text-xs font-bold text-white", roleInfo.color)}>{roleInfo.label}</span>}
                             </div>
                             <Badge variant={scoreVariant(row.score || 0)} size="sm">{row.score ?? "—"}</Badge>
@@ -381,7 +395,7 @@ export default function OwnerCandidatesPage() {
                               <button
                                 onClick={() => { setOverrideTarget({ applicationUnitId: row.applicationUnitId, name: row.name }); setOverrideReason(""); }}
                                 className="rounded px-2 py-1 text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 hover:bg-amber-100"
-                              >⚠ Override</button>
+                              >{t("owner:vacanciesUnitidCandidates.text.override2")}</button>
                             ) : (
                               ROLES.map((r) => {
                                 const isThis = selection[r.key] === row.applicationUnitId;
@@ -400,7 +414,7 @@ export default function OwnerCandidatesPage() {
                             <div className="mt-3 space-y-3 border-t border-slate-100 pt-3">
                               {row.disqualified && reasons.length > 0 && (
                                 <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3">
-                                  <h4 className="text-sm font-semibold text-red-700 mb-2">Disqualification Reasons</h4>
+                                  <h4 className="text-sm font-semibold text-red-700 mb-2">{t("owner:vacanciesUnitidCandidates.text.disqualificationReasons")}</h4>
                                   <ul className="list-disc ml-5 space-y-1.5">
                                     {formatDisqualificationReasons(reasons).map((text, i) => (
                                       <li key={i} className="text-sm text-red-700 leading-relaxed">{text}</li>
@@ -417,20 +431,20 @@ export default function OwnerCandidatesPage() {
                   </div>
 
                   {/* Wide table — hidden sm:block */}
-                  <div className="hidden sm:block inline-table-wrap">
-                    <table className="inline-table">
+                  <div className="hidden sm:block data-table-wrap">
+                    <table className="data-table">
                       <thead>
                         <tr>
-                          <th className="px-4 py-3">Rank</th>
-                          <th className="px-4 py-3">Applicant</th>
-                          <th className="px-4 py-3">Income (CHF)</th>
-                          <th className="px-4 py-3">Score</th>
-                          <th className="px-4 py-3">Confidence</th>
-                          <th className="px-4 py-3 text-right">Assign</th>
+                          <th className="px-4 py-3">{t("owner:vacancies[unitid]Candidates.col.rank")}</th>
+                          <SortableHeader label={t("owner:vacanciesUnitidCandidates.prop.applicant")} field="name" sortField={candSF} sortDir={candSD} onSort={handleCandSort} />
+                          <SortableHeader label="Income (CHF)" field="income" sortField={candSF} sortDir={candSD} onSort={handleCandSort} />
+                          <SortableHeader label={t("owner:vacanciesUnitidCandidates.prop.score")} field="score" sortField={candSF} sortDir={candSD} onSort={handleCandSort} />
+                          <SortableHeader label={t("owner:vacanciesUnitidCandidates.prop.confidence")} field="confidence" sortField={candSF} sortDir={candSD} onSort={handleCandSort} />
+                          <th className="px-4 py-3 text-right">{t("owner:vacancies[unitid]Candidates.col.assign")}</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100 bg-white">
-                        {rows.map((row, idx) => {
+                        {sortedRows.map((row, idx) => {
                           const conf = confidenceBadge(row.confidence || 0);
                           const currentRole = roleOf(row.applicationUnitId);
                           const roleInfo = currentRole ? ROLES.find((r) => r.key === currentRole) : null;
@@ -450,12 +464,12 @@ export default function OwnerCandidatesPage() {
                                   <button
                                     onClick={() => setExpandedDocApp(isDocExpanded ? null : row.id)}
                                     className={cn("font-medium underline decoration-dotted underline-offset-2 transition-colors", isDocExpanded ? "text-indigo-700" : "text-slate-900 hover:text-indigo-600")}
-                                    title="Click to view corroborative documents"
+                                    title={t("owner:vacancies[unitid]Candidates.title.clickToViewCorroborativeDocuments")}
                                   >{row.name}</button>
-                                  {row.disqualified && <span className="rounded bg-red-100 px-1.5 py-0.5 text-xs text-red-700">Disqualified</span>}
-                                  {row.overrideReason && !row.disqualified && <span className="rounded bg-amber-100 px-1.5 py-0.5 text-xs text-amber-700" title={`Override: ${row.overrideReason}`}>✓ Override</span>}
+                                  {row.disqualified && <span className="rounded bg-red-100 px-1.5 py-0.5 text-xs text-red-700">{t("owner:vacanciesUnitidCandidates.text.disqualified")}</span>}
+                                  {row.overrideReason && !row.disqualified && <span className="rounded bg-amber-100 px-1.5 py-0.5 text-xs text-amber-700" title={`Override: ${row.overrideReason}`}>{t("owner:vacanciesUnitidCandidates.text.override")}</span>}
                                   {roleInfo && <span className={cn("rounded px-1.5 py-0.5 text-xs font-bold text-white", roleInfo.color)}>{roleInfo.label}</span>}
-                                  {isDocExpanded && <span className="text-xs text-indigo-500">▼ docs</span>}
+                                  {isDocExpanded && <span className="text-xs text-indigo-500">{t("owner:vacanciesUnitidCandidates.text.docs")}</span>}
                                 </div>
                               </td>
                               <td className="px-4 py-3 text-slate-700">{row.income != null ? formatNumber(row.income) : "—"}</td>
@@ -466,8 +480,8 @@ export default function OwnerCandidatesPage() {
                                   <button
                                     onClick={() => { setOverrideTarget({ applicationUnitId: row.applicationUnitId, name: row.name }); setOverrideReason(""); }}
                                     className="rounded px-3 py-1.5 text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 hover:bg-amber-100 transition-colors"
-                                    title="Override disqualification and make this candidate eligible"
-                                  >⚠ Override</button>
+                                    title={t("owner:vacancies[unitid]Candidates.title.overrideDisqualificationAndMakeThisCandidateEligible")}
+                                  >{t("owner:vacanciesUnitidCandidates.text.override2")}</button>
                                 ) : (
                                   <div className="flex items-center justify-end gap-1">
                                     {ROLES.map((r) => {
@@ -493,7 +507,7 @@ export default function OwnerCandidatesPage() {
                                   <div className="space-y-4">
                                     {row.disqualified && reasons.length > 0 && (
                                       <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3">
-                                        <h4 className="text-sm font-semibold text-red-700 mb-2">Disqualification Reasons</h4>
+                                        <h4 className="text-sm font-semibold text-red-700 mb-2">{t("owner:vacanciesUnitidCandidates.text.disqualificationReasons")}</h4>
                                         <ul className="list-disc ml-5 space-y-1.5">
                                           {formatDisqualificationReasons(reasons).map((text, i) => (
                                             <li key={i} className="text-sm text-red-700 leading-relaxed">{text}</li>
@@ -521,7 +535,7 @@ export default function OwnerCandidatesPage() {
           {overrideTarget && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setOverrideTarget(null)}>
               <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
-                <h3 className="text-lg font-bold text-slate-900">Override Disqualification</h3>
+                <h3 className="text-lg font-bold text-slate-900">{t("owner:vacancies[unitid]Candidates.heading.overrideDisqualification")}</h3>
                 <p className="mt-2 text-sm text-slate-600">
                   You are about to override the automatic disqualification for <strong>{overrideTarget.name}</strong>.
                   This candidate will become eligible for selection.
@@ -533,11 +547,11 @@ export default function OwnerCandidatesPage() {
                   <textarea
                     className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                     rows={3}
-                    placeholder="e.g. Verified income directly with employer; debt enforcement extract is clear…"
+                    placeholder={t("owner:vacancies[unitid]Candidates.placeholder.eGVerifiedIncomeDirectlyWithEmployerDebtEnforcementExtractIsClear")}
                     value={overrideReason}
                     onChange={(e) => setOverrideReason(e.target.value)}
                   />
-                  <p className="mt-1 text-xs text-slate-400">Minimum 3 characters. This will be recorded for audit.</p>
+                  <p className="mt-1 text-xs text-slate-400">{t("owner:vacanciesUnitidCandidates.text.minimum3CharactersThisWillBeRecordedForAudit")}</p>
                 </div>
                 <div className="mt-5 flex justify-end gap-3">
                   <button
@@ -562,3 +576,5 @@ export default function OwnerCandidatesPage() {
     </AppShell>
   );
 }
+
+export const getServerSideProps = withServerTranslations(["common","owner"]);

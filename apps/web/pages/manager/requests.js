@@ -15,27 +15,28 @@ import { cn } from "../../lib/utils";
 import ScrollableTabs from "../../components/mobile/ScrollableTabs";
 import SwipeableCard from "../../components/mobile/SwipeableCard";
 import { FilterToggle, FilterPanelBody, FilterSection, FilterSectionClear, SelectField, NumberField, SortToggle, SortPanelBody, SortRow } from "../../components/ui/FilterPanel";
+import { withTranslations } from "../../lib/i18n";
+import { useTranslation } from "next-i18next";
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
 const STATUS_TABS = [
-  { key: "ALL",            label: "Overview",                statuses: null },
-  { key: "PENDING",        label: "Pending Review",          statuses: ["PENDING_REVIEW"] },
-  { key: "RFP_OPEN",       label: "RFP Open",                statuses: ["RFP_PENDING"] },
-  { key: "OWNER_APPROVAL", label: "Pending Owner Approval",  statuses: ["PENDING_OWNER_APPROVAL"] },
-  { key: "IN_PROGRESS",    label: "In Progress",             statuses: ["APPROVED", "ASSIGNED"] },
+  { key: "ALL",                statuses: null },
+  { key: "PENDING",          statuses: ["PENDING_REVIEW"] },
+  { key: "RFP_OPEN",                statuses: ["RFP_PENDING"] },
+  { key: "OWNER_APPROVAL",  statuses: ["PENDING_OWNER_APPROVAL"] },
+  { key: "IN_PROGRESS",             statuses: ["APPROVED", "ASSIGNED"] },
   {
     key: "DONE",
-    label: "Done",
     statuses: ["COMPLETED"],
     // Belt-and-suspenders: catch ASSIGNED rows where Job is COMPLETED but mirror lagged
     extraFilter: (r) =>
       r.status === "COMPLETED" ||
       (r.status === "ASSIGNED" && r.job?.status === "COMPLETED"),
   },
-  { key: "REJECTED",       label: "Rejected",                statuses: ["REJECTED"] },
-  { key: "RFPS",           label: "RFPs",                    statuses: null, href: "/manager/rfps" },
+  { key: "REJECTED",                statuses: ["REJECTED"] },
+  { key: "RFPS",                    statuses: null, href: "/manager/rfps" },
 ];
 
 // Derive TAB_KEYS from STATUS_TABS to prevent drift; preserve backward-compat aliases
@@ -78,12 +79,13 @@ function nextApproverLabel(status) {
 const REQUEST_SORT_FIELDS = ["requestNumber", "status", "building", "category", "urgency", "createdAt", "estimatedCost", "contractor", "nextApprover", "payingParty", "approvalSource"];
 
 // Column definitions for ConfigurableTable — render closures capture outer scope via page component
-function buildRequestColumns({ assigningId, setAssigningId, selectedContractorId, setSelectedContractorId, contractors, actionLoading, approveRequest, rejectRequest, doAssignContractor, doUnassignContractor, getAvailableCTAs }) {
+function buildRequestColumns({ t, assigningId, setAssigningId, selectedContractorId, setSelectedContractorId, contractors, actionLoading, approveRequest, rejectRequest, doAssignContractor, doUnassignContractor, getAvailableCTAs }) {
   return [
     {
       id: "requestNumber",
-      label: "#",
+      label: t("manager:requests.col.number"),
       sortable: true,
+      sortField: "number",
       alwaysVisible: true,
       className: "w-16",
       render: (r) => (
@@ -94,7 +96,7 @@ function buildRequestColumns({ assigningId, setAssigningId, selectedContractorId
     },
     {
       id: "status",
-      label: "Status",
+      label: t("manager:requests.col.status"),
       sortable: true,
       defaultVisible: true,
       render: (r) => (
@@ -110,7 +112,7 @@ function buildRequestColumns({ assigningId, setAssigningId, selectedContractorId
     },
     {
       id: "building",
-      label: "Building / Unit",
+      label: t("manager:requests.col.buildingUnit"),
       sortable: true,
       defaultVisible: true,
       render: (r) => (
@@ -132,7 +134,7 @@ function buildRequestColumns({ assigningId, setAssigningId, selectedContractorId
     },
     {
       id: "category",
-      label: "Category",
+      label: t("manager:requests.col.category"),
       sortable: true,
       defaultVisible: true,
       render: (r) => (
@@ -143,7 +145,7 @@ function buildRequestColumns({ assigningId, setAssigningId, selectedContractorId
     },
     {
       id: "description",
-      label: "Description",
+      label: t("manager:requests.col.description"),
       defaultVisible: true,
       className: "max-w-[260px]",
       render: (r) => (
@@ -152,7 +154,7 @@ function buildRequestColumns({ assigningId, setAssigningId, selectedContractorId
     },
     {
       id: "urgency",
-      label: "Emergency",
+      label: t("manager:requests.col.emergency"),
       sortable: true,
       defaultVisible: true,
       className: "w-24 text-center",
@@ -171,7 +173,7 @@ function buildRequestColumns({ assigningId, setAssigningId, selectedContractorId
     },
     {
       id: "contractor",
-      label: "Contractor",
+      label: t("manager:requests.col.contractor"),
       sortable: true,
       defaultVisible: false,
       render: (r) => (
@@ -182,8 +184,9 @@ function buildRequestColumns({ assigningId, setAssigningId, selectedContractorId
     },
     {
       id: "estimatedCost",
-      label: "Est. Cost",
+      label: t("manager:requests.col.estCost"),
       sortable: true,
+      sortField: "cost",
       defaultVisible: false,
       className: "text-right",
       render: (r) => (
@@ -192,7 +195,7 @@ function buildRequestColumns({ assigningId, setAssigningId, selectedContractorId
     },
     {
       id: "nextApprover",
-      label: "Next Approver",
+      label: t("manager:requests.col.nextApprover"),
       sortable: true,
       defaultVisible: false,
       render: (r) => (
@@ -201,7 +204,7 @@ function buildRequestColumns({ assigningId, setAssigningId, selectedContractorId
     },
     {
       id: "payingParty",
-      label: "Paying Party",
+      label: t("manager:requests.col.payingParty"),
       sortable: true,
       defaultVisible: false,
       render: (r) => (
@@ -214,7 +217,7 @@ function buildRequestColumns({ assigningId, setAssigningId, selectedContractorId
     },
     {
       id: "approvalSource",
-      label: "Approval Source",
+      label: t("manager:requests.col.approvalSource"),
       sortable: true,
       defaultVisible: false,
       render: (r) => (
@@ -225,8 +228,9 @@ function buildRequestColumns({ assigningId, setAssigningId, selectedContractorId
     },
     {
       id: "createdAt",
-      label: "Created",
+      label: t("manager:requests.col.created"),
       sortable: true,
+      sortField: "date",
       defaultVisible: true,
       className: "hidden sm:table-cell",
       render: (r) => (
@@ -235,7 +239,7 @@ function buildRequestColumns({ assigningId, setAssigningId, selectedContractorId
     },
     {
       id: "actions",
-      label: "Actions",
+      label: t("manager:requests.col.actions"),
       alwaysVisible: true,
       render: (r) => {
         const ctaList = getAvailableCTAs(r, assigningId);
@@ -247,20 +251,20 @@ function buildRequestColumns({ assigningId, setAssigningId, selectedContractorId
                   return (
                     <button key="approve" onClick={() => approveRequest(r.id)} disabled={actionLoading === r.id}
                       className="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-50">
-                      {actionLoading === r.id ? "\u2026" : "Approve"}
+                      {actionLoading === r.id ? "\u2026" : t("manager:requests.btn.approve")}
                     </button>
                   );
                 case 'reject':
                   return (
                     <button key="reject" onClick={() => rejectRequest(r.id)} disabled={actionLoading === r.id}
                       className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50">
-                      {actionLoading === r.id ? "\u2026" : "Reject"}
+                      {actionLoading === r.id ? "\u2026" : t("manager:requests.btn.reject")}
                     </button>
                   );
                 case 'view_rfp':
                   return (
                     <a key="view_rfp" href={r.rfpId ? `/manager/rfps/${r.rfpId}` : "/manager/rfps"} className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-700">
-                      View RFP
+                      {t("manager:requests.btn.viewRfp")}
                     </a>
                   );
                 case 'assign':
@@ -275,7 +279,7 @@ function buildRequestColumns({ assigningId, setAssigningId, selectedContractorId
                       </select>
                       <button onClick={() => doAssignContractor(r.id)} disabled={!selectedContractorId || actionLoading === r.id}
                         className="rounded-lg bg-blue-600 px-2 py-1 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50">
-                        {actionLoading === r.id ? "\u2026" : "OK"}
+                        {actionLoading === r.id ? "\u2026" : t("manager:requests.btn.ok")}
                       </button>
                       <button onClick={() => { setAssigningId(null); setSelectedContractorId(""); }}
                         className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-500 hover:bg-slate-50">
@@ -285,14 +289,14 @@ function buildRequestColumns({ assigningId, setAssigningId, selectedContractorId
                   ) : (
                     <button key="assign" onClick={() => setAssigningId(r.id)}
                       className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700">
-                      Assign
+                      {t("manager:requests.btn.assign")}
                     </button>
                   );
                 case 'unassign':
                   return (
                     <button key="unassign" onClick={() => doUnassignContractor(r.id)} disabled={actionLoading === r.id}
                       className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700 disabled:opacity-50">
-                      {actionLoading === r.id ? "\u2026" : "Unassign"}
+                      {actionLoading === r.id ? "\u2026" : t("manager:requests.btn.unassign")}
                     </button>
                   );
                 default:
@@ -573,6 +577,7 @@ function DepreciationBar({ signal }) {
 // ---------------------------------------------------------------------------
 
 function LegalRecommendationPanel({ decision, loading: isLoading, error: loadError, requestStatus }) {
+  const { t } = useTranslation("manager");
   if (isLoading) {
     return (
       <div className="flex items-center gap-3 border-t border-slate-100 bg-slate-50 px-6 py-4">
@@ -639,7 +644,7 @@ function LegalRecommendationPanel({ decision, loading: isLoading, error: loadErr
       {/* Depreciation sub-card */}
       {decision.depreciationSignal && (
         <div className="mt-3 rounded-lg border border-slate-200 bg-white p-3">
-          <p className="text-xs font-semibold text-slate-600 mb-1">Asset depreciation</p>
+          <p className="text-xs font-semibold text-slate-600 mb-1">{t("manager:requests.text.assetDepreciation")}</p>
           <DepreciationBar signal={decision.depreciationSignal} />
           {decision.depreciationSignal.fullyDepreciated && (
             <div className="mt-2 rounded-lg bg-red-50 border border-red-200 px-3 py-1.5 text-xs text-red-700 font-medium">
@@ -693,7 +698,7 @@ function LegalRecommendationPanel({ decision, loading: isLoading, error: loadErr
       {/* Rent reduction precedents from ASLOCA jurisprudence (always shown if available) */}
       {decision.matchedReductions?.length > 0 && (
         <div className="mt-3">
-          <p className="text-xs font-semibold text-slate-600 mb-1.5">Rent reduction precedents</p>
+          <p className="text-xs font-semibold text-slate-600 mb-1.5">{t("manager:requests.text.rentReductionPrecedents")}</p>
           <div className="flex flex-col gap-1.5">
             {decision.matchedReductions.slice(0, 3).map((r, i) => (
               <div key={i} className="rounded-lg border border-slate-200 bg-white px-3 py-2">
@@ -721,7 +726,7 @@ function LegalRecommendationPanel({ decision, loading: isLoading, error: loadErr
 
       {/* Rent reduction estimate (Phase B) */}
       {decision.rentReductionEstimate && (        <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3">
-          <p className="text-xs font-semibold text-amber-700 mb-1">Estimated rent reduction</p>
+          <p className="text-xs font-semibold text-amber-700 mb-1">{t("manager:requests.text.estimatedRentReduction")}</p>
           <div className="flex items-baseline gap-3 flex-wrap">
             <span className="text-lg font-bold text-amber-900">
               CHF {decision.rentReductionEstimate.totalReductionChf?.toFixed(0) ?? "—"}
@@ -732,7 +737,7 @@ function LegalRecommendationPanel({ decision, loading: isLoading, error: loadErr
             </span>
           </div>
           {decision.rentReductionEstimate.capApplied && (
-            <p className="text-[11px] text-amber-600 mt-1">Cap applied — reduction clamped to legal maximum.</p>
+            <p className="text-[11px] text-amber-600 mt-1">{t("manager:requests.text.capAppliedReductionClampedToLegalMaximum")}</p>
           )}
         </div>
       )}
@@ -765,7 +770,7 @@ function LegalRecommendationPanel({ decision, loading: isLoading, error: loadErr
 
         return (
           <div className="mt-3">
-            <p className="text-xs font-semibold text-slate-600 mb-1.5">Recommended actions</p>
+            <p className="text-xs font-semibold text-slate-600 mb-1.5">{t("manager:requests.text.recommendedActions")}</p>
             <div className="flex flex-wrap gap-1.5">
               {contextActions.map((a, i) => (
                 <span
@@ -785,20 +790,20 @@ function LegalRecommendationPanel({ decision, loading: isLoading, error: loadErr
       {/* Defect signals summary */}
       {decision.defectSignals && (decision.defectSignals.severity || decision.defectSignals.affectedArea) && (
         <div className="mt-3 rounded-lg border border-slate-200 bg-white p-3">
-          <p className="text-xs font-semibold text-slate-600 mb-1">Defect signals</p>
+          <p className="text-xs font-semibold text-slate-600 mb-1">{t("manager:requests.text.defectSignals")}</p>
           <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-slate-500">
             {decision.defectSignals.severity && (
-              <span>Severity: <span className="font-medium text-slate-700">{decision.defectSignals.severity}</span></span>
+              <span>{t("manager:requests.text.severity")} <span className="font-medium text-slate-700">{decision.defectSignals.severity}</span></span>
             )}
             {decision.defectSignals.affectedArea && (
-              <span>Area: <span className="font-medium text-slate-700">
+              <span>{t("manager:requests.text.area")} <span className="font-medium text-slate-700">
                 {typeof decision.defectSignals.affectedArea === "string"
                   ? decision.defectSignals.affectedArea
                   : (decision.defectSignals.affectedArea.rooms || []).join(", ") || "—"}
               </span></span>
             )}
             {decision.defectSignals.duration && (
-              <span>Duration: <span className="font-medium text-slate-700">
+              <span>{t("manager:requests.text.duration")} <span className="font-medium text-slate-700">
                 {typeof decision.defectSignals.duration === "string"
                   ? decision.defectSignals.duration
                   : [
@@ -835,6 +840,7 @@ const RECOMMENDATION_STYLES = {
 };
 
 function RepairReplacePanel({ state, requestCategory }) {
+  const { t } = useTranslation("manager");
   if (!state) return null;
 
   if (state.loading) {
@@ -868,7 +874,7 @@ function RepairReplacePanel({ state, requestCategory }) {
 
   return (
     <div className="px-6 py-4">
-      <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">Repair vs Replace Analysis</p>
+      <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">{t("manager:requests.text.repairVsReplaceAnalysis")}</p>
 
       <div className="space-y-2">
         {sorted.map((item) => {
@@ -927,10 +933,10 @@ function RepairReplacePanel({ state, requestCategory }) {
                   </span>
                 )}
                 {item.cumulativeRepairCostChf > 0 && (
-                  <span>Repairs: <span className="font-medium text-slate-700">CHF {item.cumulativeRepairCostChf.toLocaleString("de-CH")}</span></span>
+                  <span>{t("manager:requests.text.repairs")} <span className="font-medium text-slate-700">CHF {item.cumulativeRepairCostChf.toLocaleString("de-CH")}</span></span>
                 )}
                 {item.estimatedReplacementCostChf != null && (
-                  <span>Replace est.: <span className="font-medium text-slate-700">CHF {item.estimatedReplacementCostChf.toLocaleString("de-CH")}</span></span>
+                  <span>{t("manager:requests.text.replaceEst")} <span className="font-medium text-slate-700">CHF {item.estimatedReplacementCostChf.toLocaleString("de-CH")}</span></span>
                 )}
                 {ratioDisplay && (
                   <span>
@@ -975,6 +981,7 @@ function SectionLabel({ children }) {
 // ---------------------------------------------------------------------------
 
 function RequestPhotosPanel({ requestId }) {
+  const { t } = useTranslation("manager");
   const [attachments, setAttachments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -1035,7 +1042,7 @@ function RequestPhotosPanel({ requestId }) {
   if (loading) {
     return (
       <div className="px-6 py-4">
-        <SectionLabel>Photos / Attachments</SectionLabel>
+        <SectionLabel>{t("manager:requests.text.photosAttachments")}</SectionLabel>
         <p className="mt-2 text-xs text-slate-400">Loading&hellip;</p>
       </div>
     );
@@ -1051,7 +1058,7 @@ function RequestPhotosPanel({ requestId }) {
 
   return (
     <div className="px-6 py-4">
-      <SectionLabel>Photos / Attachments</SectionLabel>
+      <SectionLabel>{t("manager:requests.text.photosAttachments")}</SectionLabel>
 
       {attachments.length === 0 ? (
         /* Empty state */
@@ -1060,7 +1067,7 @@ function RequestPhotosPanel({ requestId }) {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
           </svg>
-          <p className="text-sm text-slate-500">No photos yet. Upload to document the issue.</p>
+          <p className="text-sm text-slate-500">{t("manager:requests.text.noPhotosYetUploadToDocumentTheIssue")}</p>
           <label className="mt-3 cursor-pointer rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700">
             Upload photo
             <input type="file" multiple accept="image/*,.pdf" className="hidden" onChange={handleUpload} />
@@ -1125,6 +1132,7 @@ function RequestPhotosPanel({ requestId }) {
 // ---------------------------------------------------------------------------
 
 export default function ManagerRequestsPage() {
+  const { t } = useTranslation("manager");
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -1149,9 +1157,13 @@ export default function ManagerRequestsPage() {
   const [sortKey, setSortKey] = useState("date");
   const [sortDir, setSortDir] = useState("desc");
   const handleSort = useCallback((field, dir) => {
+    setSortDir((prevDir) => {
+      if (dir !== undefined) return dir;
+      // header click: toggle direction when same field, default desc for new field
+      return (field === sortKey ? (prevDir === "asc" ? "desc" : "asc") : "desc");
+    });
     setSortKey(field);
-    setSortDir(dir || "desc");
-  }, []);
+  }, [sortKey]);
 
   const [search, setSearch]             = useState("");
   const [filterUrgency, setFilterUrgency] = useState("");
@@ -1358,7 +1370,7 @@ export default function ManagerRequestsPage() {
 
   const requestColumns = useMemo(
     () => buildRequestColumns({
-      assigningId, setAssigningId, selectedContractorId, setSelectedContractorId,
+      t, assigningId, setAssigningId, selectedContractorId, setSelectedContractorId,
       contractors, actionLoading,
       approveRequest, rejectRequest, doAssignContractor, doUnassignContractor,
       getAvailableCTAs,
@@ -1370,16 +1382,16 @@ export default function ManagerRequestsPage() {
     <AppShell role="MANAGER">
       <PageShell>
         <PageHeader
-          title="Requests Inbox"
-          subtitle="Review incoming maintenance requests. Click a row to see full details."
+          title={t("manager:requests.title.requestsInbox")}
+          subtitle={t("manager:requests.prop.reviewIncomingMaintenanceRequestsClickARowToSeeFullDetails")}
         />
         <PageContent>
 
           {/* Error banner */}
           {error && (
             <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 flex items-center justify-between">
-              <span><strong>Error:</strong> {error}</span>
-              <button onClick={() => setError("")} className="text-xs text-red-500 hover:underline ml-4">Dismiss</button>
+              <span><strong>{t("manager:requests.text.error")}</strong> {error}</span>
+              <button onClick={() => setError("")} className="text-xs text-red-500 hover:underline ml-4">{t("manager:requests.text.dismiss")}</button>
             </div>
           )}
 
@@ -1389,7 +1401,7 @@ export default function ManagerRequestsPage() {
               if (tab.href) {
                 return (
                   <Link key={tab.key} href={tab.href} className="tab-btn">
-                    {tab.label}
+                    {t(`manager:requests.tabs.${tab.key.toLowerCase()}`)}
                   </Link>
                 );
               }
@@ -1405,7 +1417,7 @@ export default function ManagerRequestsPage() {
                   onClick={() => setActiveTab(i)}
                   className={active ? "tab-btn-active" : "tab-btn"}
                 >
-                  {tab.label} ({count})
+                  {t(`manager:requests.tabs.${tab.key.toLowerCase()}`)} ({count})
                 </button>
               );
             })}
@@ -1416,8 +1428,8 @@ export default function ManagerRequestsPage() {
             <div className="flex items-center gap-2">
               <input
                 type="search"
-                aria-label="Search requests"
-                placeholder="#, description, building, unit, contractor…"
+                aria-label={t("manager:requests.ariaLabel.searchRequests")}
+                placeholder={t("manager:requests.placeholder.descriptionBuildingUnitContractor")}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="filter-input flex-1 min-w-0 mb-0"
@@ -1430,31 +1442,31 @@ export default function ManagerRequestsPage() {
           {/* Collapsible filter panel */}
           {filterOpen && (
             <FilterPanelBody>
-              <FilterSection title="Priority" first>
+              <FilterSection title={t("manager:requests.title.priority")} first>
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                  <SelectField label="Urgency" value={filterUrgency} onChange={(e) => setFilterUrgency(e.target.value)}>
-                    <option value="">All urgencies</option>
-                    <option value="EMERGENCY">🚨 Emergency</option>
-                    <option value="HIGH">⚠️ High</option>
-                    <option value="NORMAL">Normal</option>
-                    <option value="LOW">Low</option>
+                  <SelectField label={t("manager:requests.prop.urgency")} value={filterUrgency} onChange={(e) => setFilterUrgency(e.target.value)}>
+                    <option value="">{t("manager:requests.text.allUrgencies")}</option>
+                    <option value="EMERGENCY">{t("manager:requests.text.emergency")}</option>
+                    <option value="HIGH">{t("manager:requests.text.high")}</option>
+                    <option value="NORMAL">{t("manager:requests.text.normal")}</option>
+                    <option value="LOW">{t("manager:requests.text.low")}</option>
                   </SelectField>
                 </div>
               </FilterSection>
 
-              <FilterSection title="Scope">
+              <FilterSection title={t("manager:requests.title.scope")}>
                 <div className="grid grid-cols-2 gap-3">
                   {buildingOptions.length > 1 && (
-                    <SelectField label="Building" value={filterBuilding} onChange={(e) => { setFilterBuilding(e.target.value); }}>
-                      <option value="">All buildings</option>
+                    <SelectField label={t("manager:requests.prop.building")} value={filterBuilding} onChange={(e) => { setFilterBuilding(e.target.value); }}>
+                      <option value="">{t("manager:requests.text.allBuildings")}</option>
                       {buildingOptions.map(([id, name]) => (
                         <option key={id} value={id}>{name}</option>
                       ))}
                     </SelectField>
                   )}
                   {categoryOptions.length > 0 && (
-                    <SelectField label="Category" value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)}>
-                      <option value="">All categories</option>
+                    <SelectField label={t("manager:requests.prop.category")} value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)}>
+                      <option value="">{t("manager:requests.text.allCategories")}</option>
                       {categoryOptions.map((c) => (
                         <option key={c} value={c}>{c}</option>
                       ))}
@@ -1470,11 +1482,11 @@ export default function ManagerRequestsPage() {
           {/* Collapsible sort panel */}
           {sortOpen && (
             <SortPanelBody>
-              <SortRow active={sortKey === "date"} dir={sortKey === "date" ? sortDir : "desc"} label="Date" descLabel="Newest first" ascLabel="Oldest first" onSelect={(dir) => handleSort("date", dir)} />
-              <SortRow active={sortKey === "number"} dir={sortKey === "number" ? sortDir : "asc"} label="Request #" ascLabel="Low → High" descLabel="High → Low" onSelect={(dir) => handleSort("number", dir)} />
-              <SortRow active={sortKey === "urgency"} dir={sortKey === "urgency" ? sortDir : "desc"} label="Urgency" descLabel="High → Low" ascLabel="Low → High" onSelect={(dir) => handleSort("urgency", dir)} />
-              <SortRow active={sortKey === "cost"} dir={sortKey === "cost" ? sortDir : "desc"} label="Est. Cost" descLabel="High → Low" ascLabel="Low → High" onSelect={(dir) => handleSort("cost", dir)} />
-              <SortRow active={sortKey === "building"} dir={sortKey === "building" ? sortDir : "asc"} label="Building" ascLabel="A → Z" descLabel="Z → A" onSelect={(dir) => handleSort("building", dir)} />
+              <SortRow active={sortKey === "date"} dir={sortKey === "date" ? sortDir : "desc"} label={t("manager:requests.prop.date")} descLabel="Newest first" ascLabel="Oldest first" onSelect={(dir) => handleSort("date", dir)} />
+              <SortRow active={sortKey === "number"} dir={sortKey === "number" ? sortDir : "asc"} label={t("manager:requests.prop.request")} ascLabel="Low → High" descLabel="High → Low" onSelect={(dir) => handleSort("number", dir)} />
+              <SortRow active={sortKey === "urgency"} dir={sortKey === "urgency" ? sortDir : "desc"} label={t("manager:requests.prop.urgency")} descLabel="High → Low" ascLabel="Low → High" onSelect={(dir) => handleSort("urgency", dir)} />
+              <SortRow active={sortKey === "cost"} dir={sortKey === "cost" ? sortDir : "desc"} label={t("manager:requests.prop.estCost")} descLabel="High → Low" ascLabel="Low → High" onSelect={(dir) => handleSort("cost", dir)} />
+              <SortRow active={sortKey === "building"} dir={sortKey === "building" ? sortDir : "asc"} label={t("manager:requests.prop.building")} ascLabel="A → Z" descLabel="Z → A" onSelect={(dir) => handleSort("building", dir)} />
             </SortPanelBody>
           )}
 
@@ -1485,7 +1497,7 @@ export default function ManagerRequestsPage() {
             <div className="px-4 py-6 text-center">
               <p className="empty-state-text">{hasActiveFilters ? "No requests match your search or filters." : "No requests match this filter."}</p>
               {hasActiveFilters && (
-                <button onClick={clearFilters} className="mt-2 text-xs text-blue-600 hover:underline">Reset filters</button>
+                <button onClick={clearFilters} className="mt-2 text-xs text-blue-600 hover:underline">{t("manager:requests.text.resetFilters")}</button>
               )}
             </div>
           ) : (
@@ -1495,11 +1507,11 @@ export default function ManagerRequestsPage() {
                 columns={requestColumns}
                 data={paginatedRequests}
                 rowKey={(r) => r.id}
-                sortField={null}
+                sortField={sortKey}
                 sortDir={sortDir}
-                onSort={null}
+                onSort={handleSort}
                 onRowClick={(r) => router.push(r.rfpId ? `/manager/rfps/${r.rfpId}` : `/manager/requests/${r.id}`)}
-                emptyState={<p className="text-sm text-slate-500">No requests match this filter.</p>}
+                emptyState={<p className="text-sm text-slate-500">{t("manager:requests.text.noRequestsMatchThisFilter")}</p>}
                 mobileCard={(r) => {
                   const ctaList = getAvailableCTAs(r, assigningId);
                   const isAssigning = assigningId === r.id;
@@ -1509,15 +1521,15 @@ export default function ManagerRequestsPage() {
                   const swipeActions = isAssigning ? [] : ctaList.map((cta) => {
                     switch (cta) {
                       case 'approve':
-                        return { label: "Approve", variant: "green",  loading: isLoading, onClick: () => approveRequest(r.id) };
+                        return { label: t("manager:requests.btn.approve"), variant: "green",  loading: isLoading, onClick: () => approveRequest(r.id) };
                       case 'reject':
-                        return { label: "Reject",  variant: "slate",  loading: isLoading, onClick: () => rejectRequest(r.id) };
+                        return { label: t("manager:requests.btn.reject"),  variant: "slate",  loading: isLoading, onClick: () => rejectRequest(r.id) };
                       case 'view_rfp':
-                        return { label: "RFP",     variant: "indigo", onClick: () => router.push(r.rfpId ? `/manager/rfps/${r.rfpId}` : "/manager/rfps") };
+                        return { label: t("manager:requests.btn.viewRfp"), variant: "indigo", onClick: () => router.push(r.rfpId ? `/manager/rfps/${r.rfpId}` : "/manager/rfps") };
                       case 'assign':
-                        return { label: "Assign",  variant: "blue",   onClick: () => setAssigningId(r.id) };
+                        return { label: t("manager:requests.btn.assign"),  variant: "blue",   onClick: () => setAssigningId(r.id) };
                       case 'unassign':
-                        return { label: "Unassign",variant: "red",    loading: isLoading, onClick: () => doUnassignContractor(r.id) };
+                        return { label: t("manager:requests.btn.unassign"),variant: "red",    loading: isLoading, onClick: () => doUnassignContractor(r.id) };
                       default:
                         return null;
                     }
@@ -1553,7 +1565,7 @@ export default function ManagerRequestsPage() {
                               onChange={(e) => setSelectedContractorId(e.target.value)}
                               className="rounded border border-slate-300 px-2 py-1 text-xs flex-1 min-w-0"
                             >
-                              <option value="">Select contractor…</option>
+                              <option value="">{t("manager:requests.text.selectContractor")}</option>
                               {contractors.map((c) => (
                                 <option key={c.id} value={c.id}>{c.name || c.companyName || c.id.slice(0, 8)}</option>
                               ))}
@@ -1608,3 +1620,5 @@ export {
   formatDate as requestFormatDate,
   formatCurrency,
 };
+
+export const getStaticProps = withTranslations(["common","manager"]);

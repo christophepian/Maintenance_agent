@@ -10,6 +10,8 @@ import { authHeaders } from "../../../lib/api";
 import { formatDate, formatChf } from "../../../lib/format";
 import ConfigurableTable from "../../../components/ConfigurableTable";
 import { useTableSort, clientSort } from "../../../lib/tableUtils";
+import { withTranslations } from "../../../lib/i18n";
+import { useTranslation } from "next-i18next";
 
 const PAYMENT_SORT_FIELDS = ["invoiceNumber", "amount", "paidAt"];
 
@@ -22,23 +24,24 @@ function paymentFieldExtractor(p, field) {
   }
 }
 
-const PAYMENT_COLUMNS = [
+function buildPaymentColumns(t) {
+  return [
   {
     id: "invoiceNumber",
-    label: "Invoice #",
+    label: t("manager:financePayments.col.invoice"),
     sortable: true,
     alwaysVisible: true,
     render: (p) => p.invoiceNumber || p.id.slice(0, 8),
   },
   {
     id: "description",
-    label: "Description",
+    label: t("manager:financePayments.col.description"),
     defaultVisible: true,
     render: (p) => p.description || "\u2014",
   },
   {
     id: "amount",
-    label: "Amount (CHF)",
+    label: t("manager:financePayments.col.amountChf"),
     sortable: true,
     defaultVisible: true,
     className: "text-right",
@@ -46,28 +49,31 @@ const PAYMENT_COLUMNS = [
   },
   {
     id: "paidAt",
-    label: "Paid on",
+    label: t("manager:financePayments.col.paidOn"),
     sortable: true,
     defaultVisible: true,
     render: (p) => formatDate(p.paidAt),
   },
   {
     id: "reference",
-    label: "Payment reference",
+    label: t("manager:financePayments.col.paymentReference"),
     defaultVisible: true,
     render: (p) => p.paymentReference || "\u2014",
   },
   {
     id: "actions",
-    label: "Actions",
+    label: t("manager:financePayments.col.actions"),
     alwaysVisible: true,
     render: () => (
-      <a href="/manager/finance/invoices" className="action-btn-brand no-underline inline-block">View Invoice</a>
+      <a href="/manager/finance/invoices" className="action-btn-brand no-underline inline-block">{t("manager:financePayments.text.viewInvoice")}</a>
     ),
   },
 ];
+}
 
 export default function ManagerPaymentsPage() {
+  const { t } = useTranslation("manager");
+  const paymentColumns = useMemo(() => buildPaymentColumns(t), [t]);
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -137,19 +143,19 @@ export default function ManagerPaymentsPage() {
   return (
     <AppShell role="MANAGER">
       <PageShell>
-        <PageHeader title="Payments" />
+        <PageHeader title={t("manager:financePayments.title.payments")} />
         <PageContent>
           {error && (
             <Panel className="bg-red-50 border-red-200">
-              <strong className="text-red-700">Error:</strong> {error}
-              <button onClick={() => setError("")} className="action-btn-dismiss">Dismiss</button>
+              <strong className="text-red-700">{t("manager:financePayments.text.error")}</strong> {error}
+              <button onClick={() => setError("")} className="action-btn-dismiss">{t("manager:financePayments.text.dismiss")}</button>
             </Panel>
           )}
 
           <div className="flex items-center gap-2 mb-3">
             <input
               type="search"
-              placeholder="Search payments…"
+              placeholder={t("manager:financePayments.placeholder.searchPayments")}
               value={paySearch}
               onChange={(e) => setPaySearch(e.target.value)}
               className="filter-input flex-1 min-w-0 mb-0"
@@ -158,18 +164,18 @@ export default function ManagerPaymentsPage() {
           </div>
           {filterOpen && (
             <FilterPanelBody>
-              <FilterSection title="Scope" first>
+              <FilterSection title={t("manager:financePayments.title.scope")} first>
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                  <SelectField label="Building" value={buildingId} onChange={(e) => setBuildingId(e.target.value)}>
-                    <option value="">All buildings</option>
+                  <SelectField label={t("manager:financePayments.prop.building")} value={buildingId} onChange={(e) => setBuildingId(e.target.value)}>
+                    <option value="">{t("manager:financePayments.text.allBuildings")}</option>
                     {buildings.map((b) => <option key={b.id} value={b.id}>{b.name || b.address}</option>)}
                   </SelectField>
                 </div>
               </FilterSection>
-              <FilterSection title="Date range">
+              <FilterSection title={t("manager:financePayments.title.dateRange")}>
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                  <DateField label="Paid after" value={paidAfter} onChange={(e) => setPaidAfter(e.target.value)} />
-                  <DateField label="Paid before" value={paidBefore} onChange={(e) => setPaidBefore(e.target.value)} />
+                  <DateField label={t("manager:financePayments.prop.paidAfter")} value={paidAfter} onChange={(e) => setPaidAfter(e.target.value)} />
+                  <DateField label={t("manager:financePayments.prop.paidBefore")} value={paidBefore} onChange={(e) => setPaidBefore(e.target.value)} />
                 </div>
               </FilterSection>
               <FilterSectionClear hasFilter={hasFilters} onClear={clearFilters} />
@@ -177,18 +183,18 @@ export default function ManagerPaymentsPage() {
           )}
 
           {loading ? (
-            <Panel><p className="m-0">Loading payments...</p></Panel>
+            <Panel><p className="m-0">{t("manager:financePayments.text.loadingPayments")}</p></Panel>
           ) : (
             <ConfigurableTable
                 tableId="manager-payments"
-                columns={PAYMENT_COLUMNS}
+                columns={paymentColumns}
                 data={sortedPayments}
                 rowKey={(p) => p.id}
                 sortField={sortField}
                 sortDir={sortDir}
                 onSort={handleSort}
                 emptyState={
-                  <p className="px-4 py-8 text-center text-sm text-slate-400">No payments found for the selected filters.</p>
+                  <p className="px-4 py-8 text-center text-sm text-slate-400">{t("manager:financePayments.text.noPaymentsFoundForTheSelectedFilters")}</p>
                 }
                 mobileCard={(p) => (
                   <div className="table-card">
@@ -207,3 +213,5 @@ export default function ManagerPaymentsPage() {
     </AppShell>
   );
 }
+
+export const getStaticProps = withTranslations(["common","manager"]);

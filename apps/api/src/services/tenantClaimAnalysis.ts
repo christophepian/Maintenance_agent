@@ -18,6 +18,12 @@ import * as crypto from "crypto";
 import prisma from "./prismaClient";
 import { REQUEST_LEGAL_DECISION_INCLUDE } from "./legalIncludes";
 import {
+  findRequestForLegalDecision,
+} from "../repositories/requestRepository";
+import {
+  createLegalEvaluationLog,
+} from "../repositories/legalSourceRepository";
+import {
   evaluateRequestLegalDecision,
   type LegalDecisionDTO,
   type Citation,
@@ -168,10 +174,7 @@ export async function analyseClaimForRequest(
   requestId: string,
 ): Promise<TenantClaimAnalysisDTO> {
   // 1. Load request and verify org scope in one query
-  const request = await prisma.request.findUnique({
-    where: { id: requestId },
-    include: REQUEST_LEGAL_DECISION_INCLUDE,
-  });
+  const request = await findRequestForLegalDecision(prisma, requestId);
 
   if (!request) {
     throw new RequestNotFoundError(requestId);
@@ -262,26 +265,24 @@ export async function analyseClaimForRequest(
   };
   const contextHash = sha256(JSON.stringify(contextJson));
 
-  const evalLog = await prisma.legalEvaluationLog.create({
-    data: {
-      orgId,
-      buildingId: request.unit?.buildingId ?? null,
-      unitId: request.unitId ?? null,
-      requestId,
-      contextJson,
-      contextHash,
-      resultJson: {
-        legalObligation: decision.legalObligation,
-        confidence: decision.confidence,
-        matchedDefectCount: matchResult.matches.length,
-        topDefect: matchResult.bestMatch?.defect ?? null,
-        totalReductionPercent: rentReduction?.totalReductionPercent ?? null,
-        totalReductionChf: rentReduction?.totalReductionChf ?? null,
-        temporalContext: JSON.parse(JSON.stringify(temporalContext)),
-        tenantGuidanceSummary: tenantGuidance.summary,
-      },
-      matchedRuleVersionIdsJson: [],
+  const evalLog = await createLegalEvaluationLog(prisma, {
+    orgId,
+    buildingId: request.unit?.buildingId ?? null,
+    unitId: request.unitId ?? null,
+    requestId,
+    contextJson,
+    contextHash,
+    resultJson: {
+      legalObligation: decision.legalObligation,
+      confidence: decision.confidence,
+      matchedDefectCount: matchResult.matches.length,
+      topDefect: matchResult.bestMatch?.defect ?? null,
+      totalReductionPercent: rentReduction?.totalReductionPercent ?? null,
+      totalReductionChf: rentReduction?.totalReductionChf ?? null,
+      temporalContext: JSON.parse(JSON.stringify(temporalContext)),
+      tenantGuidanceSummary: tenantGuidance.summary,
     },
+    matchedRuleVersionIdsJson: [],
   });
 
   return {

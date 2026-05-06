@@ -1,11 +1,13 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
+import { useTranslation } from "next-i18next";
 import { formatDateTime } from "../lib/format";
 import { getNotificationLink as resolveLink } from "../lib/notificationLinks";
 import { Popover, PopoverTrigger, PopoverContent } from "./ui/Popover";
 
 import { cn } from "../lib/utils";
 export default function NotificationBell({ role }) {
+  const { t } = useTranslation("common");
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifications, setNotifications] = useState([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -195,7 +197,7 @@ export default function NotificationBell({ role }) {
       <PopoverTrigger asChild>
         <button
           className="relative p-2 text-slate-600 hover:text-slate-900 focus:outline-none rounded-full"
-          aria-label="Notifications"
+          aria-label={t("notifications.title")}
           aria-expanded={isOpen}
           aria-haspopup="dialog"
         >
@@ -224,24 +226,24 @@ export default function NotificationBell({ role }) {
       <PopoverContent className="w-96 p-0" sideOffset={8}>
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200">
-          <h3 className="text-lg font-semibold text-slate-900">Notifications</h3>
+          <h3 className="text-lg font-semibold text-slate-900">{t("notifications.title")}</h3>
           {notifications.length > 0 && (
             <button
               onClick={markAllAsRead}
               className="text-sm text-blue-600 hover:text-blue-700"
-              aria-label="Mark all notifications as read"
+              aria-label={t("notifications.markAllRead")}
             >
-              Mark all read
+              {t("notifications.markAllRead")}
             </button>
           )}
         </div>
 
         {/* Notifications List */}
-        <div className="max-h-96 overflow-y-auto" role="list" aria-label="Notifications">
+        <div className="max-h-96 overflow-y-auto" role="list" aria-label={t("notifications.title")}>
           {loading ? (
-            <div className="px-4 py-8 text-center text-slate-500">Loading...</div>
+            <div className="px-4 py-8 text-center text-slate-500">{t("label.loading")}</div>
           ) : notifications.length === 0 ? (
-            <div className="px-4 py-8 text-center text-slate-500">No notifications</div>
+            <div className="px-4 py-8 text-center text-slate-500">{t("notifications.empty")}</div>
           ) : (
             notifications.map((notif) => (
               <div
@@ -259,7 +261,7 @@ export default function NotificationBell({ role }) {
                       {!isNotifRead(notif) && (
                         <>
                           <span className="w-2 h-2 bg-blue-600 rounded-full" aria-hidden="true"></span>
-                          <span className="sr-only">Unread</span>
+                          <span className="sr-only">{t("notifications.unread")}</span>
                         </>
                       )}
                     </div>

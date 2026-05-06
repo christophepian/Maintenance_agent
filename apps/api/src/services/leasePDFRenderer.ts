@@ -1,6 +1,7 @@
 import * as PDFKit from 'pdfkit';
 import * as crypto from 'crypto';
 import prisma from './prismaClient';
+import { findLeaseById } from '../repositories/leaseRepository';
 const PDFDocument = PDFKit as any;
 
 /**
@@ -12,10 +13,7 @@ export async function generateLeasePDF(
   orgId: string,
 ): Promise<{ buffer: Buffer; sha256: string }> {
   // Load lease with relations
-  const lease = await prisma.lease.findUnique({
-    where: { id: leaseId },
-    include: { unit: { include: { building: true } } },
-  });
+  const lease = await findLeaseById(prisma, leaseId);
 
   if (!lease) throw new Error(`Lease not found: ${leaseId}`);
   if (lease.orgId !== orgId) throw new Error('Unauthorized: Lease does not belong to this org');

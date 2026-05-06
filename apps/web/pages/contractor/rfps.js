@@ -10,12 +10,14 @@ import { formatDate } from "../../lib/format";
 import { authHeaders } from "../../lib/api";
 import ConfigurableTable from "../../components/ConfigurableTable";
 import { useTableSort, clientSort } from "../../lib/tableUtils";
+import { withTranslations } from "../../lib/i18n";
+import { useTranslation } from "next-i18next";
 
 const STATUS_TABS = [
-  { key: "ALL", label: "All" },
-  { key: "OPEN", label: "Open" },
-  { key: "AWARDED", label: "Awarded" },
-  { key: "CANCELLED", label: "Cancelled" },
+  { key: "ALL" },
+  { key: "OPEN" },
+  { key: "AWARDED" },
+  { key: "CANCELLED" },
 ];
 
 const CRFP_SORT_FIELDS = ["category", "status", "invites", "quotes", "createdAt"];
@@ -31,10 +33,11 @@ function crfpFieldExtractor(rfp, field) {
   }
 }
 
-const CRFP_COLUMNS = [
+function buildCrfpColumns(t) {
+  return [
   {
     id: "request",
-    label: "Request",
+    label: t("contractor:rfps.col.request"),
     alwaysVisible: true,
     render: (rfp) => rfp.request ? (
       <span className="text-sm">
@@ -45,14 +48,14 @@ const CRFP_COLUMNS = [
   },
   {
     id: "category",
-    label: "Category",
+    label: t("contractor:rfps.col.category"),
     sortable: true,
     defaultVisible: true,
     render: (rfp) => <span className="text-sm text-slate-700">{rfp.category || "\u2014"}</span>,
   },
   {
     id: "location",
-    label: "Location",
+    label: t("contractor:rfps.col.location"),
     defaultVisible: true,
     render: (rfp) => (
       <span className="text-sm text-slate-700">
@@ -64,19 +67,19 @@ const CRFP_COLUMNS = [
   },
   {
     id: "status",
-    label: "Status",
+    label: t("contractor:rfps.col.status"),
     sortable: true,
     defaultVisible: true,
     render: (rfp) => (
       <>
         <Badge variant={rfpVariant(rfp.status)} size="sm">{rfp.status}</Badge>
-        {rfp.isInvited && <Badge variant="brand" size="sm" className="ml-1">Invited</Badge>}
+        {rfp.isInvited && <Badge variant="brand" size="sm" className="ml-1">{t("contractor:rfps.text.invited")}</Badge>}
       </>
     ),
   },
   {
     id: "myQuote",
-    label: "My Quote",
+    label: t("contractor:rfps.col.myQuote"),
     defaultVisible: true,
     render: (rfp) => rfp.myQuote ? (
       <Badge variant={quoteVariant(rfp.myQuote.status)} size="sm">
@@ -86,7 +89,7 @@ const CRFP_COLUMNS = [
   },
   {
     id: "invites",
-    label: "Invited",
+    label: t("contractor:rfps.col.invited"),
     sortable: true,
     defaultVisible: true,
     className: "text-center",
@@ -94,7 +97,7 @@ const CRFP_COLUMNS = [
   },
   {
     id: "quotes",
-    label: "Quotes",
+    label: t("contractor:rfps.col.quotes"),
     sortable: true,
     defaultVisible: true,
     className: "text-center",
@@ -102,7 +105,7 @@ const CRFP_COLUMNS = [
   },
   {
     id: "createdAt",
-    label: "Created",
+    label: t("contractor:rfps.col.created"),
     sortable: true,
     defaultVisible: true,
     render: (rfp) => <span className="text-sm text-slate-500">{formatDate(rfp.createdAt)}</span>,
@@ -112,12 +115,15 @@ const CRFP_COLUMNS = [
     label: "",
     alwaysVisible: true,
     render: (rfp) => (
-      <Link href={`/contractor/rfps/${rfp.id}`} className="cell-link text-xs font-medium" onClick={(e) => e.stopPropagation()}>View</Link>
+      <Link href={`/contractor/rfps/${rfp.id}`} className="cell-link text-xs font-medium" onClick={(e) => e.stopPropagation()}>{t("contractor:rfps.text.view")}</Link>
     ),
   },
 ];
+}
 
 export default function ContractorRfpsPage() {
+  const { t } = useTranslation("contractor");
+  const crfpColumns = useMemo(() => buildCrfpColumns(t), [t]);
   const router = useRouter();
   const [rfps, setRfps] = useState([]);
   const [total, setTotal] = useState(0);
@@ -164,7 +170,7 @@ export default function ContractorRfpsPage() {
   return (
     <AppShell role="CONTRACTOR">
       <div className="max-w-[1200px]">
-        <h1 className="mt-0 mb-6">Available RFPs</h1>
+        <h1 className="mt-0 mb-6">{t("contractor:rfps.heading.availableRfps")}</h1>
 
         <ContractorPicker onSelect={() => loadData()} />
 
@@ -182,18 +188,18 @@ export default function ContractorRfpsPage() {
                 onClick={() => setActiveTab(tab.key)}
                 className={active ? "pill-tab pill-tab-active" : "pill-tab"}
               >
-                {tab.label} ({count})
+                {t(`contractor:rfps.tabs.${tab.key.toLowerCase()}`)} ({count})
               </button>
             );
           })}
         </div>
 
         {loading ? (
-          <p className="text-slate-600">Loading RFPs...</p>
+          <p className="text-slate-600">{t("contractor:rfps.text.loadingRfps")}</p>
         ) : (
           <ConfigurableTable
             tableId="contractor-rfps"
-            columns={CRFP_COLUMNS}
+            columns={crfpColumns}
             data={sortedRfps}
             rowKey={(rfp) => rfp.id}
             sortField={sortField}
@@ -203,7 +209,7 @@ export default function ContractorRfpsPage() {
             emptyState={
               <div className="bg-slate-50 border border-slate-200 rounded p-8 text-center">
                 <p className="text-slate-600">No RFPs available{activeTab !== "ALL" ? ` with status ${activeTab}` : ""}.</p>
-                <p className="text-slate-400 text-sm mt-2">RFPs matching your service categories will appear here.</p>
+                <p className="text-slate-400 text-sm mt-2">{t("contractor:rfps.text.rFPsMatchingYourServiceCategoriesWillAppearHere")}</p>
               </div>
             }
             mobileCard={(rfp) => (
@@ -212,7 +218,7 @@ export default function ContractorRfpsPage() {
                   <span className="font-medium text-slate-900 text-sm">#{rfp.request?.requestNumber}</span>
                   <div className="flex gap-1">
                     <Badge variant={rfpVariant(rfp.status)} size="sm">{rfp.status}</Badge>
-                    {rfp.isInvited && <Badge variant="brand" size="sm">Invited</Badge>}
+                    {rfp.isInvited && <Badge variant="brand" size="sm">{t("contractor:rfps.text.invited")}</Badge>}
                   </div>
                 </div>
                 <p className="table-card-sub">{rfp.request?.description ? rfp.request.description.slice(0, 80) : "—"}</p>
@@ -231,3 +237,5 @@ export default function ContractorRfpsPage() {
     </AppShell>
   );
 }
+
+export const getStaticProps = withTranslations(["common","contractor"]);

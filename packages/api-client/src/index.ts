@@ -1998,6 +1998,12 @@ function buildAuthApi(opts: ClientOptions) {
     tenantSelfPay: (requestId: string) =>
       request<{ data: MaintenanceRequestDTO; rfpId: string }>(opts, "POST", `/tenant-portal/requests/${requestId}/self-pay`, {}),
 
+    sendConversationMessage: (body: { message: string }) =>
+      request<{ data: { replyText: string; intent: string } }>(opts, "POST", "/tenant/conversation", body),
+
+    getConversationHistory: () =>
+      request<{ data: Array<{ role: "TENANT" | "ASSISTANT"; content: string; intent: string | null; createdAt: string }> }>(opts, "GET", "/tenant/conversation/history"),
+
     triage: (body: { text: string }) =>
       request<unknown>(opts, "POST", "/triage", body),
 

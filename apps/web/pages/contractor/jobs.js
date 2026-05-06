@@ -15,10 +15,12 @@ import { authHeaders } from "../../lib/api";
 
 import { cn } from "../../lib/utils";
 import ScrollableTabs from "../../components/mobile/ScrollableTabs";
+import { withTranslations } from "../../lib/i18n";
+import { useTranslation } from "next-i18next";
 /* ── Tab config (F-UI1) ────────────────────────────────── */
 const TABS = [
-  { key: "upcoming", label: "Upcoming" },
-  { key: "history", label: "History" },
+  { key: "upcoming" },
+  { key: "history" },
 ];
 const TAB_KEYS = TABS.map((t) => t.key);
 
@@ -88,6 +90,7 @@ function shortLocation(job) {
 /* ═══════════════════════════════════════════════════════════ */
 
 export default function ContractorJobs() {
+  const { t } = useTranslation("contractor");
   const router = useRouter();
 
   /* ── Tab state (URL-persisted, F-UI1) ── */
@@ -193,7 +196,7 @@ export default function ContractorJobs() {
     <AppShell role="CONTRACTOR">
       <PageShell>
         <PageHeader
-          title="My Jobs"
+          title={t("contractor:jobs.title.myJobs")}
           actions={<ContractorPicker onSelect={() => fetchJobs()} />}
         />
 
@@ -210,7 +213,7 @@ export default function ContractorJobs() {
                   onClick={() => setActiveTab(i)}
                   className={activeTab === i ? "tab-btn-active" : "tab-btn"}
                 >
-                  {tab.label}
+                  {t(`contractor:jobs.tabs.${tab.key.toLowerCase()}`)}
                   <span className="tab-panel-count">
                     {i === 0 ? upcomingJobs.length : historyJobs.length}
                   </span>
@@ -221,10 +224,10 @@ export default function ContractorJobs() {
             {/* ── Upcoming tab ── */}
             <div className={activeTab === 0 ? "tab-panel-active" : "tab-panel"}>
               {loading ? (
-                <p className="loading-text">Loading jobs…</p>
+                <p className="loading-text">{t("contractor:jobs.text.loadingJobs")}</p>
               ) : dayGroups.length === 0 ? (
                 <div className="empty-state">
-                  <p className="empty-state-text">No upcoming jobs</p>
+                  <p className="empty-state-text">{t("contractor:jobs.text.noUpcomingJobs")}</p>
                 </div>
               ) : (
                 <div className="space-y-6">
@@ -257,10 +260,10 @@ export default function ContractorJobs() {
             {/* ── History tab ── */}
             <div className={activeTab === 1 ? "tab-panel-active" : "tab-panel"}>
               {loading ? (
-                <p className="loading-text">Loading jobs…</p>
+                <p className="loading-text">{t("contractor:jobs.text.loadingJobs")}</p>
               ) : historyJobs.length === 0 ? (
                 <div className="empty-state">
-                  <p className="empty-state-text">No completed jobs yet</p>
+                  <p className="empty-state-text">{t("contractor:jobs.text.noCompletedJobsYet")}</p>
                 </div>
               ) : (
                 <div className="space-y-2">
@@ -305,6 +308,7 @@ function JobCard({
   onStartJob,
   onCompleteJob,
 }) {
+  const { t } = useTranslation("contractor");
   const req = job.request;
   const category = req?.category || req?.asset?.category || null;
   const loc = shortLocation(job);
@@ -338,7 +342,7 @@ function JobCard({
             {/* Location */}
             {req?.unit && (
               <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-                <h4 className="text-xs font-semibold text-blue-900 mb-1">📍 Location</h4>
+                <h4 className="text-xs font-semibold text-blue-900 mb-1">{t("contractor:jobs.text.location")}</h4>
                 <p className="text-sm text-blue-700 font-medium">{req.unit.building.name}</p>
                 <p className="text-xs text-blue-700">{req.unit.building.address}</p>
                 <p className="text-xs text-blue-700 mt-0.5 font-medium">Unit {req.unit.unitNumber}</p>
@@ -346,7 +350,7 @@ function JobCard({
             )}
             {!req?.unit && (job.buildingName || job.unitNumber) && (
               <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-                <h4 className="text-xs font-semibold text-blue-900 mb-1">📍 Location</h4>
+                <h4 className="text-xs font-semibold text-blue-900 mb-1">{t("contractor:jobs.text.location")}</h4>
                 {job.buildingName && <p className="text-sm text-blue-700 font-medium">{job.buildingName}</p>}
                 {job.unitNumber && <p className="text-xs text-blue-700 font-medium">Unit {job.unitNumber}</p>}
               </div>
@@ -355,7 +359,7 @@ function JobCard({
             {/* Tenant contact */}
             {req?.tenant && (
               <div className="p-3 bg-green-50 rounded-lg border border-green-200">
-                <h4 className="text-xs font-semibold text-green-900 mb-1">👤 Tenant</h4>
+                <h4 className="text-xs font-semibold text-green-900 mb-1">{t("contractor:jobs.text.tenant")}</h4>
                 {req.tenant.name && <p className="text-sm text-green-700 font-medium">{req.tenant.name}</p>}
                 <p className="text-xs text-green-700">📞 {req.tenant.phone}</p>
                 {req.tenant.email && <p className="text-xs text-green-700">✉️ {req.tenant.email}</p>}
@@ -365,7 +369,7 @@ function JobCard({
             {/* Appointment */}
             {slot && (
               <div className="p-3 bg-indigo-50 rounded-lg border border-indigo-200">
-                <h4 className="text-xs font-semibold text-indigo-900 mb-1">📅 Appointment</h4>
+                <h4 className="text-xs font-semibold text-indigo-900 mb-1">{t("contractor:jobs.text.appointment")}</h4>
                 <p className="text-sm text-indigo-700 font-medium">
                   {fmtTime(slot.startTime)} – {fmtTime(slot.endTime)}
                 </p>
@@ -376,7 +380,7 @@ function JobCard({
             {/* Asset */}
             {req?.asset && (
               <div className="p-3 bg-amber-50 rounded-lg border border-amber-200">
-                <h4 className="text-xs font-semibold text-amber-900 mb-1">🔧 Asset</h4>
+                <h4 className="text-xs font-semibold text-amber-900 mb-1">{t("contractor:jobs.text.asset")}</h4>
                 <p className="text-sm text-amber-700">
                   {req.asset.name || req.asset.category || "—"}
                   {req.asset.serialNumber && ` (S/N: ${req.asset.serialNumber})`}
@@ -388,7 +392,7 @@ function JobCard({
           {/* Scope of work */}
           {(req?.description || job.requestDescription) && (
             <div className="mt-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
-              <h4 className="text-xs font-semibold text-slate-700 mb-1">📋 Scope</h4>
+              <h4 className="text-xs font-semibold text-slate-700 mb-1">{t("contractor:jobs.text.scope")}</h4>
               <p className="text-sm text-slate-800 whitespace-pre-wrap">
                 {req?.description || job.requestDescription}
               </p>
@@ -467,7 +471,7 @@ function JobCard({
               <div className="flex items-center gap-2">
                 <input
                   type="number"
-                  placeholder="Actual cost (CHF)"
+                  placeholder={t("contractor:jobs.placeholder.actualCostChf")}
                   value={actualCost}
                   onChange={(e) => setActualCost(e.target.value)}
                   className="w-40 px-3 py-2 border border-slate-300 rounded-lg text-sm"
@@ -521,3 +525,5 @@ function JobCard({
     </div>
   );
 }
+
+export const getStaticProps = withTranslations(["common","contractor"]);

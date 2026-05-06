@@ -9,7 +9,7 @@
  * G9: canonical include constants live here.
  */
 
-import { PrismaClient, InvoiceStatus } from "@prisma/client";
+import { PrismaClient, InvoiceStatus, Prisma, ExpenseCategory } from "@prisma/client";
 
 // ─── Canonical Includes ────────────────────────────────────────
 
@@ -95,15 +95,15 @@ export interface ListInvoiceOpts {
 export async function findInvoicesByOrg(prisma: PrismaClient, opts: ListInvoiceOpts) {
   const useSummary = opts.view === "summary";
 
-  const where: any = {
+  const where: Prisma.InvoiceWhereInput = {
     orgId: opts.orgId,
     ...(opts.jobId && { jobId: opts.jobId }),
-    ...(opts.status && { status: opts.status }),
-    ...(opts.expenseCategory && { expenseCategory: opts.expenseCategory }),
+    ...(opts.status && { status: opts.status as InvoiceStatus }),
+    ...(opts.expenseCategory && { expenseCategory: opts.expenseCategory as ExpenseCategory }),
   };
 
   // Contractor and building filters both traverse the job relation
-  const jobFilter: any = {};
+  const jobFilter: Prisma.JobWhereInput = {};
   if (opts.contractorId) jobFilter.contractorId = opts.contractorId;
   if (opts.buildingId) {
     jobFilter.request = { unit: { buildingId: opts.buildingId } };
@@ -125,3 +125,95 @@ export async function findInvoicesByOrg(prisma: PrismaClient, opts: ListInvoiceO
     include: useSummary ? INVOICE_SUMMARY_INCLUDE : INVOICE_FULL_INCLUDE,
   });
 }
+
+// ─── Overdue + PDF / QR Lookups ───────────────────────────────
+
+/** Select for overdue invoice scanning — includes nested lease/unit/building. */
+export const INVOICE_OVERDUE_SELECT = {
+  id: true,
+  orgId: true,
+  invoiceNumber: true,
+  amount: true,
+  totalAmount: true,
+  dueDate: true,
+  recipientName: true,
+  lease: {
+    select: {
+      id: true,
+      tenantName: true,
+      tenantEmail: true,
+      unit: {
+        select: {
+          unitNumber: true,
+          building: { select: { id: true, name: true } },
+        },
+      },
+    },
+  },
+} as const;
+
+/** Include for QR-bill generation — issuer + job. */
+export const INVOICE_QR_INCLUDE = {
+  issuer: true,
+  job: true,
+} as const;
+
+/** Include for PDF generation — line items + issuer. */
+export const INVOICE_PDF_INCLUDE = {
+  lineItems: true,
+  issuer: true,
+} as const;
+
+/**
+ * Find invoices overdue by a given cutoff date.
+ */
+export async function findOverdueInvoices(
+  prisma: PrismaClient,
+  cutoff: Date,
+) {
+  return prisma.invoice.findMany({
+    where: {
+      dueDate: { lt: cutoff },
+      status: { in: ["ISSUED", "APPROVED"] },
+    },
+    select: INVOICE_OVERDUE_SELECT,
+  });
+}
+
+/**
+ * Fetch invoice with issuer and job for QR-bill generation.
+ */
+export async function findInvoiceWithIssuerAndJob(
+  prisma: PrismaClient,
+  id: string,
+) {
+  return prisma.invoice.findUnique({
+    where: { id },
+    include: INVOICE_QR_INCLUDE,
+  });
+}
+
+/**
+ * Fetch invoice with line items and issuer for PDF generation.
+ */
+export async function findInvoiceWithLineItemsAndIssuer(
+  prisma: PrismaClient,
+  id: string,
+) {
+  return prisma.invoice.findUnique({
+    where: { id },
+    include: INVOICE_PDF_INCLUDE,
+  });
+}
+
+/**
+ * Create a new invoice with optional line items.
+ * Used by contractor billing service for recurring schedule invoices.
+ */
+export async function createInvoiceRecord(
+  prisma: PrismaClient,
+  data: Prisma.InvoiceUncheckedCreateInput,
+) {
+  return prisma.invoice.create({ data });
+}
+

@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { useRouter } from 'next/router';
+import { useTranslation } from 'next-i18next';
 import { cn } from '../../lib/utils';
 import BottomSheet from './BottomSheet';
 
@@ -16,6 +17,7 @@ import BottomSheet from './BottomSheet';
  *   items   — Array<{ href: string, icon: ReactNode (component), label: string }>
  */
 export default function NavDrawer({ open, onClose, items = [] }) {
+  const { t } = useTranslation('common');
   const router = useRouter();
   const pathname = router.asPath.split('?')[0];
 
@@ -26,7 +28,7 @@ export default function NavDrawer({ open, onClose, items = [] }) {
   }
 
   return (
-    <BottomSheet open={open} onClose={onClose} title="More">
+    <BottomSheet open={open} onClose={onClose} title={t('action.more', { defaultValue: 'More' })}>
       <nav aria-label="Overflow navigation" className="flex flex-col gap-1 -mx-5 px-2">
         {items.map((item) => {
           const Icon = item.icon;

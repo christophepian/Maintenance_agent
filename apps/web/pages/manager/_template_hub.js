@@ -34,6 +34,7 @@ import Link from "next/link";
 import ErrorBanner from "../../components/ui/ErrorBanner";
 import { authHeaders } from "../../lib/api";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "../../components/ui/Tabs";
+import { withTranslations } from "../../lib/i18n";
 
 // REPLACE: Tab definitions — key must be URL-safe (lowercase, hyphens).
 const TABS = [
@@ -180,3 +181,5 @@ export default function TemplateHubPage() {
     </AppShell>
   );
 }
+
+export const getStaticProps = withTranslations(["common", "manager"]);

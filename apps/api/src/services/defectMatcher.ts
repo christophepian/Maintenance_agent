@@ -8,6 +8,7 @@
  */
 
 import prisma from "./prismaClient";
+import { findRentReductionRules } from "../repositories/legalSourceRepository";
 import type { DefectSignals, DefectSeverity } from "./defectClassifier";
 import {
   getTranslation,
@@ -162,30 +163,7 @@ interface ParsedRule {
 async function loadRentReductionRules(canton?: string | null): Promise<ParsedRule[]> {
   const now = new Date();
 
-  const rules = await prisma.legalRule.findMany({
-    where: {
-      isActive: true,
-      authority: "INDUSTRY_STANDARD",
-      jurisdiction: "CH",
-      OR: [
-        { canton: null },
-        ...(canton ? [{ canton }] : []),
-      ],
-    },
-    include: {
-      versions: {
-        where: {
-          effectiveFrom: { lte: now },
-          OR: [
-            { effectiveTo: null },
-            { effectiveTo: { gte: now } },
-          ],
-        },
-        orderBy: { effectiveFrom: "desc" },
-        take: 1,
-      },
-    },
-  });
+  const rules = await findRentReductionRules(prisma, now, canton);
 
   const parsed: ParsedRule[] = [];
 

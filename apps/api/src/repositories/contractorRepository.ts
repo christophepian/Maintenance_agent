@@ -10,7 +10,7 @@
  * CQ-13 fix: extracted from routes/contractor.ts
  */
 
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 
 // ─── Canonical Includes ────────────────────────────────────────
 
@@ -105,4 +105,63 @@ export async function findActiveByOrg(
  */
 export async function findContractorOrgId(prisma: PrismaClient, id: string) {
   return prisma.contractor.findUnique({ where: { id }, select: { orgId: true } });
+}
+
+// ─── CRUD for contractors service ─────────────────────────────
+
+/**
+ * Find a contractor by id without org-scope check.
+ * Used by the contractors service which manages its own scoping.
+ */
+export async function findContractorByIdRaw(
+  prisma: PrismaClient,
+  id: string,
+) {
+  return prisma.contractor.findUnique({ where: { id } });
+}
+
+/**
+ * List contractors with a count, scoped to an org.
+ */
+export async function listContractorsWithCount(
+  prisma: PrismaClient,
+  where: Prisma.ContractorWhereInput,
+) {
+  const [rows, total] = await Promise.all([
+    prisma.contractor.findMany({ where, orderBy: { createdAt: "desc" } }),
+    prisma.contractor.count({ where }),
+  ]);
+  return { rows, total };
+}
+
+/**
+ * Create a new contractor.
+ */
+export async function createContractorRecord(
+  prisma: PrismaClient,
+  data: Prisma.ContractorUncheckedCreateInput,
+) {
+  return prisma.contractor.create({ data });
+}
+
+/**
+ * Update a contractor by id.
+ */
+export async function updateContractorRecord(
+  prisma: PrismaClient,
+  id: string,
+  data: Prisma.ContractorUncheckedUpdateInput,
+) {
+  return prisma.contractor.update({ where: { id }, data });
+}
+
+/**
+ * Find contractor by id + org (for validation checks).
+ */
+export async function findContractorByOrgAndId(
+  prisma: PrismaClient,
+  id: string,
+  orgId: string,
+) {
+  return prisma.contractor.findFirst({ where: { id, orgId } });
 }

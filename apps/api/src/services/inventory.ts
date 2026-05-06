@@ -1,6 +1,7 @@
 import { UnitType, LocationSegment, InsulationQuality, EnergyLabel, HeatingType } from "@prisma/client";
 import prisma from './prismaClient';
 import * as inventoryRepo from "../repositories/inventoryRepository";
+import { countAssetsByModel } from "../repositories/assetRepository";
 
 const assetModelName = (model: { manufacturer: string; model: string }) => {
   if (!model.manufacturer || model.manufacturer.toLowerCase() === "unknown") return model.model;
@@ -175,7 +176,7 @@ export async function deactivateAssetModel(orgId: string, modelId: string) {
   if (!existing) return { success: false, reason: "NOT_FOUND" };
   if (!existing.orgId || existing.orgId !== orgId) return { success: false, reason: "FORBIDDEN" };
 
-  const assetCount = await prisma.asset.count({ where: { assetModelId: modelId } });
+  const assetCount = await countAssetsByModel(prisma, modelId);
   if (assetCount > 0) {
     return { success: false, reason: "HAS_ASSETS" };
   }

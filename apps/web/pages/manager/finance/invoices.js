@@ -16,6 +16,8 @@ import Badge from "../../../components/ui/Badge";
 import { invoiceVariant, ingestionVariant } from "../../../lib/statusVariants";
 
 import { cn } from "../../../lib/utils";
+import { withTranslations } from "../../../lib/i18n";
+import { useTranslation } from "next-i18next";
 /* ─── Helpers ─────────────────────────────────────────────── */
 
 const INVOICE_SORT_FIELDS = ["status", "invoiceNumber", "amount", "createdAt", "issuer", "recipient", "building", "recurring", "category"];
@@ -36,21 +38,21 @@ function invoiceFieldExtractor(inv, field) {
 }
 
 const INCOMING_STATUS_TABS = [
-  { key: "ALL", label: "All" },
-  { key: "DRAFT", label: "Draft" },
-  { key: "ISSUED", label: "Issued" },
-  { key: "APPROVED", label: "Approved" },
-  { key: "PAID", label: "Paid" },
-  { key: "DISPUTED", label: "Disputed" },
+  { key: "ALL" },
+  { key: "DRAFT" },
+  { key: "ISSUED" },
+  { key: "APPROVED" },
+  { key: "PAID" },
+  { key: "DISPUTED" },
 ];
 
 const OUTGOING_STATUS_TABS = [
-  { key: "ALL", label: "All" },
-  { key: "DRAFT", label: "Draft" },
-  { key: "ISSUED", label: "Sent" },
-  { key: "APPROVED", label: "Pending" },
-  { key: "PAID", label: "Paid" },
-  { key: "DISPUTED", label: "Disputed" },
+  { key: "ALL" },
+  { key: "DRAFT" },
+  { key: "ISSUED" },
+  { key: "APPROVED" },
+  { key: "PAID" },
+  { key: "DISPUTED" },
 ];
 
 function formatDate(iso) {
@@ -157,6 +159,7 @@ function ActionDropdown({ actions }) {
 /* ─── Invoice PDF Overlay ─────────────────────────────────── */
 
 function InvoiceOverlay({ invoiceId, onClose }) {
+  const { t } = useTranslation("manager");
   const [pdfUrl, setPdfUrl] = useState(null);
   const [detail, setDetail] = useState(null);
 
@@ -229,12 +232,12 @@ function InvoiceOverlay({ invoiceId, onClose }) {
           {pdfUrl ? (
             <iframe
               src={pdfUrl}
-              title="Invoice PDF"
+              title={t("manager:financeInvoices.title.invoicePdf")}
               className="w-full h-full border-0"
             />
           ) : (
             <div className="flex items-center justify-center h-full">
-              <p className="text-slate-400">Loading PDF…</p>
+              <p className="text-slate-400">{t("manager:financeInvoices.text.loadingPdf")}</p>
             </div>
           )}
         </div>
@@ -246,6 +249,7 @@ function InvoiceOverlay({ invoiceId, onClose }) {
 /* ─── Dispute Justification Modal ─────────────────────────── */
 
 function DisputeModal({ invoiceId, onConfirm, onCancel }) {
+  const { t } = useTranslation("manager");
   const [reason, setReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -273,14 +277,14 @@ function DisputeModal({ invoiceId, onConfirm, onCancel }) {
         onClick={(e) => e.stopPropagation()}
         className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 p-6"
       >
-        <h3 className="text-lg font-semibold text-slate-900 mt-0 mb-1">Dispute Invoice</h3>
+        <h3 className="text-lg font-semibold text-slate-900 mt-0 mb-1">{t("manager:financeInvoices.heading.disputeInvoice")}</h3>
         <p className="text-sm text-slate-500 mt-0 mb-4">
           Provide a justification for disputing this invoice. The contractor will be notified.
         </p>
         <textarea
           className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
           rows={4}
-          placeholder="Reason for dispute…"
+          placeholder={t("manager:financeInvoices.placeholder.reasonForDispute")}
           value={reason}
           onChange={(e) => setReason(e.target.value)}
           autoFocus
@@ -310,6 +314,7 @@ function DisputeModal({ invoiceId, onConfirm, onCancel }) {
 /* ─── Upload Invoice Modal ────────────────────────────────── */
 
 function UploadInvoiceModal({ onClose, onSuccess }) {
+  const { t } = useTranslation("manager");
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
@@ -355,7 +360,7 @@ function UploadInvoiceModal({ onClose, onSuccess }) {
         onClick={(e) => e.stopPropagation()}
         className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 p-6"
       >
-        <h3 className="text-lg font-semibold text-slate-900 mt-0 mb-1">Upload Invoice</h3>
+        <h3 className="text-lg font-semibold text-slate-900 mt-0 mb-1">{t("manager:financeInvoices.heading.uploadInvoice")}</h3>
         <p className="text-sm text-slate-500 mt-0 mb-4">
           Upload a PDF or image of an invoice. It will be scanned and pre-filled automatically.
         </p>
@@ -369,7 +374,7 @@ function UploadInvoiceModal({ onClose, onSuccess }) {
           <p className="text-sm text-red-600 mt-2">{uploadError}</p>
         )}
         <div className="flex justify-end gap-2 mt-4">
-          <button type="button" onClick={onClose} className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition">Cancel</button>
+          <button type="button" onClick={onClose} className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition">{t("manager:financeInvoices.text.cancel")}</button>
           <button type="submit" disabled={!file || uploading} className="button-primary text-sm disabled:opacity-50">
             {uploading ? "Scanning…" : "Upload & Scan"}
           </button>
@@ -382,6 +387,7 @@ function UploadInvoiceModal({ onClose, onSuccess }) {
 /* ─── Capture Session (QR) Modal ──────────────────────────── */
 
 function CaptureSessionModal({ onClose, onComplete }) {
+  const { t } = useTranslation("manager");
   const [session, setSession] = useState(null);
   const [creating, setCreating] = useState(true);
   const [createError, setCreateError] = useState("");
@@ -448,20 +454,20 @@ function CaptureSessionModal({ onClose, onComplete }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={onClose}>
       <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-xl shadow-2xl w-full max-w-sm mx-4 p-6">
-        <h3 className="text-lg font-semibold text-slate-900 mt-0 mb-1">📷 Capture with Phone</h3>
+        <h3 className="text-lg font-semibold text-slate-900 mt-0 mb-1">{t("manager:financeInvoices.text.captureWithPhone")}</h3>
         {creating ? (
-          <p className="text-sm text-slate-500">Creating capture session…</p>
+          <p className="text-sm text-slate-500">{t("manager:financeInvoices.text.creatingCaptureSession")}</p>
         ) : createError ? (
           <div>
             <p className="text-sm text-red-600 mb-3">{createError}</p>
-            <button onClick={onClose} className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition">Close</button>
+            <button onClick={onClose} className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition">{t("manager:financeInvoices.text.close")}</button>
           </div>
         ) : completed ? (
           <div className="text-center py-4">
             <p className="text-2xl mb-2">✅</p>
-            <p className="text-sm font-medium text-green-700 mb-1">Photos received!</p>
-            <p className="text-xs text-slate-500 mb-4">The invoice is being processed.</p>
-            <button onClick={onClose} className="button-primary text-sm">Done</button>
+            <p className="text-sm font-medium text-green-700 mb-1">{t("manager:financeInvoices.text.photosReceived")}</p>
+            <p className="text-xs text-slate-500 mb-4">{t("manager:financeInvoices.text.theInvoiceIsBeingProcessed")}</p>
+            <button onClick={onClose} className="button-primary text-sm">{t("manager:financeInvoices.text.done")}</button>
           </div>
         ) : (
           <div>
@@ -472,14 +478,14 @@ function CaptureSessionModal({ onClose, onComplete }) {
               <QRCodeSVG value={mobileUrl} size={300} level="L" />
             </div>
             <div className="bg-slate-50 rounded-lg p-2 mb-3">
-              <p className="text-[10px] text-slate-400 uppercase tracking-wide mb-0.5">Mobile link</p>
+              <p className="text-[10px] text-slate-400 uppercase tracking-wide mb-0.5">{t("manager:financeInvoices.text.mobileLink")}</p>
               <p className="text-xs text-slate-600 break-all font-mono select-all m-0">{mobileUrl}</p>
             </div>
             <p className="text-[10px] text-slate-400 text-center mb-3">
               Session expires in 15 minutes. Waiting for photos…
             </p>
             <div className="flex justify-end">
-              <button onClick={onClose} className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition">Cancel</button>
+              <button onClick={onClose} className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition">{t("manager:financeInvoices.text.cancel")}</button>
             </div>
           </div>
         )}
@@ -491,6 +497,7 @@ function CaptureSessionModal({ onClose, onComplete }) {
 /* ─── Embeddable invoices content ─────────────────────────── */
 
 export function InvoicesContent() {
+  const { t } = useTranslation("manager");
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -601,10 +608,10 @@ export function InvoicesContent() {
   const [tableExpanded, setTableExpanded] = useState(false);
 
   const INV_SORT_CYCLE = [
-    { field: "createdAt", label: "Date" },
+    { field: "createdAt", label: t("manager:financeInvoices.col.date") },
     { field: "amount",    label: "Amount" },
     { field: "status",    label: "Status" },
-    { field: "invoiceNumber", label: "Invoice #" },
+    { field: "invoiceNumber", label: t("manager:financeInvoices.col.invoice") },
   ];
   const [sortCycleIdx, setSortCycleIdx] = useState(0);
   const { sortField, sortDir, handleSort } = useLocalSort(
@@ -718,7 +725,7 @@ export function InvoicesContent() {
   const invoiceColumns = useMemo(() => [
     {
       id: "status",
-      label: "Status",
+      label: t("manager:financeInvoices.col.status"),
       sortable: true,
       defaultVisible: true,
       render: (inv) => (
@@ -731,7 +738,7 @@ export function InvoicesContent() {
     },
     {
       id: "invoiceNumber",
-      label: "Invoice #",
+      label: t("manager:financeInvoices.col.invoice"),
       sortable: true,
       defaultVisible: true,
       className: "cell-bold",
@@ -739,7 +746,7 @@ export function InvoicesContent() {
     },
     {
       id: "issuerOrRecipient",
-      label: isOutgoing ? "Tenant" : "Issuer",
+      label: isOutgoing ? t("manager:financeInvoices.col.tenant") : t("manager:financeInvoices.col.issuer"),
       sortable: true,
       sortField: isOutgoing ? "recipient" : "issuer",
       defaultVisible: true,
@@ -747,7 +754,7 @@ export function InvoicesContent() {
     },
     {
       id: "building",
-      label: "Building \u00b7 Unit",
+      label: t("manager:financeInvoices.col.buildingu00b7Unit"),
       sortable: true,
       defaultVisible: true,
       render: (inv) =>
@@ -757,14 +764,14 @@ export function InvoicesContent() {
     },
     {
       id: "amount",
-      label: "Amount",
+      label: t("manager:financeInvoices.col.amount"),
       sortable: true,
       defaultVisible: true,
       render: (inv) => getAmount(inv),
     },
     {
       id: "createdAt",
-      label: "Date",
+      label: t("manager:financeInvoices.col.date"),
       sortable: true,
       defaultVisible: true,
       render: (inv) => {
@@ -782,19 +789,19 @@ export function InvoicesContent() {
     },
     {
       id: "recurring",
-      label: "Recurring",
+      label: t("manager:financeInvoices.col.recurring"),
       sortable: true,
       defaultVisible: true,
       render: (inv) => {
         const isRecurring = !!(inv.billingScheduleId || inv.contractorBillingScheduleId);
         return isRecurring
-          ? <span className="inline-flex items-center rounded-full bg-indigo-50 text-indigo-700 px-2 py-0.5 text-[10px] font-semibold">Recurring</span>
+          ? <span className="inline-flex items-center rounded-full bg-indigo-50 text-indigo-700 px-2 py-0.5 text-[10px] font-semibold">{t("manager:financeInvoices.text.recurring")}</span>
           : <span className="text-slate-300 text-xs">\u2014</span>;
       },
     },
     {
       id: "category",
-      label: "Category",
+      label: t("manager:financeInvoices.col.category"),
       sortable: true,
       defaultVisible: true,
       render: (inv) =>
@@ -804,7 +811,7 @@ export function InvoicesContent() {
     },
     {
       id: "actions",
-      label: "Actions",
+      label: t("manager:financeInvoices.col.actions"),
       sortable: false,
       alwaysVisible: true,
       className: "text-right",
@@ -817,8 +824,8 @@ export function InvoicesContent() {
     <>
       {error && (
         <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 mb-4 flex items-center justify-between">
-          <span className="text-sm text-red-700"><strong>Error:</strong> {error}</span>
-          <button onClick={() => setError("")} className="text-xs text-red-500 hover:text-red-700 ml-4">Dismiss</button>
+          <span className="text-sm text-red-700"><strong>{t("manager:financeInvoices.text.error")}</strong> {error}</span>
+          <button onClick={() => setError("")} className="text-xs text-red-500 hover:text-red-700 ml-4">{t("manager:financeInvoices.text.dismiss")}</button>
         </div>
       )}
 
@@ -826,7 +833,7 @@ export function InvoicesContent() {
       <div className="flex items-center gap-2 mb-3">
         <input
           type="search"
-          placeholder="Search invoices…"
+          placeholder={t("manager:financeInvoices.placeholder.searchInvoices")}
           value={invSearch}
           onChange={(e) => { setInvSearch(e.target.value); setTableExpanded(false); }}
           className="filter-input flex-1 min-w-0 mb-0"
@@ -837,7 +844,7 @@ export function InvoicesContent() {
         <button
           onClick={cycleSort}
           className="flex shrink-0 items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors"
-          title="Cycle sort field"
+          title={t("manager:financeInvoices.title.cycleSortField")}
         >
           {INV_SORT_CYCLE[sortCycleIdx].label}
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"
@@ -877,9 +884,7 @@ export function InvoicesContent() {
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75} aria-hidden="true">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
-                      </svg>
-                      Upload Invoice
-                    </button>
+                      </svg>{t("manager:financeInvoices.heading.uploadInvoice")}</button>
                     <button
                       onClick={() => { setActionsOpen(false); setShowCaptureModal(true); }}
                       className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 text-left"
@@ -900,7 +905,7 @@ export function InvoicesContent() {
 
       {filterOpen && (
         <FilterPanelBody>
-          <FilterSection title="Direction" first>
+          <FilterSection title={t("manager:financeInvoices.title.direction")} first>
             <div className="flex flex-wrap gap-2">
               {[
                 { key: "incoming", label: "Incoming" },
@@ -922,7 +927,7 @@ export function InvoicesContent() {
               ))}
             </div>
           </FilterSection>
-          <FilterSection title="Status">
+          <FilterSection title={t("manager:financeInvoices.title.status")}>
             <div className="flex flex-wrap gap-2">
               {(isOutgoing ? OUTGOING_STATUS_TABS : INCOMING_STATUS_TABS).map(({ key, label }) => (
                 <button
@@ -941,7 +946,7 @@ export function InvoicesContent() {
             </div>
           </FilterSection>
           {availableCategories.length > 0 && (
-            <FilterSection title="Category">
+            <FilterSection title={t("manager:financeInvoices.title.category")}>
               <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => { setCategoryFilter(""); setTableExpanded(false); }}
@@ -951,7 +956,7 @@ export function InvoicesContent() {
                       ? "bg-brand text-white border-brand"
                       : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
                   )}
-                >All</button>
+                >{t("manager:financeInvoices.text.all")}</button>
                 {availableCategories.map((cat) => (
                   <button
                     key={cat}
@@ -977,9 +982,9 @@ export function InvoicesContent() {
       )}
 
       {loading ? (
-        <Panel><p className="loading-text">Loading invoices…</p></Panel>
+        <Panel><p className="loading-text">{t("manager:financeInvoices.text.loadingInvoices")}</p></Panel>
       ) : filteredInvoices.length === 0 ? (
-        <div className="empty-state"><p className="empty-state-text">No invoices match this filter.</p></div>
+        <div className="empty-state"><p className="empty-state-text">{t("manager:financeInvoices.text.noInvoicesMatchThisFilter")}</p></div>
       ) : (
         <>
           {/* Mobile: clean card list (no Panel wrapper) */}
@@ -1094,10 +1099,11 @@ export function InvoicesContent() {
 /* ─── Main Page ───────────────────────────────────────────── */
 
 export default function ManagerInvoicesPage() {
+  const { t } = useTranslation("manager");
   return (
     <AppShell role="MANAGER">
       <PageShell>
-        <PageHeader title="Invoices" />
+        <PageHeader title={t("manager:financeInvoices.title.invoices")} />
         <PageContent>
           <InvoicesContent />
         </PageContent>
@@ -1105,3 +1111,5 @@ export default function ManagerInvoicesPage() {
     </AppShell>
   );
 }
+
+export const getStaticProps = withTranslations(["common","manager"]);

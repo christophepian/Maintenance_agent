@@ -14,8 +14,13 @@ import ErrorBanner from "../../../../components/ui/ErrorBanner";
 import { cn } from "../../../../lib/utils";
 import { jobVariant, invoiceVariant } from "../../../../lib/statusVariants";
 import ScrollableTabs from "../../../../components/mobile/ScrollableTabs";
+import SortableHeader from "../../../../components/SortableHeader";
+import { useLocalSort, clientSort } from "../../../../lib/tableUtils";
+import { withServerTranslations } from "../../../../lib/i18n";
+import { useTranslation } from "next-i18next";
 
 export default function ContractorDetailPage() {
+  const { t } = useTranslation("manager");
   const router = useRouter();
   const { id } = router.query;
   const [contractor, setContractor] = useState(null);
@@ -38,8 +43,17 @@ export default function ContractorDetailPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+
+  const { sortField: jSortField, sortDir: jSortDir, handleSort: handleJobSort } = useLocalSort("createdAt", "desc");
+  const { sortField: invSortField, sortDir: invSortDir, handleSort: handleInvSort } = useLocalSort("submittedAt", "desc");
   const [isEditing, setIsEditing] = useState(false);
-  const [activeTab, setActiveTab] = useState("Personal information");
+  const [activeTab, setActiveTab] = useState("personal");
+  const TABS = [
+    { id: "personal",  label: t("manager:peopleVendorsId.tab.personalInformation") },
+    { id: "service",   label: t("manager:peopleVendorsId.tab.serviceDetails") },
+    { id: "contracts", label: t("manager:peopleVendorsId.tab.contracts") },
+    { id: "invoices",  label: t("manager:peopleVendorsId.tab.invoices") },
+  ];
   const [jobs, setJobs] = useState([]);
   const [jobsLoading, setJobsLoading] = useState(false);
   const [contractorInvoices, setContractorInvoices] = useState([]);
@@ -199,45 +213,12 @@ export default function ContractorDetailPage() {
             className="text-sm font-medium text-slate-600 hover:text-slate-900"
             onClick={() => router.back()}
           >
-            ← Back
+            {t("manager:peopleVendorsId.text.back")}
           </button>
         </div>
         <PageHeader
           title={contractor?.name || "Contractor"}
-          subtitle="Contractor profile and service details."
-          actions={(
-            <div className="flex items-center gap-2">
-              {isEditing ? (
-                <>
-                  <button
-                    type="button"
-                    className="button-secondary"
-                    onClick={handleCancel}
-                    disabled={saving}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    className="button-primary"
-                    onClick={handleSave}
-                    disabled={saving}
-                  >
-                    {saving ? "Saving…" : "Save"}
-                  </button>
-                </>
-              ) : (
-                <button
-                  type="button"
-                  className="button-primary"
-                  onClick={() => setIsEditing(true)}
-                  disabled={loading || !contractor}
-                >
-                  Edit
-                </button>
-              )}
-            </div>
-          )}
+          subtitle={t("manager:peopleVendorsId.prop.contractorProfileAndServiceDetails")}
         />
         <PageContent>
           {message ? (
@@ -246,97 +227,109 @@ export default function ContractorDetailPage() {
           <ErrorBanner error={error} onDismiss={() => setError("")} />
 
           {loading ? (
-            <p className="loading-text">Loading contractor…</p>
+            <p className="loading-text">{t("manager:peopleVendorsId.text.loadingContractor")}</p>
           ) : contractor ? (
             <div className="grid gap-4">
-              <ScrollableTabs activeIndex={["Personal information", "Service details", "Contracts", "Invoices"].indexOf(activeTab)}>
-                {["Personal information", "Service details", "Contracts", "Invoices"].map((tab) => (
+              <ScrollableTabs activeIndex={TABS.findIndex((tab) => tab.id === activeTab)}>
+                {TABS.map((tab) => (
                   <button
-                    key={tab}
+                    key={tab.id}
                     type="button"
-                    className={activeTab === tab ? "tab-btn-active" : "tab-btn"}
-                    onClick={() => setActiveTab(tab)}
+                    className={activeTab === tab.id ? "tab-btn-active" : "tab-btn"}
+                    onClick={() => setActiveTab(tab.id)}
                   >
-                    {tab}
+                    {tab.label}
                   </button>
                 ))}
               </ScrollableTabs>
 
-              {activeTab === "Personal information" && (
-                <Panel title="Personal information">
+              {activeTab === "personal" && (
+                <Panel
+                  title={t("manager:peopleVendorsId.title.personalInformation")}
+                  actions={
+                    isEditing ? (
+                      <div className="flex items-center gap-2">
+                        <button type="button" className="button-secondary text-sm" onClick={handleCancel} disabled={saving}>{t("manager:peopleVendorsId.text.cancel")}</button>
+                        <button type="button" className="button-primary text-sm" onClick={handleSave} disabled={saving}>{saving ? t("manager:peopleVendorsId.text.saving") : t("manager:peopleVendorsId.text.save")}</button>
+                      </div>
+                    ) : (
+                      <button type="button" className="button-primary text-sm" onClick={() => setIsEditing(true)} disabled={loading || !contractor}>{t("manager:peopleVendorsId.text.edit")}</button>
+                    )
+                  }
+                >
                   <div className="grid gap-4 sm:grid-cols-2">
                     <label className="grid gap-2">
-                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Name</span>
+                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleVendorsId.text.name")}</span>
                       {isEditing ? (
                         <input
                           className="input text-sm text-slate-700"
                           type="text"
                           value={formData.name}
                           onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
-                          placeholder="Contractor name"
+                          placeholder={t("manager:peopleVendorsId.placeholder.contractorName")}
                         />
                       ) : (
                         <div className="text-sm text-slate-700">{formData.name || "—"}</div>
                       )}
                     </label>
                     <label className="grid gap-2">
-                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Phone</span>
+                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleVendorsId.text.phone")}</span>
                       {isEditing ? (
                         <input
                           className="input text-sm text-slate-700"
                           type="tel"
                           value={formData.phone}
                           onChange={(e) => setFormData((prev) => ({ ...prev, phone: e.target.value }))}
-                          placeholder="+41 XX XXX XXXX"
+                          placeholder={t("manager:peopleVendorsId.placeholder.41XxXxxXxxx")}
                         />
                       ) : (
                         <div className="text-sm text-slate-700">{formData.phone || "—"}</div>
                       )}
                     </label>
                     <label className="grid gap-2 sm:col-span-2">
-                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Email</span>
+                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleVendorsId.text.email")}</span>
                       {isEditing ? (
                         <input
                           className="input text-sm text-slate-700"
                           type="email"
                           value={formData.email}
                           onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
-                          placeholder="contractor@example.com"
+                          placeholder={t("manager:peopleVendorsId.placeholder.contractorExampleCom")}
                         />
                       ) : (
                         <div className="text-sm text-slate-700">{formData.email || "—"}</div>
                       )}
                     </label>
                     <label className="grid gap-2 sm:col-span-2">
-                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Address line 1</span>
+                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleVendorsId.text.addressLine1")}</span>
                       {isEditing ? (
                         <input
                           className="input text-sm text-slate-700"
                           type="text"
                           value={formData.addressLine1}
                           onChange={(e) => setFormData((prev) => ({ ...prev, addressLine1: e.target.value }))}
-                          placeholder="Street and number"
+                          placeholder={t("manager:peopleVendorsId.placeholder.streetAndNumber")}
                         />
                       ) : (
                         <div className="text-sm text-slate-700">{formData.addressLine1 || "—"}</div>
                       )}
                     </label>
                     <label className="grid gap-2 sm:col-span-2">
-                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Address line 2</span>
+                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleVendorsId.text.addressLine2")}</span>
                       {isEditing ? (
                         <input
                           className="input text-sm text-slate-700"
                           type="text"
                           value={formData.addressLine2}
                           onChange={(e) => setFormData((prev) => ({ ...prev, addressLine2: e.target.value }))}
-                          placeholder="Suite, floor, etc."
+                          placeholder={t("manager:peopleVendorsId.placeholder.suiteFloorEtc")}
                         />
                       ) : (
                         <div className="text-sm text-slate-700">{formData.addressLine2 || "—"}</div>
                       )}
                     </label>
                     <label className="grid gap-2">
-                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Postal code</span>
+                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleVendorsId.text.postalCode")}</span>
                       {isEditing ? (
                         <input
                           className="input text-sm text-slate-700"
@@ -349,7 +342,7 @@ export default function ContractorDetailPage() {
                       )}
                     </label>
                     <label className="grid gap-2">
-                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">City</span>
+                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleVendorsId.text.city")}</span>
                       {isEditing ? (
                         <input
                           className="input text-sm text-slate-700"
@@ -362,7 +355,7 @@ export default function ContractorDetailPage() {
                       )}
                     </label>
                     <label className="grid gap-2">
-                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Country</span>
+                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleVendorsId.text.country")}</span>
                       {isEditing ? (
                         <input
                           className="input text-sm text-slate-700"
@@ -375,35 +368,35 @@ export default function ContractorDetailPage() {
                       )}
                     </label>
                     <label className="grid gap-2 sm:col-span-2">
-                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">IBAN</span>
+                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleVendorsId.text.iban")}</span>
                       {isEditing ? (
                         <input
                           className="input text-sm text-slate-700"
                           type="text"
                           value={formData.iban}
                           onChange={(e) => setFormData((prev) => ({ ...prev, iban: e.target.value }))}
-                          placeholder="CH93 0076 2011 6238 5295 7"
+                          placeholder={t("manager:peopleVendorsId.placeholder.cH9300762011623852957")}
                         />
                       ) : (
                         <div className="text-sm text-slate-700">{formData.iban || "—"}</div>
                       )}
                     </label>
                     <label className="grid gap-2">
-                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">VAT number</span>
+                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleVendorsId.text.vATNumber")}</span>
                       {isEditing ? (
                         <input
                           className="input text-sm text-slate-700"
                           type="text"
                           value={formData.vatNumber}
                           onChange={(e) => setFormData((prev) => ({ ...prev, vatNumber: e.target.value }))}
-                          placeholder="CHE-123.456.789"
+                          placeholder={t("manager:peopleVendorsId.placeholder.cHE123456789")}
                         />
                       ) : (
                         <div className="text-sm text-slate-700">{formData.vatNumber || "—"}</div>
                       )}
                     </label>
                     <label className="grid gap-2">
-                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Default VAT rate (%)</span>
+                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleVendorsId.text.defaultVatRate")}</span>
                       {isEditing ? (
                         <input
                           className="input text-sm text-slate-700"
@@ -420,21 +413,21 @@ export default function ContractorDetailPage() {
 
                   <div className="mt-6 grid gap-4 sm:grid-cols-2">
                     <div>
-                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Contractor ID</div>
+                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleVendorsId.text.contractorId")}</div>
                       <div className="text-sm text-slate-700 mt-1">{contractor?.id}</div>
                     </div>
                     <div>
-                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Org ID</div>
+                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleVendorsId.text.orgId")}</div>
                       <div className="text-sm text-slate-700 mt-1">{contractor?.orgId || "—"}</div>
                     </div>
                     <div>
-                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Created</div>
+                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleVendorsId.text.created")}</div>
                       <div className="text-sm text-slate-700 mt-1">
                         {contractor?.createdAt ? formatDateTime(contractor.createdAt) : "—"}
                       </div>
                     </div>
                     <div>
-                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Updated</div>
+                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleVendorsId.text.updated")}</div>
                       <div className="text-sm text-slate-700 mt-1">
                         {contractor?.updatedAt ? formatDateTime(contractor.updatedAt) : "—"}
                       </div>
@@ -443,11 +436,23 @@ export default function ContractorDetailPage() {
                 </Panel>
               )}
 
-              {activeTab === "Service details" && (
-                <Panel title="Service details">
+              {activeTab === "service" && (
+                <Panel
+                  title={t("manager:peopleVendorsId.title.serviceDetails")}
+                  actions={
+                    isEditing ? (
+                      <div className="flex items-center gap-2">
+                        <button type="button" className="button-secondary text-sm" onClick={handleCancel} disabled={saving}>{t("manager:peopleVendorsId.text.cancel")}</button>
+                        <button type="button" className="button-primary text-sm" onClick={handleSave} disabled={saving}>{saving ? t("manager:peopleVendorsId.text.saving") : t("manager:peopleVendorsId.text.save")}</button>
+                      </div>
+                    ) : (
+                      <button type="button" className="button-primary text-sm" onClick={() => setIsEditing(true)} disabled={loading || !contractor}>{t("manager:peopleVendorsId.text.edit")}</button>
+                    )
+                  }
+                >
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div>
-                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Hourly rate</div>
+                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleVendorsId.text.hourlyRate")}</div>
                       {isEditing ? (
                         <input
                           className="input text-sm text-slate-700 mt-2"
@@ -467,11 +472,11 @@ export default function ContractorDetailPage() {
                       )}
                     </div>
                     <div>
-                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Status</div>
+                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleVendorsId.text.status")}</div>
                       <div className="text-sm text-slate-700 mt-1">{statusLabel}</div>
                     </div>
                     <div className="sm:col-span-2">
-                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Service categories</div>
+                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleVendorsId.text.serviceCategories")}</div>
                       {isEditing ? (
                         <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
                           {ALLOWED_CATEGORIES.map((cat) => (
@@ -497,26 +502,33 @@ export default function ContractorDetailPage() {
                 </Panel>
               )}
 
-              {activeTab === "Contracts" && (
-                <Panel title="Contracts">
+              {activeTab === "contracts" && (
+                <Panel title={t("manager:peopleVendorsId.title.contracts")}>
                   {jobsLoading ? (
-                    <p className="text-sm text-slate-600">Loading jobs…</p>
+                    <p className="text-sm text-slate-600">{t("manager:peopleVendorsId.text.loadingJobs")}</p>
                   ) : jobs.length === 0 ? (
-                    <p className="text-sm text-slate-500">No jobs found for this contractor.</p>
+                    <p className="text-sm text-slate-500">{t("manager:peopleVendorsId.text.noJobsFoundForThisContractor")}</p>
                   ) : (
                     <div className="overflow-x-auto rounded-lg border border-table-border">
-                      <table className="inline-table">
+                      <table className="data-table">
                         <thead>
                           <tr>
-                            <th>Job #</th>
-                            <th>Request title</th>
-                            <th>Building</th>
-                            <th>Status</th>
-                            <th>Created date</th>
+                            <SortableHeader label={t("manager:peopleVendorsId.prop.job")} field="jobId" sortField={jSortField} sortDir={jSortDir} onSort={handleJobSort} />
+                            <SortableHeader label={t("manager:peopleVendorsId.prop.requestTitle")} field="request" sortField={jSortField} sortDir={jSortDir} onSort={handleJobSort} />
+                            <SortableHeader label={t("manager:peopleVendorsId.prop.building")} field="building" sortField={jSortField} sortDir={jSortDir} onSort={handleJobSort} />
+                            <SortableHeader label={t("manager:peopleVendorsId.prop.status")} field="status" sortField={jSortField} sortDir={jSortDir} onSort={handleJobSort} />
+                            <SortableHeader label={t("manager:peopleVendorsId.prop.createdDate")} field="createdAt" sortField={jSortField} sortDir={jSortDir} onSort={handleJobSort} />
                           </tr>
                         </thead>
                         <tbody>
-                          {jobs.map((job) => (
+                          {[...jobs].sort((a, b) => {
+                            let va = "", vb = "";
+                            if (jSortField === "status") { va = a.status || ""; vb = b.status || ""; }
+                            else if (jSortField === "building") { va = a.request?.unit?.building?.name || ""; vb = b.request?.unit?.building?.name || ""; }
+                            else if (jSortField === "request") { va = a.request?.description || ""; vb = b.request?.description || ""; }
+                            else { va = a.createdAt || ""; vb = b.createdAt || ""; }
+                            return jSortDir === "asc" ? va.localeCompare(vb) : vb.localeCompare(va);
+                          }).map((job) => (
                             <tr key={job.id}>
                               <td>
                                 <Link href="/manager/requests" className="cell-link">
@@ -532,7 +544,7 @@ export default function ContractorDetailPage() {
                               </td>
                               <td>{formatDate(job.createdAt)}</td>
                             </tr>
-                          ))}
+                            ))}
                         </tbody>
                       </table>
                     </div>
@@ -540,26 +552,34 @@ export default function ContractorDetailPage() {
                 </Panel>
               )}
 
-              {activeTab === "Invoices" && (
-                <Panel title="Invoices">
+              {activeTab === "invoices" && (
+                <Panel title={t("manager:peopleVendorsId.title.invoices")}>
                   {invoicesLoading ? (
-                    <p className="text-sm text-slate-600">Loading invoices…</p>
+                    <p className="text-sm text-slate-600">{t("manager:peopleVendorsId.text.loadingInvoices")}</p>
                   ) : contractorInvoices.length === 0 ? (
-                    <p className="text-sm text-slate-500">No invoices found for this contractor.</p>
+                    <p className="text-sm text-slate-500">{t("manager:peopleVendorsId.text.noInvoicesFoundForThisContractor")}</p>
                   ) : (
                     <div className="overflow-x-auto rounded-lg border border-table-border">
-                      <table className="inline-table">
+                      <table className="data-table">
                         <thead>
                           <tr>
-                            <th>Invoice #</th>
-                            <th>Job #</th>
-                            <th className="text-right">Amount</th>
-                            <th>Status</th>
-                            <th>Submitted date</th>
+                            <SortableHeader label={t("manager:peopleVendorsId.prop.invoice")} field="invoiceNumber" sortField={invSortField} sortDir={invSortDir} onSort={handleInvSort} />
+                            <SortableHeader label={t("manager:peopleVendorsId.prop.job")} field="jobId" sortField={invSortField} sortDir={invSortDir} onSort={handleInvSort} />
+                            <SortableHeader label={t("manager:peopleVendorsId.prop.amount")} field="amount" sortField={invSortField} sortDir={invSortDir} onSort={handleInvSort} className="text-right" />
+                            <SortableHeader label={t("manager:peopleVendorsId.prop.status")} field="status" sortField={invSortField} sortDir={invSortDir} onSort={handleInvSort} />
+                            <SortableHeader label={t("manager:peopleVendorsId.prop.submittedDate")} field="submittedAt" sortField={invSortField} sortDir={invSortDir} onSort={handleInvSort} />
                           </tr>
                         </thead>
                         <tbody>
-                          {contractorInvoices.map((inv) => (
+                          {[...contractorInvoices].sort((a, b) => {
+                            let va = "", vb = "";
+                            if (invSortField === "status") { va = a.status || ""; vb = b.status || ""; }
+                            else if (invSortField === "amount") { return invSortDir === "asc" ? (a.totalAmount ?? 0) - (b.totalAmount ?? 0) : (b.totalAmount ?? 0) - (a.totalAmount ?? 0); }
+                            else if (invSortField === "jobId") { va = a.jobId || ""; vb = b.jobId || ""; }
+                            else if (invSortField === "invoiceNumber") { va = a.invoiceNumber || ""; vb = b.invoiceNumber || ""; }
+                            else { va = a.submittedAt || ""; vb = b.submittedAt || ""; }
+                            return invSortDir === "asc" ? va.localeCompare(vb) : vb.localeCompare(va);
+                          }).map((inv) => (
                             <tr key={inv.id}>
                               <td>{inv.invoiceNumber || inv.id?.slice(0, 8) || "—"}</td>
                               <td>
@@ -587,10 +607,10 @@ export default function ContractorDetailPage() {
             </div>
           ) : (
             <Panel>
-              <p className="text-sm text-slate-600">Contractor not found.</p>
+              <p className="text-sm text-slate-600">{t("manager:peopleVendorsId.text.contractorNotFound")}</p>
               <div className="mt-3">
                 <button type="button" className="button-secondary" onClick={() => router.back()}>
-                  Go back
+                  {t("manager:peopleVendorsId.text.goBack")}
                 </button>
               </div>
             </Panel>
@@ -600,3 +620,5 @@ export default function ContractorDetailPage() {
     </AppShell>
   );
 }
+
+export const getServerSideProps = withServerTranslations(["common","manager"]);

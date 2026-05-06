@@ -1,5 +1,7 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/router";
+import SortableHeader from "../../../components/SortableHeader";
+import { useLocalSort, clientSort } from "../../../lib/tableUtils";
 import AppShell from "../../../components/AppShell";
 import PageShell from "../../../components/layout/PageShell";
 import PageHeader from "../../../components/layout/PageHeader";
@@ -9,13 +11,15 @@ import Badge from "../../../components/ui/Badge";
 import { accountTypeVariant } from "../../../lib/statusVariants";
 import { authHeaders } from "../../../lib/api";
 import ScrollableTabs from "../../../components/mobile/ScrollableTabs";
+import { withTranslations } from "../../../lib/i18n";
+import { useTranslation } from "next-i18next";
 
 /* ─── Tabs ─────────────────────────────────────────────── */
 
 const TABS = [
-  { key: "EXPENSE_TYPES", label: "Expense Types" },
-  { key: "ACCOUNTS", label: "Accounts" },
-  { key: "MAPPINGS", label: "Mappings" },
+  { key: "EXPENSE_TYPES" },
+  { key: "ACCOUNTS" },
+  { key: "MAPPINGS" },
 ];
 const TAB_KEYS = ["expense_types", "accounts", "mappings"];
 
@@ -40,6 +44,7 @@ function AccountTypeBadge({ type }) {
 /* ─── Page ─────────────────────────────────────────────── */
 
 export default function ChartOfAccountsPage() {
+  const { t } = useTranslation("manager");
   const router = useRouter();
 
   /* Tab state — driven by URL query param for deep-linkability */
@@ -65,6 +70,33 @@ export default function ChartOfAccountsPage() {
   const [error, setError] = useState("");
   const [seedResult, setSeedResult] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
+
+  /* Sort */
+  const { sortField: etSortField, sortDir: etSortDir, handleSort: handleETSort } = useLocalSort("name", "asc");
+  const sortedExpenseTypes = useMemo(() => clientSort(expenseTypes, etSortField, etSortDir, (et, f) => {
+    if (f === "name") return (et.name || "").toLowerCase();
+    if (f === "code") return (et.code || "").toLowerCase();
+    if (f === "description") return (et.description || "").toLowerCase();
+    if (f === "status") return et.isActive ? 0 : 1;
+    return "";
+  }), [expenseTypes, etSortField, etSortDir]);
+
+  const { sortField: accSortField, sortDir: accSortDir, handleSort: handleAccSort } = useLocalSort("name", "asc");
+  const sortedAccounts = useMemo(() => clientSort(accounts, accSortField, accSortDir, (acc, f) => {
+    if (f === "name") return (acc.name || "").toLowerCase();
+    if (f === "code") return (acc.code || "").toLowerCase();
+    if (f === "type") return (acc.accountType || "").toLowerCase();
+    if (f === "status") return acc.isActive ? 0 : 1;
+    return "";
+  }), [accounts, accSortField, accSortDir]);
+
+  const { sortField: mapSF, sortDir: mapSD, handleSort: handleMapSort } = useLocalSort("expenseType", "asc");
+  const sortedMappings = useMemo(() => clientSort(mappings, mapSF, mapSD, (m, f) => {
+    if (f === "expenseType") return (m.expenseType?.name || m.expenseTypeId || "").toLowerCase();
+    if (f === "account") return (m.account?.name || m.accountId || "").toLowerCase();
+    if (f === "scope") return (m.building?.name || "org-wide").toLowerCase();
+    return "";
+  }), [mappings, mapSF, mapSD]);
 
   /* New-item forms */
   const [newET, setNewET] = useState({ name: "", description: "", code: "" });
@@ -228,8 +260,8 @@ export default function ChartOfAccountsPage() {
     <AppShell role="MANAGER">
       <PageShell>
         <PageHeader
-          title="Chart of Accounts"
-          subtitle="Manage expense types, accounts, and expense-to-account mappings"
+          title={t("manager:financeChartOfAccounts.title.chartOfAccounts")}
+          subtitle={t("manager:financeChart_Of_Accounts.prop.manageExpenseTypesAccountsAndExpensetoaccountMappings")}
           actions={seedButton}
         />
         <PageContent>
@@ -249,7 +281,7 @@ export default function ChartOfAccountsPage() {
                 onClick={() => setActiveTab(i)}
                 className={activeTab === i ? "tab-btn-active" : "tab-btn"}
               >
-                {tab.label}
+                {t(`manager:financeChartOfAccounts.tabs.${tab.key.toLowerCase()}`)}
                 <span className="ml-1.5 text-xs opacity-60">
                   {i === 0 ? expenseTypes.length : i === 1 ? accounts.length : mappings.length}
                 </span>
@@ -266,7 +298,7 @@ export default function ChartOfAccountsPage() {
                   {expenseTypes.length === 0 ? (
                     <div className="empty-state">
                       <p className="empty-state-text">
-                        No expense types yet. Click <strong>Seed Swiss Taxonomy</strong> to get started with 12 standard expense types and 4 accounts.
+                        No expense types yet. Click <strong>{t("manager:financeChart_Of_Accounts.text.seedSwissTaxonomy")}</strong> to get started with 12 standard expense types and 4 accounts.
                       </p>
                     </div>
                   ) : (
@@ -289,17 +321,17 @@ export default function ChartOfAccountsPage() {
 
                       {/* Wide table — hidden sm:block */}
                       <div className="hidden sm:block overflow-x-auto rounded-lg border border-table-border">
-                        <table className="inline-table">
+                        <table className="data-table">
                           <thead>
                             <tr>
-                              <th>Name</th>
-                              <th>Code</th>
-                              <th>Description</th>
-                              <th>Status</th>
+                              <SortableHeader label={t("manager:financeChart_Of_Accounts.prop.name")} field="name" sortField={etSortField} sortDir={etSortDir} onSort={handleETSort} />
+                              <SortableHeader label={t("manager:financeChart_Of_Accounts.prop.code")} field="code" sortField={etSortField} sortDir={etSortDir} onSort={handleETSort} />
+                              <SortableHeader label={t("manager:financeChart_Of_Accounts.prop.description")} field="description" sortField={etSortField} sortDir={etSortDir} onSort={handleETSort} />
+                              <SortableHeader label={t("manager:financeChart_Of_Accounts.prop.status")} field="status" sortField={etSortField} sortDir={etSortDir} onSort={handleETSort} />
                             </tr>
                           </thead>
                           <tbody>
-                            {expenseTypes.map((et) => (
+                            {sortedExpenseTypes.map((et) => (
                               <tr key={et.id}>
                                 <td className="cell-bold">{et.name}</td>
                                 <td><span className="code-small">{et.code || "\u2014"}</span></td>
@@ -316,30 +348,30 @@ export default function ChartOfAccountsPage() {
                   {/* Inline create form */}
                   <form onSubmit={handleCreateET} className="flex items-end gap-3 border-t border-slate-200 p-4">
                     <div className="flex-[2]">
-                      <label className="mb-1 block text-xs font-medium text-slate-500">Name *</label>
+                      <label className="mb-1 block text-xs font-medium text-slate-500">{t("manager:financeChart_Of_Accounts.text.name")}</label>
                       <input
                         className="input"
                         value={newET.name}
                         onChange={(e) => setNewET({ ...newET, name: e.target.value })}
-                        placeholder="e.g. Elevator Maintenance"
+                        placeholder={t("manager:financeChartOfAccounts.placeholder.eGElevatorMaintenance")}
                       />
                     </div>
                     <div className="flex-1">
-                      <label className="mb-1 block text-xs font-medium text-slate-500">Code</label>
+                      <label className="mb-1 block text-xs font-medium text-slate-500">{t("manager:financeChart_Of_Accounts.text.code")}</label>
                       <input
                         className="input"
                         value={newET.code}
                         onChange={(e) => setNewET({ ...newET, code: e.target.value })}
-                        placeholder="e.g. LIFT-M"
+                        placeholder={t("manager:financeChartOfAccounts.placeholder.eGLiftM")}
                       />
                     </div>
                     <div className="flex-[2]">
-                      <label className="mb-1 block text-xs font-medium text-slate-500">Description</label>
+                      <label className="mb-1 block text-xs font-medium text-slate-500">{t("manager:financeChart_Of_Accounts.text.description")}</label>
                       <input
                         className="input"
                         value={newET.description}
                         onChange={(e) => setNewET({ ...newET, description: e.target.value })}
-                        placeholder="Optional description"
+                        placeholder={t("manager:financeChartOfAccounts.placeholder.optionalDescription")}
                       />
                     </div>
                     <button
@@ -357,7 +389,7 @@ export default function ChartOfAccountsPage() {
                   {accounts.length === 0 ? (
                     <div className="empty-state">
                       <p className="empty-state-text">
-                        No accounts yet. Click <strong>Seed Swiss Taxonomy</strong> to get started.
+                        No accounts yet. Click <strong>{t("manager:financeChart_Of_Accounts.text.seedSwissTaxonomy")}</strong> to get started.
                       </p>
                     </div>
                   ) : (
@@ -380,17 +412,17 @@ export default function ChartOfAccountsPage() {
 
                       {/* Wide table — hidden sm:block */}
                       <div className="hidden sm:block overflow-x-auto rounded-lg border border-table-border">
-                        <table className="inline-table">
+                        <table className="data-table">
                           <thead>
                             <tr>
-                              <th>Name</th>
-                              <th>Code</th>
-                              <th>Type</th>
-                              <th>Status</th>
+                              <SortableHeader label={t("manager:financeChart_Of_Accounts.prop.name")} field="name" sortField={accSortField} sortDir={accSortDir} onSort={handleAccSort} />
+                              <SortableHeader label={t("manager:financeChart_Of_Accounts.prop.code")} field="code" sortField={accSortField} sortDir={accSortDir} onSort={handleAccSort} />
+                              <SortableHeader label={t("manager:financeChart_Of_Accounts.prop.type")} field="type" sortField={accSortField} sortDir={accSortDir} onSort={handleAccSort} />
+                              <SortableHeader label={t("manager:financeChart_Of_Accounts.prop.status")} field="status" sortField={accSortField} sortDir={accSortDir} onSort={handleAccSort} />
                             </tr>
                           </thead>
                           <tbody>
-                            {accounts.map((acc) => (
+                            {sortedAccounts.map((acc) => (
                               <tr key={acc.id}>
                                 <td className="cell-bold">{acc.name}</td>
                                 <td><span className="code-small">{acc.code || "\u2014"}</span></td>
@@ -407,25 +439,25 @@ export default function ChartOfAccountsPage() {
                   {/* Inline create form */}
                   <form onSubmit={handleCreateAcc} className="flex items-end gap-3 border-t border-slate-200 p-4">
                     <div className="flex-[2]">
-                      <label className="mb-1 block text-xs font-medium text-slate-500">Name *</label>
+                      <label className="mb-1 block text-xs font-medium text-slate-500">{t("manager:financeChart_Of_Accounts.text.name")}</label>
                       <input
                         className="input"
                         value={newAcc.name}
                         onChange={(e) => setNewAcc({ ...newAcc, name: e.target.value })}
-                        placeholder="e.g. Owner Charges"
+                        placeholder={t("manager:financeChartOfAccounts.placeholder.eGOwnerCharges")}
                       />
                     </div>
                     <div className="flex-1">
-                      <label className="mb-1 block text-xs font-medium text-slate-500">Code</label>
+                      <label className="mb-1 block text-xs font-medium text-slate-500">{t("manager:financeChart_Of_Accounts.text.code")}</label>
                       <input
                         className="input"
                         value={newAcc.code}
                         onChange={(e) => setNewAcc({ ...newAcc, code: e.target.value })}
-                        placeholder="e.g. 5000"
+                        placeholder={t("manager:financeChartOfAccounts.placeholder.eG5000")}
                       />
                     </div>
                     <div className="flex-1">
-                      <label className="mb-1 block text-xs font-medium text-slate-500">Type</label>
+                      <label className="mb-1 block text-xs font-medium text-slate-500">{t("manager:financeChart_Of_Accounts.text.type")}</label>
                       <select
                         className="input"
                         value={newAcc.accountType}
@@ -463,7 +495,7 @@ export default function ChartOfAccountsPage() {
                     <>
                       {/* Mobile card list — sm:hidden */}
                       <div className="sm:hidden overflow-hidden divide-y divide-table-divider">
-                        {mappings.map((m) => (
+                        {sortedMappings.map((m) => (
                           <div key={m.id} className="table-card">
                             <p className="table-card-head">{m.expenseType?.name || m.expenseTypeId}</p>
                             <p className="table-card-sub">→ {m.account?.name || m.accountId}{m.account?.code ? ` (${m.account.code})` : ""}</p>
@@ -473,7 +505,7 @@ export default function ChartOfAccountsPage() {
                                 onClick={() => handleDeleteMapping(m.id)}
                                 disabled={actionLoading}
                                 className="text-xs font-medium text-red-600 hover:text-red-700 disabled:opacity-50"
-                              >Remove</button>
+                              >{t("manager:financeChart_Of_Accounts.text.remove")}</button>
                             </div>
                           </div>
                         ))}
@@ -481,18 +513,18 @@ export default function ChartOfAccountsPage() {
 
                       {/* Wide table — hidden sm:block */}
                       <div className="hidden sm:block overflow-x-auto rounded-lg border border-table-border">
-                        <table className="inline-table">
+                        <table className="data-table">
                           <thead>
                             <tr>
-                              <th>Expense Type</th>
+                              <SortableHeader label={t("manager:financeChart_Of_Accounts.prop.expenseType")} field="expenseType" sortField={mapSF} sortDir={mapSD} onSort={handleMapSort} />
                               <th></th>
-                              <th>Account</th>
-                              <th>Scope</th>
+                              <SortableHeader label={t("manager:financeChart_Of_Accounts.prop.account")} field="account" sortField={mapSF} sortDir={mapSD} onSort={handleMapSort} />
+                              <SortableHeader label={t("manager:financeChart_Of_Accounts.prop.scope")} field="scope" sortField={mapSF} sortDir={mapSD} onSort={handleMapSort} />
                               <th></th>
                             </tr>
                           </thead>
                           <tbody>
-                            {mappings.map((m) => (
+                            {sortedMappings.map((m) => (
                               <tr key={m.id}>
                                 <td className="cell-bold">{m.expenseType?.name || m.expenseTypeId}</td>
                                 <td className="text-slate-400">{"\u2192"}</td>
@@ -522,7 +554,7 @@ export default function ChartOfAccountsPage() {
                   {/* Inline create form */}
                   <form onSubmit={handleCreateMapping} className="flex items-end gap-3 border-t border-slate-200 p-4">
                     <div className="flex-[2]">
-                      <label className="mb-1 block text-xs font-medium text-slate-500">Expense Type *</label>
+                      <label className="mb-1 block text-xs font-medium text-slate-500">{t("manager:financeChart_Of_Accounts.text.expenseType")}</label>
                       <select
                         className="input"
                         value={newMapping.expenseTypeId}
@@ -535,7 +567,7 @@ export default function ChartOfAccountsPage() {
                       </select>
                     </div>
                     <div className="flex-[2]">
-                      <label className="mb-1 block text-xs font-medium text-slate-500">Account *</label>
+                      <label className="mb-1 block text-xs font-medium text-slate-500">{t("manager:financeChart_Of_Accounts.text.account")}</label>
                       <select
                         className="input"
                         value={newMapping.accountId}
@@ -563,3 +595,5 @@ export default function ChartOfAccountsPage() {
     </AppShell>
   );
 }
+
+export const getStaticProps = withTranslations(["common","manager"]);

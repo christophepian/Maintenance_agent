@@ -10,6 +10,8 @@ import ConfigurableTable from "../../../components/ConfigurableTable";
 import { useTableSort, clientSort } from "../../../lib/tableUtils";
 import { authHeaders } from "../../../lib/api";
 import { cn } from "../../../lib/utils";
+import { withTranslations } from "../../../lib/i18n";
+import { useTranslation } from "next-i18next";
 
 const VENDOR_SORT_FIELDS = ["name", "phone", "email", "hourlyRate", "companyName", "specialty"];
 
@@ -81,6 +83,7 @@ const VENDOR_COLUMNS = [
   },
 ];
 export default function PeopleVendorsPage() {
+  const { t } = useTranslation("manager");
   const router = useRouter();
   const [contractors, setContractors] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -123,21 +126,21 @@ export default function PeopleVendorsPage() {
     <AppShell role="MANAGER">
       <PageShell variant="embedded">
         <PageHeader
-          title="Contractors"
+          title={t("manager:peopleVendors.title.contractors")}
           subtitle={`${contractors.length} contractor${contractors.length !== 1 ? "s" : ""}`}
         />
         <PageContent>
           <div className="flex items-center gap-2 mb-4">
             <input
               type="search"
-              placeholder="Search by name, email, or phone…"
+              placeholder={t("manager:peopleVendors.placeholder.searchByNameEmailOrPhone")}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="filter-input flex-1 min-w-0 mb-0"
             />
             <button
               type="button"
-              aria-label="Sort contractors"
+              aria-label={t("manager:peopleVendors.ariaLabel.sortContractors")}
               onClick={() => {
                 const cycle = ["name", "specialty", "hourlyRate"];
                 const next = cycle[(cycle.indexOf(sortField) + 1) % cycle.length];
@@ -151,7 +154,7 @@ export default function PeopleVendorsPage() {
             </button>
           </div>
 
-            {loading && <p className="text-sm text-slate-500">Loading…</p>}
+            {loading && <p className="text-sm text-slate-500">{t("manager:peopleVendors.text.loading")}</p>}
             {error && <p className="text-sm text-red-600">{error}</p>}
 
             {!loading && !error && filtered.length === 0 && (
@@ -170,7 +173,7 @@ export default function PeopleVendorsPage() {
                 sortDir={sortDir}
                 onSort={handleSort}
                 onRowClick={(c) => router.push(`/manager/people/vendors/${c.id}`)}
-                emptyState={<p className="text-sm text-slate-500">No contractors found.</p>}
+                emptyState={<p className="text-sm text-slate-500">{t("manager:peopleVendors.text.noContractorsFound")}</p>}
                 mobileCard={(c) => (
                   <div className="table-card cursor-pointer" onClick={() => router.push(`/manager/people/vendors/${c.id}`)}>
                     <p className="table-card-head">{c.name || "—"}</p>
@@ -188,3 +191,5 @@ export default function PeopleVendorsPage() {
     </AppShell>
   );
 }
+
+export const getStaticProps = withTranslations(["common","manager"]);

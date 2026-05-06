@@ -16,6 +16,8 @@ import { formatDate, formatDateLong } from "../../../lib/format";
 import { cn } from "../../../lib/utils";
 import Badge from "../../../components/ui/Badge";
 import { jobVariant, slotVariant } from "../../../lib/statusVariants";
+import { withServerTranslations } from "../../../lib/i18n";
+import { useTranslation } from "next-i18next";
 
 function fmtTime(iso) {
   const d = new Date(iso);
@@ -50,6 +52,7 @@ function StarRow({ value, onChange, disabled }) {
 }
 
 function RatingModal({ jobId, contractorId, onClose, onDone }) {
+  const { t } = useTranslation("contractor");
   const [scores, setScores] = useState({ scorePunctuality: 0, scoreAccuracy: 0, scoreCourtesy: 0 });
   const [comment, setComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -81,8 +84,8 @@ function RatingModal({ jobId, contractorId, onClose, onDone }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <div className="w-full max-w-md rounded-2xl bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
-          <h2 className="text-base font-semibold text-slate-900">Rate the tenant</h2>
-          <button onClick={onClose} className="rounded-full p-1 text-slate-400 hover:bg-slate-100" aria-label="Close">
+          <h2 className="text-base font-semibold text-slate-900">{t("contractor:jobsId.heading.rateTheTenant")}</h2>
+          <button onClick={onClose} className="rounded-full p-1 text-slate-400 hover:bg-slate-100" aria-label={t("contractor:jobsId.ariaLabel.close")}>
             <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
               <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
             </svg>
@@ -126,6 +129,7 @@ function RatingModal({ jobId, contractorId, onClose, onDone }) {
  * to add new slots for the tenant to choose from.
  */
 function SlotPanel({ jobId, contractorId, jobStatus, onRefresh }) {
+  const { t } = useTranslation("contractor");
   const [slots, setSlots] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [rows, setRows] = useState([{ date: "", startHour: "09", startMin: "00", durationH: "2" }]);
@@ -193,7 +197,7 @@ function SlotPanel({ jobId, contractorId, jobStatus, onRefresh }) {
   const hasAccepted = slots.some((s) => s.status === "ACCEPTED");
 
   return (
-    <Panel title="📅 Appointment Slots">
+    <Panel title={t("contractor:jobsId.prop.appointmentSlots")}>
       {slots.length > 0 && (
         <div className="space-y-2 mb-3">
           {slots.map((s) => (
@@ -210,11 +214,11 @@ function SlotPanel({ jobId, contractorId, jobStatus, onRefresh }) {
       )}
 
       {slots.length === 0 && !showForm && canPropose && (
-        <p className="text-sm text-slate-500 mb-3">No slots proposed yet. Propose times for the tenant to choose from.</p>
+        <p className="text-sm text-slate-500 mb-3">{t("contractor:jobsId.text.noSlotsProposedYetProposeTimesForTheTenantToChooseFrom")}</p>
       )}
 
       {hasAccepted && (
-        <p className="text-xs text-green-700 font-medium">Appointment confirmed by tenant.</p>
+        <p className="text-xs text-green-700 font-medium">{t("contractor:jobsId.text.appointmentConfirmedByTenant")}</p>
       )}
 
       {canPropose && !hasAccepted && (
@@ -252,15 +256,15 @@ function SlotPanel({ jobId, contractorId, jobStatus, onRefresh }) {
                     {["1", "1.5", "2", "3", "4"].map((d) => <option key={d} value={d}>{d}h</option>)}
                   </select>
                   {rows.length > 1 && (
-                    <button type="button" onClick={() => removeRow(i)} className="text-xs text-red-500 hover:text-red-700" aria-label="Remove schedule row">✕</button>
+                    <button type="button" onClick={() => removeRow(i)} className="text-xs text-red-500 hover:text-red-700" aria-label={t("contractor:jobsId.ariaLabel.removeScheduleRow")}>✕</button>
                   )}
                 </div>
               ))}
               {rows.length < 5 && (
-                <button type="button" onClick={addRow} className="cell-link text-xs">+ Add another slot</button>
+                <button type="button" onClick={addRow} className="cell-link text-xs">{t("contractor:jobsId.text.addAnotherSlot")}</button>
               )}
               <div className="flex gap-2 pt-1">
-                <button type="button" onClick={() => setShowForm(false)} className="rounded border border-slate-200 px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-50">Cancel</button>
+                <button type="button" onClick={() => setShowForm(false)} className="rounded border border-slate-200 px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-50">{t("contractor:jobsId.text.cancel")}</button>
                 <button type="submit" disabled={submitting} className="button-primary text-xs px-3 py-1.5 disabled:opacity-50">
                   {submitting ? "Sending…" : "Send to tenant"}
                 </button>
@@ -276,6 +280,7 @@ function SlotPanel({ jobId, contractorId, jobStatus, onRefresh }) {
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 export default function ContractorJobDetail() {
+  const { t } = useTranslation("contractor");
   const router = useRouter();
   const { id } = router.query;
   const { data: job, loading, error, refresh: loadJob } = useDetailResource(
@@ -322,9 +327,9 @@ export default function ContractorJobDetail() {
     <AppShell role="CONTRACTOR">
       <PageShell>
         <div className="mb-2">
-          <Link href="/contractor/jobs" className="cell-link text-sm">← My Jobs</Link>
+          <Link href="/contractor/jobs" className="cell-link text-sm">{t("contractor:jobsId.text.myJobs")}</Link>
         </div>
-        <ResourceShell loading={loading} error={error} hasData={!!job} loadingText="Loading job…" emptyMessage="Job not found.">
+        <ResourceShell loading={loading} error={error} hasData={!!job} loadingText="Loading job…" emptyMessage={t("contractor:jobsId.prop.jobNotFound")}>
         {job && (<>
         <PageHeader
           title={`Job #${job.id.slice(0, 8)}`}
@@ -336,7 +341,7 @@ export default function ContractorJobDetail() {
         {/* Contractor picker if no ID is set */}
         {!contractorId && (
           <div className="mb-4 rounded-lg border border-yellow-200 bg-yellow-50 px-4 py-3">
-            <p className="mb-2 text-sm font-medium text-yellow-700">Select your contractor profile to use job actions:</p>
+            <p className="mb-2 text-sm font-medium text-yellow-700">{t("contractor:jobsId.text.selectYourContractorProfileToUseJobActions")}</p>
             <ContractorPicker onSelect={(cid) => setContractorId(cid)} />
           </div>
         )}
@@ -346,45 +351,45 @@ export default function ContractorJobDetail() {
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {req?.unit && (
-              <Panel title="📍 Location">
+              <Panel title={t("contractor:jobsId.prop.location")}>
                 <p className="text-sm text-slate-800 font-medium">{req.unit.building.name}</p>
                 <p className="text-xs text-slate-600">{req.unit.building.address}</p>
                 <p className="text-xs text-slate-600 mt-0.5 font-medium">Unit {req.unit.unitNumber}</p>
               </Panel>
             )}
 
-            <Panel title="📅 Dates">
+            <Panel title={t("contractor:jobsId.prop.dates")}>
               <div className="space-y-1 text-sm">
-                <p><span className="text-slate-500">Created:</span> <span className="text-slate-800">{formatDate(job.createdAt)}</span></p>
-                {job.startedAt && <p><span className="text-slate-500">Started:</span> <span className="text-slate-800">{formatDate(job.startedAt)}</span></p>}
-                {job.completedAt && <p><span className="text-slate-500">Completed:</span> <span className="text-green-700 font-medium">{formatDate(job.completedAt)}</span></p>}
+                <p><span className="text-slate-500">{t("contractor:jobsId.text.created")}</span> <span className="text-slate-800">{formatDate(job.createdAt)}</span></p>
+                {job.startedAt && <p><span className="text-slate-500">{t("contractor:jobsId.text.started")}</span> <span className="text-slate-800">{formatDate(job.startedAt)}</span></p>}
+                {job.completedAt && <p><span className="text-slate-500">{t("contractor:jobsId.text.completed")}</span> <span className="text-green-700 font-medium">{formatDate(job.completedAt)}</span></p>}
               </div>
             </Panel>
 
             {acceptedSlot && (
-              <Panel title="✅ Confirmed Appointment">
+              <Panel title={t("contractor:jobsId.prop.confirmedAppointment")}>
                 <p className="text-sm text-indigo-700 font-medium">{fmtTime(acceptedSlot.startTime)} – {fmtTime(acceptedSlot.endTime)}</p>
                 <p className="text-xs text-indigo-700">{formatDateLong(acceptedSlot.startTime)}</p>
               </Panel>
             )}
 
             {job.actualCost != null && (
-              <Panel title="💰 Cost">
+              <Panel title={t("contractor:jobsId.prop.cost")}>
                 <p className="text-xl font-bold text-green-700">CHF {job.actualCost}</p>
               </Panel>
             )}
           </div>
 
           {req && (
-            <Panel title="📋 Scope of Work">
+            <Panel title={t("contractor:jobsId.prop.scopeOfWork")}>
               <p className="text-sm text-slate-800 whitespace-pre-wrap">{req.description}</p>
-              {req.category && <p className="text-xs text-slate-600 mt-2"><span className="font-medium">Category:</span> {req.category}</p>}
-              {req.asset && <p className="text-xs text-slate-600 mt-1"><span className="font-medium">Asset:</span> {req.asset.name || req.asset.category || "—"}{req.asset.serialNumber ? ` (S/N: ${req.asset.serialNumber})` : ""}</p>}
+              {req.category && <p className="text-xs text-slate-600 mt-2"><span className="font-medium">{t("contractor:jobsId.text.category")}</span> {req.category}</p>}
+              {req.asset && <p className="text-xs text-slate-600 mt-1"><span className="font-medium">{t("contractor:jobsId.text.asset")}</span> {req.asset.name || req.asset.category || "—"}{req.asset.serialNumber ? ` (S/N: ${req.asset.serialNumber})` : ""}</p>}
             </Panel>
           )}
 
           {req?.tenant && (
-            <Panel title="👤 Tenant Contact">
+            <Panel title={t("contractor:jobsId.prop.tenantContact")}>
               <div className="text-sm space-y-1">
                 {req.tenant.name && <p className="text-slate-800 font-medium">{req.tenant.name}</p>}
                 <p className="text-slate-600">📞 {req.tenant.phone}</p>
@@ -448,7 +453,7 @@ export default function ContractorJobDetail() {
           {/* Invoiced */}
           {job.status === "INVOICED" && (
             <Panel>
-              <p className="text-purple-700 font-medium">✅ Invoice submitted for this job.</p>
+              <p className="text-purple-700 font-medium">{t("contractor:jobsId.text.invoiceSubmittedForThisJob")}</p>
               <Link href="/contractor/invoices" className="text-purple-700 hover:underline text-sm mt-1 inline-block">
                 View My Invoices →
               </Link>
@@ -471,3 +476,5 @@ export default function ContractorJobDetail() {
     </AppShell>
   );
 }
+
+export const getServerSideProps = withServerTranslations(["common","contractor"]);

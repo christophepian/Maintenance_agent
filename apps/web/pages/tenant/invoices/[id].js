@@ -7,8 +7,11 @@ import { invoiceVariant } from "../../../lib/statusVariants";
 import { formatDate, formatChf } from "../../../lib/format";
 import { tenantFetch } from "../../../lib/api";
 import { cn } from "../../../lib/utils";
+import { withServerTranslations } from "../../../lib/i18n";
+import { useTranslation } from "next-i18next";
 
 export default function TenantInvoiceDetailPage() {
+  const { t } = useTranslation("tenant");
   const router = useRouter();
   const { id } = router.query;
   const [session, setSession] = useState(null);
@@ -81,7 +84,7 @@ export default function TenantInvoiceDetailPage() {
     return (
       <AppShell role="TENANT">
         <div className="main-container">
-          <p className="subtle">Loading…</p>
+          <p className="subtle">{t("tenant:invoicesId.text.loading")}</p>
         </div>
       </AppShell>
     );
@@ -101,7 +104,7 @@ export default function TenantInvoiceDetailPage() {
         {error && <div className="notice notice-err mb-4">{error}</div>}
 
         {loading ? (
-          <div className="text-center py-12 text-slate-500">Loading invoice…</div>
+          <div className="text-center py-12 text-slate-500">{t("tenant:invoicesId.text.loadingInvoice")}</div>
         ) : !invoice ? null : (
           <>
             {/* Invoice header */}
@@ -125,24 +128,24 @@ export default function TenantInvoiceDetailPage() {
               {/* Details grid */}
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <p className="text-slate-500">Amount</p>
+                  <p className="text-slate-500">{t("tenant:invoicesId.text.amount")}</p>
                   <p className="font-semibold text-lg">
                     {formatChf(invoice.totalAmountChf)}
                   </p>
                 </div>
                 <div>
-                  <p className="text-slate-500">Currency</p>
+                  <p className="text-slate-500">{t("tenant:invoicesId.text.currency")}</p>
                   <p className="font-medium">{invoice.currency || "CHF"}</p>
                 </div>
                 {invoice.issueDate && (
                   <div>
-                    <p className="text-slate-500">Issue Date</p>
+                    <p className="text-slate-500">{t("tenant:invoicesId.text.issueDate")}</p>
                     <p className="font-medium">{formatDate(invoice.issueDate)}</p>
                   </div>
                 )}
                 {invoice.dueDate && (
                   <div>
-                    <p className="text-slate-500">Due Date</p>
+                    <p className="text-slate-500">{t("tenant:invoicesId.text.dueDate")}</p>
                     <p className={cn(
                       "font-medium",
                       new Date(invoice.dueDate) < new Date() && invoice.status !== "PAID" && "text-red-600"
@@ -153,7 +156,7 @@ export default function TenantInvoiceDetailPage() {
                 )}
                 {invoice.paidAt && (
                   <div>
-                    <p className="text-slate-500">Paid</p>
+                    <p className="text-slate-500">{t("tenant:invoicesId.text.paid")}</p>
                     <p className="font-medium text-green-600">
                       {formatDate(invoice.paidAt)}
                     </p>
@@ -161,7 +164,7 @@ export default function TenantInvoiceDetailPage() {
                 )}
                 {invoice.unit && (
                   <div>
-                    <p className="text-slate-500">Property</p>
+                    <p className="text-slate-500">{t("tenant:invoicesId.text.property")}</p>
                     <p className="font-medium">
                       {invoice.unit.building?.name || "Property"}
                       {invoice.unit.unitNumber ? ` — Unit ${invoice.unit.unitNumber}` : ""}
@@ -173,7 +176,7 @@ export default function TenantInvoiceDetailPage() {
 
             {/* QR-Bill payment slip */}
             <div className="card p-6">
-              <h2 className="text-lg font-semibold mb-4">Payment QR Code</h2>
+              <h2 className="text-lg font-semibold mb-4">{t("tenant:invoicesId.heading.paymentQrCode")}</h2>
 
               {qrLoading ? (
                 <div className="text-center py-8 text-slate-500">
@@ -197,7 +200,7 @@ export default function TenantInvoiceDetailPage() {
                   {/* Payment details */}
                   <div className="bg-slate-50 rounded-lg p-4 text-sm space-y-2">
                     <div className="flex justify-between">
-                      <span className="text-slate-500">Payable to</span>
+                      <span className="text-slate-500">{t("tenant:invoicesId.text.payableTo")}</span>
                       <span className="font-medium text-right">{qrBill.creditorName}</span>
                     </div>
                     <div className="flex justify-between">
@@ -207,17 +210,17 @@ export default function TenantInvoiceDetailPage() {
                       </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-slate-500">Reference</span>
+                      <span className="text-slate-500">{t("tenant:invoicesId.text.reference")}</span>
                       <span className="font-mono text-xs break-all">{qrBill.reference}</span>
                     </div>
                     {qrBill.referenceType && (
                       <div className="flex justify-between">
-                        <span className="text-slate-500">Reference type</span>
+                        <span className="text-slate-500">{t("tenant:invoicesId.text.referenceType")}</span>
                         <span className="font-medium">{qrBill.referenceType}</span>
                       </div>
                     )}
                     <div className="flex justify-between">
-                      <span className="text-slate-500">Amount</span>
+                      <span className="text-slate-500">{t("tenant:invoicesId.text.amount")}</span>
                       <span className="font-semibold">CHF {qrBill.amount}</span>
                     </div>
                   </div>
@@ -234,3 +237,5 @@ export default function TenantInvoiceDetailPage() {
     </AppShell>
   );
 }
+
+export const getServerSideProps = withServerTranslations(["common","tenant"]);

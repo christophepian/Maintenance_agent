@@ -7,6 +7,8 @@ import PageContent from "../../../components/layout/PageContent";
 import Panel from "../../../components/layout/Panel";
 import ErrorBanner from "../../../components/ui/ErrorBanner";
 import { ownerAuthHeaders } from "../../../lib/api";
+import { withTranslations } from "../../../lib/i18n";
+import { useTranslation } from "next-i18next";
 
 const USER_LABELS = {
   exit_optimizer: "Prepare for sale",
@@ -30,6 +32,7 @@ const DEPRIORITIZE = {
 };
 
 export default function StrategySettingsPage() {
+  const { t } = useTranslation("owner");
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -58,11 +61,11 @@ export default function StrategySettingsPage() {
   return (
     <AppShell role="OWNER">
       <PageShell>
-        <PageHeader title="My Strategy" />
+        <PageHeader title={t("owner:settingsStrategy.title.myStrategy")} />
         <PageContent>
           <ErrorBanner error={error} />
           {loading && (
-            <p className="text-sm text-slate-500">Loading...</p>
+            <p className="text-sm text-slate-500">{t("owner:settingsStrategy.text.loading")}</p>
           )}
           {!loading && !profile && (
             <Panel>
@@ -113,3 +116,5 @@ export default function StrategySettingsPage() {
     </AppShell>
   );
 }
+
+export const getStaticProps = withTranslations(["common","owner"]);

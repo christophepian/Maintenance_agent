@@ -2,6 +2,8 @@ import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import Head from "next/head";
 import { formatChf, formatDate } from "../lib/format";
+import { withTranslations } from "../lib/i18n";
+import { useTranslation } from "next-i18next";
 
 /**
  * Public Rental Listings Page
@@ -44,6 +46,7 @@ function PhotoPlaceholder({ seed }) {
 }
 
 export default function ListingsPage() {
+  const { t } = useTranslation("tenant");
   const [units, setUnits] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -90,7 +93,7 @@ export default function ListingsPage() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <span className="text-2xl">🏠</span>
-            <h1 className="text-xl font-bold text-slate-800 tracking-tight">Rental Listings</h1>
+            <h1 className="text-xl font-bold text-slate-800 tracking-tight">{t("tenant:index.heading.rentalListings")}</h1>
           </div>
           <Link
             href="/apply"
@@ -105,7 +108,7 @@ export default function ListingsPage() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
           {/* Hero / intro */}
           <div className="mb-8">
-            <h2 className="text-3xl font-bold text-slate-900 mb-2">Find your next home</h2>
+            <h2 className="text-3xl font-bold text-slate-900 mb-2">{t("tenant:index.heading.findYourNextHome")}</h2>
             <p className="text-slate-500 text-lg">
               Browse available apartments and apply online in minutes.
             </p>
@@ -117,7 +120,7 @@ export default function ListingsPage() {
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by address, building name, or unit…"
+              placeholder={t("tenant:index.placeholder.searchByAddressBuildingNameOrUnit")}
               className="w-full max-w-md border border-slate-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
             />
           </div>
@@ -243,3 +246,5 @@ function ListingCard({ unit }) {
     </div>
   );
 }
+
+export const getStaticProps = withTranslations(["common"]);

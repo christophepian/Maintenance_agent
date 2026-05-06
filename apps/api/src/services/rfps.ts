@@ -26,7 +26,11 @@ import type { ListRfpOpts } from "../repositories/rfpRepository";
 import {
   findContractorById,
   parseServiceCategories,
+  findActiveByOrg,
 } from "../repositories/contractorRepository";
+import {
+  findRequestWithUnitBuildingConfig,
+} from "../repositories/requestRepository";
 
 // Re-export for backward compatibility with legalIncludes consumers
 export { RFP_FULL_INCLUDE } from "../repositories/rfpRepository";
@@ -239,18 +243,7 @@ export async function createRfpForRequest(
   if (existing) return mapRfpToDTO(existing);
 
   // Load request context (creation-specific logic, not a generic query)
-  const request = await prisma.request.findUnique({
-    where: { id: requestId },
-    include: {
-      unit: {
-        include: {
-          building: {
-            include: { config: true },
-          },
-        },
-      },
-    },
-  });
+  const request = await findRequestWithUnitBuildingConfig(prisma, requestId);
 
   if (!request || !request.unit) {
     throw new Error(
@@ -266,12 +259,7 @@ export async function createRfpForRequest(
     building.config?.rfpDefaultInviteCount ?? 3;
 
   // Find contractors matching category
-  const contractors = await prisma.contractor.findMany({
-    where: {
-      orgId,
-      isActive: true,
-    },
-  });
+  const contractors = await findActiveByOrg(prisma, orgId);
 
   // Filter by serviceCategories (JSON array stored as string)
   const matchingContractors = contractors.filter((c) => {

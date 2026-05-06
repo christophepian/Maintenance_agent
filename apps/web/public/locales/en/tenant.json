@@ -1,0 +1,232 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "inbox": "Inbox",
+    "requests": "Requests",
+    "leases": "Leases",
+    "invoices": "Invoices",
+    "assets": "Assets",
+    "myHome": "My Home",
+    "apply": "Apply"
+  },
+  "dashboard": {
+    "title": "Tenant Portal",
+    "yourLease": "Your Lease",
+    "openRequests": "Open Requests",
+    "pendingInvoices": "Pending Invoices"
+  },
+  "chatWidget": {
+    "openLabel": "Open maintenance assistant chat",
+    "dialogLabel": "Maintenance assistant chat",
+    "closeLabel": "Close chat",
+    "inputLabel": "Message input",
+    "sendLabel": "Send message",
+    "askAi": "Ask AI",
+    "assistantName": "Maintenance Assistant",
+    "assistantTagline": "Ask me anything about your home",
+    "loading": "Loading…",
+    "greeting": "Hi! I’m your maintenance assistant.",
+    "greetingHint": "Tell me about an issue in your home or ask about the status of a request.",
+    "suggestion1": "My faucet is leaking",
+    "suggestion2": "Show my lease details",
+    "suggestion3": "Show my invoices",
+    "placeholder": "Describe an issue or ask a question…",
+    "enterHint": "Press Enter to send · Shift+Enter for new line",
+    "error": "Something went wrong. Please try again."
+  },
+  "index": {
+    "heading": {
+      "rentalApplication": "Rental Application",
+      "selectUnitsToApplyFor": "Select units to apply for",
+      "uploadYourDocuments": "Upload your documents",
+      "applicantDetails": "Applicant Details",
+      "currentHousingHousehold": "Current Housing & Household",
+      "reviewSubmit": "Review & Submit",
+      "unitsAppliedFor": "Units Applied For",
+      "applicants": "Applicants",
+      "documents": "Documents",
+      "electronicSignature": "Electronic Signature",
+      "applicationSubmitted": "Application Submitted",
+      "maintenanceAgentNdashUiLauncher": "Maintenance Agent &ndash; UI Launcher",
+      "rentalListings": "Rental Listings",
+      "findYourNextHome": "Find your next home",
+      "maintenanceHelp": "Maintenance help",
+      "quickFixes": "Quick fixes",
+      "tenantRequestByPhone": "Tenant request (by phone)",
+      "requestContext": "Request context",
+      "tenantSignIn": "Tenant sign-in"
+    },
+    "placeholder": {
+      "eGChFrDe": "e.g. CH, FR, DE",
+      "eGJeanDupont": "e.g. Jean Dupont",
+      "searchByAddressBuildingNameOrUnit": "Search by address, building name, or unit…",
+      "yourName": "Your name",
+      "youExampleCom": "you@example.com",
+      "minimum8Characters": "Minimum 8 characters",
+      "eGTheOvenIsOverheating": "e.g., The oven is overheating",
+      "41791234567": "+41 79 123 45 67",
+      "describeTheIssueU2026": "Describe the issue\\u2026",
+      "eG150": "e.g. 150"
+    },
+    "title": {
+      "showExtractionDebugInfo": "Show extraction debug info"
+    },
+    "ariaLabel": {
+      "removeDocument": "Remove document"
+    }
+  },
+  "token": {
+    "heading": {
+      "invoiceCapture": "Invoice Capture",
+      "thisLinkHasExpired": "This link has expired",
+      "somethingWentWrong": "Something went wrong",
+      "takePhotosOfYourInvoice": "Take photos of your invoice",
+      "uploading": "Uploading…",
+      "photosSubmitted": "Photos submitted!"
+    }
+  },
+  "assets": {
+    "heading": {
+      "myUnitAmpAssets": "My Unit &amp; Assets",
+      "unitAmpAssetDetails": "Unit &amp; Asset Details"
+    },
+    "text": {
+      "comingSoon": "Coming Soon"
+    }
+  },
+  "inbox": {
+    "title": {
+      "inbox": "Inbox",
+      "unread": "Unread",
+      "dismiss": "Dismiss"
+    },
+    "text": {
+      "pleaseSignInToViewYourNotifications": "Please sign in to view your notifications.",
+      "loading": "Loading…",
+      "noNotificationsYetYouWillBeNotifiedHereWhenYourLeaseIsReadyToSignInvoicesAreCreatedAndMore": "No notifications yet. You will be notified here when your lease is ready to sign, invoices are created, and more."
+    }
+  },
+  "invoices": {
+    "heading": {
+      "myInvoices": "My Invoices"
+    },
+    "text": {
+      "loading": "Loading…",
+      "totalInvoices": "Total Invoices",
+      "outstanding": "Outstanding",
+      "paid": "Paid",
+      "loadingInvoices": "Loading invoices…",
+      "noInvoicesYet": "No invoices yet"
+    }
+  },
+  "invoicesId": {
+    "heading": {
+      "paymentQrCode": "Payment QR Code"
+    },
+    "text": {
+      "loading": "Loading…",
+      "loadingInvoice": "Loading invoice…",
+      "amount": "Amount",
+      "currency": "Currency",
+      "issueDate": "Issue Date",
+      "dueDate": "Due Date",
+      "paid": "Paid",
+      "property": "Property",
+      "payableTo": "Payable to",
+      "reference": "Reference",
+      "referenceType": "Reference type"
+    }
+  },
+  "leasesId": {
+    "heading": {
+      "leaseAgreement": "Lease Agreement",
+      "signatureStatus": "Signature Status"
+    },
+    "text": {
+      "loading": "Loading…",
+      "loadingLeaseDetails": "Loading lease details…",
+      "leaseNotFoundOrNotAccessible": "Lease not found or not accessible.",
+      "1Parties": "§ 1 — Parties",
+      "landlord": "Landlord",
+      "tenant": "Tenant",
+      "2Object": "§ 2 — Object",
+      "type": "Type",
+      "rooms": "Rooms",
+      "floor": "Floor",
+      "address": "Address",
+      "startDate": "Start Date",
+      "term": "Term",
+      "endDate": "End Date",
+      "noticePeriod": "Notice Period",
+      "netRent": "Net rent",
+      "garageParking": "Garage / parking",
+      "otherServices": "Other services",
+      "totalMonthly": "Total monthly",
+      "7Deposit": "§ 7 — Deposit",
+      "securityDeposit": "Security deposit",
+      "15OtherStipulations": "§ 15 — Other Stipulations",
+      "leaseTerminated": "📋 Lease Terminated",
+      "terminatedOn": "Terminated on:",
+      "reason": "Reason:",
+      "notice": "Notice:"
+    }
+  },
+  "leasesIndex": {
+    "heading": {
+      "myLeases": "My Leases"
+    },
+    "text": {
+      "loadingSession": "Loading session…",
+      "loadingLeases": "Loading leases…",
+      "noLeasesFound": "No leases found",
+      "mo": "/mo"
+    }
+  },
+  "requests": {
+    "heading": {
+      "newMaintenanceRequest": "New Maintenance Request"
+    },
+    "placeholder": {
+      "commentOptional": "Comment (optional)",
+      "describeTheIssueInDetailEGTheKitchenFaucetIsDripping": "Describe the issue in detail (e.g. the kitchen faucet is dripping)",
+      "41791234567": "+41 79 123 45 67"
+    },
+    "title": {
+      "myRequests": "My Requests",
+      "myMaintenanceRequests": "My Maintenance Requests"
+    },
+    "ariaLabel": {
+      "captureWithPhone": "Capture with phone",
+      "attachPhotosOrDocuments": "Attach photos or documents",
+      "capturePhotosWithPhoneViaQrCode": "Capture photos with phone via QR code"
+    },
+    "text": {
+      "checkingAppointments": "Checking appointments…",
+      "declined": "Declined",
+      "captureWithPhone": "📷 Capture with Phone",
+      "creatingCaptureSession": "Creating capture session…",
+      "close": "Close",
+      "photosReceived": "Photos received!",
+      "yourPhotosHaveBeenAttachedToTheRequest": "Your photos have been attached to the request.",
+      "done": "Done",
+      "mobileLink": "Mobile link",
+      "cancel": "Cancel",
+      "loadingPhotos": "Loading photos…",
+      "noPhotosYet": "No photos yet",
+      "jobCompleted": "✅ Job Completed",
+      "thankYouYourRatingHasBeenSubmitted": "Thank you — your rating has been submitted.",
+      "legalAnalysis": "⚖️ Legal Analysis",
+      "analysingYourClaim": "Analysing your claim…",
+      "nextSteps": "Next steps:",
+      "legalBasis": "Legal basis",
+      "escalation": "Escalation",
+      "category": "Category",
+      "contactPhone": "Contact phone",
+      "photosAttachments": "Photos / attachments",
+      "upTo5FilesMax10MbEachImagesOrPdf": "Up to 5 files, max 10 MB each. Images or PDF.",
+      "pleaseSignInToViewYourRequests": "Please sign in to view your requests.",
+      "loading": "Loading…",
+      "noMaintenanceRequestsYet": "No maintenance requests yet."
+    }
+  }
+}

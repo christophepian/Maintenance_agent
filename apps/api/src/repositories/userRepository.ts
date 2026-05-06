@@ -4,7 +4,7 @@
  * Centralizes all Prisma access for the User entity.
  */
 
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Role } from "@prisma/client";
 
 export const USER_PROFILE_SELECT = {
   id: true,
@@ -58,3 +58,48 @@ export async function updateUserProfile(
     select: USER_PROFILE_SELECT,
   });
 }
+
+// ─── Auth helpers ──────────────────────────────────────────────
+
+/**
+ * Create a new user.
+ */
+export async function createUser(
+  prisma: PrismaClient,
+  data: {
+    orgId: string;
+    email: string;
+    name: string;
+    passwordHash: string;
+    role: Role;
+  },
+) {
+  return prisma.user.create({ data });
+}
+
+/**
+ * Find a user by org + email (unique constraint) for login.
+ */
+export async function findUserByOrgEmail(
+  prisma: PrismaClient,
+  orgId: string,
+  email: string,
+) {
+  return prisma.user.findUnique({
+    where: { user_org_email_unique: { orgId, email } },
+  });
+}
+
+/**
+ * Find all MANAGER-role users in an org.
+ */
+export async function findManagersByOrg(
+  prisma: PrismaClient,
+  orgId: string,
+) {
+  return prisma.user.findMany({
+    where: { orgId, role: "MANAGER" },
+    select: { id: true, email: true },
+  });
+}
+

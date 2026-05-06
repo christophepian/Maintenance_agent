@@ -1,0 +1,221 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "requests": "Requests",
+    "jobs": "Jobs",
+    "leases": "Leases",
+    "invoices": "Invoices",
+    "buildings": "Buildings",
+    "settings": "Settings"
+  },
+  "action": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "submit": "Submit",
+    "delete": "Delete",
+    "edit": "Edit",
+    "close": "Close",
+    "back": "Back",
+    "confirm": "Confirm",
+    "create": "Create",
+    "add": "Add",
+    "search": "Search",
+    "filter": "Filter",
+    "export": "Export",
+    "viewAll": "View all",
+    "view": "View",
+    "download": "Download",
+    "preview": "Preview",
+    "undo": "Undo",
+    "more": "More",
+    "dismiss": "Dismiss"
+  },
+  "status": {
+    "open": "Open",
+    "pending": "Pending",
+    "inProgress": "In progress",
+    "completed": "Completed",
+    "cancelled": "Cancelled",
+    "approved": "Approved",
+    "rejected": "Rejected",
+    "active": "Active",
+    "inactive": "Inactive"
+  },
+  "empty": {
+    "noResults": "No results found.",
+    "noData": "No data available.",
+    "noItems": "No items to display."
+  },
+  "error": {
+    "generic": "Something went wrong. Please try again.",
+    "notFound": "Not found.",
+    "unauthorized": "You are not authorised to view this page.",
+    "loadFailed": "Failed to load data."
+  },
+  "label": {
+    "name": "Name",
+    "description": "Description",
+    "date": "Date",
+    "amount": "Amount",
+    "status": "Status",
+    "type": "Type",
+    "notes": "Notes",
+    "address": "Address",
+    "phone": "Phone",
+    "email": "Email",
+    "createdAt": "Created",
+    "updatedAt": "Updated",
+    "loading": "Loading…"
+  },
+  "role": {
+    "MANAGER": "Manager",
+    "OWNER": "Owner",
+    "CONTRACTOR": "Contractor",
+    "TENANT": "Tenant"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "markAllRead": "Mark all read",
+    "empty": "No notifications",
+    "unread": "Unread"
+  },
+  "pagination": {
+    "showing": "Showing {{from}}–{{to}} of {{total}}",
+    "page": "Page {{current}} of {{total}}",
+    "previous": "← Previous",
+    "next": "Next →"
+  },
+  "docType": {
+    "LEASE_AGREEMENT": "Lease Agreement",
+    "ADDENDUM": "Addendum",
+    "INSPECTION_REPORT": "Inspection Report",
+    "INVOICE": "Invoice",
+    "INSURANCE": "Insurance",
+    "ID_DOCUMENT": "ID / Passport",
+    "PROOF_OF_INCOME": "Proof of Income",
+    "REFERENCES": "References",
+    "OTHER": "Other",
+    "PHOTO": "Photo"
+  },
+  "assetType": {
+    "APPLIANCE": "Appliance",
+    "FIXTURE": "Fixture",
+    "FINISH": "Finish / Surface",
+    "STRUCTURAL": "Structural",
+    "SYSTEM": "System / Installation",
+    "OTHER": "Other"
+  },
+  "categoryMapping": {
+    "stove": "Stove & Cooktop",
+    "oven": "Oven",
+    "dishwasher": "Dishwasher",
+    "bathroom": "Bathroom",
+    "lighting": "Lighting",
+    "plumbing": "Plumbing",
+    "other": "Other / General"
+  },
+  "selection": {
+    "REVIEWING": "Reviewing",
+    "SHORTLISTED": "Shortlisted",
+    "OFFERED": "Offered",
+    "REJECTED": "Rejected",
+    "WITHDRAWN": "Withdrawn",
+    "AWAITING_SIGNATURE": "Awaiting Signature",
+    "FALLBACK_1": "Fallback 1 Active",
+    "FALLBACK_2": "Fallback 2 Active"
+  },
+  "leaseStatus": {
+    "DRAFT": "Draft",
+    "PENDING_SIGNATURE": "Pending Signature",
+    "READY_TO_SIGN": "Ready to Sign",
+    "SIGNED": "Signed",
+    "ACTIVE": "Active",
+    "EXPIRED": "Expired",
+    "TERMINATED": "Terminated"
+  },
+  "vacancies": {
+    "noLease": "No lease yet",
+    "tabCandidates": "Candidate Selection",
+    "tabSignature": "Awaiting Signature",
+    "emptySignature": "No units awaiting tenant signature"
+  },
+  "documents": {
+    "title": "Corroborative Documents",
+    "loading": "Loading documents…",
+    "empty": "No documents uploaded yet.",
+    "previewUnavailable": "Preview not available for this file type.",
+    "downloadInstead": "Download instead"
+  },
+  "billingEntity": {
+    "typeLabel": {
+      "ORG": "Organization",
+      "CONTRACTOR": "Contractor",
+      "OWNER": "Owner"
+    },
+    "new": "New billing entity",
+    "edit": "Edit billing entity",
+    "delete": "Delete this billing entity?",
+    "deleted": "Billing entity deleted.",
+    "saving": "Saving…",
+    "saveChanges": "Save changes",
+    "selectContractor": "Select contractor"
+  },
+  "assetInventory": {
+    "fullyDepreciated": "Fully depreciated",
+    "installUnknown": "Install date unknown",
+    "noStandard": "No depreciation standard",
+    "loading": "Loading assets…",
+    "empty": "No assets recorded yet.",
+    "addAsset": "+ Add Asset",
+    "cancel": "Cancel",
+    "adding": "Adding…",
+    "saving": "Saving…",
+    "saveChanges": "Save changes",
+    "removing": "Removing…",
+    "confirmRemove": "Confirm remove",
+    "searchPlaceholder": "Search items… (e.g. Dishwasher)",
+    "unlinkedJobs_one": "{{count}} completed job with no asset linked",
+    "unlinkedJobs_other": "{{count}} completed jobs with no asset linked"
+  },
+  "depreciationStandards": {
+    "totalItems": "Total Items",
+    "fromAsloca": "{{count}} from ASLOCA/FRI",
+    "categories": "Categories",
+    "sectionsFrom": "Sections from official table",
+    "avgLifespan": "Avg. Lifespan",
+    "acrossAll": "Across all items",
+    "source": "Source",
+    "sourceNote": "Joint depreciation table, 2007",
+    "cancel": "Cancel",
+    "addStandard": "+ Add Standard",
+    "searchPlaceholder": "Search items… (e.g. dishwasher, parquet, radiator)",
+    "allTypes": "All Types",
+    "expandAll": "Expand All",
+    "collapseAll": "Collapse All",
+    "showingOf": "Showing {{count}} of {{total}}",
+    "loading": "Loading depreciation standards…",
+    "empty": "No depreciation standards yet.",
+    "noMatch": "No items match your search. Try adjusting filters.",
+    "creating": "Creating…",
+    "createStandard": "Create Standard",
+    "lifespanLegend": "Lifespan Legend",
+    "items_one": "{{count}} item",
+    "items_other": "{{count}} items"
+  },
+  "configurableTable": {
+    "columns": "Columns",
+    "density": "Density",
+    "comfortable": "Comfortable",
+    "compact": "Compact",
+    "reset": "Reset to defaults",
+    "dragToReorder": "Drag to reorder"
+  },
+  "filterPanel": {
+    "filters": "Filters",
+    "sort": "Sort",
+    "sortBy": "Sort by",
+    "resetFilters": "Reset filters",
+    "noOptions": "No options available"
+  },
+  "loading": "Loading…"
+}

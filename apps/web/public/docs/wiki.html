@@ -1,0 +1,1956 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Maintenance Agent — Project Wiki</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=DM+Serif+Display:ital@0;1&display=swap');
+
+  :root {
+    --bg: #f8f9fc;
+    --surface: #ffffff;
+    --surface-2: #f1f3f9;
+    --border: #e2e6f0;
+    --text: #1a1f36;
+    --text-secondary: #6b7280;
+    --text-muted: #9ca3af;
+    --brand: #4f46e5;
+    --brand-light: #ede9fe;
+    --brand-mid: #7c3aed;
+    --green: #059669;
+    --green-light: #d1fae5;
+    --amber: #d97706;
+    --amber-light: #fef3c7;
+    --blue: #2563eb;
+    --blue-light: #dbeafe;
+    --rose: #e11d48;
+    --rose-light: #ffe4e6;
+    --cyan: #0891b2;
+    --cyan-light: #cffafe;
+    --radius: 12px;
+    --radius-sm: 8px;
+    --shadow: 0 1px 3px rgba(0,0,0,.08), 0 4px 16px rgba(0,0,0,.04);
+    --shadow-md: 0 4px 12px rgba(0,0,0,.1), 0 8px 32px rgba(0,0,0,.06);
+    --sidebar-w: 240px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 15px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ─── NAV ─── */
+  nav {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(255,255,255,.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 0;
+  }
+  .nav-inner {
+    max-width: 1280px; margin: 0 auto; padding: 0 32px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .nav-logo { display: flex; align-items: center; gap: 10px; }
+  .nav-logo-mark {
+    width: 32px; height: 32px; border-radius: 8px;
+    background: linear-gradient(135deg, var(--brand), var(--brand-mid));
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-weight: 700; font-size: 14px;
+  }
+  .nav-logo-text { font-weight: 700; font-size: 16px; color: var(--text); }
+  .nav-badge {
+    background: var(--brand-light); color: var(--brand);
+    font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 20px;
+  }
+  .nav-links { display: flex; gap: 24px; }
+  .nav-links a {
+    text-decoration: none; color: var(--text-secondary);
+    font-size: 13px; font-weight: 500; transition: color .15s;
+  }
+  .nav-links a:hover { color: var(--brand); }
+
+  /* ─── LAYOUT: sidebar + content ─── */
+  .page-body {
+    max-width: 1280px; margin: 0 auto; padding: 0 32px;
+    display: grid;
+    grid-template-columns: var(--sidebar-w) 1fr;
+    gap: 48px;
+    align-items: start;
+  }
+
+  /* ─── SIDEBAR ─── */
+  .sidebar {
+    position: sticky; top: 72px;
+    padding: 32px 0;
+    max-height: calc(100vh - 80px);
+    overflow-y: auto;
+  }
+  .sidebar-section { margin-bottom: 28px; }
+  .sidebar-label {
+    font-size: 10px; font-weight: 700; letter-spacing: 0.8px;
+    text-transform: uppercase; color: var(--text-muted);
+    margin-bottom: 8px; padding: 0 4px;
+  }
+  .sidebar-link {
+    display: block; padding: 5px 8px; border-radius: 6px;
+    font-size: 13px; color: var(--text-secondary); text-decoration: none;
+    transition: background .1s, color .1s;
+    margin-bottom: 2px;
+  }
+  .sidebar-link:hover { background: var(--surface-2); color: var(--text); }
+  .sidebar-link.active { background: var(--brand-light); color: var(--brand); font-weight: 600; }
+  .sidebar-sub {
+    display: block; padding: 3px 8px 3px 20px; border-radius: 6px;
+    font-size: 12px; color: var(--text-muted); text-decoration: none;
+    transition: background .1s, color .1s; margin-bottom: 1px;
+  }
+  .sidebar-sub:hover { background: var(--surface-2); color: var(--text); }
+
+  /* ─── MAIN CONTENT ─── */
+  .main-content { padding: 48px 0 96px; min-width: 0; }
+
+  /* ─── HERO (full-width above sidebar layout) ─── */
+  .hero {
+    padding: 64px 0 56px;
+    background: linear-gradient(160deg, #ffffff 0%, #f5f3ff 50%, #eff6ff 100%);
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 0;
+  }
+  .hero-inner { max-width: 1280px; margin: 0 auto; padding: 0 32px; }
+  .hero-eyebrow {
+    display: inline-flex; align-items: center; gap: 7px;
+    background: var(--brand-light); color: var(--brand);
+    font-size: 12px; font-weight: 600; letter-spacing: 0.6px; text-transform: uppercase;
+    padding: 5px 12px; border-radius: 20px; margin-bottom: 20px;
+  }
+  .hero-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
+  .hero h1 {
+    font-family: 'DM Serif Display', Georgia, serif;
+    font-size: 44px; font-weight: 800;
+    color: var(--text); letter-spacing: -1.2px; line-height: 1.1;
+    max-width: 660px; margin-bottom: 16px;
+  }
+  .hero h1 span { color: var(--brand); }
+  .hero-sub {
+    font-size: 16px; color: var(--text-secondary); max-width: 560px;
+    line-height: 1.65; margin-bottom: 36px;
+  }
+  .hero-stats {
+    display: grid; grid-template-columns: repeat(6, 1fr);
+    gap: 1px; background: var(--border);
+    border: 1px solid var(--border); border-radius: var(--radius);
+    overflow: hidden; max-width: 860px;
+  }
+  .hero-stat { background: white; padding: 16px 18px; }
+  .hero-stat-num {
+    font-family: 'DM Serif Display', Georgia, serif; font-size: 22px; font-weight: 800;
+    color: var(--brand); letter-spacing: -0.8px; line-height: 1; margin-bottom: 3px;
+  }
+  .hero-stat-label { font-size: 11px; color: var(--text-secondary); font-weight: 500; }
+
+  /* ─── SECTIONS ─── */
+  .wiki-section { margin-bottom: 64px; scroll-margin-top: 88px; }
+  .wiki-section + .wiki-section { border-top: 1px solid var(--border); padding-top: 56px; }
+  .section-eyebrow {
+    font-size: 11px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase;
+    color: var(--brand); margin-bottom: 8px;
+  }
+  .section-title {
+    font-family: 'DM Serif Display', Georgia, serif; font-size: 28px; font-weight: 700;
+    color: var(--text); letter-spacing: -0.6px; line-height: 1.2;
+    margin-bottom: 10px;
+  }
+  .section-sub {
+    font-size: 15px; color: var(--text-secondary); max-width: 640px;
+    line-height: 1.65; margin-bottom: 32px;
+  }
+
+  /* ─── CARDS ─── */
+  .card-grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+  .card-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .card-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+  .info-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 20px 18px; box-shadow: var(--shadow);
+  }
+  .info-card-icon { font-size: 22px; margin-bottom: 10px; display: block; }
+  .info-card-title { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+  .info-card-desc { font-size: 12.5px; color: var(--text-secondary); line-height: 1.6; }
+
+  .feature-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 20px 18px;
+    box-shadow: var(--shadow); position: relative; overflow: hidden;
+  }
+  .feature-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: var(--green);
+  }
+  .feature-card-icon { font-size: 20px; margin-bottom: 10px; display: block; }
+  .feature-card-title { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+  .feature-list { list-style: none; }
+  .feature-list li {
+    font-size: 12px; color: var(--text-secondary);
+    padding: 3px 0; display: flex; align-items: flex-start; gap: 6px;
+  }
+  .feature-list li::before { content: '✓'; color: var(--green); font-weight: 700; flex-shrink: 0; }
+
+  /* ─── TECH STACK ─── */
+  .stack-table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+  .stack-table th {
+    text-align: left; font-size: 11px; font-weight: 700; letter-spacing: 0.5px;
+    text-transform: uppercase; color: var(--text-muted);
+    padding: 8px 12px; background: var(--surface-2);
+    border-bottom: 1px solid var(--border);
+  }
+  .stack-table td {
+    padding: 10px 12px; font-size: 13px; border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  .stack-table tr:last-child td { border-bottom: none; }
+  .stack-table td:first-child { font-weight: 600; color: var(--text); width: 160px; }
+  .stack-table td:nth-child(2) { color: var(--text-secondary); }
+  .stack-table td code {
+    font-family: 'SF Mono', 'Fira Code', monospace; font-size: 11.5px;
+    background: var(--surface-2); border: 1px solid var(--border);
+    padding: 1px 5px; border-radius: 4px; color: var(--brand);
+  }
+
+  /* ─── CODE BLOCKS ─── */
+  .code-block {
+    background: #1e2030; border-radius: var(--radius-sm);
+    padding: 18px 20px; margin: 16px 0; overflow-x: auto;
+  }
+  .code-block pre {
+    font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    font-size: 12.5px; line-height: 1.7; color: #c9d1d9; margin: 0;
+  }
+  .code-block .comment { color: #6e7681; }
+  .code-block .keyword { color: #ff7b72; }
+  .code-block .string { color: #a5d6ff; }
+  .code-block .path { color: #79c0ff; }
+
+  /* ─── JOURNEY BLOCKS ─── */
+  .journey-block {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 24px; box-shadow: var(--shadow);
+    margin-bottom: 12px;
+  }
+  .journey-title {
+    font-size: 13px; font-weight: 700; color: var(--text);
+    margin-bottom: 16px; display: flex; align-items: center; gap: 8px;
+  }
+  .journey-steps { display: flex; align-items: flex-start; flex-wrap: wrap; gap: 0; row-gap: 10px; }
+  .journey-step { display: flex; align-items: center; }
+  .step-node {
+    background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 7px; padding: 7px 12px; white-space: nowrap;
+  }
+  .step-node-label { font-size: 11.5px; font-weight: 600; color: var(--text); }
+  .step-node-sub { font-size: 9.5px; color: var(--text-muted); margin-top: 1px; }
+  .step-node.active { background: var(--brand-light); border-color: #c4b5fd; }
+  .step-node.active .step-node-label { color: var(--brand); }
+  .step-arrow { padding: 0 8px; color: var(--text-muted); font-size: 14px; }
+
+  /* ─── SCHEMA TABLE ─── */
+  .schema-table { width: 100%; border-collapse: collapse; font-size: 12.5px; margin-bottom: 24px; }
+  .schema-table th {
+    text-align: left; font-size: 10.5px; font-weight: 700; letter-spacing: 0.4px;
+    text-transform: uppercase; color: var(--text-muted);
+    padding: 7px 10px; background: var(--surface-2); border-bottom: 2px solid var(--border);
+  }
+  .schema-table td {
+    padding: 8px 10px; border-bottom: 1px solid var(--border);
+    color: var(--text-secondary); vertical-align: top;
+  }
+  .schema-table tr:last-child td { border-bottom: none; }
+  .schema-table td:first-child { font-weight: 600; color: var(--text); font-family: 'SF Mono','Fira Code',monospace; font-size: 11.5px; }
+  .schema-table tbody tr:hover td { background: var(--surface-2); }
+
+  /* ─── GUARDRAIL CARDS ─── */
+  .guardrail-list { display: flex; flex-direction: column; gap: 10px; }
+  .guardrail {
+    background: var(--surface); border: 1px solid var(--border);
+    border-left: 3px solid var(--brand); border-radius: var(--radius-sm);
+    padding: 14px 16px;
+  }
+  .guardrail.danger { border-left-color: var(--rose); }
+  .guardrail.warn { border-left-color: var(--amber); }
+  .guardrail-title { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+  .guardrail-desc { font-size: 12.5px; color: var(--text-secondary); line-height: 1.6; }
+  .guardrail-code {
+    font-family: 'SF Mono','Fira Code',monospace; font-size: 11px;
+    background: var(--surface-2); border: 1px solid var(--border);
+    padding: 1px 5px; border-radius: 3px; color: var(--brand);
+  }
+
+  /* ─── ROADMAP ─── */
+  .roadmap-phase {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow);
+    margin-bottom: 6px;
+  }
+  .roadmap-head {
+    display: flex; align-items: center; gap: 14px; padding: 16px 20px;
+    cursor: pointer; user-select: none;
+  }
+  .roadmap-head:hover { background: var(--surface-2); }
+  .phase-badge {
+    font-size: 11px; font-weight: 700; padding: 3px 9px;
+    border-radius: 6px; flex-shrink: 0;
+  }
+  .p0 { background: #d1fae5; color: #065f46; }
+  .p1 { background: #dbeafe; color: #1e40af; }
+  .p2 { background: #ede9fe; color: #5b21b6; }
+  .p3 { background: #fef3c7; color: #92400e; }
+  .p4 { background: #fce7f3; color: #9d174d; }
+  .p5 { background: #ecfeff; color: #164e63; }
+  .roadmap-head-info { flex: 1; }
+  .roadmap-phase-name { font-size: 14px; font-weight: 700; color: var(--text); }
+  .roadmap-phase-window { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+  .status-pill {
+    font-size: 10px; font-weight: 600; padding: 3px 9px;
+    border-radius: 20px; flex-shrink: 0;
+  }
+  .status-active { background: var(--green-light); color: var(--green); }
+  .status-planned { background: var(--surface-2); color: var(--text-muted); border: 1px solid var(--border); }
+  .roadmap-body { padding: 0 20px 18px; border-top: 1px solid var(--border); display: none; }
+  .roadmap-body.open { display: block; padding-top: 16px; }
+  .roadmap-goal {
+    font-size: 12.5px; color: var(--text-secondary); font-style: italic;
+    margin-bottom: 14px; padding: 9px 12px; background: var(--surface-2);
+    border-radius: 7px; line-height: 1.6;
+  }
+  .roadmap-features { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+  .roadmap-feature {
+    background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 7px; padding: 10px 12px;
+  }
+  .roadmap-feature-title { font-size: 12px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+  .roadmap-feature-desc { font-size: 11px; color: var(--text-secondary); line-height: 1.55; }
+  .ftype {
+    display: inline-block; font-size: 9.5px; font-weight: 600;
+    padding: 1px 6px; border-radius: 3px; margin-bottom: 6px;
+  }
+  .ftype-build { background: #dbeafe; color: #1e40af; }
+  .ftype-extend { background: #d1fae5; color: #065f46; }
+  .ftype-wire { background: #ede9fe; color: #5b21b6; }
+  .ftype-product { background: #fef3c7; color: #92400e; }
+  .ftype-infra { background: #fee2e2; color: #991b1b; }
+
+  /* ─── TAGS ─── */
+  .tag {
+    display: inline-block; font-size: 11px; font-weight: 500;
+    padding: 2px 8px; border-radius: 20px; border: 1px solid;
+    margin: 2px;
+  }
+  .tag-brand { background: var(--brand-light); color: var(--brand); border-color: #c4b5fd; }
+  .tag-green { background: var(--green-light); color: var(--green); border-color: #6ee7b7; }
+  .tag-blue { background: var(--blue-light); color: var(--blue); border-color: #93c5fd; }
+  .tag-amber { background: var(--amber-light); color: var(--amber); border-color: #fcd34d; }
+  .tag-cyan { background: var(--cyan-light); color: var(--cyan); border-color: #67e8f9; }
+
+  /* ─── CALLOUT ─── */
+  .callout {
+    border-radius: var(--radius-sm); padding: 14px 16px; margin: 16px 0;
+    font-size: 13px; line-height: 1.65;
+  }
+  .callout-info { background: var(--blue-light); border-left: 3px solid var(--blue); color: #1e3a5f; }
+  .callout-warn { background: var(--amber-light); border-left: 3px solid var(--amber); color: #6b3500; }
+  .callout-tip  { background: var(--green-light); border-left: 3px solid var(--green); color: #064e2e; }
+
+  /* ─── MISC ─── */
+  .badge-live {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 11px; font-weight: 600;
+    background: var(--green-light); color: var(--green);
+    padding: 3px 9px; border-radius: 20px;
+  }
+  .badge-live-dot {
+    width: 6px; height: 6px; border-radius: 50%; background: var(--green);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+  p { margin-bottom: 12px; color: var(--text-secondary); font-size: 14px; line-height: 1.7; }
+  p:last-child { margin-bottom: 0; }
+  h3 { font-size: 16px; font-weight: 700; color: var(--text); margin: 24px 0 10px; }
+  h4 { font-size: 13px; font-weight: 700; color: var(--text); margin: 18px 0 8px; }
+  ul.prose { padding-left: 18px; margin-bottom: 14px; }
+  ul.prose li { font-size: 13.5px; color: var(--text-secondary); line-height: 1.65; margin-bottom: 4px; }
+  code.inline {
+    font-family: 'SF Mono','Fira Code',monospace; font-size: 12px;
+    background: var(--surface-2); border: 1px solid var(--border);
+    padding: 1px 5px; border-radius: 4px; color: var(--brand);
+  }
+
+  /* ─── FOOTER ─── */
+  footer {
+    border-top: 1px solid var(--border); padding: 28px 0;
+    background: var(--surface);
+  }
+  .footer-inner {
+    max-width: 1280px; margin: 0 auto; padding: 0 32px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .footer-left { font-size: 13px; color: var(--text-muted); }
+</style>
+<style>body{padding-top:36px}nav{top:36px!important}</style>
+
+</head>
+<body>
+<style>#hub-bar{position:fixed;top:0;left:0;right:0;z-index:9000;height:36px;background:#0f172a;display:flex;align-items:center;padding:0 20px;font-family:'Inter',-apple-system,sans-serif;font-size:12px;font-weight:500;border-bottom:1px solid rgba(255,255,255,.08)}#hub-bar a{color:rgba(255,255,255,.5);text-decoration:none;padding:0 8px;height:36px;display:flex;align-items:center;transition:color .12s}#hub-bar a:hover,#hub-bar a.hub-active{color:#fff}#hub-bar .hub-brand{color:rgba(255,255,255,.9)!important;font-weight:700;padding-right:14px;margin-right:6px;border-right:1px solid rgba(255,255,255,.15)}#hub-bar .hub-open{margin-left:auto;background:#4f46e5;color:#fff!important;padding:0 12px;height:24px;border-radius:4px;font-size:11px;font-weight:600}#hub-bar .hub-open:hover{background:#4338ca!important}</style>
+<div id="hub-bar"><a href="index.html" class="hub-brand">MA Docs</a><a href="wiki.html">Wiki</a><a href="blueprint.html">Blueprint</a><a href="product-overview.html">Product</a><a href="roadmap.html">Roadmap</a><a href="design-system.html">Design</a><a href="pitchdeck.html">Pitch</a><a href="https://maintenance-agent-api-git-main-christophepians-projects.vercel.app" target="_blank" class="hub-open">Open App →</a></div>
+<script>(function(){var c=window.location.pathname.split('/').pop()||'index.html';document.querySelectorAll('#hub-bar a[href]').forEach(function(a){if(a.getAttribute('href')===c)a.classList.add('hub-active');});})()</script>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-inner">
+    <div class="nav-logo">
+      <div class="nav-logo-mark">MA</div>
+      <span class="nav-logo-text">Maintenance Agent</span>
+      <span class="nav-badge">Wiki</span>
+    </div>
+    <div class="nav-links">
+      <a href="#overview">Overview</a>
+      <a href="#platform">Platform</a>
+      <a href="#workflows">Workflows</a>
+      <a href="#history">History</a>
+      <a href="#architecture">Architecture</a>
+      <a href="#codemap">Code map</a>
+      <a href="#schema">Data Model</a>
+      <a href="#frontend">Frontend</a>
+      <a href="#testing">Testing</a>
+      <a href="#conventions">Conventions</a>
+      <a href="#roadmap">Roadmap</a>
+    </div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-inner">
+    <div class="hero-eyebrow"><span class="hero-dot"></span> Live · Swiss Property Management</div>
+    <h1>Project <span>Wiki</span></h1>
+    <p class="hero-sub">
+      A complete reference for everyone working with Maintenance Agent — from product stakeholders
+      understanding what's been built, to engineers making their first code change.
+    </p>
+    <div class="hero-stats">
+      <div class="hero-stat">
+        <div class="hero-stat-num">4</div>
+        <div class="hero-stat-label">User roles</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-num">68</div>
+        <div class="hero-stat-label">DB models</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-num">291</div>
+        <div class="hero-stat-label">API operations</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-num">288</div>
+        <div class="hero-stat-label">Frontend pages</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-num">67</div>
+        <div class="hero-stat-label">Test suites</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-num">84</div>
+        <div class="hero-stat-label">DB migrations</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- BODY: sidebar + main -->
+<div class="page-body">
+
+  <!-- ─── SIDEBAR ─── -->
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">For everyone</div>
+      <a href="#overview" class="sidebar-link">What is it?</a>
+      <a href="#personas" class="sidebar-link">Four roles</a>
+      <a href="#features" class="sidebar-link">What's live</a>
+      <a href="#workflows" class="sidebar-link">How it works</a>
+      <a href="#swiss" class="sidebar-link">Swiss compliance</a>
+      <a href="#history" class="sidebar-link">Build history</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Technical</div>
+      <a href="#architecture" class="sidebar-link">Architecture</a>
+      <a href="#stack" class="sidebar-link">Tech stack</a>
+      <a href="#structure" class="sidebar-link">Repo structure</a>
+      <a href="#codemap" class="sidebar-link">Code navigation</a>
+      <a href="#schema" class="sidebar-link">Data model</a>
+      <a href="#frontend" class="sidebar-link">Frontend system</a>
+      <a href="#testing" class="sidebar-link">Testing & CI</a>
+      <a href="#conventions" class="sidebar-link">Dev conventions</a>
+      <a href="#setup" class="sidebar-link">Dev setup</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Planning</div>
+      <a href="#roadmap" class="sidebar-link">Roadmap</a>
+      <a href="#backlog" class="sidebar-link">Known backlog</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Reference docs</div>
+      <a href="../PROJECT_STATE.md" class="sidebar-sub">PROJECT_STATE.md</a>
+      <a href="../SCHEMA_REFERENCE.md" class="sidebar-sub">SCHEMA_REFERENCE.md</a>
+      <a href="../EPIC_HISTORY.md" class="sidebar-sub">EPIC_HISTORY.md</a>
+      <a href="design-system.html" class="sidebar-sub">design-system.html</a>
+      <a href="DEV_COMMANDS.md" class="sidebar-sub">DEV_COMMANDS.md</a>
+      <a href="roadmap.html" class="sidebar-sub">roadmap.html</a>
+    </div>
+  </aside>
+
+  <!-- ─── MAIN ─── -->
+  <main class="main-content">
+
+    <!-- ══════════════════════════════════════════
+         OVERVIEW
+    ══════════════════════════════════════════ -->
+    <section class="wiki-section" id="overview">
+      <div class="section-eyebrow">What is it?</div>
+      <div class="section-title">Maintenance Agent</div>
+      <p class="section-sub">A full-stack Swiss property management platform connecting four parties — property managers, building owners, tenants, and contractors — in a single, law-aware system.</p>
+
+      <p>Property management in Switzerland involves a dense web of interactions: a tenant files a water damage complaint, which may trigger a rent reduction claim under CO 259a, require owner approval before a contractor is dispatched, generate a QR-bill invoice in the ISO 20022 format, and eventually get posted to a general ledger. Today most managers stitch this together across email, spreadsheets, WhatsApp, and separate billing tools.</p>
+
+      <p>Maintenance Agent replaces all of that. It is opinionated about Swiss law, banking formats, and depreciation standards — not a generic platform localised as an afterthought.</p>
+
+      <div class="card-grid-2" style="margin-top:24px;">
+        <div class="info-card">
+          <span class="info-card-icon">🏢</span>
+          <div class="info-card-title">For professional managers</div>
+          <div class="info-card-desc">Full operational control: maintenance hub, legal engine, invoicing, leases, asset registry, general ledger — from a single dashboard.</div>
+        </div>
+        <div class="info-card">
+          <span class="info-card-icon">🏠</span>
+          <div class="info-card-title">For private landlords (Phase 2)</div>
+          <div class="info-card-desc">Same backend, simplified UX. A private owner managing 1–20 units uses the same platform with a condensed interface and self-service onboarding.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════
+         PERSONAS
+    ══════════════════════════════════════════ -->
+    <section class="wiki-section" id="personas">
+      <div class="section-eyebrow">Who it's for</div>
+      <div class="section-title">Four roles, one platform</div>
+      <p class="section-sub">Each party has a dedicated, role-scoped interface. No shared login pages, no role switching — each persona gets exactly the surface they need.</p>
+
+      <div class="card-grid-2" style="margin-bottom:16px;">
+        <div class="info-card">
+          <span class="info-card-icon">🏢</span>
+          <div class="info-card-title">Property Manager</div>
+          <div class="info-card-desc">Full operational control. Manages requests, contractors, leases, compliance, finances, and assets from a unified hub. Largest surface: 42 UI pages.</div>
+          <div style="margin-top:10px;">
+            <span class="tag tag-brand">Maintenance hub</span>
+            <span class="tag tag-brand">Legal engine</span>
+            <span class="tag tag-brand">Invoicing &amp; OCR</span>
+            <span class="tag tag-brand">Leases</span>
+            <span class="tag tag-brand">Asset registry</span>
+            <span class="tag tag-brand">General ledger</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <span class="info-card-icon">🏠</span>
+          <div class="info-card-title">Building Owner</div>
+          <div class="info-card-desc">Read-only visibility plus approval access. Sees portfolio summary, what drove performance this month, and any work requiring sign-off — without day-to-day management noise.</div>
+          <div style="margin-top:10px;">
+            <span class="tag tag-amber">Portfolio overview</span>
+            <span class="tag tag-amber">One-tap approvals</span>
+            <span class="tag tag-amber">Financial overview</span>
+            <span class="tag tag-amber">Strategy profiles</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <span class="info-card-icon">🏡</span>
+          <div class="info-card-title">Tenant</div>
+          <div class="info-card-desc">Self-service portal for submitting requests, tracking status, viewing leases, paying rent via QR code, and applying for new units — no phone calls required.</div>
+          <div style="margin-top:10px;">
+            <span class="tag tag-green">Request intake</span>
+            <span class="tag tag-green">Invoice &amp; QR pay</span>
+            <span class="tag tag-green">Lease access</span>
+            <span class="tag tag-green">Online application</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <span class="info-card-icon">🔧</span>
+          <div class="info-card-title">Contractor</div>
+          <div class="info-card-desc">Focused job queue with all the context needed to act. Accept jobs, update progress, propose appointment slots, and submit invoices — from the same interface.</div>
+          <div style="margin-top:10px;">
+            <span class="tag tag-blue">Job queue</span>
+            <span class="tag tag-blue">Status updates</span>
+            <span class="tag tag-blue">Invoice creation</span>
+            <span class="tag tag-blue">Job ratings</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout callout-info">
+        <strong>Role isolation:</strong> The Owner surface is intentionally separate from the Manager's — different nav, different routes, different data scope. Shared pages (e.g. building detail) propagate <code class="inline">?role=owner</code> through the URL chain to keep nav, tabs, and edit controls scoped correctly. See <strong>F-UI10</strong> in the conventions section.
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════
+         FEATURES
+    ══════════════════════════════════════════ -->
+    <section class="wiki-section" id="features">
+      <div class="section-eyebrow">Platform capabilities</div>
+      <div class="section-title">What's live today</div>
+      <p class="section-sub">Nine major feature areas, all production-grade and interconnected. Every maintenance event, invoice, and lease lives in the same system and cross-references each other.</p>
+
+      <div class="card-grid-3">
+
+        <div class="feature-card">
+          <span class="feature-card-icon">🔧</span>
+          <div class="feature-card-title">Maintenance Management</div>
+          <ul class="feature-list">
+            <li>Tenant intake via chat or form</li>
+            <li>Auto category + urgency classification</li>
+            <li>Owner approval gate (configurable)</li>
+            <li>Direct assign or RFP to contractors</li>
+            <li>Job status tracking with timeline</li>
+            <li>Appointment slot proposals</li>
+            <li>Contractor performance ratings</li>
+          </ul>
+        </div>
+
+        <div class="feature-card">
+          <span class="feature-card-icon">⚖️</span>
+          <div class="feature-card-title">Swiss Legal Compliance Engine</div>
+          <ul class="feature-list">
+            <li>DSL rule evaluator (AND/OR/topic_match)</li>
+            <li>CO 259a defect &amp; rent reduction rules</li>
+            <li>CO 269d rent adjustment compliance</li>
+            <li>Canton-scoped variable resolution</li>
+            <li>Live SNB/BFS reference rate ingestion</li>
+            <li>Legal auto-routing with confidence scoring</li>
+            <li>FR→EN bilingual legal term matching</li>
+          </ul>
+        </div>
+
+        <div class="feature-card">
+          <span class="feature-card-icon">📄</span>
+          <div class="feature-card-title">Invoicing &amp; OCR Capture</div>
+          <ul class="feature-list">
+            <li>Azure Document Intelligence (primary OCR)</li>
+            <li>Mobile camera → OCR → draft flow</li>
+            <li>QR-bill generation (SIX spec v2.3)</li>
+            <li>Line item editing + Chart of Accounts</li>
+            <li>Approval / dispute workflow</li>
+            <li>Original source file preserved</li>
+          </ul>
+        </div>
+
+        <div class="feature-card">
+          <span class="feature-card-icon">📋</span>
+          <div class="feature-card-title">Lease Management</div>
+          <ul class="feature-list">
+            <li>Online rental application wizard</li>
+            <li>Multi-unit applicant tracking + scoring</li>
+            <li>Lease PDF generation (SHA-256 footer)</li>
+            <li>Digital signature integration</li>
+            <li>Lease termination workflow</li>
+            <li>Vacancy tracking linked to financials</li>
+          </ul>
+        </div>
+
+        <div class="feature-card">
+          <span class="feature-card-icon">📊</span>
+          <div class="feature-card-title">Financial Engine</div>
+          <ul class="feature-list">
+            <li>Chart of Accounts with expense mapping</li>
+            <li>Double-entry General Ledger (auto-posted)</li>
+            <li>Recurring billing schedules</li>
+            <li>Charge reconciliation (Nebenkosten)</li>
+            <li>Rent adjustments (CO 269d)</li>
+            <li>Per-building financial snapshots</li>
+          </ul>
+        </div>
+
+        <div class="feature-card">
+          <span class="feature-card-icon">🏗️</span>
+          <div class="feature-card-title">Asset Inventory &amp; Depreciation</div>
+          <ul class="feature-list">
+            <li>Asset model catalog per unit</li>
+            <li>274 Swiss depreciation standards built in</li>
+            <li>Intervention history per asset</li>
+            <li>Depreciation calculator (residual value)</li>
+            <li>Asset condition + lifecycle tracking</li>
+            <li>PAIF &amp; Swiss real estate taxonomy</li>
+          </ul>
+        </div>
+
+        <div class="feature-card">
+          <span class="feature-card-icon">🧠</span>
+          <div class="feature-card-title">Strategy &amp; Cashflow Engine</div>
+          <ul class="feature-list">
+            <li>5 building archetypes (stability, growth…)</li>
+            <li>6 financial scoring dimensions</li>
+            <li>Decision scoring with ranked options</li>
+            <li>Cashflow plan with strategy overlay</li>
+            <li>Forecasting with scenario comparison</li>
+            <li>56 passing unit tests</li>
+          </ul>
+        </div>
+
+        <div class="feature-card">
+          <span class="feature-card-icon">📱</span>
+          <div class="feature-card-title">Tenant Portal</div>
+          <ul class="feature-list">
+            <li>Maintenance request submission</li>
+            <li>Invoice view with QR payment slip</li>
+            <li>Lease and contract access</li>
+            <li>Asset list for their unit</li>
+            <li>Listing browse &amp; application wizard</li>
+            <li>Mobile responsive (dual-render)</li>
+          </ul>
+        </div>
+
+        <div class="feature-card">
+          <span class="feature-card-icon">👁️</span>
+          <div class="feature-card-title">Owner Portal</div>
+          <ul class="feature-list">
+            <li>Portfolio overview (buildings &amp; units)</li>
+            <li>Pending approvals with full context</li>
+            <li>Invoice review</li>
+            <li>Vacancy tracking</li>
+            <li>Financial overview per building</li>
+            <li>Role-isolated routing</li>
+          </ul>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════
+         WORKFLOWS
+    ══════════════════════════════════════════ -->
+    <section class="wiki-section" id="workflows">
+      <div class="section-eyebrow">How it works</div>
+      <div class="section-title">End-to-end workflows</div>
+      <p class="section-sub">Every process has defined status transitions, approval gates, and domain events. The backend enforces all state machines — the UI exposes them.</p>
+
+      <div class="journey-block">
+        <div class="journey-title">
+          <span style="background:#ede9fe;border-radius:5px;padding:3px 8px;font-size:11px;color:var(--brand);font-weight:700;">MAINTENANCE</span>
+          From request to closed job
+        </div>
+        <div class="journey-steps">
+          <div class="journey-step"><div class="step-node"><div class="step-node-label">Tenant submits</div><div class="step-node-sub">Chat or form</div></div><span class="step-arrow">→</span></div>
+          <div class="journey-step"><div class="step-node active"><div class="step-node-label">Auto-triage</div><div class="step-node-sub">Category + urgency</div></div><span class="step-arrow">→</span></div>
+          <div class="journey-step"><div class="step-node"><div class="step-node-label">Legal check</div><div class="step-node-sub">Route if relevant</div></div><span class="step-arrow">→</span></div>
+          <div class="journey-step"><div class="step-node"><div class="step-node-label">Owner approval</div><div class="step-node-sub">If configured</div></div><span class="step-arrow">→</span></div>
+          <div class="journey-step"><div class="step-node"><div class="step-node-label">Assign contractor</div><div class="step-node-sub">Direct or RFP</div></div><span class="step-arrow">→</span></div>
+          <div class="journey-step"><div class="step-node"><div class="step-node-label">Job completed</div><div class="step-node-sub">With rating</div></div><span class="step-arrow">→</span></div>
+          <div class="journey-step"><div class="step-node active"><div class="step-node-label">Invoice &amp; close</div><div class="step-node-sub">Ledger posted</div></div></div>
+        </div>
+      </div>
+
+      <div class="journey-block">
+        <div class="journey-title">
+          <span style="background:#d1fae5;border-radius:5px;padding:3px 8px;font-size:11px;color:var(--green);font-weight:700;">FINANCIAL</span>
+          From invoice capture to ledger
+        </div>
+        <div class="journey-steps">
+          <div class="journey-step"><div class="step-node active"><div class="step-node-label">Invoice capture</div><div class="step-node-sub">Camera / upload</div></div><span class="step-arrow">→</span></div>
+          <div class="journey-step"><div class="step-node"><div class="step-node-label">OCR extraction</div><div class="step-node-sub">Azure Doc Intelligence</div></div><span class="step-arrow">→</span></div>
+          <div class="journey-step"><div class="step-node"><div class="step-node-label">Draft &amp; review</div><div class="step-node-sub">Line items + COA</div></div><span class="step-arrow">→</span></div>
+          <div class="journey-step"><div class="step-node"><div class="step-node-label">Manager approval</div><div class="step-node-sub">Or dispute flow</div></div><span class="step-arrow">→</span></div>
+          <div class="journey-step"><div class="step-node active"><div class="step-node-label">Auto-post ledger</div><div class="step-node-sub">Debit / credit</div></div><span class="step-arrow">→</span></div>
+          <div class="journey-step"><div class="step-node"><div class="step-node-label">Building snapshot</div><div class="step-node-sub">Per building, monthly</div></div></div>
+        </div>
+      </div>
+
+      <div class="journey-block">
+        <div class="journey-title">
+          <span style="background:#dbeafe;border-radius:5px;padding:3px 8px;font-size:11px;color:var(--blue);font-weight:700;">LEASE</span>
+          From application to active tenancy
+        </div>
+        <div class="journey-steps">
+          <div class="journey-step"><div class="step-node"><div class="step-node-label">Online application</div><div class="step-node-sub">Multi-unit wizard</div></div><span class="step-arrow">→</span></div>
+          <div class="journey-step"><div class="step-node"><div class="step-node-label">Scoring &amp; ranking</div><div class="step-node-sub">Auto + manager delta</div></div><span class="step-arrow">→</span></div>
+          <div class="journey-step"><div class="step-node"><div class="step-node-label">Owner selection</div><div class="step-node-sub">Approve / reject</div></div><span class="step-arrow">→</span></div>
+          <div class="journey-step"><div class="step-node active"><div class="step-node-label">Lease creation</div><div class="step-node-sub">PDF generated</div></div><span class="step-arrow">→</span></div>
+          <div class="journey-step"><div class="step-node"><div class="step-node-label">Digital signature</div><div class="step-node-sub">SHA-256 verified</div></div><span class="step-arrow">→</span></div>
+          <div class="journey-step"><div class="step-node active"><div class="step-node-label">Active tenancy</div><div class="step-node-sub">Billing live</div></div></div>
+        </div>
+      </div>
+
+      <h3>State machines</h3>
+      <p>The backend enforces 8 explicit state transition maps, all defined in <code class="inline">src/workflows/transitions.ts</code>. Invalid transitions are rejected at the workflow layer — no status can be set directly via raw DB update from a route.</p>
+
+      <table class="stack-table">
+        <thead><tr><th>Entity</th><th>Key statuses</th></tr></thead>
+        <tbody>
+          <tr><td>Request</td><td>PENDING_TRIAGE → PENDING_REVIEW → OWNER_APPROVAL → RFP_PENDING → ASSIGNED → IN_PROGRESS → COMPLETED / OWNER_REJECTED</td></tr>
+          <tr><td>Job</td><td>PENDING → ACCEPTED → IN_PROGRESS → COMPLETED / CANCELLED</td></tr>
+          <tr><td>Invoice</td><td>DRAFT → PENDING_APPROVAL → APPROVED → ISSUED / DISPUTED</td></tr>
+          <tr><td>Lease</td><td>DRAFT → PENDING_SIGNATURE → ACTIVE → TERMINATED / EXPIRED</td></tr>
+          <tr><td>RentalApplication</td><td>DRAFT → SUBMITTED → UNDER_REVIEW → SELECTED / REJECTED</td></tr>
+          <tr><td>Rfp</td><td>OPEN → CLOSED → AWARDED / CANCELLED</td></tr>
+          <tr><td>RfpQuote</td><td>SUBMITTED → ACCEPTED / REJECTED</td></tr>
+          <tr><td>CashflowPlan</td><td>DRAFT → ACTIVE → ARCHIVED</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- ══════════════════════════════════════════
+         SWISS COMPLIANCE
+    ══════════════════════════════════════════ -->
+    <section class="wiki-section" id="swiss">
+      <div class="section-eyebrow">Built for Switzerland</div>
+      <div class="section-title">Swiss compliance, out of the box</div>
+      <p class="section-sub">Not a generic platform adapted for Switzerland — built from the ground up for Swiss law, banking formats, and depreciation standards.</p>
+
+      <div class="card-grid-2">
+        <div class="info-card">
+          <span class="info-card-icon">🏦</span>
+          <div class="info-card-title">SIX QR-Bill (ISO 20022)</div>
+          <div class="info-card-desc">Every invoice can generate a compliant Swiss QR payment slip. SIX spec v2.3 payload generation; IBAN + structured reference (QRR/SCOR); PNG displayed inline for tenants. F5 golden test guards financial precision.</div>
+        </div>
+        <div class="info-card">
+          <span class="info-card-icon">📜</span>
+          <div class="info-card-title">Swiss Tenancy Law (CO 259a / CO 269d)</div>
+          <div class="info-card-desc">DSL rule evaluator runs against live reference rates from the SNB and BFS. CO 259a covers defect &amp; rent reduction claims. CO 269d covers lawful rent adjustments. Canton-scoped variable resolution with audit log.</div>
+        </div>
+        <div class="info-card">
+          <span class="info-card-icon">🗂️</span>
+          <div class="info-card-title">Depreciation Standards (PAIF)</div>
+          <div class="info-card-desc">274 Swiss depreciation standards built in, covering all major residential asset categories. Condition-adjusted depreciation calculator with per-intervention deduction tracking. Residual value + replacement timeline shown per asset.</div>
+        </div>
+        <div class="info-card">
+          <span class="info-card-icon">🌐</span>
+          <div class="info-card-title">Multilingual (Phase 2)</div>
+          <div class="info-card-desc">Backend already supports bilingual FR→EN legal term matching. Full FR/DE/IT tenant portal is a Phase 2 deliverable. Canton-specific initial rent notification forms (e.g. Form-10/11 for Zurich, Bern) are also planned.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════
+         ARCHITECTURE
+    ══════════════════════════════════════════ -->
+    <section class="wiki-section" id="architecture">
+      <div class="section-eyebrow">Technical</div>
+      <div class="section-title">Architecture overview</div>
+      <p class="section-sub">A monorepo with a strict layered backend, a Next.js frontend, and PostgreSQL via Docker. The backend uses a raw HTTP server — no Express or Fastify — with a custom routing layer.</p>
+
+      <h3>System topology</h3>
+      <table class="stack-table">
+        <thead><tr><th>Layer</th><th>Tech</th><th>Port</th></tr></thead>
+        <tbody>
+          <tr><td>Frontend</td><td>Next.js 14, Pages Router</td><td><code>3000</code></td></tr>
+          <tr><td>Backend API</td><td>Node.js + TypeScript, raw <code>http.createServer</code></td><td><code>3001</code></td></tr>
+          <tr><td>Database</td><td>PostgreSQL 16 via Docker, Prisma ORM</td><td><code>5432</code></td></tr>
+          <tr><td>Roadmap server</td><td>Node.js REST API (scripts/)</td><td><code>8111</code></td></tr>
+        </tbody>
+      </table>
+
+      <h3>Backend layers (strict top-to-bottom)</h3>
+      <div class="code-block">
+        <pre><span class="keyword">routes</span>  →  <span class="keyword">workflows</span>  →  <span class="keyword">services</span>  →  <span class="keyword">repositories</span>  →  Prisma  →  PostgreSQL</pre>
+      </div>
+
+      <ul class="prose">
+        <li><strong>Routes</strong> — thin HTTP handlers. Parse input, call one workflow, return response. No business logic.</li>
+        <li><strong>Workflows</strong> — orchestration. Delegate to services, emit domain events, own status transitions. 28 workflow modules.</li>
+        <li><strong>Services</strong> — domain logic. No raw Prisma calls. All side effects go through repositories.</li>
+        <li><strong>Repositories</strong> — canonical Prisma access only. Each exports a typed include constant (e.g. <code class="inline">JOB_INCLUDE</code>). 27 repository modules.</li>
+        <li><strong>transitions.ts</strong> — all 8 status transition maps live here. Nowhere else.</li>
+      </ul>
+
+      <h3>Frontend proxy layer</h3>
+      <p>The Next.js app never calls the backend directly from the browser. Every API call goes through a proxy route in <code class="inline">apps/web/pages/api/</code> which forwards to the backend via the shared <code class="inline">proxyToBackend()</code> helper. 197 proxy routes, all conforming. This pattern keeps auth headers server-side and makes the frontend URL surface independent of the backend URL structure.</p>
+
+      <h3>Why this architecture?</h3>
+      <p>The backend uses a raw <code class="inline">http.createServer()</code> rather than Express or Fastify. This was a deliberate early decision: no framework dependency, full control over binary forwarding (PDFs, QR-bill PNGs), and a clean separation between the HTTP layer and the workflow layer. The tradeoff is a bespoke routing and middleware stack — acceptable at the current scale (~225 URL paths), but worth re-evaluating before the team grows significantly. The explicit re-evaluation trigger is documented in the backlog.</p>
+      <p>The Next.js frontend proxies every API call through its own <code class="inline">pages/api/</code> routes rather than calling the backend directly from the browser. This keeps auth tokens server-side, decouples the frontend URL structure from the backend, and makes it straightforward to add per-route logic (rate limiting, caching) later without changing the frontend components.</p>
+
+      <h3>Domain event bus</h3>
+      <p>Workflows emit typed domain events (e.g. <code class="inline">job.completed</code>, <code class="inline">invoice.approved</code>) into the event bus in <code class="inline">src/events/</code>. Listeners handle side effects like notification creation and ledger posting. This decouples workflows from cross-cutting concerns.</p>
+
+      <h3>Auth system</h3>
+      <p>JWT-based. Four token types: <code class="inline">authToken</code> (MANAGER), <code class="inline">ownerToken</code> (OWNER), <code class="inline">vendorToken</code> (VENDOR), tenant session token. Production boot guard refuses to start if <code class="inline">AUTH_OPTIONAL=true</code>, <code class="inline">DEV_IDENTITY_ENABLED=true</code>, or <code class="inline">AUTH_SECRET</code> is missing. Key helpers in <code class="inline">src/authz.ts</code>:</p>
+
+      <table class="stack-table">
+        <thead><tr><th>Helper</th><th>Use case</th></tr></thead>
+        <tbody>
+          <tr><td><code>requireAuth()</code></td><td>Any authenticated route — returns user or 401</td></tr>
+          <tr><td><code>maybeRequireManager()</code></td><td>MANAGER or OWNER reads only — never for mutations</td></tr>
+          <tr><td><code>requireRole(role)</code></td><td>Single role enforcement</td></tr>
+          <tr><td><code>requireAnyRole(roles[])</code></td><td>Multi-role e.g. <code>['CONTRACTOR','MANAGER']</code></td></tr>
+          <tr><td><code>requireTenantSession()</code></td><td>Tenant portal — returns tenantId or null</td></tr>
+          <tr><td><code>getOrgIdForRequest()</code></td><td>Returns <code>string | null</code> — null in prod if unauthenticated</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- ══════════════════════════════════════════
+         TECH STACK
+    ══════════════════════════════════════════ -->
+    <section class="wiki-section" id="stack">
+      <div class="section-eyebrow">Technical</div>
+      <div class="section-title">Tech stack</div>
+      <p class="section-sub">Chosen for compatibility, ecosystem breadth, and a clear deployment path — not because each technology "won" a formal evaluation.</p>
+
+      <h3>Why this stack — the honest account</h3>
+      <p>The project was built iteratively with AI coding agents (Claude, Copilot). That single fact shaped the stack more than any other consideration: agents produce significantly better output for widely-adopted, well-documented technologies. A niche or emerging stack would have slowed every implementation cycle, since agent training data thins out quickly outside the mainstream.</p>
+      <p>The second driver was deployment compatibility. The north-star infrastructure is <strong>Supabase</strong> (managed PostgreSQL), <strong>Vercel</strong> (Next.js frontend), and <strong>Render</strong> (Node.js backend). Every technology choice was filtered through that lens — if it didn't have a clear, well-documented path onto that stack, it was deprioritised regardless of technical merit. This is why PostgreSQL was the only database seriously considered (Supabase native), why Next.js was chosen over other React frameworks (Vercel native), and why the backend stays in Node.js/TypeScript rather than exploring Go or Rust.</p>
+      <p>Tailwind v4 was adopted early — ahead of its stable release — because Next.js and the Vercel build pipeline support it natively, and because agent output quality for Tailwind utility classes is high. The tradeoff is that v4's <code class="inline">@theme {}</code> API differs from v3, which occasionally trips up older documentation. Prisma was chosen over alternatives like Drizzle or TypeORM for the same reasoning: it is by far the most represented ORM in agent training data, and its migration tooling (versioned SQL files, shadow DB replay) maps cleanly onto the Supabase deployment model.</p>
+      <p>In short: the stack was not the result of a benchmarking exercise. It was a deliberate convergence on the set of technologies that would let a small team — heavily augmented by AI — move fast, deploy reliably, and keep operational complexity low.</p>
+
+      <table class="stack-table">
+        <thead><tr><th>Concern</th><th>Technology</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td>Backend runtime</td><td>Node.js + TypeScript</td><td>Raw <code>http.createServer</code>, no framework</td></tr>
+          <tr><td>Frontend</td><td>Next.js 14, Pages Router</td><td>SSR + CSR, <code>pages/</code> directory</td></tr>
+          <tr><td>ORM</td><td>Prisma</td><td>68 models, 84 migrations, shadow DB verified</td></tr>
+          <tr><td>Database</td><td>PostgreSQL 16</td><td>Docker volume <code>maint_agent_pgdata</code></td></tr>
+          <tr><td>Styling</td><td>Tailwind CSS v4.1</td><td><code>@theme {}</code> tokens + CVA + <code>@apply</code> in globals.css</td></tr>
+          <tr><td>Component variants</td><td>CVA (class-variance-authority)</td><td>Button, Badge, Card, DataTable, etc.</td></tr>
+          <tr><td>Class merging</td><td><code>cn()</code> = twMerge + clsx</td><td>Mandatory for all dynamic className</td></tr>
+          <tr><td>Validation</td><td>Zod</td><td>All route input schemas</td></tr>
+          <tr><td>Testing</td><td>Jest + ts-jest</td><td>65 suites, serial (<code>maxWorkers: 1</code>)</td></tr>
+          <tr><td>OCR</td><td>Azure Document Intelligence</td><td><code>prebuilt-layout</code> model, Tesseract fallback</td></tr>
+          <tr><td>E-signing</td><td>SignatureRequest / Skribble</td><td>Model wired; API integration in P0</td></tr>
+          <tr><td>Email</td><td>EmailOutbox model + SMTP/SendGrid</td><td>Dev sink built; prod transport in P0</td></tr>
+          <tr><td>CI</td><td>GitHub Actions</td><td>6-gate pipeline (schema, types, lint, build, tests, smoke)</td></tr>
+          <tr><td>Infra</td><td>Docker Compose</td><td><code>infra/docker-compose.yml</code></td></tr>
+          <tr><td>Typed client</td><td><code>packages/api-client/</code></td><td>DTO types + fetch methods for frontend</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- ══════════════════════════════════════════
+         REPO STRUCTURE
+    ══════════════════════════════════════════ -->
+    <section class="wiki-section" id="structure">
+      <div class="section-eyebrow">Technical</div>
+      <div class="section-title">Repository structure</div>
+
+      <div class="code-block"><pre>
+Maintenance_Agent/
+├── <span class="path">apps/api/</span>
+│   ├── prisma/              <span class="comment"># schema.prisma + 84 migrations/</span>
+│   └── src/
+│       ├── server.ts        <span class="comment"># Entry point (port 3001)</span>
+│       ├── routes/          <span class="comment"># 28 route modules — thin HTTP handlers</span>
+│       ├── workflows/       <span class="comment"># 28 orchestration modules + transitions.ts</span>
+│       ├── services/        <span class="comment"># Domain logic (legalService, strategyService…)</span>
+│       ├── repositories/    <span class="comment"># 27 Prisma repos with canonical includes</span>
+│       ├── events/          <span class="comment"># Domain event bus</span>
+│       ├── governance/      <span class="comment"># Org scope resolvers + assertOrgScope</span>
+│       ├── validation/      <span class="comment"># Zod schemas</span>
+│       ├── authz.ts         <span class="comment"># Auth helpers (requireAuth, requireRole…)</span>
+│       ├── http/            <span class="comment"># Body/JSON/query/errors/router helpers</span>
+│       ├── __tests__/       <span class="comment"># 65 test suites</span>
+│       └── ARCHITECTURE_LOW_CONTEXT_GUIDE.md
+│
+├── <span class="path">apps/web/</span>
+│   ├── pages/               <span class="comment"># 288 pages: 88 UI + 200 API proxies</span>
+│   │   ├── manager/         <span class="comment"># 42 UI pages (hub, list, detail patterns)</span>
+│   │   ├── owner/           <span class="comment"># 8 UI pages</span>
+│   │   ├── tenant/          <span class="comment"># 8 UI pages</span>
+│   │   ├── contractor/      <span class="comment"># 6 UI pages</span>
+│   │   └── api/             <span class="comment"># 200 proxy routes (all use proxyToBackend())</span>
+│   ├── components/
+│   │   ├── AppShell.js      <span class="comment"># Sidebar + main, role-aware</span>
+│   │   ├── ui/              <span class="comment"># CVA components (Button, Badge, Modal…)</span>
+│   │   └── *.js             <span class="comment"># Shared stateful components</span>
+│   ├── lib/
+│   │   ├── proxy.js         <span class="comment"># proxyToBackend() — used by all 200 proxies</span>
+│   │   ├── format.js        <span class="comment"># formatChf, formatDate, formatPercent…</span>
+│   │   ├── statusVariants.js <span class="comment"># 20 status→Badge mappers</span>
+│   │   ├── utils.js         <span class="comment"># cn() = twMerge(clsx())</span>
+│   │   └── hooks/           <span class="comment"># useDetailResource, useAction</span>
+│   └── styles/globals.css   <span class="comment"># @theme tokens + @apply classes</span>
+│
+├── <span class="path">packages/api-client/</span>     <span class="comment"># Typed DTO types + fetch methods</span>
+├── <span class="path">scripts/</span>                 <span class="comment"># Roadmap tooling (generator, parser, server)</span>
+├── <span class="path">infra/docker-compose.yml</span>
+├── PROJECT_STATE.md         <span class="comment"># Deep canonical reference + guardrails</span>
+├── PROJECT_OVERVIEW.md      <span class="comment"># Quick-start for coding tasks</span>
+├── SCHEMA_REFERENCE.md      <span class="comment"># Full 68-model schema table</span>
+├── EPIC_HISTORY.md          <span class="comment"># All completed epic narratives</span>
+├── ROADMAP.json             <span class="comment"># Source of truth (26 features, 6 phases)</span>
+└── docs/
+    ├── design-system.html   <span class="comment"># Visual token + component reference</span>
+    ├── roadmap.html         <span class="comment"># Auto-generated roadmap dashboard</span>
+    └── wiki.html            <span class="comment"># This document</span></pre>
+      </div>
+
+      <div class="callout callout-tip">
+        <strong>First time making a code change?</strong> Start with <a href="../apps/api/src/ARCHITECTURE_LOW_CONTEXT_GUIDE.md">ARCHITECTURE_LOW_CONTEXT_GUIDE.md</a> — it has a lookup table for "which file to edit for X" covering 16 common change types.
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════
+         SCHEMA / DATA MODEL
+    ══════════════════════════════════════════ -->
+    <section class="wiki-section" id="schema">
+      <div class="section-eyebrow">Technical</div>
+      <div class="section-title">Data model</div>
+      <p class="section-sub">68 Prisma models, 62 enums, 84 migrations. All schema changes go through <code class="inline">prisma migrate dev</code> — never <code class="inline">db push</code>.</p>
+
+      <div class="callout callout-info">
+        Full schema with all fields and relations: <a href="../SCHEMA_REFERENCE.md"><strong>SCHEMA_REFERENCE.md</strong></a>. The table below covers the 20 most important models for day-to-day work.
+      </div>
+
+      <h3>Core models</h3>
+      <table class="schema-table">
+        <thead><tr><th>Model</th><th>Purpose</th><th>Key gotchas</th></tr></thead>
+        <tbody>
+          <tr><td>Org</td><td>Top-level tenant. All data is org-scoped.</td><td>mode: MANAGED | OWNER_DIRECT</td></tr>
+          <tr><td>Building</td><td>Physical property with canton, config, and owner relationships.</td><td>canton field drives legal variable resolution</td></tr>
+          <tr><td>Unit</td><td>Individual rental unit inside a building.</td><td>isVacant + monthlyRentChf drive financials</td></tr>
+          <tr><td>Request</td><td>The central maintenance request entity.</td><td>No direct orgId — scope via unit→building FK chain</td></tr>
+          <tr><td>Job</td><td>The work order dispatched to a contractor.</td><td>contractorId is REQUIRED (not optional); has no description — use Request.description</td></tr>
+          <tr><td>Invoice</td><td>Financial document. Can come from OCR capture or contractor billing.</td><td>direction: INBOUND | OUTBOUND; stores source file URL</td></tr>
+          <tr><td>Lease</td><td>Tenancy agreement with full lifecycle and financial linkage.</td><td>40+ fields; links to RecurringBillingSchedule</td></tr>
+          <tr><td>Contractor</td><td>Service provider with rate, categories, and billing info.</td><td>serviceCategories is JSON; IBAN for QR-bill</td></tr>
+          <tr><td>Tenant</td><td>Individual tenant (may occupy multiple units historically).</td><td>Linked via Occupancy join table</td></tr>
+          <tr><td>LegalRule</td><td>DSL-based Swiss law rule.</td><td>Versioned — active version determined by effectiveFrom/To</td></tr>
+          <tr><td>LegalVariable</td><td>Reference rates (SNB interest rate, BFS index).</td><td>Canton-scoped; versioned like rules</td></tr>
+          <tr><td>Asset</td><td>Physical component of a unit (boiler, lift, windows…).</td><td>Links to DepreciationStandard via topic field</td></tr>
+          <tr><td>DepreciationStandard</td><td>274 Swiss-law depreciation lifetimes.</td><td>Unique on jurisdiction+canton+assetType+topic</td></tr>
+          <tr><td>LedgerEntry</td><td>Double-entry accounting row.</td><td>Groups posting legs via journalId</td></tr>
+          <tr><td>Account</td><td>Chart of Accounts entry.</td><td>Unique on orgId+name; accountType: EXPENSE|INCOME|ASSET…</td></tr>
+          <tr><td>CaptureSession</td><td>Mobile invoice upload session with token.</td><td>Expires; stores uploaded file URLs before OCR</td></tr>
+          <tr><td>Rfp</td><td>Request for Proposal sent to multiple contractors.</td><td>buildingId required; links to RfpInvites + RfpQuotes</td></tr>
+          <tr><td>RecurringBillingSchedule</td><td>Auto-generates monthly rent invoices from lease data.</td><td>anchorDay drives generation timing</td></tr>
+          <tr><td>BuildingFinancialSnapshot</td><td>Monthly aggregate of income/expenses per building.</td><td>Computed by cashflow service; used in owner reporting</td></tr>
+          <tr><td>CashflowPlan</td><td>Multi-year financial forecast for a building.</td><td>Links to strategy profile via archetype scoring</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Key enum families</h3>
+      <table class="stack-table">
+        <thead><tr><th>Enum</th><th>Values (abbreviated)</th></tr></thead>
+        <tbody>
+          <tr><td><code>Role</code></td><td>TENANT · CONTRACTOR · MANAGER · OWNER · VENDOR · INSURANCE</td></tr>
+          <tr><td><code>RequestStatus</code></td><td>PENDING_TRIAGE · PENDING_REVIEW · OWNER_APPROVAL · RFP_PENDING · ASSIGNED · IN_PROGRESS · COMPLETED · OWNER_REJECTED · CLOSED</td></tr>
+          <tr><td><code>JobStatus</code></td><td>PENDING · ACCEPTED · IN_PROGRESS · COMPLETED · CANCELLED</td></tr>
+          <tr><td><code>InvoiceStatus</code></td><td>DRAFT · PENDING_APPROVAL · APPROVED · ISSUED · DISPUTED · CANCELLED</td></tr>
+          <tr><td><code>LeaseStatus</code></td><td>DRAFT · PENDING_SIGNATURE · ACTIVE · TERMINATED · EXPIRED</td></tr>
+          <tr><td><code>AssetType</code></td><td>HVAC · ELECTRICAL · PLUMBING · STRUCTURE · APPLIANCE · EXTERIOR · COMMON_AREA · …</td></tr>
+          <tr><td><code>InvoiceDirection</code></td><td>INBOUND (expense) · OUTBOUND (rent demand)</td></tr>
+          <tr><td><code>InvoiceSourceChannel</code></td><td>MANUAL · CAMERA · UPLOAD · EMAIL · RECURRING · CONTRACTOR_BILLING</td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout callout-warn">
+        <strong>Schema gotchas that have caused production bugs:</strong>
+        <ul style="margin-top:8px;padding-left:16px;">
+          <li><code class="inline">Job</code> has no <code class="inline">description</code> — access via <code class="inline">job.request.description</code></li>
+          <li><code class="inline">Appliance</code> has no <code class="inline">category</code> — lives on <code class="inline">AssetModel.category</code></li>
+          <li><code class="inline">Job.contractorId</code> is <strong>required</strong>, not optional</li>
+          <li><code class="inline">Request</code> has no direct <code class="inline">orgId</code> — org scope comes from the unit→building join</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════
+         FRONTEND DESIGN SYSTEM
+    ══════════════════════════════════════════ -->
+    <section class="wiki-section" id="frontend">
+      <div class="section-eyebrow">Technical</div>
+      <div class="section-title">Frontend design system</div>
+      <p class="section-sub">Three-layer CSS architecture backed by Tailwind v4.1. All styles trace back to semantic tokens — one token change reskins the entire app.</p>
+
+      <h3>Three layers</h3>
+      <div class="card-grid-3" style="margin-bottom:24px;">
+        <div class="info-card">
+          <div class="info-card-title">Layer 1 — Semantic tokens</div>
+          <div class="info-card-desc">29 CSS custom properties in <code class="inline">globals.css @theme {}</code>. Brand (indigo), destructive (red), success (green), muted (slate), surface — each with DEFAULT / light / dark / ring / text variants. Change brand colour in one line.</div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-title">Layer 2 — @apply classes</div>
+          <div class="info-card-desc">84 utility-backed CSS classes in <code class="inline">globals.css @layer components</code>. Buttons (<code class="inline">.button-primary</code>), tables (<code class="inline">.inline-table</code>), tabs (<code class="inline">.tab-strip</code>), filters, forms, layout primitives. Use these before writing custom Tailwind.</div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-title">Layer 3 — CVA primitives</div>
+          <div class="info-card-desc">~20 React components in <code class="inline">components/ui/</code>. Button (10 variants), Badge, Card, DataTable, Input, Select, ErrorBanner, EmptyState, StatusPill, KpiCard, Modal, ActionBar, ResourceShell, DetailGrid, DetailList. Barrel export via <code class="inline">components/ui/index.js</code>.</div>
+        </div>
+      </div>
+
+      <h3>Page layout nesting (mandatory)</h3>
+      <div class="code-block"><pre>
+AppShell [role="MANAGER"|"OWNER"|"CONTRACTOR"|"TENANT"]
+  PageShell                    <span class="comment">// max-width + padding</span>
+    PageHeader [title, actions, backLink, breadcrumbs]
+      PageContent
+        <span class="comment">// Hub pages (with tabs):</span>
+        div.tab-strip  <span class="comment">// or &lt;ScrollableTabs&gt;</span>
+        Panel bodyClassName="p-0"
+          div.tab-panel / div.tab-panel-active
+            div.px-4.py-4
+              content
+
+        <span class="comment">// Detail pages (no tabs):</span>
+        Panel title="Section name"
+          content
+        Panel title="Table section" bodyClassName="p-0"
+          table.inline-table</pre>
+      </div>
+
+      <h3>Key rules</h3>
+
+      <div class="guardrail-list">
+        <div class="guardrail">
+          <div class="guardrail-title">F-UI4: cn() for all dynamic className</div>
+          <div class="guardrail-desc">Use <code class="guardrail-code">cn()</code> = <code class="guardrail-code">twMerge(clsx())</code> for any className with dynamic values. Template-literal interpolation (<code class="guardrail-code">className={`... ${x}`}</code>) is banned. A pre-commit hook enforces this.</div>
+        </div>
+        <div class="guardrail">
+          <div class="guardrail-title">F-UI4a: Status badges via Badge + statusVariants.js</div>
+          <div class="guardrail-desc">20 mapper functions (<code class="guardrail-code">requestVariant</code>, <code class="guardrail-code">jobVariant</code>, <code class="guardrail-code">invoiceVariant</code>…). Always <code class="guardrail-code">&lt;Badge variant={requestVariant(status)}&gt;</code>. Never inline color maps or per-file STATUS_COLORS objects.</div>
+        </div>
+        <div class="guardrail">
+          <div class="guardrail-title">F-UI9: Mobile table pattern — dual render</div>
+          <div class="guardrail-desc">Tables must never be the mobile experience. Use a CSS dual-render: <code class="guardrail-code">sm:hidden</code> card list for mobile + <code class="guardrail-code">hidden sm:block</code> table for desktop. Never use <code class="guardrail-code">overflow-x-auto</code> on tables as a mobile strategy. 18+ pages already migrated.</div>
+        </div>
+        <div class="guardrail">
+          <div class="guardrail-title">F-UI11: Tab strips via ScrollableTabs</div>
+          <div class="guardrail-desc">Never use a bare <code class="guardrail-code">&lt;div className="tab-strip"&gt;</code>. Use <code class="guardrail-code">&lt;ScrollableTabs activeIndex={...}&gt;</code>. When tabs overflow, it automatically shows a "More ▾" button that opens a BottomSheet — the active tab is always promoted to the visible set.</div>
+        </div>
+        <div class="guardrail">
+          <div class="guardrail-title">F-UI8: Shared hooks before custom fetch code</div>
+          <div class="guardrail-desc"><code class="guardrail-code">useDetailResource(url)</code> replaces useState+useCallback+useEffect fetch boilerplate. <code class="guardrail-code">useAction()</code> replaces try/finally pending-state wrappers. <code class="guardrail-code">ResourceShell</code> replaces loading/error/not-found early-return guards.</div>
+        </div>
+        <div class="guardrail">
+          <div class="guardrail-title">F-UI7: English only</div>
+          <div class="guardrail-desc">All user-visible text, seed data, error messages, and tooltips must be in English. No German, French, or other language strings anywhere until the dedicated i18n epic lands.</div>
+        </div>
+      </div>
+
+      <h3>Design reference</h3>
+      <p>The visual component gallery with token reference, spacing rules, table vs card rules, and all decided conflicts lives at <a href="design-system.html"><strong>docs/design-system.html</strong></a>. Open it in a browser before building new UI.</p>
+    </section>
+
+    <!-- ══════════════════════════════════════════
+         TESTING & CI
+    ══════════════════════════════════════════ -->
+    <section class="wiki-section" id="testing">
+      <div class="section-eyebrow">Technical</div>
+      <div class="section-title">Testing &amp; CI</div>
+
+      <h3>Test suite</h3>
+      <table class="stack-table">
+        <thead><tr><th>Detail</th><th>Value</th></tr></thead>
+        <tbody>
+          <tr><td>Framework</td><td>Jest + ts-jest</td></tr>
+          <tr><td>Suites</td><td>65 (980 tests)</td></tr>
+          <tr><td>Execution</td><td>Serial — <code>maxWorkers: 1</code> to prevent port collisions</td></tr>
+          <tr><td>Test DB</td><td><code>maint_agent_test</code> — isolated from dev DB <code>maint_agent</code></td></tr>
+          <tr><td>Port range</td><td>3201–3219 for test servers (see CONTRIBUTING.md for registry)</td></tr>
+          <tr><td>Helpers</td><td><code>startTestServer</code> / <code>stopTestServer</code> in <code>testHelpers.ts</code> — all new tests use these</td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout callout-info" style="margin-bottom:20px;">
+        <strong>Why serial execution (<code>maxWorkers: 1</code>)?</strong> Integration tests each spin up a real Node.js server on a dedicated port. Running them in parallel caused intermittent port collision failures that were hard to reproduce and harder to debug — a real incident that cost a full session. Serial execution eliminated the problem entirely with no meaningful impact on total test runtime at current suite count.
+      </div>
+
+      <h3>Test categories</h3>
+      <ul class="prose">
+        <li><strong>Contract tests</strong> (<code class="inline">contracts.test.ts</code>) — assert DTO shape and nested relations for key endpoints. Must be updated in the same PR as any DTO change.</li>
+        <li><strong>Integration tests</strong> — spin up a real server against the test DB. Most suites fall here.</li>
+        <li><strong>Pure-function suites</strong> — <code class="inline">domainEvents</code>, <code class="inline">httpErrors</code>, <code class="inline">orgIsolation</code>, <code class="inline">routeProtection</code>, <code class="inline">triage</code> — no server spawned, always fast.</li>
+        <li><strong>Strategy engine</strong> — 56 unit tests covering all archetype scoring, decision ranking, and cashflow overlay logic.</li>
+      </ul>
+
+      <h3>CI pipeline (6 gates — all must pass)</h3>
+      <div class="guardrail-list">
+        <div class="guardrail">
+          <div class="guardrail-title">1. Schema drift check</div>
+          <div class="guardrail-desc"><code class="guardrail-code">prisma migrate diff</code> must return "empty migration". Any drift = CI fail.</div>
+        </div>
+        <div class="guardrail">
+          <div class="guardrail-title">2. Prisma generate</div>
+          <div class="guardrail-desc"><code class="guardrail-code">npx prisma generate</code> must succeed cleanly.</div>
+        </div>
+        <div class="guardrail">
+          <div class="guardrail-title">3. TypeScript type check</div>
+          <div class="guardrail-desc"><code class="guardrail-code">tsc --noEmit</code> — 0 errors required. Currently clean.</div>
+        </div>
+        <div class="guardrail">
+          <div class="guardrail-title">4. Frontend build + lint</div>
+          <div class="guardrail-desc"><code class="guardrail-code">next build</code> + <code class="guardrail-code">next lint --max-warnings 0</code></div>
+        </div>
+        <div class="guardrail">
+          <div class="guardrail-title">5. All Jest tests pass</div>
+          <div class="guardrail-desc">All 65 suites against <code class="guardrail-code">maint_agent_test</code>.</div>
+        </div>
+        <div class="guardrail">
+          <div class="guardrail-title">6. Backend smoke test</div>
+          <div class="guardrail-desc">Server boots + curl to <code class="guardrail-code">/requests</code>, <code class="guardrail-code">/leases</code>, <code class="guardrail-code">/jobs</code> all return 200.</div>
+        </div>
+      </div>
+
+      <div class="callout callout-warn" style="margin-top:20px;">
+        <strong>If CI is red: do not merge, do not defer fixes.</strong> The pipeline is a hard gate, not advisory.
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════
+         DEV CONVENTIONS / GUARDRAILS
+    ══════════════════════════════════════════ -->
+    <section class="wiki-section" id="conventions">
+      <div class="section-eyebrow">Technical</div>
+      <div class="section-title">Developer conventions</div>
+      <p class="section-sub">These guardrails exist because each one maps to a real outage or a full day of debugging. Read them before making any change.</p>
+
+      <h3>Schema &amp; database</h3>
+      <div class="guardrail-list">
+        <div class="guardrail danger">
+          <div class="guardrail-title">G1/G8: prisma db push is permanently banned</div>
+          <div class="guardrail-desc">Always use <code class="guardrail-code">npx prisma migrate dev --name &lt;desc&gt;</code>. <code class="guardrail-code">db push</code> creates invisible schema drift that breaks queries silently. CI will fail if <code class="guardrail-code">db push</code> is detected in any script.</div>
+        </div>
+        <div class="guardrail danger">
+          <div class="guardrail-title">G6: Destructive DB commands require explicit approval</div>
+          <div class="guardrail-desc"><code class="guardrail-code">docker-compose down -v</code>, <code class="guardrail-code">prisma migrate reset</code>, <code class="guardrail-code">docker volume rm maint_agent_pgdata</code> — these destroy data. Never run without the user explicitly asking. The dev DB is the persistent source of truth.</div>
+        </div>
+        <div class="guardrail">
+          <div class="guardrail-title">G2: New model fields — update all consumers in one PR</div>
+          <div class="guardrail-desc">schema.prisma + migration → repository include constant → DTO interface + mapper → validation schema → OpenAPI spec + api-client → contract test. Miss one and the DTO silently drops data.</div>
+        </div>
+        <div class="guardrail">
+          <div class="guardrail-title">G3: Prisma includes must match what mappers access</div>
+          <div class="guardrail-desc">If a DTO mapper accesses <code class="guardrail-code">job.request.tenant</code>, the query feeding it must have that relation in its include. Prisma returns <code class="guardrail-code">undefined</code> (not an error) for non-included relations.</div>
+        </div>
+        <div class="guardrail">
+          <div class="guardrail-title">G9: Canonical include constants — no ad-hoc include trees</div>
+          <div class="guardrail-desc">Every repository exports a typed include constant (e.g. <code class="guardrail-code">JOB_INCLUDE</code>). All DTO mappers use <code class="guardrail-code">Prisma.JobGetPayload&lt;{ include: typeof JOB_INCLUDE }&gt;</code>. Never define inline <code class="guardrail-code">include: { ... }</code> in routes or services.</div>
+        </div>
+      </div>
+
+      <h3>Code quality</h3>
+      <div class="guardrail-list">
+        <div class="guardrail">
+          <div class="guardrail-title">G4: No stub services in production paths</div>
+          <div class="guardrail-desc">Never leave a function that returns fake data in a file that production routes import. If a real implementation exists elsewhere, re-export it. Stubs must be clearly marked and isolated to test files.</div>
+        </div>
+        <div class="guardrail">
+          <div class="guardrail-title">G10: Contract tests must be updated with DTO changes</div>
+          <div class="guardrail-desc"><code class="guardrail-code">contracts.test.ts</code> guards the DTO shape of <code class="guardrail-code">GET /requests</code>, <code class="guardrail-code">/jobs</code>, <code class="guardrail-code">/invoices</code>, <code class="guardrail-code">/leases/:id</code>. Any DTO change must update the contract test in the same PR.</div>
+        </div>
+      </div>
+
+      <h3>Git &amp; commit safety</h3>
+      <div class="guardrail-list">
+        <div class="guardrail">
+          <div class="guardrail-title">G12: Commit every deliverable — no session-long uncommitted work</div>
+          <div class="guardrail-desc">If you've produced &gt;100 lines of working code without a commit, stop and commit. Code only in the working tree is one editor crash away from being lost.</div>
+        </div>
+        <div class="guardrail">
+          <div class="guardrail-title">G13: Frontend + backend = one atomic commit</div>
+          <div class="guardrail-desc">When a feature spans both layers, both must land in the same commit. The Forecast tab was lost in April 2026 because the backend was committed and the UI wasn't. If the UI is still in progress, commit the backend with a <code class="guardrail-code">feat: backend (UI pending)</code> message.</div>
+        </div>
+        <div class="guardrail">
+          <div class="guardrail-title">G14: Session-end verification</div>
+          <div class="guardrail-desc">Before closing: <code class="guardrail-code">git status &amp;&amp; git stash list &amp;&amp; git diff --stat</code>. If anything meaningful is uncommitted, commit it — even as <code class="guardrail-code">wip: &lt;description&gt;</code>.</div>
+        </div>
+      </div>
+
+      <h3>Pre-commit smoke test</h3>
+      <div class="code-block"><pre>
+cd apps/api
+
+<span class="comment"># 1. Types</span>
+npx tsc --noEmit
+
+<span class="comment"># 2. Tests</span>
+npm test
+
+<span class="comment"># 3. Schema drift = zero</span>
+npx prisma migrate diff \
+  --from-schema-datasource ./prisma/schema.prisma \
+  --to-schema-datamodel ./prisma/schema.prisma --script
+<span class="comment"># Expected output: "-- This is an empty migration."</span>
+
+<span class="comment"># 4. Nothing left uncommitted</span>
+git status &amp;&amp; git stash list</pre>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════
+         DEV SETUP
+    ══════════════════════════════════════════ -->
+    <section class="wiki-section" id="setup">
+      <div class="section-eyebrow">Technical</div>
+      <div class="section-title">Development setup</div>
+
+      <h3>Prerequisites</h3>
+      <ul class="prose">
+        <li>Node.js 18+ and npm</li>
+        <li>Docker Desktop (for PostgreSQL)</li>
+        <li>An <code class="inline">AUTH_SECRET</code> env var (any string for dev)</li>
+      </ul>
+
+      <h3>Quick start</h3>
+      <div class="code-block"><pre>
+<span class="comment"># 1. Start PostgreSQL</span>
+npm run dev:db
+
+<span class="comment"># 2. Run migrations + seed</span>
+cd apps/api
+npx prisma migrate deploy
+npx prisma db seed
+
+<span class="comment"># 3. Start backend (port 3001)</span>
+npm run dev:api
+
+<span class="comment"># 4. Start frontend (port 3000)</span>
+npm run dev:web</pre>
+      </div>
+
+      <div class="callout callout-tip" style="margin-top:0;margin-bottom:24px;">
+        <strong>Deployment targets:</strong> Supabase (PostgreSQL), Vercel (Next.js frontend), Render (Node.js API). Every environment variable name and default value below is chosen with these three platforms in mind.
+      </div>
+
+      <h3>Key env vars</h3>
+      <table class="stack-table">
+        <thead><tr><th>Variable</th><th>Default (dev)</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td><code>DATABASE_URL</code></td><td><code>postgresql://postgres:postgres@localhost:5432/maint_agent</code></td><td>Dev DB</td></tr>
+          <tr><td><code>PORT</code></td><td><code>3001</code></td><td>Backend port</td></tr>
+          <tr><td><code>AUTH_OPTIONAL</code></td><td><code>true</code> (dev only)</td><td>Must be false in prod</td></tr>
+          <tr><td><code>AUTH_SECRET</code></td><td>any string</td><td>Required in prod</td></tr>
+          <tr><td><code>API_BASE_URL</code></td><td><code>http://127.0.0.1:3001</code></td><td>Frontend → backend URL</td></tr>
+          <tr><td><code>AZURE_DOC_INTEL_ENDPOINT</code></td><td>—</td><td>OCR (optional in dev)</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Clean restart scripts</h3>
+      <div class="code-block"><pre>
+npm run dev:clean:api    <span class="comment"># Kill stale ts-node, restart backend</span>
+npm run dev:clean:web    <span class="comment"># Kill stale next, clear .next, restart frontend</span>
+npm run dev:clean:all    <span class="comment"># Both of the above</span>
+npm run dev:db           <span class="comment"># Start PostgreSQL via Docker</span></pre>
+      </div>
+
+      <p>Full command reference: <a href="DEV_COMMANDS.md"><strong>docs/DEV_COMMANDS.md</strong></a></p>
+
+      <h3>Dev auth tokens</h3>
+      <p>The frontend bootstraps dev JWT tokens automatically in <code class="inline">_app.js</code>. Three dev users are seeded: <code class="inline">manager@local.dev</code> (MANAGER), <code class="inline">dev-owner</code> (OWNER), <code class="inline">dev-vendor</code> (VENDOR). All tokens expire 2027-03-15. To regenerate:</p>
+      <div class="code-block"><pre>
+cd apps/api
+node -e "const jwt=require('jsonwebtoken'); \
+  console.log(jwt.sign( \
+    {userId:'dev-user',orgId:'default-org',email:'dev@local',role:'MANAGER'}, \
+    'dev-secret-key-12345', \
+    {expiresIn:'365d'} \
+  ))"</pre>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════
+         ROADMAP
+    ══════════════════════════════════════════ -->
+    <section class="wiki-section" id="roadmap">
+      <div class="section-eyebrow">What's next</div>
+      <div class="section-title">Product roadmap</div>
+      <p class="section-sub">Six phases taking the platform from production-ready to a full-coverage Swiss property intelligence layer. Source of truth: <code class="inline">ROADMAP.json</code>. Visual dashboard: <a href="roadmap.html">docs/roadmap.html</a>.</p>
+
+      <div>
+
+        <div class="roadmap-phase">
+          <div class="roadmap-head" onclick="toggle(this)">
+            <span class="phase-badge p0">P0</span>
+            <div class="roadmap-head-info">
+              <div class="roadmap-phase-name">Foundation Hardening</div>
+              <div class="roadmap-phase-window">Now → Month 1</div>
+            </div>
+            <span class="status-pill status-active">In progress</span>
+            <span style="color:var(--text-muted);font-size:13px;margin-left:8px;">▾</span>
+          </div>
+          <div class="roadmap-body open">
+            <div class="roadmap-goal">Clear the critical path blockers before adding new features. Three items directly block monetizable work.</div>
+            <div class="roadmap-features">
+              <div class="roadmap-feature"><span class="ftype ftype-wire">Wire</span><div class="roadmap-feature-title">Email Delivery (SMTP / SendGrid)</div><div class="roadmap-feature-desc">EmailOutbox model and dev sink built. Wiring production transport enables rent reminders, invoice delivery, and tenant notifications.</div></div>
+              <div class="roadmap-feature"><span class="ftype ftype-wire">Wire</span><div class="roadmap-feature-title">Digital Lease Signing (Skribble)</div><div class="roadmap-feature-desc">SignatureRequest model exists. Wire to Skribble API — the Swiss-compliant e-signature provider. Table stakes for private landlord positioning.</div></div>
+              <div class="roadmap-feature"><span class="ftype ftype-wire">Refactor</span><div class="roadmap-feature-title">Service Layer Extraction</div><div class="roadmap-feature-desc">legal.ts, tenants.ts, leases.ts have business logic in route handlers. Extract to services before P1 financial work adds complexity.</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="roadmap-phase">
+          <div class="roadmap-head" onclick="toggle(this)">
+            <span class="phase-badge p1">P1</span>
+            <div class="roadmap-head-info">
+              <div class="roadmap-phase-name">Cashflow Layer</div>
+              <div class="roadmap-phase-window">Month 1–3</div>
+            </div>
+            <span class="status-pill status-planned">Planned</span>
+            <span style="color:var(--text-muted);font-size:13px;margin-left:8px;">▾</span>
+          </div>
+          <div class="roadmap-body">
+            <div class="roadmap-goal">Build the financial visibility layer for building owners — cash in, cash out, per-building balance — without crossing into accounting.</div>
+            <div class="roadmap-features">
+              <div class="roadmap-feature"><span class="ftype ftype-build">Build</span><div class="roadmap-feature-title">QR-Invoice Rent Demand Generation</div><div class="roadmap-feature-desc">Generate ISO 20022 compliant QR-invoices for monthly rent demands from lease data. Send via email. Track payment status automatically.</div></div>
+              <div class="roadmap-feature"><span class="ftype ftype-build">Build</span><div class="roadmap-feature-title">Bank Payment Reconciliation (MT940)</div><div class="roadmap-feature-desc">Accept MT940/CSV from Swiss banks. Auto-match payments to open demands by amount + reference.</div></div>
+              <div class="roadmap-feature"><span class="ftype ftype-build">Build</span><div class="roadmap-feature-title">Rent Arrears Workflow</div><div class="roadmap-feature-desc">Escalating reminders: friendly nudge (D+3) → formal notice (D+14) → Betreibungshinweis template (D+30). Automated email delivery.</div></div>
+              <div class="roadmap-feature"><span class="ftype ftype-build">Build</span><div class="roadmap-feature-title">Nebenkosten Statements</div><div class="roadmap-feature-desc">Annual utility charge statement generation. Input: expense invoices tagged as Nebenkosten. Output: PDF per tenant with settlement.</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="roadmap-phase">
+          <div class="roadmap-head" onclick="toggle(this)">
+            <span class="phase-badge p2">P2</span>
+            <div class="roadmap-head-info">
+              <div class="roadmap-phase-name">Private Landlord SaaS</div>
+              <div class="roadmap-phase-window">Month 3–6</div>
+            </div>
+            <span class="status-pill status-planned">Planned</span>
+            <span style="color:var(--text-muted);font-size:13px;margin-left:8px;">▾</span>
+          </div>
+          <div class="roadmap-body">
+            <div class="roadmap-goal">Same backend, simplified UX skin for private individuals owning 1–20 units. Same data, different onboarding and interface.</div>
+            <div class="roadmap-features">
+              <div class="roadmap-feature"><span class="ftype ftype-product">Product</span><div class="roadmap-feature-title">Self-Service Onboarding Wizard</div><div class="roadmap-feature-desc">Private landlord operational in under 15 minutes: add building → add unit → upload lease → set rent → generate first QR-invoice.</div></div>
+              <div class="roadmap-feature"><span class="ftype ftype-build">Build</span><div class="roadmap-feature-title">Multilingual Tenant Portal (FR/DE/IT)</div><div class="roadmap-feature-desc">All tenant-facing pages served in FR, DE, or IT based on tenant language preference.</div></div>
+              <div class="roadmap-feature"><span class="ftype ftype-extend">Extend</span><div class="roadmap-feature-title">Canton Rent Notification Forms</div><div class="roadmap-feature-desc">Generate the correct canton-specific initial rent notification form pre-filled from lease data. First target: Form-10/11 (Zurich, Bern).</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="roadmap-phase">
+          <div class="roadmap-head" onclick="toggle(this)">
+            <span class="phase-badge p3">P3</span>
+            <div class="roadmap-head-info">
+              <div class="roadmap-phase-name">AI Triage Upgrade</div>
+              <div class="roadmap-phase-window">Month 5–8</div>
+            </div>
+            <span class="status-pill status-planned">Planned</span>
+            <span style="color:var(--text-muted);font-size:13px;margin-left:8px;">▾</span>
+          </div>
+          <div class="roadmap-body">
+            <div class="roadmap-goal">Extend the existing triage service from classify-and-route to resolve-before-dispatch. The infrastructure is there. The intelligence layer is not.</div>
+            <div class="roadmap-features">
+              <div class="roadmap-feature"><span class="ftype ftype-build">Build</span><div class="roadmap-feature-title">LLM-Based Triage</div><div class="roadmap-feature-desc">Replace/augment rule-based triage with LLM classification. Input: free-text + photos. Output: category, urgency, recommended action, confidence.</div></div>
+              <div class="roadmap-feature"><span class="ftype ftype-extend">Extend</span><div class="roadmap-feature-title">Self-Service Resolution Q&amp;A</div><div class="roadmap-feature-desc">Structured Q&amp;A at intake to resolve without dispatch. Target: resolve ~20% of requests without a contractor call-out.</div></div>
+              <div class="roadmap-feature"><span class="ftype ftype-build">Build</span><div class="roadmap-feature-title">Maintenance Analytics</div><div class="roadmap-feature-desc">Requests by category/building, avg time-to-resolution, self-resolution rate, contractor performance, cost-per-category.</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="roadmap-phase">
+          <div class="roadmap-head" onclick="toggle(this)">
+            <span class="phase-badge p4">P4</span>
+            <div class="roadmap-head-info">
+              <div class="roadmap-phase-name">NOI Intelligence</div>
+              <div class="roadmap-phase-window">Month 8–14</div>
+            </div>
+            <span class="status-pill status-planned">Planned</span>
+            <span style="color:var(--text-muted);font-size:13px;margin-left:8px;">▾</span>
+          </div>
+          <div class="roadmap-body">
+            <div class="roadmap-goal">Connect cashflow + maintenance analytics + vacancy data into a per-building P&amp;L proxy. Decision intelligence, not accounting.</div>
+            <div class="roadmap-features">
+              <div class="roadmap-feature"><span class="ftype ftype-product">Product</span><div class="roadmap-feature-title">NOI Dashboard</div><div class="roadmap-feature-desc">Per-building: gross income, total expenses (with maintenance breakdown), vacancy loss, net operating income proxy.</div></div>
+              <div class="roadmap-feature"><span class="ftype ftype-build">Build</span><div class="roadmap-feature-title">Predictive Maintenance Signals</div><div class="roadmap-feature-desc">Use AssetIntervention + DepreciationStandard to surface forward-looking signals: aging assets, recommended replacement budget, risk alerts.</div></div>
+              <div class="roadmap-feature"><span class="ftype ftype-infra">Infra</span><div class="roadmap-feature-title">Live Bank Feed (SIX bLink)</div><div class="roadmap-feature-desc">Replace MT940 manual import with live bank feed. Automatic daily reconciliation. Built after MT940 is proven in production.</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="roadmap-phase">
+          <div class="roadmap-head" onclick="toggle(this)">
+            <span class="phase-badge p5">P5</span>
+            <div class="roadmap-head-info">
+              <div class="roadmap-phase-name">ESG Layer</div>
+              <div class="roadmap-phase-window">Month 14+</div>
+            </div>
+            <span class="status-pill status-planned">Planned</span>
+            <span style="color:var(--text-muted);font-size:13px;margin-left:8px;">▾</span>
+          </div>
+          <div class="roadmap-body">
+            <div class="roadmap-goal">Energy tracking, cantonal compliance deadlines, retrofit ROI modeling. New vertical targeting institutional owners.</div>
+            <div class="roadmap-features">
+              <div class="roadmap-feature"><span class="ftype ftype-build">Build</span><div class="roadmap-feature-title">Energy Consumption Tracking</div><div class="roadmap-feature-desc">Per-building energy data ingestion. Cantonal compliance deadlines surfaced proactively.</div></div>
+              <div class="roadmap-feature"><span class="ftype ftype-build">Build</span><div class="roadmap-feature-title">Retrofit ROI Modeling</div><div class="roadmap-feature-desc">Connect depreciation standards and energy data to model the financial return on insulation, heating, and window retrofits.</div></div>
+              <div class="roadmap-feature"><span class="ftype ftype-product">Product</span><div class="roadmap-feature-title">Institutional Owner Reporting</div><div class="roadmap-feature-desc">ESG-grade reporting for pension funds and institutional owners managing large Swiss residential portfolios.</div></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════
+         BUILD HISTORY
+    ══════════════════════════════════════════ -->
+    <section class="wiki-section" id="history">
+      <div class="section-eyebrow">For everyone</div>
+      <div class="section-title">Build history</div>
+      <p class="section-sub">From the first commit in February 2026 to a production-ready platform in April 2026 — 20+ epics across ~12 weeks. This timeline shows what was built and when.</p>
+
+      <!-- Timeline styles inline -->
+      <style>
+        .timeline { display: flex; flex-direction: column; gap: 2px; }
+        .tl-row {
+          display: grid; grid-template-columns: 110px 1fr;
+          gap: 0; align-items: stretch;
+        }
+        .tl-date {
+          padding: 12px 16px 12px 0; font-size: 11px; font-weight: 600;
+          color: var(--text-muted); text-align: right; white-space: nowrap;
+          border-right: 2px solid var(--border); position: relative;
+        }
+        .tl-date::after {
+          content: ''; position: absolute; right: -5px; top: 18px;
+          width: 8px; height: 8px; border-radius: 50%;
+          background: var(--border); border: 2px solid var(--bg);
+        }
+        .tl-row.milestone .tl-date::after { background: var(--brand); }
+        .tl-row.infra .tl-date::after { background: var(--amber); }
+        .tl-row.feature .tl-date::after { background: var(--green); }
+        .tl-body {
+          padding: 10px 0 10px 20px;
+        }
+        .tl-title { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 3px; }
+        .tl-desc { font-size: 12px; color: var(--text-secondary); line-height: 1.55; }
+        .tl-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+        .tl-tag {
+          font-size: 10px; font-weight: 600; padding: 1px 7px; border-radius: 20px;
+        }
+        .tl-tag-backend { background: #dbeafe; color: #1e40af; }
+        .tl-tag-frontend { background: #ede9fe; color: #5b21b6; }
+        .tl-tag-infra { background: #fef3c7; color: #92400e; }
+        .tl-tag-security { background: #fee2e2; color: #991b1b; }
+        .tl-tag-legal { background: #d1fae5; color: #065f46; }
+        .tl-tag-finance { background: #cffafe; color: #164e63; }
+      </style>
+
+      <div class="timeline">
+
+        <div class="tl-row milestone">
+          <div class="tl-date">Feb 3, 2026</div>
+          <div class="tl-body">
+            <div class="tl-title">Project bootstrap &amp; first architecture</div>
+            <div class="tl-desc">Removed legacy NestJS scaffolding. Established raw <code class="inline">http.createServer</code> backend, monorepo structure, CI pipeline on GitHub Actions. First real models: Tenant, Building, Unit, Appliance, AssetModel.</div>
+            <div class="tl-tags"><span class="tl-tag tl-tag-backend">Backend</span><span class="tl-tag tl-tag-infra">CI/CD</span></div>
+          </div>
+        </div>
+
+        <div class="tl-row feature">
+          <div class="tl-date">Feb 7–8</div>
+          <div class="tl-body">
+            <div class="tl-title">Inventory admin + tenant occupancy</div>
+            <div class="tl-desc">Org-scoped CRUD for buildings/units/appliances. Occupancy join model (tenant ↔ unit). Soft-delete flags. 29 new integration tests. Admin UI detail pages for buildings and units.</div>
+            <div class="tl-tags"><span class="tl-tag tl-tag-backend">Backend</span><span class="tl-tag tl-tag-frontend">Frontend</span></div>
+          </div>
+        </div>
+
+        <div class="tl-row feature">
+          <div class="tl-date">Feb 8</div>
+          <div class="tl-body">
+            <div class="tl-title">AppShell &amp; persona-scoped navigation</div>
+            <div class="tl-desc">Shared sidebar layout (<code class="inline">AppShell.js</code>) with role dropdown. Manager, Contractor, and Tenant workspaces routed under <code class="inline">/manager/*</code>, <code class="inline">/contractor/*</code>. Foundation for all four persona surfaces.</div>
+            <div class="tl-tags"><span class="tl-tag tl-tag-frontend">Frontend</span></div>
+          </div>
+        </div>
+
+        <div class="tl-row feature">
+          <div class="tl-date">Feb–Mar 2026</div>
+          <div class="tl-body">
+            <div class="tl-title">Owner-direct workflow, job lifecycle, invoicing</div>
+            <div class="tl-desc">Owner approval gate with configurable per-building thresholds. Full job lifecycle: PENDING → IN_PROGRESS → COMPLETED → INVOICED. Invoice CRUD with approval/dispute flow. Contractor assignment and RFP groundwork.</div>
+            <div class="tl-tags"><span class="tl-tag tl-tag-backend">Backend</span><span class="tl-tag tl-tag-frontend">Frontend</span></div>
+          </div>
+        </div>
+
+        <div class="tl-row feature">
+          <div class="tl-date">Mar 2–8</div>
+          <div class="tl-body">
+            <div class="tl-title">Lease management + digital signatures</div>
+            <div class="tl-desc">End-to-end lease lifecycle: application wizard → PDF generation (SHA-256 footer) → SignatureRequest model → ACTIVE tenancy. 40+ fields on the Lease model. Vacancy tracking linked to financials.</div>
+            <div class="tl-tags"><span class="tl-tag tl-tag-backend">Backend</span><span class="tl-tag tl-tag-frontend">Frontend</span></div>
+          </div>
+        </div>
+
+        <div class="tl-row feature">
+          <div class="tl-date">Mar 8–10</div>
+          <div class="tl-body">
+            <div class="tl-title">Tenant portal + org scoping (M1)</div>
+            <div class="tl-desc">Tenant-facing portal: request submission, invoice view with QR payment slip, lease access, asset list. <code class="inline">requireTenantSession()</code> auth. Org scoping enforced across all core entities. <code class="inline">orgIsolation.test.ts</code> added (22 tests).</div>
+            <div class="tl-tags"><span class="tl-tag tl-tag-backend">Backend</span><span class="tl-tag tl-tag-frontend">Frontend</span><span class="tl-tag tl-tag-security">Security</span></div>
+          </div>
+        </div>
+
+        <div class="tl-row milestone">
+          <div class="tl-date">Mar 10</div>
+          <div class="tl-body">
+            <div class="tl-title">Security hardening (SA-1 through SA-20)</div>
+            <div class="tl-desc">19 security findings resolved. Production boot guard refuses to start with <code class="inline">AUTH_OPTIONAL=true</code>. <code class="inline">requireAnyRole()</code> added. All routes auth-gated. <code class="inline">getOrgIdForRequest()</code> returns null in prod when unauthenticated. JWT-based auth fully hardened.</div>
+            <div class="tl-tags"><span class="tl-tag tl-tag-security">Security</span><span class="tl-tag tl-tag-backend">Backend</span></div>
+          </div>
+        </div>
+
+        <div class="tl-row feature">
+          <div class="tl-date">Mar 11–12</div>
+          <div class="tl-body">
+            <div class="tl-title">Triage rework + legal engine hardening</div>
+            <div class="tl-desc"><code class="inline">OWNER_REJECTED</code> status + <code class="inline">ApprovalSource</code> enum. 93 corrupt legal rules cleaned. DSL evaluator extended with <code class="inline">topic_match</code>, <code class="inline">AND</code>/<code class="inline">OR</code> operators. Frontend rationalization: 4 pages deleted, proxy audit complete (119/119 conforming).</div>
+            <div class="tl-tags"><span class="tl-tag tl-tag-backend">Backend</span><span class="tl-tag tl-tag-legal">Legal</span><span class="tl-tag tl-tag-frontend">Frontend</span></div>
+          </div>
+        </div>
+
+        <div class="tl-row feature">
+          <div class="tl-date">Mar 14</div>
+          <div class="tl-body">
+            <div class="tl-title">Navigation &amp; UI consistency pass</div>
+            <div class="tl-desc">Sidebar flattened to 7 primary items. Tailwind unified across all pages. <code class="inline">managerStyles.js</code> deleted. Panel layout applied consistently. All 7 manager hub pages use inline tab content with URL-based tab persistence.</div>
+            <div class="tl-tags"><span class="tl-tag tl-tag-frontend">Frontend</span></div>
+          </div>
+        </div>
+
+        <div class="tl-row feature">
+          <div class="tl-date">Mar 21–22</div>
+          <div class="tl-body">
+            <div class="tl-title">Legal route extraction + rental application wizard</div>
+            <div class="tl-desc"><code class="inline">legalService.ts</code> created — 26 direct Prisma calls removed from routes. Selected-units summary panel added to the rental application wizard. Test infrastructure hardened: port deconfliction (3201–3219), 4 contract tests added, <code class="inline">CONTRIBUTING.md</code> created.</div>
+            <div class="tl-tags"><span class="tl-tag tl-tag-backend">Backend</span><span class="tl-tag tl-tag-frontend">Frontend</span><span class="tl-tag tl-tag-legal">Legal</span></div>
+          </div>
+        </div>
+
+        <div class="tl-row milestone">
+          <div class="tl-date">Mar 23</div>
+          <div class="tl-body">
+            <div class="tl-title">Chart of Accounts + General Ledger</div>
+            <div class="tl-desc">3 new models: ExpenseType, Account, ExpenseMapping. Double-entry General Ledger with auto-posting from invoice workflows. Journal and trial balance UI. <code class="inline">ledgerService.ts</code> with <code class="inline">postJournalEntries</code>, <code class="inline">getTrialBalance</code>.</div>
+            <div class="tl-tags"><span class="tl-tag tl-tag-backend">Backend</span><span class="tl-tag tl-tag-finance">Finance</span><span class="tl-tag tl-tag-frontend">Frontend</span></div>
+          </div>
+        </div>
+
+        <div class="tl-row feature">
+          <div class="tl-date">Mar 29</div>
+          <div class="tl-body">
+            <div class="tl-title">Azure Document Intelligence (replaces Tesseract)</div>
+            <div class="tl-desc">Switched primary OCR to Azure Document Intelligence <code class="inline">prebuilt-layout</code> model. Tesseract fallback kept. CaptureSession model for mobile camera → phone upload → OCR → invoice draft flow. QR code scanning to phone upload.</div>
+            <div class="tl-tags"><span class="tl-tag tl-tag-backend">Backend</span><span class="tl-tag tl-tag-frontend">Frontend</span></div>
+          </div>
+        </div>
+
+        <div class="tl-row infra">
+          <div class="tl-date">Mar 30–31</div>
+          <div class="tl-body">
+            <div class="tl-title">Migration integrity recovery + comprehensive audit</div>
+            <div class="tl-desc">5 gap-filling migrations created. Shadow DB replay now passes cleanly. G8 (<code class="inline">db push</code> ban) exception retired permanently. 46 audit findings resolved across security, code quality, test coverage, and documentation categories.</div>
+            <div class="tl-tags"><span class="tl-tag tl-tag-infra">Infra</span><span class="tl-tag tl-tag-security">Security</span></div>
+          </div>
+        </div>
+
+        <div class="tl-row milestone">
+          <div class="tl-date">Apr 3</div>
+          <div class="tl-body">
+            <div class="tl-title">Recurring invoices &amp; financial automation</div>
+            <div class="tl-desc">6 slices: RecurringBillingSchedule, ChargeReconciliation, RentAdjustment, ContractorBillingSchedule. 5 new models, 4 route modules, 4 repositories, 10 new frontend pages. Monthly rent invoices auto-generated from lease data.</div>
+            <div class="tl-tags"><span class="tl-tag tl-tag-backend">Backend</span><span class="tl-tag tl-tag-finance">Finance</span><span class="tl-tag tl-tag-frontend">Frontend</span></div>
+          </div>
+        </div>
+
+        <div class="tl-row milestone">
+          <div class="tl-date">Apr 16</div>
+          <div class="tl-body">
+            <div class="tl-title">Strategy Engine &amp; Capture hardening</div>
+            <div class="tl-desc">3-phase strategy engine with 56 unit tests: StrategyProfile + BuildingProfile models, 5 building archetypes, 6 financial scoring dimensions, decision scoring, cashflow strategy overlay. Azure OCR activated. Invoice source-file serving + original image display.</div>
+            <div class="tl-tags"><span class="tl-tag tl-tag-backend">Backend</span><span class="tl-tag tl-tag-finance">Finance</span><span class="tl-tag tl-tag-frontend">Frontend</span></div>
+          </div>
+        </div>
+
+        <div class="tl-row feature">
+          <div class="tl-date">Apr 23</div>
+          <div class="tl-body">
+            <div class="tl-title">Mobile responsive — owner surface</div>
+            <div class="tl-desc">Dual-render table pattern (F-UI9) applied to 6 files. Role-aware shared page routing (F-UI10) on buildings/[id] + units/[id]. ScrollableTabs upgraded with "More ▾" overflow bottom sheet (F-UI11). Dev server bound to 0.0.0.0 for phone testing.</div>
+            <div class="tl-tags"><span class="tl-tag tl-tag-frontend">Frontend</span></div>
+          </div>
+        </div>
+
+        <div class="tl-row milestone">
+          <div class="tl-date">Apr 27</div>
+          <div class="tl-body">
+            <div class="tl-title">Full responsive polish pass + bug fixes</div>
+            <div class="tl-desc">Dual-render pattern applied to 18+ pages across all 4 personas. PENDING_REVIEW approve/reject CTAs fixed. <code class="inline">manager-reject</code> proxy created. Timeline stage bug fixed (stuck at Contractor when job IN_PROGRESS). Tenant scheduling UX improved. 65 suites · 980 tests · 0 TS errors.</div>
+            <div class="tl-tags"><span class="tl-tag tl-tag-frontend">Frontend</span><span class="tl-tag tl-tag-backend">Backend</span></div>
+          </div>
+        </div>
+
+        <div class="tl-row infra">
+          <div class="tl-date">Apr 30</div>
+          <div class="tl-body">
+            <div class="tl-title">Deployment readiness — audit, schema drift fix, Supabase staging live</div>
+            <div class="tl-desc">Uncompromising audit produced 11 findings (C/H/M/F/L) — all resolved. Discovered+fixed schema drift (AUTO_APPROVED enum value removed in code without migration; 16 legacy rows broke <code class="inline">GET /requests</code>). Migration <code class="inline">20260430120000_remove_auto_approved_request_status</code> backfills then drops. Migration plan Phase 1 begun: T-01 (audit + Node 20 pin via <code class="inline">.nvmrc</code> + <code class="inline">engines.node</code>), T-03 (unauthenticated <code class="inline">GET /health</code> with DB latency probe), T-04 (hard shutdown timeout for Render SIGKILL safety, prod-readiness checklist), T-05 (Supabase project provisioned, all 84 migrations deployed, <code class="inline">/health</code> returns 200 against staging at 89ms RTT). 67 suites · 1004 tests · 0 TS errors.</div>
+            <div class="tl-tags"><span class="tl-tag tl-tag-infra">Infra</span><span class="tl-tag tl-tag-backend">Backend</span><span class="tl-tag tl-tag-security">Security</span></div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="callout callout-tip" style="margin-top:24px;">
+        <strong>Platform maturity at a glance:</strong> ~13 weeks from initial commit to a fully responsive, security-hardened, law-aware platform with 68 models, 291 API operations, 288 pages, 1004 tests, and a live Supabase staging environment ready for Render + Vercel deploy.
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════
+         CODE NAVIGATION
+    ══════════════════════════════════════════ -->
+    <section class="wiki-section" id="codemap">
+      <div class="section-eyebrow">Technical</div>
+      <div class="section-title">Code navigation</div>
+      <p class="section-sub">A domain-by-domain lookup table: which files to change for which task. Full version in <a href="../apps/api/src/ARCHITECTURE_LOW_CONTEXT_GUIDE.md">ARCHITECTURE_LOW_CONTEXT_GUIDE.md</a>.</p>
+
+      <div class="callout callout-info" style="margin-bottom:24px;">
+        <strong>First rule:</strong> routes → workflows → services → repositories → Prisma. Never skip a layer. Never call Prisma from a route or service directly.
+      </div>
+
+      <h3>Domain file maps</h3>
+
+      <h4>Maintenance Requests</h4>
+      <table class="schema-table">
+        <thead><tr><th>Layer</th><th>File</th><th>Key exports</th></tr></thead>
+        <tbody>
+          <tr><td>Route</td><td><code class="inline">routes/requests.ts</code></td><td>CRUD + status endpoints</td></tr>
+          <tr><td>Workflows</td><td><code class="inline">createRequestWorkflow</code>, <code class="inline">approveRequestWorkflow</code>, <code class="inline">assignContractorWorkflow</code>, <code class="inline">ownerRejectWorkflow</code></td><td></td></tr>
+          <tr><td>Service</td><td><code class="inline">services/maintenanceRequests.ts</code></td><td><code class="inline">toDTO()</code></td></tr>
+          <tr><td>Service</td><td><code class="inline">services/autoApproval.ts</code></td><td><code class="inline">decideRequestStatusWithRules()</code></td></tr>
+          <tr><td>Service</td><td><code class="inline">services/requestAssignment.ts</code></td><td><code class="inline">findMatchingContractor()</code>, <code class="inline">assignContractor()</code></td></tr>
+          <tr><td>Repo</td><td><code class="inline">repositories/requestRepository.ts</code></td><td><code class="inline">REQUEST_FULL_INCLUDE</code></td></tr>
+        </tbody>
+      </table>
+
+      <h4>Jobs</h4>
+      <table class="schema-table">
+        <thead><tr><th>Layer</th><th>File</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td>Route</td><td><code class="inline">routes/completion.ts</code></td><td>Job completion + rating endpoints</td></tr>
+          <tr><td>Workflows</td><td><code class="inline">completeJobWorkflow</code>, <code class="inline">completionRatingWorkflow</code>, <code class="inline">schedulingWorkflow</code>, <code class="inline">updateJobWorkflow</code></td><td></td></tr>
+          <tr><td>Service</td><td><code class="inline">services/jobs.ts</code></td><td><code class="inline">mapJobToDTO()</code></td></tr>
+          <tr><td>Repo</td><td><code class="inline">repositories/jobRepository.ts</code></td><td><code class="inline">JOB_FULL_INCLUDE</code></td></tr>
+          <tr><td colspan="3" style="color:var(--rose);font-size:11.5px;">⚠ Job has no <code class="inline">description</code> — use <code class="inline">Request.description</code>. <code class="inline">Job.contractorId</code> is required, not optional.</td></tr>
+        </tbody>
+      </table>
+
+      <h4>Invoices &amp; OCR</h4>
+      <table class="schema-table">
+        <thead><tr><th>Layer</th><th>File</th><th>Key exports</th></tr></thead>
+        <tbody>
+          <tr><td>Route</td><td><code class="inline">routes/invoices.ts</code></td><td>CRUD + status endpoints</td></tr>
+          <tr><td>Workflows</td><td><code class="inline">issueInvoiceWorkflow</code>, <code class="inline">approveInvoiceWorkflow</code>, <code class="inline">disputeInvoiceWorkflow</code>, <code class="inline">payInvoiceWorkflow</code></td><td></td></tr>
+          <tr><td>Service</td><td><code class="inline">services/invoices.ts</code></td><td><code class="inline">mapInvoiceToDTO()</code>, <code class="inline">normalizeLineItems()</code></td></tr>
+          <tr><td>Service</td><td><code class="inline">services/invoiceIngestionService.ts</code></td><td>OCR → draft invoice</td></tr>
+          <tr><td>Repo</td><td><code class="inline">repositories/invoiceRepository.ts</code></td><td><code class="inline">INVOICE_FULL_INCLUDE</code></td></tr>
+        </tbody>
+      </table>
+
+      <h4>Leases</h4>
+      <table class="schema-table">
+        <thead><tr><th>Layer</th><th>File</th><th>Key exports</th></tr></thead>
+        <tbody>
+          <tr><td>Route</td><td><code class="inline">routes/leases.ts</code></td><td>CRUD + expense items</td></tr>
+          <tr><td>Workflows</td><td><code class="inline">markLeaseReadyWorkflow</code>, <code class="inline">activateLeaseWorkflow</code>, <code class="inline">terminateLeaseWorkflow</code></td><td></td></tr>
+          <tr><td>Service</td><td><code class="inline">services/leases.ts</code></td><td>DTO mapping, expense item CRUD</td></tr>
+          <tr><td>Service</td><td><code class="inline">services/leasePDFRenderer.ts</code></td><td>PDF generation</td></tr>
+          <tr><td>Repo</td><td><code class="inline">repositories/leaseRepository.ts</code></td><td><code class="inline">LEASE_FULL_INCLUDE</code></td></tr>
+        </tbody>
+      </table>
+
+      <h4>Legal Engine</h4>
+      <table class="schema-table">
+        <thead><tr><th>Layer</th><th>File</th><th>Key exports</th></tr></thead>
+        <tbody>
+          <tr><td>Route</td><td><code class="inline">routes/legal.ts</code></td><td>Variables, rules, category mappings, evaluations, depreciation</td></tr>
+          <tr><td>Workflow</td><td><code class="inline">evaluateLegalRoutingWorkflow.ts</code></td><td>Legal obligation evaluation</td></tr>
+          <tr><td>Service</td><td><code class="inline">services/legalDecisionEngine.ts</code></td><td><code class="inline">evaluateRequestLegalDecision()</code></td></tr>
+          <tr><td>Service</td><td><code class="inline">services/legalService.ts</code></td><td>All legal CRUD: listVariables, listRules, listCategoryMappings, listEvaluations, listDepreciationStandards</td></tr>
+        </tbody>
+      </table>
+
+      <h4>Financials · COA · Ledger</h4>
+      <table class="schema-table">
+        <thead><tr><th>Layer</th><th>File</th><th>Key exports</th></tr></thead>
+        <tbody>
+          <tr><td>Route</td><td><code class="inline">routes/coa.ts</code></td><td>7 endpoints: expense-types, accounts, mappings CRUD + seed</td></tr>
+          <tr><td>Route</td><td><code class="inline">routes/ledger.ts</code></td><td>3 endpoints: journal, trial-balance, account balance</td></tr>
+          <tr><td>Service</td><td><code class="inline">services/coaService.ts</code></td><td>COA CRUD + Swiss taxonomy seed</td></tr>
+          <tr><td>Service</td><td><code class="inline">services/ledgerService.ts</code></td><td><code class="inline">postJournalEntries</code>, <code class="inline">postInvoiceIssued/Paid</code>, <code class="inline">getTrialBalance</code></td></tr>
+          <tr><td>Note</td><td colspan="2">Ledger auto-posts from <code class="inline">issueInvoiceWorkflow</code> + <code class="inline">payInvoiceWorkflow</code> (best-effort)</td></tr>
+        </tbody>
+      </table>
+
+      <h4>Cashflow Planning &amp; Strategy</h4>
+      <table class="schema-table">
+        <thead><tr><th>Layer</th><th>File</th><th>Key exports</th></tr></thead>
+        <tbody>
+          <tr><td>Route</td><td><code class="inline">routes/cashflowPlans.ts</code></td><td>List, create, update, submit, approve, RFP candidates</td></tr>
+          <tr><td>Workflow</td><td><code class="inline">workflows/cashflowPlanWorkflow.ts</code></td><td>create, update, addOverride, removeOverride, submit, approve</td></tr>
+          <tr><td>Service</td><td><code class="inline">services/cashflowPlanningService.ts</code></td><td><code class="inline">computeMonthlyCashflow()</code>, <code class="inline">computeRfpCandidates()</code></td></tr>
+          <tr><td>Service</td><td><code class="inline">services/capexProjectionService.ts</code></td><td>CapEx projection + timing (shared with strategy engine)</td></tr>
+          <tr><td>Repo</td><td><code class="inline">repositories/cashflowPlanRepository.ts</code></td><td><code class="inline">CASHFLOW_PLAN_INCLUDE</code></td></tr>
+          <tr><td>Note</td><td colspan="2">Status flow: DRAFT → SUBMITTED → APPROVED. RFP candidates only available for APPROVED plans.</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Route module index</h3>
+      <table class="schema-table" style="font-size:12px;">
+        <thead><tr><th>File</th><th>Domain</th></tr></thead>
+        <tbody>
+          <tr><td><code class="inline">routes/auth.ts</code></td><td>Login, registration</td></tr>
+          <tr><td><code class="inline">routes/captureSessions.ts</code></td><td>Mobile camera upload sessions</td></tr>
+          <tr><td><code class="inline">routes/cashflowPlans.ts</code></td><td>Cashflow planning — CRUD + submit + approve + RFP candidates</td></tr>
+          <tr><td><code class="inline">routes/coa.ts</code></td><td>Chart of Accounts (7 endpoints)</td></tr>
+          <tr><td><code class="inline">routes/completion.ts</code></td><td>Job completion + rating</td></tr>
+          <tr><td><code class="inline">routes/config.ts</code></td><td>Org + building config</td></tr>
+          <tr><td><code class="inline">routes/contractor.ts</code></td><td>Contractor profiles + RFPs</td></tr>
+          <tr><td><code class="inline">routes/financials.ts</code></td><td>Financial summaries</td></tr>
+          <tr><td><code class="inline">routes/inventory.ts</code></td><td>Assets, depreciation, repair-replace analysis</td></tr>
+          <tr><td><code class="inline">routes/invoices.ts</code></td><td>Invoice CRUD + lifecycle</td></tr>
+          <tr><td><code class="inline">routes/leases.ts</code></td><td>Lease CRUD + expense items</td></tr>
+          <tr><td><code class="inline">routes/ledger.ts</code></td><td>Journal entries, trial balance, account balance</td></tr>
+          <tr><td><code class="inline">routes/legal.ts</code></td><td>Legal variables, rules, category mappings, evaluations</td></tr>
+          <tr><td><code class="inline">routes/maintenanceAttachments.ts</code></td><td>File attachments on requests</td></tr>
+          <tr><td><code class="inline">routes/notifications.ts</code></td><td>Notification endpoints</td></tr>
+          <tr><td><code class="inline">routes/rentEstimation.ts</code></td><td>Rent estimation service</td></tr>
+          <tr><td><code class="inline">routes/rentalApplications.ts</code></td><td>Rental applications + owner selection</td></tr>
+          <tr><td><code class="inline">routes/requests.ts</code></td><td>Maintenance requests</td></tr>
+          <tr><td><code class="inline">routes/scheduling.ts</code></td><td>Appointment slot proposals</td></tr>
+          <tr><td><code class="inline">routes/tenants.ts</code></td><td>Tenant portal endpoints</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Repository index &amp; include constants</h3>
+      <table class="schema-table" style="font-size:12px;">
+        <thead><tr><th>Repository file</th><th>Include constant</th><th>Entity</th></tr></thead>
+        <tbody>
+          <tr><td><code class="inline">requestRepository.ts</code></td><td><code class="inline">REQUEST_FULL_INCLUDE</code></td><td>Request</td></tr>
+          <tr><td><code class="inline">jobRepository.ts</code></td><td><code class="inline">JOB_FULL_INCLUDE</code></td><td>Job</td></tr>
+          <tr><td><code class="inline">invoiceRepository.ts</code></td><td><code class="inline">INVOICE_FULL_INCLUDE</code></td><td>Invoice</td></tr>
+          <tr><td><code class="inline">leaseRepository.ts</code></td><td><code class="inline">LEASE_FULL_INCLUDE</code></td><td>Lease</td></tr>
+          <tr><td><code class="inline">contractorRepository.ts</code></td><td><code class="inline">CONTRACTOR_INCLUDE</code></td><td>Contractor</td></tr>
+          <tr><td><code class="inline">cashflowPlanRepository.ts</code></td><td><code class="inline">CASHFLOW_PLAN_INCLUDE</code></td><td>CashflowPlan / CashflowOverride</td></tr>
+          <tr><td><code class="inline">rentalApplicationRepository.ts</code></td><td>—</td><td>RentalApplication</td></tr>
+          <tr><td><code class="inline">captureSessionRepository.ts</code></td><td>—</td><td>CaptureSession</td></tr>
+          <tr><td><code class="inline">rfpRepository.ts</code></td><td>—</td><td>Rfp / RfpQuote</td></tr>
+          <tr><td><code class="inline">expenseTypeRepository.ts</code></td><td>—</td><td>ExpenseType</td></tr>
+          <tr><td><code class="inline">accountRepository.ts</code></td><td>—</td><td>Account</td></tr>
+          <tr><td><code class="inline">expenseMappingRepository.ts</code></td><td>—</td><td>ExpenseMapping</td></tr>
+          <tr><td><code class="inline">inventoryRepository.ts</code></td><td>—</td><td>Appliance / AssetIntervention</td></tr>
+          <tr><td><code class="inline">taxRuleRepository.ts</code></td><td>—</td><td>TaxRule / TaxRuleVersion</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Workflow index (25 workflows)</h3>
+      <table class="schema-table" style="font-size:12px;">
+        <thead><tr><th>Workflow</th><th>Entity</th><th>Transition</th></tr></thead>
+        <tbody>
+          <tr><td><code class="inline">createRequestWorkflow</code></td><td>Request</td><td>→ PENDING_REVIEW / AUTO_APPROVED</td></tr>
+          <tr><td><code class="inline">approveRequestWorkflow</code></td><td>Request</td><td>PENDING → APPROVED</td></tr>
+          <tr><td><code class="inline">assignContractorWorkflow</code></td><td>Request</td><td>→ ASSIGNED</td></tr>
+          <tr><td><code class="inline">unassignContractorWorkflow</code></td><td>Request</td><td>ASSIGNED → previous</td></tr>
+          <tr><td><code class="inline">ownerRejectWorkflow</code></td><td>Request</td><td>→ OWNER_REJECTED</td></tr>
+          <tr><td><code class="inline">evaluateLegalRoutingWorkflow</code></td><td>Request</td><td>→ RFP_PENDING</td></tr>
+          <tr><td><code class="inline">uploadMaintenanceAttachmentWorkflow</code></td><td>Request</td><td>(attachment only)</td></tr>
+          <tr><td><code class="inline">completeJobWorkflow</code></td><td>Job</td><td>IN_PROGRESS → COMPLETED</td></tr>
+          <tr><td><code class="inline">completionRatingWorkflow</code></td><td>Job</td><td>(rating — no transition)</td></tr>
+          <tr><td><code class="inline">schedulingWorkflow</code></td><td>Job</td><td>(slot proposals)</td></tr>
+          <tr><td><code class="inline">updateJobWorkflow</code></td><td>Job</td><td>(field update)</td></tr>
+          <tr><td><code class="inline">issueInvoiceWorkflow</code></td><td>Invoice</td><td>DRAFT → ISSUED; auto-posts ledger</td></tr>
+          <tr><td><code class="inline">approveInvoiceWorkflow</code></td><td>Invoice</td><td>ISSUED → APPROVED</td></tr>
+          <tr><td><code class="inline">disputeInvoiceWorkflow</code></td><td>Invoice</td><td>ISSUED / APPROVED → DISPUTED</td></tr>
+          <tr><td><code class="inline">payInvoiceWorkflow</code></td><td>Invoice</td><td>APPROVED → PAID; auto-posts ledger</td></tr>
+          <tr><td><code class="inline">tenantSelfPayWorkflow</code></td><td>Invoice</td><td>(tenant-facing pay)</td></tr>
+          <tr><td><code class="inline">markLeaseReadyWorkflow</code></td><td>Lease</td><td>DRAFT → READY_TO_SIGN</td></tr>
+          <tr><td><code class="inline">activateLeaseWorkflow</code></td><td>Lease</td><td>SIGNED → ACTIVE</td></tr>
+          <tr><td><code class="inline">terminateLeaseWorkflow</code></td><td>Lease</td><td>ACTIVE → TERMINATED</td></tr>
+          <tr><td><code class="inline">submitRentalApplicationWorkflow</code></td><td>RentalApplication</td><td>DRAFT → SUBMITTED</td></tr>
+          <tr><td><code class="inline">awardQuoteWorkflow</code></td><td>Rfp</td><td>CLOSED → AWARDED</td></tr>
+          <tr><td><code class="inline">submitQuoteWorkflow</code></td><td>RfpQuote</td><td>(submit quote)</td></tr>
+          <tr><td><code class="inline">rfpDirectAssignWorkflow</code></td><td>Rfp</td><td>(direct assign, skips quotes)</td></tr>
+          <tr><td><code class="inline">rfpReinviteWorkflow</code></td><td>Rfp</td><td>(re-invite contractors)</td></tr>
+          <tr><td><code class="inline">cashflowPlanWorkflow</code></td><td>CashflowPlan</td><td>DRAFT → SUBMITTED → APPROVED</td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout callout-info" style="margin-top:8px;">
+        <strong>Adding a new workflow?</strong> Follow this pattern: typed <code class="inline">Input</code>/<code class="inline">Result</code> interfaces → <code class="inline">assert*Transition()</code> guard → service calls → <code class="inline">emit()</code> domain events → canonical reload via repo include → export from <code class="inline">workflows/index.ts</code>. Add a transition rule in <code class="inline">transitions.ts</code> and a route handler in the relevant route module.
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════
+         KNOWN BACKLOG
+    ══════════════════════════════════════════ -->
+    <section class="wiki-section" id="backlog">
+      <div class="section-eyebrow">Planning</div>
+      <div class="section-title">Known backlog &amp; tech debt</div>
+
+      <h3>Active backlog items</h3>
+      <ul class="prose">
+        <li><strong>Azure Document Intelligence tier upgrade</strong> — current Free F0 tier allows 500 pages/month. Upgrade to S0 (~$1.50/1,000 pages) before production go-live. Resource: <code class="inline">maintenance-agent-docintel</code>, West Europe.</li>
+        <li><strong>Lease signing integration</strong> — DocuSign/Skribble wiring requires external API credentials + product decision on provider. Model exists; frontend wiring is the remaining work.</li>
+        <li><strong>Notification push delivery</strong> — in-app notifications work; no push/email delivery yet.</li>
+        <li><strong>Reports page</strong> — define scope before building (product decision required).</li>
+        <li><strong>Multi-org support</strong> — org scoping is in place (M1); full multi-org requires adding <code class="inline">orgId</code> to <code class="inline">Request</code> (7-step migration documented in SCHEMA_REFERENCE.md) and removing <code class="inline">DEFAULT_ORG_ID</code> entirely. Requires product decision on timeline.</li>
+      </ul>
+
+      <h3>Known technical debt</h3>
+      <ul class="prose">
+        <li><strong>Pre-existing test interaction failures (TC-11)</strong> — ~10 legacy test suites use local <code class="inline">startServer</code> copies instead of canonical <code class="inline">testHelpers.ts</code>. They pass individually but can fail in full serial mode. All new tests (since March 2026) use shared helpers.</li>
+        <li><strong>ASSET_TYPE_COLORS in depreciation page</strong> — uses hardcoded Tailwind color strings, bypassing the token system. Migrate when depreciation page is next touched.</li>
+        <li><strong>Custom HTTP stack</strong> — the raw <code class="inline">http.createServer</code> backend is appropriate at current scale (~225 URL paths). Evaluate migrating to Express/Fastify before the team grows or route count exceeds ~200.</li>
+        <li><strong>Dev auth token expiry</strong> — three dev tokens expire 2027-03-15. See the Dev Setup section for regeneration command.</li>
+      </ul>
+    </section>
+
+  </main>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-left">Maintenance Agent — Project Wiki · Updated April 2026</div>
+    <div><span class="badge-live"><span class="badge-live-dot"></span> Platform live</span></div>
+  </div>
+</footer>
+
+<script>
+  function toggle(head) {
+    const body = head.nextElementSibling;
+    const arrow = head.querySelector('span:last-child');
+    const isOpen = body.classList.contains('open');
+    body.classList.toggle('open', !isOpen);
+    arrow.textContent = isOpen ? '▾' : '▴';
+  }
+
+  // Sidebar active link on scroll
+  const sections = document.querySelectorAll('.wiki-section');
+  const links = document.querySelectorAll('.sidebar-link');
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        links.forEach(l => l.classList.remove('active'));
+        const active = document.querySelector(`.sidebar-link[href="#${entry.target.id}"]`);
+        if (active) active.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-20% 0px -70% 0px' });
+  sections.forEach(s => observer.observe(s));
+</script>
+</body>
+</html>

@@ -4,12 +4,12 @@ import * as http from "http";
 import { sendError, sendJson } from "./http/json";
 import { parseQuery } from "./http/query";
 import { getOrgIdForRequest, AuthedRequest, requireAuth } from "./authz";
-import { ensureDefaultOrgConfig } from "./services/orgConfig";
+import { ensureDefaultOrgConfig, DEFAULT_ORG_ID } from "./services/orgConfig";
 import { bootstrapLegalEngine } from "./services/bootstrapLegalEngine";
 import prisma from "./services/prismaClient";
 import { Router } from "./http/router";
 import { readJson } from "./http/body";
-import { encodeToken } from "./services/auth";
+import { encodeToken, resolveSupabaseToken, extractToken } from "./services/auth";
 
 /* ── Route registration ─────────────────────────────────────── */
 import { registerAuthRoutes } from "./routes/auth";
@@ -39,6 +39,7 @@ import { registerRentAdjustmentRoutes } from "./routes/rentAdjustments";
 import { registerContractorBillingRoutes } from "./routes/contractorBillingSchedules";
 import { registerStrategyRoutes } from "./routes/strategy";
 import { registerRecommendationRoutes } from "./routes/recommendations";
+import { registerTenantConversationRoutes } from "./routes/tenantConversation";
 import { registerEventHandlers } from "./events";
 import {
   processSelectionTimeouts,
@@ -106,6 +107,7 @@ registerRentAdjustmentRoutes(router);
 registerContractorBillingRoutes(router);
 registerStrategyRoutes(router);
 registerRecommendationRoutes(router);
+registerTenantConversationRoutes(router);
 
 /* ── Dev-only: background job trigger route ─────────────────── */
 router.post("/__dev/rental/run-jobs", async ({ res }) => {
@@ -217,7 +219,31 @@ const server = http.createServer(async (req: AuthedRequest, res) => {
       return;
     }
 
+    /* ── Pre-resolve Supabase JWT (async JWKS) ──────────────────────────────
+       Populates req.user before the router runs so getAuthUser() in authz.ts
+       can remain synchronous. Falls back gracefully when no token is present. */
+    if (!req.user) {
+      const token = extractToken(req.headers["authorization"] as string | undefined);
+      if (token) {
+        // Only assign req.user if Supabase verification succeeds.
+        // If it returns null (no SUPABASE_URL or invalid token), leave req.user
+        // undefined so getAuthUser() in authz.ts can fall back to decodeToken().
+        const supabaseUser = await resolveSupabaseToken(token);
+        if (supabaseUser) req.user = supabaseUser;
+      }
+    }
+
     const orgId = getOrgIdForRequest(req);
+
+    /* ── Public auth routes — must be reachable before org/auth resolution ── */
+    if (
+      (path === "/auth/login" || path === "/auth/register" || path === "/triage") &&
+      req.method === "POST"
+    ) {
+      const handled = await router.dispatch(req, res, path, query, DEFAULT_ORG_ID, prisma);
+      if (!handled) sendError(res, 404, "NOT_FOUND", "Not found");
+      return;
+    }
 
     if (orgId === null) {
       sendError(res, 401, "UNAUTHORIZED", "Authentication required");
@@ -301,6 +327,9 @@ async function runBackgroundJobs() {
 
 async function start() {
   try {
+    const supabaseUrl = process.env.SUPABASE_URL;
+    console.log(`[STARTUP] SUPABASE_URL: ${supabaseUrl ? `set (${supabaseUrl.slice(0, 30)}...)` : "NOT SET — Supabase JWT verification will fail"}`);
+
     await ensureDefaultOrgConfig(prisma);
     await bootstrapLegalEngine(prisma);
     registerEventHandlers(prisma);

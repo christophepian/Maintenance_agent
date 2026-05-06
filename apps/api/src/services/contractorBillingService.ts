@@ -17,6 +17,10 @@
  */
 import { PrismaClient } from "@prisma/client";
 import * as contractorBillingRepo from "../repositories/contractorBillingRepository";
+import { findContractorByOrgAndId } from "../repositories/contractorRepository";
+import { findBuildingByIdAndOrg } from "../repositories/inventoryRepository";
+import { findBillingEntityByContractor } from "../repositories/billingEntityRepository";
+import { createInvoiceRecord } from "../repositories/invoiceRepository";
 
 // ─── Period Helpers ────────────────────────────────────────────
 
@@ -85,16 +89,12 @@ export async function createSchedule(
   },
 ) {
   // Validate contractor exists
-  const contractor = await prisma.contractor.findFirst({
-    where: { id: input.contractorId, orgId },
-  });
+  const contractor = await findContractorByOrgAndId(prisma, input.contractorId, orgId);
   if (!contractor) throw new Error("Contractor not found");
 
   // Validate building if provided
   if (input.buildingId) {
-    const building = await prisma.building.findFirst({
-      where: { id: input.buildingId, orgId },
-    });
+    const building = await findBuildingByIdAndOrg(prisma, input.buildingId, orgId);
     if (!building) throw new Error("Building not found");
   }
 
@@ -214,13 +214,10 @@ export async function generateInvoiceForSchedule(
   const totalCents = subtotalCents + vatCents;
 
   // Resolve contractor's billing entity (optional)
-  const billingEntity = await prisma.billingEntity.findFirst({
-    where: { contractorId: schedule.contractorId },
-  });
+  const billingEntity = await findBillingEntityByContractor(prisma, schedule.contractorId);
 
   // Create the invoice
-  const invoice = await prisma.invoice.create({
-    data: {
+  const invoice = await createInvoiceRecord(prisma, {
       orgId,
       contractorId: schedule.contractorId,
       contractorBillingScheduleId: schedule.id,
@@ -253,7 +250,6 @@ export async function generateInvoiceForSchedule(
           },
         ],
       },
-    },
   });
 
   // Advance the schedule

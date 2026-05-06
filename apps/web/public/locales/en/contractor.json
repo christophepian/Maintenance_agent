@@ -1,0 +1,199 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "jobs": "Jobs",
+    "invoices": "Invoices",
+    "rfps": "RFPs",
+    "statusUpdates": "Status Updates"
+  },
+  "dashboard": {
+    "title": "Contractor Dashboard",
+    "activeJobs": "Active Jobs",
+    "pendingRfps": "Pending RFPs"
+  },
+  "estimates": {
+    "heading": {
+      "estimates": "Estimates"
+    },
+    "text": {
+      "comingSoonEstimateDraftingAndApproval": "Coming soon: estimate drafting and approval."
+    }
+  },
+  "index": {
+    "title": {
+      "contractorDashboard": "Contractor Dashboard",
+      "quickLinks": "Quick Links",
+      "todayActionRequired": "Today / Action Required",
+      "pipelineOverview": "Pipeline Overview"
+    },
+    "text": {
+      "loadingDashboard": "Loading dashboard...",
+      "error": "Error:",
+      "pendingJobs": "Pending Jobs",
+      "needAcceptancestart": "Need acceptance/start",
+      "staleInprogressJobs": "Stale In-Progress Jobs",
+      "completedNotInvoiced": "Completed - Not Invoiced",
+      "readyForBilling": "Ready for billing",
+      "noItemsRequireImmediateAction": "✓ No items require immediate action",
+      "openJobs": "Open Jobs",
+      "pendingInProgress": "Pending + in progress",
+      "completedThisMonth": "Completed This Month",
+      "jobsFinished": "Jobs finished",
+      "invoicedThisMonth": "Invoiced This Month",
+      "totalBilled": "Total billed"
+    }
+  },
+  "invoices": {
+    "heading": {
+      "createInvoice": "Create Invoice"
+    },
+    "placeholder": {
+      "briefDescriptionOfWorkPerformed": "Brief description of work performed"
+    },
+    "title": {
+      "myInvoices": "My Invoices"
+    },
+    "text": {
+      "dISPUTED": "⚠ DISPUTED",
+      "uploadInvoice": "📤 Upload Invoice",
+      "job": "Job",
+      "prefilledFromJobDetailPage": "Pre-filled from job detail page",
+      "loadingInvoices": "Loading invoices…",
+      "noInvoicesMatchThisFilter": "No invoices match this filter"
+    },
+    "tabs": {
+      "all": "All",
+      "draft": "Draft",
+      "issued": "Issued",
+      "approved": "Approved",
+      "paid": "Paid",
+      "disputed": "Disputed"
+    }
+  },
+  "jobs": {
+    "placeholder": {
+      "actualCostChf": "Actual cost (CHF)"
+    },
+    "title": {
+      "myJobs": "My Jobs"
+    },
+    "text": {
+      "loadingJobs": "Loading jobs…",
+      "noUpcomingJobs": "No upcoming jobs",
+      "noCompletedJobsYet": "No completed jobs yet",
+      "location": "📍 Location",
+      "tenant": "👤 Tenant",
+      "appointment": "📅 Appointment",
+      "asset": "🔧 Asset",
+      "scope": "📋 Scope"
+    },
+    "tabs": {
+      "upcoming": "Upcoming",
+      "history": "History"
+    }
+  },
+  "jobsId": {
+    "heading": {
+      "rateTheTenant": "Rate the tenant"
+    },
+    "ariaLabel": {
+      "close": "Close",
+      "removeScheduleRow": "Remove schedule row"
+    },
+    "text": {
+      "noSlotsProposedYetProposeTimesForTheTenantToChooseFrom": "No slots proposed yet. Propose times for the tenant to choose from.",
+      "appointmentConfirmedByTenant": "Appointment confirmed by tenant.",
+      "addAnotherSlot": "+ Add another slot",
+      "cancel": "Cancel",
+      "myJobs": "← My Jobs",
+      "selectYourContractorProfileToUseJobActions": "Select your contractor profile to use job actions:",
+      "created": "Created:",
+      "started": "Started:",
+      "completed": "Completed:",
+      "category": "Category:",
+      "asset": "Asset:",
+      "invoiceSubmittedForThisJob": "✅ Invoice submitted for this job."
+    },
+    "prop": {
+      "appointmentSlots": "📅 Appointment Slots",
+      "jobNotFound": "Job not found.",
+      "location": "📍 Location",
+      "dates": "📅 Dates",
+      "confirmedAppointment": "✅ Confirmed Appointment",
+      "cost": "💰 Cost",
+      "scopeOfWork": "📋 Scope of Work",
+      "tenantContact": "👤 Tenant Contact"
+    }
+  },
+  "rfps": {
+    "heading": {
+      "availableRfps": "Available RFPs"
+    },
+    "text": {
+      "invited": "Invited",
+      "view": "View",
+      "loadingRfps": "Loading RFPs...",
+      "rFPsMatchingYourServiceCategoriesWillAppearHere": "RFPs matching your service categories will appear here."
+    },
+    "tabs": {
+      "all": "All",
+      "open": "Open",
+      "awarded": "Awarded",
+      "cancelled": "Cancelled"
+    },
+    "col": {
+      "request": "Request",
+      "category": "Category",
+      "location": "Location",
+      "status": "Status",
+      "myQuote": "My Quote",
+      "invited": "Invited",
+      "quotes": "Quotes",
+      "created": "Created"
+    }
+  },
+  "rfpsId": {
+    "heading": {
+      "submitYourQuote": "Submit Your Quote",
+      "appointmentConfirmed": "Appointment Confirmed",
+      "rFPDetails": "RFP Details",
+      "workDescription": "Work Description"
+    },
+    "placeholder": {
+      "eG150000": "e.g. 1500.00",
+      "eG5": "e.g. 5",
+      "describeTheProposedWorkPlanMethodsAndTimeline": "Describe the proposed work plan, methods, and timeline…",
+      "anyAssumptionsExclusionsOrConditions": "Any assumptions, exclusions, or conditions…",
+      "anyOtherInformationForTheManager": "Any other information for the manager…",
+      "description": "Description"
+    },
+    "text": {
+      "date": "Date",
+      "from": "From",
+      "to": "To",
+      "loadingSlots": "Loading slots…",
+      "amount": "Amount",
+      "estDuration": "Est. Duration",
+      "earliestAvailable": "Earliest Available",
+      "validUntil": "Valid Until",
+      "submitted": "Submitted",
+      "workPlan": "Work Plan",
+      "assumptions": "Assumptions",
+      "notes": "Notes",
+      "lineItems": "Line Items",
+      "loading": "Loading…",
+      "status": "Status",
+      "category": "Category",
+      "legalObligation": "Legal Obligation",
+      "location": "Location",
+      "unit": "Unit",
+      "quoteDeadline": "Quote Deadline",
+      "created": "Created",
+      "quotesSubmitted": "Quotes Submitted",
+      "request": "Request #",
+      "requestDate": "Request Date",
+      "photosAttachments": "Photos / Attachments",
+      "rFPNotFoundOrNotAccessible": "RFP not found or not accessible."
+    }
+  }
+}

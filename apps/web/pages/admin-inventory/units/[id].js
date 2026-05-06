@@ -1,5 +1,5 @@
 import { useRouter } from "next/router";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import AppShell from "../../../components/AppShell";
 import PageShell from "../../../components/layout/PageShell";
@@ -16,7 +16,12 @@ import { invoiceVariant, leaseVariant, reconciliationVariant } from "../../../li
 import { formatChf, formatDate, formatChfCents } from "../../../lib/format";
 import { authHeaders } from "../../../lib/api";
 import ScrollableTabs from "../../../components/mobile/ScrollableTabs";
+import SortableHeader from "../../../components/SortableHeader";
+import { useLocalSort, clientSort } from "../../../lib/tableUtils";
+import { withServerTranslations } from "../../../lib/i18n";
+import { useTranslation } from "next-i18next";
 export default function UnitDetail() {
+  const { t } = useTranslation("manager");
   const router = useRouter();
   const { id, role } = router.query;
   const isOwner = role === "owner";
@@ -84,6 +89,53 @@ export default function UnitDetail() {
   // Lease / contracts state
   const [unitLeases, setUnitLeases] = useState([]);
   const [leasesLoading, setLeasesLoading] = useState(false);
+
+  const { sortField: reconSF, sortDir: reconSD, handleSort: handleReconSort } = useLocalSort("year", "desc");
+  const { sortField: tReconSF, sortDir: tReconSD, handleSort: handleTReconSort } = useLocalSort("year", "desc");
+  const { sortField: invSF, sortDir: invSD, handleSort: handleInvSort } = useLocalSort("createdAt", "desc");
+  const { sortField: lsSF, sortDir: lsSD, handleSort: handleLsSort } = useLocalSort("startDate", "desc");
+  const { sortField: reqSF, sortDir: reqSD, handleSort: handleReqSort } = useLocalSort("createdAt", "desc");
+
+  const sortedUnitReconciliations = useMemo(() => clientSort(unitReconciliations, reconSF, reconSD, (r, f) => {
+    if (f === "year") return r.fiscalYear ?? r.year ?? 0;
+    if (f === "status") return (r.status || "").toLowerCase();
+    return "";
+  }), [unitReconciliations, reconSF, reconSD]);
+
+  const sortedUnitInvoices = useMemo(() => {
+    const all = [...(unitInvoices || []), ...(incomingInvoices || []), ...(outgoingInvoices || [])];
+    const unique = all.filter((v, i, a) => a.findIndex(x => x.id === v.id) === i);
+    return clientSort(unique, invSF, invSD, (inv, f) => {
+      if (f === "status") return (inv.status || "").toLowerCase();
+      if (f === "description") return (inv.description || "").toLowerCase();
+      if (f === "amount") return inv.totalAmountChf ?? inv.amountCents ?? 0;
+      if (f === "period") return inv.periodStart || "";
+      if (f === "dueDate") return inv.dueDate || "";
+      if (f === "createdAt") return inv.createdAt || "";
+      return "";
+    });
+  }, [unitInvoices, incomingInvoices, outgoingInvoices, invSF, invSD]);
+
+  const sortedUnitLeases = useMemo(() => clientSort(unitLeases, lsSF, lsSD, (l, f) => {
+    if (f === "status") return (l.status || "").toLowerCase();
+    if (f === "tenant") return (l.tenantName || "").toLowerCase();
+    if (f === "startDate") return l.startDate || "";
+    if (f === "endDate") return l.endDate || "";
+    if (f === "notice") return l.noticeDate || "";
+    if (f === "createdAt") return l.createdAt || "";
+    return "";
+  }), [unitLeases, lsSF, lsSD]);
+
+  const sortedUnitRequests = useMemo(() => clientSort(unitRequests, reqSF, reqSD, (r, f) => {
+    if (f === "requestNumber") return r.requestNumber ?? 0;
+    if (f === "status") return (r.status || "").toLowerCase();
+    if (f === "category") return (r.category || "").toLowerCase();
+    if (f === "description") return (r.description || "").toLowerCase();
+    if (f === "urgency") return ({ LOW: 1, MEDIUM: 2, HIGH: 3, EMERGENCY: 4 }[r.urgency] || 0);
+    if (f === "contractor") return (r.assignedContractor?.name || "").toLowerCase();
+    if (f === "createdAt") return r.createdAt || "";
+    return "";
+  }), [unitRequests, reqSF, reqSD]);
 
   function setOk(message) {
     setNotice({ type: "ok", message });
@@ -427,7 +479,7 @@ export default function UnitDetail() {
     }
   }
 
-  const assignedTenantIds = new Set(tenants.map((t) => t.id));
+  const assignedTenantIds = new Set(tenants.map((tenant) => tenant.id));
   const hasActiveLease = (unit?.leases ?? []).length > 0;
   const occupancyStatus = hasActiveLease ? "OCCUPIED" : unit?.isVacant ? "LISTED" : "VACANT";
   const occupancyLabel = occupancyStatus === "OCCUPIED" ? "Occupied" : occupancyStatus === "LISTED" ? "Listed" : "Vacant";
@@ -438,7 +490,7 @@ export default function UnitDetail() {
     return (
       <AppShell role={isOwner ? "OWNER" : "MANAGER"}>
         <PageShell variant="embedded">
-          <PageHeader title="Unit" />
+          <PageHeader title={t("manager:unitsId.title.unit")} />
           <PageContent><p className="loading-text">Loading unit…</p></PageContent>
         </PageShell>
       </AppShell>
@@ -475,7 +527,7 @@ export default function UnitDetail() {
           </ScrollableTabs>
 
           {activeTab === "Details" && (
-          <Panel title="Unit Details" actions={editMode ? (
+          <Panel title={t("manager:unitsId.title.unitDetails")} actions={editMode ? (
               <>
                 <button type="button" className="button-primary text-sm" onClick={onSaveUnit} disabled={loading}>
                   {loading ? "Saving…" : "Save changes"}
@@ -511,11 +563,11 @@ export default function UnitDetail() {
                 <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-1.5">
                 <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Unit number</span>
-                <input className="filter-input w-full" value={editNumber} onChange={(e) => setEditNumber(e.target.value)} placeholder="e.g. Apt 3B" />
+                <input className="filter-input w-full" value={editNumber} onChange={(e) => setEditNumber(e.target.value)} placeholder={t("manager:unitsId.placeholder.eGApt3b")} />
               </div>
               <div className="grid gap-1.5">
                 <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Floor</span>
-                <input className="filter-input w-full" value={editFloor} onChange={(e) => setEditFloor(e.target.value)} placeholder="e.g. 3" />
+                <input className="filter-input w-full" value={editFloor} onChange={(e) => setEditFloor(e.target.value)} placeholder={t("manager:unitsId.placeholder.eG3")} />
               </div>
               <div className="grid gap-1.5">
                 <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Type</span>
@@ -527,11 +579,11 @@ export default function UnitDetail() {
               </div>
               <div className="grid gap-1.5">
                 <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Living area (m²)</span>
-                <input className="filter-input w-full" type="number" step="0.1" min="0" value={editLivingArea} onChange={(e) => setEditLivingArea(e.target.value)} placeholder="e.g. 75" />
+                <input className="filter-input w-full" type="number" step="0.1" min="0" value={editLivingArea} onChange={(e) => setEditLivingArea(e.target.value)} placeholder={t("manager:unitsId.placeholder.eG75")} />
               </div>
               <div className="grid gap-1.5">
                 <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Rooms</span>
-                <input className="filter-input w-full" type="number" step="0.5" min="0" value={editRooms} onChange={(e) => setEditRooms(e.target.value)} placeholder="e.g. 3.5" />
+                <input className="filter-input w-full" type="number" step="0.5" min="0" value={editRooms} onChange={(e) => setEditRooms(e.target.value)} placeholder={t("manager:unitsId.placeholder.eG35")} />
               </div>
               <div className="grid gap-1.5">
                 <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Location segment</span>
@@ -544,7 +596,7 @@ export default function UnitDetail() {
               </div>
               <div className="grid gap-1.5">
                 <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Last renovation year</span>
-                <input className="filter-input w-full" type="number" min="1900" max="2099" value={editLastRenovation} onChange={(e) => setEditLastRenovation(e.target.value)} placeholder="e.g. 2015" />
+                <input className="filter-input w-full" type="number" min="1900" max="2099" value={editLastRenovation} onChange={(e) => setEditLastRenovation(e.target.value)} placeholder={t("manager:unitsId.placeholder.eG2015")} />
               </div>
               <div className="grid gap-1.5">
                 <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Energy label</span>
@@ -671,7 +723,7 @@ export default function UnitDetail() {
           )}
 
           {activeTab === "Assets" && (
-        <Panel title="Asset Inventory & Depreciation" actions={
+        <Panel title={t("manager:unitsId.title.assetInventoryDepreciation")} actions={
             showAssetAddForm ? (
               <button type="button" className="button-cancel text-sm" onClick={() => setShowAssetAddForm(false)}>Cancel</button>
             ) : (
@@ -695,7 +747,7 @@ export default function UnitDetail() {
           )}
 
           {activeTab === "Tenants" && (
-        <Panel title="Tenants" actions={
+        <Panel title={t("manager:unitsId.title.tenants")} actions={
             tenantAction ? (
               <button type="button" className="button-cancel text-sm" onClick={() => setTenantAction(null)}>Close</button>
             ) : (
@@ -828,10 +880,10 @@ export default function UnitDetail() {
                       disabled={assigningTenant}
                     >
                       <option value="">— Select tenant —</option>
-                      {allTenants.map((t) => (
-                        <option key={t.id} value={t.id} disabled={assignedTenantIds.has(t.id)}>
-                          {t.name || "Tenant"} • {t.phone || "no phone"}
-                          {assignedTenantIds.has(t.id) ? " (assigned)" : ""}
+                      {allTenants.map((tenant) => (
+                        <option key={tenant.id} value={tenant.id} disabled={assignedTenantIds.has(tenant.id)}>
+                          {tenant.name || "Tenant"} • {tenant.phone || "no phone"}
+                          {assignedTenantIds.has(tenant.id) ? " (assigned)" : ""}
                         </option>
                       ))}
                     </select>
@@ -858,7 +910,7 @@ export default function UnitDetail() {
                       className="filter-input w-full"
                       value={createTenantName}
                       onChange={(e) => setCreateTenantName(e.target.value)}
-                      placeholder="e.g. Jane Doe"
+                      placeholder={t("manager:unitsId.placeholder.eGJaneDoe")}
                     />
                   </div>
                   <div className="min-w-[240px]">
@@ -867,7 +919,7 @@ export default function UnitDetail() {
                       className="filter-input w-full"
                       value={createTenantPhone}
                       onChange={(e) => setCreateTenantPhone(e.target.value)}
-                      placeholder="+41 79 123 45 67"
+                      placeholder={t("manager:unitsId.placeholder.41791234567")}
                     />
                   </div>
                   <div className="min-w-[240px]">
@@ -876,7 +928,7 @@ export default function UnitDetail() {
                       className="filter-input w-full"
                       value={createTenantEmail}
                       onChange={(e) => setCreateTenantEmail(e.target.value)}
-                      placeholder="tenant@example.com"
+                      placeholder={t("manager:unitsId.placeholder.tenantExampleCom")}
                     />
                   </div>
                   <button type="submit" className="button-primary" disabled={creatingTenant}>
@@ -891,7 +943,7 @@ export default function UnitDetail() {
           )}
 
           {activeTab === "Rent Estimate" && (
-        <Panel title="Rent Estimate" actions={unit?.livingAreaSqm ? (
+        <Panel title={t("manager:unitsId.title.rentEstimate")} actions={unit?.livingAreaSqm ? (
               <button
                 type="button"
                 className="button-primary text-sm"
@@ -916,7 +968,7 @@ export default function UnitDetail() {
                   {/* Main figures */}
                   <div className="grid grid-cols-3 gap-4 mb-5">
                     <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
-                      <div className="text-xs font-semibold uppercase text-green-700">Net Rent</div>
+                      <div className="text-xs font-semibold uppercase text-green-700">{t("manager:unitsId.col.netRent")}</div>
                       <div className="text-2xl font-bold text-green-800">CHF {rentEstimate.netRentChfMonthly}</div>
                       <div className="text-sm text-slate-500">per month</div>
                     </div>
@@ -978,7 +1030,7 @@ export default function UnitDetail() {
           )}
 
           {activeTab === "Documents" && (
-        <Panel title="Corroborative Documents">
+        <Panel title={t("manager:unitsId.title.corroborativeDocuments")}>
           {applicationIds.length === 0 ? (
             <div className="empty-state-text py-6 text-center italic">No rental application linked to this unit.</div>
           ) : (
@@ -1023,7 +1075,7 @@ export default function UnitDetail() {
                 const net = totalIncome - totalExpenses;
                 return (
                   <div className="space-y-6">
-                    <Panel title="Income vs. Expenses">
+                    <Panel title={t("manager:unitsId.title.incomeVsExpenses")}>
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
                           <div className="text-xs font-medium uppercase tracking-wide text-green-700">Income (tenant invoices)</div>
@@ -1042,26 +1094,26 @@ export default function UnitDetail() {
                       </div>
                     </Panel>
                     {unitReconciliations.length > 0 && (
-                      <Panel title="Nebenkosten Summary">
+                      <Panel title={t("manager:unitsId.title.nebenkostenSummary")}>
                         <div className="overflow-x-auto">
-                          <table className="data-table w-full text-sm">
+                          <table className="data-table w-full">
                             <thead>
                               <tr>
-                                <th className="text-left px-3 py-2">Year</th>
-                                <th className="text-left px-3 py-2">Status</th>
-                                <th className="text-right px-3 py-2">Acompte Paid</th>
-                                <th className="text-right px-3 py-2">Actual Costs</th>
-                                <th className="text-right px-3 py-2">Balance</th>
+                                <SortableHeader label="Year" field="year" sortField={reconSF} sortDir={reconSD} onSort={handleReconSort} />
+                                <SortableHeader label="Status" field="status" sortField={reconSF} sortDir={reconSD} onSort={handleReconSort} />
+                                <th className="text-right">{t("manager:unitsId.col.acomptePaid")}</th>
+                                <th className="text-right">{t("manager:unitsId.col.actualCosts")}</th>
+                                <th className="text-right">{t("manager:unitsId.col.balance")}</th>
                               </tr>
                             </thead>
                             <tbody>
-                              {unitReconciliations.map((r) => (
+                              {sortedUnitReconciliations.map((r) => (
                                 <tr key={r.id} className="border-t border-slate-100 hover:bg-slate-50 cursor-pointer" onClick={() => router.push(`/manager/charge-reconciliations/${r.id}`)}>
-                                  <td className="px-3 py-2 tabular-nums">{r.fiscalYear}</td>
-                                  <td className="px-3 py-2"><Badge variant={reconciliationVariant(r.status)} size="sm">{r.status}</Badge></td>
-                                  <td className="px-3 py-2 text-right tabular-nums">{formatChfCents(r.totalAcomptePaidCents)}</td>
-                                  <td className="px-3 py-2 text-right tabular-nums">{formatChfCents(r.totalActualCostsCents)}</td>
-                                  <td className={cn("px-3 py-2 text-right tabular-nums", r.balanceCents > 0 ? "text-red-600" : r.balanceCents < 0 ? "text-green-600" : "")}>
+                                  <td className="tabular-nums">{r.fiscalYear}</td>
+                                  <td><Badge variant={reconciliationVariant(r.status)} size="sm">{r.status}</Badge></td>
+                                  <td className="text-right tabular-nums">{formatChfCents(r.totalAcomptePaidCents)}</td>
+                                  <td className="text-right tabular-nums">{formatChfCents(r.totalActualCostsCents)}</td>
+                                  <td className={cn("text-right tabular-nums", r.balanceCents > 0 ? "text-red-600" : r.balanceCents < 0 ? "text-green-600" : "")}>
                                     {r.balanceCents > 0 ? "+" : ""}{formatChfCents(r.balanceCents)}
                                   </td>
                                 </tr>
@@ -1076,39 +1128,39 @@ export default function UnitDetail() {
               })()}
 
               {financialsSubTab === "reconciliations" && (
-                <Panel title="Charge Reconciliations (Nebenkosten)">
+                <Panel title={t("manager:unitsId.title.chargeReconciliationsNebenkosten")}>
                   {unitReconciliations.length === 0 ? (
                     <div className="empty-state-text py-6 text-center italic">No charge reconciliations for this unit.</div>
                   ) : (
                     <div className="overflow-x-auto">
-                      <table className="data-table w-full text-sm">
+                      <table className="data-table w-full">
                         <thead>
                           <tr>
-                            <th className="text-left px-3 py-2">Tenant</th>
-                            <th className="text-left px-3 py-2">Year</th>
-                            <th className="text-left px-3 py-2">Status</th>
-                            <th className="text-right px-3 py-2">Acompte Paid</th>
-                            <th className="text-right px-3 py-2">Actual Costs</th>
-                            <th className="text-right px-3 py-2">Balance</th>
-                            <th className="text-right px-3 py-2">Action</th>
+                            <SortableHeader label="Tenant" field="tenant" sortField={tReconSF} sortDir={tReconSD} onSort={handleTReconSort} />
+                            <SortableHeader label="Year" field="year" sortField={tReconSF} sortDir={tReconSD} onSort={handleTReconSort} />
+                            <SortableHeader label="Status" field="status" sortField={tReconSF} sortDir={tReconSD} onSort={handleTReconSort} />
+                            <th className="text-right">{t("manager:unitsId.col.acomptePaid")}</th>
+                            <th className="text-right">{t("manager:unitsId.col.actualCosts")}</th>
+                            <th className="text-right">{t("manager:unitsId.col.balance")}</th>
+                            <th className="text-right">{t("manager:unitsId.col.action")}</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {unitReconciliations.map((r) => (
+                          {sortedUnitReconciliations.map((r) => (
                             <tr key={r.id} className="border-t border-slate-100 hover:bg-slate-50">
-                              <td className="px-3 py-2">
+                              <td>
                                 <Link href={`/manager/charge-reconciliations/${r.id}`} className="cell-link">
                                   {r.lease?.tenantName || "—"}
                                 </Link>
                               </td>
-                              <td className="px-3 py-2 tabular-nums">{r.fiscalYear}</td>
-                              <td className="px-3 py-2"><Badge variant={reconciliationVariant(r.status)} size="sm">{r.status}</Badge></td>
-                              <td className="px-3 py-2 text-right tabular-nums">{formatChfCents(r.totalAcomptePaidCents)}</td>
-                              <td className="px-3 py-2 text-right tabular-nums">{formatChfCents(r.totalActualCostsCents)}</td>
-                              <td className={cn("px-3 py-2 text-right tabular-nums", r.balanceCents > 0 ? "text-red-600" : r.balanceCents < 0 ? "text-green-600" : "")}>
+                              <td className="tabular-nums">{r.fiscalYear}</td>
+                              <td><Badge variant={reconciliationVariant(r.status)} size="sm">{r.status}</Badge></td>
+                              <td className="text-right tabular-nums">{formatChfCents(r.totalAcomptePaidCents)}</td>
+                              <td className="text-right tabular-nums">{formatChfCents(r.totalActualCostsCents)}</td>
+                              <td className={cn("text-right tabular-nums", r.balanceCents > 0 ? "text-red-600" : r.balanceCents < 0 ? "text-green-600" : "")}>
                                 {r.balanceCents > 0 ? "+" : ""}{formatChfCents(r.balanceCents)}
                               </td>
-                              <td className="px-3 py-2 text-right">
+                              <td className="text-right">
                                 <Link href={`/manager/charge-reconciliations/${r.id}`} className="cell-link">
                                   {r.status === "DRAFT" ? "Edit" : "View"}
                                 </Link>
@@ -1123,13 +1175,13 @@ export default function UnitDetail() {
               )}
 
               {financialsSubTab === "invoices" && (
-                <Panel title="Invoices">
+                <Panel title={t("manager:unitsId.title.invoices")}>
                   {unitInvoices.length === 0 ? (
                     <div className="empty-state-text py-6 text-center italic">No invoices linked to this unit.</div>
                   ) : (
                     <>
                       <div className="sm:hidden space-y-2">
-                        {unitInvoices.map((inv) => (
+                        {sortedUnitInvoices.map((inv) => (
                           <div key={inv.id} className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 flex items-center justify-between gap-3">
                             <div className="min-w-0 flex-1">
                               <p className="text-sm font-medium text-slate-900 truncate">{inv.invoiceNumber || "Draft"}</p>
@@ -1140,23 +1192,23 @@ export default function UnitDetail() {
                         ))}
                       </div>
                       <div className="hidden sm:block overflow-x-auto">
-                        <table className="data-table w-full text-sm">
+                        <table className="data-table w-full">
                           <thead>
                             <tr>
-                              <th className="text-left px-3 py-2">Status</th>
-                              <th className="text-left px-3 py-2">Invoice #</th>
-                              <th className="text-left px-3 py-2">Description</th>
-                              <th className="text-right px-3 py-2">Amount</th>
-                              <th className="text-left px-3 py-2">Period</th>
-                              <th className="text-left px-3 py-2">Due Date</th>
-                              <th className="text-left px-3 py-2">Created</th>
+                              <SortableHeader label="Status" field="status" sortField={invSF} sortDir={invSD} onSort={handleInvSort} />
+                              <th>{t("manager:unitsId.col.invoice")}</th>
+                              <SortableHeader label="Description" field="description" sortField={invSF} sortDir={invSD} onSort={handleInvSort} />
+                              <SortableHeader label="Amount" field="amount" sortField={invSF} sortDir={invSD} onSort={handleInvSort} className="text-right" />
+                              <SortableHeader label="Period" field="period" sortField={invSF} sortDir={invSD} onSort={handleInvSort} />
+                              <SortableHeader label="Due Date" field="dueDate" sortField={invSF} sortDir={invSD} onSort={handleInvSort} />
+                              <SortableHeader label="Created" field="createdAt" sortField={invSF} sortDir={invSD} onSort={handleInvSort} />
                             </tr>
                           </thead>
                           <tbody>
-                            {unitInvoices.map((inv) => (
+                            {sortedUnitInvoices.map((inv) => (
                               <tr key={inv.id} className="border-t border-slate-100 hover:bg-slate-50">
-                                <td className="px-3 py-2"><Badge variant={invoiceVariant(inv.status)}>{inv.status}</Badge></td>
-                                <td className="px-3 py-2">
+                                <td><Badge variant={invoiceVariant(inv.status)}>{inv.status}</Badge></td>
+                                <td>
                                   {isOwner ? (
                                     <span>{inv.invoiceNumber || "—"}</span>
                                   ) : (
@@ -1165,15 +1217,15 @@ export default function UnitDetail() {
                                     </Link>
                                   )}
                                 </td>
-                                <td className="px-3 py-2 max-w-[200px] truncate">{inv.description || "—"}</td>
-                                <td className="px-3 py-2 text-right font-medium">{formatChf(inv.totalAmount)}</td>
-                                <td className="px-3 py-2 whitespace-nowrap">
+                                <td className="max-w-[200px] truncate">{inv.description || "—"}</td>
+                                <td className="text-right font-medium">{formatChf(inv.totalAmount)}</td>
+                                <td className="whitespace-nowrap">
                                   {inv.billingPeriodStart && inv.billingPeriodEnd
                                     ? `${formatDate(inv.billingPeriodStart)} – ${formatDate(inv.billingPeriodEnd)}`
                                     : "—"}
                                 </td>
-                                <td className="px-3 py-2 whitespace-nowrap">{inv.dueDate ? formatDate(inv.dueDate) : "—"}</td>
-                                <td className="px-3 py-2 whitespace-nowrap">{formatDate(inv.createdAt)}</td>
+                                <td className="whitespace-nowrap">{inv.dueDate ? formatDate(inv.dueDate) : "—"}</td>
+                                <td className="whitespace-nowrap">{formatDate(inv.createdAt)}</td>
                               </tr>
                             ))}
                           </tbody>
@@ -1189,7 +1241,7 @@ export default function UnitDetail() {
           )}
 
           {activeTab === "Contracts" && (
-        <Panel title="Contracts">
+        <Panel title={t("manager:unitsId.title.contracts")}>
           {leasesLoading ? (
             <div className="py-6 text-center text-sm text-slate-500">Loading leases…</div>
           ) : unitLeases.length === 0 ? (
@@ -1198,7 +1250,7 @@ export default function UnitDetail() {
             <>
               {/* Mobile: card list */}
               <div className="sm:hidden space-y-2">
-                {unitLeases.map((lease) => (
+                {sortedUnitLeases.map((lease) => (
                   <div key={lease.id} className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 flex items-center justify-between gap-3">
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium text-slate-900 truncate">{lease.tenantName || "—"}</p>
@@ -1212,26 +1264,26 @@ export default function UnitDetail() {
               </div>
               {/* Desktop: table */}
               <div className="hidden sm:block overflow-x-auto">
-                <table className="data-table w-full text-sm">
+                <table className="data-table w-full">
                   <thead>
                     <tr>
-                      <th className="text-left px-3 py-2">Status</th>
-                      <th className="text-left px-3 py-2">Tenant</th>
-                      <th className="text-right px-3 py-2">Net Rent</th>
-                      <th className="text-right px-3 py-2">Total</th>
-                      <th className="text-left px-3 py-2">Start</th>
-                      <th className="text-left px-3 py-2">End</th>
-                      <th className="text-left px-3 py-2">Notice</th>
-                      <th className="text-left px-3 py-2">Created</th>
+                      <SortableHeader label="Status" field="status" sortField={lsSF} sortDir={lsSD} onSort={handleLsSort} />
+                      <SortableHeader label="Tenant" field="tenant" sortField={lsSF} sortDir={lsSD} onSort={handleLsSort} />
+                      <th className="text-right">{t("manager:unitsId.col.netRent")}</th>
+                      <th className="text-right">{t("manager:unitsId.col.total")}</th>
+                      <SortableHeader label="Start" field="startDate" sortField={lsSF} sortDir={lsSD} onSort={handleLsSort} />
+                      <SortableHeader label="End" field="endDate" sortField={lsSF} sortDir={lsSD} onSort={handleLsSort} />
+                      <th>{t("manager:unitsId.col.notice")}</th>
+                      <SortableHeader label="Created" field="createdAt" sortField={lsSF} sortDir={lsSD} onSort={handleLsSort} />
                     </tr>
                   </thead>
                   <tbody>
-                    {unitLeases.map((lease) => (
+                    {sortedUnitLeases.map((lease) => (
                       <tr key={lease.id} className="border-t border-slate-100 hover:bg-slate-50">
-                        <td className="px-3 py-2">
+                        <td>
                           <Badge variant={leaseVariant(lease.status)}>{lease.status}</Badge>
                         </td>
-                        <td className="px-3 py-2">
+                        <td>
                           {isOwner ? (
                             <span>{lease.tenantName || "—"}</span>
                           ) : (
@@ -1240,12 +1292,12 @@ export default function UnitDetail() {
                             </Link>
                           )}
                         </td>
-                        <td className="px-3 py-2 text-right font-medium">{formatChf(lease.netRentChf)}</td>
-                        <td className="px-3 py-2 text-right">{lease.rentTotalChf != null ? formatChf(lease.rentTotalChf) : "—"}</td>
-                        <td className="px-3 py-2 whitespace-nowrap">{formatDate(lease.startDate)}</td>
-                        <td className="px-3 py-2 whitespace-nowrap">{lease.endDate ? formatDate(lease.endDate) : "Open-ended"}</td>
-                        <td className="px-3 py-2 whitespace-nowrap">{lease.noticeRule || "—"}</td>
-                        <td className="px-3 py-2 whitespace-nowrap">{formatDate(lease.createdAt)}</td>
+                        <td className="text-right font-medium">{formatChf(lease.netRentChf)}</td>
+                        <td className="text-right">{lease.rentTotalChf != null ? formatChf(lease.rentTotalChf) : "—"}</td>
+                        <td className="whitespace-nowrap">{formatDate(lease.startDate)}</td>
+                        <td className="whitespace-nowrap">{lease.endDate ? formatDate(lease.endDate) : "Open-ended"}</td>
+                        <td className="whitespace-nowrap">{lease.noticeRule || "—"}</td>
+                        <td className="whitespace-nowrap">{formatDate(lease.createdAt)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -1256,39 +1308,39 @@ export default function UnitDetail() {
         </Panel>
           )}
           {activeTab === "Requests" && (
-        <Panel title="Open Requests">
+        <Panel title={t("manager:unitsId.title.openRequests")}>
           {requestsLoading ? (
             <div className="py-6 text-center text-sm text-slate-500">Loading requests…</div>
           ) : unitRequests.length === 0 ? (
             <div className="empty-state-text py-6 text-center italic">No open requests for this unit.</div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="data-table w-full text-sm">
+              <table className="data-table w-full">
                 <thead>
                   <tr>
-                    <th className="text-left px-3 py-2">#</th>
-                    <th className="text-left px-3 py-2">Status</th>
-                    <th className="text-left px-3 py-2">Category</th>
-                    <th className="text-left px-3 py-2">Description</th>
-                    <th className="text-left px-3 py-2">Urgency</th>
-                    <th className="text-left px-3 py-2">Contractor</th>
-                    <th className="text-left px-3 py-2">Date</th>
+                    <SortableHeader label="#" field="requestNumber" sortField={reqSF} sortDir={reqSD} onSort={handleReqSort} />
+                    <SortableHeader label="Status" field="status" sortField={reqSF} sortDir={reqSD} onSort={handleReqSort} />
+                    <SortableHeader label="Category" field="category" sortField={reqSF} sortDir={reqSD} onSort={handleReqSort} />
+                    <SortableHeader label="Description" field="description" sortField={reqSF} sortDir={reqSD} onSort={handleReqSort} />
+                    <SortableHeader label="Urgency" field="urgency" sortField={reqSF} sortDir={reqSD} onSort={handleReqSort} />
+                    <SortableHeader label="Contractor" field="contractor" sortField={reqSF} sortDir={reqSD} onSort={handleReqSort} />
+                    <SortableHeader label="Date" field="createdAt" sortField={reqSF} sortDir={reqSD} onSort={handleReqSort} />
                   </tr>
                 </thead>
                 <tbody>
-                  {unitRequests.map((r) => (
+                  {sortedUnitRequests.map((r) => (
                     <tr
                       key={r.id}
                       className="border-t border-slate-100 hover:bg-slate-50 cursor-pointer"
                       onClick={() => router.push(`/manager/requests/${r.id}?from=/admin-inventory/units/${id}`)}
                     >
-                      <td className="px-3 py-2 tabular-nums font-medium">#{r.requestNumber}</td>
-                      <td className="px-3 py-2"><Badge variant="muted" size="sm">{r.status?.replace(/_/g, " ")}</Badge></td>
-                      <td className="px-3 py-2">{r.category || "—"}</td>
-                      <td className="px-3 py-2 max-w-[200px] truncate">{r.description || "—"}</td>
-                      <td className="px-3 py-2">{r.urgency || "—"}</td>
-                      <td className="px-3 py-2">{r.assignedContractor?.name || "—"}</td>
-                      <td className="px-3 py-2 whitespace-nowrap">{formatDate(r.createdAt)}</td>
+                      <td className="tabular-nums font-medium">#{r.requestNumber}</td>
+                      <td><Badge variant="muted" size="sm">{r.status?.replace(/_/g, " ")}</Badge></td>
+                      <td>{r.category || "—"}</td>
+                      <td className="max-w-[200px] truncate">{r.description || "—"}</td>
+                      <td>{r.urgency || "—"}</td>
+                      <td>{r.assignedContractor?.name || "—"}</td>
+                      <td className="whitespace-nowrap">{formatDate(r.createdAt)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -1303,3 +1355,5 @@ export default function UnitDetail() {
     </AppShell>
   );
 }
+
+export const getServerSideProps = withServerTranslations(["common","manager"]);

@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
+import { useTranslation } from "next-i18next";
 import {
   LayoutDashboard,
   Inbox,
@@ -10,16 +11,17 @@ import {
 } from "lucide-react";
 
 const TENANT_NAV = [
-  { label: "Dashboard",  icon: LayoutDashboard, href: "/tenant" },
-  { label: "Inbox",      icon: Inbox,           href: "/tenant/inbox" },
-  { label: "Requests",   icon: Wrench,          href: "/tenant/requests" },
-  { label: "My Home",    icon: Home,            href: "/tenant/leases" },
-  { label: "Apply",      icon: Search,          href: "/listings" },
+  { id: "dashboard",  icon: LayoutDashboard, href: "/tenant" },
+  { id: "inbox",      icon: Inbox,           href: "/tenant/inbox" },
+  { id: "requests",   icon: Wrench,          href: "/tenant/requests" },
+  { id: "myHome",     icon: Home,            href: "/tenant/leases" },
+  { id: "apply",      icon: Search,          href: "/listings" },
 ];
 
 export default function TenantSidebar() {
   const router = useRouter();
   const pathname = router.asPath.split("?")[0];
+  const { t } = useTranslation("tenant");
 
   const activeIndex = useMemo(() => {
     for (let i = TENANT_NAV.length - 1; i >= 0; i--) {
@@ -36,7 +38,7 @@ export default function TenantSidebar() {
         const isActive = index === activeIndex;
         return (
           <Link
-            key={item.label}
+            key={item.id}
             href={item.href}
             className={[
               "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
@@ -47,7 +49,7 @@ export default function TenantSidebar() {
             ].join(" ")}
           >
             <Icon size={18} className="shrink-0" />
-            <span>{item.label}</span>
+            <span>{t(`nav.${item.id}`)}</span>
           </Link>
         );
       })}

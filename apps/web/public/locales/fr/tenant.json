@@ -1,0 +1,232 @@
+{
+  "nav": {
+    "dashboard": "Tableau de bord",
+    "inbox": "Boîte de réception",
+    "requests": "Demandes",
+    "leases": "Baux",
+    "invoices": "Factures",
+    "assets": "Équipements",
+    "myHome": "Mon logement",
+    "apply": "Candidater"
+  },
+  "dashboard": {
+    "title": "Espace locataire",
+    "yourLease": "Votre bail",
+    "openRequests": "Demandes ouvertes",
+    "pendingInvoices": "Factures en attente"
+  },
+  "chatWidget": {
+    "openLabel": "Ouvrir l'assistant de maintenance",
+    "dialogLabel": "Chat assistant de maintenance",
+    "closeLabel": "Fermer le chat",
+    "inputLabel": "Saisie du message",
+    "sendLabel": "Envoyer le message",
+    "askAi": "Demander à l'IA",
+    "assistantName": "Assistant de maintenance",
+    "assistantTagline": "Posez-moi vos questions sur votre logement",
+    "loading": "Chargement…",
+    "greeting": "Bonjour ! Je suis votre assistant de maintenance.",
+    "greetingHint": "Décrivez un problème dans votre logement ou renseignez-vous sur l'état d'une demande.",
+    "suggestion1": "Mon robinet fuit",
+    "suggestion2": "Afficher les détails de mon bail",
+    "suggestion3": "Afficher mes factures",
+    "placeholder": "Décrivez un problème ou posez une question…",
+    "enterHint": "Entrée pour envoyer · Maj+Entrée pour nouvelle ligne",
+    "error": "Une erreur s'est produite. Veuillez réessayer."
+  },
+  "index": {
+    "heading": {
+      "rentalApplication": "Rental Application",
+      "selectUnitsToApplyFor": "Select units to apply for",
+      "uploadYourDocuments": "Upload your documents",
+      "applicantDetails": "Applicant Details",
+      "currentHousingHousehold": "Current Housing & Household",
+      "reviewSubmit": "Review & Submit",
+      "unitsAppliedFor": "Units Applied For",
+      "applicants": "Applicants",
+      "documents": "Documents",
+      "electronicSignature": "Electronic Signature",
+      "applicationSubmitted": "Application Submitted",
+      "maintenanceAgentNdashUiLauncher": "Maintenance Agent &ndash; UI Launcher",
+      "rentalListings": "Rental Listings",
+      "findYourNextHome": "Find your next home",
+      "maintenanceHelp": "Maintenance help",
+      "quickFixes": "Quick fixes",
+      "tenantRequestByPhone": "Tenant request (by phone)",
+      "requestContext": "Request context",
+      "tenantSignIn": "Tenant sign-in"
+    },
+    "placeholder": {
+      "eGChFrDe": "e.g. CH, FR, DE",
+      "eGJeanDupont": "e.g. Jean Dupont",
+      "searchByAddressBuildingNameOrUnit": "Search by address, building name, or unit…",
+      "yourName": "Your name",
+      "youExampleCom": "you@example.com",
+      "minimum8Characters": "Minimum 8 characters",
+      "eGTheOvenIsOverheating": "e.g., The oven is overheating",
+      "41791234567": "+41 79 123 45 67",
+      "describeTheIssueU2026": "Describe the issue\\u2026",
+      "eG150": "e.g. 150"
+    },
+    "title": {
+      "showExtractionDebugInfo": "Show extraction debug info"
+    },
+    "ariaLabel": {
+      "removeDocument": "Remove document"
+    }
+  },
+  "token": {
+    "heading": {
+      "invoiceCapture": "Invoice Capture",
+      "thisLinkHasExpired": "This link has expired",
+      "somethingWentWrong": "Une erreur s'est produite",
+      "takePhotosOfYourInvoice": "Take photos of your invoice",
+      "uploading": "Uploading…",
+      "photosSubmitted": "Photos submitted!"
+    }
+  },
+  "assets": {
+    "heading": {
+      "myUnitAmpAssets": "My Unit &amp; Assets",
+      "unitAmpAssetDetails": "Unit &amp; Asset Details"
+    },
+    "text": {
+      "comingSoon": "Bientôt disponible"
+    }
+  },
+  "inbox": {
+    "title": {
+      "inbox": "Boîte de réception",
+      "unread": "Unread",
+      "dismiss": "Ignorer"
+    },
+    "text": {
+      "pleaseSignInToViewYourNotifications": "Please sign in to view your notifications.",
+      "loading": "Chargement…",
+      "noNotificationsYetYouWillBeNotifiedHereWhenYourLeaseIsReadyToSignInvoicesAreCreatedAndMore": "Aucune notification yet. You will be notified here when your lease is ready to sign, invoices are created, and more."
+    }
+  },
+  "invoices": {
+    "heading": {
+      "myInvoices": "My Invoices"
+    },
+    "text": {
+      "loading": "Chargement…",
+      "totalInvoices": "Total Factures",
+      "outstanding": "En suspens",
+      "paid": "Payé",
+      "loadingInvoices": "Chargement des factures…",
+      "noInvoicesYet": "No invoices yet"
+    }
+  },
+  "invoicesId": {
+    "heading": {
+      "paymentQrCode": "Payment QR Code"
+    },
+    "text": {
+      "loading": "Chargement…",
+      "loadingInvoice": "Chargement de la facture…",
+      "amount": "Montant",
+      "currency": "Devise",
+      "issueDate": "Date d'émission",
+      "dueDate": "Date d'échéance",
+      "paid": "Payé",
+      "property": "Bien",
+      "payableTo": "Payable to",
+      "reference": "Référence",
+      "referenceType": "Reference type"
+    }
+  },
+  "leasesId": {
+    "heading": {
+      "leaseAgreement": "Lease Agreement",
+      "signatureStatus": "Signature Status"
+    },
+    "text": {
+      "loading": "Chargement…",
+      "loadingLeaseDetails": "Loading lease details…",
+      "leaseNotFoundOrNotAccessible": "Bail not found or not accessible.",
+      "1Parties": "§ 1 — Parties",
+      "landlord": "Propriétaire",
+      "tenant": "Locataire",
+      "2Object": "§ 2 — Object",
+      "type": "Type",
+      "rooms": "Rooms",
+      "floor": "Étage",
+      "address": "Adresse",
+      "startDate": "Date de début",
+      "term": "Term",
+      "endDate": "Date de fin",
+      "noticePeriod": "Préavis Period",
+      "netRent": "Loyer net",
+      "garageParking": "Garage / parking",
+      "otherServices": "Other services",
+      "totalMonthly": "Àtal monthly",
+      "7Deposit": "§ 7 — Dépôt de garantie",
+      "securityDeposit": "Security deposit",
+      "15OtherStipulations": "§ 15 — Other Stipulations",
+      "leaseTerminated": "📋 Lease Résilié",
+      "terminatedOn": "Résilié on:",
+      "reason": "Motif :",
+      "notice": "Préavis :"
+    }
+  },
+  "leasesIndex": {
+    "heading": {
+      "myLeases": "My Leases"
+    },
+    "text": {
+      "loadingSession": "Loading session…",
+      "loadingLeases": "Chargement des baux…",
+      "noLeasesFound": "Aucun bail trouvé",
+      "mo": "/mo"
+    }
+  },
+  "requests": {
+    "heading": {
+      "newMaintenanceRequest": "New Maintenance Request"
+    },
+    "placeholder": {
+      "commentOptional": "Comment (optional)",
+      "describeTheIssueInDetailEGTheKitchenFaucetIsDripping": "Describe the issue in detail (e.g. the kitchen faucet is dripping)",
+      "41791234567": "+41 79 123 45 67"
+    },
+    "title": {
+      "myRequests": "My Requests",
+      "myMaintenanceRequests": "My Maintenance Requests"
+    },
+    "ariaLabel": {
+      "captureWithPhone": "Capture with phone",
+      "attachPhotosOrDocuments": "Attach photos or documents",
+      "capturePhotosWithPhoneViaQrCode": "Capture photos with phone via QR code"
+    },
+    "text": {
+      "checkingAppointments": "Checking appointments…",
+      "declined": "Declined",
+      "captureWithPhone": "📷 Capture with Téléphone",
+      "creatingCaptureSession": "Création de la session de capture…",
+      "close": "Fermer",
+      "photosReceived": "Photos reçues !",
+      "yourPhotosHaveBeenAttachedToTheRequest": "Your photos have been attached to the request.",
+      "done": "Terminé",
+      "mobileLink": "Lien mobile",
+      "cancel": "Annuler",
+      "loadingPhotos": "Loading photos…",
+      "noPhotosYet": "Aucune photo pour l'instant",
+      "jobCompleted": "✅ Job Terminé",
+      "thankYouYourRatingHasBeenSubmitted": "Thank you — your rating has been submitted.",
+      "legalAnalysis": "⚖️ Analyse juridique",
+      "analysingYourClaim": "Analysing your claim…",
+      "nextSteps": "Suivant steps:",
+      "legalBasis": "Legal basis",
+      "escalation": "Escalation",
+      "category": "Catégorie",
+      "contactPhone": "Contact phone",
+      "photosAttachments": "Photos / Pièces jointes",
+      "upTo5FilesMax10MbEachImagesOrPdf": "Up to 5 files, max 10 MB each. Images or PDF.",
+      "pleaseSignInToViewYourRequests": "Please sign in to view your requests.",
+      "loading": "Chargement…",
+      "noMaintenanceRequestsYet": "No maintenance requests yet."
+    }
+  }
+}

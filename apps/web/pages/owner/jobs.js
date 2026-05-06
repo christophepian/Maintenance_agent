@@ -12,6 +12,8 @@ import Badge from "../../components/ui/Badge";
 import { urgencyVariant, jobVariant } from "../../lib/statusVariants";
 
 import { cn } from "../../lib/utils";
+import { withTranslations } from "../../lib/i18n";
+import { useTranslation } from "next-i18next";
 function UrgencyPill({ urgency }) {
   if (!urgency) return null;
   return (
@@ -22,6 +24,7 @@ function UrgencyPill({ urgency }) {
 }
 
 export default function OwnerJobs() {
+  const { t } = useTranslation("owner");
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -80,7 +83,7 @@ export default function OwnerJobs() {
     <AppShell role="OWNER">
       <PageShell>
         <OwnerPicker onSelect={fetchJobs} />
-        <PageHeader title="Jobs Overview" />
+        <PageHeader title={t("owner:jobs.title.jobsOverview")} />
 
         <PageContent>
           <ErrorBanner error={error} className="text-sm" />
@@ -88,43 +91,43 @@ export default function OwnerJobs() {
           <FilterToggle open={filterOpen} onToggle={() => setFilterOpen((v) => !v)} activeCount={activeCount} />
           {filterOpen && (
             <FilterPanelBody>
-              <FilterSection title="Status" first>
+              <FilterSection title={t("owner:jobs.title.status")} first>
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                  <SelectField label="Status" value={filter} onChange={(e) => setFilter(e.target.value)}>
-                    <option value="ALL">All statuses</option>
-                    <option value="PENDING">Pending</option>
-                    <option value="IN_PROGRESS">In Progress</option>
-                    <option value="COMPLETED">Completed</option>
-                    <option value="INVOICED">Invoiced</option>
+                  <SelectField label={t("owner:jobs.title.status")} value={filter} onChange={(e) => setFilter(e.target.value)}>
+                    <option value="ALL">{t("owner:jobs.text.allStatuses")}</option>
+                    <option value="PENDING">{t("owner:jobs.text.pending")}</option>
+                    <option value="IN_PROGRESS">{t("owner:jobs.text.inProgress")}</option>
+                    <option value="COMPLETED">{t("owner:jobs.text.completed")}</option>
+                    <option value="INVOICED">{t("owner:jobs.text.invoiced")}</option>
                   </SelectField>
                 </div>
               </FilterSection>
-              <FilterSection title="Date range">
+              <FilterSection title={t("owner:jobs.title.dateRange")}>
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                  <DateField label="From" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
-                  <DateField label="To" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+                  <DateField label={t("owner:jobs.prop.from")} value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+                  <DateField label={t("owner:jobs.prop.to")} value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
                 </div>
               </FilterSection>
-              <FilterSection title="Scope">
+              <FilterSection title={t("owner:jobs.title.scope")}>
                 <div className="grid grid-cols-2 gap-3">
-                  <SelectField label="Building" value={buildingFilter} onChange={(e) => { setBuildingFilter(e.target.value); setUnitFilter(""); }}>
-                    <option value="">All buildings</option>
+                  <SelectField label={t("owner:jobs.prop.building")} value={buildingFilter} onChange={(e) => { setBuildingFilter(e.target.value); setUnitFilter(""); }}>
+                    <option value="">{t("owner:jobs.text.allBuildings")}</option>
                     {buildings.map((b) => <option key={b} value={b}>{b}</option>)}
                   </SelectField>
-                  <SelectField label="Unit" value={unitFilter} onChange={(e) => setUnitFilter(e.target.value)}>
-                    <option value="">All units</option>
+                  <SelectField label={t("owner:jobs.prop.unit")} value={unitFilter} onChange={(e) => setUnitFilter(e.target.value)}>
+                    <option value="">{t("owner:jobs.text.allUnits")}</option>
                     {units.map((u) => <option key={u} value={u}>{u}</option>)}
                   </SelectField>
                 </div>
               </FilterSection>
-              <FilterSection title="Priority">
+              <FilterSection title={t("owner:jobs.title.priority")}>
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                  <SelectField label="Urgency" value={urgencyFilter} onChange={(e) => setUrgencyFilter(e.target.value)}>
-                    <option value="">All levels</option>
-                    <option value="LOW">Low</option>
-                    <option value="MEDIUM">Medium</option>
-                    <option value="HIGH">High</option>
-                    <option value="EMERGENCY">Emergency</option>
+                  <SelectField label={t("owner:jobs.prop.urgency")} value={urgencyFilter} onChange={(e) => setUrgencyFilter(e.target.value)}>
+                    <option value="">{t("owner:jobs.text.allLevels")}</option>
+                    <option value="LOW">{t("owner:jobs.text.low")}</option>
+                    <option value="MEDIUM">{t("owner:jobs.text.medium")}</option>
+                    <option value="HIGH">{t("owner:jobs.text.high")}</option>
+                    <option value="EMERGENCY">{t("owner:jobs.text.emergency")}</option>
                   </SelectField>
                 </div>
               </FilterSection>
@@ -134,7 +137,7 @@ export default function OwnerJobs() {
 
           <Panel>
             {loading ? (
-              <p className="text-sm text-slate-600">Loading jobs...</p>
+              <p className="text-sm text-slate-600">{t("owner:jobs.text.loadingJobs")}</p>
             ) : filteredJobs.length === 0 ? (
               <div className="rounded-lg border border-slate-200 bg-slate-50 p-6 text-center text-slate-600">
                 {filter === "ALL" ? "No jobs yet" : `No ${filter.toLowerCase()} jobs`}
@@ -178,7 +181,7 @@ export default function OwnerJobs() {
                         <div className="border-t border-slate-100 px-4 py-4">
                           {job.request && (
                             <div className="mb-3 rounded-lg border border-slate-100 bg-slate-50 p-3">
-                              <p className="text-xs font-semibold text-slate-600 mb-1">Request Details</p>
+                              <p className="text-xs font-semibold text-slate-600 mb-1">{t("owner:jobs.text.requestDetails")}</p>
                               <p className="text-sm text-slate-800">{job.request.description}</p>
                               {job.request.category && (
                                 <p className="text-xs text-slate-500 mt-1">Category: {job.request.category}</p>
@@ -189,7 +192,7 @@ export default function OwnerJobs() {
                           <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 mb-3">
                             {job.request?.unit && (
                               <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
-                                <p className="text-xs font-semibold text-blue-900 mb-1">Location</p>
+                                <p className="text-xs font-semibold text-blue-900 mb-1">{t("owner:jobs.text.location")}</p>
                                 <p className="text-xs font-medium text-blue-700">{job.request.unit.building.name}</p>
                                 <p className="text-xs text-blue-700">{job.request.unit.building.address}</p>
                                 <p className="text-xs font-medium text-blue-700 mt-0.5">Unit {job.request.unit.unitNumber}</p>
@@ -197,7 +200,7 @@ export default function OwnerJobs() {
                             )}
                             {job.request?.tenant && (
                               <div className="rounded-lg border border-green-200 bg-green-50 p-3">
-                                <p className="text-xs font-semibold text-green-900 mb-1">Tenant</p>
+                                <p className="text-xs font-semibold text-green-900 mb-1">{t("owner:jobs.text.tenant")}</p>
                                 {job.request.tenant.name && <p className="text-xs font-medium text-green-700">{job.request.tenant.name}</p>}
                                 <p className="text-xs text-green-700">{job.request.tenant.phone}</p>
                                 {job.request.tenant.email && <p className="text-xs text-green-700">{job.request.tenant.email}</p>}
@@ -205,7 +208,7 @@ export default function OwnerJobs() {
                             )}
                             {job.contractor && (
                               <div className="rounded-lg border border-purple-200 bg-purple-50 p-3">
-                                <p className="text-xs font-semibold text-purple-900 mb-1">Contractor</p>
+                                <p className="text-xs font-semibold text-purple-900 mb-1">{t("owner:jobs.text.contractor")}</p>
                                 <p className="text-xs font-medium text-purple-700">{job.contractor.name}</p>
                                 <p className="text-xs text-purple-700">{job.contractor.phone}</p>
                                 <p className="text-xs text-purple-700">{job.contractor.email}</p>
@@ -215,7 +218,7 @@ export default function OwnerJobs() {
 
                           {job.request?.asset && (
                             <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 p-3">
-                              <p className="text-xs font-semibold text-amber-900 mb-1">Asset</p>
+                              <p className="text-xs font-semibold text-amber-900 mb-1">{t("owner:jobs.text.asset")}</p>
                               <p className="text-sm text-amber-700">
                                 {job.request.asset.name || job.request.asset.category}
                                 {job.request.asset.serialNumber && ` (Serial: ${job.request.asset.serialNumber})`}
@@ -241,3 +244,5 @@ export default function OwnerJobs() {
     </AppShell>
   );
 }
+
+export const getStaticProps = withTranslations(["common","owner"]);

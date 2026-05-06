@@ -14,6 +14,8 @@ import { useTableSort, clientSort } from "../../../lib/tableUtils";
 import { formatChfCents, formatDate } from "../../../lib/format";
 import ScrollableTabs from "../../../components/mobile/ScrollableTabs";
 import { billingScheduleVariant } from "../../../lib/statusVariants";
+import { withTranslations } from "../../../lib/i18n";
+import { useTranslation } from "next-i18next";
 
 const FREQUENCY_LABELS = {
   MONTHLY: "Monthly",
@@ -23,10 +25,10 @@ const FREQUENCY_LABELS = {
 };
 
 const TABS = [
-  { key: "ALL", label: "All" },
-  { key: "ACTIVE", label: "Active" },
-  { key: "PAUSED", label: "Paused" },
-  { key: "COMPLETED", label: "Completed" },
+  { key: "ALL" },
+  { key: "ACTIVE" },
+  { key: "PAUSED" },
+  { key: "COMPLETED" },
 ];
 const TAB_KEYS = TABS.map((t) => t.key.toLowerCase());
 
@@ -45,10 +47,11 @@ function cbsFieldExtractor(s, field) {
   }
 }
 
-const CBS_COLUMNS = [
+function buildCbsColumns(t) {
+  return [
   {
     id: "contractor",
-    label: "Contractor",
+    label: t("manager:contractorBillingSchedulesIndex.col.contractor"),
     sortable: true,
     alwaysVisible: true,
     render: (s) => (
@@ -59,21 +62,21 @@ const CBS_COLUMNS = [
   },
   {
     id: "description",
-    label: "Description",
+    label: t("manager:contractorBillingSchedulesIndex.col.description"),
     sortable: true,
     defaultVisible: true,
     render: (s) => s.description || "\u2014",
   },
   {
     id: "frequency",
-    label: "Frequency",
+    label: t("manager:contractorBillingSchedulesIndex.col.frequency"),
     sortable: true,
     defaultVisible: true,
     render: (s) => FREQUENCY_LABELS[s.frequency] || s.frequency,
   },
   {
     id: "amount",
-    label: "Amount",
+    label: t("manager:contractorBillingSchedulesIndex.col.amount"),
     sortable: true,
     defaultVisible: true,
     className: "text-right",
@@ -81,21 +84,21 @@ const CBS_COLUMNS = [
   },
   {
     id: "status",
-    label: "Status",
+    label: t("manager:contractorBillingSchedulesIndex.col.status"),
     sortable: true,
     defaultVisible: true,
     render: (s) => <Badge variant={billingScheduleVariant(s.status)}>{s.status}</Badge>,
   },
   {
     id: "nextPeriod",
-    label: "Next Period",
+    label: t("manager:contractorBillingSchedulesIndex.col.nextPeriod"),
     sortable: true,
     defaultVisible: true,
     render: (s) => formatDate(s.nextPeriodStart),
   },
   {
     id: "building",
-    label: "Building",
+    label: t("manager:contractorBillingSchedulesIndex.col.building"),
     sortable: true,
     defaultVisible: true,
     render: (s) => s.building?.name || "\u2014",
@@ -105,12 +108,15 @@ const CBS_COLUMNS = [
     label: "",
     alwaysVisible: true,
     render: (s) => (
-      <Link href={`/manager/contractor-billing-schedules/${s.id}`} className="cell-link" onClick={(e) => e.stopPropagation()}>View</Link>
+      <Link href={`/manager/contractor-billing-schedules/${s.id}`} className="cell-link" onClick={(e) => e.stopPropagation()}>{t("manager:contractor_Billing_SchedulesIndex.text.view")}</Link>
     ),
   },
 ];
+}
 
 export default function ContractorBillingSchedulesList() {
+  const { t } = useTranslation("manager");
+  const cbsColumns = useMemo(() => buildCbsColumns(t), [t]);
   const router = useRouter();
   const activeTab = router.isReady
     ? Math.max(0, TAB_KEYS.indexOf(router.query.tab)) || 0
@@ -217,8 +223,8 @@ export default function ContractorBillingSchedulesList() {
     <AppShell>
       <PageShell>
         <PageHeader
-          title="Contractor Billing"
-          subtitle="Recurring billing schedules for contractor services"
+          title={t("manager:contractorBillingSchedulesIndex.title.contractorBilling")}
+          subtitle={t("manager:contractor_Billing_SchedulesIndex.prop.recurringBillingSchedulesForContractorServices")}
           action={
             <Button
               variant={showCreate ? "ghost" : "primary"}
@@ -233,17 +239,17 @@ export default function ContractorBillingSchedulesList() {
           {/* Create form */}
           {showCreate && (
             <Panel className="mb-4">
-              <h3 className="font-semibold text-slate-800 mb-3">Create Billing Schedule</h3>
+              <h3 className="font-semibold text-slate-800 mb-3">{t("manager:contractorBillingSchedulesIndex.heading.createBillingSchedule")}</h3>
               <form onSubmit={handleCreate} className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Contractor *</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:contractor_Billing_SchedulesIndex.text.contractor")}</label>
                   <select
                     value={form.contractorId}
                     onChange={(e) => setForm({ ...form, contractorId: e.target.value })}
                     required
                     className="w-full border rounded px-3 py-2 text-sm"
                   >
-                    <option value="">Select contractor…</option>
+                    <option value="">{t("manager:contractor_Billing_SchedulesIndex.text.selectContractor")}</option>
                     {contractors.map((c) => (
                       <option key={c.id} value={c.id}>
                         {c.name}
@@ -252,18 +258,18 @@ export default function ContractorBillingSchedulesList() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Description *</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:contractor_Billing_SchedulesIndex.text.description")}</label>
                   <input
                     type="text"
                     value={form.description}
                     onChange={(e) => setForm({ ...form, description: e.target.value })}
                     required
-                    placeholder="e.g. Monthly cleaning service"
+                    placeholder={t("manager:contractorBillingSchedulesIndex.placeholder.eGMonthlyCleaningService")}
                     className="w-full border rounded px-3 py-2 text-sm"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Frequency *</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:contractor_Billing_SchedulesIndex.text.frequency")}</label>
                   <select
                     value={form.frequency}
                     onChange={(e) => setForm({ ...form, frequency: e.target.value })}
@@ -287,7 +293,7 @@ export default function ContractorBillingSchedulesList() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Start Date *</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:contractor_Billing_SchedulesIndex.text.startDate")}</label>
                   <input
                     type="date"
                     value={form.nextPeriodStart}
@@ -305,7 +311,7 @@ export default function ContractorBillingSchedulesList() {
                     value={form.amountCents}
                     onChange={(e) => setForm({ ...form, amountCents: e.target.value })}
                     required
-                    placeholder="e.g. 500.00"
+                    placeholder={t("manager:contractorBillingSchedulesIndex.placeholder.eG50000")}
                     className="w-full border rounded px-3 py-2 text-sm"
                   />
                 </div>
@@ -332,23 +338,23 @@ export default function ContractorBillingSchedulesList() {
 
           {/* Tabs */}
           <ScrollableTabs activeIndex={activeTab}>
-            {TABS.map((t, i) => (
+            {TABS.map((tab, i) => (
               <button
-                key={t.key}
+                key={tab.key}
                 onClick={() => setActiveTab(i)}
                 className={activeTab === i ? "pill-tab-active" : "pill-tab"}
               >
-                {t.label}
+                {t(`manager:contractorBillingSchedules.tabs.${tab.key.toLowerCase()}`)}
               </button>
             ))}
           </ScrollableTabs>
 
           {loading ? (
-            <p className="loading-text p-4">Loading…</p>
+            <p className="loading-text p-4">{t("manager:contractor_Billing_SchedulesIndex.text.loading")}</p>
           ) : (
             <ConfigurableTable
                 tableId="manager-contractor-billing-schedules"
-                columns={CBS_COLUMNS}
+                columns={cbsColumns}
                 data={sortedSchedules}
                 rowKey={(s) => s.id}
                 sortField={sortField}
@@ -357,7 +363,7 @@ export default function ContractorBillingSchedulesList() {
                 onRowClick={(s) => router.push(`/manager/contractor-billing-schedules/${s.id}`)}
                 emptyState={
                   <div className="empty-state">
-                    <p className="empty-state-text">No contractor billing schedules found.</p>
+                    <p className="empty-state-text">{t("manager:contractor_Billing_SchedulesIndex.text.noContractorBillingSchedulesFound")}</p>
                   </div>
                 }
                 mobileCard={(s) => (
@@ -380,3 +386,5 @@ export default function ContractorBillingSchedulesList() {
     </AppShell>
   );
 }
+
+export const getStaticProps = withTranslations(["common","manager"]);

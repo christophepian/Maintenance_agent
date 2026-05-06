@@ -1,6 +1,7 @@
 import PDFDocument from 'pdfkit';
 import { Readable } from 'stream';
 import prisma from './prismaClient';
+import { findInvoiceWithLineItemsAndIssuer } from '../repositories/invoiceRepository';
 import { generateInvoiceQRBill, getInvoiceQRCodePNG } from './invoiceQRBill';
 
 export interface InvoicePDFOptions {
@@ -16,13 +17,7 @@ export async function generateInvoicePDF(
   options: InvoicePDFOptions = { includeQRBill: true }
 ): Promise<Buffer> {
   // Fetch invoice with all related data
-  const invoice = await prisma.invoice.findUnique({
-    where: { id: invoiceId },
-    include: {
-      lineItems: true,
-      issuer: true,
-    },
-  });
+  const invoice = await findInvoiceWithLineItemsAndIssuer(prisma, invoiceId);
 
   if (!invoice) {
     throw new Error(`Invoice not found: ${invoiceId}`);

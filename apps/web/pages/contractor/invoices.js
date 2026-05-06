@@ -13,19 +13,22 @@ import { invoiceVariant, ingestionVariant } from "../../lib/statusVariants";
 import { formatDate } from "../../lib/format";
 import { authHeaders } from "../../lib/api";
 import ScrollableTabs from "../../components/mobile/ScrollableTabs";
+import { withTranslations } from "../../lib/i18n";
+import { useTranslation } from "next-i18next";
 
 const STATUS_TABS = [
-  { key: "ALL", label: "All" },
-  { key: "DRAFT", label: "Draft" },
-  { key: "ISSUED", label: "Issued" },
-  { key: "APPROVED", label: "Approved" },
-  { key: "PAID", label: "Paid" },
-  { key: "DISPUTED", label: "Disputed" },
+  { key: "ALL" },
+  { key: "DRAFT" },
+  { key: "ISSUED" },
+  { key: "APPROVED" },
+  { key: "PAID" },
+  { key: "DISPUTED" },
 ];
 
 /* ── Status tracking pipeline ────────────────────────────────── */
 const STATUS_PIPELINE = ["DRAFT", "ISSUED", "APPROVED", "PAID"];
 function StatusPipeline({ status }) {
+  const { t } = useTranslation("contractor");
   const idx = STATUS_PIPELINE.indexOf(status);
   const isDisputed = status === "DISPUTED";
   return (
@@ -48,7 +51,7 @@ function StatusPipeline({ status }) {
         );
       })}
       {isDisputed && (
-        <span className="ml-1.5 text-[10px] font-semibold text-rose-600">⚠ DISPUTED</span>
+        <span className="ml-1.5 text-[10px] font-semibold text-rose-600">{t("contractor:invoices.text.dISPUTED")}</span>
       )}
     </div>
   );
@@ -98,6 +101,7 @@ function getInvoiceTotal(invoice) {
 }
 
 export default function ContractorInvoices() {
+  const { t } = useTranslation("contractor");
   const router = useRouter();
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -259,7 +263,7 @@ export default function ContractorInvoices() {
     <AppShell role="CONTRACTOR">
       <PageShell>
         <PageHeader
-          title="My Invoices"
+          title={t("contractor:invoices.title.myInvoices")}
           actions={
             <div className="flex items-center gap-2">
               <ContractorPicker onSelect={() => fetchInvoices()} />
@@ -288,7 +292,7 @@ export default function ContractorInvoices() {
         {showUpload && (
           <div className="mb-6 rounded-lg border-2 border-indigo-200 bg-white p-5">
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-slate-900">📤 Upload Invoice</h3>
+              <h3 className="text-lg font-semibold text-slate-900">{t("contractor:invoices.text.uploadInvoice")}</h3>
               <button
                 onClick={() => { setShowUpload(false); setUploadFile(null); setUploadError(""); }}
                 className="text-sm text-slate-400 hover:text-slate-600"
@@ -324,7 +328,7 @@ export default function ContractorInvoices() {
         {showCreateForm && (
           <div className="mb-6 rounded-lg border-2 border-indigo-200 bg-white p-5">
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-slate-900">Create Invoice</h3>
+              <h3 className="text-lg font-semibold text-slate-900">{t("contractor:invoices.heading.createInvoice")}</h3>
               <button
                 onClick={() => { setShowCreateForm(false); setFormError(""); setFormSuccess(""); }}
                 className="text-sm text-slate-400 hover:text-slate-600"
@@ -335,7 +339,7 @@ export default function ContractorInvoices() {
             <ErrorBanner error={formError} className="mb-3 text-sm" />
             <form onSubmit={submitInvoice} className="space-y-4">
               <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">Job</label>
+                <label className="mb-1 block text-sm font-medium text-slate-700">{t("contractor:invoices.text.job")}</label>
                 {router.query.jobId ? (
                   <input
                     type="text"
@@ -361,7 +365,7 @@ export default function ContractorInvoices() {
                   </select>
                 )}
                 {router.query.jobId && (
-                  <p className="mt-1 text-xs text-slate-500">Pre-filled from job detail page</p>
+                  <p className="mt-1 text-xs text-slate-500">{t("contractor:invoices.text.prefilledFromJobDetailPage")}</p>
                 )}
               </div>
               <div>
@@ -384,7 +388,7 @@ export default function ContractorInvoices() {
                   type="text"
                   value={formDescription}
                   onChange={(e) => setFormDescription(e.target.value)}
-                  placeholder="Brief description of work performed"
+                  placeholder={t("contractor:invoices.placeholder.briefDescriptionOfWorkPerformed")}
                   maxLength={500}
                   className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
@@ -422,17 +426,17 @@ export default function ContractorInvoices() {
                   onClick={() => setActiveTab(tab.key)}
                   className={active ? "tab-btn-active" : "tab-btn"}
                 >
-                  {tab.label} ({count})
+                  {t(`contractor:invoices.tabs.${tab.key.toLowerCase()}`)} ({count})
                 </button>
               );
             })}
           </ScrollableTabs>
 
           {loading ? (
-            <p className="p-4 text-sm text-slate-600">Loading invoices…</p>
+            <p className="p-4 text-sm text-slate-600">{t("contractor:invoices.text.loadingInvoices")}</p>
           ) : filteredInvoices.length === 0 ? (
             <div className="p-6 text-center text-slate-500">
-              <p className="text-sm">No invoices match this filter</p>
+              <p className="text-sm">{t("contractor:invoices.text.noInvoicesMatchThisFilter")}</p>
             </div>
           ) : (
             <div className="divide-y divide-slate-100">
@@ -508,3 +512,5 @@ export default function ContractorInvoices() {
     </AppShell>
   );
 }
+
+export const getStaticProps = withTranslations(["common","contractor"]);

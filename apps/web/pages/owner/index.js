@@ -11,24 +11,20 @@ import Link from "next/link";
 import AppShell from "../../components/AppShell";
 import ErrorBanner from "../../components/ui/ErrorBanner";
 import StrategyProfileBanner from "../../components/StrategyProfileBanner";
+import { FilterToggle, FilterPanelBody, FilterSection, FilterSectionClear, SortToggle, SortPanelBody, SortRow } from "../../components/ui/FilterPanel";
 import { formatChf, formatPercent, formatDate } from "../../lib/format";
 import { ownerAuthHeaders } from "../../lib/api";
 import { cn } from "../../lib/utils";
 import OwnerPicker from "../../components/OwnerPicker";
+import { withTranslations } from "../../lib/i18n";
+import { useTranslation } from "next-i18next";
 
 function ActionStat({ label, value, href, tone }) {
-  const countColor = { warn: "text-amber-700", bad: "text-red-600", good: "text-green-700" }[tone] ?? "text-slate-900";
+  const valueColor = { warn: "text-amber-700", bad: "text-red-600", good: "text-green-700" }[tone] ?? "text-slate-900";
   return (
-    <Link href={href} className="no-underline group">
-      <div className="flex h-full flex-col justify-between rounded-xl bg-white px-4 py-3 ring-1 ring-slate-300 transition-all hover:shadow-sm hover:ring-indigo-300 active:scale-[0.98]">
-        <span className="text-xs font-medium uppercase tracking-wide text-slate-400">{label}</span>
-        <div className="mt-2 flex items-end justify-between gap-1">
-          <span className={cn("text-2xl font-semibold tabular-nums leading-none", countColor)}>{value}</span>
-          <svg className="mb-0.5 h-4 w-4 shrink-0 text-slate-300 transition-colors group-hover:text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-          </svg>
-        </div>
-      </div>
+    <Link href={href} className="no-underline group flex flex-col justify-between">
+      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">{label}</span>
+      <span className={cn("mt-2 text-xl font-semibold tabular-nums leading-none underline-offset-2 group-hover:underline", valueColor)}>{value}</span>
     </Link>
   );
 }
@@ -43,25 +39,27 @@ function InfoStat({ label, value, tone }) {
   );
 }
 
+// Labels are translated at render time via t(`owner:dashboard.chip.${category}`)
 const CATEGORY_CHIP = {
-  approval: { label: "Needs approval",    cls: "bg-amber-100 text-amber-700" },
-  invoice:  { label: "Invoice pending",   cls: "bg-slate-100 text-slate-600" },
-  rfp:      { label: "RFP to review",     cls: "bg-indigo-100 text-indigo-700" },
-  vacancy:  { label: "Vacant unit",       cls: "bg-red-100 text-red-700" },
+  approval: { cls: "bg-amber-100 text-amber-700" },
+  invoice:  { cls: "bg-blue-100 text-blue-700" },
+  rfp:      { cls: "bg-indigo-100 text-indigo-700" },
+  vacancy:  { cls: "bg-red-100 text-red-700" },
 };
 const CARD_STYLE = {
   approval: "border-amber-200 bg-amber-50 hover:bg-amber-100",
-  invoice:  "border-slate-200 bg-white hover:bg-slate-50",
+  invoice:  "border-blue-200 bg-blue-50 hover:bg-blue-100",
   rfp:      "border-indigo-200 bg-indigo-50 hover:bg-indigo-100",
   vacancy:  "border-red-200 bg-red-50 hover:bg-red-100",
 };
 
 function ActionRow({ category, title, sub, building, date, href }) {
+  const { t } = useTranslation("owner");
   const chip = CATEGORY_CHIP[category];
   return (
     <Link href={href} className="block no-underline">
       <div className={cn("flex items-center gap-3 rounded-xl border px-4 py-3 transition-colors", CARD_STYLE[category])}>
-        <span className={cn("shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold", chip.cls)}>{chip.label}</span>
+        <span className={cn("shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold", chip.cls)}>{t(`owner:dashboard.chip.${category}`)}</span>
         <div className="min-w-0 flex-1">
           <div className="truncate text-sm font-semibold text-slate-900">{title}</div>
           <div className="mt-0.5 flex min-w-0 items-center gap-1.5">
@@ -80,10 +78,10 @@ function ActionRow({ category, title, sub, building, date, href }) {
   );
 }
 
-function heroHeadline(n) {
-  if (n === 0) return "Everything looks good — no items need attention right now.";
-  if (n === 1) return "1 item needs your attention today.";
-  return `${n} items need your attention today.`;
+function heroHeadline(t, n) {
+  if (n === 0) return t("owner:dashboard.hero.allClear");
+  if (n === 1) return t("owner:dashboard.hero.one");
+  return t("owner:dashboard.hero.many", { count: n });
 }
 
 function getLeaseRentTotal(lease) {
@@ -97,6 +95,7 @@ function getInvoiceTotal(inv) {
 }
 
 export default function OwnerDashboard() {
+  const { t } = useTranslation("owner");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [approvals, setApprovals] = useState([]);
@@ -112,7 +111,7 @@ export default function OwnerDashboard() {
       const fetchJson = async (path) => {
         const res = await fetch(path, { headers: ownerAuthHeaders() });
         const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data?.error || data?.message || "Request failed");
+        if (!res.ok) throw new Error(data?.error?.message || data?.message || data?.error || "Request failed");
         return data;
       };
       const [approvalsRes, invoicesRes, leasesRes, unitsRes, rfpsRes] = await Promise.all([
@@ -197,8 +196,24 @@ export default function OwnerDashboard() {
   }, [approvals, rfpsPendingApproval, invoices, vacantUnits]);
 
   const [feedExpanded, setFeedExpanded] = useState(false);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [sortOpen, setSortOpen] = useState(false);
+  const [filterBy, setFilterBy] = useState("all");
+  const [sortBy, setSortBy] = useState("urgency");
+
   const FEED_PREVIEW = 7;
-  const visibleFeed = feedExpanded ? actionFeed : actionFeed.slice(0, FEED_PREVIEW);
+
+  const displayFeed = useMemo(() => {
+    let items = filterBy === "all" ? actionFeed : actionFeed.filter((i) => i.category === filterBy);
+    if (sortBy === "building") {
+      items = [...items].sort((a, b) => (a.building || "").localeCompare(b.building || ""));
+    } else if (sortBy === "date") {
+      items = [...items].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+    }
+    return items;
+  }, [actionFeed, sortBy, filterBy]);
+
+  const visibleFeed = feedExpanded ? displayFeed : displayFeed.slice(0, FEED_PREVIEW);
   const totalActions = actionFeed.length;
 
   if (loading) {
@@ -221,79 +236,103 @@ export default function OwnerDashboard() {
         <div className="mb-8">
           {/* Portfolio snapshot */}
           <div className="mb-5 flex items-center gap-3">
-            <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Portfolio snapshot</span>
+            <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">{t("owner:index.text.portfolioSnapshot")}</span>
             <div className="flex-1 border-t border-slate-300" />
-          </div>
-          <div className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-4">
-            <InfoStat label="Monthly rent" value={formatChf(expectedMonthlyRentChf)} tone="good" />
-            <InfoStat
-              label="Vacancy rate"
-              value={`${vacantUnits.length} / ${residentialUnits.length}`}
-              tone={vacantUnits.length === 0 ? "good" : vacancyRate > 0.1 ? "bad" : "warn"}
-            />
-            <InfoStat
-              label="Outstanding"
-              value={formatChf(outstandingLiabilitiesChf)}
-              tone={outstandingLiabilitiesChf > 0 ? "warn" : "good"}
-            />
-            <InfoStat
-              label="Active leases"
-              value={String(activeLeases.length)}
-            />
-          </div>
-
-          <div className="mt-6 mb-5 border-t border-slate-200" />
-
-          {/* Headline + refresh */}
-          <div className="flex items-start justify-between gap-4 mb-5">
-            <div>
-              <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">Owner Dashboard</span>
-              <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">{heroHeadline(totalActions)}</h1>
-            </div>
-            <button onClick={loadDashboard} className="shrink-0 rounded-lg border border-slate-300 bg-transparent p-2 text-slate-400 hover:bg-slate-50 hover:text-slate-700 transition-colors" aria-label="Refresh dashboard">
+            <button onClick={loadDashboard} className="shrink-0 rounded-lg border border-slate-300 bg-transparent p-2 text-slate-400 hover:bg-slate-50 hover:text-slate-700 transition-colors" aria-label={t("owner:index.ariaLabel.refreshDashboard")}>
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
             </button>
           </div>
-
-          {/* Actionable KPI chips */}
-          <div className="grid grid-cols-3 gap-3">
-            <ActionStat label="Pending approvals" value={pendingApprovalCount} href="/owner/approvals" tone={pendingApprovalCount > 0 ? "warn" : "good"} />
-            <ActionStat label="Invoices to review" value={pendingInvoiceCount} href="/owner/invoices" tone={pendingInvoiceCount > 0 ? "warn" : "good"} />
-            <ActionStat label="Vacant units" value={vacantUnits.length} href="/owner/vacancies" tone={vacantUnits.length > 0 ? "bad" : "good"} />
+          {/* Financial KPIs */}
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <InfoStat label={t("owner:index.prop.monthlyRent")} value={formatChf(expectedMonthlyRentChf)} tone="good" />
+            <InfoStat
+              label={t("owner:index.prop.outstanding")}
+              value={formatChf(outstandingLiabilitiesChf)}
+              tone={outstandingLiabilitiesChf > 0 ? "warn" : "good"}
+            />
+            <InfoStat
+              label={t("owner:index.prop.activeLeases")}
+              value={String(activeLeases.length)}
+            />
           </div>
+
+          {/* Operational KPIs */}
+          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <ActionStat label={t("owner:index.prop.pendingApprovals")} value={pendingApprovalCount} href="/owner/approvals" tone={pendingApprovalCount > 0 ? "warn" : "good"} />
+            <ActionStat label={t("owner:index.prop.invoicesToReview")} value={pendingInvoiceCount} href="/owner/invoices" tone={pendingInvoiceCount > 0 ? "warn" : "good"} />
+            <ActionStat label={t("owner:index.prop.vacancyRate")} value={`${vacantUnits.length} / ${residentialUnits.length}`} href="/owner/vacancies" tone={vacantUnits.length === 0 ? "good" : vacancyRate > 0.1 ? "bad" : "warn"} />
+            <ActionStat label={t("owner:index.prop.vacantUnits")} value={vacantUnits.length} href="/owner/vacancies" tone={vacantUnits.length > 0 ? "bad" : "good"} />
+          </div>
+
+          <div className="mt-6 mb-5 border-t border-slate-200" />
+
+          <h1 className="mb-5 text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">{heroHeadline(t, totalActions)}</h1>
+
         </div>
 
         {/* Priority feed */}
         <section className="mb-6">
-          <div className="mb-3 flex items-baseline justify-between">
-            <div>
-              <h2 className="text-base font-semibold text-slate-900">Priority feed</h2>
-              <p className="text-xs text-slate-400">All items requiring your decision, sorted by urgency.</p>
+          {/* Toolbar */}
+          {totalActions > 0 && (
+            <div className="mb-1 flex items-center justify-end gap-2">
+              <FilterToggle open={filterOpen} onToggle={() => { setFilterOpen((v) => !v); setSortOpen(false); }} activeCount={filterBy !== "all" ? 1 : 0} />
+              <SortToggle open={sortOpen} onToggle={() => { setSortOpen((v) => !v); setFilterOpen(false); }} active={sortBy !== "urgency"} />
             </div>
-            {totalActions > 0 && <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600">{totalActions} item{totalActions !== 1 ? "s" : ""}</span>}
-          </div>
+          )}
+
+          {/* Collapsible filter panel */}
+          {filterOpen && (
+            <FilterPanelBody>
+              <FilterSection title={t("owner:dashboard.sort.category")} first>
+                <div className="flex flex-wrap gap-1.5">
+                  {[["all",t("owner:dashboard.filter.all")],["approval","Needs approval"],["invoice","Invoice pending"],["rfp","RFP to review"],["vacancy","Vacant unit"]].map(([key, lbl]) => (
+                    <button
+                      key={key}
+                      onClick={() => { setFilterBy(key); setFeedExpanded(false); }}
+                      className={cn(
+                        "rounded-full px-3 py-1 text-xs font-medium transition-colors",
+                        filterBy === key
+                          ? "bg-slate-800 text-white"
+                          : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                      )}
+                    >
+                      {lbl}
+                    </button>
+                  ))}
+                </div>
+              </FilterSection>
+              <FilterSectionClear hasFilter={filterBy !== "all"} onClear={() => { setFilterBy("all"); setFeedExpanded(false); }} />
+            </FilterPanelBody>
+          )}
+
+          {/* Collapsible sort panel */}
+          {sortOpen && (
+            <SortPanelBody>
+              <SortRow active={sortBy === "urgency"} dir="asc" label={t("owner:dashboard.sort.urgency")} ascLabel="High → Low" descLabel="Low → High" onSelect={() => setSortBy("urgency")} />
+              <SortRow active={sortBy === "building"} dir="asc" label={t("owner:dashboard.sort.building")} ascLabel="A → Z" descLabel="Z → A" onSelect={() => setSortBy("building")} />
+              <SortRow active={sortBy === "date"} dir="desc" label={t("owner:dashboard.sort.date")} descLabel="Newest first" ascLabel="Oldest first" onSelect={() => setSortBy("date")} />
+            </SortPanelBody>
+          )}
           {totalActions === 0 ? (
             <div className="rounded-2xl border border-green-200 bg-green-50 px-5 py-8 text-center">
               <div className="text-2xl mb-2">✓</div>
-              <div className="text-sm font-semibold text-green-800">All clear — no items need your attention</div>
-              <div className="mt-1 text-xs text-green-600">Check back after new approvals or invoices arrive.</div>
+              <div className="text-sm font-semibold text-green-800">{t("owner:index.text.allClearNoItemsNeedYourAttention")}</div>
+              <div className="mt-1 text-xs text-green-600">{t("owner:index.text.checkBackAfterNewApprovalsOrInvoicesArrive")}</div>
+            </div>
+          ) : displayFeed.length === 0 ? (
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-5 py-8 text-center">
+              <div className="text-sm text-slate-500">{t("owner:dashboard.feed.noMatch")}</div>
             </div>
           ) : (
             <div className="space-y-2">
               {visibleFeed.map((item, i) => <ActionRow key={i} {...item} />)}
-              {actionFeed.length > FEED_PREVIEW && (
+              {displayFeed.length > FEED_PREVIEW && (
                 <button onClick={() => setFeedExpanded((x) => !x)} className="mt-1 w-full rounded-xl border border-slate-100 py-2 text-xs font-medium text-slate-500 hover:bg-slate-50 transition-colors">
-                  {feedExpanded ? "Show less ↑" : `Show ${actionFeed.length - FEED_PREVIEW} more items ↓`}
+                  {feedExpanded ? t("owner:dashboard.feed.showLess") : `Show ${displayFeed.length - FEED_PREVIEW} more items ↓`}
                 </button>
               )}
-              <div className="mt-3 flex flex-wrap gap-2 pt-1">
-                {pendingApprovalCount > 0 && <Link href="/owner/approvals" className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700 hover:bg-amber-100 no-underline">{pendingApprovalCount} pending approval →</Link>}
-                {rfpsPendingApproval.length > 0 && <Link href="/owner/rfps" className="rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-xs font-medium text-indigo-600 hover:bg-indigo-100 no-underline">{rfpsPendingApproval.length} RFPs →</Link>}
-                {pendingInvoiceCount > 0 && <Link href="/owner/invoices" className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50 no-underline">{pendingInvoiceCount} invoices →</Link>}
-                {vacantUnits.length > 0 && <Link href="/owner/vacancies" className="rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs font-medium text-red-600 hover:bg-red-100 no-underline">{vacantUnits.length} vacant →</Link>}
-              </div>
             </div>
           )}
         </section>
@@ -302,14 +341,14 @@ export default function OwnerDashboard() {
         <section className="rounded-3xl border border-slate-200 bg-white p-5">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h2 className="text-base font-semibold text-slate-900">More views</h2>
-              <p className="mt-1 text-sm text-slate-500">Finance reporting, strategy, and lease management.</p>
+              <h2 className="text-base font-semibold text-slate-900">{t("owner:index.heading.moreViews")}</h2>
+              <p className="mt-1 text-sm text-slate-500">{t("owner:index.text.financeReportingStrategyAndLeaseManagement")}</p>
             </div>
             <div className="flex flex-wrap gap-2 shrink-0">
-              <Link href="/owner/reporting" className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors no-underline">Reporting</Link>
-              <Link href="/owner/finance" className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors no-underline">Finance</Link>
-              <Link href="/owner/leases" className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors no-underline">Leases</Link>
-              <Link href="/owner/approvals" className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition-colors no-underline">All approvals</Link>
+              <Link href="/owner/reporting" className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors no-underline">{t("owner:index.text.reporting")}</Link>
+              <Link href="/owner/finance" className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors no-underline">{t("owner:dashboard.moreTools.finance")}</Link>
+              <Link href="/owner/leases" className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors no-underline">{t("owner:index.text.leases")}</Link>
+              <Link href="/owner/approvals" className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition-colors no-underline">{t("owner:index.text.allApprovals")}</Link>
             </div>
           </div>
         </section>
@@ -317,3 +356,5 @@ export default function OwnerDashboard() {
     </AppShell>
   );
 }
+
+export const getStaticProps = withTranslations(["common","owner"]);

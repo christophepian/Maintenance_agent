@@ -1,8 +1,23 @@
 
+import { useEffect } from "react";
+import { useRouter } from "next/router";
 import Link from "next/link";
 import { useMemo } from "react";
+import { withTranslations } from "../lib/i18n";
+import { useTranslation } from "next-i18next";
 
 export default function Home() {
+  const { t } = useTranslation("tenant");
+  const router = useRouter();
+
+  useEffect(() => {
+    // In production, redirect straight to login.
+    // In dev, fall through to the launcher below.
+    if (process.env.NODE_ENV === "production") {
+      router.replace("/login");
+    }
+  }, [router]);
+
   // Only use NEXT_PUBLIC_ env vars here — non-prefixed vars exist server-side
   // only, which causes a hydration mismatch.
   const API_BASE =
@@ -68,7 +83,7 @@ export default function Home() {
   return (
     <div className="max-w-4xl mx-auto p-4 font-sans">
       <header className="mb-6">
-        <h1 className="mb-1">Maintenance Agent &ndash; UI Launcher</h1>
+        <h1 className="mb-1">{t("tenant:index.heading.maintenanceAgentNdashUiLauncher")}</h1>
         <div className="text-slate-500 text-sm mb-4">
           Frontend: <code className="px-1.5 py-0.5 rounded-md bg-slate-100 border border-slate-200 font-mono text-xs">http://localhost:3000</code> &bull; Backend:{" "}
           <code className="px-1.5 py-0.5 rounded-md bg-slate-100 border border-slate-200 font-mono text-xs">{API_BASE}</code>
@@ -115,3 +130,5 @@ export default function Home() {
     </div>
   );
 }
+
+export const getStaticProps = withTranslations(["common"]);

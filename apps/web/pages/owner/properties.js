@@ -14,6 +14,8 @@ import { ownerAuthHeaders } from "../../lib/api";
 import { cn } from "../../lib/utils";
 import OwnerPicker from "../../components/OwnerPicker";
 import { formatChf, formatChfCents, formatDate } from "../../lib/format";
+import { withTranslations } from "../../lib/i18n";
+import { useTranslation } from "next-i18next";
 
 // ── Monopoly palette: deterministic top-band colour from building name ──────
 // Colours are kept fun/bold (the Monopoly identity), but the rest of the
@@ -49,6 +51,8 @@ function StatRow({ label, value, sub, valueClass = "" }) {
 
 // ── Monopoly card ────────────────────────────────────────────────────────────
 function MonopolyCard({ building, fin, onClick }) {
+  const { t } = useTranslation("owner");
+  const ownerBuildingColumns = useMemo(() => buildOwnerBuildingColumns(t), [t]);
   const bandColor = monopolyColor(building.name);
   const unitCount = building.unitCount ?? building._count?.units ?? fin?.activeUnitsCount;
 
@@ -123,11 +127,11 @@ function MonopolyCard({ building, fin, onClick }) {
         {/* Stats — no top divider; rows separated internally */}
         <div className="divide-y divide-surface-border">
           {unitCount != null && (
-            <StatRow label="Units" value={unitCount} />
+            <StatRow label={t("owner:properties.prop.units")} value={unitCount} />
           )}
           {avgRent != null && (
             <StatRow
-              label="Avg rent / unit"
+              label={t("owner:properties.prop.avgRentUnit")}
               value={formatChfCents(avgRent)}
               sub="/mo"
             />
@@ -142,7 +146,7 @@ function MonopolyCard({ building, fin, onClick }) {
           )}
           {collectionPct != null && (
             <StatRow
-              label="Collection"
+              label={t("owner:properties.prop.collection")}
               value={`${collectionPct}%`}
               valueClass={
                 collectionPct >= 95 ? "text-success" :
@@ -189,31 +193,32 @@ function buildingFieldExtractor(row, field) {
   }
 }
 
-const OWNER_BUILDING_COLUMNS = [
+function buildOwnerBuildingColumns(t) {
+  return [
   {
     id: "name",
-    label: "Building",
+    label: t("owner:properties.col.building"),
     sortable: true,
     alwaysVisible: true,
     render: (b) => <span className="font-medium text-slate-900">{b.name}</span>,
   },
   {
     id: "address",
-    label: "Address",
+    label: t("owner:properties.col.address"),
     sortable: true,
     defaultVisible: true,
     render: (b) => <span className="text-slate-500">{b.address || "\u2014"}</span>,
   },
   {
     id: "unitCount",
-    label: "Units",
+    label: t("owner:properties.col.units"),
     sortable: true,
     defaultVisible: true,
     render: (b) => <span>{b.unitCount ?? b._count?.units ?? "\u2014"}</span>,
   },
   {
     id: "status",
-    label: "Status",
+    label: t("owner:properties.col.status"),
     sortable: true,
     defaultVisible: true,
     render: (b) => (
@@ -229,14 +234,16 @@ const OWNER_BUILDING_COLUMNS = [
   },
   {
     id: "canton",
-    label: "Canton",
+    label: t("owner:properties.col.canton"),
     sortable: true,
     defaultVisible: false,
     render: (b) => <span className="text-slate-600">{b.canton || "\u2014"}</span>,
   },
 ];
+}
 
 export default function OwnerPropertiesPage() {
+  const { t } = useTranslation("owner");
   const [tab, setTab] = useState("buildings");
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -245,8 +252,8 @@ export default function OwnerPropertiesPage() {
       <PageShell>
         <OwnerPicker onSelect={() => setRefreshKey((k) => k + 1)} />
         <PageHeader
-          title="Properties"
-          subtitle="Buildings and units in your portfolio"
+          title={t("owner:properties.title.properties")}
+          subtitle={t("owner:properties.prop.buildingsAndUnitsInYourPortfolio")}
           actions={
             <button
               onClick={() => setRefreshKey((k) => k + 1)}
@@ -291,6 +298,7 @@ function trailingYear() {
 }
 
 function BuildingsTab({ refreshKey }) {
+  const { t } = useTranslation("owner");
   const router = useRouter();
   const [buildings, setBuildings] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -352,7 +360,7 @@ function BuildingsTab({ refreshKey }) {
             <button
               type="button"
               onClick={() => setViewMode("list")}
-              aria-label="List view"
+              aria-label={t("owner:properties.ariaLabel.listView")}
               className={cn(
                 "px-3 py-1.5 text-sm flex items-center gap-1.5 transition-colors",
                 viewMode === "list"
@@ -366,12 +374,12 @@ function BuildingsTab({ refreshKey }) {
                 <rect x="2" y="7.25" width="12" height="1.5" rx="0.75" />
                 <rect x="2" y="11.5" width="12" height="1.5" rx="0.75" />
               </svg>
-              <span className="hidden sm:inline">List</span>
+              <span className="hidden sm:inline">{t("owner:properties.text.list")}</span>
             </button>
             <button
               type="button"
               onClick={() => setViewMode("monopoly")}
-              aria-label="Monopoly board view"
+              aria-label={t("owner:properties.ariaLabel.monopolyBoardView")}
               className={cn(
                 "px-3 py-1.5 text-sm flex items-center gap-1.5 transition-colors border-l border-slate-200",
                 viewMode === "monopoly"
@@ -386,17 +394,17 @@ function BuildingsTab({ refreshKey }) {
                 <rect x="1" y="9" width="6" height="6" rx="1" />
                 <rect x="9" y="9" width="6" height="6" rx="1" />
               </svg>
-              <span className="hidden sm:inline">Monopoly</span>
+              <span className="hidden sm:inline">{t("owner:properties.text.monopoly")}</span>
             </button>
           </div>
         </div>
       )}
 
       {loading ? (
-        <p className="loading-text">Loading properties…</p>
+        <p className="loading-text">{t("owner:properties.text.loadingProperties")}</p>
       ) : buildings.length === 0 ? (
         <div className="empty-state">
-          <p className="empty-state-text">No properties found.</p>
+          <p className="empty-state-text">{t("owner:properties.text.noPropertiesFound")}</p>
         </div>
       ) : viewMode === "monopoly" ? (
         /* ── Monopoly card grid ─────────────────────────────────────── */
@@ -439,14 +447,14 @@ function BuildingsTab({ refreshKey }) {
           <div className="hidden sm:block">
             <ConfigurableTable
                 tableId="owner-buildings"
-                columns={OWNER_BUILDING_COLUMNS}
+                columns={ownerBuildingColumns}
                 data={sortedBuildings}
                 rowKey={(b) => b.id}
                 sortField={sortField}
                 sortDir={sortDir}
                 onSort={handleSort}
                 onRowClick={(b) => router.push(buildingDetailUrl(b))}
-                emptyState={<p className="text-sm text-slate-500">No properties found.</p>}
+                emptyState={<p className="text-sm text-slate-500">{t("owner:properties.text.noPropertiesFound")}</p>}
               />
           </div>
         </>
@@ -454,3 +462,5 @@ function BuildingsTab({ refreshKey }) {
     </>
   );
 }
+
+export const getStaticProps = withTranslations(["common","owner"]);

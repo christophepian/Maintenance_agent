@@ -3,7 +3,10 @@ import { useRouter } from "next/router";
 import AppShell from "../components/AppShell";
 
 import { cn } from "../lib/utils";
+import { withTranslations } from "../lib/i18n";
+import { useTranslation } from "next-i18next";
 export default function TenantChat() {
+  const { t } = useTranslation("tenant");
   const router = useRouter();
   const [session, setSession] = useState(null);
   const [message, setMessage] = useState("");
@@ -143,7 +146,7 @@ export default function TenantChat() {
   return (
     <AppShell role="TENANT">
       <div className="main-container">
-      <h1>Maintenance help</h1>
+      <h1>{t("tenant:index.heading.maintenanceHelp")}</h1>
       <div className="subtle">{contextLabel}</div>
 
       {notice ? (
@@ -164,7 +167,7 @@ export default function TenantChat() {
 
       {suggestions.length > 0 ? (
         <div className="card">
-          <h3 className="mt-0">Quick fixes</h3>
+          <h3 className="mt-0">{t("tenant:index.heading.quickFixes")}</h3>
           {suggestions.map((s, idx) => (
             <div key={idx} className="mb-3">
               <div className="font-semibold">{s.title}</div>
@@ -194,7 +197,7 @@ export default function TenantChat() {
           className="input textarea"
           value={message}
           onChange={(e) => setMessage(e.target.value)}
-          placeholder="e.g., The oven is overheating"
+          placeholder={t("tenant:index.placeholder.eGTheOvenIsOverheating")}
           disabled={suggestions.length > 0 && !needsClarification}
         />
         <button className="button-primary" type="submit" disabled={loading}>
@@ -208,3 +211,5 @@ export default function TenantChat() {
     </AppShell>
   );
 }
+
+export const getStaticProps = withTranslations(["common","tenant"]);

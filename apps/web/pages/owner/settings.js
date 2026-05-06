@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import AppShell from "../../components/AppShell";
@@ -14,14 +14,18 @@ import { ownerAuthHeaders } from "../../lib/api";
 import ScrollableTabs from "../../components/mobile/ScrollableTabs";
 import DepreciationStandards from "../../components/DepreciationStandards";
 import OwnerPicker from "../../components/OwnerPicker";
+import SortableHeader from "../../components/SortableHeader";
+import { useLocalSort } from "../../lib/tableUtils";
+import { withTranslations } from "../../lib/i18n";
+import { useTranslation } from "next-i18next";
 
 const SETTINGS_TABS = [
-  { key: "ACCOUNT", label: "Account" },
-  { key: "RISK_PROFILE", label: "Risk Profile" },
-  { key: "NOTIFICATIONS", label: "Notifications" },
-  { key: "INTEGRATIONS", label: "Integrations" },
-  { key: "LEGAL", label: "Legal Sources" },
-  { key: "STANDARDS", label: "Standards" },
+  { key: "ACCOUNT" },
+  { key: "RISK_PROFILE" },
+  { key: "NOTIFICATIONS" },
+  { key: "INTEGRATIONS" },
+  { key: "LEGAL" },
+  { key: "STANDARDS" },
 ];
 const TAB_KEYS = ["account", "risk-profile", "notifications", "integrations", "legal", "standards"];
 
@@ -34,6 +38,7 @@ const USER_LABELS = {
 };
 
 export default function OwnerSettingsPage() {
+  const { t } = useTranslation("owner");
   const router = useRouter();
   const activeTab = router.isReady ? (Math.max(0, TAB_KEYS.indexOf(router.query.tab)) || 0) : 0;
   const setActiveTab = useCallback((index) => {
@@ -145,6 +150,9 @@ export default function OwnerSettingsPage() {
   const [legalLoading, setLegalLoading] = useState(false);
   const [scopeFilter, setScopeFilter] = useState("ALL");
 
+  const { sortField: lsSF, sortDir: lsSD, handleSort: handleLsSort } = useLocalSort("name", "asc");
+  const { sortField: lvSF, sortDir: lvSD, handleSort: handleLvSort } = useLocalSort("key", "asc");
+
   const loadLegalData = useCallback(async () => {
     if (legalSources.length > 0) return;
     setLegalLoading(true);
@@ -166,7 +174,7 @@ export default function OwnerSettingsPage() {
   return (
     <AppShell role="OWNER">
       <PageShell>
-        <PageHeader title="Settings" subtitle="Manage your account, risk profile, and preferences." />
+        <PageHeader title={t("owner:settings.title.settings")} subtitle={t("owner:settings.prop.manageYourAccountRiskProfileAndPreferences")} />
         <PageContent>
           <OwnerPicker onSelect={() => { setUser(null); setStratProfile(undefined); setLegalSources([]); }} />
 
@@ -178,7 +186,7 @@ export default function OwnerSettingsPage() {
                 onClick={() => setActiveTab(i)}
                 className={activeTab === i ? "tab-btn-active" : "tab-btn"}
               >
-                {tab.label}
+                {t(`owner:settings.tabs.${tab.key.toLowerCase()}`)}
               </button>
             ))}
           </ScrollableTabs>
@@ -195,42 +203,42 @@ export default function OwnerSettingsPage() {
                 <div className="px-4 py-4 space-y-4">
                   {accountError && (
                     <div className="notice notice-err">
-                      <strong className="text-red-700">Error:</strong> {accountError}
+                      <strong className="text-red-700">{t("owner:settings.text.error")}</strong> {accountError}
                     </div>
                   )}
                   {accountNotice && (
                     <div className="notice notice-ok">
-                      <strong className="text-green-700">OK:</strong> {accountNotice}
+                      <strong className="text-green-700">{t("owner:settings.text.oK")}</strong> {accountNotice}
                     </div>
                   )}
 
                   {/* Profile */}
                   <div className="card grid gap-3">
-                    <div className="font-bold">Profile</div>
+                    <div className="font-bold">{t("owner:settings.text.profile")}</div>
                     {userLoading ? (
-                      <p className="loading-text">Loading…</p>
+                      <p className="loading-text">{t("owner:settings.text.loading")}</p>
                     ) : (
                       <div className="grid gap-3 sm:grid-cols-2">
                         <label className="flex flex-col gap-1">
-                          <span className="text-xs font-medium text-slate-600">Display name</span>
+                          <span className="text-xs font-medium text-slate-600">{t("owner:settings.text.displayName")}</span>
                           <input
                             type="text"
                             value={nameDraft}
                             onChange={(e) => setNameDraft(e.target.value)}
                             className="input"
-                            placeholder="Your name"
+                            placeholder={t("owner:settings.placeholder.yourName")}
                           />
                         </label>
                         <label className="flex flex-col gap-1">
-                          <span className="text-xs font-medium text-slate-600">Email address</span>
+                          <span className="text-xs font-medium text-slate-600">{t("owner:settings.text.emailAddress")}</span>
                           <input
                             type="email"
                             value={emailDraft}
                             onChange={(e) => setEmailDraft(e.target.value)}
                             className="input"
-                            placeholder="you@example.com"
+                            placeholder={t("owner:settings.placeholder.youExampleCom")}
                           />
-                          <span className="text-xs text-slate-400">Changing your email also changes your login credential.</span>
+                          <span className="text-xs text-slate-400">{t("owner:settings.text.changingYourEmailAlsoChangesYourLoginCredential")}</span>
                         </label>
                       </div>
                     )}
@@ -247,10 +255,10 @@ export default function OwnerSettingsPage() {
 
                   {/* Password */}
                   <div className="card grid gap-3">
-                    <div className="font-bold">Change password</div>
+                    <div className="font-bold">{t("owner:settings.text.changePassword")}</div>
                     <div className="grid gap-3 sm:grid-cols-3">
                       <label className="flex flex-col gap-1">
-                        <span className="text-xs font-medium text-slate-600">Current password</span>
+                        <span className="text-xs font-medium text-slate-600">{t("owner:settings.text.currentPassword")}</span>
                         <input
                           type="password"
                           value={currentPwd}
@@ -260,7 +268,7 @@ export default function OwnerSettingsPage() {
                         />
                       </label>
                       <label className="flex flex-col gap-1">
-                        <span className="text-xs font-medium text-slate-600">New password</span>
+                        <span className="text-xs font-medium text-slate-600">{t("owner:settings.text.newPassword")}</span>
                         <input
                           type="password"
                           value={newPwd}
@@ -270,7 +278,7 @@ export default function OwnerSettingsPage() {
                         />
                       </label>
                       <label className="flex flex-col gap-1">
-                        <span className="text-xs font-medium text-slate-600">Confirm new password</span>
+                        <span className="text-xs font-medium text-slate-600">{t("owner:settings.text.confirmNewPassword")}</span>
                         <input
                           type="password"
                           value={confirmPwd}
@@ -297,11 +305,11 @@ export default function OwnerSettingsPage() {
               <div className={activeTab === 1 ? "tab-panel-active" : "tab-panel"}>
                 <div className="px-4 py-4">
                   {(stratLoading || stratProfile === undefined) ? (
-                    <p className="loading-text">Loading…</p>
+                    <p className="loading-text">{t("owner:settings.text.loading")}</p>
                   ) : stratProfile === null ? (
                     <div className="coming-soon">
-                      <span className="coming-soon-badge">Not set up</span>
-                      <p className="coming-soon-title">No strategy profile yet</p>
+                      <span className="coming-soon-badge">{t("owner:settings.text.notSetUp")}</span>
+                      <p className="coming-soon-title">{t("owner:settings.text.noStrategyProfileYet")}</p>
                       <p className="coming-soon-text">
                         Complete the questionnaire to define your investment strategy.
                         It shapes how maintenance priorities and recommendations are presented to you.
@@ -313,7 +321,7 @@ export default function OwnerSettingsPage() {
                   ) : (
                     <div className="card space-y-4">
                       <div>
-                        <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Primary archetype</p>
+                        <p className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("owner:settings.text.primaryArchetype")}</p>
                         <h2 className="mt-1 text-xl font-bold text-slate-900">
                           {USER_LABELS[stratProfile.primaryArchetype] || stratProfile.primaryArchetype}
                         </h2>
@@ -325,13 +333,13 @@ export default function OwnerSettingsPage() {
                       </div>
                       {stratProfile.riskTolerance && (
                         <div>
-                          <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Risk tolerance</p>
+                          <p className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("owner:settings.text.riskTolerance")}</p>
                           <p className="mt-1 text-sm text-slate-800 capitalize">{stratProfile.riskTolerance.toLowerCase()}</p>
                         </div>
                       )}
                       {stratProfile.investmentHorizonYears && (
                         <div>
-                          <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Investment horizon</p>
+                          <p className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("owner:settings.text.investmentHorizon")}</p>
                           <p className="mt-1 text-sm text-slate-800">{stratProfile.investmentHorizonYears} years</p>
                         </div>
                       )}
@@ -349,8 +357,8 @@ export default function OwnerSettingsPage() {
               <div className={activeTab === 2 ? "tab-panel-active" : "tab-panel"}>
                 <div className="px-4 py-4">
                   <div className="coming-soon">
-                    <span className="coming-soon-badge">Coming soon</span>
-                    <p className="coming-soon-title">Notification Preferences</p>
+                    <span className="coming-soon-badge">{t("owner:settings.text.comingSoon")}</span>
+                    <p className="coming-soon-title">{t("owner:settings.text.notificationPreferences")}</p>
                     <p className="coming-soon-text">
                       Configure email and in-app notification rules per event type.
                     </p>
@@ -362,8 +370,8 @@ export default function OwnerSettingsPage() {
               <div className={activeTab === 3 ? "tab-panel-active" : "tab-panel"}>
                 <div className="px-4 py-4">
                   <div className="coming-soon">
-                    <span className="coming-soon-badge">Coming soon</span>
-                    <p className="coming-soon-title">Integrations</p>
+                    <span className="coming-soon-badge">{t("owner:settings.text.comingSoon")}</span>
+                    <p className="coming-soon-title">{t("owner:settings.text.integrations")}</p>
                     <p className="coming-soon-text">
                       Connect third-party services — accounting, calendars, and more.
                     </p>
@@ -375,7 +383,7 @@ export default function OwnerSettingsPage() {
               <div className={activeTab === 4 ? "tab-panel-active" : "tab-panel"}>
                 <div className="px-4 py-4">
                   <div>
-                    <h3 className="text-sm font-semibold text-slate-800">Legal Sources</h3>
+                    <h3 className="text-sm font-semibold text-slate-800">{t("owner:settings.heading.legalSources")}</h3>
                     <p className="text-xs text-slate-500 mt-0.5">
                       Swiss tenancy law data sources — reference rates, CPI, ASLOCA depreciation, and legislation.
                     </p>
@@ -391,10 +399,10 @@ export default function OwnerSettingsPage() {
                 </div>
 
                 {legalLoading ? (
-                  <p className="loading-text">Loading sources…</p>
+                  <p className="loading-text">{t("owner:settings.text.loadingSources")}</p>
                 ) : legalSources.length === 0 ? (
                   <div className="empty-state">
-                    <p className="empty-state-text">No legal sources found.</p>
+                    <p className="empty-state-text">{t("owner:settings.text.noLegalSourcesFound")}</p>
                   </div>
                 ) : (
                   <>
@@ -421,20 +429,29 @@ export default function OwnerSettingsPage() {
                         ))}
                     </div>
 
-                    <div className="hidden sm:block inline-table-wrap">
-                      <table className="inline-table">
+                    <div className="hidden sm:block data-table-wrap">
+                      <table className="data-table">
                         <thead>
                           <tr>
-                            <th>Name</th>
-                            <th>Scope</th>
-                            <th>Frequency</th>
-                            <th>Status</th>
-                            <th>Last Synced</th>
+                            <SortableHeader label={t("owner:settings.prop.name")} field="name" sortField={lsSF} sortDir={lsSD} onSort={handleLsSort} />
+                            <SortableHeader label={t("owner:settings.prop.scope")} field="scope" sortField={lsSF} sortDir={lsSD} onSort={handleLsSort} />
+                            <SortableHeader label={t("owner:settings.prop.frequency")} field="frequency" sortField={lsSF} sortDir={lsSD} onSort={handleLsSort} />
+                            <SortableHeader label={t("owner:settings.prop.status")} field="status" sortField={lsSF} sortDir={lsSD} onSort={handleLsSort} />
+                            <SortableHeader label={t("owner:settings.prop.lastSynced")} field="lastSynced" sortField={lsSF} sortDir={lsSD} onSort={handleLsSort} />
                           </tr>
                         </thead>
                         <tbody>
-                          {legalSources
+                          {[...legalSources]
                             .filter((s) => scopeFilter === "ALL" || s.scope === scopeFilter)
+                            .sort((a, b) => {
+                              let va = "", vb = "";
+                              if (lsSF === "status") { va = a.status || ""; vb = b.status || ""; }
+                              else if (lsSF === "scope") { va = a.scope || ""; vb = b.scope || ""; }
+                              else if (lsSF === "frequency") { va = a.updateFrequency || ""; vb = b.updateFrequency || ""; }
+                              else if (lsSF === "lastSynced") { va = a.lastSuccessAt || ""; vb = b.lastSuccessAt || ""; }
+                              else { va = (a.name || "").toLowerCase(); vb = (b.name || "").toLowerCase(); }
+                              return lsSD === "asc" ? va.localeCompare(vb) : vb.localeCompare(va);
+                            })
                             .map((s) => (
                               <tr key={s.id}>
                                 <td className="cell-bold">
@@ -461,20 +478,25 @@ export default function OwnerSettingsPage() {
                 {!legalLoading && legalVariables.length > 0 && (
                   <>
                     <div className="px-4 py-3 border-t border-slate-100">
-                      <h3 className="text-sm font-semibold text-slate-800">Legal Variables</h3>
+                      <h3 className="text-sm font-semibold text-slate-800">{t("owner:settings.heading.legalVariables")}</h3>
                       <p className="text-xs text-slate-500 mt-0.5">{legalVariables.length} variable{legalVariables.length !== 1 ? "s" : ""} tracked</p>
                     </div>
-                    <div className="hidden sm:block inline-table-wrap">
-                      <table className="inline-table">
+                    <div className="hidden sm:block data-table-wrap">
+                      <table className="data-table">
                         <thead>
                           <tr>
-                            <th>Key</th>
-                            <th>Description</th>
-                            <th>Versions</th>
+                            <SortableHeader label={t("owner:settings.prop.key")} field="key" sortField={lvSF} sortDir={lvSD} onSort={handleLvSort} />
+                            <SortableHeader label={t("owner:settings.prop.description")} field="description" sortField={lvSF} sortDir={lvSD} onSort={handleLvSort} />
+                            <th>{t("owner:settings.col.versions")}</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {legalVariables.map((v) => (
+                          {[...legalVariables].sort((a, b) => {
+                            let va = "", vb = "";
+                            if (lvSF === "description") { va = (a.description || "").toLowerCase(); vb = (b.description || "").toLowerCase(); }
+                            else { va = (a.key || "").toLowerCase(); vb = (b.key || "").toLowerCase(); }
+                            return lvSD === "asc" ? va.localeCompare(vb) : vb.localeCompare(va);
+                          }).map((v) => (
                             <tr key={v.id}>
                               <td className="font-mono text-xs">{v.key}</td>
                               <td>{v.description || "—"}</td>
@@ -533,9 +555,11 @@ function LegalScopeFilterBar({ sources, activeFilter, onFilter }) {
               : "bg-slate-100 text-slate-600 hover:bg-slate-200"
           )}
         >
-          {tab.label}
+          {t(`owner:settings.tabs.${tab.key.toLowerCase()}`)}
         </button>
       ))}
     </div>
   );
 }
+
+export const getStaticProps = withTranslations(["common","owner"]);

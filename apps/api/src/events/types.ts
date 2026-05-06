@@ -266,6 +266,7 @@ export interface DomainEventMap {
   STRATEGY_PROFILE_UPDATED: StrategyProfilePayload;
   RECOMMENDATION_EVALUATED: RecommendationEvaluatedPayload;
   RECOMMENDATION_DECISION_RECORDED: RecommendationDecisionPayload;
+  CONVERSATION_TURN: ConversationTurnPayload;
 }
 
 export interface StrategyProfilePayload {
@@ -285,6 +286,14 @@ export interface RecommendationDecisionPayload {
   recommendationId: string;
   userDecision: string;
   orgId: string;
+}
+
+export interface ConversationTurnPayload {
+  orgId: string;
+  tenantId: string;
+  channel: string;
+  intent: string;
+  actionTaken: boolean;
 }
 
 export type DomainEventType = keyof DomainEventMap;

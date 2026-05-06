@@ -1,5 +1,7 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/router";
+import SortableHeader from "../../../components/SortableHeader";
+import { useLocalSort, clientSort } from "../../../lib/tableUtils";
 import Link from "next/link";
 import AppShell from "../../../components/AppShell";
 import PageShell from "../../../components/layout/PageShell";
@@ -17,6 +19,8 @@ import { cn } from "../../../lib/utils";
 import { FilterToggle, FilterPanelBody, FilterSection, FilterSectionClear, DateField } from "../../../components/ui/FilterPanel";
 import ScrollableTabs from "../../../components/mobile/ScrollableTabs";
 import KpiInlineGrid from "../../../components/ui/KpiInlineGrid";
+import { withTranslations } from "../../../lib/i18n";
+import { useTranslation } from "next-i18next";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -63,17 +67,18 @@ function HealthDot({ health }) {
 // ─── Tab definitions ─────────────────────────────────────────────────────────
 
 const FINANCE_TABS = [
-  { key: "overview",         label: "Overview" },
-  { key: "invoices",         label: "Invoices" },
-  { key: "billing-entities", label: "Billing Entities" },
-  { key: "accounting",       label: "Accounting" },
-  { key: "planning",         label: "Planning" },
-  { key: "setup",            label: "Setup" },
+  { key: "overview" },
+  { key: "invoices" },
+  { key: "billing-entities" },
+  { key: "accounting" },
+  { key: "planning" },
+  { key: "setup" },
 ];
 
 // ─── Main Page ───────────────────────────────────────────────────────────────
 
 export default function ManagerFinanceHome() {
+  const { t } = useTranslation("manager");
   const router = useRouter();
 const tabKeys = FINANCE_TABS.map((t) => t.key);
   const activeTabKey = router.isReady && tabKeys.includes(router.query.tab) ? router.query.tab : "overview";
@@ -106,6 +111,20 @@ const tabKeys = FINANCE_TABS.map((t) => t.key);
 
   useEffect(() => { fetchPortfolio(); }, [fetchPortfolio]);
 
+  const { sortField: bSortField, sortDir: bSortDir, handleSort: handleBuildingSort } = useLocalSort("name", "asc");
+  const sortedBuildings = useMemo(() => {
+    const buildings = portfolio?.buildings ?? [];
+    return clientSort(buildings, bSortField, bSortDir, (b, f) => {
+      if (f === "name") return (b.buildingName || "").toLowerCase();
+      if (f === "net") return b.netIncomeCents ?? 0;
+      if (f === "collection") return b.collectionRate ?? 0;
+      if (f === "receivables") return b.receivablesCents ?? 0;
+      if (f === "earned") return b.earnedIncomeCents ?? 0;
+      if (f === "expenses") return b.expensesTotalCents ?? 0;
+      return "";
+    });
+  }, [portfolio, bSortField, bSortDir]);
+
   const p = portfolio;
   const netAccent = p ? (p.totalNetIncomeCents > 0 ? "green" : p.totalNetIncomeCents < 0 ? "red" : "") : "";
 
@@ -113,7 +132,7 @@ const tabKeys = FINANCE_TABS.map((t) => t.key);
     <AppShell role="MANAGER">
       <PageShell>
         <PageHeader
-          title="Finances"
+          title={t("manager:financeIndex.title.finances")}
 
         />
         <PageContent>
@@ -130,7 +149,7 @@ const tabKeys = FINANCE_TABS.map((t) => t.key);
                   onClick={() => setActiveTabKey(tab.key)}
                   className={activeTabKey === tab.key ? "tab-btn-active" : "tab-btn"}
                 >
-                  {tab.label}
+                  {t(`manager:financeIndex.tabs.${tab.key.toLowerCase()}`)}
                 </button>
               ))}
             </ScrollableTabs>
@@ -146,13 +165,13 @@ const tabKeys = FINANCE_TABS.map((t) => t.key);
             // space-y-6 spaces: filter panel → error/loading → portfolio section → buildings section
             <div className="space-y-6">
               <div>
-                <FilterToggle open={filterOpen} onToggle={() => setFilterOpen((v) => !v)} activeCount={0} label="Date range" />
+                <FilterToggle open={filterOpen} onToggle={() => setFilterOpen((v) => !v)} activeCount={0} label={t("manager:financeIndex.title.dateRange")} />
                 {filterOpen && (
                   <FilterPanelBody>
-                    <FilterSection title="Date range" first>
+                    <FilterSection title={t("manager:financeIndex.title.dateRange")} first>
                       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                        <DateField label="From" value={range.from} onChange={(e) => setRange((r) => ({ ...r, from: e.target.value }))} />
-                        <DateField label="To" value={range.to} onChange={(e) => setRange((r) => ({ ...r, to: e.target.value }))} />
+                        <DateField label={t("manager:financeIndex.prop.from")} value={range.from} onChange={(e) => setRange((r) => ({ ...r, from: e.target.value }))} />
+                        <DateField label={t("manager:financeIndex.prop.to")} value={range.to} onChange={(e) => setRange((r) => ({ ...r, to: e.target.value }))} />
                       </div>
                     </FilterSection>
                     <FilterSectionClear
@@ -166,7 +185,7 @@ const tabKeys = FINANCE_TABS.map((t) => t.key);
               {portfolioError && <div className="notice notice-err">{portfolioError}</div>}
 
               {portfolioLoading && !p ? (
-                <p className="loading-text">Loading portfolio summary…</p>
+                <p className="loading-text">{t("manager:financeIndex.text.loadingPortfolioSummary")}</p>
               ) : p && (
                 <>
                   <Section>
@@ -184,18 +203,18 @@ const tabKeys = FINANCE_TABS.map((t) => t.key);
                     </div>
                     {/* Desktop: card grid */}
                     <div className="hidden sm:grid grid-cols-2 md:grid-cols-5 gap-3">
-                      <SummaryCard label="Earned Income"  value={formatChfCents(p.totalEarnedIncomeCents)} accent="green" />
-                      <SummaryCard label="Total Expenses" value={formatChfCents(p.totalExpensesCents)} />
-                      <SummaryCard label="Net Result"     value={formatChfCents(p.totalNetIncomeCents)} accent={netAccent} sub="Income − Expenses" />
-                      <SummaryCard label="Receivables"    value={formatChfCents(p.totalReceivablesCents)} accent={p.totalReceivablesCents > 0 ? "amber" : ""} sub="Unpaid rent invoices" />
-                      <SummaryCard label="Payables"       value={formatChfCents(p.totalPayablesCents)} accent={p.totalPayablesCents > 0 ? "amber" : ""} sub="Unpaid supplier invoices" />
+                      <SummaryCard label={t("manager:financeIndex.prop.earnedIncome")}  value={formatChfCents(p.totalEarnedIncomeCents)} accent="green" />
+                      <SummaryCard label={t("manager:financeIndex.prop.totalExpenses")} value={formatChfCents(p.totalExpensesCents)} />
+                      <SummaryCard label={t("manager:financeIndex.prop.netResult")}     value={formatChfCents(p.totalNetIncomeCents)} accent={netAccent} sub="Income − Expenses" />
+                      <SummaryCard label={t("manager:financeIndex.prop.receivables")}    value={formatChfCents(p.totalReceivablesCents)} accent={p.totalReceivablesCents > 0 ? "amber" : ""} sub="Unpaid rent invoices" />
+                      <SummaryCard label={t("manager:financeIndex.prop.payables")}       value={formatChfCents(p.totalPayablesCents)} accent={p.totalPayablesCents > 0 ? "amber" : ""} sub="Unpaid supplier invoices" />
                     </div>
                   </Section>
 
-                  <Section title="Buildings">
+                  <Section title={t("manager:financeIndex.title.buildings")}>
                     {/* Stats row */}
                     <div className="flex gap-4 text-xs text-slate-500">
-                      <span>Avg collection rate: <strong>{formatPercent(p.avgCollectionRate)}</strong></span>
+                      <span>{t("manager:financeIndex.text.avgCollectionRate")} <strong>{formatPercent(p.avgCollectionRate)}</strong></span>
                       {p.buildingsInRed > 0 && (
                         <span className="text-destructive-text font-medium">
                           {p.buildingsInRed} building{p.buildingsInRed !== 1 ? "s" : ""} need attention
@@ -205,13 +224,13 @@ const tabKeys = FINANCE_TABS.map((t) => t.key);
                     <div>
                       {p.buildings.length === 0 ? (
                         <div className="empty-state">
-                          <p className="empty-state-text">No buildings in this portfolio yet.</p>
+                          <p className="empty-state-text">{t("manager:financeIndex.text.noBuildingsInThisPortfolioYet")}</p>
                         </div>
                       ) : (
                         <>
                           {/* Mobile card list — md:hidden (financial table needs more width) */}
                           <div className="md:hidden overflow-hidden rounded-lg border border-table-border divide-y divide-table-divider">
-                            {(buildingsExpanded ? p.buildings : p.buildings.slice(0, 5)).map((b) => (
+                            {(buildingsExpanded ? sortedBuildings : sortedBuildings.slice(0, 5)).map((b) => (
                               <div
                                 key={b.buildingId}
                                 className="table-card cursor-pointer hover:bg-slate-50/80 transition-colors"
@@ -237,20 +256,20 @@ const tabKeys = FINANCE_TABS.map((t) => t.key);
                           {/* Wide table — hidden md:block */}
                           <div className="hidden md:block overflow-hidden rounded-lg border border-table-border">
                           <div className="overflow-x-auto">
-                            <table className="inline-table">
+                            <table className="data-table">
                               <thead>
                                 <tr>
-                                  <th>Building</th>
-                                  <th className="text-right">Earned Income</th>
-                                  <th className="text-right">Expenses</th>
-                                  <th className="text-right">Net</th>
-                                  <th className="text-right">Collection</th>
-                                  <th className="text-right">Receivables</th>
+                                  <SortableHeader label={t("manager:financeIndex.prop.building")} field="name" sortField={bSortField} sortDir={bSortDir} onSort={handleBuildingSort} />
+                                  <SortableHeader label={t("manager:financeIndex.prop.earnedIncome")} field="earned" sortField={bSortField} sortDir={bSortDir} onSort={handleBuildingSort} className="text-right" />
+                                  <SortableHeader label={t("manager:financeIndex.prop.expenses")} field="expenses" sortField={bSortField} sortDir={bSortDir} onSort={handleBuildingSort} className="text-right" />
+                                  <SortableHeader label={t("manager:financeIndex.prop.net")} field="net" sortField={bSortField} sortDir={bSortDir} onSort={handleBuildingSort} className="text-right" />
+                                  <SortableHeader label={t("manager:financeIndex.prop.collection")} field="collection" sortField={bSortField} sortDir={bSortDir} onSort={handleBuildingSort} className="text-right" />
+                                  <SortableHeader label={t("manager:financeIndex.prop.receivables")} field="receivables" sortField={bSortField} sortDir={bSortDir} onSort={handleBuildingSort} className="text-right" />
                                   <th></th>
                                 </tr>
                               </thead>
                               <tbody>
-                                {(buildingsExpanded ? p.buildings : p.buildings.slice(0, 5)).map((b) => (
+                                {(buildingsExpanded ? sortedBuildings : sortedBuildings.slice(0, 5)).map((b) => (
                                   <tr key={b.buildingId} className="cursor-pointer hover:bg-slate-50/80" onClick={() => router.push(`/manager/buildings/${b.buildingId}/financials`)}>
                                     <td>
                                       <span className="flex items-center gap-2">
@@ -271,7 +290,7 @@ const tabKeys = FINANCE_TABS.map((t) => t.key);
                                     </td>
                                     <td className="text-right">
                                       <button
-                                        aria-label="View building financials"
+                                        aria-label={t("manager:financeIndex.ariaLabel.viewBuildingFinancials")}
                                         onClick={(e) => { e.stopPropagation(); router.push(`/manager/buildings/${b.buildingId}/financials`); }}
                                         className="icon-btn"
                                       >
@@ -357,3 +376,5 @@ const tabKeys = FINANCE_TABS.map((t) => t.key);
     </AppShell>
   );
 }
+
+export const getStaticProps = withTranslations(["common","manager"]);

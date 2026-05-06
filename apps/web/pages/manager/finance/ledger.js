@@ -12,6 +12,8 @@ import { formatChfCents, formatDate } from "../../../lib/format";
 import { cn } from "../../../lib/utils";
 import { FilterToggle, FilterPanelBody, FilterSection, FilterSectionClear, SelectField, DateField } from "../../../components/ui/FilterPanel";
 import ScrollableTabs from "../../../components/mobile/ScrollableTabs";
+import { withTranslations } from "../../../lib/i18n";
+import { useTranslation } from "next-i18next";
 /* ── Constants ─────────────────────────────────────────────── */
 
 const SOURCE_TYPE_LABELS = {
@@ -62,6 +64,7 @@ function AccountTypeBadge({ type }) {
 /* ── Page ───────────────────────────────────────────────────── */
 
 export default function LedgerPage() {
+  const { t } = useTranslation("manager");
   // Tab: journal | trial-balance
   const [tab, setTab] = useState("journal");
 
@@ -216,8 +219,8 @@ export default function LedgerPage() {
     <AppShell role="MANAGER">
       <PageShell>
         <PageHeader
-          title="General Ledger"
-          subtitle="Advanced audit view — double-entry journal"
+          title={t("manager:financeLedger.title.generalLedger")}
+          subtitle={t("manager:financeLedger.prop.advancedAuditViewDoubleentryJournal")}
         />
         <PageContent>
 
@@ -226,7 +229,7 @@ export default function LedgerPage() {
             <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 px-5 py-4">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="text-sm font-semibold text-amber-700">Chart of Accounts not set up</p>
+                  <p className="text-sm font-semibold text-amber-700">{t("manager:financeLedger.text.chartOfAccountsNotSetUp")}</p>
                   <p className="text-xs text-amber-700 mt-1">
                     The ledger requires a Chart of Accounts to post entries. Click the button to seed the
                     Swiss Kontenplan and post historical invoice entries in one step.
@@ -280,13 +283,13 @@ export default function LedgerPage() {
             {[
               { key: "journal",       label: "Journal" },
               { key: "trial-balance", label: "Trial Balance" },
-            ].map((t) => (
+            ].map((tabItem) => (
               <button
-                key={t.key}
-                onClick={() => setTab(t.key)}
-                className={tab === t.key ? "tab-btn-active" : "tab-btn"}
+                key={tabItem.key}
+                onClick={() => setTab(tabItem.key)}
+                className={tab === tabItem.key ? "tab-btn-active" : "tab-btn"}
               >
-                {t.label}
+                {tabItem.label}
               </button>
             ))}
           </ScrollableTabs>
@@ -295,23 +298,23 @@ export default function LedgerPage() {
           <FilterToggle open={filterOpen} onToggle={() => setFilterOpen((v) => !v)} activeCount={activeCount} />
           {filterOpen && (
             <FilterPanelBody>
-              <FilterSection title="Date range" first>
+              <FilterSection title={t("manager:financeLedger.title.dateRange")} first>
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                  <DateField label="From" value={from} onChange={(e) => setFrom(e.target.value)} />
-                  <DateField label="To" value={to} onChange={(e) => setTo(e.target.value)} />
+                  <DateField label={t("manager:financeLedger.prop.from")} value={from} onChange={(e) => setFrom(e.target.value)} />
+                  <DateField label={t("manager:financeLedger.prop.to")} value={to} onChange={(e) => setTo(e.target.value)} />
                 </div>
               </FilterSection>
               {tab === "journal" && (
-                <FilterSection title="Scope">
+                <FilterSection title={t("manager:financeLedger.title.scope")}>
                   <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                    <SelectField label="Building" value={buildingId} onChange={(e) => setBuildingId(e.target.value)}>
-                      <option value="">All buildings</option>
+                    <SelectField label={t("manager:financeLedger.prop.building")} value={buildingId} onChange={(e) => setBuildingId(e.target.value)}>
+                      <option value="">{t("manager:financeLedger.text.allBuildings")}</option>
                       {buildings.map((b) => (
                         <option key={b.id} value={b.id}>{b.name}</option>
                       ))}
                     </SelectField>
-                    <SelectField label="Account" value={accountId} onChange={(e) => setAccountId(e.target.value)}>
-                      <option value="">All accounts</option>
+                    <SelectField label={t("manager:financeLedger.col.account")} value={accountId} onChange={(e) => setAccountId(e.target.value)}>
+                      <option value="">{t("manager:financeLedger.text.allAccounts")}</option>
                       {ACCOUNT_TYPE_ORDER.map((type) => {
                         const group = accounts.filter((a) => a.accountType === type);
                         if (!group.length) return null;
@@ -326,8 +329,8 @@ export default function LedgerPage() {
                         );
                       })}
                     </SelectField>
-                    <SelectField label="Event type" value={sourceType} onChange={(e) => setSourceType(e.target.value)}>
-                      <option value="">All events</option>
+                    <SelectField label={t("manager:financeLedger.prop.eventType")} value={sourceType} onChange={(e) => setSourceType(e.target.value)}>
+                      <option value="">{t("manager:financeLedger.text.allEvents")}</option>
                       {Object.entries(SOURCE_TYPE_LABELS).map(([k, v]) => (
                         <option key={k} value={k}>{v}</option>
                       ))}
@@ -347,10 +350,10 @@ export default function LedgerPage() {
             <Panel>
               {error && <p className="text-red-600 text-sm mb-3">{error}</p>}
               {loading ? (
-                <p className="text-slate-400 text-sm">Loading…</p>
+                <p className="text-slate-400 text-sm">{t("manager:financeLedger.text.loading")}</p>
               ) : entries.length === 0 ? (
                 <div className="py-12 text-center">
-                  <p className="text-slate-500 font-medium text-sm">No journal entries found</p>
+                  <p className="text-slate-500 font-medium text-sm">{t("manager:financeLedger.text.noJournalEntriesFound")}</p>
                   <p className="text-slate-400 text-xs mt-2 max-w-md mx-auto">
                     Ledger entries are posted automatically when invoices are issued or paid.
                     {from && " Try widening the date range."}
@@ -393,35 +396,35 @@ export default function LedgerPage() {
 
                   {/* Wide table — hidden sm:block */}
                   <div className="hidden sm:block overflow-x-auto">
-                    <table className="w-full text-sm">
+                    <table className="data-table w-full">
                       <thead>
-                        <tr className="border-b border-slate-200 text-left text-xs text-slate-500">
-                          <th className="pb-2 pr-3">Date</th>
-                          <th className="pb-2 pr-3">Account</th>
-                          <th className="pb-2 pr-3">Event</th>
-                          <th className="pb-2 pr-3">Description</th>
-                          <th className="pb-2 pr-3">Reference</th>
-                          <th className="pb-2 pr-3 text-right">Debit CHF</th>
-                          <th className="pb-2 text-right">Credit CHF</th>
+                        <tr>
+                          <th>{t("manager:financeLedger.col.date")}</th>
+                          <th>{t("manager:financeLedger.col.account")}</th>
+                          <th>{t("manager:financeLedger.col.event")}</th>
+                          <th>{t("manager:financeLedger.col.description")}</th>
+                          <th>{t("manager:financeLedger.col.reference")}</th>
+                          <th className="text-right">{t("manager:financeLedger.col.debitChf")}</th>
+                          <th className="text-right">{t("manager:financeLedger.col.creditChf")}</th>
                         </tr>
                       </thead>
                       <tbody>
                         {entries.map((e) => (
-                          <tr key={e.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-                            <td className="py-2 pr-3 whitespace-nowrap text-slate-600">{formatDate(e.date)}</td>
-                            <td className="py-2 pr-3">
+                          <tr key={e.id} className="hover:bg-slate-50 transition-colors">
+                            <td className="whitespace-nowrap text-slate-600">{formatDate(e.date)}</td>
+                            <td>
                               <span className="font-mono text-xs text-slate-400 mr-1">{e.accountCode}</span>
                               <span className="text-slate-800">{e.accountName}</span>
                             </td>
-                            <td className="py-2 pr-3 text-xs text-slate-500 whitespace-nowrap">
+                            <td className="text-xs text-slate-500 whitespace-nowrap">
                               {SOURCE_TYPE_LABELS[e.sourceType] || e.sourceType || "—"}
                             </td>
-                            <td className="py-2 pr-3 text-slate-700 max-w-xs truncate">{e.description}</td>
-                            <td className="py-2 pr-3 font-mono text-xs text-slate-400">{e.reference || "—"}</td>
-                            <td className="py-2 pr-3 text-right font-mono">
+                            <td className="text-slate-700 max-w-xs truncate">{e.description}</td>
+                            <td className="font-mono text-xs text-slate-400">{e.reference || "—"}</td>
+                            <td className="text-right font-mono">
                               {e.debitCents > 0 ? <span className="text-slate-900">{formatChfCents(e.debitCents)}</span> : <span className="text-slate-200">—</span>}
                             </td>
-                            <td className="py-2 text-right font-mono">
+                            <td className="text-right font-mono">
                               {e.creditCents > 0 ? <span className="text-slate-900">{formatChfCents(e.creditCents)}</span> : <span className="text-slate-200">—</span>}
                             </td>
                           </tr>
@@ -460,11 +463,11 @@ export default function LedgerPage() {
             <Panel>
               {tbError && <p className="text-red-600 text-sm mb-3">{tbError}</p>}
               {tbLoading ? (
-                <p className="text-slate-400 text-sm">Loading…</p>
+                <p className="text-slate-400 text-sm">{t("manager:financeLedger.text.loading")}</p>
               ) : balances.length === 0 ? (
                 <div className="py-12 text-center">
-                  <p className="text-slate-500 font-medium text-sm">No entries for this period</p>
-                  <p className="text-slate-400 text-xs mt-1">Adjust the date range and apply filters above.</p>
+                  <p className="text-slate-500 font-medium text-sm">{t("manager:financeLedger.text.noEntriesForThisPeriod")}</p>
+                  <p className="text-slate-400 text-xs mt-1">{t("manager:financeLedger.text.adjustTheDateRangeAndApplyFiltersAbove")}</p>
                 </div>
               ) : (
                 <>
@@ -508,26 +511,26 @@ export default function LedgerPage() {
 
                           {/* Wide table — hidden sm:block */}
                           <div className="hidden sm:block overflow-x-auto border border-slate-200 rounded-b">
-                            <table className="w-full text-sm">
+                            <table className="data-table w-full">
                               <thead>
-                                <tr className="border-b border-slate-200 text-left text-xs text-slate-500 bg-slate-50">
-                                  <th className="px-3 py-2">Code</th>
-                                  <th className="px-3 py-2">Account</th>
-                                  <th className="px-3 py-2 text-right">Debit CHF</th>
-                                  <th className="px-3 py-2 text-right">Credit CHF</th>
-                                  <th className="px-3 py-2 text-right">Balance CHF</th>
+                                <tr className="bg-slate-50">
+                                  <th>{t("manager:financeLedger.col.code")}</th>
+                                  <th>{t("manager:financeLedger.col.account")}</th>
+                                  <th className="text-right">{t("manager:financeLedger.col.debitChf")}</th>
+                                  <th className="text-right">{t("manager:financeLedger.col.creditChf")}</th>
+                                  <th className="text-right">{t("manager:financeLedger.col.balanceChf")}</th>
                                 </tr>
                               </thead>
                               <tbody>
                                 {rows.map((b) => {
                                   const isDebitBal = b.balanceCents >= 0;
                                   return (
-                                    <tr key={b.accountId} className="border-b border-slate-100 hover:bg-slate-50">
-                                      <td className="px-3 py-2 font-mono text-xs text-slate-400">{b.accountCode || "—"}</td>
-                                      <td className="px-3 py-2 text-slate-800">{b.accountName}</td>
-                                      <td className="px-3 py-2 text-right font-mono text-slate-700">{formatChfCents(b.debitCents)}</td>
-                                      <td className="px-3 py-2 text-right font-mono text-slate-700">{formatChfCents(b.creditCents)}</td>
-                                      <td className={cn("px-3 py-2 text-right font-mono font-semibold", isDebitBal ? "text-slate-900" : "text-blue-700")}>
+                                    <tr key={b.accountId} className="hover:bg-slate-50">
+                                      <td className="font-mono text-xs text-slate-400">{b.accountCode || "—"}</td>
+                                      <td className="text-slate-800">{b.accountName}</td>
+                                      <td className="text-right font-mono text-slate-700">{formatChfCents(b.debitCents)}</td>
+                                      <td className="text-right font-mono text-slate-700">{formatChfCents(b.creditCents)}</td>
+                                      <td className={cn("text-right font-mono font-semibold", isDebitBal ? "text-slate-900" : "text-blue-700")}>
                                         {isDebitBal ? "" : "("}
                                         {formatChfCents(Math.abs(b.balanceCents))}
                                         {isDebitBal ? "" : ")"}
@@ -538,9 +541,9 @@ export default function LedgerPage() {
                               </tbody>
                               <tfoot>
                                 <tr className="border-t border-slate-300 bg-slate-50 text-xs font-semibold">
-                                  <td colSpan={2} className="px-3 py-1.5 text-slate-600">Subtotal</td>
-                                  <td className="px-3 py-1.5 text-right font-mono">{formatChfCents(typeDebit)}</td>
-                                  <td className="px-3 py-1.5 text-right font-mono">{formatChfCents(typeCredit)}</td>
+                                  <td colSpan={2} className="text-slate-600">{t("manager:financeLedger.text.subtotal")}</td>
+                                  <td className="text-right font-mono">{formatChfCents(typeDebit)}</td>
+                                  <td className="text-right font-mono">{formatChfCents(typeCredit)}</td>
                                   <td />
                                 </tr>
                               </tfoot>
@@ -553,8 +556,8 @@ export default function LedgerPage() {
 
                   {/* Grand total */}
                   <div className="flex justify-end gap-8 text-sm font-semibold border-t-2 border-slate-300 pt-3 mt-2">
-                    <span>Grand Total Debit: <span className="font-mono">{formatChfCents(tbTotals.debit)}</span></span>
-                    <span>Grand Total Credit: <span className="font-mono">{formatChfCents(tbTotals.credit)}</span></span>
+                    <span>{t("manager:financeLedger.text.grandTotalDebit")} <span className="font-mono">{formatChfCents(tbTotals.debit)}</span></span>
+                    <span>{t("manager:financeLedger.text.grandTotalCredit")} <span className="font-mono">{formatChfCents(tbTotals.credit)}</span></span>
                     <span className={tbBalanced ? "text-green-700" : "text-red-600"}>
                       {tbBalanced ? "Balanced ✓" : `Off by CHF ${formatChfCents(Math.abs(tbTotals.debit - tbTotals.credit))}`}
                     </span>
@@ -569,3 +572,5 @@ export default function LedgerPage() {
     </AppShell>
   );
 }
+
+export const getStaticProps = withTranslations(["common","manager"]);

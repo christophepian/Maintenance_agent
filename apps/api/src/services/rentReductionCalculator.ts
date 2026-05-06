@@ -15,6 +15,10 @@
  */
 
 import prisma from "./prismaClient";
+import {
+  findLeaseForRentReduction,
+  findActiveLeaseForUnit,
+} from "../repositories/leaseRepository";
 import type { DefectMatch } from "./defectMatcher";
 import type { DurationInfo } from "./defectClassifier";
 
@@ -83,16 +87,7 @@ export async function calculateRentReduction(
   if (!matches.length) return null;
 
   // Load lease
-  const lease = await prisma.lease.findUnique({
-    where: { id: leaseId },
-    select: {
-      id: true,
-      status: true,
-      netRentChf: true,
-      startDate: true,
-      endDate: true,
-    },
-  });
+  const lease = await findLeaseForRentReduction(prisma, leaseId);
 
   if (!lease) return null;
 
@@ -153,14 +148,7 @@ export async function calculateRentReductionForUnit(
   if (!matches.length) return null;
 
   // Find the most recent active lease for this unit
-  const lease = await prisma.lease.findFirst({
-    where: {
-      unitId,
-      status: { in: ["ACTIVE", "SIGNED"] },
-    },
-    orderBy: { startDate: "desc" },
-    select: { id: true },
-  });
+  const lease = await findActiveLeaseForUnit(prisma, unitId);
 
   if (!lease) return null;
 

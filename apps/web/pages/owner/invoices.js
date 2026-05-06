@@ -14,6 +14,8 @@ import OwnerPicker from "../../components/OwnerPicker";
 import { invoiceVariant, ingestionVariant } from "../../lib/statusVariants";
 import { formatChf, formatDate as formatDateLib } from "../../lib/format";
 import { useTableSort, clientSort } from "../../lib/tableUtils";
+import { withTranslations } from "../../lib/i18n";
+import { useTranslation } from "next-i18next";
 
 // Re-evaluated on every Fast Refresh hot reload (module-level code always re-runs).
 // Used to detect that a reload happened and suppress stale modal state.
@@ -45,11 +47,11 @@ function getInvoiceTotal(invoice) {
 /* ── Status badges ───────────────────────────────────────────── */
 
 const STATUS_TABS = [
-  { key: "ALL", label: "All" },
-  { key: "ISSUED", label: "Issued" },
-  { key: "APPROVED", label: "Approved" },
-  { key: "PAID", label: "Paid" },
-  { key: "DISPUTED", label: "Disputed" },
+  { key: "ALL" },
+  { key: "ISSUED" },
+  { key: "APPROVED" },
+  { key: "PAID" },
+  { key: "DISPUTED" },
 ];
 
 /* ── Ingestion helpers (same as manager hub) ─────────────────── */
@@ -138,13 +140,14 @@ const DIRECTION_TABS = [
 /* ── PDF Download Modal ──────────────────────────────────────── */
 
 function PdfDownloadModal({ invoice, onClose }) {
+  const { t } = useTranslation("owner");
   const [includeQr, setIncludeQr] = useState(true);
   if (!invoice) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" role="dialog" aria-modal="true" aria-label="Download PDF">
+    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" role="dialog" aria-modal="true" aria-label={t("owner:invoices.heading.downloadPdf")}>
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
       <div className="relative w-full max-w-sm rounded-t-2xl sm:rounded-2xl bg-white p-6 shadow-xl">
-        <h2 className="text-base font-semibold text-slate-800 mb-1">Download PDF</h2>
+        <h2 className="text-base font-semibold text-slate-800 mb-1">{t("owner:invoices.heading.downloadPdf")}</h2>
         <p className="text-xs text-slate-500 mb-4">
           {invoice.reference || invoice.invoiceNumber || invoice.id?.slice(0, 8)}
         </p>
@@ -156,8 +159,8 @@ function PdfDownloadModal({ invoice, onClose }) {
             className="h-4 w-4 accent-blue-600"
           />
           <div>
-            <p className="text-sm font-medium text-slate-700">Include QR bill</p>
-            <p className="text-xs text-slate-400">Appends the Swiss QR payment slip</p>
+            <p className="text-sm font-medium text-slate-700">{t("owner:invoices.text.includeQrBill")}</p>
+            <p className="text-xs text-slate-400">{t("owner:invoices.text.appendsTheSwissQrPaymentSlip")}</p>
           </div>
         </label>
         <div className="mt-4 flex gap-3">
@@ -186,6 +189,7 @@ function PdfDownloadModal({ invoice, onClose }) {
 /* ── Main Component ──────────────────────────────────────────── */
 
 export default function OwnerInvoices() {
+  const { t } = useTranslation("owner");
   const router = useRouter();
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -295,14 +299,14 @@ export default function OwnerInvoices() {
   const invoiceColumns = useMemo(() => [
     {
       id: "status",
-      label: "Status",
+      label: t("owner:invoices.col.status"),
       sortable: true,
       defaultVisible: true,
       render: (inv) => <Badge variant={invoiceVariant(inv.status)} size="sm">{inv.status}</Badge>,
     },
     {
       id: "invoiceNumber",
-      label: "Invoice #",
+      label: t("owner:invoices.col.invoice"),
       sortable: true,
       defaultVisible: true,
       className: "cell-bold",
@@ -316,21 +320,21 @@ export default function OwnerInvoices() {
     },
     {
       id: "recipient",
-      label: isOutgoing ? "Tenant" : "Issuer",
+      label: isOutgoing ? t("owner:invoices.col.tenant") : t("owner:invoices.col.issuer"),
       sortable: false,
       defaultVisible: true,
       render: (inv) => inv.recipientName || <span className="text-slate-400">—</span>,
     },
     {
       id: "createdAt",
-      label: "Date",
+      label: t("owner:invoices.col.date"),
       sortable: true,
       defaultVisible: true,
       render: (inv) => formatDate(inv.createdAt),
     },
     {
       id: "amount",
-      label: "Amount",
+      label: t("owner:invoices.col.amount"),
       sortable: true,
       defaultVisible: true,
       className: "font-semibold",
@@ -338,7 +342,7 @@ export default function OwnerInvoices() {
     },
     {
       id: "actions",
-      label: "Actions",
+      label: t("owner:invoices.col.actions"),
       sortable: false,
       alwaysVisible: true,
       className: "text-right",
@@ -346,10 +350,10 @@ export default function OwnerInvoices() {
       render: (inv) => (
         <div onClick={(e) => e.stopPropagation()}>
           <ActionDropdown actions={[
-            ...(!isOutgoing && (inv.status === "ISSUED" || inv.status === "DRAFT") ? [{ label: "✓ Approve", className: "text-green-700 font-semibold", onClick: () => actionRequest(inv.id, "approve") }] : []),
-            ...(!isOutgoing && inv.status === "APPROVED" ? [{ label: "💰 Mark as Paid", className: "text-green-700 font-semibold", onClick: () => actionRequest(inv.id, "mark-paid") }] : []),
-            { label: "📄 Download PDF", onClick: () => setPdfModalInvoice(inv) },
-            ...(!isOutgoing && (inv.status === "ISSUED" || inv.status === "DRAFT" || inv.status === "APPROVED") ? [{ label: "⚠ Dispute", className: "text-rose-600", onClick: () => actionRequest(inv.id, "dispute") }] : []),
+            ...(!isOutgoing && (inv.status === "ISSUED" || inv.status === "DRAFT") ? [{ label: t("owner:invoices.col.Approve"), className: "text-green-700 font-semibold", onClick: () => actionRequest(inv.id, "approve") }] : []),
+            ...(!isOutgoing && inv.status === "APPROVED" ? [{ label: t("owner:invoices.col.MarkAsPaid"), className: "text-green-700 font-semibold", onClick: () => actionRequest(inv.id, "mark-paid") }] : []),
+            { label: t("owner:invoices.col.DownloadPdf"), onClick: () => setPdfModalInvoice(inv) },
+            ...(!isOutgoing && (inv.status === "ISSUED" || inv.status === "DRAFT" || inv.status === "APPROVED") ? [{ label: t("owner:invoices.col.Dispute"), className: "text-rose-600", onClick: () => actionRequest(inv.id, "dispute") }] : []),
           ]} />
         </div>
       ),
@@ -361,8 +365,8 @@ export default function OwnerInvoices() {
       <PageShell>
         <OwnerPicker onSelect={fetchInvoices} />
         <PageHeader
-          title="Invoices"
-          subtitle="Review, approve, and manage invoice payments"
+          title={t("owner:invoices.title.invoices")}
+          subtitle={t("owner:invoices.prop.reviewApproveAndManageInvoicePayments")}
         />
 
         <PageContent>
@@ -374,7 +378,7 @@ export default function OwnerInvoices() {
               <span className="text-lg">⚡</span>
               <div className="flex-1">
                 <p className="text-sm font-semibold text-amber-700">{approvalCount} invoice{approvalCount !== 1 ? "s" : ""} awaiting your approval</p>
-                <p className="text-xs text-amber-600">Review issued invoices and approve or dispute them</p>
+                <p className="text-xs text-amber-600">{t("owner:invoices.text.reviewIssuedInvoicesAndApproveOrDisputeThem")}</p>
               </div>
               <button
                 onClick={() => setActiveTab("ISSUED")}
@@ -398,7 +402,7 @@ export default function OwnerInvoices() {
                     : "text-slate-500 hover:text-slate-700")
                 }
               >
-                {tab.icon} {tab.label}
+                {tab.icon} {t(`owner:invoices.tabs.${tab.key.toLowerCase()}`)}
               </button>
             ))}
           </div>
@@ -406,17 +410,17 @@ export default function OwnerInvoices() {
           <FilterToggle open={filterOpen} onToggle={() => setFilterOpen((v) => !v)} activeCount={activeCount} />
           {filterOpen && (
             <FilterPanelBody>
-              <FilterSection title="Status" first>
+              <FilterSection title={t("owner:invoices.title.status")} first>
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                  <SelectField label="Status" value={activeTab} onChange={(e) => setActiveTab(e.target.value)}>
-                    {STATUS_TABS.map((t) => <option key={t.key} value={t.key}>{t.label}</option>)}
+                  <SelectField label={t("owner:invoices.title.status")} value={activeTab} onChange={(e) => setActiveTab(e.target.value)}>
+                    {STATUS_TABS.map((tab) => <option key={tab.key} value={tab.key}>{t(`owner:invoices.tabs.${tab.key.toLowerCase()}`)}</option>)}
                   </SelectField>
                 </div>
               </FilterSection>
-              <FilterSection title="Date range">
+              <FilterSection title={t("owner:invoices.title.dateRange")}>
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                  <DateField label="From" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
-                  <DateField label="To" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+                  <DateField label={t("owner:invoices.prop.from")} value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+                  <DateField label={t("owner:invoices.prop.to")} value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
                 </div>
               </FilterSection>
               <FilterSectionClear hasFilter={activeCount > 0} onClear={() => { setActiveTab("ALL"); setDateFrom(""); setDateTo(""); }} />
@@ -425,7 +429,7 @@ export default function OwnerInvoices() {
 
           {/* Invoice table */}
           {loading ? (
-            <p className="loading-text">Loading invoices…</p>
+            <p className="loading-text">{t("owner:invoices.text.loadingInvoices")}</p>
           ) : (
             <ConfigurableTable
               tableId="owner-invoices"
@@ -473,3 +477,5 @@ export default function OwnerInvoices() {
     </AppShell>
   );
 }
+
+export const getStaticProps = withTranslations(["common","owner"]);

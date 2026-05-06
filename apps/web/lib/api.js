@@ -1,87 +1,88 @@
 /**
  * Shared API helper for all frontend pages.
  *
- * Provides a single `fetchWithAuth()` function that automatically attaches
- * the correct auth headers (JWT for manager/owner/contractor, session for tenant).
+ * Token storage key: "authToken" in localStorage.
+ * After Supabase Auth migration, this key holds the Supabase access_token
+ * (a JWT verified by SUPABASE_JWT_SECRET on the backend).
  *
- * Usage:
- *   import { fetchWithAuth } from "../lib/api";  // adjust path as needed
- *   const res = await fetchWithAuth("/api/requests");
- *   const data = await res.json();
+ * The token is written once at login (see pages/login.js + pages/api/auth/callback.js)
+ * and kept fresh by the onAuthStateChange listener in components/AppShell.js.
+ *
+ * All three helper functions (authHeaders / ownerAuthHeaders / tenantHeaders) read
+ * from the same key because Supabase issues one token per user regardless of role.
+ * Role-based access is enforced on the backend via app_metadata.appRole.
  */
 
+const TOKEN_KEY = "authToken";
+
+// ── Token helpers ─────────────────────────────────────────────────────────────
+
 /**
- * Build auth headers from localStorage tokens.
- * SSR-safe: returns empty object on server.
+ * Write the Supabase access_token to localStorage.
+ * Called from the login callback and the onAuthStateChange handler.
+ * SSR-safe: no-op on the server.
+ */
+export function setAuthToken(token) {
+  if (typeof window === "undefined") return;
+  if (token) {
+    localStorage.setItem(TOKEN_KEY, token);
+  } else {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem("role");
+  }
+}
+
+/**
+ * Build Authorization header from the stored Supabase access_token.
+ * SSR-safe: returns empty object on the server.
  */
 export function authHeaders() {
   if (typeof window === "undefined") return {};
-  const token = localStorage.getItem("authToken");
+  const token = localStorage.getItem(TOKEN_KEY);
   if (token) return { Authorization: `Bearer ${token}` };
   return {};
 }
 
 /**
- * Build owner auth headers from localStorage.
- * SSR-safe: returns empty object on server.
+ * Owner pages use the same Supabase token — alias for authHeaders().
  */
 export function ownerAuthHeaders() {
-  if (typeof window === "undefined") return {};
-  const token = localStorage.getItem("ownerToken");
-  if (token) return { Authorization: `Bearer ${token}` };
-  return {};
+  return authHeaders();
 }
 
 /**
- * Build tenant auth headers from localStorage.
- * SSR-safe: returns empty object on server.
+ * Tenant portal pages use the same Supabase token — alias for authHeaders().
+ *
+ * Note: the tenant phone-based session (POST /tenant-session) is a separate
+ * flow that issues its own short-lived JWT. That flow is unchanged — it doesn't
+ * go through Supabase Auth.
  */
 export function tenantHeaders() {
-  if (typeof window === "undefined") return {};
-  const token = localStorage.getItem("tenantToken");
-  if (token) return { Authorization: `Bearer ${token}` };
-  return {};
+  return authHeaders();
 }
+
+// ── Fetch wrappers ────────────────────────────────────────────────────────────
 
 /**
  * Fetch with automatic tenant Bearer token.
  * Use this in all tenant-portal pages.
- *
- * @param {string} url - Relative URL (e.g. "/api/tenant-portal/notifications")
- * @param {RequestInit} [opts] - Standard fetch options
- * @returns {Promise<Response>}
  */
 export function tenantFetch(url, opts = {}) {
-  const headers = {
-    ...tenantHeaders(),
-    ...opts.headers,
-  };
+  const headers = { ...tenantHeaders(), ...opts.headers };
   return fetch(url, { ...opts, headers });
 }
 
 /**
- * Fetch with automatic auth headers.
- * Wraps native fetch — same signature, just adds Authorization / tenant headers.
- *
- * @param {string} url - Relative URL (e.g. "/api/requests") or absolute
- * @param {RequestInit} [opts] - Standard fetch options
- * @returns {Promise<Response>}
+ * Fetch with automatic Authorization header.
+ * Wraps native fetch — same signature, just adds the Bearer token.
  */
 export function fetchWithAuth(url, opts = {}) {
-  const headers = {
-    ...authHeaders(),
-    ...opts.headers,
-  };
+  const headers = { ...authHeaders(), ...opts.headers };
   return fetch(url, { ...opts, headers });
 }
 
 /**
- * Fetch JSON with auth, parse response, and return { data, error, status }.
- * Convenience wrapper for the common pattern.
- *
- * @param {string} url
- * @param {RequestInit} [opts]
- * @returns {Promise<{ data: any, error: any, status: number, ok: boolean }>}
+ * Fetch JSON with auth, parse response, return { data, error, status, ok }.
  */
 export async function apiFetch(url, opts = {}) {
   try {

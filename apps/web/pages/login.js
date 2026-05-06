@@ -1,7 +1,24 @@
-import { useState } from "react";
-import { useRouter } from "next/router";
+/**
+ * Login page — Supabase Auth.
+ *
+ * Primary flow:   Email → magic link (works for all user types)
+ * Secondary flow: Email + password (founders / admins who prefer it)
+ *
+ * After a successful magic-link click the browser is redirected to
+ * /api/auth/callback which sets the session cookie and redirects to the
+ * correct home page based on app_metadata.accessLevel / appRole.
+ *
+ * After a successful password login the session is set directly here and
+ * we redirect client-side.
+ */
 
+import { useState, useEffect } from "react";
+import { useRouter } from "next/router";
+import { createClient } from "../lib/supabase/client";
+import { setAuthToken } from "../lib/api";
+import { withTranslations } from "../lib/i18n";
 import { cn } from "../lib/utils";
+
 const ROLE_HOME = {
   MANAGER: "/manager",
   CONTRACTOR: "/contractor",
@@ -11,136 +28,249 @@ const ROLE_HOME = {
 
 export default function LoginPage() {
   const router = useRouter();
-  const [mode, setMode] = useState("login"); // login | register
+  const { next, error: queryError } = router.query;
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
-  const [role, setRole] = useState("MANAGER");
+  const [showPassword, setShowPassword] = useState(false);
   const [notice, setNotice] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [magicSent, setMagicSent] = useState(false);
 
-  async function submit(e) {
+  // On mount: check for an existing session.
+  // Handles two cases:
+  //   1. Supabase implicit-flow tokens in the URL hash (dashboard invites)
+  //      — the browser client picks these up automatically via getSession()
+  //   2. User navigates to /login while already signed in — redirect them away
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) redirectAfterLogin(session);
+    });
+    // Also listen for the TOKEN_HASH exchange that happens client-side
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => { if (session) redirectAfterLogin(session); }
+    );
+    return () => subscription.unsubscribe();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Show error messages coming from the callback redirect
+  useEffect(() => {
+    if (queryError === "forbidden") {
+      setNotice({ type: "err", msg: "You don't have permission to access that page." });
+    } else if (queryError === "auth_failed") {
+      setNotice({ type: "err", msg: "Authentication failed. Please try again." });
+    } else if (queryError === "missing_code") {
+      setNotice({ type: "err", msg: "Invalid login link. Please request a new one." });
+    }
+  }, [queryError]);
+
+  function redirectAfterLogin(session) {
+    const meta = session.user?.app_metadata ?? {};
+    const accessLevel = meta.accessLevel;
+    const appRole = meta.appRole;
+
+    // Store Supabase access token in localStorage so fetchWithAuth works
+    setAuthToken(session.access_token);
+    // Cache role for AppShell
+    if (appRole) localStorage.setItem("role", appRole);
+
+    const target =
+      (typeof next === "string" && next.startsWith("/") ? next : null) ||
+      (accessLevel === "DOCS_INVESTOR" ? "/docs/pitchdeck.html" : null) ||
+      (appRole ? ROLE_HOME[appRole] : null) ||
+      "/manager";
+
+    router.push(target);
+  }
+
+  // ── Magic link ────────────────────────────────────────────────────────────
+  async function sendMagicLink(e) {
     e.preventDefault();
+    if (!email.trim()) return;
     setNotice(null);
     setLoading(true);
 
     try {
-      const path = mode === "login" ? "/api/auth/login" : "/api/auth/register";
-      const payload = mode === "login"
-        ? { email, password }
-        : { email, password, name, role };
+      const supabase = createClient();
+      const redirectTo = `${window.location.origin}/api/auth/callback${next ? `?next=${encodeURIComponent(next)}` : ""}`;
 
-      const res = await fetch(path, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+      const { error } = await supabase.auth.signInWithOtp({
+        email: email.trim().toLowerCase(),
+        options: { emailRedirectTo: redirectTo, shouldCreateUser: false },
       });
-      const data = await res.json();
 
-      if (!res.ok) {
-        setNotice({ type: "err", msg: data?.error?.message || "Authentication failed." });
-        return;
+      if (error) {
+        // "Email not confirmed" or "User not found" — be intentionally vague
+        setNotice({ type: "err", msg: "If that address is registered you'll receive a link shortly." });
+      } else {
+        setMagicSent(true);
       }
-
-      const token = data?.data?.token;
-      if (token) {
-        localStorage.setItem("authToken", token);
-        localStorage.setItem("authUser", JSON.stringify(data.data.user));
-      }
-
-      // Redirect to role-specific home page
-      const userRole = data?.data?.user?.role;
-      const target = ROLE_HOME[userRole] || "/manager";
-      router.push(target);
-    } catch (e2) {
-      setNotice({ type: "err", msg: String(e2) });
+    } catch {
+      setNotice({ type: "err", msg: "Something went wrong. Please try again." });
     } finally {
       setLoading(false);
     }
   }
 
+  // ── Password login ────────────────────────────────────────────────────────
+  async function signInWithPassword(e) {
+    e.preventDefault();
+    if (!email.trim() || !password) return;
+    setNotice(null);
+    setLoading(true);
+
+    try {
+      const supabase = createClient();
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email.trim().toLowerCase(),
+        password,
+      });
+
+      if (error || !data.session) {
+        setNotice({ type: "err", msg: "Invalid email or password." });
+        setPassword("");
+        return;
+      }
+
+      redirectAfterLogin(data.session);
+    } catch {
+      setNotice({ type: "err", msg: "Something went wrong. Please try again." });
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // ── Magic link sent screen ────────────────────────────────────────────────
+  if (magicSent) {
+    return (
+      <div className="main-container">
+        <div className="card text-center p-8">
+          <div className="text-4xl mb-4">✉️</div>
+          <h1 className="mb-2">Check your inbox</h1>
+          <p className="subtle mb-6">
+            We've sent a sign-in link to <strong>{email}</strong>.
+            <br />
+            Click it to access your account — the link expires in 1 hour.
+          </p>
+          <button
+            className="button-secondary"
+            type="button"
+            onClick={() => { setMagicSent(false); setNotice(null); }}
+          >
+            Use a different email
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="main-container">
-      <h1>{mode === "login" ? "Sign in" : "Create account"}</h1>
-      <div className="subtle">
-        Use your manager or contractor credentials.
-      </div>
+      <h1>Sign in</h1>
+      <p className="subtle">Enter your email to receive a sign-in link.</p>
 
-      <div className="row" className="mb-4">
-        <button
-          className={mode === "login" ? "button-primary" : "button-secondary"}
-          type="button"
-          onClick={() => setMode("login")}
-        >
-          Login
-        </button>
-        <button
-          className={mode === "register" ? "button-primary" : "button-secondary"}
-          type="button"
-          onClick={() => setMode("register")}
-        >
-          Register
-        </button>
-      </div>
-
-      {notice ? (
+      {notice && (
         <div className={cn("notice", notice.type === "ok" ? "notice-ok" : "notice-err")}>
           {notice.msg}
         </div>
-      ) : null}
+      )}
 
-      <form className="card" onSubmit={submit}>
-        {mode === "register" ? (
+      {/* ── Magic link form (primary) ── */}
+      {!showPassword && (
+        <form className="card" onSubmit={sendMagicLink}>
           <label className="label">
-            Name
+            Email
             <input
               className="input"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Your name"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
+              required
+              autoFocus
             />
           </label>
-        ) : null}
 
-        <label className="label">
-          Email
-          <input
-            className="input"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@example.com"
-            required
-          />
-        </label>
+          <button className="button-primary" type="submit" disabled={loading}>
+            {loading ? "Sending…" : "Send sign-in link"}
+          </button>
 
-        <label className="label">
-          Password
-          <input
-            className="input"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Minimum 8 characters"
-            required
-          />
-        </label>
+          <button
+            className="button-secondary mt-2"
+            type="button"
+            onClick={() => { setShowPassword(true); setNotice(null); }}
+          >
+            Use password instead
+          </button>
+        </form>
+      )}
 
-        {mode === "register" ? (
+      {/* ── Password form (secondary — founders) ── */}
+      {showPassword && (
+        <form className="card" onSubmit={signInWithPassword}>
           <label className="label">
-            Role
-            <select className="input" value={role} onChange={(e) => setRole(e.target.value)}>
-              <option value="MANAGER">Manager</option>
-              <option value="CONTRACTOR">Contractor</option>
-              <option value="TENANT">Tenant</option>
-            </select>
+            Email
+            <input
+              className="input"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
+              required
+              autoFocus
+            />
           </label>
-        ) : null}
 
-        <button className="button-primary" type="submit" disabled={loading}>
-          {loading ? "Working…" : mode === "login" ? "Sign in" : "Create account"}
-        </button>
-      </form>
+          <label className="label">
+            Password
+            <input
+              className="input"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Your password"
+              required
+            />
+          </label>
+
+          <button className="button-primary" type="submit" disabled={loading}>
+            {loading ? "Signing in…" : "Sign in"}
+          </button>
+
+          <div className="flex gap-3 mt-2">
+            <button
+              className="button-secondary"
+              type="button"
+              onClick={() => { setShowPassword(false); setPassword(""); setNotice(null); }}
+            >
+              Send magic link instead
+            </button>
+            <button
+              className="button-secondary"
+              type="button"
+              onClick={async () => {
+                if (!email.trim()) {
+                  setNotice({ type: "err", msg: "Enter your email first." });
+                  return;
+                }
+                setLoading(true);
+                const supabase = createClient();
+                await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
+                  redirectTo: `${window.location.origin}/api/auth/callback`,
+                });
+                setNotice({ type: "ok", msg: "Password reset email sent. Check your inbox." });
+                setLoading(false);
+              }}
+            >
+              Forgot password?
+            </button>
+          </div>
+        </form>
+      )}
     </div>
   );
 }
+
+export const getStaticProps = withTranslations(["common"]);

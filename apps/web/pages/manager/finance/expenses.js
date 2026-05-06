@@ -11,6 +11,8 @@ import { formatDate, formatChf } from "../../../lib/format";
 import ConfigurableTable from "../../../components/ConfigurableTable";
 import { useTableSort, clientSort } from "../../../lib/tableUtils";
 import Badge from "../../../components/ui/Badge";
+import { withTranslations } from "../../../lib/i18n";
+import { useTranslation } from "next-i18next";
 
 const EXPENSE_CATEGORIES = [
   "MAINTENANCE", "UTILITIES", "CLEANING", "INSURANCE", "TAX", "ADMIN", "CAPEX", "OTHER",
@@ -28,7 +30,8 @@ const CATEGORY_VARIANT = {
 };
 
 function CategoryBadge({ category }) {
-  if (!category) return <span className="text-sm text-slate-400">Uncategorised</span>;
+  const { t } = useTranslation("manager");
+  if (!category) return <span className="text-sm text-slate-400">{t("manager:financeExpenses.text.uncategorised")}</span>;
   return (
     <Badge variant={CATEGORY_VARIANT[category] || "default"} size="sm">
       {category}
@@ -49,6 +52,7 @@ function expenseFieldExtractor(inv, field) {
 }
 
 export default function ManagerExpensesPage() {
+  const { t } = useTranslation("manager");
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -154,19 +158,19 @@ export default function ManagerExpensesPage() {
   return (
     <AppShell role="MANAGER">
       <PageShell>
-        <PageHeader title="Expenses" />
+        <PageHeader title={t("manager:financeExpenses.title.expenses")} />
         <PageContent>
           {error && (
             <Panel className="bg-red-50 border-red-200">
-              <strong className="text-red-700">Error:</strong> {error}
-              <button onClick={() => setError("")} className="action-btn-dismiss">Dismiss</button>
+              <strong className="text-red-700">{t("manager:financeExpenses.text.error")}</strong> {error}
+              <button onClick={() => setError("")} className="action-btn-dismiss">{t("manager:financeExpenses.text.dismiss")}</button>
             </Panel>
           )}
 
           <div className="flex items-center gap-2 mb-3">
             <input
               type="search"
-              placeholder="Search expenses…"
+              placeholder={t("manager:financeExpenses.placeholder.searchExpenses")}
               value={expSearch}
               onChange={(e) => setExpSearch(e.target.value)}
               className="filter-input flex-1 min-w-0 mb-0"
@@ -175,29 +179,29 @@ export default function ManagerExpensesPage() {
           </div>
           {filterOpen && (
             <FilterPanelBody>
-              <FilterSection title="Category" first>
+              <FilterSection title={t("manager:financeExpenses.title.category")} first>
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                  <SelectField label="Category" value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
-                    <option value="">All categories</option>
+                  <SelectField label={t("manager:financeExpenses.title.category")} value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
+                    <option value="">{t("manager:financeExpenses.text.allCategories")}</option>
                     {EXPENSE_CATEGORIES.map((cat) => <option key={cat} value={cat}>{cat}</option>)}
                   </SelectField>
                 </div>
               </FilterSection>
-              <FilterSection title="Scope">
+              <FilterSection title={t("manager:financeExpenses.title.scope")}>
                 <div className="grid grid-cols-2 gap-3">
-                  <SelectField label="Building" value={buildingId} onChange={(e) => setBuildingId(e.target.value)}>
-                    <option value="">All buildings</option>
+                  <SelectField label={t("manager:financeExpenses.prop.building")} value={buildingId} onChange={(e) => setBuildingId(e.target.value)}>
+                    <option value="">{t("manager:financeExpenses.text.allBuildings")}</option>
                     {buildings.map((b) => <option key={b.id} value={b.id}>{b.name || b.address}</option>)}
                   </SelectField>
                   {expenseTypes.length > 0 && (
-                    <SelectField label="Expense Type" value={expenseTypeId} onChange={(e) => setExpenseTypeId(e.target.value)}>
-                      <option value="">All expense types</option>
+                    <SelectField label={t("manager:financeExpenses.prop.expenseType")} value={expenseTypeId} onChange={(e) => setExpenseTypeId(e.target.value)}>
+                      <option value="">{t("manager:financeExpenses.text.allExpenseTypes")}</option>
                       {expenseTypes.map((et) => <option key={et.id} value={et.id}>{et.code} — {et.name}</option>)}
                     </SelectField>
                   )}
                   {accounts.length > 0 && (
-                    <SelectField label="Account" value={accountId} onChange={(e) => setAccountId(e.target.value)}>
-                      <option value="">All accounts</option>
+                    <SelectField label={t("manager:financeExpenses.prop.account")} value={accountId} onChange={(e) => setAccountId(e.target.value)}>
+                      <option value="">{t("manager:financeExpenses.text.allAccounts")}</option>
                       {accounts.map((a) => <option key={a.id} value={a.id}>{a.code} — {a.name}</option>)}
                     </SelectField>
                   )}
@@ -208,7 +212,7 @@ export default function ManagerExpensesPage() {
           )}
 
           {loading ? (
-            <Panel><p className="m-0">Loading expenses...</p></Panel>
+            <Panel><p className="m-0">{t("manager:financeExpenses.text.loadingExpenses")}</p></Panel>
           ) : (
             <ConfigurableTable
                 tableId="manager-expenses"
@@ -279,7 +283,7 @@ export default function ManagerExpensesPage() {
                 sortDir={sortDir}
                 onSort={handleSort}
                 emptyState={
-                  <p className="px-4 py-8 text-center text-sm text-slate-400">No expenses found. Tag invoices with an expense category to track them here.</p>
+                  <p className="px-4 py-8 text-center text-sm text-slate-400">{t("manager:financeExpenses.text.noExpensesFoundTagInvoicesWithAnExpenseCategoryToTrackThemHere")}</p>
                 }
                 mobileCard={(inv) => (
                   <div className="table-card">
@@ -301,3 +305,5 @@ export default function ManagerExpensesPage() {
     </AppShell>
   );
 }
+
+export const getStaticProps = withTranslations(["common","manager"]);

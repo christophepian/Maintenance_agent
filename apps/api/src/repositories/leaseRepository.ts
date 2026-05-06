@@ -10,7 +10,7 @@
  * G9: canonical include constants live here.
  */
 
-import { PrismaClient, LeaseStatus, RequestStatus, JobStatus } from "@prisma/client";
+import { PrismaClient, LeaseStatus, RequestStatus, JobStatus, Prisma } from "@prisma/client";
 
 // ─── Canonical Includes ────────────────────────────────────────
 
@@ -58,8 +58,8 @@ export async function listLeases(
     offset?: number;
   } = {},
 ) {
-  const where: any = { orgId, isTemplate: false, deletedAt: null };
-  if (filters.status) where.status = filters.status;
+  const where: Prisma.LeaseWhereInput = { orgId, isTemplate: false, deletedAt: null };
+  if (filters.status) where.status = filters.status as LeaseStatus;
   if (filters.unitId) where.unitId = filters.unitId;
   if (filters.applicationId) where.applicationId = filters.applicationId;
   if (filters.expenseTypeId) where.expenseItems = { some: { expenseTypeId: filters.expenseTypeId } };
@@ -89,7 +89,7 @@ export async function listLeases(
 /** Create a new lease record. */
 export async function createLease(
   prisma: PrismaClient,
-  data: any,
+  data: Prisma.LeaseUncheckedCreateInput,
 ) {
   return prisma.lease.create({
     data,
@@ -101,7 +101,7 @@ export async function createLease(
 export async function updateLease(
   prisma: PrismaClient,
   id: string,
-  data: any,
+  data: Prisma.LeaseUpdateInput,
 ) {
   return prisma.lease.update({
     where: { id },
@@ -114,7 +114,7 @@ export async function updateLease(
 export async function updateLeaseRaw(
   prisma: PrismaClient,
   id: string,
-  data: any,
+  data: Prisma.LeaseUpdateInput,
 ) {
   return prisma.lease.update({
     where: { id },
@@ -130,7 +130,7 @@ export async function findTemplates(
   orgId: string,
   buildingId?: string,
 ) {
-  const where: any = { orgId, isTemplate: true, deletedAt: null };
+  const where: Prisma.LeaseWhereInput = { orgId, isTemplate: true, deletedAt: null };
   if (buildingId) where.templateBuildingId = buildingId;
 
   return prisma.lease.findMany({
@@ -165,7 +165,7 @@ export async function createTenant(
 export async function updateTenant(
   prisma: PrismaClient,
   id: string,
-  data: any,
+  data: Prisma.TenantUpdateInput,
 ) {
   return prisma.tenant.update({ where: { id }, data });
 }
@@ -233,8 +233,8 @@ export async function countLeases(
   orgId: string,
   filters: { status?: string; unitId?: string; applicationId?: string; expenseTypeId?: string } = {},
 ) {
-  const where: any = { orgId, isTemplate: false };
-  if (filters.status) where.status = filters.status;
+  const where: Prisma.LeaseWhereInput = { orgId, isTemplate: false };
+  if (filters.status) where.status = filters.status as LeaseStatus;
   if (filters.unitId) where.unitId = filters.unitId;
   if (filters.applicationId) where.applicationId = filters.applicationId;
   if (filters.expenseTypeId) where.expenseItems = { some: { expenseTypeId: filters.expenseTypeId } };
@@ -278,3 +278,91 @@ export async function listInvoicesByLease(
     orderBy: { createdAt: "desc" },
   });
 }
+
+// ─── Rent Reduction / Legal Engine Lease Lookups ──────────────
+
+/** Select fields needed for rent reduction calculation. */
+const LEASE_RENT_SELECT = {
+  id: true,
+  status: true,
+  netRentChf: true,
+  startDate: true,
+  endDate: true,
+} as const;
+
+/**
+ * Load a lease by ID with only the fields needed for rent reduction.
+ */
+export async function findLeaseForRentReduction(
+  prisma: PrismaClient,
+  leaseId: string,
+) {
+  return prisma.lease.findUnique({
+    where: { id: leaseId },
+    select: LEASE_RENT_SELECT,
+  });
+}
+
+/**
+ * Find the most recent active/signed lease for a unit.
+ * Returns only the lease id.
+ */
+export async function findActiveLeaseForUnit(
+  prisma: PrismaClient,
+  unitId: string,
+) {
+  return prisma.lease.findFirst({
+    where: { unitId, status: { in: ["ACTIVE", "SIGNED"] } },
+    orderBy: { startDate: "desc" },
+    select: { id: true },
+  });
+}
+
+/**
+ * Find active leases for a building (via unit relation).
+ * Returns rentTotalChf for income projection fallback.
+ */
+export async function findActiveLeasesByBuilding(
+  prisma: PrismaClient,
+  buildingId: string,
+) {
+  return prisma.lease.findMany({
+    where: { unit: { buildingId }, status: "ACTIVE" },
+    select: { rentTotalChf: true },
+  });
+}
+
+// ─── Tenant lookup with occupancies (tenant portal) ───────────
+
+/** Include for tenant session — occupancies with unit → building + assets. */
+export const TENANT_SESSION_INCLUDE = {
+  occupancies: {
+    include: {
+      unit: {
+        include: {
+          building: true,
+          assets: {
+            include: {
+              assetModel: true,
+            },
+          },
+        },
+      },
+    },
+  },
+} as const;
+
+/**
+ * Find a tenant by org + phone with full occupancy context for portal session.
+ */
+export async function findTenantByPhoneWithOccupancies(
+  prisma: PrismaClient,
+  orgId: string,
+  phone: string,
+) {
+  return prisma.tenant.findUnique({
+    where: { orgId_phone: { orgId, phone } },
+    include: TENANT_SESSION_INCLUDE,
+  });
+}
+

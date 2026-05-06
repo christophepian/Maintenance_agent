@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
+import { useTranslation } from "next-i18next";
 import ConfigurableTable from "./ConfigurableTable";
 import ErrorBanner from "./ui/ErrorBanner";
 import { formatDate } from "../lib/format";
@@ -11,25 +12,24 @@ import {
   SortToggle, SortPanelBody, SortRow, CheckboxGroupField,
 } from "./ui/FilterPanel";
 
-const SELECTION_LABELS = {
-  AWAITING_SIGNATURE: "Awaiting Signature",
-  FALLBACK_1: "Fallback 1 Active",
-  FALLBACK_2: "Fallback 2 Active",
+const SELECTION_LABEL_KEYS = {
+  AWAITING_SIGNATURE: "selection.AWAITING_SIGNATURE",
+  FALLBACK_1: "selection.FALLBACK_1",
+  FALLBACK_2: "selection.FALLBACK_2",
 };
-function statusBadge(status) {
+function statusBadge(status, t) {
   return (
     <Badge variant={selectionVariant(status)} size="sm">
-      {SELECTION_LABELS[status] || status}
+      {t(SELECTION_LABEL_KEYS[status] || "status.pending")}
     </Badge>
   );
 }
 
-function leaseBadge(lease) {
-  if (!lease) return <span className="text-xs text-slate-400">No lease yet</span>;
-  const LEASE_LABELS = { DRAFT: "Draft", READY_TO_SIGN: "Ready to Sign", SIGNED: "Signed" };
+function leaseBadge(lease, t) {
+  if (!lease) return <span className="text-xs text-slate-400">{t("vacancies.noLease")}</span>;
   return (
     <Badge variant={leaseVariant(lease.status)} size="sm">
-      {LEASE_LABELS[lease.status] || lease.status}
+      {t(`leaseStatus.${lease.status}`, { defaultValue: lease.status })}
     </Badge>
   );
 }
@@ -43,11 +43,12 @@ function leaseBadge(lease) {
  * @param {number} [props.refreshKey] — increment to trigger data reload
  */
 const VACANCY_SUB_TABS = [
-  { key: "candidates", label: "Candidate Selection" },
-  { key: "signature", label: "Awaiting Signature" },
+  { key: "candidates", labelKey: "vacancies.tabCandidates" },
+  { key: "signature",  labelKey: "vacancies.tabSignature" },
 ];
 
 export default function VacanciesPanel({ role = "OWNER", refreshKey = 0 }) {
+  const { t } = useTranslation("common");
   // ── Tab ──────────────────────────────────────────────────────
   const [subTab, setSubTab] = useState("candidates");
 
@@ -195,7 +196,7 @@ export default function VacanciesPanel({ role = "OWNER", refreshKey = 0 }) {
 
       {/* Segmented control */}
       <div className="inline-flex rounded-lg border border-slate-200 bg-slate-100 p-0.5 gap-0.5 mb-4">
-        {VACANCY_SUB_TABS.map(({ key, label }) => (
+        {VACANCY_SUB_TABS.map(({ key, labelKey }) => (
           <button
             key={key}
             onClick={() => switchTab(key)}
@@ -206,7 +207,7 @@ export default function VacanciesPanel({ role = "OWNER", refreshKey = 0 }) {
                 : "text-slate-500 hover:text-slate-700",
             ].join(" ")}
           >
-            {label}
+            {t(labelKey)}
           </button>
         ))}
       </div>
@@ -394,9 +395,9 @@ export default function VacanciesPanel({ role = "OWNER", refreshKey = 0 }) {
                   ? <span><span className="font-medium text-slate-900">{sel.primaryCandidate.name}</span><span className="ml-2 text-xs text-slate-400">{sel.primaryCandidate.email}</span></span>
                   : <span className="text-slate-400">—</span> },
               { id: "status", label: "Status", sortable: false, defaultVisible: true,
-                render: (sel) => statusBadge(sel.status) },
+                render: (sel) => statusBadge(sel.status, t) },
               { id: "lease", label: "Lease", sortable: false, defaultVisible: true,
-                render: (sel) => leaseBadge(sel.lease) },
+                render: (sel) => leaseBadge(sel.lease, t) },
               { id: "received", label: "Received on", sortable: false, defaultVisible: true,
                 render: (sel) => formatDate(sel.createdAt) },
               { id: "deadline", label: "Deadline", sortable: false, defaultVisible: true,
@@ -404,7 +405,7 @@ export default function VacanciesPanel({ role = "OWNER", refreshKey = 0 }) {
             ]}
             data={filteredSelections}
             rowKey="id"
-            emptyState={<p className="empty-state-text">No units awaiting tenant signature{search || buildingFilter.length > 0 ? " match your filters" : ""}.</p>}
+            emptyState={<p className="empty-state-text">{t("vacancies.emptySignature")}{search || buildingFilter.length > 0 ? ` ${t("empty.noResults")}` : ""}.</p>}
             mobileCard={(sel) => (
               <div className="table-card">
                 <div className="flex items-start justify-between gap-2">
@@ -412,15 +413,15 @@ export default function VacanciesPanel({ role = "OWNER", refreshKey = 0 }) {
                     <p className="table-card-head">{sel.unitNumber || "—"}</p>
                     <p className="table-card-sub">{sel.buildingName || "—"}</p>
                   </div>
-                  {statusBadge(sel.status)}
+                  {statusBadge(sel.status, t)}
                 </div>
                 <p className="mt-2 text-[13px] text-slate-700">
                   {sel.primaryCandidate
                     ? sel.primaryCandidate.name
-                    : <span className="text-slate-400">No candidate</span>}
+                    : <span className="text-slate-400">{t("empty.noData")}</span>}
                 </p>
                 <div className="table-card-footer">
-                  {leaseBadge(sel.lease)}
+                  {leaseBadge(sel.lease, t)}
                   <span>Received {formatDate(sel.createdAt)}</span>
                 </div>
               </div>

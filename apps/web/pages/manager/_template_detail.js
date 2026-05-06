@@ -11,6 +11,7 @@ import PageContent from "../../components/layout/PageContent";
 import Panel from "../../components/layout/Panel";
 import ErrorBanner from "../../components/ui/ErrorBanner";
 import { authHeaders } from "../../lib/api";
+import { withTranslations } from "../../lib/i18n";
 
 export default function TemplateDetailPage() {
   const router = useRouter();
@@ -99,10 +100,10 @@ export default function TemplateDetailPage() {
 
               {/* ── Section 2: Related items table ──
                    Panel with bodyClassName="p-0" so the table sits flush.
-                   Use the inline-table CSS class from globals.css. */}
+                   Use the data-table CSS class from globals.css. */}
               <Panel title="Related Items" bodyClassName="p-0">
                 {/* REPLACE: Table of related entities */}
-                <table className="inline-table">
+                <table className="data-table">
                   <thead>
                     <tr>
                       <th className="cell-bold">Name</th>
@@ -127,3 +128,5 @@ export default function TemplateDetailPage() {
     </AppShell>
   );
 }
+
+export const getStaticProps = withTranslations(["common", "manager"]);

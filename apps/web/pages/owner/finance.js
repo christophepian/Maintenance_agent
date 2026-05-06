@@ -17,29 +17,32 @@ import { invoiceVariant } from "../../lib/statusVariants";
 import { formatChf, formatChfCents, formatDate, formatPercent } from "../../lib/format";
 import { ownerAuthHeaders } from "../../lib/api";
 import { useTableSort, useLocalSort, clientSort } from "../../lib/tableUtils";
+import SortableHeader from "../../components/SortableHeader";
 import { cn } from "../../lib/utils";
+import { withTranslations } from "../../lib/i18n";
+import { useTranslation } from "next-i18next";
 
 /* ═══════════════════════════════════════════════════════════════
    Constants
    ═══════════════════════════════════════════════════════════════ */
 
 const FINANCE_TABS = [
-  { key: "overview", label: "Overview" },
-  { key: "invoices", label: "Invoices" },
-  { key: "planning", label: "Planning" },
+  { key: "overview" },
+  { key: "invoices" },
+  { key: "planning" },
 ];
 
 const STATUS_TABS = [
-  { key: "ALL",      label: "All" },
-  { key: "ISSUED",   label: "Issued" },
-  { key: "APPROVED", label: "Approved" },
-  { key: "PAID",     label: "Paid" },
-  { key: "DISPUTED", label: "Disputed" },
+  { key: "ALL" },
+  { key: "ISSUED" },
+  { key: "APPROVED" },
+  { key: "PAID" },
+  { key: "DISPUTED" },
 ];
 
 const DIRECTION_TABS = [
-  { key: "incoming", label: "Incoming", icon: "📥" },
-  { key: "outgoing", label: "Outgoing", icon: "📤" },
+  { key: "incoming", icon: "📥" },
+  { key: "outgoing", icon: "📤" },
 ];
 
 const INGESTION_LABEL = {
@@ -124,6 +127,7 @@ function SourceChannelIcon({ channel }) {
 }
 
 function ActionDropdown({ actions }) {
+  const { t } = useTranslation("owner");
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   useEffect(() => {
@@ -141,7 +145,7 @@ function ActionDropdown({ actions }) {
         type="button"
         onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }}
         className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition"
-        aria-label="Invoice actions"
+        aria-label={t("owner:finance.ariaLabel.invoiceActions")}
       >
         Actions ▾
       </button>
@@ -171,12 +175,14 @@ function ActionDropdown({ actions }) {
    ═══════════════════════════════════════════════════════════════ */
 
 function OverviewTab() {
+  const { t } = useTranslation("owner");
   const [range, setRange] = useState(defaultRange);
   const [portfolio, setPortfolio] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [buildingsExpanded, setBuildingsExpanded] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
+  const { sortField: bSF, sortDir: bSD, handleSort: handleBSort } = useLocalSort("buildingName", "asc");
 
   const fetchPortfolio = useCallback(async () => {
     setLoading(true);
@@ -198,17 +204,26 @@ function OverviewTab() {
 
   const p = portfolio;
   const netAccent = p ? (p.totalNetIncomeCents > 0 ? "green" : p.totalNetIncomeCents < 0 ? "red" : "") : "";
+  const sortedBuildings = useMemo(() => clientSort(p?.buildings ?? [], bSF, bSD, (b, f) => {
+    if (f === "buildingName") return (b.buildingName || "").toLowerCase();
+    if (f === "earnedIncomeCents") return b.earnedIncomeCents ?? 0;
+    if (f === "expensesTotalCents") return b.expensesTotalCents ?? 0;
+    if (f === "netIncomeCents") return b.netIncomeCents ?? 0;
+    if (f === "collectionRate") return b.collectionRate ?? 0;
+    if (f === "receivablesCents") return b.receivablesCents ?? 0;
+    return "";
+  }), [p?.buildings, bSF, bSD]);
 
   return (
     <div className="space-y-6">
       <div>
-        <FilterToggle open={filterOpen} onToggle={() => setFilterOpen((v) => !v)} activeCount={0} label="Date range" />
+        <FilterToggle open={filterOpen} onToggle={() => setFilterOpen((v) => !v)} activeCount={0} label={t("owner:finance.title.dateRange")} />
         {filterOpen && (
           <FilterPanelBody>
-            <FilterSection title="Date range" first>
+            <FilterSection title={t("owner:finance.title.dateRange")} first>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                <DateField label="From" value={range.from} onChange={(e) => setRange((r) => ({ ...r, from: e.target.value }))} />
-                <DateField label="To"   value={range.to}   onChange={(e) => setRange((r) => ({ ...r, to: e.target.value }))} />
+                <DateField label={t("owner:finance.prop.from")} value={range.from} onChange={(e) => setRange((r) => ({ ...r, from: e.target.value }))} />
+                <DateField label={t("owner:finance.prop.to")}   value={range.to}   onChange={(e) => setRange((r) => ({ ...r, to: e.target.value }))} />
               </div>
             </FilterSection>
             <FilterSectionClear
@@ -222,7 +237,7 @@ function OverviewTab() {
       <ErrorBanner error={error} onDismiss={() => setError("")} />
 
       {loading && !p ? (
-        <p className="loading-text">Loading portfolio summary…</p>
+        <p className="loading-text">{t("owner:finance.text.loadingPortfolioSummary")}</p>
       ) : p && (
         <>
           <Section>
@@ -240,18 +255,18 @@ function OverviewTab() {
             </div>
             {/* Desktop KPI cards */}
             <div className="hidden sm:grid grid-cols-2 md:grid-cols-5 gap-3">
-              <SummaryCard label="Earned Income"  value={formatChfCents(p.totalEarnedIncomeCents)} accent="green" />
-              <SummaryCard label="Total Expenses" value={formatChfCents(p.totalExpensesCents)} />
-              <SummaryCard label="Net Result"     value={formatChfCents(p.totalNetIncomeCents)} accent={netAccent} sub="Income − Expenses" />
-              <SummaryCard label="Receivables"    value={formatChfCents(p.totalReceivablesCents)} accent={p.totalReceivablesCents > 0 ? "amber" : ""} sub="Unpaid rent invoices" />
-              <SummaryCard label="Payables"       value={formatChfCents(p.totalPayablesCents)} accent={p.totalPayablesCents > 0 ? "amber" : ""} sub="Unpaid supplier invoices" />
+              <SummaryCard label={t("owner:finance.prop.earnedIncome")}  value={formatChfCents(p.totalEarnedIncomeCents)} accent="green" />
+              <SummaryCard label={t("owner:finance.prop.totalExpenses")} value={formatChfCents(p.totalExpensesCents)} />
+              <SummaryCard label={t("owner:finance.prop.netResult")}     value={formatChfCents(p.totalNetIncomeCents)} accent={netAccent} sub="Income − Expenses" />
+              <SummaryCard label={t("owner:finance.prop.receivables")}    value={formatChfCents(p.totalReceivablesCents)} accent={p.totalReceivablesCents > 0 ? "amber" : ""} sub="Unpaid rent invoices" />
+              <SummaryCard label={t("owner:finance.prop.payables")}       value={formatChfCents(p.totalPayablesCents)} accent={p.totalPayablesCents > 0 ? "amber" : ""} sub="Unpaid supplier invoices" />
             </div>
           </Section>
 
-          <Section title="Buildings">
+          <Section title={t("owner:finance.title.buildings")}>
             {/* Stats row */}
             <div className="flex gap-4 text-xs text-slate-500">
-              <span>Avg collection rate: <strong>{formatPercent(p.avgCollectionRate)}</strong></span>
+              <span>{t("owner:finance.text.avgCollectionRate")} <strong>{formatPercent(p.avgCollectionRate)}</strong></span>
               {p.buildingsInRed > 0 && (
                 <span className="text-destructive-text font-medium">
                   {p.buildingsInRed} building{p.buildingsInRed !== 1 ? "s" : ""} need attention
@@ -259,12 +274,12 @@ function OverviewTab() {
               )}
             </div>
             {p.buildings.length === 0 ? (
-              <div className="empty-state"><p className="empty-state-text">No buildings in this portfolio yet.</p></div>
+              <div className="empty-state"><p className="empty-state-text">{t("owner:finance.text.noBuildingsInThisPortfolioYet")}</p></div>
             ) : (
               <>
                 {/* Mobile */}
                 <div className="md:hidden overflow-hidden rounded-lg border border-table-border divide-y divide-table-divider">
-                  {(buildingsExpanded ? p.buildings : p.buildings.slice(0, 5)).map((b) => (
+                  {(buildingsExpanded ? sortedBuildings : sortedBuildings.slice(0, 5)).map((b) => (
                     <div key={b.buildingId} className="table-card">
                       <div className="flex items-center gap-2">
                         <HealthDot health={b.health} />
@@ -283,19 +298,19 @@ function OverviewTab() {
                 {/* Desktop */}
                 <div className="hidden md:block overflow-hidden rounded-lg border border-table-border">
                   <div className="overflow-x-auto">
-                    <table className="inline-table">
+                    <table className="data-table">
                       <thead>
                         <tr>
-                          <th>Building</th>
-                          <th className="text-right">Earned Income</th>
-                          <th className="text-right">Expenses</th>
-                          <th className="text-right">Net</th>
-                          <th className="text-right">Collection</th>
-                          <th className="text-right">Receivables</th>
+                          <SortableHeader label={t("owner:finance.prop.building")} field="buildingName" sortField={bSF} sortDir={bSD} onSort={handleBSort} />
+                          <SortableHeader label={t("owner:finance.prop.earnedIncome")} field="earnedIncomeCents" sortField={bSF} sortDir={bSD} onSort={handleBSort} className="text-right" />
+                          <SortableHeader label={t("owner:finance.prop.expenses")} field="expensesTotalCents" sortField={bSF} sortDir={bSD} onSort={handleBSort} className="text-right" />
+                          <SortableHeader label={t("owner:finance.prop.net")} field="netIncomeCents" sortField={bSF} sortDir={bSD} onSort={handleBSort} className="text-right" />
+                          <SortableHeader label={t("owner:finance.prop.collection")} field="collectionRate" sortField={bSF} sortDir={bSD} onSort={handleBSort} className="text-right" />
+                          <SortableHeader label={t("owner:finance.prop.receivables")} field="receivablesCents" sortField={bSF} sortDir={bSD} onSort={handleBSort} className="text-right" />
                         </tr>
                       </thead>
                       <tbody>
-                        {(buildingsExpanded ? p.buildings : p.buildings.slice(0, 5)).map((b) => (
+                        {(buildingsExpanded ? sortedBuildings : sortedBuildings.slice(0, 5)).map((b) => (
                           <tr key={b.buildingId}>
                             <td>
                               <span className="flex items-center gap-2">
@@ -320,7 +335,7 @@ function OverviewTab() {
                     </table>
                   </div>
                 </div>
-                {p.buildings.length > 5 && (
+                  {sortedBuildings.length > 5 && (
                   <div className="expand-footer" onClick={() => setBuildingsExpanded((v) => !v)}>
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"
                       className={cn("w-4 h-4 transition-transform duration-200", buildingsExpanded ? "rotate-180" : "")}>
@@ -345,6 +360,7 @@ function OverviewTab() {
 
 
 function InvoicesTab() {
+  const { t } = useTranslation("owner");
   const router = useRouter();
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -430,7 +446,7 @@ function InvoicesTab() {
   const invoiceColumns = useMemo(() => [
     {
       id: "status",
-      label: "Status",
+      label: t("owner:finance.col.status"),
       sortable: true,
       defaultVisible: true,
       render: (inv) => (
@@ -443,7 +459,7 @@ function InvoicesTab() {
     },
     {
       id: "invoiceNumber",
-      label: "Invoice #",
+      label: t("owner:finance.col.invoice"),
       sortable: true,
       defaultVisible: true,
       className: "cell-bold",
@@ -451,21 +467,21 @@ function InvoicesTab() {
     },
     {
       id: "issuerOrRecipient",
-      label: isOutgoing ? "Tenant" : "Issuer",
+      label: isOutgoing ? t("owner:finance.col.tenant") : t("owner:finance.col.issuer"),
       sortable: false,
       defaultVisible: true,
       render: (inv) => (isOutgoing ? inv.recipientName : inv.issuerName) || <span className="text-slate-400">—</span>,
     },
     {
       id: "createdAt",
-      label: "Date",
+      label: t("owner:finance.col.date"),
       sortable: true,
       defaultVisible: true,
       render: (inv) => formatDate(inv.createdAt),
     },
     {
       id: "amount",
-      label: "Amount",
+      label: t("owner:finance.col.amount"),
       sortable: true,
       defaultVisible: true,
       render: (inv) => formatChf(getInvoiceTotal(inv)),
@@ -502,7 +518,7 @@ function InvoicesTab() {
             <p className="text-sm font-semibold text-amber-700">
               {approvalCount} invoice{approvalCount !== 1 ? "s" : ""} awaiting your approval
             </p>
-            <p className="text-xs text-amber-600">Review issued invoices and approve or dispute them</p>
+            <p className="text-xs text-amber-600">{t("owner:finance.text.reviewIssuedInvoicesAndApproveOrDisputeThem")}</p>
           </div>
           <button onClick={() => setStatusFilter("ISSUED")} className="rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-700 transition">
             Review now
@@ -514,7 +530,7 @@ function InvoicesTab() {
       <div className="flex items-center gap-2">
         <input
           type="search"
-          placeholder="Search invoices…"
+          placeholder={t("owner:finance.placeholder.searchInvoices")}
           value={invSearch}
           onChange={(e) => { setInvSearch(e.target.value); setTableExpanded(false); }}
           className="filter-input flex-1 min-w-0 mb-0"
@@ -525,7 +541,7 @@ function InvoicesTab() {
       {/* Filter panel */}
       {filterOpen && (
         <FilterPanelBody>
-          <FilterSection title="Direction" first>
+          <FilterSection title={t("owner:finance.title.direction")} first>
             <div className="flex flex-wrap gap-2">
               {[{ key: "incoming", label: "📥 Incoming" }, { key: "outgoing", label: "📤 Outgoing" }].map(({ key, label }) => (
                 <button
@@ -541,7 +557,7 @@ function InvoicesTab() {
               ))}
             </div>
           </FilterSection>
-          <FilterSection title="Status">
+          <FilterSection title={t("owner:finance.title.status")}>
             <div className="flex flex-wrap gap-2">
               {STATUS_TABS.map(({ key, label }) => (
                 <button
@@ -562,7 +578,7 @@ function InvoicesTab() {
       )}
 
       {loading ? (
-        <p className="loading-text">Loading invoices…</p>
+        <p className="loading-text">{t("owner:finance.text.loadingInvoices")}</p>
       ) : filteredInvoices.length === 0 ? (
         <div className="empty-state">
           <p className="empty-state-text">{invoices.length === 0 ? "No invoices yet." : "No invoices match this filter."}</p>
@@ -630,6 +646,7 @@ function InvoicesTab() {
    ═══════════════════════════════════════════════════════════════ */
 
 export default function OwnerFinance() {
+  const { t } = useTranslation("owner");
   const router = useRouter();
 
   const tabKeys = FINANCE_TABS.map((t) => t.key);
@@ -648,8 +665,8 @@ export default function OwnerFinance() {
       <PageShell>
         <OwnerPicker />
         <PageHeader
-          title="Finance"
-          subtitle="Portfolio summary, invoices, and cashflow planning"
+          title={t("owner:finance.title.finance")}
+          subtitle={t("owner:finance.prop.portfolioSummaryInvoicesAndCashflowPlanning")}
         />
         <PageContent>
           <div>
@@ -660,7 +677,7 @@ export default function OwnerFinance() {
                   onClick={() => setActiveTabKey(tab.key)}
                   className={activeTabKey === tab.key ? "tab-btn-active" : "tab-btn"}
                 >
-                  {tab.label}
+                  {t(`owner:finance.tabs.${tab.key.toLowerCase()}`)}
                 </button>
               ))}
             </ScrollableTabs>
@@ -675,3 +692,5 @@ export default function OwnerFinance() {
     </AppShell>
   );
 }
+
+export const getStaticProps = withTranslations(["common","owner"]);

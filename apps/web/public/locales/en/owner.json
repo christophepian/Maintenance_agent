@@ -1,0 +1,764 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "properties": "Properties",
+    "finance": "Finance",
+    "invoices": "Invoices",
+    "leases": "Leases",
+    "jobs": "Jobs",
+    "requests": "Requests",
+    "reporting": "Reporting",
+    "approvals": "Approvals",
+    "settings": "Settings"
+  },
+  "dashboard": {
+    "title": "Owner Dashboard",
+    "portfolio": "Portfolio",
+    "properties": "Properties",
+    "openRequests": "Open Requests",
+    "pendingInvoices": "Pending Invoices",
+    "feed": {
+      "noMatch": "No items match the selected filter.",
+      "showLess": "Show less"
+    },
+    "filter": {
+      "all": "All",
+      "approval": "Approvals",
+      "invoice": "Invoices"
+    },
+    "sort": {
+      "urgency": "Urgency",
+      "building": "Building",
+      "date": "Date",
+      "category": "Category"
+    },
+    "moreTools": {
+      "finance": "Finance",
+      "title": "More tools",
+      "properties": "Properties",
+      "settings": "Settings"
+    },
+    "chip": {
+      "approval": "Needs approval",
+      "invoice": "Invoice pending",
+      "rfp": "RFP to review",
+      "vacancy": "Vacant unit"
+    },
+    "hero": {
+      "allClear": "Everything looks good — no items need attention right now.",
+      "one": "1 item needs your attention today.",
+      "many": "{{count}} items need your attention today."
+    },
+    "kpi": {
+      "title": "Portfolio summary",
+      "netIncomeYtd": "Net income YTD",
+      "occupancy": "Occupancy",
+      "vacancies": "Vacancies",
+      "buildings": "Buildings"
+    }
+  },
+  "strategyBanner": {
+    "title": "Set your property strategy",
+    "description": "Get tailored recommendations on maintenance, cashflow, and repair decisions. Takes under 2 minutes.",
+    "cta": "Set my strategy",
+    "dismiss": "Remind me later"
+  },
+  "recommendation": {
+    "title": "Strategy Recommendation",
+    "feedbackPlaceholder": "Any comments on this recommendation…",
+    "acceptAriaLabel": "Accept recommendation",
+    "deferAriaLabel": "Defer recommendation",
+    "rejectAriaLabel": "Reject recommendation",
+    "decision": {
+      "accepted": "Accepted",
+      "rejected": "Rejected",
+      "deferred": "Deferred",
+      "pending": "Pending"
+    },
+    "optionType": {
+      "replace_full": "Full Replacement",
+      "replace_component": "Component Replacement",
+      "repair": "Repair",
+      "defer": "Defer",
+      "upgrade": "Upgrade"
+    }
+  },
+  "renovation": {
+    "taxCategory": {
+      "WERTERHALTEND": "Value preserving",
+      "WERTVERMEHREND": "Value enhancing",
+      "MIXED": "Mixed",
+      "ENERGY_ENVIRONMENT": "Energy / environment"
+    },
+    "deductibility": {
+      "IMMEDIATE_DEDUCTION": "Usually expensed in current year",
+      "CAPITALIZED": "Usually capitalized over useful life",
+      "SPLIT": "Usually split between maintenance and improvement",
+      "ENERGY_DEDUCTION": "Usually deductible as energy/environment measure"
+    },
+    "timingSensitivity": {
+      "HIGH": "Timing likely matters a lot",
+      "MODERATE": "Timing likely matters moderately",
+      "LOW": "Timing likely matters little"
+    },
+    "buildingSystem": {
+      "FACADE": "Facade",
+      "WINDOWS": "Windows",
+      "ROOF": "Roof / Terrace",
+      "INTERIOR": "Interior",
+      "COMMON_AREAS": "Common Areas",
+      "BATHROOM": "Bathroom",
+      "KITCHEN": "Kitchen",
+      "APPLIANCES": "Appliances",
+      "MEP": "MEP / Utilities",
+      "EXTERIOR": "Exterior / Grounds",
+      "LAUNDRY": "Laundry"
+    },
+    "capex": {
+      "title": "CapEx Outlook",
+      "subtitle": "Portfolio-level projection from asset depreciation standards. Full scenario planning and actionable timing recommendations are available in cashflow plans.",
+      "viewPlans": "View cashflow plans →",
+      "loading": "Loading CapEx projection…",
+      "openPlanning": "Open Planning tab →",
+      "totalCapex": "Total projected CapEx",
+      "acrossBuildings": "Across all buildings",
+      "bundlingOpps": "Bundling opportunities",
+      "bundlingNone": "None identified",
+      "bundlingGroups": "Groups that can save on mobilisation",
+      "timingOpps": "Timing opportunities",
+      "timingNone": "None identified",
+      "timingShifts": "Scheduling shifts could save tax",
+      "nearestYear": "Nearest replacement year",
+      "firstYear": "First year with projected spend",
+      "bundlingRecs": "Bundling Recommendations",
+      "suggestion_one": "{{count}} suggestion",
+      "suggestion_other": "{{count}} suggestions"
+    },
+    "catalog": {
+      "disclaimer": "Decision-support guidance only — classifications show usual Swiss tax treatment for privately owned rental buildings. This is not legal or tax advice. Consult a qualified advisor for your specific situation.",
+      "valuePreserving": "Value Preserving",
+      "valuePreservingNote": "Usually immediately deductible",
+      "valueEnhancing": "Value Enhancing",
+      "valueEnhancingNote": "Usually capitalized",
+      "mixed": "Mixed",
+      "mixedNote": "Usually split",
+      "energyEnv": "Energy / Environment",
+      "energyEnvNote": "Usually deductible",
+      "buildingSystemLabel": "Building System",
+      "allSystems": "All systems",
+      "taxCategoryLabel": "Tax Category",
+      "allCategories": "All categories",
+      "searchLabel": "Search",
+      "searchPlaceholder": "Search renovation jobs…",
+      "clearFilters": "Clear filters",
+      "count_one": "{{count}} renovation job",
+      "count_other": "{{count}} renovation jobs",
+      "countOf": "(of {{total}} total)",
+      "loading": "Loading classification catalog…",
+      "empty": "No renovation jobs match your filters.",
+      "showLess": "Show less",
+      "showAll": "Show all {{count}} jobs",
+      "deductibilityLabel": "Deductibility",
+      "deductiblePortion": "Deductible portion",
+      "timingGuidanceLabel": "Timing guidance",
+      "notesLabel": "Notes",
+      "assetLinkable": "Can be linked to inventory assets"
+    }
+  },
+  "approvals": {
+    "placeholder": {
+      "eG42": "e.g. 42"
+    },
+    "title": {
+      "approvals": "Approvals",
+      "dateRange": "Date range",
+      "scope": "Scope",
+      "priority": "Priority",
+      "request": "Request #",
+      "status": "Status"
+    },
+    "text": {
+      "allBuildings": "All buildings",
+      "allUnits": "All units",
+      "allLevels": "All levels",
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High",
+      "emergency": "Emergency",
+      "loading": "Loading…",
+      "pendingApproval": "Pending approval",
+      "allRfps": "All RFPs",
+      "draft": "Draft",
+      "open": "Open",
+      "closed": "Closed",
+      "awarded": "Awarded",
+      "cancelled": "Cancelled"
+    },
+    "prop": {
+      "from": "From",
+      "to": "To",
+      "building": "Building",
+      "unit": "Unit",
+      "urgency": "Urgency",
+      "requestNumber": "Request number",
+      "requestDate": "Request date",
+      "quotePrice": "Quote price",
+      "show": "Show",
+      "category": "Category",
+      "quotes": "Quotes",
+      "created": "Created"
+    }
+  },
+  "billingEntities": {
+    "title": {
+      "ownerBillingEntities": "Owner Billing Entities"
+    }
+  },
+  "finance": {
+    "placeholder": {
+      "searchInvoices": "Search invoices…"
+    },
+    "title": {
+      "dateRange": "Date range",
+      "buildings": "Buildings",
+      "direction": "Direction",
+      "status": "Status",
+      "finance": "Finance"
+    },
+    "ariaLabel": {
+      "invoiceActions": "Invoice actions"
+    },
+    "text": {
+      "loadingPortfolioSummary": "Loading portfolio summary…",
+      "avgCollectionRate": "Avg collection rate:",
+      "noBuildingsInThisPortfolioYet": "No buildings in this portfolio yet.",
+      "reviewIssuedInvoicesAndApproveOrDisputeThem": "Review issued invoices and approve or dispute them",
+      "loadingInvoices": "Loading invoices…"
+    },
+    "prop": {
+      "from": "From",
+      "to": "To",
+      "earnedIncome": "Earned Income",
+      "totalExpenses": "Total Expenses",
+      "netResult": "Net Result",
+      "receivables": "Receivables",
+      "payables": "Payables",
+      "building": "Building",
+      "expenses": "Expenses",
+      "net": "Net",
+      "collection": "Collection",
+      "portfolioSummaryInvoicesAndCashflowPlanning": "Portfolio summary, invoices, and cashflow planning"
+    },
+    "tabs": {
+      "overview": "Overview",
+      "invoices": "Invoices",
+      "planning": "Planning",
+      "all": "All",
+      "issued": "Issued",
+      "approved": "Approved",
+      "paid": "Paid",
+      "disputed": "Disputed",
+      "incoming": "Incoming",
+      "outgoing": "Outgoing"
+    },
+    "col": {
+      "status": "Status",
+      "invoice": "Invoice #",
+      "date": "Date",
+      "amount": "Amount",
+      "tenant": "Tenant",
+      "issuer": "Issuer"
+    }
+  },
+  "financeInvoicesId": {
+    "col": {
+      "description": "Description",
+      "qty": "Qty",
+      "unitPrice": "Unit Price",
+      "vAT": "VAT %",
+      "total": "Total"
+    },
+    "heading": {
+      "disputeThisInvoice": "Dispute this invoice"
+    },
+    "placeholder": {
+      "describeWhyYouAreDisputingThisInvoice": "Describe why you are disputing this invoice…"
+    },
+    "title": {
+      "invoiceDetails": "Invoice Details",
+      "recipient": "Recipient",
+      "issuer": "Issuer",
+      "lineItems": "Line Items",
+      "accounting": "Accounting",
+      "originalCapture": "Original Capture",
+      "pDFPreview": "PDF Preview",
+      "invoicePdf": "Invoice PDF",
+      "timeline": "Timeline"
+    },
+    "ariaLabel": {
+      "disputeInvoice": "Dispute invoice"
+    },
+    "text": {
+      "error": "Error:",
+      "dismiss": "Dismiss",
+      "loadingInvoice": "Loading invoice…",
+      "invoiceNotFound": "Invoice not found.",
+      "created": "Created",
+      "submitted": "Submitted",
+      "approved": "Approved",
+      "paid": "Paid"
+    },
+    "prop": {
+      "invoiceNumber": "Invoice Number",
+      "direction": "Direction",
+      "currency": "Currency",
+      "subtotal": "Subtotal",
+      "issueDate": "Issue Date",
+      "dueDate": "Due Date",
+      "created": "Created",
+      "paymentRef": "Payment Ref",
+      "name": "Name",
+      "address": "Address",
+      "postalCodeCity": "Postal Code · City",
+      "country": "Country",
+      "expenseType": "Expense Type",
+      "account": "Account"
+    }
+  },
+  "index": {
+    "heading": {
+      "moreViews": "More views"
+    },
+    "title": {
+      "category": "Category"
+    },
+    "ariaLabel": {
+      "refreshDashboard": "Refresh dashboard"
+    },
+    "text": {
+      "portfolioSnapshot": "Portfolio snapshot",
+      "allClearNoItemsNeedYourAttention": "All clear — no items need your attention",
+      "checkBackAfterNewApprovalsOrInvoicesArrive": "Check back after new approvals or invoices arrive.",
+      "financeReportingStrategyAndLeaseManagement": "Finance reporting, strategy, and lease management.",
+      "reporting": "Reporting",
+      "leases": "Leases",
+      "allApprovals": "All approvals"
+    },
+    "prop": {
+      "monthlyRent": "Monthly rent",
+      "outstanding": "Outstanding",
+      "activeLeases": "Active leases",
+      "pendingApprovals": "Pending approvals",
+      "invoicesToReview": "Invoices to review",
+      "vacancyRate": "Vacancy rate",
+      "vacantUnits": "Vacant units"
+    }
+  },
+  "invoices": {
+    "heading": {
+      "downloadPdf": "Download PDF"
+    },
+    "title": {
+      "invoices": "Invoices",
+      "status": "Status",
+      "dateRange": "Date range"
+    },
+    "ariaLabel": {
+      "downloadPdf": "Download PDF"
+    },
+    "text": {
+      "includeQrBill": "Include QR bill",
+      "appendsTheSwissQrPaymentSlip": "Appends the Swiss QR payment slip",
+      "reviewIssuedInvoicesAndApproveOrDisputeThem": "Review issued invoices and approve or dispute them",
+      "loadingInvoices": "Loading invoices…"
+    },
+    "prop": {
+      "reviewApproveAndManageInvoicePayments": "Review, approve, and manage invoice payments",
+      "from": "From",
+      "to": "To"
+    },
+    "tabs": {
+      "all": "All",
+      "issued": "Issued",
+      "approved": "Approved",
+      "paid": "Paid",
+      "disputed": "Disputed",
+      "incoming": "Incoming",
+      "outgoing": "Outgoing"
+    },
+    "col": {
+      "status": "Status",
+      "invoice": "Invoice #",
+      "date": "Date",
+      "amount": "Amount",
+      "actions": "Actions",
+      "Approve": "✓ Approve",
+      "MarkAsPaid": "💰 Mark as Paid",
+      "DownloadPdf": "📄 Download PDF",
+      "Dispute": "⚠ Dispute",
+      "tenant": "Tenant",
+      "issuer": "Issuer"
+    }
+  },
+  "jobs": {
+    "title": {
+      "jobsOverview": "Jobs Overview",
+      "status": "Status",
+      "dateRange": "Date range",
+      "scope": "Scope",
+      "priority": "Priority"
+    },
+    "text": {
+      "allStatuses": "All statuses",
+      "pending": "Pending",
+      "inProgress": "In Progress",
+      "completed": "Completed",
+      "invoiced": "Invoiced",
+      "allBuildings": "All buildings",
+      "allUnits": "All units",
+      "allLevels": "All levels",
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High",
+      "emergency": "Emergency",
+      "loadingJobs": "Loading jobs...",
+      "requestDetails": "Request Details",
+      "location": "Location",
+      "tenant": "Tenant",
+      "contractor": "Contractor",
+      "asset": "Asset"
+    },
+    "prop": {
+      "from": "From",
+      "to": "To",
+      "building": "Building",
+      "unit": "Unit",
+      "urgency": "Urgency"
+    }
+  },
+  "properties": {
+    "title": {
+      "properties": "Properties"
+    },
+    "ariaLabel": {
+      "listView": "List view",
+      "monopolyBoardView": "Monopoly board view"
+    },
+    "text": {
+      "list": "List",
+      "monopoly": "Monopoly",
+      "loadingProperties": "Loading properties…",
+      "noPropertiesFound": "No properties found."
+    },
+    "prop": {
+      "units": "Units",
+      "avgRentUnit": "Avg rent / unit",
+      "collection": "Collection",
+      "buildingsAndUnitsInYourPortfolio": "Buildings and units in your portfolio"
+    },
+    "col": {
+      "building": "Building",
+      "address": "Address",
+      "units": "Units",
+      "status": "Status",
+      "canton": "Canton"
+    }
+  },
+  "reporting": {
+    "heading": {
+      "whatDrovePerformance": "What drove performance",
+      "byProperty": "By property",
+      "tenantMovements": "Tenant movements",
+      "periodInsights": "Period insights",
+      "fullFinancialDetail": "Full financial detail"
+    },
+    "ariaLabel": {
+      "previousYear": "Previous year",
+      "nextYear": "Next year"
+    },
+    "text": {
+      "income": "Income",
+      "expenses": "Expenses",
+      "net": "Net",
+      "collection": "Collection",
+      "rentCollected": "Rent collected:",
+      "operatingCosts": "Operating costs:",
+      "netResult": "Net result",
+      "accruedPayables": "Accrued payables",
+      "periodendBalance": "Period-end balance",
+      "highlight": "Highlight",
+      "theMainForcesBehindThisMonthsNumbers": "The main forces behind this month's numbers.",
+      "noMoveinsThisPeriod": "No move-ins this period.",
+      "noMoveoutsThisPeriod": "No move-outs this period.",
+      "whatThisPeriodsDataSuggestsForFuturePlanning": "What this period's data suggests for future planning."
+    },
+    "prop": {
+      "netIncome": "Net Income",
+      "rentCollected": "Rent Collected",
+      "totalExpenses": "Total Expenses",
+      "collectionRate": "Collection Rate"
+    }
+  },
+  "requestsId": {
+    "title": {
+      "legalAnalysis": "Legal Analysis",
+      "maintenanceDecision": "Maintenance Decision"
+    },
+    "ariaLabel": {
+      "backToApprovals": "Back to approvals",
+      "dismissError": "Dismiss error"
+    },
+    "text": {
+      "noAssetLinkedToThisRequest": "No asset linked to this request.",
+      "linkAnAssetToGetRepairReplaceRecommendations": "Link an asset to get repair / replace recommendations.",
+      "recommendation": "Recommendation",
+      "notAvailable": "Not available",
+      "estimatedPrice": "Estimated price",
+      "noRepairvsreplaceDataAvailableForThisAsset": "No repair-vs-replace data available for this asset.",
+      "estRepair": "Est. repair",
+      "estReplacement": "Est. replacement",
+      "tenantfunded": "Tenant-funded",
+      "error": "Error:",
+      "dismiss": "Dismiss",
+      "requestNotFound": "Request not found.",
+      "yourApprovalIsRequired": "Your approval is required",
+      "selectedContractor": "Selected Contractor",
+      "quoteAmount": "Quote Amount",
+      "building": "Building",
+      "unit": "Unit",
+      "tenant": "Tenant",
+      "description": "Description",
+      "contractor": "Contractor",
+      "asset": "Asset",
+      "noLegalAnalysisAvailableForThisRequest": "No legal analysis available for this request.",
+      "brand": "Brand",
+      "installed": "Installed"
+    },
+    "prop": {
+      "created": "Created",
+      "category": "Category",
+      "estimatedCost": "Estimated Cost",
+      "payingParty": "Paying Party",
+      "rejectionReason": "Rejection Reason",
+      "name": "Name",
+      "phone": "Phone",
+      "email": "Email",
+      "brand": "Brand",
+      "model": "Model",
+      "installed": "Installed"
+    }
+  },
+  "rfpsId": {
+    "title": {
+      "rFPDetails": "RFP Details"
+    },
+    "text": {
+      "loading": "Loading…",
+      "yourApprovalRequired": "⚠️ Your Approval Required",
+      "status": "Status",
+      "category": "Category",
+      "legalObligation": "Legal Obligation",
+      "building": "Building",
+      "unit": "Unit",
+      "quoteDeadline": "Quote Deadline",
+      "created": "Created",
+      "awardedTo": "Awarded To",
+      "exclVat": "excl. VAT",
+      "duration": "Duration",
+      "available": "Available",
+      "validUntil": "Valid Until",
+      "submitted": "Submitted",
+      "workPlan": "Work Plan",
+      "assumptions": "Assumptions",
+      "notes": "Notes",
+      "rFPNotFound": "RFP not found."
+    }
+  },
+  "settings": {
+    "col": {
+      "versions": "Versions"
+    },
+    "heading": {
+      "legalSources": "Legal Sources",
+      "legalVariables": "Legal Variables"
+    },
+    "placeholder": {
+      "yourName": "Your name",
+      "youExampleCom": "you@example.com"
+    },
+    "title": {
+      "settings": "Settings"
+    },
+    "text": {
+      "error": "Error:",
+      "oK": "OK:",
+      "profile": "Profile",
+      "loading": "Loading…",
+      "displayName": "Display name",
+      "emailAddress": "Email address",
+      "changingYourEmailAlsoChangesYourLoginCredential": "Changing your email also changes your login credential.",
+      "changePassword": "Change password",
+      "currentPassword": "Current password",
+      "newPassword": "New password",
+      "confirmNewPassword": "Confirm new password",
+      "notSetUp": "Not set up",
+      "noStrategyProfileYet": "No strategy profile yet",
+      "primaryArchetype": "Primary archetype",
+      "riskTolerance": "Risk tolerance",
+      "investmentHorizon": "Investment horizon",
+      "comingSoon": "Coming soon",
+      "notificationPreferences": "Notification Preferences",
+      "integrations": "Integrations",
+      "loadingSources": "Loading sources…",
+      "noLegalSourcesFound": "No legal sources found."
+    },
+    "prop": {
+      "manageYourAccountRiskProfileAndPreferences": "Manage your account, risk profile, and preferences.",
+      "name": "Name",
+      "scope": "Scope",
+      "frequency": "Frequency",
+      "status": "Status",
+      "lastSynced": "Last Synced",
+      "key": "Key",
+      "description": "Description"
+    },
+    "tabs": {
+      "account": "Account",
+      "risk_profile": "Risk Profile",
+      "notifications": "Notifications",
+      "integrations": "Integrations",
+      "legal": "Legal Sources",
+      "standards": "Standards"
+    }
+  },
+  "settingsStrategy": {
+    "title": {
+      "myStrategy": "My Strategy"
+    },
+    "text": {
+      "loading": "Loading..."
+    }
+  },
+  "strategy": {
+    "heading": {
+      "whatThisMeansInPractice": "What this means in practice"
+    },
+    "placeholder": {
+      "eGRueDuLac12": "e.g. Rue du Lac 12",
+      "eG1003Lausanne": "e.g. 1003 Lausanne",
+      "eG12": "e.g. 12"
+    },
+    "title": {
+      "yourStrategy": "Your Strategy",
+      "setUpYourProperties": "Set up your properties",
+      "strategyQuestionnaire": "Strategy Questionnaire"
+    },
+    "prop": {
+      "addTheBuildingsYouOwnOrManage": "Add the buildings you own or manage"
+    }
+  },
+  "vacancies": {
+    "title": {
+      "vacancies": "Vacancies"
+    },
+    "prop": {
+      "vacantUnitsOpenForRentalApplications": "Vacant units open for rental applications"
+    }
+  },
+  "vacancies[unitid]Candidates": {
+    "col": {
+      "rank": "Rank",
+      "assign": "Assign"
+    },
+    "heading": {
+      "confirmTenantSelection": "Confirm Tenant Selection",
+      "overrideDisqualification": "Override Disqualification"
+    },
+    "placeholder": {
+      "eGVerifiedIncomeDirectlyWithEmployerDebtEnforcementExtractIsClear": "e.g. Verified income directly with employer; debt enforcement extract is clear…"
+    },
+    "title": {
+      "selectTenants": "Select Tenants",
+      "yourSelection": "Your Selection",
+      "clickToViewCorroborativeDocuments": "Click to view corroborative documents",
+      "overrideDisqualificationAndMakeThisCandidateEligible": "Override disqualification and make this candidate eligible"
+    }
+  },
+  "vacancies[unitid]Fill": {
+    "placeholder": {
+      "searchByNamePhoneOrEmail": "Search by name, phone, or email",
+      "tenantName": "Tenant name",
+      "phone41": "Phone (+41...)",
+      "emailOptional": "Email (optional)",
+      "eG1850": "e.g. 1850"
+    },
+    "title": {
+      "fillVacancy": "Fill vacancy",
+      "step1SelectOrCreateTenant": "Step 1: Select or create tenant",
+      "step2AssignTenantToUnit": "Step 2: Assign tenant to unit",
+      "step3CreateLeaseDraft": "Step 3: Create lease (DRAFT)",
+      "nextSteps": "Next steps"
+    }
+  },
+  "workRequests": {
+    "title": {
+      "workRequests": "Work Requests"
+    },
+    "tabs": {
+      "all": "All",
+      "pending": "Pending Review",
+      "owner_approval": "Owner Approval",
+      "rfp_open": "RFP Open",
+      "active": "Active",
+      "done": "Completed",
+      "rfps": "RFPs"
+    },
+    "col": {
+      "col": "#",
+      "category": "Category",
+      "buildingUnit": "Building / Unit",
+      "status": "Status",
+      "estCost": "Est. Cost",
+      "contractor": "Contractor",
+      "created": "Created"
+    }
+  },
+  "vacanciesUnitidCandidates": {
+    "text": {
+      "candidatesSelectedSuccessfully": "Candidates selected successfully!",
+      "loadingCandidates": "Loading candidates…",
+      "noApplicationsSubmittedForThisUnit": "No applications submitted for this unit.",
+      "disqualified": "Disqualified",
+      "override": "✓ Override",
+      "override2": "⚠ Override",
+      "disqualificationReasons": "Disqualification Reasons",
+      "docs": "▼ docs",
+      "minimum3CharactersThisWillBeRecordedForAudit": "Minimum 3 characters. This will be recorded for audit."
+    },
+    "prop": {
+      "applicant": "Applicant",
+      "score": "Score",
+      "confidence": "Confidence"
+    }
+  },
+  "vacanciesUnitidFill": {
+    "text": {
+      "loadingVacancyData": "Loading vacancy data...",
+      "searchTenants": "Search tenants",
+      "noTenantsFound": "No tenants found.",
+      "createNewTenant": "Create new tenant",
+      "leaseStartDate": "Lease start date"
+    },
+    "prop": {
+      "vacancyWillBeRemovedOnceTheLeaseIsActive": "Vacancy will be removed once the lease is ACTIVE."
+    }
+  },
+  "work_Requests": {
+    "text": {
+      "loadingRequests": "Loading requests…"
+    },
+    "prop": {
+      "allMaintenanceRequestsAcrossYourProperties": "All maintenance requests across your properties"
+    }
+  }
+}

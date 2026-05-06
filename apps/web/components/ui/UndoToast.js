@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useTranslation } from "next-i18next";
 import * as RToast from "@radix-ui/react-toast";
 
 const UNDO_TIMEOUT_MS = 8000;
@@ -67,6 +68,7 @@ export function useUndoToast() {
 }
 
 export default function UndoToast({ visible, message, undo, dismiss }) {
+  const { t } = useTranslation("common");
   return (
     <RToast.Root
       open={visible}
@@ -75,12 +77,12 @@ export default function UndoToast({ visible, message, undo, dismiss }) {
       className="flex items-center gap-4 bg-slate-800 text-white px-5 py-3 rounded-lg shadow-xl text-sm font-medium animate-[undoToastSlideUp_0.25s_ease-out]"
     >
       <RToast.Description>{message}</RToast.Description>
-      <RToast.Action altText="Undo" asChild>
+      <RToast.Action altText={t("action.undo", { defaultValue: "Undo" })} asChild>
         <button
           onClick={undo}
           className="border border-white/40 text-blue-400 px-3 py-1 rounded cursor-pointer font-semibold text-[13px] whitespace-nowrap hover:bg-white/10"
         >
-          Undo
+          {t("action.undo", { defaultValue: "Undo" })}
         </button>
       </RToast.Action>
       <RToast.Close asChild>

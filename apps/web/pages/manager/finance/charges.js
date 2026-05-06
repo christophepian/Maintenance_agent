@@ -7,6 +7,9 @@ import Panel from "../../../components/layout/Panel";
 import { authHeaders } from "../../../lib/api";
 import { useLocalSort, clientSort } from "../../../lib/tableUtils";
 import { cn } from "../../../lib/utils";
+import SortableHeader from "../../../components/SortableHeader";
+import { withTranslations } from "../../../lib/i18n";
+import { useTranslation } from "next-i18next";
 
 function formatCurrency(chf) {
   if (typeof chf !== "number") return "—";
@@ -16,11 +19,12 @@ function formatCurrency(chf) {
 }
 
 const VIEW_TABS = [
-  { key: "SUMMARY", label: "Summary" },
-  { key: "ITEMIZED", label: "Itemized" },
+  { key: "SUMMARY" },
+  { key: "ITEMIZED" },
 ];
 
 export default function ManagerChargesPage() {
+  const { t } = useTranslation("manager");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [leases, setLeases] = useState([]);
@@ -34,6 +38,7 @@ export default function ManagerChargesPage() {
   const [expenseTypes, setExpenseTypes] = useState([]);
   const [chargeSearch, setChargeSearch] = useState("");
   const { sortField: cSortField, sortDir: cSortDir, handleSort: handleChargeSort } = useLocalSort("tenant", "asc");
+  const { sortField: iSortField, sortDir: iSortDir, handleSort: handleISort } = useLocalSort("tenantName", "asc");
 
   useEffect(() => {
     fetch("/api/coa/expense-types", { headers: authHeaders() })
@@ -71,6 +76,8 @@ export default function ManagerChargesPage() {
       case "tenant": return (l.tenantName || "").toLowerCase();
       case "building": return (l.unit?.building?.name || "").toLowerCase();
       case "chargesTotalChf": return l.chargesTotalChf ?? 0;
+      case "unit": return (l.unit?.unitNumber || "").toLowerCase();
+      case "settlementDate": return l.chargesSettlementDate || "";
       default: return "";
     }
   }
@@ -106,6 +113,15 @@ export default function ManagerChargesPage() {
     });
     return rows;
   }, [sortedCharges]);
+
+  const sortedItemizedRows = useMemo(() => clientSort(itemizedRows, iSortField, iSortDir, (row, f) => {
+    if (f === "tenantName") return (row.tenantName || "").toLowerCase();
+    if (f === "unitNumber") return (row.unitNumber || "").toLowerCase();
+    if (f === "label") return (row.label || "").toLowerCase();
+    if (f === "mode") return (row.mode || "").toLowerCase();
+    if (f === "amountChf") return row.amountChf ?? 0;
+    return "";
+  }), [itemizedRows, iSortField, iSortDir]);
 
   function startEdit(lease) {
     setEditingLeaseId(lease.id);
@@ -173,12 +189,12 @@ export default function ManagerChargesPage() {
   return (
     <AppShell role="MANAGER">
       <PageShell>
-        <PageHeader title="Charges" />
+        <PageHeader title={t("manager:financeCharges.title.charges")} />
         <PageContent>
           {error && (
             <Panel className="bg-red-50 border-red-200">
-              <strong className="text-red-700">Error:</strong> {error}
-              <button onClick={() => setError("")} className="action-btn-dismiss">Dismiss</button>
+              <strong className="text-red-700">{t("manager:financeCharges.text.error")}</strong> {error}
+              <button onClick={() => setError("")} className="action-btn-dismiss">{t("manager:financeCharges.text.dismiss")}</button>
             </Panel>
           )}
 
@@ -187,13 +203,13 @@ export default function ManagerChargesPage() {
             <Panel>
               <div className="filter-row">
                 <div>
-                  <label className="filter-label">Expense Type</label>
+                  <label className="filter-label">{t("manager:financeCharges.text.expenseType")}</label>
                   <select
                     value={expenseTypeId}
                     onChange={(e) => setExpenseTypeId(e.target.value)}
                     className="filter-select"
                   >
-                    <option value="">All expense types</option>
+                    <option value="">{t("manager:financeCharges.text.allExpenseTypes")}</option>
                     {expenseTypes.map((et) => (
                       <option key={et.id} value={et.id}>{et.code} — {et.name}</option>
                     ))}
@@ -231,14 +247,14 @@ export default function ManagerChargesPage() {
           <div className="flex items-center gap-2">
             <input
               type="search"
-              placeholder="Search by tenant, building or unit…"
+              placeholder={t("manager:financeCharges.placeholder.searchByTenantBuildingOrUnit")}
               value={chargeSearch}
               onChange={(e) => setChargeSearch(e.target.value)}
               className="filter-input flex-1 min-w-0 mb-0"
             />
             <button
               type="button"
-              aria-label="Sort charges"
+              aria-label={t("manager:financeCharges.ariaLabel.sortCharges")}
               onClick={() => {
                 const cycle = ["tenant", "building", "chargesTotalChf"];
                 const next = cycle[(cycle.indexOf(cSortField) + 1) % cycle.length];
@@ -255,15 +271,15 @@ export default function ManagerChargesPage() {
           {/* Edit Modal (inline panel) */}
           {editingLeaseId && (
             <Panel className="edit-panel">
-              <h3 className="mb-3 text-base font-semibold m-0">Edit Charges</h3>
+              <h3 className="mb-3 text-base font-semibold m-0">{t("manager:financeCharges.heading.editCharges")}</h3>
 
               <div className="mb-3">
-                <label className="filter-label">Charge Items</label>
+                <label className="filter-label">{t("manager:financeCharges.text.chargeItems")}</label>
                 {editForm.chargesItems.map((item, idx) => (
                   <div key={idx} className="edit-row">
                     <input
                       type="text"
-                      placeholder="Item name"
+                      placeholder={t("manager:financeCharges.placeholder.itemName")}
                       value={item.label}
                       onChange={(e) => updateChargeItem(idx, "label", e.target.value)}
                       className="edit-input flex-1"
@@ -273,8 +289,8 @@ export default function ManagerChargesPage() {
                       onChange={(e) => updateChargeItem(idx, "mode", e.target.value)}
                       className="edit-input"
                     >
-                      <option value="ACOMPTE">Acompte</option>
-                      <option value="FORFAIT">Forfait</option>
+                      <option value="ACOMPTE">{t("manager:financeCharges.text.acompte")}</option>
+                      <option value="FORFAIT">{t("manager:financeCharges.text.forfait")}</option>
                     </select>
                     <input
                       type="number"
@@ -310,10 +326,10 @@ export default function ManagerChargesPage() {
                   />
                 </div>
                 <div>
-                  <label className="filter-label">Settlement date</label>
+                  <label className="filter-label">{t("manager:financeCharges.text.settlementDate")}</label>
                   <input
                     type="text"
-                    placeholder="e.g., 30.06.2027"
+                    placeholder={t("manager:financeCharges.placeholder.eG30062027")}
                     value={editForm.chargesSettlementDate}
                     onChange={(e) => setEditForm((prev) => ({ ...prev, chargesSettlementDate: e.target.value }))}
                     className="edit-input w-[150px]"
@@ -340,7 +356,7 @@ export default function ManagerChargesPage() {
           )}
 
           {loading ? (
-            <Panel><p className="m-0">Loading charges...</p></Panel>
+            <Panel><p className="m-0">{t("manager:financeCharges.text.loadingCharges")}</p></Panel>
           ) : sortedCharges.length === 0 ? (
             <Panel>
               <p className="m-0">{chargeSearch ? "No charges match your search." : "No active leases with charge data found."}</p>
@@ -357,7 +373,7 @@ export default function ManagerChargesPage() {
                       <div className="table-card-footer">
                         <span className="font-medium">{formatCurrency(l.chargesTotalChf)}/mo</span>
                         {l.chargesSettlementDate && <span>Settlement {l.chargesSettlementDate}</span>}
-                        <button onClick={() => startEdit(l)} className="text-xs font-medium text-indigo-600 hover:text-indigo-700">Edit charges</button>
+                        <button onClick={() => startEdit(l)} className="text-xs font-medium text-indigo-600 hover:text-indigo-700">{t("manager:financeCharges.text.editCharges")}</button>
                       </div>
                     </div>
                   ))}
@@ -365,15 +381,15 @@ export default function ManagerChargesPage() {
 
                 {/* Wide table — hidden sm:block */}
                 <div className="hidden sm:block overflow-x-auto rounded-lg border border-table-border">
-                  <table className="inline-table">
+                  <table className="data-table">
                     <thead>
                       <tr>
-                        <th>Tenant</th>
-                        <th>Unit</th>
-                        <th>Building</th>
-                        <th>Monthly charges (CHF)</th>
-                        <th>Settlement date</th>
-                        <th>Actions</th>
+                        <SortableHeader label={t("manager:financeCharges.prop.tenant")} field="tenant" sortField={cSortField} sortDir={cSortDir} onSort={handleChargeSort} />
+                        <SortableHeader label={t("manager:financeCharges.prop.unit")} field="unit" sortField={cSortField} sortDir={cSortDir} onSort={handleChargeSort} />
+                        <SortableHeader label={t("manager:financeCharges.prop.building")} field="building" sortField={cSortField} sortDir={cSortDir} onSort={handleChargeSort} />
+                        <SortableHeader label="Monthly charges (CHF)" field="chargesTotalChf" sortField={cSortField} sortDir={cSortDir} onSort={handleChargeSort} />
+                        <SortableHeader label={t("manager:financeCharges.prop.settlementDate")} field="settlementDate" sortField={cSortField} sortDir={cSortDir} onSort={handleChargeSort} />
+                        <th>{t("manager:financeCharges.col.actions")}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -399,13 +415,13 @@ export default function ManagerChargesPage() {
             /* Itemized view */
             itemizedRows.length === 0 ? (
               <Panel>
-                <p className="m-0">No itemized charge data found.</p>
+                <p className="m-0">{t("manager:financeCharges.text.noItemizedChargeDataFound")}</p>
               </Panel>
             ) : (
               <>
                   {/* Mobile card list — sm:hidden */}
                   <div className="sm:hidden overflow-hidden divide-y divide-table-divider">
-                    {itemizedRows.map((row, idx) => (
+                    {sortedItemizedRows.map((row, idx) => (
                       <div key={`${row.leaseId}-${idx}`} className="table-card">
                         <p className="table-card-head">{row.tenantName}</p>
                         <p className="table-card-sub">{row.unitNumber} · {row.label}</p>
@@ -418,7 +434,7 @@ export default function ManagerChargesPage() {
                           <button
                             onClick={() => { const lease = leases.find((l) => l.id === row.leaseId); if (lease) startEdit(lease); }}
                             className="text-xs font-medium text-indigo-600 hover:text-indigo-700"
-                          >Edit</button>
+                          >{t("manager:financeCharges.text.edit")}</button>
                         </div>
                       </div>
                     ))}
@@ -426,19 +442,19 @@ export default function ManagerChargesPage() {
 
                   {/* Wide table — hidden sm:block */}
                   <div className="hidden sm:block overflow-x-auto rounded-lg border border-table-border">
-                    <table className="inline-table">
+                    <table className="data-table">
                       <thead>
                         <tr>
-                          <th>Tenant</th>
-                          <th>Unit</th>
-                          <th>Item name</th>
-                          <th>Mode</th>
-                          <th>Amount (CHF)</th>
-                          <th>Actions</th>
+                          <SortableHeader label={t("manager:financeCharges.prop.tenant")} field="tenantName" sortField={iSortField} sortDir={iSortDir} onSort={handleISort} />
+                          <SortableHeader label={t("manager:financeCharges.prop.unit")} field="unitNumber" sortField={iSortField} sortDir={iSortDir} onSort={handleISort} />
+                          <SortableHeader label={t("manager:financeCharges.placeholder.itemName")} field="label" sortField={iSortField} sortDir={iSortDir} onSort={handleISort} />
+                          <SortableHeader label={t("manager:financeCharges.prop.mode")} field="mode" sortField={iSortField} sortDir={iSortDir} onSort={handleISort} />
+                          <SortableHeader label="Amount (CHF)" field="amountChf" sortField={iSortField} sortDir={iSortDir} onSort={handleISort} />
+                          <th>{t("manager:financeCharges.col.actions")}</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {itemizedRows.map((row, idx) => (
+                        {sortedItemizedRows.map((row, idx) => (
                           <tr key={`${row.leaseId}-${idx}`}>
                             <td className="cell-bold">{row.tenantName}</td>
                             <td>{row.unitNumber}</td>
@@ -476,3 +492,5 @@ export default function ManagerChargesPage() {
     </AppShell>
   );
 }
+
+export const getStaticProps = withTranslations(["common","manager"]);

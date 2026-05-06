@@ -15,12 +15,14 @@ import { formatChfCents, formatDate } from "../../lib/format";
 import { billingScheduleVariant } from "../../lib/statusVariants";
 import ScrollableTabs from "../../components/mobile/ScrollableTabs";
 import { cn } from "../../lib/utils";
+import { withTranslations } from "../../lib/i18n";
+import { useTranslation } from "next-i18next";
 
 const TABS = [
-  { key: "ACTIVE",    label: "Active" },
-  { key: "PAUSED",    label: "Paused" },
-  { key: "COMPLETED", label: "Completed" },
-  { key: "ALL",       label: "All" },
+  { key: "ACTIVE" },
+  { key: "PAUSED" },
+  { key: "COMPLETED" },
+  { key: "ALL" },
 ];
 
 const TAB_KEYS = ["active", "paused", "completed", "all"];
@@ -40,6 +42,7 @@ function bsFieldExtractor(s, field) {
 }
 
 export default function BillingSchedulesPage() {
+  const { t } = useTranslation("manager");
   const router = useRouter();
   const activeTab = router.isReady ? Math.max(0, TAB_KEYS.indexOf(router.query.tab)) || 0 : 0;
   const setActiveTab = useCallback((index) => {
@@ -104,13 +107,13 @@ export default function BillingSchedulesPage() {
     <AppShell role="MANAGER">
       <PageShell>
         <PageHeader
-          title="Billing Schedules"
-          subtitle="Recurring invoices generated automatically for active leases."
+          title={t("manager:billingSchedules.title.billingSchedules")}
+          subtitle={t("manager:billing_Schedules.prop.recurringInvoicesGeneratedAutomaticallyForActiveLeases")}
         />
         <PageContent>
           {error && (
             <div className="notice notice-err mt-3">
-              <strong className="text-red-700">Error:</strong> {error}
+              <strong className="text-red-700">{t("manager:billing_Schedules.text.error")}</strong> {error}
             </div>
           )}
 
@@ -122,7 +125,7 @@ export default function BillingSchedulesPage() {
                 onClick={() => setActiveTab(i)}
                 className={activeTab === i ? "pill-tab-active" : "pill-tab"}
               >
-                {tab.label}
+                {t(`manager:billingSchedules.tabs.${tab.key.toLowerCase()}`)}
               </button>
             ))}
           </ScrollableTabs>
@@ -135,14 +138,14 @@ export default function BillingSchedulesPage() {
           <div className="flex items-center gap-2">
             <input
               type="search"
-              placeholder="Search by tenant…"
+              placeholder={t("manager:billingSchedules.placeholder.searchByTenant")}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="filter-input flex-1 min-w-0 mb-0"
             />
             <button
               type="button"
-              aria-label="Sort schedules"
+              aria-label={t("manager:billingSchedules.ariaLabel.sortSchedules")}
               onClick={() => {
                 const cycle = ["tenant", "total", "nextPeriod"];
                 const next = cycle[(cycle.indexOf(sortField) + 1) % cycle.length];
@@ -157,7 +160,7 @@ export default function BillingSchedulesPage() {
           </div>
 
           {loading ? (
-            <p className="loading-text p-4">Loading schedules…</p>
+            <p className="loading-text p-4">{t("manager:billing_Schedules.text.loadingSchedules")}</p>
           ) : (
             <ConfigurableTable
                 tableId="manager-billing-schedules"
@@ -268,3 +271,5 @@ export default function BillingSchedulesPage() {
     </AppShell>
   );
 }
+
+export const getStaticProps = withTranslations(["common","manager"]);

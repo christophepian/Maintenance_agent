@@ -1,0 +1,2437 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "requests": "Requests",
+    "jobs": "Jobs",
+    "leases": "Leases",
+    "invoices": "Invoices",
+    "people": "People",
+    "finance": "Finance",
+    "inventory": "Inventory",
+    "buildings": "Buildings",
+    "properties": "Properties",
+    "contractors": "Contractors",
+    "tenants": "Tenants",
+    "owners": "Owners",
+    "rentalApplications": "Rental Applications",
+    "chargeReconciliations": "Charge Reconciliations",
+    "cashflow": "Cash Flow",
+    "emails": "Emails",
+    "contacts": "Contacts",
+    "finances": "Finances",
+    "settings": "Settings"
+  },
+  "dashboard": {
+    "title": "Manager Dashboard",
+    "openRequests": "Open Requests",
+    "activeJobs": "Active Jobs",
+    "pendingInvoices": "Pending Invoices",
+    "expiringLeases": "Expiring Leases",
+    "portfolioOverview": "Portfolio overview",
+    "kpi": {
+      "noiYtd": "NOI YTD",
+      "spendMtd": "Spend MTD",
+      "collectionRate": "Collection rate",
+      "buildingsInRed": "Buildings in red",
+      "openRequests": "Open requests",
+      "openJobs": "Open jobs",
+      "jobAvgDuration": "Job avg. duration",
+      "pendingInvoices": "Pending invoices"
+    },
+    "feed": {
+      "allClearTitle": "All clear — no items need action",
+      "allClearSub": "Check back after new requests or invoices arrive.",
+      "noMatch": "No items match the selected filter.",
+      "showLess": "Show less ↑",
+      "inProgressStale": "In progress > 7 days"
+    },
+    "filter": {
+      "all": "All",
+      "disputed": "Disputed",
+      "stale": "Stale jobs",
+      "rfps": "RFPs"
+    },
+    "sort": {
+      "urgency": "Urgency",
+      "building": "Building",
+      "date": "Date",
+      "category": "Category"
+    },
+    "moreTools": {
+      "title": "More tools",
+      "sub": "Deeper views for finance, strategy, and tenant portal.",
+      "finance": "Finance overview",
+      "settings": "Settings",
+      "allRequests": "All requests"
+    },
+    "chip": {
+      "review": "Pending review",
+      "approval": "Owner approval",
+      "disputed": "Disputed invoice",
+      "stale": "Stale job",
+      "rfp": "RFP routed"
+    },
+    "hero": {
+      "allClear": "Everything looks good — no items need attention right now.",
+      "one": "1 item needs your attention today.",
+      "many": "{{count}} items need your attention today."
+    }
+  },
+  "request": {
+    "singular": "Request",
+    "plural": "Requests",
+    "new": "New Request",
+    "title": "Title",
+    "urgency": "Urgency",
+    "unit": "Unit",
+    "building": "Building",
+    "assignedTo": "Assigned To",
+    "createdBy": "Created By"
+  },
+  "job": {
+    "singular": "Job",
+    "plural": "Jobs",
+    "new": "New Job",
+    "contractor": "Contractor",
+    "scheduledDate": "Scheduled Date",
+    "completedDate": "Completed Date",
+    "billingSchedule": "Billing Schedule"
+  },
+  "lease": {
+    "singular": "Lease",
+    "plural": "Leases",
+    "new": "New Lease",
+    "tenant": "Tenant",
+    "startDate": "Start Date",
+    "endDate": "End Date",
+    "monthlyRent": "Monthly Rent",
+    "deposit": "Deposit",
+    "signedAt": "Signed At"
+  },
+  "invoice": {
+    "singular": "Invoice",
+    "plural": "Invoices",
+    "new": "New Invoice",
+    "dueDate": "Due Date",
+    "issuedAt": "Issued At",
+    "paidAt": "Paid At",
+    "totalAmount": "Total Amount"
+  },
+  "assetCatalogue": {
+    "title": "Asset Catalogue",
+    "manufacturer": "Manufacturer",
+    "modelRef": "Model ref.",
+    "scope": "Scope",
+    "usefulLife": "Useful Life",
+    "replaceCost": "Replace Cost",
+    "org": "Org",
+    "global": "Global",
+    "totalModels": "Total Models",
+    "orgPrivate": "Org-Private",
+    "editableByOrg": "Editable by your org",
+    "globalLibrary": "Global Library",
+    "sharedReadonly": "Shared read-only models",
+    "nameRequired": "Name is required.",
+    "categoryRequired": "Category is required.",
+    "uncategorised": "Uncategorised",
+    "model_one": "{{count}} model",
+    "model_other": "{{count}} models",
+    "categoriesCount": "{{count}} categories",
+    "searchPlaceholder": "Search models… (e.g. Bosch, dishwasher)",
+    "allScopes": "All scopes",
+    "orgPrivateFilter": "Org-private",
+    "globalFilter": "Global library",
+    "expandAll": "Expand All",
+    "collapseAll": "Collapse All",
+    "showingOf": "Showing {{count}} of {{total}}",
+    "add": "Add",
+    "cancel": "Cancel",
+    "saving": "Saving…",
+    "saveModel": "Save model",
+    "nameLabel": "Name",
+    "categoryLabel": "Category",
+    "manufacturerLabel": "Manufacturer",
+    "optional": "(optional)",
+    "namePlaceholder": "e.g. Bosch Serie 6",
+    "manufacturerPlaceholder": "e.g. Bosch",
+    "modelRefPlaceholder": "e.g. SME88TD00Z",
+    "loading": "Loading asset models…",
+    "emptyFirst": "No equipment models yet. Use the Add button above to catalog a reusable appliance or fixture model.",
+    "emptySearch": "No models match your search. Try adjusting filters."
+  },
+  "cashflowPlan": {
+    "nameRequired": "Plan name is required.",
+    "creating": "Creating…",
+    "create": "Create plan",
+    "namePlaceholder": "e.g. 2026–2030 CapEx plan",
+    "budgetPlaceholder": "e.g. 50000",
+    "portfolio": "Portfolio",
+    "building": "Building"
+  },
+  "categoryMappings": {
+    "topic": {
+      "STOVE_COOKTOP": "Stove & Cooktop",
+      "OVEN_APPLIANCE": "Oven Appliance",
+      "DISHWASHER": "Dishwasher",
+      "BATHROOM_PLUMBING": "Bathroom & Plumbing",
+      "LIGHTING_ELECTRICAL": "Lighting & Electrical",
+      "PLUMBING_WATER": "Plumbing & Water Systems",
+      "GENERAL_MAINTENANCE": "General Maintenance"
+    },
+    "statusBanner": {
+      "allMapped": "All {{count}} categories are connected to Swiss law",
+      "allMappedDesc": "When a tenant submits a maintenance request, the legal engine will automatically look up depreciation standards and rent reduction rules for every category.",
+      "unmapped_one": "{{unmapped}} of {{total}} category isn’t connected to Swiss law yet",
+      "unmapped_other": "{{unmapped}} of {{total}} categories aren’t connected to Swiss law yet",
+      "unmappedDesc": "The legal engine can’t find depreciation standards or rent reduction rules for unmapped categories. Scroll down to set them up."
+    },
+    "howItWorks": {
+      "title": "What does a mapping do?",
+      "description": "Each mapping connects a maintenance category (what the tenant sees) to a legal topic (what the engine searches). When a tenant reports an issue — say, a broken dishwasher — the engine uses the mapping to find two things:",
+      "deprecTitle": "Depreciation standards",
+      "deprecDesc": "How old is the item and what’s its expected lifespan? This determines who pays for repairs — the tenant or the landlord.",
+      "rentTitle": "Rent reduction rules",
+      "rentDesc": "Is the tenant entitled to a rent reduction while the issue isn’t fixed? Swiss law defines specific percentages per defect type."
+    },
+    "card": {
+      "notConnected": "Not connected — the engine can’t look up legal references for this category yet.",
+      "customOverride": "Custom override",
+      "disabled": "Disabled",
+      "connectedTo": "Connected to",
+      "reset": "Reset",
+      "resetTitle": "Remove your override and use the system default",
+      "editTitle": "Change the legal topic for this category",
+      "activeTitle": "Active — the engine uses this mapping. Click to disable.",
+      "inactiveTitle": "Disabled — the engine skips this mapping. Click to re-enable.",
+      "changeHint": "Change what the engine searches when a tenant reports a “{{label}}” issue:",
+      "saving": "Saving…",
+      "save": "Save",
+      "cancel": "Cancel",
+      "checkHint": "When a tenant reports a {{label}} issue, the engine checks:",
+      "showTechnical": "▸ Show technical details",
+      "hideTechnical": "▾ Hide technical details"
+    },
+    "deprecBox": {
+      "title": "Depreciation",
+      "coversItems": "Covers items like {{assets}}",
+      "andMore": "and {{count}} more",
+      "lifespans": "Expected lifespans: {{range}}.",
+      "whoPaysSub": "→ Determines who pays: landlord (if past lifespan) or shared cost",
+      "noData": "No depreciation data for this topic. Cost-sharing can’t be calculated automatically.",
+      "item_one": "{{count}} item",
+      "item_other": "{{count}} items"
+    },
+    "rentBox": {
+      "title": "Rent Reduction",
+      "rulesFor": "Rules for: {{rules}}",
+      "andMore": "and {{count}} more",
+      "claimSub": "→ Tells you if the tenant can claim a rent reduction while unfixed",
+      "noRules": "No specific rent reduction rules. The tenant can’t auto-claim a reduction for this type.",
+      "rule_one": "{{count}} rule",
+      "rule_other": "{{count}} rules"
+    },
+    "technical": {
+      "deprecStandards": "Depreciation Standards ({{count}})",
+      "rentRules": "Rent Reduction Rules ({{count}})",
+      "moreItems": "+ {{count}} more"
+    },
+    "addSection": {
+      "needsMapping_one": "{{count}} category needs a mapping",
+      "needsMapping_other": "{{count}} categories need a mapping",
+      "cancel": "Cancel",
+      "setUp": "Set up mapping",
+      "categoryLabel": "Category",
+      "select": "Select…",
+      "connectTo": "Connect to legal topic",
+      "creating": "Creating…",
+      "create": "Create mapping"
+    },
+    "loading": "Loading categories…",
+    "empty": "No categories found yet. Once tenants start submitting maintenance requests, their categories will appear here."
+  },
+  "buildingFinancials": {
+    "dateRange": "Date range",
+    "from": "From",
+    "to": "To",
+    "refresh": "↻ Refresh",
+    "units_one": "{{count}} unit",
+    "units_other": "{{count}} units",
+    "loadingFinancials": "Loading financials…",
+    "failedToLoad": "Failed to load financials",
+    "tabs": {
+      "overview": "Overview",
+      "income": "Income",
+      "expenses": "Expenses",
+      "balances": "Receivables & Payables",
+      "advanced": "Advanced"
+    },
+    "category": {
+      "MAINTENANCE": "Maintenance",
+      "UTILITIES": "Utilities",
+      "CLEANING": "Cleaning",
+      "INSURANCE": "Insurance",
+      "TAX": "Tax",
+      "ADMIN": "Administration",
+      "CAPEX": "Capital Expenditure",
+      "OTHER": "Other"
+    },
+    "kpi": {
+      "earnedIncome": "Earned Income",
+      "totalExpenses": "Total Expenses",
+      "noi": "NOI",
+      "collection": "Collection",
+      "maintenance": "Maintenance",
+      "maintRatio": "Maint. Ratio",
+      "capex": "CapEx",
+      "costPerUnit": "Cost / Unit",
+      "receivables": "Receivables",
+      "payables": "Payables",
+      "maintSub": "of total expenses",
+      "capexSub": "Capital expenditure",
+      "earnedIncomeSub": "Cash received (paid invoices)",
+      "projectedIncome": "Projected Income",
+      "projectedIncomeSub": "Expected from active leases, prorated",
+      "projectedBreakdown": "Projected breakdown",
+      "rentalIncome": "Rental Income",
+      "rentalIncomeSub": "Net rent + garage + other service",
+      "serviceCharges": "Service Charges",
+      "serviceChargesSub": "Ancillary charges (utilities, etc.)",
+      "performance": "Performance",
+      "collectionRate": "Collection Rate",
+      "collectionRateSub": "Earned ÷ Projected",
+      "maintRatioSub": "Maintenance ÷ Income",
+      "noiLong": "Net Operating Income",
+      "noiOpSub": "Income − Operating Expenses",
+      "noiExclSub": "Earned Income − Operating Expenses (excl. CapEx)",
+      "netIncome": "Net Income",
+      "netIncomeSub": "Earned Income − All Expenses",
+      "receivablesSub": "ISSUED rent invoices not yet paid",
+      "payablesSub": "ISSUED/APPROVED supplier invoices not yet paid",
+      "noneOutstanding": "None outstanding",
+      "unpaidRent": "Unpaid rent invoices (now)",
+      "unpaidSupplier": "Unpaid supplier invoices (now)"
+    },
+    "rag": {
+      "profitable": "Profitable",
+      "balanced": "Balanced",
+      "atRisk": "At risk",
+      "noProjection": "No projection",
+      "onTrack": "On track",
+      "watch": "Watch",
+      "overdue": "Overdue",
+      "noData": "No data",
+      "healthy": "Healthy",
+      "monitor": "Monitor",
+      "high": "High",
+      "outstanding": "Outstanding"
+    },
+    "section": {
+      "topExpenseDrivers": "Top Expense Drivers",
+      "incomeBreakdown": "Income Breakdown",
+      "expensesByCategory": "Expenses by Category",
+      "expensesByAccount": "Expenses by Account",
+      "expensesByContractor": "Expenses by Contractor",
+      "outstandingBalances": "Outstanding Balances",
+      "advancedAccounting": "Advanced Accounting"
+    },
+    "col": {
+      "contractor": "Contractor",
+      "totalSpend": "Total Spend",
+      "category": "Category",
+      "amount": "Amount",
+      "code": "Code",
+      "account": "Account",
+      "total": "Total"
+    },
+    "balances": {
+      "pointInTime": "Point-in-time snapshot — shows invoices currently awaiting payment, regardless of the date range above.",
+      "allSettled": "All invoices settled — no outstanding balances."
+    },
+    "advanced": {
+      "description": "The following tools show the raw double-entry ledger. Useful for auditing, but not required for day-to-day management.",
+      "generalLedger": "General Ledger →",
+      "chartOfAccounts": "Chart of Accounts →"
+    },
+    "expenses": {
+      "noExpenses": "No categorised expenses in this period.",
+      "activeUnits_one": "{{count}} active unit",
+      "activeUnits_other": "{{count}} active units"
+    }
+  },
+  "buildingsId": {
+    "heading": {
+      "ownershipManagement": "Ownership & Management",
+      "managementGuidelines": "Management Guidelines",
+      "residentialUnits": "Residential Units",
+      "commonAreas": "Common Areas",
+      "leaseTemplate": "Lease Template"
+    },
+    "placeholder": {
+      "buildingName": "Building name",
+      "address": "Address",
+      "eG1995": "e.g. 1995",
+      "eG1013bCommonArea1": "e.g. 101, 3B, Common Area 1",
+      "leaveBlankForOrgDefault": "Leave blank for org default",
+      "eGAutoApproveOvensChf500": "e.g., Auto-approve ovens < CHF 500"
+    },
+    "title": {
+      "buildingInformation": "Building information",
+      "units": "Units",
+      "tenants": "Tenants",
+      "assetInventoryDepreciation": "Asset Inventory & Depreciation",
+      "documents": "Documents",
+      "policies": "Policies",
+      "overrides": "Overrides",
+      "requests": "Requests"
+    },
+    "ariaLabel": {
+      "backToInventory": "Back to Inventory"
+    },
+    "tabs": {
+      "buildingInformation": "Building information",
+      "units": "Units",
+      "tenants": "Tenants",
+      "assets": "Assets",
+      "documents": "Documents",
+      "policies": "Policies",
+      "financials": "Financials",
+      "requests": "Requests"
+    },
+    "kpi": {
+      "openRequests": "Open Requests",
+      "openJobs": "Open Jobs",
+      "noiYtd": "NOI (YTD)",
+      "vsPortfolio": "vs Portfolio",
+      "pendingApprovedAssigned": "Pending, approved, assigned",
+      "pendingPlusInProgress": "Pending + in progress",
+      "buildingNoiYtd": "Building NOI (YTD)",
+      "vsPortfolioLong": "vs. Portfolio",
+      "collectionRate": "collection rate",
+      "noFinancialData": "No financial data",
+      "notEnoughPortfolioData": "Not enough portfolio data",
+      "betterThanOtherAssets": "Better than other assets (NOI)",
+      "worseThanOtherAssets": "Worse than other assets (NOI)"
+    },
+    "btn": {
+      "saving": "Saving…",
+      "saveChanges": "Save changes",
+      "cancel": "Cancel",
+      "deactivate": "Deactivate",
+      "edit": "Edit",
+      "addUnit": "Add unit",
+      "cancelUnit": "Cancel",
+      "creating": "Creating…",
+      "createUnit": "Create unit",
+      "addAsset": "+ Add Asset",
+      "cancelAsset": "Cancel",
+      "save": "Save",
+      "remove": "Remove",
+      "addOwner": "Add Owner",
+      "add": "Add",
+      "savePolicies": "Save policies",
+      "addCondition": "+ Add condition",
+      "createRule": "Create rule",
+      "activate": "Activate",
+      "delete": "Delete",
+      "editPolicies": "Edit policies",
+      "cancelPolicies": "Cancel",
+      "addOverride": "+ Add override rule"
+    },
+    "label": {
+      "name": "Name",
+      "yearBuilt": "Year Built",
+      "managedSince": "Managed Since",
+      "elevator": "Elevator",
+      "concierge": "Concierge",
+      "amenities": "Amenities",
+      "owners": "Owners",
+      "noOwnersAssigned": "No owners assigned to this building.",
+      "strategy": "Strategy",
+      "roleIntent": "Role intent",
+      "buildingType": "Building type",
+      "condition": "Condition",
+      "approxUnits": "Approx. units",
+      "guidelines": "Guidelines",
+      "type": "Type",
+      "autoApproveLimit": "Auto-approve limit (CHF)",
+      "ownerThreshold": "Owner threshold (CHF)",
+      "emergencyAutoDispatch": "Emergency auto-dispatch",
+      "autoApproveLimitView": "Auto-approve limit",
+      "ownerThresholdView": "Owner threshold",
+      "usingOrgDefault": "(using org default)",
+      "blankOrgDefault": "(blank = use org default)",
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "inactive": "Inactive",
+      "priorityPrefix": "Priority: ",
+      "ruleName": "Rule name",
+      "priorityLabel": "Priority (higher = evaluated first)",
+      "conditions": "Conditions (all must match)",
+      "action": "Action"
+    },
+    "select": {
+      "selectOwner": "Select an owner…",
+      "residential": "Residential",
+      "commonArea": "Common Area",
+      "category": "Category",
+      "estimatedCost": "Estimated Cost",
+      "unitType": "Unit Type",
+      "contractor": "Contractor",
+      "equals": "Equals",
+      "notEquals": "Not Equals",
+      "lessThan": "Less Than",
+      "lessThanOrEqual": "Less Than or Equal",
+      "greaterThan": "Greater Than",
+      "greaterThanOrEqual": "Greater Than or Equal",
+      "contains": "Contains",
+      "startsWith": "Starts With",
+      "endsWith": "Ends With",
+      "autoApprove": "Auto-approve",
+      "requireManagerReview": "Require manager review",
+      "requireOwnerApproval": "Require owner approval"
+    },
+    "text": {
+      "loadingBuilding": "Loading building...",
+      "buildingNotFound": "Building not found.",
+      "noUnitsYet": "No units yet.",
+      "noTenantsYet": "No tenants for this building yet.",
+      "noApprovalRulesYet": "No approval rules yet.",
+      "loadingRequests": "Loading requests…",
+      "noRequestsYet": "No requests for this building yet.",
+      "overrideDesc": "Define context-specific approval overrides for this building (e.g., \"auto-approve ovens < CHF 500\").",
+      "autoApproveDesc": "Building-level thresholds for auto-approval and emergency dispatch. Leave blank to use org defaults.",
+      "leaseTemplateDesc": "A lease template defines the default contract terms (landlord info, notice rules, payment details, deposit) that are automatically applied when a new tenant is selected. Without a template, leases must be created manually.",
+      "goToLeaseTemplates": "Go to Lease Templates →",
+      "template": "TEMPLATE",
+      "landlordPrefix": "Landlord: ",
+      "defaultRentPrefix": "Default rent: CHF ",
+      "defaultRentSuffix": ".-/month",
+      "occupied": "Occupied",
+      "vacant": "Vacant",
+      "listed": "Listed",
+      "all": "All",
+      "acceptingApplications": "Accepting applications",
+      "since": "Since ",
+      "commonArea": "Common Area",
+      "unitOf": "of",
+      "units": "units",
+      "unit": "unit",
+      "better": "Better",
+      "worse": "Worse",
+      "thanOtherAssetsNoi": " than other assets (NOI)",
+      "both": "Both",
+      "lease": "Lease",
+      "directory": "Directory"
+    },
+    "col": {
+      "name": "Name",
+      "unit": "Unit",
+      "phone": "Phone",
+      "email": "Email",
+      "moveIn": "Move-in",
+      "source": "Source",
+      "number": "#",
+      "status": "Status",
+      "category": "Category",
+      "urgency": "Urgency",
+      "contractor": "Contractor",
+      "date": "Date"
+    }
+  },
+  "unitsId": {
+    "col": {
+      "acomptePaid": "Acompte Paid",
+      "actualCosts": "Actual Costs",
+      "balance": "Balance",
+      "action": "Action",
+      "invoice": "Invoice #",
+      "netRent": "Net Rent",
+      "total": "Total",
+      "notice": "Notice"
+    },
+    "placeholder": {
+      "eGApt3b": "e.g. Apt 3B",
+      "eG3": "e.g. 3",
+      "eG75": "e.g. 75",
+      "eG35": "e.g. 3.5",
+      "eG2015": "e.g. 2015",
+      "eGJaneDoe": "e.g. Jane Doe",
+      "41791234567": "+41 79 123 45 67",
+      "tenantExampleCom": "tenant@example.com"
+    },
+    "title": {
+      "unit": "Unit",
+      "unitDetails": "Unit Details",
+      "assetInventoryDepreciation": "Asset Inventory & Depreciation",
+      "tenants": "Tenants",
+      "rentEstimate": "Rent Estimate",
+      "corroborativeDocuments": "Corroborative Documents",
+      "incomeVsExpenses": "Income vs. Expenses",
+      "nebenkostenSummary": "Nebenkosten Summary",
+      "chargeReconciliationsNebenkosten": "Charge Reconciliations (Nebenkosten)",
+      "invoices": "Invoices",
+      "contracts": "Contracts",
+      "openRequests": "Open Requests"
+    }
+  },
+  "billingSchedules": {
+    "placeholder": {
+      "searchByTenant": "Search by tenant…"
+    },
+    "title": {
+      "billingSchedules": "Billing Schedules"
+    },
+    "ariaLabel": {
+      "sortSchedules": "Sort schedules"
+    },
+    "tabs": {
+      "active": "Active",
+      "paused": "Paused",
+      "completed": "Completed",
+      "all": "All"
+    }
+  },
+  "buildings[id]Financials": {
+    "title": {
+      "buildingFinancials": "Building Financials"
+    }
+  },
+  "cashflowId": {
+    "col": {
+      "override": "Override"
+    },
+    "placeholder": {
+      "eG50000": "e.g. 50000"
+    },
+    "title": {
+      "yearOverridden": "Year overridden",
+      "resetToBaselineYear": "Reset to baseline year",
+      "clickToEditIncomeGrowthRate": "Click to edit income growth rate",
+      "summary": "Summary",
+      "monthlyCashflow": "Monthly cashflow",
+      "scheduledCapexEvents": "Scheduled CapEx events",
+      "rFPCandidates": "RFP Candidates"
+    },
+    "text": {
+      "noCashflowData": "No cashflow data.",
+      "income": "Income",
+      "opEx": "OpEx",
+      "capEx": "CapEx",
+      "net": "Net",
+      "cumulativeBalance": "Cumulative balance",
+      "historicalProjected": "Historical / projected",
+      "noScheduledCapexEventsInTheProjectionHorizon": "No scheduled CapEx events in the projection horizon.",
+      "shiftYear": "Shift year…",
+      "bundled": "Bundled",
+      "incomeGrowth": "Income growth:",
+      "year": "% / year",
+      "saving": "Saving…",
+      "rFPCreated": "RFP created",
+      "loadingRfpCandidates": "Loading RFP candidates…",
+      "noCapexItemsScheduledWithinThePlanHorizon": "No CapEx items scheduled within the plan horizon.",
+      "loadingCashflowPlan": "Loading cashflow plan…",
+      "12moProjectedIncome": "12-mo projected income",
+      "next12ProjectedMonths": "Next 12 projected months",
+      "totalProjectedCapex": "Total projected CapEx",
+      "peakMonthlyCapex": "Peak monthly CapEx",
+      "lowestCumulativeBalance": "Lowest cumulative balance",
+      "setOpeningBalanceToSee": "Set opening balance to see"
+    },
+    "prop": {
+      "asset": "Asset",
+      "scheduled": "Scheduled",
+      "estimatedCost": "Estimated cost",
+      "tradeGroup": "Trade group",
+      "bundle": "Bundle"
+    }
+  },
+  "chargeReconciliationsId": {
+    "col": {
+      "action": "Action"
+    },
+    "title": {
+      "summary": "Summary",
+      "expenseLines": "Expense Lines",
+      "settlementInvoice": "Settlement Invoice"
+    }
+  },
+  "chargeReconciliationsIndex": {
+    "title": {
+      "chargeReconciliations": "Charge Reconciliations"
+    }
+  },
+  "contractorBillingSchedulesId": {
+    "heading": {
+      "scheduleDetails": "Schedule Details",
+      "contractor": "Contractor",
+      "actions": "Actions"
+    },
+    "placeholder": {
+      "eGContractEnded": "e.g. Contract ended"
+    }
+  },
+  "contractorBillingSchedulesIndex": {
+    "heading": {
+      "createBillingSchedule": "Create Billing Schedule"
+    },
+    "placeholder": {
+      "eGMonthlyCleaningService": "e.g. Monthly cleaning service",
+      "eG50000": "e.g. 500.00"
+    },
+    "title": {
+      "contractorBilling": "Contractor Billing"
+    },
+    "col": {
+      "contractor": "Contractor",
+      "description": "Description",
+      "frequency": "Frequency",
+      "amount": "Amount",
+      "status": "Status",
+      "nextPeriod": "Next Period",
+      "building": "Building"
+    }
+  },
+  "dashboardV2": {
+    "heading": {
+      "priorityFeed": "Priority feed",
+      "moreTools": "More tools"
+    },
+    "ariaLabel": {
+      "refreshDashboard": "Refresh dashboard"
+    }
+  },
+  "emails": {
+    "title": {
+      "emailDetail": "Email Detail"
+    },
+    "text": {
+      "all": "All",
+      "pending": "Pending",
+      "sent": "Sent",
+      "failed": "Failed",
+      "loading": "Loading…",
+      "noEmailsInOutbox": "No emails in outbox.",
+      "status": "Status",
+      "template": "Template",
+      "to": "To",
+      "subject": "Subject",
+      "body": "Body",
+      "payload": "Payload",
+      "created": "Created",
+      "sentAt": "Sent At",
+      "error": "Error"
+    },
+    "prop": {
+      "viewQueuedAndSentEmailsDevelopmentModeOnly": "View queued and sent emails — development mode only"
+    }
+  },
+  "financeBillingEntitiesId": {
+    "title": {
+      "general": "General",
+      "address": "Address",
+      "banking": "Banking",
+      "invoiceSettings": "Invoice Settings"
+    },
+    "ariaLabel": {
+      "dismissMessage": "Dismiss message"
+    }
+  },
+  "financeBillingEntitiesIndex": {
+    "title": {
+      "billingEntities": "Billing Entities"
+    }
+  },
+  "financeCharges": {
+    "col": {
+      "actions": "Actions"
+    },
+    "heading": {
+      "editCharges": "Edit Charges"
+    },
+    "placeholder": {
+      "searchByTenantBuildingOrUnit": "Search by tenant, building or unit…",
+      "itemName": "Item name",
+      "eG30062027": "e.g., 30.06.2027"
+    },
+    "title": {
+      "charges": "Charges"
+    },
+    "ariaLabel": {
+      "sortCharges": "Sort charges"
+    },
+    "text": {
+      "error": "Error:",
+      "dismiss": "Dismiss",
+      "expenseType": "Expense Type",
+      "allExpenseTypes": "All expense types",
+      "chargeItems": "Charge Items",
+      "acompte": "Acompte",
+      "forfait": "Forfait",
+      "settlementDate": "Settlement date",
+      "loadingCharges": "Loading charges...",
+      "editCharges": "Edit charges",
+      "noItemizedChargeDataFound": "No itemized charge data found.",
+      "edit": "Edit"
+    },
+    "prop": {
+      "tenant": "Tenant",
+      "unit": "Unit",
+      "building": "Building",
+      "settlementDate": "Settlement date",
+      "mode": "Mode"
+    }
+  },
+  "financeChartOfAccounts": {
+    "placeholder": {
+      "eGElevatorMaintenance": "e.g. Elevator Maintenance",
+      "eGLiftM": "e.g. LIFT-M",
+      "optionalDescription": "Optional description",
+      "eGOwnerCharges": "e.g. Owner Charges",
+      "eG5000": "e.g. 5000"
+    },
+    "title": {
+      "chartOfAccounts": "Chart of Accounts"
+    },
+    "tabs": {
+      "expense_types": "Expense Types",
+      "accounts": "Accounts",
+      "mappings": "Mappings"
+    }
+  },
+  "financeExpenses": {
+    "placeholder": {
+      "searchExpenses": "Search expenses…"
+    },
+    "title": {
+      "expenses": "Expenses",
+      "category": "Category",
+      "scope": "Scope"
+    },
+    "text": {
+      "uncategorised": "Uncategorised",
+      "error": "Error:",
+      "dismiss": "Dismiss",
+      "allCategories": "All categories",
+      "allBuildings": "All buildings",
+      "allExpenseTypes": "All expense types",
+      "allAccounts": "All accounts",
+      "loadingExpenses": "Loading expenses...",
+      "noExpensesFoundTagInvoicesWithAnExpenseCategoryToTrackThemHere": "No expenses found. Tag invoices with an expense category to track them here."
+    },
+    "prop": {
+      "building": "Building",
+      "expenseType": "Expense Type",
+      "account": "Account"
+    }
+  },
+  "financeIndex": {
+    "title": {
+      "finances": "Finances",
+      "dateRange": "Date range",
+      "buildings": "Buildings"
+    },
+    "ariaLabel": {
+      "viewBuildingFinancials": "View building financials"
+    },
+    "text": {
+      "loadingPortfolioSummary": "Loading portfolio summary…",
+      "avgCollectionRate": "Avg collection rate:",
+      "noBuildingsInThisPortfolioYet": "No buildings in this portfolio yet."
+    },
+    "prop": {
+      "from": "From",
+      "to": "To",
+      "earnedIncome": "Earned Income",
+      "totalExpenses": "Total Expenses",
+      "netResult": "Net Result",
+      "receivables": "Receivables",
+      "payables": "Payables",
+      "building": "Building",
+      "expenses": "Expenses",
+      "net": "Net",
+      "collection": "Collection"
+    },
+    "tabs": {
+      "overview": "Overview",
+      "invoices": "Invoices",
+      "billing-entities": "Billing Entities",
+      "accounting": "Accounting",
+      "planning": "Planning",
+      "setup": "Setup"
+    }
+  },
+  "financeInvoices": {
+    "heading": {
+      "disputeInvoice": "Dispute Invoice",
+      "uploadInvoice": "Upload Invoice"
+    },
+    "placeholder": {
+      "reasonForDispute": "Reason for dispute…",
+      "searchInvoices": "Search invoices…"
+    },
+    "title": {
+      "invoicePdf": "Invoice PDF",
+      "cycleSortField": "Cycle sort field",
+      "direction": "Direction",
+      "status": "Status",
+      "category": "Category",
+      "invoices": "Invoices"
+    },
+    "text": {
+      "loadingPdf": "Loading PDF…",
+      "cancel": "Cancel",
+      "captureWithPhone": "📷 Capture with Phone",
+      "creatingCaptureSession": "Creating capture session…",
+      "close": "Close",
+      "photosReceived": "Photos received!",
+      "theInvoiceIsBeingProcessed": "The invoice is being processed.",
+      "done": "Done",
+      "mobileLink": "Mobile link",
+      "recurring": "Recurring",
+      "error": "Error:",
+      "dismiss": "Dismiss",
+      "all": "All",
+      "loadingInvoices": "Loading invoices…",
+      "noInvoicesMatchThisFilter": "No invoices match this filter."
+    },
+    "tabs": {
+      "all": "All",
+      "draft": "Draft",
+      "issued": "Sent",
+      "approved": "Pending",
+      "paid": "Paid",
+      "disputed": "Disputed"
+    },
+    "col": {
+      "status": "Status",
+      "invoice": "Invoice #",
+      "buildingu00b7Unit": "Building \\u00b7 Unit",
+      "amount": "Amount",
+      "date": "Date",
+      "recurring": "Recurring",
+      "category": "Category",
+      "actions": "Actions",
+      "tenant": "Tenant",
+      "issuer": "Issuer"
+    }
+  },
+  "financeInvoicesId": {
+    "col": {
+      "description": "Description",
+      "qty": "Qty",
+      "unitPrice": "Unit Price",
+      "vAT": "VAT %",
+      "total": "Total"
+    },
+    "placeholder": {
+      "companyName": "Company name",
+      "streetNumber": "Street & number",
+      "lausanne": "Lausanne",
+      "cH": "CH...",
+      "cHE": "CHE-..."
+    },
+    "title": {
+      "invoiceDetails": "Invoice Details",
+      "recipient": "Recipient",
+      "issuerBillingEntity": "Issuer (Billing Entity)",
+      "lineItems": "Line Items",
+      "linkedRecords": "Linked Records",
+      "accounting": "Accounting",
+      "originalCapture": "Original Capture",
+      "pDFPreview": "PDF Preview",
+      "invoicePdf": "Invoice PDF",
+      "timeline": "Timeline"
+    },
+    "text": {
+      "error": "Error:",
+      "dismiss": "Dismiss",
+      "loadingInvoice": "Loading invoice…",
+      "invoiceNotFound": "Invoice not found.",
+      "thisInvoiceNeedsReview": "⚠ This invoice needs review",
+      "selectBillingEntity": "Select billing entity",
+      "choose": "— Choose —",
+      "newBillingEntity": "New Billing Entity",
+      "name": "Name *",
+      "address": "Address *",
+      "postalCode": "Postal Code *",
+      "city": "City *",
+      "iBAN": "IBAN *",
+      "vATNumber": "VAT Number",
+      "noBillingEntityLinked": "No billing entity linked.",
+      "created": "Created",
+      "submitted": "Submitted",
+      "locked": "Locked",
+      "approved": "Approved",
+      "paid": "Paid"
+    },
+    "prop": {
+      "invoiceNumber": "Invoice Number",
+      "direction": "Direction",
+      "currency": "Currency",
+      "subtotal": "Subtotal",
+      "issueDate": "Issue Date",
+      "dueDate": "Due Date",
+      "created": "Created",
+      "paymentRef": "Payment Ref",
+      "name": "Name",
+      "address": "Address",
+      "postalCodeCity": "Postal Code · City",
+      "country": "Country",
+      "city": "City",
+      "vATNumber": "VAT Number",
+      "type": "Type",
+      "job": "Job",
+      "lease": "Lease",
+      "expenseType": "Expense Type",
+      "account": "Account"
+    }
+  },
+  "financeInvoicesNew": {
+    "placeholder": {
+      "itemDescription": "Item description"
+    },
+    "title": {
+      "newInvoice": "New Invoice",
+      "recipient": "Recipient",
+      "invoiceDetails": "Invoice Details",
+      "linkToRecordOptional": "Link to Record (optional)",
+      "lineItems": "Line Items"
+    },
+    "text": {
+      "error": "Error:",
+      "dismiss": "Dismiss",
+      "recipientName": "Recipient Name *",
+      "addressLine1": "Address Line 1 *",
+      "addressLine2": "Address Line 2",
+      "postalCode": "Postal Code *",
+      "city": "City *",
+      "country": "Country",
+      "issueDate": "Issue Date",
+      "dueDate": "Due Date",
+      "description": "Description",
+      "job": "Job",
+      "none": "— None —",
+      "billingEntity": "Billing Entity",
+      "qty": "Qty",
+      "subtotal": "Subtotal",
+      "total": "Total"
+    }
+  },
+  "financeLedger": {
+    "col": {
+      "date": "Date",
+      "account": "Account",
+      "event": "Event",
+      "description": "Description",
+      "reference": "Reference",
+      "debitChf": "Debit CHF",
+      "creditChf": "Credit CHF",
+      "code": "Code",
+      "balanceChf": "Balance CHF"
+    },
+    "title": {
+      "generalLedger": "General Ledger",
+      "dateRange": "Date range",
+      "scope": "Scope"
+    },
+    "text": {
+      "chartOfAccountsNotSetUp": "Chart of Accounts not set up",
+      "allBuildings": "All buildings",
+      "allAccounts": "All accounts",
+      "allEvents": "All events",
+      "loading": "Loading…",
+      "noJournalEntriesFound": "No journal entries found",
+      "noEntriesForThisPeriod": "No entries for this period",
+      "adjustTheDateRangeAndApplyFiltersAbove": "Adjust the date range and apply filters above.",
+      "subtotal": "Subtotal",
+      "grandTotalDebit": "Grand Total Debit:",
+      "grandTotalCredit": "Grand Total Credit:"
+    },
+    "prop": {
+      "advancedAuditViewDoubleentryJournal": "Advanced audit view — double-entry journal",
+      "from": "From",
+      "to": "To",
+      "building": "Building",
+      "eventType": "Event type"
+    }
+  },
+  "financePayments": {
+    "placeholder": {
+      "searchPayments": "Search payments…"
+    },
+    "title": {
+      "payments": "Payments",
+      "scope": "Scope",
+      "dateRange": "Date range"
+    },
+    "text": {
+      "viewInvoice": "View Invoice",
+      "error": "Error:",
+      "dismiss": "Dismiss",
+      "allBuildings": "All buildings",
+      "loadingPayments": "Loading payments...",
+      "noPaymentsFoundForTheSelectedFilters": "No payments found for the selected filters."
+    },
+    "prop": {
+      "building": "Building",
+      "paidAfter": "Paid after",
+      "paidBefore": "Paid before"
+    },
+    "col": {
+      "invoice": "Invoice #",
+      "description": "Description",
+      "amountChf": "Amount (CHF)",
+      "paidOn": "Paid on",
+      "paymentReference": "Payment reference",
+      "actions": "Actions"
+    }
+  },
+  "index": {
+    "heading": {
+      "moreTools": "More tools"
+    },
+    "title": {
+      "category": "Category"
+    },
+    "ariaLabel": {
+      "refreshDashboard": "Refresh dashboard"
+    },
+    "prop": {
+      "portfolio": "Portfolio"
+    }
+  },
+  "inventory": {
+    "placeholder": {
+      "eGBahnhofstrasse12": "e.g. Bahnhofstrasse 12",
+      "eG8001": "e.g. 8001",
+      "eGZRich": "e.g. Zürich",
+      "eGSwitzerland": "e.g. Switzerland",
+      "searchBuildings": "Search buildings…"
+    },
+    "title": {
+      "properties": "Properties"
+    },
+    "ariaLabel": {
+      "filterBuildings": "Filter buildings",
+      "filterByCanton": "Filter by canton",
+      "sortBuildings": "Sort buildings",
+      "hypotheticalNextRepairCostInChf": "Hypothetical next repair cost in CHF"
+    },
+    "text": {
+      "address": "Address",
+      "cityCode": "City code",
+      "city": "City",
+      "country": "Country",
+      "cancel": "Cancel",
+      "saveBuilding": "Save building",
+      "filter": "Filter",
+      "canton": "Canton",
+      "allCantons": "All cantons",
+      "loadingBuildings": "Loading buildings…",
+      "noBuildingsFound": "No buildings found.",
+      "unit": "Unit",
+      "selectAUnit": "— Select a unit —",
+      "analysingAssets": "Analysing assets…",
+      "selectAUnitToSeeItsRepairVsReplaceAnalysis": "Select a unit to see its repair vs replace analysis.",
+      "noAssetsRecordedForThisUnitYet": "No assets recorded for this unit yet.",
+      "ifNextRepairChf": "If next repair CHF",
+      "sensitivityUnavailable": "Sensitivity unavailable",
+      "ratio": "Ratio",
+      "cumulativeRepairCostEstimatedReplacementCostAbove60Replace": "= cumulative repair cost ÷ estimated replacement cost. Above 60% → Replace.",
+      "breakeven": "Break-even",
+      "atCurrentRepairRateWhenTotalRepairsWillExceedReplacementCost": "= at current repair rate, when total repairs will exceed replacement cost.",
+      "warrantyOffset": "Warranty offset",
+      "hoverARowForTheRecommendationReason": "Hover a row for the recommendation reason."
+    },
+    "prop": {
+      "buildingsUnitsAssetsAndDepreciationSchedules": "Buildings, units, assets and depreciation schedules.",
+      "asset": "Asset",
+      "type": "Type",
+      "ageLife": "Age / Life",
+      "depreciation": "Depreciation",
+      "ratio": "Ratio",
+      "breakeven": "Break-even",
+      "recommendation": "Recommendation"
+    },
+    "col": {
+      "name": "Name",
+      "address": "Address",
+      "canton": "Canton",
+      "buildingId": "Building ID",
+      "units": "Units",
+      "health": "Health",
+      "noiYtd": "NOI YTD",
+      "collection": "Collection",
+      "category": "Category",
+      "manufacturer": "Manufacturer",
+      "scope": "Scope",
+      "usefulLife": "Useful Life",
+      "replaceCost": "Replace Cost"
+    },
+    "tabs": {
+      "buildings": "Buildings",
+      "vacancies": "Vacancies",
+      "assets": "Assets",
+      "decisions": "Maintenance Decisions"
+    }
+  },
+  "leasesId": {
+    "col": {
+      "signers": "Signers",
+      "action": "Action",
+      "actual": "Actual",
+      "balance": "Balance",
+      "old": "Old",
+      "new": "New",
+      "change": "Change"
+    },
+    "heading": {
+      "signatureRequests": "Signature Requests"
+    },
+    "placeholder": {
+      "cH": "CH...",
+      "eG1085": "e.g. 108.5",
+      "eG3MonthsNoticeFrom01042026": "e.g. 3 months notice from 01.04.2026",
+      "eGDepositForLeaseStarting01042026": "e.g. Deposit for lease starting 01.04.2026"
+    },
+    "title": {
+      "leaseContract": "Lease Contract",
+      "pDFArtifacts": "PDF Artifacts",
+      "sendForSignature": "Send for Signature",
+      "terminateLease": "Terminate Lease",
+      "createLeaseInvoice": "Create Lease Invoice"
+    },
+    "ariaLabel": {
+      "leaseActionsMenu": "Lease actions menu"
+    },
+    "text": {
+      "edit": "✏️ Edit",
+      "cancel": "Cancel",
+      "sendForSignature": "✍️ Send for Signature",
+      "terminate": "📋 Terminate",
+      "archive": "📦 Archive",
+      "invoice": "💰 Invoice",
+      "loadingLease": "Loading lease...",
+      "backToLeases": "← Back to leases",
+      "11BailleresseBailleur": "§1.1 Bailleresse / Bailleur",
+      "12Locataire": "§1.2 Locataire",
+      "appartement": "Appartement",
+      "maison": "Maison",
+      "chambreMeuble": "Chambre meublée",
+      "indtermine": "Indéterminée",
+      "dtermine": "Déterminée",
+      "3Mois": "3 mois",
+      "prolong": "Prolongé",
+      "2Semaines": "2 semaines",
+      "finDeMoisSauf3112": "Fin de mois, sauf 31.12",
+      "datesLocales": "Dates locales",
+      "laSignature": "À la signature",
+      "auDbutDuBail": "Au début du bail",
+      "uneDatePrcise": "À une date précise",
+      "draftPdf": "📄 Draft PDF",
+      "signedPdf": "✅ Signed PDF",
+      "deposit": "Deposit:",
+      "pAID": "✅ PAID",
+      "activated": "⚡ Activated:",
+      "terminated": "📋 Terminated:",
+      "archived": "📦 Archived:",
+      "loading": "Loading…",
+      "noRecurringBillingScheduleForThisLease": "No recurring billing schedule for this lease.",
+      "baseRent": "Base rent",
+      "charges": "Charges",
+      "nextPeriod": "Next period",
+      "lastGenerated": "Last generated",
+      "noChargeReconciliationsForThisLeaseYet": "No charge reconciliations for this lease yet.",
+      "fiscalYear": "Fiscal year:",
+      "newReconciliation": "+ New Reconciliation",
+      "noRentAdjustmentsForThisLeaseYet": "No rent adjustments for this lease yet.",
+      "currentCpi": "Current CPI",
+      "effectiveDate": "Effective Date",
+      "computeCpiIndexation": "+ Compute CPI Indexation",
+      "noInvoicesLinkedToThisLeaseYet": "No invoices linked to this lease yet.",
+      "signatureLevel": "Signature Level",
+      "sESSimpleElectronicSignature": "SES — Simple Electronic Signature",
+      "aESAdvancedElectronicSignature": "AES — Advanced Electronic Signature",
+      "qESQualifiedElectronicSignature": "QES — Qualified Electronic Signature",
+      "reason": "Reason",
+      "mutualAgreement": "Mutual agreement",
+      "tenantNotice": "Tenant notice",
+      "landlordNotice": "Landlord notice",
+      "endOfFixedTerm": "End of fixed term",
+      "breachOfContract": "Breach of contract",
+      "other": "Other",
+      "invoiceType": "Invoice Type",
+      "deposit2": "Deposit",
+      "rent": "Rent",
+      "repair": "Repair"
+    },
+    "prop": {
+      "nomRaisonSociale": "Nom / Raison sociale",
+      "adresse": "Adresse",
+      "nPALocalit": "NPA / Localité",
+      "tlphone": "Téléphone",
+      "email": "E-mail",
+      "nom": "Nom *",
+      "colocataire": "Co-locataire",
+      "2ObjetDuBail": "§2 — Objet du bail",
+      "typeDobjet": "Type d'objet",
+      "nombreDePices": "Nombre de pièces",
+      "tage": "Étage",
+      "adresseImmeuble": "Adresse immeuble",
+      "dbutDuBail": "Début du bail *",
+      "dureDtermine": "Durée déterminée",
+      "finDuBail": "Fin du bail",
+      "premierTermeDeRsiliation": "Premier terme de résiliation",
+      "dlaiDeRsiliation": "Délai de résiliation",
+      "termesDeRsiliation": "Termes de résiliation",
+      "6Paiement": "§6 — Paiement",
+      "jourDchance": "Jour d'échéance",
+      "bnficiaire": "Bénéficiaire",
+      "institutFinancier": "Institut financier",
+      "nDeCompte": "N° de compte",
+      "tauxDeRfrence": "Taux de référence",
+      "7Garantie": "§7 — Garantie",
+      "exigibilit": "Exigibilité",
+      "dateDchance": "Date d'échéance",
+      "autresAnnexes": "Autres annexes",
+      "dispositionsParticulires": "Dispositions particulières",
+      "provider": "Provider",
+      "level": "Level",
+      "status": "Status",
+      "sent": "Sent",
+      "created": "Created",
+      "depositTracking": "💰 Deposit Tracking",
+      "lifecycle": "📋 Lifecycle",
+      "recurringBilling": "🔄 Recurring Billing",
+      "chargeReconciliations": "📊 Charge Reconciliations",
+      "year": "Year",
+      "rentAdjustments": "📈 Rent Adjustments",
+      "type": "Type",
+      "effective": "Effective",
+      "description": "Description",
+      "amount": "Amount",
+      "thisWillSendTheLeaseForSignatureAndCreateASignatureRequestTheLeaseWillNoLongerBeEditable": "This will send the lease for signature and create a signature request. The lease will no longer be editable.",
+      "thisWillTerminateTheActiveLeasePleaseProvideAReason": "This will terminate the active lease. Please provide a reason."
+    },
+    "btn": {
+      "cancelLease": "Cancel Lease"
+    }
+  },
+  "leasesIndex": {
+    "col": {
+      "deadline": "Deadline",
+      "actions": "Actions",
+      "charges": "Charges",
+      "totalMo": "Total/mo",
+      "tag": "Tag",
+      "templateName": "Template Name",
+      "building": "Building",
+      "landlord": "Landlord",
+      "created": "Created",
+      "tenantName": "Tenant",
+      "unit": "Unit",
+      "rent": "Rent",
+      "startDate": "Start Date",
+      "endDate": "End Date",
+      "status": "Status"
+    },
+    "placeholder": {
+      "jeanDupont": "Jean Dupont",
+      "jeanExampleCom": "jean@example.com",
+      "searchByTenantBuildingOrUnit": "Search by tenant, building or unit…",
+      "selectABuildingToAutoFill": "Select a building to auto-fill",
+      "eGRGieDuLacSa": "e.g. Régie du Lac SA",
+      "eGRueDuLac15": "e.g. Rue du Lac 15",
+      "eG1003Lausanne": "e.g. 1003 Lausanne",
+      "4121": "+41 21 ...",
+      "regieExampleCh": "regie@example.ch",
+      "cH9300762011623852957": "CH93 0076 2011 6238 5295 7",
+      "eGStandard3RoomApartment": "e.g. Standard 3-room apartment"
+    },
+    "title": {
+      "leases": "Leases",
+      "createNewLease": "Create New Lease"
+    },
+    "text": {
+      "sentDateUnavailable": "Sent date unavailable",
+      "dueToday": "Due today",
+      "building": "Building",
+      "selectBuilding": "Select building...",
+      "unit": "Unit *",
+      "selectUnit": "Select unit...",
+      "tenantName": "Tenant Name *",
+      "tenantEmail": "Tenant Email",
+      "startDate": "Start Date *",
+      "building2": "Building *",
+      "selectABuilding": "Select a building...",
+      "allBuildingsAlreadyHaveATemplate": "All buildings already have a template.",
+      "templateName": "Template Name",
+      "1LandlordRgie": "§1 Landlord / Régie",
+      "landlordName": "Landlord Name *",
+      "address": "Address *",
+      "zipCity": "Zip / City *",
+      "phone": "Phone",
+      "email": "Email",
+      "noticeRule": "Notice Rule",
+      "3Months": "3 months",
+      "2Weeks": "2 weeks",
+      "depositDue": "Deposit Due",
+      "atSignature": "At signature",
+      "byLeaseStart": "By lease start",
+      "bySpecificDate": "By specific date",
+      "6Payment": "§6 Payment",
+      "paymentDueDay": "Payment Due Day",
+      "paymentIban": "Payment IBAN",
+      "referenceRate": "Reference Rate %",
+      "includesHouseRules": "Includes house rules",
+      "templateName2": "Template Name *",
+      "sourceLease": "Source Lease *",
+      "selectALeaseToCopyFrom": "Select a lease to copy from...",
+      "loadingTemplates": "Loading templates…",
+      "noTemplatesYet": "No templates yet",
+      "noTemplatesMatchThisFilter": "No templates match this filter.",
+      "loading": "Loading…",
+      "noSubmittedLeases": "No submitted leases",
+      "leasesSentToCandidatesForSignatureAppearHere": "Leases sent to candidates for signature appear here.",
+      "loadingLeases": "Loading leases...",
+      "noLeasesFound": "No leases found",
+      "readyForReview": "Ready for review",
+      "expiredAgo": "Expired {{count}} business day ago",
+      "expiredAgo_plural": "Expired {{count}} business days ago",
+      "daysLeft": "{{count}} business day left",
+      "daysLeft_plural": "{{count}} business days left"
+    },
+    "prop": {
+      "manageRentalContracts": "Manage rental contracts",
+      "tenant": "Tenant",
+      "unit": "Unit",
+      "building": "Building",
+      "rent": "Rent",
+      "sent": "Sent",
+      "netRent": "Net Rent",
+      "start": "Start",
+      "status": "Status"
+    },
+    "tabs": {
+      "active": "Active",
+      "drafts": "Draft",
+      "submitted": "Submitted",
+      "templates": "Templates",
+      "archive": "Archive"
+    },
+    "cta": {
+      "newLease": "New Lease",
+      "newTemplate": "New Template",
+      "actions": "Actions ▾",
+      "viewTemplate": "📄 View Template",
+      "delete": "🗑️ Delete",
+      "sendForSignature": "Send for Signature",
+      "terminate": "📋 Terminate",
+      "archive": "📦 Archive",
+      "invoice": "💰 Invoice"
+    }
+  },
+  "leasesTemplates": {
+    "placeholder": {
+      "selectABuildingToAutoFill": "Select a building to auto-fill",
+      "eGRGieDuLacSa": "e.g. Régie du Lac SA",
+      "eGRueDuLac15": "e.g. Rue du Lac 15",
+      "eG1003Lausanne": "e.g. 1003 Lausanne",
+      "4121": "+41 21 ...",
+      "regieExampleCh": "regie@example.ch",
+      "cH9300762011623852957": "CH93 0076 2011 6238 5295 7",
+      "eGStandard3RoomApartment": "e.g. Standard 3-room apartment"
+    },
+    "title": {
+      "leaseTemplates": "Lease Templates",
+      "createNewTemplate": "Create New Template"
+    },
+    "text": {
+      "building": "Building *",
+      "selectABuilding": "Select a building...",
+      "allBuildingsAlreadyHaveATemplate": "All buildings already have a template.",
+      "1LandlordRgie": "§1 Landlord / Régie",
+      "landlordName": "Landlord Name *",
+      "address": "Address *",
+      "zipCity": "Zip / City *",
+      "phone": "Phone",
+      "email": "Email",
+      "noticeRule": "Notice Rule",
+      "3Months": "3 months",
+      "2Weeks": "2 weeks",
+      "depositDue": "Deposit Due",
+      "atSignature": "At signature",
+      "byLeaseStart": "By lease start",
+      "bySpecificDate": "By specific date",
+      "6Payment": "§6 Payment",
+      "paymentDueDay": "Payment Due Day",
+      "paymentIban": "Payment IBAN",
+      "referenceRate": "Reference Rate %",
+      "includesHouseRules": "Includes house rules",
+      "templateName": "Template Name *",
+      "sourceLease": "Source Lease *",
+      "selectALeaseToCopyFrom": "Select a lease to copy from...",
+      "allBuildings": "All buildings",
+      "loadingTemplates": "Loading templates…",
+      "noLeaseTemplatesFound": "No lease templates found."
+    },
+    "prop": {
+      "reusableLeaseTemplatesForTheRentalPipeline": "Reusable lease templates for the rental pipeline"
+    },
+    "col": {
+      "templateName": "Template Name",
+      "building": "Building",
+      "landlord": "Landlord",
+      "created": "Created"
+    }
+  },
+  "peopleIndex": {
+    "placeholder": {
+      "jeanDupont": "Jean Dupont",
+      "jeanExampleCom": "jean@example.com",
+      "temporaryPassword": "Temporary password",
+      "rueDeLaPaix1": "Rue de la Paix 1",
+      "genVe": "Genève",
+      "cH5604835012345678009": "CH56 0483 5012 3456 7800 9",
+      "cHE123456789": "CHE-123.456.789"
+    },
+    "title": {
+      "contacts": "Contacts"
+    },
+    "ariaLabel": {
+      "dismiss": "Dismiss",
+      "viewTenant": "View tenant",
+      "viewVendor": "View vendor"
+    },
+    "text": {
+      "newOwner": "New owner",
+      "name": "Name",
+      "email": "Email",
+      "password": "Password",
+      "loadingOwners": "Loading owners…",
+      "noOwnersYetUseTheAddOwnerButtonAboveToCreateOne": "No owners yet. Use the \"+ Add owner\" button above to create one.",
+      "billingSet": "✓ Billing set",
+      "notSet": "Not set",
+      "address": "Address",
+      "postalCode": "Postal code",
+      "city": "City",
+      "vATNumber": "VAT number",
+      "openFullPage": "Open full page →",
+      "loadingTenants": "Loading tenants…",
+      "noTenantsFound": "No tenants found.",
+      "loadingContractors": "Loading contractors…",
+      "noContractorsFound": "No contractors found."
+    },
+    "prop": {
+      "name": "Name",
+      "email": "Email",
+      "billingEntity": "Billing entity",
+      "contactsAcrossTenantsVendorsAndOwners": "Contacts across tenants, vendors and owners.",
+      "phone": "Phone",
+      "unit": "Unit",
+      "rate": "Rate"
+    }
+  },
+  "peopleOwners": {
+    "placeholder": {
+      "searchByNameEmailOrBillingEntity": "Search by name, email, or billing entity…"
+    },
+    "title": {
+      "owners": "Owners"
+    },
+    "ariaLabel": {
+      "searchOwners": "Search owners",
+      "sortOwners": "Sort owners"
+    }
+  },
+  "peopleTenants": {
+    "placeholder": {
+      "searchByNameEmailPhoneOrUnit": "Search by name, email, phone, or unit…"
+    },
+    "title": {
+      "tenants": "Tenants"
+    },
+    "ariaLabel": {
+      "sortTenants": "Sort tenants"
+    },
+    "text": {
+      "loading": "Loading…",
+      "noTenantsFound": "No tenants found."
+    }
+  },
+  "peopleTenantsId": {
+    "placeholder": {
+      "tenantName": "Tenant name",
+      "41XxXxxXxxx": "+41 XX XXX XXXX",
+      "tenantExampleCom": "tenant@example.com"
+    },
+    "tab": {
+      "personalInformation": "Personal information",
+      "unit": "Unit",
+      "documents": "Documents",
+      "contracts": "Contracts",
+      "invoices": "Invoices"
+    },
+    "title": {
+      "personalInformation": "Personal information",
+      "professional": "Professional",
+      "corroborativeDocuments": "Corroborative Documents",
+      "contracts": "Contracts",
+      "invoices": "Invoices"
+    },
+    "text": {
+      "back": "← Back",
+      "loadingTenant": "Loading tenant…",
+      "cancel": "Cancel",
+      "edit": "Edit",
+      "save": "Save",
+      "saving": "Saving…",
+      "name": "Name",
+      "phone": "Phone",
+      "email": "Email",
+      "tenantId": "Tenant ID",
+      "orgId": "Org ID",
+      "created": "Created",
+      "updated": "Updated",
+      "unit": "Unit",
+      "buildingId": "Building ID",
+      "unitId": "Unit ID",
+      "floor": "Floor",
+      "loadingLeases": "Loading leases…",
+      "noLeasesFoundForThisTenant": "No leases found for this tenant.",
+      "noApplicationLinked": "No rental application linked to this tenant.",
+      "loadingInvoices": "Loading invoices…",
+      "noInvoicesFoundForThisTenant": "No invoices found for this tenant.",
+      "due": "Due:",
+      "tenantNotFound": "Tenant not found.",
+      "goBack": "Go back"
+    },
+    "prop": {
+      "tenantProfileAndContactDetails": "Tenant profile and contact details.",
+      "unit": "Unit",
+      "building": "Building",
+      "startDate": "Start date",
+      "endDate": "End date",
+      "status": "Status",
+      "monthlyRent": "Monthly rent",
+      "invoice": "Invoice #",
+      "description": "Description",
+      "amount": "Amount",
+      "dueDate": "Due date"
+    }
+  },
+  "peopleVendors": {
+    "placeholder": {
+      "searchByNameEmailOrPhone": "Search by name, email, or phone…"
+    },
+    "title": {
+      "contractors": "Contractors"
+    },
+    "ariaLabel": {
+      "sortContractors": "Sort contractors"
+    },
+    "text": {
+      "loading": "Loading…",
+      "noContractorsFound": "No contractors found."
+    }
+  },
+  "peopleVendorsId": {
+    "placeholder": {
+      "contractorName": "Contractor name",
+      "41XxXxxXxxx": "+41 XX XXX XXXX",
+      "contractorExampleCom": "contractor@example.com",
+      "streetAndNumber": "Street and number",
+      "suiteFloorEtc": "Suite, floor, etc.",
+      "cH9300762011623852957": "CH93 0076 2011 6238 5295 7",
+      "cHE123456789": "CHE-123.456.789"
+    },
+    "tab": {
+      "personalInformation": "Personal information",
+      "serviceDetails": "Service details",
+      "contracts": "Contracts",
+      "invoices": "Invoices"
+    },
+    "title": {
+      "personalInformation": "Personal information",
+      "serviceDetails": "Service details",
+      "contracts": "Contracts",
+      "invoices": "Invoices"
+    },
+    "text": {
+      "back": "← Back",
+      "loadingContractor": "Loading contractor…",
+      "cancel": "Cancel",
+      "edit": "Edit",
+      "save": "Save",
+      "saving": "Saving…",
+      "name": "Name",
+      "phone": "Phone",
+      "email": "Email",
+      "addressLine1": "Address line 1",
+      "addressLine2": "Address line 2",
+      "postalCode": "Postal code",
+      "city": "City",
+      "country": "Country",
+      "iban": "IBAN",
+      "defaultVatRate": "Default VAT rate (%)",
+      "vATNumber": "VAT number",
+      "contractorId": "Contractor ID",
+      "orgId": "Org ID",
+      "created": "Created",
+      "updated": "Updated",
+      "hourlyRate": "Hourly rate",
+      "status": "Status",
+      "serviceCategories": "Service categories",
+      "loadingJobs": "Loading jobs…",
+      "noJobsFoundForThisContractor": "No jobs found for this contractor.",
+      "loadingInvoices": "Loading invoices…",
+      "noInvoicesFoundForThisContractor": "No invoices found for this contractor.",
+      "contractorNotFound": "Contractor not found.",
+      "goBack": "Go back"
+    },
+    "prop": {
+      "contractorProfileAndServiceDetails": "Contractor profile and service details.",
+      "job": "Job #",
+      "requestTitle": "Request title",
+      "building": "Building",
+      "status": "Status",
+      "createdDate": "Created date",
+      "invoice": "Invoice #",
+      "amount": "Amount",
+      "submittedDate": "Submitted date"
+    }
+  },
+  "rentAdjustmentsId": {
+    "placeholder": {
+      "enterReason": "Enter reason…"
+    },
+    "title": {
+      "summary": "Summary",
+      "rentChange": "Rent Change",
+      "indexationDetails": "Indexation Details",
+      "rejection": "Rejection",
+      "application": "Application",
+      "leaseIndexSettings": "Lease Index Settings"
+    }
+  },
+  "rentAdjustmentsIndex": {
+    "title": {
+      "rentAdjustments": "Rent Adjustments"
+    }
+  },
+  "rentalApplicationsApplicationid": {
+    "title": {
+      "applicationDetail": "Application Detail",
+      "applicants": "Applicants",
+      "householdCurrentHousing": "Household & Current Housing",
+      "unitEvaluations": "Unit Evaluations",
+      "signature": "Signature"
+    }
+  },
+  "requests": {
+    "placeholder": {
+      "descriptionBuildingUnitContractor": "#, description, building, unit, contractor…"
+    },
+    "title": {
+      "requestsInbox": "Requests Inbox",
+      "priority": "Priority",
+      "scope": "Scope"
+    },
+    "ariaLabel": {
+      "searchRequests": "Search requests"
+    },
+    "text": {
+      "assetDepreciation": "Asset depreciation",
+      "rentReductionPrecedents": "Rent reduction precedents",
+      "estimatedRentReduction": "Estimated rent reduction",
+      "capAppliedReductionClampedToLegalMaximum": "Cap applied — reduction clamped to legal maximum.",
+      "recommendedActions": "Recommended actions",
+      "defectSignals": "Defect signals",
+      "severity": "Severity:",
+      "area": "Area:",
+      "duration": "Duration:",
+      "repairVsReplaceAnalysis": "Repair vs Replace Analysis",
+      "repairs": "Repairs:",
+      "replaceEst": "Replace est.:",
+      "photosAttachments": "Photos / Attachments",
+      "noPhotosYetUploadToDocumentTheIssue": "No photos yet. Upload to document the issue.",
+      "error": "Error:",
+      "dismiss": "Dismiss",
+      "allUrgencies": "All urgencies",
+      "emergency": "🚨 Emergency",
+      "high": "⚠️ High",
+      "normal": "Normal",
+      "low": "Low",
+      "allBuildings": "All buildings",
+      "allCategories": "All categories",
+      "resetFilters": "Reset filters",
+      "noRequestsMatchThisFilter": "No requests match this filter.",
+      "selectContractor": "Select contractor…"
+    },
+    "prop": {
+      "reviewIncomingMaintenanceRequestsClickARowToSeeFullDetails": "Review incoming maintenance requests. Click a row to see full details.",
+      "urgency": "Urgency",
+      "building": "Building",
+      "category": "Category",
+      "date": "Date",
+      "request": "Request #",
+      "estCost": "Est. Cost"
+    },
+    "tabs": {
+      "all": "Overview",
+      "pending": "Pending Review",
+      "rfp_open": "RFP Open",
+      "owner_approval": "Pending Owner Approval",
+      "in_progress": "In Progress",
+      "rejected": "Rejected",
+      "rfps": "RFPs",
+      "done": "Done"
+    },
+    "col": {
+      "status": "Status",
+      "buildingUnit": "Building / Unit",
+      "category": "Category",
+      "description": "Description",
+      "emergency": "Emergency",
+      "contractor": "Contractor",
+      "estCost": "Est. Cost",
+      "nextApprover": "Next Approver",
+      "payingParty": "Paying Party",
+      "approvalSource": "Approval Source",
+      "created": "Created",
+      "actions": "Actions",
+      "number": "#"
+    },
+    "btn": {
+      "approve": "Approve",
+      "reject": "Reject",
+      "assign": "Assign",
+      "unassign": "Unassign",
+      "viewRfp": "View RFP",
+      "ok": "OK"
+    }
+  },
+  "requestsId": {
+    "title": {
+      "legalAnalysis": "Legal Analysis",
+      "maintenanceDecision": "Maintenance Decision"
+    },
+    "ariaLabel": {
+      "selectAssetToLink": "Select asset to link"
+    },
+    "text": {
+      "loadingAssetAnalysis": "Loading asset analysis…",
+      "ownerContext": "Owner Context",
+      "archetypeAdjusted": "Archetype adjusted",
+      "tenantFundedBadge": "Tenant-funded",
+      "reasonPrefix": "Reason: ",
+      "floorPrefix": "Floor ",
+      "landlord": "Landlord",
+      "noAssetLinked": "No asset linked — use \"+ Link asset\" above",
+      "viewRfpLink": "View Request for Proposals →",
+      "legalObligation": "This request is a legal obligation — the landlord must act. Auto-routing was skipped or not yet applied.",
+      "throughUsefulLife": "% through its useful life",
+      "checkAdvisoryTab": "Check the Advisory tab for repair/replace analysis.",
+      "replacementRecommended": "Replacement recommended",
+      "planReplacementSoon": "Plan replacement soon",
+      "cumulative": "(cumulative)",
+      "ratioPrefix": "Ratio: ",
+      "breakEvenPrefix": "Break-even: ",
+      "exceeded": "Exceeded",
+      "yUsefulLife": "y useful life",
+      "confidence": "confidence",
+      "selectContractor": "Select contractor…",
+      "noAssetLinkedNoUnit": "No asset linked.",
+      "asset": "Asset",
+      "assetInventoryRecordsAreRequiredForAnalysis": "Asset inventory records are required for analysis.",
+      "building": "Building",
+      "calculating": "Calculating…",
+      "category": "Category",
+      "contractor": "Contractor",
+      "description": "Description",
+      "dismiss": "Dismiss",
+      "error": "Error:",
+      "estRepair": "Est. Repair",
+      "estReplacement": "Est. Replacement",
+      "failedToLoadAssetAnalysis": "Failed to load asset analysis.",
+      "installed": "Installed",
+      "manufacturer": "Manufacturer",
+      "noAssetLinkedToThisRequest": "No asset linked to this request.",
+      "noLegalAnalysisAvailableForThisRequest": "No legal analysis available for this request.",
+      "noRepairvsreplaceDataAvailableForThisAsset": "No repair vs. replace data available for this asset.",
+      "requestNotFound": "Request not found.",
+      "suggested": "Suggested",
+      "suggestedMatch": "Suggested match",
+      "tenant": "Tenant",
+      "unit": "Unit"
+    },
+    "prop": {
+      "created": "Created",
+      "category": "Category",
+      "estimatedCost": "Estimated Cost",
+      "contact": "Contact",
+      "payingParty": "Paying Party",
+      "rejectionReason": "Rejection Reason",
+      "name": "Name",
+      "phone": "Phone",
+      "email": "Email",
+      "manufacturer": "Manufacturer",
+      "model": "Model",
+      "installed": "Installed"
+    },
+    "stage": {
+      "review": "Review",
+      "rfp": "RFP",
+      "contractor": "Contractor",
+      "inProgress": "In Progress",
+      "completed": "Completed",
+      "ownerApproval": "Owner Approval",
+      "inprogress": "In Progress",
+      "ownerapproval": "Owner Approval"
+    },
+    "status": {
+      "pendingReview": "Pending Review",
+      "rfpPending": "RFP Pending",
+      "ownerApproval": "Owner Approval",
+      "autoApproved": "Auto-Approved",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "tenantFunded": "Tenant-Funded"
+    },
+    "urgency": {
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High"
+    },
+    "tabs": {
+      "details": "Details",
+      "advisory": "Advisory"
+    },
+    "btn": {
+      "approve": "✓ Approve",
+      "reject": "✗ Reject",
+      "viewRfp": "View RFP",
+      "assignContractor": "Assign Contractor",
+      "unassign": "Unassign",
+      "confirm": "Confirm",
+      "cancel": "Cancel",
+      "unlink": "Unlink",
+      "linkAsset": "Link asset",
+      "routing": "Routing…",
+      "routeToRfp": "Route to RFP →"
+    },
+    "rec": {
+      "repair": "Repair",
+      "monitor": "Monitor & Repair",
+      "planReplacement": "Plan Replacement",
+      "replace": "Replace",
+      "planreplacement": "Plan Replacement"
+    }
+  },
+  "rfps": {
+    "title": {
+      "requestsForProposal": "Requests for Proposal"
+    },
+    "text": {
+      "noRequestLinked": "No request linked",
+      "loading": "Loading…"
+    },
+    "prop": {
+      "manageRfpsGeneratedByTheLegalDecisionEngine": "Manage RFPs generated by the legal decision engine"
+    },
+    "tabs": {
+      "all": "All",
+      "draft": "Draft",
+      "open": "Open",
+      "evaluating": "Evaluating",
+      "awarded": "Awarded",
+      "cancelled": "Cancelled"
+    },
+    "col": {
+      "request": "Request",
+      "category": "Category",
+      "buildingUnit": "Building / Unit",
+      "status": "Status",
+      "invites": "Invites",
+      "quotes": "Quotes",
+      "created": "Created"
+    }
+  },
+  "rfpsId": {
+    "title": {
+      "rFPDetails": "RFP Details",
+      "linkedMaintenanceRequest": "Linked Maintenance Request",
+      "fallbackActions": "Fallback Actions"
+    },
+    "text": {
+      "loading": "Loading…",
+      "status": "Status",
+      "category": "Category",
+      "legalObligation": "Legal Obligation",
+      "building": "Building",
+      "unit": "Unit",
+      "targetInvites": "Target Invites",
+      "quoteDeadline": "Quote Deadline",
+      "created": "Created",
+      "awardedTo": "Awarded To",
+      "request": "Request #",
+      "requestStatus": "Request Status",
+      "requestCategory": "Request Category",
+      "description": "Description",
+      "attachments": "Attachments",
+      "requestCreated": "Request Created",
+      "exclVat": "excl. VAT",
+      "duration": "Duration",
+      "available": "Available",
+      "validUntil": "Valid Until",
+      "submitted": "Submitted",
+      "workPlan": "Work Plan",
+      "assumptions": "Assumptions",
+      "notes": "Notes",
+      "lineItems": "Line Items",
+      "reinviteContractors": "Re-invite Contractors",
+      "selectContractorsToInvite": "Select contractors to invite",
+      "directAssignContractor": "Direct Assign Contractor",
+      "selectContractor": "Select contractor",
+      "chooseContractor": "— choose contractor —",
+      "rFPNotFound": "RFP not found."
+    },
+    "prop": {
+      "contractor": "Contractor",
+      "email": "Email",
+      "phone": "Phone",
+      "status": "Status",
+      "invited": "Invited"
+    }
+  },
+  "settings": {
+    "col": {
+      "actions": "Actions",
+      "versions": "Versions"
+    },
+    "heading": {
+      "legalSources": "Legal Sources",
+      "legalVariables": "Legal Variables"
+    },
+    "placeholder": {
+      "swissReferenceRate": "Swiss Reference Rate",
+      "eGReferenceRateCpi": "e.g. REFERENCE_RATE, CPI",
+      "optional": "Optional",
+      "eGDailyMonthly": "e.g. daily, monthly"
+    },
+    "title": {
+      "settings": "Settings"
+    },
+    "ariaLabel": {
+      "configureBuilding": "Configure building"
+    },
+    "text": {
+      "error": "Error:",
+      "oK": "OK:",
+      "manageBuildings": "Manage buildings →",
+      "orgMode": "Org mode",
+      "managed": "Managed",
+      "ownerdirect": "Owner-direct",
+      "ownerdirectRestrictsGovernanceToOwnersOnly": "Owner-direct restricts governance to owners only.",
+      "autoapprovalThreshold": "Auto-approval threshold",
+      "setTo": "Set to",
+      "requestsWithEstimatedCostThisValueAutoapprove": "Requests with estimated cost ≤ this value auto-approve.",
+      "invoiceLeadTime": "Invoice lead time",
+      "generate": "Generate",
+      "daysBeforeBillingPeriod": "days before billing period",
+      "recurringInvoicesAreGeneratedThisManyDaysBeforeTheBillingPeriodStarts": "Recurring invoices are generated this many days before the billing period starts.",
+      "loadingBuildings": "Loading buildings…",
+      "noBuildingsConfiguredYetPerbuildingSettingsWillAppearOnceBuildingsAreAdded": "No buildings configured yet. Per-building settings will appear once buildings are added.",
+      "comingSoon": "Coming soon",
+      "notificationPreferences": "Notification Preferences",
+      "integrations": "Integrations",
+      "loadingSources": "Loading sources…",
+      "noLegalSourcesConfiguredSourcesAreAutocreatedOnServerStartup": "No legal sources configured. Sources are auto-created on server startup.",
+      "edit": "Edit",
+      "deactivate": "Deactivate",
+      "activate": "Activate",
+      "delete": "Delete",
+      "name": "Name *",
+      "jurisdiction": "Jurisdiction",
+      "scope": "Scope",
+      "federal": "Federal",
+      "fetcherType": "Fetcher type",
+      "parserType": "Parser type",
+      "updateFrequency": "Update frequency",
+      "status": "Status"
+    },
+    "prop": {
+      "configureGovernanceModeAndDefaultAutoapprovalSettings": "Configure governance mode and default auto-approval settings.",
+      "name": "Name",
+      "address": "Address",
+      "canton": "Canton",
+      "type": "Type",
+      "scope": "Scope",
+      "frequency": "Frequency",
+      "status": "Status",
+      "lastSynced": "Last Synced",
+      "key": "Key",
+      "description": "Description"
+    },
+    "tabs": {
+      "org": "Organisation",
+      "buildings": "Buildings",
+      "notifications": "Notifications",
+      "integrations": "Integrations",
+      "legal": "Legal Sources",
+      "depreciation": "Standards"
+    }
+  },
+  "vacancies[unitid]Applications": {
+    "col": {
+      "rank": "Rank",
+      "actions": "Actions"
+    },
+    "heading": {
+      "overrideDisqualification": "Override Disqualification",
+      "adjustScore": "Adjust Score"
+    },
+    "placeholder": {
+      "eGVerifiedIncomeDirectlyWithEmployerDebtEnforcementExtractIsClear": "e.g. Verified income directly with employer; debt enforcement extract is clear…",
+      "reasonForAdjustmentMin3Chars": "Reason for adjustment (min 3 chars)"
+    },
+    "title": {
+      "rentalApplications": "Rental Applications",
+      "clickToViewCorroborativeDocuments": "Click to view corroborative documents"
+    }
+  },
+  "vacanciesIndex": {
+    "col": {
+      "applications": "Applications",
+      "action": "Action"
+    },
+    "heading": {
+      "vacantUnitsOpenForApplications": "Vacant Units — Open for Applications"
+    },
+    "title": {
+      "inventory": "Inventory"
+    },
+    "text": {
+      "noLeaseTemplateReady": "No lease — template ready",
+      "noLeaseTemplateCreateOneFirst": "No lease template — create one first",
+      "buildings": "Buildings",
+      "vacancies": "Vacancies",
+      "assets": "Assets",
+      "maintenanceDecisions": "Maintenance Decisions",
+      "depreciation": "Depreciation",
+      "loadingSelections": "Loading selections…",
+      "noActiveTenantSelections": "No active tenant selections.",
+      "loading": "Loading…",
+      "noVacantUnitsAtThisTime": "No vacant units at this time."
+    },
+    "prop": {
+      "unit": "Unit",
+      "floor": "Floor",
+      "buildingsUnitsAssetsAndDepreciationSchedules": "Buildings, units, assets and depreciation schedules.",
+      "building": "Building",
+      "selectedTenant": "Selected Tenant",
+      "status": "Status",
+      "lease": "Lease",
+      "deadline": "Deadline"
+    }
+  },
+  "billing_Schedules": {
+    "text": {
+      "error": "Error:",
+      "loadingSchedules": "Loading schedules…"
+    },
+    "prop": {
+      "recurringInvoicesGeneratedAutomaticallyForActiveLeases": "Recurring invoices generated automatically for active leases."
+    }
+  },
+  "buildingsIdFinancials": {
+    "text": {
+      "loading": "Loading…"
+    }
+  },
+  "charge_ReconciliationsId": {
+    "text": {
+      "invoice": "Invoice:",
+      "status": "Status:",
+      "amount": "Amount:",
+      "description": "Description:"
+    },
+    "prop": {
+      "reconciliationNotFound": "Reconciliation not found.",
+      "tenant": "Tenant",
+      "fiscalYear": "Fiscal Year",
+      "status": "Status",
+      "balance": "Balance",
+      "totalAcomptePaid": "Total ACOMPTE Paid",
+      "totalActualCosts": "Total Actual Costs",
+      "difference": "Difference",
+      "expense": "Expense",
+      "mode": "Mode",
+      "aCOMPTEPaid": "ACOMPTE Paid",
+      "actualCost": "Actual Cost"
+    }
+  },
+  "charge_ReconciliationsIndex": {
+    "text": {
+      "loading": "Loading…",
+      "noReconciliationsFoundCreateOneFromALeaseDetailPage": "No reconciliations found. Create one from a lease detail page."
+    }
+  },
+  "contractor_Billing_SchedulesId": {
+    "text": {
+      "contractorDataUnavailable": "Contractor data unavailable"
+    },
+    "prop": {
+      "scheduleNotFound": "Schedule not found.",
+      "status": "Status",
+      "frequency": "Frequency",
+      "anchorDay": "Anchor Day",
+      "amount": "Amount",
+      "vATRate": "VAT Rate",
+      "amountInclVat": "Amount incl. VAT",
+      "nextPeriodStart": "Next Period Start",
+      "lastGenerated": "Last Generated",
+      "building": "Building",
+      "completedAt": "Completed At",
+      "reason": "Reason",
+      "created": "Created",
+      "name": "Name",
+      "email": "Email",
+      "phone": "Phone",
+      "vATNumber": "VAT Number",
+      "active": "Active"
+    }
+  },
+  "contractor_Billing_SchedulesIndex": {
+    "text": {
+      "view": "View",
+      "contractor": "Contractor *",
+      "selectContractor": "Select contractor…",
+      "description": "Description *",
+      "frequency": "Frequency *",
+      "startDate": "Start Date *",
+      "loading": "Loading…",
+      "noContractorBillingSchedulesFound": "No contractor billing schedules found."
+    },
+    "prop": {
+      "recurringBillingSchedulesForContractorServices": "Recurring billing schedules for contractor services"
+    }
+  },
+  "dashboard_V2": {
+    "text": {
+      "portfolioOverview": "Portfolio overview",
+      "managerDashboard": "Manager Dashboard",
+      "v2Preview": "v2 preview",
+      "allItemsRequiringActionSortedByUrgency": "All items requiring action, sorted by urgency.",
+      "allClearNoItemsNeedAction": "All clear — no items need action",
+      "checkBackAfterNewRequestsOrInvoicesArrive": "Check back after new requests or invoices arrive.",
+      "deeperViewsForFinanceStrategyAndTenantPortal": "Deeper views for finance, strategy, and tenant portal."
+    },
+    "prop": {
+      "spendMtd": "Spend MTD",
+      "avgDaysDone": "Avg days done",
+      "collectionRate": "Collection rate",
+      "nOIYtd": "NOI YTD",
+      "buildingsInRed": "Buildings in red",
+      "portfolio": "Portfolio",
+      "openRequests": "Open requests",
+      "openJobs": "Open jobs",
+      "pendingInvoices": "Pending invoices"
+    }
+  },
+  "financeBilling_EntitiesId": {
+    "text": {
+      "loadingBillingEntity": "Loading billing entity…",
+      "billingEntityNotFound": "Billing entity not found.",
+      "type": "Type",
+      "name": "Name",
+      "addressLine1": "Address line 1",
+      "addressLine2": "Address line 2",
+      "postalCode": "Postal code",
+      "city": "City",
+      "country": "Country",
+      "vATNumber": "VAT number"
+    },
+    "prop": {
+      "type": "Type",
+      "name": "Name",
+      "linkedContractor": "Linked contractor",
+      "addressLine1": "Address line 1",
+      "addressLine2": "Address line 2",
+      "postalCode": "Postal code",
+      "city": "City",
+      "country": "Country",
+      "vATNumber": "VAT number",
+      "defaultVatRate": "Default VAT rate",
+      "nextInvoiceSequence": "Next invoice sequence",
+      "entityId": "Entity ID"
+    }
+  },
+  "financeChart_Of_Accounts": {
+    "text": {
+      "seedSwissTaxonomy": "Seed Swiss Taxonomy",
+      "name": "Name *",
+      "code": "Code",
+      "description": "Description",
+      "type": "Type",
+      "remove": "Remove",
+      "expenseType": "Expense Type *",
+      "account": "Account *"
+    },
+    "prop": {
+      "manageExpenseTypesAccountsAndExpensetoaccountMappings": "Manage expense types, accounts, and expense-to-account mappings",
+      "name": "Name",
+      "code": "Code",
+      "description": "Description",
+      "status": "Status",
+      "type": "Type",
+      "expenseType": "Expense Type",
+      "account": "Account",
+      "scope": "Scope"
+    }
+  },
+  "rent_AdjustmentsId": {
+    "text": {
+      "previousRent": "Previous Rent",
+      "month": "/month",
+      "newRent": "→ New Rent",
+      "change": "Change",
+      "calculationBreakdown": "Calculation breakdown"
+    },
+    "prop": {
+      "rentAdjustmentNotFound": "Rent adjustment not found.",
+      "status": "Status",
+      "type": "Type",
+      "effectiveDate": "Effective Date",
+      "lease": "Lease",
+      "cPIBase": "CPI Base",
+      "cPICurrent": "CPI Current",
+      "cPIRatio": "CPI Ratio",
+      "indexClause": "Index Clause",
+      "cPIBaseIndex": "CPI Base Index",
+      "initialRent": "Initial Rent",
+      "lastIndexation": "Last Indexation"
+    }
+  },
+  "rent_AdjustmentsIndex": {
+    "text": {
+      "loading": "Loading…"
+    },
+    "prop": {
+      "cPIindexedAndManualRentAdjustments": "CPI-indexed and manual rent adjustments"
+    }
+  },
+  "rental_ApplicationsApplicationid": {
+    "text": {
+      "loading": "Loading…",
+      "applicationNotFound": "Application not found.",
+      "reasons": "Reasons:"
+    },
+    "prop": {
+      "email": "Email",
+      "phone": "Phone",
+      "dateOfBirth": "Date of birth",
+      "nationality": "Nationality",
+      "civilStatus": "Civil status",
+      "employer": "Employer",
+      "jobTitle": "Job title",
+      "workLocation": "Work location",
+      "employedSince": "Employed since",
+      "netMonthlyIncome": "Net monthly income",
+      "permitType": "Permit type",
+      "debtEnforcement": "Debt enforcement",
+      "currentLandlord": "Current landlord",
+      "landlordAddress": "Landlord address",
+      "landlordPhone": "Landlord phone",
+      "reasonForLeaving": "Reason for leaving",
+      "desiredMovein": "Desired move-in",
+      "householdSize": "Household size",
+      "pets": "Pets",
+      "rCInsurance": "RC insurance",
+      "vehicle": "Vehicle",
+      "needsParking": "Needs parking",
+      "remarks": "Remarks",
+      "confidence": "Confidence",
+      "status": "Status",
+      "managerDelta": "Manager delta"
+    }
+  },
+  "vacanciesUnitidApplications": {
+    "text": {
+      "vacancies": "← Vacancies",
+      "summary": "Summary",
+      "fullDetail": "Full Detail",
+      "loading": "Loading…",
+      "noApplicationsForThisUnitYet": "No applications for this unit yet.",
+      "disqualified": "Disqualified",
+      "override": "✓ Override",
+      "view": "View",
+      "adjust": "Adjust",
+      "override2": "⚠ Override",
+      "disqualificationReasons": "Disqualification Reasons",
+      "docs": "▼ docs",
+      "minimum3CharactersThisWillBeRecordedForAudit": "Minimum 3 characters. This will be recorded for audit.",
+      "addOrSubtractPointsWithAReason": "Add or subtract points with a reason.",
+      "scoreAdjustment": "Score adjustment",
+      "reason": "Reason *"
+    },
+    "prop": {
+      "applicant": "Applicant",
+      "score": "Score",
+      "confidence": "Confidence",
+      "status": "Status"
+    }
+  },
+  "rentAdjustments": {
+    "tabs": {
+      "all": "All",
+      "draft": "Draft",
+      "approved": "Approved",
+      "applied": "Applied",
+      "rejected": "Rejected"
+    },
+    "col": {
+      "tenant": "Tenant",
+      "type": "Type",
+      "effective": "Effective",
+      "status": "Status",
+      "oldRent": "Old Rent",
+      "newRent": "New Rent",
+      "change": "Change"
+    }
+  },
+  "contractorBillingSchedules": {
+    "tabs": {
+      "all": "All",
+      "active": "Active",
+      "paused": "Paused",
+      "completed": "Completed"
+    }
+  },
+  "peopleTabs": {
+    "tabs": {
+      "tenants": "Tenants",
+      "vendors": "Vendors",
+      "owners": "Owners"
+    }
+  },
+  "chargeReconciliations": {
+    "tabs": {
+      "draft": "Draft",
+      "finalized": "Finalized",
+      "settled": "Settled",
+      "all": "All"
+    }
+  },
+  "chargeRecons": {
+    "col": {
+      "tenant": "Tenant",
+      "year": "Year",
+      "status": "Status",
+      "acomptePaid": "Acompte Paid",
+      "actualCosts": "Actual Costs",
+      "balance": "Balance"
+    }
+  },
+  "loading": "Loading…"
+}

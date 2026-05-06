@@ -12,6 +12,8 @@
 import { PrismaClient } from "@prisma/client";
 import { createNotification } from "./notifications";
 import { enqueueEmail } from "./emailOutbox";
+import { findOverdueInvoices } from "../repositories/invoiceRepository";
+import { findManagersByOrg } from "../repositories/userRepository";
 
 /* ── Configuration ─────────────────────────────────────────── */
 
@@ -32,34 +34,7 @@ export async function processOverdueInvoices(
 
   // Find invoices that are overdue: dueDate is past the grace period,
   // status is ISSUED or APPROVED (actively owed), and not yet paid/cancelled.
-  const overdueInvoices = await prisma.invoice.findMany({
-    where: {
-      dueDate: { lt: cutoff },
-      status: { in: ["ISSUED", "APPROVED"] },
-    },
-    select: {
-      id: true,
-      orgId: true,
-      invoiceNumber: true,
-      amount: true,
-      totalAmount: true,
-      dueDate: true,
-      recipientName: true,
-      lease: {
-        select: {
-          id: true,
-          tenantName: true,
-          tenantEmail: true,
-          unit: {
-            select: {
-              unitNumber: true,
-              building: { select: { id: true, name: true } },
-            },
-          },
-        },
-      },
-    },
-  });
+  const overdueInvoices = await findOverdueInvoices(prisma, cutoff);
 
   if (overdueInvoices.length === 0) return 0;
 
@@ -68,10 +43,7 @@ export async function processOverdueInvoices(
 
   const managersByOrg = new Map<string, { id: string; email: string }[]>();
   for (const orgId of orgIds) {
-    const managers = await prisma.user.findMany({
-      where: { orgId, role: "MANAGER" },
-      select: { id: true, email: true },
-    });
+    const managers = await findManagersByOrg(prisma, orgId);
     managersByOrg.set(orgId, managers);
   }
 

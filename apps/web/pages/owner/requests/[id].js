@@ -18,6 +18,8 @@ import {
   formatCurrency,
 } from "../../manager/requests";
 import ScrollableTabs from "../../../components/mobile/ScrollableTabs";
+import { withServerTranslations } from "../../../lib/i18n";
+import { useTranslation } from "next-i18next";
 
 /* ═══════════════════════════════════════════════════════════════
    Constants
@@ -256,11 +258,12 @@ function DepreciationBar({ pct }) {
 /* ── Asset recommendation content ── */
 
 function AssetRecommendationContent({ assetId, repairReplaceData, requestEstimate }) {
+  const { t } = useTranslation("owner");
   if (!assetId) {
     return (
       <div className="py-6 text-center">
-        <p className="text-sm text-slate-400 m-0">No asset linked to this request.</p>
-        <p className="text-xs text-slate-400 mt-1 m-0">Link an asset to get repair / replace recommendations.</p>
+        <p className="text-sm text-slate-400 m-0">{t("owner:requestsId.text.noAssetLinkedToThisRequest")}</p>
+        <p className="text-xs text-slate-400 mt-1 m-0">{t("owner:requestsId.text.linkAnAssetToGetRepairReplaceRecommendations")}</p>
       </div>
     );
   }
@@ -273,12 +276,12 @@ function AssetRecommendationContent({ assetId, repairReplaceData, requestEstimat
     return (
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">Recommendation</span>
-          <p className="mt-1 text-sm text-slate-400 m-0">Not available</p>
+          <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">{t("owner:requestsId.text.recommendation")}</span>
+          <p className="mt-1 text-sm text-slate-400 m-0">{t("owner:requestsId.text.notAvailable")}</p>
         </div>
         <div>
-          <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">Estimated price</span>
-          <p className="mt-1 text-sm text-slate-400 m-0">Not available</p>
+          <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">{t("owner:requestsId.text.estimatedPrice")}</span>
+          <p className="mt-1 text-sm text-slate-400 m-0">{t("owner:requestsId.text.notAvailable")}</p>
         </div>
       </div>
     );
@@ -290,7 +293,7 @@ function AssetRecommendationContent({ assetId, repairReplaceData, requestEstimat
   if (!item) {
     return (
       <div className="py-4 text-center">
-        <p className="text-sm text-slate-400 m-0">No repair-vs-replace data available for this asset.</p>
+        <p className="text-sm text-slate-400 m-0">{t("owner:requestsId.text.noRepairvsreplaceDataAvailableForThisAsset")}</p>
       </div>
     );
   }
@@ -318,7 +321,7 @@ function AssetRecommendationContent({ assetId, repairReplaceData, requestEstimat
 
       <div className="grid grid-cols-2 gap-4 pt-3 border-t border-slate-100">
         <div>
-          <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">Est. repair</span>
+          <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">{t("owner:requestsId.text.estRepair")}</span>
           <p className="mt-0.5 text-sm font-semibold text-slate-900 m-0">
             {requestEstimate > 0
               ? formatCurrency(requestEstimate)
@@ -328,7 +331,7 @@ function AssetRecommendationContent({ assetId, repairReplaceData, requestEstimat
           </p>
         </div>
         <div>
-          <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">Est. replacement</span>
+          <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">{t("owner:requestsId.text.estReplacement")}</span>
           <p className="mt-0.5 text-sm font-semibold text-slate-900 m-0">
             {item.estimatedReplacementCostChf > 0 ? formatCurrency(item.estimatedReplacementCostChf) : "\u2014"}
           </p>
@@ -371,6 +374,7 @@ function AssetRecommendationContent({ assetId, repairReplaceData, requestEstimat
    ═══════════════════════════════════════════════════════════════ */
 
 export default function OwnerRequestDetailPage() {
+  const { t } = useTranslation("owner");
   const router = useRouter();
   const { id } = router.query;
 
@@ -503,7 +507,7 @@ export default function OwnerRequestDetailPage() {
             <button
               onClick={() => router.push("/owner/approvals")}
               className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-500 hover:bg-slate-50 transition mr-1"
-              aria-label="Back to approvals"
+              aria-label={t("owner:requestsId.ariaLabel.backToApprovals")}
             >
               &larr;
             </button>
@@ -513,22 +517,22 @@ export default function OwnerRequestDetailPage() {
             {!loading && r && (
               <>
                 <Badge variant={urgencyVariant(r.urgency)} size="sm">{urgencyDisplay}</Badge>
-                {isTenantFunded && <Badge variant="warning" size="sm">Tenant-funded</Badge>}
+                {isTenantFunded && <Badge variant="warning" size="sm">{t("owner:requestsId.text.tenantfunded")}</Badge>}
               </>
             )}
           </div>
 
           {error && (
             <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 mb-4 flex items-center justify-between" role="alert">
-              <span className="text-sm text-red-700"><strong>Error:</strong> {error}</span>
-              <button onClick={() => setError("")} className="text-xs text-red-500 hover:text-red-700 ml-4" aria-label="Dismiss error">Dismiss</button>
+              <span className="text-sm text-red-700"><strong>{t("owner:requestsId.text.error")}</strong> {error}</span>
+              <button onClick={() => setError("")} className="text-xs text-red-500 hover:text-red-700 ml-4" aria-label={t("owner:requestsId.ariaLabel.dismissError")}>{t("owner:requestsId.text.dismiss")}</button>
             </div>
           )}
 
           {loading ? (
             <Panel><p className="loading-text">Loading request&hellip;</p></Panel>
           ) : !r ? (
-            <div className="empty-state"><p className="empty-state-text">Request not found.</p></div>
+            <div className="empty-state"><p className="empty-state-text">{t("owner:requestsId.text.requestNotFound")}</p></div>
           ) : (
             <div className="space-y-6">
 
@@ -538,20 +542,20 @@ export default function OwnerRequestDetailPage() {
 
                 {needsOwnerApproval && (
                   <div className="mt-5 rounded-lg border border-amber-200 bg-amber-50 px-4 py-4 space-y-3">
-                    <p className="text-sm font-semibold text-amber-900 m-0">Your approval is required</p>
+                    <p className="text-sm font-semibold text-amber-900 m-0">{t("owner:requestsId.text.yourApprovalIsRequired")}</p>
                     <p className="text-xs text-amber-800 leading-relaxed m-0">{approvalReason}</p>
 
                     {(contractorName || amountChf || rfpId) && (
                       <div className="flex flex-wrap gap-x-6 gap-y-2 pt-4 sm:justify-between">
                         {contractorName && (
                           <div>
-                            <span className="text-[11px] font-medium text-amber-700 uppercase tracking-wide block">Selected Contractor</span>
+                            <span className="text-[11px] font-medium text-amber-700 uppercase tracking-wide block">{t("owner:requestsId.text.selectedContractor")}</span>
                             <span className="text-sm font-semibold text-slate-900">{contractorName}</span>
                           </div>
                         )}
                         {amountChf && (
                           <div>
-                            <span className="text-[11px] font-medium text-amber-700 uppercase tracking-wide block">Quote Amount</span>
+                            <span className="text-[11px] font-medium text-amber-700 uppercase tracking-wide block">{t("owner:requestsId.text.quoteAmount")}</span>
                             <span className="text-sm font-semibold text-slate-900">{amountChf}</span>
                           </div>
                         )}
@@ -619,21 +623,21 @@ export default function OwnerRequestDetailPage() {
                   <div className="flex flex-wrap items-baseline gap-x-6 gap-y-2 mb-4">
                     {building && (
                       <div>
-                        <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">Building</span>
+                        <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">{t("owner:requestsId.text.building")}</span>
                         <span className="text-sm font-medium text-slate-900">{building.name}</span>
                         {building.address && <p className="text-xs text-slate-400 mt-0.5 m-0">{building.address}</p>}
                       </div>
                     )}
                     {unit && (
                       <div>
-                        <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">Unit</span>
+                        <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">{t("owner:requestsId.text.unit")}</span>
                         <span className="text-sm font-medium text-slate-900">{unit.unitNumber}</span>
                         {unit.floor != null && <span className="text-xs text-slate-400 ml-1.5">Floor {unit.floor}</span>}
                       </div>
                     )}
                     {tenant && (
                       <div>
-                        <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">Tenant</span>
+                        <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">{t("owner:requestsId.text.tenant")}</span>
                         <span className="text-sm font-medium text-slate-900">{tenant.name}</span>
                         {tenant.phone && <p className="text-xs text-slate-400 mt-0.5 m-0">{tenant.phone}</p>}
                       </div>
@@ -641,7 +645,7 @@ export default function OwnerRequestDetailPage() {
                   </div>
 
                   <div className="mb-4">
-                    <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">Description</span>
+                    <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">{t("owner:requestsId.text.description")}</span>
                     <p className="mt-1 text-sm text-slate-700 leading-relaxed whitespace-pre-wrap m-0">
                       {r.description || <span className="text-slate-400">&mdash;</span>}
                     </p>
@@ -653,24 +657,24 @@ export default function OwnerRequestDetailPage() {
 
                   <div className="card-section">
                     <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3">
-                      <Field label="Created">{formatDate(r.createdAt)}</Field>
+                      <Field label={t("owner:requestsId.prop.created")}>{formatDate(r.createdAt)}</Field>
                       {r.category && (
-                        <Field label="Category">
+                        <Field label={t("owner:requestsId.prop.category")}>
                           <Badge variant="muted" size="sm">{r.category}</Badge>
                         </Field>
                       )}
                       {r.estimatedCost > 0 && (
-                        <Field label="Estimated Cost">
+                        <Field label={t("owner:requestsId.prop.estimatedCost")}>
                           <span className="font-semibold">{formatCurrency(r.estimatedCost)}</span>
                         </Field>
                       )}
-                      <Field label="Paying Party">
+                      <Field label={t("owner:requestsId.prop.payingParty")}>
                         <Badge variant={isTenantFunded ? "warning" : "muted"} size="sm">
                           {isTenantFunded ? "Tenant" : "Landlord"}
                         </Badge>
                       </Field>
                       {isTenantFunded && r.rejectionReason && (
-                        <Field label="Rejection Reason">
+                        <Field label={t("owner:requestsId.prop.rejectionReason")}>
                           <span className="text-orange-700">{r.rejectionReason}</span>
                         </Field>
                       )}
@@ -679,27 +683,27 @@ export default function OwnerRequestDetailPage() {
 
                   {r.assignedContractor && (
                     <div className="card-section">
-                      <h4 className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-3">Contractor</h4>
+                      <h4 className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-3">{t("owner:requestsId.text.contractor")}</h4>
                       <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3">
-                        <Field label="Name">
+                        <Field label={t("owner:requestsId.prop.name")}>
                           <span className="text-sm font-medium">
                             {r.assignedContractor.name || r.assignedContractor.companyName || "\u2014"}
                           </span>
                         </Field>
-                        {r.assignedContractor.phone && <Field label="Phone">{r.assignedContractor.phone}</Field>}
-                        {r.assignedContractor.email && <Field label="Email">{r.assignedContractor.email}</Field>}
+                        {r.assignedContractor.phone && <Field label={t("owner:requestsId.prop.phone")}>{r.assignedContractor.phone}</Field>}
+                        {r.assignedContractor.email && <Field label={t("owner:requestsId.prop.email")}>{r.assignedContractor.email}</Field>}
                       </dl>
                     </div>
                   )}
 
                   {asset && (
                     <div className="card-section">
-                      <h4 className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-3">Asset</h4>
+                      <h4 className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-3">{t("owner:requestsId.text.asset")}</h4>
                       <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3">
-                        <Field label="Name">{asset.name || "\u2014"}</Field>
-                        {asset.brand       && <Field label="Brand">{asset.brand}</Field>}
-                        {asset.modelNumber && <Field label="Model">{asset.modelNumber}</Field>}
-                        {asset.installedAt && <Field label="Installed">{formatDate(asset.installedAt)}</Field>}
+                        <Field label={t("owner:requestsId.prop.name")}>{asset.name || "\u2014"}</Field>
+                        {asset.brand       && <Field label={t("owner:requestsId.prop.brand")}>{asset.brand}</Field>}
+                        {asset.modelNumber && <Field label={t("owner:requestsId.prop.model")}>{asset.modelNumber}</Field>}
+                        {asset.installedAt && <Field label={t("owner:requestsId.prop.installed")}>{formatDate(asset.installedAt)}</Field>}
                       </dl>
                     </div>
                   )}
@@ -717,7 +721,7 @@ export default function OwnerRequestDetailPage() {
               {/* 4. Advisory tab */}
               {activeTab === "advisory" && (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <Panel title="Legal Analysis" bodyClassName="p-0">
+                  <Panel title={t("owner:requestsId.title.legalAnalysis")} bodyClassName="p-0">
                     <LegalRecommendationPanel
                       decision={legalState.data}
                       loading={legalState.loading}
@@ -725,28 +729,28 @@ export default function OwnerRequestDetailPage() {
                     />
                     {!legalState.loading && !legalState.data && !legalState.error && (
                       <div className="px-6 py-8 text-center">
-                        <p className="text-sm text-slate-400 m-0">No legal analysis available for this request.</p>
+                        <p className="text-sm text-slate-400 m-0">{t("owner:requestsId.text.noLegalAnalysisAvailableForThisRequest")}</p>
                       </div>
                     )}
                   </Panel>
 
-                  <Panel title="Maintenance Decision">
+                  <Panel title={t("owner:requestsId.title.maintenanceDecision")}>
                     {asset ? (
                       <div className="space-y-4">
                         <div className="flex flex-wrap items-baseline gap-x-5 gap-y-1">
                           <div>
-                            <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">Asset</span>
+                            <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">{t("owner:requestsId.text.asset")}</span>
                             <span className="text-sm font-medium text-slate-900">{asset.name || "\u2014"}</span>
                           </div>
                           {asset.brand && (
                             <div>
-                              <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">Brand</span>
+                              <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">{t("owner:requestsId.text.brand")}</span>
                               <span className="text-sm text-slate-700">{asset.brand}</span>
                             </div>
                           )}
                           {asset.installedAt && (
                             <div>
-                              <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">Installed</span>
+                              <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">{t("owner:requestsId.text.installed")}</span>
                               <span className="text-sm text-slate-700">{formatDate(asset.installedAt)}</span>
                             </div>
                           )}
@@ -763,7 +767,7 @@ export default function OwnerRequestDetailPage() {
                       </div>
                     ) : (
                       <div className="py-6 text-center">
-                        <p className="text-sm text-slate-400 m-0">No asset linked to this request.</p>
+                        <p className="text-sm text-slate-400 m-0">{t("owner:requestsId.text.noAssetLinkedToThisRequest")}</p>
                       </div>
                     )}
                   </Panel>
@@ -781,3 +785,5 @@ export default function OwnerRequestDetailPage() {
     </AppShell>
   );
 }
+
+export const getServerSideProps = withServerTranslations(["common","owner"]);

@@ -14,8 +14,13 @@ import ErrorBanner from "../../../../components/ui/ErrorBanner";
 import { cn } from "../../../../lib/utils";
 import { leaseVariant, invoiceVariant } from "../../../../lib/statusVariants";
 import ScrollableTabs from "../../../../components/mobile/ScrollableTabs";
+import SortableHeader from "../../../../components/SortableHeader";
+import { useLocalSort, clientSort } from "../../../../lib/tableUtils";
+import { withServerTranslations } from "../../../../lib/i18n";
+import { useTranslation } from "next-i18next";
 
 export default function TenantDetailPage() {
+  const { t } = useTranslation("manager");
   const router = useRouter();
   const { id } = router.query;
   const [tenant, setTenant] = useState(null);
@@ -25,12 +30,40 @@ export default function TenantDetailPage() {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [isEditing, setIsEditing] = useState(false);
-  const [activeTab, setActiveTab] = useState("Personal information");
+  const [activeTab, setActiveTab] = useState("personal");
+  const TABS = [
+    { id: "personal",   label: t("manager:peopleTenantsId.tab.personalInformation") },
+    { id: "unit",       label: t("manager:peopleTenantsId.tab.unit") },
+    { id: "documents", label: t("manager:peopleTenantsId.tab.documents") },
+    { id: "contracts", label: t("manager:peopleTenantsId.tab.contracts") },
+    { id: "invoices",  label: t("manager:peopleTenantsId.tab.invoices") },
+  ];
   const [applicationId, setApplicationId] = useState(null);
   const [leases, setLeases] = useState([]);
   const [leasesLoading, setLeasesLoading] = useState(false);
   const [leaseInvoices, setLeaseInvoices] = useState([]);
   const [invoicesLoading, setInvoicesLoading] = useState(false);
+
+  const { sortField: lSortField, sortDir: lSortDir, handleSort: handleLeaseSort } = useLocalSort("startDate", "desc");
+  const sortedLeases = useMemo(() => clientSort(leases, lSortField, lSortDir, (l, f) => {
+    if (f === "unit") return (l.unit?.unitNumber || "").toLowerCase();
+    if (f === "building") return (l.unit?.building?.name || "").toLowerCase();
+    if (f === "startDate") return l.startDate || "";
+    if (f === "endDate") return l.endDate || "";
+    if (f === "status") return l.status || "";
+    if (f === "rent") return l.netRentChf ?? 0;
+    return "";
+  }), [leases, lSortField, lSortDir]);
+
+  const { sortField: iSortField, sortDir: iSortDir, handleSort: handleInvSort } = useLocalSort("dueDate", "desc");
+  const sortedInvoices = useMemo(() => clientSort(leaseInvoices, iSortField, iSortDir, (inv, f) => {
+    if (f === "invoiceNumber") return inv.invoiceNumber || "";
+    if (f === "description") return (inv.description || "").toLowerCase();
+    if (f === "amount") return inv.totalAmount ?? 0;
+    if (f === "dueDate") return inv.dueDate || "";
+    if (f === "status") return inv.status || "";
+    return "";
+  }), [leaseInvoices, iSortField, iSortDir]);
 
   useEffect(() => {
     if (!id) return;
@@ -145,12 +178,12 @@ export default function TenantDetailPage() {
               className="text-sm font-medium text-slate-600 hover:text-slate-900"
               onClick={() => router.back()}
             >
-              ← Back
+              {t("manager:peopleTenantsId.text.back")}
             </button>
         </div>
         <PageHeader
           title={tenant?.name || "Tenant"}
-          subtitle="Tenant profile and contact details."
+          subtitle={t("manager:peopleTenantsId.prop.tenantProfileAndContactDetails")}
         />
         <PageContent>
           {message ? (
@@ -159,74 +192,74 @@ export default function TenantDetailPage() {
           <ErrorBanner error={error} onDismiss={() => setError("")} />
 
           {loading ? (
-            <p className="loading-text">Loading tenant…</p>
+            <p className="loading-text">{t("manager:peopleTenantsId.text.loadingTenant")}</p>
           ) : tenant ? (
             <div className="grid gap-4">
-              <ScrollableTabs activeIndex={["Personal information", "Unit", "Documents", "Contracts", "Invoices"].indexOf(activeTab)}>
-                {["Personal information", "Unit", "Documents", "Contracts", "Invoices"].map((tab) => (
+              <ScrollableTabs activeIndex={TABS.findIndex((tab) => tab.id === activeTab)}>
+                {TABS.map((tab) => (
                   <button
-                    key={tab}
+                    key={tab.id}
                     type="button"
-                    className={activeTab === tab ? "tab-btn-active" : "tab-btn"}
-                    onClick={() => setActiveTab(tab)}
+                    className={activeTab === tab.id ? "tab-btn-active" : "tab-btn"}
+                    onClick={() => setActiveTab(tab.id)}
                   >
-                    {tab}
+                    {tab.label}
                   </button>
                 ))}
               </ScrollableTabs>
 
-              {activeTab === "Personal information" && (
+              {activeTab === "personal" && (
                 <Panel
-                  title="Personal information"
+                  title={t("manager:peopleTenantsId.title.personalInformation")}
                   actions={
                     isEditing ? (
                       <div className="flex items-center gap-2">
-                        <button type="button" className="button-secondary text-sm" onClick={handleCancel} disabled={saving}>Cancel</button>
-                        <button type="button" className="button-primary text-sm" onClick={handleSave} disabled={saving}>{saving ? "Saving…" : "Save"}</button>
+                        <button type="button" className="button-secondary text-sm" onClick={handleCancel} disabled={saving}>{t("manager:peopleTenantsId.text.cancel")}</button>
+                        <button type="button" className="button-primary text-sm" onClick={handleSave} disabled={saving}>{saving ? t("manager:peopleTenantsId.text.saving") : t("manager:peopleTenantsId.text.save")}</button>
                       </div>
                     ) : (
-                      <button type="button" className="button-primary text-sm" onClick={() => setIsEditing(true)} disabled={loading || !tenant}>Edit</button>
+                      <button type="button" className="button-primary text-sm" onClick={() => setIsEditing(true)} disabled={loading || !tenant}>{t("manager:peopleTenantsId.text.edit")}</button>
                     )
                   }
                 >
                   <div className="grid gap-4 sm:grid-cols-2">
                     <label className="grid gap-2">
-                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Name</span>
+                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleTenantsId.text.name")}</span>
                       {isEditing ? (
                         <input
                           className="input text-sm text-slate-700"
                           type="text"
                           value={formData.name}
                           onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
-                          placeholder="Tenant name"
+                          placeholder={t("manager:peopleTenantsId.placeholder.tenantName")}
                         />
                       ) : (
                         <div className="text-sm text-slate-700">{formData.name || "—"}</div>
                       )}
                     </label>
                     <label className="grid gap-2">
-                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Phone</span>
+                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleTenantsId.text.phone")}</span>
                       {isEditing ? (
                         <input
                           className="input text-sm text-slate-700"
                           type="tel"
                           value={formData.phone}
                           onChange={(e) => setFormData((prev) => ({ ...prev, phone: e.target.value }))}
-                          placeholder="+41 XX XXX XXXX"
+                          placeholder={t("manager:peopleTenantsId.placeholder.41XxXxxXxxx")}
                         />
                       ) : (
                         <div className="text-sm text-slate-700">{formData.phone || "—"}</div>
                       )}
                     </label>
                     <label className="grid gap-2 sm:col-span-2">
-                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Email</span>
+                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleTenantsId.text.email")}</span>
                       {isEditing ? (
                         <input
                           className="input text-sm text-slate-700"
                           type="email"
                           value={formData.email}
                           onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
-                          placeholder="tenant@example.com"
+                          placeholder={t("manager:peopleTenantsId.placeholder.tenantExampleCom")}
                         />
                       ) : (
                         <div className="text-sm text-slate-700">{formData.email || "—"}</div>
@@ -236,21 +269,21 @@ export default function TenantDetailPage() {
 
                   <div className="mt-6 grid gap-4 sm:grid-cols-2">
                     <div className="min-w-0">
-                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Tenant ID</div>
+                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleTenantsId.text.tenantId")}</div>
                       <div className="text-sm text-slate-700 mt-1 break-all">{tenant?.id}</div>
                     </div>
                     <div className="min-w-0">
-                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Org ID</div>
+                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleTenantsId.text.orgId")}</div>
                       <div className="text-sm text-slate-700 mt-1 break-all">{tenant?.orgId || "—"}</div>
                     </div>
                     <div>
-                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Created</div>
+                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleTenantsId.text.created")}</div>
                       <div className="text-sm text-slate-700 mt-1">
                         {tenant?.createdAt ? formatDateTime(tenant.createdAt) : "—"}
                       </div>
                     </div>
                     <div>
-                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Updated</div>
+                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleTenantsId.text.updated")}</div>
                       <div className="text-sm text-slate-700 mt-1">
                         {tenant?.updatedAt ? formatDateTime(tenant.updatedAt) : "—"}
                       </div>
@@ -259,15 +292,15 @@ export default function TenantDetailPage() {
                 </Panel>
               )}
 
-              {activeTab === "Unit" && (
-                <Panel title="Professional">
+              {activeTab === "unit" && (
+                <Panel title={t("manager:peopleTenantsId.title.professional")}>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div>
-                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Unit</div>
+                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleTenantsId.text.unit")}</div>
                       <div className="text-sm text-slate-700 mt-1">{unitLabel}</div>
                     </div>
                     <div className="min-w-0">
-                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Building ID</div>
+                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleTenantsId.text.buildingId")}</div>
                       <div className="text-sm text-slate-700 mt-1 break-all">
                         {tenant?.unit?.buildingId ? (
                           <Link href={`/manager/buildings/${tenant.unit.buildingId}/financials`} className="cell-link">
@@ -277,7 +310,7 @@ export default function TenantDetailPage() {
                       </div>
                     </div>
                     <div className="min-w-0">
-                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Unit ID</div>
+                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleTenantsId.text.unitId")}</div>
                       <div className="text-sm text-slate-700 mt-1 break-all">
                         {(tenant?.unit?.id || tenant?.unitId) ? (
                           <Link href={`/admin-inventory/units/${tenant?.unit?.id || tenant?.unitId}`} className="cell-link">
@@ -287,36 +320,36 @@ export default function TenantDetailPage() {
                       </div>
                     </div>
                     <div>
-                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Floor</div>
+                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleTenantsId.text.floor")}</div>
                       <div className="text-sm text-slate-700 mt-1">{tenant?.unit?.floor || "—"}</div>
                     </div>
                   </div>
                 </Panel>
               )}
 
-              {activeTab === "Documents" && (
+              {activeTab === "documents" && (
                 applicationId ? (
-                  <DocumentsPanel applicationId={applicationId} title="Corroborative Documents" />
+                  <DocumentsPanel applicationId={applicationId} title={t("manager:peopleTenantsId.title.corroborativeDocuments")} />
                 ) : (
-                  <Panel title="Corroborative Documents">
+                  <Panel title={t("manager:peopleTenantsId.title.corroborativeDocuments")}>
                     <p className="text-sm text-slate-500 py-2">
-                      No rental application linked to this tenant.
+                      {t("manager:peopleTenantsId.text.noApplicationLinked")}
                     </p>
                   </Panel>
                 )
               )}
 
-              {activeTab === "Contracts" && (
-                <Panel title="Contracts" bodyClassName="p-0">
+              {activeTab === "contracts" && (
+                <Panel title={t("manager:peopleTenantsId.title.contracts")} bodyClassName="p-0">
                   {leasesLoading ? (
-                    <p className="px-4 py-3 text-sm text-slate-600">Loading leases…</p>
+                    <p className="px-4 py-3 text-sm text-slate-600">{t("manager:peopleTenantsId.text.loadingLeases")}</p>
                   ) : leases.length === 0 ? (
-                    <p className="px-4 py-3 text-sm text-slate-500">No leases found for this tenant.</p>
+                    <p className="px-4 py-3 text-sm text-slate-500">{t("manager:peopleTenantsId.text.noLeasesFoundForThisTenant")}</p>
                   ) : (
                     <>
                       {/* Mobile cards */}
                       <div className="sm:hidden divide-y divide-slate-100">
-                        {leases.map((l) => (
+                        {sortedLeases.map((l) => (
                           <div key={l.id} className="px-4 py-3 flex flex-col gap-1">
                             <div className="flex items-center justify-between gap-2">
                               <Link href={`/manager/leases/${l.id}`} className="cell-link text-sm font-medium">
@@ -333,20 +366,20 @@ export default function TenantDetailPage() {
                         ))}
                       </div>
                       {/* Desktop table */}
-                      <div className="hidden sm:block inline-table-wrap">
-                        <table className="inline-table">
+                      <div className="hidden sm:block data-table-wrap">
+                        <table className="data-table">
                           <thead>
                             <tr>
-                              <th>Unit</th>
-                              <th>Building</th>
-                              <th>Start date</th>
-                              <th>End date</th>
-                              <th>Status</th>
-                              <th className="text-right">Monthly rent</th>
+                              <SortableHeader label={t("manager:peopleTenantsId.prop.unit")} field="unit" sortField={lSortField} sortDir={lSortDir} onSort={handleLeaseSort} />
+                              <SortableHeader label={t("manager:peopleTenantsId.prop.building")} field="building" sortField={lSortField} sortDir={lSortDir} onSort={handleLeaseSort} />
+                              <SortableHeader label={t("manager:peopleTenantsId.prop.startDate")} field="startDate" sortField={lSortField} sortDir={lSortDir} onSort={handleLeaseSort} />
+                              <SortableHeader label={t("manager:peopleTenantsId.prop.endDate")} field="endDate" sortField={lSortField} sortDir={lSortDir} onSort={handleLeaseSort} />
+                              <SortableHeader label={t("manager:peopleTenantsId.prop.status")} field="status" sortField={lSortField} sortDir={lSortDir} onSort={handleLeaseSort} />
+                              <SortableHeader label={t("manager:peopleTenantsId.prop.monthlyRent")} field="rent" sortField={lSortField} sortDir={lSortDir} onSort={handleLeaseSort} className="text-right" />
                             </tr>
                           </thead>
                           <tbody>
-                            {leases.map((l) => (
+                            {sortedLeases.map((l) => (
                               <tr key={l.id}>
                                 <td>
                                   <Link href={`/manager/leases/${l.id}`} className="cell-link">
@@ -374,17 +407,17 @@ export default function TenantDetailPage() {
                 </Panel>
               )}
 
-              {activeTab === "Invoices" && (
-                <Panel title="Invoices" bodyClassName="p-0">
+              {activeTab === "invoices" && (
+                <Panel title={t("manager:peopleTenantsId.title.invoices")} bodyClassName="p-0">
                   {invoicesLoading ? (
-                    <p className="px-4 py-3 text-sm text-slate-600">Loading invoices…</p>
+                    <p className="px-4 py-3 text-sm text-slate-600">{t("manager:peopleTenantsId.text.loadingInvoices")}</p>
                   ) : leaseInvoices.length === 0 ? (
-                    <p className="px-4 py-3 text-sm text-slate-500">No invoices found for this tenant.</p>
+                    <p className="px-4 py-3 text-sm text-slate-500">{t("manager:peopleTenantsId.text.noInvoicesFoundForThisTenant")}</p>
                   ) : (
                     <>
                       {/* Mobile cards */}
                       <div className="sm:hidden divide-y divide-slate-100">
-                        {leaseInvoices.map((inv) => (
+                        {sortedInvoices.map((inv) => (
                           <div key={inv.id} className="px-4 py-3 flex flex-col gap-1">
                             <div className="flex items-center justify-between gap-2">
                               <span className="text-sm font-medium text-slate-800">
@@ -394,26 +427,26 @@ export default function TenantDetailPage() {
                             </div>
                             <span className="text-xs text-slate-500">{inv.description || "—"}</span>
                             <div className="flex items-center justify-between text-xs text-slate-500">
-                              <span>Due: {formatDate(inv.dueDate)}</span>
+                              <span>{t("manager:peopleTenantsId.text.due")} {formatDate(inv.dueDate)}</span>
                               <span className="font-mono">{inv.totalAmount != null ? formatChf(inv.totalAmount) : "—"}</span>
                             </div>
                           </div>
                         ))}
                       </div>
                       {/* Desktop table */}
-                      <div className="hidden sm:block inline-table-wrap">
-                        <table className="inline-table">
+                      <div className="hidden sm:block data-table-wrap">
+                        <table className="data-table">
                           <thead>
                             <tr>
-                              <th>Invoice #</th>
-                              <th>Description</th>
-                              <th className="text-right">Amount</th>
-                              <th>Due date</th>
-                              <th>Status</th>
+                              <SortableHeader label={t("manager:peopleTenantsId.prop.invoice")} field="invoiceNumber" sortField={iSortField} sortDir={iSortDir} onSort={handleInvSort} />
+                              <SortableHeader label={t("manager:peopleTenantsId.prop.description")} field="description" sortField={iSortField} sortDir={iSortDir} onSort={handleInvSort} />
+                              <SortableHeader label={t("manager:peopleTenantsId.prop.amount")} field="amount" sortField={iSortField} sortDir={iSortDir} onSort={handleInvSort} className="text-right" />
+                              <SortableHeader label={t("manager:peopleTenantsId.prop.dueDate")} field="dueDate" sortField={iSortField} sortDir={iSortDir} onSort={handleInvSort} />
+                              <SortableHeader label={t("manager:peopleTenantsId.prop.status")} field="status" sortField={iSortField} sortDir={iSortDir} onSort={handleInvSort} />
                             </tr>
                           </thead>
                           <tbody>
-                            {leaseInvoices.map((inv) => (
+                            {sortedInvoices.map((inv) => (
                               <tr key={inv.id}>
                                 <td>{inv.invoiceNumber || inv.id?.slice(0, 8) || "—"}</td>
                                 <td>{inv.description || "—"}</td>
@@ -438,10 +471,10 @@ export default function TenantDetailPage() {
             </div>
           ) : (
             <Panel>
-              <p className="text-sm text-slate-600">Tenant not found.</p>
+              <p className="text-sm text-slate-600">{t("manager:peopleTenantsId.text.tenantNotFound")}</p>
               <div className="mt-3">
                 <button type="button" className="button-secondary" onClick={() => router.back()}>
-                  Go back
+                  {t("manager:peopleTenantsId.text.goBack")}
                 </button>
               </div>
             </Panel>
@@ -451,3 +484,5 @@ export default function TenantDetailPage() {
     </AppShell>
   );
 }
+
+export const getServerSideProps = withServerTranslations(["common","manager"]);

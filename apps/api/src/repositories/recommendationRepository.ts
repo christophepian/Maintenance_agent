@@ -55,7 +55,7 @@ export async function updateRecommendationDecision(
   id: string,
   orgId: string,
   data: {
-    userDecision: any;
+    userDecision: UserDecisionStatus;
     userDecidedAt: Date;
     userFeedback?: string | null;
   },

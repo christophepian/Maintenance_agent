@@ -10,7 +10,10 @@ import ContractorPicker from "../../components/ContractorPicker";
 import { formatChf as formatCurrency, formatDate } from "../../lib/format";
 import { authHeaders } from "../../lib/api";
 import { cn } from "../../lib/utils";
+import { withTranslations } from "../../lib/i18n";
+import { useTranslation } from "next-i18next";
 export default function ContractorDashboard() {
+  const { t } = useTranslation("contractor");
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -112,9 +115,9 @@ export default function ContractorDashboard() {
     return (
       <AppShell role="CONTRACTOR">
         <PageShell>
-          <PageHeader title="Contractor Dashboard" />
+          <PageHeader title={t("contractor:index.title.contractorDashboard")} />
           <PageContent>
-            <p>Loading dashboard...</p>
+            <p>{t("contractor:index.text.loadingDashboard")}</p>
           </PageContent>
         </PageShell>
       </AppShell>
@@ -124,12 +127,12 @@ export default function ContractorDashboard() {
   return (
     <AppShell role="CONTRACTOR">
       <PageShell>
-        <PageHeader title="Contractor Dashboard" />
+        <PageHeader title={t("contractor:index.title.contractorDashboard")} />
         <PageContent>
           <ContractorPicker onSelect={() => loadDashboardData()} />
 
           {/* Quick Links Section */}
-          <Section title="Quick Links">
+          <Section title={t("contractor:index.title.quickLinks")}>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <button className="button-primary" onClick={() => router.push("/contractor/jobs")}>
                 🔧 All Jobs
@@ -148,19 +151,19 @@ export default function ContractorDashboard() {
 
           {error && (
             <Panel className="bg-red-50 border-red-200">
-              <strong className="text-destructive">Error:</strong> {error}
+              <strong className="text-destructive">{t("contractor:index.text.error")}</strong> {error}
             </Panel>
           )}
 
           {/* Action Required Section */}
-          <Section title="Today / Action Required">
+          <Section title={t("contractor:index.title.todayActionRequired")}>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Pending Jobs</div>
+                <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("contractor:index.text.pendingJobs")}</div>
                 <div className={cn("mt-3 text-2xl font-semibold tracking-tight", pendingJobs.length > 0 ? "text-amber-700" : "text-slate-400")}>
                   {pendingJobs.length}
                 </div>
-                <div className="text-sm text-slate-600">Need acceptance/start</div>
+                <div className="text-sm text-slate-600">{t("contractor:index.text.needAcceptancestart")}</div>
                 {pendingJobs.length > 0 && (
                   <button className="mt-3 text-sm font-medium text-indigo-600 hover:text-indigo-700" onClick={() => router.push("/contractor/jobs?status=PENDING")}>
                     View Pending Jobs →
@@ -170,7 +173,7 @@ export default function ContractorDashboard() {
 
               {staleInProgressJobs.length > 0 && (
                 <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                  <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Stale In-Progress Jobs</div>
+                  <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("contractor:index.text.staleInprogressJobs")}</div>
                   <div className="mt-3 text-2xl font-semibold tracking-tight text-amber-700">
                     {staleInProgressJobs.length}
                   </div>
@@ -183,11 +186,11 @@ export default function ContractorDashboard() {
 
               {completedNotInvoiced.length > 0 && (
                 <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                  <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Completed - Not Invoiced</div>
+                  <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("contractor:index.text.completedNotInvoiced")}</div>
                   <div className="mt-3 text-2xl font-semibold tracking-tight text-blue-700">
                     {completedNotInvoiced.length}
                   </div>
-                  <div className="text-sm text-slate-600">Ready for billing</div>
+                  <div className="text-sm text-slate-600">{t("contractor:index.text.readyForBilling")}</div>
                   <button className="mt-3 text-sm font-medium text-indigo-600 hover:text-indigo-700" onClick={() => router.push("/contractor/jobs?status=COMPLETED")}>
                     Create Invoices →
                   </button>
@@ -198,37 +201,37 @@ export default function ContractorDashboard() {
                staleInProgressJobs.length === 0 && 
                completedNotInvoiced.length === 0 && (
                 <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                  <p className="text-green-700 m-0">✓ No items require immediate action</p>
+                  <p className="text-green-700 m-0">{t("contractor:index.text.noItemsRequireImmediateAction")}</p>
                 </div>
               )}
             </div>
           </Section>
 
           {/* Pipeline KPIs Section */}
-          <Section title="Pipeline Overview">
+          <Section title={t("contractor:index.title.pipelineOverview")}>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Open Jobs</div>
+                <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("contractor:index.text.openJobs")}</div>
                 <div className={cn("mt-3 text-2xl font-semibold tracking-tight", openJobsCount > 0 ? "text-blue-700" : "text-slate-400")}>
                   {openJobsCount}
                 </div>
-                <div className="text-sm text-slate-600">Pending + in progress</div>
+                <div className="text-sm text-slate-600">{t("contractor:index.text.pendingInProgress")}</div>
               </div>
 
               <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Completed This Month</div>
+                <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("contractor:index.text.completedThisMonth")}</div>
                 <div className="mt-3 text-2xl font-semibold tracking-tight text-green-700">
                   {completedThisMonth}
                 </div>
-                <div className="text-sm text-slate-600">Jobs finished</div>
+                <div className="text-sm text-slate-600">{t("contractor:index.text.jobsFinished")}</div>
               </div>
 
               <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Invoiced This Month</div>
+                <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("contractor:index.text.invoicedThisMonth")}</div>
                 <div className="mt-3 text-2xl font-semibold tracking-tight text-green-700">
                   {formatCurrency(invoicedThisMonth)}
                 </div>
-                <div className="text-sm text-slate-600">Total billed</div>
+                <div className="text-sm text-slate-600">{t("contractor:index.text.totalBilled")}</div>
               </div>
             </div>
           </Section>
@@ -238,3 +241,5 @@ export default function ContractorDashboard() {
     </AppShell>
   );
 }
+
+export const getStaticProps = withTranslations(["common","contractor"]);

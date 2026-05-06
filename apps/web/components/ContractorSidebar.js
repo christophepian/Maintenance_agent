@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
+import { useTranslation } from "next-i18next";
 import {
   LayoutDashboard,
   Wrench,
@@ -9,15 +10,16 @@ import {
 } from "lucide-react";
 
 const CONTRACTOR_NAV = [
-  { label: "Dashboard", icon: LayoutDashboard, href: "/contractor" },
-  { label: "Jobs",      icon: Wrench,          href: "/contractor/jobs" },
-  { label: "Invoices",  icon: Receipt,         href: "/contractor/invoices" },
-  { label: "RFPs",      icon: FileSearch,      href: "/contractor/rfps" },
+  { id: "dashboard", icon: LayoutDashboard, href: "/contractor" },
+  { id: "jobs",      icon: Wrench,          href: "/contractor/jobs" },
+  { id: "invoices",  icon: Receipt,         href: "/contractor/invoices" },
+  { id: "rfps",      icon: FileSearch,      href: "/contractor/rfps" },
 ];
 
 export default function ContractorSidebar() {
   const router = useRouter();
   const pathname = router.asPath.split("?")[0];
+  const { t } = useTranslation("contractor");
 
   const activeIndex = useMemo(() => {
     for (let i = CONTRACTOR_NAV.length - 1; i >= 0; i--) {
@@ -34,7 +36,7 @@ export default function ContractorSidebar() {
         const isActive = index === activeIndex;
         return (
           <Link
-            key={item.label}
+            key={item.id}
             href={item.href}
             className={[
               "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
@@ -45,7 +47,7 @@ export default function ContractorSidebar() {
             ].join(" ")}
           >
             <Icon size={18} className="shrink-0" />
-            <span>{item.label}</span>
+            <span>{t(`nav.${item.id}`)}</span>
           </Link>
         );
       })}

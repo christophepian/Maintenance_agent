@@ -2604,4 +2604,77 @@ Footer cross-links card (More tools / More views)
 | `apps/web/pages/manager/dashboard-v2.js` | New file — prototype that became the basis for index.js |
 | `apps/web/pages/manager/index.js.bak` | Backup of old manager dashboard |
 | `apps/web/pages/owner/index.js.bak` | Backup of old owner dashboard |
+
+---
+
+## Epic: Bilingual EN/FR i18n — Full String Extraction Pass
+
+**Date:** 2026-05-05  
+**Commits:** `92fa17a` → latest  
+**Scope:** Complete extraction of all hardcoded UI strings into `next-i18next`; full FR translation; root-cause fix for dev-server locale cache bug; root-cause fix for Vercel production deployment (locale JSON files excluded by `.vercelignore`).
+
+### Problem
+
+All UI strings across 288 pages were hardcoded in English. The `next-i18next` infrastructure had been scaffolded (namespaces, config, `withTranslations` helper) but strings had not been extracted. EN locale files had `[FR]` placeholder values everywhere. Tab labels on `/fr/manager/leases`, `/fr/manager/requests`, `/fr/manager/finance`, `/fr/manager/people`, and `/fr/manager/settings` were rendering as the raw key path (e.g. `leasesIndex.tabs.active`) — causing visible `xx.xx.xx`-style fallback display.
+
+### Root Cause 1 — Dev locale cache
+
+`next-i18next` caches locale JSON files in memory from the moment the dev server starts. Any key added to locale files *after* server startup is never loaded into the cache — `t("key")` silently falls back to returning the key path as a string. This was the direct cause of all tab labels showing as dotted key paths despite the locale files being correctly populated.
+
+**Fix:** Added `reloadOnPrerender: process.env.NODE_ENV === 'development'` to `next-i18next.config.js`. This forces re-reading of locale JSON on every `getStaticProps` call in dev mode, with zero production impact.
+
+### Root Cause 2 — Vercel production deployment
+
+After the dev fix, production (Vercel) was still showing `xx.xx.xx`. The root `.vercelignore` had a blanket `*.json` rule (no leading `/`) which in gitignore syntax matches JSON files **at any depth** — including `apps/web/public/locales/**/*.json`. All locale files were being excluded from the Vercel build, so `next-i18next` had no data and fell back to key paths.
+
+**Fix:** Replaced `*.json` in `.vercelignore` with specific root-level exclusions (`/ROADMAP.json`, `/tsconfig.json`). Also created `apps/web/.vercelignore` (empty) as a safety net for deployments where Vercel's `rootDirectory` is set to `apps/web`.
+
+### What Was Done
+
+**Phase 1 — Strip `[FR]` placeholders and add missing tab keys**
+- Removed all `[FR]` suffix placeholders from FR locale files.
+- Added `leasesIndex.tabs.*`, `requests.tabs.done`, `owner:invoices.tabs.incoming/outgoing` keys that were missing from both EN and FR locale files.
+
+**Phase 2 — Structural label extraction**
+- Tab arrays across 17 pages converted from `{ key, label }` to `{ key }` only; render sites changed to `t(\`ns:section.tabs.${tab.key.toLowerCase()}\`)`.
+- Column header arrays across 13 pages converted to `buildXxxColumns(t, ...)` functions passing `t` as first arg.
+- Loop variable shadowing bugs fixed (`t` used as both a loop variable and `useTranslation` return — renamed loop vars to avoid collision in `people/index.js`, `finance/ledger.js`, `admin-inventory/units/[id].js`, `owner/invoices.js`).
+
+**Phase 3 — Button label wiring**
+- Action buttons in `requests.js` (`buildRequestColumns` render switch + mobile swipe actions) wired to `t("manager:requests.btn.*")`.
+- "Cancel Lease" in `leases/[id].js` wired to `t("leasesId.btn.cancelLease")`.
+- New locale keys added: `requests.btn.{approve,reject,assign,unassign,viewRfp,ok}`, `leasesId.btn.cancelLease`.
+
+**Phase 4 — Dev tooling**
+- `scripts/i18n-audit-missing.py` — scans all static `t("key")` calls across pages and cross-checks against locale files. Returns count of missing keys.
+- `scripts/i18n-audit-tabs.py` — traces template-literal `t(\`ns:section.tabs.${key}\`)` patterns, extracts actual runtime keys from TABS array definitions, cross-checks against locale files. Returns count of missing tab keys.
+
+### Verification
+
+All 6 affected pages confirmed rendering correct FR tab labels via SSR HTML inspection:
+- `/fr/manager/leases` → Actif, Brouillon, Soumis, Modèles, Archive
+- `/fr/manager/requests` → Vue d'ensemble, En attente de révision, En cours…
+- `/fr/manager/finance` → Vue d'ensemble, Factures, Entités de facturation…
+- `/fr/manager/people` → Locataires, Prestataires, Propriétaires
+- `/fr/manager/settings` → Organisation, Buildings, Notifications…
+
+### Files Changed
+
+| File | Change |
+|------|--------|
+| `apps/web/next-i18next.config.js` | Added `reloadOnPrerender: process.env.NODE_ENV === 'development'` |
+| `apps/web/public/locales/en/manager.json` | Added tab keys, btn keys; confirmed all sections present |
+| `apps/web/public/locales/fr/manager.json` | Stripped `[FR]` placeholders; added tab keys, btn keys; full FR translations |
+| `apps/web/public/locales/en/owner.json` | Added `invoices.tabs.incoming/outgoing` |
+| `apps/web/public/locales/fr/owner.json` | Added `invoices.tabs.incoming/outgoing` FR translations |
+| `apps/web/pages/manager/requests.js` | Button labels via `t()`; tab array structural fix |
+| `apps/web/pages/manager/leases/[id].js` | "Cancel Lease" via `t()` |
+| `apps/web/pages/manager/leases/index.js` | Tab array structural fix |
+| `apps/web/pages/manager/finance/index.js` | Tab array structural fix |
+| `apps/web/pages/manager/people/index.js` | Tab array structural fix; loop var rename |
+| `apps/web/pages/manager/settings.js` | Tab array structural fix |
+| `scripts/i18n-audit-missing.py` | New — static key coverage audit |
+| `scripts/i18n-audit-tabs.py` | New — template-literal tab key coverage audit |
 | `docs/FRONTEND_INVENTORY.md` | Updated last-modified dates; added dashboard-v2 entry |
+| `.vercelignore` | Replaced blanket `*.json` with specific root-level exclusions — unblocks all locale JSON files from Vercel builds |
+| `apps/web/.vercelignore` | New empty file — ensures locale files are never excluded when Vercel `rootDirectory=apps/web` |

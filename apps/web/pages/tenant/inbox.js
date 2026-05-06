@@ -10,6 +10,8 @@ import { tenantFetch } from "../../lib/api";
 import { getNotificationLink } from "../../lib/notificationLinks";
 import TenantPicker from "../../components/TenantPicker";
 import Badge from "../../components/ui/Badge";
+import { withTranslations } from "../../lib/i18n";
+import { useTranslation } from "next-i18next";
 
 const EVENT_ICONS = {
   LEASE_READY_TO_SIGN: "📝",
@@ -35,6 +37,7 @@ const EVENT_ICONS = {
 };
 
 export default function TenantInboxPage() {
+  const { t } = useTranslation("tenant");
   const router = useRouter();
   const [session, setSession] = useState(null);
   const [notifications, setNotifications] = useState([]);
@@ -174,11 +177,11 @@ export default function TenantInboxPage() {
     return (
       <AppShell role="TENANT">
         <PageShell>
-          <PageHeader title="Inbox" />
+          <PageHeader title={t("tenant:inbox.title.inbox")} />
           <PageContent>
             <Panel>
               <div className="empty-state">
-                <p className="empty-state-text">Please sign in to view your notifications.</p>
+                <p className="empty-state-text">{t("tenant:inbox.text.pleaseSignInToViewYourNotifications")}</p>
                 <button
                   onClick={() => router.push("/tenant")}
                   className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700"
@@ -228,10 +231,10 @@ export default function TenantInboxPage() {
 
           <Panel bodyClassName="p-0">
             {loading ? (
-              <p className="loading-text">Loading…</p>
+              <p className="loading-text">{t("tenant:inbox.text.loading")}</p>
             ) : notifications.length === 0 ? (
               <div className="empty-state">
-                <p className="empty-state-text">No notifications yet. You will be notified here when your lease is ready to sign, invoices are created, and more.</p>
+                <p className="empty-state-text">{t("tenant:inbox.text.noNotificationsYetYouWillBeNotifiedHereWhenYourLeaseIsReadyToSignInvoicesAreCreatedAndMore")}</p>
               </div>
             ) : (
               <div className="space-y-2 p-4">
@@ -273,7 +276,7 @@ export default function TenantInboxPage() {
                 </div>
                 <div className="flex items-center gap-1 flex-shrink-0">
                   {!n.readAt && (
-                    <span className="w-2.5 h-2.5 rounded-full bg-blue-500" title="Unread" />
+                    <span className="w-2.5 h-2.5 rounded-full bg-blue-500" title={t("tenant:inbox.title.unread")} />
                   )}
                   <button
                     onClick={(e) => {
@@ -281,7 +284,7 @@ export default function TenantInboxPage() {
                       dismissNotification(n.id);
                     }}
                     className="text-slate-300 hover:text-slate-500 ml-1"
-                    title="Dismiss"
+                    title={t("tenant:inbox.title.dismiss")}
                   >
                     ✕
                   </button>
@@ -296,3 +299,5 @@ export default function TenantInboxPage() {
     </AppShell>
   );
 }
+
+export const getStaticProps = withTranslations(["common","tenant"]);

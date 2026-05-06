@@ -1,4 +1,10 @@
 import { PrismaClient } from "@prisma/client";
+import {
+  findBuildingConfig,
+  findBuildingForConfig,
+  upsertBuildingConfigRecord,
+  findEffectiveConfigData,
+} from "../repositories/buildingConfigRepository";
 
 export type BuildingConfigDTO = {
   id: string;
@@ -24,7 +30,7 @@ export async function getBuildingConfig(
   orgId: string,
   buildingId: string
 ): Promise<BuildingConfigDTO | null> {
-  return prisma.buildingConfig.findFirst({ where: { orgId, buildingId } });
+  return findBuildingConfig(prisma, orgId, buildingId);
 }
 
 export async function upsertBuildingConfig(
@@ -37,24 +43,26 @@ export async function upsertBuildingConfig(
     requireOwnerApprovalAbove?: number | null;
   }
 ): Promise<BuildingConfigDTO | null> {
-  const building = await prisma.building.findFirst({ where: { id: buildingId, orgId } });
+  const building = await findBuildingForConfig(prisma, orgId, buildingId);
   if (!building) return null;
 
-  return prisma.buildingConfig.upsert({
-    where: { buildingId },
-    create: {
+  return upsertBuildingConfigRecord(
+    prisma,
+    orgId,
+    buildingId,
+    {
       orgId,
       buildingId,
       autoApproveLimit: payload.autoApproveLimit ?? null,
       emergencyAutoDispatch: payload.emergencyAutoDispatch ?? null,
       requireOwnerApprovalAbove: payload.requireOwnerApprovalAbove ?? null,
     },
-    update: {
+    {
       autoApproveLimit: payload.autoApproveLimit !== undefined ? payload.autoApproveLimit : undefined,
       emergencyAutoDispatch: payload.emergencyAutoDispatch !== undefined ? payload.emergencyAutoDispatch : undefined,
       requireOwnerApprovalAbove: payload.requireOwnerApprovalAbove !== undefined ? payload.requireOwnerApprovalAbove : undefined,
     },
-  });
+  );
 }
 
 export async function computeEffectiveConfig(
@@ -62,14 +70,11 @@ export async function computeEffectiveConfig(
   orgId: string,
   buildingId?: string
 ): Promise<EffectiveConfig> {
-  const [orgConfig, buildingOverride] = await Promise.all([
-    prisma.orgConfig.findUnique({ where: { orgId } }),
-    buildingId
-      ? prisma.buildingConfig.findFirst({ where: { orgId, buildingId } })
-      : Promise.resolve(null),
-  ]);
-
-  const org = await prisma.org.findUnique({ where: { id: orgId }, select: { mode: true } });
+  const { orgConfig, buildingOverride, org } = await findEffectiveConfigData(
+    prisma,
+    orgId,
+    buildingId,
+  );
   if (!orgConfig || !org) throw new Error("ORG_CONFIG_NOT_FOUND");
 
   const effectiveAutoApproveLimit =

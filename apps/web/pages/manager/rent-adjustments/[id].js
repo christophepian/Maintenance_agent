@@ -17,6 +17,8 @@ import { DetailGrid, DetailItem } from "../../../components/ui/DetailGrid";
 import ActionBar from "../../../components/ui/ActionBar";
 import ResourceShell from "../../../components/ui/ResourceShell";
 import { rentAdjustmentVariant } from "../../../lib/statusVariants";
+import { withServerTranslations } from "../../../lib/i18n";
+import { useTranslation } from "next-i18next";
 
 const TYPE_LABELS = {
   CPI_INDEXATION: "CPI Indexation",
@@ -25,6 +27,7 @@ const TYPE_LABELS = {
 };
 
 export default function RentAdjustmentDetail() {
+  const { t } = useTranslation("manager");
   const router = useRouter();
   const { id } = router.query;
   const { data: adj, setData: setAdj, loading, error } = useDetailResource(
@@ -69,7 +72,7 @@ export default function RentAdjustmentDetail() {
   return (
     <AppShell>
       <PageShell>
-        <ResourceShell loading={loading} error={error} hasData={!!adj} emptyMessage="Rent adjustment not found.">
+        <ResourceShell loading={loading} error={error} hasData={!!adj} emptyMessage={t("manager:rent_AdjustmentsId.prop.rentAdjustmentNotFound")}>
         {adj && (<>
         <PageHeader
           title={`Rent Adjustment — ${adj.lease?.tenantName || "Unknown"}`}
@@ -77,14 +80,14 @@ export default function RentAdjustmentDetail() {
         />
         <PageContent>
           {/* Summary Panel */}
-          <Panel title="Summary">
+          <Panel title={t("manager:rentAdjustmentsId.title.summary")}>
             <DetailGrid>
-              <DetailItem label="Status">
+              <DetailItem label={t("manager:rent_AdjustmentsId.prop.status")}>
                 <Badge variant={rentAdjustmentVariant(adj.status)} size="sm">{adj.status}</Badge>
               </DetailItem>
-              <DetailItem label="Type">{TYPE_LABELS[adj.adjustmentType]}</DetailItem>
-              <DetailItem label="Effective Date">{formatDate(adj.effectiveDate)}</DetailItem>
-              <DetailItem label="Lease">
+              <DetailItem label={t("manager:rent_AdjustmentsId.prop.type")}>{TYPE_LABELS[adj.adjustmentType]}</DetailItem>
+              <DetailItem label={t("manager:rent_AdjustmentsId.prop.effectiveDate")}>{formatDate(adj.effectiveDate)}</DetailItem>
+              <DetailItem label={t("manager:rent_AdjustmentsId.prop.lease")}>
                 <a href={`/manager/leases/${adj.leaseId}`} className="cell-link font-medium">
                   {adj.lease?.tenantName}
                 </a>
@@ -93,20 +96,20 @@ export default function RentAdjustmentDetail() {
           </Panel>
 
           {/* Rent Change Panel */}
-          <Panel title="Rent Change" className="mt-4">
+          <Panel title={t("manager:rentAdjustmentsId.title.rentChange")} className="mt-4">
             <div className="grid grid-cols-3 gap-6 text-center">
               <div>
-                <span className="text-slate-500 text-sm block">Previous Rent</span>
+                <span className="text-slate-500 text-sm block">{t("manager:rent_AdjustmentsId.text.previousRent")}</span>
                 <span className="text-xl font-semibold">{formatChfCents(adj.previousRentCents)}</span>
-                <span className="text-xs text-slate-400 block">/month</span>
+                <span className="text-xs text-slate-400 block">{t("manager:rent_AdjustmentsId.text.month")}</span>
               </div>
               <div>
-                <span className="text-slate-500 text-sm block">→ New Rent</span>
+                <span className="text-slate-500 text-sm block">{t("manager:rent_AdjustmentsId.text.newRent")}</span>
                 <span className="text-xl font-bold text-indigo-700">{formatChfCents(adj.newRentCents)}</span>
-                <span className="text-xs text-slate-400 block">/month</span>
+                <span className="text-xs text-slate-400 block">{t("manager:rent_AdjustmentsId.text.month")}</span>
               </div>
               <div>
-                <span className="text-slate-500 text-sm block">Change</span>
+                <span className="text-slate-500 text-sm block">{t("manager:rent_AdjustmentsId.text.change")}</span>
                 <span className={cn("text-xl font-semibold", adj.adjustmentCents > 0 ? "text-red-600" : adj.adjustmentCents < 0 ? "text-green-600" : "")}>
                   {adj.adjustmentCents > 0 ? "+" : ""}{formatChfCents(adj.adjustmentCents)}
                 </span>
@@ -117,12 +120,12 @@ export default function RentAdjustmentDetail() {
 
           {/* CPI / Calculation Details */}
           {(adj.cpiOldIndex || adj.cpiNewIndex) && (
-            <Panel title="Indexation Details" className="mt-4">
+            <Panel title={t("manager:rentAdjustmentsId.title.indexationDetails")} className="mt-4">
               <DetailGrid>
-                <DetailItem label="CPI Base">{adj.cpiOldIndex ?? "—"}</DetailItem>
-                <DetailItem label="CPI Current">{adj.cpiNewIndex ?? "—"}</DetailItem>
+                <DetailItem label={t("manager:rent_AdjustmentsId.prop.cPIBase")}>{adj.cpiOldIndex ?? "—"}</DetailItem>
+                <DetailItem label={t("manager:rent_AdjustmentsId.prop.cPICurrent")}>{adj.cpiNewIndex ?? "—"}</DetailItem>
                 {adj.cpiOldIndex && adj.cpiNewIndex && (
-                  <DetailItem label="CPI Ratio">{(adj.cpiNewIndex / adj.cpiOldIndex).toFixed(4)}</DetailItem>
+                  <DetailItem label={t("manager:rent_AdjustmentsId.prop.cPIRatio")}>{(adj.cpiNewIndex / adj.cpiOldIndex).toFixed(4)}</DetailItem>
                 )}
                 {adj.referenceRateOld && (
                   <DetailItem label="Ref Rate (old → new)">
@@ -132,7 +135,7 @@ export default function RentAdjustmentDetail() {
               </DetailGrid>
               {adj.calculationDetails && (
                 <details className="mt-3">
-                  <summary className="text-xs text-slate-400 cursor-pointer">Calculation breakdown</summary>
+                  <summary className="text-xs text-slate-400 cursor-pointer">{t("manager:rent_AdjustmentsId.text.calculationBreakdown")}</summary>
                   <pre className="mt-1 text-xs bg-slate-50 rounded p-2 overflow-x-auto">
                     {JSON.stringify(adj.calculationDetails, null, 2)}
                   </pre>
@@ -143,7 +146,7 @@ export default function RentAdjustmentDetail() {
 
           {/* Rejection info */}
           {adj.status === "REJECTED" && (
-            <Panel title="Rejection" className="mt-4">
+            <Panel title={t("manager:rentAdjustmentsId.title.rejection")} className="mt-4">
               <p className="text-red-600 text-sm">
                 Rejected on {formatDate(adj.rejectedAt)}
                 {adj.rejectionReason && <> — {adj.rejectionReason}</>}
@@ -153,7 +156,7 @@ export default function RentAdjustmentDetail() {
 
           {/* Application info */}
           {adj.status === "APPLIED" && (
-            <Panel title="Application" className="mt-4">
+            <Panel title={t("manager:rentAdjustmentsId.title.application")} className="mt-4">
               <p className="text-green-700 text-sm">
                 ✅ Applied on {formatDate(adj.appliedAt)}.
                 Lease rent updated to {formatChfCents(adj.newRentCents)}/month.
@@ -163,12 +166,12 @@ export default function RentAdjustmentDetail() {
 
           {/* Lease Index Settings */}
           {adj.lease && (
-            <Panel title="Lease Index Settings" className="mt-4">
+            <Panel title={t("manager:rentAdjustmentsId.title.leaseIndexSettings")} className="mt-4">
               <DetailGrid>
-                <DetailItem label="Index Clause">{adj.lease.indexClauseType || "NONE"}</DetailItem>
-                <DetailItem label="CPI Base Index">{adj.lease.cpiBaseIndex ?? "—"}</DetailItem>
-                <DetailItem label="Initial Rent">{adj.lease.initialNetRentChf ? fmt(adj.lease.initialNetRentChf * 100) : "—"}</DetailItem>
-                <DetailItem label="Last Indexation">
+                <DetailItem label={t("manager:rent_AdjustmentsId.prop.indexClause")}>{adj.lease.indexClauseType || "NONE"}</DetailItem>
+                <DetailItem label={t("manager:rent_AdjustmentsId.prop.cPIBaseIndex")}>{adj.lease.cpiBaseIndex ?? "—"}</DetailItem>
+                <DetailItem label={t("manager:rent_AdjustmentsId.prop.initialRent")}>{adj.lease.initialNetRentChf ? fmt(adj.lease.initialNetRentChf * 100) : "—"}</DetailItem>
+                <DetailItem label={t("manager:rent_AdjustmentsId.prop.lastIndexation")}>
                   {adj.lease.lastIndexationDate
                     ? formatDate(adj.lease.lastIndexationDate)
                     : "Never"}
@@ -230,7 +233,7 @@ export default function RentAdjustmentDetail() {
                 onChange={(e) => setRejectReason(e.target.value)}
                 className="w-full border rounded p-2 text-sm"
                 rows={2}
-                placeholder="Enter reason…"
+                placeholder={t("manager:rentAdjustmentsId.placeholder.enterReason")}
               />
               <div className="mt-2 flex gap-2">
                 <Button
@@ -256,3 +259,5 @@ export default function RentAdjustmentDetail() {
     </AppShell>
   );
 }
+
+export const getServerSideProps = withServerTranslations(["common","manager"]);

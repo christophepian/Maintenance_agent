@@ -7,7 +7,7 @@
  * All queries are org-scoped. Routes and workflows must not call Prisma directly.
  */
 
-import { PrismaClient, Prisma } from "@prisma/client";
+import { PrismaClient, Prisma, StrategyArchetype, StrategySource, RoleIntent, BuildingConditionRating } from "@prisma/client";
 
 // ─── Canonical includes (G9) ───────────────────────────────────
 
@@ -69,11 +69,11 @@ export async function createOwnerProfile(
     userFacingGoalLabel: string;
     dimensionsJson: string;
     archetypeScoresJson: string;
-    primaryArchetype: any;
-    secondaryArchetype?: any;
+    primaryArchetype: StrategyArchetype;
+    secondaryArchetype?: StrategyArchetype;
     confidence: string;
     contradictionScore: number;
-    source?: any;
+    source?: StrategySource;
   },
 ): Promise<OwnerProfileWithRelations> {
   return prisma.ownerStrategyProfile.create({
@@ -101,8 +101,8 @@ export async function upsertOwnerProfile(
     userFacingGoalLabel: string;
     dimensionsJson: string;
     archetypeScoresJson: string;
-    primaryArchetype: any;
-    secondaryArchetype?: any;
+    primaryArchetype: StrategyArchetype;
+    secondaryArchetype?: StrategyArchetype;
     confidence: string;
     contradictionScore: number;
   },
@@ -159,15 +159,15 @@ export async function createBuildingProfile(
     orgId: string;
     buildingId: string;
     ownerProfileId: string;
-    roleIntent?: any;
+    roleIntent?: RoleIntent;
     buildingType?: string;
     approxUnits?: number;
-    conditionRating?: any;
+    conditionRating?: BuildingConditionRating;
     buildingDimensionsJson?: string;
     effectiveDimensionsJson: string;
     archetypeScoresJson: string;
-    primaryArchetype: any;
-    secondaryArchetype?: any;
+    primaryArchetype: StrategyArchetype;
+    secondaryArchetype?: StrategyArchetype;
     confidence: string;
   },
 ): Promise<BuildingProfileWithRelations> {
@@ -197,15 +197,15 @@ export async function upsertBuildingProfile(
   orgId: string,
   data: {
     ownerProfileId: string;
-    roleIntent?: any;
+    roleIntent?: RoleIntent;
     buildingType?: string;
     approxUnits?: number;
-    conditionRating?: any;
+    conditionRating?: BuildingConditionRating;
     buildingDimensionsJson?: string;
     effectiveDimensionsJson: string;
     archetypeScoresJson: string;
-    primaryArchetype: any;
-    secondaryArchetype?: any;
+    primaryArchetype: StrategyArchetype;
+    secondaryArchetype?: StrategyArchetype;
     confidence: string;
   },
 ): Promise<BuildingProfileWithRelations> {

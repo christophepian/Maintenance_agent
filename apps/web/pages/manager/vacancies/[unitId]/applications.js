@@ -13,6 +13,10 @@ import { formatDisqualificationReasons } from "../../../../lib/formatDisqualific
 import { authHeaders } from "../../../../lib/api";
 import Badge from "../../../../components/ui/Badge";
 import { cn } from "../../../../lib/utils";
+import SortableHeader from "../../../../components/SortableHeader";
+import { useLocalSort, clientSort } from "../../../../lib/tableUtils";
+import { withServerTranslations } from "../../../../lib/i18n";
+import { useTranslation } from "next-i18next";
 function scoreColor(score) {
   if (score >= 700) return "text-green-700 bg-green-50";
   if (score >= 400) return "text-amber-700 bg-amber-50";
@@ -26,6 +30,7 @@ function confidenceBadge(confidence) {
 }
 
 export default function UnitApplicationsPage() {
+  const { t } = useTranslation("manager");
   const router = useRouter();
   const { unitId } = router.query;
 
@@ -166,23 +171,27 @@ export default function UnitApplicationsPage() {
     });
   }, [applications, view, unitId]);
 
+  const { sortField: appSF, sortDir: appSD, handleSort: handleAppSort } = useLocalSort("score", "desc");
   const sorted = useMemo(() => {
-    return [...rows].sort((a, b) => {
-      // Non-disqualified first
-      if (a.disqualified !== b.disqualified) return a.disqualified ? 1 : -1;
-      // Then by score descending
-      return (b.score || 0) - (a.score || 0);
+    return clientSort(rows, appSF, appSD, (r, f) => {
+      if (f === "rank") return r.score ?? 0; // rank by score
+      if (f === "name") return (r.name || "").toLowerCase();
+      if (f === "income") return r.income ?? 0;
+      if (f === "score") return r.score ?? 0;
+      if (f === "confidence") return r.confidence ?? 0;
+      if (f === "status") return r.status || "";
+      return 0;
     });
-  }, [rows]);
+  }, [rows, appSF, appSD]);
 
   return (
     <AppShell role="MANAGER">
       <PageShell>
         <div className="px-4 pt-4">
-          <Link href="/manager/vacancies" className="text-sm text-blue-600 hover:text-blue-700">← Vacancies</Link>
+          <Link href="/manager/vacancies" className="text-sm text-blue-600 hover:text-blue-700">{t("manager:vacanciesUnitidApplications.text.vacancies")}</Link>
         </div>
         <PageHeader
-          title="Rental Applications"
+          title={t("manager:vacancies[unitid]Applications.title.rentalApplications")}
           subtitle={unitLabel}
           actions={
             <div className="flex items-center gap-2">
@@ -191,8 +200,8 @@ export default function UnitApplicationsPage() {
                 onChange={(e) => { setView(e.target.value); }}
                 className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
               >
-                <option value="summary">Summary</option>
-                <option value="full">Full Detail</option>
+                <option value="summary">{t("manager:vacanciesUnitidApplications.text.summary")}</option>
+                <option value="full">{t("manager:vacanciesUnitidApplications.text.fullDetail")}</option>
               </select>
               <button
                 onClick={loadData}
@@ -209,10 +218,10 @@ export default function UnitApplicationsPage() {
 
           <div>
           <h2 className="mb-3 text-sm font-semibold text-slate-700">{`${sorted.length} Application${sorted.length !== 1 ? "s" : ""}`}</h2>
-            {loading && <p className="text-sm text-slate-500">Loading…</p>}
+            {loading && <p className="text-sm text-slate-500">{t("manager:vacanciesUnitidApplications.text.loading")}</p>}
 
             {!loading && sorted.length === 0 && (
-              <p className="text-sm text-slate-500">No applications for this unit yet.</p>
+              <p className="text-sm text-slate-500">{t("manager:vacanciesUnitidApplications.text.noApplicationsForThisUnitYet")}</p>
             )}
 
             {!loading && sorted.length > 0 && (
@@ -245,30 +254,30 @@ export default function UnitApplicationsPage() {
                         </div>
                         <div className="table-card-footer">
                           {row.disqualified ? (
-                            <span className="rounded bg-red-100 px-1.5 py-0.5 text-xs text-red-700">Disqualified</span>
+                            <span className="rounded bg-red-100 px-1.5 py-0.5 text-xs text-red-700">{t("manager:vacanciesUnitidApplications.text.disqualified")}</span>
                           ) : row.overrideReason ? (
-                            <span className="rounded bg-amber-100 px-1.5 py-0.5 text-xs text-amber-700">✓ Override</span>
+                            <span className="rounded bg-amber-100 px-1.5 py-0.5 text-xs text-amber-700">{t("manager:vacanciesUnitidApplications.text.override")}</span>
                           ) : null}
                           <Badge variant={conf.variant} size="sm">{row.confidence ?? 0}% {conf.label}</Badge>
                           {row.income != null && <span>CHF {formatNumber(row.income)}</span>}
                         </div>
                         <div className="mt-2 flex gap-2 flex-wrap">
-                          <button onClick={() => router.push(`/manager/rental-applications/${row.id}`)} className="text-xs font-medium text-blue-600 hover:text-blue-700">View</button>
+                          <button onClick={() => router.push(`/manager/rental-applications/${row.id}`)} className="text-xs font-medium text-blue-600 hover:text-blue-700">{t("manager:vacanciesUnitidApplications.text.view")}</button>
                           {row.applicationUnitId && !row.disqualified && (
-                            <button onClick={() => setAdjustTarget(row.applicationUnitId)} className="text-xs text-amber-600 hover:underline">Adjust</button>
+                            <button onClick={() => setAdjustTarget(row.applicationUnitId)} className="text-xs text-amber-600 hover:underline">{t("manager:vacanciesUnitidApplications.text.adjust")}</button>
                           )}
                           {row.disqualified && row.applicationUnitId && (
                             <button
                               onClick={() => { setOverrideTarget({ applicationUnitId: row.applicationUnitId, name: row.name }); setOverrideReason(""); }}
                               className="rounded px-2 py-0.5 text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 hover:bg-amber-100 transition-colors"
-                            >⚠ Override</button>
+                            >{t("manager:vacanciesUnitidApplications.text.override2")}</button>
                           )}
                         </div>
                         {isDocExpanded && (
                           <div className="mt-3 space-y-3 border-t border-slate-100 pt-3">
                             {row.disqualified && reasons.length > 0 && (
                               <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3">
-                                <h4 className="text-sm font-semibold text-red-700 mb-2">Disqualification Reasons</h4>
+                                <h4 className="text-sm font-semibold text-red-700 mb-2">{t("manager:vacanciesUnitidApplications.text.disqualificationReasons")}</h4>
                                 <ul className="list-disc ml-5 space-y-1.5">
                                   {formatDisqualificationReasons(reasons).map((text, i) => (
                                     <li key={i} className="text-sm text-red-700 leading-relaxed">{text}</li>
@@ -286,16 +295,16 @@ export default function UnitApplicationsPage() {
 
                 {/* Wide table — hidden sm:block */}
                 <div className="hidden sm:block overflow-x-auto rounded-lg border border-table-border">
-                  <table className="inline-table">
+                  <table className="data-table">
                     <thead>
                       <tr>
-                        <th>Rank</th>
-                        <th>Applicant</th>
-                        <th>Income (CHF)</th>
-                        <th>Score</th>
-                        <th>Confidence</th>
-                        <th>Status</th>
-                        <th className="text-right">Actions</th>
+                        <th>{t("manager:vacancies[unitid]Applications.col.rank")}</th>
+                        <SortableHeader label={t("manager:vacanciesUnitidApplications.prop.applicant")} field="name" sortField={appSF} sortDir={appSD} onSort={handleAppSort} />
+                        <SortableHeader label="Income (CHF)" field="income" sortField={appSF} sortDir={appSD} onSort={handleAppSort} />
+                        <SortableHeader label={t("manager:vacanciesUnitidApplications.prop.score")} field="score" sortField={appSF} sortDir={appSD} onSort={handleAppSort} />
+                        <SortableHeader label={t("manager:vacanciesUnitidApplications.prop.confidence")} field="confidence" sortField={appSF} sortDir={appSD} onSort={handleAppSort} />
+                        <SortableHeader label={t("manager:vacanciesUnitidApplications.prop.status")} field="status" sortField={appSF} sortDir={appSD} onSort={handleAppSort} />
+                        <th className="text-right">{t("manager:vacancies[unitid]Applications.col.actions")}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -318,7 +327,7 @@ export default function UnitApplicationsPage() {
                                   className={cn("font-medium underline decoration-dotted underline-offset-2 transition-colors", isDocExpanded
                                       ? "text-indigo-700"
                                       : "text-slate-900 hover:text-indigo-600")}
-                                  title="Click to view corroborative documents"
+                                  title={t("manager:vacancies[unitid]Applications.title.clickToViewCorroborativeDocuments")}
                                 >
                                   {row.name}
                                 </button>
@@ -333,7 +342,7 @@ export default function UnitApplicationsPage() {
                                   </span>
                                 )}
                                 {isDocExpanded && (
-                                  <span className="text-xs text-indigo-500">▼ docs</span>
+                                  <span className="text-xs text-indigo-500">{t("manager:vacanciesUnitidApplications.text.docs")}</span>
                                 )}
                               </div>
                             </td>
@@ -387,7 +396,7 @@ export default function UnitApplicationsPage() {
                                 <div className="space-y-4">
                                   {row.disqualified && reasons.length > 0 && (
                                     <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3">
-                                      <h4 className="text-sm font-semibold text-red-700 mb-2">Disqualification Reasons</h4>
+                                      <h4 className="text-sm font-semibold text-red-700 mb-2">{t("manager:vacanciesUnitidApplications.text.disqualificationReasons")}</h4>
                                       <ul className="list-disc ml-5 space-y-1.5">
                                         {formatDisqualificationReasons(reasons).map((text, i) => (
                                           <li key={i} className="text-sm text-red-700 leading-relaxed">{text}</li>
@@ -415,7 +424,7 @@ export default function UnitApplicationsPage() {
         {overrideTarget && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setOverrideTarget(null)}>
             <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
-              <h3 className="text-lg font-bold text-slate-900">Override Disqualification</h3>
+              <h3 className="text-lg font-bold text-slate-900">{t("manager:vacancies[unitid]Applications.heading.overrideDisqualification")}</h3>
               <p className="mt-2 text-sm text-slate-600">
                 You are about to override the automatic disqualification for <strong>{overrideTarget.name}</strong>.
                 This candidate will become eligible for selection.
@@ -427,11 +436,11 @@ export default function UnitApplicationsPage() {
                 <textarea
                   className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                   rows={3}
-                  placeholder="e.g. Verified income directly with employer; debt enforcement extract is clear…"
+                  placeholder={t("manager:vacancies[unitid]Applications.placeholder.eGVerifiedIncomeDirectlyWithEmployerDebtEnforcementExtractIsClear")}
                   value={overrideReason}
                   onChange={(e) => setOverrideReason(e.target.value)}
                 />
-                <p className="mt-1 text-xs text-slate-400">Minimum 3 characters. This will be recorded for audit.</p>
+                <p className="mt-1 text-xs text-slate-400">{t("manager:vacanciesUnitidApplications.text.minimum3CharactersThisWillBeRecordedForAudit")}</p>
               </div>
               <div className="mt-5 flex justify-end gap-3">
                 <button
@@ -456,11 +465,11 @@ export default function UnitApplicationsPage() {
         {adjustTarget && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
             <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
-              <h3 className="text-lg font-semibold text-slate-900">Adjust Score</h3>
-              <p className="text-sm text-slate-600 mt-1">Add or subtract points with a reason.</p>
+              <h3 className="text-lg font-semibold text-slate-900">{t("manager:vacancies[unitid]Applications.heading.adjustScore")}</h3>
+              <p className="text-sm text-slate-600 mt-1">{t("manager:vacanciesUnitidApplications.text.addOrSubtractPointsWithAReason")}</p>
               <div className="mt-4 space-y-3">
                 <div>
-                  <label className="block text-xs font-medium text-slate-700 mb-1">Score adjustment</label>
+                  <label className="block text-xs font-medium text-slate-700 mb-1">{t("manager:vacanciesUnitidApplications.text.scoreAdjustment")}</label>
                   <input
                     type="number"
                     value={scoreDelta}
@@ -470,13 +479,13 @@ export default function UnitApplicationsPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-700 mb-1">Reason *</label>
+                  <label className="block text-xs font-medium text-slate-700 mb-1">{t("manager:vacanciesUnitidApplications.text.reason")}</label>
                   <textarea
                     value={adjustReason}
                     onChange={(e) => setAdjustReason(e.target.value)}
                     rows={3}
                     className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                    placeholder="Reason for adjustment (min 3 chars)"
+                    placeholder={t("manager:vacancies[unitid]Applications.placeholder.reasonForAdjustmentMin3Chars")}
                   />
                 </div>
               </div>
@@ -502,3 +511,5 @@ export default function UnitApplicationsPage() {
     </AppShell>
   );
 }
+
+export const getServerSideProps = withServerTranslations(["common","manager"]);
