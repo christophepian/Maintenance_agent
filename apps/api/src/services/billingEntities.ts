@@ -1,5 +1,14 @@
 import { BillingEntityType } from "@prisma/client";
 import prisma from './prismaClient';
+import {
+  findBillingEntityByTypeAndOwner,
+  createBillingEntityRecord,
+  listBillingEntitiesFiltered,
+  findBillingEntityByOrgAndId,
+  updateBillingEntityRecord,
+  deleteBillingEntityRecord,
+} from "../repositories/billingEntityRepository";
+import { findContractorByOrgAndId } from "../repositories/contractorRepository";
 
 export type BillingEntityDTO = {
   id: string;
@@ -58,40 +67,36 @@ export async function createBillingEntity(
   }
 
   if (params.contractorId) {
-    const contractor = await prisma.contractor.findFirst({
-      where: { id: params.contractorId, orgId: params.orgId },
-    });
+    const contractor = await findContractorByOrgAndId(prisma, params.contractorId, params.orgId);
     if (!contractor) {
       throw new Error("CONTRACTOR_NOT_FOUND");
     }
   }
 
-  // For OWNER type: one billing entity per user. For other types: one per org.
-  const existingWhere = params.type === BillingEntityType.OWNER && params.userId
-    ? { orgId: params.orgId, type: params.type, userId: params.userId }
-    : { orgId: params.orgId, type: params.type, userId: null };
-
-  const existing = await prisma.billingEntity.findFirst({ where: existingWhere });
+  const existing = await findBillingEntityByTypeAndOwner(
+    prisma,
+    params.orgId,
+    params.type,
+    params.userId,
+  );
   if (existing) {
     throw new Error("BILLING_ENTITY_TYPE_EXISTS");
   }
 
-  const created = await prisma.billingEntity.create({
-    data: {
-      orgId: params.orgId,
-      type: params.type,
-      contractorId: params.contractorId ?? null,
-      userId: params.userId ?? null,
-      name: params.name,
-      addressLine1: params.addressLine1,
-      addressLine2: params.addressLine2 ?? null,
-      postalCode: params.postalCode,
-      city: params.city,
-      country: params.country || "CH",
-      iban: params.iban,
-      vatNumber: params.vatNumber ?? null,
-      defaultVatRate: params.defaultVatRate ?? 7.7,
-    },
+  const created = await createBillingEntityRecord(prisma, {
+    orgId: params.orgId,
+    type: params.type,
+    contractorId: params.contractorId ?? null,
+    userId: params.userId ?? null,
+    name: params.name,
+    addressLine1: params.addressLine1,
+    addressLine2: params.addressLine2 ?? null,
+    postalCode: params.postalCode,
+    city: params.city,
+    country: params.country || "CH",
+    iban: params.iban,
+    vatNumber: params.vatNumber ?? null,
+    defaultVatRate: params.defaultVatRate ?? 7.7,
   });
 
   return mapBillingEntityToDTO(created);
@@ -101,13 +106,7 @@ export async function listBillingEntities(
   orgId: string,
   filters?: { type?: BillingEntityType }
 ): Promise<BillingEntityDTO[]> {
-  const entities = await prisma.billingEntity.findMany({
-    where: {
-      orgId,
-      ...(filters?.type ? { type: filters.type } : {}),
-    },
-    orderBy: { createdAt: "desc" },
-  });
+  const entities = await listBillingEntitiesFiltered(prisma, orgId, filters?.type);
 
   return entities.map(mapBillingEntityToDTO);
 }
@@ -116,9 +115,7 @@ export async function getBillingEntity(
   orgId: string,
   billingEntityId: string
 ): Promise<BillingEntityDTO | null> {
-  const entity = await prisma.billingEntity.findFirst({
-    where: { id: billingEntityId, orgId },
-  });
+  const entity = await findBillingEntityByOrgAndId(prisma, orgId, billingEntityId);
 
   return entity ? mapBillingEntityToDTO(entity) : null;
 }
@@ -128,9 +125,7 @@ export async function updateBillingEntity(
   billingEntityId: string,
   params: UpdateBillingEntityParams
 ): Promise<BillingEntityDTO | null> {
-  const entity = await prisma.billingEntity.findFirst({
-    where: { id: billingEntityId, orgId },
-  });
+  const entity = await findBillingEntityByOrgAndId(prisma, orgId, billingEntityId);
 
   if (!entity) return null;
 
@@ -138,9 +133,7 @@ export async function updateBillingEntity(
     if (params.contractorId === null) {
       // allow unlink
     } else {
-      const contractor = await prisma.contractor.findFirst({
-        where: { id: params.contractorId, orgId },
-      });
+      const contractor = await findContractorByOrgAndId(prisma, params.contractorId, orgId);
       if (!contractor) {
         throw new Error("CONTRACTOR_NOT_FOUND");
       }
@@ -150,26 +143,23 @@ export async function updateBillingEntity(
     }
   }
 
-  const updated = await prisma.billingEntity.update({
-    where: { id: billingEntityId },
-    data: {
-      ...(params.contractorId !== undefined
-        ? { contractorId: params.contractorId === null ? null : params.contractorId }
-        : {}),
-      ...(params.name !== undefined ? { name: params.name } : {}),
-      ...(params.addressLine1 !== undefined ? { addressLine1: params.addressLine1 } : {}),
-      ...(params.addressLine2 !== undefined
-        ? { addressLine2: params.addressLine2 === null ? null : params.addressLine2 }
-        : {}),
-      ...(params.postalCode !== undefined ? { postalCode: params.postalCode } : {}),
-      ...(params.city !== undefined ? { city: params.city } : {}),
-      ...(params.country !== undefined ? { country: params.country } : {}),
-      ...(params.iban !== undefined ? { iban: params.iban } : {}),
-      ...(params.vatNumber !== undefined
-        ? { vatNumber: params.vatNumber === null ? null : params.vatNumber }
-        : {}),
-      ...(params.defaultVatRate !== undefined ? { defaultVatRate: params.defaultVatRate } : {}),
-    },
+  const updated = await updateBillingEntityRecord(prisma, billingEntityId, {
+    ...(params.contractorId !== undefined
+      ? { contractorId: params.contractorId === null ? null : params.contractorId }
+      : {}),
+    ...(params.name !== undefined ? { name: params.name } : {}),
+    ...(params.addressLine1 !== undefined ? { addressLine1: params.addressLine1 } : {}),
+    ...(params.addressLine2 !== undefined
+      ? { addressLine2: params.addressLine2 === null ? null : params.addressLine2 }
+      : {}),
+    ...(params.postalCode !== undefined ? { postalCode: params.postalCode } : {}),
+    ...(params.city !== undefined ? { city: params.city } : {}),
+    ...(params.country !== undefined ? { country: params.country } : {}),
+    ...(params.iban !== undefined ? { iban: params.iban } : {}),
+    ...(params.vatNumber !== undefined
+      ? { vatNumber: params.vatNumber === null ? null : params.vatNumber }
+      : {}),
+    ...(params.defaultVatRate !== undefined ? { defaultVatRate: params.defaultVatRate } : {}),
   });
 
   return mapBillingEntityToDTO(updated);
@@ -179,13 +169,11 @@ export async function deleteBillingEntity(
   orgId: string,
   billingEntityId: string
 ): Promise<boolean> {
-  const entity = await prisma.billingEntity.findFirst({
-    where: { id: billingEntityId, orgId },
-  });
+  const entity = await findBillingEntityByOrgAndId(prisma, orgId, billingEntityId);
 
   if (!entity) return false;
 
-  await prisma.billingEntity.delete({ where: { id: billingEntityId } });
+  await deleteBillingEntityRecord(prisma, billingEntityId);
   return true;
 }
 

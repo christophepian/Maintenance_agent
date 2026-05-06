@@ -12,6 +12,13 @@ import {
   CreateContractorSchema,
   UpdateContractorSchema,
 } from "../validation/contractors";
+import {
+  findRequestsByContractor,
+  findRequestWithContractorAndJob,
+  findRequestWithContractor,
+  updateRequestStatus,
+} from "../repositories/requestRepository";
+import { updateJobRecord } from "../repositories/jobRepository";
 
 export { CreateContractorSchema, UpdateContractorSchema };
 
@@ -59,21 +66,7 @@ export async function getContractorAssignedRequests(
   prisma: PrismaClient,
   contractorId: string
 ): Promise<MaintenanceRequestDTO[]> {
-  const rows = await prisma.request.findMany({
-    where: { assignedContractorId: contractorId },
-    orderBy: { createdAt: "desc" },
-    include: {
-      assignedContractor: {
-        select: {
-          id: true,
-          name: true,
-          phone: true,
-          email: true,
-          hourlyRate: true,
-        },
-      },
-    },
-  });
+  const rows = await findRequestsByContractor(prisma, contractorId);
 
   return rows.map((r) => toDTO(r));
 }
@@ -104,17 +97,7 @@ export async function updateContractorRequestStatus(
   }
 
   // Verify the request exists and is assigned to this contractor
-  const request = await prisma.request.findUnique({
-    where: { id: requestId },
-    include: {
-      assignedContractor: {
-        select: { id: true, name: true, phone: true, email: true, hourlyRate: true },
-      },
-      job: {
-        select: { id: true, status: true },
-      },
-    },
-  });
+  const request = await findRequestWithContractorAndJob(prisma, requestId);
 
   if (!request) {
     return { success: false, message: "Request not found" };
@@ -143,27 +126,14 @@ export async function updateContractorRequestStatus(
   }
 
   // Update Job.status
-  await prisma.job.update({
-    where: { id: request.job.id },
-    data: { status: targetJobStatus },
-  });
+  await updateJobRecord(prisma, request.job.id, { status: targetJobStatus });
 
   // Mirror COMPLETED onto Request.status so the DONE tab works
   if (targetJobStatus === JobStatus.COMPLETED && request.status === RequestStatus.ASSIGNED) {
-    await prisma.request.update({
-      where: { id: requestId },
-      data: { status: RequestStatus.COMPLETED },
-    });
+    await updateRequestStatus(prisma, requestId, RequestStatus.COMPLETED);
   }
 
-  const reloaded = await prisma.request.findUnique({
-    where: { id: requestId },
-    include: {
-      assignedContractor: {
-        select: { id: true, name: true, phone: true, email: true, hourlyRate: true },
-      },
-    },
-  });
+  const reloaded = await findRequestWithContractor(prisma, requestId);
 
   return {
     success: true,

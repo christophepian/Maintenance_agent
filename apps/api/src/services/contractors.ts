@@ -1,4 +1,10 @@
 import { PrismaClient } from "@prisma/client";
+import {
+  listContractorsWithCount,
+  findContractorByIdRaw,
+  createContractorRecord,
+  updateContractorRecord,
+} from "../repositories/contractorRepository";
 
 export type ContractorDTO = {
   id: string;
@@ -83,13 +89,7 @@ export async function listContractors(
   orgId: string
 ): Promise<{ data: ContractorDTO[]; total: number }> {
   const where = { orgId, isActive: true };
-  const [rows, total] = await Promise.all([
-    prisma.contractor.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-    }),
-    prisma.contractor.count({ where }),
-  ]);
+  const { rows, total } = await listContractorsWithCount(prisma, where);
   return { data: rows.map(toDTO), total };
 }
 
@@ -100,7 +100,7 @@ export async function getContractorById(
   prisma: PrismaClient,
   id: string
 ): Promise<ContractorDTO | null> {
-  const row = await prisma.contractor.findUnique({ where: { id } });
+  const row = await findContractorByIdRaw(prisma, id);
   return row ? toDTO(row) : null;
 }
 
@@ -112,23 +112,21 @@ export async function createContractor(
   orgId: string,
   input: CreateContractorInput
 ): Promise<ContractorDTO> {
-  const row = await prisma.contractor.create({
-    data: {
-      orgId,
-      name: input.name,
-      phone: input.phone,
-      email: input.email,
-      addressLine1: input.addressLine1 ?? null,
-      addressLine2: input.addressLine2 ?? null,
-      postalCode: input.postalCode ?? null,
-      city: input.city ?? null,
-      country: input.country ?? "CH",
-      iban: input.iban ?? null,
-      vatNumber: input.vatNumber ?? null,
-      defaultVatRate: input.defaultVatRate ?? 7.7,
-      hourlyRate: input.hourlyRate ?? 50,
-      serviceCategories: JSON.stringify(input.serviceCategories),
-    },
+  const row = await createContractorRecord(prisma, {
+    orgId,
+    name: input.name,
+    phone: input.phone,
+    email: input.email,
+    addressLine1: input.addressLine1 ?? null,
+    addressLine2: input.addressLine2 ?? null,
+    postalCode: input.postalCode ?? null,
+    city: input.city ?? null,
+    country: input.country ?? "CH",
+    iban: input.iban ?? null,
+    vatNumber: input.vatNumber ?? null,
+    defaultVatRate: input.defaultVatRate ?? 7.7,
+    hourlyRate: input.hourlyRate ?? 50,
+    serviceCategories: JSON.stringify(input.serviceCategories),
   });
   return toDTO(row);
 }
@@ -158,10 +156,7 @@ export async function updateContractor(
     updates.serviceCategories = JSON.stringify(input.serviceCategories);
 
   try {
-    const row = await prisma.contractor.update({
-      where: { id },
-      data: updates,
-    });
+    const row = await updateContractorRecord(prisma, id, updates);
     return toDTO(row);
   } catch (e) {
     return null;
@@ -176,10 +171,7 @@ export async function deactivateContractor(
   id: string
 ): Promise<boolean> {
   try {
-    await prisma.contractor.update({
-      where: { id },
-      data: { isActive: false },
-    });
+    await updateContractorRecord(prisma, id, { isActive: false });
     return true;
   } catch (e) {
     return false;

@@ -477,3 +477,64 @@ export async function findRequestForLegalDecision(
     include: REQUEST_LEGAL_DECISION_INCLUDE,
   });
 }
+
+// ─── Contractor-facing includes ────────────────────────────────
+
+export const REQUEST_CONTRACTOR_SELECT = {
+  id: true,
+  name: true,
+  phone: true,
+  email: true,
+  hourlyRate: true,
+} as const;
+
+export const REQUEST_WITH_CONTRACTOR_INCLUDE = {
+  assignedContractor: { select: REQUEST_CONTRACTOR_SELECT },
+} as const;
+
+export const REQUEST_WITH_CONTRACTOR_AND_JOB_INCLUDE = {
+  assignedContractor: { select: REQUEST_CONTRACTOR_SELECT },
+  job: { select: { id: true, status: true } },
+} as const;
+
+/**
+ * Find all requests assigned to a contractor, ordered newest first.
+ */
+export async function findRequestsByContractor(
+  prisma: PrismaClient,
+  contractorId: string,
+) {
+  return prisma.request.findMany({
+    where: { assignedContractorId: contractorId },
+    orderBy: { createdAt: "desc" },
+    include: REQUEST_WITH_CONTRACTOR_INCLUDE,
+  });
+}
+
+/**
+ * Find a request by id with contractor select and job status.
+ * Used for contractor status-update flow.
+ */
+export async function findRequestWithContractorAndJob(
+  prisma: PrismaClient,
+  id: string,
+) {
+  return prisma.request.findUnique({
+    where: { id },
+    include: REQUEST_WITH_CONTRACTOR_AND_JOB_INCLUDE,
+  });
+}
+
+/**
+ * Find a request by id with contractor select (no job).
+ * Used for the final reload after contractor status update.
+ */
+export async function findRequestWithContractor(
+  prisma: PrismaClient,
+  id: string,
+) {
+  return prisma.request.findUnique({
+    where: { id },
+    include: REQUEST_WITH_CONTRACTOR_INCLUDE,
+  });
+}

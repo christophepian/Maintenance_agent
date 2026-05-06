@@ -7090,7 +7090,7 @@
       "goal": "Continue ARCH-1 migration by eliminating direct prisma.* calls from 19 service files with 3-6 calls each. Depends on Slice 1 establishing the pattern.",
       "phase": "P0",
       "order": 121,
-      "status": "capture",
+      "status": "done",
       "product_area": "architecture",
       "depends_on": [
         "DT-120"
@@ -7471,7 +7471,7 @@
       "goal": "Continue ARCH-1 migration by eliminating direct prisma.* calls from 19 service files with 3-6 calls each. Depends on Slice 1 establishing the pattern.",
       "phase": "P0",
       "order": 121,
-      "status": "capture",
+      "status": "done",
       "product_area": "architecture",
       "depends_on": [
         "DT-120"

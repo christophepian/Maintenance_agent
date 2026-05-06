@@ -206,3 +206,14 @@ export async function findInvoiceWithLineItemsAndIssuer(
   });
 }
 
+/**
+ * Create a new invoice with optional line items.
+ * Used by contractor billing service for recurring schedule invoices.
+ */
+export async function createInvoiceRecord(
+  prisma: PrismaClient,
+  data: Prisma.InvoiceUncheckedCreateInput,
+) {
+  return prisma.invoice.create({ data });
+}
+
