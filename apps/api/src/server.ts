@@ -323,6 +323,9 @@ async function runBackgroundJobs() {
 
 async function start() {
   try {
+    const supabaseUrl = process.env.SUPABASE_URL;
+    console.log(`[STARTUP] SUPABASE_URL: ${supabaseUrl ? `set (${supabaseUrl.slice(0, 30)}...)` : "NOT SET — Supabase JWT verification will fail"}`);
+
     await ensureDefaultOrgConfig(prisma);
     await bootstrapLegalEngine(prisma);
     registerEventHandlers(prisma);
