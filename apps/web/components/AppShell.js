@@ -45,6 +45,7 @@ function getStoredRole() {
 export default function AppShell({ role: roleProp, children }) {
   const router = useRouter();
   const [role, setRole] = useState(roleProp || null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   // ── On mount: resolve role + wire Supabase session listener ───────────────
   useEffect(() => {
@@ -63,15 +64,17 @@ export default function AppShell({ role: roleProp, children }) {
       (_event, session) => {
         if (session) {
           setAuthToken(session.access_token);
-          const appRole = session.user?.app_metadata?.appRole;
-          if (appRole) {
-            setRole(appRole);
-            localStorage.setItem("role", appRole);
+          const meta = session.user?.app_metadata ?? {};
+          if (meta.appRole) {
+            setRole(meta.appRole);
+            localStorage.setItem("role", meta.appRole);
           }
+          setIsAdmin(meta.accessLevel === "ADMIN");
         } else {
           // Session ended — clear token but keep role in state so the UI
           // doesn't flash. Middleware will redirect on the next navigation.
           setAuthToken(null);
+          setIsAdmin(false);
         }
       }
     );
@@ -105,7 +108,7 @@ export default function AppShell({ role: roleProp, children }) {
     router.push("/login");
   }
 
-  const showHubBar = role === "MANAGER";
+  const showHubBar = isAdmin || role === "MANAGER";
 
   return (
     <>
@@ -127,8 +130,8 @@ export default function AppShell({ role: roleProp, children }) {
       >
         <div className="font-bold text-lg mb-5">Maintenance Agent</div>
 
-        {/* Role switcher — dev / staging only */}
-        {ROLE_SWITCH_ENABLED && (
+        {/* Role switcher — admin users and dev/staging environments */}
+        {(ROLE_SWITCH_ENABLED || isAdmin) && (
           <div className="mb-5">
             <div className="text-sm text-slate-500 mb-2">Role</div>
             <select
