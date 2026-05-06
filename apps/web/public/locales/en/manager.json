@@ -1565,6 +1565,13 @@
       "41XxXxxXxxx": "+41 XX XXX XXXX",
       "tenantExampleCom": "tenant@example.com"
     },
+    "tab": {
+      "personalInformation": "Personal information",
+      "unit": "Unit",
+      "documents": "Documents",
+      "contracts": "Contracts",
+      "invoices": "Invoices"
+    },
     "title": {
       "personalInformation": "Personal information",
       "professional": "Professional",
@@ -1573,9 +1580,12 @@
       "invoices": "Invoices"
     },
     "text": {
+      "back": "← Back",
       "loadingTenant": "Loading tenant…",
       "cancel": "Cancel",
       "edit": "Edit",
+      "save": "Save",
+      "saving": "Saving…",
       "name": "Name",
       "phone": "Phone",
       "email": "Email",
@@ -1589,9 +1599,12 @@
       "floor": "Floor",
       "loadingLeases": "Loading leases…",
       "noLeasesFoundForThisTenant": "No leases found for this tenant.",
+      "noApplicationLinked": "No rental application linked to this tenant.",
       "loadingInvoices": "Loading invoices…",
       "noInvoicesFoundForThisTenant": "No invoices found for this tenant.",
-      "tenantNotFound": "Tenant not found."
+      "due": "Due:",
+      "tenantNotFound": "Tenant not found.",
+      "goBack": "Go back"
     },
     "prop": {
       "tenantProfileAndContactDetails": "Tenant profile and contact details.",

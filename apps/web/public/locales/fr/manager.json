@@ -1565,17 +1565,27 @@
       "41XxXxxXxxx": "+41 XX XXX XXXX",
       "tenantExampleCom": "tenant@example.com"
     },
+    "tab": {
+      "personalInformation": "Informations personnelles",
+      "unit": "Unité",
+      "documents": "Documents",
+      "contracts": "Contrats",
+      "invoices": "Factures"
+    },
     "title": {
-      "personalInformation": "Personal information",
-      "professional": "Professional",
-      "corroborativeDocuments": "Corroborative Documents",
-      "contracts": "Contracts",
+      "personalInformation": "Informations personnelles",
+      "professional": "Professionnel",
+      "corroborativeDocuments": "Documents justificatifs",
+      "contracts": "Contrats",
       "invoices": "Factures"
     },
     "text": {
-      "loadingTenant": "Loading tenant…",
+      "back": "← Retour",
+      "loadingTenant": "Chargement du locataire…",
       "cancel": "Annuler",
       "edit": "Modifier",
+      "save": "Enregistrer",
+      "saving": "Enregistrement…",
       "name": "Nom",
       "phone": "Téléphone",
       "email": "E-mail",
@@ -1588,13 +1598,16 @@
       "unitId": "Unité ID",
       "floor": "Étage",
       "loadingLeases": "Chargement des baux…",
-      "noLeasesFoundForThisTenant": "Aucun bail trouvé for this tenant.",
+      "noLeasesFoundForThisTenant": "Aucun bail trouvé pour ce locataire.",
+      "noApplicationLinked": "Aucune candidature liée à ce locataire.",
       "loadingInvoices": "Chargement des factures…",
-      "noInvoicesFoundForThisTenant": "No invoices found for this tenant.",
-      "tenantNotFound": "Locataire not found."
+      "noInvoicesFoundForThisTenant": "Aucune facture trouvée pour ce locataire.",
+      "due": "Échéance :",
+      "tenantNotFound": "Locataire introuvable.",
+      "goBack": "Retour"
     },
     "prop": {
-      "tenantProfileAndContactDetails": "Locataire prdeile and contact details.",
+      "tenantProfileAndContactDetails": "Profil et coordonnées du locataire.",
       "unit": "Unité",
       "building": "Immeuble",
       "startDate": "Date de début",

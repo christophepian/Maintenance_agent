@@ -30,7 +30,14 @@ export default function TenantDetailPage() {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [isEditing, setIsEditing] = useState(false);
-  const [activeTab, setActiveTab] = useState("Personal information");
+  const [activeTab, setActiveTab] = useState("personal");
+  const TABS = [
+    { id: "personal",   label: t("manager:peopleTenantsId.tab.personalInformation") },
+    { id: "unit",       label: t("manager:peopleTenantsId.tab.unit") },
+    { id: "documents", label: t("manager:peopleTenantsId.tab.documents") },
+    { id: "contracts", label: t("manager:peopleTenantsId.tab.contracts") },
+    { id: "invoices",  label: t("manager:peopleTenantsId.tab.invoices") },
+  ];
   const [applicationId, setApplicationId] = useState(null);
   const [leases, setLeases] = useState([]);
   const [leasesLoading, setLeasesLoading] = useState(false);
@@ -171,7 +178,7 @@ export default function TenantDetailPage() {
               className="text-sm font-medium text-slate-600 hover:text-slate-900"
               onClick={() => router.back()}
             >
-              ← Back
+              {t("manager:peopleTenantsId.text.back")}
             </button>
         </div>
         <PageHeader
@@ -188,27 +195,27 @@ export default function TenantDetailPage() {
             <p className="loading-text">{t("manager:peopleTenantsId.text.loadingTenant")}</p>
           ) : tenant ? (
             <div className="grid gap-4">
-              <ScrollableTabs activeIndex={["Personal information", "Unit", "Documents", "Contracts", "Invoices"].indexOf(activeTab)}>
-                {["Personal information", "Unit", "Documents", "Contracts", "Invoices"].map((tab) => (
+              <ScrollableTabs activeIndex={TABS.findIndex((tab) => tab.id === activeTab)}>
+                {TABS.map((tab) => (
                   <button
-                    key={tab}
+                    key={tab.id}
                     type="button"
-                    className={activeTab === tab ? "tab-btn-active" : "tab-btn"}
-                    onClick={() => setActiveTab(tab)}
+                    className={activeTab === tab.id ? "tab-btn-active" : "tab-btn"}
+                    onClick={() => setActiveTab(tab.id)}
                   >
-                    {tab}
+                    {tab.label}
                   </button>
                 ))}
               </ScrollableTabs>
 
-              {activeTab === "Personal information" && (
+              {activeTab === "personal" && (
                 <Panel
                   title={t("manager:peopleTenantsId.title.personalInformation")}
                   actions={
                     isEditing ? (
                       <div className="flex items-center gap-2">
                         <button type="button" className="button-secondary text-sm" onClick={handleCancel} disabled={saving}>{t("manager:peopleTenantsId.text.cancel")}</button>
-                        <button type="button" className="button-primary text-sm" onClick={handleSave} disabled={saving}>{saving ? "Saving…" : "Save"}</button>
+                        <button type="button" className="button-primary text-sm" onClick={handleSave} disabled={saving}>{saving ? t("manager:peopleTenantsId.text.saving") : t("manager:peopleTenantsId.text.save")}</button>
                       </div>
                     ) : (
                       <button type="button" className="button-primary text-sm" onClick={() => setIsEditing(true)} disabled={loading || !tenant}>{t("manager:peopleTenantsId.text.edit")}</button>
@@ -285,7 +292,7 @@ export default function TenantDetailPage() {
                 </Panel>
               )}
 
-              {activeTab === "Unit" && (
+              {activeTab === "unit" && (
                 <Panel title={t("manager:peopleTenantsId.title.professional")}>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div>
@@ -320,19 +327,19 @@ export default function TenantDetailPage() {
                 </Panel>
               )}
 
-              {activeTab === "Documents" && (
+              {activeTab === "documents" && (
                 applicationId ? (
                   <DocumentsPanel applicationId={applicationId} title={t("manager:peopleTenantsId.title.corroborativeDocuments")} />
                 ) : (
                   <Panel title={t("manager:peopleTenantsId.title.corroborativeDocuments")}>
                     <p className="text-sm text-slate-500 py-2">
-                      No rental application linked to this tenant.
+                      {t("manager:peopleTenantsId.text.noApplicationLinked")}
                     </p>
                   </Panel>
                 )
               )}
 
-              {activeTab === "Contracts" && (
+              {activeTab === "contracts" && (
                 <Panel title={t("manager:peopleTenantsId.title.contracts")} bodyClassName="p-0">
                   {leasesLoading ? (
                     <p className="px-4 py-3 text-sm text-slate-600">{t("manager:peopleTenantsId.text.loadingLeases")}</p>
@@ -400,7 +407,7 @@ export default function TenantDetailPage() {
                 </Panel>
               )}
 
-              {activeTab === "Invoices" && (
+              {activeTab === "invoices" && (
                 <Panel title={t("manager:peopleTenantsId.title.invoices")} bodyClassName="p-0">
                   {invoicesLoading ? (
                     <p className="px-4 py-3 text-sm text-slate-600">{t("manager:peopleTenantsId.text.loadingInvoices")}</p>
@@ -420,7 +427,7 @@ export default function TenantDetailPage() {
                             </div>
                             <span className="text-xs text-slate-500">{inv.description || "—"}</span>
                             <div className="flex items-center justify-between text-xs text-slate-500">
-                              <span>Due: {formatDate(inv.dueDate)}</span>
+                              <span>{t("manager:peopleTenantsId.text.due")} {formatDate(inv.dueDate)}</span>
                               <span className="font-mono">{inv.totalAmount != null ? formatChf(inv.totalAmount) : "—"}</span>
                             </div>
                           </div>
@@ -467,7 +474,7 @@ export default function TenantDetailPage() {
               <p className="text-sm text-slate-600">{t("manager:peopleTenantsId.text.tenantNotFound")}</p>
               <div className="mt-3">
                 <button type="button" className="button-secondary" onClick={() => router.back()}>
-                  Go back
+                  {t("manager:peopleTenantsId.text.goBack")}
                 </button>
               </div>
             </Panel>
