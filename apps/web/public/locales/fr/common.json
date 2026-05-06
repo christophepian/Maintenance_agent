@@ -216,5 +216,6 @@
     "sortBy": "Trier par",
     "resetFilters": "Réinitialiser les filtres",
     "noOptions": "Aucune option disponible"
-  }
+  },
+  "loading": "Chargement…"
 }

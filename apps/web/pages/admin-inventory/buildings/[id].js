@@ -639,19 +639,29 @@ export default function BuildingDetail() {
 
           {/* Tabs Navigation */}
           {(() => {
-            const tabs = isOwner
+            const TAB_KEYS = isOwner
               ? ["Building information", "Units", "Tenants", "Assets", "Requests"]
               : ["Building information", "Units", "Tenants", "Assets", "Documents", "Policies", "Financials", "Requests"];
+            const TAB_I18N = {
+              "Building information": t("manager:buildingsId.tabs.buildingInformation"),
+              "Units":                t("manager:buildingsId.tabs.units"),
+              "Tenants":              t("manager:buildingsId.tabs.tenants"),
+              "Assets":               t("manager:buildingsId.tabs.assets"),
+              "Documents":            t("manager:buildingsId.tabs.documents"),
+              "Policies":             t("manager:buildingsId.tabs.policies"),
+              "Financials":           t("manager:buildingsId.tabs.financials"),
+              "Requests":             t("manager:buildingsId.tabs.requests"),
+            };
             return (
-              <ScrollableTabs activeIndex={tabs.indexOf(activeTab)}>
-                {tabs.map((tab) => (
+              <ScrollableTabs activeIndex={TAB_KEYS.indexOf(activeTab)}>
+                {TAB_KEYS.map((tab) => (
                   <button
                     key={tab}
                     type="button"
                     className={activeTab === tab ? "tab-btn-active" : "tab-btn"}
                     onClick={() => setActiveTab(tab)}
                   >
-                    {tab}
+                    {TAB_I18N[tab]}
                   </button>
                 ))}
               </ScrollableTabs>
@@ -665,10 +675,10 @@ export default function BuildingDetail() {
               <div className="sm:hidden mb-4">
                 <KpiInlineGrid
                   items={[
-                    { label: "Open Requests", value: kpisLoading ? "…" : (buildingKpis?.openRequests ?? "—"), tone: buildingKpis?.openRequests > 20 ? "warn" : undefined },
-                    { label: "Open Jobs",     value: kpisLoading ? "…" : (buildingKpis?.openJobs ?? "—"), tone: buildingKpis?.openJobs > 15 ? "warn" : undefined },
-                    { label: "NOI (YTD)",     value: kpisLoading ? "…" : (buildingKpis?.financials ? formatChfCents(buildingKpis.financials.netIncomeCents) : "—"), tone: buildingKpis?.financials ? (buildingKpis.financials.netIncomeCents >= 0 ? "good" : "warn") : undefined },
-                    { label: "vs Portfolio",  value: kpisLoading ? "…" : (buildingKpis?.portfolioComparison ? `${buildingKpis.portfolioComparison.better ? "+" : ""}${buildingKpis.portfolioComparison.pct}%` : "—"), tone: buildingKpis?.portfolioComparison ? (buildingKpis.portfolioComparison.better ? "good" : "warn") : undefined },
+                    { label: t("manager:buildingsId.kpi.openRequests"), value: kpisLoading ? "…" : (buildingKpis?.openRequests ?? "—"), tone: buildingKpis?.openRequests > 20 ? "warn" : undefined },
+                    { label: t("manager:buildingsId.kpi.openJobs"),     value: kpisLoading ? "…" : (buildingKpis?.openJobs ?? "—"), tone: buildingKpis?.openJobs > 15 ? "warn" : undefined },
+                    { label: t("manager:buildingsId.kpi.noiYtd"),       value: kpisLoading ? "…" : (buildingKpis?.financials ? formatChfCents(buildingKpis.financials.netIncomeCents) : "—"), tone: buildingKpis?.financials ? (buildingKpis.financials.netIncomeCents >= 0 ? "good" : "warn") : undefined },
+                    { label: t("manager:buildingsId.kpi.vsPortfolio"),  value: kpisLoading ? "…" : (buildingKpis?.portfolioComparison ? `${buildingKpis.portfolioComparison.better ? "+" : ""}${buildingKpis.portfolioComparison.pct}%` : "—"), tone: buildingKpis?.portfolioComparison ? (buildingKpis.portfolioComparison.better ? "good" : "warn") : undefined },
                   ]}
                 />
               </div>
@@ -676,66 +686,66 @@ export default function BuildingDetail() {
               <div className="hidden sm:grid kpi-grid gap-4 xl:grid-cols-4 mb-4">
                 {/* Open Requests */}
                 <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                  <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Open Requests</div>
+                  <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:buildingsId.kpi.openRequests")}</div>
                   {kpisLoading ? (
-                    <div className="mt-3 text-sm text-slate-400">Loading…</div>
+                    <div className="mt-3 text-sm text-slate-400">{t("common:loading")}</div>
                   ) : (
                     <>
                       <div className={cn("mt-3 text-2xl font-semibold tracking-tight", buildingKpis?.openRequests > 20 ? "text-amber-700" : "text-slate-900")}>
                         {buildingKpis?.openRequests ?? "—"}
                       </div>
-                      <div className="text-sm text-slate-600">Pending, approved, assigned</div>
+                      <div className="text-sm text-slate-600">{t("manager:buildingsId.kpi.pendingApprovedAssigned")}</div>
                     </>
                   )}
                 </div>
                 {/* Open Jobs */}
                 <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                  <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Open Jobs</div>
+                  <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:buildingsId.kpi.openJobs")}</div>
                   {kpisLoading ? (
-                    <div className="mt-3 text-sm text-slate-400">Loading…</div>
+                    <div className="mt-3 text-sm text-slate-400">{t("common:loading")}</div>
                   ) : (
                     <>
                       <div className={cn("mt-3 text-2xl font-semibold tracking-tight", buildingKpis?.openJobs > 15 ? "text-amber-700" : "text-slate-900")}>
                         {buildingKpis?.openJobs ?? "—"}
                       </div>
-                      <div className="text-sm text-slate-600">Pending + in progress</div>
+                      <div className="text-sm text-slate-600">{t("manager:buildingsId.kpi.pendingPlusInProgress")}</div>
                     </>
                   )}
                 </div>
                 {/* Building NOI */}
                 <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                  <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Building NOI (YTD)</div>
+                  <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:buildingsId.kpi.buildingNoiYtd")}</div>
                   {kpisLoading ? (
-                    <div className="mt-3 text-sm text-slate-400">Loading…</div>
+                    <div className="mt-3 text-sm text-slate-400">{t("common:loading")}</div>
                   ) : (
                     <>
                       <div className={cn("mt-3 text-2xl font-semibold tracking-tight", !buildingKpis?.financials ? "text-slate-400" : buildingKpis.financials.netIncomeCents >= 0 ? "text-green-700" : "text-red-700")}>
                         {buildingKpis?.financials ? formatChfCents(buildingKpis.financials.netIncomeCents) : "—"}
                       </div>
                       <div className="text-sm text-slate-600">
-                        {buildingKpis?.financials ? `${formatPercent(buildingKpis.financials.collectionRate)} collection rate` : "No financial data"}
+                        {buildingKpis?.financials ? `${formatPercent(buildingKpis.financials.collectionRate)} ${t("manager:buildingsId.kpi.collectionRate")}` : t("manager:buildingsId.kpi.noFinancialData")}
                       </div>
                     </>
                   )}
                 </div>
                 {/* Portfolio Comparison */}
                 <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                  <div className="text-xs font-medium uppercase tracking-wide text-slate-400">vs. Portfolio</div>
+                  <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:buildingsId.kpi.vsPortfolioLong")}</div>
                   {kpisLoading ? (
-                    <div className="mt-3 text-sm text-slate-400">Loading…</div>
+                    <div className="mt-3 text-sm text-slate-400">{t("common:loading")}</div>
                   ) : buildingKpis?.portfolioComparison ? (
                     <>
                       <div className={cn("mt-3 text-2xl font-semibold tracking-tight", buildingKpis.portfolioComparison.better ? "text-green-700" : "text-red-700")}>
                         {buildingKpis.portfolioComparison.better ? "+" : ""}{buildingKpis.portfolioComparison.pct}%
                       </div>
                       <div className="text-sm text-slate-600">
-                        {buildingKpis.portfolioComparison.better ? "Better" : "Worse"} than other assets (NOI)
+                        {buildingKpis.portfolioComparison.better ? t("manager:buildingsId.kpi.betterThanOtherAssets") : t("manager:buildingsId.kpi.worseThanOtherAssets")}
                       </div>
                     </>
                   ) : (
                     <>
                       <div className="mt-3 text-2xl font-semibold tracking-tight text-slate-400">—</div>
-                      <div className="text-sm text-slate-600">Not enough portfolio data</div>
+                      <div className="text-sm text-slate-600">{t("manager:buildingsId.kpi.notEnoughPortfolioData")}</div>
                     </>
                   )}
                 </div>
@@ -751,7 +761,7 @@ export default function BuildingDetail() {
                     disabled={loading}
                     onClick={onUpdateBuilding}
                   >
-                    {loading ? "Saving…" : "Save changes"}
+                    {loading ? t("manager:buildingsId.btn.saving") : t("manager:buildingsId.btn.saveChanges")}
                   </button>
                   <button
                     type="button"
@@ -766,7 +776,7 @@ export default function BuildingDetail() {
                       setEditManagedSince(building?.managedSince ? building.managedSince.slice(0, 10) : "");
                     }}
                   >
-                    Cancel
+                    {t("manager:buildingsId.btn.cancel")}
                   </button>
                   <button
                     type="button"
@@ -774,7 +784,7 @@ export default function BuildingDetail() {
                     onClick={onDeactivateBuilding}
                     disabled={loading}
                   >
-                    Deactivate
+                    {t("manager:buildingsId.btn.deactivate")}
                   </button>
                 </>
               ) : !isOwner ? (
@@ -784,7 +794,7 @@ export default function BuildingDetail() {
                   onClick={() => { setEditMode(true); loadOwnerCandidates(); }}
                   disabled={loading}
                 >
-                  Edit
+                  {t("manager:buildingsId.btn.edit")}
                 </button>
               ) : null}
             >
@@ -792,7 +802,7 @@ export default function BuildingDetail() {
                 <form onSubmit={onUpdateBuilding}>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <label className="grid gap-2">
-                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Name</span>
+                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:buildingsId.label.name")}</span>
                       <input
                         className="input text-sm text-slate-700"
                         type="text"
@@ -812,7 +822,7 @@ export default function BuildingDetail() {
                       />
                     </label>
                     <label className="grid gap-2">
-                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Year Built</span>
+                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:buildingsId.label.yearBuilt")}</span>
                       <input
                         className="input text-sm text-slate-700"
                         type="number"
@@ -824,7 +834,7 @@ export default function BuildingDetail() {
                       />
                     </label>
                     <label className="grid gap-2">
-                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Managed Since</span>
+                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:buildingsId.label.managedSince")}</span>
                       <input
                         className="input text-sm text-slate-700"
                         type="date"
@@ -839,7 +849,7 @@ export default function BuildingDetail() {
                           checked={editElevator}
                           onChange={(e) => setEditElevator(e.target.checked)}
                         />
-                        <span className="text-sm text-slate-700">Elevator</span>
+                        <span className="text-sm text-slate-700">{t("manager:buildingsId.label.elevator")}</span>
                       </label>
                       <label className="flex items-center gap-2 cursor-pointer">
                         <input
@@ -847,7 +857,7 @@ export default function BuildingDetail() {
                           checked={editConcierge}
                           onChange={(e) => setEditConcierge(e.target.checked)}
                         />
-                        <span className="text-sm text-slate-700">Concierge</span>
+                        <span className="text-sm text-slate-700">{t("manager:buildingsId.label.concierge")}</span>
                       </label>
                     </div>
                   </div>
@@ -856,7 +866,7 @@ export default function BuildingDetail() {
                 <>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div>
-                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Name</div>
+                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:buildingsId.label.name")}</div>
                       <div className="text-sm text-slate-700 mt-1">{building?.name}</div>
                     </div>
                     <div>
@@ -864,14 +874,14 @@ export default function BuildingDetail() {
                       <div className="text-sm text-slate-700 mt-1">{building?.address || "—"}</div>
                     </div>
                     <div>
-                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Year Built</div>
+                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:buildingsId.label.yearBuilt")}</div>
                       <div className="text-sm text-slate-700 mt-1">{building?.yearBuilt ?? "—"}</div>
                     </div>
                     <div>
-                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Amenities</div>
+                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:buildingsId.label.amenities")}</div>
                       <div className="text-sm text-slate-700 mt-1 flex gap-3">
-                        {building?.hasElevator && <Badge variant="info" size="sm">Elevator</Badge>}
-                        {building?.hasConcierge && <Badge variant="info" size="sm">Concierge</Badge>}
+                        {building?.hasElevator && <Badge variant="info" size="sm">{t("manager:buildingsId.label.elevator")}</Badge>}
+                        {building?.hasConcierge && <Badge variant="info" size="sm">{t("manager:buildingsId.label.concierge")}</Badge>}
                         {!building?.hasElevator && !building?.hasConcierge && "—"}
                       </div>
                     </div>
@@ -888,7 +898,7 @@ export default function BuildingDetail() {
                     {/* Managed Since — inline date input when editing */}
                     <div className="grid gap-4 sm:grid-cols-2 mb-3">
                       <div>
-                        <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Managed Since</div>
+                        <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:buildingsId.label.managedSince")}</div>
                         {editMode ? (
                           <div className="flex items-center gap-2 mt-1">
                             <input
@@ -919,7 +929,7 @@ export default function BuildingDetail() {
                                 }
                               }}
                             >
-                              Save
+                              {t("manager:buildingsId.btn.save")}
                             </button>
                           </div>
                         ) : (
@@ -933,7 +943,7 @@ export default function BuildingDetail() {
                     {/* Owners list */}
                     {building?.owners && building.owners.length > 0 ? (
                       <div>
-                        <div className="text-xs font-medium uppercase tracking-wide text-slate-400 mb-2">Owners</div>
+                        <div className="text-xs font-medium uppercase tracking-wide text-slate-400 mb-2">{t("manager:buildingsId.label.owners")}</div>
                         <div className="grid gap-3 sm:grid-cols-2">
                           {building.owners.map((owner) => {
                             const profile = ownerStrategyProfiles[owner.id];
@@ -954,14 +964,14 @@ export default function BuildingDetail() {
                                       disabled={ownerLoading}
                                       onClick={() => onRemoveOwner(owner.id)}
                                     >
-                                      Remove
+                                      {t("manager:buildingsId.btn.remove")}
                                     </button>
                                   )}
                                 </div>
                                 {profile && (
                                   <div className="mt-2.5 pt-2.5 border-t border-slate-200">
                                     <div className="flex items-center gap-2 mb-1.5">
-                                      <span className="text-xs font-semibold text-slate-700">Strategy</span>
+                                      <span className="text-xs font-semibold text-slate-700">{t("manager:buildingsId.label.strategy")}</span>
                                       {label && (
                                         <Badge variant="brand" size="sm">{label}</Badge>
                                       )}
@@ -994,20 +1004,20 @@ export default function BuildingDetail() {
                         </div>
                       </div>
                     ) : (
-                      <div className="text-sm text-slate-500 italic">No owners assigned to this building.</div>
+                      <div className="text-sm text-slate-500 italic">{t("manager:buildingsId.label.noOwnersAssigned")}</div>
                     )}
 
                     {/* Add owner picker (visible when editing) */}
                     {editMode && (
                       <div className="mt-3 flex items-end gap-2">
                         <div className="flex-1">
-                          <div className="text-xs font-medium uppercase tracking-wide text-slate-400 mb-1">Add Owner</div>
+                          <div className="text-xs font-medium uppercase tracking-wide text-slate-400 mb-1">{t("manager:buildingsId.label.owners")}</div>
                           <select
                             className="input text-sm text-slate-700 w-full"
                             value={selectedCandidateId}
                             onChange={(e) => setSelectedCandidateId(e.target.value)}
                           >
-                            <option value="">Select an owner…</option>
+                            <option value="">{t("manager:buildingsId.select.selectOwner")}</option>
                             {ownerCandidates
                               .filter((c) => !(building?.owners || []).some((o) => o.id === c.id))
                               .map((c) => (
@@ -1023,7 +1033,7 @@ export default function BuildingDetail() {
                           disabled={!selectedCandidateId || ownerLoading}
                           onClick={onAddOwner}
                         >
-                          Add
+                          {t("manager:buildingsId.btn.add")}
                         </button>
                       </div>
                     )}
@@ -1046,15 +1056,15 @@ export default function BuildingDetail() {
                     </div>
                     <KpiInlineGrid
                       items={[
-                        { label: "Role intent", value: bp.roleIntent ? bp.roleIntent.replace(/_/g, " ") : "—" },
-                        { label: "Building type", value: bp.buildingType ? bp.buildingType.replace(/_/g, " ") : "—" },
-                        { label: "Condition", value: bp.conditionRating != null ? `${bp.conditionRating}/10` : "—" },
-                        { label: "Approx. units", value: bp.approxUnits != null ? String(bp.approxUnits) : "—" },
+                        { label: t("manager:buildingsId.label.roleIntent"), value: bp.roleIntent ? bp.roleIntent.replace(/_/g, " ") : "—" },
+                        { label: t("manager:buildingsId.label.buildingType"), value: bp.buildingType ? bp.buildingType.replace(/_/g, " ") : "—" },
+                        { label: t("manager:buildingsId.label.condition"), value: bp.conditionRating != null ? `${bp.conditionRating}/10` : "—" },
+                        { label: t("manager:buildingsId.label.approxUnits"), value: bp.approxUnits != null ? String(bp.approxUnits) : "—" },
                       ]}
                     />
                     {copy && (
                       <div className="mt-3">
-                        <div className="text-xs font-medium uppercase tracking-wide text-slate-400 mb-1.5">Guidelines</div>
+                        <div className="text-xs font-medium uppercase tracking-wide text-slate-400 mb-1.5">{t("manager:buildingsId.label.guidelines")}</div>
                         <ul className="space-y-1">
                           {copy.bullets.map((b, i) => (
                             <li key={i} className="text-xs text-slate-600 flex gap-1.5">
@@ -1064,7 +1074,7 @@ export default function BuildingDetail() {
                           ))}
                           {copy.deprioritize && (
                             <li className="text-xs text-slate-400 flex gap-1.5 mt-1">
-                              <span className="flex-shrink-0">↓ Deprioritise:</span>
+                              <span className="flex-shrink-0">↓ {t("manager:buildingsId.label.guidelines")}:</span>
                               <span>{copy.deprioritize}</span>
                             </li>
                           )}
@@ -1088,7 +1098,7 @@ export default function BuildingDetail() {
                   className="button-primary text-sm"
                   onClick={() => setUnitAction(unitAction ? null : "create")}
                 >
-                  {unitAction ? "Cancel" : "Add unit"}
+                  {unitAction ? t("manager:buildingsId.btn.cancel") : t("manager:buildingsId.btn.addUnit")}
                 </button>
               )}
             >
@@ -1105,19 +1115,19 @@ export default function BuildingDetail() {
                       />
                     </label>
                     <label className="grid gap-2">
-                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Type</span>
+                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:buildingsId.label.type")}</span>
                       <select
                         className="input text-sm text-slate-700"
                         value={createUnitType}
                         onChange={(e) => setCreateUnitType(e.target.value)}
                       >
-                        <option value="RESIDENTIAL">Residential</option>
-                        <option value="COMMON_AREA">Common Area</option>
+                        <option value="RESIDENTIAL">{t("manager:buildingsId.select.residential")}</option>
+                        <option value="COMMON_AREA">{t("manager:buildingsId.select.commonArea")}</option>
                       </select>
                     </label>
                   </div>
                   <button type="submit" className="button-primary" disabled={loading}>
-                    {loading ? "Creating…" : "Create unit"}
+                    {loading ? t("manager:buildingsId.btn.creating") : t("manager:buildingsId.btn.createUnit")}
                   </button>
                 </form>
               )}
@@ -1126,16 +1136,16 @@ export default function BuildingDetail() {
                 <>
                   {/* ─── Occupancy summary row ─── */}
                   <div className="text-sm text-slate-600 mt-4 mb-2">
-                    {units.length} unit{units.length !== 1 ? "s" : ""} — {occupiedCount} occupied, {vacantCount} vacant, {listedCount} listed
+                    {units.length} {units.length !== 1 ? t("manager:buildingsId.text.units") : t("manager:buildingsId.text.unit")} — {occupiedCount} {t("manager:buildingsId.text.occupied").toLowerCase()}, {vacantCount} {t("manager:buildingsId.text.vacant").toLowerCase()}, {listedCount} {t("manager:buildingsId.text.listed").toLowerCase()}
                   </div>
 
                   {/* ─── Filter tabs ─── */}
                   <div className="flex gap-1 mb-4">
                     {[
-                      { key: "ALL", label: "All" },
-                      { key: "OCCUPIED", label: "Occupied" },
-                      { key: "VACANT", label: "Vacant" },
-                      { key: "LISTED", label: "Listed" },
+                      { key: "ALL",      label: t("manager:buildingsId.text.all") },
+                      { key: "OCCUPIED", label: t("manager:buildingsId.text.occupied") },
+                      { key: "VACANT",   label: t("manager:buildingsId.text.vacant") },
+                      { key: "LISTED",   label: t("manager:buildingsId.text.listed") },
                     ].map((tab) => (
                       <button
                         key={tab.key}
@@ -1166,13 +1176,13 @@ export default function BuildingDetail() {
                               {u.livingAreaSqm != null && <span className="text-xs text-slate-400">{u.livingAreaSqm} m²</span>}
                               {/* ─── Occupancy badge ─── */}
                               {u.occupancyStatus === "OCCUPIED" && (
-                                <Badge variant="success" size="sm">Occupied</Badge>
+                                <Badge variant="success" size="sm">{t("manager:buildingsId.text.occupied")}</Badge>
                               )}
                               {u.occupancyStatus === "VACANT" && (
-                                <Badge variant="destructive" size="sm">Vacant</Badge>
+                                <Badge variant="destructive" size="sm">{t("manager:buildingsId.text.vacant")}</Badge>
                               )}
                               {u.occupancyStatus === "LISTED" && (
-                                <Badge variant="warning" size="sm">Listed</Badge>
+                                <Badge variant="warning" size="sm">{t("manager:buildingsId.text.listed")}</Badge>
                               )}
                             </div>
                             {/* ─── Tenant info for occupied units ─── */}
@@ -1181,14 +1191,14 @@ export default function BuildingDetail() {
                                 <span className="text-slate-700">{u.tenantName}</span>
                                 {u.moveInDate && (
                                   <span className="ml-2 text-slate-400">
-                                    Since {formatDate(u.moveInDate)}
+                                    {t("manager:buildingsId.text.since")}{formatDate(u.moveInDate)}
                                   </span>
                                 )}
                               </div>
                             )}
                             {/* ─── Listed note ─── */}
                             {u.occupancyStatus === "LISTED" && (
-                              <div className="text-xs text-yellow-600 mt-1">Accepting applications</div>
+                              <div className="text-xs text-yellow-600 mt-1">{t("manager:buildingsId.text.acceptingApplications")}</div>
                             )}
                             {(u.monthlyRentChf != null || u.monthlyChargesChf != null) && (
                               <div className="text-xs text-slate-500 mt-1">
@@ -1217,18 +1227,18 @@ export default function BuildingDetail() {
                         <div className="flex justify-between items-center">
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2 flex-wrap">
-                              <span className="font-semibold text-slate-900">{u.unitNumber || u.name || "Common Area"}</span>
-                              {u.floor && <span className="text-xs text-slate-400">Floor {u.floor}</span>}
+                              <span className="font-semibold text-slate-900">{u.unitNumber || u.name || t("manager:buildingsId.text.commonArea")}</span>
+                              {u.floor && <span className="text-xs text-slate-400">{u.floor}</span>}
                               {u.livingAreaSqm != null && <span className="text-xs text-slate-400">{u.livingAreaSqm} m²</span>}
                               {/* ─── Occupancy badge ─── */}
                               {u.occupancyStatus === "OCCUPIED" && (
-                                <Badge variant="success" size="sm">Occupied</Badge>
+                                <Badge variant="success" size="sm">{t("manager:buildingsId.text.occupied")}</Badge>
                               )}
                               {u.occupancyStatus === "VACANT" && (
-                                <Badge variant="destructive" size="sm">Vacant</Badge>
+                                <Badge variant="destructive" size="sm">{t("manager:buildingsId.text.vacant")}</Badge>
                               )}
                               {u.occupancyStatus === "LISTED" && (
-                                <Badge variant="warning" size="sm">Listed</Badge>
+                                <Badge variant="warning" size="sm">{t("manager:buildingsId.text.listed")}</Badge>
                               )}
                             </div>
                           </div>
@@ -1240,7 +1250,7 @@ export default function BuildingDetail() {
                 </>
               )}
 
-              {units.length === 0 && <div className="text-center text-slate-500 italic text-sm py-6">No units yet.</div>}
+              {units.length === 0 && <div className="text-center text-slate-500 italic text-sm py-6">{t("manager:buildingsId.text.noUnitsYet")}</div>}
             </Panel>
           )}
 
@@ -1262,12 +1272,12 @@ export default function BuildingDetail() {
                 <table className="hidden sm:table data-table">
                   <thead>
                     <tr>
-                      <SortableHeader label="Name" field="name" sortField={tenSF} sortDir={tenSD} onSort={handleTenSort} />
-                      <SortableHeader label="Unit" field="unit" sortField={tenSF} sortDir={tenSD} onSort={handleTenSort} />
-                      <SortableHeader label="Phone" field="phone" sortField={tenSF} sortDir={tenSD} onSort={handleTenSort} />
-                      <SortableHeader label="Email" field="email" sortField={tenSF} sortDir={tenSD} onSort={handleTenSort} />
-                      <SortableHeader label="Move-in" field="moveIn" sortField={tenSF} sortDir={tenSD} onSort={handleTenSort} />
-                      <SortableHeader label="Source" field="source" sortField={tenSF} sortDir={tenSD} onSort={handleTenSort} />
+                      <SortableHeader label={t("manager:buildingsId.col.name")} field="name" sortField={tenSF} sortDir={tenSD} onSort={handleTenSort} />
+                      <SortableHeader label={t("manager:buildingsId.col.unit")} field="unit" sortField={tenSF} sortDir={tenSD} onSort={handleTenSort} />
+                      <SortableHeader label={t("manager:buildingsId.col.phone")} field="phone" sortField={tenSF} sortDir={tenSD} onSort={handleTenSort} />
+                      <SortableHeader label={t("manager:buildingsId.col.email")} field="email" sortField={tenSF} sortDir={tenSD} onSort={handleTenSort} />
+                      <SortableHeader label={t("manager:buildingsId.col.moveIn")} field="moveIn" sortField={tenSF} sortDir={tenSD} onSort={handleTenSort} />
+                      <SortableHeader label={t("manager:buildingsId.col.source")} field="source" sortField={tenSF} sortDir={tenSD} onSort={handleTenSort} />
                     </tr>
                   </thead>
                   <tbody>
@@ -1287,7 +1297,7 @@ export default function BuildingDetail() {
                           <td className="text-slate-700">{t.moveInDate ? displayDate(t.moveInDate) : "—"}</td>
                           <td>
                             <Badge variant={badgeVariant} size="sm">
-                              {t.source === "BOTH" ? "Both" : t.source === "LEASE" ? "Lease" : "Directory"}
+                              {t.source === "BOTH" ? t("manager:buildingsId.text.both") : t.source === "LEASE" ? t("manager:buildingsId.text.lease") : t("manager:buildingsId.text.directory")}
                             </Badge>
                           </td>
                         </tr>
@@ -1297,7 +1307,7 @@ export default function BuildingDetail() {
                 </table>
                 </>
               ) : (
-                <div className="text-center text-slate-500 italic text-sm py-6">No tenants found for this building.</div>
+                <div className="text-center text-slate-500 italic text-sm py-6">{t("manager:buildingsId.text.noTenantsYet")}</div>
               )}
             </Panel>
           )}
@@ -1312,7 +1322,7 @@ export default function BuildingDetail() {
                   className={assetAddMode ? "button-cancel text-sm" : "button-primary text-sm"}
                   onClick={() => setAssetAddMode((v) => !v)}
                 >
-                  {assetAddMode ? "Cancel" : "+ Add Asset"}
+                  {assetAddMode ? t("manager:buildingsId.btn.cancel") : t("manager:buildingsId.btn.addAsset")}
                 </button>
               )}
             >
@@ -1346,12 +1356,12 @@ export default function BuildingDetail() {
                       <div className="flex justify-between items-center">
                         <Link href={`/manager/leases/${tpl.id}`} className="flex-1 min-w-0">
                           <span className="font-semibold text-slate-900">{tpl.templateName || "Lease Template"}</span>
-                          <Badge variant="brand" size="sm" className="ml-2">TEMPLATE</Badge>
+                          <Badge variant="brand" size="sm" className="ml-2">{t("manager:buildingsId.text.template")}</Badge>
                           {tpl.landlordName && (
-                            <p className="text-xs text-slate-500 mt-1">Landlord: {tpl.landlordName}</p>
+                            <p className="text-xs text-slate-500 mt-1">{t("manager:buildingsId.text.landlordPrefix")}{tpl.landlordName}</p>
                           )}
                           {tpl.netRentChf != null && (
-                            <p className="text-xs text-slate-500">Default rent: CHF {tpl.netRentChf}.-/month</p>
+                            <p className="text-xs text-slate-500">{t("manager:buildingsId.text.defaultRentPrefix")}{tpl.netRentChf}{t("manager:buildingsId.text.defaultRentSuffix")}</p>
                           )}
                         </Link>
                         <div className="flex items-center gap-2 ml-4 flex-shrink-0">
@@ -1384,14 +1394,13 @@ export default function BuildingDetail() {
                 <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
                   <p className="text-sm text-amber-700 font-medium mb-1">No lease template found for this building</p>
                   <p className="text-xs text-amber-600 mb-3">
-                    A lease template defines the default contract terms (landlord info, notice rules, payment details, deposit) 
-                    that are automatically applied when a new tenant is selected. Without a template, leases must be created manually.
+                    {t("manager:buildingsId.text.leaseTemplateDesc")}
                   </p>
                   <Link
                     href="/manager/leases/templates"
                     className="inline-flex items-center rounded-lg bg-amber-600 px-3 py-2 text-xs font-semibold text-white hover:bg-amber-700"
                   >
-                    Go to Lease Templates →
+                    {t("manager:buildingsId.text.goToLeaseTemplates")}
                   </Link>
                 </div>
               )}
@@ -1409,7 +1418,7 @@ export default function BuildingDetail() {
                     className="button-cancel text-sm"
                     onClick={() => setConfigMode(null)}
                   >
-                    Cancel
+                    {t("manager:buildingsId.btn.cancelPolicies")}
                   </button>
                 ) : (
                   <button
@@ -1417,16 +1426,16 @@ export default function BuildingDetail() {
                     className="button-primary text-sm"
                     onClick={() => setConfigMode("edit")}
                   >
-                    Edit policies
+                    {t("manager:buildingsId.btn.editPolicies")}
                   </button>
                 )}
               >
-                <div className="text-sm text-slate-600 mb-4">Building-level thresholds for auto-approval and emergency dispatch. Leave blank to use org defaults.</div>
+                <div className="text-sm text-slate-600 mb-4">{t("manager:buildingsId.text.autoApproveDesc")}</div>
                 {configMode === "edit" ? (
                   <form onSubmit={onSaveBuildingConfig} className="mt-4">
                     <div className="grid gap-4 sm:grid-cols-2">
                       <label className="grid gap-2">
-                        <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Auto-approve limit (CHF)</span>
+                        <span className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:buildingsId.label.autoApproveLimit")}</span>
                         <input
                           type="number"
                           className="input text-sm text-slate-700"
@@ -1434,10 +1443,10 @@ export default function BuildingDetail() {
                           onChange={(e) => setConfigAutoApprove(e.target.value)}
                           placeholder={t("manager:buildingsId.placeholder.leaveBlankForOrgDefault")}
                         />
-                        <span className="text-xs text-slate-500">(blank = use org default)</span>
+                        <span className="text-xs text-slate-500">{t("manager:buildingsId.label.blankOrgDefault")}</span>
                       </label>
                       <label className="grid gap-2">
-                        <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Owner threshold (CHF)</span>
+                        <span className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:buildingsId.label.ownerThreshold")}</span>
                         <input
                           type="number"
                           className="input text-sm text-slate-700"
@@ -1445,7 +1454,7 @@ export default function BuildingDetail() {
                           onChange={(e) => setConfigOwnerThreshold(e.target.value)}
                           placeholder={t("manager:buildingsId.placeholder.leaveBlankForOrgDefault")}
                         />
-                        <span className="text-xs text-slate-500">(blank = use org default)</span>
+                        <span className="text-xs text-slate-500">{t("manager:buildingsId.label.blankOrgDefault")}</span>
                       </label>
                     </div>
                     <label className="flex items-center gap-2 my-4 cursor-pointer">
@@ -1455,31 +1464,31 @@ export default function BuildingDetail() {
                         onChange={(e) => setConfigEmergency(e.target.checked)}
                         className="rounded"
                       />
-                      <span className="text-sm font-semibold text-slate-700">Emergency auto-dispatch</span>
+                      <span className="text-sm font-semibold text-slate-700">{t("manager:buildingsId.label.emergencyAutoDispatch")}</span>
                     </label>
                     <button type="submit" className="button-primary" disabled={loading}>
-                      {loading ? "Saving…" : "Save policies"}
+                      {loading ? t("manager:buildingsId.btn.saving") : t("manager:buildingsId.btn.savePolicies")}
                     </button>
                   </form>
                 ) : (
                   <>
                     <div className="grid gap-4 sm:grid-cols-2 mt-4">
                       <div>
-                        <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Auto-approve limit</div>
+                        <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:buildingsId.label.autoApproveLimitView")}</div>
                         <div className="text-sm text-slate-700 mt-1">
-                          {buildingConfig?.autoApproveLimit != null ? `${buildingConfig.autoApproveLimit} CHF` : "(using org default)"}
+                          {buildingConfig?.autoApproveLimit != null ? `${buildingConfig.autoApproveLimit} CHF` : t("manager:buildingsId.label.usingOrgDefault")}
                         </div>
                       </div>
                       <div>
-                        <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Owner threshold</div>
+                        <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:buildingsId.label.ownerThresholdView")}</div>
                         <div className="text-sm text-slate-700 mt-1">
-                          {buildingConfig?.requireOwnerApprovalAbove != null ? `${buildingConfig.requireOwnerApprovalAbove} CHF` : "(using org default)"}
+                          {buildingConfig?.requireOwnerApprovalAbove != null ? `${buildingConfig.requireOwnerApprovalAbove} CHF` : t("manager:buildingsId.label.usingOrgDefault")}
                         </div>
                       </div>
                       <div>
-                        <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Emergency auto-dispatch</div>
+                        <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:buildingsId.label.emergencyAutoDispatch")}</div>
                         <div className="text-sm text-slate-700 mt-1">
-                          {buildingConfig?.emergencyAutoDispatch ? "Enabled" : "Disabled"}
+                          {buildingConfig?.emergencyAutoDispatch ? t("manager:buildingsId.label.enabled") : t("manager:buildingsId.label.disabled")}
                         </div>
                       </div>
                     </div>
@@ -1501,7 +1510,7 @@ export default function BuildingDetail() {
                       setNewRuleAction("AUTO_APPROVE");
                     }}
                   >
-                    Cancel
+                    {t("manager:buildingsId.btn.cancel")}
                   </button>
                 ) : (
                   <button
@@ -1509,16 +1518,16 @@ export default function BuildingDetail() {
                     className="button-primary text-sm"
                     onClick={() => setCreateRuleMode(true)}
                   >
-                    Create rule
+                    {t("manager:buildingsId.btn.addOverride")}
                   </button>
                 )}
               >
-                <div className="text-sm text-slate-600 mb-4">Define context-specific approval overrides for this building (e.g., "auto-approve ovens &lt; CHF 500").</div>
+                <div className="text-sm text-slate-600 mb-4">{t("manager:buildingsId.text.overrideDesc")}</div>
 
               {createRuleMode ? (
                 <form onSubmit={onCreateRule} className="mt-4">
                   <div className="mb-4">
-                    <label className="block text-sm font-semibold text-slate-700 mb-2">Rule name</label>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">{t("manager:buildingsId.label.ruleName")}</label>
                     <input
                       className="input text-sm text-slate-700 w-full"
                       value={newRuleName}
@@ -1528,7 +1537,7 @@ export default function BuildingDetail() {
                   </div>
 
                   <div className="mb-4">
-                    <label className="block text-sm font-semibold text-slate-700 mb-2">Priority (higher = evaluated first)</label>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">{t("manager:buildingsId.label.priorityLabel")}</label>
                     <input
                       type="number"
                       className="input text-sm text-slate-700"
@@ -1540,7 +1549,7 @@ export default function BuildingDetail() {
                   </div>
 
                   <div className="mb-4">
-                    <label className="block text-sm font-semibold text-slate-700 mb-2">Conditions (all must match)</label>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">{t("manager:buildingsId.label.conditions")}</label>
                     <div className="space-y-2 mb-3">
                       {newRuleConditions.map((cond, idx) => (
                         <div key={idx} className="flex gap-2 items-end">
@@ -1549,9 +1558,9 @@ export default function BuildingDetail() {
                             value={cond.field}
                             onChange={(e) => updateCondition(idx, "field", e.target.value)}
                           >
-                            <option value="CATEGORY">Category</option>
-                            <option value="ESTIMATED_COST">Estimated Cost</option>
-                            <option value="UNIT_TYPE">Unit Type</option>
+                            <option value="CATEGORY">{t("manager:buildingsId.select.category")}</option>
+                            <option value="ESTIMATED_COST">{t("manager:buildingsId.select.estimatedCost")}</option>
+                            <option value="UNIT_TYPE">{t("manager:buildingsId.select.unitType")}</option>
                             <option value="UNIT_NUMBER">Unit Number</option>
                           </select>
                           <select
@@ -1559,21 +1568,21 @@ export default function BuildingDetail() {
                             value={cond.operator}
                             onChange={(e) => updateCondition(idx, "operator", e.target.value)}
                           >
-                            <option value="EQUALS">Equals</option>
-                            <option value="NOT_EQUALS">Not Equals</option>
+                            <option value="EQUALS">{t("manager:buildingsId.select.equals")}</option>
+                            <option value="NOT_EQUALS">{t("manager:buildingsId.select.notEquals")}</option>
                             {cond.field === "ESTIMATED_COST" && (
                               <>
-                                <option value="LESS_THAN">Less Than</option>
-                                <option value="LESS_THAN_OR_EQUAL">Less Than or Equal</option>
-                                <option value="GREATER_THAN">Greater Than</option>
-                                <option value="GREATER_THAN_OR_EQUAL">Greater Than or Equal</option>
+                                <option value="LESS_THAN">{t("manager:buildingsId.select.lessThan")}</option>
+                                <option value="LESS_THAN_OR_EQUAL">{t("manager:buildingsId.select.lessThanOrEqual")}</option>
+                                <option value="GREATER_THAN">{t("manager:buildingsId.select.greaterThan")}</option>
+                                <option value="GREATER_THAN_OR_EQUAL">{t("manager:buildingsId.select.greaterThanOrEqual")}</option>
                               </>
                             )}
                             {(cond.field === "CATEGORY" || cond.field === "UNIT_TYPE" || cond.field === "UNIT_NUMBER") && (
                               <>
-                                <option value="CONTAINS">Contains</option>
-                                <option value="STARTS_WITH">Starts With</option>
-                                <option value="ENDS_WITH">Ends With</option>
+                                <option value="CONTAINS">{t("manager:buildingsId.select.contains")}</option>
+                                <option value="STARTS_WITH">{t("manager:buildingsId.select.startsWith")}</option>
+                                <option value="ENDS_WITH">{t("manager:buildingsId.select.endsWith")}</option>
                               </>
                             )}
                           </select>
@@ -1600,28 +1609,28 @@ export default function BuildingDetail() {
                               className="button-secondary px-2 py-1 text-xs"
                               onClick={() => removeCondition(idx)}
                             >
-                              Remove
+                              {t("manager:buildingsId.btn.remove")}
                             </button>
                           )}
                         </div>
                       ))}
                     </div>
                     <button type="button" className="button-secondary text-xs" onClick={addCondition}>
-                      + Add condition
+                      {t("manager:buildingsId.btn.addCondition")}
                     </button>
                   </div>
 
                   <div className="mb-4">
-                    <label className="block text-sm font-semibold text-slate-700 mb-2">Action</label>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">{t("manager:buildingsId.label.action")}</label>
                     <select className="input text-sm text-slate-700 w-full" value={newRuleAction} onChange={(e) => setNewRuleAction(e.target.value)}>
-                      <option value="AUTO_APPROVE">Auto-approve</option>
-                      <option value="REQUIRE_MANAGER_REVIEW">Require manager review</option>
-                      <option value="REQUIRE_OWNER_APPROVAL">Require owner approval</option>
+                      <option value="AUTO_APPROVE">{t("manager:buildingsId.select.autoApprove")}</option>
+                      <option value="REQUIRE_MANAGER_REVIEW">{t("manager:buildingsId.select.requireManagerReview")}</option>
+                      <option value="REQUIRE_OWNER_APPROVAL">{t("manager:buildingsId.select.requireOwnerApproval")}</option>
                     </select>
                   </div>
 
                   <button type="submit" className="button-primary" disabled={loading}>
-                    {loading ? "Creating…" : "Create rule"}
+                    {loading ? t("manager:buildingsId.btn.creating") : t("manager:buildingsId.btn.createRule")}
                   </button>
                 </form>
               ) : (
@@ -1634,8 +1643,8 @@ export default function BuildingDetail() {
                             <div className="flex-1">
                               <div className="font-semibold text-slate-900">
                                 {rule.name}
-                                {!rule.isActive && <Badge variant="warning" size="sm" className="ml-2">Inactive</Badge>}
-                                <Badge variant="info" size="sm" className="ml-2">Priority: {rule.priority}</Badge>
+                                {!rule.isActive && <Badge variant="warning" size="sm" className="ml-2">{t("manager:buildingsId.label.inactive")}</Badge>}
+                                <Badge variant="info" size="sm" className="ml-2">{t("manager:buildingsId.label.priorityPrefix")}{rule.priority}</Badge>
                               </div>
                               <div className="text-xs text-slate-600 mt-1">
                                 {rule.conditions.map((c, i) => (
@@ -1655,7 +1664,7 @@ export default function BuildingDetail() {
                                 onClick={() => onToggleRuleActive(rule.id, rule.isActive)}
                                 disabled={loading}
                               >
-                                {rule.isActive ? "Deactivate" : "Activate"}
+                                {rule.isActive ? t("manager:buildingsId.btn.deactivate") : t("manager:buildingsId.btn.activate")}
                               </button>
                               <button
                                 type="button"
@@ -1663,7 +1672,7 @@ export default function BuildingDetail() {
                                 onClick={() => onDeleteRule(rule.id)}
                                 disabled={loading}
                               >
-                                Delete
+                                {t("manager:buildingsId.btn.delete")}
                               </button>
                             </div>
                           </div>
@@ -1671,7 +1680,7 @@ export default function BuildingDetail() {
                       ))}
                     </div>
                   )}
-                  {rules.length === 0 && <div className="text-center text-slate-500 italic text-sm py-6">No approval rules yet.</div>}
+                  {rules.length === 0 && <div className="text-center text-slate-500 italic text-sm py-6">{t("manager:buildingsId.text.noApprovalRulesYet")}</div>}
                 </>
               )}
               </Panel>
@@ -1682,9 +1691,9 @@ export default function BuildingDetail() {
           {activeTab === "Requests" && (
             <Panel title={t("manager:buildingsId.title.requests")}>
               {requestsLoading ? (
-                <p className="text-sm text-slate-500 py-4">Loading requests…</p>
+                <p className="text-sm text-slate-500 py-4">{t("manager:buildingsId.text.loadingRequests")}</p>
               ) : buildingRequests.length === 0 ? (
-                <p className="text-sm text-slate-500 italic py-4">No requests found for this building.</p>
+                <p className="text-sm text-slate-500 italic py-4">{t("manager:buildingsId.text.noRequestsYet")}</p>
               ) : (
                 <>
                   {/* Mobile cards */}
@@ -1724,13 +1733,13 @@ export default function BuildingDetail() {
                     <table className="data-table w-full">
                       <thead>
                         <tr>
-                          <th>#</th>
-                          <SortableHeader label="Status" field="status" sortField={reqSF} sortDir={reqSD} onSort={handleReqSort} />
-                          <SortableHeader label="Category" field="category" sortField={reqSF} sortDir={reqSD} onSort={handleReqSort} />
-                          <SortableHeader label="Unit" field="unit" sortField={reqSF} sortDir={reqSD} onSort={handleReqSort} />
-                          <SortableHeader label="Urgency" field="urgency" sortField={reqSF} sortDir={reqSD} onSort={handleReqSort} />
-                          <SortableHeader label="Contractor" field="contractor" sortField={reqSF} sortDir={reqSD} onSort={handleReqSort} />
-                          <SortableHeader label="Date" field="createdAt" sortField={reqSF} sortDir={reqSD} onSort={handleReqSort} />
+                          <th>{t("manager:buildingsId.col.number")}</th>
+                          <SortableHeader label={t("manager:buildingsId.col.status")} field="status" sortField={reqSF} sortDir={reqSD} onSort={handleReqSort} />
+                          <SortableHeader label={t("manager:buildingsId.col.category")} field="category" sortField={reqSF} sortDir={reqSD} onSort={handleReqSort} />
+                          <SortableHeader label={t("manager:buildingsId.col.unit")} field="unit" sortField={reqSF} sortDir={reqSD} onSort={handleReqSort} />
+                          <SortableHeader label={t("manager:buildingsId.col.urgency")} field="urgency" sortField={reqSF} sortDir={reqSD} onSort={handleReqSort} />
+                          <SortableHeader label={t("manager:buildingsId.col.contractor")} field="contractor" sortField={reqSF} sortDir={reqSD} onSort={handleReqSort} />
+                          <SortableHeader label={t("manager:buildingsId.col.date")} field="createdAt" sortField={reqSF} sortDir={reqSD} onSort={handleReqSort} />
                         </tr>
                       </thead>
                       <tbody>
