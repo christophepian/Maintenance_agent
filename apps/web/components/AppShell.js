@@ -29,6 +29,7 @@ import OwnerSidebar from "./OwnerSidebar";
 import ContractorSidebar from "./ContractorSidebar";
 import TenantSidebar from "./TenantSidebar";
 import BottomNav from "./mobile/BottomNav";
+import HubBar from "./HubBar";
 import { createClient } from "../lib/supabase/client";
 import { setAuthToken } from "../lib/api";
 
@@ -104,11 +105,17 @@ export default function AppShell({ role: roleProp, children }) {
     router.push("/login");
   }
 
+  const showHubBar = role === "MANAGER";
+
   return (
-    <div className="min-h-screen md:grid md:grid-cols-[260px_1fr] bg-white text-slate-900 font-sans overflow-hidden">
+    <div
+      className="min-h-screen md:grid md:grid-cols-[260px_1fr] bg-white text-slate-900 font-sans overflow-hidden"
+      style={showHubBar ? { paddingTop: 36 } : undefined}
+    >
+      {showHubBar && <HubBar />}
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded focus:bg-white focus:px-4 focus:py-2 focus:shadow-lg focus:ring-2 focus:ring-blue-500"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-10 focus:left-2 focus:z-50 focus:rounded focus:bg-white focus:px-4 focus:py-2 focus:shadow-lg focus:ring-2 focus:ring-blue-500"
       >
         Skip to main content
       </a>
