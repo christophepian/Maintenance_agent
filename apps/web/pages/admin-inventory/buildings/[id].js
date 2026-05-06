@@ -98,13 +98,13 @@ export default function BuildingDetail() {
   // ─── Sort state for Tenants + Requests tabs (must be here, before early returns) ───
   const { sortField: tenSF, sortDir: tenSD, handleSort: handleTenSort } = useLocalSort("name", "asc");
   const { sortField: reqSF, sortDir: reqSD, handleSort: handleReqSort } = useLocalSort("createdAt", "desc");
-  const sortedBuildingTenants = useMemo(() => clientSort(building?.tenants ?? [], tenSF, tenSD, (t, f) => {
-    if (f === "name") return (t.name || "").toLowerCase();
-    if (f === "unit") return (t.unitNumber || "").toLowerCase();
-    if (f === "phone") return (t.phone || "").toLowerCase();
-    if (f === "email") return (t.email || "").toLowerCase();
-    if (f === "moveIn") return t.moveInDate || "";
-    if (f === "source") return (t.source || "").toLowerCase();
+  const sortedBuildingTenants = useMemo(() => clientSort(building?.tenants ?? [], tenSF, tenSD, (ten, f) => {
+    if (f === "name") return (ten.name || "").toLowerCase();
+    if (f === "unit") return (ten.unitNumber || "").toLowerCase();
+    if (f === "phone") return (ten.phone || "").toLowerCase();
+    if (f === "email") return (ten.email || "").toLowerCase();
+    if (f === "moveIn") return ten.moveInDate || "";
+    if (f === "source") return (ten.source || "").toLowerCase();
     return "";
   }), [building?.tenants, tenSF, tenSD]);
   const sortedBuildingRequests = useMemo(() => clientSort(buildingRequests, reqSF, reqSD, (r, f) => {
@@ -1261,10 +1261,10 @@ export default function BuildingDetail() {
                 <>
                 {/* Mobile: card list */}
                 <div className="sm:hidden space-y-2">
-                  {sortedBuildingTenants.map((t, idx) => (
-                    <div key={t.tenantId || idx} className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5">
-                      <p className="text-sm font-medium text-slate-900">{t.name}</p>
-                      <p className="text-xs text-slate-500 mt-0.5">Unit {t.unitNumber}{t.phone ? ` · ${t.phone}` : ""}</p>
+                  {sortedBuildingTenants.map((ten, idx) => (
+                    <div key={ten.tenantId || idx} className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5">
+                      <p className="text-sm font-medium text-slate-900">{ten.name}</p>
+                      <p className="text-xs text-slate-500 mt-0.5">Unit {ten.unitNumber}{ten.phone ? ` · ${ten.phone}` : ""}</p>
                     </div>
                   ))}
                 </div>
@@ -1281,23 +1281,23 @@ export default function BuildingDetail() {
                     </tr>
                   </thead>
                   <tbody>
-                    {sortedBuildingTenants.map((t, idx) => {
+                    {sortedBuildingTenants.map((ten, idx) => {
                       const badgeVariant =
-                        t.source === "BOTH"
+                        ten.source === "BOTH"
                           ? "success"
-                          : t.source === "LEASE"
+                          : ten.source === "LEASE"
                           ? "info"
                           : "muted";
                       return (
-                        <tr key={t.tenantId || idx} className="border-b border-slate-100">
-                          <td className="text-slate-900 font-medium">{t.name}</td>
-                          <td className="text-slate-700">{t.unitNumber}</td>
-                          <td className="text-slate-700">{t.phone || "—"}</td>
-                          <td className="text-slate-700">{t.email || "—"}</td>
-                          <td className="text-slate-700">{t.moveInDate ? displayDate(t.moveInDate) : "—"}</td>
+                        <tr key={ten.tenantId || idx} className="border-b border-slate-100">
+                          <td className="text-slate-900 font-medium">{ten.name}</td>
+                          <td className="text-slate-700">{ten.unitNumber}</td>
+                          <td className="text-slate-700">{ten.phone || "—"}</td>
+                          <td className="text-slate-700">{ten.email || "—"}</td>
+                          <td className="text-slate-700">{ten.moveInDate ? displayDate(ten.moveInDate) : "—"}</td>
                           <td>
                             <Badge variant={badgeVariant} size="sm">
-                              {t.source === "BOTH" ? t("manager:buildingsId.text.both") : t.source === "LEASE" ? t("manager:buildingsId.text.lease") : t("manager:buildingsId.text.directory")}
+                              {ten.source === "BOTH" ? t("manager:buildingsId.text.both") : ten.source === "LEASE" ? t("manager:buildingsId.text.lease") : t("manager:buildingsId.text.directory")}
                             </Badge>
                           </td>
                         </tr>
