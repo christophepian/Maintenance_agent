@@ -9,7 +9,7 @@ import { bootstrapLegalEngine } from "./services/bootstrapLegalEngine";
 import prisma from "./services/prismaClient";
 import { Router } from "./http/router";
 import { readJson } from "./http/body";
-import { encodeToken } from "./services/auth";
+import { encodeToken, resolveSupabaseToken, extractToken } from "./services/auth";
 
 /* ── Route registration ─────────────────────────────────────── */
 import { registerAuthRoutes } from "./routes/auth";
@@ -217,6 +217,16 @@ const server = http.createServer(async (req: AuthedRequest, res) => {
         checkedInMs: Date.now() - startedAt,
       });
       return;
+    }
+
+    /* ── Pre-resolve Supabase JWT (async JWKS) ──────────────────────────────
+       Populates req.user before the router runs so getAuthUser() in authz.ts
+       can remain synchronous. Falls back gracefully when no token is present. */
+    if (!req.user) {
+      const token = extractToken(req.headers["authorization"] as string | undefined);
+      if (token) {
+        req.user = await resolveSupabaseToken(token);
+      }
     }
 
     const orgId = getOrgIdForRequest(req);

@@ -211,6 +211,7 @@ model User {
   createdAt    DateTime @default(now())
   email          String?
   passwordHash   String?
+  supabaseId     String?  @unique  /// Supabase auth.users UUID — set on first Supabase login
   updatedAt      DateTime        @updatedAt
   org            Org             @relation(fields: [orgId], references: [id])
   ownedBuildings BuildingOwner[]
