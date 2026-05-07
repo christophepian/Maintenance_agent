@@ -7105,7 +7105,7 @@
     {
       "id": "DT-119",
       "title": "Owner invoices: overlay detail view + deeplink from dashboard (bypass list overhead)",
-      "status": "review",
+      "status": "done",
       "source_intake": "INT-127",
       "priority": "medium",
       "goal": "Two related wins: (1) Clicking an invoice row in /owner/invoices opens a detail overlay consistent with the manager invoice experience. (2) Owner dashboard widgets that surface specific invoices must deeplink directly to that invoice (e.g. /owner/invoices?open=<id>) rather than navigating to the invoices list and losing context.",

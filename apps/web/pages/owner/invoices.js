@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect, useRef } from "react";
+import { useMemo, useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import AppShell from "../../components/AppShell";
@@ -186,6 +186,229 @@ function PdfDownloadModal({ invoice, onClose }) {
   );
 }
 
+/* ── Invoice slide-over detail panel ────────────────────────── */
+
+const SOURCE_LABEL_DETAIL = SOURCE_LABEL;
+
+function InvoiceSlideOver({ invoiceId, onClose, onAction }) {
+  const { t } = useTranslation("owner");
+  const [inv, setInv] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [actionLoading, setActionLoading] = useState(false);
+
+  const load = useCallback(async () => {
+    if (!invoiceId) return;
+    setLoading(true);
+    setError("");
+    try {
+      const res = await fetch(`/api/invoices/${invoiceId}`, { headers: ownerAuthHeaders() });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error?.message || data?.error || "Failed to load");
+      setInv(data?.data || null);
+    } catch (e) {
+      setError(String(e?.message || e));
+    } finally {
+      setLoading(false);
+    }
+  }, [invoiceId]);
+
+  useEffect(() => { load(); }, [load]);
+
+  // Close on Escape
+  useEffect(() => {
+    function onKey(e) { if (e.key === "Escape") onClose(); }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  async function doAction(action, body) {
+    setActionLoading(true);
+    setError("");
+    try {
+      const res = await fetch(`/api/invoices/${invoiceId}/${action}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...ownerAuthHeaders() },
+        body: body ? JSON.stringify(body) : JSON.stringify({}),
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        throw new Error(d?.error?.message || d?.error || `Failed to ${action}`);
+      }
+      await load();
+      if (onAction) onAction();
+    } catch (e) {
+      setError(String(e?.message || e));
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  const isIncoming = inv?.direction ? inv.direction === "INCOMING" : true;
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 bg-black/30 z-40"
+        onClick={onClose}
+        aria-hidden="true"
+      />
+      {/* Panel */}
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Invoice details"
+        className="fixed inset-y-0 right-0 z-50 flex w-full max-w-lg flex-col bg-white shadow-2xl"
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-slate-900 truncate">
+              {inv?.invoiceNumber || invoiceId?.slice(0, 8) || "Invoice"}
+            </p>
+            {inv && (
+              <p className="text-xs text-slate-400 mt-0.5">
+                {inv.direction === "INCOMING" ? "↓ Incoming" : "↑ Outgoing"}
+                {inv.createdAt ? ` · ${formatDate(inv.createdAt)}` : ""}
+              </p>
+            )}
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            {inv && (
+              <a
+                href={`/owner/finance/invoices/${invoiceId}`}
+                className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 transition"
+              >
+                Full page →
+              </a>
+            )}
+            <button
+              type="button"
+              aria-label="Close invoice panel"
+              onClick={onClose}
+              className="rounded-lg p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition"
+            >
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto px-5 py-5 space-y-5">
+          {error && (
+            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
+          )}
+
+          {loading ? (
+            <p className="loading-text">Loading invoice…</p>
+          ) : !inv ? (
+            <p className="empty-state-text">Invoice not found.</p>
+          ) : (
+            <>
+              {/* Status row */}
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant={invoiceVariant(inv.status)} size="sm">{inv.status}</Badge>
+                <IngestionBadge ingestionStatus={inv.ingestionStatus} />
+                {inv.sourceChannel && SOURCE_LABEL_DETAIL[inv.sourceChannel] && (
+                  <span className={"inline-flex items-center rounded border px-1.5 py-0.5 text-[10px] font-medium " + SOURCE_LABEL_DETAIL[inv.sourceChannel].cls}>
+                    {SOURCE_LABEL_DETAIL[inv.sourceChannel].text}
+                  </span>
+                )}
+              </div>
+
+              {/* Key fields */}
+              <dl className="grid grid-cols-2 gap-x-6 gap-y-3">
+                {[
+                  { label: "Invoice #", value: inv.invoiceNumber },
+                  { label: "Amount", value: formatCurrency(getInvoiceTotal(inv)) },
+                  { label: "Issuer / Recipient", value: inv.recipientName || inv.issuerName },
+                  { label: "Issue date", value: formatDate(inv.issueDate) },
+                  { label: "Due date", value: formatDate(inv.dueDate) },
+                  { label: "Currency", value: inv.currency || "CHF" },
+                ].map(({ label, value }) => (
+                  <div key={label}>
+                    <dt className="text-xs font-medium text-slate-500 uppercase tracking-wide">{label}</dt>
+                    <dd className="mt-0.5 text-sm text-slate-900">{value ?? "—"}</dd>
+                  </div>
+                ))}
+              </dl>
+
+              {/* Line items summary */}
+              {inv.lineItems?.length > 0 && (
+                <div>
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">Line items</p>
+                  <div className="divide-y divide-slate-100 rounded-lg border border-slate-200">
+                    {inv.lineItems.map((li, i) => (
+                      <div key={i} className="flex items-center justify-between px-3 py-2 text-sm">
+                        <span className="text-slate-700 truncate flex-1 mr-2">{li.description || "—"}</span>
+                        <span className="font-mono text-slate-900 shrink-0">{formatCurrency(li.lineTotal)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Timeline */}
+              <div>
+                <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">Timeline</p>
+                <div className="space-y-1.5 text-xs text-slate-600">
+                  {[{label:"Created",value:inv.createdAt},{label:"Submitted",value:inv.submittedAt},{label:"Approved",value:inv.approvedAt},{label:"Paid",value:inv.paidAt}]
+                    .filter(e => e.value)
+                    .map(({label,value}) => (
+                      <div key={label} className="flex justify-between">
+                        <span className="text-slate-500">{label}</span>
+                        <span>{formatDate(value)}</span>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Footer actions */}
+        {inv && (
+          <div className="border-t border-slate-200 px-5 py-4 flex flex-wrap gap-2">
+            {isIncoming && inv.status === "ISSUED" && (
+              <button
+                type="button"
+                disabled={actionLoading}
+                onClick={() => doAction("approve")}
+                className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 transition disabled:opacity-50"
+              >
+                ✓ Approve
+              </button>
+            )}
+            {isIncoming && ["ISSUED", "DRAFT", "APPROVED"].includes(inv.status) && (
+              <button
+                type="button"
+                disabled={actionLoading}
+                onClick={() => {
+                  const reason = window.prompt("Reason for dispute (required):");
+                  if (reason?.trim()) doAction("dispute", { reason });
+                }}
+                className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-100 transition disabled:opacity-50"
+              >
+                ✗ Dispute
+              </button>
+            )}
+            <a
+              href={`/api/invoices/${invoiceId}/pdf`}
+              download
+              className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition"
+            >
+              ↓ PDF
+            </a>
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
 /* ── Main Component ──────────────────────────────────────────── */
 
 export default function OwnerInvoices() {
@@ -205,6 +428,18 @@ export default function OwnerInvoices() {
     setPdfModalNonce(_moduleNonce);
   }
 
+  // Slide-over detail panel
+  const [selectedInvoiceId, setSelectedInvoiceId] = useState(null);
+  const openInvoice = useCallback((id) => {
+    setSelectedInvoiceId(id);
+    router.replace({ pathname: router.pathname, query: { ...router.query, invoiceId: id } }, undefined, { shallow: true });
+  }, [router]);
+  const closeInvoice = useCallback(() => {
+    setSelectedInvoiceId(null);
+    const { invoiceId: _removed, ...rest } = router.query;
+    router.replace({ pathname: router.pathname, query: rest }, undefined, { shallow: true });
+  }, [router]);
+
   // Date filters
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
@@ -214,20 +449,18 @@ export default function OwnerInvoices() {
 
   useEffect(() => { fetchInvoices(); }, []);
 
-  // Deep-link: auto-scroll to invoice from ?invoiceId= query param
-  const highlightedId = router.isReady ? router.query.invoiceId : null;
+  // Deep-link: open overlay when ?invoiceId= is present on load
+  const deepLinked = useRef(false);
   useEffect(() => {
-    if (!highlightedId || loading) return;
-    const el = document.getElementById(`invoice-${highlightedId}`);
-    if (el) {
-      el.scrollIntoView({ behavior: "smooth", block: "center" });
-      el.classList.add("ring-2", "ring-indigo-400", "bg-indigo-50");
-      const timer = setTimeout(() => {
-        el.classList.remove("ring-2", "ring-indigo-400", "bg-indigo-50");
-      }, 3000);
-      return () => clearTimeout(timer);
+    if (!router.isReady || deepLinked.current) return;
+    if (router.query.invoiceId) {
+      deepLinked.current = true;
+      setSelectedInvoiceId(router.query.invoiceId);
     }
-  }, [highlightedId, loading]);
+  }, [router.isReady, router.query.invoiceId]);
+
+  // Legacy: remove highlightedId variable (replaced by overlay)
+  const highlightedId = null;
 
   const fetchInvoices = async () => {
     setLoading(true);
@@ -437,7 +670,8 @@ export default function OwnerInvoices() {
               data={sortedInvoices}
               rowKey="id"
               rowId={(inv) => `invoice-${inv.id}`}
-              rowClassName={(inv) => inv.id === highlightedId ? "ring-2 ring-inset ring-indigo-400 bg-indigo-50" : ""}
+              rowClassName={() => ""}
+              onRowClick={(inv) => openInvoice(inv.id)}
               sortField={sortField}
               sortDir={sortDir}
               onSort={handleSort}
@@ -447,7 +681,11 @@ export default function OwnerInvoices() {
                 </p>
               }
               mobileCard={(inv) => (
-                <div className="table-card">
+                <button
+                  type="button"
+                  onClick={() => openInvoice(inv.id)}
+                  className="table-card w-full text-left cursor-pointer"
+                >
                   <div className="flex items-start justify-between gap-2">
                     <span className="font-mono text-xs text-slate-500">{inv.invoiceNumber || inv.id?.slice(0, 8)}</span>
                     <Badge variant={invoiceVariant(inv.status)} size="sm">{inv.status}</Badge>
@@ -457,7 +695,7 @@ export default function OwnerInvoices() {
                     <span className="font-medium">{formatCurrency(getInvoiceTotal(inv))}</span>
                     <span>{formatDate(inv.createdAt)}</span>
                   </div>
-                </div>
+                </button>
               )}
             />
           )}
@@ -474,6 +712,13 @@ export default function OwnerInvoices() {
         </PageContent>
       </PageShell>
       <PdfDownloadModal invoice={effectivePdfModal} onClose={() => setPdfModalInvoice(null)} />
+      {selectedInvoiceId && (
+        <InvoiceSlideOver
+          invoiceId={selectedInvoiceId}
+          onClose={closeInvoice}
+          onAction={fetchInvoices}
+        />
+      )}
     </AppShell>
   );
 }
