@@ -52,7 +52,6 @@ function StatRow({ label, value, sub, valueClass = "" }) {
 // ── Monopoly card ────────────────────────────────────────────────────────────
 function MonopolyCard({ building, fin, onClick }) {
   const { t } = useTranslation("owner");
-  const ownerBuildingColumns = useMemo(() => buildOwnerBuildingColumns(t), [t]);
   const bandColor = monopolyColor(building.name);
   const unitCount = building.unitCount ?? building._count?.units ?? fin?.activeUnitsCount;
 
@@ -299,6 +298,7 @@ function trailingYear() {
 
 function BuildingsTab({ refreshKey }) {
   const { t } = useTranslation("owner");
+  const ownerBuildingColumns = useMemo(() => buildOwnerBuildingColumns(t), [t]);
   const router = useRouter();
   const [buildings, setBuildings] = useState([]);
   const [loading, setLoading] = useState(true);
