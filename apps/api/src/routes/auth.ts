@@ -554,6 +554,104 @@ export function registerAuthRoutes(router: Router) {
     }
   });
 
+  // ── Dev-only tenant impersonation (AUTH_OPTIONAL=true only) ─────────────────
+
+  // GET /__dev/tenant-list — returns all tenants with active occupancies
+  router.get("/__dev/tenant-list", async ({ res, prisma, orgId }) => {
+    if (process.env.AUTH_OPTIONAL !== "true") return sendError(res, 403, "FORBIDDEN", "Dev-only endpoint");
+    try {
+      const tenants = await prisma.tenant.findMany({
+        where: {
+          occupancies: {
+            some: {
+              status: "ACTIVE",
+              unit: { building: { orgId } },
+            },
+          },
+        },
+        select: {
+          id: true,
+          name: true,
+          phone: true,
+          email: true,
+          occupancies: {
+            where: { status: "ACTIVE" },
+            select: {
+              unit: {
+                select: {
+                  unitNumber: true,
+                  floor: true,
+                  building: { select: { name: true } },
+                },
+              },
+            },
+            take: 1,
+          },
+        },
+        take: 50,
+      });
+      sendJson(res, 200, { data: tenants });
+    } catch (e) {
+      sendError(res, 500, "DB_ERROR", "Failed to list tenants", String(e));
+    }
+  });
+
+  // POST /__dev/tenant-login — issues a tenant JWT for a given tenantId
+  router.post("/__dev/tenant-login", async ({ res, req, prisma, orgId }) => {
+    if (process.env.AUTH_OPTIONAL !== "true") return sendError(res, 403, "FORBIDDEN", "Dev-only endpoint");
+    try {
+      const { tenantId } = await readJson(req) as { tenantId?: string };
+      if (!tenantId) return sendError(res, 400, "VALIDATION_ERROR", "tenantId required");
+      const tenant = await prisma.tenant.findFirst({
+        where: {
+          id: tenantId,
+          occupancies: { some: { unit: { building: { orgId } } } },
+        },
+        select: {
+          id: true,
+          name: true,
+          phone: true,
+          email: true,
+          occupancies: {
+            select: {
+              unit: {
+                select: {
+                  id: true,
+                  unitNumber: true,
+                  floor: true,
+                  building: { select: { id: true, name: true, address: true } },
+                  assets: {
+                    select: { id: true, name: true, topic: true, type: true, serialNumber: true },
+                  },
+                },
+              },
+            },
+            take: 1,
+          },
+        },
+      });
+      if (!tenant) return sendError(res, 404, "NOT_FOUND", "Tenant not found");
+      const primaryUnit = tenant.occupancies[0]?.unit ?? null;
+      const token = encodeToken({
+        userId: tenant.id,
+        role: "TENANT",
+        email: tenant.email || "",
+        tenantId: tenant.id,
+      });
+      sendJson(res, 200, {
+        data: {
+          token,
+          tenant: { id: tenant.id, name: tenant.name, phone: tenant.phone, email: tenant.email, unitId: primaryUnit?.id ?? null },
+          unit: primaryUnit ? { id: primaryUnit.id, unitNumber: primaryUnit.unitNumber, floor: primaryUnit.floor ?? null } : null,
+          building: primaryUnit?.building ? { id: primaryUnit.building.id, name: primaryUnit.building.name, address: primaryUnit.building.address } : null,
+          assets: primaryUnit?.assets ?? [],
+        },
+      });
+    } catch (e) {
+      sendError(res, 500, "DB_ERROR", "Failed to create dev tenant session", String(e));
+    }
+  });
+
   // POST /__dev/create-contractor-user (dev only)
   router.post("/__dev/create-contractor-user", async ({ res, req, prisma, orgId }) => {
     if (process.env.NODE_ENV === "production") return sendError(res, 403, "FORBIDDEN", "Not allowed in production");

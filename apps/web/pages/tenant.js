@@ -43,9 +43,11 @@ export default function TenantPhone() {
         return;
       }
 
-      // Store token separately for auth headers, keep session for tenant data
+      // Write token to both keys: tenantToken (phone-login key) and authToken
+      // (read by tenantHeaders() / tenantFetch in all tenant portal pages).
       if (data.data.token) {
         localStorage.setItem("tenantToken", data.data.token);
+        localStorage.setItem("authToken", data.data.token);
       }
       localStorage.setItem("tenantSession", JSON.stringify(data.data));
       router.push("/tenant/inbox");

@@ -51,14 +51,17 @@ export function ownerAuthHeaders() {
 }
 
 /**
- * Tenant portal pages use the same Supabase token — alias for authHeaders().
+ * Tenant portal pages: reads tenantToken first (issued by phone-based or
+ * dev-impersonation login), falls back to authToken (Supabase) if not present.
  *
- * Note: the tenant phone-based session (POST /tenant-session) is a separate
- * flow that issues its own short-lived JWT. That flow is unchanged — it doesn't
- * go through Supabase Auth.
+ * Writing: tenant session login always writes to BOTH tenantToken AND authToken
+ * so this helper never needs to distinguish between login paths at the call site.
  */
 export function tenantHeaders() {
-  return authHeaders();
+  if (typeof window === "undefined") return {};
+  const token = localStorage.getItem("tenantToken") || localStorage.getItem(TOKEN_KEY);
+  if (token) return { Authorization: `Bearer ${token}` };
+  return {};
 }
 
 // ── Fetch wrappers ────────────────────────────────────────────────────────────
