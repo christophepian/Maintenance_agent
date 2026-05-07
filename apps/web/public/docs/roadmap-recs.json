@@ -1,0 +1,158 @@
+{
+  "recommendations": [
+    {
+      "id": "S-P0-001-02",
+      "rank": 1,
+      "title": "Configure SMTP env vars",
+      "phase": "P0",
+      "type": "infra",
+      "column": "ready",
+      "isSlice": true,
+      "isCustom": false,
+      "parentId": "F-P0-001",
+      "parentTitle": "Email Delivery (SMTP / SendGrid)",
+      "reasons": [
+        "P0 critical-path — highest priority phase",
+        "all dependencies met — ready now",
+        "concrete slice (3 files)",
+        "declared position: feature #1, slice #2"
+      ],
+      "unlocks": 0,
+      "scopeFileCount": 3,
+      "movement": 0,
+      "movementLabel": "—",
+      "hasCompleteTests": false,
+      "files": [
+        "SMTP provider config",
+        "emailOutbox model",
+        "notificationService"
+      ],
+      "blockedBy": []
+    },
+    {
+      "id": "F-P0-003",
+      "rank": 2,
+      "title": "Skribble e-Sign Integration",
+      "phase": "P0",
+      "type": "wire",
+      "column": "ready",
+      "isSlice": false,
+      "isCustom": false,
+      "parentId": null,
+      "parentTitle": null,
+      "reasons": [
+        "P0 critical-path — highest priority phase",
+        "all dependencies met — ready now",
+        "feature-level (3 hooks)",
+        "declared position: feature #3"
+      ],
+      "unlocks": 0,
+      "scopeFileCount": 3,
+      "movement": 0,
+      "movementLabel": "—",
+      "hasCompleteTests": false,
+      "files": [
+        "Skribble API client",
+        "SignatureRequest model",
+        "leaseService"
+      ],
+      "blockedBy": []
+    },
+    {
+      "id": "F-P1-002",
+      "rank": 3,
+      "title": "MT940 Bank Statement Import",
+      "phase": "P1",
+      "type": "build",
+      "column": "ready",
+      "isSlice": false,
+      "isCustom": false,
+      "parentId": null,
+      "parentTitle": null,
+      "reasons": [
+        "P1 — phase position 2/6",
+        "all dependencies met — ready now",
+        "feature-level (4 hooks)",
+        "declared position: feature #6",
+        "completing this unlocks 1 downstream item"
+      ],
+      "unlocks": 1,
+      "scopeFileCount": 4,
+      "movement": 0,
+      "movementLabel": "—",
+      "hasCompleteTests": false,
+      "files": [
+        "MT940 parser service",
+        "paymentMatchingWorkflow",
+        "Invoice model",
+        "invoiceRepository"
+      ],
+      "blockedBy": []
+    },
+    {
+      "id": "F-P1-003",
+      "rank": 4,
+      "title": "BuildingFinancialSnapshot Engine",
+      "phase": "P1",
+      "type": "extend",
+      "column": "ready",
+      "isSlice": false,
+      "isCustom": false,
+      "parentId": null,
+      "parentTitle": null,
+      "reasons": [
+        "P1 — phase position 2/6",
+        "all dependencies met — ready now",
+        "feature-level (4 hooks)",
+        "declared position: feature #7",
+        "completing this unlocks 4 downstream items"
+      ],
+      "unlocks": 4,
+      "scopeFileCount": 4,
+      "movement": 0,
+      "movementLabel": "—",
+      "hasCompleteTests": false,
+      "files": [
+        "snapshotService (scheduled)",
+        "vacancyLossCalc",
+        "BuildingFinancialSnapshot model",
+        "financial route"
+      ],
+      "blockedBy": []
+    },
+    {
+      "id": "F-P1-005",
+      "rank": 5,
+      "title": "Nebenkostenabrechnung Generator",
+      "phase": "P1",
+      "type": "build",
+      "column": "ready",
+      "isSlice": false,
+      "isCustom": false,
+      "parentId": null,
+      "parentTitle": null,
+      "reasons": [
+        "P1 — phase position 2/6",
+        "all dependencies met — ready now",
+        "feature-level (5 hooks)",
+        "declared position: feature #9"
+      ],
+      "unlocks": 0,
+      "scopeFileCount": 5,
+      "movement": 0,
+      "movementLabel": "—",
+      "hasCompleteTests": false,
+      "files": [
+        "NebenkostenCategory enum",
+        "chargeAllocationService",
+        "Invoice + InvoiceLineItem",
+        "pdfGenerator",
+        "Unit + BuildingOwner"
+      ],
+      "blockedBy": []
+    }
+  ],
+  "generated_at": "2026-05-07 06:51:37 UTC",
+  "total_in_queue": 28,
+  "next_id": "S-P0-001-02"
+}

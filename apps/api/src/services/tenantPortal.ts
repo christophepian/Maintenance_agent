@@ -4,7 +4,7 @@
  * Tenants identify via phone → unitId; they can only see leases
  * that are READY_TO_SIGN, SIGNED, or ACTIVE on their unit.
  */
-import { LeaseStatus, SignatureRequestStatus } from '@prisma/client';
+import { LeaseStatus, SignatureRequestStatus, RentalOwnerSelectionStatus } from '@prisma/client';
 import prisma from './prismaClient';
 import * as tenantPortalRepo from '../repositories/tenantPortalRepository';
 import * as userRepo from '../repositories/userRepository';
@@ -238,7 +238,7 @@ export async function tenantAcceptLease(
   // Mark the RentalOwnerSelection as SIGNED (removes from "Awaiting Signature" pipeline)
   try {
     const unitId = updatedLease.unitId;
-    const sel = await rentalAppRepo.findOwnerSelectionByUnitStatus(prisma, unitId, 'AWAITING_SIGNATURE');
+    const sel = await rentalAppRepo.findOwnerSelectionByUnitStatus(prisma, unitId, RentalOwnerSelectionStatus.AWAITING_SIGNATURE);
     if (sel) {
       await rentalAppRepo.updateOwnerSelectionRecord(prisma, sel.id, { status: 'SIGNED' } as any);
       console.log(`[LEASE] Updated selection ${sel.id} → SIGNED for unit ${unitId}`);

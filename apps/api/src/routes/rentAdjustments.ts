@@ -20,6 +20,7 @@ import { first } from "../http/query";
 import { maybeRequireManager, requireRole } from "../authz";
 import { withAuthRequired } from "../http/routeProtection";
 import { readJson } from "../http/body";
+import { RentAdjustmentStatus, RentAdjustmentType } from "@prisma/client";
 import * as rentAdjustmentRepo from "../repositories/rentAdjustmentRepository";
 import * as rentAdjustmentService from "../services/rentAdjustmentService";
 
@@ -110,9 +111,9 @@ export function registerRentAdjustmentRoutes(router: Router) {
     withAuthRequired(async ({ req, res, orgId, prisma, query }) => {
       if (!maybeRequireManager(req, res)) return;
       try {
-        const statusFilter = first(query, "status") || undefined;
+        const statusFilter = (first(query, "status") || undefined) as RentAdjustmentStatus | undefined;
         const leaseIdFilter = first(query, "leaseId") || undefined;
-        const typeFilter = first(query, "adjustmentType") || undefined;
+        const typeFilter = (first(query, "adjustmentType") || undefined) as RentAdjustmentType | undefined;
 
         const list = await rentAdjustmentRepo.listRentAdjustments(
           prisma,

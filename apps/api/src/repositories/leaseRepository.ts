@@ -262,9 +262,9 @@ export async function createAdminJob(
 /** Create an invoice (used for lease-linked invoices). */
 export async function createInvoice(
   prisma: PrismaClient,
-  data: Record<string, unknown>,
+  data: Prisma.InvoiceUncheckedCreateInput,
 ) {
-  return prisma.invoice.create({ data: data as any });
+  return prisma.invoice.create({ data });
 }
 
 /** List invoices for a lease. */

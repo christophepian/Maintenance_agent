@@ -29,7 +29,7 @@
         "title": "Nebenkostenabrechnung Generator"
       }
     ],
-    "last_recommendations_at": "2026-04-24 20:38:28 UTC"
+    "last_recommendations_at": "2026-05-07 06:51:37 UTC"
   },
   "project": {
     "name": "Maintenance Agent",
@@ -1460,6 +1460,116 @@
         "Manual review: docs/AUDIT.md — mark resolved findings, add new ones",
         "Manual review: SCHEMA_REFERENCE.md — update if schema changed",
         "Commit: npx tsc --noEmit → npm test → npm run blueprint"
+      ]
+    },
+    {
+      "id": "TASK-009",
+      "phase": "P3",
+      "title": "AI Decision Persistence (logAiDecision)",
+      "type": "refactor",
+      "status": "backlog",
+      "order": 9,
+      "description": "Persist every AI asset-matching decision to the database so that matches can be audited, false positives diagnosed, and confidence distributions monitored over time. Currently the AI call in resolveAssetWithAI() logs to console only. This item must be implemented before a second AI call site is added to the codebase — retrofitting a unified log table across multiple callers is significantly more expensive than building it once at the right moment.\n\nTrigger condition: implement this ticket before merging any PR that adds a second call to getAnthropicClient() outside of services/assetMatcher.ts.",
+      "acceptance_criteria": [
+        "New Prisma model AiDecisionLog with fields: id, createdAt, caller (string — identifies which feature made the call), inputSummary (string — non-PII digest of the input), outputSummary (string), confidence (string), accepted (boolean — whether the result was used or discarded), orgId (string, nullable)",
+        "Migration generated and applied: npx prisma migrate dev --name add_ai_decision_log",
+        "New repository: src/repositories/aiDecisionLogRepository.ts with createAiDecisionLog(prisma, data) function",
+        "New helper: logAiDecision({ caller, inputSummary, outputSummary, confidence, accepted, orgId }) exported from services/aiClient.ts — fire-and-forget (does not block the caller, swallows errors)",
+        "resolveAssetWithAI() in services/assetMatcher.ts calls logAiDecision() after every AI response, replacing the current console.log",
+        "console.log at assetMatcher.ts:100 replaced by logAiDecision call; no raw console.log left in assetMatcher.ts for AI decisions",
+        "GET /admin/ai-decisions endpoint (MANAGER-only) returns paginated AiDecisionLog rows for debugging — not required on first pass if time-constrained",
+        "npx tsc --noEmit — zero errors",
+        "All existing tests pass — logAiDecision must be a no-op when ANTHROPIC_API_KEY is absent (test environment)"
+      ],
+      "files_expected": [
+        "apps/api/prisma/schema.prisma",
+        "apps/api/src/repositories/aiDecisionLogRepository.ts",
+        "apps/api/src/services/aiClient.ts",
+        "apps/api/src/services/assetMatcher.ts"
+      ],
+      "in_scope": [
+        "AiDecisionLog Prisma model + migration",
+        "aiDecisionLogRepository.ts with createAiDecisionLog()",
+        "logAiDecision() helper in aiClient.ts — fire-and-forget, non-blocking, fails silently",
+        "Wire logAiDecision into resolveAssetWithAI() replacing console.log",
+        "Graceful degradation: no-op when DB unavailable or in test environment"
+      ],
+      "out_of_scope": [
+        "Admin UI for browsing AI decision logs (roadmap separately if needed)",
+        "Aggregation, dashboards, or analytics queries",
+        "Retroactive backfill of historical decisions",
+        "Any changes to the AI model selection or prompt logic"
+      ],
+      "product_area": "ai-infrastructure",
+      "required_tests": [
+        "Unit test: logAiDecision does not throw when prisma is unavailable",
+        "Integration: resolveAssetWithAI() call results in an AiDecisionLog row in the test DB",
+        "No regressions in existing 67 test suites"
+      ],
+      "test_protocol": "1. npx tsc --noEmit — zero TypeScript errors\n2. npm test — all 67 suites pass\n3. npm run blueprint — architecture docs sync\n4. Verify AiDecisionLog row exists in maint_agent_test after a resolveAssetWithAI() call\n5. Verify logAiDecision is a no-op (no throw) when ANTHROPIC_API_KEY is absent\n6. Verify G1: migration exists and npx prisma migrate diff shows empty output",
+      "validation_checklist": [
+        "AiDecisionLog model in schema.prisma",
+        "Migration generated and applied",
+        "aiDecisionLogRepository.ts exports createAiDecisionLog",
+        "logAiDecision wired into assetMatcher.ts — no raw console.log for AI decisions",
+        "logAiDecision is fire-and-forget: does not propagate errors to caller",
+        "All tests pass (npm test)",
+        "Zero TS errors (npx tsc --noEmit)",
+        "Blueprint regenerated (npm run blueprint)"
+      ],
+      "post_validation": [
+        "Update PROJECT_STATE.md: note AiDecisionLog model added, AI logging coverage = 100%",
+        "Update SCHEMA_REFERENCE.md with AiDecisionLog model entry",
+        "npm run blueprint",
+        "Commit: npx tsc --noEmit → npm test → npm run blueprint"
+      ]
+    },
+    {
+      "id": "TASK-010",
+      "phase": "P2",
+      "title": "Large Service File Review (CR-4)",
+      "type": "refactor",
+      "status": "backlog",
+      "order": 10,
+      "description": "Identify service files that have grown beyond a single coherent responsibility and split them at natural domain boundaries. This is not a mechanical LOC-threshold exercise — the criterion is mixed responsibilities evidenced by: (a) the file is regularly touched by unrelated features in the same PR, (b) a new feature requires changes across disconnected sections of the same file, or (c) the file exports functions that belong to clearly different sub-domains.\n\nThis ticket is intentionally scoped as a read-first, decide-second exercise. The output is either a set of focused split PRs or a documented decision that no split is warranted yet.",
+      "acceptance_criteria": [
+        "Read every service file with >400 LOC and produce a one-paragraph assessment: single responsibility or mixed? If mixed: what are the natural split boundaries?",
+        "For each file assessed as mixed: open a focused child ticket with the split plan (which functions move where, what the new file is named, which callers are updated)",
+        "For each file assessed as coherent: add a one-line comment at the top of the file — '// Single responsibility: <domain>' — so future reviewers don't re-litigate the question",
+        "No service file is split in this ticket — only assessed. Splits happen in child tickets so each can be reviewed, tested, and reverted independently",
+        "Assessment document committed to docs/service-size-audit.md",
+        "npx tsc --noEmit — zero errors after any comment additions"
+      ],
+      "files_expected": [
+        "docs/service-size-audit.md"
+      ],
+      "in_scope": [
+        "Read all src/services/*.ts files with >400 LOC",
+        "Assess each for single vs. mixed responsibility",
+        "Document findings in docs/service-size-audit.md",
+        "Open child tickets for confirmed splits",
+        "Add single-responsibility comments to files that are large but coherent"
+      ],
+      "out_of_scope": [
+        "Actual file splits (these happen in child tickets)",
+        "Renaming, moving, or deleting anything",
+        "Changing function signatures or behavior",
+        "Any schema, migration, or test changes"
+      ],
+      "product_area": "architecture",
+      "required_tests": [
+        "npx tsc --noEmit — zero errors (comment additions only, no logic changes)"
+      ],
+      "test_protocol": "1. npx tsc --noEmit — zero TypeScript errors after any comment additions\n2. No other test requirements — this ticket produces documentation and child tickets, not code changes",
+      "validation_checklist": [
+        "docs/service-size-audit.md committed with one entry per assessed file",
+        "Each mixed-responsibility finding has a corresponding child ticket in custom_items",
+        "Each coherent-but-large file has a // Single responsibility: comment",
+        "Zero TS errors"
+      ],
+      "post_validation": [
+        "npm run blueprint",
+        "Commit: npx tsc --noEmit → npm run blueprint"
       ]
     }
   ],

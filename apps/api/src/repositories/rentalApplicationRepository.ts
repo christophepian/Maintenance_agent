@@ -9,7 +9,7 @@
  * G9: canonical include constants live here (delegated to rentalIncludes).
  */
 
-import { PrismaClient, LeaseStatus, ApplicantRole, Prisma, RentalOwnerSelectionStatus, UnitType } from "@prisma/client";
+import { PrismaClient, LeaseStatus, ApplicantRole, Prisma, RentalOwnerSelectionStatus, RentalApplicationUnitStatus, RentalDocType, UnitType } from "@prisma/client";
 import {
   RENTAL_APPLICATION_INCLUDE,
   RENTAL_APPLICATION_UNIT_INCLUDE,
@@ -210,7 +210,7 @@ export async function createAttachment(
   data: {
     applicationId: string;
     applicantId: string;
-    docType: string;
+    docType: RentalDocType;
     fileName: string;
     fileSizeBytes: number;
     mimeType: string;
@@ -218,7 +218,7 @@ export async function createAttachment(
     sha256: string;
   },
 ) {
-  return prisma.rentalAttachment.create({ data: data as any });
+  return prisma.rentalAttachment.create({ data });
 }
 
 /** Find application with applicants only (for upload validation). */
@@ -300,10 +300,10 @@ export const SELECTION_PIPELINE_INCLUDE = {
 export async function findOwnerSelectionByUnitStatus(
   prisma: PrismaClient,
   unitId: string,
-  status: string,
+  status: RentalOwnerSelectionStatus,
 ) {
   return prisma.rentalOwnerSelection.findFirst({
-    where: { unitId, status: status as any },
+    where: { unitId, status },
   });
 }
 
@@ -342,7 +342,7 @@ export async function findOwnerSelectionForUnitWithBackup(
 /** Find expired selections (past deadline, still AWAITING_SIGNATURE). */
 export async function findExpiredSelections(prisma: PrismaClient, now: Date) {
   return prisma.rentalOwnerSelection.findMany({
-    where: { status: "AWAITING_SIGNATURE" as any, deadlineAt: { lte: now } },
+    where: { status: RentalOwnerSelectionStatus.AWAITING_SIGNATURE, deadlineAt: { lte: now } },
     include: {
       unit: { include: { building: { select: { orgId: true } } } },
     },
@@ -387,7 +387,7 @@ export async function findApplicationUnitsByIds(
     where: { id: { in: auIds }, unitId },
     include: {
       application: {
-        include: { applicants: { where: { role: "PRIMARY" as any }, take: 1 } },
+        include: { applicants: { where: { role: ApplicantRole.PRIMARY }, take: 1 } },
       },
     },
   });
@@ -401,10 +401,10 @@ export async function findRejectedApplicationUnitsForUnit(
   unitId: string,
 ) {
   return prisma.rentalApplicationUnit.findMany({
-    where: { unitId, status: "REJECTED" as any },
+    where: { unitId, status: RentalApplicationUnitStatus.REJECTED },
     include: {
       application: {
-        include: { applicants: { where: { role: "PRIMARY" as any }, take: 1 } },
+        include: { applicants: { where: { role: ApplicantRole.PRIMARY }, take: 1 } },
       },
     },
   });
@@ -439,7 +439,7 @@ export async function processSelectionTimeoutTransaction(
     backup2ApplicationUnitId?: string | null;
   },
 ) {
-  return prisma.$transaction(async (tx: any) => {
+  return prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     await tx.rentalApplicationUnit.update({
       where: { id: sel.primaryApplicationUnitId },
       data: { status: "VOIDED" },
@@ -495,7 +495,7 @@ export async function createOwnerSelectionTransaction(
     auIds: string[];
   },
 ) {
-  return prisma.$transaction(async (tx: any) => {
+  return prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     const sel = await tx.rentalOwnerSelection.create({
       data: {
         unitId: params.unitId,

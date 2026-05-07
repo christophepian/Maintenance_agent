@@ -19,7 +19,7 @@
  */
 
 import { v4 as uuidv4 } from "uuid";
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, InvoiceStatus } from "@prisma/client";
 import type { InvoiceDTO } from "./invoices";
 import * as accountRepo from "../repositories/accountRepository";
 import * as leaseRepo from "../repositories/leaseRepository";
@@ -403,7 +403,7 @@ export async function getUnpostedIssuedInvoiceIds(
     await ledgerRepo.findLedgerSourceIds(prisma, orgId, "INVOICE_ISSUED"),
   );
 
-  const ids = await invoiceRepo.findInvoiceIdsByStatuses(prisma, orgId, ["ISSUED", "APPROVED", "PAID"]);
+  const ids = await invoiceRepo.findInvoiceIdsByStatuses(prisma, orgId, [InvoiceStatus.ISSUED, InvoiceStatus.APPROVED, InvoiceStatus.PAID]);
 
   return ids.filter((id) => !postedIds.has(id));
 }
@@ -420,7 +420,7 @@ export async function getUnpostedPaidInvoiceIds(
     await ledgerRepo.findLedgerSourceIds(prisma, orgId, "INVOICE_PAID"),
   );
 
-  const ids = await invoiceRepo.findInvoiceIdsByStatuses(prisma, orgId, ["PAID"]);
+  const ids = await invoiceRepo.findInvoiceIdsByStatuses(prisma, orgId, [InvoiceStatus.PAID]);
 
   return ids.filter((id) => !postedIds.has(id));
 }
@@ -432,5 +432,5 @@ export async function getDraftInvoiceIds(
   prisma: PrismaClient,
   orgId: string,
 ): Promise<string[]> {
-  return invoiceRepo.findInvoiceIdsByStatuses(prisma, orgId, ["DRAFT"]);
+  return invoiceRepo.findInvoiceIdsByStatuses(prisma, orgId, [InvoiceStatus.DRAFT]);
 }

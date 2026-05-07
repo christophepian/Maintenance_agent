@@ -1,4 +1,4 @@
-import { PrismaClient, Prisma } from "@prisma/client";
+import { PrismaClient, Prisma, RentAdjustmentStatus, RentAdjustmentType } from "@prisma/client";
 
 // ─── Canonical include constant ────────────────────────────────
 
@@ -42,16 +42,16 @@ export async function listRentAdjustments(
   prisma: PrismaClient,
   orgId: string,
   filters: {
-    status?: string;
+    status?: RentAdjustmentStatus;
     leaseId?: string;
-    adjustmentType?: string;
+    adjustmentType?: RentAdjustmentType;
   } = {},
 ): Promise<RentAdjustmentWithLease[]> {
   const where: Prisma.RentAdjustmentWhereInput = { orgId };
-  if (filters.status) where.status = filters.status as any;
+  if (filters.status) where.status = filters.status;
   if (filters.leaseId) where.leaseId = filters.leaseId;
   if (filters.adjustmentType)
-    where.adjustmentType = filters.adjustmentType as any;
+    where.adjustmentType = filters.adjustmentType;
 
   return prisma.rentAdjustment.findMany({
     where,
@@ -205,7 +205,7 @@ export async function applyAdjustmentTransaction(
   },
 ) {
   const newRentChf = Math.round(adj.newRentCents / 100);
-  return prisma.$transaction(async (tx: any) => {
+  return prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     await tx.lease.update({
       where: { id: adj.leaseId },
       data: {

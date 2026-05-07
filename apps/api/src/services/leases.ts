@@ -1,4 +1,4 @@
-import { LeaseStatus, Prisma, RequestStatus, JobStatus } from '@prisma/client';
+import { LeaseStatus, Prisma, RequestStatus, JobStatus, InvoiceStatus } from '@prisma/client';
 import prisma from './prismaClient';
 import { CreateLeasePayload, UpdateLeasePayload } from '../validation/leases';
 import { normalizePhoneToE164 } from '../utils/phoneNormalization';
@@ -946,7 +946,7 @@ export async function createLeaseInvoice(
     amount: Math.round(payload.amountChf),
     currency: 'CHF',
     vatRate: 0,
-    status: 'DRAFT',
+    status: InvoiceStatus.DRAFT,
     iban: lease.paymentIban || null,
   });
 

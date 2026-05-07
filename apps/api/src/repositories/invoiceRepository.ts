@@ -334,10 +334,10 @@ export async function aggregatePayableInvoicesForUnits(
 export async function findInvoiceIdsByStatuses(
   prisma: PrismaClient,
   orgId: string,
-  statuses: string[],
+  statuses: InvoiceStatus[],
 ): Promise<string[]> {
   const rows = await prisma.invoice.findMany({
-    where: { orgId, status: { in: statuses as any } },
+    where: { orgId, status: { in: statuses } },
     select: { id: true },
     orderBy: { createdAt: "asc" },
   });
