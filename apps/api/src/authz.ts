@@ -58,6 +58,16 @@ function sendAuthError(res: http.ServerResponse, status: 401 | 403, code: "UNAUT
   return sendJson(res, status, { error: code });
 }
 
+/**
+ * Return a copy of `user` wearing `role`.
+ * Used so ADMIN users can impersonate any portal: their real userId and orgId
+ * are preserved (data scoping stays correct), only the role claim changes so
+ * that requireRole/requireAnyRole/maybeRequireManager pass through.
+ */
+function asRole(user: TokenPayload, role: string): TokenPayload {
+  return { ...user, role };
+}
+
 export function requireAuth(
   req: AuthedRequest,
   res: http.ServerResponse
@@ -87,6 +97,9 @@ export function requireRole(
     sendAuthError(res, 401, "UNAUTHORIZED");
     return null;
   }
+  // ADMIN can traverse any portal — return user wearing the required role so
+  // downstream role-sensitive queries (e.g. "my jobs as CONTRACTOR") also work.
+  if (user.accessLevel === "ADMIN") return asRole(user, role);
   if (user.role !== role) {
     sendAuthError(res, 403, "FORBIDDEN");
     return null;
@@ -110,6 +123,7 @@ export function requireAnyRole(
     sendAuthError(res, 401, "UNAUTHORIZED");
     return null;
   }
+  if (user.accessLevel === "ADMIN") return asRole(user, roles[0]);
   if (!roles.includes(user.role)) {
     sendAuthError(res, 403, "FORBIDDEN");
     return null;
@@ -136,6 +150,7 @@ export function maybeRequireManager(
     sendAuthError(res, 401, "UNAUTHORIZED");
     return false;
   }
+  if (user.accessLevel === "ADMIN") return true;
   if (user.role !== "MANAGER") {
     sendAuthError(res, 403, "FORBIDDEN");
     return false;
@@ -160,6 +175,7 @@ export function requireStaffAuth(
     sendAuthError(res, 401, 'UNAUTHORIZED');
     return null;
   }
+  if (user.accessLevel === "ADMIN") return user;
   if (!(STAFF_ROLES as readonly string[]).includes(user.role)) {
     sendAuthError(res, 403, 'FORBIDDEN');
     return null;

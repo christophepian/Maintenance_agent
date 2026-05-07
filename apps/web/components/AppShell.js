@@ -49,13 +49,12 @@ export default function AppShell({ role: roleProp, children }) {
 
   // ── On mount: resolve role + wire Supabase session listener ───────────────
   useEffect(() => {
-    // If the parent page already determined the role (e.g. from a prop), use it.
-    if (roleProp) {
-      setRole(roleProp);
-    } else {
-      // Fall back to cached value (set on login or by the dev role-switcher).
-      setRole(getStoredRole());
-    }
+    // Resolve active role: stored value wins (set by the role switcher),
+    // falling back to the page prop, then to nothing.
+    // This prevents the page's hardcoded role prop from overwriting an
+    // admin's manually-selected role on every navigation.
+    const stored = getStoredRole();
+    setRole(stored || roleProp || null);
 
     const supabase = createClient();
 
