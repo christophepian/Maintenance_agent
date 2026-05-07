@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import AppShell from "../../components/AppShell";
@@ -434,15 +434,6 @@ function RfpsTab() {
           </FilterSection>
           <FilterSectionClear hasFilter={hasFilter} onClear={() => { setDateFrom(""); setDateTo(""); setBuildingFilter(""); setUrgencyFilter(""); setRequestNumberFilter(""); }} />
         </FilterPanelBody>
-      )}
-
-      {sortOpen && (
-        <SortPanelBody>
-          <SortRow active={sortKey === "number"} dir={sortKey === "number" ? sortDir : "asc"} label={t("owner:approvals.title.request")} ascLabel="Low → High" descLabel="High → Low" onSelect={(dir) => handleSort("number", dir)} />
-          <SortRow active={sortKey === "date"} dir={sortKey === "date" ? sortDir : "desc"} label={t("owner:approvals.prop.requestDate")} descLabel="Newest first" ascLabel="Oldest first" onSelect={(dir) => handleSort("date", dir)} />
-          <SortRow active={sortKey === "urgency"} dir={sortKey === "urgency" ? sortDir : "desc"} label={t("owner:approvals.prop.urgency")} descLabel="High → Low" ascLabel="Low → High" onSelect={(dir) => handleSort("urgency", dir)} />
-          <SortRow active={sortKey === "price"} dir={sortKey === "price" ? sortDir : "desc"} label={t("owner:approvals.prop.quotePrice")} descLabel="High → Low" ascLabel="Low → High" onSelect={(dir) => handleSort("price", dir)} />
-        </SortPanelBody>
       )}
 
       {loading ? (

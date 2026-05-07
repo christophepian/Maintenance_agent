@@ -7087,7 +7087,7 @@
     {
       "id": "DT-118",
       "title": "Owner RFPs: verify /owner/rfps/index.js has tabs and is consistent with /owner/approvals",
-      "status": "review",
+      "status": "done",
       "source_intake": "INT-124",
       "priority": "low",
       "goal": "/owner/approvals already has a tabs pattern (Requests tab + RFPs tab). Verify that /owner/rfps/index.js (separate route) also uses consistent tabs or is redirected to /owner/approvals. If both exist independently, consolidate or redirect to avoid two disconnected surfaces for the same data.",
