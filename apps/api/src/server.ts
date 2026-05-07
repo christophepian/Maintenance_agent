@@ -125,6 +125,60 @@ router.post("/__dev/rental/run-jobs", async ({ res }) => {
   }
 });
 
+/* ── Dev-only: switch-tenant — issues a JWT for any Tenant ── */
+router.post("/dev/switch-tenant", async ({ req, res, prisma, orgId }) => {
+  if (isProdEnv) {
+    sendError(res, 403, "FORBIDDEN", "Dev route disabled in production");
+    return;
+  }
+  const actor = requireAuth(req, res);
+  if (!actor) return;
+  const body = await readJson(req);
+  const tenantId: string | undefined = body?.tenantId;
+  if (!tenantId) {
+    sendError(res, 400, "BAD_REQUEST", "tenantId is required");
+    return;
+  }
+  const tenant = await prisma.tenant.findFirst({
+    where: {
+      id: tenantId,
+      occupancies: { some: { unit: { building: { orgId } } } },
+    },
+    select: {
+      id: true,
+      name: true,
+      phone: true,
+      email: true,
+      occupancies: {
+        select: {
+          unit: {
+            select: {
+              id: true,
+              unitNumber: true,
+              building: { select: { id: true, name: true } },
+            },
+          },
+        },
+        take: 1,
+      },
+    },
+  });
+  if (!tenant) {
+    sendError(res, 404, "NOT_FOUND", "Tenant not found");
+    return;
+  }
+  const primaryUnit = tenant.occupancies[0]?.unit ?? null;
+  const token = encodeToken({ userId: tenant.id, orgId, email: tenant.email || "", role: "TENANT" } as any);
+  sendJson(res, 200, {
+    data: {
+      token,
+      tenant: { id: tenant.id, name: tenant.name, phone: tenant.phone, email: tenant.email, unitId: primaryUnit?.id ?? null },
+      unit: primaryUnit ? { id: primaryUnit.id, unitNumber: primaryUnit.unitNumber } : null,
+      building: primaryUnit?.building ?? null,
+    },
+  });
+});
+
 /* ── Dev-only: switch-owner — issues a JWT for any OWNER user ── */
 router.post("/dev/switch-owner", async ({ req, res, prisma, orgId }) => {
   if (isProdEnv) {

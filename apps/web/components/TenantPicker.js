@@ -7,11 +7,12 @@ function authHeaders() {
 }
 
 /**
- * Dev/test helper: renders a tenant selector bar.
- * On selection, calls POST /tenant-session with the tenant's phone number to
- * obtain a fresh JWT, then persists tenantToken + tenantSession in localStorage
- * (same keys used by tenantFetch / tenantHeaders).
- * Calls onSelect() so parent pages can reload their data.
+ * Dev/test helper: renders a tenant selector bar on tenant portal pages.
+ * On selection, calls POST /api/dev/switch-tenant with the manager token to
+ * obtain a fresh JWT for that Tenant, then persists it as `tenantToken`
+ * in localStorage. Calls onSelect() so parent pages can reload their data.
+ *
+ * Only renders in non-production environments.
  */
 export default function TenantPicker({ onSelect }) {
   const [tenants, setTenants] = useState([]);
@@ -24,7 +25,7 @@ export default function TenantPicker({ onSelect }) {
       try {
         const res = await fetch("/api/tenants?limit=100", { headers: authHeaders() });
         const data = await res.json();
-        const list = (data?.data || data || []).filter((t) => t.phone);
+        const list = data?.data || data || [];
         setTenants(list);
 
         // Pre-select whichever tenant is currently in the session
@@ -51,31 +52,29 @@ export default function TenantPicker({ onSelect }) {
     setSelected(tenantId);
     if (!tenantId) {
       localStorage.removeItem("tenantToken");
+      localStorage.removeItem("authToken");
       localStorage.removeItem("tenantSession");
       onSelect?.(null);
       return;
     }
 
-    const tenant = tenants.find((t) => t.id === tenantId);
-    if (!tenant?.phone) return;
-
     setSwitching(true);
     try {
-      const res = await fetch("/api/tenant-session", {
+      const res = await fetch("/api/dev/switch-tenant", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: tenant.phone }),
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({ tenantId }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data?.error?.message || "Failed to start session");
-
+      if (!res.ok) throw new Error(data?.error?.message || "Failed to switch tenant");
       if (data.data?.token) {
         localStorage.setItem("tenantToken", data.data.token);
+        localStorage.setItem("authToken", data.data.token);
       }
       localStorage.setItem("tenantSession", JSON.stringify(data.data));
       onSelect?.(tenantId);
     } catch (err) {
-      console.warn("[TenantPicker] session error:", err);
+      console.warn("[TenantPicker] switch error:", err);
     } finally {
       setSwitching(false);
     }
@@ -92,6 +91,22 @@ export default function TenantPicker({ onSelect }) {
 
   const current = tenants.find((t) => t.id === selected);
 
+  // Read building/unit from stored session for richer display
+  let sessionUnit = null;
+  let sessionBuilding = null;
+  if (typeof window !== "undefined" && selected) {
+    try {
+      const raw = localStorage.getItem("tenantSession");
+      if (raw) {
+        const s = JSON.parse(raw);
+        if (s?.tenant?.id === selected) {
+          sessionUnit = s.unit;
+          sessionBuilding = s.building;
+        }
+      }
+    } catch { /* ignore */ }
+  }
+
   return (
     <div className="flex items-center gap-2.5 flex-wrap px-4 py-2 mb-4 bg-green-50 border border-green-300 rounded-lg text-sm">
       <span className="font-semibold text-green-900">🏠 Viewing as tenant:</span>
@@ -104,14 +119,17 @@ export default function TenantPicker({ onSelect }) {
         <option value="">— Select a tenant —</option>
         {tenants.map((t) => (
           <option key={t.id} value={t.id}>
-            {t.name || t.id.slice(0, 12)} ({t.phone})
+            {t.name || t.id.slice(0, 12)}{t.email ? ` (${t.email})` : ""}
           </option>
         ))}
       </select>
       {switching && <span className="text-green-700 text-sm">Switching…</span>}
       {current && !switching && (
         <span className="text-slate-600 text-xs">
-          ID: {current.id.slice(0, 8)}…
+          {current.name || current.id.slice(0, 8)}
+          {sessionBuilding ? ` · ${sessionBuilding.name}` : ""}
+          {sessionUnit ? ` · Unit ${sessionUnit.unitNumber}` : ""}
+          {" · "}ID: {current.id.slice(0, 8)}…
         </span>
       )}
     </div>

@@ -564,7 +564,6 @@ export function registerAuthRoutes(router: Router) {
         where: {
           occupancies: {
             some: {
-              status: "ACTIVE",
               unit: { building: { orgId } },
             },
           },
@@ -575,7 +574,6 @@ export function registerAuthRoutes(router: Router) {
           phone: true,
           email: true,
           occupancies: {
-            where: { status: "ACTIVE" },
             select: {
               unit: {
                 select: {
@@ -632,12 +630,7 @@ export function registerAuthRoutes(router: Router) {
       });
       if (!tenant) return sendError(res, 404, "NOT_FOUND", "Tenant not found");
       const primaryUnit = tenant.occupancies[0]?.unit ?? null;
-      const token = encodeToken({
-        userId: tenant.id,
-        role: "TENANT",
-        email: tenant.email || "",
-        tenantId: tenant.id,
-      });
+      const token = encodeToken({ userId: tenant.id, orgId, role: "TENANT", email: tenant.email || "" } as any);
       sendJson(res, 200, {
         data: {
           token,
