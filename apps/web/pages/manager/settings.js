@@ -12,6 +12,7 @@ import { cn } from "../../lib/utils";
 import { formatDate } from "../../lib/format";
 import ScrollableTabs from "../../components/mobile/ScrollableTabs";
 import DepreciationStandards from "../../components/DepreciationStandards";
+import CategoryMappings from "../../components/CategoryMappings";
 import SortableHeader from "../../components/SortableHeader";
 import { useLocalSort, clientSort } from "../../lib/tableUtils";
 import { withTranslations } from "../../lib/i18n";
@@ -24,9 +25,10 @@ const SETTINGS_TABS = [
   { key: "INTEGRATIONS" },
   { key: "LEGAL" },
   { key: "DEPRECIATION" },
+  { key: "CATEGORYMAPPINGS" },
 ];
 
-const TAB_KEYS = ['organisation', 'buildings', 'notifications', 'integrations', 'legal', 'depreciation'];
+const TAB_KEYS = ['organisation', 'buildings', 'notifications', 'integrations', 'legal', 'depreciation', 'categorymappings'];
 
 export default function ManagerSettingsPage() {
   const { t } = useTranslation("manager");
@@ -806,6 +808,9 @@ export default function ManagerSettingsPage() {
 
           {/* Depreciation tab — renders its own Panels internally */}
           {activeTab === 5 && <DepreciationStandards />}
+
+          {/* Category Mappings tab — maps expense categories to legal topics */}
+          {activeTab === 6 && <CategoryMappings />}
 
         </PageContent>
       </PageShell>

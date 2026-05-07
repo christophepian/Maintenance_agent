@@ -2079,7 +2079,8 @@
       "notifications": "Notifications",
       "integrations": "Intégrations",
       "legal": "Sources légales",
-      "depreciation": "Normes"
+      "depreciation": "Normes",
+      "categorymappings": "Correspondances de catégories"
     }
   },
   "vacancies[unitid]Applications": {
