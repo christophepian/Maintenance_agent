@@ -34,7 +34,7 @@ export default class ErrorBoundary extends React.Component {
             <p className="text-sm text-slate-500">
               An unexpected error occurred. Please try reloading the page.
             </p>
-            {process.env.NODE_ENV !== "production" && this.state.error && (
+            {this.state.error && (
               <pre className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-left text-xs text-red-700 overflow-auto max-h-40">
                 {this.state.error.message}
                 {"\n"}

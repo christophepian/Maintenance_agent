@@ -46,7 +46,8 @@ export function withRole(role: "MANAGER" | "OWNER" | "CONTRACTOR" | "TENANT", ha
       await handler(ctx);
       return;
     }
-    if (user.role !== role) {
+    // ADMIN can traverse any portal — bypass role check
+    if (user.accessLevel !== "ADMIN" && user.role !== role) {
       throw new ForbiddenError(`${role} role required`);
     }
     await handler(ctx);
