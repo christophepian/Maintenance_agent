@@ -15,5 +15,7 @@ export function sendError(
   message: string,
   details?: any
 ) {
-  sendJson(res, status, { error: { code, message, details } });
+  // Never leak internal error details (stack traces, DB messages) to clients in production.
+  const safeDetails = process.env.NODE_ENV === "production" ? undefined : details;
+  sendJson(res, status, { error: { code, message, details: safeDetails } });
 }

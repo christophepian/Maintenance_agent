@@ -58,15 +58,6 @@ function sendAuthError(res: http.ServerResponse, status: 401 | 403, code: "UNAUT
   return sendJson(res, status, { error: code });
 }
 
-/**
- * Return a copy of `user` wearing `role`.
- * Used so ADMIN users can impersonate any portal: their real userId and orgId
- * are preserved (data scoping stays correct), only the role claim changes so
- * that requireRole/requireAnyRole/maybeRequireManager pass through.
- */
-function asRole(user: TokenPayload, role: string): TokenPayload {
-  return { ...user, role };
-}
 
 export function requireAuth(
   req: AuthedRequest,
@@ -97,9 +88,10 @@ export function requireRole(
     sendAuthError(res, 401, "UNAUTHORIZED");
     return null;
   }
-  // ADMIN can traverse any portal — return user wearing the required role so
-  // downstream role-sensitive queries (e.g. "my jobs as CONTRACTOR") also work.
-  if (user.accessLevel === "ADMIN") return asRole(user, role);
+  // ADMIN users must not silently traverse role-gated portals — this prevented
+  // proper access-control enforcement and enabled IDOR chains.
+  // Admin back-office access should use dedicated admin endpoints or
+  // maybeRequireManager (which has an explicit ADMIN bypass).
   if (user.role !== role) {
     sendAuthError(res, 403, "FORBIDDEN");
     return null;
@@ -123,7 +115,8 @@ export function requireAnyRole(
     sendAuthError(res, 401, "UNAUTHORIZED");
     return null;
   }
-  if (user.accessLevel === "ADMIN") return asRole(user, roles[0]);
+  // ADMIN users must not silently traverse role-gated portals.
+  // See requireRole() comment for rationale.
   if (!roles.includes(user.role)) {
     sendAuthError(res, 403, "FORBIDDEN");
     return null;

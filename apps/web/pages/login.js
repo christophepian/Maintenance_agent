@@ -1,15 +1,18 @@
 /**
- * Login page — Supabase Auth.
+ * Login page — redesigned (Clerk-style).
  *
- * Primary flow:   Email → magic link (works for all user types)
- * Secondary flow: Email + password (founders / admins who prefer it)
+ * Two auth methods in a tab strip:
+ *   Magic link  — email OTP, no password needed (primary)
+ *   Password    — email + password with inline "Forgot password?" recovery
  *
- * After a successful magic-link click the browser is redirected to
- * /api/auth/callback which sets the session cookie and redirects to the
- * correct home page based on app_metadata.accessLevel / appRole.
+ * Flows:
+ *   magic link  → sendMagicLink() → "Check your inbox" confirmation screen
+ *   password    → signInWithPassword() → redirectAfterLogin()
+ *   forgot pwd  → sendPasswordReset() → "Reset link sent" confirmation screen
+ *                 user clicks email link → /reset-password
  *
- * After a successful password login the session is set directly here and
- * we redirect client-side.
+ * First-time users (invited):
+ *   invite link → /api/auth/callback → detects no password set → /set-password
  */
 
 import { useState, useEffect } from "react";
@@ -17,7 +20,6 @@ import { useRouter } from "next/router";
 import { createClient } from "../lib/supabase/client";
 import { setAuthToken } from "../lib/api";
 import { withTranslations } from "../lib/i18n";
-import { cn } from "../lib/utils";
 
 const ROLE_HOME = {
   MANAGER: "/manager",
@@ -26,28 +28,192 @@ const ROLE_HOME = {
   TENANT: "/tenant/inbox",
 };
 
+/* ── Small shared components ──────────────────────────────────── */
+
+function Spinner() {
+  return (
+    <svg
+      className="animate-spin h-4 w-4 inline shrink-0"
+      fill="none"
+      viewBox="0 0 24 24"
+    >
+      <circle
+        className="opacity-25"
+        cx="12" cy="12" r="10"
+        stroke="currentColor" strokeWidth="4"
+      />
+      <path
+        className="opacity-75"
+        fill="currentColor"
+        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+      />
+    </svg>
+  );
+}
+
+function MethodTab({ active, onClick, children }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={[
+        "flex-1 py-2 text-sm font-medium rounded-lg transition-all duration-150",
+        active
+          ? "bg-white text-slate-900 shadow-sm border border-slate-200"
+          : "text-slate-500 hover:text-slate-700",
+      ].join(" ")}
+    >
+      {children}
+    </button>
+  );
+}
+
+function Notice({ type, msg }) {
+  const isErr = type === "err";
+  return (
+    <div
+      className={[
+        "flex items-start gap-2.5 px-3.5 py-3 rounded-xl mb-5 text-sm border",
+        isErr
+          ? "bg-destructive-light border-destructive-ring text-destructive-text"
+          : "bg-success-light border-success-ring text-success-dark",
+      ].join(" ")}
+    >
+      {isErr ? (
+        <svg className="w-4 h-4 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+            d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      ) : (
+        <svg className="w-4 h-4 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      )}
+      <span>{msg}</span>
+    </div>
+  );
+}
+
+/* ── Outer centered shell ─────────────────────────────────────── */
+
+function AuthShell({ children, footer }) {
+  return (
+    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
+      <div className="w-full max-w-sm">
+        {/* Logo */}
+        <div className="flex flex-col items-center mb-8">
+          <div className="w-11 h-11 bg-brand rounded-xl flex items-center justify-center shadow-md mb-4">
+            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75}
+                d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+            </svg>
+          </div>
+          <h1 className="text-2xl font-semibold text-slate-900 tracking-tight">
+            Maintenance Agent
+          </h1>
+        </div>
+
+        {/* Card */}
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm px-8 py-7">
+          {children}
+        </div>
+
+        {/* Footer */}
+        {footer && (
+          <p className="text-center text-xs text-slate-400 mt-5">{footer}</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ── Confirmation screens ─────────────────────────────────────── */
+
+function MagicLinkSentScreen({ email, onBack }) {
+  return (
+    <AuthShell>
+      <div className="text-center py-2">
+        <div className="w-14 h-14 bg-brand-light rounded-full flex items-center justify-center mx-auto mb-5">
+          <svg className="w-7 h-7 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+              d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+          </svg>
+        </div>
+        <h2 className="text-xl font-semibold text-slate-900 mb-2">Check your inbox</h2>
+        <p className="text-sm text-slate-500 leading-relaxed mb-6">
+          We sent a sign-in link to{" "}
+          <span className="font-medium text-slate-700">{email}</span>.
+          <br />
+          The link expires in 1 hour.
+        </p>
+        <button
+          type="button"
+          onClick={onBack}
+          className="text-sm text-brand hover:text-brand-dark font-medium inline-flex items-center gap-1"
+        >
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+          Use a different email
+        </button>
+      </div>
+    </AuthShell>
+  );
+}
+
+function ResetSentScreen({ email, onBack }) {
+  return (
+    <AuthShell>
+      <div className="text-center py-2">
+        <div className="w-14 h-14 bg-success-light rounded-full flex items-center justify-center mx-auto mb-5">
+          <svg className="w-7 h-7 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <h2 className="text-xl font-semibold text-slate-900 mb-2">Reset link sent</h2>
+        <p className="text-sm text-slate-500 leading-relaxed mb-6">
+          Check your inbox at{" "}
+          <span className="font-medium text-slate-700">{email}</span>
+          <br />
+          for a password reset link.
+        </p>
+        <button
+          type="button"
+          onClick={onBack}
+          className="text-sm text-brand hover:text-brand-dark font-medium inline-flex items-center gap-1"
+        >
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+          Back to sign in
+        </button>
+      </div>
+    </AuthShell>
+  );
+}
+
+/* ── Main page ────────────────────────────────────────────────── */
+
 export default function LoginPage() {
   const router = useRouter();
   const { next, error: queryError } = router.query;
 
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [notice, setNotice] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [email, setEmail]         = useState("");
+  const [password, setPassword]   = useState("");
+  const [method, setMethod]       = useState("magic"); // "magic" | "password"
+  const [notice, setNotice]       = useState(null);
+  const [loading, setLoading]     = useState(false);
   const [magicSent, setMagicSent] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
 
-  // On mount: check for an existing session.
-  // Handles two cases:
-  //   1. Supabase implicit-flow tokens in the URL hash (dashboard invites)
-  //      — the browser client picks these up automatically via getSession()
-  //   2. User navigates to /login while already signed in — redirect them away
+  // Redirect if already signed in, or handle implicit-flow tokens from invites
   useEffect(() => {
     const supabase = createClient();
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) redirectAfterLogin(session);
     });
-    // Also listen for the TOKEN_HASH exchange that happens client-side
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => { if (session) redirectAfterLogin(session); }
     );
@@ -55,7 +221,7 @@ export default function LoginPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Show error messages coming from the callback redirect
+  // Surface errors forwarded from /api/auth/callback
   useEffect(() => {
     if (queryError === "forbidden") {
       setNotice({ type: "err", msg: "You don't have permission to access that page." });
@@ -68,41 +234,32 @@ export default function LoginPage() {
 
   function redirectAfterLogin(session) {
     const meta = session.user?.app_metadata ?? {};
-    const accessLevel = meta.accessLevel;
-    const appRole = meta.appRole;
-
-    // Store Supabase access token in localStorage so fetchWithAuth works
     setAuthToken(session.access_token);
-    // Cache role for AppShell
-    if (appRole) localStorage.setItem("role", appRole);
-
+    if (meta.appRole) localStorage.setItem("role", meta.appRole);
     const target =
       (typeof next === "string" && next.startsWith("/") ? next : null) ||
-      (accessLevel === "DOCS_INVESTOR" ? "/docs/pitchdeck.html" : null) ||
-      (appRole ? ROLE_HOME[appRole] : null) ||
+      (meta.accessLevel === "DOCS_INVESTOR" ? "/docs/pitchdeck.html" : null) ||
+      (meta.appRole ? ROLE_HOME[meta.appRole] : null) ||
       "/manager";
-
     router.push(target);
   }
 
-  // ── Magic link ────────────────────────────────────────────────────────────
+  /* ── Magic link ─────────────────────────────────────────────── */
   async function sendMagicLink(e) {
     e.preventDefault();
     if (!email.trim()) return;
     setNotice(null);
     setLoading(true);
-
     try {
       const supabase = createClient();
-      const redirectTo = `${window.location.origin}/api/auth/callback${next ? `?next=${encodeURIComponent(next)}` : ""}`;
-
+      const redirectTo = `${window.location.origin}/api/auth/callback${
+        next ? `?next=${encodeURIComponent(next)}` : ""
+      }`;
       const { error } = await supabase.auth.signInWithOtp({
         email: email.trim().toLowerCase(),
         options: { emailRedirectTo: redirectTo, shouldCreateUser: false },
       });
-
       if (error) {
-        // "Email not confirmed" or "User not found" — be intentionally vague
         setNotice({ type: "err", msg: "If that address is registered you'll receive a link shortly." });
       } else {
         setMagicSent(true);
@@ -114,26 +271,23 @@ export default function LoginPage() {
     }
   }
 
-  // ── Password login ────────────────────────────────────────────────────────
+  /* ── Password sign-in ───────────────────────────────────────── */
   async function signInWithPassword(e) {
     e.preventDefault();
     if (!email.trim() || !password) return;
     setNotice(null);
     setLoading(true);
-
     try {
       const supabase = createClient();
       const { data, error } = await supabase.auth.signInWithPassword({
         email: email.trim().toLowerCase(),
         password,
       });
-
       if (error || !data.session) {
-        setNotice({ type: "err", msg: "Invalid email or password." });
+        setNotice({ type: "err", msg: "Incorrect email or password." });
         setPassword("");
         return;
       }
-
       redirectAfterLogin(data.session);
     } catch {
       setNotice({ type: "err", msg: "Something went wrong. Please try again." });
@@ -142,134 +296,155 @@ export default function LoginPage() {
     }
   }
 
-  // ── Magic link sent screen ────────────────────────────────────────────────
+  /* ── Forgot password ────────────────────────────────────────── */
+  async function sendPasswordReset(e) {
+    e.preventDefault();
+    if (!email.trim()) {
+      setNotice({ type: "err", msg: "Enter your email address first." });
+      return;
+    }
+    setNotice(null);
+    setLoading(true);
+    try {
+      const supabase = createClient();
+      await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      setResetSent(true);
+    } catch {
+      setNotice({ type: "err", msg: "Something went wrong. Please try again." });
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  /* ── Confirmation screens ───────────────────────────────────── */
   if (magicSent) {
     return (
-      <div className="main-container">
-        <div className="card text-center p-8">
-          <div className="text-4xl mb-4">✉️</div>
-          <h1 className="mb-2">Check your inbox</h1>
-          <p className="subtle mb-6">
-            We've sent a sign-in link to <strong>{email}</strong>.
-            <br />
-            Click it to access your account — the link expires in 1 hour.
-          </p>
-          <button
-            className="button-secondary"
-            type="button"
-            onClick={() => { setMagicSent(false); setNotice(null); }}
-          >
-            Use a different email
-          </button>
-        </div>
-      </div>
+      <MagicLinkSentScreen
+        email={email}
+        onBack={() => { setMagicSent(false); setNotice(null); }}
+      />
     );
   }
 
+  if (resetSent) {
+    return (
+      <ResetSentScreen
+        email={email}
+        onBack={() => { setResetSent(false); setNotice(null); }}
+      />
+    );
+  }
+
+  /* ── Main form ──────────────────────────────────────────────── */
   return (
-    <div className="main-container">
-      <h1>Sign in</h1>
-      <p className="subtle">Enter your email to receive a sign-in link.</p>
+    <AuthShell footer="Access is by invitation only. Contact your administrator.">
+      <h2 className="text-lg font-semibold text-slate-900 mb-1">Sign in</h2>
+      <p className="text-sm text-slate-500 mb-6">to your account</p>
 
-      {notice && (
-        <div className={cn("notice", notice.type === "ok" ? "notice-ok" : "notice-err")}>
-          {notice.msg}
-        </div>
-      )}
+      {notice && <Notice type={notice.type} msg={notice.msg} />}
 
-      {/* ── Magic link form (primary) ── */}
-      {!showPassword && (
-        <form className="card" onSubmit={sendMagicLink}>
-          <label className="label">
-            Email
+      {/* Method tabs */}
+      <div className="flex gap-1 p-1 bg-slate-100 rounded-xl mb-6">
+        <MethodTab
+          active={method === "magic"}
+          onClick={() => { setMethod("magic"); setNotice(null); }}
+        >
+          Magic link
+        </MethodTab>
+        <MethodTab
+          active={method === "password"}
+          onClick={() => { setMethod("password"); setNotice(null); }}
+        >
+          Password
+        </MethodTab>
+      </div>
+
+      {/* Magic link form */}
+      {method === "magic" && (
+        <form onSubmit={sendMagicLink}>
+          <div className="mb-5">
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">
+              Email address
+            </label>
             <input
-              className="input"
               type="email"
+              className="input mb-0"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={e => setEmail(e.target.value)}
               placeholder="you@example.com"
               required
               autoFocus
             />
-          </label>
-
-          <button className="button-primary" type="submit" disabled={loading}>
+          </div>
+          <button
+            type="submit"
+            disabled={loading}
+            className="button-primary w-full flex items-center justify-center gap-2 text-sm"
+          >
+            {loading && <Spinner />}
             {loading ? "Sending…" : "Send sign-in link"}
           </button>
-
-          <button
-            className="button-secondary mt-2"
-            type="button"
-            onClick={() => { setShowPassword(true); setNotice(null); }}
-          >
-            Use password instead
-          </button>
+          <p className="text-xs text-center text-slate-400 mt-4">
+            A one-click link will be sent to your inbox.
+          </p>
         </form>
       )}
 
-      {/* ── Password form (secondary — founders) ── */}
-      {showPassword && (
-        <form className="card" onSubmit={signInWithPassword}>
-          <label className="label">
-            Email
+      {/* Password form */}
+      {method === "password" && (
+        <form onSubmit={signInWithPassword}>
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">
+              Email address
+            </label>
             <input
-              className="input"
               type="email"
+              className="input mb-0"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={e => setEmail(e.target.value)}
               placeholder="you@example.com"
               required
               autoFocus
             />
-          </label>
+          </div>
 
-          <label className="label">
-            Password
+          <div className="mb-5">
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block text-sm font-medium text-slate-700">
+                Password
+              </label>
+              <button
+                type="button"
+                onClick={sendPasswordReset}
+                disabled={loading}
+                className="text-xs text-brand hover:text-brand-dark font-medium disabled:opacity-50"
+              >
+                Forgot password?
+              </button>
+            </div>
             <input
-              className="input"
               type="password"
+              className="input mb-0"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Your password"
+              onChange={e => setPassword(e.target.value)}
+              placeholder="••••••••"
               required
             />
-          </label>
+          </div>
 
-          <button className="button-primary" type="submit" disabled={loading}>
+          <button
+            type="submit"
+            disabled={loading}
+            className="button-primary w-full flex items-center justify-center gap-2 text-sm"
+          >
+            {loading && <Spinner />}
             {loading ? "Signing in…" : "Sign in"}
           </button>
-
-          <div className="flex gap-3 mt-2">
-            <button
-              className="button-secondary"
-              type="button"
-              onClick={() => { setShowPassword(false); setPassword(""); setNotice(null); }}
-            >
-              Send magic link instead
-            </button>
-            <button
-              className="button-secondary"
-              type="button"
-              onClick={async () => {
-                if (!email.trim()) {
-                  setNotice({ type: "err", msg: "Enter your email first." });
-                  return;
-                }
-                setLoading(true);
-                const supabase = createClient();
-                await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
-                  redirectTo: `${window.location.origin}/api/auth/callback`,
-                });
-                setNotice({ type: "ok", msg: "Password reset email sent. Check your inbox." });
-                setLoading(false);
-              }}
-            >
-              Forgot password?
-            </button>
-          </div>
         </form>
       )}
-    </div>
+    </AuthShell>
   );
 }
 

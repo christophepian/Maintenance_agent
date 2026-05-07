@@ -46,8 +46,25 @@ export default async function handler(req, res) {
 
   const { session } = data;
   const meta = session.user?.app_metadata ?? {};
+  const userMeta = session.user?.user_metadata ?? {};
   const accessLevel = meta.accessLevel;
   const appRole = meta.appRole;
+
+  // First-time users: created_at and last_sign_in_at are identical on the very
+  // first login (Supabase sets both at the same moment). Redirect them to
+  // /set-password so they can create a password before entering the app.
+  // On all subsequent logins last_sign_in_at will be older than created_at.
+  const user = session.user;
+  const isFirstLogin =
+    !userMeta.password_set &&
+    user.created_at &&
+    user.last_sign_in_at &&
+    Math.abs(new Date(user.created_at) - new Date(user.last_sign_in_at)) < 5000;
+
+  if (isFirstLogin) {
+    const dest = next ? `/set-password?next=${encodeURIComponent(next)}` : "/set-password";
+    return res.redirect(302, dest);
+  }
 
   // Determine redirect target
   let target = next || null;

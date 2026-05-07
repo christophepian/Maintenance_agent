@@ -196,13 +196,18 @@ describe("Contractor RFP Marketplace", () => {
     });
     unitId = unit.id;
 
-    // Contractor with plumbing category
-    const contractor = await prisma.contractor.create({
-      data: {
+    // Contractor with plumbing category.
+    // Email must match contractorToken (email: "contractor@crfp-test.ch") so that
+    // resolveContractorId() can look up this contractor from the authenticated user's email.
+    const contractor = await prisma.contractor.upsert({
+      where: { id: "crfp-contractor-fixed" },
+      update: { orgId: org.id, email: "contractor@crfp-test.ch", serviceCategories: JSON.stringify(["plumbing", "heating"]) },
+      create: {
+        id: "crfp-contractor-fixed",
         orgId: org.id,
         name: "Plumber Pro",
         phone: "+41791234567",
-        email: `crfp-plumber-${Date.now()}@test.ch`,
+        email: "contractor@crfp-test.ch",
         serviceCategories: JSON.stringify(["plumbing", "heating"]),
       },
     });
@@ -580,13 +585,14 @@ describe("Contractor RFP Marketplace", () => {
 
   /* ── Cross-org isolation ───────────────────────────────────── */
 
-  it("cross-org contractor gets 404 (contractor not in org)", async () => {
+  it("cross-org contractor gets 403 (no contractor record in their org)", async () => {
     const result = await httpGet(
       `/contractor/rfps?contractorId=${contractorId}`,
       otherOrgContractorToken,
     );
-    // Contractor ID belongs to ORG_ID but token is for crfp-other-org → 404
-    expect(result.status).toBe(404);
+    // resolveContractorId looks up by email+orgId — no contractor record exists
+    // for "contractor@other-org.ch" in "crfp-other-org" → 403 before DB lookup
+    expect(result.status).toBe(403);
   }, 10000);
 
   /* ── Quote Submission ──────────────────────────────────────── */
@@ -618,13 +624,17 @@ describe("Contractor RFP Marketplace", () => {
     expect(result.status).toBe(403);
   }, 10000);
 
-  it("returns 400 when contractorId is missing", async () => {
+  it("omitting contractorId query param works (identity resolved from JWT)", async () => {
+    // contractorId is now resolved server-side from the authenticated user's email.
+    // Omitting it from the query string is no longer an error.
+    // We post to awardRfpId (contractor already has a quote there from beforeAll)
+    // → 409 DUPLICATE_QUOTE, confirming auth succeeded and the route was reached.
     const result = await httpPost(
-      `/contractor/rfps/${openRfpPlumbingId}/quotes`,
+      `/contractor/rfps/${awardRfpId}/quotes`,
       validQuoteBody,
       contractorToken,
     );
-    expect(result.status).toBe(400);
+    expect(result.status).toBe(409);
   }, 10000);
 
   it("returns 400 when workPlan is missing", async () => {

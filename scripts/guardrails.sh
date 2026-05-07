@@ -185,6 +185,52 @@ else
   pass "F-UI9: No Panel-wrapping-table violations detected"
 fi
 
+# ─── G18: Detect staged secrets / hardcoded credentials ─────────────────
+echo ""
+echo "━━━ G18: Checking staged files for hardcoded secrets ━━━"
+
+if git rev-parse --git-dir > /dev/null 2>&1; then
+
+  # Check 1: staged .env files (anything matching .env* except .env.example)
+  ENV_STAGED=$(git diff --cached --name-only --diff-filter=ACMR 2>/dev/null \
+    | grep -E '(^|/)\.env' \
+    | grep -v '\.env\.example$' || true)
+  if [ -n "$ENV_STAGED" ]; then
+    fail "G18 VIOLATION: .env file(s) staged for commit — secrets must never be committed:"
+    echo "$ENV_STAGED" | while read -r f; do echo "    $f"; done
+    echo "    Only .env.example (placeholder values only) should ever be committed."
+    echo "    Real secrets belong in .env.local (local dev) or your deployment platform (Render / Vercel)."
+  else
+    pass "No .env files staged"
+  fi
+
+  # Check 2: high-confidence secret patterns in any staged source file
+  # Patterns covered:
+  #   sk-ant-api…        — Anthropic / Claude API key
+  #   sb_secret_…        — Supabase new-format secret key
+  #   sb_publishable_…   — Supabase new-format publishable key
+  #   eyJhbGci…          — JWT / legacy Supabase service-role token (base64 header)
+  #   AZURE_*_KEY=<val>  — Azure cognitive services key (long alphanumeric after =)
+  SECRET_PATTERN='sk-ant-api[0-9A-Za-z_-]{20,}|sb_secret_[0-9A-Za-z_-]{10,}|sb_publishable_[0-9A-Za-z_-]{10,}|eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}|AZURE_[A-Z_]*KEY=[0-9A-Za-z]{32,}'
+  SECRET_HITS=$(git diff --cached --diff-filter=ACMR \
+      -- '*.ts' '*.js' '*.json' '*.yaml' '*.yml' '*.toml' '*.sh' \
+      2>/dev/null \
+    | grep '^+' \
+    | grep -v '^+++' \
+    | grep -E "$SECRET_PATTERN" \
+    | grep -v '# guardrail-ignore' \
+    || true)
+  if [ -n "$SECRET_HITS" ]; then
+    fail "G18 VIOLATION: Hardcoded secret pattern detected in staged files:"
+    echo "$SECRET_HITS" | head -5 | while read -r line; do echo "    $line"; done
+    echo "    Move secrets to .env.local (local) or your deployment platform env vars."
+    echo "    Never embed live keys in source code."
+  else
+    pass "No hardcoded secret patterns in staged source files"
+  fi
+
+fi
+
 # ─── G16: Ban MyApp.getInitialProps in _app.js ──────────────────────────
 echo ""
 echo "━━━ G16: Checking for banned MyApp.getInitialProps in _app.js ━━━"

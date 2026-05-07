@@ -151,6 +151,9 @@ describe("OpenAPI spec ↔ Router sync", () => {
     "GET /units/:id/unlinked-jobs",
     "PATCH /requests/:id/asset",
     "GET /strategy/owner-profile-current",
+    // DEV: Dev-only impersonation endpoints — never exposed in the public spec
+    "GET /__dev/tenant-list",
+    "POST /__dev/tenant-login",
   ]);
 
   it("every code route has a spec entry", () => {

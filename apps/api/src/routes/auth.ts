@@ -554,11 +554,11 @@ export function registerAuthRoutes(router: Router) {
     }
   });
 
-  // ── Dev-only tenant impersonation (AUTH_OPTIONAL=true only) ─────────────────
+  // ── Dev-only tenant impersonation ────────────────────────────────────────────
 
   // GET /__dev/tenant-list — returns all tenants with active occupancies
   router.get("/__dev/tenant-list", async ({ res, prisma, orgId }) => {
-    if (process.env.AUTH_OPTIONAL !== "true") return sendError(res, 403, "FORBIDDEN", "Dev-only endpoint");
+    if (process.env.NODE_ENV === "production") return sendError(res, 403, "FORBIDDEN", "Dev-only endpoint");
     try {
       const tenants = await prisma.tenant.findMany({
         where: {
@@ -596,7 +596,7 @@ export function registerAuthRoutes(router: Router) {
 
   // POST /__dev/tenant-login — issues a tenant JWT for a given tenantId
   router.post("/__dev/tenant-login", async ({ res, req, prisma, orgId }) => {
-    if (process.env.AUTH_OPTIONAL !== "true") return sendError(res, 403, "FORBIDDEN", "Dev-only endpoint");
+    if (process.env.NODE_ENV === "production") return sendError(res, 403, "FORBIDDEN", "Dev-only endpoint");
     try {
       const { tenantId } = await readJson(req) as { tenantId?: string };
       if (!tenantId) return sendError(res, 400, "VALIDATION_ERROR", "tenantId required");

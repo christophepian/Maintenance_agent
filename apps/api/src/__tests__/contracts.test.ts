@@ -7,7 +7,7 @@
  */
 
 import { ChildProcessWithoutNullStreams } from 'child_process';
-import { startTestServer, stopTestServer, createTenantToken, getAuthHeaders } from './testHelpers';
+import { startTestServer, stopTestServer, createTenantToken, createTestToken, getAuthHeaders } from './testHelpers';
 
 const PORT = 3205;
 const API_BASE = `http://127.0.0.1:${PORT}`;
@@ -268,17 +268,21 @@ describe('G10: API Contract Tests', () => {
   // ── Contractor-Scoped Endpoints (H1 isolation) ──
   describe('GET /contractor/jobs?contractorId=<id>&limit=1&view=summary', () => {
     it('requires CONTRACTOR role and returns contractor-filtered jobs', async () => {
-      // First get a contractor ID
+      // First get a contractor ID + email
       const contractors = await fetchJson('/contractors?limit=1');
       if (contractors.data.length === 0) {
         console.log('⚠️  Skipping contractor jobs test: no contractors in database');
         return;
       }
 
-      const contractorId = contractors.data[0].id;
+      const { id: contractorId, email: contractorEmail } = contractors.data[0];
 
-      // Test with CONTRACTOR role
-      const response = await fetchWithRole(`/contractor/jobs?contractorId=${contractorId}&limit=1&view=summary`, 'CONTRACTOR');
+      // resolveContractorId() looks up the contractor by the authenticated user's email,
+      // so the token must carry the same email as the contractor DB record.
+      const token = createTestToken({ userId: 'test-contractor', orgId: 'default-org', email: contractorEmail, role: 'CONTRACTOR' });
+      const response = await fetch(`${API_BASE}/contractor/jobs?contractorId=${contractorId}&limit=1&view=summary`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       expect(response.ok).toBe(true);
       const data = await response.json();
 
@@ -302,17 +306,21 @@ describe('G10: API Contract Tests', () => {
 
   describe('GET /contractor/invoices?contractorId=<id>&limit=1&view=summary', () => {
     it('requires CONTRACTOR role and returns contractor-filtered invoices', async () => {
-      // First get a contractor ID
+      // First get a contractor ID + email
       const contractors = await fetchJson('/contractors?limit=1');
       if (contractors.data.length === 0) {
         console.log('⚠️  Skipping contractor invoices test: no contractors in database');
         return;
       }
 
-      const contractorId = contractors.data[0].id;
+      const { id: contractorId, email: contractorEmail } = contractors.data[0];
 
-      // Test with CONTRACTOR role
-      const response = await fetchWithRole(`/contractor/invoices?contractorId=${contractorId}&limit=1&view=summary`, 'CONTRACTOR');
+      // resolveContractorId() looks up the contractor by the authenticated user's email,
+      // so the token must carry the same email as the contractor DB record.
+      const token = createTestToken({ userId: 'test-contractor', orgId: 'default-org', email: contractorEmail, role: 'CONTRACTOR' });
+      const response = await fetch(`${API_BASE}/contractor/invoices?contractorId=${contractorId}&limit=1&view=summary`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       expect(response.ok).toBe(true);
       const data = await response.json();
 

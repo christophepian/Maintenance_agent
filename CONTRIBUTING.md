@@ -154,6 +154,7 @@ name and the contract test fails, update the test — do not delete it.
 | G13 | Frontend + backend = one atomic commit |
 | G14 | Session-end: verify nothing valuable is left uncommitted |
 | G15 | Never `git stash drop` without inspection; prefer `stash branch` |
+| G18 | Never commit secrets — `.env*` files (except `.env.example`) and hardcoded key patterns are blocked by the pre-commit hook |
 
 Full guardrail list: `PROJECT_OVERVIEW.md`
 File-routing map: `apps/api/src/ARCHITECTURE_LOW_CONTEXT_GUIDE.md`

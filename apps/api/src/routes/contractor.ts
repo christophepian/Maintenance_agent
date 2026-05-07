@@ -2,6 +2,8 @@ import { Router } from "../http/router";
 import { sendError, sendJson } from "../http/json";
 import { first, getIntParam } from "../http/query";
 import { requireRole } from "../authz";
+import type { TokenPayload } from "../services/auth";
+import { PrismaClient } from "@prisma/client";
 import { listJobs, getJob } from "../services/jobs";
 import { listInvoices, getInvoice } from "../services/invoices";
 import { listRfpsForContractor, getContractorRfpById, RfpNotFoundError } from "../services/rfps";
@@ -19,10 +21,35 @@ import {
 } from "../workflows/completionRatingWorkflow";
 
 /**
+ * Resolve the contractorId for an authenticated request.
+ *
+ * IDOR prevention: CONTRACTOR users cannot supply an arbitrary contractorId via
+ * query parameter — their identity is always derived from their authenticated
+ * email, ensuring they can only access their own data.
+ *
+ * ADMIN users (internal staff) may pass any contractorId via query param so
+ * they can inspect contractor data for support / back-office purposes.
+ */
+async function resolveContractorId(
+  prisma: PrismaClient,
+  user: TokenPayload,
+  queryContractorId: string | undefined,
+  orgId: string,
+): Promise<string | null> {
+  if (user.accessLevel === "ADMIN") {
+    return queryContractorId ?? null;
+  }
+  const row = await prisma.contractor.findFirst({
+    where: { email: user.email, orgId },
+    select: { id: true },
+  });
+  return row?.id ?? null;
+}
+
+/**
  * Contractor-scoped routes: /contractor/jobs, /contractor/invoices
- * H1: Contractor isolation - endpoints filter by authenticated contractor's ID
- * Note: For dev MVP, contractorId is passed via query parameter.
- * In production with full auth, would resolve from user.contractorId field.
+ * H1: Contractor isolation - contractorId is always resolved from the
+ * authenticated user's identity, never from an arbitrary query parameter.
  */
 export function registerContractorRoutes(router: Router) {
   
@@ -32,16 +59,9 @@ export function registerContractorRoutes(router: Router) {
       const user = requireRole(req, res, "CONTRACTOR");
       if (!user) return;
 
-      // For dev MVP: accept contractorId from query or x-dev-contractor-id header
-      let contractorId = first(query, "contractorId") as string | undefined;
+      const contractorId = await resolveContractorId(prisma, user, first(query, "contractorId") as string | undefined, orgId);
       if (!contractorId) {
-        // Try to extract from headers (for testing)
-        const headerId = ({} as any).headers?.["x-dev-contractor-id"];
-        if (headerId) contractorId = Array.isArray(headerId) ? headerId[0] : headerId;
-      }
-
-      if (!contractorId) {
-        return sendError(res, 400, "VALIDATION_ERROR", "contractorId parameter required");
+        return sendError(res, 403, "FORBIDDEN", "No contractor record found for this user");
       }
 
       // Verify contractor exists in this org (CQ-13: via repository)
@@ -75,10 +95,9 @@ export function registerContractorRoutes(router: Router) {
       const user = requireRole(req, res, "CONTRACTOR");
       if (!user) return;
 
-      // For dev MVP: accept contractorId from query parameter
-      let contractorId = first(query, "contractorId") as string | undefined;
+      const contractorId = await resolveContractorId(prisma, user, first(query, "contractorId") as string | undefined, orgId);
       if (!contractorId) {
-        return sendError(res, 400, "VALIDATION_ERROR", "contractorId parameter required");
+        return sendError(res, 403, "FORBIDDEN", "No contractor record found for this user");
       }
 
       // Verify contractor exists in this org (CQ-13: via repository)
@@ -112,10 +131,9 @@ export function registerContractorRoutes(router: Router) {
       const user = requireRole(req, res, "CONTRACTOR");
       if (!user) return;
 
-      // For dev MVP: accept contractorId from query parameter
-      let contractorId = first(query, "contractorId") as string | undefined;
+      const contractorId = await resolveContractorId(prisma, user, first(query, "contractorId") as string | undefined, orgId);
       if (!contractorId) {
-        return sendError(res, 400, "VALIDATION_ERROR", "contractorId parameter required");
+        return sendError(res, 403, "FORBIDDEN", "No contractor record found for this user");
       }
 
       // Verify contractor exists in this org (CQ-13: via repository)
@@ -149,10 +167,9 @@ export function registerContractorRoutes(router: Router) {
       const user = requireRole(req, res, "CONTRACTOR");
       if (!user) return;
 
-      // For dev MVP: accept contractorId from query parameter
-      let contractorId = first(query, "contractorId") as string | undefined;
+      const contractorId = await resolveContractorId(prisma, user, first(query, "contractorId") as string | undefined, orgId);
       if (!contractorId) {
-        return sendError(res, 400, "VALIDATION_ERROR", "contractorId parameter required");
+        return sendError(res, 403, "FORBIDDEN", "No contractor record found for this user");
       }
 
       // Verify contractor exists in this org (CQ-13: via repository)
@@ -188,11 +205,18 @@ export function registerContractorRoutes(router: Router) {
       const user = requireRole(req, res, "CONTRACTOR");
       if (!user) return;
 
+      // Resolve contractor identity before Zod parse so we always use the
+      // authenticated contractor's ID, not whatever the client sent.
+      const contractorId = await resolveContractorId(prisma, user, first(query, "contractorId") as string | undefined, orgId);
+      if (!contractorId) {
+        return sendError(res, 403, "FORBIDDEN", "No contractor record found for this user");
+      }
+
       const parsed = ListContractorRfpsSchema.safeParse({
         limit: first(query, "limit"),
         offset: first(query, "offset"),
         status: first(query, "status"),
-        contractorId: first(query, "contractorId"),
+        contractorId,
       });
 
       if (!parsed.success) {
@@ -201,8 +225,6 @@ export function registerContractorRoutes(router: Router) {
           .join("; ");
         return sendError(res, 400, "VALIDATION_ERROR", msg);
       }
-
-      const contractorId = parsed.data.contractorId;
 
       // Verify contractor exists in this org (CQ-13: via repository)
       const contractor = await contractorRepo.verifyOrgOwnership(prisma, contractorId, orgId);
@@ -229,9 +251,9 @@ export function registerContractorRoutes(router: Router) {
       const user = requireRole(req, res, "CONTRACTOR");
       if (!user) return;
 
-      const contractorId = first(query, "contractorId") as string | undefined;
+      const contractorId = await resolveContractorId(prisma, user, first(query, "contractorId") as string | undefined, orgId);
       if (!contractorId) {
-        return sendError(res, 400, "VALIDATION_ERROR", "contractorId parameter required");
+        return sendError(res, 403, "FORBIDDEN", "No contractor record found for this user");
       }
 
       const contractor = await contractorRepo.verifyOrgOwnership(prisma, contractorId, orgId);
@@ -258,9 +280,9 @@ export function registerContractorRoutes(router: Router) {
       const user = requireRole(req, res, "CONTRACTOR");
       if (!user) return;
 
-      const contractorId = first(query, "contractorId") as string | undefined;
+      const contractorId = await resolveContractorId(prisma, user, first(query, "contractorId") as string | undefined, orgId);
       if (!contractorId) {
-        return sendError(res, 400, "VALIDATION_ERROR", "contractorId parameter required");
+        return sendError(res, 403, "FORBIDDEN", "No contractor record found for this user");
       }
 
       const contractor = await contractorRepo.verifyOrgOwnership(prisma, contractorId, orgId);
@@ -303,9 +325,9 @@ export function registerContractorRoutes(router: Router) {
       const user = requireRole(req, res, "CONTRACTOR");
       if (!user) return;
 
-      const contractorId = first(query, "contractorId") as string | undefined;
+      const contractorId = await resolveContractorId(prisma, user, first(query, "contractorId") as string | undefined, orgId);
       if (!contractorId) {
-        return sendError(res, 400, "VALIDATION_ERROR", "contractorId parameter required");
+        return sendError(res, 403, "FORBIDDEN", "No contractor record found for this user");
       }
 
       // Verify contractor exists in this org (CQ-13: via repository)
@@ -331,9 +353,9 @@ export function registerContractorRoutes(router: Router) {
       const user = requireRole(req, res, "CONTRACTOR");
       if (!user) return;
 
-      const contractorId = first(query, "contractorId") as string | undefined;
+      const contractorId = await resolveContractorId(prisma, user, first(query, "contractorId") as string | undefined, orgId);
       if (!contractorId) {
-        return sendError(res, 400, "VALIDATION_ERROR", "contractorId parameter required");
+        return sendError(res, 403, "FORBIDDEN", "No contractor record found for this user");
       }
 
       // Parse and validate request body

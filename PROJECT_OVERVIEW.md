@@ -255,6 +255,21 @@ npm run blueprint
 git status && git stash list
 ```
 
+### G18: No Secrets in Source Code
+
+API keys, tokens, and credentials must **never** appear in committed files.
+
+| Where | Rule |
+|-------|------|
+| `apps/api/.env` | Local dev secrets — git-ignored, never committed |
+| `apps/web/.env.local` | Local dev secrets — git-ignored, never committed |
+| `apps/api/.env.example` | **Only** placeholder values (`your-key-here`) — the one env file that IS committed |
+| Render / Vercel | Real production secrets live here, injected at runtime |
+
+The pre-commit hook (`scripts/guardrails.sh` G18) blocks commits that stage any `.env*` file (except `.env.example`) or contain recognisable secret patterns (`sk-ant-api…`, `sb_secret_…`, `sb_publishable_…`, Supabase JWTs, Azure cognitive keys).
+
+If the hook fires, move the value to `.env.local` and reference it via `process.env.YOUR_VAR`.
+
 ### G12–G15: Session & Commit Safety
 
 - **G12** — Commit every deliverable (>100 new lines → stop and commit)
@@ -274,6 +289,7 @@ npx prisma migrate diff \
 
 ## Do NOT
 
+- Commit secrets, API keys, or tokens — use `.env.local` locally and deployment-platform env vars in production (G18; pre-commit hook enforces this)
 - Put business logic in routes — use workflows/services
 - Call Prisma directly from routes or services — use repositories
 - Define inline `include: { ... }` — use canonical constants

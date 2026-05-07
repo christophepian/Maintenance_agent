@@ -464,7 +464,8 @@ describe("Cross-org isolation", () => {
       {},
       wrongOrgContractorToken,
     );
-    // Cross-org request should not find the contractor (404)
-    expect(res.status).toBe(404);
+    // Cross-org request: resolveContractorId finds no contractor for this caller's email
+    // in the target org → 403 before even reaching the contractor DB lookup.
+    expect(res.status).toBe(403);
   });
 });

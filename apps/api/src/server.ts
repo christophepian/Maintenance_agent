@@ -222,11 +222,25 @@ const server = http.createServer(async (req: AuthedRequest, res) => {
   });
 
   try {
-    /* CORS */
+    /* CORS — never use wildcard; always enforce an explicit origin allowlist.
+       In production CORS_ORIGIN must be set (e.g. "https://app.example.com").
+       In development we fall back to localhost only. */
     const isProd = process.env.NODE_ENV === "production";
-    const corsOrigin = process.env.CORS_ORIGIN || (isProd ? "" : "*");
+    const DEV_ALLOWED_ORIGINS = ["http://localhost:3000", "http://localhost:3001", "http://127.0.0.1:3000", "http://127.0.0.1:3001"];
+    const requestOrigin = req.headers["origin"] as string | undefined;
+    let corsOrigin = "";
+    if (process.env.CORS_ORIGIN) {
+      // Support comma-separated list of allowed origins
+      const allowed = process.env.CORS_ORIGIN.split(",").map((o) => o.trim());
+      if (requestOrigin && allowed.includes(requestOrigin)) {
+        corsOrigin = requestOrigin;
+      }
+    } else if (!isProd && requestOrigin && DEV_ALLOWED_ORIGINS.includes(requestOrigin)) {
+      corsOrigin = requestOrigin;
+    }
     if (corsOrigin) {
       res.setHeader("Access-Control-Allow-Origin", corsOrigin);
+      res.setHeader("Vary", "Origin");
     }
     res.setHeader(
       "Access-Control-Allow-Methods",

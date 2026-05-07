@@ -31,7 +31,7 @@ export const ListContractorRfpsSchema = z.object({
     .optional()
     .transform((v) => Math.max(0, parseInt(v ?? "0", 10))),
   status: z.nativeEnum(RfpStatus).optional(),
-  contractorId: z.string().uuid("contractorId must be a valid UUID"),
+  contractorId: z.string().min(1),
 });
 
 export type ListContractorRfpsQuery = z.infer<typeof ListContractorRfpsSchema>;
