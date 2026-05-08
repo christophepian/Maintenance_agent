@@ -265,6 +265,7 @@ export async function updateUnit(
     heatingType?: HeatingType;
     monthlyRentChf?: number | null;
     monthlyChargesChf?: number | null;
+    isListedPublicly?: boolean;
   },
 ) {
   return prisma.unit.update({
@@ -285,6 +286,7 @@ export async function updateUnit(
       heatingType: data.heatingType ?? undefined,
       ...(data.monthlyRentChf !== undefined ? { monthlyRentChf: data.monthlyRentChf } : {}),
       ...(data.monthlyChargesChf !== undefined ? { monthlyChargesChf: data.monthlyChargesChf } : {}),
+      ...(data.isListedPublicly !== undefined ? { isListedPublicly: data.isListedPublicly } : {}),
     },
   });
 }

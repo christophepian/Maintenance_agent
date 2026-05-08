@@ -93,6 +93,7 @@ export async function updateUnit(
     heatingType?: HeatingType;
     monthlyRentChf?: number | null;
     monthlyChargesChf?: number | null;
+    isListedPublicly?: boolean;
   }
 ) {
   const existing = await inventoryRepo.findUnitByIdAndOrg(prisma, unitId, orgId);

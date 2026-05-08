@@ -313,6 +313,21 @@ const server = http.createServer(async (req: AuthedRequest, res) => {
       return;
     }
 
+    /* ── Public rental routes — unauthenticated, use DEFAULT_ORG_ID ── */
+    const isPublicRentalRoute =
+      (req.method === "GET" && (path === "/listings" || path === "/vacant-units")) ||
+      (req.method === "POST" && (
+        path === "/document-scan" ||
+        path === "/rental-applications" ||
+        /^\/rental-applications\/[^/]+\/submit$/.test(path) ||
+        /^\/rental-applications\/[^/]+\/attachments$/.test(path)
+      ));
+    if (isPublicRentalRoute) {
+      const handled = await router.dispatch(req, res, path, query, DEFAULT_ORG_ID, prisma);
+      if (!handled) sendError(res, 404, "NOT_FOUND", "Not found");
+      return;
+    }
+
     if (orgId === null) {
       sendError(res, 401, "UNAUTHORIZED", "Authentication required");
       return;
