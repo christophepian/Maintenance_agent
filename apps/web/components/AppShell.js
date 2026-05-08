@@ -137,10 +137,11 @@ export default function AppShell({ role: roleProp, children }) {
         </a>
 
       <aside
-        className="hidden md:flex md:flex-col border-r border-slate-200 px-4 py-5 bg-slate-100"
+        className="hidden md:flex md:flex-col border-r border-slate-200 px-4 py-5 bg-slate-100 sticky top-0 h-screen overflow-hidden"
+        style={showHubBar ? { top: 36, height: "calc(100vh - 36px)" } : undefined}
         aria-label="Sidebar navigation"
       >
-        <div className="font-bold text-lg mb-5">Maintenance Agent</div>
+        <div className="font-bold text-lg mb-5">Sencilo</div>
 
         {/* Role switcher — admin users and dev/staging environments */}
         {(ROLE_SWITCH_ENABLED || isAdmin) && (
@@ -160,19 +161,21 @@ export default function AppShell({ role: roleProp, children }) {
           </div>
         )}
 
-        {/* Role-specific sidebar */}
-        {role === "MANAGER" ? (
-          <ManagerSidebar />
-        ) : role === "OWNER" ? (
-          <OwnerSidebar />
-        ) : role === "CONTRACTOR" ? (
-          <ContractorSidebar />
-        ) : role === "TENANT" ? (
-          <TenantSidebar />
-        ) : null}
+        {/* Role-specific sidebar — scrollable if nav items overflow */}
+        <div className="flex-1 min-h-0 overflow-y-auto">
+          {role === "MANAGER" ? (
+            <ManagerSidebar />
+          ) : role === "OWNER" ? (
+            <OwnerSidebar />
+          ) : role === "CONTRACTOR" ? (
+            <ContractorSidebar />
+          ) : role === "TENANT" ? (
+            <TenantSidebar />
+          ) : null}
+        </div>
 
-        {/* Sign out — bottom of sidebar */}
-        <div className="mt-auto pt-4 border-t border-slate-200">
+        {/* Sign out — always visible at bottom of sidebar */}
+        <div className="pt-4 border-t border-slate-200">
           <button
             type="button"
             onClick={signOut}
