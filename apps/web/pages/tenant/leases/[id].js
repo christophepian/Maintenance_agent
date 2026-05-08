@@ -51,10 +51,6 @@ export default function TenantLeaseDetailPage() {
     router.push("/tenant");
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-    }
-    router.push("/tenant");
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   // Fetch lease detail
   const fetchLease = useCallback(async () => {
