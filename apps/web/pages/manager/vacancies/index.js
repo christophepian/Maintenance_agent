@@ -89,7 +89,7 @@ function leaseBadge(lease, hasLeaseTemplate) {
   );
 }
 
-function VacantGroupTable({ units, onNavigate }) {
+function VacantGroupTable({ units, onTogglePublish, publishingId }) {
   const { t } = useTranslation("manager");
   const router = useRouter();
   const { sortField: uSF, sortDir: uSD, handleSort: handleUSort } = useLocalSort("unitNumber", "asc");
@@ -132,6 +132,15 @@ function VacantGroupTable({ units, onNavigate }) {
                     className: u.applicationCount === 0 ? "opacity-50 cursor-not-allowed text-slate-400" : "text-slate-700",
                     title: u.applicationCount === 0 ? "No applications yet" : undefined,
                   },
+                  {
+                    label: publishingId === u.id
+                      ? "⏳ Updating…"
+                      : u.isListedPublicly
+                        ? "🔕 Unpublish from Listings"
+                        : "📢 Publish to Listings",
+                    onClick: publishingId === u.id ? undefined : () => onTogglePublish(u),
+                    className: publishingId === u.id ? "opacity-50 cursor-not-allowed text-slate-400" : u.isListedPublicly ? "text-amber-700" : "text-green-700",
+                  },
                   ...(u.building?.id ? [
                     { label: "🏢 View Building", onClick: () => router.push("/admin-inventory/buildings/" + u.building.id) },
                   ] : []),
@@ -156,6 +165,7 @@ export default function ManagerVacanciesPage() {
   const [loading, setLoading] = useState(true);
   const [selectionsLoading, setSelectionsLoading] = useState(true);
   const [error, setError] = useState("");
+  const [publishingId, setPublishingId] = useState(null);
   const { sortField: selSF, sortDir: selSD, handleSort: handleSelSort } = useLocalSort("buildingName", "asc");
 
   useEffect(() => {
@@ -188,6 +198,28 @@ export default function ManagerVacanciesPage() {
       // Non-critical
     } finally {
       setSelectionsLoading(false);
+    }
+  }
+
+  async function togglePublish(unit) {
+    setPublishingId(unit.id);
+    try {
+      const res = await fetch(`/api/units/${unit.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({ isListedPublicly: !unit.isListedPublicly }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data?.error?.message || data?.message || "Failed to update listing status");
+      }
+      setUnits((prev) =>
+        prev.map((u) => u.id === unit.id ? { ...u, isListedPublicly: !unit.isListedPublicly } : u)
+      );
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setPublishingId(null);
     }
   }
 
@@ -435,6 +467,15 @@ export default function ManagerVacanciesPage() {
                             className: u.applicationCount === 0 ? "opacity-50 cursor-not-allowed text-slate-400" : "text-slate-700",
                             title: u.applicationCount === 0 ? "No applications yet" : undefined,
                           },
+                          {
+                            label: publishingId === u.id
+                              ? "⏳ Updating…"
+                              : u.isListedPublicly
+                                ? "🔕 Unpublish from Listings"
+                                : "📢 Publish to Listings",
+                            onClick: publishingId === u.id ? undefined : () => togglePublish(u),
+                            className: publishingId === u.id ? "opacity-50 cursor-not-allowed text-slate-400" : u.isListedPublicly ? "text-amber-700" : "text-green-700",
+                          },
                           ...(u.building?.id ? [
                             { label: "🏢 View Building", onClick: () => router.push("/admin-inventory/buildings/" + u.building.id) },
                           ] : []),
@@ -448,7 +489,7 @@ export default function ManagerVacanciesPage() {
                 </div>
 
                 {/* Wide table — hidden sm:block */}
-                <VacantGroupTable units={group.units} />
+                <VacantGroupTable units={group.units} onTogglePublish={togglePublish} publishingId={publishingId} />
               </div>
             ))}
           </div>
