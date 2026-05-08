@@ -280,10 +280,10 @@ function TenantCaptureSessionModal({ requestId, onClose, onComplete }) {
               <QRCodeSVG value={mobileUrl} size={300} level="L" />
             </div>
             <div className="bg-slate-50 rounded-lg p-2 mb-3">
-              <p className="text-[10px] text-slate-400 uppercase tracking-wide mb-0.5">{t("tenant:requests.text.mobileLink")}</p>
+              <p className="text-xs text-slate-400 uppercase tracking-wide mb-0.5">{t("tenant:requests.text.mobileLink")}</p>
               <p className="text-xs text-slate-600 break-all font-mono select-all m-0">{mobileUrl}</p>
             </div>
-            <p className="text-[10px] text-slate-400 text-center mb-3">
+            <p className="text-xs text-slate-400 text-center mb-3">
               Session expires in 15 minutes. Waiting for photos…
             </p>
             <div className="flex justify-end">

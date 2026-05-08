@@ -80,7 +80,7 @@ export default function UndoToast({ visible, message, undo, dismiss }) {
       <RToast.Action altText={t("action.undo", { defaultValue: "Undo" })} asChild>
         <button
           onClick={undo}
-          className="border border-white/40 text-blue-400 px-3 py-1 rounded cursor-pointer font-semibold text-[13px] whitespace-nowrap hover:bg-white/10"
+          className="border border-white/40 text-blue-400 px-3 py-1 rounded cursor-pointer font-semibold text-[0.8125rem] whitespace-nowrap hover:bg-white/10"
         >
           {t("action.undo", { defaultValue: "Undo" })}
         </button>

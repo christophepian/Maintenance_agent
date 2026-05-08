@@ -33,9 +33,9 @@ const ROLE_NAV = {
     items: [
       { href: '/manager',           icon: LayoutDashboard, label: 'Dashboard' },
       { href: '/manager/requests',  icon: Wrench,          label: 'Requests'  },
-      { href: '/manager/inventory', icon: Building2,       label: 'Inventory' },
-      { href: '/manager/finance',   icon: Wallet,          label: 'Finances'  },
-      { href: '/manager/people',    icon: Users,           label: 'People'    },
+      { href: '/manager/inventory', icon: Building2,       label: 'Properties' },
+      { href: '/manager/finance',   icon: Wallet,          label: 'Finances'   },
+      { href: '/manager/people',    icon: Users,           label: 'Contacts'   },
     ],
     moreItems: [
       { href: '/manager/leases',   icon: KeyRound, label: 'Leases'   },
@@ -121,7 +121,7 @@ export default function BottomNav({ role }) {
               href={item.href}
               className={cn(
                 'flex-1 flex flex-col items-center justify-center gap-1 min-h-[44px]',
-                'text-[10px] font-medium transition-colors no-underline',
+                'text-xs font-medium transition-colors no-underline',
                 active ? 'text-brand' : 'text-slate-500',
               )}
               aria-current={active ? 'page' : undefined}
@@ -142,7 +142,7 @@ export default function BottomNav({ role }) {
             onClick={() => setDrawerOpen(true)}
             className={cn(
               'flex-1 flex flex-col items-center justify-center gap-1 min-h-[44px]',
-              'text-[10px] font-medium text-slate-500 bg-transparent border-0 cursor-pointer',
+              'text-xs font-medium text-slate-500 bg-transparent border-0 cursor-pointer',
               drawerOpen && 'text-brand',
             )}
             aria-label="More navigation options"

@@ -103,7 +103,7 @@ function buildRequestColumns({ t, assigningId, setAssigningId, selectedContracto
         <>
           <StatusBadge request={r} />
           {r.payingParty === "TENANT" && (
-            <span className="ml-1.5 inline-block rounded-full border border-orange-200 bg-orange-50 px-2 py-0.5 text-[10px] font-semibold text-orange-700">
+            <span className="ml-1.5 inline-block rounded-full border border-orange-200 bg-orange-50 px-2 py-0.5 text-xs font-semibold text-orange-700">
               Tenant-funded
             </span>
           )}
@@ -138,7 +138,7 @@ function buildRequestColumns({ t, assigningId, setAssigningId, selectedContracto
       sortable: true,
       defaultVisible: true,
       render: (r) => (
-        <span className="inline-block rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">
+        <span className="inline-block rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
           {r.category || "\u2014"}
         </span>
       ),
@@ -160,7 +160,7 @@ function buildRequestColumns({ t, assigningId, setAssigningId, selectedContracto
       className: "w-24 text-center",
       render: (r) => (
         (r.urgency === "EMERGENCY" || r.urgency === "HIGH") ? (
-          <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold", r.urgency === "EMERGENCY"
+          <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold", r.urgency === "EMERGENCY"
               ? "bg-red-100 text-red-700 border border-red-200"
               : "bg-orange-100 text-orange-700 border border-orange-200")}>
             <span className="text-xs">{r.urgency === "EMERGENCY" ? "\u{1F6A8}" : "\u26A0"}</span>
@@ -208,7 +208,7 @@ function buildRequestColumns({ t, assigningId, setAssigningId, selectedContracto
       sortable: true,
       defaultVisible: false,
       render: (r) => (
-        <span className={cn("inline-block rounded-full px-2 py-0.5 text-[11px] font-medium", r.payingParty === "TENANT"
+        <span className={cn("inline-block rounded-full px-2 py-0.5 text-xs font-medium", r.payingParty === "TENANT"
             ? "bg-orange-50 text-orange-700 border border-orange-200"
             : "bg-slate-50 text-slate-600 border border-slate-200")}>
           {r.payingParty === "TENANT" ? "Tenant" : "Landlord"}
@@ -566,7 +566,7 @@ function DepreciationBar({ signal }) {
         <div className={cn("h-2 rounded-full", barColor, "transition-all duration-500")} style={{ width: `${usedPct}%` }} />
       </div>
       {signal.notes && (
-        <p className="mt-1 text-[11px] text-slate-400">Source: {signal.notes}</p>
+        <p className="mt-1 text-xs text-slate-400">Source: {signal.notes}</p>
       )}
     </div>
   );
@@ -614,9 +614,9 @@ function LegalRecommendationPanel({ decision, loading: isLoading, error: loadErr
         <div className="flex items-start justify-between gap-4">
           <div>
             <h4 className="text-sm font-bold">{ob.heading}</h4>
-            <p className="mt-1 text-[13px] leading-snug opacity-90">{ob.description}</p>
+            <p className="mt-1 text-[0.8125rem] leading-snug opacity-90">{ob.description}</p>
           </div>
-          <span className="shrink-0 rounded-full bg-white/60 px-2.5 py-0.5 text-[11px] font-semibold">
+          <span className="shrink-0 rounded-full bg-white/60 px-2.5 py-0.5 text-xs font-semibold">
             {decision.confidence}% confidence
           </span>
         </div>
@@ -633,7 +633,7 @@ function LegalRecommendationPanel({ decision, loading: isLoading, error: loadErr
               </div>
             ))}
             {uniqueCitations.length > 4 && (
-              <span className="text-[11px] text-slate-400">
+              <span className="text-xs text-slate-400">
                 + {uniqueCitations.length - 4} more citation{uniqueCitations.length - 4 > 1 ? "s" : ""}
               </span>
             )}
@@ -670,16 +670,16 @@ function LegalRecommendationPanel({ decision, loading: isLoading, error: loadErr
                     <p className="text-xs font-medium text-slate-800 truncate">
                       {dm.defectEn || dm.defect}
                     </p>
-                    <p className="text-[11px] text-slate-500 mt-0.5">
+                    <p className="text-xs text-slate-500 mt-0.5">
                       {dm.categoryEn || dm.category} &bull; {dm.reductionPercent}% reduction
                     </p>
                   </div>
-                  <span className="shrink-0 text-[11px] text-slate-400">
+                  <span className="shrink-0 text-xs text-slate-400">
                     {Math.round(dm.matchConfidence)}% match
                   </span>
                 </div>
                 {dm.matchReasons?.length > 0 && (
-                  <p className="text-[11px] text-slate-400 mt-1 truncate">
+                  <p className="text-xs text-slate-400 mt-1 truncate">
                     {dm.matchReasons.join(", ")}
                   </p>
                 )}
@@ -688,7 +688,7 @@ function LegalRecommendationPanel({ decision, loading: isLoading, error: loadErr
           })()}
           {/* Additional precedents collapsed — only show count */}
           {decision.defectMatches.length > 1 && (
-            <p className="text-[11px] text-slate-400 mt-1.5">
+            <p className="text-xs text-slate-400 mt-1.5">
               + {decision.defectMatches.length - 1} additional precedent{decision.defectMatches.length > 2 ? "s" : ""} identified
             </p>
           )}
@@ -707,16 +707,16 @@ function LegalRecommendationPanel({ decision, loading: isLoading, error: loadErr
                     <p className="text-xs font-medium text-slate-800 truncate">
                       {r.defectEn || r.defect}
                     </p>
-                    <p className="text-[11px] text-slate-500 mt-0.5">
+                    <p className="text-xs text-slate-500 mt-0.5">
                       {r.categoryEn || r.category} &bull; {r.reductionPercent}% rent reduction
                     </p>
                   </div>
-                  <span className="shrink-0 text-[11px] text-slate-400">{r.basis}</span>
+                  <span className="shrink-0 text-xs text-slate-400">{r.basis}</span>
                 </div>
               </div>
             ))}
             {decision.matchedReductions.length > 3 && (
-              <p className="text-[11px] text-slate-400">
+              <p className="text-xs text-slate-400">
                 + {decision.matchedReductions.length - 3} more precedent{decision.matchedReductions.length - 3 > 1 ? "s" : ""}
               </p>
             )}
@@ -737,7 +737,7 @@ function LegalRecommendationPanel({ decision, loading: isLoading, error: loadErr
             </span>
           </div>
           {decision.rentReductionEstimate.capApplied && (
-            <p className="text-[11px] text-amber-600 mt-1">{t("manager:requests.text.capAppliedReductionClampedToLegalMaximum")}</p>
+            <p className="text-xs text-amber-600 mt-1">{t("manager:requests.text.capAppliedReductionClampedToLegalMaximum")}</p>
           )}
         </div>
       )}
@@ -775,7 +775,7 @@ function LegalRecommendationPanel({ decision, loading: isLoading, error: loadErr
               {contextActions.map((a, i) => (
                 <span
                   key={i}
-                  className={cn("inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-medium", a.done
+                  className={cn("inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium", a.done
                       ? 'bg-green-50 border-green-200 text-green-700'
                       : 'bg-blue-50 border-blue-200 text-blue-700')}
                 >
@@ -791,7 +791,7 @@ function LegalRecommendationPanel({ decision, loading: isLoading, error: loadErr
       {decision.defectSignals && (decision.defectSignals.severity || decision.defectSignals.affectedArea) && (
         <div className="mt-3 rounded-lg border border-slate-200 bg-white p-3">
           <p className="text-xs font-semibold text-slate-600 mb-1">{t("manager:requests.text.defectSignals")}</p>
-          <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-slate-500">
+          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
             {decision.defectSignals.severity && (
               <span>{t("manager:requests.text.severity")} <span className="font-medium text-slate-700">{decision.defectSignals.severity}</span></span>
             )}
@@ -816,7 +816,7 @@ function LegalRecommendationPanel({ decision, loading: isLoading, error: loadErr
           {decision.defectSignals.keywords?.length > 0 && (
             <div className="flex flex-wrap gap-1 mt-1.5">
               {decision.defectSignals.keywords.map((kw, i) => (
-                <span key={i} className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-500">
+                <span key={i} className="rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-500">
                   {typeof kw === "string" ? kw : kw.term || JSON.stringify(kw)}
                 </span>
               ))}
@@ -907,23 +907,23 @@ function RepairReplacePanel({ state, requestCategory }) {
                   <div className="flex items-center gap-2">
                     <p className="text-sm font-medium text-slate-800 truncate">{item.assetName}</p>
                     {isRelevant && (
-                      <span className="shrink-0 rounded-full bg-indigo-100 border border-indigo-200 px-2 py-0.5 text-[10px] font-semibold text-indigo-700">
+                      <span className="shrink-0 rounded-full bg-indigo-100 border border-indigo-200 px-2 py-0.5 text-xs font-semibold text-indigo-700">
                         Related
                       </span>
                     )}
                   </div>
-                  <p className="text-[11px] text-slate-500 mt-0.5">
+                  <p className="text-xs text-slate-500 mt-0.5">
                     {item.topic || "\u2014"}
                     {ageYears && lifeYears ? ` \u00B7 ${ageYears} yr of ${lifeYears}-yr life` : ""}
                   </p>
                 </div>
-                <span className={cn("shrink-0 inline-block rounded-full border px-2.5 py-0.5 text-[11px] font-semibold", style.badge)}>
+                <span className={cn("shrink-0 inline-block rounded-full border px-2.5 py-0.5 text-xs font-semibold", style.badge)}>
                   {style.label}
                 </span>
               </div>
 
               {/* Metrics row */}
-              <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-[11px] text-slate-500">
+              <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-slate-500">
                 {depPct != null && (
                   <span>
                     Depreciation:{" "}
@@ -960,7 +960,7 @@ function RepairReplacePanel({ state, requestCategory }) {
         })}
       </div>
 
-      <p className="mt-2 text-[11px] text-slate-400">
+      <p className="mt-2 text-xs text-slate-400">
         Ratio = cumulative repair cost \u00F7 replacement est. Hover a card for the recommendation reason.
       </p>
     </div>
@@ -970,7 +970,7 @@ function RepairReplacePanel({ state, requestCategory }) {
 /** Consistent section label used inside the accordion */
 function SectionLabel({ children }) {
   return (
-    <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+    <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
       {children}
     </p>
   );
@@ -1544,7 +1544,7 @@ export default function ManagerRequestsPage() {
                           </span>
                           <StatusBadge request={r} />
                           {(r.urgency === "EMERGENCY" || r.urgency === "HIGH") && (
-                            <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold", r.urgency === "EMERGENCY"
+                            <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold", r.urgency === "EMERGENCY"
                                 ? "bg-red-100 text-red-700 border border-red-200"
                                 : "bg-orange-100 text-orange-700 border border-orange-200")}>
                               {r.urgency === "EMERGENCY" ? "🚨" : "⚠"} {r.urgency === "EMERGENCY" ? "Emergency" : "High"}
@@ -1554,7 +1554,7 @@ export default function ManagerRequestsPage() {
                         <p className="table-card-head mt-1.5">{r.buildingName || "—"}{r.unitNumber ? ` / ${r.unitNumber}` : ""}</p>
                         {r.category && (
                           <p className="mt-0.5">
-                            <span className="inline-block rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">{r.category}</span>
+                            <span className="inline-block rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">{r.category}</span>
                           </p>
                         )}
                         {/* Assign sub-flow — shown inline after tapping Assign in the swipe panel */}

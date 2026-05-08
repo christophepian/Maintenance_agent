@@ -51,7 +51,7 @@ function StatusPipeline({ status }) {
         );
       })}
       {isDisputed && (
-        <span className="ml-1.5 text-[10px] font-semibold text-rose-600">{t("contractor:invoices.text.dISPUTED")}</span>
+        <span className="ml-1.5 text-xs font-semibold text-rose-600">{t("contractor:invoices.text.dISPUTED")}</span>
       )}
     </div>
   );
@@ -83,7 +83,7 @@ const SOURCE_LABEL = {
 function SourceChannelIcon({ channel }) {
   if (!channel || !SOURCE_LABEL[channel]) return null;
   const { text, cls } = SOURCE_LABEL[channel];
-  return <span title={channel} className={"inline-flex items-center rounded border px-1.5 py-0.5 text-[10px] font-medium ml-1 " + cls}>{text}</span>;
+  return <span title={channel} className={"inline-flex items-center rounded border px-1.5 py-0.5 text-xs font-medium ml-1 " + cls}>{text}</span>;
 }
 
 /* ── Currency helper ─────────────────────────────────────────── */

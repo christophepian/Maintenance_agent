@@ -143,11 +143,11 @@ h1, h2 {
 }
 
 .help {
-  @apply text-[13px] text-slate-600 mt-2;
+  @apply text-[0.8125rem] text-slate-600 mt-2;
 }
 
 .subtle {
-  @apply text-[13px] text-slate-600 mb-4;
+  @apply text-[0.8125rem] text-slate-600 mb-4;
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -196,7 +196,7 @@ h1, h2 {
 
   /* ── Day group header (job schedule) ── */
   .day-header {
-    @apply text-[13px] font-semibold text-slate-800 uppercase tracking-wide;
+    @apply text-[0.8125rem] font-semibold text-slate-800 uppercase tracking-wide;
     @apply pt-1.5 pb-2 border-b border-slate-200 mb-2;
   }
 
@@ -218,7 +218,7 @@ h1, h2 {
     @apply min-w-[56px] text-sm font-semibold text-slate-800;
   }
   .job-card-meta {
-    @apply flex-1 min-w-0 text-[13px] text-slate-500;
+    @apply flex-1 min-w-0 text-[0.8125rem] text-slate-500;
   }
   .job-card-meta strong {
     @apply text-slate-800 font-semibold;
@@ -266,7 +266,7 @@ h1, h2 {
   .tab-panel        { @apply hidden; }
   .tab-panel-active { @apply block; }
   .tab-panel-count  { @apply block text-xs text-slate-500 mb-1; }
-  .full-page-link   { @apply text-[13px] text-brand font-medium no-underline; }
+  .full-page-link   { @apply text-[0.8125rem] text-brand font-medium no-underline; }
 
   /* ── Inline data table ── */
   .data-table {
@@ -280,7 +280,7 @@ h1, h2 {
     @apply overflow-x-auto rounded-lg border border-table-border;
   }
   .data-table th {
-    @apply px-3 py-2.5 text-left font-medium text-[11px] uppercase tracking-wider;
+    @apply px-3 py-2.5 text-left font-medium text-xs uppercase tracking-wider;
     @apply text-slate-400 bg-transparent border-b-2 border-slate-200;
   }
   .data-table td {
@@ -414,7 +414,7 @@ h1, h2 {
     @apply px-4 py-3.5 bg-white;
   }
   .table-card-head {
-    @apply font-medium text-slate-900 text-[13px];
+    @apply font-medium text-slate-900 text-[0.8125rem];
   }
   .table-card-sub {
     @apply text-xs text-slate-500 mt-0.5;

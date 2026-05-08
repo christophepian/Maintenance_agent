@@ -106,7 +106,7 @@ const SOURCE_LABEL = {
 function SourceChannelIcon({ channel }) {
   if (!channel || !SOURCE_LABEL[channel]) return null;
   const { text, cls } = SOURCE_LABEL[channel];
-  return <span title={channel} className={"inline-flex items-center rounded border px-1.5 py-0.5 text-[10px] font-medium mr-1 " + cls}>{text}</span>;
+  return <span title={channel} className={"inline-flex items-center rounded border px-1.5 py-0.5 text-xs font-medium mr-1 " + cls}>{text}</span>;
 }
 
 /* ─── ActionDropdown (same pattern as vacancies) ──────────── */
@@ -478,10 +478,10 @@ function CaptureSessionModal({ onClose, onComplete }) {
               <QRCodeSVG value={mobileUrl} size={300} level="L" />
             </div>
             <div className="bg-slate-50 rounded-lg p-2 mb-3">
-              <p className="text-[10px] text-slate-400 uppercase tracking-wide mb-0.5">{t("manager:financeInvoices.text.mobileLink")}</p>
+              <p className="text-xs text-slate-400 uppercase tracking-wide mb-0.5">{t("manager:financeInvoices.text.mobileLink")}</p>
               <p className="text-xs text-slate-600 break-all font-mono select-all m-0">{mobileUrl}</p>
             </div>
-            <p className="text-[10px] text-slate-400 text-center mb-3">
+            <p className="text-xs text-slate-400 text-center mb-3">
               Session expires in 15 minutes. Waiting for photos…
             </p>
             <div className="flex justify-end">
@@ -782,7 +782,7 @@ export function InvoicesContent() {
         const time = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
         return (
           <span>
-            {date} <span className="text-slate-400 text-[10px]">{time}</span>
+            {date} <span className="text-slate-400 text-xs">{time}</span>
           </span>
         );
       },
@@ -795,7 +795,7 @@ export function InvoicesContent() {
       render: (inv) => {
         const isRecurring = !!(inv.billingScheduleId || inv.contractorBillingScheduleId);
         return isRecurring
-          ? <span className="inline-flex items-center rounded-full bg-indigo-50 text-indigo-700 px-2 py-0.5 text-[10px] font-semibold">{t("manager:financeInvoices.text.recurring")}</span>
+          ? <span className="inline-flex items-center rounded-full bg-indigo-50 text-indigo-700 px-2 py-0.5 text-xs font-semibold">{t("manager:financeInvoices.text.recurring")}</span>
           : <span className="text-slate-300 text-xs">\u2014</span>;
       },
     },

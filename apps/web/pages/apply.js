@@ -1246,14 +1246,14 @@ function UploadedDocRow({ doc, onRemove }) {
           {rawText && (
             <div>
               <div className="text-xs font-semibold text-slate-700 mb-1">📄 Raw extracted text</div>
-              <pre className="text-[11px] leading-relaxed text-slate-600 bg-slate-50 border border-slate-200 rounded p-2 max-h-48 overflow-auto whitespace-pre-wrap font-mono">
+              <pre className="text-xs leading-relaxed text-slate-600 bg-slate-50 border border-slate-200 rounded p-2 max-h-48 overflow-auto whitespace-pre-wrap font-mono">
                 {rawText}
               </pre>
             </div>
           )}
 
           {/* Confidence */}
-          <div className="text-[10px] text-slate-400">
+          <div className="text-xs text-slate-400">
             docType: {doc.detectedDocType} · confidence: {doc.scanResult?.confidence}%
             {doc.scanResult?.summary && ` · ${doc.scanResult.summary}`}
           </div>
@@ -1278,7 +1278,7 @@ function AutoField({ label, type = "text", value, onChange, className = "", auto
       <label className="mb-1 flex items-center gap-1 text-xs font-medium text-slate-700">
         <span>{labelText}{isRequired ? <span className="text-red-500"> *</span> : null}</span>
         {autoFilled && value ? (
-          <span className="inline-flex items-center gap-0.5 rounded-full bg-green-100 text-green-700 px-1.5 py-0 text-[10px] font-medium">
+          <span className="inline-flex items-center gap-0.5 rounded-full bg-green-100 text-green-700 px-1.5 py-0 text-xs font-medium">
             ✨ auto-filled
           </span>
         ) : null}

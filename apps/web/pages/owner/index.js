@@ -236,7 +236,7 @@ export default function OwnerDashboard() {
         <div className="mb-8">
           {/* Portfolio snapshot */}
           <div className="mb-5 flex items-center gap-3">
-            <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">{t("owner:index.text.portfolioSnapshot")}</span>
+            <span className="text-xs font-semibold uppercase tracking-widest text-slate-400">{t("owner:index.text.portfolioSnapshot")}</span>
             <div className="flex-1 border-t border-slate-300" />
             <button onClick={loadDashboard} className="shrink-0 rounded-lg border border-slate-300 bg-transparent p-2 text-slate-400 hover:bg-slate-50 hover:text-slate-700 transition-colors" aria-label={t("owner:index.ariaLabel.refreshDashboard")}>
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">

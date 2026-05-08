@@ -224,7 +224,7 @@ export default function OwnerWorkRequestsPage() {
                 >
                   {t(`owner:workRequests.tabs.${tab.key.toLowerCase()}`)}
                   {count > 0 && (
-                    <span className={cn("ml-1.5 inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold", isActive ? "bg-indigo-100 text-indigo-700" : "bg-slate-100 text-slate-600")}>
+                    <span className={cn("ml-1.5 inline-flex items-center rounded-full px-1.5 py-0.5 text-xs font-semibold", isActive ? "bg-indigo-100 text-indigo-700" : "bg-slate-100 text-slate-600")}>
                       {count}
                     </span>
                   )}

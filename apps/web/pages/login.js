@@ -234,8 +234,17 @@ export default function LoginPage() {
 
   function redirectAfterLogin(session) {
     const meta = session.user?.app_metadata ?? {};
+    const userMeta = session.user?.user_metadata ?? {};
     setAuthToken(session.access_token);
     if (meta.appRole) localStorage.setItem("role", meta.appRole);
+
+    // First-time users: no password_set flag → prompt them to create a password
+    if (!userMeta.password_set) {
+      const dest = next ? `/set-password?next=${encodeURIComponent(next)}` : "/set-password";
+      router.push(dest);
+      return;
+    }
+
     const target =
       (typeof next === "string" && next.startsWith("/") ? next : null) ||
       (meta.accessLevel === "DOCS_INVESTOR" ? "/docs/pitchdeck.html" : null) ||

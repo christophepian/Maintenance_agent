@@ -342,7 +342,7 @@ export default function ManagerDashboardV2() {
         <div className="mb-8">
           {/* ─ Portfolio overview ─ */}
           <div className="mb-5 flex items-center gap-3">
-            <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">{t("manager:dashboard_V2.text.portfolioOverview")}</span>
+            <span className="text-xs font-semibold uppercase tracking-widest text-slate-400">{t("manager:dashboard_V2.text.portfolioOverview")}</span>
             <div className="flex-1 border-t border-slate-300" />
           </div>
 

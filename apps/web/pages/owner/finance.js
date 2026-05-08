@@ -123,7 +123,7 @@ function IngestionBadge({ ingestionStatus }) {
 function SourceChannelIcon({ channel }) {
   if (!channel || !SOURCE_LABEL[channel]) return null;
   const { text, cls } = SOURCE_LABEL[channel];
-  return <span className={"inline-flex items-center rounded border px-1.5 py-0.5 text-[10px] font-medium ml-1 " + cls}>{text}</span>;
+  return <span className={"inline-flex items-center rounded border px-1.5 py-0.5 text-xs font-medium ml-1 " + cls}>{text}</span>;
 }
 
 function ActionDropdown({ actions }) {

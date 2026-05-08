@@ -269,7 +269,7 @@ function StrategyOverlayPanel({ overlay }) {
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Badge variant={ALIGNMENT_TAG_VARIANT[item.tag]} className="text-[10px] px-1.5 py-0">
+                    <Badge variant={ALIGNMENT_TAG_VARIANT[item.tag]} className="text-xs px-1.5 py-0">
                       {ALIGNMENT_TAG_LABEL[item.tag]}
                     </Badge>
                     <span className="text-sm font-medium text-slate-900">
@@ -289,7 +289,7 @@ function StrategyOverlayPanel({ overlay }) {
                       <span
                         key={d.name}
                         className={cn(
-                          "inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full font-medium",
+                          "inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-full font-medium",
                           d.itemScore >= 60 ? "bg-emerald-100 text-emerald-700" :
                           d.itemScore >= 40 ? "bg-amber-100 text-amber-700" :
                           "bg-red-100 text-red-700"
@@ -585,7 +585,7 @@ function CapexEventRow({ ev, ov, rec, planId, isDraft, onRefresh, alignmentMap }
         {ev.assetName}
         {alignmentMap?.[ev.assetId] && (
           <span title={alignmentMap[ev.assetId].explanation} className="cursor-help">
-            <Badge variant={ALIGNMENT_TAG_VARIANT[alignmentMap[ev.assetId].tag]} className="ml-1 text-[10px] px-1 py-0">
+            <Badge variant={ALIGNMENT_TAG_VARIANT[alignmentMap[ev.assetId].tag]} className="ml-1 text-xs px-1 py-0">
               {ALIGNMENT_TAG_LABEL[alignmentMap[ev.assetId].tag]}
             </Badge>
           </span>

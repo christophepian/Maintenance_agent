@@ -241,12 +241,12 @@ export default function InvoiceDetailPage() {
                       <StatusBadge status={inv.status} />
                       <IngestionBadge ingestionStatus={inv.ingestionStatus} />
                       {inv.direction && (
-                        <span className="inline-flex items-center rounded-full bg-slate-50 border border-slate-200 px-2 py-0.5 text-[10px] font-medium text-slate-500">
+                        <span className="inline-flex items-center rounded-full bg-slate-50 border border-slate-200 px-2 py-0.5 text-xs font-medium text-slate-500">
                           {inv.direction === "INCOMING" ? "↓ Incoming" : "↑ Outgoing"}
                         </span>
                       )}
                       {inv.sourceChannel && SOURCE_LABEL[inv.sourceChannel] && (
-                        <span className={"inline-flex items-center rounded border px-1.5 py-0.5 text-[10px] font-medium " + SOURCE_LABEL[inv.sourceChannel].cls}>
+                        <span className={"inline-flex items-center rounded border px-1.5 py-0.5 text-xs font-medium " + SOURCE_LABEL[inv.sourceChannel].cls}>
                           {SOURCE_LABEL[inv.sourceChannel].text}
                         </span>
                       )}

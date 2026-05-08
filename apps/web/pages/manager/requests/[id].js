@@ -280,7 +280,7 @@ function StatusPipeline({ status, jobStatus, payingParty }) {
               <div className={cn("h-3.5 w-3.5 rounded-full border-2 shrink-0", getDotCls(i))} />
               {i < stages.length - 1 && <div className={cn("h-0.5 flex-1", connectorColor(i))} />}
             </div>
-            <span className={cn("mt-1.5 text-[11px] leading-tight text-center", getLabelCls(i))}>
+            <span className={cn("mt-1.5 text-xs leading-tight text-center", getLabelCls(i))}>
               {getLabelText(stage, i)}
             </span>
           </div>
@@ -990,7 +990,7 @@ export default function RequestDetailPage() {
                   {/* Contractor — only when assigned */}
                   {r.assignedContractor && (
                     <div className="border-t border-slate-100 pt-4 mt-4">
-                      <h4 className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-3">{t("manager:requestsId.text.contractor")}</h4>
+                      <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">{t("manager:requestsId.text.contractor")}</h4>
                       <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3">
                         <Field label={t("manager:requestsId.prop.name")}>
                           <Link href={`/manager/people/vendors/${r.assignedContractor.id}`} className="cell-link font-medium text-sm">
@@ -1006,7 +1006,7 @@ export default function RequestDetailPage() {
                   {/* Linked Asset (prefers canonical Asset, falls back to Appliance) */}
                   <div className="border-t border-slate-100 pt-4 mt-4">
                     <div className="flex items-center justify-between mb-3">
-                      <h4 className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 m-0">{t("manager:requestsId.text.asset")}</h4>
+                      <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-400 m-0">{t("manager:requestsId.text.asset")}</h4>
                       {linkedAsset && r.assetId && !assetPickerOpen && (
                         <button
                           type="button"
@@ -1052,7 +1052,7 @@ export default function RequestDetailPage() {
                             <>
                               {scored[0]?._score >= 3 && (
                                 <div className="w-full mb-2">
-                                  <p className="text-[11px] text-indigo-600 font-medium mb-1">{t("manager:requestsId.text.suggestedMatch")}</p>
+                                  <p className="text-xs text-indigo-600 font-medium mb-1">{t("manager:requestsId.text.suggestedMatch")}</p>
                                   <button
                                     type="button"
                                     onClick={() => { setSelectedAssetId(scored[0].id); doLinkAsset && setTimeout(doLinkAsset, 0); }}
@@ -1061,7 +1061,7 @@ export default function RequestDetailPage() {
                                   >
                                     <span className="font-medium text-indigo-800">{scored[0].name || scored[0].topic}</span>
                                     {scored[0].brand && <span className="text-indigo-600 ml-2">— {scored[0].brand}</span>}
-                                    <span className="ml-2 rounded-full bg-indigo-200 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-700">{t("manager:requestsId.text.suggested")}</span>
+                                    <span className="ml-2 rounded-full bg-indigo-200 px-1.5 py-0.5 text-xs font-semibold text-indigo-700">{t("manager:requestsId.text.suggested")}</span>
                                   </button>
                                 </div>
                               )}

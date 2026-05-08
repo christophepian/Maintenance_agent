@@ -227,7 +227,7 @@ function StatusPipeline({ status, payingParty }) {
               <div className={cn("h-3.5 w-3.5 rounded-full border-2 shrink-0", getDotCls(i))} />
               {i < stages.length - 1 && <div className={cn("h-0.5 flex-1", connectorColor(i))} />}
             </div>
-            <span className={cn("mt-1.5 text-[11px] leading-tight text-center", getLabelCls(i))}>
+            <span className={cn("mt-1.5 text-xs leading-tight text-center", getLabelCls(i))}>
               {getLabelText(stage, i)}
             </span>
           </div>
@@ -549,13 +549,13 @@ export default function OwnerRequestDetailPage() {
                       <div className="flex flex-wrap gap-x-6 gap-y-2 pt-4 sm:justify-between">
                         {contractorName && (
                           <div>
-                            <span className="text-[11px] font-medium text-amber-700 uppercase tracking-wide block">{t("owner:requestsId.text.selectedContractor")}</span>
+                            <span className="text-xs font-medium text-amber-700 uppercase tracking-wide block">{t("owner:requestsId.text.selectedContractor")}</span>
                             <span className="text-sm font-semibold text-slate-900">{contractorName}</span>
                           </div>
                         )}
                         {amountChf && (
                           <div>
-                            <span className="text-[11px] font-medium text-amber-700 uppercase tracking-wide block">{t("owner:requestsId.text.quoteAmount")}</span>
+                            <span className="text-xs font-medium text-amber-700 uppercase tracking-wide block">{t("owner:requestsId.text.quoteAmount")}</span>
                             <span className="text-sm font-semibold text-slate-900">{amountChf}</span>
                           </div>
                         )}
@@ -683,7 +683,7 @@ export default function OwnerRequestDetailPage() {
 
                   {r.assignedContractor && (
                     <div className="card-section">
-                      <h4 className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-3">{t("owner:requestsId.text.contractor")}</h4>
+                      <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">{t("owner:requestsId.text.contractor")}</h4>
                       <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3">
                         <Field label={t("owner:requestsId.prop.name")}>
                           <span className="text-sm font-medium">
@@ -698,7 +698,7 @@ export default function OwnerRequestDetailPage() {
 
                   {asset && (
                     <div className="card-section">
-                      <h4 className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-3">{t("owner:requestsId.text.asset")}</h4>
+                      <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">{t("owner:requestsId.text.asset")}</h4>
                       <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3">
                         <Field label={t("owner:requestsId.prop.name")}>{asset.name || "\u2014"}</Field>
                         {asset.brand       && <Field label={t("owner:requestsId.prop.brand")}>{asset.brand}</Field>}

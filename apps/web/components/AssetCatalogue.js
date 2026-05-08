@@ -16,7 +16,7 @@ function StatCard({ label, value, sublabel }) {
     <div className="rounded-lg border border-slate-100 bg-white px-4 py-3 shadow-sm">
       <p className="text-2xl font-bold text-slate-800">{value}</p>
       <p className="text-xs font-medium text-slate-500">{label}</p>
-      {sublabel && <p className="mt-0.5 text-[11px] text-slate-400">{sublabel}</p>}
+      {sublabel && <p className="mt-0.5 text-xs text-slate-400">{sublabel}</p>}
     </div>
   );
 }
@@ -32,7 +32,7 @@ function CategorySection({ category, items, collapsed, onToggle }) {
       >
         <span className="text-sm font-semibold text-slate-800 capitalize">{category || t("assetCatalogue.uncategorised")}</span>
         <div className="flex items-center gap-2">
-          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-500">
+          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500">
             {t(items.length === 1 ? "assetCatalogue.model_one" : "assetCatalogue.model_other", { count: items.length })}
           </span>
           <svg

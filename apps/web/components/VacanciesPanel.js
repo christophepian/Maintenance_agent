@@ -465,7 +465,7 @@ export default function VacanciesPanel({ role = "OWNER", refreshKey = 0 }) {
                   </div>
                   {statusBadge(sel.status, t)}
                 </div>
-                <p className="mt-2 text-[13px] text-slate-700">
+                <p className="mt-2 text-[0.8125rem] text-slate-700">
                   {sel.primaryCandidate
                     ? sel.primaryCandidate.name
                     : <span className="text-slate-400">{t("empty.noData")}</span>}

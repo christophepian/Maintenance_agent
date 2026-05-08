@@ -307,7 +307,7 @@ export default function ChatWidget() {
                   </svg>
                 </button>
               </form>
-              <p className="mt-1.5 text-[10px] text-slate-400 text-center">
+              <p className="mt-1.5 text-xs text-slate-400 text-center">
                 Press Enter to send · Shift+Enter for new line
               </p>
             </div>

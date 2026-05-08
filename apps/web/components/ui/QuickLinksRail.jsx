@@ -24,14 +24,14 @@ export default function QuickLinksRail({ items }) {
                 className="absolute -top-1.5 -right-1.5
                            rounded-full bg-destructive border-2 border-white
                            min-w-[18px] px-1 py-px
-                           text-[10px] font-bold leading-none text-white
+                           text-xs font-bold leading-none text-white
                            text-center tabular-nums"
               >
                 {item.count > 99 ? "99+" : item.count}
               </span>
             )}
           </span>
-          <span className="text-[11px] font-medium text-indigo-700 text-center -tracking-[0.005em]">
+          <span className="text-xs font-medium text-indigo-700 text-center -tracking-[0.005em]">
             {item.label}
           </span>
         </Link>

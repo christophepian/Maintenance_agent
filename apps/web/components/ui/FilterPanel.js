@@ -46,7 +46,7 @@ export function FilterToggle({ open, onToggle, activeCount }) {
         </svg>
         {t("filterPanel.filters")}
         {activeCount > 0 && (
-          <span className="inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-blue-600 px-1 text-[10px] font-semibold text-white">
+          <span className="inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-blue-600 px-1 text-xs font-semibold text-white">
             {activeCount}
           </span>
         )}
@@ -191,7 +191,7 @@ export function SortToggle({ open, onToggle, active }) {
       </svg>
       {t("filterPanel.sort")}
       {active && (
-        <span className="inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-blue-600 px-1 text-[10px] font-semibold text-white" aria-hidden="true">
+        <span className="inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-blue-600 px-1 text-xs font-semibold text-white" aria-hidden="true">
           1
         </span>
       )}

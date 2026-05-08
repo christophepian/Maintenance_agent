@@ -216,7 +216,7 @@ export default function NotificationBell({ role }) {
             />
           </svg>
           {unreadCount > 0 && (
-            <span className="absolute top-0.5 right-0.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[11px] font-bold leading-none text-white bg-red-600 rounded-full">
+            <span className="absolute top-0.5 right-0.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-xs font-bold leading-none text-white bg-red-600 rounded-full">
               {unreadCount}
             </span>
           )}

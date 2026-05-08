@@ -89,7 +89,7 @@ function DepreciationBar({ depreciation, installedAt }) {
   return (
     <div className="flex items-center gap-2 min-w-[220px]">
       {isFullyDepreciated && (
-        <span className="text-[10px] font-semibold uppercase tracking-wide bg-red-100 text-red-700 border border-red-200 px-1.5 py-0.5 rounded-full whitespace-nowrap">
+        <span className="text-xs font-semibold uppercase tracking-wide bg-red-100 text-red-700 border border-red-200 px-1.5 py-0.5 rounded-full whitespace-nowrap">
           {t("assetInventory.fullyDepreciated")}
         </span>
       )}
@@ -145,7 +145,7 @@ function DepreciationDetail({ depreciation, installedAt }) {
       <div className="flex items-center justify-between">
         <h5 className="text-xs font-semibold text-slate-600">Useful Life / Depreciation</h5>
         {isFullyDepreciated && (
-          <span className="text-[10px] font-semibold uppercase tracking-wide bg-red-100 text-red-700 border border-red-200 px-2 py-0.5 rounded-full">
+          <span className="text-xs font-semibold uppercase tracking-wide bg-red-100 text-red-700 border border-red-200 px-2 py-0.5 rounded-full">
             Fully depreciated
           </span>
         )}
@@ -190,7 +190,7 @@ function InterventionList({ interventions }) {
     <div className="space-y-1.5">
       {interventions.map((iv) => (
         <div key={iv.id} className="flex items-center gap-2 text-xs">
-          <span className={cn("px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase", iv.type === "REPLACEMENT" ? "bg-red-100 text-red-700" : "bg-blue-100 text-blue-700")}>
+          <span className={cn("px-1.5 py-0.5 rounded text-xs font-semibold uppercase", iv.type === "REPLACEMENT" ? "bg-red-100 text-red-700" : "bg-blue-100 text-blue-700")}>
             {iv.type}
           </span>
           <span className="text-slate-600">{formatDate(iv.interventionDate)}</span>
@@ -363,7 +363,7 @@ function AddAssetForm({ scope, parentId, unitId, units, onDone }) {
                   ← Back
                 </button>
               </div>
-              <p className="text-[10px] text-amber-600">
+              <p className="text-xs text-amber-600">
                 No depreciation standard will be matched — useful life won't be tracked unless you add a standard for this topic.
               </p>
             </div>
@@ -395,7 +395,7 @@ function AddAssetForm({ scope, parentId, unitId, units, onDone }) {
                     >
                       <span className="text-sm text-slate-800">{topicLabel(s.topicKey)}</span>
                       {s.usefulLifeMonths != null && (
-                        <span className="ml-2 shrink-0 text-[11px] font-medium text-slate-400">
+                        <span className="ml-2 shrink-0 text-xs font-medium text-slate-400">
                           {Math.round(s.usefulLifeMonths / 12)} yr
                         </span>
                       )}
@@ -514,7 +514,7 @@ function AddAssetForm({ scope, parentId, unitId, units, onDone }) {
             className="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-lg"
           />
           {!form.installedAt && (
-            <p className="text-[10px] text-amber-600 mt-0.5">
+            <p className="text-xs text-amber-600 mt-0.5">
               No install date — depreciation won't be tracked.
             </p>
           )}
@@ -885,7 +885,7 @@ export default function AssetInventoryPanel({ assets, onRefresh, scope, parentId
         return (
         <div key={type} className="space-y-1">
           <h4 className="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wider pt-2">
-            <span className={cn("px-2 py-0.5 rounded-full text-[10px]", TYPE_COLORS[type] || TYPE_COLORS.OTHER)}>{typeLabel(type)}</span>
+            <span className={cn("px-2 py-0.5 rounded-full text-xs", TYPE_COLORS[type] || TYPE_COLORS.OTHER)}>{typeLabel(type)}</span>
             <span className={cn("px-1.5 py-0.5 rounded border text-[9px] font-medium", CATEGORY_COLORS[category] || CATEGORY_COLORS.EQUIPMENT)}>{category}</span>
             <span>({items.length})</span>
           </h4>
@@ -910,7 +910,7 @@ export default function AssetInventoryPanel({ assets, onRefresh, scope, parentId
                     <div className="flex-1" />
                     <DepreciationBar depreciation={asset.depreciation} installedAt={asset.installedAt} />
                     {!asset.isPresent && (
-                      <span className="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-semibold">ABSENT</span>
+                      <span className="text-xs bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-semibold">ABSENT</span>
                     )}
                     <span className="text-slate-400 text-xs">{isExpanded ? "▲" : "▼"}</span>
                   </button>
@@ -1016,7 +1016,7 @@ export default function AssetInventoryPanel({ assets, onRefresh, scope, parentId
                             <button
                               type="button"
                               onClick={() => setShowInterventionFor(showInterventionFor === asset.id ? null : asset.id)}
-                              className="text-[10px] text-blue-600 hover:underline font-medium"
+                              className="text-xs text-blue-600 hover:underline font-medium"
                             >
                               {showInterventionFor === asset.id ? "Cancel" : "+ Log intervention"}
                             </button>

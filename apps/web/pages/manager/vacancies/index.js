@@ -333,7 +333,7 @@ export default function ManagerVacanciesPage() {
                         {selectionStatusBadge(sel.status)}
                       </div>
                       {sel.primaryCandidate && (
-                        <p className="mt-2 text-[13px] text-slate-700">{sel.primaryCandidate.name}</p>
+                        <p className="mt-2 text-[0.8125rem] text-slate-700">{sel.primaryCandidate.name}</p>
                       )}
                       <div className="table-card-footer">
                         {sel.lease ? (

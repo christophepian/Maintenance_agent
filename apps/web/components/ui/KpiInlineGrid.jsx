@@ -45,7 +45,7 @@ export default function KpiInlineGrid({ items = [], className }) {
               !isLastInRow && "border-r border-slate-100"
             )}
           >
-            <span className="text-[11px] font-medium text-slate-500 uppercase tracking-wide leading-tight">
+            <span className="text-xs font-medium text-slate-500 uppercase tracking-wide leading-tight">
               {item.label}
             </span>
             <span

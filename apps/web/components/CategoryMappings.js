@@ -223,7 +223,7 @@ function HowItWorks() {
           <span className="text-lg">&#x1F4CA;</span>
           <div>
             <p className="text-xs font-semibold text-slate-700">{t("categoryMappings.howItWorks.deprecTitle")}</p>
-            <p className="text-[11px] leading-relaxed text-slate-500">
+            <p className="text-xs leading-relaxed text-slate-500">
               {t("categoryMappings.howItWorks.deprecDesc")}
             </p>
           </div>
@@ -232,7 +232,7 @@ function HowItWorks() {
           <span className="text-lg">&#x2696;&#xFE0F;</span>
           <div>
             <p className="text-xs font-semibold text-slate-700">{t("categoryMappings.howItWorks.rentTitle")}</p>
-            <p className="text-[11px] leading-relaxed text-slate-500">
+            <p className="text-xs leading-relaxed text-slate-500">
               {t("categoryMappings.howItWorks.rentDesc")}
             </p>
           </div>
@@ -286,12 +286,12 @@ function CategoryCard({
             <div className="flex items-center gap-2">
               <h3 className="text-sm font-bold text-slate-800">{label}</h3>
               {isOrgOverride && (
-                <span className="rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-semibold text-violet-600">
+                <span className="rounded-full bg-violet-100 px-2 py-0.5 text-xs font-semibold text-violet-600">
                   {t("categoryMappings.card.customOverride")}
                 </span>
               )}
               {isDisabled && (
-                <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-semibold text-slate-500">
+                <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs font-semibold text-slate-500">
                   {t("categoryMappings.card.disabled")}
                 </span>
               )}
@@ -304,7 +304,7 @@ function CategoryCard({
 
         <div className="flex items-center gap-1">
           {isOrgOverride && (
-            <button onClick={onReset} className="rounded-lg px-2 py-1 text-[11px] font-medium text-slate-400 hover:bg-slate-50 hover:text-slate-600" title={t("categoryMappings.card.resetTitle")}>{t("categoryMappings.card.reset")}</button>
+            <button onClick={onReset} className="rounded-lg px-2 py-1 text-xs font-medium text-slate-400 hover:bg-slate-50 hover:text-slate-600" title={t("categoryMappings.card.resetTitle")}>{t("categoryMappings.card.reset")}</button>
           )}
           <button onClick={onStartEdit} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600" title={t("categoryMappings.card.editTitle")}><PencilIcon /></button>
           <button
@@ -343,7 +343,7 @@ function CategoryCard({
         </div>
 
         {(c.depreciationSamples?.length > 0 || c.ruleSamples?.length > 0) && (
-          <button onClick={() => setExpanded(!expanded)} className="mt-3 text-[11px] font-medium text-slate-400 hover:text-slate-600">
+          <button onClick={() => setExpanded(!expanded)} className="mt-3 text-xs font-medium text-slate-400 hover:text-slate-600">
             {expanded ? "\u25BE Hide technical details" : "\u25B8 Show technical details"}
           </button>
         )}
@@ -360,21 +360,21 @@ function DepreciationBox({ c, hasDepreciation }) {
       <div className="flex items-center gap-2">
         <span className="text-sm">&#x1F4CA;</span>
         <span className={cn("text-xs font-semibold", hasDepreciation ? "text-green-700" : "text-slate-500")}>{t("categoryMappings.deprecBox.title")}</span>
-        <span className={cn("ml-auto rounded-full px-2 py-0.5 text-[10px] font-bold", hasDepreciation ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-400")}>
+        <span className={cn("ml-auto rounded-full px-2 py-0.5 text-xs font-bold", hasDepreciation ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-400")}>
           {t("categoryMappings.deprecBox.item", { count: c.depreciationCount })}
         </span>
       </div>
       {hasDepreciation ? (
         <div className="mt-2">
-          <p className="text-[11px] leading-relaxed text-green-700">
+          <p className="text-xs leading-relaxed text-green-700">
             {t("categoryMappings.deprecBox.coversItems", { assets: c.readableAssets?.slice(0, 3).join(", ") })}
             {c.readableAssets?.length > 3 && <span> {t("categoryMappings.deprecBox.andMore", { count: c.readableAssets.length - 3 })}</span>}.
             {c.lifespanRange && (<> {t("categoryMappings.deprecBox.lifespans", { range: c.lifespanRange })}</>)}
           </p>
-          <p className="mt-1 text-[10px] text-green-600">{t("categoryMappings.deprecBox.whoPaysSub")}</p>
+          <p className="mt-1 text-xs text-green-600">{t("categoryMappings.deprecBox.whoPaysSub")}</p>
         </div>
       ) : (
-        <p className="mt-2 text-[11px] text-slate-400">{t("categoryMappings.deprecBox.noData")}</p>
+        <p className="mt-2 text-xs text-slate-400">{t("categoryMappings.deprecBox.noData")}</p>
       )}
     </div>
   );
@@ -387,20 +387,20 @@ function RentReductionBox({ c, hasRules }) {
       <div className="flex items-center gap-2">
         <span className="text-sm">&#x2696;&#xFE0F;</span>
         <span className={cn("text-xs font-semibold", hasRules ? "text-blue-700" : "text-slate-500")}>{t("categoryMappings.rentBox.title")}</span>
-        <span className={cn("ml-auto rounded-full px-2 py-0.5 text-[10px] font-bold", hasRules ? "bg-blue-100 text-blue-700" : "bg-slate-100 text-slate-400")}>
+        <span className={cn("ml-auto rounded-full px-2 py-0.5 text-xs font-bold", hasRules ? "bg-blue-100 text-blue-700" : "bg-slate-100 text-slate-400")}>
           {t("categoryMappings.rentBox.rule", { count: c.ruleCount })}
         </span>
       </div>
       {hasRules ? (
         <div className="mt-2">
-          <p className="text-[11px] leading-relaxed text-blue-700">
+          <p className="text-xs leading-relaxed text-blue-700">
             {t("categoryMappings.rentBox.rulesFor", { rules: c.readableRules?.slice(0, 3).join(", ") })}
             {c.readableRules?.length > 3 && <span> {t("categoryMappings.rentBox.andMore", { count: c.readableRules.length - 3 })}</span>}.
           </p>
-          <p className="mt-1 text-[10px] text-blue-600">{t("categoryMappings.rentBox.claimSub")}</p>
+          <p className="mt-1 text-xs text-blue-600">{t("categoryMappings.rentBox.claimSub")}</p>
         </div>
       ) : (
-        <p className="mt-2 text-[11px] text-slate-400">{t("categoryMappings.rentBox.noRules")}</p>
+        <p className="mt-2 text-xs text-slate-400">{t("categoryMappings.rentBox.noRules")}</p>
       )}
     </div>
   );
@@ -413,32 +413,32 @@ function TechnicalDetails({ c }) {
       <div className="grid gap-4 sm:grid-cols-2">
         {c.depreciationSamples?.length > 0 && (
           <div>
-            <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+            <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-slate-400">
               {t("categoryMappings.technical.deprecStandards", { count: c.depreciationCount })}
             </p>
             {c.depreciationSamples.map((d, i) => (
-              <div key={i} className="flex items-center justify-between py-0.5 text-[11px] text-slate-600">
+              <div key={i} className="flex items-center justify-between py-0.5 text-xs text-slate-600">
                 <span>{d.topic.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, ch => ch.toUpperCase())}</span>
                 <span className="text-slate-400">{Math.round(d.usefulLifeMonths / 12)} yr</span>
               </div>
             ))}
             {c.depreciationCount > c.depreciationSamples.length && (
-              <p className="mt-1 text-[10px] text-slate-400">{t("categoryMappings.technical.moreItems", { count: c.depreciationCount - c.depreciationSamples.length })}</p>
+              <p className="mt-1 text-xs text-slate-400">{t("categoryMappings.technical.moreItems", { count: c.depreciationCount - c.depreciationSamples.length })}</p>
             )}
           </div>
         )}
         {c.ruleSamples?.length > 0 && (
           <div>
-            <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+            <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-slate-400">
               {t("categoryMappings.technical.rentRules", { count: c.ruleCount })}
             </p>
             {c.ruleSamples.map((key, i) => (
-              <div key={i} className="py-0.5 text-[11px] text-slate-600">
+              <div key={i} className="py-0.5 text-xs text-slate-600">
                 {key.replace(/^CH_RENT_RED_/, "").replace(/_/g, " ").toLowerCase().replace(/\b\w/g, ch => ch.toUpperCase())}
               </div>
             ))}
             {c.ruleCount > c.ruleSamples.length && (
-              <p className="mt-1 text-[10px] text-slate-400">{t("categoryMappings.technical.moreItems", { count: c.ruleCount - c.ruleSamples.length })}</p>
+              <p className="mt-1 text-xs text-slate-400">{t("categoryMappings.technical.moreItems", { count: c.ruleCount - c.ruleSamples.length })}</p>
             )}
           </div>
         )}

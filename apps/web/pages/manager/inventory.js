@@ -457,13 +457,13 @@ export default function ManagerInventoryPage() {
                       <path fillRule="evenodd" d="M2.628 1.601C5.028 1.206 7.49 1 10 1s4.973.206 7.372.601a.75.75 0 0 1 .628.74v2.288a2.25 2.25 0 0 1-.659 1.59l-4.682 4.683a2.25 2.25 0 0 0-.659 1.59v3.037c0 .684-.31 1.33-.844 1.757l-1.937 1.55A.75.75 0 0 1 8 18.25v-5.757a2.25 2.25 0 0 0-.659-1.591L2.659 6.22A2.25 2.25 0 0 1 2 4.629V2.34a.75.75 0 0 1 .628-.74Z" clipRule="evenodd" />
                     </svg>
                     <span className="hidden sm:inline">{t("manager:inventory.text.filter")}</span>
-                    {buildingCantonFilter && <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-brand text-white text-[10px] font-bold leading-none">1</span>}
+                    {buildingCantonFilter && <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-brand text-white text-xs font-bold leading-none">1</span>}
                   </button>
                 {buildingFilterOpen && (
                     <>
                     <div className="fixed inset-0 z-10" aria-hidden="true" onClick={() => setBuildingFilterOpen(false)} />
                     <div className="absolute right-0 top-full mt-1.5 z-20 w-52 rounded-xl border border-slate-200 bg-white shadow-lg p-3 space-y-2">
-                      <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">{t("manager:inventory.text.canton")}</p>
+                      <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">{t("manager:inventory.text.canton")}</p>
                       <select
                         className="filter-input w-full"
                         value={buildingCantonFilter}
@@ -617,7 +617,7 @@ export default function ManagerInventoryPage() {
                     <div key={item.assetId} className="rounded-xl border border-slate-200 p-3.5 bg-white" title={item.recommendationReason}>
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
-                          <p className="font-medium text-slate-900 text-[13px] truncate">{item.assetName}</p>
+                          <p className="font-medium text-slate-900 text-[0.8125rem] truncate">{item.assetName}</p>
                           <p className="text-xs text-slate-500 mt-0.5">{item.topic}</p>
                         </div>
                         <span className={cn("inline-block shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold", recStyle.badge)}>
@@ -763,12 +763,12 @@ export default function ManagerInventoryPage() {
                                     {effectiveStyle.label}
                                   </span>
                                   {changed && (
-                                    <span className="block text-[10px] text-slate-400 mt-0.5">
+                                    <span className="block text-xs text-slate-400 mt-0.5">
                                       was: {(RECOMMENDATION_STYLES[item.recommendation] || RECOMMENDATION_STYLES.REPAIR).label}
                                     </span>
                                   )}
                                   {/* Transparent analysis: show why */}
-                                  <div className="mt-1 text-[10px] text-slate-400 leading-snug max-w-[160px]">
+                                  <div className="mt-1 text-xs text-slate-400 leading-snug max-w-[160px]">
                                     {item.repairToReplacementRatio != null && (
                                       <span className="block">
                                         Ratio {Math.round((hyp != null && hyp > 0 ? ((item.cumulativeRepairCostChf || 0) + hyp) / item.estimatedReplacementCostChf : item.repairToReplacementRatio) * 100)}%

@@ -80,7 +80,7 @@ const SOURCE_LABEL = {
 function SourceChannelIcon({ channel }) {
   if (!channel || !SOURCE_LABEL[channel]) return null;
   const { text, cls } = SOURCE_LABEL[channel];
-  return <span title={channel} className={"inline-flex items-center rounded border px-1.5 py-0.5 text-[10px] font-medium ml-1 " + cls}>{text}</span>;
+  return <span title={channel} className={"inline-flex items-center rounded border px-1.5 py-0.5 text-xs font-medium ml-1 " + cls}>{text}</span>;
 }
 
 /* ── ActionDropdown (same pattern as vacancies / manager hub) ── */
@@ -313,7 +313,7 @@ function InvoiceSlideOver({ invoiceId, onClose, onAction }) {
                 <Badge variant={invoiceVariant(inv.status)} size="sm">{inv.status}</Badge>
                 <IngestionBadge ingestionStatus={inv.ingestionStatus} />
                 {inv.sourceChannel && SOURCE_LABEL_DETAIL[inv.sourceChannel] && (
-                  <span className={"inline-flex items-center rounded border px-1.5 py-0.5 text-[10px] font-medium " + SOURCE_LABEL_DETAIL[inv.sourceChannel].cls}>
+                  <span className={"inline-flex items-center rounded border px-1.5 py-0.5 text-xs font-medium " + SOURCE_LABEL_DETAIL[inv.sourceChannel].cls}>
                     {SOURCE_LABEL_DETAIL[inv.sourceChannel].text}
                   </span>
                 )}

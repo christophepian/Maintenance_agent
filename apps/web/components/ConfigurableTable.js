@@ -97,13 +97,13 @@ function ColumnConfigPopover({ orderedColumns, visibility, density, onToggle, on
 
       {/* Density toggle */}
       <div className="border-t border-slate-100 px-3 py-2">
-        <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5">{t("configurableTable.density")}</p>
+        <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">{t("configurableTable.density")}</p>
         <div className="flex gap-1">
           {["comfortable", "compact"].map((d) => (
             <button
               key={d}
               onClick={() => onDensityChange(d)}
-              className={cn("flex-1 rounded-lg px-2 py-1 text-[11px] font-medium transition-colors", density === d
+              className={cn("flex-1 rounded-lg px-2 py-1 text-xs font-medium transition-colors", density === d
                   ? "bg-blue-50 text-blue-700 border border-blue-200"
                   : "bg-white text-slate-500 border border-slate-200 hover:bg-slate-50")}
             >
@@ -117,7 +117,7 @@ function ColumnConfigPopover({ orderedColumns, visibility, density, onToggle, on
       <div className="border-t border-slate-100 px-3 py-2">
         <button
           onClick={onReset}
-          className="text-[11px] text-slate-400 hover:text-red-500 transition-colors"
+          className="text-xs text-slate-400 hover:text-red-500 transition-colors"
         >
           {t("configurableTable.reset")}
         </button>
@@ -229,7 +229,7 @@ export default function ConfigurableTable({
       <div className={cn("overflow-x-auto rounded-lg border border-table-border", mobileCard && "hidden sm:block")}>
         <table className={cn("w-full text-sm", ds.text)}>
           <thead>
-            <tr className="border-b-2 border-table-border bg-transparent text-left text-[11px] font-medium uppercase tracking-wider text-slate-400">
+            <tr className="border-b-2 border-table-border bg-transparent text-left text-xs font-medium uppercase tracking-wider text-slate-400">
               {leadingHeader}
               {visibleColumns.map((col) =>
                 col.sortable ? (

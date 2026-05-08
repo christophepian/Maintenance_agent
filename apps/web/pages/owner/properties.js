@@ -43,7 +43,7 @@ function StatRow({ label, value, sub, valueClass = "" }) {
       <span className="text-xs text-slate-500 shrink-0">{label}</span>
       <span className={cn("text-xs font-semibold text-slate-800 text-right tabular-nums", valueClass)}>
         {value}
-        {sub && <span className="text-[10px] font-normal text-slate-400 ml-0.5">{sub}</span>}
+        {sub && <span className="text-xs font-normal text-slate-400 ml-0.5">{sub}</span>}
       </span>
     </div>
   );
@@ -95,7 +95,7 @@ function MonopolyCard({ building, fin, onClick }) {
           {building.name}
         </span>
         {(building.address || building.city) && (
-          <span className="text-[10px] text-white/75 mt-0.5 line-clamp-1">
+          <span className="text-xs text-white/75 mt-0.5 line-clamp-1">
             {[building.address, building.city].filter(Boolean).join(" · ")}
           </span>
         )}
@@ -114,7 +114,7 @@ function MonopolyCard({ building, fin, onClick }) {
             </span>
           )}
           {building.yearBuilt && (
-            <span className="text-[10px] text-slate-400">{building.yearBuilt}</span>
+            <span className="text-xs text-slate-400">{building.yearBuilt}</span>
           )}
           {amenities.map((a) => (
             <span key={a} className="text-[9px] bg-muted-light text-muted-text rounded px-1.5 py-0.5">
@@ -160,7 +160,7 @@ function MonopolyCard({ building, fin, onClick }) {
         <div className="mt-auto pt-4 flex items-center justify-between gap-1 flex-wrap">
           <span
             className={cn(
-              "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold",
+              "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold",
               building.isActive === false
                 ? "bg-muted-light text-muted"
                 : "bg-success-light text-success-dark"
@@ -169,7 +169,7 @@ function MonopolyCard({ building, fin, onClick }) {
             {building.isActive === false ? "Inactive" : "Active"}
           </span>
           {healthBadge && (
-            <span className={cn("inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold", healthBadge.cls)}>
+            <span className={cn("inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold", healthBadge.cls)}>
               {healthBadge.label}
             </span>
           )}

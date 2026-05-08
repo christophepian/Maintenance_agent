@@ -341,7 +341,7 @@ export default function MobileCapturePage() {
 
         {/* Footer */}
         <footer className="px-4 py-3 text-center">
-          <p className="text-[10px] text-slate-400 m-0">Secure invoice capture session</p>
+          <p className="text-xs text-slate-400 m-0">Secure invoice capture session</p>
         </footer>
       </div>
     </>
