@@ -703,16 +703,15 @@ export async function overrideDisqualification(
 /**
  * List vacant units (public endpoint).
  */
-export async function listVacantUnits(orgId: string) {
-  const units = await rentalAppRepo.findVacantUnits(prisma, orgId);
-
-  return units.map((u) => ({
+function mapVacantUnit(u: Awaited<ReturnType<typeof rentalAppRepo.findVacantUnits>>[number]) {
+  return {
     id: u.id,
     unitNumber: u.unitNumber,
     floor: u.floor,
     rooms: u.rooms,
     monthlyRentChf: u.monthlyRentChf,
     monthlyChargesChf: u.monthlyChargesChf,
+    isListedPublicly: u.isListedPublicly,
     vacantSince: u.leases[0]?.endDate ?? u.leases[0]?.terminatedAt ?? null,
     applicationCount: u._count.rentalApplicationUnits,
     building: u.building
@@ -724,5 +723,15 @@ export async function listVacantUnits(orgId: string) {
           postalCode: u.building.postalCode,
         }
       : undefined,
-  }));
+  };
+}
+
+export async function listVacantUnits(orgId: string) {
+  const units = await rentalAppRepo.findVacantUnits(prisma, orgId);
+  return units.map(mapVacantUnit);
+}
+
+export async function listPublicListings(orgId: string) {
+  const units = await rentalAppRepo.findVacantUnits(prisma, orgId);
+  return units.filter((u) => u.isListedPublicly).map(mapVacantUnit);
 }

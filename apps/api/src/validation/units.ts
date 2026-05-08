@@ -29,6 +29,9 @@ export const UpdateUnitSchema = z.object({
   // Pricing
   monthlyRentChf: z.number().int().min(0).max(100000).nullable().optional(),
   monthlyChargesChf: z.number().int().min(0).max(50000).nullable().optional(),
+
+  // Listings
+  isListedPublicly: z.boolean().optional(),
 });
 
 export type CreateUnitInput = z.infer<typeof CreateUnitSchema>;

@@ -60,7 +60,7 @@ export default function ListingsPage() {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch("/api/vacant-units");
+      const res = await fetch("/api/listings");
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error?.message || data?.message || "Failed to load listings");
       setUnits(data.data || []);

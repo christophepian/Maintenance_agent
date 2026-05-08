@@ -184,6 +184,28 @@ export default function VacanciesPanel({ role = "OWNER", refreshKey = 0 }) {
     setHasCandidatesFilter(false);
   }
 
+  // ── Publish toggle ────────────────────────────────────────────
+  const [publishingId, setPublishingId] = useState(null);
+
+  async function togglePublish(unit) {
+    setPublishingId(unit.id);
+    try {
+      const res = await fetch(`/api/units/${unit.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({ isListedPublicly: !unit.isListedPublicly }),
+      });
+      if (!res.ok) throw new Error("Failed to update listing status");
+      setVacancyRows((rows) =>
+        rows.map((r) => r.id === unit.id ? { ...r, isListedPublicly: !unit.isListedPublicly } : r)
+      );
+    } catch (err) {
+      setError(err?.message || "Failed to update listing status");
+    } finally {
+      setPublishingId(null);
+    }
+  }
+
   // ── Action paths ──────────────────────────────────────────────
   const fillPath = (unitId) =>
     role === "MANAGER" ? `/manager/vacancies/${unitId}/fill` : `/owner/vacancies/${unitId}/fill`;
@@ -315,6 +337,22 @@ export default function VacanciesPanel({ role = "OWNER", refreshKey = 0 }) {
               { id: "actions", label: "Actions", sortable: false, alwaysVisible: true, className: "text-right", headerClassName: "text-right",
                 render: (u) => (
                   <div className="flex items-center justify-end gap-2">
+                    <button
+                      onClick={() => togglePublish(u)}
+                      disabled={publishingId === u.id}
+                      className={[
+                        "rounded-lg border px-3 py-2 text-xs font-semibold transition-colors disabled:opacity-50",
+                        u.isListedPublicly
+                          ? "border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
+                          : "border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100",
+                      ].join(" ")}
+                    >
+                      {publishingId === u.id
+                        ? "…"
+                        : u.isListedPublicly
+                        ? "Unpublish"
+                        : "Publish to listings"}
+                    </button>
                     <Link href={fillPath(u.id)} className="rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-xs font-semibold text-green-700 hover:bg-green-100">
                       Fill vacancy →
                     </Link>
@@ -343,7 +381,19 @@ export default function VacanciesPanel({ role = "OWNER", refreshKey = 0 }) {
                       : "No rent set"}
                   </span>
                 </div>
-                <div className="flex gap-2 mt-3">
+                <div className="flex gap-2 mt-3 flex-wrap">
+                  <button
+                    onClick={() => togglePublish(u)}
+                    disabled={publishingId === u.id}
+                    className={[
+                      "rounded-lg border px-3 py-2 text-xs font-semibold transition-colors disabled:opacity-50",
+                      u.isListedPublicly
+                        ? "border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
+                        : "border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100",
+                    ].join(" ")}
+                  >
+                    {publishingId === u.id ? "…" : u.isListedPublicly ? "Unpublish" : "Publish to listings"}
+                  </button>
                   <Link href={fillPath(u.id)} className="rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-xs font-semibold text-green-700 hover:bg-green-100">
                     Fill vacancy →
                   </Link>

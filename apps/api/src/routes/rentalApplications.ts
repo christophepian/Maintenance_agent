@@ -24,6 +24,7 @@ import {
   adjustEvaluation,
   overrideDisqualification,
   listVacantUnits,
+  listPublicListings,
 } from "../services/rentalApplications";
 import { ownerSelectCandidates } from "../services/ownerSelection";
 import { listEmails, getEmail } from "../services/emailOutbox";
@@ -72,6 +73,20 @@ export function registerRentalRoutes(router: Router) {
     } catch (e: any) {
       console.error("[RENTAL] listVacantUnits error:", e);
       sendError(res, 500, "DB_ERROR", "Failed to fetch vacant units", e.message);
+    }
+  });
+
+  /**
+   * Public rental listings — only units explicitly published by the manager.
+   * Used by the public /listings page.
+   */
+  router.get("/listings", async ({ res, orgId }) => {
+    try {
+      const units = await listPublicListings(orgId);
+      sendJson(res, 200, { data: units });
+    } catch (e: any) {
+      console.error("[RENTAL] listPublicListings error:", e);
+      sendError(res, 500, "DB_ERROR", "Failed to fetch listings", e.message);
     }
   });
 

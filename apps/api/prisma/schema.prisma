@@ -440,9 +440,10 @@ model Unit {
   type       UnitType @default(RESIDENTIAL)
 
   // Vacancy fields (rental applications)
-  isVacant          Boolean @default(false)
-  monthlyRentChf    Int?
-  monthlyChargesChf Int?
+  isVacant            Boolean @default(false)
+  isListedPublicly    Boolean @default(false)
+  monthlyRentChf      Int?
+  monthlyChargesChf   Int?
 
   // Rent estimation fields
   livingAreaSqm      Float?
