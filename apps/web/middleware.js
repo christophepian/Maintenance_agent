@@ -93,6 +93,15 @@ export async function middleware(request) {
       return response; // admin sees everything
     }
     if (accessLevel === "DOCS_INVESTOR" && isInvestorDoc(pathname)) {
+      // Signal to the static HTML that this is an investor-only session so it
+      // can hide hub-bar links the investor is not allowed to visit.
+      response.cookies.set("ma_docs_role", "investor", {
+        path: "/",
+        sameSite: "lax",
+        httpOnly: false, // must be readable by client-side JS in the static HTML
+        secure: process.env.NODE_ENV === "production",
+        maxAge: 60 * 60 * 8, // 8 hours
+      });
       return response; // investor sees pitchdeck only
     }
     // All other cases: forbidden — redirect to login with error hint
