@@ -50,7 +50,8 @@ export default function TenantLeaseDetailPage() {
     } catch {
       router.push("/tenant");
     }
-  }, [router]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Fetch lease detail
   const fetchLease = useCallback(async () => {

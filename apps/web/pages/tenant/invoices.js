@@ -24,7 +24,8 @@ export default function TenantInvoicesPage() {
     const raw = localStorage.getItem("tenantSession");
     if (!raw) { router.push("/tenant"); return; }
     try { setSession(JSON.parse(raw)); } catch { router.push("/tenant"); }
-  }, [router]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const fetchInvoices = useCallback(async () => {
     if (!session?.tenant?.id) return;

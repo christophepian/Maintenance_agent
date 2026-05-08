@@ -51,7 +51,8 @@ export default function TenantInboxPage() {
     const raw = localStorage.getItem("tenantSession");
     if (!raw) { setLoading(false); router.push("/tenant"); return; }
     try { setSession(JSON.parse(raw)); } catch { setLoading(false); router.push("/tenant"); }
-  }, [router]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const fetchNotifications = useCallback(async () => {
     if (!session?.tenant?.id) { setLoading(false); return; }

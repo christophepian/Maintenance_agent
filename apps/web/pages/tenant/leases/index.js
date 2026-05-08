@@ -39,7 +39,8 @@ export default function TenantLeasesPage() {
       setLoading(false);
       router.push("/tenant");
     }
-  }, [router]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const fetchLeases = useCallback(async () => {
     if (!session?.tenant?.id) { setLoading(false); return; }

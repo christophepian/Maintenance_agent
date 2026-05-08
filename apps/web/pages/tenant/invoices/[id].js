@@ -27,7 +27,8 @@ export default function TenantInvoiceDetailPage() {
     const raw = localStorage.getItem("tenantSession");
     if (!raw) { router.push("/tenant"); return; }
     try { setSession(JSON.parse(raw)); } catch { router.push("/tenant"); }
-  }, [router]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Fetch invoice list and find matching one
   useEffect(() => {
