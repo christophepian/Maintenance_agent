@@ -305,7 +305,7 @@ const server = http.createServer(async (req: AuthedRequest, res) => {
 
     /* ── Public auth routes — must be reachable before org/auth resolution ── */
     if (
-      (path === "/auth/login" || path === "/auth/register" || path === "/triage") &&
+      (path === "/auth/login" || path === "/auth/register" || path === "/triage" || path === "/tenant-session") &&
       req.method === "POST"
     ) {
       const handled = await router.dispatch(req, res, path, query, DEFAULT_ORG_ID, prisma);
