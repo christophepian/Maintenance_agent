@@ -22,6 +22,7 @@ export interface TokenPayload {
   role: string;        // from app_metadata.appRole
   supabaseId?: string; // sub claim
   accessLevel?: string;// ADMIN | APP_USER | DOCS_INVESTOR
+  tenantId?: string;   // Tenant.id — set in app_metadata for TENANT role users
 }
 
 // ── Supabase JWKS (production) ───────────────────────────────────────────────
@@ -63,6 +64,7 @@ export async function resolveSupabaseToken(token: string): Promise<TokenPayload 
       role: meta.appRole || "MANAGER",
       supabaseId: payload.sub,
       accessLevel: meta.accessLevel,
+      tenantId: meta.tenantId || undefined,
     };
   } catch (err) {
     console.error("[auth] resolveSupabaseToken failed:", err instanceof Error ? err.message : String(err));

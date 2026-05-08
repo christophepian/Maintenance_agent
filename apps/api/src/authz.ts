@@ -177,6 +177,18 @@ export function requireStaffAuth(
 }
 
 export function requireTenantSession(req: http.IncomingMessage, res: http.ServerResponse): string | null {
+  // 1. Use pre-resolved user from Supabase JWT (set by server.ts before routing)
+  const authedReq = req as AuthedRequest;
+  if (authedReq.user) {
+    if (authedReq.user.role !== "TENANT") {
+      res.writeHead(403, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: "Tenant role required" }));
+      return null;
+    }
+    return authedReq.user.tenantId || authedReq.user.userId || null;
+  }
+
+  // 2. Fall back to manual decode for legacy dev JWTs (AUTH_OPTIONAL mode)
   const authHeader = req.headers["authorization"];
   if (!authHeader?.startsWith("Bearer ")) {
     res.writeHead(401, { "Content-Type": "application/json" });
