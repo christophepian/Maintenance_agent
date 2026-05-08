@@ -15,7 +15,8 @@ export default function TenantLogin() {
     } else {
       router.replace("/login?next=/tenant/requests");
     }
-  }, [router]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <AppShell role="TENANT">
