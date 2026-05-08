@@ -40,8 +40,6 @@ export default function BuildingDetail() {
 
   // ui object removed — all styles now use Tailwind className
 
-  const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3001";
-
   const [building, setBuilding] = useState(null);
   const [units, setUnits] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -138,9 +136,9 @@ export default function BuildingDetail() {
   }
 
   async function fetchJSON(path, options = {}) {
-    const res = await fetch(`${API_BASE}${path}`, {
+    const res = await fetch(`/api${path}`, {
       ...options,
-      headers: { "Content-Type": "application/json", ...(options.headers || {}) },
+      headers: { "Content-Type": "application/json", ...authHeaders(), ...(options.headers || {}) },
     });
     const text = await res.text();
     let data = null;
@@ -1370,11 +1368,11 @@ export default function BuildingDetail() {
                             type="button"
                             onClick={async () => {
                               try {
-                                const r = await fetch(`${API_BASE}/lease-templates/${tpl.id}`, { method: "DELETE" });
+                                const r = await fetch(`/api/lease-templates/${tpl.id}`, { method: "DELETE", headers: authHeaders() });
                                 if (!r.ok) throw new Error("Delete failed");
                                 await loadLeaseTemplates();
                                 toast.show(`Template "${tpl.templateName || "Unnamed"}" deleted`, async () => {
-                                  await fetch(`${API_BASE}/lease-templates/${tpl.id}/restore`, { method: "POST" });
+                                  await fetch(`/api/lease-templates/${tpl.id}/restore`, { method: "POST", headers: authHeaders() });
                                   await loadLeaseTemplates();
                                 });
                               } catch (e) {
