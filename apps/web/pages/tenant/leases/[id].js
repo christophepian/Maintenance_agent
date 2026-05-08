@@ -41,26 +41,28 @@ export default function TenantLeaseDetailPage() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     const raw = localStorage.getItem("tenantSession");
-    if (!raw) {
-      router.push("/tenant");
+    if (raw) {
+      try { setSession(JSON.parse(raw)); return; } catch { /* fall through */ }
+    }
+    if (localStorage.getItem("authToken")) {
+      setSession({ tenant: {}, unit: null, building: null });
       return;
     }
-    try {
-      setSession(JSON.parse(raw));
-    } catch {
-      router.push("/tenant");
+    router.push("/tenant");
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
     }
+    router.push("/tenant");
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Fetch lease detail
   const fetchLease = useCallback(async () => {
-    if (!session?.tenant?.id || !leaseId) return;
+    if (!session || !leaseId) return;
     setLoading(true);
     setError(null);
     try {
-      const qs = `tenantId=${session.tenant.id}`;
-      const res = await tenantFetch(`/api/tenant-portal/leases/${leaseId}?${qs}`);
+      const res = await tenantFetch(`/api/tenant-portal/leases/${leaseId}`);
       const data = await res.json();
       if (!res.ok) {
         setError(data?.error?.message || data?.error || "Failed to load lease");
@@ -80,16 +82,14 @@ export default function TenantLeaseDetailPage() {
 
   // Accept/sign handler
   async function handleAccept() {
-    if (!session?.tenant?.id) return;
+    if (!session) return;
     setAccepting(true);
     setError(null);
     try {
       const res = await tenantFetch(`/api/tenant-portal/leases/${leaseId}/accept`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          tenantId: session.tenant.id,
-        }),
+        body: JSON.stringify({}),
       });
       const data = await res.json();
       if (!res.ok) {

@@ -28,27 +28,24 @@ export default function TenantLeasesPage() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     const raw = localStorage.getItem("tenantSession");
-    if (!raw) {
-      setLoading(false);
-      router.push("/tenant");
+    if (raw) {
+      try { setSession(JSON.parse(raw)); return; } catch { /* fall through */ }
+    }
+    if (localStorage.getItem("authToken")) {
+      setSession({ tenant: {}, unit: null, building: null });
       return;
     }
-    try {
-      setSession(JSON.parse(raw));
-    } catch {
-      setLoading(false);
-      router.push("/tenant");
-    }
+    setLoading(false);
+    router.push("/tenant");
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchLeases = useCallback(async () => {
-    if (!session?.tenant?.id) { setLoading(false); return; }
+    if (!session) { setLoading(false); return; }
     setLoading(true);
     setError(null);
     try {
-      const qs = `tenantId=${session.tenant.id}`;
-      const res = await tenantFetch(`/api/tenant-portal/leases?${qs}`);
+      const res = await tenantFetch(`/api/tenant-portal/leases`);
       const data = await res.json();
       if (!res.ok) {
         setError(data?.error?.message || data?.error || "Failed to load leases");

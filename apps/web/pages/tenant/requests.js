@@ -1175,13 +1175,21 @@ export default function TenantRequestsPage() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     const raw = localStorage.getItem("tenantSession");
-    if (!raw) { setLoading(false); router.push("/tenant"); return; }
-    try { setSession(JSON.parse(raw)); } catch { setLoading(false); router.push("/tenant"); }
+    if (raw) {
+      try { setSession(JSON.parse(raw)); return; } catch { /* fall through */ }
+    }
+    // Supabase auth path: authToken present means tenant is authenticated via email login
+    if (localStorage.getItem("authToken")) {
+      setSession({ tenant: {}, unit: null, building: null });
+      return;
+    }
+    setLoading(false);
+    router.push("/tenant");
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchRequests = useCallback(async () => {
-    if (!session?.tenant?.id) { setLoading(false); return; }
+    if (!session) { setLoading(false); return; }
     setLoading(true);
     setError(null);
     try {

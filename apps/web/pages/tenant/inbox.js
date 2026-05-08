@@ -49,19 +49,24 @@ export default function TenantInboxPage() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     const raw = localStorage.getItem("tenantSession");
-    if (!raw) { setLoading(false); router.push("/tenant"); return; }
-    try { setSession(JSON.parse(raw)); } catch { setLoading(false); router.push("/tenant"); }
+    if (raw) {
+      try { setSession(JSON.parse(raw)); return; } catch { /* fall through */ }
+    }
+    if (localStorage.getItem("authToken")) {
+      setSession({ tenant: {}, unit: null, building: null });
+      return;
+    }
+    setLoading(false);
+    router.push("/tenant");
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchNotifications = useCallback(async () => {
-    if (!session?.tenant?.id) { setLoading(false); return; }
+    if (!session) { setLoading(false); return; }
     setLoading(true);
     setError(null);
     try {
-      const res = await tenantFetch(
-        `/api/tenant-portal/notifications?tenantId=${session.tenant.id}`
-      );
+      const res = await tenantFetch(`/api/tenant-portal/notifications`);
       const data = await res.json();
       if (!res.ok) {
         setError(data?.error?.message || "Failed to load notifications");
@@ -76,11 +81,9 @@ export default function TenantInboxPage() {
   }, [session]);
 
   const fetchUnreadCount = useCallback(async () => {
-    if (!session?.tenant?.id) return;
+    if (!session) return;
     try {
-      const res = await tenantFetch(
-        `/api/tenant-portal/notifications/unread-count?tenantId=${session.tenant.id}`
-      );
+      const res = await tenantFetch(`/api/tenant-portal/notifications/unread-count`);
       const data = await res.json();
       setUnreadCount(data.count || 0);
     } catch { /* silent */ }
@@ -119,14 +122,14 @@ export default function TenantInboxPage() {
   }
 
   async function markAllRead() {
-    if (!session?.tenant?.id) return;
+    if (!session) return;
     try {
       await tenantFetch(
-        `/api/tenant-portal/notifications/mark-all-read?tenantId=${session.tenant.id}`,
+        `/api/tenant-portal/notifications/mark-all-read`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ tenantId: session.tenant.id }),
+          body: JSON.stringify({}),
         }
       );
       fetchNotifications();

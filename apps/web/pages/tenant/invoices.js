@@ -22,13 +22,19 @@ export default function TenantInvoicesPage() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     const raw = localStorage.getItem("tenantSession");
-    if (!raw) { router.push("/tenant"); return; }
-    try { setSession(JSON.parse(raw)); } catch { router.push("/tenant"); }
+    if (raw) {
+      try { setSession(JSON.parse(raw)); return; } catch { /* fall through */ }
+    }
+    if (localStorage.getItem("authToken")) {
+      setSession({ tenant: {}, unit: null, building: null });
+      return;
+    }
+    router.push("/tenant");
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchInvoices = useCallback(async () => {
-    if (!session?.tenant?.id) return;
+    if (!session) return;
     setLoading(true);
     setError(null);
     try {

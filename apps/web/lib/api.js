@@ -51,13 +51,14 @@ export function ownerAuthHeaders() {
 }
 
 /**
- * Tenant portal pages: reads tenantToken only.
- * tenantToken is written by: phone login, TenantPicker (dev switch), tenant-dev-login page.
- * Never falls back to authToken — a manager Supabase JWT would fail requireTenantSession.
+ * Tenant portal pages: prefers tenantToken (dev TenantPicker switch),
+ * falls back to authToken (Supabase email login as TENANT role).
+ * The backend requireTenantSession accepts both — it checks req.user.role === "TENANT"
+ * for Supabase JWTs, and decodes legacy dev JWTs with role:"TENANT" directly.
  */
 export function tenantHeaders() {
   if (typeof window === "undefined") return {};
-  const token = localStorage.getItem("tenantToken");
+  const token = localStorage.getItem("tenantToken") || localStorage.getItem(TOKEN_KEY);
   if (token) return { Authorization: `Bearer ${token}` };
   return {};
 }
