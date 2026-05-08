@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useRouter } from "next/router";
 import AppShell from "../components/AppShell";
+import TenantPicker from "../components/TenantPicker";
 
 import { cn } from "../lib/utils";
 import { withTranslations } from "../lib/i18n";
@@ -43,11 +44,9 @@ export default function TenantPhone() {
         return;
       }
 
-      // Write token to both keys: tenantToken (phone-login key) and authToken
-      // (read by tenantHeaders() / tenantFetch in all tenant portal pages).
+      // Write token to tenantToken — read by tenantHeaders() / tenantFetch in all tenant portal pages.
       if (data.data.token) {
         localStorage.setItem("tenantToken", data.data.token);
-        localStorage.setItem("authToken", data.data.token);
       }
       localStorage.setItem("tenantSession", JSON.stringify(data.data));
       router.push("/tenant/inbox");
@@ -61,6 +60,7 @@ export default function TenantPhone() {
   return (
     <AppShell role="TENANT">
       <div className="main-container">
+      <TenantPicker onSelect={() => router.push("/tenant/requests")} />
       <h1>{t("tenant:index.heading.tenantSignIn")}</h1>
       <div className="subtle">Enter your phone number to continue.</div>
 

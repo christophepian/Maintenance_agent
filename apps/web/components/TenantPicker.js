@@ -69,7 +69,6 @@ export default function TenantPicker({ onSelect }) {
       if (!res.ok) throw new Error(data?.error?.message || "Failed to switch tenant");
       if (data.data?.token) {
         localStorage.setItem("tenantToken", data.data.token);
-        localStorage.setItem("authToken", data.data.token);
       }
       localStorage.setItem("tenantSession", JSON.stringify(data.data));
       onSelect?.(tenantId);

@@ -51,15 +51,13 @@ export function ownerAuthHeaders() {
 }
 
 /**
- * Tenant portal pages: reads tenantToken first (issued by phone-based or
- * dev-impersonation login), falls back to authToken (Supabase) if not present.
- *
- * Writing: tenant session login always writes to BOTH tenantToken AND authToken
- * so this helper never needs to distinguish between login paths at the call site.
+ * Tenant portal pages: reads tenantToken only.
+ * tenantToken is written by: phone login, TenantPicker (dev switch), tenant-dev-login page.
+ * Never falls back to authToken — a manager Supabase JWT would fail requireTenantSession.
  */
 export function tenantHeaders() {
   if (typeof window === "undefined") return {};
-  const token = localStorage.getItem("tenantToken") || localStorage.getItem(TOKEN_KEY);
+  const token = localStorage.getItem("tenantToken");
   if (token) return { Authorization: `Bearer ${token}` };
   return {};
 }
