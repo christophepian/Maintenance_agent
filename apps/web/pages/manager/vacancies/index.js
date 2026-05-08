@@ -173,8 +173,8 @@ export default function ManagerVacanciesPage() {
     loadSelections();
   }, []);
 
-  async function loadVacantUnits() {
-    setLoading(true);
+  async function loadVacantUnits({ silent = false } = {}) {
+    if (!silent) setLoading(true);
     setError("");
     try {
       const res = await fetch("/api/vacant-units", { headers: authHeaders() });
@@ -184,7 +184,7 @@ export default function ManagerVacanciesPage() {
     } catch (e) {
       setError(e.message);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }
 
@@ -213,9 +213,11 @@ export default function ManagerVacanciesPage() {
         const data = await res.json().catch(() => ({}));
         throw new Error(data?.error?.message || data?.message || "Failed to update listing status");
       }
+      // Optimistic update for instant feedback, then silent server reload to confirm persistence
       setUnits((prev) =>
         prev.map((u) => u.id === unit.id ? { ...u, isListedPublicly: !unit.isListedPublicly } : u)
       );
+      await loadVacantUnits({ silent: true });
     } catch (e) {
       setError(e.message);
     } finally {
