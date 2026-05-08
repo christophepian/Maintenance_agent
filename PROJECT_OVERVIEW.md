@@ -208,6 +208,43 @@ if (!tenantId) return;
 
 ---
 
+## Supabase User Management
+
+**Login flow** — `/login` has two tabs: Magic link (passwordless) and Password. On first login, callback detects `!user_metadata.password_set` (+ `created_at ≈ last_sign_in_at` within 5 s) and redirects to `/set-password`. Password reset goes to `/reset-password` via PKCE code exchange.
+
+**App metadata fields** — set in `auth.users.raw_app_meta_data`:
+| Field | Values |
+|-------|--------|
+| `appRole` | `MANAGER` \| `CONTRACTOR` \| `OWNER` \| `TENANT` |
+| `orgId` | `default-org` (or specific org UUID) |
+| `accessLevel` | `ADMIN` \| `APP_USER` \| `DOCS_INVESTOR` |
+
+**Creating users manually** (when Supabase invite emails hit rate limits):
+Run `apps/api/scripts/create-supabase-user.sql` in the Supabase SQL Editor. It handles auth.users, auth.identities, and the app-side User record in three steps.
+
+**Setting / resetting a user's password via Admin API:**
+```bash
+curl -X PUT \
+  "https://<project-ref>.supabase.co/auth/v1/admin/users/<user-id>" \
+  -H "Authorization: Bearer <service-role-key>" \
+  -H "apikey: <service-role-key>" \
+  -H "Content-Type: application/json" \
+  -d '{"password":"NewPassword123","email_confirm":true}'
+```
+Use `PUT`, not `PATCH` (GoTrue returns 405 for PATCH).
+
+**Granting admin rights:**
+```sql
+UPDATE auth.users
+SET raw_app_meta_data = '{"appRole":"MANAGER","orgId":"default-org","accessLevel":"ADMIN"}'
+WHERE email = 'user@example.com';
+```
+User must log out and back in for the new token to take effect.
+
+**Key format** — Supabase project uses legacy JWT keys (`eyJhbGci...`). The `sb_publishable_` / `sb_secret_` prefixed keys are disabled. The anon key is safe to expose to browsers (RLS-gated). The service role key is server-side only — never use `NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY`.
+
+---
+
 ## Task Routing
 
 ### API change (add endpoint / modify response)
@@ -324,7 +361,7 @@ npx prisma migrate diff \
 
 **Current System Snapshot**
 
-66 suites · 1001 tests (100% passing) · 0 TS errors · 91/94 audit findings resolved. Strategy Engine & Capture Hardening epic complete (3-phase strategy engine with 56 tests, Azure OCR activation, invoice source-file serving). Responsive polish pass complete: dual-render pattern (F-UI9) applied to 18+ pages across all 4 personas. Audit remediation pass: prisma-in-routes eliminated (userRepository/requestRepository/rfpRepository), workflowCoverage tests added, openapi.yaml updated with 3 missing routes, schema drift bug fixed (AUTO_APPROVED migration backfilled).
+66 suites · 1009 tests (100% passing) · 0 TS errors · 91/94 audit findings resolved. Strategy Engine & Capture Hardening epic complete (3-phase strategy engine with 56 tests, Azure OCR activation, invoice source-file serving). Responsive polish pass complete: dual-render pattern (F-UI9) applied to 18+ pages across all 4 personas. Audit remediation pass: prisma-in-routes eliminated (userRepository/requestRepository/rfpRepository), workflowCoverage tests added, openapi.yaml updated with 3 missing routes, schema drift bug fixed (AUTO_APPROVED migration backfilled). Auth hardening: contractor IDOR fixed via `resolveContractorId()` (identity derived from JWT email, never query param); login page redesigned (magic-link + password tabs, first-time `/set-password` flow, `/reset-password` for recovery).
 
 **i18n (bilingual EN/FR — live as of 2026-05-05):** All UI strings extracted through `next-i18next`. Five namespaces: `common`, `manager`, `owner`, `contractor`, `tenant`. Tab labels rendered via `t(\`ns:section.tabs.\${key}\`)` template literals — runtime keys must exist in locale JSON. Critical dev rule: `reloadOnPrerender: true` is set in `next-i18next.config.js` so locale file changes are picked up without a server restart. Critical deploy rule: `.vercelignore` must never contain a bare `*.json` rule — it excluded all locale files from Vercel builds (now replaced with specific root-level exclusions; `apps/web/.vercelignore` is empty). Audit scripts: `scripts/i18n-audit-missing.py` (static key coverage), `scripts/i18n-audit-tabs.py` (template-literal tab key coverage).
 
