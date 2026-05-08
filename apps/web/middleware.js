@@ -21,11 +21,16 @@ import { NextResponse } from "next/server";
 // Paths that never require auth
 const PUBLIC_PATHS = [
   "/login",
+  "/reset-password",      // unauthenticated users arrive here with a ?code= from email
+  "/set-password",        // handles its own session check client-side
   "/api/auth/callback",
   "/api/auth/login",      // legacy — kept for dev local bootstrap
   "/api/auth/register",   // legacy — kept for dev local bootstrap
   "/_next",
   "/favicon",
+  "/capture",             // mobile invoice capture — token-gated, no Supabase session required
+  "/api/capture",         // capture API proxies (validate, upload, complete)
+  "/api/capture-sessions/resolve", // session-ID → JWT resolution (public, rate-limited)
 ];
 
 // /docs pages accessible to DOCS_INVESTOR (and ADMIN)
