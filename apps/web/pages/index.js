@@ -1,6 +1,4 @@
 
-import { useEffect } from "react";
-import { useRouter } from "next/router";
 import Link from "next/link";
 import { useMemo } from "react";
 import { withTranslations } from "../lib/i18n";
@@ -8,15 +6,6 @@ import { useTranslation } from "next-i18next";
 
 export default function Home() {
   const { t } = useTranslation("tenant");
-  const router = useRouter();
-
-  useEffect(() => {
-    // In production, redirect straight to login.
-    // In dev, fall through to the launcher below.
-    if (process.env.NODE_ENV === "production") {
-      router.replace("/login");
-    }
-  }, [router]);
 
   // Only use NEXT_PUBLIC_ env vars here — non-prefixed vars exist server-side
   // only, which causes a hydration mismatch.
@@ -131,4 +120,13 @@ export default function Home() {
   );
 }
 
-export const getStaticProps = withTranslations(["common"]);
+export async function getServerSideProps(ctx) {
+  // In production: server-side redirect to /login — no page content ever
+  // reaches the browser, eliminating the flash of the dev launcher.
+  if (process.env.NODE_ENV === "production") {
+    return { redirect: { destination: "/login", permanent: false } };
+  }
+  // In dev: fall through to the launcher below.
+  const i18nProps = await withTranslations(["common"])(ctx);
+  return i18nProps;
+}
