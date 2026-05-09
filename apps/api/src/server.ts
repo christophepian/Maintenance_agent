@@ -281,7 +281,7 @@ const server = http.createServer(async (req: AuthedRequest, res) => {
         dbLatencyMs,
         shuttingDown: isShuttingDown,
         uptimeSeconds: Math.round(process.uptime()),
-        version: process.env.GIT_SHA || "dev",
+        version: process.env.GIT_SHA || process.env.RENDER_GIT_COMMIT || "dev",
         codeVersion: "2026-05-09-public-listings",
         checkedInMs: Date.now() - startedAt,
       });
