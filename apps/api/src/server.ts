@@ -72,6 +72,15 @@ if (isProdEnv) {
     );
     process.exit(1);
   }
+  // Guard against deploying from a branch other than main.
+  // RENDER_GIT_BRANCH is injected automatically by Render at build time.
+  const deployedBranch = process.env.RENDER_GIT_BRANCH;
+  if (deployedBranch && deployedBranch !== "main") {
+    console.error(
+      `[FATAL] Production must deploy from 'main'. Currently on '${deployedBranch}'. Update the Render service branch setting.`,
+    );
+    process.exit(1);
+  }
 }
 
 const port = process.env.PORT ? Number(process.env.PORT) : 3001;

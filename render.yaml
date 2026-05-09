@@ -4,6 +4,7 @@ services:
     runtime: node
     region: frankfurt
     plan: starter
+    branch: main
     autoDeploy: true
 
     # --- Node version ---
