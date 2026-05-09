@@ -282,6 +282,7 @@ const server = http.createServer(async (req: AuthedRequest, res) => {
         shuttingDown: isShuttingDown,
         uptimeSeconds: Math.round(process.uptime()),
         version: process.env.GIT_SHA || "dev",
+        codeVersion: "2026-05-09-public-listings",
         checkedInMs: Date.now() - startedAt,
       });
       return;
