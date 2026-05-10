@@ -65,11 +65,10 @@ const ROLE_NAV = {
   },
   TENANT: {
     items: [
-      { href: '/tenant',          icon: LayoutDashboard, label: 'Dashboard' },
-      { href: '/tenant/requests', icon: Wrench,          label: 'Requests'  },
-      { href: '/tenant/leases',   icon: Home,            label: 'My Home'   },
-      { href: '/tenant/inbox',    icon: Inbox,           label: 'Inbox'     },
-      { href: '/listings',        icon: Search,          label: 'Apply'     },
+      { href: '/tenant/leases',   icon: Home,  label: 'My Home'  },
+      { href: '/tenant/inbox',    icon: Inbox, label: 'Inbox'    },
+      { href: '/tenant/requests', icon: Wrench, label: 'Requests' },
+      { href: '/listings',        icon: Search, label: 'Apply'    },
     ],
     moreItems: [],
   },

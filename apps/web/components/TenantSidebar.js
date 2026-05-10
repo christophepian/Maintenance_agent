@@ -3,7 +3,6 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { useTranslation } from "next-i18next";
 import {
-  LayoutDashboard,
   Inbox,
   Wrench,
   Home,
@@ -11,11 +10,10 @@ import {
 } from "lucide-react";
 
 const TENANT_NAV = [
-  { id: "dashboard",  icon: LayoutDashboard, href: "/tenant" },
-  { id: "inbox",      icon: Inbox,           href: "/tenant/inbox" },
-  { id: "requests",   icon: Wrench,          href: "/tenant/requests" },
-  { id: "myHome",     icon: Home,            href: "/tenant/leases" },
-  { id: "apply",      icon: Search,          href: "/listings" },
+  { id: "myHome",    icon: Home,  href: "/tenant/leases" },
+  { id: "inbox",     icon: Inbox, href: "/tenant/inbox" },
+  { id: "requests",  icon: Wrench, href: "/tenant/requests" },
+  { id: "apply",     icon: Search, href: "/listings" },
 ];
 
 export default function TenantSidebar() {
