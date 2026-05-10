@@ -225,7 +225,20 @@ function normalizeIdentityFields(
 ): Record<string, string | number | boolean | null> {
   const fields: Record<string, string | number | boolean | null> = {};
 
-  // 1. Azure structured fields (populated by prebuilt-idDocument)
+  // 1a. Flatten MachineReadableZone sub-fields — passports return most structured
+  //     data nested under MRZ rather than at the top level of documents[0].fields.
+  //     Top-level fields win; MRZ fills in what's missing.
+  const mrzObject = (azureFields["MachineReadableZone"] as any)?.valueObject as
+    Record<string, DocumentFieldOutput> | undefined;
+  if (mrzObject) {
+    for (const [k, v] of Object.entries(mrzObject)) {
+      if (!azureFields[k]) {
+        azureFields[k] = v;
+      }
+    }
+  }
+
+  // 1b. Azure structured fields (populated by prebuilt-idDocument)
   fields.lastName =
     fieldToString(azureFields["LastName"]) ??
     fieldToString(azureFields["Surname"]) ??
@@ -240,6 +253,11 @@ function normalizeIdentityFields(
     fieldToString(azureFields["DateOfBirth"]) ??
     fieldToString(azureFields["BirthDate"]) ??
     findKvValue(kvPairs, /date.*birth|date.*naissance|geburtsdatum/i);
+
+  fields.expiryDate =
+    fieldToString(azureFields["DateOfExpiration"]) ??
+    fieldToString(azureFields["ExpirationDate"]) ??
+    findKvValue(kvPairs, /expir|valid.*until|valable\s*jusqu|g[uü]ltig\s*bis/i);
 
   fields.nationality =
     fieldToString(azureFields["Nationality"]) ??
