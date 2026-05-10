@@ -43,9 +43,22 @@ JWT-based. Production boot guard enforced (F1). All routes auth-gated. `AUTH_OPT
 > **Security hardening (SA-1–SA-22):** All resolved — see [EPIC_HISTORY.md](EPIC_HISTORY.md).
 > **Prisma/DTO hardening (CQ-7/12/13/14):** All resolved — see [EPIC_HISTORY.md](EPIC_HISTORY.md).
 
-### ⚠️ Known issue — Supabase JWT algorithm mismatch (flagged 2026-05-10)
+### Supabase key migration (2026-05-10)
 
-Render logs show repeated `[auth] resolveSupabaseToken failed: Unsupported "alg" value for a JSON Web Key Set`. The API's JWT verification does not support the algorithm now used by the Supabase project (likely ES256/RS256 after a key rotation), so some requests fail token verification silently. Fresh logins may still work via the fallback path, but stale sessions will fail on every API call until the user re-authenticates. **To investigate at next audit:** check the `alg` value in the Supabase project's JWKS endpoint against what `jose` is configured to accept in `authz.ts` / `resolveSupabaseToken`. May require upgrading the JWKS verification config or re-issuing the Supabase JWT secret.
+Supabase disabled legacy API keys on 2026-05-10 and migrated to a new publishable/secret key format. The following changes were made:
+
+**Vercel env vars (frontend):**
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` → `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (code renamed in `client.js`, `server.js`, `middleware.js`)
+- `SUPABASE_SERVICE_ROLE_KEY` → `SUPABASE_SECRET_KEY`
+- Both new vars set in Vercel dashboard with new `sb_publishable_` / `sb_secret_` key values
+
+**JWT algorithm:** Supabase migrated signing from HS256 to ES256 (asymmetric). User JWTs now carry `"alg":"ES256"`. The JWKS path in `resolveSupabaseToken` (`auth.ts`) handles this correctly — no secret needed, just `SUPABASE_URL`. The HS256 fallback (added 2026-05-10) is now unused and can be removed at the next cleanup.
+
+**Middleware fix:** Edge middleware was gating `/api/*` routes with `supabase.auth.getSession()`, silently redirecting API calls to `/login` when the session check failed. Fixed by adding `/api/` to `PUBLIC_PATHS` — the Render backend enforces its own auth independently.
+
+### ⚠️ Known issue — Tenant chatbot proxy not reaching Render (2026-05-10)
+
+ChatWidget POST to `/api/tenant/conversation` fails with "Failed to send message". Middleware fix is deployed (API routes bypass session gate). Vercel proxy function is invoked but requests are not appearing in Render logs, suggesting the proxy is failing before the fetch to Render (possible `API_BASE_URL` misconfiguration or connection error). **To investigate next session:** check Vercel Functions logs for `[proxy]` output and confirm `API_BASE_URL` in Vercel points to `https://maintenance-agent.onrender.com`.
 
 ### Testing — 67 suites
 
