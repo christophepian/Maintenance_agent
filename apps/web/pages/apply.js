@@ -150,16 +150,20 @@ export default function ApplyPage() {
         }
       };
 
+      // Strip trailing MRZ filler characters (commas, <<, whitespace) from name strings
+      const cleanName = (s) => (typeof s === "string" ? s.replace(/[,<\s]+$/, "").trim() : s);
+
       if (detectedType === "IDENTITY") {
-        fill("firstName", f.firstName);
-        fill("lastName", f.lastName);
-        fill("dateOfBirth", f.dateOfBirth);
+        fill("firstName", cleanName(f.firstName));
+        fill("lastName", cleanName(f.lastName));
+        // Normalize to YYYY-MM-DD so <input type="date"> can display it immediately
+        fill("dateOfBirth", normalizeBirthdate(f.dateOfBirth));
         fill("nationality", f.nationality);
       }
 
       if (detectedType === "SALARY_PROOF") {
-        fill("firstName", f.firstName);
-        fill("lastName", f.lastName);
+        fill("firstName", cleanName(f.firstName));
+        fill("lastName", cleanName(f.lastName));
         fill("employer", f.employer);
         fill("jobTitle", f.jobTitle);
         fill("netMonthlyIncome", f.netMonthlyIncome);
@@ -172,8 +176,8 @@ export default function ApplyPage() {
           primary.hasDebtEnforcement = f.hasDebtEnforcement;
           changed = true;
         }
-        fill("firstName", f.firstName);
-        fill("lastName", f.lastName);
+        fill("firstName", cleanName(f.firstName));
+        fill("lastName", cleanName(f.lastName));
       }
 
       if (detectedType === "PERMIT") {
